@@ -15791,6 +15791,9 @@ impl GameState {
             }
         };
         for pl in &mut self.players {
+            // One `Player::deref_mut` for the three zones: `Player` is a CoW
+            // handle, so each `iter_mut` was its own `Arc::make_mut`.
+            let pl = &mut **pl;
             pl.hand.iter_mut().for_each(clear);
             pl.graveyard.iter_mut().for_each(clear);
             pl.library.iter_mut().for_each(clear);

@@ -4368,13 +4368,16 @@ impl GameState {
                 // that dealt damage to you this turn" (Spear of Heliod) can
                 // filter targets.
                 if amount > 0 {
-                    self.players[p].was_dealt_damage_this_turn = true;
-                    self.players[p].damage_taken_this_turn =
-                        self.players[p].damage_taken_this_turn.saturating_add(amount);
-                    self.players[p].combat_damage_taken_this_turn =
-                        self.players[p].combat_damage_taken_this_turn.saturating_add(amount);
-                    if !self.players[p].creatures_that_damaged_me_this_turn.contains(&atk.id) {
-                        self.players[p].creatures_that_damaged_me_this_turn.push(atk.id);
+                    // One `Player::deref_mut` for the run: `Player` is a CoW
+                    // handle, so each write below was its own `Arc::make_mut`.
+                    let atk_id = atk.id;
+                    let pl = &mut *self.players[p];
+                    pl.was_dealt_damage_this_turn = true;
+                    pl.damage_taken_this_turn = pl.damage_taken_this_turn.saturating_add(amount);
+                    pl.combat_damage_taken_this_turn =
+                        pl.combat_damage_taken_this_turn.saturating_add(amount);
+                    if !pl.creatures_that_damaged_me_this_turn.contains(&atk_id) {
+                        pl.creatures_that_damaged_me_this_turn.push(atk_id);
                     }
                     // CR 702.76 — Prowl window: record the damaging creature's
                     // types for its controller (Changeling counts as every

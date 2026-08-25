@@ -664,6 +664,9 @@ impl GameState {
                 self.opponent_cast_since_your_turn &=
                     !crate::game::seat_bit(self.active_player_idx);
                 for pl in &mut self.players {
+                    // One `Player::deref_mut` for the run: `Player` is a CoW
+                    // handle, so each write below was its own `Arc::make_mut`.
+                    let pl = &mut **pl;
                     pl.spells_cast_this_game_turn = 0;
                     pl.sorceries_cast_this_turn = 0;
                     pl.noncreature_spells_cast_this_game_turn = 0;
