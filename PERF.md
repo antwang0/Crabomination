@@ -207,6 +207,40 @@ check the `--bench` invariants (`decisions`, `turns_per_game`) on any change
 whose Ir moves more than its blast radius allows: they are one 2-second run
 and they fail loudly.
 
+**When you do want a clock number, use `scripts/ab_wall.py` and run its null
+control.** It is the loop every pass has hand-rolled — alternate two binaries,
+quote best-of — with the two things that loop was missing. It runs an **ABBA**
+schedule, so a linear host drift cancels inside a block instead of landing on
+whichever binary went first; and it reports the **mean of the per-block ratios
+with a 95 % t confidence interval**, so the answer arrives with the effect size
+the sample can distinguish. It also fingerprints both runs (`decisions`, the
+decided/undecided split) and refuses to report a timing when they differ.
+
+```text
+python3 scripts/ab_wall.py --bin-a /tmp/base/bot_ladder \
+    --bin-b target/release-fast/bot_ladder --blocks 8 \
+    -- --a gang --b gang --games 2000 --decks sos --seed 11 --threads 4
+python3 scripts/ab_wall.py --bin-a X --bin-b X --blocks 8 -- <same workload>
+```
+
+**Best-of is a biased estimator and this file has been quoting it.** It
+compares two extreme order statistics of an unknown distribution, so with a
+7-9 % within-binary spread it mostly reports which side caught the quiet
+minute. `cae6b605` read **+2.5 % slower** by best-of over nine hand-rolled
+pairs, **+1.26 % slower with a `+/-0.67 %` half-range** at four ABBA blocks —
+and **flat** at eight, where the null control is equally flat:
+
+```text
+--games 2000 --decks sos --threads 4, ~30 s a run, Xeon @ 2.10GHz, 4 cores
+8 blocks, base vs tip    mean +0.18 %   CI -1.64 .. +2.00 %   FLAT
+8 blocks, null control   mean -0.40 %   CI -2.45 .. +1.66 %   FLAT
+```
+
+**The box resolves +/-2 % and nothing finer, for thirty-two runs and sixteen
+minutes a side.** Four blocks is not enough — it called a null-equivalent
+result significant. That number is the reason the rule below holds, and it is
+now measured rather than asserted.
+
 **Sub-5 % changes need callgrind, not `--bench`.** Two runs of one binary
 here differ by more than a 2 % code change is worth, so a small win reads as
 noise however many pairs you run. `callgrind` on a fixed workload counts
@@ -420,14 +454,16 @@ calls / 7,868,320 Ir** and `__memcpy` **11,324 / 2,501,090** both go to zero,
 grows by pointers), and `evaluate_requirement_static_hinted` is unchanged at
 39,430 / 19,241,574.
 
-**And the clock cannot see any of it, under either allocator.** `release-fast`
-+ mimalloc, `--a gang --b gang --games 4000 --decks sos --seed 11 --threads
-4` (20,000 games a run), **nine alternated pairs**: base mean 58.60 s
-(56.9-60.6), tip 58.99 s (58.3-59.7), 3/9 pairs positive — the two are inside
-each other's spread and the difference is +0.7 % the wrong way. The same
-workload on the *system*-allocator binaries (`profiling-fast`, three pairs:
-62.5/62.8, 63.1/64.3, 64.8/63.2) is flat too, which rules out "mimalloc
-already made the allocation cheap" as the explanation.
+**And the clock cannot see any of it.** `scripts/ab_wall.py`, `release-fast` +
+mimalloc, `--games 2000 --decks sos --threads 4`, **eight ABBA blocks**: mean
+B/A **+0.18 %**, 95 % CI **-1.64 .. +2.00 %**, 3/8 blocks faster — and the
+null control on the same workload reads -0.40 % with a comparable CI, so the
+box's floor is +/-2 % and the effect is under it. The same workload on the
+*system*-allocator binaries (`profiling-fast`) is flat too, which rules out
+"mimalloc already made the allocation cheap" as the explanation. **Two earlier
+readings of this same pair said otherwise and both were noise**: best-of over
+nine hand-rolled pairs said +2.5 % slower, four ABBA blocks said +1.26 %
+slower. That is what the tool exists for.
 
 **This is pass 57's clock rule with its mechanism named, and it is the rule
 this file should carry forward: `Ir` counts a `memcpy`; the machine barely

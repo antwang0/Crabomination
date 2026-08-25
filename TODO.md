@@ -208,6 +208,15 @@ Log with its numbers; read the entry before re-proposing any of them.
   taking cube from -1.85 to -2.26 % and sos from -2.75 to -3.16 % at the same
   time. `fixed`'s `sa_cards` is empty on all 32,002 gathers, so the walks were
   already free there and anything in front of them is pure charge.
+- **Best-of is a biased estimator, and every clock number in this file before
+  pass 59 was one.** `scripts/ab_wall.py` runs an ABBA schedule (linear host
+  drift cancels inside a block), reports the mean per-block ratio with a 95 %
+  t CI, fingerprints `decisions` on both sides and refuses to time two
+  binaries that played different games. **Run its null control
+  (`--bin-a X --bin-b X`) at the same block count before believing a
+  verdict.** Calibrated on the routine box: `--games 2000 --decks sos
+  --threads 4`, eight blocks, **+/-2 % and nothing finer** — four blocks
+  called a null-equivalent result significant.
 - **`Ir` counts a `memcpy`; the machine barely does** (`cae6b605`, and it is
   pass 57's clock rule with its mechanism named). Replacing
   `granted_abilities_of`'s deep-copied `Vec<ActivatedAbility>` with
@@ -282,7 +291,8 @@ Log with its numbers; read the entry before re-proposing any of them.
   libasound2-dev libudev-dev libxkbcommon-dev`. Cold `profiling-fast` engine
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
   Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
-  5 %; a `profiling-fast` games/s compares to nothing.
+  5 %; a `profiling-fast` games/s compares to nothing, and a clock A/B needs
+  `scripts/ab_wall.py` with eight blocks *and* its null control (~35 min).
 - **Trackers.** TODO 1.0k, ROADMAP 0.66k, PERF 6.0k (**passes 45-49's
   Baseline blocks are one table plus the lessons they carried, and passes 45
   and 46's Log entries are folded, at the 58th tip**; the 48th's and 49th's
