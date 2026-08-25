@@ -19,45 +19,50 @@ reference and want their own triage pass):
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 **Sessions run this branch concurrently: expect to rebase and re-read your
-numbers.** Two ran this pass and both opened with the same vocab fix; read
-the log before opening a NEXT item.
+numbers.** Two sessions ran pass 55 and two ran pass 56, and in *both*
+pairs they opened with the same idea — the second one's commit was dropped
+on the rebase each time. **Read the log before starting the top candidate.**
 
-1. **Pass 55, eleven commits: `--decks cube` 4,012 M -> 3,180 M Ir
-   (-20.8 %), -6.2 % wall clock; `sos` -2.16 % / **-3.3 % wall**, `fixed`
-   -1.15 %.** Tip (`c676cf48`): fixed 1,234,031,722 / cube 3,179,782,586 /
-   sos 1,722,423,954. `sealed` 3,489,058,164 and deck-build 34,607,871 were read
-   at (B) and not since — (C)-(J) do not touch that path.
-2. **The pass's device, and it found nine of the eleven: the code built the
-   answer before asking whether anyone wanted it.** A gathered layer view a
-   presence gate answers, a cloned tree the caller discards, an unshared
-   zone with nothing to restore, a `battlefield_find` for a card the caller
-   is holding, two `collect()`s that are empty on every board, two `Vec`s
-   and a sort to ask "has anyone won". In five the cheap question was
-   already a function in the file.
-   **The two that pay on `fixed` are the last two**, and they are the same
-   question asked of a `collect()`: not "how big is it" but "how often is it
-   empty". `cg_edges.py --callers __rust_alloc` by call count is the list.
-3. **Candidates:** (-40) is the fresh cube profile — the gather is still the
-   largest subtree (5.9 % self / 11.5 % inclusive, 59,470 gathers) and its
-   `Vec::from_iter` traffic (204,138 collects) has never been read by line.
-   **(-37) is CLOSED** — its residue was sized at the tip and is nothing
-   (the walker's `try_init` is 117,334 calls at 101 Ir against 581,256 at
-   1,084; do not write the artifact/supertype predicates). (-38)
-   `battlefield_find` is 61.5 M / 2.35 % at the tip, of which `eval.rs:3113`
-   — every remaining unhinted requirement evaluation — is 14.2 M.
-4. **Do not pattern-match the remaining ~80 `evaluate_requirement_static(..,
+1. **Pass 56, eight commits, branch tip `9582d1ea`: deck build 34,622,104 ->
+   26,570,012 (-23.1 % Ir, **-14 % wall clock**, 4/4 alternated pairs);
+   fixed 1,226,172,210 / cube 3,162,426,697 / sos 1,715,663,088 / sealed
+   3,430,701,306.** Against pass 55's (K) that is -0.637 / -0.546 / -0.392 %,
+   the same rows the pass measured on its own base — the two passes compose.
+2. **The pass's device, and it found five of the eight: ask what varies with
+   the shape.** The sealed builder runs ~57 shapes over one pool and almost
+   nothing it derives per shape depends on the shape — the pack buckets,
+   each card's brief, the pool's pip totals, each card's score.
+3. **Candidates:** (-40)'s only open row is `resolve_combat`'s
+   per-damage-pair freeze scope (8,686 gathers, 1.68 % of cube); the other
+   big context rows are scopes paying for themselves, and the gather's own
+   `Vec::from_iter` traffic has still never been read by line. (-39)'s deck
+   build: `build_shape`'s 22.5 % residual and `assemble_lands`' `Vec::retain`
+   (6.2 %, and `suggest_main_deck_in_colors` already holds every brief it
+   re-looks-up). (-38)'s `find_card_anywhere` first leg and
+   `pick_blocks_inner`. **(-37) is CLOSED, twice over** — sized at the tip
+   *and* built and measured at +0.123 % cube. Do not write the predicates.
+4. **`cg_sites.py`'s number is a floor, twice over.** The auto-tap row read
+   0.15 % of `fixed` and measured **-0.291 %**; pass 53's two sites read
+   0.35 % and measured -0.611 %. Do not decline a site on a small row.
+5. **A presence gate is sized by its arm's call count**, not by what the arm
+   costs when taken — the rule the two independent (-37) closes agree on.
+6. **Do not pattern-match the remaining ~80 `evaluate_requirement_static(..,
    &Target::Permanent(c.id), ..)` sites** into the `_on` form: several
    iterate graveyards or hands, where the hint changes the answer, and the
    `debug_assert` only catches a site a test plays. PERF's (H) says it too.
-5. **Top ML item is a training run, not code:** the vocab index is frozen,
+7. **`--bench` on some containers reads ~210-220 against the committed
+   270.56 anchor while `host_calib_ms` reads 44-47 against 55.** It is the
+   box. Anchor **not** refreshed; quote a paired A/B from one sitting.
+8. **Top ML item is a training run, not code:** the vocab index is frozen,
    post-freeze nets pad, `--use-deck-best` works end to end at 91.7 % of the
-   unjudged rate. What is missing is a *good* deck net.
-6. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings.** Read the
+   unjudged rate. What is missing is a *good* deck net — and two passes of
+   deck-builder work now compound inside its 32x.
+9. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings.** Read the
    oracle before fixing one; false positives remain.
-7. **Housekeeping.** TODO 0.95k, PERF 5.2k — Baseline is 1.1k holding five
-   passes' blocks and folding the oldest two is the cheapest fold left, then
-   the 45th/46th Log entries. ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still
-   want a triage pass.
+10. **Housekeeping.** TODO ~1.0k, PERF 5.6k — **passes 45-47's Baseline
+   blocks were folded to one table at the 56th tip**; the 48th/49th are the
+   next fold, then the 45th/46th Log entries. ENGINE_BACKLOG 4.9k /
+   CARD_BACKLOG 4.2k still want a triage pass.
 
 ## Standing rules for a perf pass
 
@@ -147,6 +152,32 @@ Log with its numbers; read the entry before re-proposing any of them.
   take one on an Ir number**. What works is making the callee smaller than any
   inliner threshold, which is what `has_kw` does.
   `CardDefinition::is_creature` is the same family and the same trap.
+- **A presence gate is sized by its arm's call count, not by what the arm
+  costs when it is taken** (pass 56, one gate paid and two lost in the same
+  sitting; pass 55 closed the same entry by sizing rather than building and
+  agrees). `creature_type_change_in_scope` was worth taking out of the mutex
+  because `HasCreatureType` is **410,900 of the requirement walker's 654,950
+  calls** on cube; `HasArtifactSubtype` / `HasSupertype` are rare, and gates
+  for them measured **+0.123 %**. Count the arm before writing the predicate.
+- **A gather is one per freeze *scope*, not one per unscoped read** (pass 56,
+  and it closes three rows of the contexts table that look like candidates).
+  `computed_permanent` gathers when the scope's memo is empty — its first
+  computed read — so N gathers in a context is usually N scopes each paying
+  for itself. `pick_blocks` and `eval_material` are both that shape.
+- **`cg_sites.py`'s number is a floor, and there are two data points.** The
+  auto-tap source table read 0.15 % of `fixed` in that table and measured
+  **-0.291 %**; pass 53's two sites read 0.35 % and measured -0.611 %. Do not
+  decline a site because its `cg_sites` row looks small.
+- **A wall-clock number for the deck build carries the process floor with
+  it** (pass 56). `--decks sealed --games 1` is ~6 ms of build on a ~3.3 ms
+  startup floor, so quote both columns; the tip's floor was 6.5 % *higher*
+  than the base's on a bigger binary, and that came straight off the measured
+  win. A training actor never pays it — it builds decks in one process.
+- **Ask what varies with the shape** (pass 56, and it was -23.1 % of the deck
+  build in five commits). The sealed lattice runs ~57 shapes over one pool;
+  the pack buckets, each card's brief, the pool's pip totals and each card's
+  score are all properties of the *pool*, and each was being rebuilt per
+  shape. `PoolScores` is where a new per-pool derived fact goes.
 - **Measurement.** Read PERF's "How to measure" — pass 48 rewrote it.
   `scripts/cg_symbolize.py` + `scripts/cg_edges.py`, never
   `callgrind_annotate --tree` for a caller table. **`cg_edges.py`'s shares
@@ -165,22 +196,23 @@ Log with its numbers; read the entry before re-proposing any of them.
   `card_type_change_in_scope`, the `LayerFreeze` depth shadow, the
   `sba_board_scan` definition bitmask, the trigger-carrier bitmask, the APNAP
   rank table, the headroom-reserving `Vec`, `board_keyword_matching`'s
-  presence gate, and (-31)'s `improves_this_turn` reuse. And **never** skip
+  presence gate, presence gates for `has_atype` / `has_stype` (pass 56,
+  +0.123 % cube), and (-31)'s `improves_this_turn` reuse. And **never** skip
   `push_ordered_trigger_candidates` on an empty batch (+7.3 % *and* a
   correctness bug — it owns the per-batch `died_card_snapshots.clear()`).
 - **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
-  crabomination_tests` is the gate (~20 min from cold on this box). Workspace
+  crabomination_tests` is the gate (18,728 / 0 / 5 over 22 binaries at the
+  fifty-sixth tip; ~25 min from cold). Workspace
   clippy needs `apt-get update && apt-get install -y libwayland-dev
   libasound2-dev libudev-dev libxkbcommon-dev`. Cold `profiling-fast` engine
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
   Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
   5 %; a `profiling-fast` games/s compares to nothing.
-- **Trackers.** TODO ~0.95k, ROADMAP 0.66k, PERF ~5.2k (the 45th pass's
-  profile table was folded at the 48th tip and the 46th's at the 53rd; the
-  47th's is the next fold, and **Baseline is now 1.0k holding four passes'
-  blocks** — the oldest two are the cheapest fold left).
-  ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k are the archives and still want
-  their own triage pass.
+- **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~5.6k (**passes 45-47's
+  Baseline blocks were folded to one table plus the three lessons they
+  carried, at the 56th tip**; the 48th's and 49th's are the next fold, then
+  the 45th/46th Log entries). ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k are
+  the archives and still want their own triage pass.
 
 ## Environment note
 
