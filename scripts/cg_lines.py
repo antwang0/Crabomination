@@ -22,7 +22,10 @@ function's body when everything around it is inlined.
 
 Both listings say what they left out: the 60,000-address resolution cap and
 the 45-row print are reported with the Ir they dropped, so a table that stops
-at its limit cannot read as a complete one.
+at its limit cannot read as a complete one. `--rows N` (`0` = no cap) lifts
+the print cap, which is what a fallback-chain read needs — a chain of narrow
+passes shows up as a run of *identically costed* rows well below row 45, and
+the default print cannot see it.
 
 **Two things this script got wrong until the fiftieth pass, and both produced
 a plausible table rather than an error.** It summed the instruction addresses
@@ -212,6 +215,11 @@ def main():
     needle = None
     if "--in" in sys.argv:
         needle = sys.argv[sys.argv.index("--in") + 1]
+    rows = 45
+    if "--rows" in sys.argv:
+        rows = int(sys.argv[sys.argv.index("--rows") + 1])
+        if rows <= 0:
+            rows = None
     cost, total_seen = parse_instr(cg, binary)
     total = sum(cost.values())
     if total == 0:
@@ -256,9 +264,9 @@ def main():
     shown = sum(lines.values())
     print(f"# {shown:,} Ir grouped ({100 * shown / max(total, 1):.1f}% of the run)")
     ranked_lines = lines.most_common()
-    for name, v in ranked_lines[:45]:
+    for name, v in ranked_lines[:rows]:
         print(f"{v:>12,} ({100 * v / total:5.2f}%)  {name}")
-    rest = ranked_lines[45:]
+    rest = ranked_lines[rows:] if rows else []
     if rest:
         rest_ir = sum(v for _, v in rest)
         print(
