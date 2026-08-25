@@ -341,21 +341,21 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`7ec4836c`.** Nine commits, one class after the first: **the simulator kept
+`J`.** Ten commits, one class after the first: **the simulator kept
 building answers before asking whether anyone wanted them.** (A) the
 requirement walker's subtype arms stop gathering where the printed line
 answers; (B) the freeze scope's depth and gate slots come out of the mutex;
-(C)-(I) seven helpers that allocated, cloned or re-found something their
-caller discards or already holds. **`--decks cube` -20.47 %,
-`--decks sos` -1.70 %, `--decks fixed` -0.72 %.** Ir readings `profiling-fast
+(C)-(J) eight helpers that allocated, cloned or re-found something their
+caller discards or already holds. **`--decks cube` -20.70 %,
+`--decks sos` -2.11 %, `--decks fixed` -1.08 %.** Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --seed 1` unless the row says otherwise.
 
 ```text
-                          base (bf4917a5)   (A) 8779aa9f     tip (I)
-I refs, --decks cube        4,012,095,058   3,332,029,985   3,191,053,723  -20.47 %
-I refs, --decks fixed       1,248,407,927   1,249,622,086   1,239,454,474   -0.717 %
-I refs, --decks sos         1,760,442,504   1,761,529,321   1,730,614,578   -1.695 %
+                          base (bf4917a5)   (A) 8779aa9f     tip (J)
+I refs, --decks cube        4,012,095,058   3,332,029,985   3,181,765,191  -20.70 %
+I refs, --decks fixed       1,248,407,927   1,249,622,086   1,234,886,711   -1.083 %
+I refs, --decks sos         1,760,442,504   1,761,529,321   1,723,306,764   -2.110 %
 I refs, --decks sealed      3,497,162,303   3,500,013,528     (B), below
 deck build alone               34,506,869      34,859,382     (B), below
   (--decks sealed --games 1: 0 games played, all setup)
@@ -374,10 +374,11 @@ Per commit, the three pools each was measured on:
 | G `863d882d` | -0.205 % | -0.028 % | -0.254 % | `granted_abilities_of` does the same for the mana sweep's grant scan |
 | H `353273ef` | -0.126 % | flat | flat | thirteen more battlefield walks hand their card to the requirement walker |
 | I `7ec4836c` | -0.256 % | **-0.356 %** | -0.291 % | the gather's two always-empty `collect()`s become `Vec::new()` |
+| J | -0.291 % | -0.369 % | **-0.422 %** | the SBA sweep's game-over check is a walk, not two `Vec`s and a sort |
 | — | +0.40 % | +0.66 % | — | **REVERTED** — the presence gate on `board_keyword_matching`'s *frozen* leg. See the Log |
 | — | +0.43 % | +0.12 % | — | **REVERTED** — a two-phase exactly-sized build in `statics_granted_triggers_with`. See the Log |
 
-`sealed` and the deck build were read at (B) and not re-read; (C) through (I)
+`sealed` and the deck build were read at (B) and not re-read; (C) through (J)
 are engine paths the deck builder does not reach.
 
 **The deck-build row was layout, and the profile says so rather than the
@@ -1505,8 +1506,8 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-Nine commits, base `bf4917a5`. (A) is the pass's finding; (B) through (I)
-are each a win on every pool they move — **cube -20.5 % over the pass**:
+Ten commits, base `bf4917a5`. (A) is the pass's finding; (B) through (J)
+are each a win on every pool they move — **cube -20.7 % over the pass**:
 
 ```text
                   base (bf4917a5)   (A) 8779aa9f
@@ -1742,6 +1743,20 @@ of each is cheaper than the call it skips.
 one measurement rather than a line profile: the row is 204,138 calls /
 117.3 M inclusive, and the question to ask of a collect inside a hot
 function is not "how big is it" but "how often is it empty".
+
+**(J) The state-based-action sweep asked "has anyone won" with two `Vec`s
+and a sort. `sos` -0.422 %, `fixed` -0.369 %, `cube` -0.291 %.** The
+game-over block collected the alive seats, mapped them to teams, collected
+that, sorted and deduped it — on **every** sweep, and the sweep runs on
+every priority pass (9,206 of them over six bench games, six `from_iter`s
+apiece). The question is only "does more than one team still have an
+uneliminated seat", which one walk answers and which is `true` for every
+sweep but a game's last.
+
+The reported `winner` is unchanged and the reason is worth writing down:
+when one team survives, every alive seat is on it, so "lowest alive seat on
+the winning team" *is* "first alive seat in seat order", which the walk has
+already found.
 
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —

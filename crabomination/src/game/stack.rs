@@ -5828,44 +5828,57 @@ impl GameState {
         // would have ended the match as soon as one of the four
         // players died even though their teammate was still in.
         if self.game_over.is_none() {
-            let alive: Vec<usize> = (0..self.players.len())
-                .filter(|i| !self.players[*i].eliminated)
-                .collect();
-            let mut surviving_teams: Vec<crate::team::TeamId> = alive
-                .iter()
-                .map(|&s| self.team_of(s))
-                .collect();
-            surviving_teams.sort_by_key(|t| t.0);
-            surviving_teams.dedup();
-            match surviving_teams.len() {
-                0 => {
-                    self.game_over = Some(None);
-                    events.push(GameEvent::GameOver { winner: None });
+            // One seat walk, no allocation. This block built two `Vec`s and
+            // sorted one of them on **every** state-based-action sweep — the
+            // sweep runs on every priority pass, and it was two of the
+            // ~55,720 `Vec::from_iter` calls `check_state_based_actions`
+            // makes over six bench games. The question is only "does more
+            // than one team still have an uneliminated seat", which a walk
+            // answers and which is `true` for all but the last sweep of a
+            // game.
+            //
+            // The reported `winner` is unchanged: it is the first alive seat
+            // in seat order, which is what `alive` (seat order) filtered to
+            // the surviving team and re-sorted gave — when one team survives,
+            // every alive seat is on it. For solo-team formats that is the
+            // literal winner; for 2HG it identifies the team by a
+            // representative member.
+            let mut winner: Option<usize> = None;
+            let mut team: Option<crate::team::TeamId> = None;
+            let mut multiple_teams = false;
+            for seat in 0..self.players.len() {
+                if self.players[seat].eliminated {
+                    continue;
                 }
-                1 => {
-                    // Report the winning team's first alive seat (by
-                    // seat number) as the `winner`. For solo-team
-                    // formats this is the literal winner; for 2HG it
-                    // identifies the surviving team via a
-                    // representative member, which is enough to let
-                    // the server / UI resolve to a team result.
-                    let winner_team = surviving_teams[0];
-                    let mut reps: Vec<usize> = alive
-                        .iter()
-                        .copied()
-                        .filter(|&s| self.team_of(s) == winner_team)
-                        .collect();
-                    reps.sort();
-                    let winner = reps[0];
-                    self.game_over = Some(Some(winner));
-                    // CR 407.2 — the winner becomes the owner of everything
-                    // in the ante zone.
-                    if self.playing_for_ante {
-                        self.award_ante_to(winner);
+                let t = self.team_of(seat);
+                match team {
+                    None => {
+                        team = Some(t);
+                        winner = Some(seat);
                     }
-                    events.push(GameEvent::GameOver { winner: Some(winner) });
+                    Some(first) if first != t => {
+                        multiple_teams = true;
+                        break;
+                    }
+                    Some(_) => {}
                 }
-                _ => {}
+            }
+            if !multiple_teams {
+                match winner {
+                    None => {
+                        self.game_over = Some(None);
+                        events.push(GameEvent::GameOver { winner: None });
+                    }
+                    Some(winner) => {
+                        self.game_over = Some(Some(winner));
+                        // CR 407.2 — the winner becomes the owner of everything
+                        // in the ante zone.
+                        if self.playing_for_ante {
+                            self.award_ante_to(winner);
+                        }
+                        events.push(GameEvent::GameOver { winner: Some(winner) });
+                    }
+                }
             }
         }
 
