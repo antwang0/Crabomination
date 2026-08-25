@@ -599,6 +599,84 @@ build.
 
 ## Baseline
 
+**Sixty-third pass. Base `0036e238` vs tip `fa3bf671`.** Two commits, one
+class: **a loop over pairs charged per pair for facts belonging to one side
+of the pair.** Ir readings `profiling-fast --no-default-features`,
+callgrind, one thread, `--a gang --b gang --games 6 --threads 1 --seed 1`.
+Both binaries built at `0036e238`; the three commits the rebase put
+underneath are documentation only (no `.rs` file differs between
+`0036e238` and `c2cc6c01`), so the columns are comparable to the current
+parent as measured.
+
+```text
+                          base (0036e238)   tip (fa3bf671)
+I refs, --decks fixed     1,182,567,955    1,175,724,194   -0.579 %
+I refs, --decks sos       1,530,678,137    1,523,856,909   -0.446 %
+I refs, --decks cube      2,768,347,971    2,732,667,632   -1.289 %
+```
+
+| step | commit | fixed | sos | cube | what |
+|---|---|---|---|---|---|
+| A | `d9f459de` | -0.425 % | -0.359 % | **-0.791 %** | six attacker facts and two blocker facts read per (blocker x attacker) pair |
+| B | `fa3bf671` | -0.154 % | -0.087 % | **-0.502 %** | block legality resolved both sides of the pair, per pair |
+
+**`cube` is 2.2x `fixed` and 2.9x `sos`**, which is the pool-ratio device
+paying off: `pick_blocks_inner` was the 2.09x row in the sixty-second pass's
+ratio table, and a grant-heavy pool has wider boards, so the pair count
+grows quadratically where the rest of the game loop grows linearly. Full
+write-up, rows and the rule in **Log**.
+
+```text
+decisions        196,220 -> 196,220        byte-identical
+turns_per_game   27.53   -> 27.53
+decisions_per_game 613.2
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism      ok (all pairs split, rho -1.000 on all 160);
+                 thread_determinism ok (3 vs 1 threads identical)
+ladder printout  identical on fixed / sos / cube at both commits
+peak_rss_mib     27.1 / 27.2 / 27.2 over three `--bench` runs
+suite            18,736 passed / 0 failed / 5 ignored, 14 test binaries
+golden traces    7 passed, all unchanged (both commits)
+clippy           `--workspace --all-targets` clean, all eight crates
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 50-69
+```
+
+**The `peak_rss_mib` and `games_per_s` rows are `release-fast`, not
+`release`, and neither compares to a row above.** Three `--bench` runs read
+**202.12 / 195.87 / 201.33 games/s** at `games_per_s_th` 67.4 / 65.3 / 67.1;
+no base binary was built at this profile in this sitting, so there is no
+pair and no claim. The RSS figure carries mimalloc (default features) on the
+2.80 GHz box — read (-48) before comparing it to the 24.0-24.3 the other
+session recorded on the 2.10 GHz one.
+
+**No wall-clock pair is quoted.** At Ir's measured ~1.7x-2.8x over-read,
+this pass is worth roughly -0.25 % of wall on `sos` and -0.45 % on `cube` —
+well under the +/-2 % this box resolves at eight ABBA blocks. Nothing here
+is allocation-shaped: the allocator family and `__memcpy` are flat to four
+digits on both pools, so there is no "Ir counts a memcpy, the machine barely
+does" discount either. What came off is battlefield walks and keyword scans.
+
+**Crash-freedom and determinism at the tip, on the wider recipe.**
+`overflow` build (release-fast + `overflow-checks`), `--a gang --b gang
+--threads 3`, seeds 11 and 12:
+
+```text
+--decks all     --games 200   3,400 decided / 0 undecided per seed, 1,700 pairs all split
+--decks cube    --games 120     960 decided / 0 undecided per seed,   480 pairs all split
+--decks sealed  --games 120   1,440 decided / 0 undecided per seed,   720 pairs all split
+```
+
+**11,600 games, no panic, no arithmetic overflow, `rho -1.000` on every
+pair.** Both commits are in combat code, which `--decks all`'s seventeen
+fixed archetypes exercise heavily; `cube` and `sealed` are the pools that
+can put a Rampage / Menace / protection / indestructible attacker into the
+same board as a first-striker, which is the shape the `AttackerFacts` hoist
+would break if it broke anything.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
+or `Vocab` change is in this pass.
+
 **Sixty-first pass (the other session's line, run concurrently with 59 and
 60). Base `ba15f249` vs this block's tip.** Four commits, one class and one
 defect: **four questions the simulator asked with a walk or an iterator chain
