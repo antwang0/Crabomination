@@ -61448,17 +61448,15 @@ pub fn cloudpiercer() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         mutate: Some(cost(&[generic(3), r()])),
-        triggered_abilities: vec![on_mutate(Effect::Seq(vec![
-            Effect::Discard {
+        triggered_abilities: vec![on_mutate(Effect::MayDiscard {
+            description: "Discard a card to draw a card?".into(),
+            count: Value::ONE,
+            then: Box::new(Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
-                random: false,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]))],
+            }),
+            else_: None,
+        })],
         ..Default::default()
     }
 }

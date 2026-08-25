@@ -462,25 +462,27 @@ pub fn rictus_robber() -> CardDefinition {
     }
 }
 
-/// Highway Robbery — {1}{R} Sorcery. Discard a card or sacrifice a land; if you
-/// do, draw two. Plot {1}{R}.
+/// Highway Robbery — {1}{R} Sorcery. You *may* discard a card; if you do, draw
+/// two. Plot {1}{R}.
+///
+/// The printed choice is "discard a card **or sacrifice a land**"; only the
+/// discard half is modelled, so a hand with nothing to spare declines where the
+/// real card could pay with a land instead.
 pub fn highway_robbery() -> CardDefinition {
     CardDefinition {
         name: "Highway Robbery",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Sorcery],
         plot_cost: Some(cost(&[generic(1), r()])),
-        effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::Player(PlayerRef::You),
-                amount: Value::Const(1),
-                random: false,
-            },
-            Effect::Draw {
+        effect: Effect::MayDiscard {
+            description: "Discard a card to draw two?".into(),
+            count: Value::ONE,
+            then: Box::new(Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(2),
-            },
-        ]),
+            }),
+            else_: None,
+        },
         ..Default::default()
     }
 }

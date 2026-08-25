@@ -2258,7 +2258,8 @@ fn essence_symbiote_rewards_mutation() {
     assert_eq!(g.players[0].life, life + 2, "gained 2 from Essence Symbiote");
 }
 
-/// Cloudpiercer rummages (discard then draw) when it mutates.
+/// Cloudpiercer rummages (discard then draw) when it mutates. The rummage is
+/// the printed "you may", so the yes is scripted — `AutoDecider` declines.
 #[test]
 fn cloudpiercer_rummages_on_mutate() {
     let mut g = two_player_game();
@@ -2268,12 +2269,37 @@ fn cloudpiercer_rummages_on_mutate() {
     g.add_card_to_library(0, catalog::lightning_bolt()); // the draw
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3); // {3}{R}
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     g.perform_action(GameAction::CastMutate {
         card_id: piercer, target: host, on_top: true, x_value: None,
     }).expect("mutate Cloudpiercer");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"), "drew the bolt");
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"), "discarded the bear");
+}
+
+/// ...and declined, the hand is untouched. The trigger used to discard and
+/// draw unconditionally, which is a loss for a hand with nothing to pitch.
+#[test]
+fn cloudpiercer_mutate_rummage_can_be_declined() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let piercer = g.add_card_to_hand(0, catalog::cloudpiercer());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastMutate {
+        card_id: piercer, target: host, on_top: true, x_value: None,
+    }).expect("mutate Cloudpiercer");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().all(|c| c.definition.name != "Lightning Bolt"), "no draw");
+    assert!(
+        g.players[0].graveyard.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "no discard",
+    );
 }
 
 /// Sea-Dasher Octopus draws when it connects in combat.

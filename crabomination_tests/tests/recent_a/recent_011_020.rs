@@ -1709,6 +1709,52 @@ mod recent20 {
         assert_eq!(cost_reduction_for_spell(&g, 0, &brute, None), 2, "{{1}} less per outlaw");
     }
 
+    /// Highway Robbery's discard is the printed "you may" — taken, it draws two.
+    #[test]
+    fn highway_robbery_discards_to_draw_two() {
+        let mut g = two_player_game();
+        let rob = g.add_card_to_hand(0, catalog::highway_robbery());
+        g.add_card_to_hand(0, catalog::grizzly_bears()); // the discard
+        g.add_card_to_library(0, catalog::lightning_bolt());
+        g.add_card_to_library(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        // AutoDecider declines a "may"; script the yes.
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(true),
+        ]));
+        cast(&mut g, rob);
+        assert!(
+            g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+            "discarded the bear",
+        );
+        assert_eq!(
+            g.players[0].hand.iter().filter(|c| c.definition.name == "Lightning Bolt").count(),
+            2,
+            "drew two",
+        );
+    }
+
+    /// ...and declined, nothing is discarded and nothing is drawn. Before the
+    /// "may" was wired the discard and the two cards were both mandatory, so a
+    /// hand of business paid for a draw it did not want.
+    #[test]
+    fn highway_robbery_declined_keeps_the_hand() {
+        let mut g = two_player_game();
+        let rob = g.add_card_to_hand(0, catalog::highway_robbery());
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.add_card_to_library(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        cast(&mut g, rob); // AutoDecider declines
+        assert!(g.players[0].graveyard.iter().all(|c| c.definition.name != "Grizzly Bears"));
+        assert_eq!(
+            g.players[0].hand.iter().filter(|c| c.definition.name == "Lightning Bolt").count(),
+            0,
+            "no draw without the discard",
+        );
+    }
+
     /// Bovine Intervention destroys and gives the controller an Ox.
     #[test]
     fn bovine_intervention_destroys_and_makes_ox() {
