@@ -89,7 +89,14 @@ rounds per commit.**
    `718a66f8` (takes `impl Into<Arc<_>>`; the deep clone is gone). Pass 57's
    gate placement is ~0.25 % of `fixed` Ir = ~0.1 % of clock for a 2,000-line
    re-indent — tidy, not a number.
-8. **Two measurement cautions before you rank anything.** (a) Clock numbers
+8. **Three measurement cautions before you rank anything.** (0) **RSS per
+   actor is the ML-relevant number and the file was quoting the wrong
+   build.** At one tip on one box: system allocator 17.6 MiB, shipped
+   `release`/mimalloc **24.0-24.3**, `overflow` 27.2. The sixtieth pass's
+   "-19 %, 17.7 MiB" is a `--no-default-features` reading and reproduces
+   exactly — but **plan actor counts off ~24 MiB**. Nor does RSS compare
+   across containers (this box 24.0-24.3 at 2.10 GHz, the other session's
+   30.0-30.1 at 2.80 GHz). (a) Clock numbers
    go through `scripts/ab_wall.py` with its null control; eight blocks
    resolve **+/-2 % and nothing finer**, and Ir over-reads by ~2x. (b)
    `name_index()` builds 22,568 `CardDefinition`s to read their names —
