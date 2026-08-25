@@ -4291,13 +4291,17 @@ impl GameState {
     /// CR 201.4a — evaluate a `SelectionRequirement` against a bare
     /// `CardDefinition` (a *name*, not an object in any zone), for the
     /// namespace restriction on "choose a [kind] card name".
+    /// Takes `impl Into<Arc<_>>` so a caller holding a `CardInstance`'s
+    /// definition hands over a refcount. It used to take `&CardDefinition` and
+    /// `clone()` it into the scratch instance — a **deep** copy of an
+    /// 8,232-byte struct and every `Vec` in it, to answer a predicate.
     pub fn definition_matches_requirement(
         &self,
-        def: &crate::card::CardDefinition,
+        def: impl Into<std::sync::Arc<crate::card::CardDefinition>>,
         req: &SelectionRequirement,
         controller: usize,
     ) -> bool {
-        let scratch = CardInstance::new(CardId(u32::MAX), def.clone(), controller);
+        let scratch = CardInstance::new(CardId(u32::MAX), def, controller);
         self.evaluate_requirement_on_card(req, &scratch, controller)
     }
 

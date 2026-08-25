@@ -20016,7 +20016,11 @@ impl GameState {
                         let match_to_bf = picked_matching_to_battlefield
                             .as_ref()
                             .is_some_and(|f| {
-                                self.definition_matches_requirement(&card.definition, f, player)
+                                self.definition_matches_requirement(
+                                    card.definition.clone(),
+                                    f,
+                                    player,
+                                )
                             });
                         if to_battlefield || land_to_bf || match_to_bf {
                             let cid = card.id;
@@ -20580,7 +20584,7 @@ impl GameState {
                 // legal choice; treat it as naming nothing.
                 let legal = restrict_to.as_ref().is_none_or(|f| {
                     crate::card_registry::lookup_by_name(name)
-                        .is_some_and(|d| self.definition_matches_requirement(&d, f, 0))
+                        .is_some_and(|d| self.definition_matches_requirement(d, f, 0))
                 });
                 if !name.is_empty() && legal {
                     if let Some(card) = self.find_card_anywhere_mut(target_id) {

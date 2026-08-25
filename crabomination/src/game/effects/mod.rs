@@ -28669,31 +28669,44 @@ impl GameState {
                 // an opponent's activated-ability permanent; a resolving
                 // spell (Spoils of the Vault) wants its controller's most
                 // common library name.
-                let suggestions = if self.battlefield.iter().any(|c| c.id == target_id) {
-                    rank_names_by_frequency(
+                let pool: Vec<&crate::card::CardInstance> =
+                    if self.battlefield.iter().any(|c| c.id == target_id) {
                         self.battlefield
                             .iter()
                             .filter(|c| {
                                 !self.same_team(c.controller, ctx.controller)
                                     && !c.definition.activated_abilities.is_empty()
                             })
-                            .map(|c| c.definition.name),
-                    )
-                } else {
-                    rank_names_by_frequency(
-                        self.players[ctx.controller].library.iter().map(|c| c.definition.name),
-                    )
-                };
+                            .collect()
+                    } else {
+                        self.players[ctx.controller].library.iter().collect()
+                    };
+                let suggestions = rank_names_by_frequency(pool.iter().map(|c| c.definition.name));
                 // CR 201.4a — narrow the namespace when the card restricts it
                 // ("choose a land card name"); an off-namespace answer is
                 // dropped when the pending state is applied.
+                //
+                // Tested against the definition the suggestion *came from*.
+                // It used to go back out through `card_registry::lookup_by_name`
+                // — a global name index whose first use built a
+                // `CardDefinition` for all 22,568 catalog factories just to
+                // read their names (104,536,834 Ir, 6.75 % of a six-game
+                // `--decks sos` run at b370d69e) — and then deep-clone what it
+                // handed back. Every one of these names belongs to a card this
+                // function is already holding.
                 let suggestions: Vec<String> = match restrict_to {
                     Some(f) => suggestions
                         .into_iter()
                         .filter(|n| {
-                            crate::card_registry::lookup_by_name(n).is_some_and(|d| {
-                                self.definition_matches_requirement(&d, f, ctx.controller)
-                            })
+                            pool.iter()
+                                .find(|c| c.definition.name == n.as_str())
+                                .is_some_and(|c| {
+                                    self.definition_matches_requirement(
+                                        c.definition.clone(),
+                                        f,
+                                        ctx.controller,
+                                    )
+                                })
                         })
                         .collect(),
                     None => suggestions,
