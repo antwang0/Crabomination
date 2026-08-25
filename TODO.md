@@ -19,50 +19,69 @@ reference and want their own triage pass):
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 **Sessions run this branch concurrently: expect to rebase and re-read your
-numbers.** Two sessions ran pass 55 and two ran pass 56, and in *both*
-pairs they opened with the same idea — the second one's commit was dropped
-on the rebase each time. **Read the log before starting the top candidate.**
+numbers.** Two sessions ran pass 55, two ran pass 56, and pass 57 rebased
+twice — in *both* of the earlier pairs the second session's opening commit
+was dropped as a duplicate. **Read the log before starting the top
+candidate**, and budget two callgrind rounds, not one.
 
-1. **Pass 56, eight commits, branch tip `9582d1ea`: deck build 34,622,104 ->
-   26,570,012 (-23.1 % Ir, **-14 % wall clock**, 4/4 alternated pairs);
-   fixed 1,226,172,210 / cube 3,162,426,697 / sos 1,715,663,088 / sealed
-   3,430,701,306.** Against pass 55's (K) that is -0.637 / -0.546 / -0.392 %,
-   the same rows the pass measured on its own base — the two passes compose.
-2. **The pass's device, and it found five of the eight: ask what varies with
-   the shape.** The sealed builder runs ~57 shapes over one pool and almost
-   nothing it derives per shape depends on the shape — the pack buckets,
-   each card's brief, the pool's pip totals, each card's score.
-3. **Candidates:** (-40)'s only open row is `resolve_combat`'s
-   per-damage-pair freeze scope (8,686 gathers, 1.68 % of cube); the other
-   big context rows are scopes paying for themselves, and the gather's own
-   `Vec::from_iter` traffic has still never been read by line. (-39)'s deck
-   build: `build_shape`'s 22.5 % residual and `assemble_lands`' `Vec::retain`
-   (6.2 %, and `suggest_main_deck_in_colors` already holds every brief it
-   re-looks-up). (-38)'s `find_card_anywhere` first leg and
-   `pick_blocks_inner`. **(-37) is CLOSED, twice over** — sized at the tip
-   *and* built and measured at +0.123 % cube. Do not write the predicates.
-4. **`cg_sites.py`'s number is a floor, twice over.** The auto-tap row read
+1. **Pass 57, two commits, base `28ae2416`: `--decks sos` -3.43 %, `cube`
+   -2.52 %, `fixed` +0.56 %.** Tip: fixed 1,233,007,810 / cube 3,082,752,911
+   / sos 1,656,877,045. The same rows read -3.42 / -2.48 / +0.55 against
+   `91f3ede3` before the rebase, so pass 56 and pass 57 compose.
+   `--bench` paired at `release` is flat; `release-fast` wall clock cube
+   -4.4 %, sos -4.0 % on best-of-interleaved (measured against the pass's
+   first base and not re-run after the second rebase).
+2. **The finding: thirty-eight passes at the end of the gather that walk the
+   same list and re-read the same static abilities**, one per live-state
+   `StaticEffect` variant, matching nothing on a typical board. A
+   `gather_spec` bitmask built by the pre-scan answers all of them, per card
+   and board-wide; `sa_open` / `sa_audit` make the 18,728-test suite the
+   mask's proof instead of a re-derived variant list.
+   **The tell was a run of identically-costed line rows** — ten at 511,188 Ir,
+   eight at 425,990, seven at 340,792 — and none was inside `cg_lines.py`'s
+   default forty-five rows, so `--rows` was added first. Pass 56's NEXT said
+   the gather's internals had never been read by line; they have now.
+3. **A gate lives on the pool that has nothing to gate** — pass 53's "which
+   pool does the change live on", inverted. `--decks fixed` carries *no*
+   printed static ability on the battlefield, so `sa_cards` is empty on all
+   32,002 gathers, every one of the thirty-eight passes was already free
+   there, and the mask can only charge for asking. Quote all three pools for
+   anything that adds a per-call question, and say which pool the shipped
+   workload is: `selfplay_train`'s actors play SOS (`Vocab::sos_sealed`).
+4. **Candidates: (-40) is a fresh cube table at this tip.** Two to rank off
+   it: **`dispatch_triggers_for_events`, now the largest engine row, and
+   "measured diffuse at the 49th" is the last time anyone read it** — no
+   caller table, no line profile, no call counts; and `__memcpy` + the
+   allocator family + `Arc::clone_from_ref_in` + `make_mut` +
+   `GameState::clone` at **~21 % between them**, which is (-10)/(-13) seen
+   from the profile side. (-39)'s deck build: `build_shape`'s 22.5 %
+   residual and `assemble_lands`' `Vec::retain`. (-38)'s
+   `find_card_anywhere` first leg and `pick_blocks_inner`. **(-37) is
+   CLOSED, twice over** — do not write the predicates.
+5. **`cg_sites.py`'s number is a floor, twice over.** The auto-tap row read
    0.15 % of `fixed` and measured **-0.291 %**; pass 53's two sites read
    0.35 % and measured -0.611 %. Do not decline a site on a small row.
-5. **A presence gate is sized by its arm's call count**, not by what the arm
+6. **A presence gate is sized by its arm's call count**, not by what the arm
    costs when taken — the rule the two independent (-37) closes agree on.
-6. **Do not pattern-match the remaining ~80 `evaluate_requirement_static(..,
+7. **Do not pattern-match the remaining ~80 `evaluate_requirement_static(..,
    &Target::Permanent(c.id), ..)` sites** into the `_on` form: several
    iterate graveyards or hands, where the hint changes the answer, and the
    `debug_assert` only catches a site a test plays. PERF's (H) says it too.
-7. **`--bench` on some containers reads ~210-220 against the committed
+8. **`--bench` on some containers reads ~210-220 against the committed
    270.56 anchor while `host_calib_ms` reads 44-47 against 55.** It is the
-   box. Anchor **not** refreshed; quote a paired A/B from one sitting.
-8. **Top ML item is a training run, not code:** the vocab index is frozen,
+   box: pass 57 built a `release` base binary and read 210 from it on the
+   same commit the anchor records at 281. Anchor **not** refreshed; quote a
+   paired A/B from one sitting.
+9. **Top ML item is a training run, not code:** the vocab index is frozen,
    post-freeze nets pad, `--use-deck-best` works end to end at 91.7 % of the
    unjudged rate. What is missing is a *good* deck net — and two passes of
    deck-builder work now compound inside its 32x.
-9. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings.** Read the
+10. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings.** Read the
    oracle before fixing one; false positives remain.
-10. **Housekeeping.** TODO ~1.0k, PERF 5.6k — **passes 45-47's Baseline
-   blocks were folded to one table at the 56th tip**; the 48th/49th are the
-   next fold, then the 45th/46th Log entries. ENGINE_BACKLOG 4.9k /
-   CARD_BACKLOG 4.2k still want a triage pass.
+11. **Housekeeping.** TODO ~1.0k, PERF 5.7k — passes 45-47's Baseline blocks
+   were folded at the 56th tip; the 48th/49th are the next fold, then the
+   45th/46th Log entries. ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want
+   a triage pass.
 
 ## Standing rules for a perf pass
 

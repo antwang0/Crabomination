@@ -340,6 +340,104 @@ it.
 
 ## Baseline
 
+**Fifty-seventh pass, base `28ae2416` (pass 56's tip) vs its own tip
+`da30d1c2`.** Two commits, one finding: **the gather ends in thirty-eight
+passes that walk the same short list and re-read the same static abilities,
+one per live-state `StaticEffect` variant, and on a typical board none of
+them matches anything.** One bitmask, built by the pre-scan that already
+walks the battlefield, answers all thirty-eight. Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
+--seed 1`.
+
+```text
+                          base (28ae2416)        tip
+I refs, --decks sos         1,715,663,129   1,656,877,045   -3.427 %
+I refs, --decks cube        3,162,426,135   3,082,752,911   -2.519 %
+I refs, --decks fixed       1,226,171,600   1,233,007,810   +0.558 %
+I refs, --decks sealed      3,430,701,306     not re-read — the deck builder
+deck build alone               26,570,012     never reaches the gather
+```
+
+**Read once on pass 56's base and again on pass 57's, and the two passes
+compose to the third decimal.** The pass was measured first against
+`91f3ede3` (sos -3.422 %, cube -2.476 %, fixed +0.551 %) and re-measured
+after the rebase onto pass 56's eight commits: **-3.427 / -2.519 / +0.558**.
+Nothing pass 56 removed was already removed here, and nothing here makes
+pass 56's rows smaller.
+
+**`fixed` pays and does not collect, and that is the pool, not the gate.**
+No permanent in the vanilla archetype decks has a printed static ability, so
+`sa_cards` is empty on all 32,002 gathers: the thirty-eight passes were
+already one length check LLVM had folded across all of them, and a mask can
+only add the cost of asking. Three variants were built and measured on this
+base rather than argued — see the Log. **`sos` is the pool
+`crabomination_ml::selfplay_train`'s actors play** (`Vocab::sos_sealed`),
+and it is the one that moved most.
+
+```text
+decisions        196,220 -> 196,220        byte-identical
+turns_per_game   27.53   -> 27.53
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism      ok (all pairs split, both)
+suite            18,728 passed / 0 failed / 5 ignored over 22 binaries
+golden traces    all unchanged
+clippy           `--workspace --all-targets` clean
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
+```
+
+**Wall clock, and this sitting is a case study in why the file says
+alternate.** `release-fast` + mimalloc, 600 games / 1 thread / seed 1,
+interleaved `tip base base tip` so linear drift cancels, best of each side.
+**Both binaries here are the pass's first pair — base `91f3ede3` against its
+own tip** — and were not rebuilt after the rebase onto pass 56, whose eight
+commits move the same pools by their own -0.5 %:
+
+```text
+--decks cube   base 58.93 / 58.68 / 59.57 / 64.10 / 59.89   best 58.68
+               tip  57.01 / 56.35 / 57.06 / 66.84 / 56.10   best 56.10   -4.4 %
+--decks sos    base 34.12 - 36.44 over 11 runs               best 34.12
+               tip  32.74 - 38.23 over 11 runs               best 32.74   -4.0 %
+                    (medians 35.03 -> 34.44, -1.7 %)
+```
+
+**The first three sos pairs read the wrong way** — 34.55/34.24/34.98 base
+against 34.62/34.43/36.29 tip, i.e. the tip "slower" — and eight more pairs
+in the same sitting reversed it. Three pairs cannot resolve 3 % on this box;
+the drift is upward through a sitting and it is larger than the effect.
+
+**`--bench`, the committed throughput configuration** (`release` + mimalloc,
+3 threads), **paired** this time — a base binary was built at `release` so
+the column means something, which the last two passes could not do. Same
+first pair (`91f3ede3` vs this pass's own tip):
+
+```text
+                 base (91f3ede3)                    tip
+games_per_s      216.47 212.12 212.52 211.99         206.68 225.44 204.43 212.48
+                 205.49 206.34 203.23 210.12 216.04  217.61 201.88 209.99 208.06 224.63
+mean             210.48                              212.36    -> +0.9 %
+best             216.47                              225.44    -> +4.1 %
+host_calib_ms    48-56 (both sides interleaved)
+decisions        196,220 on every run, both sides
+peak_rss_mib     28.1 - 31.6 (both sides)
+```
+
+**Read it as flat, and read the absolute as the box.** +0.55 % of Ir on this
+pool is under the noise floor of a configuration whose nine tip readings span
+201.88 to 225.44 (11 %). **The base binary reads 210 here against the 281 this
+file records at the pass-55 tip** — same commit, same profile, 25 % apart —
+which is why a `--bench` absolute is never a cross-sitting comparison and why
+this pass built the base rather than diffing the committed line.
+
+**Crash-freedom and determinism at the pass's first tip.** `release`,
+`--a gang --b gang --games 200 --threads 3`, seeds 11/12/13 x `--decks all`
+plus `--decks sealed` at seed 11: **12,600 games, every cell decided, 0
+undecided, no panic**. `CRAB_THREAD_CHECK=1 --bench` reads
+**`thread_determinism ok (3 vs 1 threads identical)`**.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
+or `Vocab` change is in this pass.
+
 **Fifty-sixth pass, base `00348ada` vs its own tip `3801f01f`,
 re-read on the branch after a second rebase onto pass 55's (I)-(K).** Eight
 commits in two classes: **five things the deck builder derived once per
@@ -1578,6 +1676,96 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Fifty-seventh pass — thirty-eight passes that re-read every static ability
+
+Two commits, base `28ae2416`. `--decks sos` **-3.427 %**, `cube` **-2.519 %**,
+`fixed` **+0.558 %** — and the same rows read -3.422 / -2.476 / +0.551
+against `91f3ede3` before the rebase onto pass 56, so the two passes compose.
+
+**The finding is the forty-ninth pass's device at a bigger scale, and the
+tooling could not see it.** `gather_continuous_effects_inner` ends in
+thirty-eight passes shaped
+
+```rust
+for &card in &sa_cards {
+    for sa in &card.definition.static_abilities {
+        let StaticEffect::X { .. } = &sa.effect else { continue };
+        ...
+    }
+}
+```
+
+— one per `StaticEffect` variant that needs live board state. Each walks the
+same list and re-reads the same static abilities, and on a typical board none
+of the thirty-eight matches. In the line profile they are **ten rows at
+exactly 511,188 Ir, eight at 425,990, seven at 340,792, three at 361,704** —
+the identically-costed run that says "fallback chain", and **none of them is
+inside `cg_lines.py`'s default forty-five rows**. `--rows` was added first
+(`fe41ae32`); `cg_edges.py` has had it since the fiftieth pass.
+
+**This is the answer to (-40)'s open question — "the gather's `Vec::from_iter`
+traffic has never been read by line" — and the line profile says the collects
+were the smaller half.** At the pass-55 tip the gather is **195,923,396 Ir
+self, 6.12 % of the cube run, the largest self row in the program**, and by
+line the bulk of it is the thirty-eight passes' *iteration machinery*:
+`macros.rs:?` 29.8 M, `non_null.rs:444` 18.7 M, `non_null.rs:1720` 15.7 M,
+`mod.rs:?` 12.9 M, `macros.rs:180` 9.8 M. The two always-empty `collect()`s
+pass 55's (I) took were 2 of 3.43 `from_iter`s per gather and worth -0.36 %
+on `fixed`; the walks around them are worth five times that on `cube`.
+
+**The fix.** The pre-scan that already builds `sa_cards` folds each card's
+statics into a `gather_spec` bitmask, stored per card and OR'd board-wide.
+A pass runs only if the board bit is set, and then skips a card whose own bit
+is clear. Bits over-approximate — the five `While*` wrappers recurse, because
+`active_static` peels them, and every pass still runs its own `match` — so a
+set bit costs only the walk it always paid. `any_artifacts_are_equipment`,
+`any_pump_per_shared_type` and `anthem_open` are three more walks the same
+mask answers.
+
+**The audit is the suite, not a re-derived list.** In a debug build `sa_open`
+is unconditionally true, so every pass runs on the full list and `sa_audit`
+asserts that a pass the mask closed emitted nothing. A variant the mask
+forgets is a `_ => 0` in `static_effect_gather_bits`, and 18,728 tests on real
+boards are what catches it — the `gated_block!` device from `bot.rs`, which
+is where this shape was first made safe.
+
+**Three variants, all built and measured on this base:**
+
+| gate | fixed | cube | sos |
+|---|---|---|---|
+| per-card bit only, no board branch | +0.298 % | -1.446 % | -1.957 % |
+| **board branch + per-card bit (shipped)** | **+0.551 %** | **-2.476 %** | **-3.422 %** |
+| board-wide slice swap, no per-card bit | +1.03 % | -2.03 % | -3.01 % |
+
+(All three rows are against `91f3ede3`, the pass's first base, so they are
+comparable to each other; the shipped row re-reads +0.558 / -2.519 / -3.427
+on `28ae2416`.)
+
+(The third row was measured against the *previous* base, `00348ada`, before
+the rebase; its `fixed` cost was localised to one line — the slice select at
+**8,793,228 Ir, 39 gates x 32,002 gathers, ~7 Ir each** — and an ablation
+with the select alone removed read 1,245,732,866 against 1,243,882,876, so
+the select was 11.5 M of that variant's 13.4 M.)
+
+**What the `fixed` column costs and why it is taken anyway** (numbers on
+`91f3ede3`, where the variants were compared)**.** The board
+branch is 3.13 M Ir of the 6.81 M (38 tests x 32,002 gathers, ~2.6 Ir each).
+The other 3.68 M is diffuse codegen in a 3,300-line function and did not
+localise: `#[inline(never)]` on `static_effect_gather_bits` (so the 471-arm
+match is not inlined into the gather twice) reads **+1.17 M worse**, and
+making the audit's `before` debug-only reads **flat**, so it is neither the
+inlined match nor a live `Vec::len`. **No permanent in `--decks fixed` has a
+printed static ability at all** — `sa_cards` is empty on every gather, which
+is why the passes were free there and why a mask can only add the cost of
+asking. `selfplay_train`'s actors play the SOS pool.
+
+**A pool rule this pass adds, and pass 53's is its other half.** "Which pool
+does the change live on" tells you where a win will show. Its converse is
+that a *gate* lives on the pool that has nothing to gate: the cost of asking
+lands exactly where the answer is always no. Quote all three pools for
+anything that adds a per-call question, and say which pool the shipped
+workload is.
 
 ### Fifty-sixth pass — ask what varies with the shape
 
@@ -3630,38 +3818,52 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-FIFTH TIP.** The
-table below was taken at **3,332 M**, i.e. after (A) and before (B)-(H) took
-the pool to **3,199 M** — read the shares, not the absolutes, and re-read
-the table before ranking work off it. Self cost:
+**(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-SEVENTH TIP
+(3,082,752,248).** Self cost, whole program:
 
 | row | % | note |
 |---|---|---|
-| `gather_continuous_effects_inner` | **5.88** | 59,470 gathers, 384 M inclusive (**11.5 %**). The single largest subtree |
-| `__memcpy_avx_unaligned_erms` | 5.31 | |
-| `dispatch_triggers_for_events` | 4.75 | measured diffuse at the 49th; not re-read here |
-| `evaluate_requirement_static_hinted` | 3.32 + 1.35 | two arities |
-| allocator family | ~11 | `_int_free` 3.74, `malloc` 2.79, `_int_malloc` 2.60, `free` 2.30 |
-| `Arc::clone_from_ref_in` | 2.92 | |
-| `creature_type_change_in_scope` | 0.93 | the fifty-fifth pass's own gate — **PAID by (B)**, which took the mutex off the memo hit |
+| `__memcpy_avx_unaligned_erms` | **5.73** | the CoW/clone family's memory traffic |
+| `dispatch_triggers_for_events` | **5.14** | **the largest engine function, and "measured diffuse at the 49th" is the last time anyone read it** |
+| `gather_continuous_effects_inner` | 3.83 | was 6.12 % at the pass-55 tip; pass 57 took 40 % of its self cost |
+| allocator family | ~11.1 | `_int_free` 3.54, `malloc` 2.69, `_int_malloc` 2.64, `free` 2.19 |
+| `Arc::clone_from_ref_in` | 3.07 | |
+| `Vec::from_iter` | 2.75 | |
+| `evaluate_requirement_static_hinted` | 2.11 | |
+| `check_state_based_actions` | 2.02 | |
+| `compute_permanent_pass` / `computed_permanent` | 1.47 / 1.45 | |
+| `GameState::clone` / `Arc::make_mut` | 1.37 / 1.26 | |
+| `sba_board_scan` | 1.30 | |
+| `card_can_grant_keyword` | 1.25 | |
+| `activate_ability_inner` | 1.24 | |
 
-**Paid since that table was taken**, all in the same pass: the gate's own
-mutex (B), `affected_from_requirement`'s heap stack (C),
-`restore_payment_state`'s unshare (D), `extract_power_gate`'s tree clone
-(E), and the per-card grant walk's `battlefield_find` (F)-(H). The
-allocator family is the row that moved most — 1,963,140 allocations ->
-about 1.79 M — and the gather is still the largest subtree.
+**Two things to rank off it.** `dispatch_triggers_for_events` is now the
+largest engine row and has not been read from the top in seven passes — no
+caller table, no line profile, no call-count read; "diffuse" was a
+conclusion about the forty-ninth tip's shape, not a measurement of this one.
+And **`__memcpy` + the allocator family + `Arc::clone_from_ref_in` +
+`make_mut` + `GameState::clone` is ~21 % between them**, which is (-10)/(-13)'s
+checkpoint-sharing cost seen from the profile side.
 
 **The gather is the target, and the question is scope count, not gating.**
 59,470 gathers for six games; a freeze scope's *first* computed read gathers
 to fill its memo, so the count is roughly "how many scopes, plus every
 unscoped read". Gating that first read is refuted (see the fifty-fifth
-pass's Log). What is unread is the gather's own internals: by callee,
-`Vec::from_iter` is **151,660 calls / 89.2 M / 2.7 % of the program** plus
-28.2 M at the second arity, with `grow_one` 6.2 M and `__rust_alloc` 46,978
-— **~137 M of the gather's 384 M is allocation**, and it is 2.55
-`from_iter`s per gather. Which lines those are needs `profiling-lines` +
-`cg_lines.py --in gather_continuous_effects_inner`; nobody has run it.
+pass's Log).
+
+**The gather's internals are now read by line, and the `from_iter` row was
+the smaller half.** The fifty-seventh pass ran `profiling-lines` +
+`cg_lines.py --in gather_continuous_effects_inner` on cube, which this entry
+had been asking for. The gather's 195.9 M self / 6.12 % breaks down as
+iteration machinery, not allocation: `macros.rs:?` 29.8 M,
+`non_null.rs:444` 18.7 M, `non_null.rs:1720` 15.7 M, `mod.rs:?` 12.9 M,
+`macros.rs:180` 9.8 M — the thirty-eight per-static passes walking
+`sa_cards` and re-reading every card's `static_abilities`. **The tell is a
+run of identically-costed rows** (ten at 511,188 Ir, eight at 425,990, seven
+at 340,792), and none of them was inside `cg_lines.py`'s default forty-five;
+`--rows` was added for it. Pass 57 took those with a variant bitmask
+(`sos` -3.43 %, `cube` -2.52 %). The two `collect()`s pass 55's (I) removed
+were the other half and worth a fifth as much on `cube`.
 
 **Where the gathers come from** (`cg_contexts.py`, `--separate-callers=3`,
 cube, the fifty-fifth tip — the top of 74 contexts):
