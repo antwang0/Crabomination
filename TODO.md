@@ -21,6 +21,13 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 **Sessions run this branch concurrently: read PERF's Log before starting the
 top candidate, re-read the base after every rebase, and budget two callgrind
 rounds per commit.**
+**And two sessions took (-48) in the same hour this run, each spending two
+11-minute builds and forty minutes of runs on it.** Nothing stops that: both
+read "the highest-value fresh item" and both had disk. **Before starting a
+named candidate, `git fetch` and grep PERF's Log for its number** — that is
+the whole mitigation, it costs one command, and it would have saved this run
+an hour. If you take one anyway, say so in the Log as a replication rather
+than rewriting the entry.
 
 0. **The sixty-fourth pass closed (-44).** A token mint built the token's
    8,232-byte `CardDefinition` *per token in the batch* — `sos` **-0.605 %**,
@@ -53,7 +60,11 @@ rounds per commit.**
    perf commit in ten passes and 9.7 MiB an actor is not a constraint on any
    box that runs four of them. **The null resolved +/-0.99 % on the 2.80 GHz
    box, not the +/-2 % this file quotes for the 2.10 GHz one — run the null
-   where you are.**
+   where you are.** **Replicated on a second container the same hour** (the
+   other session took the entry concurrently): **+7.98 %**, CI +7.05..+8.91,
+   8/8, null flat at +/-1.03 %; RSS system 17.4-17.8 vs mimalloc 26.8-28.9.
+   The two CIs meet at ~7.0 % and do not overlap below it — **quote "6-8 %,
+   host-dependent", not one number** — and plan actors off **~27 MiB**.
 4. **Then (-43), the CoW clone cost, and its paying side is now read.**
    `Arc::clone_from_ref_in` is 85,650 calls / 64.0 M on `sos` (**4.20 %**)
    and 168,808 / 128.2 M on `cube` (**4.69 %**) — 19.4 % of `make_mut`
@@ -77,10 +88,12 @@ rounds per commit.**
    allocator — both sides are read and both are flat.** (b) `cg_edges.py
    --callers SpecFromIterNested` ranked by **calls**, then ask which
    collects can be non-empty on the pools the actors play — that is (-45).
-   (c) **Rank rows by `cube% / sos%`, not by either share** (`--rows 0` on
-   *both* dumps, or truncation reads as an infinite ratio). That device
-   found pass 62's second commit and pointed pass 63 at `pick_blocks_inner`
-   (2.09x). **The ratio is a pointer, not a size** — confirm with Ir/call.
+   (c) **Rank rows by `cube% / sos%`, not by either share** —
+   `scripts/cg_ratio.py cg.cube.out cg.sos.out`, which exists now and reads
+   `cg_edges.py`'s parse directly, so the truncation-reads-as-infinite
+   failure cannot happen. That device found pass 62's second commit and
+   pointed pass 63 at `pick_blocks_inner` (2.09x). **The ratio is a pointer,
+   not a size** — confirm with Ir/call.
 7. **Crash-freedom recipe (unchanged, nearly free).** Add `--decks cube`
    and `--decks sealed` (`--games 120 --threads 3`, two seeds) to the
    standing `--decks all` grid whenever a pass touches rules code: `all` is
@@ -98,9 +111,12 @@ rounds per commit.**
    `release`/mimalloc **24.0-24.3**, `overflow` 27.2. The sixtieth pass's
    "-19 %, 17.7 MiB" is a `--no-default-features` reading and reproduces
    exactly — but **plan actor counts off ~24 MiB**. Nor does RSS compare
-   across containers (2.10 GHz box 24.0-24.3, 2.80 GHz box 30.0-30.1). (a) Clock numbers
-   go through `scripts/ab_wall.py` with its null control; eight blocks
-   resolve **+/-2 % and nothing finer**, and Ir over-reads by ~2x. (b)
+   across containers (2.10 GHz box 24.0-24.3, 2.80 GHz box 26.8-30.1). (a) Clock
+   numbers go through `scripts/ab_wall.py` with its null control. The
+   **+/-2 %** this file records was calibrated on the 2.10 GHz box; **both
+   nulls run on the 2.80 GHz one this run resolved about +/-1 %**, so the
+   resolution is a property of the host and the minute — run the null where
+   you are and quote what it says. Ir over-reads by ~2x. (b)
    `name_index()` builds 22,568 `CardDefinition`s to read their names —
    104.7 M Ir, **6.8 % of a six-game `sos` total and 0 % of `cube` and
    `fixed`**. **Subtract it before quoting an `sos` share**, and note the
@@ -108,9 +124,8 @@ rounds per commit.**
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **770** (was 1,096 — "Engine — Missing Mechanics"
-   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.8k. Suite is **14 test
-   binaries / 18,736 tests**, not the "22" older blocks quote. Next folds:
+10. **Housekeeping.** TODO **~800**, PERF 7.9k. Suite is **14 test
+   binaries / 18,744 tests**, not the "22" older blocks quote. Next folds:
    PERF's 49th/50th Log entries (the 47th and 48th are folded), and
    ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k both want a topical triage — the
    backlog file's own header asks for one and nobody has done it.
@@ -124,12 +139,39 @@ rounds per commit.**
    `decisions` still 196,220. **It landed after the tip the Baseline's Ir
    columns were measured at** — a `cube` / `sos` total taken now is not
    comparable to them; re-base first.
-   **Next bug in the same family:** `Selector::TriggerSource` on a block
-   trigger binds the source, not the partner — every `BecomesBlocked` /
-   `Blocks` body that reads it is suspect (CARD_BACKLOG). And
-   `ChooseUnchosenMode` is still `requires_target => false` while its modes
-   can carry a slot; the filter is surfaced now, but whether the trigger
-   binds it wants a read of the push path.
+   **Both named successors are now CLOSED too, at the sixty-fifth pass.**
+   (a) `Selector::TriggerSource` on a **self-scoped** block trigger — closed
+   by `core_rules::block_trigger_selectors`, which found five abilities over
+   four cards past the three already rewritten: Abomination (a local copy of
+   `combat_partner_punisher` gating on `TriggerSource`; the card is black and
+   the gate asks green-or-white, so it never fired), Infernal Medusa,
+   Frostweb Spider, Tolarian Entrancer, Hedron Blade. **The scope is the
+   whole distinction**: on `AnyPlayer` / `YourControl`, and on an
+   `equipped_bonus` with `triggers_on_equipment`, the watcher is a third
+   object and `TriggerSource` *is* the partner — correct, and the test
+   exempts them. (b) `ChooseUnchosenMode` — `requires_target => false` is
+   right (it picks at resolution) but nothing bound the chosen mode's targets
+   either, so Silent Hallcreeper's copy mode has been dead since it shipped
+   *and* burned one of its three picks. Resolution auto-targets now, per
+   `Effect::Reflexive`; CR 601.2b drops unsatisfiable modes from the menu.
+   **The device both share, and it is the one to re-run:** a test whose ctx
+   hands in a target cannot see a binding bug, because a real trigger push
+   hands an empty list. Two shipped tests passed vacuously that way this run
+   (Abomination's blocker died to combat damage; the Hallcreeper's was fed a
+   target). **Ask of any per-card test: could this pass if the ability never
+   fired?**
+   **Where the class goes next, and it is a whole-catalog invariant like the
+   other two.** Every `Effect` variant that runs a *sub-body with its own
+   targeting* is a place a slot can be declared and never bound. Three are
+   now handled — `Reflexive`, `ReflexiveTrigger`, `ChooseUnchosenMode` — and
+   `core_rules::target_walkers` exempts the first two by name. **The audit
+   nobody has run: for each variant `requires_target` answers `false` on,
+   does its body get auto-targeted at resolution, or does the slot just
+   vanish?** `query.rs`'s `requires_target` arm list is the worklist
+   (`ChooseUpToN`, `Spree`, `Tiered`, `ChooseModesCast`,
+   `ChooseModesByPoints` all return `false` there). Each `false` is either
+   correct-because-resolution-targets or a dead mode; the two known answers
+   split one each way.
 12. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
    sacrifice / tap / discard" cluster is **read to the end**; the ~337
    remaining are the "you may draw / search / put into hand" tail, where
