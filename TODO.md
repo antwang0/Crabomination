@@ -18,92 +18,24 @@ reference and want their own triage pass):
 
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
-**Sessions run this branch concurrently: read the Log before starting the top
-candidate, and budget two callgrind rounds.**
+**Sessions run this branch concurrently.** Read PERF's Log for the pass you
+are continuing; every number below is written up there in full.
 
-1. **Pass 58, five commits, base `c18552fd`: deck build (`--decks sealed
-   --games 1`) 26,478,634 -> 21,774,018, -17.77 %**; `fixed` -0.101 %, `sos`
-   -0.053 % (both the binary shrinking, not the loop). Pass 56's question —
-   what varies with the shape? — asked of the four things it left, and the
-   answer was "nothing" every time. **Every per-shape data structure in this
-   builder was keyed by something the pool determines.**
-   **A `--decks sealed --games 1` absolute moves with binary size**: pass
-   57's (D)+(E) landing underneath moved it 37 k without touching the
-   builder. Re-read the base after a rebase before quoting a delta.
-2. **Pass 57 gained two more commits after its write-up: (D) `603d354b` and
-   (E) `6c5dd0ab`, a second session's, rebased in.** The gather allocated a
-   `Vec` per static-ability card *and* another per emitted effect, both
-   drained by the caller one frame up; on top of (B)+(C) they read cube
-   -1.001 / -0.424 %, sos -0.634 / -0.283 %, **fixed -0.011 / -0.189 %** —
-   the only rows in pass 57 that move `fixed` down. **The placement (B)'s
-   variant table did not try is still on the table and is worth ~0.25 % of
-   `fixed`:** the board test *inside* the loop (`if mask & bit == 0 { break;
-   }`) read +0.234 % where the slice swap read +1.076 % on the same base. It
-   is a ~2,000-line re-indent of thirty-eight blocks; take it when the branch
-   is quiet.
-3. **Top candidate: (-43), the CoW-handle family.** `make_mut` on `sos` is
-   475,676 calls / ~50 M Ir after this pass took it down 18.3 %, and (-43)
-   has the caller table. **Read its Ir/call column first — it splits the
-   family in two.** ~30 Ir/call is a refcount check on an already-unshared
-   handle and `let x = &mut *…` collapses it (that is the paid half). 230-458
-   Ir/call is a *real clone*, binding once buys nothing, and the question is
-   who else holds the `Arc`. The two clone-shaped rows
-   (`activate_ability_inner` 13.85 M, `cast_spell_with_convoke` 12.01 M) are
-   1.6 % of `sos` between them.
-   **Read one level further and the number gets much bigger, which is the
-   actual handoff:** `make_mut` really clones 85,322 of those 475,676 times,
-   and with the specialised `deref_mut`s the CoW bodies are deep-copied
-   **91,478 times / 80.9 M Ir = 5.04 % of `sos`**. The *cause* is the bot's
-   probe machinery — `GameState::clone` 19,086 times / 24.8 M Ir — so its
-   true price is **105.7 M Ir, 6.6 % of `sos`**. (-43) has the three
-   sub-candidates, and **every one of them is an existing entry that was
-   already answered** — the checkpoint is (-13) (pass 43 took the provable
-   half, `fallibility_closure.py` says the rest isn't provable, and
-   narrowing it re-opens the audit-P0 partial-mutation family), the probe
-   cell is already lazy, `accept_on`'s divergence is the point, and the
-   `try_init` table's big rows are a static-eval memo and `SweepMana`
-   = (-41). **That is the finding**: the clone cost has been costed three
-   times from the *causing* side and never from the *paying* side, which is
-   3.2x larger and appears in no caller table of `GameState::clone`. **Get the `selfplay_train` clock number before
-   sizing any of it:** 17.0 M of the 80.9 M is `__rust_alloc` under
-   callgrind's system allocator, and the rest is `memcpy`.
-   The deck builder is *done* for now:
-   (-39)'s copy-cap head is paid, and what is left of it is `build_shape`'s
-   24.77 % residual (diffuse for three passes), `__memcpy` 9.49 % (the pools'
-   definitions, built once) and a scorer whose colour argument genuinely
-   varies per shape.
-4. **Two fresh engine candidates, both read on `sos` (the actors' pool).**
-   (-42) is **PAID as a site, in two commits**: `Player` is a CoW handle, so
-   `do_untap`'s per-turn seat writes unshared the seat once per field.
-   `8a0f11fb` took the ~55-field reset loop (sos -0.261 %, cube -0.253 %,
-   `make_mut` 212,012 -> 80,148); the follow-up took the tail's three write
-   runs and three more seat loops (**sos -0.120 %, cube -0.115 %**,
-   80,148 -> 41,200). What is left is per-card singletons with nothing to
-   bind. A third commit took the same device off the untap step entirely —
-   `advance_step`'s cleanup reset (51,142 -> 9,198), combat damage's tally
-   (21,012 -> 10,008), the per-seat zone sweep — for **sos -0.112 %, cube
-   -0.108 %**. A `--callers make_mut` sweep is what found all three; run it
-   before guessing at a site. **What is left is (-43), item 3.**
-   **Re-read the base after a rebase — this is not just a `sealed` rule.**
-   The follow-up first read -2.069 % against the Baseline block's
-   `1,639,754,965`, which predates `cae6b605` rebasing in underneath; the
-   true base at `d2a8320b` is `1,607,757,957`. Model the win before you
-   measure it, and let a 17x miss indict the base.
-   (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos — the
-   pre-filter is sound only there (the other two callers index the list) and
-   **worth zero on `sos`**: the set's single `GrantActivatedAbility` (Petrified
-   Hamlet) grants `{T}: Add {C}`, which survives it. Cube only.
-5. **(-40) is closed as a whole.** The clone/allocator family is 26.5 % of
-   `sos`, read from the top, and diffuse: `__memcpy`'s top twenty callers
-   hold half its 1.29 M calls, the rest is 21,130 rows. Take (-41)/(-42).
-6. **`cg_symbolize.py` is now usually a no-op** — the dump comes back
-   symbolized. Run `cg_edges.py` on the raw dump first.
-7. **Housekeeping.** TODO 1.0k, PERF 5.9k (48th/49th Baseline and 45th/46th
-   Log folded this run; the 48th/49th Log entries are next). ENGINE_BACKLOG
-   4.9k / CARD_BACKLOG 4.2k still want a triage pass.
-8. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings** (read the
-   oracle first). **Top ML item is still a training run, not code:** a good
-   deck net, and two passes of builder work now compound inside its 32x.
+1. **Top candidate: (-43), the CoW clone cost.** 91,478 deep copies / 80.9 M
+   Ir = **5.04 % of `sos`**, and every sub-candidate on the *causing* side is
+   an entry already answered ((-13), (-41), `ProbeCell`). The paying side has
+   never been read. Get a `selfplay_train` number before sizing it.
+2. **Then (-41)** — `available_mana`'s grant walk, cube only, worth zero on
+   `sos`.
+3. **Pass 58 is done and paid**: five deck-builder commits (`sealed` **-17.77
+   %**) plus three CoW-handle commits (`sos` -0.49 %, `make_mut` 582,552 ->
+   475,676). (-42), the builder and (-40) are closed.
+4. **Left from pass 57:** the placement (B)'s variant table did not try,
+   ~0.25 % of `fixed` — a 2,000-line re-indent of 38 blocks. When it's quiet.
+5. **Housekeeping.** TODO 1.0k, PERF 6.3k; ENGINE_BACKLOG 4.9k /
+   CARD_BACKLOG 4.2k want triage; PERF's 48th/49th Log entries fold next.
+6. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings** (oracle
+   first). **Top ML item is still a training run, not code.**
 
 ## Standing rules for a perf pass
 

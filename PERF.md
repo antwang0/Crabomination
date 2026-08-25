@@ -324,6 +324,32 @@ overstates what ships. Measured on the real loop with mimalloc,
 `--actors 3 --games 120 --steps 1 --seed 7`, alternated A/B/A/B:
 **26.1 / 25.0 games/s before, 85.6 / 85.6 after — 3.28x.**
 
+**How to actually run it, characterised at the fifty-eighth pass, because
+two of the three obvious instincts are wrong.**
+
+* **Always discard the first run.** It reads ~45 % low, every time, on an
+  otherwise idle box: 66.6 then 119.8, 119.8. Four separate batches this
+  pass each opened with a low outlier (80.0, 59.9, 74.9, 66.6) and it is
+  what a single-run reading will hand you.
+* **Warm, the committed 120-game recipe is stable to 0.1 %** — six
+  consecutive runs read 119.9 / 119.9 / 119.9 / 119.8 / 119.9 / 119.8. It is
+  a *good* bench, which is not obvious from the fact that it spans one
+  second.
+* **A longer run is noisier, not quieter.** 1,200 games reads 104-115
+  (~10 % spread) and 3,000 games 109.3-114.5 (~5 %), against 120 games'
+  0.1 %. Raising the game count to fight noise makes it worse here, so
+  don't; the learner thread and the 250 k row window start participating.
+  The absolutes are also not comparable across game counts, so a baseline
+  number only means something at a fixed one.
+* **Nothing else may be running.** The 1,200-game batch read
+  68.1/89.2/90.5/83.2 with a leftover build finishing, and 104-115 with the
+  box idle. Check `/proc/loadavg` before quoting.
+
+**The 85.6 above is not comparable to a reading taken now**: the same recipe
+on this container reads **119.8 games/s** at the fifty-eighth tip. That is
+container and accumulated-pass drift, not one pass's win — quote it as a
+same-session A/B or not at all.
+
 ## Build time — the file-size lever is dead, measured 2026-08-23
 
 **"Oversized engine files dominate incremental rebuilds" is false on this
@@ -508,9 +534,12 @@ turns_per_game   27.53   -> 27.53
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
 peak_rss_mib     22.0
-suite            18,728 passed / 0 failed / 5 ignored over 22 binaries (A-D and again at (E))
+suite            18,728 passed / 0 failed / 5 ignored over 22 binaries (A-D, at (E), and at each of the three CoW commits)
 golden traces    7 passed, all unchanged
 clippy           `--workspace --all-targets` clean, all eight crates
+throughput       119.8 games/s warm (`selfplay_train --actors 3 --games 120
+                 --steps 1 --seed 7`), best-of-6, 0 stalls. Not comparable to
+                 the 85.6 in "How to measure" — see the note there.
 rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 58-73
 ```
@@ -519,7 +548,9 @@ host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 58
 --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400 games,
 20,396 decided, no panic**, and all 10,198 mirrored pairs split
 (`rho -1.000` on every seed). The 4 undecided are seed 11's standing rules
-draws, the same four every pass since the forty-fourth has recorded.
+draws, the same four every pass since the forty-fourth has recorded. **Re-run
+at the tip that carries the three CoW-handle commits: identical — 3,398 /
+3,400 / 3,400 pairs, 0 A-sweeps, 0 B-sweeps, every pair split.**
 
 Behaviour beyond the bench: `--decks sealed --games 6` and `--decks all
 --games 20 --seed 11` are **byte-identical to the base at every one of the
