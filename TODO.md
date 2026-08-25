@@ -96,23 +96,28 @@ rounds per commit.**
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **750** (was 1,096 — "Engine — Missing Mechanics"
-   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.5k. Suite is **14 test
+10. **Housekeeping.** TODO **759** (was 1,096 — "Engine — Missing Mechanics"
+   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.7k. Suite is **14 test
    binaries / 18,736 tests**, not the "22" older blocks quote. Next folds:
    PERF's 47th/48th Log entries, and ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k
    both want a topical triage — the backlog file's own header asks for one
    and nobody has done it.
 11. **Bugs: the parallel target-walker class is CLOSED** (`core_rules::
-   target_walkers` baseline 39 -> **0**, an invariant now, not a budget). 20
-   of the 39 were the test counting `Reflexive` / `ReflexiveTrigger` bodies
-   the walker is deliberately blind to; **19 were real**, each a shipped card
-   whose targeted effect resolved against an empty list.
-   **This landed after the perf tip the Baseline columns were measured at**
-   — `--bench`, decisions and traces are unmoved, but a `cube` / `sos` Ir
-   total taken now is not comparable to them; re-base first.
+   target_walkers` 39 -> **0**, and it asserts `is_empty()` now — add the
+   walker arm, do not reintroduce a threshold). 20 of the 39 were the test
+   counting `Reflexive` / `ReflexiveTrigger` bodies the walker is
+   deliberately blind to; **19 were real**, each a shipped card whose
+   targeted effect resolved against an empty list. Verified on the wider
+   crash-freedom grid at `aaadfdc2`: 11,600 games clean, `--bench`
+   `decisions` still 196,220. **It landed after the tip the Baseline's Ir
+   columns were measured at** — a `cube` / `sos` total taken now is not
+   comparable to them; re-base first.
    **Next bug in the same family:** `Selector::TriggerSource` on a block
    trigger binds the source, not the partner — every `BecomesBlocked` /
-   `Blocks` body that reads it is suspect (CARD_BACKLOG).
+   `Blocks` body that reads it is suspect (CARD_BACKLOG). And
+   `ChooseUnchosenMode` is still `requires_target => false` while its modes
+   can carry a slot; the filter is surfaced now, but whether the trigger
+   binds it wants a read of the push path.
 12. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
    sacrifice / tap / discard" cluster is **read to the end**; the ~337
    remaining are the "you may draw / search / put into hand" tail, where

@@ -684,6 +684,13 @@ all seven traces are unchanged — but they *are* in the cube and sealed pools,
 so a `--decks cube` or `--decks sos` Ir total taken after `1399e86b` is not
 comparable to the columns above. Re-base before quoting one.
 
+Re-checked at `aaadfdc2` on the `overflow` build, same grid as above:
+`--decks all --games 200` 3,400 decided / 0 undecided per seed, `cube` 960,
+`sealed` 1,440 — **11,600 games, no panic, no arithmetic overflow, every pair
+split**, and `--bench` `decisions` still **196,220** byte-identical with
+`turns_per_game` 27.53 and zero stalls. Nineteen cards that used to resolve
+against an empty target list now bind one, and nothing in the pools noticed.
+
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass.
 
