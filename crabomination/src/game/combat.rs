@@ -4909,18 +4909,16 @@ impl GameState {
         damage_amount: u32,
         static_granted: &[crate::card::TriggeredAbility],
     ) {
-        let attacker_controller = self
-            .battlefield
-            .iter()
-            .find(|c| c.id == source)
-            .map(|c| c.controller);
-
         // One [`DamageTrigger`] bucket per requested kind; drained in order at
         // the bottom.
         let slot = |k: &EventKind| kinds.iter().position(|want| want == k);
         let mut by_kind: Vec<Vec<DamageTrigger>> = kinds.iter().map(|_| Vec::new()).collect();
 
+        // One lookup of the dealer, not two: the controller Phase 1b onward
+        // needs is a field of the card Phase 1 walks the battlefield to find.
+        let mut attacker_controller = None;
         if let Some(c) = self.battlefield.iter().find(|c| c.id == source) {
+            attacker_controller = Some(c.controller);
             // Printed + statics-granted ("Slivers you control have
             // '…combat damage…'" — Tempered/Virulent) + instance-granted
             // (`GrantTriggeredAbility` on `granted_triggers_eot` — Summon:
@@ -5067,33 +5065,37 @@ impl GameState {
         // which cares about the dealer's characteristics rather than its
         // controller. `EventSpec.dealer_filter` gates on the dealing creature;
         // the dealer's own `AnyPlayer` trigger already fired in Phase 1.
-        {
-            let dealer_ok: Vec<(usize, CardId, Effect, usize, Option<crate::card::Predicate>)> =
-                self.battlefield
-                    .iter()
-                    .filter(|c| c.id != source)
-                    .flat_map(|c| {
-                        c.definition.triggered_abilities.iter().filter_map(move |t| {
-                            matches!(t.event.scope, crate::effect::EventScope::AnyPlayer)
-                                .then(|| slot(&t.event.kind))
-                                .flatten()
-                                .map(|i| (i, c.id, c.controller, t))
-                        })
+        //
+        // A plain nested loop, not the `filter`/`flat_map`/`filter`/`map`
+        // chain this used to `collect()` into a `Vec`: nothing in it borrows
+        // `self` mutably, so there was never anything to buffer, and the
+        // adapter stack was **3,671,940 Ir / 0.30 % of a six-game `--decks
+        // fixed` run** in `Map::try_fold` alone (fifty-ninth pass) against a
+        // `Vec` that is empty on every board without an `AnyPlayer` listener.
+        for c in &self.battlefield {
+            if c.id == source {
+                continue;
+            }
+            for t in &c.definition.triggered_abilities {
+                if matches!(t.event.scope, crate::effect::EventScope::AnyPlayer)
+                    && let Some(i) = slot(&t.event.kind)
+                    && t.event.dealer_filter.as_ref().is_none_or(|f| {
+                        self.evaluate_requirement_static(
+                            f,
+                            &Target::Permanent(source),
+                            c.controller,
+                            None,
+                        )
                     })
-                    .filter(|(_, _, ctrl, t)| {
-                        t.event.dealer_filter.as_ref().is_none_or(|f| {
-                            self.evaluate_requirement_static(
-                                f,
-                                &Target::Permanent(source),
-                                *ctrl,
-                                None,
-                            )
-                        })
-                    })
-                    .map(|(i, id, ctrl, t)| (i, id, t.effect.clone(), ctrl, t.event.filter.clone()))
-                    .collect();
-            for (i, id, effect, ctrl, filter) in dealer_ok {
-                by_kind[i].push((id, effect, ctrl, filter, true));
+                {
+                    by_kind[i].push((
+                        c.id,
+                        t.effect.clone(),
+                        c.controller,
+                        t.event.filter.clone(),
+                        true,
+                    ));
+                }
             }
         }
 
