@@ -2046,6 +2046,32 @@ The three lessons those blocks were carrying, which are why the numbers can go:
   archetypes. One `cp`, three minutes, and it answers what a recorded
   decision count only answers if the invocation matches.
 
+**Crash-freedom at the sixty-second tip (`52e0b801`): clean, and identical to
+the record.** `overflow` profile (`release-fast` + `overflow-checks`), `--a
+gang --b gang --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13:
+**20,400 games, 20,396 decided, no panic and no arithmetic overflow**,
+28.5-30.4 s a seed against a 10m11s build. The 4 undecided are all on seed
+11, which is what every tip since the forty-second pass records.
+
+**Run here because this tip is the first to carry both sessions' lines**,
+and the other one's four commits reordered state-based actions on purpose —
+`assign_sectors` and `sync_graveyard_shapeshifters` moved under
+`sba_board_scan`, and the converge oracle changed which payment order two
+cards take. Reordering SBAs is exactly the shape that turns into a stall or
+a panic several thousand games out.
+
+It did not, and the integration check is sharper than the grid:
+`CRAB_THREAD_CHECK=1 --bench` on the same binary reads **decisions 196,220,
+turns_per_game 27.53, 0 stalls (cap 0 / stuck 0 / draw 0), determinism ok
+(all pairs split, rho -1.000), thread_determinism ok (3 vs 1 threads
+identical)**, `host_calib_ms` 48 (in the 47-52 band). **196,220 is
+byte-identical to the count at `b370d69e`, before any of the five commits.**
+Five commits from two sessions, four of them behaviour-changing in the
+rules, and the bench workload makes the same decisions in the same order.
+
+Its `peak_rss_mib 27.3` is **not** comparable to the 17.7-18.3 MiB in the
+Baseline block — that is an `overflow` build, and RSS is profile-dependent.
+
 **Crash-freedom at the sixtieth tip: clean, and identical to the record.**
 `overflow` profile (`release-fast` + `overflow-checks`), `--a gang --b gang
 --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400 games,
