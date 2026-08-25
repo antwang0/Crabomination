@@ -12063,12 +12063,13 @@ impl GameState {
                 }
                 // CR 721.2a — static abilities granted by the band.
                 for se in &band.statics {
-                    all_effects.extend(static_effect_to_effects(
+                    static_effect_to_effects(
                         se,
                         card,
                         card.object_timestamp(),
                         self.active_player_idx == card.controller,
-                    ));
+                        &mut all_effects,
+                    );
                 }
             }
         }
@@ -12122,12 +12123,13 @@ impl GameState {
                     crate::game::effects::EffectContext::for_spell(card.controller, None, 0, 0);
                 ctx.source = Some(card.id);
                 if self.evaluate_predicate(condition, &ctx) {
-                    all_effects.extend(static_effect_to_effects(
+                    static_effect_to_effects(
                         inner,
                         card,
                         card.object_timestamp(),
                         self.active_player_idx == card.controller,
-                    ));
+                        &mut all_effects,
+                    );
                 }
             }
             // CR 611.2 — Sheltering Prayers: the grant is gated on each
@@ -22772,7 +22774,7 @@ fn push_static_ability_effects(
     out: &mut Vec<ContinuousEffect>,
 ) {
     for sa in &card.definition.static_abilities {
-        out.extend(static_effect_to_effects(&sa.effect, card, timestamp, your_turn));
+        static_effect_to_effects(&sa.effect, card, timestamp, your_turn, out);
     }
 }
 
@@ -22785,7 +22787,8 @@ fn static_effect_to_effects(
     card: &CardInstance,
     timestamp: u64,
     your_turn: bool,
-) -> Vec<ContinuousEffect> {
+    out: &mut Vec<ContinuousEffect>,
+) {
     use crate::effect::StaticEffect;
     let source = card.id;
 
@@ -22795,9 +22798,7 @@ fn static_effect_to_effects(
             // only while the source Class is at level `n` or higher.
             StaticEffect::WhileClassLevelAtLeast { n, inner } => {
                 if card.class_level >= *n {
-                    static_effect_to_effects(inner, card, timestamp, your_turn)
-                } else {
-                    vec![]
+                    static_effect_to_effects(inner, card, timestamp, your_turn, out)
                 }
             }
             // CR 611.2 — the turn gate: emit the inner effect only during the
@@ -22806,35 +22807,29 @@ fn static_effect_to_effects(
             // instead applied — turn-gated — by the stateful gather path.)
             StaticEffect::WhileYourTurn { inner } => {
                 if your_turn {
-                    static_effect_to_effects(inner, card, timestamp, your_turn)
-                } else {
-                    vec![]
+                    static_effect_to_effects(inner, card, timestamp, your_turn, out)
                 }
             }
             // CR 611.2 — mirror gate: emit the inner effect only during turns
             // other than the source controller's (Oak Street Innkeeper).
             StaticEffect::WhileNotYourTurn { inner } => {
-                if your_turn {
-                    vec![]
-                } else {
-                    static_effect_to_effects(inner, card, timestamp, your_turn)
+                if !your_turn {
+                    static_effect_to_effects(inner, card, timestamp, your_turn, out);
                 }
             }
             // CR 611.2 — the counter gate: emit the inner effect only while the
             // source carries `n` or more `kind` counters (the Quest cycle).
             // Gated in the stateful `gather_continuous_effects` pass, which has
             // the `GameState` the predicate needs.
-            StaticEffect::WhileCondition { .. } => vec![],
+            StaticEffect::WhileCondition { .. } => {},
             StaticEffect::WhileCountersAtLeast { kind, n, inner } => {
                 if card.counter_count(*kind) >= *n {
-                    static_effect_to_effects(inner, card, timestamp, your_turn)
-                } else {
-                    vec![]
+                    static_effect_to_effects(inner, card, timestamp, your_turn, out)
                 }
             }
             StaticEffect::PumpPT { applies_to, power, toughness } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22842,13 +22837,12 @@ fn static_effect_to_effects(
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::ModifyPowerToughness(*power, *toughness),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::SetBaseToughnessForMatching { applies_to, toughness } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22856,13 +22850,12 @@ fn static_effect_to_effects(
                         sublayer: Some(PtSublayer::SetValue),
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::SetToughness(*toughness),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::PumpPTPerOwnCreatureType { applies_to, per_power, per_toughness, max } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22872,17 +22865,16 @@ fn static_effect_to_effects(
                         modification: Modification::ModifyPtPerOwnCreatureType(
                             *per_power, *per_toughness, *max,
                         ),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::PumpPTPerCounterOnSource { applies_to, kind, per_power, per_toughness } => {
                 let n = card.counter_count(*kind) as i32;
                 if n == 0 {
-                    return vec![];
+                    return;
                 }
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22893,13 +22885,12 @@ fn static_effect_to_effects(
                             n * per_power,
                             n * per_toughness,
                         ),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::GrantKeyword { applies_to, keyword } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22907,15 +22898,14 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::AddKeyword(keyword.clone()),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             // Ward Sliver — the granted protection color comes off the
             // source's ETB `chosen_color` stamp; inert until chosen.
             StaticEffect::GrantProtectionFromChosenColor { applies_to } => {
-                match (card.chosen_color, selector_to_affected(applies_to, card)) {
-                    (Some(color), Some(affected)) => vec![ContinuousEffect {
+                if let (Some(color), Some(affected)) = (card.chosen_color, selector_to_affected(applies_to, card)) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22923,39 +22913,37 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::AddKeyword(Keyword::Protection(color)),
-                    }],
-                    _ => vec![],
+                    });
                 }
             }
             // Swirl the Mists — one layer-3 rewrite per non-chosen color, over
             // every permanent on the battlefield.
-            StaticEffect::AllColorWordsBecomeChosen => match card.chosen_color {
-                Some(to) => crate::mana::Color::ALL
-                    .iter()
-                    .filter(|c| **c != to)
-                    .map(|from| ContinuousEffect {
-                        timestamp,
-                        source,
-                        affected: AffectedPermanents::All {
-                            controller: None,
-                            card_types: vec![],
-                            exclude_source: false,
-                            color: None,
-                            colorless: false,
-                            token: None,
-                            owned_by_controller: None,
+            StaticEffect::AllColorWordsBecomeChosen => {
+                if let Some(to) = card.chosen_color {
+                    out.extend(crate::mana::Color::ALL.iter().filter(|c| **c != to).map(
+                        |from| ContinuousEffect {
+                            timestamp,
+                            source,
+                            affected: AffectedPermanents::All {
+                                controller: None,
+                                card_types: vec![],
+                                exclude_source: false,
+                                color: None,
+                                colorless: false,
+                                token: None,
+                                owned_by_controller: None,
+                            },
+                            layer: Layer::L3Text,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ReplaceColorWord(*from, to),
                         },
-                        layer: Layer::L3Text,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ReplaceColorWord(*from, to),
-                    })
-                    .collect(),
-                None => vec![],
-            },
+                    ));
+                }
+            }
             StaticEffect::LoseKeyword { applies_to, keyword } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22963,13 +22951,12 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::RemoveKeyword(keyword.clone()),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::CantHaveKeyword { applies_to, keyword } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22977,14 +22964,13 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::CantHaveKeyword(keyword.clone()),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::GrantAllBasicLandTypes { applies_to } => {
                 use crate::card::LandType;
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -22998,15 +22984,14 @@ fn static_effect_to_effects(
                             LandType::Mountain,
                             LandType::Forest,
                         ]),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::CreaturesYouControlAreChosenType => {
                 // Conspiracy — a layer-4 subtype *replacement* on every
                 // creature the source's controller controls.
-                match card.chosen_creature_type {
-                    Some(ct) => vec![ContinuousEffect {
+                if let Some(ct) = card.chosen_creature_type {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected: AffectedPermanents::All {
@@ -23022,12 +23007,11 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::SetCreatureTypes(vec![ct]),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
-            StaticEffect::MatchingAreChosenTypeToo { filter } => match card.chosen_creature_type {
-                Some(ct) => vec![ContinuousEffect {
+            StaticEffect::MatchingAreChosenTypeToo { filter } => if let Some(ct) = card.chosen_creature_type {
+                out.push(ContinuousEffect {
                     timestamp,
                     source,
                     affected: AffectedPermanents::CardMatch {
@@ -23038,15 +23022,14 @@ fn static_effect_to_effects(
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::AddCreatureType(ct),
-                }],
-                None => vec![],
+                });
             },
             StaticEffect::LandsYouControlAreChosenType => {
                 // Realmwright — lands the source's controller controls are the
                 // chosen basic type in addition (layer-4 additive). No-op until
                 // the ETB choice stamps `chosen_land_type`.
-                match card.chosen_land_type {
-                    Some(land_type) => vec![ContinuousEffect {
+                if let Some(land_type) = card.chosen_land_type {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected: AffectedPermanents::All {
@@ -23062,13 +23045,12 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::AddLandType(land_type),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::GrantColorless { applies_to } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -23076,13 +23058,12 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::LoseAllColors,
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::SetColorOfMatching { applies_to, color } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -23090,8 +23071,7 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::SetColors(vec![*color]),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::MatchingLandsAreCreatures {
@@ -23115,14 +23095,12 @@ fn static_effect_to_effects(
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification,
                 };
-                let mut out = vec![
-                    mk(Layer::L4Type, None, Modification::AddCardType(CardType::Creature)),
-                    mk(
-                        Layer::L7PowerTough,
-                        Some(PtSublayer::SetValue),
-                        Modification::SetPowerToughness(*power, *toughness),
-                    ),
-                ];
+                out.push(mk(Layer::L4Type, None, Modification::AddCardType(CardType::Creature)));
+                out.push(mk(
+                    Layer::L7PowerTough,
+                    Some(PtSublayer::SetValue),
+                    Modification::SetPowerToughness(*power, *toughness),
+                ));
                 out.extend(keywords.iter().map(|kw| {
                     mk(Layer::L6Ability, None, Modification::AddKeyword(kw.clone()))
                 }));
@@ -23132,11 +23110,10 @@ fn static_effect_to_effects(
                 if !colors.is_empty() {
                     out.push(mk(Layer::L5Color, None, Modification::SetColors(colors.clone())));
                 }
-                out
             }
             StaticEffect::SetColorOfMatchingToChosen { applies_to } => {
-                match (selector_to_affected(applies_to, card), card.chosen_color) {
-                    (Some(affected), Some(color)) => vec![ContinuousEffect {
+                if let (Some(affected), Some(color)) = (selector_to_affected(applies_to, card), card.chosen_color) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -23144,14 +23121,13 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::SetColors(vec![color]),
-                    }],
-                    _ => vec![],
+                    });
                 }
             }
             StaticEffect::GrantAllColors { applies_to } => {
                 use crate::mana::Color;
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -23165,14 +23141,13 @@ fn static_effect_to_effects(
                             Color::Red,
                             Color::Green,
                         ]),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             // Dress Down — every creature loses all abilities (layer 6).
             StaticEffect::CreaturesLoseAllAbilities => {
                 debug_assert!(static_effect_strips_abilities(effect), "strip gate: Dress Down");
-                vec![ContinuousEffect {
+                out.push(ContinuousEffect {
                     timestamp,
                     source,
                     affected: AffectedPermanents::All {
@@ -23188,11 +23163,11 @@ fn static_effect_to_effects(
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::RemoveAllAbilities,
-                }]
+                })
             }
             StaticEffect::SetBasePtForFilter { applies_to, power, toughness } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -23200,13 +23175,12 @@ fn static_effect_to_effects(
                         sublayer: Some(PtSublayer::SetValue),
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::SetPowerToughness(*power, *toughness),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::AddCreatureTypeToMatching { applies_to, creature_type } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => vec![ContinuousEffect {
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected,
@@ -23214,29 +23188,24 @@ fn static_effect_to_effects(
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::AddCreatureType(*creature_type),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
             StaticEffect::AddCardTypeToMatching { applies_to, card_type, artifact_subtype } => {
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => {
-                        let mk = |m| ContinuousEffect {
-                            timestamp,
-                            source,
-                            affected: affected.clone(),
-                            layer: Layer::L4Type,
-                            sublayer: None,
-                            duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification: m,
-                        };
-                        let mut fx = vec![mk(Modification::AddCardType(card_type.clone()))];
-                        if let Some(sub) = artifact_subtype {
-                            fx.push(mk(Modification::AddArtifactSubtype(*sub)));
-                        }
-                        fx
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    let mk = |m| ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: affected.clone(),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: m,
+                    };
+                    out.push(mk(Modification::AddCardType(card_type.clone())));
+                    if let Some(sub) = artifact_subtype {
+                        out.push(mk(Modification::AddArtifactSubtype(*sub)));
                     }
-                    None => vec![],
                 }
             }
             StaticEffect::LandTypeChanger { applies_to, land_type, replace }
@@ -23251,36 +23220,31 @@ fn static_effect_to_effects(
                 if let StaticEffect::LandTypeChangerWhileCounters { kind, n, .. } = effect
                     && card.counter_count(*kind) < *n
                 {
-                    return vec![];
+                    return;
                 }
-                match selector_to_affected(applies_to, card) {
-                    Some(affected) => {
-                        let mk = |layer, modification| ContinuousEffect {
-                            timestamp,
-                            source,
-                            affected: affected.clone(),
-                            layer,
-                            sublayer: None,
-                            duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification,
-                        };
-                        if *replace {
-                            // Blood Moon — lose other land types + abilities;
-                            // the intrinsic mana ability follows the type.
-                            debug_assert!(
-                                static_effect_strips_abilities(effect),
-                                "strip gate: Blood Moon",
-                            );
-                            vec![
-                                mk(Layer::L4Type, Modification::SetLandTypes(vec![*land_type])),
-                                mk(Layer::L6Ability, Modification::RemoveAllAbilities),
-                            ]
-                        } else {
-                            // Urborg — the type in addition.
-                            vec![mk(Layer::L4Type, Modification::AddLandType(*land_type))]
-                        }
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    let mk = |layer, modification| ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected: affected.clone(),
+                        layer,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification,
+                    };
+                    if *replace {
+                        // Blood Moon — lose other land types + abilities;
+                        // the intrinsic mana ability follows the type.
+                        debug_assert!(
+                            static_effect_strips_abilities(effect),
+                            "strip gate: Blood Moon",
+                        );
+                        out.push(mk(Layer::L4Type, Modification::SetLandTypes(vec![*land_type])));
+                        out.push(mk(Layer::L6Ability, Modification::RemoveAllAbilities));
+                    } else {
+                        // Urborg — the type in addition.
+                        out.push(mk(Layer::L4Type, Modification::AddLandType(*land_type)));
                     }
-                    None => vec![],
                 }
             }
             StaticEffect::EntersTapped { .. }
@@ -24062,14 +24026,14 @@ fn static_effect_to_effects(
             // Carth the Lion — read where loyalty activation costs apply.
             | StaticEffect::LoyaltyAbilitiesCostExtra(_)
             // Zabaz — read where the modular death trigger moves counters.
-            | StaticEffect::ModularBonusCounters(_) => vec![],
+            | StaticEffect::ModularBonusCounters(_) => {},
 
             // Serra's Emissary — the creature half is a layer-6 keyword grant
             // keyed to the ETB-chosen card type; the player half is read at
             // the targeting/damage gates.
             StaticEffect::YouAndCreaturesProtectionFromChosenCardType => {
-                match &card.chosen_card_type {
-                    Some(t) => vec![ContinuousEffect {
+                if let Some(t) = &card.chosen_card_type {
+                    out.push(ContinuousEffect {
                         timestamp,
                         source,
                         affected: AffectedPermanents::CardMatch {
@@ -24085,8 +24049,7 @@ fn static_effect_to_effects(
                         modification: Modification::AddKeyword(
                             crate::card::Keyword::ProtectionFromCardType(t.clone()),
                         ),
-                    }],
-                    None => vec![],
+                    });
                 }
             }
         }
