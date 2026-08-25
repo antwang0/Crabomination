@@ -277,7 +277,12 @@ throughput item barely at all — so that nobody reads the 6.8 % as a
 simulator cost and spends a pass on it.
 
 **When you do want a clock number, use `scripts/ab_wall.py` and run its null
-control.** It is the loop every pass has hand-rolled — alternate two binaries,
+control — and read the null's own resolution, because it is the box's, not the
+harness's.** The +/-2 % below is the 2.10 GHz container's; the 2.80 GHz one
+(`host_calib_ms` 50-57) resolved **+/-0.99 %** at the same eight blocks and
+workload at the sixty-fourth pass, which is what made (-48)'s -5.99 %
+quotable.
+ It is the loop every pass has hand-rolled — alternate two binaries,
 quote best-of — with the two things that loop was missing. It runs an **ABBA**
 schedule, so a linear host drift cancels inside a block instead of landing on
 whichever binary went first; and it reports the **mean of the per-block ratios
@@ -2402,6 +2407,15 @@ definition goes through `Arc::make_mut`, which unshares first, and nothing
 in the program branches on definition pointer identity (`Arc::ptr_eq` appears
 once, on `CowBox`, in a test-only helper). The memo is a pure function of its
 key, so thread-local storage adds no cross-thread order to the game.
+
+**The pass also answered (-48), which is measurement, not code: mimalloc is
+5.99 % faster than the system allocator** (eight ABBA blocks, 8/8, CI -7.04 ..
+-4.95 %, null control flat at +0.20 %) **and costs 9.7 MiB of RSS a process**
+(27.2 vs 17.5 on `release-fast`). Six percent is larger than any single perf
+commit in the last ten passes; the memory is bought and the default stays.
+The entry is closed with both columns in it. **The null resolved +/-0.99 % on
+this box against the +/-2 % this file records for the 2.10 GHz one** — run the
+null where you are.
 
 **And the other commit is the tool, not the engine**: `cg_lines.py`'s location
 column was a bare basename. See **How to measure** — the row this file has
@@ -4938,38 +4952,39 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-48) THE ALLOCATOR CHOICE ITSELF HAS NEVER BEEN MEASURED HEAD-TO-HEAD,
-AND IT IS WORTH 6.4 MiB PER ACTOR.** The A/B recipe for it is at the top of
-this file and has been since mimalloc became the default, but no row in this
-file reports the result. Half of it is now measured and it is the half that
-matters to a training run:
+**(-48) CLOSED at the sixty-fourth pass: mimalloc is 5.99 % faster and costs
+9.7 MiB of RSS per process. The default is right and the memory is bought.**
+`scripts/ab_wall.py`, eight ABBA blocks, `release-fast` both sides at the
+sixty-fourth tip, `--a gang --b gang --games 2000 --decks sos --seed 11
+--threads 4`, A = `--no-default-features` (system), B = default (mimalloc):
 
-| build | allocator | peak_rss_mib (`--bench`, one box, same minute) |
-|---|---|---|
-| `--no-default-features` | system | **17.6** |
-| `release` (default) | mimalloc | **24.0 - 24.3** |
+```text
+              mean B/A   95 % CI            blocks B faster
+A/B           0.9401     -7.04 .. -4.95 %   8/8
+null control  1.0020     -0.79 .. +1.18 %   4/8      FLAT
+```
 
-**mimalloc costs ~36 % more resident memory per process**, and RSS per actor
-is what caps how many actors fit on a box. The missing half is throughput:
-if the system allocator is within noise on `games_per_s`, the default is
-buying ~6.4 MiB an actor for nothing; if mimalloc is clearly faster, the
-memory is bought and this entry closes as a documented trade.
+```text
+build (release-fast)   allocator   peak_rss_mib   games_per_s (--bench, one run)
+--no-default-features  system      17.5           156.22
+default                mimalloc    27.2           164.63
+```
 
-**The measurement, and it is a morning's work, not a pass's.** Two
-`release-fast` trees per the recipe at the top (the feature change is a full
-rebuild, so the variants need separate `CARGO_TARGET_DIR`s — `/target-mi/`
-is gitignored), then `scripts/ab_wall.py --blocks 8` with its null control
-on `--games 2000 --decks sos --threads 4`. Quote the CI, not a best-of.
+**Six percent is larger than any single perf commit in the last ten passes,
+and it costs 9.7 MiB a process.** The entry framed RSS as the thing that caps
+actors per box; at 27 MiB an actor that is not the constraint on any box that
+can run four of them, so the trade is not close. Keep mimalloc.
 
-**It needs ~1.5 GB of free disk that this container did not have** — `target`
-was 28 GB against 654 MB free when the entry was written, which is why the
-throughput half is unmeasured rather than unattempted. Clear `target/debug`
-(24 GB, incremental test cache — costs the next run a ~20 min rebuild) or
-run it where there is room.
+**And the null resolved +/-0.99 % here, not the +/-2 % this file records.**
+That figure was calibrated on a 2.10 GHz box; this one is a 2.80 GHz Xeon
+with `host_calib_ms` 50-57 and a within-binary spread of 8-9 %. **Run the null
+on the box you are on** — the resolution is a property of the host and the
+minute, not of the harness.
 
-**Do not read the RSS row as a regression.** The system-allocator figure
-reproduces the sixtieth pass's 17.7 MiB exactly, two passes later. Nothing
-got heavier; the file was quoting the build that is not shipped.
+**The RSS row also reproduces across three passes and two builds**: the
+sixtieth pass's 17.7 MiB and the sixty-third's 17.6 are this run's 17.5, all
+`--no-default-features`; the shipped number is the other column. Nothing got
+heavier.
 
 **(-47) DONE at the sixty-third pass — `d9f459de` + `fa3bf671`, and it read
 5x its sizing.** The entry costed the attacker-resolution hoist alone at

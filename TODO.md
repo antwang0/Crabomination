@@ -46,13 +46,14 @@ rounds per commit.**
    `cg_edges.py --callees <fn>` ranked by **calls** is the table. Other pair
    loops worth the same read: `legal_block_targets`, the combat-damage
    assignment loops, `pick_attacks`'s blocker scan (see 5).
-3. **(-48) is the highest-value fresh item and it is half-measured:
-   mimalloc costs ~36 % more RSS (24.0-24.3 MiB vs 17.6) and nobody has ever
-   measured what it buys on the clock.** RSS per actor caps actors per box,
-   so 6.4 MiB is real. Finish it with two `release-fast` trees in separate
-   target dirs + `ab_wall.py --blocks 8` and its null control. **Needs
-   ~1.5 GB free disk** — the container it was written on had 654 MB against
-   a 28 GB `target`, which is the only reason it is unmeasured.
+3. **(-48) is CLOSED — mimalloc is 5.99 % faster and the memory is bought.**
+   Eight ABBA blocks, 8/8, CI **-7.04 .. -4.95 %**, null control flat
+   (+0.20 %, CI -0.79 .. +1.18 %); RSS 27.2 MiB against the system
+   allocator's 17.5 on `release-fast`. Six percent is larger than any single
+   perf commit in ten passes and 9.7 MiB an actor is not a constraint on any
+   box that runs four of them. **The null resolved +/-0.99 % on the 2.80 GHz
+   box, not the +/-2 % this file quotes for the 2.10 GHz one — run the null
+   where you are.**
 4. **Then (-43), the CoW clone cost, and its paying side is now read.**
    `Arc::clone_from_ref_in` is 85,650 calls / 64.0 M on `sos` (**4.20 %**)
    and 168,808 / 128.2 M on `cube` (**4.69 %**) — 19.4 % of `make_mut`
