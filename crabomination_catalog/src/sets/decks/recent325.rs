@@ -561,9 +561,14 @@ pub fn silent_hallcreeper() -> CardDefinition {
                     amount: Value::Const(2),
                 },
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
+                // "*another* target creature you control" — without the
+                // `IsSource` exclusion the mode could copy the Hallcreeper
+                // onto itself, which is a legal pick and a no-op.
                 Effect::BecomeCopyOf {
                     what: Selector::This,
-                    source: target_filtered(R::Creature.and(R::ControlledByYou)),
+                    source: target_filtered(
+                        R::Creature.and(R::ControlledByYou).and(R::IsSource.negate()),
+                    ),
                     extra_creature_types: vec![],
                     keep_own_triggered: false,
                     keep_own_activated: false,

@@ -287,6 +287,42 @@ fn silent_hallcreeper_picks_a_fresh_mode_each_hit() {
     assert_eq!((after_one, after_two), (1, 2), "a different mode each time");
 }
 
+/// The copy mode targets, and `ChooseUnchosenMode` is `requires_target =>
+/// false` — so nothing upstream binds a slot and the mode used to resolve
+/// against an empty target list. Note the empty `ctx.targets`: that is what a
+/// real trigger push hands it, and the test above passes one in, which is why
+/// it never caught this.
+#[test]
+fn silent_hallcreeper_copy_mode_targets_at_resolution() {
+    let mut g = two_player_game();
+    let creeper = g.add_card_to_battlefield(0, catalog::silent_hallcreeper());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hit = catalog::silent_hallcreeper().triggered_abilities[0].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2)]));
+    let ctx = EffectContext { source: Some(creeper), ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&hit, &ctx).unwrap();
+    let cp = g.computed_permanent(creeper).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "became a copy of the Bears");
+}
+
+/// CR 601.2b — a mode whose target can't be satisfied can't be chosen. The
+/// pick is recorded on the source and never comes back, so offering it with
+/// no legal target would burn it for nothing. This also pins "*another*
+/// target creature you control": with the Hallcreeper alone on the
+/// battlefield the mode is unavailable only because the filter excludes the
+/// source, so a regression there fails here.
+#[test]
+fn silent_hallcreeper_hides_the_copy_mode_with_nothing_to_copy() {
+    let mut g = two_player_game();
+    let creeper = g.add_card_to_battlefield(0, catalog::silent_hallcreeper());
+    let hit = catalog::silent_hallcreeper().triggered_abilities[0].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2)]));
+    let ctx = EffectContext { source: Some(creeper), ..EffectContext::for_spell(0, None, 0, 0) };
+    g.resolve_effect(&hit, &ctx).unwrap();
+    let chosen = g.battlefield_find(creeper).unwrap().modes_chosen.clone();
+    assert_eq!(chosen, vec![1], "clamped onto the last offered mode, not the copy");
+}
+
 /// Leyline of Mutation can start the game on the battlefield.
 #[test]
 fn leyline_of_mutation_starts_in_play() {

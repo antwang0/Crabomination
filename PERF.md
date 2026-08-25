@@ -718,6 +718,14 @@ split**, and `--bench` `decisions` still **196,220** byte-identical with
 `turns_per_game` 27.53 and zero stalls. Nineteen cards that used to resolve
 against an empty target list now bind one, and nothing in the pools noticed.
 
+Re-checked again at `2ad8b397` (the block-trigger class), same grid, same
+two seeds: **11,600 games, no panic, no arithmetic overflow, `rho -1.000` on
+every pair**, and `--bench` `decisions` **196,220** with `turns_per_game`
+27.53 and zero stalls on both the mimalloc and system-allocator builds. That
+commit adds a `SelectionRequirement` arm and rewrites five shipped block
+triggers; none of the five is in the `--bench` archetypes or the golden-trace
+decks, and the `cube` / `sealed` legs are the ones that can draw them.
+
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass.
 

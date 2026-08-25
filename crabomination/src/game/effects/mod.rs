@@ -5301,8 +5301,30 @@ impl GameState {
                     .battlefield_find(source)
                     .map(|c| c.modes_chosen.clone())
                     .unwrap_or_default();
-                let available: Vec<usize> =
-                    (0..modes.len()).filter(|i| !used.contains(&(*i as u8))).collect();
+                // The mode is picked here, so its targets are picked here too —
+                // `requires_target` is deliberately false for this variant, so
+                // nothing upstream bound a slot and a targeting mode would
+                // otherwise resolve against an empty list (Silent
+                // Hallcreeper's "becomes a copy of another target creature").
+                // Same shape as `Effect::Reflexive` below. CR 601.2b — a mode
+                // whose targets cannot be satisfied can't be chosen at all, so
+                // it is dropped from the menu rather than picked and wasted:
+                // the pick is recorded on the source and never comes back.
+                let mut available: Vec<(usize, Vec<Target>)> = Vec::new();
+                for i in (0..modes.len()).filter(|i| !used.contains(&(*i as u8))) {
+                    if !modes[i].requires_target() {
+                        available.push((i, Vec::new()));
+                        continue;
+                    }
+                    let (slot0, additional) = self.auto_targets_for_effect_all_slots_sourced(
+                        &modes[i],
+                        ctx.controller,
+                        None,
+                        ctx.source,
+                    );
+                    let Some(t) = slot0 else { continue };
+                    available.push((i, std::iter::once(t).chain(additional).collect()));
+                }
                 if available.is_empty() {
                     return Ok(());
                 }
@@ -5311,17 +5333,22 @@ impl GameState {
                     num_modes: available.len(),
                     mode_texts: available
                         .iter()
-                        .map(|i| modes[*i].effect_short_text())
+                        .map(|(i, _)| modes[*i].effect_short_text())
                         .collect(),
                 });
-                let pick = match answer {
-                    DecisionAnswer::Mode(i) => available[i.min(available.len() - 1)],
-                    _ => available[0],
+                let idx = match answer {
+                    DecisionAnswer::Mode(i) => i.min(available.len() - 1),
+                    _ => 0,
                 };
+                let (pick, targets) = available.swap_remove(idx);
                 if let Some(c) = self.battlefield_find_mut(source) {
                     c.modes_chosen.push(pick as u8);
                 }
-                self.run_effect(&modes[pick].clone(), ctx, events)
+                let mut mode_ctx = ctx.clone();
+                if !targets.is_empty() {
+                    mode_ctx.targets = targets;
+                }
+                self.run_effect(&modes[pick].clone(), &mode_ctx, events)
             }
 
             Effect::MayDoBy { who, description, body } => {
