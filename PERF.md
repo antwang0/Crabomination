@@ -52,7 +52,15 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.out \
   target/profiling-fast/bot_ladder --a gang --b gang --games 6 --threads 1 \
   --seed 1 --decks fixed
-# SYMBOLS: valgrind 3.22 in this image does **not** read bot_ladder's symbol
+# SYMBOLS: **check before you symbolize.** At the fifty-eighth pass the dump
+# came back fully symbolized on its own — `ob=` names the binary, `fn=` lines
+# carry demangled Rust names and `fi=` lines carry source paths — so
+# `cg_symbolize.py` was a no-op and its bias auto-detect (43 unresolved libc
+# addresses, 2 of them inside a FUNC) printed a scary-looking line for
+# nothing. Run `cg_edges.py` on the raw dump first; symbolize only if the rows
+# come out as addresses. The note this replaces, kept because the failure is
+# real when it happens:
+# valgrind 3.22 in this image did **not** read bot_ladder's symbol
 # table — `valgrind -v` never prints "Reading syms from …/bot_ladder", so
 # every engine frame comes out `???:0x…`. It is not the copy-the-binary
 # hazard the older note here blamed, and not `split-debuginfo`, size, or lld
@@ -350,6 +358,71 @@ matches `crabomination_base` and `crabomination_catalog` too and so forces the
 build.
 
 ## Baseline
+
+**Fifty-eighth pass, base `c18552fd` (pass 57's tip) vs its own tip
+`13f3521c`.** Four commits, one class: **the sealed builder's last three
+per-shape re-derivations, plus the land walk that rediscovered what the pile
+builder already knew.** The workload that moves is `--decks sealed --games 1`,
+which plays no games and so is deck construction and nothing else:
+**26,478,634 -> 23,574,309, -10.968 %.** Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, one argv throughout.
+
+```text
+                          base (c18552fd)   tip (13f3521c)
+deck build (sealed, 1 g)     26,478,634       23,574,309   -10.968 %
+I refs, --decks fixed     1,234,918,094    1,233,675,802    -0.101 %
+I refs, --decks sos       1,658,496,337    1,657,624,397    -0.053 %
+I refs, --decks cube      2,952,041,099      not re-read — no commit is on that path
+```
+
+| step | commit | deck build | what |
+|---|---|---|---|
+| A | `811cddec` | **-3.738 %** | the splash ranker reads the pool's memoized colours and scores |
+| B | `432976a0` | -0.599 % | one `PoolScores` per pool, not one per random build |
+| C | `88b97f25` | **-2.828 %** | fifty-seven shapes share three sorted orders |
+| D | `13f3521c` | **-4.246 %** | the land walk reads the index the pile builder kept |
+
+**Both game pools read slightly *down* rather than flat, and the reason is
+the binary.** No commit here is on the game loop; `_dl_relocate_object` is
+2.31 % of the deck-build workload and `build_shape` shrank, so the process
+startup floor moved with it. Read -0.101 % and -0.053 % as "unchanged, and
+the code got smaller", not as a game-loop win.
+
+```text
+decisions        196,220 -> 196,220        byte-identical
+turns_per_game   27.53   -> 27.53
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
+determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
+peak_rss_mib     22.0
+suite            18,728 passed / 0 failed / 5 ignored over 22 binaries
+golden traces    7 passed, all unchanged
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 58-73
+```
+
+**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b gang
+--games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400 games,
+20,396 decided, no panic**, and all 10,198 mirrored pairs split
+(`rho -1.000` on every seed). The 4 undecided are seed 11's standing rules
+draws, the same four every pass since the forty-fourth has recorded.
+
+Behaviour beyond the bench: `--decks sealed --games 6` and `--decks all
+--games 20 --seed 11` are **byte-identical to the base at every one of the
+four steps** apart from the wall-clock line. That pair is the check a
+deck-builder change needs and the golden traces cannot give — they play
+hand-built decks, so the builder never runs in them.
+
+**No wall-clock pair is quoted, and the arithmetic is why.** Deck
+construction is ~2.2 M Ir per pool-plus-build against ~50 M for a sealed
+game, and a `selfplay_train` actor builds two decks per game — so the whole
+builder is ~8 % of an actor's per-game work and this pass is **~0.9 %** of
+it. That is an order of magnitude under what `--bench` resolves on this box
+(an 11 % spread between runs of one binary), which is the case this file says
+callgrind exists for.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState` or
+`Vocab` change is in this pass; the decks the builder produces are
+byte-identical.
 
 **Fifty-seventh pass, base `28ae2416` (pass 56's tip) vs its own tip
 `c6ef9af8`.** Three commits, one class: **the simulator's two largest engine
@@ -1629,6 +1702,94 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Fifty-eighth pass — the shape lattice's last per-shape re-derivations
+
+Four commits, base `c18552fd` (pass 57's tip). One workload moves: `--decks
+sealed --games 1`, which plays no games and so is deck construction and
+nothing else, **26,478,634 -> 23,574,309 Ir, -10.968 %**. `--decks fixed` and `--decks
+sos` are flat to five decimal places at every step, which is what a
+deck-builder change has to read on a pool that builds its decks once.
+
+The pass is the fifty-sixth's question — **what actually varies with the
+shape?** — asked of the three things that pass left: the splash ranker, the
+per-shape sort, and the land assignment. The answer each time was "nothing",
+and the fifty-sixth pass's own device (`PoolScores`, the pool's
+shape-invariant per-card facts) is where all three answers now live.
+
+**(A) `811cddec` — the splash ranker re-derived the pool's colours and every
+candidate's score, thirty times per pool. -3.738 %.** `splash_cards` opened
+with `colors_of_picks(pool)` and scored its survivors with
+`score_card_quality(f, &pool_colors)`. Both are what `PoolScores` holds: the
+scorer's colour argument *is* the pool's pip totals and the scorer is
+`cfg.builder_v2`'s, so the score it computes is the base score already in
+hand. `PoolScores` gains the `quality` flag it was scored under and
+`build_shape` `debug_assert_eq!`s it against `cfg.builder_v2`, so mixing the
+two scorers fails the suite rather than silently ranking splashes under the
+wrong one.
+
+**(B) `432976a0` — a random build re-derived the pool scores its own lattice
+was built from. -0.599 %.** `build_random_deck` enumerates the lattice (which
+builds a `PoolScores`) and then calls `build_random_deck_from`, which built a
+second one. `selfplay::build_candidates_cfg` is the sharper case: it hoists
+the lattice out of its `n`-candidate loop and then paid `PoolScores::new`
+*inside* it, so `best_build_by`'s n = 32 walked the pool thirty-two extra
+times.
+
+**(C) `88b97f25` — fifty-seven shapes sorted the same pool fifty-seven times.
+-2.828 %, the pass's biggest row.** With no pick jitter a pick scores `base +
+fixing_bonus * is_fixing`, and `fixing_bonus` is a function of the shape's
+colour *count* — 0, 1 or 3. **So the pool's descending order is one of three
+permutations, not one per shape.** A stable sort commutes with a filter, so
+walking the pool-wide order and skipping what a shape disallows is
+byte-identical to sorting the allowed list: the shape's `allowed` answers go
+into a bitmask in the pass that already evaluates them, and the copy-cap
+funnel reads the order behind it. The jittered path (gauntlet and variant
+builds) still sorts, and a pool wider than the bitmask falls back to it.
+
+**(D) `13f3521c` — the land assignment looked a `CardBrief` up per leftover to
+rediscover what the pile-builder already knew. D-10.968 %.** `assemble_lands`
+`retain`ed over ~70 leftovers asking `card_brief(f).is_land` for each, to find
+the two or three pool duals. But a land never occupies a spell slot, so
+`allowed` rejects every one of them and they all land in the `off` pile —
+which keeps pool order, which *is* the order the `retain` was rediscovering.
+The pile-builder records `(index, produces)` per land as it goes, the
+dual test becomes two `ColorSet` mask tests instead of an iterator over the
+build's colours, and the removal is one gap-copy over the tail.
+
+**What the pass leaves behind, by self cost of `--decks sealed --games 1` at
+the tip** (`build_shape` is still the residual and still diffuse):
+
+| row | % | note |
+|---|---|---|
+| `build_shape` | **21.82** | was 22.5 % of a bigger total; `suggest_main_deck_shape` + `assemble_lands` inlined into it |
+| `__memcpy` | 8.76 | still mostly the twelve pools' definitions being built once |
+| `suggest_main_deck_shape::take` | **7.85** | 24,147 calls at 76.7 Ir — the copy-cap funnel, and most of it is the `HashMap` probe. It only has a row at all because (C) gave it a name |
+| allocator | ~13.6 | `_int_malloc` 6.37, `_int_free` 3.13, `malloc` 2.57, `free` 1.55 |
+| `score_brief_with_colors` | 6.29 | `static_build_score`'s, 684 x ~23 main cards, and `main_colors` really does vary per shape |
+| `static_build_score` | 2.71 | |
+| `small_sort_network` | 2.53 | down from ~8 % across three sort rows: what is left is (C)'s two or three orders per pool, 24 `OnceCell::try_init` calls at 26,036 Ir |
+| `_dl_relocate_object` | 2.31 | process startup, on a workload this short |
+| `HashMap::insert` | 2.29 | the copy-cap counts, again |
+| `assemble_lands` | 2.02 | was 6.2 % on the `Vec::retain` row alone |
+
+```text
+                          base (c18552fd)   (A)          (B)          (C)          tip (D)
+deck build (sealed, 1)       26,478,634    25,488,835   25,336,128   24,619,696   23,574,309
+```
+
+Behaviour: `--decks sealed --games 6` and `--decks all --games 20 --seed 11`
+byte-identical to the base at every step apart from the wall-clock line.
+No encoding, pool, `TrainRow`, `EncodedState` or `Vocab` change: **no net
+needs retraining.**
+
+**No wall-clock pair is quoted, and the reason is arithmetic rather than
+laziness.** Deck construction is ~2.2 M Ir per pool-plus-build against ~50 M
+for a sealed game, and a `selfplay_train` actor builds two decks per game — so
+the whole deck builder is ~8 % of an actor's per-game work and this pass is
+~0.9 % of it. That is an order of magnitude under what `--bench` can
+resolve on this box (an 11 % spread between runs of one binary), which is
+exactly the case this file says callgrind is for.
 
 ### Fifty-seventh pass — a fan of narrow walks at the end of two big functions
 
@@ -3621,6 +3782,69 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
+**(-42) `do_untap` calls `Arc::make_mut` 141.5 times per untap step, and the
+obvious explanation is REFUTED.** On `--decks sos` at the fifty-eighth tip:
+1,498 untap steps, **212,012 `make_mut` calls** at 45.7 Ir each —
+9,694,094 Ir, **0.58 % of the run** — against 9,832
+`clear_summoning_sickness` calls and 6,960 Ir of `remove_counters`. On cube
+it is **363,462 calls / 15,771,096 Ir**, the largest `make_mut` caller in the
+program by count (27 % of all of them) and 12 % of the program's 1.33 M
+`make_mut` calls for one turn-based action.
+
+**The refuted explanation, because it is the one anybody reading `do_untap`
+will reach for first:** the three `for card in &mut self.battlefield` loops
+do *not* pay a `DerefMut` per field *read*. rustc picks `Deref` for a place
+expression used immutably even when the base binding is `&mut`, and a
+standalone test of exactly this shape (an `Arc::make_mut` in `DerefMut` with
+a counter) reads **zero** `deref_mut` calls after a loop body of pure reads
+and one after a single write. So the 141.5 are real writes, and whoever takes
+this entry has to find them — the third loop's per-turn flag roll-over
+(`goaded_by` / `detained_by` / `attacked_this_turn` / `blocked_this_turn` /
+`attacked_last_turn` / `attacked_own_turn` / `attack_ban`, up to seven writes
+per permanent) is the shape to count first, and each of its gates is already
+a `!=` test, so what is left is the writes that genuinely change something.
+**Read it with `cg_lines.py --in do_untap` before proposing anything.**
+
+**(-41) `available_mana` walks the grants of every untapped permanent, and it
+is the one caller of `granted_abilities_of` that can be pre-filtered.**
+`--decks sos` at the fifty-eighth tip: `granted_abilities_of` is **68,538
+calls / ~48 M Ir, 2.9 % of the run**, over three callers —
+`effective_mana_abilities_into` 27,846 / 18.88 M, **`bot::available_mana`
+25,680 / 18,159,501 (1.09 %)**, `main_phase_action_with` (via
+`usable_abilities`) 15,012 / 10.91 M. Inside it,
+`evaluate_requirement_static_hinted` is 39,430 calls / 19,242,702 and the
+pushes cost `ActivatedAbility::clone` 11,324 / 7.87 M plus `grow_one` 11,324
+/ 8.49 M.
+
+The lever is pass 57's (C) at a different site: **ask the cheap question
+first.** `available_mana` keeps only abilities that pass
+`is_countable_mana_ability` (a handful of field tests), so testing the
+*ability* before evaluating the grant's `SelectionRequirement` against this
+permanent skips both the evaluation and the clone for every grant that is not
+a mana ability.
+
+**It is sound for `available_mana` only, and that is the whole entry.** The
+other two callers index into the returned list — `effective_mana_abilities_into`
+pushes `(printed_count + j, …)` and `usable_abilities` `(n + i, …)`, and
+`activate_ability` resolves granted abilities by that index — so a filtered
+list would renumber them. Skipping a grant's requirement evaluation also
+means not knowing whether it *would* have been included, so the indices
+cannot be preserved by carrying the original position either. Size it at the
+share of 18.16 M that non-mana grants hold on the SOS boards; that share is
+**not** measured, and if the set's grants are mostly mana grants (school
+lands and their kin) the change measures nothing. Build it and read it.
+
+**`wants_converge` is 12,507,301 Ir / 0.42 % of a six-game cube run over 217
+calls, and it is startup, not steady state.** Pass 46 gave it a thread-local
+L1 in front of the process-wide map so the `format!("{self:?}")` probe runs at
+most once per card name per process; those 217 are the cube pool's distinct
+names, and the whole `core::fmt` family is 0.3 % of the run behind them
+(158,350 `String::write_str` calls, 78,120 of them `DebugStruct::field`). A
+training actor amortises it to nothing over thousands of games. **What it
+does mean is that a six-game benchmark carries a fixed ~12 M of per-name
+setup** — do not read a 0.4 % move on this workload as a steady-state result
+without checking whether it landed there.
+
 **(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-SEVENTH TIP
 (2,952,041,750).** Self cost, whole program:
 
@@ -3655,6 +3879,37 @@ ask first.
 `__memcpy` + the allocator + `Arc::clone_from_ref_in` + `make_mut` +
 `GameState::clone` is ~23 % between them**, which is (-10)/(-13)'s
 checkpoint-sharing cost seen from the profile side.
+
+**READ FROM THE TOP AT THE FIFTY-EIGHTH TIP, ON `sos` — the pool the shipped
+workload plays — AND THE ANSWER IS: DIFFUSE. It is bigger there than on
+cube and there is still no caller to take.** `--decks sos` is 1,658,496,337
+and the family is **26.5 %** of it: `__memcpy` **8.21** (against cube's
+5.73), the allocator 12.66 (`_int_free` 4.06, `malloc` 3.16, `_int_malloc`
+2.85, `free` 2.59), `clone_from_ref_in` 2.92, `GameState::clone` 1.50,
+`make_mut` 1.26.
+
+`__memcpy`'s caller table on `sos` is 1,293,413 calls, and **the top twenty
+callers hold barely half of them — 630,711 are spread over 21,130 rows**
+(48.76 %). The named half: `GameState::clone` 103,330, `finalize_cast`
+92,590, `String::write_str` 65,285 (the `wants_converge` startup below),
+`computed_permanent` 60,556, `Vec::clone` 34,547, `mana::cost` 28,704 (a card
+factory building the pool's definitions — startup), `clone_from_ref_in`
+28,010, `RawTable::clone` 24,672, `ActivatedAbility::clone` 23,118,
+`Iterator::partition` 20,424, `effective_mana_abilities_into` 18,880.
+`GameState::clone` itself is **32,600 calls on cube**: `accept_on` 12,012,
+the `perform_action` checkpoint 8,964, the bot's probe cells 6,300 (see
+`ProbeCell`), `sim_start_state` 2,170, `evaluate_action_sequence` 1,290,
+`main_phase_action_with` 1,252, `score_settled_state` 496 — i.e. the dry-run
+probes and the transaction, which (-10)/(-13) costed and refused.
+
+`Arc::make_mut` is **1,331,820 calls on cube** of which only 169,420 actually
+unshare (12.7 %), so the *fast* path is the cost and it is a call count
+problem, not a copying one. Its biggest caller by count is `do_untap` —
+see (-42), which is the one row of this family that is not diffuse.
+
+**So: do not open the clone family as a whole again.** What is left in it are
+the two named rows with their own entries, (-41) and (-42), and the
+allocation table by call count, which is (-23)'s recipe.
 
 **The gather is the target, and the question is scope count, not gating.**
 59,470 gathers for six games; a freeze scope's *first* computed read gathers
@@ -3696,15 +3951,25 @@ the tool. The `declare_attackers` / `declare_blockers` rows are scope-firsts
 and their gather is prepaid work for the rest of the scope, not waste.
 
 **(-39) THE DECK BUILDER — 111.8 M -> 34.9 M at the fifty-fourth pass
-(-68.80 %) and 34.6 M -> 26.6 M at the fifty-sixth (-23.13 % Ir, -14 % wall
-clock), for twelve pools + twelve builds.** It was ~28 % of what a
-`selfplay_train` actor does per game and is now under 9 %. Read both passes'
-Log entries before proposing anything here. Pass 54's device was "a
-definition is memoized, but everything read off it is not", and `CardBrief`
-is where a new derived fact belongs; pass 56's is one level up — **ask what
-varies with the shape.** The lattice runs ~57 shapes over one pool, and the
-pool's Special-Guest sheet, its colour buckets, each card's brief and each
-card's *score* are invariant across every one of them.
+(-68.80 %), 34.6 M -> 26.6 M at the fifty-sixth (-23.13 % Ir, -14 % wall
+clock) and 26.5 M -> 23.6 M at the fifty-eighth (-10.97 %), for twelve pools
++ twelve builds.** It was ~28 % of what a `selfplay_train` actor does per
+game and is now ~7 %. Read all three passes' Log entries before proposing
+anything here. Pass 54's device was "a definition is memoized, but everything
+read off it is not", and `CardBrief` is where a new derived fact belongs;
+pass 56's is one level up — **ask what varies with the shape**; pass 58 is
+that question asked of the three things pass 56 left (the splash ranker, the
+score sort, the land walk) and the answer was "nothing" all three times.
+
+**The one thing that has not been asked of it yet is the copy-cap counter.**
+`suggest_main_deck_shape::take` is **7.85 % at the fifty-eighth tip** —
+24,147 calls at 76.7 Ir — and `HashMap::insert` another 2.29 %, all of it a
+`HashMap<CardFactory, u32>` built and probed per shape to count copies of a
+card. The pool's *distinct-card partition* is invariant across every shape
+like everything else here: a dense id per distinct factory in `PoolScores`
+turns the counter into a `Vec<u8>` indexed by it and takes the hash off the
+per-shape path entirely. Both walk paths would hand `take` a pick index
+rather than a factory. **Size it at ~8 % of the build and take it first.**
 
 **The structural answer this entry used to propose — resolving a pool's
 definitions once into a `Vec<Arc<CardDefinition>>` and indexing it, a
@@ -3714,17 +3979,22 @@ should not be started.** The 4,096-slot direct-mapped front cache
 derived-facts memo (`9cc1175c`) took the re-derivation the index change
 would not have.
 
-What is left, by self cost of `--decks sealed --games 1` at the fifty-sixth
-tip (`generate_sos_pack` and `candidate_label` are off the table entirely):
+What is left, by self cost of `--decks sealed --games 1` at the fifty-eighth
+tip. `generate_sos_pack`, `candidate_label` and `Vec::retain` are off the
+table entirely, and the sorts fell from ~8 % across three rows to one:
 
 | row | % | note |
 |---|---|---|
-| `build_shape` residual | **22.5** | diffuse, and it is `suggest_main_deck_in_colors` + `assemble_lands` inlined into it: the `allowed` filter chain and the two output piles |
-| allocator family | ~12 | `_int_malloc` 5.9, `_int_free` 2.6, `malloc` 2.0 |
-| `__memcpy` | 7.8 | still mostly the twelve pools' definitions being built once |
-| `score_brief_with_colors` | 7.6 | now `static_build_score`'s, not the pick loop's: 684 calls x ~23 main cards, and `main_colors` really does vary per shape. One attempt on the scorer is refuted (+2.88 %, see the Log) |
-| `Vec::retain` | 6.2 | `assemble_lands`' land walk, 684 calls x ~70 leftovers at ~34 Ir, and the `card_brief` per leftover is most of it — **`suggest_main_deck_in_colors` already holds every one of those briefs** |
-| the sorts | ~8 | `small_sort_general_with_scratch` 4.6 + `small_sort_network` 2.3 + `drift::sort` 1.4 — the per-shape score sort |
+| `build_shape` residual | **21.82** | diffuse, and it is `suggest_main_deck_shape` + `assemble_lands` inlined into it: the `allowed` filter chain and the two output piles |
+| allocator family | ~13.6 | `_int_malloc` 6.37, `_int_free` 3.13, `malloc` 2.57, `free` 1.55 |
+| `__memcpy` | 8.76 | still mostly the twelve pools' definitions being built once |
+| `suggest_main_deck_shape::take` | **7.85** | the copy-cap funnel — see above, and it is the next thing to take |
+| `score_brief_with_colors` | 6.29 | now `static_build_score`'s, not the pick loop's: 684 calls x ~23 main cards, and `main_colors` really does vary per shape. One attempt on the scorer is refuted (+2.88 %, see the Log) |
+| `static_build_score` | 2.71 | 684 calls at 2,981 Ir |
+| `small_sort_network` | 2.53 | what is left of the sorts: 24 `OnceCell::try_init` calls at 26,036 Ir, i.e. two or three pool-wide orders per pool |
+| `_dl_relocate_object` | 2.31 | process startup; on a workload this short it is a real row and a training actor never pays it |
+| `HashMap::insert` | 2.29 | the copy-cap counts again |
+| `assemble_lands` | 2.02 | 684 calls at 4,030 Ir, and `basic_split` is most of what is left |
 
 **A second-order note the fifty-sixth pass's wall-clock pair exposed: the
 tip's process startup floor is 6.5 % higher than the base's** (0.3294 s

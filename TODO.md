@@ -18,78 +18,34 @@ reference and want their own triage pass):
 
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
-**Sessions run this branch concurrently: expect to rebase and re-read your
-numbers.** Two sessions ran pass 55, two ran pass 56, and pass 57 rebased
-twice — in *both* of the earlier pairs the second session's opening commit
-was dropped as a duplicate. **Read the log before starting the top
-candidate**, and budget two callgrind rounds, not one.
+**Sessions run this branch concurrently: read the Log before starting the top
+candidate, and budget two callgrind rounds.**
 
-1. **Pass 57, three commits, base `28ae2416`: `--decks cube` -6.65 %, `sos`
-   -3.33 %, `fixed` +0.71 %.** Tip (`c6ef9af8`): fixed 1,234,918,599 / cube
-   2,952,041,750 / sos 1,658,496,791. `--bench` paired at `release` is flat;
-   `release-fast` wall clock over the whole pass, six interleaved readings a
-   side: **cube -2.3 %, sos -3.0 %** (best), and the `cube` gap against its
-   -6.65 % Ir is the mirror of the allocation rule — **a change that removes
-   cheap, predictable instructions under-delivers on the clock**, the way an
-   allocation-shaped one over-reads in Ir.
-2. **The finding, twice: a fan of narrow walks at the end of the two largest
-   engine functions, each asking a question the board or the batch has
-   already answered.** (B) the gather's thirty-eight per-static passes get a
-   `gather_spec` bitmask built by the pre-scan — **the tell was a run of
-   identically-costed line rows** (ten at 511,188 Ir), below `cg_lines.py`'s
-   default forty-five, so `--rows` was added first. (C)
-   `dispatch_triggers_for_events` evaluated every grant filter against every
-   permanent (406,346 requirement evaluations, 3.46 % of cube) for grants no
-   event in the batch could ever fire; `retain` on
-   `event_kind_matches(.., None)` drops **all** of them on the bench boards.
-   In both, the cheap question is the *same code* as the exact one, which is
-   what separates it from the fuse-the-question device that has lost four
-   times.
-   **The two land on different pools**: (B) on `sos`, which has the static
-   abilities; (C) on `cube`, which has the `GrantTriggeredAbility` statics.
-3. **A gate lives on the pool that has nothing to gate** — pass 53's "which
-   pool does the change live on", inverted. `--decks fixed` carries *no*
-   printed static ability on the battlefield, so `sa_cards` is empty on all
-   32,002 gathers, every one of the thirty-eight passes was already free
-   there, and the mask can only charge for asking. Quote all three pools for
-   anything that adds a per-call question, and say which pool the shipped
-   workload is: `selfplay_train`'s actors play SOS (`Vocab::sos_sealed`).
-4. **Candidates: (-40) is a fresh cube table at this tip, and
-   `dispatch_triggers_for_events` is now READ from the top** — its cost was
-   one callee, (C) took it, and what is left is genuinely diffuse (largest
-   line 1.06 %, then 0.36 / 0.36 / 0.29). **The one big thing left on that
-   table is the clone/allocator family — `__memcpy` + allocator +
-   `Arc::clone_from_ref_in` + `make_mut` + `GameState::clone`, ~23 % between
-   them**, which is (-10)/(-13) seen from the profile side. (-39)'s deck
-   build: `build_shape`'s 22.5 % residual and `assemble_lands`'
-   `Vec::retain`. (-38)'s `find_card_anywhere` first leg and
-   `pick_blocks_inner`. **(-37) is CLOSED, twice over** — do not write the
-   predicates.
-5. **`cg_sites.py`'s number is a floor, twice over.** The auto-tap row read
-   0.15 % of `fixed` and measured **-0.291 %**; pass 53's two sites read
-   0.35 % and measured -0.611 %. Do not decline a site on a small row.
-6. **A presence gate is sized by its arm's call count**, not by what the arm
-   costs when taken — the rule the two independent (-37) closes agree on.
-7. **Do not pattern-match the remaining ~80 `evaluate_requirement_static(..,
-   &Target::Permanent(c.id), ..)` sites** into the `_on` form: several
-   iterate graveyards or hands, where the hint changes the answer, and the
-   `debug_assert` only catches a site a test plays. PERF's (H) says it too.
-8. **`--bench` on some containers reads ~210-220 against the committed
-   270.56 anchor while `host_calib_ms` reads 44-47 against 55.** It is the
-   box: pass 57 built a `release` base binary and read 210 from it on the
-   same commit the anchor records at 281. Anchor **not** refreshed; quote a
-   paired A/B from one sitting.
-9. **Top ML item is a training run, not code:** the vocab index is frozen,
-   post-freeze nets pad, `--use-deck-best` works end to end at 91.7 % of the
-   unjudged rate. What is missing is a *good* deck net — and two passes of
-   deck-builder work now compound inside its 32x.
-10. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings.** Read the
-   oracle before fixing one; false positives remain.
-11. **Housekeeping.** TODO 1.0k, PERF 5.9k — the closed deck-net vocabulary
-   write-up moved verbatim to `ML_NOTES.md` at the 57th tip to hold TODO
-   under 1k; passes 45-47's Baseline blocks were folded at the 56th, and the
-   48th/49th are the next fold, then the 45th/46th Log entries.
-   ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
+1. **Pass 58, four commits, base `c18552fd`: deck build (`--decks sealed
+   --games 1`) 26,478,634 -> 23,574,309, -10.968 %**; `fixed` -0.101 %, `sos`
+   -0.053 % (both the binary shrinking, not the loop). Pass 56's question
+   asked of the three things it left, and the answer was "nothing" each time.
+2. **Top candidate: (-39)'s head — the copy-cap counter.**
+   `suggest_main_deck_shape::take` 7.85 % + `HashMap::insert` 2.29 %, a
+   `HashMap<CardFactory,u32>` per shape. A dense distinct-card id in
+   `PoolScores` makes it a `Vec<u8>`. Designed, not built; ~8 % of the build.
+3. **Two fresh engine candidates, both read on `sos` (the actors' pool).**
+   (-42) `do_untap` makes **141.5 `Arc::make_mut` calls per untap step**
+   (0.58 % sos / 0.53 % cube) — and "reads through `&mut` call `deref_mut`"
+   is **refuted** by a standalone test, so find the real writes.
+   (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos,
+   pre-filterable **only** there (the other two callers index the list).
+4. **(-40) is closed as a whole.** The clone/allocator family is 26.5 % of
+   `sos`, read from the top, and diffuse: `__memcpy`'s top twenty callers
+   hold half its 1.29 M calls, the rest is 21,130 rows. Take (-41)/(-42).
+5. **`cg_symbolize.py` is now usually a no-op** — the dump comes back
+   symbolized. Run `cg_edges.py` on the raw dump first.
+6. **Housekeeping.** TODO 1.0k, PERF 5.9k (48th/49th Baseline and 45th/46th
+   Log folded this run; the 47th/48th Log entries are next). ENGINE_BACKLOG
+   4.9k / CARD_BACKLOG 4.2k still want a triage pass.
+7. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings** (read the
+   oracle first). **Top ML item is still a training run, not code:** a good
+   deck net, and two passes of builder work now compound inside its 32x.
 
 ## Standing rules for a perf pass
 
@@ -235,11 +191,11 @@ Log with its numbers; read the entry before re-proposing any of them.
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
   Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
   5 %; a `profiling-fast` games/s compares to nothing.
-- **Trackers.** TODO ~1.0k, ROADMAP 0.66k, PERF ~5.6k (**passes 45-47's
-  Baseline blocks were folded to one table plus the three lessons they
-  carried, at the 56th tip**; the 48th's and 49th's are the next fold, then
-  the 45th/46th Log entries). ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k are
-  the archives and still want their own triage pass.
+- **Trackers.** TODO 0.96k, ROADMAP 0.66k, PERF 5.9k (**passes 45-49's
+  Baseline blocks are one table plus the lessons they carried, and passes 45
+  and 46's Log entries are folded, at the 58th tip**; the 47th's and 48th's
+  Log entries are the next fold). ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k
+  are the archives and still want their own triage pass.
 
 ## Environment note
 
