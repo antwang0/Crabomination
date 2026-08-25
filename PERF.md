@@ -382,7 +382,17 @@ I refs, --decks cube      2,952,041,099      not re-read — no commit is on tha
 | C | `88b97f25` | **-2.828 %** | fifty-seven shapes share three sorted orders |
 | D | `13f3521c` | **-4.246 %** | the land walk reads the index the pile builder kept |
 | — | *rebase onto pass 57's (D)+(E)*; the same four re-read `23,611,357` | | |
-| E | (tip) | **-7.782 %** | the copy cap counts by dense card id, not by `HashMap` |
+| E | `15cad53b` | **-7.782 %** | the copy cap counts by dense card id, not by `HashMap` |
+
+**And a sixth commit that is not on the deck builder at all** — `223c77b5`,
+candidate (-42)'s answer: `do_untap`'s per-turn seat reset writes ~55 fields
+through `Player`, which is a CoW handle, so each was its own
+`Arc::make_mut`. `make_mut` calls in that function **212,012 -> 80,148**;
+`--decks sos` **1,644,049,924 -> 1,639,754,965, -0.261 %**, `--decks cube`
+**2,910,850,945 -> 2,903,490,499, -0.253 %**. Same recipe, base re-read at
+the tip that carries (E). Two cheaper explanations were built and refuted
+first; the line profile named `Player::deref_mut`, not a hot line. See the
+Log and (-42).
 
 **Both game pools read slightly *down* rather than flat, and the reason is
 the binary.** No commit here is on the game loop; `_dl_relocate_object` is
@@ -3902,12 +3912,31 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-42) `do_untap` calls `Arc::make_mut` 141.5 times per untap step, and the
-obvious explanation is REFUTED.** On `--decks sos` at the fifty-eighth tip:
-1,498 untap steps, **212,012 `make_mut` calls** at 45.7 Ir each —
-9,694,094 Ir, **0.58 % of the run** — against 9,832
+**(-42) MOSTLY PAID at the fifty-eighth pass: `sos` -0.261 %, `cube`
+-0.253 %, and `do_untap`'s `make_mut` calls went 212,012 -> 80,148.** The
+answer was **`Player` is itself a CoW handle** — `Player::deref_mut` is
+`Arc::make_mut` — so the `for pl in &mut self.players` per-turn reset, about
+fifty-five field writes per seat, took one unshare *per field*. One
+`let pl = &mut **pl;` collapses them.
+
+**The generalisable shape, and it is the CowBox sharp edge from the other
+side:** a run of writes through a CoW *handle* pays a refcount check each,
+and the handles in this engine are `Player`, `CardInstance`, `CowBox` and the
+`cold` groups behind them. Wherever a sweep writes several fields of one
+handle in a row — the cleanup step's per-turn resets are the obvious next
+place — bind the target once. The reads are already free: rustc picks `Deref`
+for a place used immutably even through a `&mut` binding (checked with a
+standalone test; see below).
+
+**What is left is 80,148 calls, 53.5 per untap step**, in `do_untap`'s tail
+(runs of `self.players[p].X = …` interleaved with `retain_cold!` calls on
+`self`, which is why they were not collapsed in the same commit) and in the
+main untap loop's per-card writes. Same device, smaller prize.
+
+The original reading, for the sizing: 1,498 untap steps, **212,012 `make_mut`
+calls** at 45.7 Ir each — 9,694,094 Ir, **0.58 % of the run** — against 9,832
 `clear_summoning_sickness` calls and 6,960 Ir of `remove_counters`. On cube
-it is **363,462 calls / 15,771,096 Ir**, the largest `make_mut` caller in the
+it was **363,462 calls / 15,771,096 Ir**, the largest `make_mut` caller in the
 program by count (27 % of all of them) and 12 % of the program's 1.33 M
 `make_mut` calls for one turn-based action.
 
@@ -3930,13 +3959,15 @@ program by count (27 % of all of them) and 12 % of the program's 1.33 M
   `sos` **+0.0008 %**, `cube` **+0.0004 %**. Reverted. Pass 43's per-write
   gates were already doing their job; the loop writes almost nothing.
 
-So ~211 k `make_mut` calls per six games are somewhere else in `do_untap`,
-141 per untap step over ~13 permanents. The main untap loop's
-`clear_summoning_sickness` (9,832) and `tapped = false` cannot be more than
-~20 k of them, and the four `retain_cold!` / `ColdState` writes in the tail
-are a handful. **This needs `cg_lines.py --in do_untap` on a
-`profiling-lines` build** — the cold build the two refutations above were not
-worth paying for, and now are.
+**The line profile is what named it, and the entry is worth reading for how
+cheap the answer was once the right tool ran.** `cg_lines.py --in do_untap`
+on a `profiling-lines` build (11m32s cold, 552 MB binary) reports `do_untap`
+as *diffuse by line* — its largest row is 365,638 Ir, 0.03 % of the run —
+which is exactly the wrong-looking answer. The row that mattered was two
+lines down the list: **`player.rs:1053` at 155,792 Ir, which is
+`Player::deref_mut`**, sitting inside `do_untap`. The line profile does not
+rank the fix; it names the *type* being unshared, and that was the whole
+find. Both cheap refutations above assumed the card was the handle.
 
 **(-41) `available_mana` walks the grants of every untapped permanent, and it
 is the one caller of `granted_abilities_of` that can be pre-filtered.**

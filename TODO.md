@@ -47,12 +47,11 @@ candidate, and budget two callgrind rounds.**
    definitions, built once) and a scorer whose colour argument genuinely
    varies per shape.
 4. **Two fresh engine candidates, both read on `sos` (the actors' pool).**
-   (-42) `do_untap` makes **141.5 `Arc::make_mut` calls per untap step**
-   (0.58 % sos / 0.53 % cube). **Two explanations are refuted**: reads
-   through `&mut` do not `deref_mut` (standalone test), and it is *not* the
-   per-turn flag roll-over loop (built, measured: 212,012 -> 211,298 calls,
-   sos +0.0008 %, reverted). It needs `cg_lines.py --in do_untap` on a
-   `profiling-lines` build — budget the cold build.
+   (-42) is **mostly PAID** (`223c77b5`, sos -0.261 %, cube -0.253 %):
+   `Player` is a CoW handle, so `do_untap`'s ~55-field per-turn seat reset
+   unshared the seat once per field. `make_mut` 212,012 -> 80,148. **The
+   device generalises** — bind the handle once wherever a sweep writes a run
+   of its fields; the cleanup step is the next place to look.
    (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos — the
    pre-filter is sound only there (the other two callers index the list) and
    **worth zero on `sos`**: the set's single `GrantActivatedAbility` (Petrified
