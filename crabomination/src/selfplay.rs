@@ -21,7 +21,7 @@ use rand::seq::SliceRandom;
 use crabomination_nn::TrainRow;
 
 use crate::cube::CardFactory;
-use crate::draft::{generate_sos_pack, sos_draft_pool};
+use crate::draft::{SosPacks, sos_draft_pool};
 use crate::game::GameState;
 use crate::recommend::{
     STALE_ROUNDS, SimConfig, StopReason, build_match_template, build_random_deck,
@@ -78,7 +78,8 @@ pub const SEALED_PACKS: usize = 6;
 pub fn sealed_pool_packs(seed: u64, packs: usize) -> Vec<CardFactory> {
     let pool = sos_draft_pool();
     let mut rng = StdRng::seed_from_u64(seed);
-    (0..packs.max(1)).flat_map(|_| generate_sos_pack(&pool, &mut rng)).collect()
+    let rolls = SosPacks::new(&pool);
+    (0..packs.max(1)).flat_map(|_| rolls.roll(&mut rng)).collect()
 }
 
 /// The bootstrap deckbuilder: the recommender's noisy-greedy sealed build

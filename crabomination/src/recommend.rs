@@ -40,8 +40,8 @@ use rand::{Rng, RngExt, SeedableRng};
 
 use crate::cube::CardFactory;
 use crate::draft::{
-    COPY_CAP, colors_of_cost, colors_of_picks, generate_sos_pack,
-    score_card_with_colors, sos_draft_pool,
+    COPY_CAP, SosPacks, colors_of_cost, colors_of_picks, score_card_with_colors,
+    sos_draft_pool,
 };
 use crate::game::GameState;
 use crate::mana::Color;
@@ -875,8 +875,9 @@ pub fn generate_gauntlet(cfg: &SimConfig) -> Vec<GauntletDeck> {
                         cfg.seed
                             ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1),
                     );
+                    let rolls = SosPacks::new(&pool);
                     let pulls: Vec<CardFactory> =
-                        (0..6).flat_map(|_| generate_sos_pack(&pool, &mut rng)).collect();
+                        (0..6).flat_map(|_| rolls.roll(&mut rng)).collect();
                     let deck = build_random_deck(&pulls, cfg, &mut rng);
                     out.lock().unwrap()[i] = Some(deck);
                 }

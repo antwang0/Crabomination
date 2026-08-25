@@ -159,8 +159,8 @@ fn main() {
         });
         let mut rng = rand::rngs::StdRng::seed_from_u64(pool_seed);
         let sos = crabomination::draft::sos_draft_pool();
-        let pool: Vec<_> =
-            (0..6).flat_map(|_| crabomination::draft::generate_sos_pack(&sos, &mut rng)).collect();
+        let rolls = crabomination::draft::SosPacks::new(&sos);
+        let pool: Vec<_> = (0..6).flat_map(|_| rolls.roll(&mut rng)).collect();
         println!("pool: {} cards (synthetic, pool seed {pool_seed})", pool.len());
         pool
     } else {

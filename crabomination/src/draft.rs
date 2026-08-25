@@ -156,93 +156,115 @@ fn sos_bucket_of(def: &crate::card::CardDefinition) -> SosBucket {
 ///   universe is far smaller than 15 cards but the wider SoS pool
 ///   always satisfies the recipe).
 pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardFactory> {
-    if pool.is_empty() {
-        return Vec::new();
-    }
-    // The Special Guests sheet is collated separately (see
-    // `SOS_SPECIAL_GUEST_RATE`), so keep it out of the colour buckets.
-    let guests: Vec<usize> = {
+    SosPacks::new(pool).roll(rng)
+}
+
+/// The part of [`generate_sos_pack`] that is a pure function of the pool:
+/// which indices are on the Special Guests sheet and which colour bucket
+/// every other one falls in. A draft opens `POD_SIZE * PACKS_PER_SEAT` packs
+/// from one pool and a sealed build six, and each of those used to re-derive
+/// this — a `card_def` lookup and a `sos_bucket_of` per pool card per pack.
+/// Build it once and roll from it; the rolls draw from `rng` in exactly the
+/// order they did before.
+pub struct SosPacks<'a> {
+    pool: &'a [CardFactory],
+    /// Pool indices on the Special Guests sheet, kept indexable because the
+    /// guest slot picks one at random.
+    guests: Vec<usize>,
+    by_bucket: crate::fxhash::HashMap<SosBucket, Vec<usize>>,
+}
+
+impl<'a> SosPacks<'a> {
+    pub fn new(pool: &'a [CardFactory]) -> Self {
+        // The Special Guests sheet is collated separately (see
+        // `SOS_SPECIAL_GUEST_RATE`), so keep it out of the colour buckets.
+        // Membership is the sheet's `HashSet`, not a linear scan of `guests`:
+        // one walk of the pool fills both.
         let sheet: crate::fxhash::HashSet<usize> = crate::sos_mode::sos_special_guests()
             .into_iter()
             .map(|f| f as usize)
             .collect();
-        pool.iter()
-            .enumerate()
-            .filter(|(_, f)| sheet.contains(&(**f as usize)))
-            .map(|(i, _)| i)
-            .collect()
-    };
-    // Pre-bucket every card in the pool. The bucket function is pure,
-    // so caching once amortizes across the pack roll.
-    let mut by_bucket: crate::fxhash::HashMap<SosBucket, Vec<usize>> =
-        crate::fxhash::HashMap::default();
-    for (i, factory) in pool.iter().enumerate() {
-        if guests.contains(&i) {
-            continue;
+        let mut guests: Vec<usize> = Vec::new();
+        let mut by_bucket: crate::fxhash::HashMap<SosBucket, Vec<usize>> =
+            crate::fxhash::HashMap::default();
+        for (i, factory) in pool.iter().enumerate() {
+            if sheet.contains(&(*factory as usize)) {
+                guests.push(i);
+                continue;
+            }
+            let def = crate::cube::card_def(*factory);
+            by_bucket.entry(sos_bucket_of(def)).or_default().push(i);
         }
-        let def = crate::cube::card_def(*factory);
-        by_bucket.entry(sos_bucket_of(def)).or_default().push(i);
+        Self { pool, guests, by_bucket }
     }
-    let mut used: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
-    let mut pack: Vec<CardFactory> = Vec::with_capacity(PACK_SIZE);
-    let pull_from = |bucket: SosBucket,
-                        want: usize,
-                        by_bucket: &crate::fxhash::HashMap<SosBucket, Vec<usize>>,
-                        used: &mut crate::fxhash::HashSet<usize>,
-                        pack: &mut Vec<CardFactory>,
-                        rng: &mut R|
-     -> usize {
-        let Some(indices) = by_bucket.get(&bucket) else {
-            return 0;
+
+    /// Roll one pack.
+    pub fn roll<R: Rng>(&self, rng: &mut R) -> Vec<CardFactory> {
+        let (pool, guests, by_bucket) = (self.pool, &self.guests, &self.by_bucket);
+        if pool.is_empty() {
+            return Vec::new();
+        }
+        let mut used: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
+        let mut pack: Vec<CardFactory> = Vec::with_capacity(PACK_SIZE);
+        let pull_from = |bucket: SosBucket,
+                         want: usize,
+                         by_bucket: &crate::fxhash::HashMap<SosBucket, Vec<usize>>,
+                         used: &mut crate::fxhash::HashSet<usize>,
+                         pack: &mut Vec<CardFactory>,
+                         rng: &mut R|
+         -> usize {
+            let Some(indices) = by_bucket.get(&bucket) else {
+                return 0;
+            };
+            let mut taken = 0;
+            let mut attempts = 0;
+            // Cap attempts so a near-empty bucket can't infinite-loop.
+            let max_attempts = indices.len().saturating_mul(4).max(8);
+            while taken < want && attempts < max_attempts {
+                attempts += 1;
+                let pick = indices[rng.random_range(0..indices.len())];
+                if used.insert(pick) {
+                    pack.push(pool[pick]);
+                    taken += 1;
+                }
+            }
+            taken
         };
-        let mut taken = 0;
-        let mut attempts = 0;
-        // Cap attempts so a near-empty bucket can't infinite-loop.
-        let max_attempts = indices.len().saturating_mul(4).max(8);
-        while taken < want && attempts < max_attempts {
-            attempts += 1;
-            let pick = indices[rng.random_range(0..indices.len())];
-            if used.insert(pick) {
-                pack.push(pool[pick]);
-                taken += 1;
+        let mut shortfall = 0usize;
+        for (bucket, want) in SOS_PACK_RECIPE {
+            let got = pull_from(*bucket, *want, by_bucket, &mut used, &mut pack, rng);
+            shortfall += want.saturating_sub(got);
+        }
+        // Fill any shortfall first from Multi, then from any unused pool
+        // card. This is the rare-pool guard — real SoS draws always
+        // satisfy the recipe, but a custom subset (test fixtures, future
+        // college-only modes) might not.
+        if shortfall > 0 {
+            pull_from(
+                SosBucket::Multi,
+                shortfall,
+                by_bucket,
+                &mut used,
+                &mut pack,
+                rng,
+            );
+        }
+        while pack.len() < PACK_SIZE.min(pool.len()) {
+            let idx = rng.random_range(0..pool.len());
+            if used.insert(idx) {
+                pack.push(pool[idx]);
             }
         }
-        taken
-    };
-    let mut shortfall = 0usize;
-    for (bucket, want) in SOS_PACK_RECIPE {
-        let got = pull_from(*bucket, *want, &by_bucket, &mut used, &mut pack, rng);
-        shortfall += want.saturating_sub(got);
-    }
-    // Fill any shortfall first from Multi, then from any unused pool
-    // card. This is the rare-pool guard — real SoS draws always
-    // satisfy the recipe, but a custom subset (test fixtures, future
-    // college-only modes) might not.
-    if shortfall > 0 {
-        pull_from(
-            SosBucket::Multi,
-            shortfall,
-            &by_bucket,
-            &mut used,
-            &mut pack,
-            rng,
-        );
-    }
-    while pack.len() < PACK_SIZE.min(pool.len()) {
-        let idx = rng.random_range(0..pool.len());
-        if used.insert(idx) {
-            pack.push(pool[idx]);
+        // The Special Guest, when it shows, replaces the pack's last slot.
+        if !guests.is_empty()
+            && !pack.is_empty()
+            && rng.random_range(0..SOS_SPECIAL_GUEST_RATE) == 0
+        {
+            let last = pack.len() - 1;
+            pack[last] = pool[guests[rng.random_range(0..guests.len())]];
         }
+        pack
     }
-    // The Special Guest, when it shows, replaces the pack's last slot.
-    if !guests.is_empty()
-        && !pack.is_empty()
-        && rng.random_range(0..SOS_SPECIAL_GUEST_RATE) == 0
-    {
-        let last = pack.len() - 1;
-        pack[last] = pool[guests[rng.random_range(0..guests.len())]];
-    }
-    pack
 }
 
 impl DraftPool {
