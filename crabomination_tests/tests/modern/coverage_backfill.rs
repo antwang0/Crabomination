@@ -130,20 +130,84 @@ fn archdruids_charm_mode_one_adds_two_counters_to_your_creature() {
     assert_eq!((b.power, b.toughness), (4, 4), "2/2 + two +1/+1 counters = 4/4");
 }
 
-#[test]
-fn awaken_the_honored_dead_returns_all_your_creatures() {
-    let mut g = two_player_game();
-    let c1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let c2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+/// Awaken the Honored Dead is a `{B}{G}{U}` Saga: I destroys a nonland
+/// permanent, II mills three. It shipped as a `{5}{W}{B}` Sorcery that
+/// reanimated every creature in your graveyard — a different card.
+fn cast_awaken(g: &mut GameState) -> crabomination::card::CardId {
     let id = g.add_card_to_hand(0, catalog::awaken_the_honored_dead());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
+    for c in [Color::Black, Color::Green, Color::Blue] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Awaken the Honored Dead castable");
+    }).expect("Awaken the Honored Dead castable for BGU");
+    drain_stack(g);
+    id
+}
+
+#[test]
+fn awaken_the_honored_dead_chapter_one_destroys_then_two_mills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let saga = cast_awaken(&mut g);
+    assert_eq!(
+        g.battlefield_find(saga).unwrap().counter_count(CounterType::Lore),
+        1,
+        "entered on chapter I",
+    );
+    assert!(g.battlefield_find(bear).is_none(), "chapter I destroyed the bear");
+    let gy = g.players[0].graveyard.len();
+    g.saga_advance(saga);
     drain_stack(&mut g);
-    assert!([c1, c2].iter().all(|id| g.battlefield.iter().any(|c| c.id == *id)),
-        "both creatures reanimated from the graveyard");
+    assert_eq!(g.players[0].graveyard.len(), gy + 3, "chapter II milled three");
+}
+
+#[test]
+fn awaken_the_honored_dead_chapter_three_discard_is_optional() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // chapter I's target
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let back = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let saga = cast_awaken(&mut g);
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // the discard
+    g.saga_advance(saga);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    // AutoDecider declines a "may": nothing leaves the hand, nothing returns.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "kept the card");
+    assert!(g.battlefield_find(back).is_none() && g.players[0].hand.iter().all(|c| c.id != back));
+}
+
+#[test]
+fn awaken_the_honored_dead_chapter_three_returns_when_taken() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let back = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let saga = cast_awaken(&mut g);
+    g.add_card_to_hand(0, catalog::pithing_needle()); // the discard
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.saga_advance(saga);
+    g.saga_advance(saga);
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == back),
+        "chapter III returned the Elves to hand",
+    );
+    assert!(
+        g.players[0].hand.iter().all(|c| c.definition.name != "Grizzly Bears"),
+        "and not the bear out of the opponent's graveyard — the return is \"from *your* graveyard\"",
+    );
 }
 
 #[test]

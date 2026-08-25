@@ -619,25 +619,51 @@ pub fn archdruids_charm() -> CardDefinition {
     }
 }
 
-/// Awaken the Honored Dead — {5}{W}{B} Sorcery.
+/// Awaken the Honored Dead — {B}{G}{U} Enchantment — Saga.
+/// I: destroy target nonland permanent. II: mill three. III: you may discard a
+/// card; if you do, return target creature or land card from your graveyard to
+/// your hand.
 ///
-/// Awaken the Honored Dead — return all creature cards from your graveyard to
-/// the battlefield (`Selector::EachMatching` over the graveyard).
+/// It was a `{5}{W}{B}` **Sorcery** that returned *every* creature card in your
+/// graveyard to the battlefield — a different card at a different cost in
+/// different colours, and strictly stronger. Nothing about the old shape was
+/// printed anywhere; the doc comment asserted it too.
 pub fn awaken_the_honored_dead() -> CardDefinition {
     CardDefinition {
         name: "Awaken the Honored Dead",
         cost: cost(&[b(), g(), u()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Move {
-            what: Selector::EachMatching {
-                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
-                filter: SelectionRequirement::Creature,
-            },
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: false,
-            },
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Saga],
+            ..Default::default()
         },
+        saga_chapters: vec![
+            (1, Effect::Destroy { what: target_filtered(SelectionRequirement::Nonland) }),
+            (
+                2,
+                Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            ),
+            (
+                3,
+                Effect::MayDiscard {
+                    description: "Discard a card to return a creature or land card?".into(),
+                    count: Value::ONE,
+                    // "from **your** graveyard" — without `InYourGraveyard`
+                    // the walker happily takes the creature chapter I just
+                    // destroyed out of the *opponent's* graveyard.
+                    then: Box::new(Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::InYourGraveyard.and(
+                                SelectionRequirement::Creature
+                                    .or(SelectionRequirement::Land),
+                            ),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                    else_: None,
+                },
+            ),
+        ],
         ..Default::default()
     }
 }

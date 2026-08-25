@@ -1566,10 +1566,18 @@ pub fn mox_diamond() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
+            // "If this artifact would enter, you **may** discard a **land**
+            // card instead. If you do, put it onto the battlefield. If you
+            // don't, put it into its owner's graveyard." Modelled as
+            // Drekavac's enter-then-keep-or-sacrifice shape, which is the
+            // engine's idiom for this text: it discarded *any* card,
+            // unconditionally, and kept the Mox either way.
+            effect: Effect::MayDiscardMatching {
+                description: "Discard a land card to keep Mox Diamond?".into(),
+                count: Value::ONE,
+                filter: SelectionRequirement::Land,
+                then: Box::new(Effect::Noop),
+                else_: Some(Box::new(Effect::SacrificeSource)),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

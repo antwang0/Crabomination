@@ -621,23 +621,50 @@ fn smothering_tithe_makes_treasure_on_opponent_draw() {
         "Smothering Tithe created a Treasure for you");
 }
 
+/// "If this artifact would enter, you **may** discard a **land** card instead.
+/// If you do, put it onto the battlefield. If you don't, put it into its
+/// owner's graveyard." Taken, the land goes and the Mox stays.
 #[test]
 fn mox_diamond_discards_on_etb_and_taps_for_any() {
     let mut g = two_player_game();
     let mox = g.add_card_to_hand(0, catalog::mox_diamond());
-    g.add_card_to_hand(0, catalog::forest()); // a card to discard
+    g.add_card_to_hand(0, catalog::forest()); // the land to discard
     let gy = g.players[0].graveyard.len();
+    // AutoDecider declines a "may"; script the yes.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Mox Diamond for {0}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].graveyard.len(), gy + 1, "discarded a card on ETB");
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.definition.name == "Forest"),
+        "and it was the land, not whatever was cheapest",
+    );
     g.clear_sickness(mox);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mox, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap for mana");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "Mox Diamond tapped for one mana");
+}
+
+/// With no land to pitch, Mox Diamond goes to the graveyard. It used to
+/// discard *any* card — a creature, a burn spell — and stay either way.
+#[test]
+fn mox_diamond_is_sacrificed_without_a_land_to_discard() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_hand(0, catalog::mox_diamond());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // not a land
+    g.perform_action(GameAction::CastSpell {
+        card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mox Diamond for {0}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mox).is_none(), "no land to discard, so no Mox");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "and the bear stayed in hand",
+    );
 }
 
 #[test]

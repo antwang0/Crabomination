@@ -38713,25 +38713,34 @@ pub fn myr_battlesphere() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::DealDamage {
-                        to: Selector::Player(PlayerRef::DefendingPlayer),
-                        amount: untapped_myr(),
-                    },
-                    Effect::PumpPT {
-                        what: Selector::This,
-                        power: untapped_myr(),
-                        toughness: Value::Const(0),
-                        duration: Duration::EndOfTurn,
-                    },
-                    Effect::Tap {
-                        what: Selector::EachPermanent(
-                            SelectionRequirement::ControlledByYou
-                                .and(SelectionRequirement::HasCreatureType(CreatureType::Myr))
-                                .and(SelectionRequirement::Untapped),
-                        ),
-                    },
-                ]),
+                // "You **may** tap X untapped Myr you control. If you do, …"
+                // — tapping them is a real cost (they stop being blockers), so
+                // the choice is load-bearing and was not modelled: the trigger
+                // tapped every untapped Myr on every attack. `MayDo` offers the
+                // whole package or none of it; the printed card also allows an
+                // intermediate X, which no primitive here spells.
+                effect: Effect::MayDo {
+                    description: "Tap your untapped Myr for damage and +X/+0?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::DealDamage {
+                            to: Selector::Player(PlayerRef::DefendingPlayer),
+                            amount: untapped_myr(),
+                        },
+                        Effect::PumpPT {
+                            what: Selector::This,
+                            power: untapped_myr(),
+                            toughness: Value::Const(0),
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::Tap {
+                            what: Selector::EachPermanent(
+                                SelectionRequirement::ControlledByYou
+                                    .and(SelectionRequirement::HasCreatureType(CreatureType::Myr))
+                                    .and(SelectionRequirement::Untapped),
+                            ),
+                        },
+                    ])),
+                },
             },
         ],
         ..Default::default()

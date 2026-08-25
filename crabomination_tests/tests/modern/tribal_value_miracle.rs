@@ -877,6 +877,8 @@ fn myr_battlesphere_makes_four_myr_on_etb() {
     assert_eq!(myr, 4, "ETB mints four Myr");
 }
 
+/// "You **may** tap X untapped Myr you control. If you do, …" — taken, the
+/// four Myr tap and the defender takes four.
 #[test]
 fn myr_battlesphere_attack_pings_for_each_untapped_myr() {
     let mut g = two_player_game();
@@ -888,6 +890,10 @@ fn myr_battlesphere_attack_pings_for_each_untapped_myr() {
     while g.step != TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
+    // AutoDecider declines a "may"; script the yes.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
     let opp_life = g.players[1].life;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: sphere, target: AttackTarget::Player(1),
@@ -899,6 +905,34 @@ fn myr_battlesphere_attack_pings_for_each_untapped_myr() {
         drain_stack(&mut g);
     }
     assert!(g.players[1].life <= opp_life - 4, "pinged for each of the four untapped Myr");
+    assert!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Myr").all(|c| c.tapped),
+        "and the Myr are tapped, which is what the choice costs",
+    );
+}
+
+/// ...and declined, the Myr stay untapped and available to block. The trigger
+/// used to tap every untapped Myr on every attack, with no way out.
+#[test]
+fn myr_battlesphere_attack_tap_can_be_declined() {
+    let mut g = two_player_game();
+    let sphere = g.add_card_to_battlefield(0, catalog::myr_battlesphere());
+    g.fire_self_etb_triggers(sphere, 0);
+    drain_stack(&mut g);
+    g.clear_sickness(sphere);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sphere, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life, "no ping without the tap");
+    assert!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Myr").all(|c| !c.tapped),
+        "the Myr are still untapped and can block",
+    );
 }
 
 #[test]
