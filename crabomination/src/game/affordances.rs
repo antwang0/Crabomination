@@ -407,7 +407,7 @@ impl GameState {
                     | Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand
                     | Keyword::CantAttackOrBlockUnlessPayPerPermanent(_) => self.could_pay_generic(
                         seat,
-                        self.attack_block_keyword_tax(c.id, &kws, true),
+                        self.attack_block_keyword_tax(c.id, kws, true),
                     ),
                     // CR 508.1g — Hollow Warrior needs a spare untapped match
                     // that isn't the attacker itself.

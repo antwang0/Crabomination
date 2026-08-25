@@ -2420,16 +2420,16 @@ impl GameState {
                 pt_deltas.push((b, -flank));
             }
             // Bushido on the blocker (it blocks).
-            let bn = sum_n(&bk, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
+            let bn = sum_n(bk, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
             if bn > 0 { pt_deltas.push((b, bn)); }
         }
         for (a, count) in blocked {
             let ak = kws_for(a);
             // Bushido on the attacker (it becomes blocked — once).
-            let bn = sum_n(&ak, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
+            let bn = sum_n(ak, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
             if bn > 0 { pt_deltas.push((a, bn)); }
             // Rampage: +N for each blocker beyond the first.
-            let rn = sum_n(&ak, |k| if let Keyword::Rampage(x) = k { Some(*x as i32) } else { None });
+            let rn = sum_n(ak, |k| if let Keyword::Rampage(x) = k { Some(*x as i32) } else { None });
             let extra = count.saturating_sub(1) as i32;
             if rn > 0 && extra > 0 { pt_deltas.push((a, rn * extra)); }
         }
