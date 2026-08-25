@@ -22,6 +22,16 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 top candidate, re-read the base after every rebase, and budget two callgrind
 rounds per commit.**
 
+0. **The sixty-fourth pass closed (-44).** A token mint built the token's
+   8,232-byte `CardDefinition` *per token in the batch* — `sos` **-0.605 %**,
+   `cube` **-0.747 %**, and `mint_token_onto_battlefield -> CardInstance::new`
+   6,649,391 -> 296,405 Ir. **The hoist out of the two `CreateToken` loops is
+   -0.53 % of `sos` on its own; the memo behind it is -0.04 %.** (-44)'s own
+   reason for deferring it was wrong: a memo whose key derives `Eq` but not
+   `Hash` can be a capped `Vec` — price the linear scan before writing a
+   `Hash` impl. `cg_lines.py`'s location column now carries one directory
+   component, which is what finally named `check_state_based_actions`' largest
+   row (`core/src/slice/iter/macros.rs`, i.e. the sweep's own walks).
 1. **The sixty-third pass took (-47) and it read 5x its sizing.** Base
    `0036e238` -> tip, two commits: `fixed` **-0.579 %**, `sos` **-0.446 %**,
    `cube` **-1.289 %**. The entry costed only the attacker-resolution hoist
@@ -50,8 +60,9 @@ rounds per commit.**
    flat since the 58th tip; do not re-collect it.** The `cube` column is
    new and has two unread clone-shaped rows: `restore_payment_state`
    (553 Ir/call) and `place_card_at_resolved_zone` (629). **The bind-once
-   half is done; don't grind it.** Then (-44) (`__memcpy`, allocator half
-   closed) and (-45) (the cost of asking).
+   half is done; don't grind it.** **(-44) is now closed on both halves** —
+   its `__memcpy` table and its allocator table are both read and both flat —
+   so after (-43) the fresh queue is (-45) (the cost of asking).
    **(-46) is deliberately last and should stay there** — see 9.
 5. **What is left of (-47) is small and needs measuring, not assuming.**
    `pick_attacks`'s "unblockable by the current board" check is the same
@@ -96,8 +107,8 @@ rounds per commit.**
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **759** (was 1,096 — "Engine — Missing Mechanics"
-   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.7k. Suite is **14 test
+10. **Housekeeping.** TODO **770** (was 1,096 — "Engine — Missing Mechanics"
+   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.8k. Suite is **14 test
    binaries / 18,736 tests**, not the "22" older blocks quote. Next folds:
    PERF's 47th/48th Log entries, and ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k
    both want a topical triage — the backlog file's own header asks for one

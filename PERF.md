@@ -138,6 +138,14 @@ python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder \
 # **Cross-check any line-profile row against `cg_edges.py`'s call counts
 # before ranking work by it.** The counts are the truth; the lines are a
 # pointer to where inside a function the cost sits, never to a function total.
+# **The location column carries one directory component** (sixty-fourth pass).
+# It was a bare basename, so `sync/mod.rs:1917` (the CoW deep copy) and
+# `game/mod.rs:17108` (the trigger dispatcher) both read `mod.rs`, and every
+# `macros.rs` in the standard library shared a label. That is what left this
+# file describing `check_state_based_actions`' largest row as "a dependency's
+# `macros.rs:332` at 0.62 %" for six passes: it is
+# `core/src/slice/iter/macros.rs`, i.e. `slice::Iter::next` — the sweep's own
+# battlefield walks.
 # Every listing `cg_edges.py` prints says what it truncated (the nineteenth
 # robustness filter) — and the first thing that reports is that **the top 45
 # self-cost rows are 68.5 % of the program and 1,150 rows hold the rest**. A
@@ -2335,6 +2343,62 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Sixty-fourth pass — a token mint built the token's definition, per token
+
+Two commits, base `a3c5eb97`. The base re-read here is **code-identical** to
+the sixty-third pass's tip `fa3bf671` (the three commits between them are
+documentation) and reproduces its recorded columns to within 450 Ir, which is
+argv length.
+
+```text
+                          base (a3c5eb97)   tip
+I refs, --decks fixed     1,175,725,212    1,175,213,494   -0.044 %
+I refs, --decks sos       1,523,857,356    1,514,644,234   -0.605 %
+I refs, --decks cube      2,732,668,272    2,712,267,762   -0.747 %
+```
+
+**`CardDefinition` is 8,232 bytes and a token mint moved a whole one twice**:
+`token_to_card_definition` built it, `mint_token_onto_battlefield`'s by-value
+argument moved it, `Arc::new` moved it again — and both `CreateToken` loops
+did all of that *per token in the batch*. The edge
+`mint_token_onto_battlefield -> CardInstance::new` was **370 calls /
+6,649,391 Ir, 17,971 apiece**; it is **296,405 (-95.5 %)**.
+`token_to_card_definition` runs **340 times -> 4** over six games, and
+program-wide `__memcpy` goes **82,706,356 -> 76,797,319 (5.43 % -> 5.07 %)`.
+
+**The step that pays is the hoist, not the memo** — the definition leaving the
+loop is -0.53 % of `sos` on its own, against -0.04 % for the memo and -0.01 %
+for the `Into<Arc<_>>` signature. Measured separately, in that order, against
+one base. A batch of `n` tokens was `n` builds of the same shape; the memo
+only removes the *first* one of each shape per thread.
+
+**(-44) said this needed `TokenDefinition: Hash` and it did not.** A capped
+`Vec<(TokenDefinition, Arc<CardDefinition>)>` scanned with the `Eq` the type
+already derives is enough: `name: String` is field 0, so a miss short-circuits
+on the first compare, and the table stops at 64 entries because
+`CreateTokenCopyOf` can mint a shape per copied card. **Where a memo's key
+derives `Eq` but not `Hash`, price the linear scan before writing the `Hash`
+impl** — a handful of distinct keys makes the scan the cheaper structure and
+the smaller change.
+
+**Sharing one definition across mints is invisible to the engine**, which is
+the fact that makes the whole entry safe: every site that writes a permanent's
+definition goes through `Arc::make_mut`, which unshares first, and nothing
+in the program branches on definition pointer identity (`Arc::ptr_eq` appears
+once, on `CowBox`, in a test-only helper). The memo is a pure function of its
+key, so thread-local storage adds no cross-thread order to the game.
+
+**And the other commit is the tool, not the engine**: `cg_lines.py`'s location
+column was a bare basename. See **How to measure** — the row this file has
+called "a dependency's `macros.rs:332`" since the fifty-eighth pass is
+`core/src/slice/iter/macros.rs`, the SBA sweep's own battlefield walks.
+
+Suite 19,160 passed / 0 failed / 5 skipped, golden traces unchanged; `--bench`
+decisions **196,220 byte-identical**, turns/game 27.53, 0 stalls, determinism
+ok; the ladder printout diffs identically on all three pools at `--games 20
+--seed 11`; `clippy --workspace --all-targets` clean. No encoding, pool,
+`TrainRow`, `EncodedState` or `Vocab` change — **no net needs retraining.**
 
 ### Sixty-third pass — the pair loop paid for the half of the pair that did not vary
 
@@ -5245,17 +5309,22 @@ The sos table at the sixtieth tip, top of `__memcpy`'s callers:
 mean and usually does not. `finalize_cast`'s 24.7 memcpys a call are
 (-28)'s and that entry is closed to everything but a `CardTypeSet` bitset.
 
-**What is left under `CardInstance::new`, both of them the same shape one size
-down:** `mint_token_onto_battlefield` is **370 calls / 6,644,250 Ir (0.43 %)**
-— `token_to_card_definition` builds a whole 8 KB `CardDefinition` per token
-minted and `Arc::new` copies it — and
-`definition_matches_requirement` **deep-clones** a `CardDefinition` (156 /
-2,736,861, 0.18 %) to build a scratch `CardInstance` for a predicate.
-`card_arc`'s trick does not transfer to either: a token's definition is a
-*value*, so a memo needs `TokenDefinition: Hash` (it derives only `Eq`) and an
-eviction rule for `CreateTokenCopyOf`, and the predicate site holds a
-`&CardDefinition` with no `Arc` to share. **Size them together at ~0.6 % and
-do not start one alone.**
+**Both halves under `CardInstance::new` are PAID, and together they came in
+above the ~0.6 % this entry sized them at.** `definition_matches_requirement`'s
+deep clone went at the sixty-second pass (`71cee718`, and the find was one
+level up — the caller was looking a name back up in the global index to test a
+definition it was already holding). `mint_token_onto_battlefield` went at the
+sixty-fourth: **370 calls / 6,649,391 Ir -> 296,405, -95.5 %**, `sos`
+**-0.605 %**, `cube` **-0.747 %**.
+
+**This entry's own reason for not starting them was wrong and the correction
+generalises.** It said a token memo needs `TokenDefinition: Hash`, which the
+type does not derive. It does not: a capped `Vec` scanned with the derived
+`Eq` is enough when the distinct-key count is small (four shapes over six
+games), and `name: String` being field 0 makes a miss one compare. **Price the
+linear scan before writing a `Hash` impl.** The larger half was not the memo
+at all — it was that both `CreateToken` loops rebuilt the same 8,232-byte
+definition *per token in the batch*, which is -0.53 % of `sos` on its own.
 
 **RE-READ AT THE SIXTY-THIRD TIP AND IT IS FLAT — do not spend a callgrind
 round re-collecting this table.** `make_mut` on `sos` is **440,300** calls
