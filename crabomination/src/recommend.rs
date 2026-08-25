@@ -426,6 +426,19 @@ impl<'a> PoolScores<'a> {
 const ALLOW_WORDS: usize = 16;
 const ALLOW_BITS: usize = ALLOW_WORDS * 64;
 
+/// The two piles plus what [`assemble_lands`] needs to skip re-deriving them.
+struct MainDeck {
+    main: Vec<CardFactory>,
+    leftovers: Vec<CardFactory>,
+    /// `(index in leftovers, colours it taps for)` per pool land, ascending.
+    ///
+    /// A land never occupies a spell slot, so every pool land lands in the
+    /// `off` pile, and `off` keeps pool order — so this *is* the order and
+    /// the contents `assemble_lands` used to rediscover with a `card_brief`
+    /// per leftover.
+    lands: Vec<(u32, crate::mana::ColorSet)>,
+}
+
 /// [`suggest_main_deck_in_colors`] against a prebuilt [`PoolScores`].
 pub fn suggest_main_deck_in_colors_with<R: Rng>(
     scores: &PoolScores<'_>,
@@ -435,6 +448,20 @@ pub fn suggest_main_deck_in_colors_with<R: Rng>(
     noise: i32,
     rng: &mut R,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
+    let d = suggest_main_deck_shape(scores, colors, splash, target_spells, noise, rng);
+    (d.main, d.leftovers)
+}
+
+/// [`suggest_main_deck_in_colors_with`] keeping the land index the shape
+/// builder's land assignment wants. See [`MainDeck`].
+fn suggest_main_deck_shape<R: Rng>(
+    scores: &PoolScores<'_>,
+    colors: &[Color],
+    splash: &[CardFactory],
+    target_spells: usize,
+    noise: i32,
+    rng: &mut R,
+) -> MainDeck {
     let picks = scores.picks;
     let allowed = |f: CardFactory, brief: &crate::cube::CardBrief| -> bool {
         // Lands never occupy spell slots in the sealed builder —
@@ -464,10 +491,16 @@ pub fn suggest_main_deck_in_colors_with<R: Rng>(
     let mut scored: Vec<(CardFactory, i32)> =
         Vec::with_capacity(if ordered.is_some() { 0 } else { picks.len() });
     let mut off: Vec<CardFactory> = Vec::with_capacity(picks.len());
+    // A sealed pool is about a fifth lands; one allocation rather than five
+    // doublings.
+    let mut lands: Vec<(u32, crate::mana::ColorSet)> = Vec::with_capacity(picks.len() / 4);
     let mut allow = [0u64; ALLOW_WORDS];
     let mut n_allowed = 0usize;
     for (i, (&f, &(brief, base))) in picks.iter().zip(&scores.cards).enumerate() {
         if !allowed(f, brief) {
+            if brief.is_land {
+                lands.push((off.len() as u32, brief.produces));
+            }
             off.push(f);
             continue;
         }
@@ -520,8 +553,14 @@ pub fn suggest_main_deck_in_colors_with<R: Rng>(
             take(f, &mut counts, target_spells, &mut main, &mut leftovers);
         }
     }
+    // `off` is appended whole, so a land's index in `leftovers` is its index
+    // in `off` shifted by whatever the scored pile left behind.
+    let off_start = leftovers.len() as u32;
+    for (at, _) in &mut lands {
+        *at += off_start;
+    }
     leftovers.extend(off);
-    (main, leftovers)
+    MainDeck { main, leftovers, lands }
 }
 
 /// True when a card helps cast a multicolor deck's spells: it taps for
@@ -749,29 +788,44 @@ pub(crate) fn land_produced_colors(def: &crate::card::CardDefinition) -> crate::
 /// duals are removed from `leftovers`.
 fn assemble_lands(
     leftovers: &mut Vec<CardFactory>,
+    lands: &[(u32, crate::mana::ColorSet)],
     main: &[CardFactory],
     colors: &[Color],
     total: u32,
     squared_pips: bool,
 ) -> (Vec<CardFactory>, HashMap<Color, u32>) {
-    let mut duals: Vec<CardFactory> = Vec::new();
-    leftovers.retain(|&f| {
-        if duals.len() >= total as usize {
-            return true;
-        }
-        let brief = crate::cube::card_brief(f);
-        if !brief.is_land {
-            return true;
-        }
-        let produced = brief.produces;
-        let on_color = produced.iter().filter(|c| colors.contains(c)).count() as u32;
-        if on_color >= 2 && on_color == produced.len() {
-            duals.push(f);
-            false
-        } else {
-            true
-        }
+    let want = colors.iter().fold(crate::mana::ColorSet::empty(), |mut s, &c| {
+        s.insert(c);
+        s
     });
+    let mut duals: Vec<CardFactory> = Vec::new();
+    // Ascending, so removing them below is one pass with no search.
+    let mut taken: Vec<u32> = Vec::new();
+    for &(at, produced) in lands {
+        if duals.len() >= total as usize {
+            break;
+        }
+        // `ColorSet` is a five-bit field, so "at least two of the build's
+        // colours and nothing outside them" is two mask tests.
+        let on_color = crate::mana::ColorSet(produced.0 & want.0).len();
+        if on_color >= 2 && produced.is_subset_of(want) {
+            duals.push(leftovers[at as usize]);
+            taken.push(at);
+        }
+    }
+    if let Some(&first) = taken.first() {
+        let mut next = 1usize;
+        let mut write = first as usize;
+        for read in write + 1..leftovers.len() {
+            if next < taken.len() && taken[next] as usize == read {
+                next += 1;
+                continue;
+            }
+            leftovers[write] = leftovers[read];
+            write += 1;
+        }
+        leftovers.truncate(write);
+    }
     let basics = basic_split(main, colors, total - duals.len() as u32, squared_pips);
     (duals, basics)
 }
@@ -828,8 +882,8 @@ fn build_shape<R: Rng>(
     if !splash_colors.is_empty() && splash.is_empty() {
         return None;
     }
-    let (main, mut leftovers) =
-        suggest_main_deck_in_colors_with(scores, colors, &splash, spells, noise, rng);
+    let MainDeck { main, mut leftovers, lands: land_slots } =
+        suggest_main_deck_shape(scores, colors, &splash, spells, noise, rng);
     if main.is_empty() {
         return None;
     }
@@ -845,7 +899,7 @@ fn build_shape<R: Rng>(
     // count, pad lands so the deck still reaches 40 cards.
     let lands = lands.max(40u32.saturating_sub(main.len() as u32));
     let (duals, basics) =
-        assemble_lands(&mut leftovers, &main, &land_colors, lands, cfg.builder_v2);
+        assemble_lands(&mut leftovers, &land_slots, &main, &land_colors, lands, cfg.builder_v2);
     Some(CandidateBuild {
         static_score: if cfg.builder_v3 {
             static_build_score_v3(&main, spells)
