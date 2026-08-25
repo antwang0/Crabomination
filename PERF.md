@@ -431,24 +431,25 @@ Quote both numbers or neither.
 3 threads), three readings at the tip:
 
 ```text
-games_per_s      263.60 / 270.56 / 255.92   best 270.56  (pass 54 tip: 269.41)
+games_per_s      270.23 / 276.73 / 269.17   best 276.73  (pass 54 tip: 269.41)
 decisions        196,220 on all three
 turns_per_game   27.53
-peak_rss_mib     30.2 / 30.1 / 28.3
-host_calib_ms    65 / 68 / 65
+stalls_by        cap 0 / stuck 0 / draw 0 on all three
+peak_rss_mib     28.1 / 28.2 / 27.8         (pass 54 tip: 30.3)
+host_calib_ms    55 / 53 / 55
 ```
 
-**Flat, and it has to be.** `--bench` is `--decks fixed`, +0.097 % in Ir; the
-5.7 % spread across three back-to-back runs of *one* binary is this file's
-standing warning about `--bench` absolutes, restated. No base binary was
-built at `release` for this pass — the Ir column is the attribution and the
+**Read it as flat.** `--bench` is `--decks fixed`, -0.36 % in Ir over the
+pass; the 2.8 % spread across three back-to-back runs of *one* binary is
+this file's standing warning about `--bench` absolutes. No base binary was
+built at `release` here — the Ir column is the attribution and the
 release-fast pair above is the wall-clock claim.
 
 **Crash-freedom and determinism at the tip.** `release`, `--a gang --b gang
---games 200 --threads 3 --decks all`, seeds 11/12/13: every cell **3,400
-decided, 0 undecided, no panic, all 1,700 pairs split** — 10,200 games and
-5,100 pairs. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism ok
-(3 vs 1 threads identical)`**.
+--games 200 --threads 3`, seeds 11/12/13 x `--decks all` plus `--decks
+sealed` at seed 11: every cell **decided, 0 undecided, no panic, all pairs
+split** — 12,600 games and 6,300 pairs. `CRAB_THREAD_CHECK=1 --bench` reads
+**`thread_determinism ok (3 vs 1 threads identical)`**.
 
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass.
