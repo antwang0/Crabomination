@@ -507,6 +507,68 @@ build.
 
 ## Baseline
 
+**Sixtieth pass, base `58346b57` vs tip `6344adf6`, two commits, both about
+a copy nobody needed.** `--decks sos` **-3.46 %**, `cube` **-2.82 %**,
+`fixed` **-2.16 %**, `sealed` **-2.33 %**, and **peak RSS on `--bench`
+21.9 -> 17.7 MiB, -19 %**. Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
+--seed 1`.
+
+```text
+                       base (58346b57)   (A) ba15f249    tip (B) 6344adf6
+I refs, --decks sos      1,603,088,243   1,593,828,683   1,547,629,927  -3.460 %
+I refs, --decks cube     2,878,150,309   2,866,725,942   2,797,004,247  -2.820 %
+I refs, --decks fixed    1,219,893,985   1,218,193,228   1,193,591,244  -2.156 %
+I refs, --decks sealed     3,276,783,848 (read at (A))   3,200,503,032  -2.328 %
+deck build alone              21,800,071 (read at (A))      21,871,968  +0.330 %
+peak_rss_mib, --bench               21.9                          17.7    -19 %
+```
+
+| step | commit | sos | cube | fixed | what |
+|---|---|---|---|---|---|
+| A | `ba15f249` | -0.578 % | -0.397 % | -0.139 % | the CR 104.4b loop watchdog ran SipHash over fifty small integers |
+| B | `6344adf6` | **-2.899 %** | **-2.432 %** | **-2.019 %** | a deck-fill memcpy'd an 8,232-byte `CardDefinition` per card |
+
+**(B) is the pass, and the number that found it is a struct size.**
+`CardDefinition` is **8,232 bytes**; `CardInstance::new` takes
+`impl Into<Arc<CardDefinition>>`, and every deck-fill site handed it a fresh
+`f()`, so `Arc::new` copied all of it once per card in a library. In the sos
+profile `CardInstance::new` is the second-largest `__memcpy` caller — 3,452
+memcpys / 28,451,728 Ir, **8,242 Ir apiece** — and that per-call figure is
+what named the cause: a memcpy that expensive is copying kilobytes, and only
+one thing in this engine is that big. `cube::card_arc(f)` memoizes one
+`Arc<CardDefinition>` per factory per thread; a deck-fill is now a refcount
+bump. It is sound because `Arc<CardDefinition>` is already the CoW handle for
+a definition — the ~twenty sites that rewrite one all go through
+`Arc::make_mut`.
+
+**The RSS half is the same change seen from the other side** and matters more
+to `selfplay_train` than the Ir does: a forty-card deck holds ~twenty distinct
+definitions instead of forty, and an actor count multiplies it.
+
+**The one column that goes the wrong way is the cold deck-build
+microbenchmark, +0.330 %, and the first version of (B) read +6.591 % there.**
+Routing `card_arc` through `card_brief`'s memo made a *miss* also pay
+`CardBrief::of` — the pip counts, the keyword walk, `is_fixing_card`'s whole
+effect-tree walk — and `--decks sealed --games 1` is eighty template cards
+that are all misses and no games. Its own memo costs a map lookup and an
+`Arc` allocation, which is the +0.330 %. **A long-lived actor pays that once
+per factory ever**; the microbenchmark is a cold process by construction.
+
+```text
+decisions        196,220 -> 196,220        byte-identical
+turns_per_game   27.53   -> 27.53
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism      ok; CRAB_THREAD_CHECK=1 ok (3 vs 1 threads identical)
+ladder output    the full printout diffs identically on fixed, cube, sos
+                 and sealed
+suite            18,735 passed / 0 failed / 5 ignored over 14 result blocks
+golden traces    all unchanged
+clippy           `--workspace --all-targets` clean
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
+```
+
 **Fifty-eighth pass, base `c18552fd` (pass 57's tip) vs its own tip
 `13f3521c`.** Four commits, one class: **the sealed builder's last three
 per-shape re-derivations, plus the land walk that rediscovered what the pile
@@ -1994,6 +2056,57 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Sixtieth pass — a struct size found it, not a function row
+
+Two commits, base `58346b57`. `sos` **-3.46 %**, `cube` -2.82 %, `fixed`
+-2.16 %, `sealed` -2.33 %, **peak RSS -19 %**. Numbers in the Baseline block.
+
+**(B) `6344adf6` — a deck-fill memcpy'd an 8,232-byte `CardDefinition` per
+card. sos -2.899 %.** The device is worth writing down because no function
+row says it: `__memcpy_avx_unaligned_erms` is **7.80 % of `sos`** and has
+never had an entry, and its caller table is forty rows of small copies —
+except one. `CardInstance::new` is **3,452 calls at 8,242 Ir each**, and
+*that per-call number is the finding*: a memcpy costing eight thousand
+instructions is moving kilobytes, and `size_of::<CardDefinition>()` is 8,232.
+`CardInstance::new` takes `impl Into<Arc<CardDefinition>>` and every deck-fill
+site handed it a fresh `f()`, so `Arc::new` copied the whole definition, once
+per card in a library, on top of building it. `cube::card_arc(f)` memoizes one
+`Arc` per factory per thread and the fill becomes a refcount bump.
+
+**Read the Ir/call column of a caller table, not just the calls or the
+total.** Every other row in that table is a hundred-odd Ir and genuinely
+diffuse; the one row worth a commit is visible only as an outlier in the
+ratio.
+
+**Sound because the definition was already a CoW handle.** `Arc<Card
+Definition>` is what `CardData` holds, and the ~twenty sites that rewrite a
+definition — transform, become-a-copy, a permanent keyword grant, a colour
+override — all go through `Arc::make_mut`. Four copies of a card in a deck
+share one definition until one of them is rewritten, and the first writer
+unshares. The RSS drop (21.9 -> 17.7 MiB on `--bench`) is the same fact from
+the other side, and it is the half that matters to an actor count.
+
+**Its own memo, and the alternative was measured.** Riding `card_brief`'s memo
+made a *miss* also pay `CardBrief::of` — pip counts, the keyword walk,
+`is_fixing_card`'s effect-tree walk — which read **+6.591 % on `--decks
+sealed --games 1`**, a workload that is eighty template cards, all misses, and
+no games. A separate memo reads +0.330 % there. **A memo whose miss path is
+expensive is not a free memo**, and the workload that shows it is the cold
+one.
+
+**(A) `ba15f249` — the CR 104.4b loop watchdog ran SipHash over fifty small
+integers. sos -0.578 %.** `loop_fingerprint` built its digest into a
+`DefaultHasher` at ~52 Ir a `write`: **2,424 calls / 12,546,606 Ir / 0.78 % of
+`sos`**, and 203,496 of the program's 204,774 `sip::Hasher::write` calls. It
+runs after every triggered-ability resolution, so a trigger-heavy pool pays it
+constantly and almost always to learn that the state moved. SplitMix64's
+finalizer chained over the same field stream avalanches every input bit across
+all 64 output bits in ten instructions, which is what the function's own doc
+asks for ("a false positive would end a live game"). **The engine's vendored
+`fxhash` would have been the wrong tool** — its own doc says it is not
+collision-resistant, and it exists for iteration determinism in *maps*, not
+for a 64-bit digest that decides a draw.
 
 ### Fifty-ninth pass — the clock gets a harness, and the arc gets measured on it
 

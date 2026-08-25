@@ -148,6 +148,18 @@ Log with its numbers; read the entry before re-proposing any of them.
   taking cube from -1.85 to -2.26 % and sos from -2.75 to -3.16 % at the same
   time. `fixed`'s `sa_cards` is empty on all 32,002 gathers, so the walks were
   already free there and anything in front of them is pure charge.
+- **Read the Ir/call column of a caller table, not just the calls or the
+  total** (pass 60, -2.9 % of `sos` in one commit). `__memcpy` is 7.80 % of
+  `sos` over forty diffuse rows — except `CardInstance::new`, 3,452 calls at
+  **8,242 Ir each**. A memcpy costing eight thousand instructions is moving
+  kilobytes, and `size_of::<CardDefinition>()` is **8,232**: every deck-fill
+  site handed `CardInstance::new` a fresh `f()` and `Arc::new` copied the whole
+  definition per card in a library.
+- **A memo whose miss path is expensive is not a free memo** (same pass). The
+  first version of `card_arc` rode `card_brief`'s memo, so a miss also paid the
+  pip counts, the keyword walk and `is_fixing_card`'s effect-tree walk:
+  **+6.591 % on `--decks sealed --games 1`**, which is all misses and no games.
+  Its own memo reads +0.330 % there. Quote the *cold* workload for a memo.
 - **The Ir does show up on the clock, and it over-reads by ~2x** (measured
   2026-08-25, and it is the first time anyone asked). Passes 57-59 together,
   `28ae2416` -> `49c7220d`, eight ABBA blocks a pool with a flat null control:
