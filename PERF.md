@@ -341,20 +341,20 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`863d882d`.** Seven commits, one class after the first: **the simulator kept
+`353273ef`.** Eight commits, one class after the first: **the simulator kept
 building answers before asking whether anyone wanted them.** (A) the
 requirement walker's subtype arms stop gathering where the printed line
 answers; (B) the freeze scope's depth and gate slots come out of the mutex;
-(C)-(G) five helpers that allocated, cloned or re-found something their
-caller discards or already holds. **`--decks cube` -20.16 %.** Ir readings `profiling-fast
+(C)-(H) six helpers that allocated, cloned or re-found something their
+caller discards or already holds. **`--decks cube` -20.26 %.** Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --seed 1` unless the row says otherwise.
 
 ```text
-                          base (bf4917a5)   (A) 8779aa9f     tip (G)
-I refs, --decks cube        4,012,095,058   3,332,029,985   3,203,301,192  -20.16 %
-I refs, --decks fixed       1,248,407,927   1,249,622,086   1,243,899,270   -0.361 %
-I refs, --decks sos         1,760,442,504   1,761,529,321   1,735,589,729   -1.412 %
+                          base (bf4917a5)   (A) 8779aa9f     tip (H)
+I refs, --decks cube        4,012,095,058   3,332,029,985   3,199,249,495  -20.26 %
+I refs, --decks fixed       1,248,407,927   1,249,622,086   1,243,883,316   -0.362 %
+I refs, --decks sos         1,760,442,504   1,761,529,321   1,735,661,160   -1.408 %
 I refs, --decks sealed      3,497,162,303   3,500,013,528     (B), below
 deck build alone               34,506,869      34,859,382     (B), below
   (--decks sealed --games 1: 0 games played, all setup)
@@ -371,10 +371,11 @@ Per commit, the three pools each was measured on:
 | E `5f988142` | -1.021 % | flat | -0.442 % | `extract_power_gate` asks `requirement_mentions_power` before cloning the tree |
 | F `9d9555e9` | -1.208 % | -0.034 % | -0.018 % | the per-card grant walk hands the permanent to the filters instead of re-finding it |
 | G `863d882d` | -0.205 % | -0.028 % | -0.254 % | `granted_abilities_of` does the same for the mana sweep's grant scan |
+| H `353273ef` | -0.126 % | flat | flat | thirteen more battlefield walks hand their card to the requirement walker |
 | — | +0.40 % | +0.66 % | — | **REVERTED** — the presence gate on `board_keyword_matching`'s *frozen* leg. See the Log |
 | — | +0.43 % | +0.12 % | — | **REVERTED** — a two-phase exactly-sized build in `statics_granted_triggers_with`. See the Log |
 
-`sealed` and the deck build were read at (B) and not re-read; (C) through (G)
+`sealed` and the deck build were read at (B) and not re-read; (C) through (H)
 are engine paths the deck builder does not reach.
 
 **The deck-build row was layout, and the profile says so rather than the
@@ -1488,8 +1489,8 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-Seven commits, base `bf4917a5`. (A) is the pass's finding; (B) through (G)
-are each a win on every pool they move — **cube -20.2 % over the pass**:
+Eight commits, base `bf4917a5`. (A) is the pass's finding; (B) through (H)
+are each a win on every pool they move — **cube -20.3 % over the pass**:
 
 ```text
                   base (bf4917a5)   (A) 8779aa9f
