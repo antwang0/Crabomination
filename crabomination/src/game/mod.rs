@@ -23807,12 +23807,36 @@ pub(crate) fn affected_from_requirement(
     let mut other_than_source = false;
     let mut opponent = false;
     let mut owned_by_controller: Option<bool> = None;
-    let mut walk = vec![req];
-    while let Some(r) = walk.pop() {
+    // The And-tree is a handful of leaves, and this stack was a heap `Vec`:
+    // one allocation and one regrowth on **every** call — 44,396 + 44,438 of
+    // a cube run's 1.96 M allocations at the fifty-fifth tip, and this is one
+    // of the gather's inner helpers. A fixed inline stack walks the same
+    // leaves; the accumulators below are order-independent by construction
+    // (see the `opponent` note), so the spill's LIFO-vs-inline ordering
+    // cannot change an answer. `spill` allocates only on a tree deeper than
+    // `INLINE`, which no printed card has.
+    const INLINE: usize = 8;
+    let mut inline: [&SelectionRequirement; INLINE] = [req; INLINE];
+    let mut n = 1usize;
+    let mut spill: Vec<&SelectionRequirement> = Vec::new();
+    while n > 0 || !spill.is_empty() {
+        let r = match spill.pop() {
+            Some(r) => r,
+            None => {
+                n -= 1;
+                inline[n]
+            }
+        };
         match r {
             R::And(a, b) => {
-                walk.push(a);
-                walk.push(b);
+                for x in [&**a, &**b] {
+                    if n < INLINE {
+                        inline[n] = x;
+                        n += 1;
+                    } else {
+                        spill.push(x);
+                    }
+                }
             }
             R::ControlledByYou => ctrl = Some(Some(source_controller)),
             // Accumulate a flag rather than returning early, so the opponent

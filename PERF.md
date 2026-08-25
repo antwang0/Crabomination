@@ -1468,8 +1468,8 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-Two commits, base `bf4917a5`. (A) is the pass's finding and (B) pays for
-the sliver (A) cost the other pools:
+Three commits, base `bf4917a5`. (A) is the pass's finding; (B) and (C) are
+each a win on every pool it moves:
 
 ```text
                   base (bf4917a5)   (A) 8779aa9f
@@ -1579,6 +1579,25 @@ both moved fields describe things a `&GameState` holder cannot change: the
 depth is written only by the thread that pushed the scope, and a gate slot
 caches an answer about `continuous_effects` + `battlefield`. `memo` and
 `perms` stay under the lock, where a torn read would matter.
+
+**(C) `affected_from_requirement`'s And-tree stack was a heap `Vec`.
+`cube` -0.665 %, `sos` -0.338 %, `fixed` flat (+0.001 %).** `let mut walk =
+vec![req]` is one allocation and — after the first `And` — one regrowth on
+every call, 44,396 + 44,438 of a cube run's **1,963,140 allocations**, and
+the function is one of the gather's inner helpers. A fixed eight-slot inline
+stack with a `Vec` spill (which no printed card's tree reaches) walks the
+same leaves. Sound because the accumulators are order-independent, which the
+function's own `opponent` comment already states as a requirement.
+
+**The table that found it is `cg_edges.py --callers __rust_alloc` ranked by
+*call count*, and this file has said so since the forty-ninth pass.**
+`finish_grow` is 443,589 of those 1.96 M — a fifth of every allocation in
+the simulator is a `Vec` that was pushed into without reserving — and one
+level up, `grow_one`'s caller table is a ranked worklist of exactly this
+shape. `affected_from_requirement` was its largest engine row at 44,438;
+`statics_granted_triggers_with` is next at 33,424 and is **not** the same
+fix (its `out` is empty on most calls, so a `with_capacity` would allocate
+where nothing does today).
 
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —
