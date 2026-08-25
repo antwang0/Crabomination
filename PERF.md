@@ -390,9 +390,10 @@ through `Player`, which is a CoW handle, so each was its own
 `Arc::make_mut`. `make_mut` calls in that function **212,012 -> 80,148**;
 `--decks sos` **1,644,049,924 -> 1,639,754,965, -0.261 %**, `--decks cube`
 **2,910,850,945 -> 2,903,490,499, -0.253 %**. Same recipe, base re-read at
-the tip that carries (E). Two cheaper explanations were built and refuted
-first; the line profile named `Player::deref_mut`, not a hot line. See the
-Log and (-42).
+the tip that carries (E); a concurrent session's `cae6b605` (the grant list's
+deep copy) then landed underneath it, and is not in either column. Two
+cheaper explanations were built and refuted first; the line profile named
+`Player::deref_mut`, not a hot line. See the Log and (-42).
 
 **Both game pools read slightly *down* rather than flat, and the reason is
 the binary.** No commit here is on the game loop; `_dl_relocate_object` is
