@@ -801,6 +801,9 @@ impl Effect {
             // Targets a spell on the stack.
             Effect::ChefsKiss => true,
             Effect::AdjustBattleDefense { what } => sel_has_target(what),
+            // Sorrow's Path: both blocker slots are targets (slot 1 lives
+            // in `b`, which the shared `a: what` group could not see).
+            Effect::SwapBlockAssignments { a, b } => sel_has_target(a) || sel_has_target(b),
             // Targets an opponent (player slot 0).
             Effect::OpponentRevealsPickToBattlefield { .. } => true,
             Effect::RollDie { count, results, .. } => {
@@ -1069,7 +1072,6 @@ impl Effect {
             | Effect::GrantDamageExilesVictimThisTurn { what }
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
-            | Effect::SwapBlockAssignments { a: what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
@@ -1561,6 +1563,7 @@ impl Effect {
             Effect::MayDealPowerThenNoCombatDamage { to, .. } => sel_filter(to),
             Effect::TapAndHoldWhileSourceTapped { what }
             | Effect::GrantSacrificedLandTypesLandwalk { what, .. } => sel_filter(what),
+            Effect::SwapBlockAssignments { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
             // The Aura slot is the targeted one; the host is usually `This`
             // (Iridescent Drake, Hakim, Loreweaver).
             Effect::AttachAuraFromGraveyardTo { aura, host } => {
@@ -1649,7 +1652,6 @@ impl Effect {
             | Effect::GrantDamageExilesVictimThisTurn { what }
             | Effect::GrantDamageDeniesRegenerationThisTurn { what }
             | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
-            | Effect::SwapBlockAssignments { a: what, .. }
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantEmbalmThisTurn { what }
             | Effect::GrantHarmonizeThisTurn { what }
@@ -3091,6 +3093,49 @@ impl Effect {
                 | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayBy { body, .. }
                 | Effect::MayPayLife { body, .. } => eff_find(body, slot, mode, kicked),
+                // Both run their chosen branch on the *outer* context, so the
+                // branch's slots are the enclosing ability's and have to be
+                // surfaced here (Dwarven Scorcher / Driller; Silent
+                // Hallcreeper). `ChooseUnchosenMode` picks at resolution, so
+                // every mode is searched — as `ChooseMode` does with no mode.
+                Effect::AnyPlayerMayAccept { accepted, otherwise, .. } => {
+                    eff_find(accepted, slot, mode, kicked)
+                        .or_else(|| eff_find(otherwise, slot, mode, kicked))
+                }
+                Effect::ChooseUnchosenMode { modes } => {
+                    modes.iter().find_map(|m| eff_find(m, slot, None, kicked))
+                }
+                Effect::AnteTopOfLibrary { then, else_, .. } => then
+                    .as_deref()
+                    .and_then(|t| eff_find(t, slot, mode, kicked))
+                    .or_else(|| {
+                        else_.as_deref().and_then(|e| eff_find(e, slot, mode, kicked))
+                    }),
+                Effect::ExileThenBranchByController { what, theirs } => sel_find(what, slot)
+                    .or_else(|| eff_find(theirs, slot, mode, kicked)),
+                // Leaf effects whose selector had no arm at all: the slot was
+                // declared, never surfaced, and the effect resolved against an
+                // empty target list.
+                Effect::AdjustBattleDefense { what }
+                | Effect::BottomThenRevealUntilCreature { what }
+                | Effect::CopyAbility { what, .. }
+                | Effect::GainAllActivatedAbilitiesOf { what, .. }
+                | Effect::LockOrUnlockRoomDoor { what } => sel_find(what, slot),
+                Effect::ExileFromHand { who, .. } | Effect::ManifestFromHand { who, .. } => {
+                    sel_find(who, slot)
+                }
+                Effect::GrantProtectionFromColorsOf { what, of, .. } => {
+                    sel_find(what, slot).or_else(|| sel_find(of, slot))
+                }
+                Effect::SwapBlockAssignments { a, b } => {
+                    sel_find(a, slot).or_else(|| sel_find(b, slot))
+                }
+                // Halfdane / Sentinel: the only mention of the slot is inside
+                // the `Value::PowerOf` / `ToughnessOf` the base P/T is set from.
+                Effect::SetBasePT { what, power, toughness, .. } => sel_find(what, slot)
+                    .or_else(|| implicit_creature_for_slot(what, slot))
+                    .or_else(|| val_find(power, slot))
+                    .or_else(|| val_find(toughness, slot)),
                 Effect::CollectEvidence { then, .. } | Effect::CollectEvidenceX { then } => {
                     eff_find(then, slot, mode, kicked)
                 }
@@ -3115,7 +3160,9 @@ impl Effect {
                 | Effect::MayExileFromYourGraveyard { then: body, .. } => {
                     eff_find(body, slot, mode, kicked)
                 }
-                Effect::AttachAuraFromGraveyardTo { aura, .. } => sel_find(aura, slot),
+                Effect::AttachAuraFromGraveyardTo { aura, host } => {
+                    sel_find(aura, slot).or_else(|| sel_find(host, slot))
+                }
                 Effect::ExileAllCopiesOfTargetName { what }
                 | Effect::ExileTokensSharingNameWith { what }
                 | Effect::DestroyAllSharingNameWith { what }
@@ -3345,7 +3392,6 @@ impl Effect {
                 | Effect::GrantDamageExilesVictimThisTurn { what }
                 | Effect::GrantDamageDeniesRegenerationThisTurn { what }
                 | Effect::WhenTargetLeavesBattlefieldThisTurn { what, .. }
-                | Effect::SwapBlockAssignments { a: what, .. }
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantEmbalmThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
@@ -3429,7 +3475,6 @@ impl Effect {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }
                 Effect::PumpPT { what, .. }
-                | Effect::SetBasePT { what, .. }
                 | Effect::SwitchPT { what, .. }
                 | Effect::DoublePower { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_creature_for_slot(what, slot))

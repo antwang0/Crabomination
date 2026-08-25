@@ -50,19 +50,29 @@ priority in the current ML phase; this is where it waits.
   worked around it. Either bind the partner there or rename the selector —
   every `BecomesBlocked` / `Blocks` body that reads `TriggerSource` is
   suspect and wants an audit. ⏳
-- **The parallel target-walker class is now ratcheted, not closed.**
-  `Effect::MoveCounters` was in `requires_target` but neither
-  `primary_target_filter` nor `target_filter_for_slot`, so Afiya Grove's
-  trigger silently did nothing; `AttachAuraFromGraveyardTo` was the same.
-  `core_rules/target_walkers` now serde-walks the whole catalog and fails if
-  more than 39 effect bodies declare a `TargetFiltered` slot the walker can't
-  answer — down from 164 after arms were added for LicidAttach (10 Licids),
-  PreventNextDamageFromChosenSource's `to`/`redirect_to`, AttachSourceTo,
-  RemoveFromCombat, SpellBecomesChosenColor, UnlockRoomDoor, HauntCreature,
-  RevealRandomFromHand, TopTwoGraveyardOpponentSplits, CoffinExile,
-  ExchangeOwnership, PlayerMayPayLifeElse and ReplaceYourNextDrawThisTurn.
-  The residual 39 are a long tail (run the test to list them). A single
-  derive-or-table over the three walkers would end the class outright. ⏳
+- ✅ **The parallel target-walker class is CLOSED.** `core_rules/
+  target_walkers` serde-walks the whole catalog and asserts that **zero**
+  effect bodies declare a `TargetFiltered` slot `target_filter_for_slot`
+  cannot answer — it ran as a ratchet at 164, then 39, and is now 0.
+  Of the last 39, **20 were the test's own false positives**: `Reflexive`
+  and `ReflexiveTrigger` auto-target their bodies fresh at resolution
+  (CR 603.7d) and are deliberately opaque to the cast/trigger-time walk, so
+  a slot under one is answered, not lost. The other **19 were real**, each a
+  shipped card whose targeted effect resolved against an empty target list:
+  `AdjustBattleDefense`, `BottomThenRevealUntilCreature`, `CopyAbility`,
+  `GainAllActivatedAbilitiesOf`, `LockOrUnlockRoomDoor`, `ExileFromHand`,
+  `ManifestFromHand`, `GrantProtectionFromColorsOf`,
+  `SwapBlockAssignments`'s `b`, `AttachAuraFromGraveyardTo`'s `host` and
+  `SetBasePT`'s `power`/`toughness` `Value`s had no arm; `AnyPlayerMayAccept`,
+  `ChooseUnchosenMode`, `AnteTopOfLibrary` and `ExileThenBranchByController`
+  never forwarded into the branch they resolve. `SwapBlockAssignments`'s `b`
+  was missing from all *three* walkers, which is the class in one variant:
+  `requires_target` and `primary_target_filter` now see it too. Named cards:
+  Portent Tracker, Timmerian Fiends, Dwarven Scorcher, Dwarven Driller,
+  Nomad Mythmaker, Proteus Staff, Silent Hallcreeper, Gogo, Kyoki,
+  Unyielding Gatekeeper, Quicksilver Elemental, Samite Elder,
+  Marina Vendrell, Kozilek the Broken Reality, Halfdane, Sentinel,
+  Sorrow's Path.
 - **`Selector::MatchingAmong` statics only resolve over `Selector::This`.**
   `eager_static_targets` handles the self-scoped shape (the one every real
   card uses); an inner `EachPermanent` still falls through to `None` and the

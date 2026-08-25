@@ -11,8 +11,8 @@
 //!
 //! This test closes the class: every `TargetFiltered { slot }` reachable in a
 //! catalog card's effect tree must be answerable by `target_filter_for_slot`.
-//! It runs as a ratchet: the baseline below is what the walker still cannot
-//! answer. Lower it as arms are added; it must never rise.
+//! It ran as a ratchet at 39 until the sixty-third pass took it to **0**; it
+//! is now an invariant and the baseline must never rise.
 
 use crabomination::card::CardDefinition;
 use crabomination::catalog;
@@ -118,12 +118,13 @@ fn every_declared_target_slot_is_answerable() {
     }
     bad.sort();
     bad.dedup();
-    // A ratchet, not a clean bill of health: the walker still can't answer
-    // this many slots (see TODO.md — "The parallel target-walker class").
-    // 39 until `RESOLUTION_TIME_TARGETING` above stopped counting the twenty
-    // `Reflexive` / `ReflexiveTrigger` bodies the walker is deliberately blind
-    // to. Lower it as arms are added; it must never rise.
-    const BASELINE: usize = 19;
+    // **Closed.** This was a ratchet at 39 for as long as it existed; 20 of
+    // those were the walker being asked about `Reflexive` / `ReflexiveTrigger`
+    // bodies it is deliberately blind to (see `RESOLUTION_TIME_TARGETING`) and
+    // the other 19 were real. It is now an invariant, not a budget: a new
+    // `Effect` variant that holds a `TargetFiltered` without an arm in
+    // `target_filter_for_slot` fails here. Do not raise it.
+    const BASELINE: usize = 0;
     assert!(
         bad.len() <= BASELINE,
         "{} effect bodies (baseline {BASELINE}) declare a TargetFiltered slot \
