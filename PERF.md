@@ -1468,8 +1468,8 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-Three commits, base `bf4917a5`. (A) is the pass's finding; (B) and (C) are
-each a win on every pool it moves:
+Four commits, base `bf4917a5`. (A) is the pass's finding; (B), (C) and (D)
+are each a win on every pool they move:
 
 ```text
                   base (bf4917a5)   (A) 8779aa9f
@@ -1609,6 +1609,20 @@ one exact allocation. Measured **cube +0.43 %, fixed +0.12 %** and reverted.
 The regrowth it removes is rare; the *second allocation* it adds is not, and
 `MIN_NON_ZERO_CAP` already gives the naive `Vec` four slots on its first
 push. Count the pushes per call before splitting a build in two.
+
+**(D) `restore_payment_state` unshared the battlefield once per snapshot
+entry, on a path whose common case restores nothing. `fixed` -0.121 %,
+`cube` -0.114 %, `sos` -0.064 %.** `battlefield` is a `CowBox`, so **any**
+`iter_mut` deep-copies the zone whenever a probe clone still shares it — and
+`would_accept`'s dry run means one usually does. The loop asked for that
+mutable borrow once per entry (one per permanent the payer owns), 67,750
+`Arc::make_mut` calls / 24.0 M Ir on a cube run. It now asks with a shared
+borrow first and takes one mutable borrow only if a flag actually moved.
+
+Small, and on every pool, which is the point: `Arc::make_mut` is
+**1,364,822 calls / 174,142 real unshares** on a cube run, and its caller
+table is the CoW sharp edge's worklist. Most rows are genuine mutations;
+this one was not.
 
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —

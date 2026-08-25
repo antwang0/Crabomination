@@ -11540,9 +11540,22 @@ impl GameState {
     /// battlefield (the caller is responsible for any zone-change rollback).
     pub(crate) fn restore_payment_state(&mut self, payer: usize, snapshot: PaymentSnapshot) {
         self.players[payer].mana_pool = snapshot.pool;
-        for (id, was_tapped) in snapshot.tapped {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
-                c.tapped = was_tapped;
+        // `battlefield` is a `CowBox`, so **any** `iter_mut` deep-copies the
+        // zone whenever a probe clone still shares it — and this asked for
+        // one per snapshot entry, on a path whose common case is "the
+        // payment left every flag where it found it". 67,750 `Arc::make_mut`
+        // calls / 24.0 M Ir on a cube run at the fifty-fifth tip. Ask with a
+        // shared borrow, then take the one mutable borrow only if a flag
+        // actually moved.
+        let restore = |c: &crate::card::CardInstance| {
+            snapshot.tapped.iter().find(|(id, _)| *id == c.id).map(|(_, was)| *was)
+        };
+        if !self.battlefield.iter().any(|c| restore(c).is_some_and(|was| was != c.tapped)) {
+            return;
+        }
+        for c in self.battlefield.iter_mut() {
+            if let Some(was) = snapshot.tapped.iter().find(|(id, _)| *id == c.id).map(|(_, w)| *w) {
+                c.tapped = was;
             }
         }
     }
