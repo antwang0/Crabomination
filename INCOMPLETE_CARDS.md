@@ -191,6 +191,38 @@ abilities absent, not dropped riders:
 | ~~Tidal Terror~~ ✅ **FIXED** | eoe.rs | the whole attack trigger ("you may tap two other untapped creatures you control. If you do, this creature can't be blocked this turn") — the card was a vanilla 5/6 with Islandcycling. Now `Effect::MayTap` into an end-of-turn `Unblockable` |
 | ~~Bristlebud Farmer~~ ✅ **FIXED** | decks/recent.rs | the whole attack trigger ("you may sacrifice a Food. If you do, mill three cards. You may put a permanent card from among them into your hand") — the ETB minted two Foods with nothing to feed them to. Now `MaySacrifice` into `MillThenToHand` |
 
+**The load-bearing cluster was read to the end, 2026-08-25, and it is nine
+entries — five real, four false positives.** `audit_dropped_may.py` now reads
+346 of 11,094 cached names; filtering its output to the verbs where declining
+is a real choice (`you may destroy / sacrifice / tap / discard`) leaves nine,
+and every one was checked against the oracle:
+
+| Card | Was | Now |
+|---|---|---|
+| ~~Awaken the Honored Dead~~ ✅ | a `{5}{W}{B}` **Sorcery** returning *every* creature card in your graveyard to the battlefield | the printed `{B}{G}{U}` **Enchantment — Saga**: I destroy target nonland permanent, II mill three, III `MayDiscard` → return target creature/land **from your graveyard** to hand. Not a dropped "may" at all — a different card |
+| ~~Myr Battlesphere~~ ✅ | tapped *every* untapped Myr on every attack | `Effect::MayDo` over the whole package (the printed intermediate X has no primitive) |
+| ~~Mox Diamond~~ ✅ | discarded *any* card, unconditionally, and kept the Mox either way | `MayDiscardMatching { filter: Land, then: Noop, else_: SacrificeSource }` — Drekavac's shape |
+| ~~Cloudpiercer~~ ✅ | mutate trigger discarded and drew unconditionally | `Effect::MayDiscard` |
+| ~~Highway Robbery~~ ✅ | discarded and drew two unconditionally, and would draw two off an empty hand | `Effect::MayDiscard`; the "or sacrifice a land" half of the choice is still not modelled and the doc says so |
+| Voltage Surge ✓ | — | false positive: `kicker_action_cost` is already optional |
+| Plumb the Forbidden ✓ | — | false positive: `AdditionalCastCost::SacrificeAnyNumber` — "any number" includes zero |
+| Devouring Greed ✓ | — | false positive, same shape |
+| Devouring Rage ✓ | — | false positive, same shape |
+
+**Two rules the pass yields.** *One:* four of nine were false positives and all
+four are the same shape — the choice spelled as an **optional additional cast
+cost** rather than an in-tree `May*`, which the auditor cannot see. Check
+`kicker_action_cost` / `additional_cast_cost` before writing a fix. *Two:* a
+"return target [thing] **from your graveyard**" needs
+`SelectionRequirement::InYourGraveyard`; without it the walker will take the
+creature your own removal just killed out of the **opponent's** graveyard,
+which is what Awaken's chapter III did on the first attempt.
+
+**The other ~337 findings are the "you may draw / search / put into your hand"
+tail**, where declining is almost never right and the dropped choice costs a
+game nothing. Read the oracle before fixing one; the residue still has false
+positives, and this pass's four are the reason.
+
 **The lesson for the next sweep**: the dropped-"may" audit is a *body-stub*
 finder as much as an optionality finder. A card whose printed text is "you may
 X. If you do, Y" and whose definition has neither X nor the choice reads to
