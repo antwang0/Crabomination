@@ -377,14 +377,32 @@ pub(crate) fn score_card_quality(
     factory: CardFactory,
     seat_colors: &ColorCounts,
 ) -> i32 {
-    score_card_with_colors(factory, seat_colors) + crate::cube::card_brief(factory).quality
+    score_brief_quality(crate::cube::card_brief(factory), seat_colors)
+}
+
+/// [`score_card_quality`] for a caller that is already holding the brief.
+pub(crate) fn score_brief_quality(
+    brief: &crate::cube::CardBrief,
+    seat_colors: &ColorCounts,
+) -> i32 {
+    score_brief_with_colors(brief, seat_colors) + brief.quality
 }
 
 pub(crate) fn score_card_with_colors(
     factory: CardFactory,
     seat_colors: &ColorCounts,
 ) -> i32 {
-    let brief = crate::cube::card_brief(factory);
+    score_brief_with_colors(crate::cube::card_brief(factory), seat_colors)
+}
+
+/// [`score_card_with_colors`] for a caller that is already holding the brief.
+/// The sealed builder looks one up to decide whether a card is even allowed
+/// in the shape, and used to look the same one up again here and a third
+/// time for the fixing bonus.
+pub(crate) fn score_brief_with_colors(
+    brief: &crate::cube::CardBrief,
+    seat_colors: &ColorCounts,
+) -> i32 {
     let mut score: i32 = 0;
 
     // ── Color fit (the dominant signal once you have ~5 picks) ──

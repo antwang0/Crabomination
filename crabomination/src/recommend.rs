@@ -334,8 +334,9 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     rng: &mut R,
     quality: bool,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
-    let allowed = |f: CardFactory| -> bool {
-        let brief = crate::cube::card_brief(f);
+    // Takes the brief the caller is already holding: one `card_brief` per
+    // pool card per shape, where this and the two scorers below made three.
+    let allowed = |f: CardFactory, brief: &crate::cube::CardBrief| -> bool {
         // Lands never occupy spell slots in the sealed builder —
         // `assemble_lands` owns the land base. (High jitter used to
         // promote off-color duals into the 22-24 spell main.)
@@ -361,20 +362,20 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     let mut scored: Vec<(CardFactory, i32)> = Vec::with_capacity(picks.len());
     let mut off: Vec<CardFactory> = Vec::with_capacity(picks.len());
     for &f in picks {
-        if allowed(f) {
+        let brief = crate::cube::card_brief(f);
+        if allowed(f, brief) {
             let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
             // Lands never take spell slots — they're assigned by
             // `assemble_lands`; the fixing bonus is for rocks/fetchers.
-            let brief = crate::cube::card_brief(f);
             let fix = if fixing_bonus > 0 && !brief.is_land && brief.is_fixing {
                 fixing_bonus
             } else {
                 0
             };
             let base = if quality {
-                crate::draft::score_card_quality(f, &pick_colors)
+                crate::draft::score_brief_quality(brief, &pick_colors)
             } else {
-                score_card_with_colors(f, &pick_colors)
+                crate::draft::score_brief_with_colors(brief, &pick_colors)
             };
             scored.push((f, base + jitter + fix));
         } else {
