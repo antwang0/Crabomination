@@ -360,6 +360,14 @@ pub struct PoolScores<'a> {
     /// Descending-score orders over `picks`, one per fixing bonus a shape's
     /// colour count can imply, built on first ask. See [`Self::order`].
     orders: [std::cell::OnceCell<Vec<u32>>; 3],
+    /// A dense id per *distinct* card in `picks`, and how many there are.
+    ///
+    /// The copy cap counts copies of a card, and the builder counted them in a
+    /// `HashMap<CardFactory, u32>` built and probed per shape. The pool's
+    /// distinct-card partition is invariant across every shape, so the counter
+    /// is an array indexed by this and the hash comes off the per-shape path.
+    dup_group: Vec<u32>,
+    groups: usize,
 }
 
 impl<'a> PoolScores<'a> {
@@ -377,7 +385,24 @@ impl<'a> PoolScores<'a> {
                 (brief, base)
             })
             .collect();
-        Self { picks, cards, quality, orders: [const { std::cell::OnceCell::new() }; 3] }
+        let mut ids: HashMap<usize, u32> =
+            HashMap::with_capacity_and_hasher(picks.len(), Default::default());
+        let dup_group: Vec<u32> = picks
+            .iter()
+            .map(|&f| {
+                let next = ids.len() as u32;
+                *ids.entry(f as usize).or_insert(next)
+            })
+            .collect();
+        let groups = ids.len();
+        Self {
+            picks,
+            cards,
+            quality,
+            orders: [const { std::cell::OnceCell::new() }; 3],
+            dup_group,
+            groups,
+        }
     }
 
     /// The fixing bonus a build in `n` colours gives a fixing card — the
@@ -488,14 +513,15 @@ fn suggest_main_deck_shape<R: Rng>(
     // Pre-sized: `scored` and `off` partition `picks` between them, and the
     // two output piles partition `scored`. Growing them a doubling at a time
     // was the largest single caller of `RawVec::grow_one` in the build.
-    let mut scored: Vec<(CardFactory, i32)> =
+    // Pick *indices*, not factories: both paths hand `take` an index so the
+    // copy cap can read the dense card id off it.
+    let mut scored: Vec<(u32, i32)> =
         Vec::with_capacity(if ordered.is_some() { 0 } else { picks.len() });
     let mut off: Vec<CardFactory> = Vec::with_capacity(picks.len());
     // A sealed pool is about a fifth lands; one allocation rather than five
     // doublings.
     let mut lands: Vec<(u32, crate::mana::ColorSet)> = Vec::with_capacity(picks.len() / 4);
     let mut allow = [0u64; ALLOW_WORDS];
-    let mut n_allowed = 0usize;
     for (i, (&f, &(brief, base))) in picks.iter().zip(&scores.cards).enumerate() {
         if !allowed(f, brief) {
             if brief.is_land {
@@ -504,7 +530,6 @@ fn suggest_main_deck_shape<R: Rng>(
             off.push(f);
             continue;
         }
-        n_allowed += 1;
         if ordered.is_some() {
             allow[i >> 6] |= 1u64 << (i & 63);
             continue;
@@ -517,40 +542,43 @@ fn suggest_main_deck_shape<R: Rng>(
         } else {
             0
         };
-        scored.push((f, base + jitter + fix));
+        scored.push((i as u32, base + jitter + fix));
     }
     /// One pick down the copy-cap funnel: into the main deck while it has a
-    /// slot and the cap allows, into the leftovers otherwise.
+    /// slot and the cap allows, into the leftovers otherwise. `at` indexes
+    /// `picks`; the cap counts copies of the *card*, which is
+    /// `PoolScores::dup_group`'s dense id for it.
+    #[inline]
     fn take(
-        f: CardFactory,
-        counts: &mut HashMap<usize, u32>,
+        at: u32,
+        scores: &PoolScores<'_>,
+        counts: &mut [u8],
         target_spells: usize,
         main: &mut Vec<CardFactory>,
         leftovers: &mut Vec<CardFactory>,
     ) {
-        let count = counts.entry(f as usize).or_insert(0);
-        if main.len() < target_spells && *count < COPY_CAP {
+        let f = scores.picks[at as usize];
+        let count = &mut counts[scores.dup_group[at as usize] as usize];
+        if main.len() < target_spells && u32::from(*count) < COPY_CAP {
             *count += 1;
             main.push(f);
         } else {
             leftovers.push(f);
         }
     }
-    let mut counts: HashMap<usize, u32> =
-        HashMap::with_capacity_and_hasher(n_allowed, Default::default());
+    let mut counts: Vec<u8> = vec![0; scores.groups];
     let mut main = Vec::with_capacity(target_spells);
     let mut leftovers = Vec::with_capacity(picks.len());
     if let Some(order) = ordered {
         for &i in order {
-            let i = i as usize;
-            if allow[i >> 6] & (1u64 << (i & 63)) != 0 {
-                take(picks[i], &mut counts, target_spells, &mut main, &mut leftovers);
+            if allow[i as usize >> 6] & (1u64 << (i & 63)) != 0 {
+                take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers);
             }
         }
     } else {
         scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
-        for (f, _) in scored {
-            take(f, &mut counts, target_spells, &mut main, &mut leftovers);
+        for (i, _) in scored {
+            take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers);
         }
     }
     // `off` is appended whole, so a land's index in `leftovers` is its index
