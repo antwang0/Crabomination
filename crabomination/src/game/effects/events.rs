@@ -6,16 +6,25 @@ use crate::card::{CardId, CardInstance};
 use crate::effect::{EventKind, EventScope, EventSpec};
 use crate::game::{GameEvent, GameState};
 
-/// Returns true if `event` matches the `EventSpec` on `source` (a permanent
-/// on the battlefield). Used by `fire_triggers_for_event` to decide whether a
-/// triggered ability should be pushed onto the stack.
-pub(crate) fn event_matches_spec(
+/// The `(spec.kind, event)` half of [`event_matches_spec`], with the source
+/// object optional.
+///
+/// Three arms read the source (`YourSourceDealtNoncombatDamageEqualToToughness`
+/// and the two control-change halves); with `source: None` they answer `true`,
+/// so a `None` call is a sound **over-approximation** of whether `event` can
+/// reach `spec` at all. That is what the trigger dispatcher's batch pre-filter
+/// asks: it drops a grant whose ability no event in the batch could ever match,
+/// before evaluating that grant's filter against every permanent on the board.
+/// One match serves both callers, so the cheap question cannot drift from the
+/// exact one.
+#[inline]
+pub(crate) fn event_kind_matches(
     state: &GameState,
     event: &GameEvent,
     spec: &EventSpec,
-    source: &CardInstance,
+    source: Option<&CardInstance>,
 ) -> bool {
-    let kind_ok = match (&spec.kind, event) {
+    match (&spec.kind, event) {
         (EventKind::EntersBattlefield, GameEvent::PermanentEntered { .. }) => true,
         (EventKind::CreatureDied, GameEvent::CreatureDied { .. }) => true,
         (
@@ -75,12 +84,12 @@ pub(crate) fn event_matches_spec(
                 from_controller: Some(dealer),
                 ..
             },
-        ) => {
-            *dealer == source.controller
+        ) => source.is_none_or(|src| {
+            *dealer == src.controller
                 && state
                     .computed_permanent(*victim)
                     .is_some_and(|cp| cp.toughness > 0 && cp.toughness as u32 == *amount)
-        }
+        }),
         // Any damage to a player, combat or not (Quest for Pure Flame).
         (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
@@ -143,13 +152,13 @@ pub(crate) fn event_matches_spec(
         // CR 800.4 — the trigger's controller must be the seat that just
         // gained control (Risky Move fires for the new controller only).
         (EventKind::GainedControlOfThis, GameEvent::ControlChanged { card_id, to, .. }) => {
-            *card_id == source.id && *to == source.controller
+            source.is_none_or(|src| *card_id == src.id && *to == src.controller)
         }
         // CR 800.4 — the losing half. `from != to` is guaranteed by the
         // emitter; `dispatch_triggers_for_events` re-points the trigger's
         // controller at `from`, which is no longer the source's controller.
         (EventKind::LostControlOfThis, GameEvent::ControlChanged { card_id, from, to }) => {
-            *card_id == source.id && from != to
+            source.is_none_or(|src| *card_id == src.id) && from != to
         }
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::Discovered, GameEvent::Discovered { .. }) => true,
@@ -185,8 +194,19 @@ pub(crate) fn event_matches_spec(
             *was_transition
         }
         _ => false,
-    };
-    if !kind_ok {
+    }
+}
+
+/// Returns true if `event` matches the `EventSpec` on `source` (a permanent
+/// on the battlefield). Used by `fire_triggers_for_event` to decide whether a
+/// triggered ability should be pushed onto the stack.
+pub(crate) fn event_matches_spec(
+    state: &GameState,
+    event: &GameEvent,
+    spec: &EventSpec,
+    source: &CardInstance,
+) -> bool {
+    if !event_kind_matches(state, event, spec, Some(source)) {
         return false;
     }
 

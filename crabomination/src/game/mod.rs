@@ -16993,7 +16993,30 @@ impl GameState {
         // are skipped while a strip-abilities effect is in scope per CR
         // 113.10b. Empty (and free) on a board with no such effect.
         let stripped_ids = self.permanents_with_abilities_removed(scan.strip_on_battlefield);
-        let trigger_grants = scan.trigger_grants;
+        // A granted trigger is only ever *used* inside the per-event
+        // `event_matches_spec` check below, so a grant whose ability no event
+        // in this batch could match contributes nothing — and finding that out
+        // costs one `SelectionRequirement` evaluation per (grant, permanent)
+        // pair, which is the single largest thing this function does:
+        // `statics_granted_triggers_inner` reaches
+        // `evaluate_requirement_static_hinted` 406,346 times for 106.6 M Ir,
+        // 3.46 % of a cube run. Ask the batch first — one
+        // `event_kind_matches` per (grant, event) instead, over-approximated
+        // (`source: None`) so it can only keep a grant the exact check would
+        // have dropped.
+        let mut trigger_grants = scan.trigger_grants;
+        if !trigger_grants.is_empty() {
+            trigger_grants.retain(|g| {
+                events.iter().any(|ev| {
+                    crate::game::effects::events::event_kind_matches(
+                        self,
+                        ev,
+                        &g.ability.event,
+                        None,
+                    )
+                })
+            });
+        }
         let equip_grants = scan.equip_grants;
         // CR 603.3d — keys for `once_per_turn` triggers that fire in this
         // batch; merged into the turn-scoped set after the battlefield walk
