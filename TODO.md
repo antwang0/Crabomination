@@ -22,12 +22,12 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 numbers.** Two ran this pass and both opened with the same vocab fix; read
 the log before opening a NEXT item.
 
-1. **Pass 55, ten commits: `--decks cube` 4,012 M -> 3,182 M Ir (-20.7 %),
-   -6.2 % wall clock; `sos` -2.11 % / **-3.3 % wall**, `fixed` -1.08 %.**
-   Tip (`ca16b33a`): fixed 1,234,886,711 / cube 3,181,765,191 / sos
-   1,723,306,764. `sealed` 3,489,058,164 and deck-build 34,607,871 were read
+1. **Pass 55, eleven commits: `--decks cube` 4,012 M -> 3,180 M Ir
+   (-20.8 %), -6.2 % wall clock; `sos` -2.16 % / **-3.3 % wall**, `fixed`
+   -1.15 %.** Tip (`c676cf48`): fixed 1,234,031,722 / cube 3,179,782,586 /
+   sos 1,722,423,954. `sealed` 3,489,058,164 and deck-build 34,607,871 were read
    at (B) and not since — (C)-(J) do not touch that path.
-2. **The pass's device, and it found eight of the ten: the code built the
+2. **The pass's device, and it found nine of the eleven: the code built the
    answer before asking whether anyone wanted it.** A gathered layer view a
    presence gate answers, a cloned tree the caller discards, an unshared
    zone with nothing to restore, a `battlefield_find` for a card the caller
