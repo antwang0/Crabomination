@@ -47,8 +47,9 @@ The functional suite lives in `crabomination_tests/tests/` as a small number of
 grouped integration-test binaries (`core_rules`, `modern`, `sos`, `stx`,
 `classic_sets`, `mh`, `recent_a`, `recent_b`). Keep it that way:
 
-- **Do not add new top-level `tests/*.rs` files.** Each one is a separate
-  binary to link; add a module inside an existing binary instead.
+- **Do not add new top-level `tests/*.rs` files**, in this crate or in
+  `crabomination`. Each one is a separate binary to link; add a module inside
+  an existing binary instead. `crabomination/tests/` no longer exists.
 - **A new `[[bin]]` with no `#[cfg(test)]` block gets `test = false`.**
   `cargo test` otherwise builds and links a whole extra harness — engine plus
   the 619 k-line catalog — to run zero tests. Seven of nine bins were doing

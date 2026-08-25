@@ -422,12 +422,20 @@ on those seven, `crabomination/Cargo.toml`:
 
 ```text
 touch game/effects/mod.rs; cargo test -p crabomination -p crabomination_tests --no-run
-  before   24.99 / 26.18 / 24.47 s   (mean 25.21)   20 executables
-  after    21.87 / 21.95 / 21.23 s   (mean 21.68)   13 executables
-                                     -14.0 %
-suite      18,728 passed / 0 failed / 5 ignored — unchanged, because the
-           seven harnesses held no tests
+  before   24.99 / 26.18 / 24.47 s              (mean 25.21)   20 executables
+  -7 bin   21.87 / 21.95 / 21.23                (mean 21.68)   13   -14.0 %
+  -1 int   18.37 / 21.56 / 19.05 / 20.40 /
+           18.65 / 17.65                        (mean 19.28)   12   -23.5 %
+suite      18,728 passed / 0 failed / 5 ignored — unchanged throughout: the
+           seven harnesses held no tests, and the integration binary's
+           seventeen moved into `core_rules`
 ```
+
+The twelfth executable came off with `crabomination/tests/card_instance.rs`,
+a top-level integration test *in the engine crate* holding seventeen tests
+that use only public API (`CardInstance::new`, `catalog::`). It is a module of
+`crabomination_tests`' `core_rules` binary now, which is where CLAUDE.md says
+it belongs; `crabomination/tests/` is gone.
 
 **It is the link and only the link.** One of the two harnesses that stays
 (`replay_view`, two tests) starts and finishes in **3.5 ms**, so the catalog's
@@ -436,6 +444,19 @@ suite      18,728 passed / 0 failed / 5 ignored — unchanged, because the
 bin-local helpers (`classify` / `def_has_any_ability`, `narrate`), and moving
 them would mean moving the helpers into the library to be tested, which is a
 worse trade than one link.
+
+**Where the rest of it goes, `cargo build --timings` at the twelve-executable
+tip** (four cores, 69 s of CPU over ~19 s of wall): `crabomination` lib
+**10.00 s in test mode** on top of **7.54 s** normal — the engine compiled
+twice, and the 553 unit tests that second compile exists for are
+`#[cfg(test)] mod tests` blocks in thirty files, mostly `server/` internals
+(`available_mana`, `mcts`, `encode`) that are private and cannot move out.
+Then the eight integration binaries, 37.5 s of CPU between them
+(`classic_sets` 9.29, `modern` 6.23, `core_rules` 5.31), and the nine bins'
+*normal* builds at ~11.5 s, which `cargo test` does whether or not their
+harnesses are on — there is no cargo flag to skip them short of
+`--lib --tests`, which would also drop `audit_stubs`' and `replay_view`'s four
+tests. **Nothing left here is worth a risk.**
 
 **The standing rule gains a clause**, now in CLAUDE.md: a new `[[bin]]` with
 no `#[cfg(test)]` block gets `test = false`.

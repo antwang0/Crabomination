@@ -3,6 +3,7 @@
 
 mod abilitywords;
 mod c21;
+mod card_instance;
 mod catalog_registration;
 mod classic;
 mod combat_keywords;
