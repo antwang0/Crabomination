@@ -83,6 +83,12 @@ candidate, and budget two callgrind rounds.**
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
 
+- **This branch is rebased constantly, so a hash in a doc is a liability**
+  (pass 58, three stale ones in one session — `223c77b5` twice, and a
+  write-up that named its own commit before the rebase renamed it). Cite a
+  hash only for a commit that is *already* on `origin`; for the commit the
+  paragraph is describing, name it by title, and re-grep for the short hash
+  after every `rebase --continue`.
 - **A memoized object is not a memoized *answer*** (pass 54, and it was
   -68.8 % of the deck build). `card_def` had cached the `CardDefinition`
   since pass 53, and the builders still re-derived everything they read off

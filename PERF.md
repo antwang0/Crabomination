@@ -440,7 +440,7 @@ order to read it is a clarity win on its own — but **-1.95 % is not a
 throughput claim**, and the next allocation-shaped candidate on this branch
 should be sized with that in front of it.
 
-**And an eighth, `85f4f55b`, the rest of (-42)'s class** — `do_untap`'s tail, where the
+**And an eighth, `4382bd43`, the rest of (-42)'s class** — `do_untap`'s tail, where the
 runs of seat writes are split by `retain_cold!` calls on `self`. `make_mut`
 in that function **80,148 -> 41,200**; `--decks sos` **1,607,757,957 ->
 1,605,824,543, -0.120 %**, `--decks cube` **2,888,913,466 -> 2,885,591,189,
