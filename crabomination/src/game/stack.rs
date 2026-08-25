@@ -3528,18 +3528,23 @@ impl GameState {
                 crate::game::types::DelayedKind::CreatureAttacksYouUntilYourNextTurn
             ) && dt.controller == p)
         });
-        self.players[p].extra_land_plays = 0;
-        // CR 702.179 — "speed increases once on each of your turns": clear the
-        // active player's per-turn speed-bump flag as their turn begins.
-        self.players[p].speed_increased_this_turn = false;
-        // Raid (CR 702.108): the active player hasn't attacked yet this turn.
-        self.players[p].attacked_this_turn = false;
-        // "Until your next turn" player grants expire at their owner's untap
-        // (Blossoming Calm's hexproof).
-        self.players[p].hexproof_until_next_turn = false;
-        self.players[p].creatures_attacked_this_turn = 0;
-        self.players[p].spells_cast_this_turn = 0;
-        self.players[p].spells_cast_from_hand_this_turn = 0;
+        {
+            // One `Player::deref_mut` for the run: `Player` is a CoW handle,
+            // so each write below was its own `Arc::make_mut`.
+            let me = &mut *self.players[p];
+            me.extra_land_plays = 0;
+            // CR 702.179 — "speed increases once on each of your turns": clear the
+            // active player's per-turn speed-bump flag as their turn begins.
+            me.speed_increased_this_turn = false;
+            // Raid (CR 702.108): the active player hasn't attacked yet this turn.
+            me.attacked_this_turn = false;
+            // "Until your next turn" player grants expire at their owner's untap
+            // (Blossoming Calm's hexproof).
+            me.hexproof_until_next_turn = false;
+            me.creatures_attacked_this_turn = 0;
+            me.spells_cast_this_turn = 0;
+            me.spells_cast_from_hand_this_turn = 0;
+        }
         // Reset the Bloodthirst "damaged this turn" flag for *every* player
         // CR 701.38 — a vote-control grant lasts only for its own turn.
         self.vote_controller_this_turn = None;
@@ -3648,18 +3653,23 @@ impl GameState {
         // scaling cards (Fractal Anomaly's "X = cards drawn this turn"
         // and similar). Other players' tallies advance independently
         // and are reset on their own untap.
-        self.players[p].cards_drawn_this_turn = 0;
-        self.players[p].last_drawn_card = None;
-        // Reset the per-turn {E}-spent tally (Izzet Generatorium's draw gate).
-        self.players[p].energy_spent_this_turn = 0;
-        // Reset the "cards left your graveyard this turn" tally; powers
-        // Lorehold "if a card left your graveyard this turn" payoffs
-        // (Living History, Primary Research, Wilt in the Heat) per turn.
-        self.players[p].cards_left_graveyard_this_turn = 0;
-        // Reset the "creatures died under your control this turn" tally;
-        // powers Witherbloom "if a creature died under your control this
-        // turn" end-step payoffs (Essenceknit Scholar).
-        self.players[p].creatures_died_this_turn = 0;
+        {
+            // One `Player::deref_mut` for the run: `Player` is a CoW handle,
+            // so each write below was its own `Arc::make_mut`.
+            let me = &mut *self.players[p];
+            me.cards_drawn_this_turn = 0;
+            me.last_drawn_card = None;
+            // Reset the per-turn {E}-spent tally (Izzet Generatorium's draw gate).
+            me.energy_spent_this_turn = 0;
+            // Reset the "cards left your graveyard this turn" tally; powers
+            // Lorehold "if a card left your graveyard this turn" payoffs
+            // (Living History, Primary Research, Wilt in the Heat) per turn.
+            me.cards_left_graveyard_this_turn = 0;
+            // Reset the "creatures died under your control this turn" tally;
+            // powers Witherbloom "if a creature died under your control this
+            // turn" end-step payoffs (Essenceknit Scholar).
+            me.creatures_died_this_turn = 0;
+        }
         clear_cold!(self.creature_deaths_this_turn);
         self.players[p].zuberas_died_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
@@ -3686,28 +3696,34 @@ impl GameState {
         // casts). These refine `spells_cast_this_turn` for cards that
         // need exact-type filtering (Potioner's Trove "instant or
         // sorcery only" gate, future Magecraft variants).
-        self.players[p].instants_or_sorceries_cast_this_turn = 0;
-        // One-shot IS-spell discounts are keyed off that tally, so they must
-        // be cleared in lockstep with it (a stale `granted_at == 0` entry
-        // would otherwise re-match after the reset).
-        self.players[p].pending_is_discounts.clear();
-        self.players[p].pending_spell_discounts.clear();
-        self.players[p].creatures_cast_this_turn = 0;
-        // Clear Teferi, Time Raveler's "you may cast sorceries as though they
-        // had flash" flag — it expires on the start of your next turn.
-        self.players[p].sorceries_as_flash = false;
+        {
+            // One `Player::deref_mut` for the run: `Player` is a CoW handle,
+            // so each write below was its own `Arc::make_mut`.
+            let me = &mut *self.players[p];
+            me.instants_or_sorceries_cast_this_turn = 0;
+            // One-shot IS-spell discounts are keyed off that tally, so they must
+            // be cleared in lockstep with it (a stale `granted_at == 0` entry
+            // would otherwise re-match after the reset).
+            me.pending_is_discounts.clear();
+            me.pending_spell_discounts.clear();
+            me.creatures_cast_this_turn = 0;
+            // Clear Teferi, Time Raveler's "you may cast sorceries as though they
+            // had flash" flag — it expires on the start of your next turn.
+            me.sorceries_as_flash = false;
+        }
         // Clear "this turn" lifegain locks across **every player** — CR
         // "this turn" means the current turn, so a Skullcrack-style
         // lock set during the previous turn expires before priority
         // hits the new active player. Scoped wider than the per-player
         // counters above because the lock applies to whichever player
         // was targeted, not to the active player.
-        for q in 0..self.players.len() {
-            self.players[q].cannot_gain_life_this_turn = false;
-            self.players[q].life_locked_this_turn = false;
+        for pl in &mut self.players {
+            let pl = &mut **pl;
+            pl.cannot_gain_life_this_turn = false;
+            pl.life_locked_this_turn = false;
             // CR 104.3d — Angel's Grace's protections end with the turn.
-            self.players[q].cant_lose_this_turn = false;
-            self.players[q].damage_floor_this_turn = false;
+            pl.cant_lose_this_turn = false;
+            pl.damage_floor_this_turn = false;
         }
         // Forbidding Spirit's "until your next turn" attack tax expires when
         // the taxed player's own turn begins.
@@ -3715,6 +3731,7 @@ impl GameState {
         // Deep Water / Dark Sphere / Blood of the Martyr all expire with the
         // turn they were made in.
         for pl in &mut self.players {
+            let pl = &mut **pl;
             pl.lands_produce_color_this_turn = None;
             pl.half_damage_shields = 0;
             pl.damage_mirrors = 0;
@@ -4056,6 +4073,7 @@ impl GameState {
         // Rotate the per-turn creature-entry log (Ephara reads "last turn"
         // at each upkeep, so the rotation is per game turn, not per player).
         for pl in &mut self.players {
+            let pl = &mut **pl;
             pl.creatures_entered_last_turn = std::mem::take(&mut pl.creatures_entered_this_turn);
             pl.artifacts_entered_this_turn = 0;
             pl.planeswalkers_entered_this_turn = 0;
