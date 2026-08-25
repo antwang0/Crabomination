@@ -546,10 +546,19 @@ container ninety minutes apart. The Ir column is the attribution.
 --games 200 --threads 3`, seeds 11/12/13 x `--decks all` and `--decks sealed`
 (the deck builder's own pool, which `--decks all` does not include): every
 cell **decided, 0 undecided, no panic, all pairs split** — 17,400 games and
-8,700 pairs. Re-run unchanged after the run's later card-defect commits, at
-`9198cc67`: same grid, `thread_determinism ok (3 vs 1)`, `--bench` decisions
-196,220 / turns 27.53 / stalls 0 / 274.49 games/s best of two, and all four
-pools' 20-game printout still diffs identically against the pass base.
+8,700 pairs. Re-run unchanged after the run's later card-defect commits **and after the
+rebase onto the fifty-fifth pass**, at `1badee12`: same grid clean (11,600
+games), `thread_determinism ok (3 vs 1)`, `--bench` decisions 196,220 / turns
+27.53 / stalls 0 / **269.72 games/s best of four**, suite 18,827 passed /
+0 failed / 5 ignored, clippy `--workspace --all-targets` clean. All four
+pools' 20-game printout diffs identically against the pass base at the
+pre-rebase tip.
+
+**A caution the same sitting supplied.** The first two `--bench` runs after
+clippy read 225.24 and 231.00 with the host still settling, against 252-270
+across four runs minutes later on the same binary — a **16 % spread**, four
+times the 3.7 % this file already records. Take the best of several, never
+the first after a build.
 **Read that last one narrowly**: eleven cards changed behaviour in this run
 (a dropped "you may", a collapsed mode, three absent abilities), and a
 20-game sample not separating them means the sample did not reach them, not
