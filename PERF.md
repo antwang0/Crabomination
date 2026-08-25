@@ -412,6 +412,34 @@ justification for this one is the maintenance shape — twenty-two hand-kept
 per-set factory lists, each of which goes stale the moment someone adds a
 card and forgets it, replaced by one tree walk that cannot.
 
+**And the binary count had seven executables in it that run nothing, found
+2026-08-25.** The section above is right that the relink is the lever and that
+the count is the thing to keep down — and nobody had counted. `cargo test`
+builds a *test harness* per `[[bin]]` on top of the normal binary, so the nine
+bins under `crabomination/src/bin/` are nine of the twenty executables it
+relinks; **seven of them carry no `#[cfg(test)]` block at all.** `test = false`
+on those seven, `crabomination/Cargo.toml`:
+
+```text
+touch game/effects/mod.rs; cargo test -p crabomination -p crabomination_tests --no-run
+  before   24.99 / 26.18 / 24.47 s   (mean 25.21)   20 executables
+  after    21.87 / 21.95 / 21.23 s   (mean 21.68)   13 executables
+                                     -14.0 %
+suite      18,728 passed / 0 failed / 5 ignored — unchanged, because the
+           seven harnesses held no tests
+```
+
+**It is the link and only the link.** One of the two harnesses that stays
+(`replay_view`, two tests) starts and finishes in **3.5 ms**, so the catalog's
+`ctor` registration is not eager and there was no run-time cost to remove.
+`audit_stubs` and `replay_view` keep their harnesses: four real tests over
+bin-local helpers (`classify` / `def_has_any_ability`, `narrate`), and moving
+them would mean moving the helpers into the library to be tested, which is a
+worse trade than one link.
+
+**The standing rule gains a clause**, now in CLAUDE.md: a new `[[bin]]` with
+no `#[cfg(test)]` block gets `test = false`.
+
 Not measured here, and still open: the `release` / `profiling-fast` rebuild
 (~13 min cold for the engine) is a codegen-bound build where CGU partitioning,
 not query invalidation, decides the cost. Nothing above says anything about

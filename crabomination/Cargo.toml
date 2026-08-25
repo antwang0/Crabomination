@@ -41,3 +41,44 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 # binaries, so a library consumer only pays the (unused) dependency.
 default = ["mimalloc"]
 mimalloc = ["dep:mimalloc"]
+
+# `cargo test` builds a *test harness* per `[[bin]]` on top of the normal
+# binary, and seven of the nine bins carry no `#[cfg(test)]` block at all — so
+# seven of the twenty executables a `cargo test` relinks exist to run zero
+# tests. `test = false` drops the harness and keeps the binary.
+#
+# Measured (PERF.md's recipe: touch `game/effects/mod.rs`, then
+# `cargo test -p crabomination -p crabomination_tests --no-run`, three runs):
+# **25.21 s -> 21.68 s, -14.0 %**, executables 20 -> 13. It is the link and
+# only the link — one of these harnesses starts and finishes in 3.5 ms, so
+# there was no meaningful run-time cost to remove.
+#
+# `audit_stubs` and `replay_view` are left alone — they hold four real tests
+# over bin-local helpers (`classify` / `def_has_any_ability`, `narrate`).
+[[bin]]
+name = "audit_incomplete"
+test = false
+
+[[bin]]
+name = "bot_ladder"
+test = false
+
+[[bin]]
+name = "bot_probe"
+test = false
+
+[[bin]]
+name = "bot_puzzles"
+test = false
+
+[[bin]]
+name = "deck_duel"
+test = false
+
+[[bin]]
+name = "dump_cards"
+test = false
+
+[[bin]]
+name = "recommend_pool"
+test = false

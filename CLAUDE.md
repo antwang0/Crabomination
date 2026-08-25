@@ -49,6 +49,11 @@ grouped integration-test binaries (`core_rules`, `modern`, `sos`, `stx`,
 
 - **Do not add new top-level `tests/*.rs` files.** Each one is a separate
   binary to link; add a module inside an existing binary instead.
+- **A new `[[bin]]` with no `#[cfg(test)]` block gets `test = false`.**
+  `cargo test` otherwise builds and links a whole extra harness — engine plus
+  the 619 k-line catalog — to run zero tests. Seven of nine bins were doing
+  that; turning them off took the incremental test rebuild from 25.2 s to
+  21.7 s (-14 %). See `crabomination/Cargo.toml`.
 - **No micro-files.** Group card tests into files of roughly 500–2000 lines by
   set/mechanic/batch range, not one tiny file per card batch.
 - **One test per card, table-driven where possible.** A card gets one test for
