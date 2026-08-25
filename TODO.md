@@ -110,9 +110,9 @@ rounds per commit.**
 10. **Housekeeping.** TODO **770** (was 1,096 — "Engine — Missing Mechanics"
    moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.8k. Suite is **14 test
    binaries / 18,736 tests**, not the "22" older blocks quote. Next folds:
-   PERF's 47th/48th Log entries, and ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k
-   both want a topical triage — the backlog file's own header asks for one
-   and nobody has done it.
+   PERF's 49th/50th Log entries (the 47th and 48th are folded), and
+   ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k both want a topical triage — the
+   backlog file's own header asks for one and nobody has done it.
 11. **Bugs: the parallel target-walker class is CLOSED** (`core_rules::
    target_walkers` 39 -> **0**, and it asserts `is_empty()` now — add the
    walker arm, do not reintroduce a threshold). 20 of the 39 were the test
