@@ -817,23 +817,26 @@ fn affected_includes_gated(
             if *exclude_source && source == card.id {
                 return false;
             }
-            let ctrl_ok = controller.is_none_or(|c| c == card.controller);
-            let type_ok = card_types.is_empty()
-                || card_types.iter().all(|t| card.definition.card_types.contains(t));
-            let color_ok = color.is_none_or(|want| {
-                card.definition.cost.symbols.iter().any(|s| {
-                    matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
+            // Cheapest-first, and `&&` rather than six `let`s ANDed at the
+            // end: the seat compare rejects roughly half the battlefield, and
+            // the two `cost.symbols` walks below it are loops LLVM will not
+            // sink past an AND it cannot see.
+            controller.is_none_or(|c| c == card.controller)
+                && token.is_none_or(|want| card.is_token == want)
+                && owned_by_controller
+                    .is_none_or(|want| (card.owner == card.controller) == want)
+                && (card_types.is_empty()
+                    || card_types.iter().all(|t| card.definition.card_types.contains(t)))
+                && color.is_none_or(|want| {
+                    card.definition.cost.symbols.iter().any(|s| {
+                        matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
+                    })
                 })
-            });
-            // CR 702.114 — Devoid CDA: colorless despite colored pips.
-            let colorless_ok = !*colorless
-                || card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
-                || !card.definition.cost.symbols.iter()
-                    .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_)));
-            let token_ok = token.is_none_or(|want| card.is_token == want);
-            let own_ok =
-                owned_by_controller.is_none_or(|want| (card.owner == card.controller) == want);
-            ctrl_ok && type_ok && color_ok && colorless_ok && token_ok && own_ok
+                // CR 702.114 — Devoid CDA: colorless despite colored pips.
+                && (!*colorless
+                    || card.definition.keywords.has_kw(&crate::card::Keyword::Devoid)
+                    || !card.definition.cost.symbols.iter()
+                        .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))))
         }
         AffectedPermanents::AllOpponents {
             source_controller,
@@ -850,43 +853,44 @@ fn affected_includes_gated(
             } else {
                 !friendly_seats.contains(&card.controller)
             };
-            let type_ok = card_types.is_empty()
-                || card_types.iter().all(|t| card.definition.card_types.contains(t));
-            let color_ok = color.is_none_or(|want| {
-                card.definition.cost.symbols.iter().any(|s| {
-                    matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
+            // Short-circuit, cheapest first — see the `All` arm.
+            ctrl_ok
+                && (card_types.is_empty()
+                    || card_types.iter().all(|t| card.definition.card_types.contains(t)))
+                && counter.is_none_or(|k| card.counter_count(k) > 0)
+                && color.is_none_or(|want| {
+                    card.definition.cost.symbols.iter().any(|s| {
+                        matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
+                    })
                 })
-            });
-            let ct_ok = creature_type.as_ref().is_none_or(|ct| {
-                let typed = match gate_types {
-                    Some(types) => types.contains(ct),
-                    None => card.definition.subtypes.creature_types.contains(ct),
-                };
-                typed || card.definition.keywords.has_kw(&Keyword::Changeling)
-            });
-            let counter_ok = counter.is_none_or(|k| card.counter_count(k) > 0);
-            ctrl_ok && type_ok && color_ok && ct_ok && counter_ok
+                && creature_type.as_ref().is_none_or(|ct| {
+                    let typed = match gate_types {
+                        Some(types) => types.contains(ct),
+                        None => card.definition.subtypes.creature_types.contains(ct),
+                    };
+                    typed || card.definition.keywords.has_kw(&Keyword::Changeling)
+                })
         }
         AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
             if *exclude_source && source == card.id {
                 return false;
             }
-            let ctrl_ok = controller.is_none_or(|c| c == card.controller);
-            let is_creature = card.definition.card_types.contains(&CardType::Creature);
-            // CR 613.8 — match against computed types when a type-changer is in
-            // play (pass 2), else the printed type line.
-            let has_type = match gate_types {
-                Some(types) => types.contains(creature_type),
-                None => card.definition.subtypes.creature_types.contains(creature_type),
-            } || card.definition.keywords.has_kw(&Keyword::Changeling);
-            ctrl_ok && is_creature && has_type
+            controller.is_none_or(|c| c == card.controller)
+                && card.definition.card_types.contains(&CardType::Creature)
+                // CR 613.8 — match against computed types when a type-changer
+                // is in play (pass 2), else the printed type line.
+                && (match gate_types {
+                    Some(types) => types.contains(creature_type),
+                    None => {
+                        card.definition.subtypes.creature_types.contains(creature_type)
+                    }
+                } || card.definition.keywords.has_kw(&Keyword::Changeling))
         }
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
-            let ctrl_ok = controller.is_none_or(|c| c == card.controller);
-            let type_ok = card_types.is_empty()
-                || card_types.iter().all(|t| card.definition.card_types.contains(t));
-            let counter_ok = card.counter_count(*counter) >= *at_least;
-            ctrl_ok && type_ok && counter_ok
+            controller.is_none_or(|c| c == card.controller)
+                && (card_types.is_empty()
+                    || card_types.iter().all(|t| card.definition.card_types.contains(t)))
+                && card.counter_count(*counter) >= *at_least
         }
         AffectedPermanents::CardMatch { source_controller, requirement } => {
             // CR "other ... you control": `OtherThanSource` is matched here
