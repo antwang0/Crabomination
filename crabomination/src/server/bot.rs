@@ -8488,6 +8488,36 @@ fn bot_can_block(c: &crate::card::CardInstance) -> bool {
     c.can_block() && !c.has_keyword(&Keyword::Decayed) && !c.has_keyword(&Keyword::CantBlock)
 }
 
+/// Everything the block planner wants to know about one declared attacker.
+///
+/// Each field is a property of the *attacker alone*, and the planner's inner
+/// loop runs once per (blocker x attacker) pair — so every one of these was a
+/// whole-battlefield `find` plus a keyword walk per pair before it was a
+/// field. Built once per attacker in [`pick_blocks_inner`].
+struct AttackerFacts {
+    id: CardId,
+    target: AttackTarget,
+    /// [`attacker_damage_value`] — combat damage this attacker assigns.
+    power: i32,
+    toughness: i32,
+    flying: bool,
+    deathtouch: bool,
+    /// First or double strike: it damages the blocker before the blocker
+    /// strikes back (CR 702.7).
+    first_strike: bool,
+    trample: bool,
+    indestructible: bool,
+    /// CR 509.1c — "must be blocked if able".
+    must_be_blocked: bool,
+    /// CR 702.23 — Rampage N, the per-extra-blocker pump.
+    rampage: i32,
+    /// CR 509.1b — Menace / `CantBeBlockedExceptByN`, else 1.
+    min_blockers: usize,
+    /// Poison this attacker would add on damage: Infect (CR 702.90) deals its
+    /// power as poison, Toxic/Poisonous N add N.
+    poison: u32,
+}
+
 fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // Improved blocker heuristic (push claude/modern_decks):
     //   1. Build the candidate set of (attacker, attacker_power,
@@ -8509,39 +8539,67 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     //      blocker can't kill it — the loop falls through to try the
     //      next blocker.
     use crate::card::Keyword;
-    // (id, power, toughness, flying, deathtouch). Deathtouch makes the
-    // attacker lethal to any blocker it damages regardless of power, so
-    // the bot must treat a block against it as a likely loss of the
-    // blocker when scoring trades.
-    let attacker_info: Vec<(CardId, i32, i32, bool, bool)> = state
+    // Deathtouch makes the attacker lethal to any blocker it damages
+    // regardless of power, so the bot must treat a block against it as a
+    // likely loss of the blocker when scoring trades.
+    let attacker_info: Vec<AttackerFacts> = state
         .attacking()
         .iter()
         .filter(|atk| state.defender_for(atk.target) == Some(seat))
         .filter_map(|atk| {
-            state
-                .battlefield
-                .iter()
-                .find(|c| c.id == atk.attacker)
-                .map(|a| {
-                    (
-                        atk.attacker,
-                        attacker_damage_value(state, atk.attacker),
-                        a.toughness(),
-                        a.has_keyword(&Keyword::Flying),
-                        a.has_keyword(&Keyword::Deathtouch),
-                    )
-                })
+            state.battlefield.iter().find(|c| c.id == atk.attacker).map(|a| AttackerFacts {
+                id: atk.attacker,
+                target: atk.target,
+                power: attacker_damage_value(state, atk.attacker),
+                toughness: a.toughness(),
+                flying: a.has_keyword(&Keyword::Flying),
+                deathtouch: a.has_keyword(&Keyword::Deathtouch),
+                first_strike: a.has_keyword(&Keyword::FirstStrike)
+                    || a.has_keyword(&Keyword::DoubleStrike),
+                trample: a.has_keyword(&Keyword::Trample),
+                indestructible: a.is_indestructible(),
+                must_be_blocked: a.has_keyword(&Keyword::MustBeBlocked),
+                rampage: a
+                    .definition
+                    .keywords
+                    .iter()
+                    .chain(a.granted_keywords_eot.iter())
+                    .filter_map(|k| match k {
+                        Keyword::Rampage(n) => Some(*n as i32),
+                        _ => None,
+                    })
+                    .max()
+                    .unwrap_or(0),
+                min_blockers: min_blockers_required(a),
+                poison: {
+                    let mut p = 0u32;
+                    if a.has_keyword(&Keyword::Infect) {
+                        p += a.power().max(0) as u32;
+                    }
+                    p += a
+                        .definition
+                        .keywords
+                        .iter()
+                        .filter_map(|k| match k {
+                            Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
+                            _ => None,
+                        })
+                        .sum::<u32>();
+                    p
+                },
+            })
         })
         .collect();
     // Only attackers aimed at the *player* threaten our life total — damage
     // to a planeswalker we control hits its loyalty, not our face. Summing
     // every attacker here would over-state the life threat and trigger
-    // needless chump-blocks.
-    let total_incoming: i32 = state
-        .attacking()
+    // needless chump-blocks. Read off `attacker_info`: an attacker aimed at
+    // us is always in it (`defender_for(Player(seat))` is `Some(seat)`), and
+    // one that has left the battlefield scores 0 either way.
+    let total_incoming: i32 = attacker_info
         .iter()
-        .filter(|atk| atk.target == AttackTarget::Player(seat))
-        .map(|atk| attacker_damage_value(state, atk.attacker))
+        .filter(|a| a.target == AttackTarget::Player(seat))
+        .map(|a| a.power)
         .sum();
     // Planeswalker defense (CR 306.7): for each planeswalker we control that
     // is being attacked, if the attackers aimed at it would deal lethal
@@ -8580,28 +8638,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // must chump an infect/toxic attacker to avoid a poison-out even at a
     // healthy life total. Infect deals its power as poison; Toxic N adds N on
     // top of normal combat damage.
-    let incoming_poison: u32 = state
-        .attacking()
-        .iter()
-        .filter(|atk| state.defender_for(atk.target) == Some(seat))
-        .filter_map(|atk| state.battlefield.iter().find(|c| c.id == atk.attacker))
-        .map(|a| {
-            let mut p = 0u32;
-            if a.has_keyword(&Keyword::Infect) {
-                p += a.power().max(0) as u32;
-            }
-            p += a
-                .definition
-                .keywords
-                .iter()
-                .filter_map(|k| match k {
-                    Keyword::Toxic(n) | Keyword::Poisonous(n) => Some(*n),
-                    _ => None,
-                })
-                .sum::<u32>();
-            p
-        })
-        .sum();
+    let incoming_poison: u32 = attacker_info.iter().map(|a| a.poison).sum();
     let poison_threatened =
         incoming_poison > 0 && state.players[seat].poison_counters + incoming_poison >= 10;
     let life_threatened = state.players[seat].life <= total_incoming || poison_threatened;
@@ -8641,8 +8678,16 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     for (b_id, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
         // Pick the best attacker for this blocker.
         let mut best: Option<(CardId, i32, bool)> = None; // (attacker, score, was_kill)
-        for (a_id, a_pow, a_tough, a_flying, a_dt) in &attacker_info {
-            if *a_flying && !b_flying && !b_reach {
+        // Blocker-side facts, read once instead of once per attacker: the
+        // trade math below asks both on every pair.
+        let blk = state.battlefield_find(b_id);
+        let blk_first_strike = blk.is_some_and(|c| {
+            c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
+        });
+        let blocker_indestructible = blk.is_some_and(|c| c.is_indestructible());
+        for a in &attacker_info {
+            let (a_id, a_pow, a_tough, a_dt) = (&a.id, &a.power, &a.toughness, &a.deathtouch);
+            if a.flying && !b_flying && !b_reach {
                 continue;
             }
             // Authoritative legality gate (CR 509.1b): also honors
@@ -8661,24 +8706,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // that bonus into the effective P/T so the bot doesn't gang-block
             // into a pump that saves the attacker and kills the extra blocker.
             let bcount = attacker_block_count.get(a_id).copied().unwrap_or(0);
-            let rampage = state
-                .battlefield
-                .iter()
-                .find(|c| c.id == *a_id)
-                .map(|a| {
-                    a.definition
-                        .keywords
-                        .iter()
-                        .chain(a.granted_keywords_eot.iter())
-                        .filter_map(|k| match k {
-                            Keyword::Rampage(n) => Some(*n as i32),
-                            _ => None,
-                        })
-                        .max()
-                        .unwrap_or(0)
-                })
-                .unwrap_or(0);
-            let ramp_bonus = rampage * bcount;
+            let ramp_bonus = a.rampage * bcount;
             let eff_a_tough = *a_tough + ramp_bonus;
             let eff_a_pow = *a_pow + ramp_bonus;
             if !b_dt && queued >= eff_a_tough {
@@ -8689,19 +8717,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // first-strike damage is already lethal to the blocker, the
             // blocker dies *before* dealing any damage — so it never trades
             // up. Such a "kill" is illusory; downgrade it to a chump.
-            let atk_first_strike = state
-                .battlefield
-                .iter()
-                .find(|c| c.id == *a_id)
-                .is_some_and(|a| {
-                    a.has_keyword(&Keyword::FirstStrike) || a.has_keyword(&Keyword::DoubleStrike)
-                });
-            let blk_first_strike = {
-                let blk = state.battlefield.iter().find(|c| c.id == b_id);
-                blk.is_some_and(|c| {
-                    c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
-                })
-            };
+            let atk_first_strike = a.first_strike;
             // CR 702.16e — protection prevents combat damage either way:
             // a blocker protected from the attacker's color takes none (won't
             // die), and an attacker protected from the blocker's color takes
@@ -8711,10 +8727,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // CR 702.12 — an indestructible permanent isn't destroyed by lethal
             // damage (or deathtouch), so it never dies in a trade and can't be
             // killed by a blocker. Block freely behind an indestructible body.
-            let blocker_indestructible =
-                state.battlefield_find(b_id).is_some_and(|c| c.is_indestructible());
-            let attacker_indestructible =
-                state.battlefield_find(*a_id).is_some_and(|c| c.is_indestructible());
+            let attacker_indestructible = a.indestructible;
             let dies_before_striking = atk_first_strike
                 && !blk_first_strike
                 && !blocker_takes_no_dmg
@@ -8754,12 +8767,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 // of its damage — score by the actual damage saved so the bot
                 // prefers fully blocking a non-trampler over partially
                 // blocking a trampler.
-                let a_trample = state
-                    .battlefield
-                    .iter()
-                    .find(|c| c.id == *a_id)
-                    .is_some_and(|a| a.has_keyword(&Keyword::Trample));
-                let saved = if a_trample { b_tough.min(*a_pow) } else { *a_pow };
+                let saved = if a.trample { b_tough.min(*a_pow) } else { *a_pow };
                 100 + saved
             } else {
                 continue;
@@ -8802,33 +8810,17 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 )
             })
             .collect();
-        let mut uncovered: Vec<(CardId, i32, i32, bool, bool)> = attacker_info
+        let mut uncovered: Vec<&AttackerFacts> = attacker_info
             .iter()
-            .filter(|(a_id, _, _, _, _)| !assignments.iter().any(|(_, aid)| aid == a_id))
-            .copied()
+            .filter(|a| !assignments.iter().any(|(_, aid)| *aid == a.id))
             .collect();
-        uncovered.sort_by_key(|(_, p, _, _, _)| -*p);
-        for (a_id, _a_pow, a_tough, a_flying, _a_dt) in uncovered {
+        uncovered.sort_by_key(|a| -a.power);
+        for atk in uncovered {
+            let (a_id, a_tough, a_flying) = (atk.id, atk.toughness, atk.flying);
             // Rampage N (CR 702.23): each blocker beyond the first raises the
             // attacker's toughness by N, so a gang must out-damage the pumped
             // total — otherwise the chumps die and the attacker survives.
-            let rampage = state
-                .battlefield
-                .iter()
-                .find(|c| c.id == a_id)
-                .map(|a| {
-                    a.definition
-                        .keywords
-                        .iter()
-                        .chain(a.granted_keywords_eot.iter())
-                        .filter_map(|k| match k {
-                            Keyword::Rampage(n) => Some(*n as i32),
-                            _ => None,
-                        })
-                        .max()
-                        .unwrap_or(0)
-                })
-                .unwrap_or(0);
+            let rampage = atk.rampage;
             // Collect a gang of legal idle blockers that together kill it.
             let mut gang: Vec<CardId> = Vec::new();
             let mut dmg = 0i32;
@@ -8861,13 +8853,9 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // one or it would deadlock the combat step. Pull any unused creature
     // that can legally block (respecting flying/reach) onto each
     // must-be-blocked attacker still missing a blocker.
-    for (a_id, _a_pow, _a_tough, a_flying, _a_dt) in &attacker_info {
-        let must_block = state
-            .battlefield
-            .iter()
-            .find(|c| c.id == *a_id)
-            .is_some_and(|a| a.has_keyword(&Keyword::MustBeBlocked));
-        if !must_block || assignments.iter().any(|(_, aid)| aid == a_id) {
+    for atk in &attacker_info {
+        let (a_id, a_flying) = (&atk.id, atk.flying);
+        if !atk.must_be_blocked || assignments.iter().any(|(_, aid)| aid == a_id) {
             continue;
         }
         // Pick the cheapest (lowest-power) legal idle blocker so a forced block
@@ -8898,13 +8886,8 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // the whole declaration. For each such attacker, top the block up to the
     // minimum with legal idle blockers; if the minimum can't be reached,
     // drop every block on it (better unblocked than an illegal batch).
-    for (a_id, _a_pow, _a_tough, a_flying, _a_dt) in &attacker_info {
-        let min_blockers = state
-            .battlefield
-            .iter()
-            .find(|c| c.id == *a_id)
-            .map(min_blockers_required)
-            .unwrap_or(1);
+    for atk in &attacker_info {
+        let (a_id, a_flying, min_blockers) = (&atk.id, atk.flying, atk.min_blockers);
         if min_blockers <= 1 {
             continue;
         }
@@ -8988,35 +8971,31 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         let mut taken: i32 = assignments
             .iter()
             .filter(|(bid, _)| *bid == b_id)
-            .filter_map(|(_, aid)| attacker_info.iter().find(|(a, ..)| a == aid))
-            .map(|(_, p, ..)| *p)
+            .filter_map(|(_, aid)| attacker_info.iter().find(|a| a.id == *aid))
+            .map(|a| a.power)
             .sum();
         let mut spare = extra_capacity(b_id);
-        for (a_id, a_pow, _a_tough, a_flying, a_dt) in &attacker_info {
+        for atk in &attacker_info {
+            let a_id = &atk.id;
             if spare == 0 {
                 break;
             }
-            if *a_dt
-                || taken + *a_pow >= b_tough
+            if atk.deathtouch
+                || taken + atk.power >= b_tough
                 || assignments.iter().any(|(bid, aid)| *bid == b_id && aid == a_id)
                 || assignments.iter().any(|(_, aid)| aid == a_id)
-                || (*a_flying && !b_flying && !b_reach)
-                || min_blockers_required_by_id(state, *a_id) > 1
+                || (atk.flying && !b_flying && !b_reach)
+                || atk.min_blockers > 1
                 || !state.blocker_can_block_attacker(b_id, *a_id)
             {
                 continue;
             }
             assignments.push((b_id, *a_id));
-            taken += *a_pow;
+            taken += atk.power;
             spare = spare.saturating_sub(1);
         }
     }
     assignments
-}
-
-/// [`min_blockers_required`] for a battlefield id (1 when it isn't there).
-fn min_blockers_required_by_id(state: &GameState, id: CardId) -> usize {
-    state.battlefield_find(id).map(min_blockers_required).unwrap_or(1)
 }
 
 /// Minimum number of creatures legally required to block `attacker` (CR
