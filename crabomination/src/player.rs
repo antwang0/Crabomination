@@ -1309,12 +1309,26 @@ impl PlayerData {
     }
 
     /// Push a card definition directly into the library (top of deck = index 0).
-    pub fn add_to_library_top(&mut self, id: CardId, definition: CardDefinition) {
+    pub fn add_to_library_top(
+        &mut self,
+        id: CardId,
+        definition: impl Into<std::sync::Arc<CardDefinition>>,
+    ) {
         self.library.insert(0, CardInstance::new(id, definition, self.id.0));
     }
 
     /// Push a card definition to the bottom of the library.
-    pub fn add_to_library_bottom(&mut self, id: CardId, definition: CardDefinition) {
+    ///
+    /// Takes `impl Into<Arc<_>>` so a caller with a memoized definition
+    /// ([`crate::cube::card_arc`]) hands over a refcount instead of a
+    /// **8,232-byte** memcpy into a fresh `Arc`. Deck construction fills a
+    /// library one card at a time and was the largest single `__memcpy`
+    /// caller on `--decks sos`.
+    pub fn add_to_library_bottom(
+        &mut self,
+        id: CardId,
+        definition: impl Into<std::sync::Arc<CardDefinition>>,
+    ) {
         self.library.push(CardInstance::new(id, definition, self.id.0));
     }
 }

@@ -29,9 +29,9 @@ pub fn build_demo_state() -> GameState {
     let p1_deck: &[CardFactory] = goryos_vengeance_deck();
 
     let mut rng = rand::rng();
-    for &f in p0_deck { state.add_card_to_library(0, f()); }
+    for &f in p0_deck { state.add_card_to_library(0, crate::cube::card_arc(f)); }
     state.players[0].library.shuffle(&mut rng);
-    for &f in p1_deck { state.add_card_to_library(1, f()); }
+    for &f in p1_deck { state.add_card_to_library(1, crate::cube::card_arc(f)); }
     state.players[1].library.shuffle(&mut rng);
 
     state.players[0].wants_ui = true;
@@ -92,7 +92,7 @@ pub fn build_commander_state() -> GameState {
     let mut rng = rand::rng();
     for seat in 0..4 {
         for &f in rofellos_commander_main() {
-            state.add_card_to_library(seat, f());
+            state.add_card_to_library(seat, crate::cube::card_arc(f));
         }
         state.players[seat].library.shuffle(&mut rng);
         state.seat_commanders(seat, vec![rofellos_llanowar_emissary()]);

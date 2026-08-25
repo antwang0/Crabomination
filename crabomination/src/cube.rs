@@ -78,6 +78,50 @@ pub fn card_def(f: CardFactory) -> &'static CardDefinition {
     card_brief(f).def
 }
 
+/// The memoized definition, refcounted, for a caller that needs to *own* one —
+/// `CardInstance::new` takes `impl Into<Arc<CardDefinition>>`.
+///
+/// `CardDefinition` is **8,232 bytes**, so handing `CardInstance::new` a fresh
+/// `f()` memcpys all of it into the `Arc`'s allocation, once per card in a
+/// library. On `--decks sos`, six games: `add_to_library_bottom` was 1,200
+/// `CardInstance::new` calls for **21,734,216 Ir, 1.36 % of the run**, nearly
+/// all of it that one copy. A clone of this is a refcount bump.
+///
+/// Sound because `Arc<CardDefinition>` is already the engine's CoW handle for
+/// a definition: the ~twenty sites that rewrite one (transform, become-a-copy,
+/// a permanent keyword grant) all go through `Arc::make_mut`, so the first
+/// writer unshares and every reader keeps the shared original.
+///
+/// **Its own memo, not [`card_brief`]'s.** A miss here must cost `f()` and
+/// nothing else; routing it through the brief made a miss pay
+/// `CardBrief::of` as well — the pip counts, the keyword walk, the whole
+/// effect-tree walk of `is_fixing_card` — and that measured **+6.6 % on
+/// `--decks sealed --games 1`**, the deck-build-only workload, whose eighty
+/// template cards turn out not to be in the brief memo when the template is
+/// filled.
+pub fn card_arc(f: CardFactory) -> std::sync::Arc<CardDefinition> {
+    let key = f as usize;
+    ARC_CACHE.with(|c| {
+        if let Some(a) = c.borrow().get(&key) {
+            return (*a).clone();
+        }
+        // Built outside the borrow: a factory is pure, but re-entering the
+        // cache while it is borrowed would panic. Same rule as `card_brief`.
+        let arc = std::sync::Arc::new(f());
+        c.borrow_mut().insert(key, arc.clone());
+        arc
+    })
+}
+
+thread_local! {
+    /// [`card_arc`]'s memo. Thread-local for the same reason [`card_brief`]'s
+    /// is: a worker thread's definitions are its own, so the `Arc`s never
+    /// cross a thread and their refcounts are uncontended.
+    static ARC_CACHE: std::cell::RefCell<
+        crate::fxhash::HashMap<usize, std::sync::Arc<CardDefinition>>,
+    > = std::cell::RefCell::new(crate::fxhash::HashMap::default());
+}
+
 /// The per-definition facts the deck builders read, derived once per factory
 /// alongside the definition itself.
 ///
@@ -223,11 +267,11 @@ pub fn build_cube_state() -> GameState {
     let p1_deck = cube_deck(p1_colors, &mut rng);
 
     for &f in &p0_deck {
-        state.add_card_to_library(0, f());
+        state.add_card_to_library(0, card_arc(f));
     }
     state.players[0].library.shuffle(&mut rng);
     for &f in &p1_deck {
-        state.add_card_to_library(1, f());
+        state.add_card_to_library(1, card_arc(f));
     }
     state.players[1].library.shuffle(&mut rng);
 

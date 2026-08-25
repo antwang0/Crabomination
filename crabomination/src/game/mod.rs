@@ -13519,7 +13519,11 @@ impl GameState {
         events.push(GameEvent::GameRestarted { starter });
     }
 
-    pub fn add_card_to_library(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
+    pub fn add_card_to_library(
+        &mut self,
+        player_idx: usize,
+        def: impl Into<std::sync::Arc<CardDefinition>>,
+    ) -> CardId {
         let id = self.next_id();
         self.players[player_idx].add_to_library_bottom(id, def);
         id

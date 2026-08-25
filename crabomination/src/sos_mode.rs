@@ -220,11 +220,11 @@ pub fn build_sos_state() -> GameState {
     let p1_deck = sos_deck(p1_college, &mut rng);
 
     for &f in &p0_deck {
-        state.add_card_to_library(0, f());
+        state.add_card_to_library(0, crate::cube::card_arc(f));
     }
     state.players[0].library.shuffle(&mut rng);
     for &f in &p1_deck {
-        state.add_card_to_library(1, f());
+        state.add_card_to_library(1, crate::cube::card_arc(f));
     }
     state.players[1].library.shuffle(&mut rng);
 

@@ -819,11 +819,11 @@ pub fn build_draft_match_state(
         Player::new(1, &opponent_seat_name),
     ]);
     for f in &player_deck {
-        state.add_card_to_library(0, f());
+        state.add_card_to_library(0, crate::cube::card_arc(*f));
     }
     state.players[0].library.shuffle(&mut rng);
     for f in &opponent_deck {
-        state.add_card_to_library(1, f());
+        state.add_card_to_library(1, crate::cube::card_arc(*f));
     }
     state.players[1].library.shuffle(&mut rng);
     state.players[0].wants_ui = true;

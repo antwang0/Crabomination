@@ -1494,7 +1494,9 @@ pub(crate) fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory])
     let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
     for (seat, deck) in [seat0, seat1].into_iter().enumerate() {
         for &f in deck {
-            g.add_card_to_library(seat, f());
+            // `card_arc`, not `f()`: a `CardDefinition` is 8,232 bytes and a
+            // library is ~40 of them per seat per game.
+            g.add_card_to_library(seat, crate::cube::card_arc(f));
         }
         g.players[seat].wants_ui = true;
     }
