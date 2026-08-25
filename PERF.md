@@ -402,6 +402,20 @@ is pool-specific and structural rather than diffuse. Dump both pools at one
 tip, parse `cg_edges.py <dump> --rows 0` into `{row: share}` for each, and
 sort by `cube% / sos%` over the rows above ~0.45 % of cube:
 
+**`scripts/cg_ratio.py` is that script** — it was described here as "one
+script" for two passes before one existed, and every pass that used the
+device re-derived the join by hand:
+
+```text
+python3 scripts/cg_ratio.py cg.cube.out cg.sos.out --floor 0.45
+```
+
+It reads `cg_edges.py`'s parse directly, so it has `--rows 0` semantics by
+construction (a row truncated out of one dump is what makes a ratio read
+infinite), and it prints rows with **no** denominator cost in their own
+section rather than as a ratio — a row the other pool never executes is a
+stronger finding than a large one, but it is not a number.
+
 ```text
 cube%   sos%     x    row                                    (sixty-second tip)
  0.61   0.12  5.08    layers::affected_includes_gated        <- taken, -28 % of itself

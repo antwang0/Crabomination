@@ -43,13 +43,33 @@ priority in the current ML phase; this is where it waits.
   x attackers) with a full requirement evaluation inside. Fine at real board
   sizes; worth a cheap keyword prefilter if a wide board ever shows up in a
   profile. ⏳
-- **`Selector::TriggerSource` on a block trigger binds the source, not the
-  partner.** It bit three cards this run (Dream Fighter, Crimson Roc,
-  Catacomb Dragon) before they were rewritten onto
-  `Selector::CreaturesInCombatWith(This)`; `combat_partner_punisher` already
-  worked around it. Either bind the partner there or rename the selector —
-  every `BecomesBlocked` / `Blocks` body that reads `TriggerSource` is
-  suspect and wants an audit. ⏳
+- ✅ **`Selector::TriggerSource` on a *self-scoped* block trigger is CLOSED.**
+  `core_rules::block_trigger_selectors` serde-walks the catalog and asserts
+  **zero** `SelfSource` `Blocks` / `BecomesBlocked` / `BlocksNOrMore` /
+  `BecomesBlockedByNOrMore` triggers read it in their filter or their body.
+  It found **five abilities across four cards** past the three that were
+  already rewritten (Dream Fighter, Crimson Roc, Catacomb Dragon):
+  **Abomination** (a local copy of `combat_partner_punisher` in `leg5.rs`
+  that gated on `TriggerSource` — the card is black and the gate asks for
+  green-or-white, so it never fired), **Infernal Medusa** (both halves
+  destroyed the Medusa), **Frostweb Spider** (asked whether the Spider had
+  flying), **Tolarian Entrancer** (stole a creature you already had) and
+  **Hedron Blade** (tested the bearer's own colour).
+  **The scope is the whole distinction and the test encodes it**: on
+  `AnyPlayer` / `YourControl` the watcher is a third object (Heat of Battle,
+  Righteous Indignation, Perimeter Captain) so `TriggerSource` *is* the
+  pair-side creature the text calls "that creature" — correct and
+  unreplaceable. Same for an `equipped_bonus` ability with
+  `triggers_on_equipment` (Godsend): it fires from the Equipment, so the
+  blocking bearer is the subject and `This` is the Equipment.
+  Add the partner selector, do not add a threshold.
+  **The one primitive it needed:** `SelectionRequirement::
+  BlockedSourceThisTurn`, the mirror of `BlockedBySourceThisTurn`, reading
+  `GameState.blocks_declared_this_turn` rather than a permanent's own field
+  — so an `AtEndOfCombat` body finds its partner after `resolve_combat` has
+  dropped `block_map` *and* after the source itself has died. That last part
+  is why Tolarian Entrancer (a 1/1 that dies to its own blocker) could not
+  use `combat_partner_punisher`'s `ChosenPermanentOfSource` stamp.
 - ✅ **The parallel target-walker class is CLOSED.** `core_rules/
   target_walkers` serde-walks the whole catalog and asserts that **zero**
   effect bodies declare a `TargetFiltered` slot `target_filter_for_slot`
