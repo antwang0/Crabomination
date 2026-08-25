@@ -2544,12 +2544,25 @@ impl GameState {
             // …and so does how it got here: a reanimated permanent wasn't cast
             // from anywhere, so "if you didn't cast it from your hand" riders
             // see the new object (Phage the Untouchable).
-            c.cast_from_hand = false;
-            c.cast_from_exile = false;
-            c.cast_from_library = false;
-            c.cast_via_flashback = false;
-            c.cast_from_suspend = false;
-            c.cast_from_escape = false;
+            // Same shape as the four above: gate the run, then take one
+            // `CardInstance::deref_mut` for it. `CardInstance` is a CoW
+            // handle, so each of these six writes was its own
+            // `Arc::make_mut`, and the reads are free (`Deref`).
+            if c.cast_from_hand
+                || c.cast_from_exile
+                || c.cast_from_library
+                || c.cast_via_flashback
+                || c.cast_from_suspend
+                || c.cast_from_escape
+            {
+                let c = &mut **c;
+                c.cast_from_hand = false;
+                c.cast_from_exile = false;
+                c.cast_from_library = false;
+                c.cast_via_flashback = false;
+                c.cast_from_suspend = false;
+                c.cast_from_escape = false;
+            }
         }
         // CR 611.2c — continuous effects aimed at this specific permanent
         // end with it (don't re-attach if the same card re-enters).

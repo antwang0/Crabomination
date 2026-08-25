@@ -8216,10 +8216,15 @@ impl GameState {
         self.spells_cast_this_turn += 1;
         // Mana Maze reads the turn's most recent cast (CR 601.2 restriction).
         self.last_cast_spell_colors = card.definition.printed_color_set();
-        self.players[p].spells_cast_this_turn += 1;
-        self.players[p].spells_cast_this_game_turn += 1;
-        if card.definition.card_types.contains(&crate::card::CardType::Sorcery) {
-            self.players[p].sorceries_cast_this_turn += 1;
+        {
+            // One `Player::deref_mut` for the run: `Player` is a CoW handle,
+            // so each write below was its own `Arc::make_mut`.
+            let me = &mut *self.players[p];
+            me.spells_cast_this_turn += 1;
+            me.spells_cast_this_game_turn += 1;
+            if card.definition.card_types.contains(&crate::card::CardType::Sorcery) {
+                me.sorceries_cast_this_turn += 1;
+            }
         }
         // Arboria — "cast a spell … during their last turn".
         self.note_acted_on_own_turn(p);
@@ -8230,10 +8235,11 @@ impl GameState {
             crate::game::seat_mask(self.players.len()) & !crate::game::seat_bit(p);
         // Per-turn cast-name log (Grim Reminder's "cast a spell this turn with
         // the same name").
-        self.players[p]
-            .spell_names_cast_this_turn
-            .push(card.definition.name);
-        self.players[p].spell_ids_cast_this_turn.push(card.id);
+        {
+            let me = &mut *self.players[p];
+            me.spell_names_cast_this_turn.push(card.definition.name);
+            me.spell_ids_cast_this_turn.push(card.id);
+        }
         // "First noncreature spell of a turn" tally (Nullstone Gargoyle). An
         // Adventure/Omen half cast is a noncreature spell regardless of the
         // card's front face.
@@ -8265,24 +8271,28 @@ impl GameState {
         };
         // Refine the spell-type tallies. Both gates default to 0 on
         // snapshot back-compat (player.rs `#[serde(default)]`).
+        // One `Player::deref_mut` for the whole tally run below: `Player` is a
+        // CoW handle, so each of these seven writes was its own
+        // `Arc::make_mut`. `card` is owned, so the binding outlives the reads.
+        let me = &mut *self.players[p];
         if is_instant_or_sorcery {
-            self.players[p].instants_or_sorceries_cast_this_turn += 1;
+            me.instants_or_sorceries_cast_this_turn += 1;
         }
         if card.definition.cost.color_set().is_multicolored() {
-            self.players[p].multicolored_spells_cast_this_turn += 1;
+            me.multicolored_spells_cast_this_turn += 1;
         }
         if !card.casting_alt_half() && card.definition.is_creature() {
-            self.players[p].creatures_cast_this_turn += 1;
+            me.creatures_cast_this_turn += 1;
         }
         // Spell-type tallies for the per-turn lock pieces (Deafening Silence,
         // Ethersworn Canonist). Read the cast half's types so an Adventure/Omen
         // instant-or-sorcery half counts as a noncreature spell.
         let cast_types = alt_types.unwrap_or(&card.definition.card_types);
         if !cast_types.contains(&CardType::Creature) {
-            self.players[p].noncreature_spells_cast_this_game_turn += 1;
+            me.noncreature_spells_cast_this_game_turn += 1;
         }
         if !cast_types.contains(&CardType::Artifact) {
-            self.players[p].nonartifact_spells_cast_this_game_turn += 1;
+            me.nonartifact_spells_cast_this_game_turn += 1;
         }
         // Veil of Summer gate: note when a player casts a blue or black
         // spell (color read off the printed mana cost). The full profile
@@ -8292,9 +8302,9 @@ impl GameState {
             if colors.contains(crate::mana::Color::Blue)
                 || colors.contains(crate::mana::Color::Black)
             {
-                self.players[p].cast_blue_or_black_this_turn = true;
+                me.cast_blue_or_black_this_turn = true;
             }
-            self.players[p].spell_casts_this_turn.push(crate::game::types::CastProfile {
+            me.spell_casts_this_turn.push(crate::game::types::CastProfile {
                 colors,
                 card_types: cast_types.clone(),
             });
