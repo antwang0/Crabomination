@@ -8311,7 +8311,7 @@ impl GameState {
     /// `equipped_bonus.remove_abilities` (Heliod's Punishment),
     /// `NoncreatureArtifactsLoseAbilities` (Titania's Song),
     /// `NamedLandsNeutralized` (Alpine Moon), `BlightedLandsNeutralized`
-    /// (Ultima), and the two `static_ability_to_effects` arms
+    /// (Ultima), and the two `push_static_ability_effects` arms
     /// (`CreaturesLoseAllAbilities`, a replacing `LandTypeChanger`). The last
     /// five are folded into [`card_can_strip_abilities`], which the emitting
     /// blocks `debug_assert!` against so the gate can't drift from them; a
@@ -8809,9 +8809,14 @@ impl GameState {
             // timestamp (entry-stamped; id-order fallback for unstamped
             // objects).
             let ts = card.object_timestamp();
-            let mut effects =
-                static_ability_to_effects(card, ts, self.active_player_idx == card.controller);
-            // Team-aware static abilities: `static_ability_to_effects` is a
+            let start = all_effects.len();
+            push_static_ability_effects(
+                card,
+                ts,
+                self.active_player_idx == card.controller,
+                &mut all_effects,
+            );
+            // Team-aware static abilities: `push_static_ability_effects` is a
             // free function with no GameState handle, so it can't fill in
             // `AllOpponents.friendly_seats` itself. Patch them now using
             // the source's actual team membership — in 1v1 / FFA this is
@@ -8820,7 +8825,7 @@ impl GameState {
             // teammate so a Crackling Drake-style "creatures opponents
             // control" anthem doesn't accidentally buff the source's
             // partner.
-            for e in &mut effects {
+            for e in &mut all_effects[start..] {
                 if let AffectedPermanents::AllOpponents {
                     source_controller,
                     friendly_seats,
@@ -8833,11 +8838,10 @@ impl GameState {
                     *friendly_seats = seats;
                 }
             }
-            all_effects.extend(effects);
         }
         // CR 114 — static-ability emblems (Vivien Reid's −8 anthem). Emblems
         // have no battlefield object, so synthesize a CardInstance per emblem
-        // (controller = owner) and reuse `static_ability_to_effects`. The
+        // (controller = owner) and reuse `push_static_ability_effects`. The
         // source id sits in a high sentinel range so it can't collide with a
         // real card; the duration is remapped to `Indefinite` since emblems
         // never leave the command zone.
@@ -8854,9 +8858,14 @@ impl GameState {
                 let sid = CardId(u32::MAX - (seat as u32 * 256 + ei as u32));
                 let mut synth = CardInstance::new(sid, synth_def, seat);
                 synth.controller = seat;
-                for mut e in
-                    static_ability_to_effects(&synth, sid.0 as u64, self.active_player_idx == seat)
-                {
+                let start = all_effects.len();
+                push_static_ability_effects(
+                    &synth,
+                    sid.0 as u64,
+                    self.active_player_idx == seat,
+                    &mut all_effects,
+                );
+                for e in &mut all_effects[start..] {
                     e.duration = EffectDuration::Indefinite;
                     if let AffectedPermanents::AllOpponents {
                         source_controller,
@@ -8869,10 +8878,9 @@ impl GameState {
                         seats.push(*source_controller);
                         *friendly_seats = seats;
                     }
-                    all_effects.push(e);
                 }
                 // Live-conditional team anthems (`PumpTeamIf`) don't fold
-                // through `static_ability_to_effects` — evaluate the gate
+                // through `push_static_ability_effects` — evaluate the gate
                 // against the emblem's owner here (Ellywick's −7 emblem).
                 for sa in &synth.definition.static_abilities {
                     let crate::effect::StaticEffect::PumpTeamIf {
@@ -8923,13 +8931,18 @@ impl GameState {
         // there. The card never leaves, so the effects are indefinite.
         for (seat, player) in self.players.iter().enumerate() {
             for card in player.command.iter().filter(|c| c.command_zone_abilities_active()) {
-                for mut e in
-                    static_ability_to_effects(card, card.object_timestamp(), self.active_player_idx == seat)
-                {
+                let start = all_effects.len();
+                push_static_ability_effects(
+                    card,
+                    card.object_timestamp(),
+                    self.active_player_idx == seat,
+                    &mut all_effects,
+                );
+                let named = card.named_card.as_deref();
+                for e in &mut all_effects[start..] {
                     e.duration = EffectDuration::Indefinite;
                     // CR 702.106 — a revealed hidden agenda's "with the chosen
                     // name" filters concretize against the name it named.
-                    let named = card.named_card.as_deref();
                     match &mut e.affected {
                         AffectedPermanents::CardMatch { requirement, .. }
                         | AffectedPermanents::CardMatchPowerGated { requirement, .. } => {
@@ -8948,7 +8961,6 @@ impl GameState {
                         seats.push(*source_controller);
                         *friendly_seats = seats;
                     }
-                    all_effects.push(e);
                 }
             }
         }
@@ -9579,7 +9591,7 @@ impl GameState {
         // CR 700.5 / Theros gods — "isn't a creature unless your devotion
         // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
         // self-effect while the gate is unmet; reading devotion needs the
-        // live GameState, so it can't route through static_ability_to_effects.
+        // live GameState, so it can't route through push_static_ability_effects.
         let before = all_effects.len();
         if sa_open(sa_mask, gs::NOT_CREATURE_WHILE_DEVOTION_BELOW) {
             for &(card, bits) in &sa_cards {
@@ -9612,7 +9624,7 @@ impl GameState {
         // CR 613 — Opalescence / Starfield of Nyx: each other non-Aura
         // enchantment becomes an `MV/MV` creature. Starfield gates on the
         // controller holding five or more enchantments, so the set is gathered
-        // state-aware rather than through `static_ability_to_effects`.
+        // state-aware rather than through `push_static_ability_effects`.
         let before = all_effects.len();
         if sa_open(sa_mask, gs::NON_AURA_ENCHANTMENTS_ARE_CREATURES) {
             for &(card, bits) in &sa_cards {
@@ -22746,22 +22758,26 @@ fn sa_audit(mask: u64, bit: u64, before: usize, after: usize) {
     );
 }
 
-/// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
-/// Takes the full `CardInstance` so Equipment/Aura abilities can use `attached_to`.
-fn static_ability_to_effects(
+/// Append a source permanent's `StaticAbility` effects to `out`. Takes the
+/// full `CardInstance` so Equipment/Aura abilities can use `attached_to`.
+///
+/// Writes through the caller's buffer rather than returning a `Vec`: every
+/// caller is the gather, which drains what it gets into `all_effects`, so the
+/// returned `Vec` was allocated, filled, copied out and freed once per
+/// static-ability permanent per gather.
+fn push_static_ability_effects(
     card: &CardInstance,
     timestamp: u64,
     your_turn: bool,
-) -> Vec<ContinuousEffect> {
-    card.definition
-        .static_abilities
-        .iter()
-        .flat_map(|sa| static_effect_to_effects(&sa.effect, card, timestamp, your_turn))
-        .collect()
+    out: &mut Vec<ContinuousEffect>,
+) {
+    for sa in &card.definition.static_abilities {
+        out.extend(static_effect_to_effects(&sa.effect, card, timestamp, your_turn));
+    }
 }
 
 /// Convert a single `StaticEffect` from `card` into layer continuous effects.
-/// Split out of `static_ability_to_effects` so charge-gated Station bands
+/// Split out of `push_static_ability_effects` so charge-gated Station bands
 /// (CR 721.2a) can reuse the same conversion. `your_turn` is true when the
 /// source's controller is the active player (CR 611.2 turn gate).
 fn static_effect_to_effects(
