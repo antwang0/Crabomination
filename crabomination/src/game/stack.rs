@@ -35,6 +35,9 @@ struct SbaBoardScan {
     start_engines: bool,
     equipment_attached: bool,
     soulbond: bool,
+    shapeshifter: bool,
+    sculptor: bool,
+    sector_set: bool,
 }
 
 /// How a CR 514 cleanup round ended, telling the caller how to continue.
@@ -1395,6 +1398,14 @@ impl GameState {
     /// stack makes its controller planeswalk. Checked where finished schemes
     /// are swept.
     pub(crate) fn sweep_finished_phenomena(&mut self) {
+        // Both this and `sweep_finished_schemes` only ever act on cards in a
+        // command zone, and `check_state_based_actions` calls both on every
+        // sweep. One length check per seat instead of a `flat_map` + `collect`
+        // over the whole zone list: outside Planechase/Archenemy every command
+        // zone is empty for the whole game.
+        if self.command_zones_are_empty() {
+            return;
+        }
         let phenomena: Vec<CardId> = self
             .players
             .iter()
@@ -1413,6 +1424,11 @@ impl GameState {
         self.planeswalk(seat);
     }
 
+    /// The presence gate the two command-zone sweeps share.
+    fn command_zones_are_empty(&self) -> bool {
+        self.players.iter().all(|p| p.command.is_empty())
+    }
+
     /// CR 701.33 / 904.10 — abandon a face-up scheme: off the command zone and
     /// onto the bottom of its owner's scheme deck.
     pub(crate) fn abandon_scheme(&mut self, scheme: CardId) {
@@ -1428,6 +1444,11 @@ impl GameState {
     /// CR 904.10 — a face-up non-ongoing scheme is abandoned the next time a
     /// player would receive priority, once no scheme trigger is on the stack.
     pub(crate) fn sweep_finished_schemes(&mut self) {
+        // See `sweep_finished_phenomena` — and this gate goes *before* the
+        // stack walk, whose predicate reads the command zones too.
+        if self.command_zones_are_empty() {
+            return;
+        }
         if self.stack.iter().any(|item| self.stack_item_is_scheme_trigger(item)) {
             return;
         }
@@ -4279,6 +4300,13 @@ impl GameState {
     /// controller chooses, opponents of the sculptor's controller first. When
     /// the last sculptor leaves, the designations clear (CR 702.158b).
     /// Auto-assignment spreads a player's creatures round-robin.
+    ///
+    /// `check_state_based_actions` gates the call on `sba_board_scan`'s
+    /// `sculptor`/`sector_set` bits, which are exactly this function's own
+    /// "no sculptor and nothing designated" bail read off a walk that already
+    /// happens — so on an ordinary board this never runs at all. The walk
+    /// below stays for the other callers and for the case the gate lets
+    /// through.
     pub(crate) fn assign_sectors(&mut self) {
         use crate::card::{Keyword, Sector};
         // Hot path: this runs on every SBA check, so bail before allocating
@@ -4338,19 +4366,25 @@ impl GameState {
     /// controller's graveyard, reverting to its printed self when the top card
     /// isn't a creature. The printed definition lives on a `shapeshifter`
     /// `TempCopy` entry, so a snapshot round-trip recovers it by name.
-    fn sync_graveyard_shapeshifters(&mut self) {
+    ///
+    /// Returns whether it rewrote any definition, so the caller knows whether
+    /// the board scan it was gated on is still valid.
+    fn sync_graveyard_shapeshifters(&mut self) -> bool {
+        let any_tmp = self.temporary_copies.iter().any(|tc| tc.shapeshifter);
         let ids: Vec<CardId> = self
             .battlefield
             .iter()
             .filter(|c| {
                 c.definition.copies_top_graveyard_creature
-                    || self
-                        .temporary_copies
-                        .iter()
-                        .any(|tc| tc.card == c.id && tc.shapeshifter)
+                    || (any_tmp
+                        && self
+                            .temporary_copies
+                            .iter()
+                            .any(|tc| tc.card == c.id && tc.shapeshifter))
             })
             .map(|c| c.id)
             .collect();
+        let mut rewrote = false;
         for id in ids {
             let printed = match self
                 .temporary_copies
@@ -4394,6 +4428,7 @@ impl GameState {
                 continue;
             }
             card.definition = target;
+            rewrote = true;
             if !self
                 .temporary_copies
                 .iter()
@@ -4409,6 +4444,7 @@ impl GameState {
                 });
             }
         }
+        rewrote
     }
 
     /// One battlefield pass answering "is this SBA's shape present at all?"
@@ -4466,6 +4502,11 @@ impl GameState {
                 }
             }
             s.equipment_attached |= c.attached_to.is_some() && d.is_equipment();
+            s.shapeshifter |= d.copies_top_graveyard_creature;
+            s.sector_set |= c.sector.is_some();
+            if !s.sculptor {
+                s.sculptor = d.keywords.iter().any(|k| matches!(k, Keyword::SpaceSculptor));
+            }
             for sa in &d.static_abilities {
                 match sa.effect {
                     StaticEffect::AllNonlandPermanentsAreLegendary => s.supertype_grant = true,
@@ -4547,8 +4588,6 @@ impl GameState {
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
-        self.assign_sectors();
-
         // CR 904.10 — a face-up non-ongoing scheme is abandoned once no scheme
         // trigger is left on the stack.
         self.sweep_finished_schemes();
@@ -4556,13 +4595,31 @@ impl GameState {
         // stack makes its controller planeswalk.
         self.sweep_finished_phenomena();
 
-        self.sync_graveyard_shapeshifters();
-
         // One pass answering "which of the rare SBAs can fire on this board".
         // Retaken below wherever the sweep can change the answer (a flip swaps
         // a definition; Persist/Undying puts a permanent back).
         let mut scan = self.sba_board_scan();
         let mut flipped = false;
+
+        // CR 613 layer 1 — Volrath's Shapeshifter. Moved *under* the scan and
+        // gated on it: the sync's own `filter` was a second whole-battlefield
+        // walk on every sweep, asking a question this scan already reads off
+        // the same definitions. It rewrites definitions, so the scan is retaken
+        // when it actually does — the same shape the flip legs below use.
+        if (scan.shapeshifter || self.temporary_copies.iter().any(|tc| tc.shapeshifter))
+            && self.sync_graveyard_shapeshifters()
+        {
+            scan = self.sba_board_scan();
+        }
+
+        // CR 704.5u / 702.158c — sector designations. Same device: the scan
+        // carries this function's own bail condition, so an ordinary board no
+        // longer pays a third whole-battlefield walk (with a keyword scan per
+        // permanent) per sweep. Under the shapeshifter sync, so a copied
+        // Space Sculptor is read from the layer-1 definition.
+        if scan.sculptor || scan.sector_set {
+            self.assign_sectors();
+        }
 
         // CR 603.8 — state-triggered flip (Student of Elements: "When this
         // creature has flying, flip it"). Cheap guard so the common board pays
