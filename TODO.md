@@ -47,11 +47,21 @@ candidate, and budget two callgrind rounds.**
    definitions, built once) and a scorer whose colour argument genuinely
    varies per shape.
 4. **Two fresh engine candidates, both read on `sos` (the actors' pool).**
-   (-42) is **mostly PAID** (`223c77b5`, sos -0.261 %, cube -0.253 %):
-   `Player` is a CoW handle, so `do_untap`'s ~55-field per-turn seat reset
-   unshared the seat once per field. `make_mut` 212,012 -> 80,148. **The
-   device generalises** — bind the handle once wherever a sweep writes a run
-   of its fields; the cleanup step is the next place to look.
+   (-42) is **PAID as a site, in two commits**: `Player` is a CoW handle, so
+   `do_untap`'s per-turn seat writes unshared the seat once per field.
+   `8a0f11fb` took the ~55-field reset loop (sos -0.261 %, cube -0.253 %,
+   `make_mut` 212,012 -> 80,148); the follow-up took the tail's three write
+   runs and three more seat loops (**sos -0.120 %, cube -0.115 %**,
+   80,148 -> 41,200). What is left is per-card singletons with nothing to
+   bind. **The device generalises and is the open work** — bind the handle
+   once wherever a sweep writes a run of its fields. Next sites, unmeasured:
+   `stack.rs:666` (cleanup step, ~16 writes/seat) and `mod.rs:15793`
+   (three `iter_mut` zone sweeps/seat).
+   **Re-read the base after a rebase — this is not just a `sealed` rule.**
+   The follow-up first read -2.069 % against the Baseline block's
+   `1,639,754,965`, which predates `cae6b605` rebasing in underneath; the
+   true base at `d2a8320b` is `1,607,757,957`. Model the win before you
+   measure it, and let a 17x miss indict the base.
    (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos — the
    pre-filter is sound only there (the other two callers index the list) and
    **worth zero on `sos`**: the set's single `GrantActivatedAbility` (Petrified

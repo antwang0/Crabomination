@@ -384,7 +384,7 @@ I refs, --decks cube      2,952,041,099      not re-read — no commit is on tha
 | — | *rebase onto pass 57's (D)+(E)*; the same four re-read `23,611,357` | | |
 | E | `15cad53b` | **-7.782 %** | the copy cap counts by dense card id, not by `HashMap` |
 
-**And a sixth commit that is not on the deck builder at all** — `223c77b5`,
+**And a sixth commit that is not on the deck builder at all** — `8a0f11fb`,
 candidate (-42)'s answer: `do_untap`'s per-turn seat reset writes ~55 fields
 through `Player`, which is a CoW handle, so each was its own
 `Arc::make_mut`. `make_mut` calls in that function **212,012 -> 80,148**;
@@ -405,7 +405,7 @@ read it through `Deref`. Every source it draws from is reachable from
 `&'a self`, `me` or the scan, so it returns `Vec<&'a ActivatedAbility>`; the
 one ability with nothing to borrow from (CR 804.2's deploy-creatures grant,
 all-constant fields) is a `LazyLock`. Base `7c7f2e5e` re-read at the tip that
-carries (E) and `223c77b5`:
+carries (E) and `8a0f11fb`:
 
 ```text
                      base (7c7f2e5e)   tip (cae6b605)
@@ -439,6 +439,15 @@ suite are identical, and not deep-copying an immutable shared structure in
 order to read it is a clarity win on its own — but **-1.95 % is not a
 throughput claim**, and the next allocation-shaped candidate on this branch
 should be sized with that in front of it.
+
+**And an eighth, `85f4f55b`, the rest of (-42)'s class** — `do_untap`'s tail, where the
+runs of seat writes are split by `retain_cold!` calls on `self`. `make_mut`
+in that function **80,148 -> 41,200**; `--decks sos` **1,607,757,957 ->
+1,605,824,543, -0.120 %**, `--decks cube` **2,888,913,466 -> 2,885,591,189,
+-0.115 %**. **Both base columns here are re-read at `d2a8320b`, i.e. with
+`cae6b605` in** — quoting the sixth commit's `1,639,754,965` instead would
+have read -2.069 %, seventeen times the real win, and the seventh commit
+directly above is where that missing -1.946 % went. See (-42).
 
 **Both game pools read slightly *down* rather than flat, and the reason is
 the binary.** No commit here is on the game loop; `_dl_relocate_object` is
@@ -3974,10 +3983,39 @@ place — bind the target once. The reads are already free: rustc picks `Deref`
 for a place used immutably even through a `&mut` binding (checked with a
 standalone test; see below).
 
-**What is left is 80,148 calls, 53.5 per untap step**, in `do_untap`'s tail
-(runs of `self.players[p].X = …` interleaved with `retain_cold!` calls on
-`self`, which is why they were not collapsed in the same commit) and in the
-main untap loop's per-card writes. Same device, smaller prize.
+**The tail is paid too, in a second commit: 80,148 -> 41,200 calls
+(-48.6 %), `sos` -0.120 %, `cube` -0.115 %.** Three runs of
+`self.players[p].X = …` (7, 5 and 5 writes) took a `let me = &mut
+*self.players[p];`, and three `for pl in &mut self.players` loops took the
+`let pl = &mut **pl;`. The interleaved `retain_cold!`/`clear_cold!` calls on
+`self` are what had kept them out of the first commit; they only split the
+runs, they do not force a re-unshare, so each run collapses on its own.
+Ir saved 1,933,414 on `sos` against 1,168,440 of `make_mut` self — the other
+765 k is the per-write preamble (index, `Arc` load, refcount load, branch)
+that went with it.
+
+**What is left is 41,200 calls, 27.5 per untap step**, in the main untap
+loop's per-card writes. `clear_end_of_turn_effects` is already one
+`deref_mut` for its whole macro-expanded reset *and* gated on
+`end_of_turn_effects_are_clear()`, so the residual is the gated singletons
+(`granted_flashback_eot`, `granted_harmonize_eot`, `damage`) — one write
+each, nothing left to bind once. This entry is closed as a site; the
+*device* is open everywhere else (see the generalisable shape above, and the
+cleanup step).
+
+**The base was re-read before the delta was quoted, and it is the whole
+reason the number above is 0.120 % and not 2.069 %.** The first reading
+compared against `1,639,754,965`, the figure in this pass's Baseline block —
+but that was measured before a concurrent session's `cae6b605` rebased in
+underneath, and the true base at `d2a8320b` is **1,607,757,957**. The stale
+column would have credited this commit with 17x its actual win — and that
+session's own write-up, landing in the same rebase, prices `cae6b605` on
+`sos` at **-1.946 %**, which is exactly the gap. The rule
+already in TODO's NEXT ("re-read the base after a rebase before quoting a
+delta") was written for `--decks sealed --games 1` and binary size; it
+applies just as hard to a game pool when the branch is shared. **A predicted
+size that comes in 17x high is the signal — model the win first, then let a
+miss that large indict the base rather than the change.**
 
 The original reading, for the sizing: 1,498 untap steps, **212,012 `make_mut`
 calls** at 45.7 Ir each — 9,694,094 Ir, **0.58 % of the run** — against 9,832
