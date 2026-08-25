@@ -208,6 +208,23 @@ def resolve(binary, addrs, bias):
     return res
 
 
+def short_loc(path):
+    """`dir/file.rs:line` — the basename alone is ambiguous and was misleading.
+
+    Rust's tree is full of `mod.rs` and `macros.rs`. A basename-only column
+    put `alloc/src/sync/mod.rs:1917` (the `Arc` deep copy) and
+    `game/mod.rs:17108` (the trigger dispatcher) under the same label
+    `mod.rs`, and left PERF's `check_state_based_actions` lead reading "a
+    dependency's `macros.rs:332` at 0.62 %" for a year — it is
+    `core/src/slice/iter/macros.rs`, i.e. `slice::Iter::next`. One more
+    component names every one of them.
+    """
+    if not path:
+        return "??"
+    parts = [p for p in path.replace("/rustc/", "rustc:/").split("/") if p]
+    return "/".join(parts[-2:]) if parts else "??"
+
+
 def main():
     if len(sys.argv) < 3:
         sys.exit(__doc__)
@@ -259,8 +276,8 @@ def main():
         # *outermost* frame — the real function — and keep the innermost's
         # file:line as the "what it is doing there" column.
         func = fr[-1][0]
-        loc = (fr[0][1] or "??").replace("/rustc/", "rustc:").split("/")[-1]
-        lines[f"{loc:<28} {func[:88]}"] += cost[a]
+        loc = short_loc(fr[0][1])
+        lines[f"{loc:<34} {func[:88]}"] += cost[a]
     shown = sum(lines.values())
     print(f"# {shown:,} Ir grouped ({100 * shown / max(total, 1):.1f}% of the run)")
     ranked_lines = lines.most_common()
