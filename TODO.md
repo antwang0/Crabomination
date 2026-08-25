@@ -52,7 +52,7 @@ candidate, and budget two callgrind rounds.**
 6. **`cg_symbolize.py` is now usually a no-op** — the dump comes back
    symbolized. Run `cg_edges.py` on the raw dump first.
 7. **Housekeeping.** TODO 1.0k, PERF 5.9k (48th/49th Baseline and 45th/46th
-   Log folded this run; the 47th/48th Log entries are next). ENGINE_BACKLOG
+   Log folded this run; the 48th/49th Log entries are next). ENGINE_BACKLOG
    4.9k / CARD_BACKLOG 4.2k still want a triage pass.
 8. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings** (read the
    oracle first). **Top ML item is still a training run, not code:** a good
@@ -222,7 +222,7 @@ Log with its numbers; read the entry before re-proposing any of them.
   5 %; a `profiling-fast` games/s compares to nothing.
 - **Trackers.** TODO 1.0k, ROADMAP 0.66k, PERF 6.0k (**passes 45-49's
   Baseline blocks are one table plus the lessons they carried, and passes 45
-  and 46's Log entries are folded, at the 58th tip**; the 47th's and 48th's
+  and 46's Log entries are folded, at the 58th tip**; the 48th's and 49th's
   Log entries are the next fold). ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k
   are the archives and still want their own triage pass.
 

@@ -108,3 +108,6 @@ calling*.txt
 cg.*.out
 cg.*.sym
 cg.out
+
+# Side-by-side target dir for a scoped clippy run.
+/target-clip/

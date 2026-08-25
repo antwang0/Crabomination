@@ -396,6 +396,7 @@ determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
 peak_rss_mib     22.0
 suite            18,728 passed / 0 failed / 5 ignored over 22 binaries
 golden traces    7 passed, all unchanged
+clippy           `--workspace --all-targets` clean, all eight crates
 rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 58-73
 ```
