@@ -352,6 +352,11 @@ pub struct PoolScores<'a> {
     picks: &'a [CardFactory],
     /// `(brief, base score)` per entry of `picks`, in order.
     cards: Vec<(&'static crate::cube::CardBrief, i32)>,
+    /// Which scorer produced `cards`' second element — `SimConfig::builder_v2`
+    /// at every call site that reaches [`build_shape`]. Read by the
+    /// `debug_assert` there, so a caller that builds these under one scorer
+    /// and ranks splashes under the other fails the suite.
+    quality: bool,
 }
 
 impl<'a> PoolScores<'a> {
@@ -369,7 +374,7 @@ impl<'a> PoolScores<'a> {
                 (brief, base)
             })
             .collect();
-        Self { picks, cards }
+        Self { picks, cards, quality }
     }
 
     /// The pool these scores were built from.
@@ -550,30 +555,31 @@ pub(crate) fn curve_penalty(main: &[CardFactory]) -> i32 {
 /// bar). Gold cards straddling the pair and the splash qualify — "U/B
 /// splashing a B/G bomb" is a real sealed build, and a mono-only rule
 /// silently excluded exactly the cards most worth splashing.
-fn splash_cards(pool: &[CardFactory], pair: &[Color], third: Color, cfg: &SimConfig) -> Vec<CardFactory> {
-    let pool_colors = colors_of_picks(pool);
-    let mut hits: Vec<(CardFactory, i32)> = pool
+///
+/// Its scorer argument was `colors_of_picks(pool)` and its scorer was
+/// `cfg.builder_v2`'s — the pool property and the scorer [`PoolScores`] has
+/// already scored every card with — so both the whole-pool colour walk and
+/// the per-card score were re-derived once per splash shape, thirty times
+/// over one pool.
+fn splash_cards(scores: &PoolScores<'_>, pair: &[Color], third: Color, cfg: &SimConfig) -> Vec<CardFactory> {
+    let mut hits: Vec<(CardFactory, i32)> = scores
+        .picks
         .iter()
-        .filter(|&&f| {
-            let pips = &crate::cube::card_brief(f).pips;
+        .zip(&scores.cards)
+        .filter_map(|(&f, &(brief, base))| {
+            let pips = &brief.pips;
             if !(pips.get(third) > 0 && pips.colors().all(|c| c == third || pair.contains(&c))) {
-                return false;
+                return None;
             }
             // A splash is a handful of off-color sources, so it can only
             // support ONE colored pip. Without this the builder splashed
             // {3}{U}{U} Emeritus of Ideation off three Islands — a card
             // it then measurably failed to cast.
-            !cfg.builder_v2 || pips.get(third) <= 1
+            if cfg.builder_v2 && pips.get(third) > 1 {
+                return None;
+            }
+            (base >= cfg.splash_min_score).then_some((f, base))
         })
-        .map(|&f| {
-            let s = if cfg.builder_v2 {
-                crate::draft::score_card_quality(f, &pool_colors)
-            } else {
-                score_card_with_colors(f, &pool_colors)
-            };
-            (f, s)
-        })
-        .filter(|(_, s)| *s >= cfg.splash_min_score)
         .collect();
     hits.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
     hits.into_iter().take(cfg.splash_max_cards).map(|(f, _)| f).collect()
@@ -726,20 +732,23 @@ fn candidate_label(colors: &[Color], splash: &[Color]) -> String {
 /// hollow — no splash-worthy cards for a splash shape, or no playables
 /// at all.
 fn build_shape<R: Rng>(
-    pool: &[CardFactory],
     colors: &[Color],
     splash_colors: &[Color],
     // (spell slots, land count, pick jitter)
     shape: (usize, u32, i32),
     cfg: &SimConfig,
     rng: &mut R,
-    // The pool's shape-invariant per-card facts — see [`PoolScores`].
+    // The pool and its shape-invariant per-card facts — see [`PoolScores`].
     scores: &PoolScores<'_>,
 ) -> Option<CandidateBuild> {
+    debug_assert_eq!(
+        scores.quality, cfg.builder_v2,
+        "PoolScores was built under the other scorer; splash_cards reads its base scores",
+    );
     let (spells, lands, noise) = shape;
     let splash: Vec<CardFactory> = splash_colors
         .iter()
-        .flat_map(|&c| splash_cards(pool, colors, c, cfg))
+        .flat_map(|&c| splash_cards(scores, colors, c, cfg))
         .collect();
     if !splash_colors.is_empty() && splash.is_empty() {
         return None;
@@ -804,7 +813,6 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
     let scores = PoolScores::new(pool, cfg.builder_v2);
     for (colors, splash_colors) in shapes {
         let Some(build) = build_shape(
-            pool,
             &colors,
             &splash_colors,
             (cfg.target_spells, cfg.total_lands, 0),
@@ -889,7 +897,6 @@ pub(crate) fn build_random_deck_from<R: Rng>(
     let noise = (t * 2.0).round() as i32;
     let scores = PoolScores::new(pulls, cfg.builder_v2);
     let build = build_shape(
-        pulls,
         &chosen.colors,
         &chosen.splash,
         (spells, lands, noise),
@@ -902,7 +909,6 @@ pub(crate) fn build_random_deck_from<R: Rng>(
         // and it came from enumerate, so it isn't. Defensive: fall
         // back to the enumerated build itself.
         build_shape(
-            pulls,
             &chosen.colors,
             &chosen.splash,
             (cfg.target_spells, cfg.total_lands, 0),
@@ -2185,7 +2191,6 @@ impl Session {
                     (s, l, noise + (v as i32 / 16) * 2)
                 };
                 let Some(mut build) = build_shape(
-                    pool,
                     &shape.colors,
                     &shape.splash,
                     (spells, lands, n),
