@@ -8720,6 +8720,7 @@ impl GameState {
     }
 
     fn gather_continuous_effects_inner(&self) -> Vec<ContinuousEffect> {
+        use gather_spec as gs;
         // Most passes below are gated on `definition.static_abilities`, and a
         // typical board is vanilla creatures and basic lands. Filter once so
         // those passes walk the handful of cards that can contribute instead
@@ -8733,18 +8734,28 @@ impl GameState {
         // with one keyword scan per card replaces eleven; each pass keeps its
         // place and iterates an empty slice when its flag is clear, so the
         // emitted effect sequence is unchanged.
-        let mut sa_cards: Vec<&CardInstance> = Vec::new();
+        let mut sa_cards: Vec<(&CardInstance, u64)> = Vec::new();
         let (mut any_equipped_bonus, mut any_soulbond_bonus, mut any_attached) =
             (false, false, false);
         let (mut any_reconfigure, mut any_impending, mut any_unleash) = (false, false, false);
         let (mut any_hexproof_unless, mut any_dynamic_pt) = (false, false);
         let (mut any_level_bands, mut any_station, mut any_living_metal) = (false, false, false);
         let mut any_suspected = false;
+        // Which of the thirty-eight per-static passes below can fire at all.
+        // Each used to walk `sa_cards` itself looking for one `StaticEffect`
+        // variant; this walk answers all thirty-eight at once, per card in
+        // `sa_cards` and OR'd board-wide here. See [`gather_spec`].
+        let mut sa_mask: u64 = 0;
         for card in self.battlefield.iter() {
             let def = &card.definition;
             any_suspected |= card.suspected;
             if !def.static_abilities.is_empty() {
-                sa_cards.push(card);
+                let mut bits = 0;
+                for sa in &def.static_abilities {
+                    bits |= static_effect_gather_bits(&sa.effect);
+                }
+                sa_cards.push((card, bits));
+                sa_mask |= bits;
             }
             any_equipped_bonus |= def.equipped_bonus.is_some();
             any_soulbond_bonus |= def.soulbond_bonus.is_some();
@@ -8782,28 +8793,22 @@ impl GameState {
         // Bludgeon Brawl's pass calls `brawl_equip_mv` per battlefield card,
         // and that helper re-scans the whole board's static abilities looking
         // for `ArtifactsAreEquipment` — O(cards²) on every gather for a card
-        // that is almost never out. Ask once, off the short `sa_cards` list.
-        let any_artifacts_are_equipment = sa_cards.iter().any(|c| {
-            c.definition
-                .static_abilities
-                .iter()
-                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::ArtifactsAreEquipment))
-        });
+        // that is almost never out. The mask above already asked; the bit
+        // over-approximates (it sees through the `While*` wrappers the old
+        // `matches!` did not) and `brawl_equip_mv` re-derives per card, so a
+        // set bit costs only the walk it always paid.
+        let any_artifacts_are_equipment = sa_mask & gs::ARTIFACTS_ARE_EQUIPMENT != 0;
         // Coat of Arms' pass built a `Vec` of every creature on the board —
         // one `is_creature` and one `Vec<Keyword>` scan per card — before
-        // looking for the static that consumes it, on every gather. Ask off
-        // the short `sa_cards` list first. The pass matches `sa.effect`
-        // directly rather than through `active_static`, so a bare `matches!`
-        // here finds exactly what it would have found.
-        let any_pump_per_shared_type = sa_cards.iter().any(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, crate::effect::StaticEffect::PumpPerSharedType { .. })
-            })
-        });
-        for &card in &sa_cards {
+        // looking for the static that consumes it, on every gather. Same
+        // mask bit, same over-approximation: the pass still runs its own
+        // `match` per static ability.
+        let any_pump_per_shared_type = sa_mask & gs::PUMP_PER_SHARED_TYPE != 0;
+        for &(card, _) in &sa_cards {
             // CR 613.7a — static-ability effects carry the source object's
-        // timestamp (entry-stamped; id-order fallback for unstamped objects).
-        let ts = card.object_timestamp();
+            // timestamp (entry-stamped; id-order fallback for unstamped
+            // objects).
+            let ts = card.object_timestamp();
             let mut effects =
                 static_ability_to_effects(card, ts, self.active_player_idx == card.controller);
             // Team-aware static abilities: `static_ability_to_effects` is a
@@ -9385,23 +9390,68 @@ impl GameState {
         // the live `attacking` list and scope the grant to the source's own
         // attackers. Layer-6 keyword addition, like the equipment grants.
         if !self.attacking.is_empty() {
-            for &card in &sa_cards {
+            let before = all_effects.len();
+            if sa_open(sa_mask, gs::GRANT_KEYWORD_TO_ATTACKERS) {
+                for &(card, bits) in &sa_cards {
+                    if !sa_open(bits, gs::GRANT_KEYWORD_TO_ATTACKERS) {
+                        continue;
+                    }
+                    for sa in &card.definition.static_abilities {
+                        let crate::effect::StaticEffect::GrantKeywordToAttackers { keyword } =
+                            &sa.effect
+                        else {
+                            continue;
+                        };
+                        let ids: Vec<CardId> = self
+                            .attacking
+                            .iter()
+                            .map(|a| a.attacker)
+                            .filter(|id| {
+                                self.battlefield
+                                    .iter()
+                                    .any(|c| c.id == *id && c.controller == card.controller)
+                            })
+                            .collect();
+                        if ids.is_empty() {
+                            continue;
+                        }
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(ids),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(keyword.clone()),
+                        });
+                    }
+                }
+            }
+            sa_audit(sa_mask, gs::GRANT_KEYWORD_TO_ATTACKERS, before, all_effects.len());
+        }
+        // CR 700.9 — "Modified creatures you control have <keyword>"
+        // (Kodama of the West Tree) and "attacking [tokens] you control have
+        // <keyword>" (Bone-Cairn Butcher). `IsModified` (attachments) and
+        // `IsAttacking` (combat state) both need the live battlefield, so
+        // filters mentioning them resolve here into a Specific id list per
+        // recompute; `affected_from_requirement` drops them on the static
+        // path, so there's no double application.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::GRANT_KEYWORD) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::GRANT_KEYWORD) {
+                    continue;
+                }
                 for sa in &card.definition.static_abilities {
-                    let crate::effect::StaticEffect::GrantKeywordToAttackers { keyword } =
-                        &sa.effect
+                    // CR 716.2 / 611.2 — peel the level/turn/counter gates to the
+                    // inner grant (Blacksmith's Talent's level-3 "during your
+                    // turn, equipped creatures … have double strike and haste").
+                    let Some(eff) = self.active_static(&sa.effect, card) else { continue };
+                    let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = eff
                     else {
                         continue;
                     };
-                    let ids: Vec<CardId> = self
-                        .attacking
-                        .iter()
-                        .map(|a| a.attacker)
-                        .filter(|id| {
-                            self.battlefield
-                                .iter()
-                                .any(|c| c.id == *id && c.controller == card.controller)
-                        })
-                        .collect();
+                    let Some(ids) = self.eager_static_targets(card, applies_to) else { continue };
                     if ids.is_empty() {
                         continue;
                     }
@@ -9417,310 +9467,335 @@ impl GameState {
                 }
             }
         }
-        // CR 700.9 — "Modified creatures you control have <keyword>"
-        // (Kodama of the West Tree) and "attacking [tokens] you control have
-        // <keyword>" (Bone-Cairn Butcher). `IsModified` (attachments) and
-        // `IsAttacking` (combat state) both need the live battlefield, so
-        // filters mentioning them resolve here into a Specific id list per
-        // recompute; `affected_from_requirement` drops them on the static
-        // path, so there's no double application.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                // CR 716.2 / 611.2 — peel the level/turn/counter gates to the
-                // inner grant (Blacksmith's Talent's level-3 "during your
-                // turn, equipped creatures … have double strike and haste").
-                let Some(eff) = self.active_static(&sa.effect, card) else { continue };
-                let crate::effect::StaticEffect::GrantKeyword { applies_to, keyword } = eff
-                else {
-                    continue;
-                };
-                let Some(ids) = self.eager_static_targets(card, applies_to) else { continue };
-                if ids.is_empty() {
-                    continue;
-                }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Specific(ids),
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(keyword.clone()),
-                });
-            }
-        }
+        sa_audit(sa_mask, gs::GRANT_KEYWORD, before, all_effects.len());
         // CR 700.9 / combat anthems — "attacking creatures you control get
         // +X/+X" (Orcish Oriflamme) and modified-creature P/T lords. Mirrors
         // the GrantKeyword loop above: `IsAttacking`/`IsModified` need the live
         // battlefield, so `PumpPT` statics over them resolve here into a
         // Specific id list per recompute; `affected_from_requirement` drops
         // them on the static path, so there's no double application.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                // CR 611.2 — peel any `While*` gate first, so a gated combat
-                // anthem (Watchdog's untapped rider) still resolves live.
-                let Some(crate::effect::StaticEffect::PumpPT { applies_to, power, toughness }) =
-                    self.active_static(&sa.effect, card)
-                else {
-                    continue;
-                };
-                // CR 303.4a — a player-scoped anthem ("creatures enchanted
-                // player controls get -1/-1", Curse of Death's Hold) resolves
-                // here too: the seat is live `attached_to_player` state.
-                let Some(ids) = self.eager_static_targets(card, applies_to) else { continue };
-                if ids.is_empty() {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_PT) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_PT) {
                     continue;
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Specific(ids),
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(*power, *toughness),
-                });
+                for sa in &card.definition.static_abilities {
+                    // CR 611.2 — peel any `While*` gate first, so a gated combat
+                    // anthem (Watchdog's untapped rider) still resolves live.
+                    let Some(crate::effect::StaticEffect::PumpPT { applies_to, power, toughness }) =
+                        self.active_static(&sa.effect, card)
+                    else {
+                        continue;
+                    };
+                    // CR 303.4a — a player-scoped anthem ("creatures enchanted
+                    // player controls get -1/-1", Curse of Death's Hold) resolves
+                    // here too: the seat is live `attached_to_player` state.
+                    let Some(ids) = self.eager_static_targets(card, applies_to) else { continue };
+                    if ids.is_empty() {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(ids),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                    });
+                }
             }
         }
+        sa_audit(sa_mask, gs::PUMP_PT, before, all_effects.len());
         // CR 613 — "this creature has <keyword> as long as it matches
         // <condition>" (Kor Duelist's "double strike while equipped"). The
         // condition reads live board state, so it resolves here per recompute
         // into a layer-6 self keyword.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfHasKeywordWhile { keyword, condition } =
-                    &sa.effect
-                else {
-                    continue;
-                };
-                if !self.evaluate_requirement_static_on(
-                    condition,
-                    card,
-                    card.controller,
-                    Some(card.id),
-                ) {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_HAS_KEYWORD_WHILE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_HAS_KEYWORD_WHILE) {
                     continue;
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(keyword.clone()),
-                });
-            }
-        }
-        // Predicate-gated sibling of the loop above — the condition reads live
-        // board state relative to the source (e.g. "you control another Faerie").
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition } =
-                    &sa.effect
-                else {
-                    continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(card.id, 0, None);
-                if !self.evaluate_predicate(condition, &ctx) {
-                    continue;
-                }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(keyword.clone()),
-                });
-            }
-        }
-        // CR 700.5 / Theros gods — "isn't a creature unless your devotion
-        // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
-        // self-effect while the gate is unmet; reading devotion needs the
-        // live GameState, so it can't route through static_ability_to_effects.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::NotCreatureWhileDevotionBelow {
-                    colors,
-                    threshold,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                if (self.devotion_to(card.controller, colors) as u32) < *threshold {
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SelfHasKeywordWhile { keyword, condition } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    if !self.evaluate_requirement_static_on(
+                        condition,
+                        card,
+                        card.controller,
+                        Some(card.id),
+                    ) {
+                        continue;
+                    }
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
                         affected: AffectedPermanents::Source,
-                        layer: Layer::L4Type,
+                        layer: Layer::L6Ability,
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::RemoveCardType(CardType::Creature),
+                        modification: Modification::AddKeyword(keyword.clone()),
                     });
                 }
             }
         }
+        sa_audit(sa_mask, gs::SELF_HAS_KEYWORD_WHILE, before, all_effects.len());
+        // Predicate-gated sibling of the loop above — the condition reads live
+        // board state relative to the source (e.g. "you control another Faerie").
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_HAS_KEYWORD_WHILE_PREDICATE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_HAS_KEYWORD_WHILE_PREDICATE) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SelfHasKeywordWhilePredicate { keyword, condition } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(card.id, 0, None);
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::SELF_HAS_KEYWORD_WHILE_PREDICATE, before, all_effects.len());
+        // CR 700.5 / Theros gods — "isn't a creature unless your devotion
+        // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
+        // self-effect while the gate is unmet; reading devotion needs the
+        // live GameState, so it can't route through static_ability_to_effects.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::NOT_CREATURE_WHILE_DEVOTION_BELOW) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::NOT_CREATURE_WHILE_DEVOTION_BELOW) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::NotCreatureWhileDevotionBelow {
+                        colors,
+                        threshold,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    if (self.devotion_to(card.controller, colors) as u32) < *threshold {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::RemoveCardType(CardType::Creature),
+                        });
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::NOT_CREATURE_WHILE_DEVOTION_BELOW, before, all_effects.len());
         // CR 613 — Opalescence / Starfield of Nyx: each other non-Aura
         // enchantment becomes an `MV/MV` creature. Starfield gates on the
         // controller holding five or more enchantments, so the set is gathered
         // state-aware rather than through `static_ability_to_effects`.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::NonAuraEnchantmentsAreCreatures {
-                    yours_only,
-                    requires_five,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                if *requires_five
-                    && self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == card.controller
-                                && c.definition.card_types.contains(&CardType::Enchantment)
-                        })
-                        .count()
-                        < 5
-                {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::NON_AURA_ENCHANTMENTS_ARE_CREATURES) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::NON_AURA_ENCHANTMENTS_ARE_CREATURES) {
                     continue;
                 }
-                use crate::card::{EnchantmentSubtype, SelectionRequirement as R};
-                let mut req = R::Enchantment
-                    .and(R::Not(Box::new(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))))
-                    .and(R::OtherThanSource);
-                if *yours_only {
-                    req = req.and(R::ControlledByYou);
-                }
-                let affected = AffectedPermanents::CardMatch {
-                    source_controller: card.controller,
-                    requirement: Box::new(req),
-                };
-                let ts = card.object_timestamp();
-                all_effects.push(ContinuousEffect {
-                    timestamp: ts,
-                    source: card.id,
-                    affected: affected.clone(),
-                    layer: Layer::L4Type,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddCardType(CardType::Creature),
-                });
-                all_effects.push(ContinuousEffect {
-                    timestamp: ts,
-                    source: card.id,
-                    affected,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::SetValue),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::SetPowerToughnessToManaValue,
-                });
-            }
-        }
-        // CR 613 — March of the Machines: each noncreature artifact becomes an
-        // `MV/MV` artifact creature. Gathered state-aware alongside Opalescence
-        // (the affected set is "artifact and not already a creature").
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                if !matches!(sa.effect, crate::effect::StaticEffect::NoncreatureArtifactsAreCreatures)
-                {
-                    continue;
-                }
-                use crate::card::SelectionRequirement as R;
-                let affected = AffectedPermanents::CardMatch {
-                    source_controller: card.controller,
-                    requirement: Box::new(R::Artifact.and(R::Not(Box::new(R::Creature)))),
-                };
-                let ts = card.object_timestamp();
-                all_effects.push(ContinuousEffect {
-                    timestamp: ts,
-                    source: card.id,
-                    affected: affected.clone(),
-                    layer: Layer::L4Type,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddCardType(CardType::Creature),
-                });
-                all_effects.push(ContinuousEffect {
-                    timestamp: ts,
-                    source: card.id,
-                    affected,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::SetValue),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::SetPowerToughnessToManaValue,
-                });
-            }
-        }
-        // Titania's Song — the ability-stripping half of the same animation
-        // (layer 6), paired on the card with `NoncreatureArtifactsAreCreatures`.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                if !matches!(
-                    sa.effect,
-                    crate::effect::StaticEffect::NoncreatureArtifactsLoseAbilities
-                ) {
-                    continue;
-                }
-                debug_assert!(card_can_strip_abilities(card), "strip gate: Titania's Song");
-                use crate::card::SelectionRequirement as R;
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::CardMatch {
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::NonAuraEnchantmentsAreCreatures {
+                        yours_only,
+                        requires_five,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    if *requires_five
+                        && self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == card.controller
+                                    && c.definition.card_types.contains(&CardType::Enchantment)
+                            })
+                            .count()
+                            < 5
+                    {
+                        continue;
+                    }
+                    use crate::card::{EnchantmentSubtype, SelectionRequirement as R};
+                    let mut req = R::Enchantment
+                        .and(R::Not(Box::new(R::HasEnchantmentSubtype(EnchantmentSubtype::Aura))))
+                        .and(R::OtherThanSource);
+                    if *yours_only {
+                        req = req.and(R::ControlledByYou);
+                    }
+                    let affected = AffectedPermanents::CardMatch {
                         source_controller: card.controller,
-                        requirement: Box::new(R::Artifact.and(R::Not(Box::new(R::Creature)))),
-                    },
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::RemoveAllAbilities,
-                });
-            }
-        }
-        // Sliver Legion — "each [type] gets +P/+T for each OTHER [type]".
-        // The bonus differs per affected permanent (it excludes itself), so
-        // this is gathered state-aware: one Specific effect per matching
-        // permanent, scaled by the live count minus one.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpPTPerOtherOfType {
-                    creature_type,
-                    power,
-                    toughness,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                let matching: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.definition.subtypes.creature_types.contains(creature_type))
-                    .map(|c| c.id)
-                    .collect();
-                let others = matching.len().saturating_sub(1) as i32;
-                if others == 0 {
-                    continue;
-                }
-                for id in matching {
+                        requirement: Box::new(req),
+                    };
+                    let ts = card.object_timestamp();
                     all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
+                        timestamp: ts,
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![id]),
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
+                        affected: affected.clone(),
+                        layer: Layer::L4Type,
+                        sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(
-                            others * power,
-                            others * toughness,
-                        ),
+                        modification: Modification::AddCardType(CardType::Creature),
+                    });
+                    all_effects.push(ContinuousEffect {
+                        timestamp: ts,
+                        source: card.id,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughnessToManaValue,
                     });
                 }
             }
         }
+        sa_audit(sa_mask, gs::NON_AURA_ENCHANTMENTS_ARE_CREATURES, before, all_effects.len());
+        // CR 613 — March of the Machines: each noncreature artifact becomes an
+        // `MV/MV` artifact creature. Gathered state-aware alongside Opalescence
+        // (the affected set is "artifact and not already a creature").
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::NONCREATURE_ARTIFACTS_ARE_CREATURES) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::NONCREATURE_ARTIFACTS_ARE_CREATURES) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    if !matches!(sa.effect, crate::effect::StaticEffect::NoncreatureArtifactsAreCreatures)
+                    {
+                        continue;
+                    }
+                    use crate::card::SelectionRequirement as R;
+                    let affected = AffectedPermanents::CardMatch {
+                        source_controller: card.controller,
+                        requirement: Box::new(R::Artifact.and(R::Not(Box::new(R::Creature)))),
+                    };
+                    let ts = card.object_timestamp();
+                    all_effects.push(ContinuousEffect {
+                        timestamp: ts,
+                        source: card.id,
+                        affected: affected.clone(),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddCardType(CardType::Creature),
+                    });
+                    all_effects.push(ContinuousEffect {
+                        timestamp: ts,
+                        source: card.id,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughnessToManaValue,
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::NONCREATURE_ARTIFACTS_ARE_CREATURES, before, all_effects.len());
+        // Titania's Song — the ability-stripping half of the same animation
+        // (layer 6), paired on the card with `NoncreatureArtifactsAreCreatures`.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::NONCREATURE_ARTIFACTS_LOSE_ABILITIES) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::NONCREATURE_ARTIFACTS_LOSE_ABILITIES) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    if !matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::NoncreatureArtifactsLoseAbilities
+                    ) {
+                        continue;
+                    }
+                    debug_assert!(card_can_strip_abilities(card), "strip gate: Titania's Song");
+                    use crate::card::SelectionRequirement as R;
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::CardMatch {
+                            source_controller: card.controller,
+                            requirement: Box::new(R::Artifact.and(R::Not(Box::new(R::Creature)))),
+                        },
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::RemoveAllAbilities,
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::NONCREATURE_ARTIFACTS_LOSE_ABILITIES, before, all_effects.len());
+        // Sliver Legion — "each [type] gets +P/+T for each OTHER [type]".
+        // The bonus differs per affected permanent (it excludes itself), so
+        // this is gathered state-aware: one Specific effect per matching
+        // permanent, scaled by the live count minus one.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_PT_PER_OTHER_OF_TYPE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_PT_PER_OTHER_OF_TYPE) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpPTPerOtherOfType {
+                        creature_type,
+                        power,
+                        toughness,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let matching: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.definition.subtypes.creature_types.contains(creature_type))
+                        .map(|c| c.id)
+                        .collect();
+                    let others = matching.len().saturating_sub(1) as i32;
+                    if others == 0 {
+                        continue;
+                    }
+                    for id in matching {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![id]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(
+                                others * power,
+                                others * toughness,
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_PT_PER_OTHER_OF_TYPE, before, all_effects.len());
         // Coat of Arms — each creature gets +P/+T for each OTHER creature that
         // shares ≥1 creature type with it (Changeling shares all types). The
         // bonus is per-creature (shared-type count differs per subject), so it's
@@ -9736,7 +9811,7 @@ impl GameState {
                      c.definition.keywords.has_kw(&Keyword::Changeling))
                 })
                 .collect();
-            for &src in &sa_cards {
+            for &(src, _) in &sa_cards {
                 for sa in &src.definition.static_abilities {
                     let crate::effect::StaticEffect::PumpPerSharedType { power, toughness } =
                         &sa.effect
@@ -9775,48 +9850,62 @@ impl GameState {
         // War Balloon — "as long as this has N+ [kind] counters, it's a
         // creature." Emit a layer-4 AddCardType(Creature) self-effect while
         // the count holds (printed P/T already carry the stats).
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind, n } =
-                    &sa.effect
-                else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_IS_CREATURE_WHILE_COUNTERS_AT_LEAST) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_IS_CREATURE_WHILE_COUNTERS_AT_LEAST) {
                     continue;
-                };
-                if card.counter_count(*kind) >= *n {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Source,
-                        layer: Layer::L4Type,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddCardType(CardType::Creature),
-                    });
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind, n } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    if card.counter_count(*kind) >= *n {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddCardType(CardType::Creature),
+                        });
+                    }
                 }
             }
         }
+        sa_audit(sa_mask, gs::SELF_IS_CREATURE_WHILE_COUNTERS_AT_LEAST, before, all_effects.len());
         // Idol of False Gods — "as long as this has N+ [kind] counters, it has
         // [keyword]." Layer-6 keyword grant while the count holds.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfHasKeywordWhileCountersAtLeast { kind, n, keyword } =
-                    &sa.effect
-                else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST) {
                     continue;
-                };
-                if card.counter_count(*kind) >= *n {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Source,
-                        layer: Layer::L6Ability,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddKeyword(keyword.clone()),
-                    });
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SelfHasKeywordWhileCountersAtLeast { kind, n, keyword } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    if card.counter_count(*kind) >= *n {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(keyword.clone()),
+                        });
+                    }
                 }
             }
         }
+        sa_audit(sa_mask, gs::SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST, before, all_effects.len());
         // CR 702.183 — Impending: a permanent with the Impending keyword isn't
         // a creature while it has a time counter. Emit a layer-4
         // RemoveCardType(Creature) self-effect while counters remain.
@@ -9841,20 +9930,488 @@ impl GameState {
         // Death-Mask Duplicant — the imprinted card's evasion keywords bleed
         // onto the Duplicant. Matched by variant so the printed "landwalk" /
         // "protection" families cover any land type / colour.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::GainKeywordsFromExiledWith { keywords } =
-                    &sa.effect
-                else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::GAIN_KEYWORDS_FROM_EXILED_WITH) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::GAIN_KEYWORDS_FROM_EXILED_WITH) {
                     continue;
-                };
-                let wanted: Vec<std::mem::Discriminant<crate::card::Keyword>> =
-                    keywords.iter().map(std::mem::discriminant).collect();
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::GainKeywordsFromExiledWith { keywords } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let wanted: Vec<std::mem::Discriminant<crate::card::Keyword>> =
+                        keywords.iter().map(std::mem::discriminant).collect();
+                    for exiled in self.exile.iter().filter(|c| c.exiled_with == Some(card.id)) {
+                        for kw in &exiled.definition.keywords {
+                            if !wanted.contains(&std::mem::discriminant(kw)) {
+                                continue;
+                            }
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: AffectedPermanents::Source,
+                                layer: Layer::L6Ability,
+                                sublayer: None,
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::AddKeyword(kw.clone()),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::GAIN_KEYWORDS_FROM_EXILED_WITH, before, all_effects.len());
+        // Phyrexian Ingester — the imprinted creature card's printed P/T is
+        // added as a layer-7c pump.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_SELF_BY_EXILED_WITH_STATS) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_SELF_BY_EXILED_WITH_STATS) {
+                    continue;
+                }
+                if !card.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::PumpSelfByExiledWithStats)
+                }) {
+                    continue;
+                }
+                for exiled in self
+                    .exile
+                    .iter()
+                    .filter(|c| c.exiled_with == Some(card.id) && c.definition.is_creature())
+                {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            exiled.definition.power,
+                            exiled.definition.toughness,
+                        ),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_SELF_BY_EXILED_WITH_STATS, before, all_effects.len());
+        // Mirror Golem — "protection from each of the exiled card's card types"
+        // (CR 702.16), live-resolved off the imprint.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PROTECTION_FROM_EXILED_WITH_CARD_TYPES) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PROTECTION_FROM_EXILED_WITH_CARD_TYPES) {
+                    continue;
+                }
+                if !card.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::ProtectionFromExiledWithCardTypes
+                    )
+                }) {
+                    continue;
+                }
                 for exiled in self.exile.iter().filter(|c| c.exiled_with == Some(card.id)) {
-                    for kw in &exiled.definition.keywords {
-                        if !wanted.contains(&std::mem::discriminant(kw)) {
+                    for ct in &exiled.definition.card_types {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(
+                                crate::card::Keyword::ProtectionFromCardType(ct.clone()),
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PROTECTION_FROM_EXILED_WITH_CARD_TYPES, before, all_effects.len());
+        // Alpine Moon — opponents' lands matching the source's chosen name
+        // lose all land types and abilities (the any-color mana grant rides
+        // a separate `GrantActivatedAbility` over `NamedBySource`).
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::NAMED_LANDS_NEUTRALIZED) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::NAMED_LANDS_NEUTRALIZED) {
+                    continue;
+                }
+                let has = card.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::NamedLandsNeutralized)
+                });
+                let Some(name) = card.named_card.as_deref().filter(|_| has) else { continue };
+                debug_assert!(card_can_strip_abilities(card), "strip gate: Alpine Moon");
+                let hit: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.definition.is_land()
+                            && c.definition.name == name
+                            && !self.same_team(c.controller, card.controller)
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if hit.is_empty() {
+                    continue;
+                }
+                for (layer, modification) in [
+                    (Layer::L4Type, Modification::SetLandTypes(vec![])),
+                    (Layer::L6Ability, Modification::RemoveAllAbilities),
+                ] {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(hit.clone()),
+                        layer,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification,
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::NAMED_LANDS_NEUTRALIZED, before, all_effects.len());
+        // Ultima — lands with a blight counter lose all land types and
+        // abilities (the "{T}: Add {C}" half rides a `GrantActivatedAbility`
+        // over `WithCounter(Blight)` lands).
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::BLIGHTED_LANDS_NEUTRALIZED) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::BLIGHTED_LANDS_NEUTRALIZED) {
+                    continue;
+                }
+                let has = card.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::BlightedLandsNeutralized)
+                });
+                if !has {
+                    continue;
+                }
+                debug_assert!(card_can_strip_abilities(card), "strip gate: Ultima");
+                let hit: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.definition.is_land()
+                            && c.counter_count(crate::card::CounterType::Blight) > 0
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                if hit.is_empty() {
+                    continue;
+                }
+                for (layer, modification) in [
+                    (Layer::L4Type, Modification::SetLandTypes(vec![])),
+                    (Layer::L6Ability, Modification::RemoveAllAbilities),
+                ] {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(hit.clone()),
+                        layer,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification,
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::BLIGHTED_LANDS_NEUTRALIZED, before, all_effects.len());
+        // "This creature gets +X/+Y for each [filter] you control."
+        // (`StaticEffect::PumpSelfByControlledPermanents`) — count the
+        // controller's matching battlefield permanents live and emit a
+        // layer-7 ModifyPowerToughness self-effect.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_SELF_BY_CONTROLLED_PERMANENTS) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_SELF_BY_CONTROLLED_PERMANENTS) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpSelfByControlledPermanents {
+                        filter,
+                        per_power,
+                        per_toughness,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    // Source-aware evaluation so an `OtherThanSource` filter
+                    // ("each *other* Rat you control" — Persistent Marshstalker)
+                    // excludes this permanent itself.
+                    let count = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == card.controller
+                                && self.evaluate_requirement_static_on(
+                                    filter,
+                                    c,
+                                    card.controller,
+                                    Some(card.id),
+                                )
+                        })
+                        .count() as i32;
+                    if count == 0 {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            count * per_power,
+                            count * per_toughness,
+                        ),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_SELF_BY_CONTROLLED_PERMANENTS, before, all_effects.len());
+        // "This creature gets +P/+T for each [thing]" where the count is an
+        // arbitrary `Value` (`StaticEffect::PumpSelfByValue`) — evaluated live
+        // against the source, then emitted as a layer-7 self-effect.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_SELF_BY_VALUE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_SELF_BY_VALUE) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let Some(inner) = self.active_static(&sa.effect, card) else { continue };
+                    let crate::effect::StaticEffect::PumpSelfByValue {
+                        amount,
+                        per_power,
+                        per_toughness,
+                    } = inner
+                    else {
+                        continue;
+                    };
+                    let mut ctx = crate::game::effects::EffectContext::for_spell(
+                        card.controller,
+                        None,
+                        0,
+                        0,
+                    );
+                    ctx.source = Some(card.id);
+                    let count = self.evaluate_value(amount, &ctx).max(0);
+                    if count == 0 {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            count * per_power,
+                            count * per_toughness,
+                        ),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_SELF_BY_VALUE, before, all_effects.len());
+        // "[applies_to] you control get +P/+T for each Equipment attached to
+        // this creature" (Armament Master) — count the source's own
+        // attachments, then emit a per-affected layer-7 pump.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_TEAM_PER_ATTACHMENT_ON_SOURCE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_TEAM_PER_ATTACHMENT_ON_SOURCE) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpTeamPerAttachmentOnSource {
+                        applies_to,
+                        attachment_filter,
+                        per_power,
+                        per_toughness,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let count = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.attached_to == Some(card.id)
+                                && self.evaluate_requirement_static_on(
+                                    attachment_filter,
+                                    c,
+                                    card.controller,
+                                    Some(card.id),
+                                )
+                        })
+                        .count() as i32;
+                    if count == 0 {
+                        continue;
+                    }
+                    for target in &self.battlefield {
+                        if target.controller != card.controller
+                            || !self.evaluate_requirement_static_on(
+                                applies_to,
+                                target,
+                                card.controller,
+                                Some(card.id),
+                            )
+                        {
                             continue;
                         }
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![target.id]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(
+                                count * per_power,
+                                count * per_toughness,
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_TEAM_PER_ATTACHMENT_ON_SOURCE, before, all_effects.len());
+        // "[applies_to] you control get +P/+T for each [count_filter] you
+        // control" (`StaticEffect::PumpTeamByControlledPermanents`) — count the
+        // controller's matching permanents (plus graveyard cards when
+        // `count_graveyard`), then emit a per-affected layer-7 pump. Warrior of
+        // Light (legendary anthem) and Cid, Timeless Artificer (graveyard-aware
+        // Artificer count) ride this.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_TEAM_BY_CONTROLLED_PERMANENTS) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_TEAM_BY_CONTROLLED_PERMANENTS) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpTeamByControlledPermanents {
+                        applies_to,
+                        count_filter,
+                        per_power,
+                        per_toughness,
+                        count_graveyard,
+                        exclude_self,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let mut count = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == card.controller
+                                && self.evaluate_requirement_static_on(
+                                    count_filter,
+                                    c,
+                                    card.controller,
+                                    Some(card.id),
+                                )
+                        })
+                        .count() as i32;
+                    if *count_graveyard {
+                        count += self.players[card.controller]
+                            .graveyard
+                            .iter()
+                            .filter(|c| {
+                                self.evaluate_requirement_on_card(count_filter, c, card.controller)
+                            })
+                            .count() as i32;
+                    }
+                    for target in &self.battlefield {
+                        if target.controller != card.controller
+                            || !self.evaluate_requirement_static_on(
+                                applies_to,
+                                target,
+                                card.controller,
+                                Some(card.id),
+                            )
+                        {
+                            continue;
+                        }
+                        // "for each OTHER …" — the affected permanent doesn't
+                        // count itself.
+                        let count = if *exclude_self
+                            && self.evaluate_requirement_static_on(
+                                count_filter,
+                                target,
+                                card.controller,
+                                Some(card.id),
+                            ) {
+                            count - 1
+                        } else {
+                            count
+                        };
+                        if count == 0 {
+                            continue;
+                        }
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![target.id]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(
+                                count * per_power,
+                                count * per_toughness,
+                            ),
+                        });
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_TEAM_BY_CONTROLLED_PERMANENTS, before, all_effects.len());
+        // "As long as [condition], this creature gets +P/+T and has [keyword]."
+        // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
+        // against the source and, while it holds, emit a layer-7 pump plus an
+        // optional keyword grant.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_SELF_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_SELF_IF) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpSelfIf {
+                        condition,
+                        power,
+                        toughness,
+                        keywords,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                    });
+                    for kw in keywords {
                         all_effects.push(ContinuousEffect {
                             timestamp: card.object_timestamp(),
                             source: card.id,
@@ -9868,742 +10425,413 @@ impl GameState {
                 }
             }
         }
-        // Phyrexian Ingester — the imprinted creature card's printed P/T is
-        // added as a layer-7c pump.
-        for &card in &sa_cards {
-            if !card.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, crate::effect::StaticEffect::PumpSelfByExiledWithStats)
-            }) {
-                continue;
-            }
-            for exiled in self
-                .exile
-                .iter()
-                .filter(|c| c.exiled_with == Some(card.id) && c.definition.is_creature())
-            {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(
-                        exiled.definition.power,
-                        exiled.definition.toughness,
-                    ),
-                });
-            }
-        }
-        // Mirror Golem — "protection from each of the exiled card's card types"
-        // (CR 702.16), live-resolved off the imprint.
-        for &card in &sa_cards {
-            if !card.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    sa.effect,
-                    crate::effect::StaticEffect::ProtectionFromExiledWithCardTypes
-                )
-            }) {
-                continue;
-            }
-            for exiled in self.exile.iter().filter(|c| c.exiled_with == Some(card.id)) {
-                for ct in &exiled.definition.card_types {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Source,
-                        layer: Layer::L6Ability,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddKeyword(
-                            crate::card::Keyword::ProtectionFromCardType(ct.clone()),
-                        ),
-                    });
-                }
-            }
-        }
-        // Alpine Moon — opponents' lands matching the source's chosen name
-        // lose all land types and abilities (the any-color mana grant rides
-        // a separate `GrantActivatedAbility` over `NamedBySource`).
-        for &card in &sa_cards {
-            let has = card.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, crate::effect::StaticEffect::NamedLandsNeutralized)
-            });
-            let Some(name) = card.named_card.as_deref().filter(|_| has) else { continue };
-            debug_assert!(card_can_strip_abilities(card), "strip gate: Alpine Moon");
-            let hit: Vec<CardId> = self
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.definition.is_land()
-                        && c.definition.name == name
-                        && !self.same_team(c.controller, card.controller)
-                })
-                .map(|c| c.id)
-                .collect();
-            if hit.is_empty() {
-                continue;
-            }
-            for (layer, modification) in [
-                (Layer::L4Type, Modification::SetLandTypes(vec![])),
-                (Layer::L6Ability, Modification::RemoveAllAbilities),
-            ] {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Specific(hit.clone()),
-                    layer,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification,
-                });
-            }
-        }
-        // Ultima — lands with a blight counter lose all land types and
-        // abilities (the "{T}: Add {C}" half rides a `GrantActivatedAbility`
-        // over `WithCounter(Blight)` lands).
-        for &card in &sa_cards {
-            let has = card.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, crate::effect::StaticEffect::BlightedLandsNeutralized)
-            });
-            if !has {
-                continue;
-            }
-            debug_assert!(card_can_strip_abilities(card), "strip gate: Ultima");
-            let hit: Vec<CardId> = self
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.definition.is_land()
-                        && c.counter_count(crate::card::CounterType::Blight) > 0
-                })
-                .map(|c| c.id)
-                .collect();
-            if hit.is_empty() {
-                continue;
-            }
-            for (layer, modification) in [
-                (Layer::L4Type, Modification::SetLandTypes(vec![])),
-                (Layer::L6Ability, Modification::RemoveAllAbilities),
-            ] {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Specific(hit.clone()),
-                    layer,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification,
-                });
-            }
-        }
-        // "This creature gets +X/+Y for each [filter] you control."
-        // (`StaticEffect::PumpSelfByControlledPermanents`) — count the
-        // controller's matching battlefield permanents live and emit a
-        // layer-7 ModifyPowerToughness self-effect.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpSelfByControlledPermanents {
-                    filter,
-                    per_power,
-                    per_toughness,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                // Source-aware evaluation so an `OtherThanSource` filter
-                // ("each *other* Rat you control" — Persistent Marshstalker)
-                // excludes this permanent itself.
-                let count = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| {
-                        c.controller == card.controller
-                            && self.evaluate_requirement_static_on(
-                                filter,
-                                c,
-                                card.controller,
-                                Some(card.id),
-                            )
-                    })
-                    .count() as i32;
-                if count == 0 {
-                    continue;
-                }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(
-                        count * per_power,
-                        count * per_toughness,
-                    ),
-                });
-            }
-        }
-        // "This creature gets +P/+T for each [thing]" where the count is an
-        // arbitrary `Value` (`StaticEffect::PumpSelfByValue`) — evaluated live
-        // against the source, then emitted as a layer-7 self-effect.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let Some(inner) = self.active_static(&sa.effect, card) else { continue };
-                let crate::effect::StaticEffect::PumpSelfByValue {
-                    amount,
-                    per_power,
-                    per_toughness,
-                } = inner
-                else {
-                    continue;
-                };
-                let mut ctx = crate::game::effects::EffectContext::for_spell(
-                    card.controller,
-                    None,
-                    0,
-                    0,
-                );
-                ctx.source = Some(card.id);
-                let count = self.evaluate_value(amount, &ctx).max(0);
-                if count == 0 {
-                    continue;
-                }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(
-                        count * per_power,
-                        count * per_toughness,
-                    ),
-                });
-            }
-        }
-        // "[applies_to] you control get +P/+T for each Equipment attached to
-        // this creature" (Armament Master) — count the source's own
-        // attachments, then emit a per-affected layer-7 pump.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpTeamPerAttachmentOnSource {
-                    applies_to,
-                    attachment_filter,
-                    per_power,
-                    per_toughness,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                let count = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| {
-                        c.attached_to == Some(card.id)
-                            && self.evaluate_requirement_static_on(
-                                attachment_filter,
-                                c,
-                                card.controller,
-                                Some(card.id),
-                            )
-                    })
-                    .count() as i32;
-                if count == 0 {
-                    continue;
-                }
-                for target in &self.battlefield {
-                    if target.controller != card.controller
-                        || !self.evaluate_requirement_static_on(
-                            applies_to,
-                            target,
-                            card.controller,
-                            Some(card.id),
-                        )
-                    {
-                        continue;
-                    }
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target.id]),
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(
-                            count * per_power,
-                            count * per_toughness,
-                        ),
-                    });
-                }
-            }
-        }
-        // "[applies_to] you control get +P/+T for each [count_filter] you
-        // control" (`StaticEffect::PumpTeamByControlledPermanents`) — count the
-        // controller's matching permanents (plus graveyard cards when
-        // `count_graveyard`), then emit a per-affected layer-7 pump. Warrior of
-        // Light (legendary anthem) and Cid, Timeless Artificer (graveyard-aware
-        // Artificer count) ride this.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpTeamByControlledPermanents {
-                    applies_to,
-                    count_filter,
-                    per_power,
-                    per_toughness,
-                    count_graveyard,
-                    exclude_self,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                let mut count = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| {
-                        c.controller == card.controller
-                            && self.evaluate_requirement_static_on(
-                                count_filter,
-                                c,
-                                card.controller,
-                                Some(card.id),
-                            )
-                    })
-                    .count() as i32;
-                if *count_graveyard {
-                    count += self.players[card.controller]
-                        .graveyard
-                        .iter()
-                        .filter(|c| {
-                            self.evaluate_requirement_on_card(count_filter, c, card.controller)
-                        })
-                        .count() as i32;
-                }
-                for target in &self.battlefield {
-                    if target.controller != card.controller
-                        || !self.evaluate_requirement_static_on(
-                            applies_to,
-                            target,
-                            card.controller,
-                            Some(card.id),
-                        )
-                    {
-                        continue;
-                    }
-                    // "for each OTHER …" — the affected permanent doesn't
-                    // count itself.
-                    let count = if *exclude_self
-                        && self.evaluate_requirement_static_on(
-                            count_filter,
-                            target,
-                            card.controller,
-                            Some(card.id),
-                        ) {
-                        count - 1
-                    } else {
-                        count
-                    };
-                    if count == 0 {
-                        continue;
-                    }
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target.id]),
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(
-                            count * per_power,
-                            count * per_toughness,
-                        ),
-                    });
-                }
-            }
-        }
-        // "As long as [condition], this creature gets +P/+T and has [keyword]."
-        // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
-        // against the source and, while it holds, emit a layer-7 pump plus an
-        // optional keyword grant.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpSelfIf {
-                    condition,
-                    power,
-                    toughness,
-                    keywords,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                if !self.evaluate_predicate(condition, &ctx) {
-                    continue;
-                }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(*power, *toughness),
-                });
-                for kw in keywords {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Source,
-                        layer: Layer::L6Ability,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddKeyword(kw.clone()),
-                    });
-                }
-            }
-        }
+        sa_audit(sa_mask, gs::PUMP_SELF_IF, before, all_effects.len());
         // "As long as [condition], this creature has base power and toughness
         // P/T." (`StaticEffect::SetBasePtIf`) — a live layer-7b set (Snowmelt
         // Stag). +N/+M and counters still stack on top per CR 613.7c/f.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SetBasePtIf { condition, power, toughness } =
-                    &sa.effect
-                else {
-                    continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                if !self.evaluate_predicate(condition, &ctx) {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SET_BASE_PT_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SET_BASE_PT_IF) {
                     continue;
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::SetValue),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::SetPowerToughness(*power, *toughness),
-                });
-            }
-        }
-        // "All [filter] have 'This gets +P/+T as long as [condition]'"
-        // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
-        // evaluated per matching permanent with that permanent's controller
-        // as "you".
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::GrantPumpSelfIf {
-                    filter,
-                    condition,
-                    power,
-                    toughness,
-                    keywords,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                for subject in &self.battlefield {
-                    if !crate::game::layers::requirement_matches_card(
-                        filter,
-                        subject,
-                        card.controller,
-                    ) {
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SetBasePtIf { condition, power, toughness } =
+                        &sa.effect
+                    else {
                         continue;
-                    }
+                    };
                     let ctx = crate::game::effects::EffectContext::for_ability(
-                        subject.id,
-                        subject.controller,
+                        card.id,
+                        card.controller,
                         None,
                     );
                     if !self.evaluate_predicate(condition, &ctx) {
                         continue;
                     }
-                    if *power != 0 || *toughness != 0 {
-                        all_effects.push(ContinuousEffect {
-                            timestamp: card.object_timestamp(),
-                            source: card.id,
-                            affected: AffectedPermanents::Specific(vec![subject.id]),
-                            layer: Layer::L7PowerTough,
-                            sublayer: Some(PtSublayer::Modify),
-                            duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification: Modification::ModifyPowerToughness(*power, *toughness),
-                        });
-                    }
-                    for kw in keywords {
-                        all_effects.push(ContinuousEffect {
-                            timestamp: card.object_timestamp(),
-                            source: card.id,
-                            affected: AffectedPermanents::Specific(vec![subject.id]),
-                            layer: Layer::L6Ability,
-                            sublayer: None,
-                            duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification: Modification::AddKeyword(kw.clone()),
-                        });
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughness(*power, *toughness),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::SET_BASE_PT_IF, before, all_effects.len());
+        // "All [filter] have 'This gets +P/+T as long as [condition]'"
+        // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
+        // evaluated per matching permanent with that permanent's controller
+        // as "you".
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::GRANT_PUMP_SELF_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::GRANT_PUMP_SELF_IF) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::GrantPumpSelfIf {
+                        filter,
+                        condition,
+                        power,
+                        toughness,
+                        keywords,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    for subject in &self.battlefield {
+                        if !crate::game::layers::requirement_matches_card(
+                            filter,
+                            subject,
+                            card.controller,
+                        ) {
+                            continue;
+                        }
+                        let ctx = crate::game::effects::EffectContext::for_ability(
+                            subject.id,
+                            subject.controller,
+                            None,
+                        );
+                        if !self.evaluate_predicate(condition, &ctx) {
+                            continue;
+                        }
+                        if *power != 0 || *toughness != 0 {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: AffectedPermanents::Specific(vec![subject.id]),
+                                layer: Layer::L7PowerTough,
+                                sublayer: Some(PtSublayer::Modify),
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::ModifyPowerToughness(*power, *toughness),
+                            });
+                        }
+                        for kw in keywords {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: AffectedPermanents::Specific(vec![subject.id]),
+                                layer: Layer::L6Ability,
+                                sublayer: None,
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::AddKeyword(kw.clone()),
+                            });
+                        }
                     }
                 }
             }
         }
+        sa_audit(sa_mask, gs::GRANT_PUMP_SELF_IF, before, all_effects.len());
         // "[Creatures the selector picks] get +X/+Y" with live Values
         // (`StaticEffect::PumpPTByValue`) — Meishin's hand-sized shrink.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } =
-                    &sa.effect
-                else {
-                    continue;
-                };
-                let Some(affected) = selector_to_affected(applies_to, card) else {
-                    continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                let (p, t) =
-                    (self.evaluate_value(power, &ctx), self.evaluate_value(toughness, &ctx));
-                if p == 0 && t == 0 {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_PT_BY_VALUE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_PT_BY_VALUE) {
                     continue;
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(p, t),
-                });
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Some(affected) = selector_to_affected(applies_to, card) else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    let (p, t) =
+                        (self.evaluate_value(power, &ctx), self.evaluate_value(toughness, &ctx));
+                    if p == 0 && t == 0 {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(p, t),
+                    });
+                }
             }
         }
+        sa_audit(sa_mask, gs::PUMP_PT_BY_VALUE, before, all_effects.len());
         // "As long as [condition], [creatures the selector picks] get +P/+T."
         // (`StaticEffect::PumpTeamIf`) — the conditional team anthem. Evaluate
         // the gate against the source; while it holds, emit a layer-7 pump for
         // every permanent the selector resolves to (e.g. Beastmaster Ascension
         // at 7+ quest counters → all your creatures +5/+5).
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpTeamIf {
-                    condition,
-                    applies_to,
-                    power,
-                    toughness,
-                    keywords,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                if !self.evaluate_predicate(condition, &ctx) {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_TEAM_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_TEAM_IF) {
                     continue;
                 }
-                // `selector_to_affected` covers the printed-characteristic
-                // selectors; combat-relationship selectors (Alms Beast's
-                // "creatures blocking or blocked by this") need the live
-                // block map, so resolve those to a concrete id set here.
-                let affected = selector_to_affected(applies_to, card).or_else(|| {
-                    matches!(applies_to, crate::effect::Selector::CreaturesInCombatWith(inner)
-                        if matches!(inner.as_ref(), crate::effect::Selector::This))
-                        .then(|| {
-                            let mut ids = self.attackers_blocked_by(card.id).to_vec();
-                            ids.extend(self.blockers_of(card.id));
-                            AffectedPermanents::Specific(ids)
-                        })
-                });
-                if let Some(affected) = affected {
-                    if *power != 0 || *toughness != 0 {
-                        all_effects.push(ContinuousEffect {
-                            timestamp: card.object_timestamp(),
-                            source: card.id,
-                            affected: affected.clone(),
-                            layer: Layer::L7PowerTough,
-                            sublayer: Some(PtSublayer::Modify),
-                            duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification: Modification::ModifyPowerToughness(*power, *toughness),
-                        });
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpTeamIf {
+                        condition,
+                        applies_to,
+                        power,
+                        toughness,
+                        keywords,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
                     }
-                    for kw in keywords {
-                        all_effects.push(ContinuousEffect {
-                            timestamp: card.object_timestamp(),
-                            source: card.id,
-                            affected: affected.clone(),
-                            layer: Layer::L6Ability,
-                            sublayer: None,
-                            duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification: Modification::AddKeyword(kw.clone()),
-                        });
+                    // `selector_to_affected` covers the printed-characteristic
+                    // selectors; combat-relationship selectors (Alms Beast's
+                    // "creatures blocking or blocked by this") need the live
+                    // block map, so resolve those to a concrete id set here.
+                    let affected = selector_to_affected(applies_to, card).or_else(|| {
+                        matches!(applies_to, crate::effect::Selector::CreaturesInCombatWith(inner)
+                            if matches!(inner.as_ref(), crate::effect::Selector::This))
+                            .then(|| {
+                                let mut ids = self.attackers_blocked_by(card.id).to_vec();
+                                ids.extend(self.blockers_of(card.id));
+                                AffectedPermanents::Specific(ids)
+                            })
+                    });
+                    if let Some(affected) = affected {
+                        if *power != 0 || *toughness != 0 {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: affected.clone(),
+                                layer: Layer::L7PowerTough,
+                                sublayer: Some(PtSublayer::Modify),
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::ModifyPowerToughness(*power, *toughness),
+                            });
+                        }
+                        for kw in keywords {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: affected.clone(),
+                                layer: Layer::L6Ability,
+                                sublayer: None,
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::AddKeyword(kw.clone()),
+                            });
+                        }
                     }
                 }
             }
         }
+        sa_audit(sa_mask, gs::PUMP_TEAM_IF, before, all_effects.len());
         // CR 702.44 — "each other Samurai you control gets +1/+1 for each point
         // of bushido it has" (Takeno). Per-permanent magnitude, so each match
         // gets its own pinned effect.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::PumpPerBushido { filter } = &sa.effect else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_PER_BUSHIDO) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_PER_BUSHIDO) {
                     continue;
-                };
-                for other in &self.battlefield {
-                    // Printed bushido only — this runs inside the layer gather,
-                    // so the computed view isn't available yet.
-                    let Some(n) = other.definition.keywords.iter().find_map(|k| match k {
-                        crate::card::Keyword::Bushido(n) => Some(*n as i32),
-                        _ => None,
-                    }) else {
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpPerBushido { filter } = &sa.effect else {
                         continue;
                     };
-                    if n == 0
-                        || !self.evaluate_requirement_static_on(
-                            filter,
-                            other,
-                            card.controller,
-                            Some(card.id),
-                        )
-                    {
-                        continue;
+                    for other in &self.battlefield {
+                        // Printed bushido only — this runs inside the layer gather,
+                        // so the computed view isn't available yet.
+                        let Some(n) = other.definition.keywords.iter().find_map(|k| match k {
+                            crate::card::Keyword::Bushido(n) => Some(*n as i32),
+                            _ => None,
+                        }) else {
+                            continue;
+                        };
+                        if n == 0
+                            || !self.evaluate_requirement_static_on(
+                                filter,
+                                other,
+                                card.controller,
+                                Some(card.id),
+                            )
+                        {
+                            continue;
+                        }
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Specific(vec![other.id]),
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(n, n),
+                        });
                     }
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Specific(vec![other.id]),
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(n, n),
-                    });
                 }
             }
         }
+        sa_audit(sa_mask, gs::PUMP_PER_BUSHIDO, before, all_effects.len());
         // Chosen-type tribal anthem (`StaticEffect::AnthemForChosenType`) —
         // pumps the controller's creatures of the type named at the source's
         // ETB (`CardInstance.chosen_creature_type`). Adaptive Automaton,
         // Patchwork Banner.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents, all_players, per_counter } =
-                    &sa.effect
-                else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::ANTHEM_FOR_CHOSEN_TYPE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::ANTHEM_FOR_CHOSEN_TYPE) {
                     continue;
-                };
-                let Some(ct) = card.chosen_creature_type else { continue };
-                // Per-counter scaling (Door of Destinies): +P/+T for each
-                // counter of `per_counter` on the source. No counters → no pump.
-                let (power, toughness) = match per_counter {
-                    Some(kind) => {
-                        let n = card.counters.get(kind).copied().unwrap_or(0) as i32;
-                        if n == 0 { continue }
-                        (power * n, toughness * n)
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source, opponents, all_players, per_counter } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Some(ct) = card.chosen_creature_type else { continue };
+                    // Per-counter scaling (Door of Destinies): +P/+T for each
+                    // counter of `per_counter` on the source. No counters → no pump.
+                    let (power, toughness) = match per_counter {
+                        Some(kind) => {
+                            let n = card.counters.get(kind).copied().unwrap_or(0) as i32;
+                            if n == 0 { continue }
+                            (power * n, toughness * n)
+                        }
+                        None => (*power, *toughness),
+                    };
+                    // Whose creatures the modifier hits: the controller's (the
+                    // tribal-anthem default) or each opponent's (Plague Engineer).
+                    let seats: Vec<usize> = if *all_players {
+                        (0..self.players.len()).collect()
+                    } else if *opponents {
+                        self.opponents_of(card.controller)
+                    } else {
+                        vec![card.controller]
+                    };
+                    for seat in seats {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::AllWithCreatureType {
+                                controller: Some(seat),
+                                creature_type: ct,
+                                exclude_source: *exclude_source,
+                            },
+                            layer: Layer::L7PowerTough,
+                            sublayer: Some(PtSublayer::Modify),
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::ModifyPowerToughness(power, toughness),
+                        });
                     }
-                    None => (*power, *toughness),
-                };
-                // Whose creatures the modifier hits: the controller's (the
-                // tribal-anthem default) or each opponent's (Plague Engineer).
-                let seats: Vec<usize> = if *all_players {
-                    (0..self.players.len()).collect()
-                } else if *opponents {
-                    self.opponents_of(card.controller)
-                } else {
-                    vec![card.controller]
-                };
-                for seat in seats {
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::ANTHEM_FOR_CHOSEN_TYPE, before, all_effects.len());
+        // Chosen-color anthem (`StaticEffect::AnthemForChosenColor`) — pumps the
+        // controller's creatures of the color named at the source's ETB
+        // (`CardInstance.chosen_color`). Heraldic Banner.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::ANTHEM_FOR_CHOSEN_COLOR) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::ANTHEM_FOR_CHOSEN_COLOR) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::AnthemForChosenColor { power, toughness } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Some(color) = card.chosen_color else { continue };
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::AllWithCreatureType {
-                            controller: Some(seat),
-                            creature_type: ct,
-                            exclude_source: *exclude_source,
+                        affected: AffectedPermanents::All {
+                            controller: Some(card.controller),
+                            card_types: vec![crate::card::CardType::Creature],
+                            exclude_source: false,
+                            color: Some(color),
+                            token: None,
+                            colorless: false,
+                            owned_by_controller: None,
                         },
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(power, toughness),
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
                     });
                 }
             }
         }
-        // Chosen-color anthem (`StaticEffect::AnthemForChosenColor`) — pumps the
-        // controller's creatures of the color named at the source's ETB
-        // (`CardInstance.chosen_color`). Heraldic Banner.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::AnthemForChosenColor { power, toughness } =
-                    &sa.effect
-                else {
-                    continue;
-                };
-                let Some(color) = card.chosen_color else { continue };
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::All {
-                        controller: Some(card.controller),
-                        card_types: vec![crate::card::CardType::Creature],
-                        exclude_source: false,
-                        color: Some(color),
-                        token: None,
-                        colorless: false,
-                        owned_by_controller: None,
-                    },
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(*power, *toughness),
-                });
-            }
-        }
+        sa_audit(sa_mask, gs::ANTHEM_FOR_CHOSEN_COLOR, before, all_effects.len());
         // Chosen-type keyword grant (`StaticEffect::GrantKeywordToChosenType`) —
         // grants a keyword to the controller's (or each opponent's) creatures of
         // the type named at the source's ETB. Steely Resolve, Kindred Boon.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::GrantKeywordToChosenType { keyword, opponents } =
-                    &sa.effect
-                else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::GRANT_KEYWORD_TO_CHOSEN_TYPE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::GRANT_KEYWORD_TO_CHOSEN_TYPE) {
                     continue;
-                };
-                let Some(ct) = card.chosen_creature_type else { continue };
-                let seats: Vec<usize> = if *opponents {
-                    self.opponents_of(card.controller)
-                } else {
-                    vec![card.controller]
-                };
-                for seat in seats {
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::AllWithCreatureType {
-                            controller: Some(seat),
-                            creature_type: ct,
-                            exclude_source: false,
-                        },
-                        layer: Layer::L6Ability,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddKeyword(keyword.clone()),
-                    });
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::GrantKeywordToChosenType { keyword, opponents } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Some(ct) = card.chosen_creature_type else { continue };
+                    let seats: Vec<usize> = if *opponents {
+                        self.opponents_of(card.controller)
+                    } else {
+                        vec![card.controller]
+                    };
+                    for seat in seats {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::AllWithCreatureType {
+                                controller: Some(seat),
+                                creature_type: ct,
+                                exclude_source: false,
+                            },
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(keyword.clone()),
+                        });
+                    }
                 }
             }
         }
+        sa_audit(sa_mask, gs::GRANT_KEYWORD_TO_CHOSEN_TYPE, before, all_effects.len());
         // Fixed-filter team anthem (`StaticEffect::AnthemForFilter`) — pumps
         // and/or grants keywords to the controller's (or each opponent's)
         // permanents matching a printed filter. Balthier and Fran (Vehicles),
         // Ardyn, the Usurper (Demons).
+        // This pass reaches three zones and `sa_mask` covers only one, so
+        // the other two open it on *presence*: a seat with an emblem or a
+        // command-zone card. Reading their statics for the exact bit would
+        // inline the whole `static_effect_gather_bits` match a second time
+        // into the simulator's largest function, and both zones are empty on
+        // every board the bench plays.
+        let zone_anthem = self
+            .players
+            .iter()
+            .any(|p| !p.emblems.is_empty() || !p.command.is_empty());
+        let anthem_open =
+            sa_mask & gs::ANTHEM_FILTER != 0 || zone_anthem || cfg!(debug_assertions);
+        let before = all_effects.len();
         // CR 114 — emblems have no battlefield object, so synthesize one per
         // emblem carrying an anthem static (Gideon, Ally of Zendikar's −4) and
         // walk them alongside the real permanents. Their effects last
@@ -10613,14 +10841,13 @@ impl GameState {
         // face-up command-zone object, which is nearly all of them. An empty
         // `collect()` still calls `Vec::from_iter`, and the gather's
         // `from_iter` traffic is 204,138 calls / 117.3 M Ir; two of those per
-        // gather are these. `Vec::new()` costs nothing and the two-player
-        // `is_empty` walk in front of it costs less than the call.
-        let any_emblem = self.players.iter().any(|p| !p.emblems.is_empty());
-        let emblem_anthems: Vec<CardInstance> = if !any_emblem {
+        // gather are these. `Vec::new()` costs nothing, and `anthem_open` is
+        // the same question the per-zone `is_empty` walks asked plus the
+        // battlefield's own bit, so it answers both for one test.
+        let emblem_anthems: Vec<CardInstance> = if !anthem_open {
             Vec::new()
         } else {
-            self
-            .players
+            self.players
             .iter()
             .enumerate()
             .flat_map(|(seat, player)| {
@@ -10656,8 +10883,7 @@ impl GameState {
         // CR 904.8 / 315.5 / 901.7 — a face-up scheme's, conspiracy's or
         // plane's statics function from the command zone, so they join the
         // anthem walk exactly like an emblem does.
-        let any_command = self.players.iter().any(|p| !p.command.is_empty());
-        let face_up_schemes: Vec<&CardInstance> = if !any_command {
+        let face_up_schemes: Vec<&CardInstance> = if !anthem_open {
             Vec::new()
         } else {
             self.players
@@ -10677,7 +10903,8 @@ impl GameState {
         // simulator's hottest function into a walk of two or three cards.
         let anthem_walk = sa_cards
             .iter()
-            .map(|c| (*c, EffectDuration::WhileSourceOnBattlefield))
+            .filter(|&&(_, bits)| sa_open(bits, gs::ANTHEM_FILTER))
+            .map(|&(c, _)| (c, EffectDuration::WhileSourceOnBattlefield))
             .chain(emblem_anthems.iter().map(|c| (c, EffectDuration::Indefinite)))
             .chain(face_up_schemes.iter().map(|c| (*c, EffectDuration::Indefinite)));
         for (card, source_duration) in anthem_walk {
@@ -10783,43 +11010,56 @@ impl GameState {
                 }
             }
         }
+        debug_assert!(
+            sa_mask & gs::ANTHEM_FILTER != 0
+                || zone_anthem
+                || all_effects.len() == before,
+            "gather gate ANTHEM_FILTER skipped a real effect",
+        );
         // Crown of Convergence — the anthem reads the top of the controller's
         // library, so it can only be gathered live.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::AnthemForColorSharedWithLibraryTop {
-                    power,
-                    toughness,
-                } = &sa.effect
-                else {
-                    continue;
-                };
-                let Some(top) = self.players[card.controller].library.first() else { continue };
-                if !top.definition.is_creature() {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP) {
                     continue;
                 }
-                let colors = top.definition.cost.colors();
-                let ids: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == card.controller && c.definition.is_creature())
-                    .filter(|c| c.definition.cost.colors().iter().any(|x| colors.contains(x)))
-                    .map(|c| c.id)
-                    .collect();
-                if ids.is_empty() {
-                    continue;
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::AnthemForColorSharedWithLibraryTop {
+                        power,
+                        toughness,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Some(top) = self.players[card.controller].library.first() else { continue };
+                    if !top.definition.is_creature() {
+                        continue;
+                    }
+                    let colors = top.definition.cost.colors();
+                    let ids: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == card.controller && c.definition.is_creature())
+                        .filter(|c| c.definition.cost.colors().iter().any(|x| colors.contains(x)))
+                        .map(|c| c.id)
+                        .collect();
+                    if ids.is_empty() {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(ids),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                    });
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Specific(ids),
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::Modify),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(*power, *toughness),
-                });
             }
         }
+        sa_audit(sa_mask, gs::ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP, before, all_effects.len());
         // State-aware `SetBasePtForFilter` / `GrantKeyword` — when the
         // `applies_to` selector carries a *stateful* filter (e.g. `IsEnchanted`,
         // which must scan the battlefield for attached Auras — Archon of the
@@ -10828,135 +11068,151 @@ impl GameState {
         // and the per-static gather emits nothing. Resolve those live here and
         // pin the effect to the matching ids, mirroring the `AnthemForFilter`
         // stateful path above.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let (req, modification, layer, sublayer) = match &sa.effect {
-                    crate::effect::StaticEffect::SetBasePtForFilter {
-                        applies_to: crate::effect::Selector::EachPermanent(req),
-                        power,
-                        toughness,
-                    } if !crate::game::layers::requirement_is_card_only(req) => (
-                        req,
-                        Modification::SetPowerToughness(*power, *toughness),
-                        Layer::L7PowerTough,
-                        Some(PtSublayer::SetValue),
-                    ),
-                    crate::effect::StaticEffect::GrantKeyword {
-                        applies_to: crate::effect::Selector::EachPermanent(req),
-                        keyword,
-                    } if !crate::game::layers::requirement_is_card_only(req) => (
-                        req,
-                        Modification::AddKeyword(keyword.clone()),
-                        Layer::L6Ability,
-                        None,
-                    ),
-                    _ => continue,
-                };
-                let ids: Vec<CardId> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| {
-                        self.evaluate_requirement_static_on(
-                            req,
-                            c,
-                            card.controller,
-                            Some(card.id),
-                        )
-                    })
-                    .map(|c| c.id)
-                    .collect();
-                if ids.is_empty() {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SET_BASE_PT_FOR_FILTER | gs::GRANT_KEYWORD) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SET_BASE_PT_FOR_FILTER | gs::GRANT_KEYWORD) {
                     continue;
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Specific(ids),
-                    layer,
-                    sublayer,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification,
-                });
+                for sa in &card.definition.static_abilities {
+                    let (req, modification, layer, sublayer) = match &sa.effect {
+                        crate::effect::StaticEffect::SetBasePtForFilter {
+                            applies_to: crate::effect::Selector::EachPermanent(req),
+                            power,
+                            toughness,
+                        } if !crate::game::layers::requirement_is_card_only(req) => (
+                            req,
+                            Modification::SetPowerToughness(*power, *toughness),
+                            Layer::L7PowerTough,
+                            Some(PtSublayer::SetValue),
+                        ),
+                        crate::effect::StaticEffect::GrantKeyword {
+                            applies_to: crate::effect::Selector::EachPermanent(req),
+                            keyword,
+                        } if !crate::game::layers::requirement_is_card_only(req) => (
+                            req,
+                            Modification::AddKeyword(keyword.clone()),
+                            Layer::L6Ability,
+                            None,
+                        ),
+                        _ => continue,
+                    };
+                    let ids: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            self.evaluate_requirement_static_on(
+                                req,
+                                c,
+                                card.controller,
+                                Some(card.id),
+                            )
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    if ids.is_empty() {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(ids),
+                        layer,
+                        sublayer,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification,
+                    });
+                }
             }
         }
+        sa_audit(sa_mask, gs::SET_BASE_PT_FOR_FILTER | gs::GRANT_KEYWORD, before, all_effects.len());
         // Predicate-gated self keyword (`StaticEffect::SelfHasKeywordIf`) —
         // Freya Crescent's "During your turn, Freya has flying".
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfHasKeywordIf { keyword, condition } =
-                    &sa.effect
-                else {
-                    continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                if !self.evaluate_predicate(condition, &ctx) {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_HAS_KEYWORD_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_HAS_KEYWORD_IF) {
                     continue;
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(keyword.clone()),
-                });
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SelfHasKeywordIf { keyword, condition } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    });
+                }
             }
         }
+        sa_audit(sa_mask, gs::SELF_HAS_KEYWORD_IF, before, all_effects.len());
         // CR 905.2b draft-noted keywords (`StaticEffect::SelfHasDraftNotedKeywords`)
         // — Animus of Predation wears whatever it removed from the draft.
-        for &card in &sa_cards {
-            if !card.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, crate::effect::StaticEffect::SelfHasDraftNotedKeywords)
-            }) {
-                continue;
-            }
-            for keyword in self.players[card.controller]
-                .draft_notes
-                .noted_keywords(card.definition.name)
-            {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(keyword.clone()),
-                });
-            }
-        }
-        // Predicate-gated self is-a-creature (`StaticEffect::SelfIsCreatureIf`) —
-        // Midnight Mangler is an artifact creature during turns other than yours.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfIsCreatureIf { condition, creature_types } =
-                    &sa.effect
-                else {
-                    continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                if !self.evaluate_predicate(condition, &ctx) {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_HAS_DRAFT_NOTED_KEYWORDS) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_HAS_DRAFT_NOTED_KEYWORDS) {
                     continue;
                 }
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L4Type,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddCardType(CardType::Creature),
-                });
-                for ct in creature_types {
+                if !card.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::SelfHasDraftNotedKeywords)
+                }) {
+                    continue;
+                }
+                for keyword in self.players[card.controller]
+                    .draft_notes
+                    .noted_keywords(card.definition.name)
+                {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::SELF_HAS_DRAFT_NOTED_KEYWORDS, before, all_effects.len());
+        // Predicate-gated self is-a-creature (`StaticEffect::SelfIsCreatureIf`) —
+        // Midnight Mangler is an artifact creature during turns other than yours.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_IS_CREATURE_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_IS_CREATURE_IF) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SelfIsCreatureIf { condition, creature_types } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
@@ -10964,11 +11220,23 @@ impl GameState {
                         layer: Layer::L4Type,
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::AddCreatureType(*ct),
+                        modification: Modification::AddCardType(CardType::Creature),
                     });
+                    for ct in creature_types {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddCreatureType(*ct),
+                        });
+                    }
                 }
             }
         }
+        sa_audit(sa_mask, gs::SELF_IS_CREATURE_IF, before, all_effects.len());
         // CR 604.3 — characteristic-defining dynamic P/T injection. The
         // formula lives on `CardDefinition.dynamic_pt`; we resolve it here
         // on every layer recompute and emit a layer-7 SetPT effect.
@@ -11576,26 +11844,33 @@ impl GameState {
         }
         // Ulamog, the Defiler — annihilator X where X = +1/+1 counters,
         // injected as a computed layer-6 keyword.
-        for &card in &sa_cards {
-            let has = card.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, crate::effect::StaticEffect::AnnihilatorPerPlusOneCounter)
-            });
-            if !has {
-                continue;
-            }
-            let n = card.counter_count(crate::card::CounterType::PlusOnePlusOne);
-            if n > 0 {
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L6Ability,
-                    sublayer: None,
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::AddKeyword(crate::card::Keyword::Annihilator(n)),
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::ANNIHILATOR_PER_PLUS_ONE_COUNTER) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::ANNIHILATOR_PER_PLUS_ONE_COUNTER) {
+                    continue;
+                }
+                let has = card.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::AnnihilatorPerPlusOneCounter)
                 });
+                if !has {
+                    continue;
+                }
+                let n = card.counter_count(crate::card::CounterType::PlusOnePlusOne);
+                if n > 0 {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(crate::card::Keyword::Annihilator(n)),
+                    });
+                }
             }
         }
+        sa_audit(sa_mask, gs::ANNIHILATOR_PER_PLUS_ONE_COUNTER, before, all_effects.len());
         // "Has hexproof unless it's attacking or blocking" (Tromokratis) —
         // injected as a computed layer-6 Hexproof so every existing
         // targeting gate honors it.
@@ -11625,66 +11900,80 @@ impl GameState {
         // count sets its base P/T (layer 7a CDA) and grants its keywords.
         // CR 604.3 — `SelfBasePtFromValue`: a state-driven CDA on the source's
         // own base P/T (Ixidron's "equal to the number of face-down creatures").
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SelfBasePtFromValue { power, toughness } =
-                    &sa.effect
-                else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SELF_BASE_PT_FROM_VALUE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SELF_BASE_PT_FROM_VALUE) {
                     continue;
-                };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                let (p, t) = (
-                    self.evaluate_value(power, &ctx),
-                    self.evaluate_value(toughness, &ctx),
-                );
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected: AffectedPermanents::Source,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::CharDefining),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::SetPowerToughness(p, t),
-                });
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SelfBasePtFromValue { power, toughness } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    let (p, t) = (
+                        self.evaluate_value(power, &ctx),
+                        self.evaluate_value(toughness, &ctx),
+                    );
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::CharDefining),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughness(p, t),
+                    });
+                }
             }
         }
+        sa_audit(sa_mask, gs::SELF_BASE_PT_FROM_VALUE, before, all_effects.len());
         // Porcelain Gallery — the live-magnitude `SetBasePtForFilter`: both
         // sides are `Value`s evaluated against the static's source each pass.
-        for &card in &sa_cards {
-            for sa in &card.definition.static_abilities {
-                let crate::effect::StaticEffect::SetBasePtForFilterFromValue {
-                    applies_to,
-                    power,
-                    toughness,
-                } = &sa.effect
-                else {
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SET_BASE_PT_FOR_FILTER_FROM_VALUE) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SET_BASE_PT_FOR_FILTER_FROM_VALUE) {
                     continue;
-                };
-                let Some(affected) = selector_to_affected(applies_to, card) else { continue };
-                let ctx = crate::game::effects::EffectContext::for_ability(
-                    card.id,
-                    card.controller,
-                    None,
-                );
-                let (p, t) = (
-                    self.evaluate_value(power, &ctx),
-                    self.evaluate_value(toughness, &ctx),
-                );
-                all_effects.push(ContinuousEffect {
-                    timestamp: card.object_timestamp(),
-                    source: card.id,
-                    affected,
-                    layer: Layer::L7PowerTough,
-                    sublayer: Some(PtSublayer::SetValue),
-                    duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::SetPowerToughness(p, t),
-                });
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SetBasePtForFilterFromValue {
+                        applies_to,
+                        power,
+                        toughness,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let Some(affected) = selector_to_affected(applies_to, card) else { continue };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    let (p, t) = (
+                        self.evaluate_value(power, &ctx),
+                        self.evaluate_value(toughness, &ctx),
+                    );
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughness(p, t),
+                    });
+                }
             }
         }
+        sa_audit(sa_mask, gs::SET_BASE_PT_FOR_FILTER_FROM_VALUE, before, all_effects.len());
         for card in if any_level_bands { &self.battlefield[..] } else { &[] } {
             if card.definition.level_bands.is_empty() {
                 continue;
@@ -11787,7 +12076,7 @@ impl GameState {
             it_all = self.battlefield.iter();
             &mut it_all
         } else {
-            it_sa = sa_cards.iter().copied();
+            it_sa = sa_cards.iter().map(|&(c, _)| c);
             &mut it_sa
         };
         for card in stateful_cards {
@@ -11950,7 +12239,7 @@ impl GameState {
         // rule collapses same-named duplicates across all players.
         // Ask the short `sa_cards` list, not the whole board: only a card with
         // printed statics can carry this one (the Coat of Arms shape).
-        if sa_cards.iter().any(|c| {
+        if sa_cards.iter().any(|(c, _)| {
             c.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, crate::effect::StaticEffect::AllNonlandPermanentsAreLegendary)
             })
@@ -22286,6 +22575,152 @@ impl<'a> ProtectionKind<'a> {
             _ => return None,
         })
     }
+}
+
+/// Which of `gather_continuous_effects_inner`'s per-static passes can fire.
+///
+/// Thirty-eight of that function's passes walk `sa_cards` looking for one
+/// `StaticEffect` variant each, and a typical board carries none of them —
+/// thirty-eight walks of the same short list, each re-reading every card's
+/// static abilities to find nothing, inside the simulator's hottest function.
+/// One walk in the pre-scan sets the bits here, per card and OR'd board-wide;
+/// a pass skips a card whose bit is clear ([`sa_open`]) instead of walking its
+/// statics. Bits over-approximate — every pass still runs its own `match` — so
+/// a set bit costs only the walk it always paid.
+///
+/// The gate is *per card*, not a slice swap on the whole list: an empty
+/// `sa_cards` must cost what it cost before. A `mask & bit` per pass over a
+/// shared list measured **+1.03 % on `--decks fixed`**, where `sa_cards` is
+/// empty and all thirty-eight passes were already free.
+mod gather_spec {
+    pub const GRANT_KEYWORD: u64 = 1 << 0;
+    pub const GRANT_KEYWORD_TO_ATTACKERS: u64 = 1 << 1;
+    pub const PUMP_PT: u64 = 1 << 2;
+    pub const SELF_HAS_KEYWORD_WHILE: u64 = 1 << 3;
+    pub const SELF_HAS_KEYWORD_WHILE_PREDICATE: u64 = 1 << 4;
+    pub const NOT_CREATURE_WHILE_DEVOTION_BELOW: u64 = 1 << 5;
+    pub const NON_AURA_ENCHANTMENTS_ARE_CREATURES: u64 = 1 << 6;
+    pub const NONCREATURE_ARTIFACTS_ARE_CREATURES: u64 = 1 << 7;
+    pub const NONCREATURE_ARTIFACTS_LOSE_ABILITIES: u64 = 1 << 8;
+    pub const PUMP_PT_PER_OTHER_OF_TYPE: u64 = 1 << 9;
+    pub const SELF_IS_CREATURE_WHILE_COUNTERS_AT_LEAST: u64 = 1 << 10;
+    pub const SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST: u64 = 1 << 11;
+    pub const GAIN_KEYWORDS_FROM_EXILED_WITH: u64 = 1 << 12;
+    pub const PUMP_SELF_BY_EXILED_WITH_STATS: u64 = 1 << 13;
+    pub const PROTECTION_FROM_EXILED_WITH_CARD_TYPES: u64 = 1 << 14;
+    pub const NAMED_LANDS_NEUTRALIZED: u64 = 1 << 15;
+    pub const BLIGHTED_LANDS_NEUTRALIZED: u64 = 1 << 16;
+    pub const PUMP_SELF_BY_CONTROLLED_PERMANENTS: u64 = 1 << 17;
+    pub const PUMP_SELF_BY_VALUE: u64 = 1 << 18;
+    pub const PUMP_TEAM_PER_ATTACHMENT_ON_SOURCE: u64 = 1 << 19;
+    pub const PUMP_TEAM_BY_CONTROLLED_PERMANENTS: u64 = 1 << 20;
+    pub const PUMP_SELF_IF: u64 = 1 << 21;
+    pub const SET_BASE_PT_IF: u64 = 1 << 22;
+    pub const GRANT_PUMP_SELF_IF: u64 = 1 << 23;
+    pub const PUMP_PT_BY_VALUE: u64 = 1 << 24;
+    pub const PUMP_TEAM_IF: u64 = 1 << 25;
+    pub const PUMP_PER_BUSHIDO: u64 = 1 << 26;
+    pub const ANTHEM_FOR_CHOSEN_TYPE: u64 = 1 << 27;
+    pub const ANTHEM_FOR_CHOSEN_COLOR: u64 = 1 << 28;
+    pub const GRANT_KEYWORD_TO_CHOSEN_TYPE: u64 = 1 << 29;
+    pub const ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP: u64 = 1 << 30;
+    pub const SET_BASE_PT_FOR_FILTER: u64 = 1 << 31;
+    pub const SELF_HAS_KEYWORD_IF: u64 = 1 << 32;
+    pub const SELF_HAS_DRAFT_NOTED_KEYWORDS: u64 = 1 << 33;
+    pub const SELF_IS_CREATURE_IF: u64 = 1 << 34;
+    pub const ANNIHILATOR_PER_PLUS_ONE_COUNTER: u64 = 1 << 35;
+    pub const SELF_BASE_PT_FROM_VALUE: u64 = 1 << 36;
+    pub const SET_BASE_PT_FOR_FILTER_FROM_VALUE: u64 = 1 << 37;
+    pub const ARTIFACTS_ARE_EQUIPMENT: u64 = 1 << 38;
+    pub const PUMP_PER_SHARED_TYPE: u64 = 1 << 39;
+    /// `AnthemForFilter` and `AnthemForFilterIf` share one walk, so one bit.
+    pub const ANTHEM_FILTER: u64 = 1 << 40;
+}
+
+/// The [`gather_spec`] bits `effect` can contribute.
+///
+/// The five gate wrappers recurse rather than returning a bit of their own:
+/// `active_static` peels them, so a pass reached through one still sees the
+/// inner variant. Anything unmapped is `0` — a pass whose variant is missing
+/// here is skipped, which is what [`sa_audit`] exists to catch.
+fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
+    use crate::effect::StaticEffect as SE;
+    use gather_spec as g;
+    match effect {
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCondition { inner, .. }
+        | SE::WhileCountersAtLeast { inner, .. } => static_effect_gather_bits(inner),
+        SE::GrantKeyword { .. } => g::GRANT_KEYWORD,
+        SE::GrantKeywordToAttackers { .. } => g::GRANT_KEYWORD_TO_ATTACKERS,
+        SE::PumpPT { .. } => g::PUMP_PT,
+        SE::SelfHasKeywordWhile { .. } => g::SELF_HAS_KEYWORD_WHILE,
+        SE::SelfHasKeywordWhilePredicate { .. } => g::SELF_HAS_KEYWORD_WHILE_PREDICATE,
+        SE::NotCreatureWhileDevotionBelow { .. } => g::NOT_CREATURE_WHILE_DEVOTION_BELOW,
+        SE::NonAuraEnchantmentsAreCreatures { .. } => g::NON_AURA_ENCHANTMENTS_ARE_CREATURES,
+        SE::NoncreatureArtifactsAreCreatures => g::NONCREATURE_ARTIFACTS_ARE_CREATURES,
+        SE::NoncreatureArtifactsLoseAbilities => g::NONCREATURE_ARTIFACTS_LOSE_ABILITIES,
+        SE::PumpPTPerOtherOfType { .. } => g::PUMP_PT_PER_OTHER_OF_TYPE,
+        SE::SelfIsCreatureWhileCountersAtLeast { .. } => {
+            g::SELF_IS_CREATURE_WHILE_COUNTERS_AT_LEAST
+        }
+        SE::SelfHasKeywordWhileCountersAtLeast { .. } => {
+            g::SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST
+        }
+        SE::GainKeywordsFromExiledWith { .. } => g::GAIN_KEYWORDS_FROM_EXILED_WITH,
+        SE::PumpSelfByExiledWithStats => g::PUMP_SELF_BY_EXILED_WITH_STATS,
+        SE::ProtectionFromExiledWithCardTypes => g::PROTECTION_FROM_EXILED_WITH_CARD_TYPES,
+        SE::NamedLandsNeutralized => g::NAMED_LANDS_NEUTRALIZED,
+        SE::BlightedLandsNeutralized => g::BLIGHTED_LANDS_NEUTRALIZED,
+        SE::PumpSelfByControlledPermanents { .. } => g::PUMP_SELF_BY_CONTROLLED_PERMANENTS,
+        SE::PumpSelfByValue { .. } => g::PUMP_SELF_BY_VALUE,
+        SE::PumpTeamPerAttachmentOnSource { .. } => g::PUMP_TEAM_PER_ATTACHMENT_ON_SOURCE,
+        SE::PumpTeamByControlledPermanents { .. } => g::PUMP_TEAM_BY_CONTROLLED_PERMANENTS,
+        SE::PumpSelfIf { .. } => g::PUMP_SELF_IF,
+        SE::SetBasePtIf { .. } => g::SET_BASE_PT_IF,
+        SE::GrantPumpSelfIf { .. } => g::GRANT_PUMP_SELF_IF,
+        SE::PumpPTByValue { .. } => g::PUMP_PT_BY_VALUE,
+        SE::PumpTeamIf { .. } => g::PUMP_TEAM_IF,
+        SE::PumpPerBushido { .. } => g::PUMP_PER_BUSHIDO,
+        SE::AnthemForChosenType { .. } => g::ANTHEM_FOR_CHOSEN_TYPE,
+        SE::AnthemForChosenColor { .. } => g::ANTHEM_FOR_CHOSEN_COLOR,
+        SE::GrantKeywordToChosenType { .. } => g::GRANT_KEYWORD_TO_CHOSEN_TYPE,
+        SE::AnthemForColorSharedWithLibraryTop { .. } => {
+            g::ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP
+        }
+        SE::SetBasePtForFilter { .. } => g::SET_BASE_PT_FOR_FILTER,
+        SE::SelfHasKeywordIf { .. } => g::SELF_HAS_KEYWORD_IF,
+        SE::SelfHasDraftNotedKeywords => g::SELF_HAS_DRAFT_NOTED_KEYWORDS,
+        SE::SelfIsCreatureIf { .. } => g::SELF_IS_CREATURE_IF,
+        SE::AnnihilatorPerPlusOneCounter => g::ANNIHILATOR_PER_PLUS_ONE_COUNTER,
+        SE::SelfBasePtFromValue { .. } => g::SELF_BASE_PT_FROM_VALUE,
+        SE::SetBasePtForFilterFromValue { .. } => g::SET_BASE_PT_FOR_FILTER_FROM_VALUE,
+        SE::ArtifactsAreEquipment => g::ARTIFACTS_ARE_EQUIPMENT,
+        SE::PumpPerSharedType { .. } => g::PUMP_PER_SHARED_TYPE,
+        SE::AnthemForFilter { .. } | SE::AnthemForFilterIf { .. } => g::ANTHEM_FILTER,
+        _ => 0,
+    }
+}
+
+/// Whether a pass gated on `bit` should run for a card whose statics carry
+/// `bits`.
+///
+/// Debug builds always say yes, so every pass runs on the full list and
+/// [`sa_audit`] can check the gate against what it emitted.
+#[inline]
+fn sa_open(bits: u64, bit: u64) -> bool {
+    bits & bit != 0 || cfg!(debug_assertions)
+}
+
+/// Assert a pass the mask closed emitted nothing, so the suite audits the
+/// mask on real boards rather than against a re-derived variant list.
+#[inline]
+fn sa_audit(mask: u64, bit: u64, before: usize, after: usize) {
+    debug_assert!(
+        mask & bit != 0 || before == after,
+        "gather gate {bit:#x} skipped a real effect",
+    );
 }
 
 /// Convert a `StaticAbility` from a source permanent into `ContinuousEffect`s.
