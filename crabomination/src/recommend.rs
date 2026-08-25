@@ -357,6 +357,9 @@ pub struct PoolScores<'a> {
     /// `debug_assert` there, so a caller that builds these under one scorer
     /// and ranks splashes under the other fails the suite.
     quality: bool,
+    /// Descending-score orders over `picks`, one per fixing bonus a shape's
+    /// colour count can imply, built on first ask. See [`Self::order`].
+    orders: [std::cell::OnceCell<Vec<u32>>; 3],
 }
 
 impl<'a> PoolScores<'a> {
@@ -374,7 +377,41 @@ impl<'a> PoolScores<'a> {
                 (brief, base)
             })
             .collect();
-        Self { picks, cards, quality }
+        Self { picks, cards, quality, orders: [const { std::cell::OnceCell::new() }; 3] }
+    }
+
+    /// The fixing bonus a build in `n` colours gives a fixing card — the
+    /// only shape-dependent term in a pick's score once the jitter is zero.
+    fn fixing_bonus(n: usize) -> i32 {
+        match n {
+            0..=1 => 0,
+            2 => 1,
+            _ => 3,
+        }
+    }
+
+    /// `picks` indices, descending by `base + bonus * is_fixing`, stably.
+    ///
+    /// There are three of these, not fifty-seven: the bonus is a function of
+    /// the shape's colour *count*, so every pair shares one order and every
+    /// three-or-more-colour shape shares another. Built on first ask, so a
+    /// caller that builds one shape pays for one order.
+    fn order(&self, bonus: i32) -> &[u32] {
+        let slot = match bonus {
+            0 => 0,
+            1 => 1,
+            _ => 2,
+        };
+        self.orders[slot].get_or_init(|| {
+            let mut idx: Vec<u32> = (0..self.cards.len() as u32).collect();
+            idx.sort_by_key(|&i| {
+                let (brief, base) = self.cards[i as usize];
+                let fix =
+                    if bonus > 0 && !brief.is_land && brief.is_fixing { bonus } else { 0 };
+                std::cmp::Reverse(base + fix)
+            });
+            idx
+        })
     }
 
     /// The pool these scores were built from.
@@ -382,6 +419,12 @@ impl<'a> PoolScores<'a> {
         self.picks
     }
 }
+
+/// Words in the sort-free path's `allowed` bitmask, and the pool size it
+/// covers. A sealed pool is ~90 cards and a whole cube ~360; anything wider
+/// falls back to the per-shape sort rather than growing a stack array.
+const ALLOW_WORDS: usize = 16;
+const ALLOW_BITS: usize = ALLOW_WORDS * 64;
 
 /// [`suggest_main_deck_in_colors`] against a prebuilt [`PoolScores`].
 pub fn suggest_main_deck_in_colors_with<R: Rng>(
@@ -406,43 +449,75 @@ pub fn suggest_main_deck_in_colors_with<R: Rng>(
     };
     // Fixing-aware bonus: mana rocks / land fetchers earn their keep in
     // proportion to how many colors the build stretches across.
-    let fixing_bonus = match colors.len() {
-        0..=1 => 0,
-        2 => 1,
-        _ => 3,
-    };
+    let fixing_bonus = PoolScores::fixing_bonus(colors.len());
+    // With no pick jitter a pick scores `base + fixing_bonus * is_fixing`, so
+    // the pool's descending order is one of the three `PoolScores` holds
+    // rather than one sort per shape — and a stable sort commutes with a
+    // filter, so walking that order and skipping what this shape disallows is
+    // the same sequence sorting the filtered list produced. `allowed` is
+    // recorded in a bitmask by the pass that already evaluates it. The
+    // jittered path (gauntlet and variant builds) still sorts.
+    let ordered = (noise == 0 && picks.len() <= ALLOW_BITS).then(|| scores.order(fixing_bonus));
     // Pre-sized: `scored` and `off` partition `picks` between them, and the
     // two output piles partition `scored`. Growing them a doubling at a time
     // was the largest single caller of `RawVec::grow_one` in the build.
-    let mut scored: Vec<(CardFactory, i32)> = Vec::with_capacity(picks.len());
+    let mut scored: Vec<(CardFactory, i32)> =
+        Vec::with_capacity(if ordered.is_some() { 0 } else { picks.len() });
     let mut off: Vec<CardFactory> = Vec::with_capacity(picks.len());
-    for (&f, &(brief, base)) in picks.iter().zip(&scores.cards) {
-        if allowed(f, brief) {
-            let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
-            // Lands never take spell slots — they're assigned by
-            // `assemble_lands`; the fixing bonus is for rocks/fetchers.
-            let fix = if fixing_bonus > 0 && !brief.is_land && brief.is_fixing {
-                fixing_bonus
-            } else {
-                0
-            };
-            scored.push((f, base + jitter + fix));
-        } else {
+    let mut allow = [0u64; ALLOW_WORDS];
+    let mut n_allowed = 0usize;
+    for (i, (&f, &(brief, base))) in picks.iter().zip(&scores.cards).enumerate() {
+        if !allowed(f, brief) {
             off.push(f);
+            continue;
         }
+        n_allowed += 1;
+        if ordered.is_some() {
+            allow[i >> 6] |= 1u64 << (i & 63);
+            continue;
+        }
+        let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
+        // Lands never take spell slots — they're assigned by
+        // `assemble_lands`; the fixing bonus is for rocks/fetchers.
+        let fix = if fixing_bonus > 0 && !brief.is_land && brief.is_fixing {
+            fixing_bonus
+        } else {
+            0
+        };
+        scored.push((f, base + jitter + fix));
     }
-    scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
-    let mut counts: HashMap<usize, u32> =
-        HashMap::with_capacity_and_hasher(scored.len(), Default::default());
-    let mut main = Vec::with_capacity(target_spells);
-    let mut leftovers = Vec::with_capacity(picks.len());
-    for (f, _) in scored {
+    /// One pick down the copy-cap funnel: into the main deck while it has a
+    /// slot and the cap allows, into the leftovers otherwise.
+    fn take(
+        f: CardFactory,
+        counts: &mut HashMap<usize, u32>,
+        target_spells: usize,
+        main: &mut Vec<CardFactory>,
+        leftovers: &mut Vec<CardFactory>,
+    ) {
         let count = counts.entry(f as usize).or_insert(0);
         if main.len() < target_spells && *count < COPY_CAP {
             *count += 1;
             main.push(f);
         } else {
             leftovers.push(f);
+        }
+    }
+    let mut counts: HashMap<usize, u32> =
+        HashMap::with_capacity_and_hasher(n_allowed, Default::default());
+    let mut main = Vec::with_capacity(target_spells);
+    let mut leftovers = Vec::with_capacity(picks.len());
+    if let Some(order) = ordered {
+        for &i in order {
+            let i = i as usize;
+            if allow[i >> 6] & (1u64 << (i & 63)) != 0 {
+                take(picks[i], &mut counts, target_spells, &mut main, &mut leftovers);
+            }
+        }
+    } else {
+        scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
+        for (f, _) in scored {
+            take(f, &mut counts, target_spells, &mut main, &mut leftovers);
         }
     }
     leftovers.extend(off);
