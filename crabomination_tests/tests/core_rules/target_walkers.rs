@@ -11,8 +11,8 @@
 //!
 //! This test closes the class: every `TargetFiltered { slot }` reachable in a
 //! catalog card's effect tree must be answerable by `target_filter_for_slot`.
-//! It ran as a ratchet at 39 until the sixty-third pass took it to **0**; it
-//! is now an invariant and the baseline must never rise.
+//! It ran as a ratchet (164, then 39) until the sixty-third pass took it to
+//! **0**; it is an invariant now — add the arm, do not add a threshold.
 
 use crabomination::card::CardDefinition;
 use crabomination::catalog;
@@ -118,18 +118,18 @@ fn every_declared_target_slot_is_answerable() {
     }
     bad.sort();
     bad.dedup();
-    // **Closed.** This was a ratchet at 39 for as long as it existed; 20 of
-    // those were the walker being asked about `Reflexive` / `ReflexiveTrigger`
-    // bodies it is deliberately blind to (see `RESOLUTION_TIME_TARGETING`) and
-    // the other 19 were real. It is now an invariant, not a budget: a new
-    // `Effect` variant that holds a `TargetFiltered` without an arm in
-    // `target_filter_for_slot` fails here. Do not raise it.
-    const BASELINE: usize = 0;
+    // **Closed.** This was a ratchet — 164, then 39 — for as long as it
+    // existed; 20 of the last 39 were the walker being asked about
+    // `Reflexive` / `ReflexiveTrigger` bodies it is deliberately blind to
+    // (see `RESOLUTION_TIME_TARGETING`) and the other 19 were real. It is an
+    // invariant now, not a budget: a new `Effect` variant that holds a
+    // `TargetFiltered` without an arm in `target_filter_for_slot` fails here.
+    // Do not reintroduce a threshold — add the arm.
     assert!(
-        bad.len() <= BASELINE,
-        "{} effect bodies (baseline {BASELINE}) declare a TargetFiltered slot \
-         that `Effect::target_filter_for_slot` can't answer — the effect \
-         resolves against an empty target list:\n  {}",
+        bad.is_empty(),
+        "{} effect bodies declare a TargetFiltered slot that \
+         `Effect::target_filter_for_slot` can't answer — the effect resolves \
+         against an empty target list:\n  {}",
         bad.len(),
         bad.join("\n  ")
     );

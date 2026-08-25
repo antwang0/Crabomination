@@ -674,6 +674,16 @@ can put a Rampage / Menace / protection / indestructible attacker into the
 same board as a first-striker, which is the shape the `AttackerFacts` hoist
 would break if it broke anything.
 
+**Two commits landed *after* the tip these columns were measured at, and
+they are a rules fix, not a perf change.** The target-walker class closed at
+this tip (`core_rules::target_walkers` 39 -> 0: nineteen shipped cards
+declared a `TargetFiltered` slot no walker surfaced, so their targeted
+effects resolved against an empty list). None of the nineteen is in the
+`--bench` archetypes or the golden-trace decks — decisions, turns, stalls and
+all seven traces are unchanged — but they *are* in the cube and sealed pools,
+so a `--decks cube` or `--decks sos` Ir total taken after `1399e86b` is not
+comparable to the columns above. Re-base before quoting one.
+
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass.
 
