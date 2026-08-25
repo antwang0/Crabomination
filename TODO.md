@@ -21,29 +21,56 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 **Sessions run this branch concurrently.** Read PERF's Log for the pass you
 are continuing; every number below is written up there in full.
 
-1. **Top candidate: (-43), the CoW clone cost.** 91,478 deep copies / 80.9 M
-   Ir = **5.04 % of `sos`**, and every sub-candidate on the *causing* side is
-   an entry already answered ((-13), (-41), `ProbeCell`). The paying side has
-   never been read. Get a `selfplay_train` number before sizing it.
-2. **Then (-41)** — `available_mana`'s grant walk, cube only, worth zero on
-   `sos`.
-3. **Pass 58 is done and paid**: five deck-builder commits (`sealed` **-17.77
-   %**) plus four CoW-handle commits (`sos` -0.55 %, `make_mut` 582,552 ->
-   439,300, **-24.6 %**). (-42), the builder and (-40) are closed.
-   **The bind-once half of (-43) is done — don't grind it.** `cg_sites.py …
-   deref_mut` prices the whole inlined family at **0.53 %** over 111 sites,
-   largest 0.10 %. `resolve_top_of_stack_inner` / `resolve_combat` look like
-   rows and are not: their `make_mut`s belong to inlined callees, so there
-   is no run to bind.
-7. **New lead, sized not chased:** `check_state_based_actions` is
-   **3.8 % of `sos`** by line and diffuse — top row a dependency's
-   `macros.rs:332` at 0.62 %. No CoW handle in it.
-4. **Left from pass 57:** the placement (B)'s variant table did not try,
-   ~0.25 % of `fixed` — a 2,000-line re-indent of 38 blocks. When it's quiet.
-5. **Housekeeping.** TODO 1.0k, PERF 6.3k; ENGINE_BACKLOG 4.9k /
-   CARD_BACKLOG 4.2k want triage; PERF's 48th/49th Log entries fold next.
-6. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings** (oracle
-   first). **Top ML item is still a training run, not code.**
+1. **Pass 60 is done: `sos` -3.46 %, `cube` -2.82 %, `fixed` -2.16 %,
+   `sealed` -2.33 %, and peak RSS on `--bench` 21.9 -> 17.7 MiB.** Two
+   commits — `6344adf6` (a deck-fill memcpy'd an 8,232-byte `CardDefinition`
+   per card; `cube::card_arc` memoizes one `Arc` per factory per thread) and
+   `ba15f249` (the loop watchdog ran SipHash over fifty small integers).
+2. **The device is new and cheap to re-run: read the Ir/call column of a
+   caller table.** `__memcpy` is 5.55 % of `sos` over forty diffuse rows;
+   the only row worth a commit showed up as an *outlier in the ratio*
+   (8,242 Ir a call = `size_of::<CardDefinition>()`). Do the same for
+   `_int_free` / `malloc`, which are 10.0 % between them and have never had a
+   caller table read this way.
+3. **Top candidate is still (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of
+   `sos`, paying side unread. **The bind-once half is done; don't grind it.**
+4. **The sos profile at the sixtieth tip**, for whoever ranks next:
+   `dispatch_triggers_for_events` 5.88 %, `__memcpy` 5.55 %, the allocator
+   family 12.7 %, the gather 3.71 %, `check_state_based_actions` 2.84 % +
+   `sba_board_scan` 1.81 %, `GameState::clone` 1.61 %. Everything above 1 %
+   that is *named* has an entry; the two that do not are the allocator and
+   `__memcpy` themselves.
+5. **What is left under `CardInstance::new`** after `6344adf6`:
+   `mint_token_onto_battlefield` 370 calls / 6,644,250 Ir (**0.43 %**) still
+   builds and copies a whole `CardDefinition` per token, and
+   `definition_matches_requirement` deep-clones one (156 / 2,736,861,
+   0.18 %) to answer a predicate. Both want a value-keyed memo or an `Arc`
+   in the signature; neither is worth a pass alone.
+6. **Clock numbers go through `scripts/ab_wall.py` with its null control**
+   (`--bin-a X --bin-b X`). Eight blocks of a 30-second `sos` run resolve
+   **+/-2 % and nothing finer**; four blocks called a null significant. Ir
+   over-reads the clock by ~2x — halve a delta before quoting throughput.
+7. **Left from pass 57**, and pass 60's calibration re-sizes it *down*: the
+   gate placement (B)'s variant table did not try is ~0.25 % of `fixed` Ir,
+   i.e. ~0.1 % of clock on the pool the actors do not play, for a 2,000-line
+   re-indent of 38 blocks in the most contended function in the tree. **Take
+   it only if the branch is quiet and you want the tidy, not the number.**
+8. **Cards: `scripts/audit_dropped_may.py`.** Its load-bearing cluster (the
+   "destroy / sacrifice / tap / discard" verbs) is **read to the end** — five
+   fixed, four false positives, all written up in INCOMPLETE_CARDS with the
+   two rules that pass yields. The ~337 remaining findings are the "you may
+   draw / search / put into hand" tail, where declining is almost never
+   right.
+9. **Build/test iteration: the incremental test rebuild is 19.3 s**, down
+   from 25.2 s (executables 20 -> 12). What is left, by `cargo build
+   --timings`, is the engine compiling twice (7.5 s + 10.0 s in test mode,
+   for 553 private `server/` unit tests that cannot move out), the eight
+   integration binaries at 37.5 s of CPU, and the nine bins' normal builds at
+   ~11.5 s that `cargo test` does regardless. **Nothing left there is worth a
+   risk.**
+10. **Housekeeping.** TODO 1.1k, PERF 6.6k; ENGINE_BACKLOG 4.9k /
+   CARD_BACKLOG 4.2k want triage; PERF's 47th/48th Log entries fold next.
+   **Top ML item is still a training run, not code.**
 
 ## Standing rules for a perf pass
 

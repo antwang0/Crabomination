@@ -4312,6 +4312,43 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
+**(-44) `__memcpy` IS 5.55 % OF `sos` AND THE ALLOCATOR FAMILY 12.7 %, AND
+NEITHER HAS EVER HAD A CALLER TABLE READ BY Ir/CALL.** The sixtieth pass took
+`__memcpy` from 7.80 % to 5.55 % with one commit, and the way it found the row
+is the entry: the table is forty rows of a hundred-odd Ir each, and one row —
+`CardInstance::new`, 3,452 calls at **8,242 Ir apiece** — is an outlier in the
+*ratio*, not in the calls or the total. 8,242 Ir is `size_of::<CardDefinition>
+()` = 8,232 bytes moving. Do the same read on `_int_free` (4.25 %) and
+`malloc` + `_int_malloc` (5.78 %): an allocation whose Ir/call is far above
+the family's mean is an allocation of something big, and that is a shape, not
+a diffuse cost.
+
+The sos table at the sixtieth tip, top of `__memcpy`'s callers:
+
+| caller | calls | Ir | Ir/call |
+|---|---|---|---|
+| `GameState::clone` | 103,330 | 6,222,884 | 60 |
+| `finalize_cast` | 92,590 | 7,832,712 | 85 |
+| `String::write_str` | 65,285 | 1,029,267 | 16 |
+| `computed_permanent` | 60,556 | 1,816,680 | 30 |
+| `Vec::clone` | 34,547 | 1,875,090 | 54 |
+
+**Nothing left in that table is an outlier**, which is what "diffuse" should
+mean and usually does not. `finalize_cast`'s 24.7 memcpys a call are
+(-28)'s and that entry is closed to everything but a `CardTypeSet` bitset.
+
+**What is left under `CardInstance::new`, both of them the same shape one size
+down:** `mint_token_onto_battlefield` is **370 calls / 6,644,250 Ir (0.43 %)**
+— `token_to_card_definition` builds a whole 8 KB `CardDefinition` per token
+minted and `Arc::new` copies it — and
+`definition_matches_requirement` **deep-clones** a `CardDefinition` (156 /
+2,736,861, 0.18 %) to build a scratch `CardInstance` for a predicate.
+`card_arc`'s trick does not transfer to either: a token's definition is a
+*value*, so a memo needs `TokenDefinition: Hash` (it derives only `Eq`) and an
+eviction rule for `CreateTokenCopyOf`, and the predicate site holds a
+`&CardDefinition` with no `Arc` to share. **Size them together at ~0.6 % and
+do not start one alone.**
+
 **(-43) THE CoW-HANDLE FAMILY, READ FROM THE TOP AT THE FIFTY-EIGHTH TIP.
 `make_mut` on `sos` is 439,300 calls after four commits took it down from
 582,552 (-24.6 %), and the table below is where the rest of it is.** This
