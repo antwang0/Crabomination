@@ -87,6 +87,9 @@ web/dist/
 # is locked by a long release build — cargo takes a whole-directory lock, so
 # a second dir is the only way to keep iterating during one.
 /target-check/
+# Side-by-side target dir for the `profiling-lines` build (packed DWARF,
+# ~550 MB binary) — see PERF.md's `cg_lines.py` recipe.
+/target-lines/
 
 # callgrind / profiling output
 cg*.out

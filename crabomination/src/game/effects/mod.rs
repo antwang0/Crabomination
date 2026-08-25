@@ -16,7 +16,7 @@ mod targeting;
 // engine's `game::effects::*_token` paths keep working.
 pub use crabomination_base::tokens::{
     blood_token, clue_token, detective_token, food_token, incubator_token,
-    token_to_card_definition, treasure_token,
+    token_arc_with_pt, token_card_arc, token_to_card_definition, treasure_token,
 };
 pub(crate) use delayed::delayed_kind_from_effect;
 pub(crate) use eval::card_is_outlaw;
@@ -1933,7 +1933,7 @@ impl GameState {
             for (def, count) in riders {
                 for _ in 0..count {
                     self.mint_token_onto_battlefield(
-                        token_to_card_definition(&def),
+                        token_card_arc(&def),
                         p,
                         false,
                         &mut events,
@@ -10813,7 +10813,7 @@ impl GameState {
                     if self.players[seat].graveyard.iter().any(|c| c.id == cid)
                         || self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cid))
                     {
-                        let def = crabomination_base::tokens::token_to_card_definition(definition);
+                        let def = crabomination_base::tokens::token_card_arc(definition);
                         self.mint_token_onto_battlefield(def, seat, false, events);
                     }
                 }
@@ -15538,7 +15538,7 @@ impl GameState {
 
             Effect::EachPlayerDiscardsHandMakeTokens { token } => {
                 let n_players = self.players.len();
-                let def = token_to_card_definition(token);
+                let def = token_card_arc(token);
                 for i in 0..n_players {
                     let p = (self.active_player_idx + i) % n_players;
                     let hand: Vec<crate::card::CardId> =
@@ -17669,13 +17669,13 @@ impl GameState {
                         )?;
                         continue;
                     }
+                    // Every token in the batch has the same shape, so build
+                    // it once: off the per-thread memo when nothing overrides
+                    // it, by hand when a dynamic P/T does. The mint takes
+                    // `Into<Arc<_>>`, so the loop hands out refcount bumps.
+                    let def = token_arc_with_pt(definition, dyn_pt);
                     for _ in 0..n {
-                        let mut def = token_to_card_definition(definition);
-                        if let Some((pw, tn)) = dyn_pt {
-                            def.power = pw;
-                            def.toughness = tn;
-                        }
-                        self.mint_token_onto_battlefield(def, p, definition.tapped, events);
+                        self.mint_token_onto_battlefield(def.clone(), p, definition.tapped, events);
                     }
                 }
                 Ok(())
@@ -17690,7 +17690,7 @@ impl GameState {
                     let doublers = self.token_doublers_for(p);
                     let copies = 1u32 << doublers.min(16);
                     for _ in 0..copies {
-                        let def = token_to_card_definition(&incubator_token());
+                        let def = token_card_arc(&incubator_token());
                         let id = self.mint_token_onto_battlefield(def, p, false, events);
                         if n > 0 && self.battlefield.iter().any(|c| c.id == id) {
                             // CR 614.16 — counter replacements apply to the +1/+1s.
@@ -17729,7 +17729,7 @@ impl GameState {
                     None => {
                         let mut types = vec![CreatureType::Army];
                         if let Some(t) = extra_type { types.push(*t); }
-                        let def = token_to_card_definition(&crate::card::TokenDefinition {
+                        let def = token_card_arc(&crate::card::TokenDefinition {
                             name: "Army".into(),
                             power: 0,
                             toughness: 0,
@@ -17786,13 +17786,9 @@ impl GameState {
                 let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
                     (self.evaluate_value(pv, ctx), self.evaluate_value(tv, ctx))
                 });
+                let def = token_arc_with_pt(definition, dyn_pt);
                 for _ in 0..n {
-                    let mut def = token_to_card_definition(definition);
-                    if let Some((pw, tn)) = dyn_pt {
-                        def.power = pw;
-                        def.toughness = tn;
-                    }
-                    let id = self.mint_token_onto_battlefield(def, p, true, events);
+                    let id = self.mint_token_onto_battlefield(def.clone(), p, true, events);
                     // Join combat tapped + attacking (CR 508.3a) — bypasses the
                     // declare-attackers timing/sickness gates, like Ninjutsu.
                     if self.battlefield.iter().any(|c| c.id == id) {
@@ -17867,7 +17863,7 @@ impl GameState {
                 let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
                     return Ok(());
                 };
-                let def = self.battlefield_find(src).map(|c| (*c.definition).clone());
+                let def = self.battlefield_find(src).map(|c| c.definition.clone());
                 let Some(def) = def else { return Ok(()); };
                 // CR 702.115b — one copy per opponent other than the defender.
                 let opps: Vec<usize> = (0..self.players.len())
@@ -18022,6 +18018,9 @@ impl GameState {
                         def.keywords.push(kw.clone());
                     }
                 }
+                // One allocation for the whole batch; the mint takes
+                // `Into<Arc<_>>`, so `clone` below is a refcount bump.
+                let def = std::sync::Arc::new(def);
                 for _ in 0..n {
                     self.mint_token_onto_battlefield(def.clone(), p, *enters_tapped, events);
                 }
@@ -18090,7 +18089,7 @@ impl GameState {
                         _ => None,
                     });
                 let Some(src_id) = src_id else { return Ok(()); };
-                let Some(def) = self.battlefield.iter().find(|c| c.id == src_id).map(|c| (*c.definition).clone())
+                let Some(def) = self.battlefield.iter().find(|c| c.id == src_id).map(|c| c.definition.clone())
                 else { return Ok(()); };
                 for _ in 0..n {
                     let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
@@ -18126,7 +18125,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .find(|c| c.id == src_id)
-                    .map(|c| (*c.definition).clone())
+                    .map(|c| c.definition.clone())
                 else {
                     return Ok(());
                 };
@@ -19944,7 +19943,7 @@ impl GameState {
                     .filter(|id| self.battlefield_find(*id).is_some())
                     .collect();
                 for host in hosts {
-                    let def = token_to_card_definition(definition);
+                    let def = token_card_arc(definition);
                     let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
                     if let Some(c) = self.battlefield_find_mut(minted) {
                         c.attached_to = Some(host);
@@ -31787,7 +31786,7 @@ impl GameState {
                     .iter()
                     .find(|c| c.id == src)
                     .or_else(|| self.battlefield.iter().find(|c| c.id == src))
-                    .map(|c| (*c.definition).clone())
+                    .map(|c| c.definition.clone())
                 else {
                     return Ok(());
                 };
@@ -35503,7 +35502,7 @@ impl GameState {
                 if self.battlefield_find(tid).is_none() {
                     return Ok(());
                 }
-                let def = token_to_card_definition(definition);
+                let def = token_card_arc(definition);
                 let minted = self.mint_token_onto_battlefield(def, ctx.controller, false, events);
                 if let Some(c) = self.battlefield_find_mut(minted) {
                     c.attached_to = Some(tid);

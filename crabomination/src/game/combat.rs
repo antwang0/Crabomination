@@ -4165,7 +4165,7 @@ impl GameState {
                 count: removed,
             });
         }
-        let def = crabomination_base::tokens::token_to_card_definition(&token);
+        let def = crabomination_base::tokens::token_card_arc(&token);
         for _ in 0..dealt {
             self.mint_token_onto_battlefield(def.clone(), controller, false, events);
         }

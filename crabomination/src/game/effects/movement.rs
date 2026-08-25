@@ -699,7 +699,7 @@ impl GameState {
         // Ria Ivor — one Phyrexian Mite per point of damage the shield ate.
         for (seat, n) in mite_mints {
             for _ in 0..n {
-                let def = crabomination_base::tokens::token_to_card_definition(
+                let def = crabomination_base::tokens::token_card_arc(
                     &crabomination_base::tokens::phyrexian_mite_token(),
                 );
                 self.mint_token_onto_battlefield(def, seat, false, events);

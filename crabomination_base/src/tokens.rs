@@ -68,6 +68,60 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
     }
 }
 
+/// How many distinct token shapes one thread remembers. A game draws its
+/// tokens from a handful of shapes; `CreateTokenCopyOf` can mint one per
+/// copied card, which is why this stops growing rather than keeping every
+/// shape a long game produces.
+const TOKEN_MEMO_CAP: usize = 64;
+
+thread_local! {
+    static TOKEN_DEFS: std::cell::RefCell<Vec<(TokenDefinition, std::sync::Arc<CardDefinition>)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// [`token_to_card_definition`] as a shared `Arc`, memoized per thread.
+///
+/// `CardDefinition` is 8,232 bytes, and `CardInstance::new` moves one twice —
+/// once as a by-value argument and once into the `Arc` — so a mint pays
+/// ~16,500 Ir before the token exists. Sharing one definition between mints of
+/// the same shape is invisible to the engine: every site that writes a
+/// permanent's definition goes through `Arc::make_mut`, which unshares first.
+///
+/// Thread-local because the memo is a pure function of its key: two threads
+/// cannot disagree about what it returns, so it adds no cross-thread order to
+/// the game. Callers that go on to *mutate* the definition want
+/// [`token_to_card_definition`] instead.
+pub fn token_card_arc(token: &TokenDefinition) -> std::sync::Arc<CardDefinition> {
+    TOKEN_DEFS.with(|memo| {
+        let mut memo = memo.borrow_mut();
+        if let Some((_, def)) = memo.iter().find(|(t, _)| t == token) {
+            return def.clone();
+        }
+        let def = std::sync::Arc::new(token_to_card_definition(token));
+        if memo.len() < TOKEN_MEMO_CAP {
+            memo.push((token.clone(), def.clone()));
+        }
+        def
+    })
+}
+
+/// [`token_card_arc`] with a mint-time P/T override applied (Shark Typhoon's
+/// X/X, Gemini Engine's Twin). `None` — the ordinary case — is the memo hit.
+pub fn token_arc_with_pt(
+    token: &TokenDefinition,
+    pt: Option<(i32, i32)>,
+) -> std::sync::Arc<CardDefinition> {
+    match pt {
+        None => token_card_arc(token),
+        Some((power, toughness)) => {
+            let mut def = token_to_card_definition(token);
+            def.power = power;
+            def.toughness = toughness;
+            std::sync::Arc::new(def)
+        }
+    }
+}
+
 /// CR 701.53b — the Incubator double-faced token. Front: a colorless Incubator
 /// artifact with "{2}: Transform this token." Back: a 0/0 colorless Phyrexian
 /// artifact creature ("Phyrexian Token"). `incubate N` mints this with N +1/+1

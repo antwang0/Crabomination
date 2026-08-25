@@ -7135,9 +7135,14 @@ impl GameState {
     /// control replacement (CR 614), pushes the entry events, records
     /// `last_created_token(s)`, and fires self-source ETB triggers. The
     /// shared funnel for every token-creation site.
+    /// Takes the definition by `Into<Arc<_>>` like [`CardInstance::new_token`]
+    /// itself, so a caller minting `n` tokens off one shape shares one
+    /// allocation: `CardDefinition` is 8,232 bytes and the `def.clone()` a
+    /// batch loop used to pass was a deep copy of all of it per token, plus
+    /// the `Arc::new` that followed and the drop that ended it.
     pub(crate) fn mint_token_onto_battlefield(
         &mut self,
-        def: CardDefinition,
+        def: impl Into<std::sync::Arc<CardDefinition>>,
         controller: usize,
         tapped: bool,
         events: &mut Vec<crate::game::GameEvent>,
@@ -7267,7 +7272,7 @@ impl GameState {
             ] {
                 if other.name != minted_name {
                     self.mint_token_onto_battlefield(
-                        crabomination_base::tokens::token_to_card_definition(&other),
+                        crabomination_base::tokens::token_card_arc(&other),
                         ctrl,
                         tapped,
                         events,
@@ -13347,7 +13352,7 @@ impl GameState {
         token: &crate::card::TokenDefinition,
     ) -> CardId {
         let id = self.next_id();
-        let def = crate::game::effects::token_to_card_definition(token);
+        let def = crate::game::effects::token_card_arc(token);
         let mut inst = CardInstance::new_token(id, def, player_idx);
         inst.battlefield_timestamp = self.next_timestamp();
         self.battlefield.push(inst);
