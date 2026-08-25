@@ -400,15 +400,28 @@ rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
 ```
 
-**Wall clock, measured at (A) — a third of (A)'s Ir.** `release-fast` +
-mimalloc, 600 games / 1 thread / seed 1, best-of-three alternated
-A/B/A/B/A/B:
+**Wall clock over the whole pass, and it is a quarter of the Ir.**
+`release-fast` + mimalloc, 600 games / 1 thread / seed 1, alternated
+base/tip in one sitting. The base here is **the pass's own engine diff
+reverted at the current catalog** — the concurrent session's card commits
+land between `bf4917a5` and this tip, and this isolates the engine work
+from them.
 
 ```text
-              base      (A)
---decks cube  55.49 s   51.72 s   -6.8 % against -16.95 % in Ir
---decks sos   31.99 s   31.30 s   (inside the drift; +0.062 % in Ir)
+--decks cube   base 55.77 / 55.12 / 54.65 / 55.93 / 54.40   best 54.40
+               tip  52.41 / 52.19 / 52.64 / 52.72 / 51.54   best 51.54   -5.3 %
+               (tip faster in all five pairs, by 2.4-3.4 s)
+--decks sos    base 32.09 / 32.20 / 31.87   tip 32.13 / 31.67 / 32.60
+               inside the drift, as -1.4 % in Ir should be
 ```
+
+**-5.3 % wall clock against -20.3 % Ir, and the gap is the point.** A sixth
+of the Ir this pass removed is the allocator family, callgrind runs the
+*system* allocator, and mimalloc ships — so the Ir is the attribution and
+the wall clock is what the training host gets. **An earlier sitting read
+(A) alone at -6.8 %** on a different catalog; the two are not comparable and
+neither is wrong, which is this file's standing warning about wall-clock
+absolutes restated. Quote both numbers or neither.
 
 The gap is the pass-54 caveat again: a sixth of the Ir saved is the
 allocator family, callgrind runs the *system* allocator, and mimalloc ships.
@@ -3409,10 +3422,10 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-FIFTH TIP (3,332 M,
-before (B) took it to 3,308 M — the shares below are (A)'s and are within a
-point), and this is where the next pass should start.** The cube profile moved 17 %
-under it, so every share below is fresh. Self cost:
+**(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-FIFTH TIP.** The
+table below was taken at **3,332 M**, i.e. after (A) and before (B)-(H) took
+the pool to **3,199 M** — read the shares, not the absolutes, and re-read
+the table before ranking work off it. Self cost:
 
 | row | % | note |
 |---|---|---|
@@ -3423,6 +3436,13 @@ under it, so every share below is fresh. Self cost:
 | allocator family | ~11 | `_int_free` 3.74, `malloc` 2.79, `_int_malloc` 2.60, `free` 2.30 |
 | `Arc::clone_from_ref_in` | 2.92 | |
 | `creature_type_change_in_scope` | 0.93 | the fifty-fifth pass's own gate — **PAID by (B)**, which took the mutex off the memo hit |
+
+**Paid since that table was taken**, all in the same pass: the gate's own
+mutex (B), `affected_from_requirement`'s heap stack (C),
+`restore_payment_state`'s unshare (D), `extract_power_gate`'s tree clone
+(E), and the per-card grant walk's `battlefield_find` (F)-(H). The
+allocator family is the row that moved most — 1,963,140 allocations ->
+about 1.79 M — and the gather is still the largest subtree.
 
 **The gather is the target, and the question is scope count, not gating.**
 59,470 gathers for six games; a freeze scope's *first* computed read gathers

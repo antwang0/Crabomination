@@ -19,36 +19,39 @@ reference and want their own triage pass):
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 **Sessions run this branch concurrently: expect to rebase and re-read your
-numbers.** Two ran this pass and both started the same vocab fix; check the
-log before opening a NEXT item.
+numbers.** Two ran this pass and both opened with the same vocab fix; read
+the log before opening a NEXT item.
 
-1. **Pass 55 took (-37): `--decks cube` 4,012 M -> 3,332 M Ir (-16.95 %),
-   -6.8 % wall clock; `fixed` +0.097 %, `sos` +0.062 %.** Tip (`8779aa9f`):
-   fixed 1,249,622,086 / cube 3,332,029,985 / sos 1,761,529,321 / sealed
-   3,500,013,528 / deck-build 34,859,382 (`--decks sealed --games 1`).
-2. **Rank a lazy cell by its inclusive cost.** (-37) was sized at 7.1 % off
-   self cost and was 15.03 % — `cg_edges.py --callers computed_permanent`,
-   not the self table. And do not wrap a gate in a `OnceCell` that runs once
-   (+1.24 M), or gate on `!computed_absent()` first (+0.066 %): both lost.
-3. **Candidates:** (-38) `battlefield_find`'s three unclaimed sites (0.59 %);
-   (-37)'s residue is `has_atype` / `has_stype`, both needing a **new**
-   predicate and both **unsized** — measure before writing. `cg_contexts.py`
-   still has 20,374 gathering `computed_permanent` calls open (3.2 %).
-4. **Top ML item is a training run, not code:** the vocab index is frozen
-   (`server::vocab_snapshot`), post-freeze nets pad, and a throwaway net
-   proved `--use-deck-best` works end to end at **91.7 %** of the unjudged
-   rate. What is missing is a *good* deck net.
-5. **Cards: `scripts/audit_dropped_may.py`, 349 open findings** (11,094
-   checked against the offline Scryfall cache; synthesized `(b###)` names
-   skipped). **Thirteen were fixed at pass 54** — the "may destroy /
-   sacrifice / tap" cluster, where being forced hurts, plus three cards
-   missing the whole ability. Read the oracle before fixing one; false
-   positives remain, and the audit is a body-stub finder as much as an
-   optionality one.
-6. **Housekeeping.** TODO 0.9k, PERF 5.1k — the Baseline section is now 1.0k
-   holding four passes' blocks; folding the oldest two is the next fold, and
-   the 45th/46th Log entries after that. ENGINE_BACKLOG 4.9k /
-   CARD_BACKLOG 4.2k still want a triage pass.
+1. **Pass 55, eight commits: `--decks cube` 4,012 M -> 3,199 M Ir
+   (-20.3 %), -5.3 % wall clock; `sos` -1.41 %, `fixed` -0.36 %.** Tip
+   (`353273ef`): fixed 1,243,883,316 / cube 3,199,249,495 / sos
+   1,735,661,160. `sealed` 3,489,058,164 and deck-build 34,607,871 were read
+   at (B) and not since — (C)-(H) do not touch that path.
+2. **The pass's device, and it found six of the eight: the code built the
+   answer before asking whether anyone wanted it.** A gathered layer view a
+   presence gate answers, a cloned tree the caller discards, an unshared
+   zone with nothing to restore, a `battlefield_find` for a card the caller
+   is holding. In four of them the cheap question was already a function in
+   the file.
+3. **Candidates:** (-40) is the fresh cube profile — the gather is still the
+   largest subtree (5.9 % self / 11.5 % inclusive, 59,470 gathers) and its
+   `Vec::from_iter` traffic (204,138 collects) has never been read by line.
+   (-37)'s residue is `has_atype` / `has_stype`, both **unsized**. (-38)
+   `battlefield_find` is 61.5 M / 2.35 % at the tip, of which `eval.rs:3113`
+   — every remaining unhinted requirement evaluation — is 14.2 M.
+4. **Do not pattern-match the remaining ~80 `evaluate_requirement_static(..,
+   &Target::Permanent(c.id), ..)` sites** into the `_on` form: several
+   iterate graveyards or hands, where the hint changes the answer, and the
+   `debug_assert` only catches a site a test plays. PERF's (H) says it too.
+5. **Top ML item is a training run, not code:** the vocab index is frozen,
+   post-freeze nets pad, `--use-deck-best` works end to end at 91.7 % of the
+   unjudged rate. What is missing is a *good* deck net.
+6. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings.** Read the
+   oracle before fixing one; false positives remain.
+7. **Housekeeping.** TODO 0.95k, PERF 5.2k — Baseline is 1.1k holding five
+   passes' blocks and folding the oldest two is the cheapest fold left, then
+   the 45th/46th Log entries. ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still
+   want a triage pass.
 
 ## Standing rules for a perf pass
 
@@ -97,6 +100,15 @@ Log with its numbers; read the entry before re-proposing any of them.
   question, a gate that gathered to prove a negative, a freeze scope opened
   for a closure that returns immediately, two clones handed to a walk that
   skips.
+- **Build the answer *after* asking whether anyone wants it** (pass 55, six
+  of its eight commits, -20.3 % of the cube pool between them). A gathered
+  layer view a presence gate answers; a requirement tree cloned to build a
+  residual the caller discards on 99.3 % of calls; a CoW zone unshared to
+  restore flags that never moved; a `battlefield_find` for the card the
+  caller is iterating. **In four of the six the cheap question was already a
+  function in the file** — `requirement_mentions_power`,
+  `creature_type_change_in_scope`, `evaluate_requirement_static_on`. Grep
+  for the cheap form before writing one.
 - **Rank a lazy cell by what is under it, not by its own row** (pass 55, and
   it was 16.9 % of the cube pool). Candidate (-37) was sized at
   `computed_permanent`'s 4.14 % + `compute_permanent_pass`'s 2.97 % — self
@@ -151,7 +163,7 @@ Log with its numbers; read the entry before re-proposing any of them.
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
   Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
   5 %; a `profiling-fast` games/s compares to nothing.
-- **Trackers.** TODO ~0.94k, ROADMAP 0.66k, PERF ~5.1k (the 45th pass's
+- **Trackers.** TODO ~0.95k, ROADMAP 0.66k, PERF ~5.2k (the 45th pass's
   profile table was folded at the 48th tip and the 46th's at the 53rd; the
   47th's is the next fold, and **Baseline is now 1.0k holding four passes'
   blocks** — the oldest two are the cheapest fold left).
