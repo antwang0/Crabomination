@@ -543,7 +543,15 @@ container ninety minutes apart. The Ir column is the attribution.
 --games 200 --threads 3`, seeds 11/12/13 x `--decks all` and `--decks sealed`
 (the deck builder's own pool, which `--decks all` does not include): every
 cell **decided, 0 undecided, no panic, all pairs split** — 17,400 games and
-8,700 pairs, and the grid was re-run unchanged at the final tip. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism ok
+8,700 pairs. Re-run unchanged after the run's later card-defect commits, at
+`9198cc67`: same grid, `thread_determinism ok (3 vs 1)`, `--bench` decisions
+196,220 / turns 27.53 / stalls 0 / 274.49 games/s best of two, and all four
+pools' 20-game printout still diffs identically against the pass base.
+**Read that last one narrowly**: eleven cards changed behaviour in this run
+(a dropped "you may", a collapsed mode, three absent abilities), and a
+20-game sample not separating them means the sample did not reach them, not
+that nothing moved. Their per-card tests are the proof of those changes; the
+ladder diff is only evidence that the *engine* did not move. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism ok
 (3 vs 1 threads identical)`**. And the `[profile.overflow]` run that turns a
 silent wrap into a panic, re-run here because the deck builder is the code
 that moved: `--decks sealed` 2,400 games and `--decks all` 3,400 games at 3

@@ -180,6 +180,23 @@ Paradox Surveyor · Conjurer's Bauble.
 | ~~Phyrexian Obliterator~~ ✅ **FIXED (1v1-approx)** | mod_set/creatures.rs:4006 | Damage-retaliation now wired: `DealtDamage`/`SelfSource` → `Sacrifice { count: TriggerEventAmount }`. Sacrificer is `EachOpponent` (faithful in 1v1; "that source's controller" can't be read — `GameEvent::DamageDealt` carries no source). Doc P/T corrected 5/8→5/5. Tests: `phyrexian_obliterator_is_5_5_trample`, `…_damage_forces_opponent_to_sacrifice_that_many` |
 | ~~Alesha, Who Smiles at Death~~ ✅ **FIXED** | ktk/mod.rs | Attack trigger now wired: `on_attack(MayPay { {W/B}{W/B} → Move(target gy creature pow≤2 → battlefield tapped) + JoinCombatAttacking(LastMoved) })`. New `Effect::JoinCombatAttacking` puts the reanimated creature into combat attacking (CR 508.3a); `Move→Battlefield` + `MayPay` now bias the trigger auto-targeter to the graveyard. Test `cr_508_3a_alesha_reanimates_tapped_and_attacking`. |
 
+**Three more found at the fifty-fourth pass, and the finder was not this
+file** — it was `scripts/audit_dropped_may.py`, reading the oracle beside the
+definition for the "you may sacrifice / tap" cluster. All three were whole
+abilities absent, not dropped riders:
+
+| Card | Location | Was missing |
+|---|---|---|
+| ~~Springbloom Druid~~ ✅ **FIXED** | decks/modern.rs | "you may sacrifice a land. **If you do**, search…" — the sacrifice was not there at all, so the card was free two-land ramp; its doc comment asserted that wrong oracle *and* a 2/2 body for a 1/1. Now `Effect::MaySacrifice`. Tests take it and decline it |
+| ~~Tidal Terror~~ ✅ **FIXED** | eoe.rs | the whole attack trigger ("you may tap two other untapped creatures you control. If you do, this creature can't be blocked this turn") — the card was a vanilla 5/6 with Islandcycling. Now `Effect::MayTap` into an end-of-turn `Unblockable` |
+| ~~Bristlebud Farmer~~ ✅ **FIXED** | decks/recent.rs | the whole attack trigger ("you may sacrifice a Food. If you do, mill three cards. You may put a permanent card from among them into your hand") — the ETB minted two Foods with nothing to feed them to. Now `MaySacrifice` into `MillThenToHand` |
+
+**The lesson for the next sweep**: the dropped-"may" audit is a *body-stub*
+finder as much as an optionality finder. A card whose printed text is "you may
+X. If you do, Y" and whose definition has neither X nor the choice reads to
+the audit as a dropped "may" and is really a missing ability — which is the
+more serious defect and the easier one to confirm.
+
 ### Wrong-effect substitutions — implemented card is functionally a different card
 | Card | Location | Substitution |
 |---|---|---|
