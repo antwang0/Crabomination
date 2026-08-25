@@ -381,6 +381,8 @@ I refs, --decks cube      2,952,041,099      not re-read — no commit is on tha
 | B | `432976a0` | -0.599 % | one `PoolScores` per pool, not one per random build |
 | C | `88b97f25` | **-2.828 %** | fifty-seven shapes share three sorted orders |
 | D | `13f3521c` | **-4.246 %** | the land walk reads the index the pile builder kept |
+| — | *rebase onto pass 57's (D)+(E)*; the same four re-read `23,611,357` | | |
+| E | (tip) | **-7.782 %** | the copy cap counts by dense card id, not by `HashMap` |
 
 **Both game pools read slightly *down* rather than flat, and the reason is
 the binary.** No commit here is on the game loop; `_dl_relocate_object` is
@@ -394,7 +396,7 @@ turns_per_game   27.53   -> 27.53
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
 peak_rss_mib     22.0
-suite            18,728 passed / 0 failed / 5 ignored over 22 binaries
+suite            18,728 passed / 0 failed / 5 ignored over 22 binaries (A-D and again at (E))
 golden traces    7 passed, all unchanged
 clippy           `--workspace --all-targets` clean, all eight crates
 rustc            1.95.0 (59807616e 2026-04-14)
@@ -424,6 +426,21 @@ callgrind exists for.
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState` or
 `Vocab` change is in this pass; the decks the builder produces are
 byte-identical.
+
+**(A)-(D) were read at `13f3521c`; two of pass 57's commits then landed on
+top** (`7b0477d4` and `2394206c`, the gather's two `Vec`s) and (E) is measured
+above them. Nothing in this pass is on the gather and nothing in theirs is on
+the deck builder, so the two compose — but their two commits move the
+deck-build workload from **23,574,309 to 23,611,357** (+0.157 %, code size on
+a workload whose `_dl_relocate_object` is 2.5 % of the total), which is why
+(E)'s base is re-read rather than chained. **The pass end to end is
+`26,478,634 -> 21,774,018`, -17.77 %**, and the 37,048 Ir their commits add is
+inside that.
+
+**A `--decks sealed --games 1` absolute moves with the size of the binary, not
+just with the deck builder.** Two commits that touch neither `recommend.rs`
+nor `selfplay.rs` moved it 37 k. Re-read the base after any rebase before
+quoting a delta on this workload.
 
 **Fifty-seventh pass, base `28ae2416` (pass 56's tip) vs its own tip
 `6c5dd0ab`.** Five commits in two classes. **The simulator's two largest
@@ -1777,21 +1794,39 @@ The pile-builder records `(index, produces)` per land as it goes, the
 dual test becomes two `ColorSet` mask tests instead of an iterator over the
 build's colours, and the removal is one gap-copy over the tail.
 
+**(E) — the copy cap counted copies of a card in a `HashMap` keyed by the
+card, per shape. -7.782 %, the pass's biggest row and it was not in the plan.**
+The tip's own self-cost table put `suggest_main_deck_shape::take` at 7.85 %
+(24,147 calls at **76.7 Ir**, nearly all of it the `entry()` probe) — a row
+that only became visible because (C) gave the funnel a name. The counter's key
+is the card, and **the pool's distinct-card partition is invariant across
+every shape**, exactly like the briefs, the scores and the sort order this
+pass and pass 56 hoisted. `PoolScores` gains a dense id per distinct factory,
+the counter becomes a `Vec<u8>` indexed by it, and both walk paths hand `take`
+a pick index instead of a factory. `take` no longer has a row at all: it
+inlines back into `build_shape`, which grows 248 k against the 1.85 M that
+came off.
+
+**The generalisation, and it is the pass's whole shape in one line: every
+per-shape data structure in this builder was keyed by something the *pool*
+determines.** Briefs (pass 54), scores (pass 56), the sort order (C), the land
+index (D) and now the copy-cap counter. When the next per-shape allocation
+shows up, ask what its key varies with before costing it.
+
 **What the pass leaves behind, by self cost of `--decks sealed --games 1` at
 the tip** (`build_shape` is still the residual and still diffuse):
 
-| row | % | note |
+| row | % of 21,774,018 | note |
 |---|---|---|
-| `build_shape` | **21.82** | was 22.5 % of a bigger total; `suggest_main_deck_shape` + `assemble_lands` inlined into it |
-| `__memcpy` | 8.76 | still mostly the twelve pools' definitions being built once |
-| `suggest_main_deck_shape::take` | **7.85** | 24,147 calls at 76.7 Ir — the copy-cap funnel, and most of it is the `HashMap` probe. It only has a row at all because (C) gave it a name |
-| allocator | ~13.6 | `_int_malloc` 6.37, `_int_free` 3.13, `malloc` 2.57, `free` 1.55 |
-| `score_brief_with_colors` | 6.29 | `static_build_score`'s, 684 x ~23 main cards, and `main_colors` really does vary per shape |
-| `static_build_score` | 2.71 | |
-| `small_sort_network` | 2.53 | down from ~8 % across three sort rows: what is left is (C)'s two or three orders per pool, 24 `OnceCell::try_init` calls at 26,036 Ir |
-| `_dl_relocate_object` | 2.31 | process startup, on a workload this short |
-| `HashMap::insert` | 2.29 | the copy-cap counts, again |
-| `assemble_lands` | 2.02 | was 6.2 % on the `Vec::retain` row alone |
+| `build_shape` | **24.77** | diffuse; `suggest_main_deck_shape`, `take` and `assemble_lands` all inline into it now |
+| `__memcpy` | 9.49 | still mostly the twelve pools' definitions being built once |
+| `score_brief_with_colors` | 6.81 | `static_build_score`'s, 684 x ~23 main cards, and `main_colors` really does vary per shape |
+| allocator | ~14.1 | `_int_malloc` 5.95, `_int_free` 3.48, `malloc` 2.64, `free` ~2 |
+| `Map::fold'2` | 5.88 | |
+| `static_build_score` | 2.94 | 684 calls |
+| `small_sort_network` | 2.74 | down from ~8 % across three sort rows: what is left is (C)'s two or three pool-wide orders, 24 `OnceCell::try_init` calls at 26,036 Ir |
+| `_dl_relocate_object` | 2.52 | process startup; a training actor never pays it |
+| `HashMap::insert` | 2.49 | **not the copy cap any more** — `basic_split`'s `HashMap<Color, u32>` return and `PoolScores`' one-per-pool id map |
 
 ```text
                           base (c18552fd)   (A)          (B)          (C)          tip (D)
@@ -4042,15 +4077,14 @@ pass 56's is one level up — **ask what varies with the shape**; pass 58 is
 that question asked of the three things pass 56 left (the splash ranker, the
 score sort, the land walk) and the answer was "nothing" all three times.
 
-**The one thing that has not been asked of it yet is the copy-cap counter.**
-`suggest_main_deck_shape::take` is **7.85 % at the fifty-eighth tip** —
-24,147 calls at 76.7 Ir — and `HashMap::insert` another 2.29 %, all of it a
-`HashMap<CardFactory, u32>` built and probed per shape to count copies of a
-card. The pool's *distinct-card partition* is invariant across every shape
-like everything else here: a dense id per distinct factory in `PoolScores`
-turns the counter into a `Vec<u8>` indexed by it and takes the hash off the
-per-shape path entirely. Both walk paths would hand `take` a pick index
-rather than a factory. **Size it at ~8 % of the build and take it first.**
+**The copy-cap counter is PAID at the fifty-eighth pass's (E), -7.782 %**, and
+it is worth recording that this entry sized it at "~8 % of the build" off one
+self-cost row and the measurement agreed to the first decimal. What is left
+here is `build_shape`'s 24.77 % residual, which is the `allowed` filter chain
+and the two output piles and has been diffuse for three passes; `__memcpy`
+9.49 %, which is the twelve pools' definitions being built once; and
+`score_brief_with_colors` 6.81 %, whose colour argument genuinely varies per
+shape (one attempt on the scorer is refuted at +2.88 %).
 
 **The structural answer this entry used to propose — resolving a pool's
 definitions once into a `Vec<Arc<CardDefinition>>` and indexing it, a
@@ -4060,22 +4094,10 @@ should not be started.** The 4,096-slot direct-mapped front cache
 derived-facts memo (`9cc1175c`) took the re-derivation the index change
 would not have.
 
-What is left, by self cost of `--decks sealed --games 1` at the fifty-eighth
-tip. `generate_sos_pack`, `candidate_label` and `Vec::retain` are off the
-table entirely, and the sorts fell from ~8 % across three rows to one:
-
-| row | % | note |
-|---|---|---|
-| `build_shape` residual | **21.82** | diffuse, and it is `suggest_main_deck_shape` + `assemble_lands` inlined into it: the `allowed` filter chain and the two output piles |
-| allocator family | ~13.6 | `_int_malloc` 6.37, `_int_free` 3.13, `malloc` 2.57, `free` 1.55 |
-| `__memcpy` | 8.76 | still mostly the twelve pools' definitions being built once |
-| `suggest_main_deck_shape::take` | **7.85** | the copy-cap funnel — see above, and it is the next thing to take |
-| `score_brief_with_colors` | 6.29 | now `static_build_score`'s, not the pick loop's: 684 calls x ~23 main cards, and `main_colors` really does vary per shape. One attempt on the scorer is refuted (+2.88 %, see the Log) |
-| `static_build_score` | 2.71 | 684 calls at 2,981 Ir |
-| `small_sort_network` | 2.53 | what is left of the sorts: 24 `OnceCell::try_init` calls at 26,036 Ir, i.e. two or three pool-wide orders per pool |
-| `_dl_relocate_object` | 2.31 | process startup; on a workload this short it is a real row and a training actor never pays it |
-| `HashMap::insert` | 2.29 | the copy-cap counts again |
-| `assemble_lands` | 2.02 | 684 calls at 4,030 Ir, and `basic_split` is most of what is left |
+The leftover table is in the fifty-eighth pass's Log entry, read at its tip
+(21,774,018). `generate_sos_pack`, `candidate_label`, `Vec::retain` and the
+copy-cap `HashMap` are all off it now, and the sorts fell from ~8 % across
+three rows to 2.74 % in one.
 
 **A second-order note the fifty-sixth pass's wall-clock pair exposed: the
 tip's process startup floor is 6.5 % higher than the base's** (0.3294 s
