@@ -245,13 +245,28 @@ pub(crate) mod cast_lock {
 /// don't re-clone it. `Mutex` (not `RefCell`) keeps `GameState: Sync` for the
 /// server's `Arc<GameState>` snapshot sink. Clones reset to unfrozen — a bot
 /// dry-run clone taken inside a freeze scope mutates, so it must re-gather.
+/// **`depth` and `gates` live outside the mutex, and that is a measured
+/// choice.** Every scoped read starts by asking "am I frozen", and the
+/// presence gates ask "what did this scope answer last time" — 550 k asks a
+/// cube run between them at the fifty-fifth tip, each paying an uncontended
+/// lock/unlock for two loads. Both fields describe state that cannot change
+/// while a reader holds `&GameState`: the depth is written only by that same
+/// thread's push/pop, and a gate slot caches an answer about
+/// `continuous_effects` + `battlefield`, which the `Arc<GameState>` snapshot
+/// sink's readers cannot mutate. `memo` and `perms` stay under the lock —
+/// they are built lazily and a torn read of them would matter.
 #[derive(Default)]
-pub(crate) struct LayerFreeze(std::sync::Mutex<LayerFreezeState>);
+pub(crate) struct LayerFreeze {
+    /// Nesting depth of active `with_frozen_layers` scopes; 0 = unfrozen.
+    depth: std::sync::atomic::AtomicU32,
+    /// Per-scope presence-gate answers: 0 unset, 1 false, 2 true. See
+    /// [`TypeGate`], and [`LayerFreezeState::end_of_scope`] for the clear.
+    gates: [std::sync::atomic::AtomicU8; TypeGate::COUNT],
+    state: std::sync::Mutex<LayerFreezeState>,
+}
 
 #[derive(Default)]
 struct LayerFreezeState {
-    /// Nesting depth of active `with_frozen_layers` scopes; 0 = unfrozen.
-    depth: u32,
     /// Lazily-gathered effect set, populated on the first computed read
     /// inside a scope and cleared when the outermost scope exits.
     memo: Option<std::sync::Arc<Vec<ContinuousEffect>>>,
@@ -261,18 +276,18 @@ struct LayerFreezeState {
     /// Short — one entry per permanent actually asked about — so a linear
     /// scan beats hashing. Cleared with `memo`.
     perms: Vec<(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>)>,
-    /// The layer-4 type-family presence gates for this scope, by the same
-    /// argument as `memo`: each is two whole-collection walks whose inputs
-    /// (`continuous_effects`, `battlefield`) cannot change while frozen, so
-    /// the second ask is the first answer. The shape it exists for: at the
-    /// fiftieth pass's (D) tip, `evaluate_requirement_static`'s card-type
-    /// gate made 15,096 of the walk's 34,906 calls, ~5 per target
-    /// enumeration and every one the same answer. Cleared with `memo`.
-    gates: [Option<bool>; TypeGate::COUNT],
 }
 
 /// The layer-4 type families with a presence gate, and the slot each one
 /// memoizes into inside a freeze scope.
+///
+/// A slot holds this scope's answer, by the same argument as
+/// [`LayerFreezeState::memo`]: each gate is two whole-collection walks whose
+/// inputs (`continuous_effects`, `battlefield`) cannot change while frozen,
+/// so the second ask is the first answer. The shape it exists for: at the
+/// fiftieth pass's (D) tip, `evaluate_requirement_static`'s card-type gate
+/// made 15,096 of the walk's 34,906 calls, ~5 per target enumeration and
+/// every one the same answer.
 #[derive(Clone, Copy)]
 pub(crate) enum TypeGate {
     Card = 0,
@@ -286,7 +301,45 @@ impl TypeGate {
 
 impl LayerFreeze {
     fn lock(&self) -> std::sync::MutexGuard<'_, LayerFreezeState> {
-        self.0.lock().unwrap_or_else(|e| e.into_inner())
+        self.state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Nesting depth, without the lock. `Relaxed` throughout: the only
+    /// writer of a given state's depth is the thread that pushed the scope.
+    fn depth(&self) -> u32 {
+        self.depth.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// `depth += 1`, returning nothing — the caller only ever needs "we are
+    /// now frozen".
+    fn push(&self) {
+        self.depth.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// `depth -= 1`, `true` when this closed the outermost scope and the
+    /// caller must clear the memos.
+    fn pop(&self) -> bool {
+        self.depth.fetch_sub(1, std::sync::atomic::Ordering::Relaxed) == 1
+    }
+
+    /// The presence gate's answer for this scope, if it has one.
+    fn gate(&self, gate: TypeGate) -> Option<bool> {
+        match self.gates[gate as usize].load(std::sync::atomic::Ordering::Relaxed) {
+            1 => Some(false),
+            2 => Some(true),
+            _ => None,
+        }
+    }
+
+    fn set_gate(&self, gate: TypeGate, answer: bool) {
+        self.gates[gate as usize]
+            .store(1 + answer as u8, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn clear_gates(&self) {
+        for g in &self.gates {
+            g.store(0, std::sync::atomic::Ordering::Relaxed);
+        }
     }
 }
 
@@ -301,7 +354,6 @@ impl LayerFreezeState {
     fn end_of_scope(&mut self) {
         self.memo = None;
         self.perms.clear();
-        self.gates = [None; TypeGate::COUNT];
     }
 }
 
@@ -8277,20 +8329,13 @@ impl GameState {
     /// reads can change while frozen. A family that does not hold that
     /// property does not belong in [`TypeGate`].
     fn type_gate(&self, gate: TypeGate, walk: impl FnOnce() -> bool) -> bool {
-        let frozen = {
-            let st = self.layer_freeze.lock();
-            if st.depth > 0 {
-                if let Some(v) = st.gates[gate as usize] {
-                    return v;
-                }
-                true
-            } else {
-                false
-            }
-        };
+        let frozen = self.layer_freeze.depth() > 0;
+        if frozen && let Some(v) = self.layer_freeze.gate(gate) {
+            return v;
+        }
         let answer = walk();
         if frozen {
-            self.layer_freeze.lock().gates[gate as usize] = Some(answer);
+            self.layer_freeze.set_gate(gate, answer);
         }
         answer
     }
@@ -8490,16 +8535,15 @@ impl GameState {
     /// reuse the outer memo. Use this around any read-only loop that filters
     /// or inspects many permanents.
     pub fn with_frozen_layers<R>(&self, f: impl FnOnce(&Self) -> R) -> R {
-        self.layer_freeze.lock().depth += 1;
+        self.layer_freeze.push();
         // Decrement on drop (not after `f`) so a panicking assertion inside
         // a test closure can't leave a stale memo behind.
         struct Unfreeze<'a>(&'a GameState);
         impl Drop for Unfreeze<'_> {
             fn drop(&mut self) {
-                let mut st = self.0.layer_freeze.lock();
-                st.depth -= 1;
-                if st.depth == 0 {
-                    st.end_of_scope();
+                if self.0.layer_freeze.pop() {
+                    self.0.layer_freeze.clear_gates();
+                    self.0.layer_freeze.lock().end_of_scope();
                 }
             }
         }
@@ -8512,15 +8556,14 @@ impl GameState {
     /// [`with_frozen_layers`](Self::with_frozen_layers) (panic-safe) except
     /// on recursion-hot paths where the closure+guard frame cost matters.
     pub(crate) fn freeze_layers_push(&self) {
-        self.layer_freeze.lock().depth += 1;
+        self.layer_freeze.push();
     }
 
     /// Exit a freeze scope opened by [`freeze_layers_push`](Self::freeze_layers_push).
     pub(crate) fn freeze_layers_pop(&self) {
-        let mut st = self.layer_freeze.lock();
-        st.depth -= 1;
-        if st.depth == 0 {
-            st.end_of_scope();
+        if self.layer_freeze.pop() {
+            self.layer_freeze.clear_gates();
+            self.layer_freeze.lock().end_of_scope();
         }
     }
 
@@ -8533,11 +8576,12 @@ impl GameState {
     /// is pure loss under this and skips itself; `false` keeps the gate, so
     /// this is only ever a cost question, never a correctness one.
     fn layers_memoized(&self) -> bool {
-        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
+            || self.layer_freeze.depth() == 0
+        {
             return false;
         }
-        let st = self.layer_freeze.lock();
-        st.depth > 0 && st.memo.is_some()
+        self.layer_freeze.lock().memo.is_some()
     }
 
     fn frozen_effects(&self) -> Option<std::sync::Arc<Vec<ContinuousEffect>>> {
@@ -8546,14 +8590,11 @@ impl GameState {
         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
             return None;
         }
-        {
-            let st = self.layer_freeze.lock();
-            if st.depth == 0 {
-                return None;
-            }
-            if let Some(fx) = &st.memo {
-                return Some(fx.clone());
-            }
+        if self.layer_freeze.depth() == 0 {
+            return None;
+        }
+        if let Some(fx) = &self.layer_freeze.lock().memo {
+            return Some(fx.clone());
         }
         // First computed read in this scope: gather outside the lock (the
         // gather itself re-enters `frozen_effects` via guarded eval paths).
@@ -11977,17 +12018,17 @@ impl GameState {
             let card = self.battlefield.iter().find(|c| c.id == id)?;
             return Some(std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &[])));
         }
-        // One lock covers both memos: a hit costs exactly one acquisition,
-        // a miss two, and only the scope's first computed read pays three.
+        // Unfrozen — the common case off a scoped loop — takes no lock at
+        // all: `depth` is an atomic beside the mutex. Inside a scope one lock
+        // covers both memos, so a hit costs exactly one acquisition, a miss
+        // two, and only the scope's first computed read pays three.
         let mut frozen_fx = None;
-        {
+        if self.layer_freeze.depth() > 0 {
             let st = self.layer_freeze.lock();
-            if st.depth > 0 {
-                if let Some((_, cp)) = st.perms.iter().find(|(k, _)| *k == id) {
-                    return Some(cp.clone());
-                }
-                frozen_fx = Some(st.memo.clone());
+            if let Some((_, cp)) = st.perms.iter().find(|(k, _)| *k == id) {
+                return Some(cp.clone());
             }
+            frozen_fx = Some(st.memo.clone());
         }
         let card = self.battlefield.iter().find(|c| c.id == id)?;
         if let Some(memo) = frozen_fx {
@@ -11997,9 +12038,8 @@ impl GameState {
                 Some(fx) => fx,
                 None => {
                     let fx = std::sync::Arc::new(self.gather_continuous_effects());
-                    let mut st = self.layer_freeze.lock();
-                    if st.depth > 0 {
-                        st.memo = Some(fx.clone());
+                    if self.layer_freeze.depth() > 0 {
+                        self.layer_freeze.lock().memo = Some(fx.clone());
                     }
                     fx
                 }
@@ -12007,9 +12047,8 @@ impl GameState {
             let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &fx));
             // Re-check: an entry stored after the scope closed would outlive
             // the state it describes, and nothing would clear it.
-            let mut st = self.layer_freeze.lock();
-            if st.depth > 0 {
-                st.perms.push((id, cp.clone()));
+            if self.layer_freeze.depth() > 0 {
+                self.layer_freeze.lock().perms.push((id, cp.clone()));
             }
             return Some(cp);
         }

@@ -1456,7 +1456,8 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-One commit, base `bf4917a5`, one workload boundary:
+Two commits, base `bf4917a5`. (A) is the pass's finding and (B) pays for
+the sliver (A) cost the other pools:
 
 ```text
                   base (bf4917a5)   tip (8779aa9f)
@@ -1529,6 +1530,43 @@ it reads 356 Ir, and that is where the residual `fixed` cost is.
 against -0.84 M of `dying_snapshot`'s avoided gathers. The candidates list
 called (-37) "cube pool only" and that reading is confirmed, in both
 directions.
+
+**REFUTED in the same sitting, and it is the gate rule's second half with a
+new face: `board_keyword_matching`'s presence gate does *not* belong on its
+frozen leg.** The unfrozen leg has asked `keyword_grant_in_scope` since pass
+48; the frozen leg calls `frozen_effects()`, which returns `Some` inside a
+scope but **gathers to fill the memo on the scope's first computed read** —
+so a caller inside a fresh scope pays exactly the gather the gate exists to
+avoid. On cube that is 10,374 of the run's 59,470 gathers, all of them
+`declare_attackers_banded` / `declare_blockers`. Putting the gate there
+(guarded by `!layers_memoized()`, the established idiom) measured **cube
++0.40 %, fixed +0.66 %** and was reverted.
+
+**Why, and it is the rule to carry:** filling that memo is not waste, it is
+*prepaid work for the rest of the scope*. The gate only pays where the
+gather would otherwise be built and thrown away. `layers_memoized()` answers
+"is it already built"; nothing answers "will anyone else in this scope read
+it", and that is the question. Ask it by hand before proposing this shape
+again.
+
+**(B) The freeze scope's depth and its gate slots come out of the mutex.
+`fixed` -0.276 %, `cube` -0.709 %, `sos` -0.365 % — a win on every pool,
+and the only one this pass has that is not pool-shaped.** (A) left
+`creature_type_change_in_scope` at 0.93 % self on cube: 410,900 calls at
+**75 Ir**, almost all of them a memo hit, and a memo hit was an uncontended
+`Mutex` lock/unlock around two loads. `computed_permanent` (267,116 calls),
+`frozen_effects` and `layers_memoized` all opened with the same
+lock-to-read-`depth`.
+
+`LayerFreeze` is now `{ depth: AtomicU32, gates: [AtomicU8; 3], state:
+Mutex<{memo, perms}> }`. `type_gate` takes no lock at all; every other site
+answers "am I frozen" from the atomic and locks only when it is. Sound by
+the same argument the mutex was there for in the first place — it exists to
+keep `GameState: Sync` for the server's `Arc<GameState>` snapshot sink, and
+both moved fields describe things a `&GameState` holder cannot change: the
+depth is written only by the thread that pushed the scope, and a gate slot
+caches an answer about `continuous_effects` + `battlefield`. `memo` and
+`perms` stay under the lock, where a torn read would matter.
 
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —
@@ -3227,6 +3265,50 @@ deck construction (96 % of a deck build, and a training actor builds two
 decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
+
+**(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-FIFTH TIP (3,332 M),
+and this is where the next pass should start.** The cube profile moved 17 %
+under it, so every share below is fresh. Self cost:
+
+| row | % | note |
+|---|---|---|
+| `gather_continuous_effects_inner` | **5.88** | 59,470 gathers, 384 M inclusive (**11.5 %**). The single largest subtree |
+| `__memcpy_avx_unaligned_erms` | 5.31 | |
+| `dispatch_triggers_for_events` | 4.75 | measured diffuse at the 49th; not re-read here |
+| `evaluate_requirement_static_hinted` | 3.32 + 1.35 | two arities |
+| allocator family | ~11 | `_int_free` 3.74, `malloc` 2.79, `_int_malloc` 2.60, `free` 2.30 |
+| `Arc::clone_from_ref_in` | 2.92 | |
+| `creature_type_change_in_scope` | 0.93 | **the fifty-fifth pass's own gate**, 410,900 calls at 75 Ir — a mutex lock/unlock per memo hit. An atomic depth mirror on `LayerFreeze` would take most of it, and `card_type_change_in_scope` and `computed_permanent`'s own depth probe with it |
+
+**The gather is the target, and the question is scope count, not gating.**
+59,470 gathers for six games; a freeze scope's *first* computed read gathers
+to fill its memo, so the count is roughly "how many scopes, plus every
+unscoped read". Gating that first read is refuted (see the fifty-fifth
+pass's Log). What is unread is the gather's own internals: by callee,
+`Vec::from_iter` is **151,660 calls / 89.2 M / 2.7 % of the program** plus
+28.2 M at the second arity, with `grow_one` 6.2 M and `__rust_alloc` 46,978
+— **~137 M of the gather's 384 M is allocation**, and it is 2.55
+`from_iter`s per gather. Which lines those are needs `profiling-lines` +
+`cg_lines.py --in gather_continuous_effects_inner`; nobody has run it.
+
+**Where the gathers come from** (`cg_contexts.py`, `--separate-callers=3`,
+cube, the fifty-fifth tip — the top of 74 contexts):
+
+```text
+6,098  computed_permanent <- resolve_combat <- advance_step
+5,976  frozen_effects <- board_keyword_in_scope <- declare_attackers_banded
+5,166  computed_permanent <- permanent_value_with <- eval_material_inner
+5,114  compute_permanents <- combat_damage_computed <- resolve_combat
+4,398  frozen_effects <- board_keyword_in_scope <- declare_blockers
+3,828  computed_permanent <- with_frozen_layers <- declare_blockers
+2,588  computed_permanent <- resolve_combat <- submit_decision
+2,000  check_state_based_actions <- resolve_combat <- advance_step
+```
+
+**Combat is over a third of it** — `resolve_combat` accounts for 13,212
+between three of those rows, and it is `&mut self`, so a freeze scope is not
+the tool. The `declare_attackers` / `declare_blockers` rows are scope-firsts
+and their gather is prepaid work for the rest of the scope, not waste.
 
 **(-39) THE DECK BUILDER — LARGELY PAID at the fifty-fourth pass: 111.8 M
 -> 34.9 M Ir for twelve pools + twelve builds, -68.80 %.** It was ~28 % of
