@@ -22,17 +22,21 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 numbers.** Two ran this pass and both opened with the same vocab fix; read
 the log before opening a NEXT item.
 
-1. **Pass 55, eight commits: `--decks cube` 4,012 M -> 3,199 M Ir
-   (-20.3 %), -5.3 % wall clock; `sos` -1.41 %, `fixed` -0.36 %.** Tip
-   (`353273ef`): fixed 1,243,883,316 / cube 3,199,249,495 / sos
-   1,735,661,160. `sealed` 3,489,058,164 and deck-build 34,607,871 were read
-   at (B) and not since — (C)-(H) do not touch that path.
-2. **The pass's device, and it found six of the eight: the code built the
+1. **Pass 55, ten commits: `--decks cube` 4,012 M -> 3,182 M Ir (-20.7 %),
+   -6.2 % wall clock; `sos` -2.11 % / **-3.3 % wall**, `fixed` -1.08 %.**
+   Tip (`ca16b33a`): fixed 1,234,886,711 / cube 3,181,765,191 / sos
+   1,723,306,764. `sealed` 3,489,058,164 and deck-build 34,607,871 were read
+   at (B) and not since — (C)-(J) do not touch that path.
+2. **The pass's device, and it found eight of the ten: the code built the
    answer before asking whether anyone wanted it.** A gathered layer view a
    presence gate answers, a cloned tree the caller discards, an unshared
    zone with nothing to restore, a `battlefield_find` for a card the caller
-   is holding. In four of them the cheap question was already a function in
-   the file.
+   is holding, two `collect()`s that are empty on every board, two `Vec`s
+   and a sort to ask "has anyone won". In five the cheap question was
+   already a function in the file.
+   **The two that pay on `fixed` are the last two**, and they are the same
+   question asked of a `collect()`: not "how big is it" but "how often is it
+   empty". `cg_edges.py --callers __rust_alloc` by call count is the list.
 3. **Candidates:** (-40) is the fresh cube profile — the gather is still the
    largest subtree (5.9 % self / 11.5 % inclusive, 59,470 gathers) and its
    `Vec::from_iter` traffic (204,138 collects) has never been read by line.
@@ -100,15 +104,21 @@ Log with its numbers; read the entry before re-proposing any of them.
   question, a gate that gathered to prove a negative, a freeze scope opened
   for a closure that returns immediately, two clones handed to a walk that
   skips.
-- **Build the answer *after* asking whether anyone wants it** (pass 55, six
-  of its eight commits, -20.3 % of the cube pool between them). A gathered
+- **Build the answer *after* asking whether anyone wants it** (pass 55,
+  eight of its ten commits, -20.7 % of the cube pool between them). A gathered
   layer view a presence gate answers; a requirement tree cloned to build a
   residual the caller discards on 99.3 % of calls; a CoW zone unshared to
   restore flags that never moved; a `battlefield_find` for the card the
-  caller is iterating. **In four of the six the cheap question was already a
-  function in the file** — `requirement_mentions_power`,
+  caller is iterating. **In five of the eight the cheap question was already
+  a function in the file** — `requirement_mentions_power`,
   `creature_type_change_in_scope`, `evaluate_requirement_static_on`. Grep
   for the cheap form before writing one.
+- **Ask a `collect()` how often it is *empty*, not how big it is** (pass 55,
+  the two commits that pay on the bench pool). An empty `collect()` still
+  calls `Vec::from_iter`; two per gather and two per state-based-action
+  sweep were -0.7 % of `--decks fixed` between them. The worklist is
+  `cg_edges.py --callers __rust_alloc` ranked by call count, then `grow_one`
+  one level up.
 - **Rank a lazy cell by what is under it, not by its own row** (pass 55, and
   it was 16.9 % of the cube pool). Candidate (-37) was sized at
   `computed_permanent`'s 4.14 % + `compute_permanent_pass`'s 2.97 % — self
