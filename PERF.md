@@ -558,8 +558,21 @@ cleanup-step seat reset **51,142 -> 9,198 (-82.0 %)**,
 **1,605,824,543 -> 1,604,031,880, -0.112 %**, `--decks cube`
 **2,885,591,189 -> 2,882,468,355, -0.108 %**. **Program-wide the three
 CoW-handle commits take `make_mut` on `sos` from 582,552 calls to 475,676,
--18.3 %**; what is left, and the reason half of it is *not* this device, is
-the new candidate (-43).
+-18.3 %.**
+
+**And a tenth, a second `--callers make_mut` sweep for the cheap-per-call
+rows.** `finalize_cast`'s ten per-seat cast tallies take three bindings (a
+`&mut self` call and two `GameState` field writes split the run)
+**46,992 -> 26,474**, and `on_left_battlefield`'s six unconditional
+`cast_from_*` clears take the gate-then-bind shape already used by the four
+`CardCold` clears above them, **24,352 -> 8,494**. `--decks sos`
+**1,604,031,880 -> 1,603,018,685, -0.063 %**, `--decks cube`
+**2,882,468,355 -> 2,880,726,428, -0.060 %**; program-wide `make_mut`
+**475,676 -> 439,300, -7.6 %**.
+
+**So across the four CoW-handle commits `make_mut` on `sos` goes
+582,552 -> 439,300, -24.6 %**; what is left, and the reason half of it is
+*not* this device, is the new candidate (-43).
 
 **Both game pools read slightly *down* rather than flat, and the reason is
 the binary.** No commit here is on the game loop; `_dl_relocate_object` is
@@ -573,7 +586,7 @@ turns_per_game   27.53   -> 27.53
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
 peak_rss_mib     22.0
-suite            18,728 passed / 0 failed / 5 ignored over 22 binaries (A-D, at (E), and at each of the three CoW commits)
+suite            18,728 passed / 0 failed / 5 ignored over 22 binaries (A-D, at (E), and at each of the four CoW commits)
 golden traces    7 passed, all unchanged
 clippy           `--workspace --all-targets` clean, all eight crates
 throughput       119.8 games/s warm (`selfplay_train --actors 3 --games 120
@@ -4086,8 +4099,8 @@ device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
 **(-43) THE CoW-HANDLE FAMILY, READ FROM THE TOP AT THE FIFTY-EIGHTH TIP.
-`make_mut` on `sos` is 475,676 calls after three commits took it down from
-582,552 (-18.3 %), and the table below is where the rest of it is.** This
+`make_mut` on `sos` is 439,300 calls after four commits took it down from
+582,552 (-24.6 %), and the table below is where the rest of it is.** This
 is (-42) generalised: `Player`, `CardInstance` and `CowBox` are all CoW
 handles whose `DerefMut` is `Arc::make_mut`, so a run of writes through one
 pays an unshare per write.
@@ -4096,14 +4109,14 @@ pays an unshare per write.
 callers of make_mut, --decks sos, at the fifty-eighth tip
   calls        Ir        Ir/call  caller
   52,110   12,005,430      230    cast_spell_with_convoke
-  46,992    2,315,765       49    finalize_cast
   41,200    4,572,433      111    do_untap            (paid; residual is singletons)
   37,532    3,959,023      105    resolve_top_of_stack_inner
   30,208   13,848,574      458    activate_ability_inner
   28,722    9,731,410      339    declare_attackers_banded
+  26,474    1,700,225       64    finalize_cast       (paid, 46,992 -> 26,474)
   26,538      875,532       33    resolve_combat
-  24,352      700,120       29    on_left_battlefield
- 188,022         —          —     60 more rows (39.5 %)
+   8,494      224,380       26    on_left_battlefield (paid, 24,352 -> 8,494)
+ 222,990         —          —     62 more rows (50.8 %)
 ```
 
 **Read the Ir/call column before picking a row, because it splits the family
@@ -4121,7 +4134,9 @@ holds this `Arc`, and does the write have to happen while they do"** — a
 snapshot, a `clone()` kept across the call, or a handle parked in a local.
 Size the prize off the Ir column, not the calls column: the two clone-shaped
 rows are 25.9 M Ir together, 1.6 % of `sos`, against 8.5 M for the whole
-bind-once half.
+bind-once half. The bind-once half is now largely taken — four commits, six
+sites, `make_mut` -24.6 % — and `resolve_top_of_stack_inner` (105 Ir/call)
+and `resolve_combat` (33) are what is left of it.
 
 **Then the family was read one level further down, and the real number is
 much larger than the caller table suggests. `make_mut` genuinely *clones*

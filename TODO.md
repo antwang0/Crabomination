@@ -28,8 +28,10 @@ are continuing; every number below is written up there in full.
 2. **Then (-41)** — `available_mana`'s grant walk, cube only, worth zero on
    `sos`.
 3. **Pass 58 is done and paid**: five deck-builder commits (`sealed` **-17.77
-   %**) plus three CoW-handle commits (`sos` -0.49 %, `make_mut` 582,552 ->
-   475,676). (-42), the builder and (-40) are closed.
+   %**) plus four CoW-handle commits (`sos` -0.55 %, `make_mut` 582,552 ->
+   439,300, **-24.6 %**). (-42), the builder and (-40) are closed. The
+   bind-once half of (-43) is largely taken; `resolve_top_of_stack_inner`
+   and `resolve_combat` are what is left of it.
 4. **Left from pass 57:** the placement (B)'s variant table did not try,
    ~0.25 % of `fixed` — a 2,000-line re-indent of 38 blocks. When it's quiet.
 5. **Housekeeping.** TODO 1.0k, PERF 6.3k; ENGINE_BACKLOG 4.9k /
