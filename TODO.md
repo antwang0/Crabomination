@@ -52,15 +52,17 @@ rounds per commit.**
    writing code — the row below it in that same table (`has_keyword`,
    494,394 calls at a flat 46 Ir) is diffuse and was not taken. Write-up in
    "Which pool a change moves".
-3. **Take (-47) first — it is the only fresh one, and half of it is
-   low-risk.** `pick_blocks` is **120.2 M / 4.34 % of cube** inclusive, and
-   `blocker_can_block_attacker` builds the *attacker's* computed view once
+3. **(-47) is the only fresh candidate and it is small: ~0.24 % of cube.**
+   `blocker_can_block_attacker` resolves the *attacker's* computed view once
    per candidate blocker (56,748 `computed_permanent` calls for 28,374
-   checks). Two shapes: hoisting the attacker view is ~0.24 % of cube but
-   touches seven bot call sites that decide **block legality** — take it
-   only with a three-pool ladder printout diff; making the `layer_freeze`
-   memo a map instead of a mutex + linear scan has no behavioural exposure
-   and helps every `computed_permanent` caller. **Do the memo half first.**
+   checks); hoisting it needs a `_with` variant through seven `bot.rs` call
+   sites that decide **block legality**, so take it only with a three-pool
+   ladder printout diff. **Read its two refutations before proposing
+   anything near it** — the `layer_freeze` memo is a `Vec` on purpose (its
+   own doc says so, and the mutex is 26 Ir a call), and the bot's scoring
+   loop is *already* frozen. The 7.6 % of cube under `computed_permanent`
+   is one gather per freeze scope times the number of scopes, i.e. (-13)'s
+   cloned candidate states, which was costed and refused.
 4. **Then (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of `sos`, paying
    side unread. **The bind-once half is done; don't grind it.** Then (-44)
    (`__memcpy`, allocator half now closed) and (-45) (the cost of asking).
