@@ -1784,6 +1784,20 @@ when one team survives, every alive seat is on it, so "lowest alive seat on
 the winning team" *is* "first alive seat in seat order", which the walk has
 already found.
 
+**(K) The same question of combat's per-attacker collects. -0.069 % /
+-0.062 % / -0.051 %, and it is where the class stops paying.** Three
+`collect()`s run once per declared attacker (`AttackCostBounce`'s filters,
+`AttackCostSacrifice`'s costs) or once per declaration
+(`tap_another_filters`, which is also asked per declared *blocker*), and all
+three are empty on every board these pools play. They exist only so the
+borrow of the computed keyword slice ends before the `&mut self` below, so
+the fix is a presence scan over that same slice.
+
+**Recorded at 0.06 %, which is the useful part**: the `from_iter` rows left
+after (I)-(K) are `compute_permanent_pass`'s `sorted` (75,260, and it is
+never empty — it is the layer walk's own input) and a tail of sub-0.1 %
+sites. The always-empty-collect class is worked out on these three pools.
+
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —
 `SetArtifactSubtypes` / `AddArtifactSubtype` fold into a battlefield-shape

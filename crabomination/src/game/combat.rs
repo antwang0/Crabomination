@@ -13,6 +13,13 @@ type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, boo
 /// The `AttackBlockCostTapAnother` filters carried by a computed keyword list
 /// (Hollow Warrior) — one helper must be tapped per entry.
 fn tap_another_filters(kws: &[Keyword]) -> Vec<crate::card::SelectionRequirement> {
+    // Asked once per declared attacker and once per declared blocker, and
+    // empty on every board that plays none of the handful of cards with the
+    // keyword — but an empty `collect()` still calls `Vec::from_iter`. The
+    // presence scan is over the same slice the `filter_map` would walk.
+    if !kws.iter().any(|k| matches!(k, Keyword::AttackBlockCostTapAnother(_))) {
+        return Vec::new();
+    }
     kws.iter()
         .filter_map(|k| match k {
             Keyword::AttackBlockCostTapAnother(f) => Some((**f).clone()),
@@ -1050,13 +1057,28 @@ impl GameState {
         {
             let mut spent: Vec<CardId> = Vec::new();
             for atk in &attacks {
-                let filters: Vec<crate::card::SelectionRequirement> = computed_kw(atk.attacker)
-                    .iter()
-                    .filter_map(|k| match k {
-                        Keyword::AttackCostBounce(f) => Some((**f).clone()),
-                        _ => None,
-                    })
-                    .collect();
+                // The `collect` exists only so the keyword borrow ends before
+                // the `&mut self` below; almost no attacker carries the
+                // keyword, and an empty `collect()` still calls
+                // `Vec::from_iter`. Ask the borrowed slice first — this and
+                // its `AttackCostSacrifice` twin are two `from_iter`s per
+                // declared attacker.
+                let filters: Vec<crate::card::SelectionRequirement> = if !computed_kw(
+                    atk.attacker,
+                )
+                .iter()
+                .any(|k| matches!(k, Keyword::AttackCostBounce(_)))
+                {
+                    Vec::new()
+                } else {
+                    computed_kw(atk.attacker)
+                        .iter()
+                        .filter_map(|k| match k {
+                            Keyword::AttackCostBounce(f) => Some((**f).clone()),
+                            _ => None,
+                        })
+                        .collect()
+                };
                 for f in filters {
                     let pick = self.battlefield.iter().find(|c| {
                         c.controller == p
@@ -1093,14 +1115,22 @@ impl GameState {
         {
             let mut spent: Vec<CardId> = Vec::new();
             for atk in &attacks {
-                let costs: Vec<(crate::card::SelectionRequirement, u32)> =
+                let costs: Vec<(crate::card::SelectionRequirement, u32)> = if !computed_kw(
+                    atk.attacker,
+                )
+                .iter()
+                .any(|k| matches!(k, Keyword::AttackCostSacrifice(..)))
+                {
+                    Vec::new()
+                } else {
                     computed_kw(atk.attacker)
                         .iter()
                         .filter_map(|k| match k {
                             Keyword::AttackCostSacrifice(f, n) => Some(((**f).clone(), *n)),
                             _ => None,
                         })
-                        .collect();
+                        .collect()
+                };
                 for (f, n) in costs {
                     for _ in 0..n {
                         let pick = self.battlefield.iter().find(|c| {
@@ -1129,7 +1159,14 @@ impl GameState {
 
         // CR 508.1g — Hollow Warrior's attack cost: tap an untapped matching
         // permanent that isn't itself attacking. One helper per such attacker.
-        {
+        // Same shape: `declared` is built for `find_tap_helper`, and no
+        // attacker carries a tap-another filter on any board the bench or the
+        // sealed pool plays.
+        if attacks.iter().any(|atk| {
+            computed_kw(atk.attacker)
+                .iter()
+                .any(|k| matches!(k, Keyword::AttackBlockCostTapAnother(_)))
+        }) {
             let declared: Vec<CardId> = attacks.iter().map(|a| a.attacker).collect();
             let mut tapped: Vec<CardId> = Vec::new();
             for atk in &attacks {
