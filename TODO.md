@@ -225,7 +225,7 @@ Log with its numbers; read the entry before re-proposing any of them.
   `push_ordered_trigger_candidates` on an empty batch (+7.3 % *and* a
   correctness bug — it owns the per-batch `died_card_snapshots.clear()`).
 - **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
-  crabomination_tests` is the gate (18,728 / 0 / 5 over 22 binaries at the
+  crabomination_tests` is the gate (18,728 / 0 / 5 over 14 test binaries at the
   fifty-sixth tip; ~25 min from cold). Workspace
   clippy needs `apt-get update && apt-get install -y libwayland-dev
   libasound2-dev libudev-dev libxkbcommon-dev`. Cold `profiling-fast` engine

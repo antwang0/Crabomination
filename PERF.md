@@ -607,7 +607,11 @@ turns_per_game   27.53   -> 27.53
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
 peak_rss_mib     22.0
-suite            18,728 passed / 0 failed / 5 ignored over 22 binaries (A-D, at (E), and at each of the four CoW commits)
+suite            18,728 passed / 0 failed / 5 ignored over **14** test binaries
+                 (A-D, at (E), and at each of the four CoW commits). The "22"
+                 this file has carried since the 18,712 era counts cargo's
+                 zero-test result lines too; the per-binary sum is 553 + 2 + 2
+                 + 6,087 + 1,724 + 370 + 3,464 + 1,858 + 1,813 + 649 + 2,206.
 golden traces    7 passed, all unchanged
 clippy           `--workspace --all-targets` clean, all eight crates
 throughput       119.8 games/s warm (`selfplay_train --actors 3 --games 120
