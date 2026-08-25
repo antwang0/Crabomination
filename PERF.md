@@ -341,7 +341,7 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`19b1c2dd`.** Two commits: **(A) the requirement walker's subtype arms stop
+`4c58c9c7`.** Two commits: **(A) the requirement walker's subtype arms stop
 gathering where the printed line answers**, and **(B) the freeze scope's
 depth and gate slots come out of the mutex** — (B) is what turns (A)'s
 0.1 % cost on the non-cube pools into a win on all three. Ir readings `profiling-fast
@@ -1463,7 +1463,7 @@ Two commits, base `bf4917a5`. (A) is the pass's finding and (B) pays for
 the sliver (A) cost the other pools:
 
 ```text
-                  base (bf4917a5)   tip (8779aa9f)
+                  base (bf4917a5)   (A) 8779aa9f
 --decks cube        4,012,095,058    3,332,029,985   -16.95 %
 --decks fixed       1,248,407,927    1,249,622,086    +0.097 %
 --decks sos         1,760,442,504    1,761,529,321    +0.062 %
