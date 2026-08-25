@@ -169,13 +169,15 @@ pub fn build_candidates_cfg(
     // `build_random_deck_from` — so enumerate it once for all `n`
     // candidates instead of per candidate. At `best_build_by`'s n = 32
     // (what `selfplay_train --use-deck-best` runs per side per game) that
-    // is 32 x ~26 `build_shape` calls replaced by ~26 + 32.
-    let shapes = crate::recommend::enumerate_candidates(pool, cfg);
+    // is 32 x ~26 `build_shape` calls replaced by ~26 + 32. The pool's
+    // `PoolScores` is invariant across both loops for the same reason.
+    let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2);
+    let shapes = crate::recommend::enumerate_candidates_with(&scores, cfg);
     let out: Vec<Vec<CardFactory>> = (0..n as u64)
         .map(|i| {
             let mut rng =
                 StdRng::seed_from_u64(seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(7));
-            crate::recommend::build_random_deck_from(&shapes, pool, cfg, &mut rng).cards
+            crate::recommend::build_random_deck_from(&shapes, &scores, cfg, &mut rng).cards
         })
         .collect();
     // The hoist is sound only while `enumerate_candidates` is a pure

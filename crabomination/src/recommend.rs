@@ -792,6 +792,17 @@ fn build_shape<R: Rng>(
 /// score, deduplicated by identical main-deck contents (a triple whose
 /// third color contributes nothing collapses into its pair).
 pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<CandidateBuild> {
+    enumerate_candidates_with(&PoolScores::new(pool, cfg.builder_v2), cfg)
+}
+
+/// [`enumerate_candidates`] against a prebuilt [`PoolScores`], for a caller
+/// that goes on to build more decks from the same pool: building one is a
+/// whole-pool walk, and everything downstream of the lattice reads the same
+/// shape-invariant facts.
+pub(crate) fn enumerate_candidates_with(
+    scores: &PoolScores<'_>,
+    cfg: &SimConfig,
+) -> Vec<CandidateBuild> {
     // (main colors, splash colors) shapes.
     let mut shapes: Vec<(Vec<Color>, Vec<Color>)> = Vec::new();
     for pair in color_subsets(&[2]) {
@@ -809,8 +820,6 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
     let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
     let mut out: Vec<CandidateBuild> = Vec::new();
     let mut seen_mains: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
-    // Invariant across the ~57 shapes below, and each of them rebuilt it.
-    let scores = PoolScores::new(pool, cfg.builder_v2);
     for (colors, splash_colors) in shapes {
         let Some(build) = build_shape(
             &colors,
@@ -818,7 +827,7 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
             (cfg.target_spells, cfg.total_lands, 0),
             cfg,
             &mut rng,
-            &scores,
+            scores,
         ) else {
             continue;
         };
@@ -844,8 +853,9 @@ pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, 
     // Same shape lattice as user candidates (pairs, splashes, 3/4/5-color).
     // A field that only ever builds pairs never bombs back at splash-shaped
     // candidates — inflating their measured win rates.
-    let shapes = enumerate_candidates(pulls, cfg);
-    build_random_deck_from(&shapes, pulls, cfg, rng)
+    let scores = PoolScores::new(pulls, cfg.builder_v2);
+    let shapes = enumerate_candidates_with(&scores, cfg);
+    build_random_deck_from(&shapes, &scores, cfg, rng)
 }
 
 /// [`build_random_deck`] with the shape lattice already enumerated.
@@ -860,9 +870,13 @@ pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, 
 /// time: n x 26 `build_shape` calls where 26 + n do. Everything that varies
 /// per candidate — the softmax roll, the spell/land split, the pick jitter —
 /// is downstream of the lattice and reads only `rng`.
+///
+/// `scores` is that pool's [`PoolScores`], for the same reason:
+/// `enumerate_candidates` had to build one to produce `shapes`, and this
+/// function built a second one per candidate.
 pub(crate) fn build_random_deck_from<R: Rng>(
     shapes: &[CandidateBuild],
-    pulls: &[CardFactory],
+    scores: &PoolScores<'_>,
     cfg: &SimConfig,
     rng: &mut R,
 ) -> GauntletDeck {
@@ -895,14 +909,13 @@ pub(crate) fn build_random_deck_from<R: Rng>(
     // field soft and inflated every candidate's measured win rate.
     let (spells, lands) = sample_deck_split(cfg, rng);
     let noise = (t * 2.0).round() as i32;
-    let scores = PoolScores::new(pulls, cfg.builder_v2);
     let build = build_shape(
         &chosen.colors,
         &chosen.splash,
         (spells, lands, noise),
         cfg,
         rng,
-        &scores,
+        scores,
     )
     .unwrap_or_else(|| {
         // The noisy rebuild can only fail if the shape was hollow —
@@ -914,7 +927,7 @@ pub(crate) fn build_random_deck_from<R: Rng>(
             (cfg.target_spells, cfg.total_lands, 0),
             cfg,
             rng,
-            &scores,
+            scores,
         )
         .expect("enumerated shape rebuilds")
     });
