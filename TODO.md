@@ -49,8 +49,12 @@ rounds per commit.**
 4. **Refuted this pass, do not re-take:** a presence bit belongs in
    `sba_board_scan` only when the question has no early exit of its own
    (+0.29 % on `fixed`; third loss for the fusion device in
-   `creature_death_possible` alone). And a collect whose drain touches `self`
-   is load-bearing — check that line before trying to remove one.
+   `creature_death_possible` alone). A collect whose drain touches `self` is
+   load-bearing — check that line before trying to remove one. And
+   `is_event_hardcoded`'s 0.38 % of `sos`, taken with per-event bitmasks,
+   read **+0.12 %**: see (-16), which now carries the first line profile of
+   `dispatch_triggers_for_events` on `sos` and the rule that goes with it —
+   *a line's Ir is not what removing the line would save.*
 5. **Sized and unclaimed:** `mint_token_onto_battlefield`, 370 calls /
    6,644,250 Ir (**0.43 %** of `sos`), still builds and copies a whole
    `CardDefinition` per token — wants a value-keyed memo, not worth a pass
@@ -90,6 +94,13 @@ Log with its numbers; read the entry before re-proposing any of them.
   contains. A presence question is paid on every sweep or dispatch whether or
   not it can fire. `cg_edges.py --callers SpecFromIterNested` **ranked by
   calls, not Ir** is the table that finds them; PERF's (-44) has the rest.
+- **A line profile's row is what that source construct's instructions cost,
+  not what removing it would save** (pass 61, +0.12 % and reverted).
+  `cg_lines.py` put `is_event_hardcoded`'s `match ev` at 0.38 % of `sos`
+  inside the biggest engine row; replacing it with per-event bitmasks made
+  the function 1.9 M Ir *slower* and moved nothing else in the program,
+  because the loop still had to branch per event. **Ask what the loop still
+  does when the line is gone** before costing the row.
 - **A presence bit belongs in a shared scan only when the question has no
   early exit of its own** (pass 59, +0.29 % on `fixed` and reverted). Folding
   `card_type_change_unscoped`'s battlefield leg into `sba_board_scan` cost

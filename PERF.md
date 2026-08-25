@@ -566,6 +566,13 @@ I refs, --decks sos       1,593,831,453    1,580,084,804   -0.862 %
 I refs, --decks cube      2,866,729,876    2,841,539,263   -0.879 %
 ```
 
+**One caveat added after the fact, and it makes these numbers conservative:**
+the sixty-second pass found that `name_index()` builds 22,568
+`CardDefinition`s at startup — **104.7 M Ir, 6.8 % of a six-game `sos`
+total** (see (-46)). Both columns above carry it, so the deltas are sound,
+but the *shares* are diluted: net of startup, `sos` reads -0.923 % rather
+than -0.862 %.
+
 **The base column is a cross-check as well as a base.** `ba15f249`'s own
 commit message reads `fixed` 1,218,193,228 and `sos` 1,593,828,683 for the
 same commit, measured by the other session; this reading is 2,588 and 2,770
@@ -5999,6 +6006,60 @@ site has now lost to fusion three times and to a memo twice; and the "ask it les
 the claim that `activate_ability_inner` asks it twice per activation is stale
 — callgrind at the forty-sixth tip reads 18,864 calls over 18,830
 activations, i.e. once, and one call site is left in that function.
+
+**(-16) READ BY LINE ON `sos` FOR THE FIRST TIME (sixty-first pass), AND THE
+VERDICT IS "DIFFUSE" WITH A MEASUREMENT BEHIND IT — including one commit
+built against the table and reverted.** `dispatch_triggers_for_events` has
+been the largest engine self row since pass 43 and every previous read of it
+was on `fixed` or `cube`. `profiling-lines` + `cg_lines.py --in
+dispatch_triggers_for_events` on `--decks sos` (1,535,739,641), everything
+whose inline chain mentions the function — **91,537,964 Ir, 7.5 % of the
+run**:
+
+```text
+ 14,467,414 (1.18%)  mod.rs:?          <- no line info; the largest single row
+  5,708,410 (0.47%)  macros.rs:?
+  3,785,518 (0.31%)  mod.rs:22000      is_event_hardcoded's `match ev`
+  3,196,160 (0.26%)  mod.rs:464        a ColdState field read (doc-comment line)
+  2,948,808 (0.24%)  mod.rs:1815       "
+  2,919,532 (0.24%)  mut_ptr.rs:961    slice iteration
+  2,868,740 (0.23%)  non_null.rs:444   "
+  2,745,712 (0.22%)  non_null.rs:1720  "
+  2,718,104 (0.22%)  mod.rs:17108      `if any_static_grant || !station.is_empty()`
+  2,359,736 (0.19%)  mod.rs:612        a ColdState field read
+  2,222,190 (0.18%)  macros.rs:180
+  2,151,812 (0.18%)  mod.rs:17241      `event_subject(ev, &ta.event.kind)`
+  2,019,616 (0.17%)  mod.rs:17223      `if is_event_hardcoded(ev, &ta.event)`
+  1,587,184 (0.13%)  mod.rs:17154      the FromYourGraveyard scope test
+  1,431,576 (0.12%)  macros.rs:332
+  1,279,136 (0.10%)  mod.rs:17240      `event_matches_spec(...)`
+```
+
+**The largest *named* engine line is 0.31 % and the top two rows have no line
+info at all.** That is what diffuse looks like when you finally see it. (The
+percentages are of the run total, which carries `name_index()`'s 104.7 M of
+startup — see (-46); net of it every share here is ~7 % larger, and the
+ranking is unchanged.)
+
+**And the table's most promising row was taken, measured and reverted, which
+is the entry's real contribution.** `is_event_hardcoded` reads
+5,805,134 Ir / 0.38 % across its two rows, it is asked once per
+(permanent x trigger x event), and its answer is a function of the *event*
+alone plus one bit of the trigger's scope — the textbook (-45) shape. Three
+`u64` masks over the batch (hardcoded-always, hardcoded-if-`SelfSource`, and
+the `CreatureDied` skip that folds in Hushbringer suppression and CR 700.4's
+replaced deaths), built once per dispatch, allocation-free, with a
+`> 64 events` fallback. It reads **+0.123 % on `sos` and +0.187 % on
+`fixed`**, and the whole regression is inside the function: `+1,917,670` on
+`dispatch_triggers_for_events` and *nothing else in the program moves*.
+
+**The rule that comes out of it, and it is about `cg_lines.py`, not about
+this function: a line's Ir is what the instructions attributed to that
+source construct cost, not what removing the construct would save.** The
+`match ev` was already compiled to a jump the loop had to make anyway; the
+mask replaced it with a branch, an `enumerate`, a shift and a test, and paid
+more. **Before costing a line-profile row, ask what the loop still has to do
+when the line is gone.** Two rows here answer "the same thing".
 
 **(-16) PARTLY PAID (`36e998aa`): the phase-1 board walk runs under a freeze
 scope now, which is worth nothing on `fixed` (5.29 % self, unchanged) and
