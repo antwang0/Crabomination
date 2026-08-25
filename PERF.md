@@ -350,6 +350,17 @@ on this container reads **119.8 games/s** at the fifty-eighth tip. That is
 container and accumulated-pass drift, not one pass's win — quote it as a
 same-session A/B or not at all.
 
+**And the 0.1 % above is repeatability, not resolution — do not read it as a
+contradiction of `scripts/ab_wall.py`'s 6.5 % spread, and do not use it to
+justify quoting best-of.** Six consecutive runs of one binary inside one
+quiet batch agreeing to 0.1 % says the recipe is not self-noisy; it says
+nothing about whether *two* binaries measured minutes apart can be told
+apart, which is the question an A/B asks and which only `ab_wall.py`'s ABBA
+blocks and null control answer. The two figures also measure different
+things: 0.1 % is `selfplay_train`, 3 actors, one-second runs; the 6.5 % is
+`bot_ladder`, 4 threads, ~30-60 s runs. **Use these bullets to take a single
+honest absolute; use `ab_wall.py` for any comparison between two binaries.**
+
 ## Build time — the file-size lever is dead, measured 2026-08-23
 
 **"Oversized engine files dominate incremental rebuilds" is false on this
@@ -538,8 +549,9 @@ suite            18,728 passed / 0 failed / 5 ignored over 22 binaries (A-D, at 
 golden traces    7 passed, all unchanged
 clippy           `--workspace --all-targets` clean, all eight crates
 throughput       119.8 games/s warm (`selfplay_train --actors 3 --games 120
-                 --steps 1 --seed 7`), best-of-6, 0 stalls. Not comparable to
-                 the 85.6 in "How to measure" — see the note there.
+                 --steps 1 --seed 7`), six consecutive runs within 0.1 %, 0
+                 stalls. An absolute at this tip, not an A/B claim — no
+                 commit in this pass is sized off it. See "How to measure".
 rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 58-73
 ```
