@@ -1468,7 +1468,7 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-Four commits, base `bf4917a5`. (A) is the pass's finding; (B), (C) and (D)
+Five commits, base `bf4917a5`. (A) is the pass's finding; (B) through (E)
 are each a win on every pool they move:
 
 ```text
@@ -1623,6 +1623,24 @@ Small, and on every pool, which is the point: `Arc::make_mut` is
 **1,364,822 calls / 174,142 real unshares** on a cube run, and its caller
 table is the CoW sharp edge's worklist. Most rows are genuine mutations;
 this one was not.
+
+**(E) `extract_power_gate` deep-cloned the requirement tree to build a
+residual the caller throws away. `cube` -1.021 %, `sos` -0.442 %, `fixed`
+flat.** Its inner `walk` rebuilds the tree as an owned `SelectionRequirement`
+— a `Box` and a clone per node — and the last line discards all of it unless
+a `PowerAtLeast` leaf set the gate. It did on **312 of 44,084 calls**. The
+waste is three rows of `affected_from_requirement`'s callee table:
+`walk` 19.5 M, `drop_in_place<SelectionRequirement>` 15.7 M, `__rust_dealloc`
+4.8 M — **40 M Ir / 1.2 % of a cube run**, and 120,400 of the run's 168,512
+`Box` allocations. `requirement_mentions_power` already existed, is
+non-allocating, and answers `true` for exactly the leaf that writes the
+gate, so the early return is the same answer.
+
+**Two entries in this pass are the same shape and it is worth naming**:
+(-40)'s "ask what a tick pays when the answer is nothing to do", one level
+down. `walk` and `restore_payment_state` both *built the answer* before
+asking whether anyone wanted it, and in both the cheap version of the
+question was already written in the file.
 
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —

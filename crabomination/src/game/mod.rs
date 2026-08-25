@@ -23694,6 +23694,17 @@ fn extract_power_gate(
             other => Some(Some(other.clone())),
         }
     }
+    // `walk` rebuilds the residual as an owned tree — a `Box` and a clone per
+    // node — and the last line throws all of it away unless a `PowerAtLeast`
+    // set `gate`. Almost no requirement has one, so ask the non-allocating
+    // question first: this call is 44,084 of a cube run at the fifty-fifth
+    // tip, 19.5 M Ir / 0.59 %, and 120,400 of the run's 168,512 `Box`
+    // allocations were `walk`'s. `PowerAtLeast` is the only leaf that writes
+    // `gate` and the only one `requirement_mentions_power` answers `true`
+    // for, so the early return is exactly the answer the walk would give.
+    if !requirement_mentions_power(req) {
+        return None;
+    }
     let mut gate = None;
     let residual = walk(req, &mut gate)?;
     gate.map(|g| (g, residual.unwrap_or(R::Any)))
