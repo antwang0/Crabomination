@@ -35,8 +35,11 @@ rounds per commit.**
 2. **Two devices, both cheap to re-run, both found their pass's biggest
    commit.** (a) Read a caller table's **Ir/call** column: an allocation far
    above the family mean is an allocation of something big (`__memcpy` ->
-   `CardInstance::new` at 8,242 Ir = `size_of::<CardDefinition>()`). Do it
-   for `_int_free` / `malloc`, 10.0 % between them. (b) `cg_edges.py
+   `CardInstance::new` at 8,242 Ir = `size_of::<CardDefinition>()`). **Do
+   NOT re-run it on the allocator — both sides are now read and both are
+   flat** (`__rust_alloc` at the 60th tip, `__rust_dealloc` at the 62nd:
+   95-126 Ir/call over 1,071,319 calls, no outlier). That half of (-44) is
+   closed; what is left of it is `__memcpy`'s own rows. (b) `cg_edges.py
    --callers SpecFromIterNested` ranked by **calls**, then ask which collects
    can be non-empty on the pools the actors play — that is (-45).
 3. **Top candidate is still (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of

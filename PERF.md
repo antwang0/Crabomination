@@ -4701,6 +4701,38 @@ now amortize to once per factory per thread; the only game-loop caller of
 `GrowVec` newtype that measured **+0.050 %**. **So: the allocator is a real
 12.7 % and it is genuinely diffuse.**
 
+**The *dealloc* side is now read too, at the sixty-second tip, and it is the
+same answer — so this half of the entry is CLOSED, both sides.** The alloc
+table above is `__rust_alloc`'s; `_int_free` (4.26 %) and `free` (2.71 %)
+are reached through `__rust_dealloc`, which is a different table and had
+never been read. It is 1,071,319 calls and flat to within a factor of 1.3
+by Ir/call — there is no `CardInstance::new`-shaped outlier in it:
+
+```text
+callers of __rust_dealloc, --decks sos, sixty-second tip
+  calls        Ir        Ir/call  caller
+ 243,857   27,078,427      111    Arc::drop_slow
+  89,930   11,310,723      126    Arc::drop_slow'2
+  87,118    9,574,823      110    drop_in_place<GameState>
+  70,374    7,663,336      109    drop_in_place<CardDefinition>
+  42,176    4,169,983       99    check_state_based_actions
+  39,191    3,859,235       98    drop_in_place<Box<SelectionRequirement>>
+  30,302    2,919,322       96    gather_continuous_effects_inner
+  27,830    3,294,958      118    drop_in_place<Result<Vec<GameEvent>,_>>
+  26,748    2,755,679      103    auto_tap_for_cost_inner
+  25,405    3,168,277      125    IntoIter::drop
+ 322,448         —          —     440 more rows (30.10 %)
+```
+
+**95 to 126 Ir a call, top to bottom.** The sixtieth pass's device works by
+finding a ratio outlier; there isn't one here, on either side. **Do not
+spend a build re-reading `_int_free` or `malloc` by Ir/call** — a
+handoff-note in TODO was still pointing at it, and this is the record that
+retires it. The allocator's 12.75 % is a million small frees, and the two
+rows with any shape to them (`Arc::drop_slow` at 333,787 calls between them,
+`drop_in_place<CardDefinition>` at 70,374) are the *paying* side of the CoW
+unshares that **(-43)** already prices at 80.9 M — counted there, not here.
+
 The sos table at the sixtieth tip, top of `__memcpy`'s callers:
 
 | caller | calls | Ir | Ir/call |
