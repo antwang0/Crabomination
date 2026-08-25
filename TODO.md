@@ -25,25 +25,36 @@ candidate, and budget two callgrind rounds.**
    --games 1`) 26,478,634 -> 23,574,309, -10.968 %**; `fixed` -0.101 %, `sos`
    -0.053 % (both the binary shrinking, not the loop). Pass 56's question
    asked of the three things it left, and the answer was "nothing" each time.
-2. **Top candidate: (-39)'s head — the copy-cap counter.**
+2. **Pass 57 gained two more commits after its write-up: (D) `603d354b` and
+   (E) `6c5dd0ab`, a second session's, rebased in.** The gather allocated a
+   `Vec` per static-ability card *and* another per emitted effect, both
+   drained by the caller one frame up; on top of (B)+(C) they read cube
+   -1.001 / -0.424 %, sos -0.634 / -0.283 %, **fixed -0.011 / -0.189 %** —
+   the only rows in pass 57 that move `fixed` down. **The placement (B)'s
+   variant table did not try is still on the table and is worth ~0.25 % of
+   `fixed`:** the board test *inside* the loop (`if mask & bit == 0 { break;
+   }`) read +0.234 % where the slice swap read +1.076 % on the same base. It
+   is a ~2,000-line re-indent of thirty-eight blocks; take it when the branch
+   is quiet.
+3. **Top candidate: (-39)'s head — the copy-cap counter.**
    `suggest_main_deck_shape::take` 7.85 % + `HashMap::insert` 2.29 %, a
    `HashMap<CardFactory,u32>` per shape. A dense distinct-card id in
    `PoolScores` makes it a `Vec<u8>`. Designed, not built; ~8 % of the build.
-3. **Two fresh engine candidates, both read on `sos` (the actors' pool).**
+4. **Two fresh engine candidates, both read on `sos` (the actors' pool).**
    (-42) `do_untap` makes **141.5 `Arc::make_mut` calls per untap step**
    (0.58 % sos / 0.53 % cube) — and "reads through `&mut` call `deref_mut`"
    is **refuted** by a standalone test, so find the real writes.
    (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos,
    pre-filterable **only** there (the other two callers index the list).
-4. **(-40) is closed as a whole.** The clone/allocator family is 26.5 % of
+5. **(-40) is closed as a whole.** The clone/allocator family is 26.5 % of
    `sos`, read from the top, and diffuse: `__memcpy`'s top twenty callers
    hold half its 1.29 M calls, the rest is 21,130 rows. Take (-41)/(-42).
-5. **`cg_symbolize.py` is now usually a no-op** — the dump comes back
+6. **`cg_symbolize.py` is now usually a no-op** — the dump comes back
    symbolized. Run `cg_edges.py` on the raw dump first.
-6. **Housekeeping.** TODO 1.0k, PERF 5.9k (48th/49th Baseline and 45th/46th
+7. **Housekeeping.** TODO 1.0k, PERF 5.9k (48th/49th Baseline and 45th/46th
    Log folded this run; the 47th/48th Log entries are next). ENGINE_BACKLOG
    4.9k / CARD_BACKLOG 4.2k still want a triage pass.
-7. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings** (read the
+8. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings** (read the
    oracle first). **Top ML item is still a training run, not code:** a good
    deck net, and two passes of builder work now compound inside its 32x.
 
@@ -135,6 +146,24 @@ Log with its numbers; read the entry before re-proposing any of them.
   take one on an Ir number**. What works is making the callee smaller than any
   inliner threshold, which is what `has_kw` does.
   `CardDefinition::is_creature` is the same family and the same trap.
+- **A presence gate in front of a loop is only free if the loop was not
+  already empty** (pass 57, and it is the one thing the second session
+  measured that the first did not). The gather's thirty-eight `sa_cards`
+  passes: gating by swapping the iterated slice read **+1.076 % on `--decks
+  fixed`**, a board branch outside the loop +0.551 %, and the same test moved
+  *inside* the loop (`if mask & bit == 0 { break; }`) **+0.234 %** — while
+  taking cube from -1.85 to -2.26 % and sos from -2.75 to -3.16 % at the same
+  time. `fixed`'s `sa_cards` is empty on all 32,002 gathers, so the walks were
+  already free there and anything in front of them is pure charge.
+- **A `Vec` returned to a caller that immediately drains it is two
+  allocations, not one** (pass 57's (D) and (E), -1.4 % of cube between them
+  on top of the mask). `static_ability_to_effects` collected a `Vec` per
+  static-ability card and `static_effect_to_effects` built `vec![one]` per
+  emitted effect; both were `extend`ed into `all_effects` one frame up. The
+  tell is in the callee table, not the self table: `SpecFromIterNested::
+  from_iter` and an `IntoIter::drop` at **exactly the same call count**. Write
+  through the caller's buffer (`out: &mut Vec<_>`) and patch
+  `out[start..]` where the caller was patching the temporary.
 - **A presence gate is sized by its arm's call count, not by what the arm
   costs when it is taken** (pass 56, one gate paid and two lost in the same
   sitting; pass 55 closed the same entry by sizing rather than building and
@@ -191,7 +220,7 @@ Log with its numbers; read the entry before re-proposing any of them.
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
   Wide-pool sweep ~55 s a seed — no excuse to skip it. Quote callgrind under
   5 %; a `profiling-fast` games/s compares to nothing.
-- **Trackers.** TODO 0.96k, ROADMAP 0.66k, PERF 5.9k (**passes 45-49's
+- **Trackers.** TODO 1.0k, ROADMAP 0.66k, PERF 6.0k (**passes 45-49's
   Baseline blocks are one table plus the lessons they carried, and passes 45
   and 46's Log entries are folded, at the 58th tip**; the 47th's and 48th's
   Log entries are the next fold). ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k

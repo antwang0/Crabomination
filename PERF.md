@@ -425,29 +425,40 @@ callgrind exists for.
 byte-identical.
 
 **Fifty-seventh pass, base `28ae2416` (pass 56's tip) vs its own tip
-`c6ef9af8`.** Three commits, one class: **the simulator's two largest engine
-functions each ended in a fan of narrow walks that ask a question the board
-has already answered.** (A) `cg_lines.py --rows`, because the shape is a run
-of identically-costed rows below the default print; (B) the gather's
+`6c5dd0ab`.** Five commits in two classes. **The simulator's two largest
+engine functions each ended in a fan of narrow walks that ask a question the
+board has already answered** — (A) `cg_lines.py --rows`, because the shape is
+a run of identically-costed rows below the default print; (B) the gather's
 thirty-eight per-static passes get a variant bitmask; (C) the trigger
 dispatcher stops evaluating grant filters for grants no event in the batch
-could fire. **`--decks cube` -6.65 %, `sos` -3.33 %, `fixed` +0.71 %.** Ir
-readings `profiling-fast --no-default-features`, callgrind, one thread,
-`--a gang --b gang --games 6 --seed 1`.
+could fire. Then **the gather allocated twice for every effect it emitted** —
+(D) and (E), landed by a second session and rebased on top of (C). **`--decks
+cube` -7.97 %, `sos` -4.21 %, `fixed` +0.51 %.** Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
+--seed 1`.
 
 ```text
-                          base (28ae2416)   (B) da30d1c2      tip (C)
-I refs, --decks cube        3,162,426,135   3,082,752,911   2,952,041,750  -6.653 %
-I refs, --decks sos         1,715,663,129   1,656,877,045   1,658,496,791  -3.332 %
-I refs, --decks fixed       1,226,171,600   1,233,007,810   1,234,918,599  +0.713 %
-I refs, --decks sealed      3,430,701,306     not re-read — neither the gather nor
-deck build alone               26,570,012     the dispatcher is on that path
+                       base (28ae2416)   (B) da30d1c2    (C) 353105fe     tip (E)
+I refs, --decks cube     3,162,426,135   3,082,752,911   2,952,044,117   2,910,120,990  -7.973 %
+I refs, --decks sos      1,715,663,129   1,656,877,045   1,658,498,742   1,643,320,227  -4.216 %
+I refs, --decks fixed    1,226,171,600   1,233,007,810   1,234,920,109   1,232,447,924  +0.512 %
+I refs, --decks sealed     3,430,701,306   not re-read — neither the gather nor
+deck build alone              26,570,012   the dispatcher is on that path
 ```
 
 | step | commit | cube | sos | fixed | what |
 |---|---|---|---|---|---|
 | B | `da30d1c2` | -2.519 % | **-3.427 %** | +0.558 % | the gather's thirty-eight per-static passes ask a variant bitmask |
 | C | `c6ef9af8` | **-4.241 %** | +0.098 % | +0.155 % | the dispatcher drops a grant no event in the batch could fire |
+| D | `603d354b` | **-1.001 %** | -0.634 % | -0.011 % | `static_ability_to_effects` collected a `Vec` its only caller drains |
+| E | `6c5dd0ab` | -0.424 % | -0.283 % | -0.189 % | thirty-three arms returned `vec![one]` per emitted effect |
+
+**(D) and (E) were written concurrently with (B) and (C) on `28ae2416` and
+read -0.937 / -0.301 % on cube there; on top of (B)+(C) they read -1.001 /
+-0.424 %.** They are worth *more* after the mask, on every pool, which is the
+composition to expect: the mask took the walking out, so what is left of the
+gather is a larger share allocation. They are the only rows in this pass that
+move `--decks fixed` **down**.
 
 **The two rows are on different pools and that is the pass's rule.** `sos`
 carries the static abilities the gather walks; `cube` carries the
@@ -1793,12 +1804,73 @@ exactly the case this file says callgrind is for.
 
 ### Fifty-seventh pass — a fan of narrow walks at the end of two big functions
 
-Three commits, base `28ae2416`. `--decks cube` **-6.653 %**, `sos`
-**-3.332 %**, `fixed` **+0.713 %**. (B) and (C) are the same shape in the
+Five commits, base `28ae2416`. `--decks cube` **-7.973 %**, `sos`
+**-4.216 %**, `fixed` **+0.512 %**. (B) and (C) are the same shape in the
 simulator's two largest engine functions — a chain of narrow per-card walks
 asking a question the *board* or the *batch* has already answered — and they
 land on different pools: (B) on `sos`, which has the static abilities;
-(C) on `cube`, which has the `GrantTriggeredAbility` statics.
+(C) on `cube`, which has the `GrantTriggeredAbility` statics. (D) and (E) are
+a second session's, written concurrently against the same base and rebased on
+top: the gather allocated twice for every effect it emitted.
+
+**Two sessions opened this pass on the same function, and this time both
+halves survived.** The other three occasions (passes 55, 56 twice) ended with
+one session's commit dropped on the rebase because the two had written the
+*same* optimization. The difference here is that (B) removes walks and (D)/(E)
+remove allocations, so the rebase was a conflict in `mod.rs` and not a
+duplicate. **What did get dropped is the second session's own version of (B)**
+— see "the gate placement (B) did not try", below, which is the one thing it
+measured that (B) did not.
+
+**(D) `603d354b` — `static_ability_to_effects` collected a `Vec` its only
+caller drains. cube -1.001 %, sos -0.634 %, fixed -0.011 %.** The function
+flat-mapped a permanent's static abilities into a fresh
+`Vec<ContinuousEffect>` and handed it back; all three call sites are the
+gather and all three `extend` it into `all_effects`. So a static-ability
+permanent paid an allocation, a growth chain, a memcpy out and a free, per
+gather, for a buffer that lived for the length of one `extend`. It writes
+through `&mut all_effects` now and the three per-effect patches (the
+`AllOpponents` team fill, the emblem duration remap, the command-zone
+named-card resolve) run over `all_effects[start..]`.
+
+The gather's callee table sized it on `28ae2416`, `--decks cube`, six games:
+`SpecFromIterNested::from_iter` **65,288 calls / 39,931,402 Ir** plus 19,910 /
+12,113,011 at the second arity, `IntoIter::drop` **85,198 / 6,108,635** —
+exactly one per collect — and `grow_one` 44,384 / 6,455,215.
+
+**(E) `6c5dd0ab` — thirty-three arms returned `vec![one]` per emitted effect.
+cube -0.424 %, sos -0.283 %, fixed -0.189 %.** The same shape one level down:
+`static_effect_to_effects` returns a `Vec` per static ability, and the arms
+that emit build it with `vec![ContinuousEffect { .. }]`. The arms that emit
+nothing returned `vec![]`, which allocates nothing — so the cost fell exactly
+on the boards that have statics, and `--decks fixed` read -0.002 % for this
+commit on the pre-(B) base.
+
+**The pair reads larger *after* (B) than before it, on every pool** (cube
+-0.937 -> -1.001, sos -0.634 -> -0.634, fixed -0.069 -> -0.200 for the two
+together). That is what composition looks like when one change removes work
+and the other removes allocation for the work that remains: the mask made the
+gather smaller, so the allocation is a larger share of what is left. They are
+also the only rows in this pass that move `--decks fixed` down.
+
+**The gate placement (B) did not try, and it is worth ~0.25 % of `fixed`.**
+(B)'s own variant table measured three placements — per-card bit alone
+(fixed +0.298 %), board branch plus per-card bit (+0.551 %, taken), and a
+board-wide slice swap (+1.03 %) — and attributes the board branch's 0.253 %
+to "38 tests x 32,002 gathers, ~2.6 Ir each". The second session's version
+measured a **fourth**: the board test *inside* the loop,
+`for &card in &sa_cards { if mask & bit == 0 { break; } .. }`, which read
+**+0.234 % on fixed against +1.076 % for the slice swap on the same base**,
+and took cube and sos further at the same time (-1.85 -> -2.26 %, -2.75 ->
+-3.16 %). On an empty `sa_cards` a test inside the loop costs nothing, which
+is exactly `fixed`'s board. **The rule: a presence gate in front of a loop is
+only free if the loop was not already empty.** Applied to (B)'s shape it would
+be `for &(card, bits) in &sa_cards { if !sa_open(sa_mask, BIT) { break; } if
+!sa_open(bits, BIT) { continue; } .. }`, which costs one extra test per card
+on the passes whose board bit *is* set. **Not taken here**: it is a ~2,000-line
+re-indent of thirty-eight blocks on a branch two sessions are writing to, for
+0.25 % of the pool that matters least to `selfplay_train`. Take it when the
+branch is quiet.
 
 **(C) The trigger dispatcher asked every permanent about grants no event
 could fire. `cube` -4.241 %, `sos` +0.098 %, `fixed` +0.155 %.**
