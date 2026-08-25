@@ -4477,6 +4477,7 @@ impl GameState {
                 match kw {
                     Keyword::Persist | Keyword::Undying => s.persist_undying = true,
                     Keyword::StartYourEngines => s.start_engines = true,
+                    Keyword::SpaceSculptor => s.sculptor = true,
                     _ => {}
                 }
             }
@@ -4504,9 +4505,6 @@ impl GameState {
             s.equipment_attached |= c.attached_to.is_some() && d.is_equipment();
             s.shapeshifter |= d.copies_top_graveyard_creature;
             s.sector_set |= c.sector.is_some();
-            if !s.sculptor {
-                s.sculptor = d.keywords.iter().any(|k| matches!(k, Keyword::SpaceSculptor));
-            }
             for sa in &d.static_abilities {
                 match sa.effect {
                     StaticEffect::AllNonlandPermanentsAreLegendary => s.supertype_grant = true,
@@ -4552,6 +4550,15 @@ impl GameState {
         // generalise to a walk whose per-card body is already this cheap.
         // `check_state_based_actions` is the only caller and it is
         // `&mut self`, so this is provably outside every freeze scope.
+        //
+        // A fourth walk here, `card_type_change_unscoped`'s battlefield leg,
+        // was **measured into `sba_board_scan` and reverted at +0.255 % on
+        // `sos` / +0.295 % on `fixed`** (fifty-ninth pass): the standalone
+        // `any` short-circuits per card, while a scan bit runs
+        // `static_effect_changes_card_types` for every static ability of every
+        // permanent. `card_type_change_unscoped` came off at -5,948,694 and
+        // `sba_board_scan` went up 9,249,352 for it. Third refutation of the
+        // fusion device in this one function.
         let type_change = self.card_type_change_unscoped();
         self.battlefield
             .iter()
