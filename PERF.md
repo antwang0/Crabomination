@@ -396,8 +396,9 @@ decisions        196,220 -> 196,220        byte-identical
 turns_per_game   27.53   -> 27.53
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism      ok (all pairs split, both)
-suite            18,728 passed / 0 failed / 5 ignored over 22 binaries
-golden traces    all unchanged
+suite            18,827 passed / 0 failed / 5 ignored over 31 binaries
+                 (the whole workspace, at the final tip)
+golden traces    all 7 unchanged
 clippy           `--workspace --all-targets` clean
 rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
