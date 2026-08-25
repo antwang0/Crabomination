@@ -341,21 +341,21 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`ca16b33a`.** Ten commits, one class after the first: **the simulator kept
+`c676cf48`.** Eleven commits, one class after the first: **the simulator kept
 building answers before asking whether anyone wanted them.** (A) the
 requirement walker's subtype arms stop gathering where the printed line
 answers; (B) the freeze scope's depth and gate slots come out of the mutex;
-(C)-(J) eight helpers that allocated, cloned or re-found something their
-caller discards or already holds. **`--decks cube` -20.70 %,
-`--decks sos` -2.11 %, `--decks fixed` -1.08 %.** Ir readings `profiling-fast
+(C)-(K) nine helpers that allocated, cloned or re-found something their
+caller discards or already holds. **`--decks cube` -20.75 %,
+`--decks sos` -2.16 %, `--decks fixed` -1.15 %.** Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --seed 1` unless the row says otherwise.
 
 ```text
-                          base (bf4917a5)   (A) 8779aa9f     tip (J)
-I refs, --decks cube        4,012,095,058   3,332,029,985   3,181,765,191  -20.70 %
-I refs, --decks fixed       1,248,407,927   1,249,622,086   1,234,886,711   -1.083 %
-I refs, --decks sos         1,760,442,504   1,761,529,321   1,723,306,764   -2.110 %
+                          base (bf4917a5)   (A) 8779aa9f     tip (K)
+I refs, --decks cube        4,012,095,058   3,332,029,985   3,179,782,586  -20.75 %
+I refs, --decks fixed       1,248,407,927   1,249,622,086   1,234,031,722   -1.151 %
+I refs, --decks sos         1,760,442,504   1,761,529,321   1,722,423,954   -2.160 %
 I refs, --decks sealed      3,497,162,303   3,500,013,528     (B), below
 deck build alone               34,506,869      34,859,382     (B), below
   (--decks sealed --games 1: 0 games played, all setup)
@@ -375,10 +375,11 @@ Per commit, the three pools each was measured on:
 | H `353273ef` | -0.126 % | flat | flat | thirteen more battlefield walks hand their card to the requirement walker |
 | I `7ec4836c` | -0.256 % | **-0.356 %** | -0.291 % | the gather's two always-empty `collect()`s become `Vec::new()` |
 | J `ca16b33a` | -0.291 % | -0.369 % | **-0.422 %** | the SBA sweep's game-over check is a walk, not two `Vec`s and a sort |
+| K `c676cf48` | -0.062 % | -0.069 % | -0.051 % | combat's three per-attacker collects are gated on a presence scan |
 | — | +0.40 % | +0.66 % | — | **REVERTED** — the presence gate on `board_keyword_matching`'s *frozen* leg. See the Log |
 | — | +0.43 % | +0.12 % | — | **REVERTED** — a two-phase exactly-sized build in `statics_granted_triggers_with`. See the Log |
 
-`sealed` and the deck build were read at (B) and not re-read; (C) through (J)
+`sealed` and the deck build were read at (B) and not re-read; (C) through (K)
 are engine paths the deck builder does not reach.
 
 **The deck-build row was layout, and the profile says so rather than the
@@ -1532,8 +1533,8 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-Ten commits, base `bf4917a5`. (A) is the pass's finding; (B) through (J)
-are each a win on every pool they move — **cube -20.7 % over the pass**:
+Eleven commits, base `bf4917a5`. (A) is the pass's finding; (B) through (K)
+are each a win on every pool they move — **cube -20.8 % over the pass**:
 
 ```text
                   base (bf4917a5)   (A) 8779aa9f
