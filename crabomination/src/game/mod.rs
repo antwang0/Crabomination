@@ -2772,9 +2772,9 @@ impl GameState {
         applies_to: &crate::effect::Selector,
     ) -> Option<Vec<CardId>> {
         let matches = |req: &SelectionRequirement, c: &CardInstance| {
-            self.evaluate_requirement_static(
+            self.evaluate_requirement_static_on(
                 req,
-                &Target::Permanent(c.id),
+                c,
                 source.controller,
                 Some(source.id),
             )
@@ -5067,9 +5067,9 @@ impl GameState {
                             .iter()
                             .filter(|c| c.controller == controller && c.id != entering)
                             .filter(|c| {
-                                self.evaluate_requirement_static(
+                                self.evaluate_requirement_static_on(
                                     per,
-                                    &crate::game::Target::Permanent(c.id),
+                                    c,
                                     controller,
                                     Some(src.id),
                                 )
@@ -9493,9 +9493,9 @@ impl GameState {
                 else {
                     continue;
                 };
-                if !self.evaluate_requirement_static(
+                if !self.evaluate_requirement_static_on(
                     condition,
-                    &Target::Permanent(card.id),
+                    card,
                     card.controller,
                     Some(card.id),
                 ) {
@@ -10019,9 +10019,9 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.controller == card.controller
-                            && self.evaluate_requirement_static(
+                            && self.evaluate_requirement_static_on(
                                 filter,
-                                &crate::game::types::Target::Permanent(c.id),
+                                c,
                                 card.controller,
                                 Some(card.id),
                             )
@@ -10102,9 +10102,9 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.attached_to == Some(card.id)
-                            && self.evaluate_requirement_static(
+                            && self.evaluate_requirement_static_on(
                                 attachment_filter,
-                                &crate::game::types::Target::Permanent(c.id),
+                                c,
                                 card.controller,
                                 Some(card.id),
                             )
@@ -10115,9 +10115,9 @@ impl GameState {
                 }
                 for target in &self.battlefield {
                     if target.controller != card.controller
-                        || !self.evaluate_requirement_static(
+                        || !self.evaluate_requirement_static_on(
                             applies_to,
-                            &crate::game::types::Target::Permanent(target.id),
+                            target,
                             card.controller,
                             Some(card.id),
                         )
@@ -10163,9 +10163,9 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.controller == card.controller
-                            && self.evaluate_requirement_static(
+                            && self.evaluate_requirement_static_on(
                                 count_filter,
-                                &crate::game::types::Target::Permanent(c.id),
+                                c,
                                 card.controller,
                                 Some(card.id),
                             )
@@ -10182,9 +10182,9 @@ impl GameState {
                 }
                 for target in &self.battlefield {
                     if target.controller != card.controller
-                        || !self.evaluate_requirement_static(
+                        || !self.evaluate_requirement_static_on(
                             applies_to,
-                            &crate::game::types::Target::Permanent(target.id),
+                            target,
                             card.controller,
                             Some(card.id),
                         )
@@ -10194,9 +10194,9 @@ impl GameState {
                     // "for each OTHER …" — the affected permanent doesn't
                     // count itself.
                     let count = if *exclude_self
-                        && self.evaluate_requirement_static(
+                        && self.evaluate_requirement_static_on(
                             count_filter,
-                            &crate::game::types::Target::Permanent(target.id),
+                            target,
                             card.controller,
                             Some(card.id),
                         ) {
@@ -10468,9 +10468,9 @@ impl GameState {
                         continue;
                     };
                     if n == 0
-                        || !self.evaluate_requirement_static(
+                        || !self.evaluate_requirement_static_on(
                             filter,
-                            &crate::game::types::Target::Permanent(other.id),
+                            other,
                             card.controller,
                             Some(card.id),
                         )
@@ -10731,9 +10731,9 @@ impl GameState {
                             .iter()
                             .filter(|c| c.controller == seat)
                             .filter(|c| {
-                                self.evaluate_requirement_static(
+                                self.evaluate_requirement_static_on(
                                     filter,
-                                    &crate::game::types::Target::Permanent(c.id),
+                                    c,
                                     seat,
                                     Some(card.id),
                                 )
@@ -10840,9 +10840,9 @@ impl GameState {
                     .battlefield
                     .iter()
                     .filter(|c| {
-                        self.evaluate_requirement_static(
+                        self.evaluate_requirement_static_on(
                             req,
-                            &crate::game::types::Target::Permanent(c.id),
+                            c,
                             card.controller,
                             Some(card.id),
                         )
@@ -13608,9 +13608,9 @@ impl GameState {
         if atk_kws.iter().any(|kw| match kw {
             Keyword::CantBeBlockedIfDefenderControls(f) => self.battlefield.iter().any(|c| {
                 c.controller == blocker.controller
-                    && self.evaluate_requirement_static(
+                    && self.evaluate_requirement_static_on(
                         f.as_ref(),
-                        &Target::Permanent(c.id),
+                        c,
                         blocker.controller,
                         None,
                     )

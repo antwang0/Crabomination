@@ -1692,6 +1692,24 @@ fallback, i.e. every *remaining* unhinted requirement evaluation — is
 14.2 M / 0.54 %, and `find_card_anywhere`'s first leg is 7.4 M / 0.28 %. The
 number is a floor (see the tool's docstring).
 
+**(H) The rest of the class inside the gather and the combat gates.
+`cube` -0.126 %, `fixed` and `sos` flat.** Thirteen sites of the shape
+`self.battlefield.iter().filter(|c| self.evaluate_requirement_static(req,
+&Target::Permanent(c.id), ..))` — the caller is holding `c`. Small on its
+own; taken because it is the same duplication and because
+`evaluate_requirement_static_on` makes the site say what it means. The
+suite is the check: its `debug_assert!` fires on any hint that is not the
+live battlefield permanent it names, and all 18,728 tests pass.
+
+**About eighty more sites of that literal shape exist**, mostly in
+`effects/mod.rs`'s resolution paths. **Do not convert them by pattern
+match**: several iterate graveyards or hands, where the hint would change
+the *answer* (the walker's battlefield branch reads the layer view) and the
+`debug_assert` only catches a site a test actually plays. Convert one only
+after reading what its loop iterates, and only where the profile says it is
+worth it — `eval.rs:3113`, the fallback that every unhinted evaluation
+reaches, is **14.2 M / 0.54 %** for all of them together.
+
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —
 `SetArtifactSubtypes` / `AddArtifactSubtype` fold into a battlefield-shape
