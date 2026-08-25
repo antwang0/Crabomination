@@ -461,6 +461,14 @@ composition to expect: the mask took the walking out, so what is left of the
 gather is a larger share allocation. They are the only rows in this pass that
 move `--decks fixed` **down**.
 
+**The columns above were read on `353105fe`; the second rebase then put pass
+58's four deck-builder commits underneath (D) and (E).** Re-read at the true
+branch tip `7918d1e6`: fixed **1,233,103,048**, cube **2,910,805,300**, sos
+**1,643,976,414**. Against `353105fe` that is -0.147 / -1.397 / -0.876 % for
+pass 58 + (D) + (E) together, against -0.200 / -1.420 / -0.915 % for (D)+(E)
+alone — i.e. pass 58 is within 0.05 % of flat on all three *game* pools, which
+is what a deck-builder change should be, and the two do not overlap.
+
 **The two rows are on different pools and that is the pass's rule.** `sos`
 carries the static abilities the gather walks; `cube` carries the
 `GrantTriggeredAbility` statics the dispatcher walks (`--decks fixed` carries
