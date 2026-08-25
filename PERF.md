@@ -185,6 +185,31 @@ slower host from a regression. Check it *before* investigating a moved
 baseline. The only sound way to attribute a delta to code is to measure both
 sides in one sitting, alternating A/B/A/B — host drift then moves both.
 
+**`peak_rss_mib` IS AN ALLOCATOR READING TOO, AND THE FILE HAS BEEN QUOTING
+THE WRONG ONE.** Measured at the sixty-second tip on one box within the same
+minute — same code, same `--bench` workload, `decisions 196,220` on all
+three, so nothing but the build differs:
+
+| build | features | allocator | peak_rss_mib |
+|---|---|---|---|
+| `profiling-fast` | `--no-default-features` | system | **17.6** |
+| `release` | default | mimalloc | **24.0 - 24.3** |
+| `overflow` | default | mimalloc | **27.2** |
+
+**The shipped binary uses ~36 % more resident memory than the number this
+file records.** The sixtieth pass's headline "peak RSS 21.9 -> 17.7 MiB,
+-19 %" sits in a block whose Ir readings are stated as `profiling-fast
+--no-default-features`, and the RSS came off the same binaries — so the -19 %
+is real and reproducible (17.6 here, two passes later) but it is a fact
+about the **system allocator**, and `selfplay_train` actors do not run that
+build. **Plan actor counts off ~24 MiB, not 17.7.**
+
+Neither figure is comparable across containers either: the concurrent
+session's `release` block reads 30.0-30.1 MiB at `host_cpu` 2.80 GHz where
+this box reads 24.0-24.3 at 2.10 GHz. **So an RSS row needs its profile, its
+feature flags and its host before it means anything** — the same discipline
+this file already applies to `games_per_s`, and for the same reason.
+
 **An allocator-shaped change must be measured with the shipped allocator.**
 The default is mimalloc; callgrind forces the *system* allocator (valgrind
 replaces malloc). A change that removes allocations therefore reads far
@@ -755,6 +780,9 @@ I refs, --decks fixed    1,219,893,985   1,218,193,228   1,193,591,244  -2.156 %
 I refs, --decks sealed     3,276,783,848 (read at (A))   3,200,503,032  -2.328 %
 deck build alone              21,800,071 (read at (A))      21,871,968  +0.330 %
 peak_rss_mib, --bench               21.9                          17.7    -19 %
+  ^ SYSTEM allocator (--no-default-features), like the Ir rows above it.
+    The shipped mimalloc build reads ~24 MiB at the same tip — see
+    "peak_rss_mib is an allocator reading too" in How to measure.
 ```
 
 | step | commit | sos | cube | fixed | what |
