@@ -2241,6 +2241,98 @@ the table above is safe to compress:
 
 ## Log
 
+### Sixty-third pass — the pair loop paid for the half of the pair that did not vary
+
+Two commits, base `0036e238`, and they are the same shape at two levels of
+the same subtree: **a loop over pairs charged per pair for facts that belong
+to one side of the pair.** This is (-47), which the entry sized at ~0.24 % of
+cube; it read **-1.289 %** because the resolution hoist it named is the
+smaller half of what the seam was hiding.
+
+```text
+                          base (0036e238)   tip (66ec5e42)
+I refs, --decks fixed     1,182,567,955    1,175,724,194   -0.579 %
+I refs, --decks sos       1,530,678,137    1,523,856,909   -0.446 %
+I refs, --decks cube      2,768,347,971    2,732,667,632   -1.289 %
+```
+
+| step | commit | fixed | sos | cube | what |
+|---|---|---|---|---|---|
+| A | `358c6e3b` | -0.425 % | -0.359 % | **-0.791 %** | six attacker facts and two blocker facts read per pair |
+| B | `66ec5e42` | -0.154 % | -0.087 % | **-0.502 %** | block legality resolved both sides of the pair, per pair |
+
+**`cube` moves 2.2x what `fixed` does and 2.9x what `sos` does**, which is
+what the pool-ratio device predicted: `pick_blocks_inner` was the 2.09x row
+in the sixty-second pass's ratio table, and a grant-heavy pool has wider
+boards, so the pair count grows quadratically where the rest of the game
+loop grows linearly.
+
+**(A) `358c6e3b` — the loop re-derived the attacker on every blocker.**
+`pick_blocks_inner` scores one blocker against every attacker; inside that
+inner loop it read Rampage N, first/double strike, indestructible, trample,
+"must be blocked" and the Menace/`CantBeBlockedExceptByN` minimum, each a
+whole-battlefield `find` plus a keyword walk, **per pair**, for a fact that
+is a property of the attacker alone. Two more — the blocker's own first
+strike and indestructibility — were read inside the attacker loop for a fact
+that is a property of the blocker.
+
+The function already built a per-attacker record (a 5-tuple); it becomes
+`AttackerFacts` and the six facts move into it, computed in the walk that
+was already finding the card. `incoming_poison` and `total_incoming` were
+two more whole-`attacking()` walks over the same set and now read off it, so
+`attacker_damage_value` runs once per attacker instead of twice.
+
+```text
+pick_blocks_inner self, cube    24,906,488 -> 7,583,714   -69.6 %
+  -> has_keyword calls             130,450 ->    49,048
+  -> is_indestructible calls        36,916 ->     8,736
+  -> callee calls, all rows        353,306 ->   233,248
+```
+
+**(B) `66ec5e42` — and the legality check did the same thing one level
+down.** `blocker_can_block_attacker(blocker_id, attacker_id)` resolves two
+permanents and two computed views internally, so N candidate blockers
+against a fixed attacker is N+1 distinct permanents and 2N resolutions —
+which is what the (-47) entry found. What the entry did not have is that
+**two of the rule's twelve gates never name an attacker**: creature-ness off
+the computed view, and `blocker_side_gates_allow_block`'s whole CantBlock /
+Decayed / hand-size / tax / delirium / descend / blessing family, 193 Ir a
+call. Those were paid per pair for an answer fixed for the blocker.
+
+`blocker_can_block_anything(blocker, blocker_cp)` is that half;
+`blocker_can_block_attacker_pair(blocker, blocker_cp, attacker, atk_cp)` is
+the rest; `blocker_can_block_attacker` resolves and composes the two so they
+cannot drift, and `can_block_any_computed_attacker` — which had hand-copied
+the same prefix — calls the helper instead. Every gate is pure and they are
+all AND'ed, so grouping them changes no answer.
+
+```text
+blocker_can_block_attacker* inclusive from pick_blocks_inner, cube
+                                 33,966,170 -> 8,347,806   -75.4 %
+blocker_side_gates_allow_block self  4,113,542 -> 1,900,582   -53.8 %
+computed_permanent self             43,892,534 -> 41,255,354
+```
+
+**The rule, and it is the one to carry forward: in a loop over pairs, ask of
+every term which side of the pair it belongs to.** Both commits are that
+question asked of one subtree, and neither needed a new data structure — (A)
+put fields on a record the loop already built, (B) split a function at a
+seam its own gates already had. The tell is a `find` or a resolve whose
+argument is the loop-invariant one; `cg_edges.py --callees <fn>` ranked by
+*calls* shows it as a callee count that is a multiple of the pair count
+(`computed_permanent` at exactly 2x `blocker_can_block_attacker`).
+
+**Where this did *not* get taken, and why.** `pick_attacks`'s
+"unblockable by the current board" check is the same shape
+(`opp_blockers.iter().all(|b| !blocker_can_block_attacker(b.id, c.id))`) but
+only ~4,900 of the 28,374 pair checks come from outside `pick_blocks_inner`,
+and hoisting there means resolving every opponent blocker eagerly on boards
+where the branch is never reached. Left alone. The cold top-up passes
+(must-be-blocked, menace, spare capacity) still call the composed entry
+point, which is the point of keeping it composed.
+
+Ladder printouts byte-identical on all three pools, both commits.
+
 ### Sixty-second pass — two questions that were asked before they were needed
 
 This session's line, run concurrently with the sixty-first pass below; its
@@ -4383,6 +4475,43 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### The three pools at the sixty-third tip (`66ec5e42`)
+
+Same binary, same config, one pool each: **`fixed` 1,175,724,194, `sos`
+1,523,856,909, `cube` 2,732,667,632.** Self costs, top 18 on each pool, with
+the allocator family summed rather than listed four times.
+
+| row | sos | fixed | cube |
+|---|---|---|---|
+| `dispatch_triggers_for_events` | **5.98 %** | **5.73 %** | **5.30 %** |
+| allocator (`_int_free`+`malloc`+`free`+`_int_malloc`) | 12.9 % | 11.3 % | 12.8 % |
+| `__memcpy_avx_unaligned_erms` | 5.43 % | 2.56 % | 3.64 % |
+| `gather_continuous_effects_inner` | 3.77 % | 4.61 % | 4.15 % |
+| `Arc::clone_from_ref_in` | 3.19 % | 3.32 % | 3.45 % |
+| `check_state_based_actions` | 2.45 % | 2.04 % | 1.93 % |
+| `Vec::from_iter` (all monos) | 2.06 % | 2.83 % | 2.64 % |
+| `sba_board_scan` | 1.84 % | 1.78 % | 1.47 % |
+| `GameState::clone` | 1.64 % | 1.84 % | 1.55 % |
+| `dispatch_board_scan` | 1.43 % | 1.75 % | 1.27 % |
+| `compute_permanent_pass` | 1.31 % | 1.47 % | 1.66 % |
+| `computed_permanent` | 1.30 % | 1.36 % | 1.51 % |
+| `evaluate_requirement_static_hinted` | 1.28 % | 2.04 % | — |
+| `card_can_grant_keyword` | — | 1.45 % | 1.40 % |
+| `activate_ability_inner` | 1.45 % | — | 1.39 % |
+| `fire_combat_damage_triggers` | — | — | 1.25 % |
+
+**`dispatch_triggers_for_events` is the largest engine self row on all three
+pools and has been since pass 43**, and it is still the standing "biggest row
+with no taker": 91,088,068 Ir on `sos` over 81,744 calls, of which 44,560 get
+past the empty-batch return — ~2,044 Ir of self per working dispatch,
+essentially all of it the `for card in &self.battlefield` walk. (-16) reads
+it as diffuse by line (largest single line 1.06 % on cube) and it has never
+been read by line on `sos`.
+
+**Nothing in the sixty-third pass's subtree is in this table**, which is the
+point of the pool-ratio device: `pick_blocks_inner` was 0.90 % of cube before
+the pass and 0.31 % after, and no top-18 listing would ever have shown it.
+
 ### The three pools at the sixty-first tip
 
 Same binary, same config, one pool each: **`fixed` 1,206,204,087, `sos`
@@ -4771,38 +4900,31 @@ run it where there is room.
 reproduces the sixtieth pass's 17.7 MiB exactly, two passes later. Nothing
 got heavier; the file was quoting the build that is not shipped.
 
-**(-47) `pick_blocks` IS 120,203,116 Ir / 4.34 % OF `cube` INCLUSIVE, AND
-`blocker_can_block_attacker` RESOLVES THE ATTACKER'S COMPUTED VIEW ONCE PER
-CANDIDATE BLOCKER.** Found at the sixty-second tip by the pool-ratio device
-— `pick_blocks_inner` is 0.90 % of cube against 0.43 % of sos (**2.09x**)
-and 0.53 % of fixed.
+**(-47) DONE at the sixty-third pass — `358c6e3b` + `66ec5e42`, and it read
+5x its sizing.** The entry costed the attacker-resolution hoist alone at
+~6.6 M / ~0.24 % of cube. Measured: **-1.289 % of cube**, -0.579 % of fixed,
+-0.446 % of sos. The sizing missed two things and both are the transferable
+part — see the Log's sixty-third pass.
 
-```text
-pick_blocks                 4,070 calls   120,203,116 incl   29,533 Ir/call
--> pick_blocks_inner       17,502          24,906,488 self
-   -> blocker_can_block_attacker  28,374   34,005,223 incl    1,449 Ir/call
-      -> computed_permanent       56,748   13,238,631 incl      233 Ir/call  <- 2x
-      -> can_block_attacker_computed 28,374  6,399,180
-      -> blocker_side_gates_allow_block 28,374 5,472,506
-```
+1. The pair loop above the legality check was paying per pair for *six*
+   attacker facts (Rampage, first strike, indestructible, trample, must-be-
+   blocked, min-blockers) and two blocker facts, each a battlefield `find`
+   plus a keyword walk. `pick_blocks_inner` self went 24,906,488 -> 7,583,714.
+2. Two of the twelve gates inside `blocker_can_block_attacker` never name an
+   attacker at all (`blocker_side_gates_allow_block`, 193 Ir a call, and the
+   computed creature-ness test), so the hoistable half was bigger than the
+   resolutions.
 
-**Two per check is one too many.** `blocker_can_block_attacker(blocker_id,
-attacker_id)` resolves *both* ids internally, and its callers loop blockers
-inside a fixed attacker: `pick_blocks_inner`'s forced and menace passes are
-`battlefield.iter().filter(|c| … state.blocker_can_block_attacker(c.id,
-*a_id))`. One attacker and N candidate blockers is N+1 distinct permanents
-and 2N resolutions. It also costs two `battlefield_find`s per check, which
-is **(-38)**'s.
+**The rule: in a loop over pairs, ask of every term which side of the pair
+it belongs to.** The tell is a callee count that is a *multiple* of the pair
+count — `computed_permanent` sat at exactly 2x `blocker_can_block_attacker`.
 
-**Size: ~6.6 M on cube, ~0.24 %** — those 233 Ir are memo hits (see below),
-so a hoist saves the hit, not a gather. It needs a
-`blocker_can_block_attacker_with(blocker, blocker_cp, attacker, atk_cp)` and
-seven call sites in `bot.rs` threaded through it.
-
-**Take it only with a ladder printout diff on all three pools.** Every one
-of those call sites decides **block legality**. A hoist that passes the
-wrong side's computed view does not crash; it makes the bot block illegally
-or decline legal blocks, and the suite will not catch it.
+**What is left of this entry, and it is small.** `pick_attacks`'s
+"unblockable by the current board" check is the same shape over the ~4,900
+pair checks that do not come from `pick_blocks_inner`; hoisting there means
+resolving every opponent blocker eagerly on boards where the branch is never
+reached, so it needs measuring rather than assuming. The two
+`battlefield_find`s per composed call are still **(-38)**'s.
 
 **Two things this entry proposed on its first writing and which are
 REFUTED — recorded so nobody re-proposes them.**
@@ -5031,6 +5153,22 @@ minted and `Arc::new` copies it — and
 eviction rule for `CreateTokenCopyOf`, and the predicate site holds a
 `&CardDefinition` with no `Arc` to share. **Size them together at ~0.6 % and
 do not start one alone.**
+
+**RE-READ AT THE SIXTY-THIRD TIP AND IT IS FLAT — do not spend a callgrind
+round re-collecting this table.** `make_mut` on `sos` is **440,300** calls
+against the 439,300 below, and every row is within a percent of its
+fifty-eighth-tip value (`cast_spell_with_convoke` 52,410 / 12.06 M,
+`activate_ability_inner` 30,404 / 13.97 M, `declare_attackers_banded` 28,722
+/ 9.71 M, `do_untap` 41,198 / 4.59 M). The `cube` column, which this entry
+never had, is 858,130 calls with the same shape and two rows that are
+larger there than on `sos`: `restore_payment_state` **34,326 / 18,996,709 =
+553 Ir/call** and `place_card_at_resolved_zone` **13,516 / 8,496,828 = 629**
+— both in the clone-shaped half, both above `activate_ability_inner`'s
+Ir/call, and neither has ever been read. **The paying side is
+`Arc::clone_from_ref_in`: 85,650 calls / 64,030,880 Ir on `sos` (4.20 %) and
+168,808 / 128,187,067 on `cube` (4.69 %), i.e. 19.4 % of unshares actually
+deep-copy, at ~747 Ir apiece.** That is the size of the prize and it is the
+largest unclaimed number in the profile.
 
 **(-43) THE CoW-HANDLE FAMILY, READ FROM THE TOP AT THE FIFTY-EIGHTH TIP.
 `make_mut` on `sos` is 439,300 calls after four commits took it down from

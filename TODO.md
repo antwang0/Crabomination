@@ -22,88 +22,71 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
 top candidate, re-read the base after every rebase, and budget two callgrind
 rounds per commit.**
 
-1. **Two sessions ran passes 59-62 concurrently; both lines are in PERF's
-   Log.**
-   Pass 60 (`6344adf6` + `ba15f249`): `sos` **-3.46 %**, `fixed` -2.16 %,
-   peak RSS 21.9 -> 17.7 MiB. Pass 61, the other session: `fixed`
-   **-0.984 %**, `sos` -0.862 %, `cube` -0.879 % — measured at base
-   `ba15f249`, so `6344adf6` is under neither of its columns. Pass 62, this
-   session, two code commits, both **under the clock's resolution** and both
-   landed as correctness/clarity: `718a66f8` (`NameCard`'s namespace filter
-   stopped asking a global index about names it already held) and
-   `655e1e47` (`affected_includes_gated` computed six predicates before the
-   AND that could reject on the first — the function itself **-28 % on
-   cube, -45 % on sos**, the program -0.170 % / -0.069 % / -0.047 %).
-2. **Three devices, all cheap to re-run, each found its pass's biggest
-   commit.** (a) Read a caller table's **Ir/call** column: an allocation far
-   above the family mean is an allocation of something big (`__memcpy` ->
-   `CardInstance::new` at 8,242 Ir = `size_of::<CardDefinition>()`). **Do
-   NOT re-run it on the allocator — both sides are now read and both are
-   flat** (`__rust_alloc` at the 60th tip, `__rust_dealloc` at the 62nd:
-   95-126 Ir/call over 1,071,319 calls, no outlier). That half of (-44) is
-   closed; what is left of it is `__memcpy`'s own rows. (b) `cg_edges.py
-   --callers SpecFromIterNested` ranked by **calls**, then ask which collects
-   can be non-empty on the pools the actors play — that is (-45).
-   (c) **Rank rows by `cube% / sos%`, not by either share** — dump both
-   pools at one tip, `cg_edges.py --rows 0` on each (`--rows 0` on *both*,
-   or truncation reads as an infinite ratio), sort the ratio. That is how
-   pass 62 found a row that is 0.61 % of cube and **5.08x** its sos share.
-   **The ratio is a pointer, not a size**: confirm with Ir/call before
-   writing code — the row below it in that same table (`has_keyword`,
-   494,394 calls at a flat 46 Ir) is diffuse and was not taken. Write-up in
-   "Which pool a change moves".
+1. **The sixty-third pass took (-47) and it read 5x its sizing.** Base
+   `0036e238` -> tip, two commits: `fixed` **-0.579 %**, `sos` **-0.446 %**,
+   `cube` **-1.289 %**. The entry costed only the attacker-resolution hoist
+   (~0.24 % of cube); what it missed was that the pair loop *above* the
+   check paid per pair for six attacker facts and two blocker facts, and
+   that two of the twelve gates *inside* the check never name an attacker.
+   `pick_blocks_inner` self on cube 24,906,488 -> 7,583,714.
+2. **The rule that pass yields, and it is cheap to re-run: in a loop over
+   pairs, ask of every term which side of the pair it belongs to.** The tell
+   is a callee count that is a *multiple* of the pair count —
+   `computed_permanent` sat at exactly 2x `blocker_can_block_attacker`.
+   `cg_edges.py --callees <fn>` ranked by **calls** is the table. Other pair
+   loops worth the same read: `legal_block_targets`, the combat-damage
+   assignment loops, `pick_attacks`'s blocker scan (see 5).
 3. **(-48) is the highest-value fresh item and it is half-measured:
    mimalloc costs ~36 % more RSS (24.0-24.3 MiB vs 17.6) and nobody has ever
    measured what it buys on the clock.** RSS per actor caps actors per box,
    so 6.4 MiB is real. Finish it with two `release-fast` trees in separate
    target dirs + `ab_wall.py --blocks 8` and its null control. **Needs
-   ~1.5 GB free disk** — this container had 654 MB against a 28 GB `target`,
-   which is the only reason it is unmeasured.
-4. **(-47) is the other fresh candidate and it is small: ~0.24 % of cube.**
-   `blocker_can_block_attacker` resolves the *attacker's* computed view once
-   per candidate blocker (56,748 `computed_permanent` calls for 28,374
-   checks); hoisting it needs a `_with` variant through seven `bot.rs` call
-   sites that decide **block legality**, so take it only with a three-pool
-   ladder printout diff. **Read its two refutations before proposing
-   anything near it** — the `layer_freeze` memo is a `Vec` on purpose (its
-   own doc says so, and the mutex is 26 Ir a call), and the bot's scoring
-   loop is *already* frozen. The 7.6 % of cube under `computed_permanent`
-   is one gather per freeze scope times the number of scopes, i.e. (-13)'s
-   cloned candidate states, which was costed and refused.
-5. **Then (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of `sos`, paying
-   side unread. **The bind-once half is done; don't grind it.** Then (-44)
-   (`__memcpy`, allocator half now closed) and (-45) (the cost of asking).
+   ~1.5 GB free disk** — the container it was written on had 654 MB against
+   a 28 GB `target`, which is the only reason it is unmeasured.
+4. **Then (-43), the CoW clone cost, and its paying side is now read.**
+   `Arc::clone_from_ref_in` is 85,650 calls / 64.0 M on `sos` (**4.20 %**)
+   and 168,808 / 128.2 M on `cube` (**4.69 %**) — 19.4 % of `make_mut`
+   unshares actually deep-copy, at ~747 Ir apiece. **The caller table is
+   flat since the 58th tip; do not re-collect it.** The `cube` column is
+   new and has two unread clone-shaped rows: `restore_payment_state`
+   (553 Ir/call) and `place_card_at_resolved_zone` (629). **The bind-once
+   half is done; don't grind it.** Then (-44) (`__memcpy`, allocator half
+   closed) and (-45) (the cost of asking).
    **(-46) is deliberately last and should stay there** — see 9.
-6. **Crash-freedom now has a wider recipe, and it is nearly free.** Add
-   `--decks cube` and `--decks sealed` (`--games 120 --threads 3`, two
-   seeds) to the standing `--decks all` grid whenever a pass touches rules
-   code: `all` is 17 fixed archetypes and cannot reach a card they never
-   draw, and the `overflow` build is the expensive part either way. Clean at
-   `9b0cc470` over 25,200 games.
-7. **Refuted this pass, do not re-take:** a presence bit belongs in
-   `sba_board_scan` only when the question has no early exit of its own
-   (+0.29 % on `fixed`; third loss for the fusion device in
-   `creature_death_possible` alone). A collect whose drain touches `self` is
-   load-bearing — check that line before trying to remove one. And
-   `is_event_hardcoded`'s 0.38 % of `sos`, taken with per-event bitmasks,
-   read **+0.12 %**: see (-16), which now carries the first line profile of
-   `dispatch_triggers_for_events` on `sos` and the rule that goes with it —
-   *a line's Ir is not what removing the line would save.*
-8. **Sized and unclaimed:** `mint_token_onto_battlefield`, 370 calls /
-   6,644,250 Ir (**0.43 %** of `sos`), still builds and copies a whole
-   `CardDefinition` per token — wants a value-keyed memo, not worth a pass
-   alone. Its sibling `definition_matches_requirement` is **closed** by
-   `718a66f8` (takes `impl Into<Arc<_>>`; the deep clone is gone). Pass 57's
-   gate placement is ~0.25 % of `fixed` Ir = ~0.1 % of clock for a 2,000-line
-   re-indent — tidy, not a number.
+5. **What is left of (-47) is small and needs measuring, not assuming.**
+   `pick_attacks`'s "unblockable by the current board" check is the same
+   shape, but only ~4,900 of 28,374 pair checks come from outside
+   `pick_blocks_inner`, and hoisting there resolves every opponent blocker
+   eagerly on boards where the branch is never reached. The two
+   `battlefield_find`s per composed `blocker_can_block_attacker` are (-38)'s.
+6. **Three devices, all cheap to re-run, each found a pass's biggest
+   commit.** (a) Read a caller table's **Ir/call** column: a cost far above
+   the family mean is a copy of something big. **Do NOT re-run it on the
+   allocator — both sides are read and both are flat.** (b) `cg_edges.py
+   --callers SpecFromIterNested` ranked by **calls**, then ask which
+   collects can be non-empty on the pools the actors play — that is (-45).
+   (c) **Rank rows by `cube% / sos%`, not by either share** (`--rows 0` on
+   *both* dumps, or truncation reads as an infinite ratio). That device
+   found pass 62's second commit and pointed pass 63 at `pick_blocks_inner`
+   (2.09x). **The ratio is a pointer, not a size** — confirm with Ir/call.
+7. **Crash-freedom recipe (unchanged, nearly free).** Add `--decks cube`
+   and `--decks sealed` (`--games 120 --threads 3`, two seeds) to the
+   standing `--decks all` grid whenever a pass touches rules code: `all` is
+   17 fixed archetypes and cannot reach a card they never draw, and the
+   `overflow` build is the expensive part either way.
+8. **Refuted, do not re-take:** a presence bit belongs in `sba_board_scan`
+   only when the question has no early exit of its own (third loss for the
+   fusion device in `creature_death_possible` alone). A collect whose drain
+   touches `self` is load-bearing — check that line first. Per-event
+   bitmasks for `is_event_hardcoded` read **+0.12 %**: see (-16), and the
+   rule that a line's Ir is not what removing the line would save.
 9. **Three measurement cautions before you rank anything.** (0) **RSS per
    actor is the ML-relevant number and the file was quoting the wrong
    build.** At one tip on one box: system allocator 17.6 MiB, shipped
    `release`/mimalloc **24.0-24.3**, `overflow` 27.2. The sixtieth pass's
    "-19 %, 17.7 MiB" is a `--no-default-features` reading and reproduces
    exactly — but **plan actor counts off ~24 MiB**. Nor does RSS compare
-   across containers (this box 24.0-24.3 at 2.10 GHz, the other session's
-   30.0-30.1 at 2.80 GHz). (a) Clock numbers
+   across containers (2.10 GHz box 24.0-24.3, 2.80 GHz box 30.0-30.1). (a) Clock numbers
    go through `scripts/ab_wall.py` with its null control; eight blocks
    resolve **+/-2 % and nothing finer**, and Ir over-reads by ~2x. (b)
    `name_index()` builds 22,568 `CardDefinition`s to read their names —
@@ -113,12 +96,20 @@ rounds per commit.**
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **759** (was 1,096 — "Engine — Missing Mechanics"
-   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.4k. Next folds: PERF's
-   47th/48th Log entries, and ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k both
-   want a topical triage — the backlog file's own header asks for one and
-   nobody has done it. **Top ML item is still a training run, not code.**
-11. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
+10. **Housekeeping.** TODO **750** (was 1,096 — "Engine — Missing Mechanics"
+   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.5k. Suite is **14 test
+   binaries / 18,736 tests**, not the "22" older blocks quote. Next folds:
+   PERF's 47th/48th Log entries, and ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k
+   both want a topical triage — the backlog file's own header asks for one
+   and nobody has done it.
+11. **Bugs, and this is the best-shaped one left.** `core_rules::
+   target_walkers` is a ratchet at **39** effect bodies that declare a
+   `TargetFiltered` slot `target_filter_for_slot` cannot answer — each one a
+   shipped card whose targeted effect resolves against an empty list. A
+   single derive-or-table over the three hand-written walkers
+   (`requires_target` / `primary_target_filter` / `target_filter_for_slot`)
+   ends the class outright; run the test to list the residual.
+12. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
    sacrifice / tap / discard" cluster is **read to the end**; the ~337
    remaining are the "you may draw / search / put into hand" tail, where
    declining is almost never right. **Top ML item is still a training run.**
