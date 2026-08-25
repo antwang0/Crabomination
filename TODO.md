@@ -165,6 +165,16 @@ Log with its numbers; read the entry before re-proposing any of them.
   taking cube from -1.85 to -2.26 % and sos from -2.75 to -3.16 % at the same
   time. `fixed`'s `sa_cards` is empty on all 32,002 gathers, so the walks were
   already free there and anything in front of them is pure charge.
+- **`Ir` counts a `memcpy`; the machine barely does** (`cae6b605`, and it is
+  pass 57's clock rule with its mechanism named). Replacing
+  `granted_abilities_of`'s deep-copied `Vec<ActivatedAbility>` with
+  `Vec<&ActivatedAbility>` — 11,324 `ActivatedAbility::clone` and 11,324
+  `__memcpy` a six-game run, gone — reads **-1.946 % on `sos`** and is **flat
+  on the clock over nine alternated 20,000-game pairs**, under *both*
+  allocators. A deep copy of a contiguous struct runs at high IPC out of a
+  just-written cache line; the borrow that replaces it turns a hot-buffer read
+  into a pointer chase into cold definitions. Keep such a change for its Ir and
+  its clarity, but do not quote it as throughput.
 - **A `Vec` returned to a caller that immediately drains it is two
   allocations, not one** (pass 57's (D) and (E), -1.4 % of cube between them
   on top of the mask). `static_ability_to_effects` collected a `Vec` per

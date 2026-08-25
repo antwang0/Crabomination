@@ -395,6 +395,51 @@ deep copy) then landed underneath it, and is not in either column. Two
 cheaper explanations were built and refuted first; the line profile named
 `Player::deref_mut`, not a hot line. See the Log and (-42).
 
+**And a seventh, `cae6b605`, from the third concurrent session: the grant
+list was deep-copied for callers that only ever read it.**
+`granted_abilities_of` collected a permanent's granted activated abilities
+into a `Vec<ActivatedAbility>` — a whole `Effect` tree, a cost and a dozen
+filters per element — and its three callers either folded the list or wrapped
+each element in `AbilityRef::Synth(Box::new(a))`, a second allocation, and
+read it through `Deref`. Every source it draws from is reachable from
+`&'a self`, `me` or the scan, so it returns `Vec<&'a ActivatedAbility>`; the
+one ability with nothing to borrow from (CR 804.2's deploy-creatures grant,
+all-constant fields) is a `LazyLock`. Base `7c7f2e5e` re-read at the tip that
+carries (E) and `223c77b5`:
+
+```text
+                     base (7c7f2e5e)   tip (cae6b605)
+I refs, --decks fixed  1,233,122,037   1,230,058,286   -0.248 %
+I refs, --decks cube   2,910,851,269   2,896,273,896   -0.501 %
+I refs, --decks sos    1,644,050,093   1,612,056,291   -1.946 %
+```
+
+The function's own callee table on `sos`: `ActivatedAbility::clone` **11,324
+calls / 7,868,320 Ir** and `__memcpy` **11,324 / 2,501,090** both go to zero,
+`RawVec::grow_one` **11,324 / 8,485,733 -> 9,782 / 1,252,111** (the `Vec` now
+grows by pointers), and `evaluate_requirement_static_hinted` is unchanged at
+39,430 / 19,241,574.
+
+**And the clock cannot see any of it, under either allocator.** `release-fast`
++ mimalloc, `--a gang --b gang --games 4000 --decks sos --seed 11 --threads
+4` (20,000 games a run), **nine alternated pairs**: base mean 58.60 s
+(56.9-60.6), tip 58.99 s (58.3-59.7), 3/9 pairs positive — the two are inside
+each other's spread and the difference is +0.7 % the wrong way. The same
+workload on the *system*-allocator binaries (`profiling-fast`, three pairs:
+62.5/62.8, 63.1/64.3, 64.8/63.2) is flat too, which rules out "mimalloc
+already made the allocation cheap" as the explanation.
+
+**This is pass 57's clock rule with its mechanism named, and it is the rule
+this file should carry forward: `Ir` counts a `memcpy`; the machine barely
+does.** A deep copy of a contiguous struct runs at high IPC out of a
+just-written cache line, and the borrow that replaces it turns a hot-buffer
+read into a pointer chase into the (cold, scattered) card definitions. The
+commit is **kept** — the Ir is real, the ladder printout and the 18,728-test
+suite are identical, and not deep-copying an immutable shared structure in
+order to read it is a clarity win on its own — but **-1.95 % is not a
+throughput claim**, and the next allocation-shaped candidate on this branch
+should be sized with that in front of it.
+
 **Both game pools read slightly *down* rather than flat, and the reason is
 the binary.** No commit here is on the game loop; `_dl_relocate_object` is
 2.31 % of the deck-build workload and `build_shape` shrank, so the process
@@ -4011,6 +4056,19 @@ two-thirds would pay. If someone wants this, measure it on `--decks cube`
 and quote that pool; it is the pass-53 rule ("which pool does the change
 live on") pointing the other way for once — the change lives on a pool the
 training loop does not play.
+
+**It was also built and measured, by a second session, which is the same
+answer from the other end.** `granted_abilities_of_where(.., keep: fn(&Ac
+tivatedAbility) -> bool)` with `available_mana` passing
+`is_countable_mana_ability`: `granted_abilities_of`'s edge to
+`evaluate_requirement_static_hinted` came back at **exactly 39,430 calls /
+19,241,574 Ir — unchanged to the instruction**, and `ActivatedAbility::clone`
+at exactly 11,324, i.e. the filter rejected nothing at all. What it added was
+24,926 `FnOnce::call_once` (the `|_| true` the two other callers now pass) and
+14,504 `is_countable_mana_ability` calls, for **+0.049 % on `sos`,
++0.019 % on cube**. Reverted. **The entry stays closed for the shipped pools,
+and the useful part of it is elsewhere: the same table is what named
+`cae6b605`'s 11,324 clones.**
 
 **`wants_converge` is 12,507,301 Ir / 0.42 % of a six-game cube run over 217
 calls, and it is startup, not steady state.** Pass 46 gave it a thread-local
