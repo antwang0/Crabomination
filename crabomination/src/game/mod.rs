@@ -13841,14 +13841,11 @@ impl GameState {
         };
         let blocker_cp = &blocker_cp;
         // CR 509.1a — creature-ness from the computed view (animated lands /
-        // crewed Vehicles can block).
-        if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
-            return false;
-        }
-        // Honor `Keyword::CantBlock` from the computed keyword set (transient
-        // pump-spell grants and static restrictions both surface here) plus
-        // every other attacker-independent gate.
-        if !self.blocker_side_gates_allow_block(blocker, blocker_cp) {
+        // crewed Vehicles can block), untapped, and every attacker-independent
+        // gate: `Keyword::CantBlock` from the computed keyword set (transient
+        // pump-spell grants and static restrictions both surface here) and the
+        // hand-size / pay / delirium / descend / blessing family.
+        if !self.blocker_can_block_anything(blocker, blocker_cp) {
             return false;
         }
         attackers.iter().any(|(atk, atk_cp)| {
@@ -13884,6 +13881,21 @@ impl GameState {
         })
     }
 
+    /// CR 509.1a/b — the whole blocker-side half of
+    /// [`blocker_can_block_attacker`]: creature-ness from the computed view,
+    /// untapped, and every gate that doesn't name an attacker. False here
+    /// means this creature can block *nothing* this combat, so a caller
+    /// looping attackers inside a fixed blocker asks it once.
+    pub(crate) fn blocker_can_block_anything(
+        &self,
+        blocker: &CardInstance,
+        blocker_cp: &ComputedPermanent,
+    ) -> bool {
+        blocker_cp.card_types.contains(&crate::card::CardType::Creature)
+            && !blocker.tapped
+            && self.blocker_side_gates_allow_block(blocker, blocker_cp)
+    }
+
     /// True if `blocker_id` can legally block `attacker_id`.
     pub fn blocker_can_block_attacker(&self, blocker_id: CardId, attacker_id: CardId) -> bool {
         let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
@@ -13896,21 +13908,34 @@ impl GameState {
         let Some(blocker_cp) = self.computed_permanent(blocker_id) else {
             return false;
         };
-        let blocker_cp = &blocker_cp;
-        if !blocker_cp.card_types.contains(&crate::card::CardType::Creature) || blocker.tapped {
+        if !self.blocker_can_block_anything(blocker, &blocker_cp) {
             return false;
         }
+        let atk_cp = self.computed_permanent(attacker_id);
+        self.blocker_can_block_attacker_pair(blocker, &blocker_cp, attacker, atk_cp.as_deref())
+    }
+
+    /// The attacker-dependent half of [`blocker_can_block_attacker`], with
+    /// both permanents and both computed views already resolved.
+    ///
+    /// Split out so the bot's block planner — which loops one side of the pair
+    /// inside the other — resolves the invariant side once instead of once per
+    /// pair. **Callers must have checked [`blocker_can_block_anything`]
+    /// first**; the two halves together are the whole rule, and
+    /// `blocker_can_block_attacker` is the composition that can't drift.
+    pub(crate) fn blocker_can_block_attacker_pair(
+        &self,
+        blocker: &CardInstance,
+        blocker_cp: &ComputedPermanent,
+        attacker: &CardInstance,
+        atk_cp: Option<&ComputedPermanent>,
+    ) -> bool {
+        let attacker_id = attacker.id;
         // CR 702.158d — Space Beleren's +1: creatures can be blocked this turn
         // only by creatures in the same sector.
         if self.sector_block_lock_turn == Some(self.turn_number)
             && blocker.sector != attacker.sector
         {
-            return false;
-        }
-        // CR 509.1a/b — every attacker-independent gate (CantBlock, Decayed,
-        // the hand-size / pay / delirium / descend / blessing gates, Branded
-        // Brawlers, Hollow Warrior's tap cost, Topiary Stomper's count).
-        if !self.blocker_side_gates_allow_block(blocker, blocker_cp) {
             return false;
         }
         // CR 509.1b — Mogg Toady: strictly more creatures than the attacker's
@@ -13920,10 +13945,9 @@ impl GameState {
         {
             return false;
         }
-        let atk_cp = self.computed_permanent(attacker_id);
-        let atk_kws = atk_cp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
-        let atk_colors = atk_cp.as_ref().map(|c| c.colors).unwrap_or_default();
-        let atk_power = atk_cp.as_ref().map(|c| c.power).unwrap_or_else(|| attacker.power());
+        let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        let atk_colors = atk_cp.map(|c| c.colors).unwrap_or_default();
+        let atk_power = atk_cp.map(|c| c.power).unwrap_or_else(|| attacker.power());
         // CR 509.1b — "can't be blocked as long as defending player controls a
         // [filter]" (Neurok Spy, Hazy Homunculus). Enforced in
         // `declare_blockers` too; mirrored here so the UI/bot never offers the

@@ -8494,8 +8494,12 @@ fn bot_can_block(c: &crate::card::CardInstance) -> bool {
 /// loop runs once per (blocker x attacker) pair — so every one of these was a
 /// whole-battlefield `find` plus a keyword walk per pair before it was a
 /// field. Built once per attacker in [`pick_blocks_inner`].
-struct AttackerFacts {
+struct AttackerFacts<'a> {
     id: CardId,
+    /// The attacker itself and its computed view, resolved once so the pair
+    /// check doesn't re-resolve them per candidate blocker.
+    card: &'a crate::card::CardInstance,
+    cp: Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>,
     target: AttackTarget,
     /// [`attacker_damage_value`] — combat damage this attacker assigns.
     power: i32,
@@ -8549,6 +8553,8 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         .filter_map(|atk| {
             state.battlefield.iter().find(|c| c.id == atk.attacker).map(|a| AttackerFacts {
                 id: atk.attacker,
+                card: a,
+                cp: state.computed_permanent(atk.attacker),
                 target: atk.target,
                 power: attacker_damage_value(state, atk.attacker),
                 toughness: a.toughness(),
@@ -8685,6 +8691,16 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
         });
         let blocker_indestructible = blk.is_some_and(|c| c.is_indestructible());
+        // CR 509.1a/b — the attacker-independent half of block legality, asked
+        // once for this blocker rather than once per attacker. `None` means it
+        // can block nothing, so the whole attacker loop is dead.
+        let blk_cp = state.computed_permanent(b_id);
+        let Some((blk_card, blk_view)) = blk
+            .zip(blk_cp.as_deref())
+            .filter(|&(b, bcp)| state.blocker_can_block_anything(b, bcp))
+        else {
+            continue;
+        };
         for a in &attacker_info {
             let (a_id, a_pow, a_tough, a_dt) = (&a.id, &a.power, &a.toughness, &a.deathtouch);
             if a.flying && !b_flying && !b_reach {
@@ -8695,7 +8711,8 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // protection, shadow, etc. Skip attackers this blocker can't
             // legally be assigned to, so the bot never submits a block batch
             // the engine will reject.
-            if !state.blocker_can_block_attacker(b_id, *a_id) {
+            if !state.blocker_can_block_attacker_pair(blk_card, blk_view, a.card, a.cp.as_deref())
+            {
                 continue;
             }
             // Skip attackers that already have at least their toughness
