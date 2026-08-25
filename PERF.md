@@ -423,6 +423,24 @@ The tip is faster in every one of the eight pairs. **`sos` -3.3 % is the
 number the training loop gets** — that is the pool a `selfplay_train` actor
 plays.
 
+**The training loop itself was measured and is INCONCLUSIVE, which is worth
+recording rather than rounding into a win.** `selfplay_train --actors 3
+--games 6000 --steps 1 --seed 7`, both binaries `release-fast` + mimalloc,
+alternated in one sitting:
+
+```text
+base   144.4 / 176.1 / 178.2 games/s      best 178.2
+tip    185.1 / 177.7 / 179.5              best 185.1     (+3.9 %)
+wall   base 34.2 / 34.0 / 33.0 s          tip 33.5 / 33.1 / 33.2 s   (flat)
+```
+
+The reported rate and the wall clock disagree in sign, and the base's spread
+on the identical binary is **23 %** (144.4 to 178.2) against the tip's 4 %.
+Three actors on a four-core box that is also running the harness is not an
+instrument at this resolution. **Use `--decks sos` on the ladder as the
+proxy** — same pool, one thread, 3/3 pairs, -3.3 % — and re-run the training
+loop on the box that matters.
+
 **-6.2 % wall clock against -20.7 % Ir, and the gap is the point.** A sixth
 of the Ir this pass removed is the allocator family, callgrind runs the
 *system* allocator, and mimalloc ships — so the Ir is the attribution and
