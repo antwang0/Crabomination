@@ -3956,16 +3956,29 @@ first.** `available_mana` keeps only abilities that pass
 permanent skips both the evaluation and the clone for every grant that is not
 a mana ability.
 
-**It is sound for `available_mana` only, and that is the whole entry.** The
-other two callers index into the returned list — `effective_mana_abilities_into`
-pushes `(printed_count + j, …)` and `usable_abilities` `(n + i, …)`, and
+**It is sound for `available_mana` only.** The other two callers index into
+the returned list — `effective_mana_abilities_into` pushes
+`(printed_count + j, …)` and `usable_abilities` `(n + i, …)`, and
 `activate_ability` resolves granted abilities by that index — so a filtered
 list would renumber them. Skipping a grant's requirement evaluation also
 means not knowing whether it *would* have been included, so the indices
-cannot be preserved by carrying the original position either. Size it at the
-share of 18.16 M that non-mana grants hold on the SOS boards; that share is
-**not** measured, and if the set's grants are mostly mana grants (school
-lands and their kin) the change measures nothing. Build it and read it.
+cannot be preserved by carrying the original position either.
+
+**AND IT IS WORTH NOTHING ON `sos`, WHICH IS THE POOL THAT MATTERS. Do not
+build it for the actors.** The filter only pays for grants whose ability is
+*not* a countable mana ability, and **SOS has exactly one
+`GrantActivatedAbility` static in the whole set** — Petrified Hamlet's
+"lands with the chosen name have `{T}: Add {C}`" — which is a mana ability
+and survives the filter. `--decks fixed` carries no grant at all. So the
+ceiling on the shipped workload is zero, and `available_mana`'s 18.16 M is
+the walk itself, not the filter evaluations inside it.
+
+Catalog-wide there are **68 `GrantActivatedAbility` sites** and roughly a
+third of them grant mana, so a *cube* board carrying one of the other
+two-thirds would pay. If someone wants this, measure it on `--decks cube`
+and quote that pool; it is the pass-53 rule ("which pool does the change
+live on") pointing the other way for once — the change lives on a pool the
+training loop does not play.
 
 **`wants_converge` is 12,507,301 Ir / 0.42 % of a six-game cube run over 217
 calls, and it is startup, not steady state.** Pass 46 gave it a thread-local

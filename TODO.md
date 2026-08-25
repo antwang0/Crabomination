@@ -53,8 +53,10 @@ candidate, and budget two callgrind rounds.**
    per-turn flag roll-over loop (built, measured: 212,012 -> 211,298 calls,
    sos +0.0008 %, reverted). It needs `cg_lines.py --in do_untap` on a
    `profiling-lines` build — budget the cold build.
-   (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos,
-   pre-filterable **only** there (the other two callers index the list).
+   (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos — the
+   pre-filter is sound only there (the other two callers index the list) and
+   **worth zero on `sos`**: the set's single `GrantActivatedAbility` (Petrified
+   Hamlet) grants `{T}: Add {C}`, which survives it. Cube only.
 5. **(-40) is closed as a whole.** The clone/allocator family is 26.5 % of
    `sos`, read from the top, and diffuse: `__memcpy`'s top twenty callers
    hold half its 1.29 M calls, the rest is 21,130 rows. Take (-41)/(-42).
