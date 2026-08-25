@@ -52,7 +52,14 @@ rounds per commit.**
    writing code — the row below it in that same table (`has_keyword`,
    494,394 calls at a flat 46 Ir) is diffuse and was not taken. Write-up in
    "Which pool a change moves".
-3. **(-47) is the only fresh candidate and it is small: ~0.24 % of cube.**
+3. **(-48) is the highest-value fresh item and it is half-measured:
+   mimalloc costs ~36 % more RSS (24.0-24.3 MiB vs 17.6) and nobody has ever
+   measured what it buys on the clock.** RSS per actor caps actors per box,
+   so 6.4 MiB is real. Finish it with two `release-fast` trees in separate
+   target dirs + `ab_wall.py --blocks 8` and its null control. **Needs
+   ~1.5 GB free disk** — this container had 654 MB against a 28 GB `target`,
+   which is the only reason it is unmeasured.
+4. **(-47) is the other fresh candidate and it is small: ~0.24 % of cube.**
    `blocker_can_block_attacker` resolves the *attacker's* computed view once
    per candidate blocker (56,748 `computed_permanent` calls for 28,374
    checks); hoisting it needs a `_with` variant through seven `bot.rs` call
@@ -63,17 +70,17 @@ rounds per commit.**
    loop is *already* frozen. The 7.6 % of cube under `computed_permanent`
    is one gather per freeze scope times the number of scopes, i.e. (-13)'s
    cloned candidate states, which was costed and refused.
-4. **Then (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of `sos`, paying
+5. **Then (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of `sos`, paying
    side unread. **The bind-once half is done; don't grind it.** Then (-44)
    (`__memcpy`, allocator half now closed) and (-45) (the cost of asking).
-   **(-46) is deliberately last and should stay there** — see 8.
-5. **Crash-freedom now has a wider recipe, and it is nearly free.** Add
+   **(-46) is deliberately last and should stay there** — see 9.
+6. **Crash-freedom now has a wider recipe, and it is nearly free.** Add
    `--decks cube` and `--decks sealed` (`--games 120 --threads 3`, two
    seeds) to the standing `--decks all` grid whenever a pass touches rules
    code: `all` is 17 fixed archetypes and cannot reach a card they never
    draw, and the `overflow` build is the expensive part either way. Clean at
    `9b0cc470` over 25,200 games.
-6. **Refuted this pass, do not re-take:** a presence bit belongs in
+7. **Refuted this pass, do not re-take:** a presence bit belongs in
    `sba_board_scan` only when the question has no early exit of its own
    (+0.29 % on `fixed`; third loss for the fusion device in
    `creature_death_possible` alone). A collect whose drain touches `self` is
@@ -82,14 +89,14 @@ rounds per commit.**
    read **+0.12 %**: see (-16), which now carries the first line profile of
    `dispatch_triggers_for_events` on `sos` and the rule that goes with it —
    *a line's Ir is not what removing the line would save.*
-7. **Sized and unclaimed:** `mint_token_onto_battlefield`, 370 calls /
+8. **Sized and unclaimed:** `mint_token_onto_battlefield`, 370 calls /
    6,644,250 Ir (**0.43 %** of `sos`), still builds and copies a whole
    `CardDefinition` per token — wants a value-keyed memo, not worth a pass
    alone. Its sibling `definition_matches_requirement` is **closed** by
    `718a66f8` (takes `impl Into<Arc<_>>`; the deep clone is gone). Pass 57's
    gate placement is ~0.25 % of `fixed` Ir = ~0.1 % of clock for a 2,000-line
    re-indent — tidy, not a number.
-8. **Three measurement cautions before you rank anything.** (0) **RSS per
+9. **Three measurement cautions before you rank anything.** (0) **RSS per
    actor is the ML-relevant number and the file was quoting the wrong
    build.** At one tip on one box: system allocator 17.6 MiB, shipped
    `release`/mimalloc **24.0-24.3**, `overflow` 27.2. The sixtieth pass's
@@ -106,12 +113,12 @@ rounds per commit.**
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-9. **Housekeeping.** TODO **744** (was 1,096 — "Engine — Missing Mechanics"
-   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.3k. Next folds: PERF's
+10. **Housekeeping.** TODO **759** (was 1,096 — "Engine — Missing Mechanics"
+   moved to ENGINE_BACKLOG at the 62nd pass), PERF 7.4k. Next folds: PERF's
    47th/48th Log entries, and ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k both
    want a topical triage — the backlog file's own header asks for one and
    nobody has done it. **Top ML item is still a training run, not code.**
-10. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
+11. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
    sacrifice / tap / discard" cluster is **read to the end**; the ~337
    remaining are the "you may draw / search / put into hand" tail, where
    declining is almost never right. **Top ML item is still a training run.**
