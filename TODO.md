@@ -29,9 +29,15 @@ are continuing; every number below is written up there in full.
    `sos`.
 3. **Pass 58 is done and paid**: five deck-builder commits (`sealed` **-17.77
    %**) plus four CoW-handle commits (`sos` -0.55 %, `make_mut` 582,552 ->
-   439,300, **-24.6 %**). (-42), the builder and (-40) are closed. The
-   bind-once half of (-43) is largely taken; `resolve_top_of_stack_inner`
-   and `resolve_combat` are what is left of it.
+   439,300, **-24.6 %**). (-42), the builder and (-40) are closed.
+   **The bind-once half of (-43) is done — don't grind it.** `cg_sites.py …
+   deref_mut` prices the whole inlined family at **0.53 %** over 111 sites,
+   largest 0.10 %. `resolve_top_of_stack_inner` / `resolve_combat` look like
+   rows and are not: their `make_mut`s belong to inlined callees, so there
+   is no run to bind.
+7. **New lead, sized not chased:** `check_state_based_actions` is
+   **3.8 % of `sos`** by line and diffuse — top row a dependency's
+   `macros.rs:332` at 0.62 %. No CoW handle in it.
 4. **Left from pass 57:** the placement (B)'s variant table did not try,
    ~0.25 % of `fixed` — a 2,000-line re-indent of 38 blocks. When it's quiet.
 5. **Housekeeping.** TODO 1.0k, PERF 6.3k; ENGINE_BACKLOG 4.9k /

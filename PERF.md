@@ -4155,9 +4155,42 @@ holds this `Arc`, and does the write have to happen while they do"** — a
 snapshot, a `clone()` kept across the call, or a handle parked in a local.
 Size the prize off the Ir column, not the calls column: the two clone-shaped
 rows are 25.9 M Ir together, 1.6 % of `sos`, against 8.5 M for the whole
-bind-once half. The bind-once half is now largely taken — four commits, six
-sites, `make_mut` -24.6 % — and `resolve_top_of_stack_inner` (105 Ir/call)
-and `resolve_combat` (33) are what is left of it.
+bind-once half.
+
+**STOP GRINDING THE BIND-ONCE HALF — it has a measured ceiling and four
+commits already took most of it.** A `profiling-lines` build plus
+`cg_sites.py … deref_mut` prices the *entire* inlined `deref_mut` family at
+**6,551,438 Ir, 0.53 % of the run**, across 111 sites, and the largest single
+one is 1,193,304 Ir (0.10 %). That is the whole remaining prize for binding
+handles, against the 80.9 M (5.04 %) of actual clones below. The four
+commits of this pass took `make_mut` 582,552 -> 439,300 and there is no
+site left that is worth a pass of its own:
+
+```text
+inlined deref_mut call sites, --decks sos, after the four commits
+  1,193,304 (0.10%)  stack.rs:5777    check_state_based_actions (token sweep)
+    623,910 (0.05%)  layers.rs:487    compute_permanent_pass
+    548,064 (0.04%)  mod.rs:2153      GameState::deref_mut
+    527,502 (0.04%)  card.rs:6513     CardInstance::deref_mut
+    389,528 (0.03%)  mod.rs:3812      Vec::index_mut
+    356,520 (0.03%)  layers.rs:581    compute_permanent_pass
+    267,360 (0.02%)  mod.rs:17738     dispatch_triggers_for_events
+    267,360 (0.02%)  mod.rs:17872     dispatch_triggers_for_events
+    800,194 (0.06%)  86 more sites
+```
+
+**`resolve_top_of_stack_inner` and `resolve_combat` looked like the two rows
+left and are not takeable**: both are short functions whose `make_mut` count
+belongs to *inlined callees*, so there is no run of writes to bind — that is
+why they need `cg_sites.py` rather than a read of the function. Same for
+`check_state_based_actions`: its eight seat writes are all singletons and all
+already gated, and its `Player::deref_mut` line (`player.rs:1053`,
+1,361,936 Ir) has nothing to collapse.
+
+**The by-line read of `check_state_based_actions` is a separate lead and a
+bigger one — it is 47,133,588 Ir, 3.8 % of the run**, and diffuse: its top
+row is a dependency's `macros.rs:332` at 7,724,320 (0.62 %), then `cmp.rs:412`
+at 2,770,838. Nothing in it is a CoW handle. Sized here, not chased.
 
 **Then the family was read one level further down, and the real number is
 much larger than the caller table suggests. `make_mut` genuinely *clones*
