@@ -24,23 +24,29 @@ twice — in *both* of the earlier pairs the second session's opening commit
 was dropped as a duplicate. **Read the log before starting the top
 candidate**, and budget two callgrind rounds, not one.
 
-1. **Pass 57, two commits, base `28ae2416`: `--decks sos` -3.43 %, `cube`
-   -2.52 %, `fixed` +0.56 %.** Tip: fixed 1,233,007,810 / cube 3,082,752,911
-   / sos 1,656,877,045. The same rows read -3.42 / -2.48 / +0.55 against
-   `91f3ede3` before the rebase, so pass 56 and pass 57 compose.
-   `--bench` paired at `release` is flat; `release-fast` wall clock cube
-   -4.4 %, sos -4.0 % on best-of-interleaved (measured against the pass's
-   first base and not re-run after the second rebase).
-2. **The finding: thirty-eight passes at the end of the gather that walk the
-   same list and re-read the same static abilities**, one per live-state
-   `StaticEffect` variant, matching nothing on a typical board. A
-   `gather_spec` bitmask built by the pre-scan answers all of them, per card
-   and board-wide; `sa_open` / `sa_audit` make the 18,728-test suite the
-   mask's proof instead of a re-derived variant list.
-   **The tell was a run of identically-costed line rows** — ten at 511,188 Ir,
-   eight at 425,990, seven at 340,792 — and none was inside `cg_lines.py`'s
-   default forty-five rows, so `--rows` was added first. Pass 56's NEXT said
-   the gather's internals had never been read by line; they have now.
+1. **Pass 57, three commits, base `28ae2416`: `--decks cube` -6.65 %, `sos`
+   -3.33 %, `fixed` +0.71 %.** Tip (`c6ef9af8`): fixed 1,234,918,599 / cube
+   2,952,041,750 / sos 1,658,496,791. `--bench` paired at `release` is flat;
+   `release-fast` wall clock over the whole pass, six interleaved readings a
+   side: **cube -2.3 %, sos -3.0 %** (best), and the `cube` gap against its
+   -6.65 % Ir is the mirror of the allocation rule — **a change that removes
+   cheap, predictable instructions under-delivers on the clock**, the way an
+   allocation-shaped one over-reads in Ir.
+2. **The finding, twice: a fan of narrow walks at the end of the two largest
+   engine functions, each asking a question the board or the batch has
+   already answered.** (B) the gather's thirty-eight per-static passes get a
+   `gather_spec` bitmask built by the pre-scan — **the tell was a run of
+   identically-costed line rows** (ten at 511,188 Ir), below `cg_lines.py`'s
+   default forty-five, so `--rows` was added first. (C)
+   `dispatch_triggers_for_events` evaluated every grant filter against every
+   permanent (406,346 requirement evaluations, 3.46 % of cube) for grants no
+   event in the batch could ever fire; `retain` on
+   `event_kind_matches(.., None)` drops **all** of them on the bench boards.
+   In both, the cheap question is the *same code* as the exact one, which is
+   what separates it from the fuse-the-question device that has lost four
+   times.
+   **The two land on different pools**: (B) on `sos`, which has the static
+   abilities; (C) on `cube`, which has the `GrantTriggeredAbility` statics.
 3. **A gate lives on the pool that has nothing to gate** — pass 53's "which
    pool does the change live on", inverted. `--decks fixed` carries *no*
    printed static ability on the battlefield, so `sa_cards` is empty on all
@@ -48,16 +54,17 @@ candidate**, and budget two callgrind rounds, not one.
    there, and the mask can only charge for asking. Quote all three pools for
    anything that adds a per-call question, and say which pool the shipped
    workload is: `selfplay_train`'s actors play SOS (`Vocab::sos_sealed`).
-4. **Candidates: (-40) is a fresh cube table at this tip.** Two to rank off
-   it: **`dispatch_triggers_for_events`, now the largest engine row, and
-   "measured diffuse at the 49th" is the last time anyone read it** — no
-   caller table, no line profile, no call counts; and `__memcpy` + the
-   allocator family + `Arc::clone_from_ref_in` + `make_mut` +
-   `GameState::clone` at **~21 % between them**, which is (-10)/(-13) seen
-   from the profile side. (-39)'s deck build: `build_shape`'s 22.5 %
-   residual and `assemble_lands`' `Vec::retain`. (-38)'s
-   `find_card_anywhere` first leg and `pick_blocks_inner`. **(-37) is
-   CLOSED, twice over** — do not write the predicates.
+4. **Candidates: (-40) is a fresh cube table at this tip, and
+   `dispatch_triggers_for_events` is now READ from the top** — its cost was
+   one callee, (C) took it, and what is left is genuinely diffuse (largest
+   line 1.06 %, then 0.36 / 0.36 / 0.29). **The one big thing left on that
+   table is the clone/allocator family — `__memcpy` + allocator +
+   `Arc::clone_from_ref_in` + `make_mut` + `GameState::clone`, ~23 % between
+   them**, which is (-10)/(-13) seen from the profile side. (-39)'s deck
+   build: `build_shape`'s 22.5 % residual and `assemble_lands`'
+   `Vec::retain`. (-38)'s `find_card_anywhere` first leg and
+   `pick_blocks_inner`. **(-37) is CLOSED, twice over** — do not write the
+   predicates.
 5. **`cg_sites.py`'s number is a floor, twice over.** The auto-tap row read
    0.15 % of `fixed` and measured **-0.291 %**; pass 53's two sites read
    0.35 % and measured -0.611 %. Do not decline a site on a small row.
@@ -78,10 +85,11 @@ candidate**, and budget two callgrind rounds, not one.
    deck-builder work now compound inside its 32x.
 10. **Cards: `scripts/audit_dropped_may.py`, ~340 open findings.** Read the
    oracle before fixing one; false positives remain.
-11. **Housekeeping.** TODO ~1.0k, PERF 5.7k — passes 45-47's Baseline blocks
-   were folded at the 56th tip; the 48th/49th are the next fold, then the
-   45th/46th Log entries. ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want
-   a triage pass.
+11. **Housekeeping.** TODO 1.0k, PERF 5.9k — the closed deck-net vocabulary
+   write-up moved verbatim to `ML_NOTES.md` at the 57th tip to hold TODO
+   under 1k; passes 45-47's Baseline blocks were folded at the 56th, and the
+   48th/49th are the next fold, then the 45th/46th Log entries.
+   ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k still want a triage pass.
 
 ## Standing rules for a perf pass
 
@@ -272,46 +280,15 @@ or `stuck` goes non-zero).
 
 ### Every committed deck net fails to load — FIXED for the future, not for those nets
 
-**What it was.** `Vocab::sos_sealed()` derived its embedding indices from
-`draft::sos_draft_pool()` in *sorted-name* order, so adding one card to the
-SOS set shifted the index of every card sorting after it and silently
-retired every net trained before it. It surfaced as
-`deck net vocab != encoder vocab — left: 153 right: 164`: all seven
-committed `*/deck-latest.safetensors` are eleven cards behind.
-
-**The fix (fifty-fourth pass).** `server::vocab_snapshot::VOCAB_SNAPSHOT`
-freezes the assignment — a name owns `position + 1` whether or not it is
-still in the pool, and a pool name outside the snapshot is appended after it
-in sorted order. So a card addition *or removal* grows the table at the end
-and never moves an index a net depends on. `PlayNet` / `DeckNet::pad_vocab`
-zero-extend a shorter table (and the vocabulary-sized opponent head), and
-`vocab_fit` decides whether that is allowed.
-
-**Verified end to end at the fifty-fourth pass.** A throwaway deck net
-trained at the current vocabulary (`selfplay_train --actors 3 --games 4000
---steps 30`, 30 steps, val AUC 0.62 — not committed, it is far too
-undertrained to be a judge) loads, pads and drives `--use-deck-best`: ~7,600
-judged actor games, 0 stalls. So the loader path is not the thing standing
-in the way; a *good* deck net is. The judged path now runs at **91.7 %** of
-the unjudged rate (148.9 vs 162.3 games/s, best of four alternated), against
-83.4 % at the fifty-third pass — best-of-32 building is where the deck-builder
-work compounds thirty-two-fold.
-
-**What is deliberately *not* fixed, and it is the interesting half.** A net
-whose vocabulary is smaller than `FROZEN_VOCAB_SIZE` (164) predates the
-freeze, so nothing can say which card each of its rows meant — padding it
-would load cleanly and mean the wrong cards, which is worse than the loud
-failure. `vocab_fit` refuses those by name. **The seven committed deck nets
-are in that bucket and still need retraining**; `--use-deck-best` stays dead
-until one is trained. The snapshot was seeded from the then-current sorted
-order, so `nets/champion.safetensors` (164) is unaffected and **no net needs
-retraining because of this change**.
-
-**Also fixed while there:** both forward passes clamped an out-of-range card
-index with `.min(emb.rows - 1)`, mapping an unknown card to *the last card's*
-embedding rather than to index 0, the reserved unknown slot. Unreachable
-before only because the hard size check rejected the net first; reachable the
-moment padding exists.
+**Still open, and it is a training run, not code.** `VOCAB_SNAPSHOT` froze
+the embedding index at the fifty-fourth pass, `pad_vocab` zero-extends a
+shorter table and `--use-deck-best` runs end to end at 91.7 % of the unjudged
+rate. The seven committed `*/deck-latest.safetensors` predate the freeze, so
+nothing can say which card each of their rows meant; `vocab_fit` refuses them
+by name and they need retraining. `nets/champion.safetensors` is unaffected.
+**The full write-up — what the bug was, what the fix does, what is
+deliberately not fixed and why, and the out-of-range clamp found alongside it
+— moved verbatim to `ML_NOTES.md` at the fifty-seventh pass.**
 
 ## Engine — Missing Mechanics
 

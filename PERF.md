@@ -341,38 +341,51 @@ it.
 ## Baseline
 
 **Fifty-seventh pass, base `28ae2416` (pass 56's tip) vs its own tip
-`da30d1c2`.** Two commits, one finding: **the gather ends in thirty-eight
-passes that walk the same short list and re-read the same static abilities,
-one per live-state `StaticEffect` variant, and on a typical board none of
-them matches anything.** One bitmask, built by the pre-scan that already
-walks the battlefield, answers all thirty-eight. Ir readings `profiling-fast
---no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
---seed 1`.
+`c6ef9af8`.** Three commits, one class: **the simulator's two largest engine
+functions each ended in a fan of narrow walks that ask a question the board
+has already answered.** (A) `cg_lines.py --rows`, because the shape is a run
+of identically-costed rows below the default print; (B) the gather's
+thirty-eight per-static passes get a variant bitmask; (C) the trigger
+dispatcher stops evaluating grant filters for grants no event in the batch
+could fire. **`--decks cube` -6.65 %, `sos` -3.33 %, `fixed` +0.71 %.** Ir
+readings `profiling-fast --no-default-features`, callgrind, one thread,
+`--a gang --b gang --games 6 --seed 1`.
 
 ```text
-                          base (28ae2416)        tip
-I refs, --decks sos         1,715,663,129   1,656,877,045   -3.427 %
-I refs, --decks cube        3,162,426,135   3,082,752,911   -2.519 %
-I refs, --decks fixed       1,226,171,600   1,233,007,810   +0.558 %
-I refs, --decks sealed      3,430,701,306     not re-read — the deck builder
-deck build alone               26,570,012     never reaches the gather
+                          base (28ae2416)   (B) da30d1c2      tip (C)
+I refs, --decks cube        3,162,426,135   3,082,752,911   2,952,041,750  -6.653 %
+I refs, --decks sos         1,715,663,129   1,656,877,045   1,658,496,791  -3.332 %
+I refs, --decks fixed       1,226,171,600   1,233,007,810   1,234,918,599  +0.713 %
+I refs, --decks sealed      3,430,701,306     not re-read — neither the gather nor
+deck build alone               26,570,012     the dispatcher is on that path
 ```
 
-**Read once on pass 56's base and again on pass 57's, and the two passes
-compose to the third decimal.** The pass was measured first against
+| step | commit | cube | sos | fixed | what |
+|---|---|---|---|---|---|
+| B | `da30d1c2` | -2.519 % | **-3.427 %** | +0.558 % | the gather's thirty-eight per-static passes ask a variant bitmask |
+| C | `c6ef9af8` | **-4.241 %** | +0.098 % | +0.155 % | the dispatcher drops a grant no event in the batch could fire |
+
+**The two rows are on different pools and that is the pass's rule.** `sos`
+carries the static abilities the gather walks; `cube` carries the
+`GrantTriggeredAbility` statics the dispatcher walks (`--decks fixed` carries
+neither, which is why it only ever pays). Neither commit is visible on the
+other's pool, and both are invisible on the committed bench.
+
+**(B) was read once on pass 56's base and again on pass 57's, and the two
+passes compose to the third decimal.** It was measured first against
 `91f3ede3` (sos -3.422 %, cube -2.476 %, fixed +0.551 %) and re-measured
 after the rebase onto pass 56's eight commits: **-3.427 / -2.519 / +0.558**.
 Nothing pass 56 removed was already removed here, and nothing here makes
 pass 56's rows smaller.
 
 **`fixed` pays and does not collect, and that is the pool, not the gate.**
-No permanent in the vanilla archetype decks has a printed static ability, so
-`sa_cards` is empty on all 32,002 gathers: the thirty-eight passes were
-already one length check LLVM had folded across all of them, and a mask can
-only add the cost of asking. Three variants were built and measured on this
-base rather than argued — see the Log. **`sos` is the pool
-`crabomination_ml::selfplay_train`'s actors play** (`Vocab::sos_sealed`),
-and it is the one that moved most.
+No permanent in the vanilla archetype decks has a printed static ability *or*
+a `GrantTriggeredAbility` static, so `sa_cards` is empty on all 32,002
+gathers and `trigger_grants` is empty on every dispatch: both fans of walks
+were already free there, and a gate can only add the cost of asking. Three
+variants of (B)'s gate were built and measured rather than argued, and two
+placements of (C)'s — see the Log. **`sos` is the pool
+`crabomination_ml::selfplay_train`'s actors play** (`Vocab::sos_sealed`).
 
 ```text
 decisions        196,220 -> 196,220        byte-identical
@@ -386,54 +399,56 @@ rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
 ```
 
-**Wall clock, and this sitting is a case study in why the file says
-alternate.** `release-fast` + mimalloc, 600 games / 1 thread / seed 1,
-interleaved `tip base base tip` so linear drift cancels, best of each side.
-**Both binaries here are the pass's first pair — base `91f3ede3` against its
-own tip** — and were not rebuilt after the rebase onto pass 56, whose eight
-commits move the same pools by their own -0.5 %:
+**Wall clock over the whole pass**, `release-fast` + mimalloc, 600 games /
+1 thread / seed 1, interleaved `tip base base tip` so linear drift cancels,
+six readings a side, base `28ae2416` vs tip `c6ef9af8`:
 
 ```text
---decks cube   base 58.93 / 58.68 / 59.57 / 64.10 / 59.89   best 58.68
-               tip  57.01 / 56.35 / 57.06 / 66.84 / 56.10   best 56.10   -4.4 %
---decks sos    base 34.12 - 36.44 over 11 runs               best 34.12
-               tip  32.74 - 38.23 over 11 runs               best 32.74   -4.0 %
-                    (medians 35.03 -> 34.44, -1.7 %)
+--decks cube   base 62.98 63.37 63.96 64.67 65.48 66.20   best 62.98  med 64.3
+               tip  61.52 62.59 63.00 63.59 65.12 65.55   best 61.52  med 63.3
+                                                          -2.3 % best, -1.6 % median
+--decks sos    base 38.33 38.62 39.55 39.64 41.12 41.22   best 38.33  med 39.6
+               tip  37.20 37.95 38.06 38.66 39.06 39.12   best 37.20  med 38.4
+                                                          -3.0 % best, -3.1 % median
 ```
 
-**The first three sos pairs read the wrong way** — 34.55/34.24/34.98 base
-against 34.62/34.43/36.29 tip, i.e. the tip "slower" — and eight more pairs
-in the same sitting reversed it. Three pairs cannot resolve 3 % on this box;
-the drift is upward through a sitting and it is larger than the effect.
+**`sos` tracks its Ir (-3.0 % against -3.33 %); `cube` does not (-2.3 %
+against -6.65 %), and the gap is what (C) removes.** A requirement evaluation
+the batch filter skips is a short, perfectly predicted walk over an
+L1-resident grant list — Ir counts every instruction of it and the machine
+retires several per cycle. The rule this file has for allocation-shaped
+change (Ir over-reads it) has a mirror: **a change that removes cheap,
+predictable instructions under-delivers on the clock.** Quote both.
 
-**`--bench`, the committed throughput configuration** (`release` + mimalloc,
-3 threads), **paired** this time — a base binary was built at `release` so
-the column means something, which the last two passes could not do. Same
-first pair (`91f3ede3` vs this pass's own tip):
+**The pass's first pair was measured separately** (base `91f3ede3` against
+(B)) and read cube -4.4 % / sos -4.0 % on best-of-interleaved, on a sitting
+where the same workload ran 56-59 s rather than 62-66 s. Neither absolute is
+comparable to the other; both deltas are.
+
+**`--bench`, paired** (`release-fast` + mimalloc, 3 threads, interleaved
+`tip base base tip`, six a side):
 
 ```text
-                 base (91f3ede3)                    tip
-games_per_s      216.47 212.12 212.52 211.99         206.68 225.44 204.43 212.48
-                 205.49 206.34 203.23 210.12 216.04  217.61 201.88 209.99 208.06 224.63
-mean             210.48                              212.36    -> +0.9 %
-best             216.47                              225.44    -> +4.1 %
-host_calib_ms    48-56 (both sides interleaved)
-decisions        196,220 on every run, both sides
-peak_rss_mib     28.1 - 31.6 (both sides)
+base  189.65 184.15 196.87 202.21 204.62 204.47    mean 197.00  best 204.62
+tip   190.49 194.80 198.97 199.28 199.86 204.33    mean 197.96  best 204.33
+                                                   +0.5 % mean, -0.1 % best
 ```
 
-**Read it as flat, and read the absolute as the box.** +0.55 % of Ir on this
-pool is under the noise floor of a configuration whose nine tip readings span
-201.88 to 225.44 (11 %). **The base binary reads 210 here against the 281 this
-file records at the pass-55 tip** — same commit, same profile, 25 % apart —
-which is why a `--bench` absolute is never a cross-sitting comparison and why
-this pass built the base rather than diffing the committed line.
+**Read it as flat**, which is what +0.71 % of Ir on that pool has to be
+against an 11 % spread. Earlier in the same session a **`release` pair** was
+built for (B) — base `91f3ede3` at `release` reads mean 210.48 / best 216.47
+against the tip's 212.36 / 225.44 over nine readings a side, also flat, and
+**the base binary reads 210 there against the 281 this file records at the
+pass-55 tip for the same commit and profile**. A `--bench` absolute is never
+a cross-sitting comparison; the anchor is not refreshed.
 
-**Crash-freedom and determinism at the pass's first tip.** `release`,
-`--a gang --b gang --games 200 --threads 3`, seeds 11/12/13 x `--decks all`
-plus `--decks sealed` at seed 11: **12,600 games, every cell decided, 0
+**Crash-freedom and determinism at the tip.** `release-fast`, `--a gang
+--b gang --games 200 --threads 3`, seeds 11/12/13 x `--decks all` plus
+`--decks sealed` at seed 11: **12,600 games, every cell decided, 0
 undecided, no panic**. `CRAB_THREAD_CHECK=1 --bench` reads
-**`thread_determinism ok (3 vs 1 threads identical)`**.
+**`thread_determinism ok (3 vs 1 threads identical)`**, `decisions` 196,220,
+`turns_per_game` 27.53, `stalls_by` 0/0/0. The same grid ran clean at (B) on
+a `release` build.
 
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass.
@@ -1677,11 +1692,48 @@ the table above is safe to compress:
 
 ## Log
 
-### Fifty-seventh pass — thirty-eight passes that re-read every static ability
+### Fifty-seventh pass — a fan of narrow walks at the end of two big functions
 
-Two commits, base `28ae2416`. `--decks sos` **-3.427 %**, `cube` **-2.519 %**,
-`fixed` **+0.558 %** — and the same rows read -3.422 / -2.476 / +0.551
-against `91f3ede3` before the rebase onto pass 56, so the two passes compose.
+Three commits, base `28ae2416`. `--decks cube` **-6.653 %**, `sos`
+**-3.332 %**, `fixed` **+0.713 %**. (B) and (C) are the same shape in the
+simulator's two largest engine functions — a chain of narrow per-card walks
+asking a question the *board* or the *batch* has already answered — and they
+land on different pools: (B) on `sos`, which has the static abilities;
+(C) on `cube`, which has the `GrantTriggeredAbility` statics.
+
+**(C) The trigger dispatcher asked every permanent about grants no event
+could fire. `cube` -4.241 %, `sos` +0.098 %, `fixed` +0.155 %.**
+`dispatch_triggers_for_events` walks the battlefield and evaluates every
+grant filter on the board against every permanent —
+`statics_granted_triggers_inner` reaching
+`evaluate_requirement_static_hinted` **406,346 times for 106.6 M Ir, 3.46 %
+of a cube run**. A granted trigger is only ever used inside the per-event
+`event_matches_spec` check below it, so a grant whose ability no event in the
+batch could match contributes nothing however many permanents match its
+filter. `trigger_grants.retain(event_kind_matches(.., None))` asks the batch
+first: one test per (grant, event) pair instead of one requirement evaluation
+per (grant, permanent) pair. **On the bench boards no grant survives it** —
+the dispatcher's 235,062 grant-walk calls go to zero, and with them the
+freeze scope those calls were the reason for.
+
+`event_kind_matches` is `event_matches_spec`'s own `(spec.kind, event)` match
+with the source made optional; three of its ~170 arms read the source and
+answer `true` under `None`, so the cheap question is a sound
+over-approximation of the exact one **and is the same code**, which is the
+difference between this and the "fuse the cheap question in" device that has
+lost four times.
+
+Two placements were measured. An `#[inline(never)]` helper, so the 170-arm
+match is not inlined into the dispatcher a second time, reads **worse on all
+three pools** (cube +6.98 M, sos +4.53 M, fixed +0.69 M) — the code-size
+theory for the `fixed` residual is refuted. An `is_empty()` guard in front of
+the `retain` is worth 0.96 M on `fixed`, where `trigger_grants` is always
+empty.
+
+**(B) Thirty-eight gather passes that re-read every static ability.**
+`--decks sos` **-3.427 %**, `cube` **-2.519 %**, `fixed` **+0.558 %** — and
+the same rows read -3.422 / -2.476 / +0.551 against `91f3ede3` before the
+rebase onto pass 56, so the two passes compose.
 
 **The finding is the forty-ninth pass's device at a bigger scale, and the
 tooling could not see it.** `gather_continuous_effects_inner` ends in
@@ -3819,30 +3871,38 @@ device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
 **(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-SEVENTH TIP
-(3,082,752,248).** Self cost, whole program:
+(2,952,041,750).** Self cost, whole program:
 
 | row | % | note |
 |---|---|---|
 | `__memcpy_avx_unaligned_erms` | **5.73** | the CoW/clone family's memory traffic |
-| `dispatch_triggers_for_events` | **5.14** | **the largest engine function, and "measured diffuse at the 49th" is the last time anyone read it** |
-| `gather_continuous_effects_inner` | 3.83 | was 6.12 % at the pass-55 tip; pass 57 took 40 % of its self cost |
-| allocator family | ~11.1 | `_int_free` 3.54, `malloc` 2.69, `_int_malloc` 2.64, `free` 2.19 |
-| `Arc::clone_from_ref_in` | 3.07 | |
-| `Vec::from_iter` | 2.75 | |
-| `evaluate_requirement_static_hinted` | 2.11 | |
-| `check_state_based_actions` | 2.02 | |
-| `compute_permanent_pass` / `computed_permanent` | 1.47 / 1.45 | |
-| `GameState::clone` / `Arc::make_mut` | 1.37 / 1.26 | |
-| `sba_board_scan` | 1.30 | |
-| `card_can_grant_keyword` | 1.25 | |
-| `activate_ability_inner` | 1.24 | |
+| `dispatch_triggers_for_events` | **4.96** | was 5.14 % before this pass's (C); its self cost is what is left after the grant walk came off, and it is **diffuse by line** — the largest row inside it is 1.06 % and unresolved |
+| `gather_continuous_effects_inner` | 4.00 | 118.0 M absolute, down from 195.9 M at the pass-55 tip |
+| allocator family | ~11.5 | `_int_free` 3.65, `malloc` 2.75, `_int_malloc` 2.57, `free` ~2.2 |
+| `Arc::clone_from_ref_in` | 3.20 | |
+| `Vec::from_iter` | 2.87 | |
+| `evaluate_requirement_static_hinted` | ~1.9 | 106.6 M of it came off with (C) |
+| `check_state_based_actions` | ~2.1 | |
+| `compute_permanent_pass` / `computed_permanent` | ~1.5 each | |
+| `GameState::clone` / `Arc::make_mut` | ~1.4 / ~1.3 | |
+| `sba_board_scan` | ~1.4 | |
 
-**Two things to rank off it.** `dispatch_triggers_for_events` is now the
-largest engine row and has not been read from the top in seven passes — no
-caller table, no line profile, no call-count read; "diffuse" was a
-conclusion about the forty-ninth tip's shape, not a measurement of this one.
-And **`__memcpy` + the allocator family + `Arc::clone_from_ref_in` +
-`make_mut` + `GameState::clone` is ~21 % between them**, which is (-10)/(-13)'s
+**`dispatch_triggers_for_events` has now been read from the top, and the
+answer was one callee, not the function.** Its caller table is
+`perform_action_inner` 103,598 of 125,820 calls; its callee table put
+`statics_granted_triggers_inner` at **235,062 calls / 113.1 M inclusive**,
+and (C) took all of it. What is left is genuinely diffuse: by line the
+largest row inside it is 1.06 % and unresolved, then 0.36 %, 0.36 %,
+0.29 % — the forty-ninth pass's "measured diffuse" verdict, now with a
+measurement behind it. **The remaining named callees are
+`dispatch_board_scan` (67,360 calls / 35.5 M), `event_matches_spec` (662,098
+/ 19.2 M at 29 Ir each) and `push_ordered_trigger_candidates` (67,352 /
+13.2 M)**; none is a fan of narrow walks and none has an obvious question to
+ask first.
+
+**The one thing left to rank off this table is the clone/allocator family:
+`__memcpy` + the allocator + `Arc::clone_from_ref_in` + `make_mut` +
+`GameState::clone` is ~23 % between them**, which is (-10)/(-13)'s
 checkpoint-sharing cost seen from the profile side.
 
 **The gather is the target, and the question is scope count, not gating.**

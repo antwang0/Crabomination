@@ -2973,3 +2973,52 @@ this format (run the recall diagnostic above, then likely park the
 thread), gen-1 Gumbel completed-Q targets (the one untried Gumbel
 variant; two nulls and the prior-starvation negative make it a worse bet
 than anything above — on the list, not in the next round).
+
+## The deck-net vocabulary freeze (moved from TODO.md at the fifty-seventh pass)
+
+Verbatim from `TODO.md`'s "ML — defects" section; the index entry there
+points here. Nothing is summarized away — the point of the record is that
+nobody re-derives the half that is deliberately *not* fixed.
+
+### Every committed deck net fails to load — FIXED for the future, not for those nets
+
+**What it was.** `Vocab::sos_sealed()` derived its embedding indices from
+`draft::sos_draft_pool()` in *sorted-name* order, so adding one card to the
+SOS set shifted the index of every card sorting after it and silently
+retired every net trained before it. It surfaced as
+`deck net vocab != encoder vocab — left: 153 right: 164`: all seven
+committed `*/deck-latest.safetensors` are eleven cards behind.
+
+**The fix (fifty-fourth pass).** `server::vocab_snapshot::VOCAB_SNAPSHOT`
+freezes the assignment — a name owns `position + 1` whether or not it is
+still in the pool, and a pool name outside the snapshot is appended after it
+in sorted order. So a card addition *or removal* grows the table at the end
+and never moves an index a net depends on. `PlayNet` / `DeckNet::pad_vocab`
+zero-extend a shorter table (and the vocabulary-sized opponent head), and
+`vocab_fit` decides whether that is allowed.
+
+**Verified end to end at the fifty-fourth pass.** A throwaway deck net
+trained at the current vocabulary (`selfplay_train --actors 3 --games 4000
+--steps 30`, 30 steps, val AUC 0.62 — not committed, it is far too
+undertrained to be a judge) loads, pads and drives `--use-deck-best`: ~7,600
+judged actor games, 0 stalls. So the loader path is not the thing standing
+in the way; a *good* deck net is. The judged path now runs at **91.7 %** of
+the unjudged rate (148.9 vs 162.3 games/s, best of four alternated), against
+83.4 % at the fifty-third pass — best-of-32 building is where the deck-builder
+work compounds thirty-two-fold.
+
+**What is deliberately *not* fixed, and it is the interesting half.** A net
+whose vocabulary is smaller than `FROZEN_VOCAB_SIZE` (164) predates the
+freeze, so nothing can say which card each of its rows meant — padding it
+would load cleanly and mean the wrong cards, which is worse than the loud
+failure. `vocab_fit` refuses those by name. **The seven committed deck nets
+are in that bucket and still need retraining**; `--use-deck-best` stays dead
+until one is trained. The snapshot was seeded from the then-current sorted
+order, so `nets/champion.safetensors` (164) is unaffected and **no net needs
+retraining because of this change**.
+
+**Also fixed while there:** both forward passes clamped an out-of-range card
+index with `.min(emb.rows - 1)`, mapping an unknown card to *the last card's*
+embedding rather than to index 0, the reserved unknown slot. Unreachable
+before only because the hard size check rejected the net first; reachable the
+moment padding exists.
