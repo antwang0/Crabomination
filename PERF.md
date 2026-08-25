@@ -1599,6 +1599,17 @@ shape. `affected_from_requirement` was its largest engine row at 44,438;
 fix (its `out` is empty on most calls, so a `with_capacity` would allocate
 where nothing does today).
 
+**REFUTED on that second row, and the shape is worth naming: an
+exactly-sized two-phase build loses when the common case is one element.**
+`statics_granted_triggers_with` pushes 736-byte `TriggeredAbility` clones
+into a growing `Vec`, so collecting `&TriggeredAbility` matches first and
+cloning once into an exact `Vec` looked like the obvious fix — it turns a
+~3 KiB first allocation and every 736-byte regrowth into 8-byte growth plus
+one exact allocation. Measured **cube +0.43 %, fixed +0.12 %** and reverted.
+The regrowth it removes is rare; the *second allocation* it adds is not, and
+`MIN_NON_ZERO_CAP` already gives the naive `Vec` four slots on its first
+push. Count the pushes per call before splitting a build in two.
+
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —
 `SetArtifactSubtypes` / `AddArtifactSubtype` fold into a battlefield-shape
