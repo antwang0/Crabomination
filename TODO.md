@@ -49,8 +49,20 @@ candidate, and budget two callgrind rounds.**
    Ir/call is a *real clone*, binding once buys nothing, and the question is
    who else holds the `Arc`. The two clone-shaped rows
    (`activate_ability_inner` 13.85 M, `cast_spell_with_convoke` 12.01 M) are
-   1.6 % of `sos` between them — the largest single thing this pass found and
-   did not take.
+   1.6 % of `sos` between them.
+   **Read one level further and the number gets much bigger, which is the
+   actual handoff:** `make_mut` really clones 85,322 of those 475,676 times,
+   and with the specialised `deref_mut`s the CoW bodies are deep-copied
+   **91,478 times / 80.9 M Ir = 5.04 % of `sos`**. The *cause* is the bot's
+   probe machinery — `GameState::clone` 19,086 times / 24.8 M Ir — so its
+   true price is **105.7 M Ir, 6.6 % of `sos`**. (-43) has the three
+   sub-candidates ranked by safety: `perform_action`'s failure checkpoint
+   (5,606, correctness-critical — audit per action kind, never as a sweep),
+   `can_afford_in_state_with`'s probe cell (3,376, a memo whose stored value
+   is a whole `GameState`), and `accept_on` (6,660, leave alone — the
+   divergence is the point). **Get the `selfplay_train` clock number before
+   sizing any of it:** 17.0 M of the 80.9 M is `__rust_alloc` under
+   callgrind's system allocator, and the rest is `memcpy`.
    The deck builder is *done* for now:
    (-39)'s copy-cap head is paid, and what is left of it is `build_shape`'s
    24.77 % residual (diffuse for three passes), `__memcpy` 9.49 % (the pools'

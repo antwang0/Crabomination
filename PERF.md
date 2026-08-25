@@ -4016,6 +4016,68 @@ Size the prize off the Ir column, not the calls column: the two clone-shaped
 rows are 25.9 M Ir together, 1.6 % of `sos`, against 8.5 M for the whole
 bind-once half.
 
+**Then the family was read one level further down, and the real number is
+much larger than the caller table suggests. `make_mut` genuinely *clones*
+85,322 times out of 475,676 (17.9 %), at 748 Ir each.** Counting the
+specialised `deref_mut`s alongside the generic row, the CoW bodies are
+deep-copied **91,478 times for 80,868,330 Ir — 5.04 % of `sos`**:
+
+```text
+callers of Arc::clone_from_ref_in, --decks sos
+  85,322   63,860,853   Arc::make_mut (the generic, inlined row)
+   3,102   14,285,495   GameState::deref_mut          <- 4,605 Ir a clone
+   1,692    1,532,689   PlayerData::deref_mut
+     842      767,056   CardInstance::deref_mut
+     460      367,273   CowBox::deref_mut
+      60       54,964   Player::deref_mut
+```
+
+Inside one clone: **1.64 allocations** (140,010 `__rust_alloc` / 17,044,619
+Ir, the single largest line item), ~2 `Vec` clones (168,822 / 10,123,493),
+half a `RawTable` (43,362 / 2,923,028).
+
+**And the cause is not in any of those callers — it is the bot's probe
+machinery, one frame up.** `GameState::clone` runs **19,086 times, 24.8 M Ir
+self (1.55 %)**, essentially all of it speculative: `accept_on` 6,660,
+`perform_action`'s failure checkpoint 5,606, `OnceCell::try_init` 3,376
+(`can_afford_in_state_with`'s probe cell), `sim_start_state` 1,226,
+`evaluate_action_sequence` 896, `main_phase_action_with` 894. Each such
+clone is cheap by design — it bumps refcounts — and then **every subsequent
+write on either side pays the deferred deep copy.** So the probe machinery's
+true price is the 24.8 M of clones *plus* the 80.9 M they force:
+**105.7 M Ir, 6.6 % of `sos`**, and it is the largest single structure this
+file has that is not already an entry.
+
+**Three sub-candidates, in order of how safe they are:**
+
+1. **`perform_action`'s checkpoint (5,606 clones).** Its own doc comment
+   already names this cost — "it shares every CoW zone, so the action's
+   first write to one deep-copies it" — and a previous pass already carved
+   out `PassPriority` (41 % of a bot game's actions) on the argument that
+   the path cannot fail after mutating. The rest of the dispatch wants the
+   same audit, per action kind. **This is correctness-critical: the
+   checkpoint exists to restore a failed action's partial mutation, and a
+   wrong "cannot fail after mutating" silently corrupts state on the failure
+   path rather than failing loudly.** Do it one action kind at a time, with
+   a test that forces the failure, not as a sweep.
+2. **`can_afford_in_state_with`'s probe cell (3,376 clones, and
+   `try_init`'s callers total 19.59 M Ir).** A memo whose *stored value* is
+   a whole `GameState`. Pass 54's rule applies directly — "a memoized
+   object is not a memoized answer" — and the question is whether the
+   callers need the state or only the affordability verdict.
+3. **`accept_on` (6,660 clones), and it is the one to leave alone.** The
+   divergence is the point: probing N candidate actions against one template
+   means N of them must diverge, and CoW already makes that cost
+   proportional to what each action touches. The only waste is the probes
+   that return `None`, and that is not knowable in advance.
+
+**Size any of it against the clock before believing the Ir**, and this
+family is the exact shape the standing rules warn about twice over: 17.0 M
+of the 80.9 M is `__rust_alloc` under callgrind's *system* allocator when
+mimalloc ships, and the rest is `memcpy`, which pass 57's `cae6b605` showed
+reads -1.95 % in Ir and flat on nine alternated `selfplay_train` pairs.
+Get the `selfplay_train` number first.
+
 **(-42) PAID at the fifty-eighth pass, in two commits: `sos` -0.261 % then
 -0.120 %, `cube` -0.253 % then -0.115 %, and `do_untap`'s `make_mut` calls
 went 212,012 -> 41,200.** The
