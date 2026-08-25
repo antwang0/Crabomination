@@ -5268,9 +5268,12 @@ impl CardDefinition {
     }
 
     /// Whether casting this card cares which *colors* pay for it — its
-    /// rules text computes `Value::ConvergedValue` somewhere (converge
-    /// and converge-shaped riders). Read by the payment path: a converge
-    /// cast taps and drains toward distinct colors instead of the
+    /// rules text reads the converge count somewhere. Two spellings, and
+    /// both are converge: `Value::ConvergedValue` (the amount riders) and
+    /// `SelectionRequirement::ManaValueAtMostConverged` (the target-filter
+    /// side, Sundering Archaic's "artifact with mana value X or less, where
+    /// X is the number of colors of mana spent"). Read by the payment path:
+    /// a converge cast taps and drains toward distinct colors instead of the
     /// mana-conserving default, which was measurably incapable of
     /// playing converge (it drained colorless-then-WUBRG-greedy, so a
     /// converge spell routinely counted one color on a five-color board).
@@ -5280,7 +5283,12 @@ impl CardDefinition {
     /// recursive enum with no generic walker, and a hand-written match
     /// over every variant would silently rot as variants are added. The
     /// variant name is unambiguous in the rendering, and a catalog name
-    /// maps to one definition, so the cache is sound.
+    /// maps to one definition, so the cache is sound. **This is the one
+    /// oracle**: the bot had a second, hand-written walker for the same
+    /// question and it had already rotted in both directions — it enumerated
+    /// fifteen `Effect` arms (so it missed converge in any other one, and in
+    /// every activated or triggered ability) while being the only side that
+    /// knew about `ManaValueAtMostConverged`.
     /// Two levels, because this is asked once per cast payment on every
     /// actor thread. L1 is a thread-local direct-mapped table keyed on the
     /// name's *pointer* — catalog names are `&'static str`, so pointer
@@ -5314,7 +5322,9 @@ impl CardDefinition {
         let val = match hit {
             Some(v) => v,
             None => {
-                let v = format!("{self:?}").contains("ConvergedValue");
+                let dbg = format!("{self:?}");
+                let v = dbg.contains("ConvergedValue")
+                    || dbg.contains("ManaValueAtMostConverged");
                 cache.write().unwrap().insert(name.to_string(), v);
                 v
             }

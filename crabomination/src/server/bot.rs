@@ -9897,64 +9897,20 @@ fn best_hostile_creature_target(
     })
 }
 
-/// True when casting `def` reads the converge count — the distinct colors
-/// of mana spent — anywhere the bot can see it: an effect `Value`
-/// (`ConvergedValue`), a `ManaValueAtMostConverged` target filter
-/// (Sundering Archaic), or an enters-with-counters amount. The `Value`
-/// walk mirrors [`effect_uses_x`]'s variant coverage.
+/// True when casting `def` reads the converge count — the distinct colors of
+/// mana spent. One oracle, [`CardDefinition::wants_converge`], shared with the
+/// payment path.
+///
+/// This used to be a second, hand-written walk of the effect tree, and the two
+/// disagreed in both directions: the walker enumerated fifteen `Effect` arms,
+/// so converge in any other arm — or in an activated or triggered ability —
+/// was invisible to it, while it was the only side that knew about
+/// `SelectionRequirement::ManaValueAtMostConverged`. The oracle now covers
+/// both spellings, and reading the whole definition rather than the cast's own
+/// effect only over-approximates here: the pre-float below is bounded on every
+/// other side, so a spare tap is the worst a false positive costs.
 fn card_reads_converge(def: &CardDefinition) -> bool {
-    use crate::effect::Value;
-    fn value_is_converge(v: &Value) -> bool {
-        match v {
-            Value::ConvergedValue => true,
-            Value::Sum(parts) => parts.iter().any(value_is_converge),
-            Value::Diff(a, b) | Value::Times(a, b) | Value::Min(a, b) | Value::Max(a, b) => {
-                value_is_converge(a) || value_is_converge(b)
-            }
-            Value::NonNeg(inner) => value_is_converge(inner),
-            _ => false,
-        }
-    }
-    fn req_converge(r: &crate::card::SelectionRequirement) -> bool {
-        use crate::card::SelectionRequirement as R;
-        match r {
-            R::ManaValueAtMostConverged => true,
-            R::And(a, b) | R::Or(a, b) => req_converge(a) || req_converge(b),
-            _ => false,
-        }
-    }
-    fn walk(eff: &Effect) -> bool {
-        match eff {
-            Effect::Seq(steps) => steps.iter().any(walk),
-            Effect::If { then, else_, .. } => walk(then) || walk(else_),
-            Effect::ChooseMode(modes) => modes.iter().any(walk),
-            Effect::ForEach { body, .. }
-            | Effect::Repeat { body, .. }
-            | Effect::DelayUntil { body, .. }
-            | Effect::MayDo { body, .. } => walk(body),
-            Effect::DealDamage { amount, .. }
-            | Effect::GainLife { amount, .. }
-            | Effect::LoseLife { amount, .. }
-            | Effect::Drain { amount, .. }
-            | Effect::Draw { amount, .. }
-            | Effect::Mill { amount, .. }
-            | Effect::Scry { amount, .. }
-            | Effect::Surveil { amount, .. }
-            | Effect::LookAtTop { amount, .. }
-            | Effect::AddCounter { amount, .. }
-            | Effect::RemoveCounter { amount, .. }
-            | Effect::AddPoison { amount, .. }
-            | Effect::Discard { amount, .. } => value_is_converge(amount),
-            Effect::PumpPT { power, toughness, .. } => {
-                value_is_converge(power) || value_is_converge(toughness)
-            }
-            Effect::CreateToken { count, .. } => value_is_converge(count),
-            _ => false,
-        }
-    }
-    walk(&def.effect)
-        || def.effect.primary_target_filter().is_some_and(req_converge)
-        || def.enters_with_counters.as_ref().is_some_and(|(_, v)| value_is_converge(v))
+    def.wants_converge()
 }
 
 /// SOS Converge pre-float: when the bot's chosen play scales with the

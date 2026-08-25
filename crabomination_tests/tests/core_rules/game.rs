@@ -8314,3 +8314,28 @@ fn declaring_blockers_hands_priority_to_the_active_player() {
     assert_eq!(g.player_with_priority(), 1, "the declaration restarts the round");
     assert_eq!(g.priority.consecutive_passes, 0, "and resets the pass count");
 }
+
+/// `CardDefinition::wants_converge` is the single oracle for "does casting
+/// this read the converge count", and converge has two spellings: a
+/// `Value::ConvergedValue` amount rider, and a
+/// `SelectionRequirement::ManaValueAtMostConverged` target filter. The oracle
+/// scanned only for the first, so Bring to Light and Sundering Archaic — whose
+/// converge is *entirely* in the filter — were paid for with the
+/// mana-conserving default and routinely converged for one colour on a
+/// multicolour board. Table-driven over the catalog so a third spelling gets a
+/// row here rather than a second walker somewhere else.
+#[test]
+fn wants_converge_sees_both_spellings_of_converge() {
+    let both_ways: &[(&str, crabomination::card::CardDefinition)] = &[
+        ("Prismatic Ending", catalog::prismatic_ending()),
+        ("Bring to Light", catalog::bring_to_light()),
+        ("Sundering Archaic", catalog::sundering_archaic()),
+    ];
+    for (name, def) in both_ways {
+        assert!(def.wants_converge(), "{name} reads the converge count");
+    }
+    assert!(
+        !catalog::grizzly_bears().wants_converge(),
+        "a vanilla creature does not, or every cast pays the converge funnel"
+    );
+}
