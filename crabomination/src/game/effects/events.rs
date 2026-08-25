@@ -17,6 +17,13 @@ use crate::game::{GameEvent, GameState};
 /// before evaluating that grant's filter against every permanent on the board.
 /// One match serves both callers, so the cheap question cannot drift from the
 /// exact one.
+///
+/// `#[inline]` is not a claimed win — it restores the inlining this match had
+/// when it was written out inside `event_matches_spec`, and it was measured:
+/// without it `--decks fixed` reads +0.51 M Ir. PERF's rule against taking an
+/// `#[inline]` on an Ir number is about *adding* one to a callee that the
+/// shipped LTO build would inline anyway; this one is putting back what
+/// lifting the function out took away.
 #[inline]
 pub(crate) fn event_kind_matches(
     state: &GameState,
