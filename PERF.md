@@ -2250,16 +2250,24 @@ cube; it read **-1.289 %** because the resolution hoist it named is the
 smaller half of what the seam was hiding.
 
 ```text
-                          base (0036e238)   tip (66ec5e42)
+                          base (0036e238)   tip (fa3bf671)
 I refs, --decks fixed     1,182,567,955    1,175,724,194   -0.579 %
 I refs, --decks sos       1,530,678,137    1,523,856,909   -0.446 %
 I refs, --decks cube      2,768,347,971    2,732,667,632   -1.289 %
 ```
 
+**Name the base, and this one needs a sentence.** Both binaries were built
+at `0036e238`; the rebase that brought this block onto the branch put the
+other session's three commits underneath it (`02e545fc`, `b24e6d84`,
+`f79f59af` and their TODO pair) and **all of them are documentation** — no
+`.rs` file differs between `0036e238` and `c2cc6c01`. So the columns are
+comparable to the current parent as measured, which is not the usual case
+and is why it is written down.
+
 | step | commit | fixed | sos | cube | what |
 |---|---|---|---|---|---|
-| A | `358c6e3b` | -0.425 % | -0.359 % | **-0.791 %** | six attacker facts and two blocker facts read per pair |
-| B | `66ec5e42` | -0.154 % | -0.087 % | **-0.502 %** | block legality resolved both sides of the pair, per pair |
+| A | `d9f459de` | -0.425 % | -0.359 % | **-0.791 %** | six attacker facts and two blocker facts read per pair |
+| B | `fa3bf671` | -0.154 % | -0.087 % | **-0.502 %** | block legality resolved both sides of the pair, per pair |
 
 **`cube` moves 2.2x what `fixed` does and 2.9x what `sos` does**, which is
 what the pool-ratio device predicted: `pick_blocks_inner` was the 2.09x row
@@ -2267,7 +2275,7 @@ in the sixty-second pass's ratio table, and a grant-heavy pool has wider
 boards, so the pair count grows quadratically where the rest of the game
 loop grows linearly.
 
-**(A) `358c6e3b` — the loop re-derived the attacker on every blocker.**
+**(A) `d9f459de` — the loop re-derived the attacker on every blocker.**
 `pick_blocks_inner` scores one blocker against every attacker; inside that
 inner loop it read Rampage N, first/double strike, indestructible, trample,
 "must be blocked" and the Menace/`CantBeBlockedExceptByN` minimum, each a
@@ -2289,7 +2297,7 @@ pick_blocks_inner self, cube    24,906,488 -> 7,583,714   -69.6 %
   -> callee calls, all rows        353,306 ->   233,248
 ```
 
-**(B) `66ec5e42` — and the legality check did the same thing one level
+**(B) `fa3bf671` — and the legality check did the same thing one level
 down.** `blocker_can_block_attacker(blocker_id, attacker_id)` resolves two
 permanents and two computed views internally, so N candidate blockers
 against a fixed attacker is N+1 distinct permanents and 2N resolutions —
@@ -4475,7 +4483,7 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
-### The three pools at the sixty-third tip (`66ec5e42`)
+### The three pools at the sixty-third tip (`fa3bf671`)
 
 Same binary, same config, one pool each: **`fixed` 1,175,724,194, `sos`
 1,523,856,909, `cube` 2,732,667,632.** Self costs, top 18 on each pool, with
@@ -4900,7 +4908,7 @@ run it where there is room.
 reproduces the sixtieth pass's 17.7 MiB exactly, two passes later. Nothing
 got heavier; the file was quoting the build that is not shipped.
 
-**(-47) DONE at the sixty-third pass — `358c6e3b` + `66ec5e42`, and it read
+**(-47) DONE at the sixty-third pass — `d9f459de` + `fa3bf671`, and it read
 5x its sizing.** The entry costed the attacker-resolution hoist alone at
 ~6.6 M / ~0.24 % of cube. Measured: **-1.289 % of cube**, -0.579 % of fixed,
 -0.446 % of sos. The sizing missed two things and both are the transferable
