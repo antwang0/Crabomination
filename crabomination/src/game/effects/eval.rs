@@ -3321,11 +3321,9 @@ impl GameState {
                 // Vengeance, Reanimate, Animate Dead) can validate their
                 // targets, and so counter-style spells (Mystical Dispute,
                 // Force of Negation) can read the colors of a target stack
-                // spell.
-                let stack_card = self.stack.iter().find_map(|si| match si {
-                    StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
-                    _ => None,
-                });
+                // spell. Every leg is lazy, the stack included: the walk stops
+                // at the battlefield on almost every call, and the stack scan
+                // used to run before it on all of them.
                 let bf_card = self.bf_hint_or_find(*cid, hint);
                 let card = bf_card
                     // Dies-trigger filters (Felisa's "with a +1/+1 counter on
@@ -3342,7 +3340,12 @@ impl GameState {
                     })
                     .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
                     .or_else(|| self.exile.iter().find(|c| c.id == *cid))
-                    .or(stack_card)
+                    .or_else(|| {
+                        self.stack.iter().find_map(|si| match si {
+                            StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
+                            _ => None,
+                        })
+                    })
                     // Library / hand: needed by "look at top of library"
                     // predicates (Lurking Predators: "if it's a creature
                     // card, …"), discard-from-hand pickers, and any future
