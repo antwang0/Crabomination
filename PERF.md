@@ -4986,6 +4986,27 @@ sixtieth pass's 17.7 MiB and the sixty-third's 17.6 are this run's 17.5, all
 `--no-default-features`; the shipped number is the other column. Nothing got
 heavier.
 
+**Replicated independently the same hour, on a different container, at
+`0c6fb73e`** — the two sessions ran this entry concurrently without knowing
+it, which is the one useful thing to come of the duplication: the effect now
+has two boxes under it and a spread.
+
+```text
+                     mean B/A (system vs mimalloc)   95 % CI          blocks
+sixty-fourth tip     +5.99 %                         +4.95 .. +7.04   8/8
+0c6fb73e             +7.98 %                         +7.05 .. +8.91   8/8
+null (0c6fb73e)      +0.02 %                         -1.01 .. +1.05   4/8  FLAT
+peak_rss_mib         system 17.4/17.8/17.5   mimalloc 28.9/27.0/26.8
+```
+
+**The two CIs meet at ~7.0 % and do not overlap below it, so the honest
+statement is "6-8 %, host-dependent", not a single number** — the same
+caution this file already applies to `games_per_s` and RSS, now with the
+allocator delta itself inside it. Both nulls are flat and both resolve about
++/-1 %, which is the second reading of "run the null on the box you are on".
+`decisions 196,220` byte-identical on all six binaries. Direction, sign and
+the RSS gap are the same on both boxes; **nothing here re-opens the entry.**
+
 **(-47) DONE at the sixty-third pass — `d9f459de` + `fa3bf671`, and it read
 5x its sizing.** The entry costed the attacker-resolution hoist alone at
 ~6.6 M / ~0.24 % of cube. Measured: **-1.289 % of cube**, -0.579 % of fixed,
