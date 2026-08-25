@@ -40,7 +40,9 @@ the log before opening a NEXT item.
 3. **Candidates:** (-40) is the fresh cube profile — the gather is still the
    largest subtree (5.9 % self / 11.5 % inclusive, 59,470 gathers) and its
    `Vec::from_iter` traffic (204,138 collects) has never been read by line.
-   (-37)'s residue is `has_atype` / `has_stype`, both **unsized**. (-38)
+   **(-37) is CLOSED** — its residue was sized at the tip and is nothing
+   (the walker's `try_init` is 117,334 calls at 101 Ir against 581,256 at
+   1,084; do not write the artifact/supertype predicates). (-38)
    `battlefield_find` is 61.5 M / 2.35 % at the tip, of which `eval.rs:3113`
    — every remaining unhinted requirement evaluation — is 14.2 M.
 4. **Do not pattern-match the remaining ~80 `evaluate_requirement_static(..,

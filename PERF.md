@@ -1799,15 +1799,12 @@ after (I)-(K) are `compute_permanent_pass`'s `sorted` (75,260, and it is
 never empty — it is the layer walk's own input) and a tail of sub-0.1 %
 sites. The always-empty-collect class is worked out on these three pools.
 
-**Left for the taker: the other two arms.** `has_atype` and `has_stype` are
-still ungated, and unlike the pair above they need new predicates —
-`SetArtifactSubtypes` / `AddArtifactSubtype` fold into a battlefield-shape
-scan (Bludgeon Brawl's `brawl_equip_mv`, `equipped_bonus.set_artifact_types`,
-the `AddCardType`-with-subtype static), and `AddSupertype` has only two
-emitters and neither is a card's printed shape (the all-nonland-legendary
-block and `ring_temptations >= 1`). Size them before writing them: they were
-inside the 413,844 the pair above already took, so what is *left* is
-unmeasured and probably small.
+**Not left for the taker: the other two arms are worth nothing.** `has_atype`
+and `has_stype` stayed ungated, and the residual was sized at the pass's tip
+rather than guessed: the requirement walker's `OnceCell::try_init` is
+**117,334 calls at 101 Ir**, against 581,256 at 1,084 Ir at the pass's base,
+and `computed_permanent` no longer appears in its caller table. The two arms
+(A) gated were the whole of it. See (-37), now closed.
 
 ### Fifty-fourth pass — deck construction, read from the top for the first time
 
@@ -3626,14 +3623,16 @@ entry before touching the rest — it also records the two shapes that lost
 (a `OnceCell` around a gate that runs once, and gating on
 `!computed_absent()` first).
 
-What is left is **`has_atype` and `has_stype`, both still ungated and both
-needing a new predicate**: `SetArtifactSubtypes` / `AddArtifactSubtype` fold
-into a battlefield-shape scan (Bludgeon Brawl's `brawl_equip_mv`,
-`equipped_bonus.set_artifact_types`, the `AddCardType`-with-subtype static),
-and `AddSupertype` has two emitters, neither a printed card shape (the
-all-nonland-legendary block and `ring_temptations >= 1`). **Size before
-writing**: the 413,844 forced `computed()`s the entry quoted were taken by
-the pair above, so the residual is unmeasured and probably small.
+**The residual was sized at the pass's tip and it is nothing — this entry is
+CLOSED.** `has_atype` and `has_stype` are still ungated, and gating them
+would need two new predicates (`SetArtifactSubtypes` / `AddArtifactSubtype`
+fold into a battlefield-shape scan — Bludgeon Brawl's `brawl_equip_mv`,
+`equipped_bonus.set_artifact_types`, the `AddCardType`-with-subtype static;
+`AddSupertype` has two emitters, neither a printed card shape). **Do not
+write them.** The requirement walker's `OnceCell::try_init` at the
+fifty-fifth tip is **117,334 calls at 101 Ir**, against 581,256 at 1,084 Ir
+at the pass's base — `computed_permanent` no longer appears in its caller
+table at all. The two arms the pair above gated were the whole of it.
 
 **Ranking rule added by the fiftieth pass, and it found 13 % in one sitting:
 ask what is done *twice*.** Not "what is expensive" and not "what is called
