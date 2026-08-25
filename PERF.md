@@ -341,7 +341,7 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`I`.** Nine commits, one class after the first: **the simulator kept
+`7ec4836c`.** Nine commits, one class after the first: **the simulator kept
 building answers before asking whether anyone wanted them.** (A) the
 requirement walker's subtype arms stop gathering where the printed line
 answers; (B) the freeze scope's depth and gate slots come out of the mutex;
@@ -373,7 +373,7 @@ Per commit, the three pools each was measured on:
 | F `9d9555e9` | -1.208 % | -0.034 % | -0.018 % | the per-card grant walk hands the permanent to the filters instead of re-finding it |
 | G `863d882d` | -0.205 % | -0.028 % | -0.254 % | `granted_abilities_of` does the same for the mana sweep's grant scan |
 | H `353273ef` | -0.126 % | flat | flat | thirteen more battlefield walks hand their card to the requirement walker |
-| I | -0.256 % | **-0.356 %** | -0.291 % | the gather's two always-empty `collect()`s become `Vec::new()` |
+| I `7ec4836c` | -0.256 % | **-0.356 %** | -0.291 % | the gather's two always-empty `collect()`s become `Vec::new()` |
 | — | +0.40 % | +0.66 % | — | **REVERTED** — the presence gate on `board_keyword_matching`'s *frozen* leg. See the Log |
 | — | +0.43 % | +0.12 % | — | **REVERTED** — a two-phase exactly-sized build in `statics_granted_triggers_with`. See the Log |
 
