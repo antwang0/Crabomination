@@ -148,6 +148,14 @@ Log with its numbers; read the entry before re-proposing any of them.
   taking cube from -1.85 to -2.26 % and sos from -2.75 to -3.16 % at the same
   time. `fixed`'s `sa_cards` is empty on all 32,002 gathers, so the walks were
   already free there and anything in front of them is pure charge.
+- **The Ir does show up on the clock, and it over-reads by ~2x** (measured
+  2026-08-25, and it is the first time anyone asked). Passes 57-59 together,
+  `28ae2416` -> `49c7220d`, eight ABBA blocks a pool with a flat null control:
+  **`sos` -6.57 % Ir / -3.87 % clock (8/8 blocks), `cube` -8.91 % / -3.16 %
+  (7/8)**. So rank work by callgrind — deterministic, thirty times cheaper,
+  and it found every one of those commits — but **halve an Ir delta before
+  quoting it as throughput**, and expect a single commit under ~3 % of Ir to
+  be unseparable on this box's clock.
 - **Best-of is a biased estimator, and every clock number in this file before
   pass 59 was one.** `scripts/ab_wall.py` runs an ABBA schedule (linear host
   drift cancels inside a block), reports the mean per-block ratio with a 95 %

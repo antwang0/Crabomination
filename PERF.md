@@ -241,6 +241,34 @@ minutes a side.** Four blocks is not enough — it called a null-equivalent
 result significant. That number is the reason the rule below holds, and it is
 now measured rather than asserted.
 
+**And with the harness in hand, the obvious question got asked for the first
+time: does the Ir show up on the clock?** Three passes' worth — base
+`28ae2416` (pass 56's tip) against `49c7220d`, i.e. passes 57, 58 and 59
+together — measured both ways on the same box, eight ABBA blocks a pool, with
+the null control run at the same block count and workload and coming back
+flat:
+
+```text
+pool     Ir base          Ir tip           Ir        clock (8 blocks)     blocks
+sos      1,715,661,899    1,603,018,915    -6.57 %   -3.87 %  [-5.2,-2.5]   8/8
+cube     3,162,425,896    2,880,726,915    -8.91 %   -3.16 %  [-5.2,-1.1]   7/8
+fixed    1,226,171,101    1,219,893,702    -0.51 %   not run
+```
+
+**The method works, and Ir over-reads the clock by about 1.7x on `sos` and
+2.8x on `cube`.** Both readings are outside the +/-2 % floor and the same
+direction as the Ir, so ranking work by callgrind is sound — it is
+deterministic, thirty times cheaper to collect, and it found every one of
+these commits. What it is *not* is a throughput number. **Halve an Ir delta
+before quoting it as games/sec**, and treat a pass under ~3 % of Ir as
+unseparable on this box's clock at eight blocks — which is most single
+commits, and is why the per-commit rows in the Log stay in Ir.
+
+The `cube` ratio being the worse of the two is consistent with what the two
+pools carry: cube's share of the arc is the trigger dispatcher's grant walk
+and thirty-eight `sa_cards` walks, i.e. cheap predictable instructions at high
+IPC, while `sos` also carries `cae6b605`'s allocations and the CoW unshares.
+
 **Sub-5 % changes need callgrind, not `--bench`.** Two runs of one binary
 here differ by more than a 2 % code change is worth, so a small win reads as
 noise however many pairs you run. `callgrind` on a fixed workload counts
