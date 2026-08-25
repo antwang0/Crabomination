@@ -13211,7 +13211,6 @@ impl GameState {
     ) -> Vec<crate::effect::ActivatedAbility> {
         use crate::effect::{Selector, StaticEffect};
         let card_id = me.id;
-        let tgt = Target::Permanent(card_id);
         let mut out = Vec::new();
         // Which of the "has the activated abilities of …" statics this
         // permanent carries, in one pass of its static abilities instead of
@@ -13269,7 +13268,12 @@ impl GameState {
                     // controller so "ControlledByYou" picks that
                     // player's permanents (and `NamedBySource` reads
                     // the granting source's chosen name).
-                    if self.evaluate_requirement_static(req, &tgt, src.controller, Some(src.id)) {
+                    // `me` is a battlefield permanent by this function's
+                    // contract, so hand it over rather than making the
+                    // walker re-find it by id — one `battlefield_find` per
+                    // (permanent x grant), on a path the mana sweep runs for
+                    // every untapped permanent.
+                    if self.evaluate_requirement_static_on(req, me, src.controller, Some(src.id)) {
                         out.push((*ability).clone());
                     }
                 }
@@ -13294,7 +13298,7 @@ impl GameState {
         // lands you control have '…'". The grant is live from the graveyard,
         // scoped to the owning seat's permanents.
         for (req, ability, seat, src_id) in &scan.graveyard {
-            if self.evaluate_requirement_static(req, &tgt, *seat, Some(*src_id)) {
+            if self.evaluate_requirement_static_on(req, me, *seat, Some(*src_id)) {
                 out.push((*ability).clone());
             }
         }

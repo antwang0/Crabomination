@@ -341,24 +341,42 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`4c58c9c7`.** Two commits: **(A) the requirement walker's subtype arms stop
-gathering where the printed line answers**, and **(B) the freeze scope's
-depth and gate slots come out of the mutex** — (B) is what turns (A)'s
-0.1 % cost on the non-cube pools into a win on all three. Ir readings `profiling-fast
+`9d9555e9`.** Six commits, one class after the first: **the simulator kept
+building answers before asking whether anyone wanted them.** (A) the
+requirement walker's subtype arms stop gathering where the printed line
+answers; (B) the freeze scope's depth and gate slots come out of the mutex;
+(C)-(F) four helpers that allocated, cloned or re-found something their
+caller discards or already holds. **`--decks cube` -20.00 %.** Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --seed 1` unless the row says otherwise.
 
 ```text
-                          base (bf4917a5)   (A) 8779aa9f     tip (B)
-I refs, --decks cube        4,012,095,058   3,332,029,985   3,308,407,431  -17.54 %
-I refs, --decks fixed       1,248,407,927   1,249,622,086   1,246,171,974   -0.179 %
-I refs, --decks sos         1,760,442,504   1,761,529,321   1,755,105,701   -0.303 %
-I refs, --decks sealed      3,497,162,303   3,500,013,528   3,489,058,164   -0.232 %
-deck build alone               34,506,869      34,859,382      34,607,871   +0.293 %
+                          base (bf4917a5)   (A) 8779aa9f     tip (F)
+I refs, --decks cube        4,012,095,058   3,332,029,985   3,209,883,069  -20.00 %
+I refs, --decks fixed       1,248,407,927   1,249,622,086   1,244,249,278   -0.333 %
+I refs, --decks sos         1,760,442,504   1,761,529,321   1,740,018,684   -1.160 %
+I refs, --decks sealed      3,497,162,303   3,500,013,528     (B), below
+deck build alone               34,506,869      34,859,382     (B), below
   (--decks sealed --games 1: 0 games played, all setup)
 ```
 
-**The deck-build row is layout, and the profile says so rather than the
+Per commit, the three pools each was measured on:
+
+| step | cube | fixed | sos | what |
+|---|---|---|---|---|
+| A `8779aa9f` | **-16.95 %** | +0.097 % | +0.062 % | the requirement walker's subtype arms ask a presence gate before forcing the layer view |
+| B `4c58c9c7` | -0.709 % | -0.276 % | -0.365 % | the freeze scope's depth and gate slots come out of the mutex |
+| C `24860169` | -0.665 % | +0.001 % | -0.338 % | `affected_from_requirement`'s And-tree stack is an inline array, not a heap `Vec` |
+| D `67fc39ab` | -0.114 % | -0.121 % | -0.064 % | `restore_payment_state` asks with a shared borrow before unsharing the battlefield |
+| E `5f988142` | -1.021 % | flat | -0.442 % | `extract_power_gate` asks `requirement_mentions_power` before cloning the tree |
+| F `9d9555e9` | -1.208 % | -0.034 % | -0.018 % | the per-card grant walk hands the permanent to the filters instead of re-finding it |
+| — | +0.40 % | +0.66 % | — | **REVERTED** — the presence gate on `board_keyword_matching`'s *frozen* leg. See the Log |
+| — | +0.43 % | +0.12 % | — | **REVERTED** — a two-phase exactly-sized build in `statics_granted_triggers_with`. See the Log |
+
+`sealed` and the deck build were read at (B) and not re-read; (C) through (F)
+are engine paths the deck builder does not reach.
+
+**The deck-build row was layout, and the profile says so rather than the
 usual hand-wave.** At (A) it read +1.02 %, and
 `creature_type_change_in_scope` / `land_type_change_in_scope` do not appear
 in that dump at all — the deck builder never reaches the requirement walker.
@@ -373,19 +391,20 @@ decisions        196,220 -> 196,220        byte-identical
 turns_per_game   27.53   -> 27.53
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism      ok (all pairs split, both)
-suite            18,723 passed / 0 failed / 5 ignored over 22 binaries
+suite            18,728 passed / 0 failed / 5 ignored over 22 binaries
 golden traces    all unchanged
 clippy           `--workspace --all-targets` clean
 rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores
 ```
 
-**Wall clock, and it is a third of the Ir.** `release-fast` + mimalloc, 600
-games / 1 thread / seed 1, best-of-three alternated A/B/A/B/A/B:
+**Wall clock, measured at (A) — a third of (A)'s Ir.** `release-fast` +
+mimalloc, 600 games / 1 thread / seed 1, best-of-three alternated
+A/B/A/B/A/B:
 
 ```text
-              base      tip
---decks cube  55.49 s   51.72 s   -6.8 %
+              base      (A)
+--decks cube  55.49 s   51.72 s   -6.8 % against -16.95 % in Ir
 --decks sos   31.99 s   31.30 s   (inside the drift; +0.062 % in Ir)
 ```
 
@@ -1657,6 +1676,20 @@ same: `evaluate_requirement_static_on` has existed since that pass, with a
 only work here was finding the callers that could promise it. The fourth
 (`statics_granted_triggers_for`, and the death-snapshot path under it) takes
 a card that may be off the battlefield and keeps the plain form.
+
+**(G) The same fix at the second site the pass-53 device did not reach.
+`sos` -0.254 %, `cube` -0.205 %, `fixed` -0.028 %.** `granted_abilities_of`
+takes a battlefield permanent by contract — its doc says so and all four
+callers are walking the battlefield — and then asked its grant filters about
+`Target::Permanent(me.id)`, one `battlefield_find` per (permanent x grant).
+28,496 calls / 19.8 M Ir on a cube run, and it is the mana sweep, which is
+why `sos` moves more than `cube` here.
+
+**`cg_sites.py battlefield_find` at the tip says what is left**: 61.5 M /
+2.35 % over the whole program, of which `eval.rs:3113` — `bf_hint_or_find`'s
+fallback, i.e. every *remaining* unhinted requirement evaluation — is
+14.2 M / 0.54 %, and `find_card_anywhere`'s first leg is 7.4 M / 0.28 %. The
+number is a floor (see the tool's docstring).
 
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —
