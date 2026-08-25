@@ -442,6 +442,10 @@ just with the deck builder.** Two commits that touch neither `recommend.rs`
 nor `selfplay.rs` moved it 37 k. Re-read the base after any rebase before
 quoting a delta on this workload.
 
+**Anchors at the branch tip** (this pass's (E) on top of pass 57's (D)+(E)),
+same recipe, for whoever measures next: `--decks sos` **1,644,049,924**,
+`--decks cube` **2,910,850,945**, deck build **21,774,018**.
+
 **Fifty-seventh pass, base `28ae2416` (pass 56's tip) vs its own tip
 `6c5dd0ab`.** Five commits in two classes. **The simulator's two largest
 engine functions each ended in a fan of narrow walks that ask a question the
@@ -3907,19 +3911,32 @@ it is **363,462 calls / 15,771,096 Ir**, the largest `make_mut` caller in the
 program by count (27 % of all of them) and 12 % of the program's 1.33 M
 `make_mut` calls for one turn-based action.
 
-**The refuted explanation, because it is the one anybody reading `do_untap`
-will reach for first:** the three `for card in &mut self.battlefield` loops
-do *not* pay a `DerefMut` per field *read*. rustc picks `Deref` for a place
-expression used immutably even when the base binding is `&mut`, and a
-standalone test of exactly this shape (an `Arc::make_mut` in `DerefMut` with
-a counter) reads **zero** `deref_mut` calls after a loop body of pure reads
-and one after a single write. So the 141.5 are real writes, and whoever takes
-this entry has to find them — the third loop's per-turn flag roll-over
-(`goaded_by` / `detained_by` / `attacked_this_turn` / `blocked_this_turn` /
-`attacked_last_turn` / `attacked_own_turn` / `attack_ban`, up to seven writes
-per permanent) is the shape to count first, and each of its gates is already
-a `!=` test, so what is left is the writes that genuinely change something.
-**Read it with `cg_lines.py --in do_untap` before proposing anything.**
+**TWO explanations are refuted, and between them they narrow the entry to
+"not the obvious places". Read both before proposing anything.**
+
+* **Reads through `&mut` do not pay a `DerefMut`.** rustc picks `Deref` for a
+  place expression used immutably even when the base binding is `&mut`, and a
+  standalone test of exactly this shape (an `Arc::make_mut` in `DerefMut` with
+  a counter) reads **zero** `deref_mut` calls after a loop body of pure reads
+  and one after a single write. So the 141.5 are real writes.
+* **They are not the per-turn flag roll-over loop**, which is the obvious
+  candidate: `goaded_by` / `detained_by` / `attacked_this_turn` /
+  `blocked_this_turn` / `blocked_attackers_this_turn` / `attacked_last_turn` /
+  `attacked_own_turn` / `attack_ban`, up to seven writes per permanent. Built
+  and measured at the fifty-eighth tip: the reads moved to a shared reborrow,
+  the whole block gated on "does anything want a write at all", and the writes
+  taking **one** `&mut **card` between them. `do_untap`'s `make_mut` count
+  went **212,012 -> 211,298** — 714 calls, 0.34 % of them — and the run read
+  `sos` **+0.0008 %**, `cube` **+0.0004 %**. Reverted. Pass 43's per-write
+  gates were already doing their job; the loop writes almost nothing.
+
+So ~211 k `make_mut` calls per six games are somewhere else in `do_untap`,
+141 per untap step over ~13 permanents. The main untap loop's
+`clear_summoning_sickness` (9,832) and `tapped = false` cannot be more than
+~20 k of them, and the four `retain_cold!` / `ColdState` writes in the tail
+are a handful. **This needs `cg_lines.py --in do_untap` on a
+`profiling-lines` build** — the cold build the two refutations above were not
+worth paying for, and now are.
 
 **(-41) `available_mana` walks the grants of every untapped permanent, and it
 is the one caller of `granted_abilities_of` that can be pre-filtered.**

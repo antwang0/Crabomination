@@ -48,8 +48,11 @@ candidate, and budget two callgrind rounds.**
    varies per shape.
 4. **Two fresh engine candidates, both read on `sos` (the actors' pool).**
    (-42) `do_untap` makes **141.5 `Arc::make_mut` calls per untap step**
-   (0.58 % sos / 0.53 % cube) — and "reads through `&mut` call `deref_mut`"
-   is **refuted** by a standalone test, so find the real writes.
+   (0.58 % sos / 0.53 % cube). **Two explanations are refuted**: reads
+   through `&mut` do not `deref_mut` (standalone test), and it is *not* the
+   per-turn flag roll-over loop (built, measured: 212,012 -> 211,298 calls,
+   sos +0.0008 %, reverted). It needs `cg_lines.py --in do_untap` on a
+   `profiling-lines` build — budget the cold build.
    (-41) `available_mana`'s per-permanent grant walk, 1.09 % of sos,
    pre-filterable **only** there (the other two callers index the list).
 5. **(-40) is closed as a whole.** The clone/allocator family is 26.5 % of
