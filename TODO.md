@@ -52,11 +52,20 @@ rounds per commit.**
    writing code — the row below it in that same table (`has_keyword`,
    494,394 calls at a flat 46 Ir) is diffuse and was not taken. Write-up in
    "Which pool a change moves".
-3. **Top candidate is still (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of
-   `sos`, paying side unread. **The bind-once half is done; don't grind it.**
-   Then (-44) (`__memcpy`/allocator) and (-45) (the cost of asking).
-   **(-46) is deliberately last and should stay there** — see 6.
-4. **Refuted this pass, do not re-take:** a presence bit belongs in
+3. **Take (-47) first — it is the only fresh one, and half of it is
+   low-risk.** `pick_blocks` is **120.2 M / 4.34 % of cube** inclusive, and
+   `blocker_can_block_attacker` builds the *attacker's* computed view once
+   per candidate blocker (56,748 `computed_permanent` calls for 28,374
+   checks). Two shapes: hoisting the attacker view is ~0.24 % of cube but
+   touches seven bot call sites that decide **block legality** — take it
+   only with a three-pool ladder printout diff; making the `layer_freeze`
+   memo a map instead of a mutex + linear scan has no behavioural exposure
+   and helps every `computed_permanent` caller. **Do the memo half first.**
+4. **Then (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of `sos`, paying
+   side unread. **The bind-once half is done; don't grind it.** Then (-44)
+   (`__memcpy`, allocator half now closed) and (-45) (the cost of asking).
+   **(-46) is deliberately last and should stay there** — see 7.
+5. **Refuted this pass, do not re-take:** a presence bit belongs in
    `sba_board_scan` only when the question has no early exit of its own
    (+0.29 % on `fixed`; third loss for the fusion device in
    `creature_death_possible` alone). A collect whose drain touches `self` is
@@ -65,14 +74,14 @@ rounds per commit.**
    read **+0.12 %**: see (-16), which now carries the first line profile of
    `dispatch_triggers_for_events` on `sos` and the rule that goes with it —
    *a line's Ir is not what removing the line would save.*
-5. **Sized and unclaimed:** `mint_token_onto_battlefield`, 370 calls /
+6. **Sized and unclaimed:** `mint_token_onto_battlefield`, 370 calls /
    6,644,250 Ir (**0.43 %** of `sos`), still builds and copies a whole
    `CardDefinition` per token — wants a value-keyed memo, not worth a pass
    alone. Its sibling `definition_matches_requirement` is **closed** by
    `718a66f8` (takes `impl Into<Arc<_>>`; the deep clone is gone). Pass 57's
    gate placement is ~0.25 % of `fixed` Ir = ~0.1 % of clock for a 2,000-line
    re-indent — tidy, not a number.
-6. **Two measurement cautions before you rank anything.** (a) Clock numbers
+7. **Two measurement cautions before you rank anything.** (a) Clock numbers
    go through `scripts/ab_wall.py` with its null control; eight blocks
    resolve **+/-2 % and nothing finer**, and Ir over-reads by ~2x. (b)
    `name_index()` builds 22,568 `CardDefinition`s to read their names —
@@ -82,11 +91,11 @@ rounds per commit.**
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-7. **Housekeeping.** TODO ~1.05k, PERF 6.8k (52nd/53rd Baseline folded; 55th/
+8. **Housekeeping.** TODO ~1.09k, PERF 7.3k (52nd/53rd Baseline folded; 55th/
    56th and the 47th/48th Log entries fold next). Suite is **14 test binaries
    / 18,736 tests**, not the "22" older blocks quote; incremental test rebuild
    19.3 s. ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k want triage.
-8. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
+9. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
    sacrifice / tap / discard" cluster is **read to the end**; the ~337
    remaining are the "you may draw / search / put into hand" tail, where
    declining is almost never right. **Top ML item is still a training run.**

@@ -4683,6 +4683,57 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
+**(-47) `pick_blocks` IS 120,203,116 Ir / 4.34 % OF `cube` INCLUSIVE, AND
+`blocker_can_block_attacker` RECOMPUTES THE ATTACKER'S COMPUTED VIEW ONCE
+PER CANDIDATE BLOCKER.** Found at the sixty-second tip by the pool-ratio
+device — `pick_blocks_inner` is 0.90 % of cube against 0.43 % of sos
+(**2.09x**) and 0.53 % of fixed. Sized, not taken; the reason it was not
+taken is at the bottom and is about risk, not size.
+
+```text
+pick_blocks                 4,070 calls   120,203,116 incl   29,533 Ir/call
+-> pick_blocks_inner       17,502          24,906,488 self
+   -> blocker_can_block_attacker  28,374   34,005,223 incl    1,449 Ir/call
+      -> computed_permanent       56,748   13,238,631 incl      233 Ir/call  <- 2x
+      -> can_block_attacker_computed 28,374  6,399,180
+      -> blocker_side_gates_allow_block 28,374 5,472,506
+```
+
+**Two per check is one too many.** `blocker_can_block_attacker(blocker_id,
+attacker_id)` resolves *both* ids to computed views internally, and its
+callers loop blockers inside a fixed attacker: `pick_blocks_inner`'s forced
+and menace passes are `battlefield.iter().filter(|c| … state
+.blocker_can_block_attacker(c.id, *a_id))`. So for one attacker and N
+candidate blockers the attacker's view is built N times and the blockers'
+once each — N+1 distinct permanents, 2N computations. It also costs two
+`battlefield_find`s per check, which is **(-38)**'s.
+
+**And the 233 Ir is itself worth reading before costing a hoist.** Outside a
+`layer_freeze` scope `computed_permanent` recomputes; inside one it hits a
+memo, and 233 Ir says these calls are hitting it. But the memo is
+`st.perms.iter().find(|(k, _)| *k == id)` **under a mutex** — a lock
+acquisition plus a linear scan plus an `Arc` clone. So there are two
+independent shapes here and they are worth different amounts:
+
+1. **Hoist the attacker's view out of the blocker loop.** Removes ~28,374
+   of the 56,748 calls: **~6.6 M on cube, ~0.24 %**. Needs a
+   `blocker_can_block_attacker_with(blocker, blocker_cp, attacker, atk_cp)`
+   and seven call sites in `bot.rs` threaded through it.
+2. **Make the freeze memo a map rather than a linear scan.** Helps every
+   `computed_permanent` caller inside a scope, not just this one — and
+   `computed_permanent` is 1.61 % of cube by itself. Unsized; measure how
+   long `perms` actually gets before assuming a scan is the cost, because on
+   ~20 permanents the *lock* is the likelier half.
+
+**Why it is here and not in the Log: the risk is behavioural, not
+numerical.** All seven call sites are inside the bot's block selection, and
+this is the function that decides which blocks are *legal* — a hoist that
+passes the wrong side's computed view does not crash, it quietly makes the
+bot block illegally or decline legal blocks, and the ladder printout is the
+only thing that would catch it. Take it with the three-pool printout diff
+and the `--bench` `decisions` count, not on the suite alone. Shape 2 has no
+such exposure and is the better first take.
+
 **(-45) THE COST OF ASKING — the sixty-first pass's class, and the table it
 came out of still has rows.** Every one of that
 pass's wins was a presence question whose *asking* cost the same whether the
