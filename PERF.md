@@ -4039,8 +4039,8 @@ half a `RawTable` (43,362 / 2,923,028).
 **And the cause is not in any of those callers — it is the bot's probe
 machinery, one frame up.** `GameState::clone` runs **19,086 times, 24.8 M Ir
 self (1.55 %)**, essentially all of it speculative: `accept_on` 6,660,
-`perform_action`'s failure checkpoint 5,606, `OnceCell::try_init` 3,376
-(`can_afford_in_state_with`'s probe cell), `sim_start_state` 1,226,
+`perform_action`'s failure checkpoint 5,606, `ProbeCell::try_init` 3,376,
+`sim_start_state` 1,226,
 `evaluate_action_sequence` 896, `main_phase_action_with` 894. Each such
 clone is cheap by design — it bumps refcounts — and then **every subsequent
 write on either side pays the deferred deep copy.** So the probe machinery's
@@ -4060,11 +4060,21 @@ file has that is not already an entry.
    wrong "cannot fail after mutating" silently corrupts state on the failure
    path rather than failing loudly.** Do it one action kind at a time, with
    a test that forces the failure, not as a sweep.
-2. **`can_afford_in_state_with`'s probe cell (3,376 clones, and
-   `try_init`'s callers total 19.59 M Ir).** A memo whose *stored value* is
-   a whole `GameState`. Pass 54's rule applies directly — "a memoized
-   object is not a memoized answer" — and the question is whether the
-   callers need the state or only the affordability verdict.
+2. **The `ProbeCell` inits (3,376 clones) — already largely paid, and the
+   `try_init` caller table will mislead you into re-taking it.** Three
+   different `OnceCell`s share that table and only one holds a `GameState`.
+   The 3,376 are exactly `sim_spell_action_inner` 1,280 +
+   `main_phase_action_with` 1,152 + `cast_candidates` 944, and `ProbeCell`'s
+   whole point is that a previous pass *already* made them lazy (its doc
+   comment: `sim_spell_action_inner` alone took 3,732 templates per six
+   bench games and probed on at most 1,552). What is left is inits that were
+   genuinely needed. **The table's two big rows are not `GameState` at
+   all** — `evaluate_requirement_static_hinted` 106,242 / 8,520,486 is a
+   static-eval memo at 80 Ir a call, and `can_afford_in_state_with` 5,712 /
+   19,593,552 is `SweepMana`'s `AvailableMana` cell, i.e. `available_mana`,
+   which is **(-41)**, not this entry. Check which cell a `try_init` row
+   belongs to before costing it; this write-up got it wrong on the first
+   pass for exactly that reason.
 3. **`accept_on` (6,660 clones), and it is the one to leave alone.** The
    divergence is the point: probing N candidate actions against one template
    means N of them must diverge, and CoW already makes that cost

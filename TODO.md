@@ -56,11 +56,14 @@ candidate, and budget two callgrind rounds.**
    **91,478 times / 80.9 M Ir = 5.04 % of `sos`**. The *cause* is the bot's
    probe machinery — `GameState::clone` 19,086 times / 24.8 M Ir — so its
    true price is **105.7 M Ir, 6.6 % of `sos`**. (-43) has the three
-   sub-candidates ranked by safety: `perform_action`'s failure checkpoint
-   (5,606, correctness-critical — audit per action kind, never as a sweep),
-   `can_afford_in_state_with`'s probe cell (3,376, a memo whose stored value
-   is a whole `GameState`), and `accept_on` (6,660, leave alone — the
-   divergence is the point). **Get the `selfplay_train` clock number before
+   sub-candidates, of which **only one is live**: `perform_action`'s failure
+   checkpoint (5,606, correctness-critical — audit per action kind, never as
+   a sweep). The `ProbeCell` inits (3,376) are already lazy from an earlier
+   pass, and `accept_on` (6,660) should be left alone — the divergence is
+   the point. **Three different `OnceCell`s share the `try_init` caller
+   table and only one holds a `GameState`**; its big rows are a static-eval
+   memo and `SweepMana`, which is (-41). This write-up mis-costed it once
+   already. **Get the `selfplay_train` clock number before
    sizing any of it:** 17.0 M of the 80.9 M is `__rust_alloc` under
    callgrind's system allocator, and the rest is `memcpy`.
    The deck builder is *done* for now:
