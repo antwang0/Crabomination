@@ -1576,27 +1576,43 @@ impl GameState {
     /// progressing trigger chain would move (life, zone sizes, counters, the
     /// stack's shape). Deliberately coarse — a false *negative* just means the
     /// draw isn't detected, while a false positive would end a live game.
+    ///
+    /// Mixed with SplitMix64's finalizer rather than through a `Hasher`.
+    /// `DefaultHasher` is SipHash-1-3 at ~52 Ir a `write`, and this digest
+    /// writes ten fields plus four per battlefield permanent: **2,424 calls
+    /// cost 12,546,606 Ir, 0.78 % of a six-game `--decks sos` run** at the
+    /// fifty-ninth tip. The finalizer avalanches every input bit across all 64
+    /// output bits in ten instructions, which is the property the paragraph
+    /// above asks for. The engine's own `fxhash` is the wrong tool here — it
+    /// is a *map* hasher and its own doc says it is not collision-resistant.
     fn loop_fingerprint(&self) -> u64 {
-        use std::hash::{Hash, Hasher};
-        let mut h = std::collections::hash_map::DefaultHasher::new();
-        self.turn_number.hash(&mut h);
-        self.stack.len().hash(&mut h);
+        /// SplitMix64's finalizer over `acc + v + PHI`. Chaining it makes the
+        /// digest order-sensitive, which the field stream needs.
+        #[inline]
+        fn mix(acc: u64, v: u64) -> u64 {
+            let mut z = acc.wrapping_add(v).wrapping_add(0x9E37_79B9_7F4A_7C15);
+            z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            z ^ (z >> 31)
+        }
+        let mut h = mix(0, self.turn_number as u64);
+        h = mix(h, self.stack.len() as u64);
         for p in &self.players {
-            p.life.hash(&mut h);
-            p.hand.len().hash(&mut h);
-            p.library.len().hash(&mut h);
-            p.graveyard.len().hash(&mut h);
-            p.poison_counters.hash(&mut h);
+            h = mix(h, p.life as u64);
+            h = mix(h, p.hand.len() as u64);
+            h = mix(h, p.library.len() as u64);
+            h = mix(h, p.graveyard.len() as u64);
+            h = mix(h, p.poison_counters as u64);
         }
-        self.exile.len().hash(&mut h);
-        self.battlefield.len().hash(&mut h);
+        h = mix(h, self.exile.len() as u64);
+        h = mix(h, self.battlefield.len() as u64);
         for c in &self.battlefield {
-            c.id.hash(&mut h);
-            c.tapped.hash(&mut h);
-            c.damage.hash(&mut h);
-            c.counters.values().sum::<u32>().hash(&mut h);
+            h = mix(h, c.id.0 as u64);
+            h = mix(h, u64::from(c.tapped));
+            h = mix(h, c.damage as u64);
+            h = mix(h, u64::from(c.counters.values().sum::<u32>()));
         }
-        h.finish()
+        h
     }
 
     fn resolve_top_of_stack_inner(&mut self) -> Result<Vec<GameEvent>, GameError> {
