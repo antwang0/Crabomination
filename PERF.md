@@ -2084,6 +2084,33 @@ The three lessons those blocks were carrying, which are why the numbers can go:
   archetypes. One `cp`, three minutes, and it answers what a recorded
   decision count only answers if the invocation matches.
 
+**Crash-freedom re-run at `9b0cc470`, WIDER THAN THE STANDING RECIPE: 25,200
+games, no panic and no arithmetic overflow.** `overflow` profile. The
+standing grid (`--games 400 --threads 3 --decks all`, seeds 11/12/13) plus
+two pools it does not reach:
+
+| pool | invocation | games | decided | undecided |
+|---|---|---|---|---|
+| all | `--games 400 --threads 3`, seeds 11/12/13 | 20,400 | 20,396 | 4 (all seed 11) |
+| cube | `--games 120 --threads 3`, seeds 11/12 | 1,920 | 1,920 | 0 |
+| sealed | `--games 120 --threads 3`, seeds 11/12 | 2,880 | 2,880 | 0 |
+
+**Why the two extra pools, and it is the point of the re-run.** `--decks
+all` is 17 hand-built archetypes — a fixed, small card set. A panic in a
+card those decks never draw is invisible to it however many games it plays,
+and the catalog is 22,568 factories. `cube` and `sealed` build from
+randomised pools, so they reach cards the standing grid cannot. Both came
+back clean and neither has an undecided game. **Add them when a pass touches
+rules code**; they cost seconds against the grid's minutes because the
+`overflow` build is the expensive part and it is already paid.
+
+**And the `--decks all` block is byte-identical to the run at `52e0b801`
+below** — same 6796/4, 6800/0, 6800/0 — which makes it a 20,400-game
+behaviour check on `655e1e47`, the layers commit between the two tips. A
+reordering of `affected_includes_gated`'s predicates is exactly the change
+that would show up as a different game outcome if the reorder were not
+behaviour-preserving, and it does not.
+
 **Crash-freedom at the sixty-second tip (`52e0b801`): clean, and identical to
 the record.** `overflow` profile (`release-fast` + `overflow-checks`), `--a
 gang --b gang --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13:
