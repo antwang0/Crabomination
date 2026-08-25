@@ -1468,8 +1468,8 @@ the table above is safe to compress:
 
 ### Fifty-fifth pass — the requirement walker's subtype arms stop gathering
 
-Five commits, base `bf4917a5`. (A) is the pass's finding; (B) through (E)
-are each a win on every pool they move:
+Six commits, base `bf4917a5`. (A) is the pass's finding; (B) through (F)
+are each a win on every pool they move — **cube -20.0 % over the pass**:
 
 ```text
                   base (bf4917a5)   (A) 8779aa9f
@@ -1641,6 +1641,22 @@ gate, so the early return is the same answer.
 down. `walk` and `restore_payment_state` both *built the answer* before
 asking whether anyone wanted it, and in both the cheap version of the
 question was already written in the file.
+
+**(F) The per-card grant walk re-found the permanent its caller was
+iterating. `cube` -1.208 %, `sos` -0.018 %, `fixed` -0.034 %.**
+`statics_granted_triggers_with` is **351,982 calls / ~207 M Ir inclusive**
+on a cube run — 143.6 M from `dispatch_triggers_for_events`, 45.2 M from
+`fire_step_triggers` — and every call ran one `battlefield_find` per grant
+through `evaluate_requirement_static`'s `Target::Permanent` branch. Three of
+its four call sites are `for c in self.battlefield`, i.e. they are holding
+the permanent. `statics_granted_triggers_on` hands it over.
+
+**This is pass 53's (A) at a site it did not reach**, and the device is the
+same: `evaluate_requirement_static_on` has existed since that pass, with a
+`debug_assert!` that the hint is the battlefield permanent it names, so the
+only work here was finding the callers that could promise it. The fourth
+(`statics_granted_triggers_for`, and the death-snapshot path under it) takes
+a card that may be off the battlefield and keeps the plain form.
 
 **Left for the taker: the other two arms.** `has_atype` and `has_stype` are
 still ungated, and unlike the pair above they need new predicates —

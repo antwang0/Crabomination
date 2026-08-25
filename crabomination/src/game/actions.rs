@@ -11372,7 +11372,7 @@ impl GameState {
                 }
             }
             let static_granted = if any_static_grant || !c.definition.station.is_empty() {
-                self.statics_granted_triggers_with(c, &trigger_grants)
+                self.statics_granted_triggers_on(c, &trigger_grants)
             } else {
                 Vec::new()
             };

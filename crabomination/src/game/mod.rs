@@ -2978,7 +2978,10 @@ impl GameState {
         out
     }
 
-    /// [`statics_granted_triggers_for`] against a prebuilt grant list.
+    /// [`statics_granted_triggers_for`] against a prebuilt grant list, for a
+    /// caller that cannot promise `card` is a live battlefield permanent (a
+    /// death snapshot, a card being cast). Prefer
+    /// [`statics_granted_triggers_on`](Self::statics_granted_triggers_on).
     ///
     /// [`statics_granted_triggers_for`]: Self::statics_granted_triggers_for
     pub(crate) fn statics_granted_triggers_with(
@@ -2986,14 +2989,48 @@ impl GameState {
         card: &CardInstance,
         grants: &[TriggerGrant<'_>],
     ) -> Vec<crate::card::TriggeredAbility> {
+        self.statics_granted_triggers_inner(card, grants, None)
+    }
+
+    /// The same walk for a caller *iterating the battlefield*, which can hand
+    /// the permanent to each grant filter instead of making every one re-find
+    /// it by id.
+    ///
+    /// Three of this function's four call sites are exactly that loop, and it
+    /// is the hottest of them: `statics_granted_triggers_with` is 351,982
+    /// calls / ~207 M Ir inclusive on a cube run at the fifty-fifth tip, and
+    /// each call runs one `battlefield_find` per grant. The hint is only
+    /// equivalent to the walk when `card` *is* the battlefield permanent with
+    /// that id, which `evaluate_requirement_static_on` `debug_assert!`s — so
+    /// a caller that cannot promise it keeps the plain form above.
+    pub(crate) fn statics_granted_triggers_on(
+        &self,
+        card: &CardInstance,
+        grants: &[TriggerGrant<'_>],
+    ) -> Vec<crate::card::TriggeredAbility> {
+        self.statics_granted_triggers_inner(card, grants, Some(card))
+    }
+
+    fn statics_granted_triggers_inner(
+        &self,
+        card: &CardInstance,
+        grants: &[TriggerGrant<'_>],
+        hint: Option<&CardInstance>,
+    ) -> Vec<crate::card::TriggeredAbility> {
+        let matches = |req: &crate::card::SelectionRequirement,
+                       controller: usize,
+                       source: Option<CardId>| match hint {
+            Some(c) => self.evaluate_requirement_static_on(req, c, controller, source),
+            None => self.evaluate_requirement_static(
+                req,
+                &Target::Permanent(card.id),
+                controller,
+                source,
+            ),
+        };
         let mut out = Vec::new();
         for g in grants {
-            if self.evaluate_requirement_static(
-                &g.filter,
-                &Target::Permanent(card.id),
-                g.controller,
-                Some(g.source),
-            ) {
+            if matches(&g.filter, g.controller, Some(g.source)) {
                 out.push((*g.ability).clone());
             }
         }
@@ -3001,12 +3038,7 @@ impl GameState {
         // this turn, …"). Unlike an EOT trigger grant, these reach permanents
         // that enter after the granting spell resolved.
         for (filter, ability) in &self.turn_granted_triggers {
-            if self.evaluate_requirement_static(
-                filter,
-                &Target::Permanent(card.id),
-                card.controller,
-                None,
-            ) {
+            if matches(filter, card.controller, None) {
                 out.push(ability.clone());
             }
         }
@@ -16725,7 +16757,7 @@ impl GameState {
             // triggers are never once-per-turn and use a sentinel index.
             let n_printed = card.definition.triggered_abilities.len();
             let static_granted = if any_static_grant || !card.definition.station.is_empty() {
-                self.statics_granted_triggers_with(card, &trigger_grants)
+                self.statics_granted_triggers_on(card, &trigger_grants)
             } else {
                 Vec::new()
             };
