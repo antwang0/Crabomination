@@ -1127,118 +1127,7 @@ recipe missed: `restart_game` (CR 727) rebuilt the state with
 *restarted* stopped replaying — fixed in `c6898506`, written up as TODO's
 twenty-first robustness filter.
 
-**Forty-ninth pass, base `40fb5e31` (pass 47's tip) vs its own tip**, both
-`profiling-fast --no-default-features`, built and run in one sitting on one
-box. It ran concurrently with pass 48 and is **rebased on top of it**, so it
-has two readings as well.
-
-```text
-                     base (40fb5e31)          own tip
-I refs (callgrind)   1,645,831,476            1,560,268,509   -5.198 %
-decisions            196,220                  196,220         byte-identical
-turns_per_game       27.53                    27.53
-stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
-determinism          ok (all pairs split, both)
-allocations          967,377                  926,895
-peak_rss_mib         21.9                     21.5
-
-                     branch base (04282f2e)   final tip
-I refs (callgrind)   1,625,264,320 (derived)  1,531,246,793   -5.785 %
-decisions            196,220                  196,220         byte-identical
-turns_per_game       27.53                    27.53
-stalls / determinism 0 / ok (both)
-peak_rss_mib         not re-read here         21.5
-suite                18,709 passed / 0 failed / 5 ignored over 22 binaries
-clippy               `--workspace --all-targets` clean
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        52-57 across every reading
-
-The intermediate rebased readings, for the Log rows that chain to them:
-`bf658313` (derived 1,628,220,915) -> A+B 1,540,962,924 -> C 1,538,787,495.
-Three of pass 48's commits then landed underneath and the chain was rebased
-again, which is where the final pair above comes from; **908,931**
-allocations were read at the A+B tip.
-```
-
-**The base columns are 492 Ir below what passes 47 and 48 recorded for the
-same commits** (1,645,831,968 / 1,628,221,407 / 1,625,264,812): this run's
-`--callgrind-out-file` name is a character shorter, and argv length lands in
-the Ir total — pass 47 saw the same effect at 686 Ir. `40fb5e31` was read
-directly here (1,645,831,476, exactly 492 under pass 48's reading of it);
-`bf658313` and `04282f2e` were **not** re-read, so the second block's base is
-that same 492 subtracted from pass 48's recorded number for the commit. Everything measured in this
-pass used one argv throughout, so the deltas are exact and the derivation only
-affects the rebased row's third decimal. Pass 48's rule holds: the absolute
-transfers between containers, to within the argv string.
-
-**The two passes compose, and this one's rows read slightly *larger* on the
-rebased branch** (-5.359 % against -5.198 %): pass 48's (E) took the
-`mana_source_table` gathers out from under the same ticks, so the tail this
-pass removes is a bigger share of what is left.
-
-**Crash-freedom and determinism at the rebased tip, widest pool.** `--a gang
---b gang --games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400
-games, 20,396 decided, no panic**, all 10,198 mirrored pairs split
-(`rho -1.000` every seed). The 4 undecided are seed 11's rules draws, the same
-four passes 44-48 recorded.
-
-**Forty-eighth pass, base `89f55a5c` vs tip `1b32e4fb`**, both
-`profiling-fast --no-default-features`, built and run in one sitting on one
-box.
-
-Pass 48 ran concurrently with pass 47's last five commits and is **rebased on
-top of them**, so it has two readings. Its own chain, and then the branch.
-
-```text
-                     base (89f55a5c)          own tip (1b32e4fb)
-I refs (callgrind)   1,662,145,003            1,643,104,718   -1.146 %
-decisions            196,220                  196,220         byte-identical
-turns_per_game       27.53                    27.53
-stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
-determinism          ok (all pairs split, both)
-allocations          967,377                  949,413
-peak_rss_mib         21.5                     21.0
-suite                18,709 passed / 0 failed / 5 ignored over 22 binaries (both)
-host_cpu             Intel(R) Xeon(R) Processor @ 2.80GHz
-host_calib_ms        55-57 across every reading
-
-                     pass 47 tip (40fb5e31)   branch tip
-I refs (callgrind)   1,645,831,968            1,628,221,407   -1.070 % (A-E)
-                                              1,625,262,542   -1.250 % (with F)
-decisions            196,220                  196,220         byte-identical
-turns_per_game       27.53                    27.53
-stalls / determinism 0 / ok (both)
-```
-
-**The two passes compose, and the rows read slightly *smaller* on the rebased
-branch** (-1.070 % against -1.146 %): pass 47's `Keyword::eq` pair had already
-removed some of what pass 48's (B) and (E) reach.
-
-**Two containers, one Ir apart — so an absolute *does* transfer, and the
-forty-eighth pass first concluded the opposite and was wrong.** Pass 47's tip
-`40fb5e31` reads **1,645,831,968** here against the **1,645,831,969** that
-pass recorded on its own box. The thing that misled: pass 48's base
-`89f55a5c` reads 1,662,145,003, not the 1,674,581,042 pass 47's Log records —
-because that Log number is pass 47's **pre-rebase** tip `3706f96f`, and
-`89f55a5c` is the same seven commits *after* a concurrent session landed pass
-46's `cast_cost_scan` (-0.697 %) underneath them. The gap is that commit, not
-the container. **The rule that survives is narrower and still worth having:
-re-read your own base, because on a shared branch the commit you think you
-are standing on may not be the one the last pass measured.**
-
-No `games_per_s` pair is quoted: the only `--bench` runs available were taken
-between builds on a shared box, and this file's rule is to quote callgrind
-under 5 %.
-
-**Crash-freedom and determinism, widest pool, run twice — once at pass 48's
-own tip and once at the branch tip after (F) changed a container type.**
-`--a gang --b gang --games 400 --threads 3 --decks all` (fixed + cube + sos,
-17 archetypes), seeds 11 / 12 / 13: **20,400 games, 20,396 decided, no
-panic**, and all 10,198 mirrored pairs split (`rho -1.000` on every seed),
-byte-identical across the two runs. The 4 undecided are seed 11's rules
-draws — the same four passes 44 and 45 recorded.
-
-**Passes 45, 46 and 47's Ir blocks, compacted.** The full blocks are in git
+**Passes 45-49's Ir blocks, compacted.** The full blocks are in git
 (`git log -- PERF.md`); every one is `profiling-fast --no-default-features`,
 callgrind, `--a gang --b gang --games 6 --seed 1`, and every one reads
 `decisions` **196,220**, `turns_per_game` **27.53**, `stalls` 0
@@ -1252,16 +1141,49 @@ only column that chains across them.
 | 46, rebased and with its (E) | `fec179f0` -> tip | 1,765,005,375 -> 1,735,997,491 | -1.643 % |
 | 47, own chain | `c9606062` -> `3706f96f` | 1,727,336,594 -> 1,674,581,042 | -3.054 % |
 | 47, rebased and with the `Keyword::eq` pair | `636902ca` -> `a98d39b0` | 1,715,304,981 -> 1,645,831,969 | -4.050 % |
+| 48, own chain | `89f55a5c` -> `1b32e4fb` | 1,662,145,003 -> 1,643,104,718 | -1.146 % |
+| 48, rebased (A-E, then with F) | `40fb5e31` -> branch tip | 1,645,831,968 -> 1,628,221,407 / 1,625,262,542 | -1.070 % / -1.250 % |
+| 49, own chain | `40fb5e31` -> own tip | 1,645,831,476 -> 1,560,268,509 | -5.198 % |
+| 49, rebased onto 48 | `04282f2e` -> final tip | 1,625,264,320 (derived) -> 1,531,246,793 | -5.785 % |
 
 **The branch across passes 46 and 47: 1,765,005,375 -> 1,645,831,969,
--6.752 %**, and the two **compose**: pass 47's seven commits take *more* off
-the branch after pass 46's `cast_cost_scan` landed underneath them
-(-53,159,867) than they did before it (-52,755,552).
+-6.752 %**, and every adjacent pair **composes**. Pass 47's seven commits take
+*more* off the branch after pass 46's `cast_cost_scan` landed underneath them
+(-53,159,867) than they did before it (-52,755,552); pass 48's rows read
+slightly *smaller* rebased (-1.070 % against -1.146 %) because pass 47's
+`Keyword::eq` pair had already removed some of what its (B) and (E) reach; and
+pass 49's read slightly *larger* (-5.359 % against -5.198 %) because pass 48's
+(E) took the `mana_source_table` gathers out from under the same ticks.
+Pass 49's intermediate rebased readings, for the Log rows that chain to them:
+`bf658313` (derived 1,628,220,915) -> A+B 1,540,962,924 -> C 1,538,787,495,
+with **908,931** allocations at the A+B tip. Allocation counts across the two:
+967,377 -> 949,413 (48), 967,377 -> 926,895 (49).
+
+**Two containers, one Ir apart — so an absolute *does* transfer, and the
+forty-eighth pass first concluded the opposite and was wrong.** Pass 47's tip
+`40fb5e31` read **1,645,831,968** on pass 48's box against the
+**1,645,831,969** pass 47 recorded on its own. The thing that misled: pass
+48's base `89f55a5c` reads 1,662,145,003, not the 1,674,581,042 pass 47's Log
+records — because that Log number is pass 47's **pre-rebase** tip `3706f96f`,
+and `89f55a5c` is the same seven commits *after* a concurrent session landed
+pass 46's `cast_cost_scan` (-0.697 %) underneath them. The gap is that commit,
+not the container. **The rule that survives is narrower and still worth
+having: re-read your own base, because on a shared branch the commit you think
+you are standing on may not be the one the last pass measured.**
+
+**And argv length lands in the Ir total.** Pass 49's base columns are 492 Ir
+below what passes 47 and 48 recorded for the same commits, because its
+`--callgrind-out-file` name is a character shorter; pass 47 saw the same
+effect at 686 Ir. `40fb5e31` was re-read directly there (1,645,831,476,
+exactly 492 under pass 48's reading); `bf658313` and `04282f2e` were not, so
+those bases are that 492 subtracted from pass 48's numbers. One argv
+throughout a pass makes its deltas exact — the absolute transfers between
+containers to within the argv string.
 
 The three things those blocks were written to carry, which are why the
 numbers can go:
 
-- **None of passes 45-47 ran a `release` A/B.** Each row is callgrind plus
+- **None of passes 45-49 ran a `release` A/B.** Each row is callgrind plus
   the `--bench` invariant check, which is what this file asks for a sub-5 %
   change; the committed `release` block below is still the forty-fourth
   pass's.
@@ -1269,11 +1191,16 @@ numbers can go:
   unalternated readings ran 138.16 / 139.14 / 135.69 / 133.08 in commit
   order and then **143.36 at the rebased tip** — drift that tracks the box,
   against an Ir column falling monotonically. Pass 47 declined to quote a
-  pair at all: `host_calib_ms` read 49 then 60 across the two runs it had.
-- **Wide pool clean at both tips.** `--a gang --b gang --games 400
+  pair at all: `host_calib_ms` read 49 then 60 across the two runs it had,
+  and pass 48's only `--bench` runs were taken between builds on a shared box.
+- **Wide pool clean at every tip.** `--a gang --b gang --games 400
   --threads 3 --decks all`, seeds 11/12/13: 20,400 games, 20,396 decided, no
-  panic, all 10,198 mirrored pairs split. The 4 undecided are seed 11's
-  standing rules draws.
+  panic, all 10,198 mirrored pairs split (`rho -1.000` every seed), and
+  byte-identical across pass 48's two runs. The 4 undecided are seed 11's
+  standing rules draws, the same four passes 44-48 recorded.
+  `peak_rss_mib` 21.0-21.9 across both passes; `host_cpu` Intel Xeon @
+  2.80GHz, `host_calib_ms` 52-57; suite 18,709 passed / 0 failed / 5 ignored
+  over 22 binaries, clippy `--workspace --all-targets` clean.
 
 
 **The forty-fourth pass is a paired `release` A/B over six alternated pairs.**
