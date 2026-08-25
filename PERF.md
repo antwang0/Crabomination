@@ -4045,21 +4045,33 @@ self (1.55 %)**, essentially all of it speculative: `accept_on` 6,660,
 clone is cheap by design — it bumps refcounts — and then **every subsequent
 write on either side pays the deferred deep copy.** So the probe machinery's
 true price is the 24.8 M of clones *plus* the 80.9 M they force:
-**105.7 M Ir, 6.6 % of `sos`**, and it is the largest single structure this
-file has that is not already an entry.
+**105.7 M Ir, 6.6 % of `sos`**.
 
-**Three sub-candidates, in order of how safe they are:**
+**The value of this entry is the 80.9 M deferred half, not the sub-candidate
+list — because every item on that list turns out to be an existing entry
+that was already answered.** That is the finding: the CoW clone cost has
+been costed three times from the *causing* side ((-13) on the checkpoint,
+(-41) on `available_mana`, `ProbeCell` on the probe templates) and never
+once from the *paying* side, which is 3.2x larger than the clones that cause
+it and does not appear in any caller table of `GameState::clone`. Read it
+that way before proposing anything:
 
-1. **`perform_action`'s checkpoint (5,606 clones).** Its own doc comment
-   already names this cost — "it shares every CoW zone, so the action's
-   first write to one deep-copies it" — and a previous pass already carved
-   out `PassPriority` (41 % of a bot game's actions) on the argument that
-   the path cannot fail after mutating. The rest of the dispatch wants the
-   same audit, per action kind. **This is correctness-critical: the
-   checkpoint exists to restore a failed action's partial mutation, and a
-   wrong "cannot fail after mutating" silently corrupts state on the failure
-   path rather than failing loudly.** Do it one action kind at a time, with
-   a test that forces the failure, not as a sweep.
+1. **`perform_action`'s checkpoint (5,606 clones) — this is (-13), it is
+   already costed, and the answer was no. Do not re-open it without a new
+   argument.** Pass 43's (A) took the provable half (-2.842 %): the
+   round-closing `PassPriority` skips the checkpoint, and
+   `GameState::clone` from `perform_action` went 18,208 -> 8,266. **The
+   remainder is explicitly the half where the checkpoint earns its keep**,
+   and `scripts/fallibility_closure.py` is the tool that decides it —
+   `play_land` reaches 6 `Result` functions of which 2 raise, but
+   `submit_decision` reaches **137 of which 70 raise**, which is exactly why
+   the rest is not proven arm by arm. TODO's "Engine — Rollback / Undo
+   system" has the other half of the argument: the checkpoint is what
+   structurally kills the audit-P0 partial-mutation family (Squad/Casualty
+   under-pay, `declare_attackers` mid-loop corruption, back-face land
+   corruption, madness mana loss), it is pinned by
+   `cow::tests::rejected_action_restores_state_exactly`, and **any narrowing
+   of it is a rules-correctness argument first and a perf change second**.
 2. **The `ProbeCell` inits (3,376 clones) — already largely paid, and the
    `try_init` caller table will mislead you into re-taking it.** Three
    different `OnceCell`s share that table and only one holds a `GameState`.
