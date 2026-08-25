@@ -1990,6 +1990,15 @@ The three lessons those blocks were carrying, which are why the numbers can go:
   archetypes. One `cp`, three minutes, and it answers what a recorded
   decision count only answers if the invocation matches.
 
+**Crash-freedom at the sixtieth tip: clean, and identical to the record.**
+`overflow` profile (`release-fast` + `overflow-checks`), `--a gang --b gang
+--games 400 --threads 3 --decks all`, seeds 11 / 12 / 13: **20,400 games,
+20,396 decided, no panic and no arithmetic overflow**, 28-30 s a seed against
+an 8m19s build. The 4 undecided are all on seed 11, which is what every tip
+since the forty-second pass records. Worth running here because the pass
+touched arithmetic on purpose (`ba15f249`'s `wrapping_*` mixer) and changed
+three cube-pool cards' behaviour.
+
 **Crash-freedom, the standing recipe and its record.** The `overflow` profile
 (release-fast + `overflow-checks`) over `--a gang --b gang --games 400
 --threads 3 --decks all`, seeds 11/12/13 (+ 3/29/41 at `5174acd3`): **no
@@ -4322,6 +4331,21 @@ is the entry: the table is forty rows of a hundred-odd Ir each, and one row —
 `malloc` + `_int_malloc` (5.78 %): an allocation whose Ir/call is far above
 the family's mean is an allocation of something big, and that is a shape, not
 a diffuse cost.
+
+**The allocator half of this entry was read the same way and there is no
+outlier — record kept so nobody redoes it.** 1,072,958 `__rust_alloc` calls a
+six-game `sos` run; by Ir/call the table is flat: `finish_grow` 241,644 at 86,
+`Arc::clone_from_ref_in` 140,010 at 123, `Vec::clone` 39,750 at **174** (the
+highest, and it is a moderate `Vec`, not a kilobyte), `Box::clone` 38,129 at
+79, `finalize_cast` 13,868 at 119, `mana::cost` 28,024 at 58. The engine
+functions that allocate *directly* and look wrong — `mana::cost` 28,024,
+`SelectionRequirement::and` 16,992, `::or` 8,464 — are **catalog
+constructors**, i.e. definition-build time, which `card_arc` and `card_brief`
+now amortize to once per factory per thread; the only game-loop caller of
+`mana::cost` is `declare_blockers` at 1,258 calls / 191,426 Ir (0.012 %).
+`finish_grow`'s 22.5 % share is (-28)'s `Vec::clone` capacity story and the
+`GrowVec` newtype that measured **+0.050 %**. **So: the allocator is a real
+12.7 % and it is genuinely diffuse.**
 
 The sos table at the sixtieth tip, top of `__memcpy`'s callers:
 
