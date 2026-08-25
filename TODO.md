@@ -18,65 +18,64 @@ reference and want their own triage pass):
 
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
-**Sessions run this branch concurrently.** Read PERF's Log for the pass you
-are continuing; every number below is written up there in full.
+**Sessions run this branch concurrently: read PERF's Log before starting the
+top candidate, re-read the base after every rebase, and budget two callgrind
+rounds per commit.**
 
-1. **Pass 60 is done: `sos` -3.46 %, `cube` -2.82 %, `fixed` -2.16 %,
-   `sealed` -2.33 %, and peak RSS on `--bench` 21.9 -> 17.7 MiB.** Two
-   commits — `6344adf6` (a deck-fill memcpy'd an 8,232-byte `CardDefinition`
-   per card; `cube::card_arc` memoizes one `Arc` per factory per thread) and
-   `ba15f249` (the loop watchdog ran SipHash over fifty small integers).
-2. **The device is new and cheap to re-run: read the Ir/call column of a
-   caller table.** `__memcpy` is 5.55 % of `sos` over forty diffuse rows;
-   the only row worth a commit showed up as an *outlier in the ratio*
-   (8,242 Ir a call = `size_of::<CardDefinition>()`). Do the same for
-   `_int_free` / `malloc`, which are 10.0 % between them and have never had a
-   caller table read this way.
+1. **Two sessions ran passes 59-61 concurrently; both are in PERF's Log.**
+   Pass 60 (`6344adf6` + `ba15f249`): `sos` **-3.46 %**, `fixed` -2.16 %,
+   peak RSS 21.9 -> 17.7 MiB. Pass 61, the other session: `fixed`
+   **-0.984 %**, `sos` -0.862 %, `cube` -0.879 % — measured at base
+   `ba15f249`, so `6344adf6` is under neither of its columns.
+2. **Two devices, both cheap to re-run, both found their pass's biggest
+   commit.** (a) Read a caller table's **Ir/call** column: an allocation far
+   above the family mean is an allocation of something big (`__memcpy` ->
+   `CardInstance::new` at 8,242 Ir = `size_of::<CardDefinition>()`). Do it
+   for `_int_free` / `malloc`, 10.0 % between them. (b) `cg_edges.py
+   --callers SpecFromIterNested` ranked by **calls**, then ask which collects
+   can be non-empty on the pools the actors play — that is (-45).
 3. **Top candidate is still (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of
    `sos`, paying side unread. **The bind-once half is done; don't grind it.**
-4. **The sos profile at the sixtieth tip**, for whoever ranks next:
-   `dispatch_triggers_for_events` 5.88 %, `__memcpy` 5.55 %, the allocator
-   family 12.7 %, the gather 3.71 %, `check_state_based_actions` 2.84 % +
-   `sba_board_scan` 1.81 %, `GameState::clone` 1.61 %. Everything above 1 %
-   that is *named* has an entry; the two that do not are the allocator and
-   `__memcpy` themselves.
-5. **What is left under `CardInstance::new`** after `6344adf6`:
-   `mint_token_onto_battlefield` 370 calls / 6,644,250 Ir (**0.43 %**) still
-   builds and copies a whole `CardDefinition` per token, and
-   `definition_matches_requirement` deep-clones one (156 / 2,736,861,
-   0.18 %) to answer a predicate. Both want a value-keyed memo or an `Arc`
-   in the signature; neither is worth a pass alone.
-6. **Clock numbers go through `scripts/ab_wall.py` with its null control**
-   (`--bin-a X --bin-b X`). Eight blocks of a 30-second `sos` run resolve
-   **+/-2 % and nothing finer**; four blocks called a null significant. Ir
-   over-reads the clock by ~2x — halve a delta before quoting throughput.
-7. **Left from pass 57**, and pass 60's calibration re-sizes it *down*: the
-   gate placement (B)'s variant table did not try is ~0.25 % of `fixed` Ir,
-   i.e. ~0.1 % of clock on the pool the actors do not play, for a 2,000-line
-   re-indent of 38 blocks in the most contended function in the tree. **Take
-   it only if the branch is quiet and you want the tidy, not the number.**
-8. **Cards: `scripts/audit_dropped_may.py`.** Its load-bearing cluster (the
-   "destroy / sacrifice / tap / discard" verbs) is **read to the end** — five
-   fixed, four false positives, all written up in INCOMPLETE_CARDS with the
-   two rules that pass yields. The ~337 remaining findings are the "you may
-   draw / search / put into hand" tail, where declining is almost never
-   right.
-9. **Build/test iteration: the incremental test rebuild is 19.3 s**, down
-   from 25.2 s (executables 20 -> 12). What is left, by `cargo build
-   --timings`, is the engine compiling twice (7.5 s + 10.0 s in test mode,
-   for 553 private `server/` unit tests that cannot move out), the eight
-   integration binaries at 37.5 s of CPU, and the nine bins' normal builds at
-   ~11.5 s that `cargo test` does regardless. **Nothing left there is worth a
-   risk.**
-10. **Housekeeping.** TODO 1.1k, PERF 6.6k; ENGINE_BACKLOG 4.9k /
-   CARD_BACKLOG 4.2k want triage; PERF's 47th/48th Log entries fold next.
-   **Top ML item is still a training run, not code.**
+   Then (-44) (`__memcpy`/allocator) and (-45) (the cost of asking).
+4. **Refuted this pass, do not re-take:** a presence bit belongs in
+   `sba_board_scan` only when the question has no early exit of its own
+   (+0.29 % on `fixed`; third loss for the fusion device in
+   `creature_death_possible` alone). And a collect whose drain touches `self`
+   is load-bearing — check that line before trying to remove one.
+5. **Sized and unclaimed:** `mint_token_onto_battlefield` + 
+   `definition_matches_requirement` under `CardInstance::new` (~0.6 % together,
+   don't start one alone); pass 57's gate placement, ~0.25 % of `fixed` Ir =
+   ~0.1 % of clock, a 2,000-line re-indent — tidy, not a number.
+6. **Clock numbers go through `scripts/ab_wall.py` with its null control.**
+   Eight blocks resolve **+/-2 % and nothing finer**; Ir over-reads by ~2x.
+7. **Housekeeping.** TODO ~1.0k, PERF 6.7k (52nd/53rd Baseline folded; 55th/
+   56th and the 47th/48th Log entries fold next). Suite is **14 test binaries
+   / 18,736 tests**, not the "22" older blocks quote; incremental test rebuild
+   19.3 s. ENGINE_BACKLOG 4.9k / CARD_BACKLOG 4.2k want triage.
+8. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
+   sacrifice / tap / discard" cluster is **read to the end**; the ~337
+   remaining are the "you may draw / search / put into hand" tail, where
+   declining is almost never right. **Top ML item is still a training run.**
 
 ## Standing rules for a perf pass
 
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
 
+- **Ask what the answer costs when it is "no"** (pass 59, ~1.5 % of `sos`
+  across four sites). None of them was a hot function: a SipHash of ~84
+  small integers for a digest compared only within one process, an
+  iterator stack collected into an always-empty `Vec`, a `flat_map` over two
+  always-empty command zones, a battlefield `filter` for a card no bench deck
+  contains. A presence question is paid on every sweep or dispatch whether or
+  not it can fire. `cg_edges.py --callers SpecFromIterNested` **ranked by
+  calls, not Ir** is the table that finds them; PERF's (-44) has the rest.
+- **A presence bit belongs in a shared scan only when the question has no
+  early exit of its own** (pass 59, +0.29 % on `fixed` and reverted). Folding
+  `card_type_change_unscoped`'s battlefield leg into `sba_board_scan` cost
+  more than the walk it removed, because the standalone `any` short-circuits
+  per card and a scan bit has to finish. Third loss for the (-6) fusion
+  device inside `creature_death_possible` alone.
 - **This branch is rebased constantly, so a hash in a doc is a liability**
   (pass 58, three stale ones in one session — `223c77b5` twice, and a
   write-up that named its own commit before the rebase renamed it). Cite a
@@ -470,12 +469,6 @@ first).
 and has flying" (Dragon's Rage Channeler, Traverse the Ulvenwald-adjacent
 cards) — needs a layer-system static whose application is gated on a
 predicate. DRC isn't implemented yet pending this.
-
-### Client build in the routine sandbox — CLOSED 2026-08-23
-The four dev packages install via apt and `cargo clippy --workspace
---all-targets` then builds `crabomination_client` outright (**Environment
-note**, top of file). Runtime/GPU verification still needs the local
-`verifier-client` skill; only compile-checking works headless.
 
 ### Damage-as-(-1/-1)-counters replacement
 Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would

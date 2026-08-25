@@ -507,6 +507,165 @@ build.
 
 ## Baseline
 
+**Sixty-first pass (the other session's line, run concurrently with 59 and
+60). Base `ba15f249` vs this block's tip.** Four commits, one class and one
+defect: **four questions the simulator asked with a walk or an iterator chain
+it did not need to build.** All three pools move, which is the difference
+from pass 58 — nothing here is on the deck builder. Ir readings
+`profiling-fast --no-default-features`, callgrind, one thread, `--a gang --b
+gang --games 6 --threads 1 --seed 1`.
+
+**`ba15f249` is the base both columns were measured at, and pass 60's
+`6344adf6` is in neither.** That commit (the deck-fill `CardDefinition`
+memcpy, -2.9 % on `sos` by itself) landed underneath during the rebase that
+brought this block onto the branch; it is on `cube::card_arc` and the deck
+fill, which none of the four commits here touch, so the deltas stand — but
+**do not diff the current tip against the current base and expect these
+numbers.** Name the base, as this file has had to say four times.
+
+```text
+                          base (ba15f249)   tip (this block's)
+I refs, --decks fixed     1,218,195,816    1,206,204,087   -0.984 %
+I refs, --decks sos       1,593,831,453    1,580,084,804   -0.862 %
+I refs, --decks cube      2,866,729,876    2,841,539,263   -0.879 %
+```
+
+**The base column is a cross-check as well as a base.** `ba15f249`'s own
+commit message reads `fixed` 1,218,193,228 and `sos` 1,593,828,683 for the
+same commit, measured by the other session; this reading is 2,588 and 2,770
+Ir above them, which is argv length and nothing else (see pass 49's note).
+Two sessions, two containers, two build directories, the same binary
+behaviour to five digits.
+
+| step | commit | fixed | sos | what |
+|---|---|---|---|---|
+| A | `e0e64d12` | **-0.262 %** | -0.205 % | the combat-damage dispatch's `AnyPlayer` leg `collect()`ed an always-empty `Vec` |
+| B | `7f8f94d2` | +0.012 % | +0.014 % | **defect**: converge had two oracles, disagreeing in both directions |
+| C | `2336817d` | **-0.641 %** | **-0.564 %** | three whole-battlefield / command-zone walks at the top of every SBA sweep |
+| D | `c676a229` | -0.095 % | -0.100 % | C's `sculptor` bit folded into the keyword walk the scan already does |
+
+**The per-step column was measured on this session's own line, before the
+rebase**, i.e. on `ff929e7f` plus a fifth commit of this session's that the
+rebase dropped (below). The three-pool pair above was re-read at the rebased
+base and tip, and it is the number to quote — but the two agree: the steps
+sum to **-0.986 % on `fixed`** against the pair's -0.984 %, and **-0.855 %
+on `sos`** against -0.862 %. The concurrent session's commits underneath are
+on different code, and this is the check that says so.
+
+**And the fifth commit is the reason to read this block before starting
+anything: two sessions found `loop_fingerprint` in the same hour, and the
+other one was right.** Both saw that the CR 104.4b watchdog's digest ran
+`DefaultHasher` (SipHash-1-3) over ~84 small integers per call, 0.78 % of a
+six-game `sos` run. This session replaced it with the engine's vendored
+`FxHasher` and measured `sos` -0.706 %; the other replaced it with
+**SplitMix64's finalizer** (`ba15f249`) for -0.578 % on its own base — and
+its argument is the correct one. `fxhash`'s own doc says it is not
+collision-resistant, and it exists for *map iteration determinism*; this
+digest decides a **draw**, where the function's comment says a false positive
+ends a live game. A cheaper hash with a weaker avalanche is the wrong trade
+there even though the Ir was better. **This session's commit was dropped in
+the rebase.** The rule, and it is new: when two sessions land the same
+finding, keep the one whose *argument* survives, not the one whose number is
+larger.
+
+**B is a bug fix that costs 0.01 % and the number is quoted so nobody has to
+re-derive it.** `CardDefinition::wants_converge` scanned the definition's
+Debug rendering for `ConvergedValue` and missed converge's other spelling,
+`SelectionRequirement::ManaValueAtMostConverged` — so **Bring to Light** and
+**Sundering Archaic**, whose converge is entirely in a target filter, were
+paid for with the mana-conserving order that the function's own doc says
+"routinely counted one color on a five-color board". Measured directly rather
+than by row attribution: on the pre-rebase line a base binary carrying only
+this commit read `fixed` 1,220,954,533 against 1,220,812,183, so it is
+**+142,350 Ir, +0.0117 %** — the second substring scan, once per card *name*
+per process, amortized to nothing over a training run.
+
+**The rows that moved, tip against base (pre-rebase line, `fixed` / `sos`):**
+
+```text
+                                 fixed                     sos
+check_state_based_actions  28,960,956 -> 24,033,162   43,928,234 -> 37,493,708
+Vec::from_iter (all monos) 37,336,782 -> 33,571,904   36,400,225 -> 31,767,323
+Map::try_fold               6,167,108 ->  2,495,168    (same shape)
+sba_board_scan             20,935,578 -> 20,927,838   28,013,796 -> 28,032,252
+```
+
+`sba_board_scan` is flat: the four bits C added (`shapeshifter`,
+`sector_set`, `sculptor`, and D's fold of the last one) cost what the walks
+they replaced cost per card, and the win is the three walks that stopped
+happening at all. `Vec::from_iter` attributed to
+`check_state_based_actions` went **53,362 calls / 21,358,086 Ir to 13,576 /
+15,880,576** on `sos` — 4.02 collects a sweep down to 1.02.
+
+**One thing was built, measured and reverted, and it is the pass's second
+finding.** Serving `card_type_change_unscoped`'s battlefield leg off
+`sba_board_scan` reads **+0.295 % on `fixed` / +0.255 % on `sos`**:
+`card_type_change_unscoped` comes off in full (-5,948,694 on `sos`) and
+`sba_board_scan` goes up **9,249,352** to pay for it. The standalone
+`any(card_can_change_card_types)` short-circuits per card; a scan bit has to
+run `static_effect_changes_card_types` over every static ability of every
+permanent whether or not the answer is already known. **That is the third
+refutation of the (-6) fusion device inside `creature_death_possible`
+alone** (+0.55 % and +1.24 % are the other two, already in the code
+comment). The rule it yields: *a presence bit belongs in a shared scan only
+when the question has no early exit of its own.*
+
+**And the shape all the wins share, which is the one to carry forward: ask
+what the answer costs when it is "no".** None of these was a hot function.
+A `filter`/`flat_map`/`filter`/`map` stack over an empty result, a
+`flat_map` over two empty command zones, a battlefield `filter` for a card
+nobody's deck contains — and, both sessions independently, a SipHash of ~84
+small integers for a digest that is only compared with itself. Every one is
+the cost of *asking*, paid on every sweep or every dispatch, on a board
+where the answer is always no. `cg_edges.py --callers SpecFromIterNested`
+found two of them in one table: rank the collect sites by *calls*, then ask
+which of them can return non-empty on the bench pools.
+
+```text
+decisions        196,220 -> 196,220        byte-identical
+turns_per_game   27.53   -> 27.53
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
+peak_rss_mib     30.0 / 30.1 / 30.1 over three `--bench` runs
+suite            18,736 passed / 0 failed / 5 ignored over 14 test binaries
+                 (11 of them carry tests), at every commit
+golden traces    7 passed, all unchanged (every commit)
+clippy           `--workspace --all-targets` clean, all eight crates
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 52-60
+```
+
+**No wall-clock pair is quoted, and the concurrent session's Ir-vs-clock
+measurement is why.** That reading (see "How to measure") puts Ir at ~1.7x
+the clock on `sos` and ~2.8x on `cube`, so these four commits are worth
+roughly **-0.5 % of wall time on `sos` and -0.3 % on `cube`** — a quarter of
+the +/-2 % this box resolves at eight ABBA blocks, and exactly the "under
+~3 % of Ir is unseparable" case that note describes. The Ir column is the
+attribution. None of the four is allocation-shaped —
+`malloc`/`free`/`_int_malloc` are flat to five digits on both pools — so
+there is no "Ir counts a memcpy, the machine barely does" discount on top:
+what came off is iterator-adapter frames and battlefield loads.
+
+**Crash-freedom and determinism at the tip, widest pool.** `release`, `--a
+gang --b gang --games 200 --threads 3 --decks all`, seeds 11 / 12 / 13:
+**10,200 games, 10,200 decided, no panic**, and all 5,100 mirrored pairs
+split (`rho -1.000` on every seed). `--decks sealed --games 200 --seed 11`:
+**2,400 decided, 0 undecided**. `CRAB_THREAD_CHECK=1 --bench` reads
+`thread_determinism ok (3 vs 1 threads identical)`.
+
+**The `release` throughput reading, for the record and not as a claim.**
+Three `--bench` runs at the rebased tip: **171.72 / 167.88 / 167.94
+games/s**, `decisions_per_s` 105,299 / ~102,900, at `host_calib_ms` 58 / 54 /
+64. (The pre-rebase tip read 162.69 / 162.72 / 167.98 at calib 52 / 60 / 56,
+two hours earlier on the same container — which is the spread this file keeps
+warning about, not a result.) No base binary was built at `release` in this
+sitting, so there is no pair, and the standing rule is that a cross-sitting
+`games_per_s` difference is not evidence. What the run attests is the
+invariants above it.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
+or `Vocab` change is in this pass.
+
 **Sixtieth pass, base `58346b57` vs tip `6344adf6`, two commits, both about
 a copy nobody needed.** `--decks sos` **-3.46 %**, `cube` **-2.82 %**,
 `fixed` **-2.16 %**, `sealed` **-2.33 %**, and **peak RSS on `--bench`
@@ -1356,164 +1515,25 @@ re-read at **1,252,225,395** — +0.016 % on `ec138369`, layout again:
 | I `25438a8b` | 1,252,225,395 -> 1,250,520,577 (**-0.136 %**) | `do_phasing`'s presence gate asked from inside its own freeze scope, so it gathered the effect set it exists to avoid |
 | J `e1cbc390` | 1,250,520,577 -> 1,248,410,451 (**-0.169 %**) | the gather's own buffer was a `Vec::clone` (`capacity == len`) and reallocated on its first static ability |
 
-**Fifty-third pass, base `d37f31d8`, base `d37f31d8` (pass 52's tip) vs its own tip
-`ae938ac3`**, both `profiling-fast --no-default-features`, built and run in
-one sitting on one box. Nine commits, three classes: **the requirement walker and its
-family take the permanent the caller is holding**, **the per-card grant
-walks run under one freeze scope**, and **deck construction stops
-rebuilding a `CardDefinition` per property read** — it was five games'
-worth of work per deck.
-
-**This block reads four pools, not one.** See "Which pool a change moves":
-the two largest wins are invisible on `--decks fixed`, which is why they
-survived fifty-two passes.
+**Fifty-third and fifty-second passes, compacted.** The full blocks are in
+git (`PERF.md` before the sixty-first pass) and the Log entries carry the
+substance. The numbers worth keeping:
 
 ```text
-                     base (d37f31d8)     tip (ae938ac3)
-I refs, --decks fixed    1,265,405,219   1,250,409,741   -1.185 %
-I refs, --decks cube     7,962,354,254   4,026,141,796  -49.436 %
-I refs, --decks sos      1,771,650,597   1,760,202,906   -0.646 %
-I refs, --decks sealed   6,408,608,519   3,572,196,844  -44.259 %
-deck build alone         2,915,219,820     111,759,384  -96.166 %
-  (--decks sealed --games 1: 0 games played, all setup)
-
-decisions                196,220         196,220        byte-identical
-turns_per_game           27.53           27.53
-stalls                   0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
-determinism              ok (all pairs split, both)
-peak_rss_mib             21.8            21.9
-ladder output            all four pools' full printout diffs identically
-                         base vs tip (the strongest behaviour check here:
-                         it covers the decks a seed builds, not just the
-                         games they play)
-suite                    18,712 passed / 0 failed / 5 ignored over 22 binaries
-golden traces            all unchanged
-clippy                   `--workspace --all-targets` clean
-rustc                    1.95.0 (59807616e 2026-04-14)
-host_cpu                 Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores
-host_calib_ms            55-57 across every reading
+pass 53  base d37f31d8 -> tip ae938ac3
+  fixed  1,265,405,219 -> 1,250,409,741   -1.185 %
+  cube   7,962,354,254 -> 4,026,141,796  -49.436 %
+  sos    1,771,650,597 -> 1,760,202,906   -0.646 %
+  — and the two largest wins were invisible on `--decks fixed`, which is
+    why they survived fifty-two passes. That is where "which pool a change
+    moves" comes from.
+pass 52  base b906be3b -> tip 1,265,410,851
+  fixed  1,314,290,577 -> 1,265,410,851   -3.716 %
+  decisions 198,810 byte-identical, turns_per_game 27.94, stalls 0
+  — the pickers that dry-run their picks hand the state out, so the driver
+    adopts it instead of running the same action a second time.
 ```
 
-**Crash-freedom and determinism at the tip, widest pool.** `--a gang --b
-gang --decks all`, seeds 11/12/13 x threads 1/3, 200 games an archetype,
-`CRAB_PAIR_SWEEPS=1`, `release-fast`: every cell **3,400 decided, 0
-undecided, no panic, all 1,700 mirrored pairs split** — 20,400 games and
-10,200 pairs across the grid, no seed or thread count producing a sweep.
-Plus `--decks sealed` (the deck builder's own pool, which `--decks all`
-does not include) at seeds 11/12: 2,400 decided, 0 undecided, all 1,200
-pairs split each. `CRAB_THREAD_CHECK=1 --bench` reads **`thread_determinism
-ok (3 vs 1 threads identical)`**. And the `[profile.overflow]` run that
-turns a silent wrap into a panic (TODO filter 6): `--decks sealed` 1,200
-games and `--decks all` 1,700 games at 3 threads, **0 panics** — re-run
-here because the deck builder is new code on the actor path.
-
-**A soak on the training loop itself**, which is where the pass's new code
-lives (a thread-local leaked definition cache, a hoisted shape lattice) and
-which the ladder does not exercise: `selfplay_train --actors 3`, tip binary,
-`release-fast` + mimalloc — **6,000 heuristic games** (112.1 games/s,
-579,500 rows) and **4,000 judged best-of-32 games** (88.1 games/s, 380,907
-rows), **0 stalls and no panic in either**, plus 17,000 `--decks all`
-ladder games at 3 threads with all 8,500 pairs split. ~27,000 games at the
-tip, clean.
-
-**The wall-clock number, and it is the one that matters for training.**
-The deck-builder fix is allocation-shaped, so its Ir overstates what ships;
-measured on the real loop with the shipped allocator (`release-fast`,
-mimalloc), `selfplay_train --actors 3 --games 120 --steps 1 --seed 7`,
-alternated A/B/A/B in one sitting:
-
-```text
---actors 3 --games 900 --steps 1 --seed 7          (heuristic builder)
-base          25.6/s    26.1/s
-tip           92.6/s    99.8/s          3.82x on best-of-two
-
---actors 3 --games 150 --steps 1 --seed 7 --use-deck-best <net>
-base           1.2/s     1.2/s
-tip           83.2/s    83.2/s          69x — deck building was 95 %
-                                        of a judged actor's work
-```
-
-(The row counts vary by ~0.5 % *within* a binary as well as across — the
-per-row sampling reads a counter shared across actor threads, so it follows
-the interleaving. Game outcomes do not: the ladder diff above is exact.)
-
-Per commit, `--decks fixed` unless the row says otherwise:
-
-| step | before -> after | what |
-|---|---|---|
-| A `9bf2ae2e` | 1,265,402,214 -> 1,257,273,358 (**-0.642 %**) | `evaluate_requirement_static_on` — the walker takes the permanent instead of re-finding it; `eval.rs:3271` was 1.72 % of the program on its own |
-| B `3d29f9c4` | 1,257,273,358 -> 1,257,275,539 (+2,181, dead) | the same at eighteen more walks; **cube** 7,954,621,442 -> 7,954,622,012, -0.078 % |
-| C `36e998aa` | cube 7,954,622,012 -> 5,100,118,347 (**-35.88 %**) | freeze scope over `dispatch_triggers_for_events`' phase-1 board walk; fixed +0.081 % |
-| D `fdac88df` | cube 5,100,118,347 -> 4,174,033,023 (**-18.16 %**) | the same over `fire_step_triggers`; fixed +0.027 % |
-| E `67809f9f` | deck build 2,910,408,580 -> 176,120,671 (**-93.95 %**) | `cube::card_def` memoizes `CardFactory` -> `CardDefinition`; sealed -42.78 % |
-| F `16f03d27` | deck build 176,120,671 -> 118,357,325 (**-32.80 %**) | `const` TLS + `colors_of_cost` returns a `ColorSet`; sealed -1.58 % |
-| G `1ba3e76b` | cube 4,172,623,506 -> 4,048,597,048 (**-2.97 %**) | the third grant walk, `fire_spell_cast_triggers`; fixed +0.007 % |
-| H `4a951123` | 1,258,304,569 -> 1,250,618,001 (**-0.611 %**) | `all_damage_to_player_prevented` walked the board once per controlled permanent; `bot::permanent_value` re-found the card `eval_material_inner` was holding. Every pool: sealed -0.568 %, cube -0.524 %, sos -0.424 % |
-| I `867de7bb` | deck build 118,457,567 -> 111,936,472 (**-5.51 %**) | `card_def` hands back a leaked `&'static` — the `Arc` was an atomic pair per lookup over 487,071 lookups a build |
-| J `d1b4081f` | judged training loop 25.8 -> 83.2 games/s (**3.22x**) | `build_candidates_cfg` enumerated the same deterministic shape lattice per candidate; hoisted, ~26n `build_shape` calls become ~26 + n. No engine Ir moves (n = 1 everywhere the ladder measures) |
-
-**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
-or `Vocab` change is in this pass, and the decks a seed builds are
-byte-identical — only the cost of building them moved.
-
-**Fifty-second pass, base `b906be3b` (pass 51's tip) vs its own tip**, both
-`profiling-fast --no-default-features`, built and run in one sitting on one
-box. Four commits, one class: **the pickers that dry-run their picks hand
-the state out**, so the driver adopts it instead of running the same action
-a second time. The class started at pass 50 (finalist adopt) and this pass
-takes it across the picker paths; the dispatch and combat commits are dead-
-work cleanups on the same box for the same reason (once you cut a hot row,
-the walks under it show up).
-
-```text
-                     base (b906be3b)          tip
-I refs (callgrind)   1,314,290,577            1,265,410,851   -3.716 %
-decisions            198,810                  198,810         byte-identical
-turns_per_game       27.94                    27.94
-stalls               0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
-determinism          ok (all pairs split, both)
-peak_rss_mib         21.6                     21.8
-suite                18,712 passed / 0 failed / 0 ignored over 22 binaries
-golden traces        all 7 unchanged
-clippy               `--workspace --all-targets` clean
-host_cpu             Intel(R) Xeon(R) Processor @ 2.10GHz
-host_calib_ms        48-52 across every reading
-```
-
-**Base 1,314,290,577 is pass 51's rebased-head reading**; my callgrind at
-the same commit before starting reads **1,314,289,790**, 787 Ir under it on
-argv length (the `cg.base.out` name against pass 51's longer path). All
-readings in this block use the same argv, so the delta stands.
-
-Four commits, all measured together at the tip because each threads state
-across `Bot::next_action` and their effects only compose there:
-
-| step | before -> after | what |
-|---|---|---|
-| A | 1,314,289,790 -> 1,279,629,727 (**-2.637 %**) | `main_phase_action_with`'s finalist path (`accept_on` finalists that already had `settled: Some`) — the driver adopts the probe's state instead of running the action a second time; skips 516 driver `perform_action` calls |
-| B | 1,279,629,727 -> 1,274,999,328 (**-0.362 %**) | dispatch dead-work: fuse the three `for ev in events` tail loops + gate the delayed-trigger halves; presence-gate the exile and hand walks; hoist `declare_attackers_banded`'s two grant scans |
-| C | 1,274,999,328 -> 1,265,410,851 (**-0.752 %**) | picker adopts: `pick_stack_response`, `pick_combat_trick`, `pick_land_to_play` (from hand, graveyard, and impulse-exile) and `legacy_pretap` all thread `Probed`'s state through to `BotStep`; the driver skips a further 524 `perform_action` calls |
-
-**The pass on the branch: `1,314,289,790 -> 1,265,410,851`, -48,878,939 /
--3.719 %**, and every step is one thing: the picker probes the action, its
-state IS the action, hand it out.
-
-**Crash-freedom and determinism at the tip, widest pool — the wide sweep
-filter 21's fix demanded, run this pass.** `--a gang --b gang --decks all`,
-**seeds 11-15 × `--threads 1/2/3`, the full 15-cell grid** (200
-games/archetype, `CRAB_PAIR_SWEEPS=1`): every cell **3,400 decided, 0
-undecided, no panic, all 1,700 pairs split** — **25,500 mirrored pairs
-across the grid, every one split, no thread count or seed produces a
-sweep.** Plus seeds 11/12/13 at 400 games/threads 3 (another 10,200
-pairs; there the 4 seed-11 rules draws show, the same four passes 44-51
-recorded — they need >200 games/archetype to sample). This is the sweep
-the filter-21 fix (`c6898506`, `restart_game`'s entropy RNG) said was
-owed: varying thread count *and* seed, reading the sweep count not the
-panic count. It is clean, so no HashMap/HashSet iteration order or
-thread interleaving leaks into game logic at this tip.
-
-**No net needs retraining.** No encoding, pool, `TrainRow`,
-`EncodedState`, or `Vocab` change is in this pass.
 
 **Fiftieth pass, base `e7b3b3d4` (pass 49's tip) vs its own tip**, both
 `profiling-fast --no-default-features`, built and run in one sitting on one
@@ -2066,6 +2086,97 @@ the table above is safe to compress:
 
 ## Log
 
+### Sixty-first pass — what does the answer cost when it is "no"?
+
+The other session's line, run concurrently with passes 59 and 60; pass 60's
+`6344adf6` is under neither column. Four commits, base `ba15f249`. **`--decks fixed` 1,218,195,816 ->
+1,206,204,087, -0.984 %; `--decks sos` 1,593,831,453 -> 1,580,084,804,
+-0.862 %; `--decks cube` 2,866,729,876 -> 2,841,539,263, -0.879 %.** The Baseline block above has
+the step table, the reverted experiment, and the fifth commit this session
+wrote and the first rebase dropped. What is worth keeping here:
+
+**(A) `e0e64d12` — a `collect()` into a `Vec` that is empty on every bench
+board. `fixed` -0.262 %.** `fire_combat_damage_triggers`' Phase 1.6 (the
+`AnyPlayer` dealer listeners — Cabal Slaver) ran
+`filter`/`flat_map`/`filter`/`map` over the whole battlefield, collected it,
+and drained the collection into `by_kind` two lines later. Nothing in the
+chain borrows `self` mutably, so there was never anything to buffer.
+**`Map::try_fold` 6,167,108 -> 2,495,168** and the function's own self cost
+went *up* 1.09 M, which is the adapter stack being inlined into it instead.
+The dealer lookup that ran twice (`battlefield.iter().find(|c| c.id ==
+source)` one line apart, once for the controller and once for Phase 1) runs
+once.
+
+**And the thing (A) tried first, measured, and did not take:** folding the
+five kind-independent battlefield walks in that function (equipment, Auras,
+soulbond, `YourControl`, `AnyPlayer`) into one pass with five
+order-preserving buckets reads **-0.245 % / -0.174 %** — worse than the
+one-line fix on both pools. The buckets and their five-way `chain` cost
+1.14 M (`IntoIter::drop` +627 k, `drop_in_place<Chain<..>>` +274 k, self
++242 k) against walks that were never the cost. **The walks are not the
+cost; the iterator built over them is.**
+
+**(B) `7f8f94d2` — converge had two oracles and they disagreed in both
+directions.** `CardDefinition::wants_converge` (the payment path's) scans
+the definition's Debug rendering; `bot::card_reads_converge` (the
+pre-float's) was a hand-written walk of the effect tree. The walker
+enumerated fifteen `Effect` arms — so converge in any other arm, or in an
+activated or triggered ability, was invisible to it, which is exactly the
+rot `wants_converge`'s doc comment predicted a hand-written match would
+have. And the walker was the only side that knew converge's *other*
+spelling, `SelectionRequirement::ManaValueAtMostConverged`: **Bring to
+Light** and **Sundering Archaic** put their converge entirely in a target
+filter, so `wants_converge` said false for both and their casts took the
+mana-conserving payment order. One oracle now; the walker is 45 lines
+deleted and a table-driven catalog test in its place. **+142,350 Ir on
+`fixed` (+0.0117 %, measured on a base binary carrying only this commit) and
++0.014 % on `sos`, all of it the second substring scan, once per card name
+per process.**
+
+**(C) `2336817d` — three whole-zone walks ran at the top of every SBA sweep.
+`fixed` -0.641 %, `sos` -0.564 %, the pass's biggest commit.**
+`check_state_based_actions` runs at every priority pass (13,262 times over
+six games) and opened with four helpers, three of which walked
+unconditionally:
+
+* `sweep_finished_schemes` and `sweep_finished_phenomena` each `flat_map` +
+  `collect` over every seat's **command zone**, which is empty for the whole
+  game outside Planechase/Archenemy. One `is_empty` per seat now; the scheme
+  sweep's gate goes ahead of its stack walk, whose predicate reads the
+  command zones too.
+* `sync_graveyard_shapeshifters` (CR 613 layer 1, Volrath's Shapeshifter)
+  `filter`ed the battlefield for a definition flag `sba_board_scan` reads off
+  the same definitions. It moved *under* the scan, gated on a new bit, and
+  returns whether it rewrote a definition so the scan can be retaken when it
+  did — the shape the two flip legs below it already use.
+* `assign_sectors` (CR 704.5u) walked the battlefield with a keyword scan per
+  permanent to compute its own "no sculptor and nothing designated" bail.
+  Two more scan bits *are* that condition. It moves under the shapeshifter
+  sync too, so a copied Space Sculptor is read from the layer-1 definition —
+  the only case where the order is observable, and the new one is correct.
+
+`check_state_based_actions` self 28,960,956 -> 24,033,162 on `fixed`;
+`Vec::from_iter` attributed to it went 53,362 calls / 21,358,086 Ir to
+13,576 / 15,880,576 on `sos` — **4.02 collects a sweep down to 1.02.**
+
+**(D) `c676a229` — and (C)'s own new bit got its own keyword walk.**
+`sba_board_scan` already iterates each permanent's printed keywords; the
+`sculptor` bit ran a second `any` over the same list. One more match arm:
+-0.095 % / -0.100 %.
+
+**The reverted experiment, and it is the second finding.** See the Baseline
+block: serving `card_type_change_unscoped`'s battlefield leg off the scan
+reads +0.295 % / +0.255 %, because the standalone `any` short-circuits per
+card and a scan bit cannot. Third refutation of the fusion device inside
+`creature_death_possible` alone.
+
+**How two of the four commits were found, so the next pass can repeat it:**
+`python3 scripts/cg_edges.py cg.out --callers SpecFromIterNested`, ranked by
+*calls*, then ask of each row "can this collect be non-empty on the bench
+pools?". `check_state_based_actions` at 53,362 calls / 4.02 per sweep and
+`fire_combat_damage_triggers`' leg were both in the top ten. The general
+form is the pass's title: **a presence question costs the same whether the
+answer is yes or no, and the bench pools answer no every time.**
 ### Sixtieth pass — a struct size found it, not a function row
 
 Two commits, base `58346b57`. `sos` **-3.46 %**, `cube` -2.82 %, `fixed`
@@ -4006,6 +4117,46 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### The three pools at the sixty-first tip
+
+Same binary, same config, one pool each: **`fixed` 1,206,204,087, `sos`
+1,580,084,804, `cube` 2,841,539,263.** Top self costs, `sos` (the pool the
+actors play) with `fixed` alongside (shares to two places; the two sessions'
+tips are within 0.06 % of each other on every pool, so the shares hold):
+
+| row | sos | fixed |
+|---|---|---|
+| `__memcpy_avx_unaligned_erms` | **7.92 %** | 4.30 % |
+| `dispatch_triggers_for_events` | **5.77 %** | **5.58 %** |
+| allocator (`_int_free`+`malloc`+`free`+`_int_malloc`) | ~12.7 % | ~12.7 % |
+| `gather_continuous_effects_inner` | 3.64 % | 4.49 % |
+| `Arc::clone_from_ref_in` | 3.08 % | 3.24 % |
+| `check_state_based_actions` | 2.37 % | 1.99 % |
+| `Vec::from_iter` (all monos) | 2.01 % | 2.78 % |
+| `sba_board_scan` | 1.78 % | 1.73 % |
+| `GameState::clone` | 1.58 % | 1.79 % |
+| `activate_ability_inner` | 1.40 % | 1.19 % |
+| `dispatch_board_scan` | 1.38 % | 1.70 % |
+| `perform_action_inner` | 1.33 % | 1.67 % |
+| `computed_permanent` | 1.28 % | 1.34 % |
+| `compute_permanent_pass` | 1.26 % | 1.44 % |
+| `evaluate_requirement_static_hinted` | 1.23 % | 1.99 % |
+| `card_type_change_unscoped` | 1.04 % | 0.97 % |
+| `card_can_grant_keyword` | 1.00 % | 1.40 % |
+
+**`dispatch_triggers_for_events` is the largest engine self row on both
+pools and has been since pass 43** — 91,088,068 Ir on `sos` over 81,744
+calls, of which **44,560 get past the empty-batch return**, i.e. **2,044 Ir
+of self per working dispatch**, essentially all of it the
+`for card in &self.battlefield` walk. (-16) reads it as diffuse by line
+(largest single line 1.06 % on cube) and it has never been read by line on
+`sos`. That is the standing "biggest row with no taker".
+
+**Two things did not move this pass and are worth the line:** `__memcpy` is
+7.92 % of `sos` against 4.30 % of `fixed` — the same 3.6-point gap (-40)
+recorded, still diffuse across 21 k caller rows — and the allocator family
+is 12.7 % on both.
+
 ### The four pools at the fifty-third tip (`1ba3e76b`)
 
 Same binary, same config (`--a gang --b gang --games 6 --threads 1 --seed 1`),
@@ -4321,6 +4472,74 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
+**(-45) THE COST OF ASKING — the sixty-first pass's class, and the table it
+came out of still has rows.** Every one of that
+pass's wins was a presence question whose *asking* cost the same whether the
+answer was yes or no, on a board where it is always no: a SipHash of ~84
+small integers for a fingerprint (both sessions found that one
+independently), a `filter`/`flat_map`/`filter`/`map` stack collected into an
+always-empty `Vec`, a `flat_map` over two always-empty command zones, and a
+battlefield `filter` for a card no bench deck contains. **None of them is a
+hot function**; together they are ~1.5 % of `sos`.
+
+**The device is one command**, and it is why this entry exists rather than a
+list of sites: `python3 scripts/cg_edges.py cg.out --callers
+SpecFromIterNested`, **ranked by calls, not by Ir**, then ask of each row
+"can this collect be non-empty on the pools the actors play?". The
+sixty-first tip's table on `--decks sos` (1,580,084,804), with the two rows
+that pass already took removed:
+
+```text
+  calls        Ir        caller
+  90,170    6,537,071    layers::compute_permanent_pass       <- 72 Ir each, 9.6 per
+                                                                 compute_permanents
+  37,420    1,336,242    resolve_effect                       <- 36 Ir each
+  21,912    7,323,096    declare_attackers_banded
+  18,750      944,725    fire_delayed_event_watchers          <- 50 Ir each
+  13,576   15,884,891    check_state_based_actions            <- 1.02 per sweep now,
+                                                                 was 4.02
+  11,334    2,445,441    finalize_cast
+  11,004    1,543,826    fire_combat_damage_to_player_triggers
+  10,836      769,032    blockers_of
+  10,328   20,436,507    bot::pick_attacks_inner
+   9,374   13,233,290    compute_permanents
+ 149,490         —      103 more rows (38.07 % of the calls)
+```
+
+**Read the two columns against each other.** A row with many calls and few
+Ir apiece (`compute_permanent_pass`, `resolve_effect`,
+`fire_delayed_event_watchers`) is a `Vec` being built to be thrown away —
+the sixty-first pass's shape, and the cheapest kind to fix, because the
+replacement is a loop. A row with few calls and a lot of Ir apiece
+(`pick_attacks_inner`, `compute_permanents`) is the *iterator body* being
+re-reported through `from_iter`, not collect overhead — **(-17)'s standing
+caveat**, and those rows are not this entry's.
+
+**And the third kind, which is the one to check before writing any code: a
+collect that exists because a `&mut self` follows it.** Phase 1.6 of
+`fire_combat_damage_triggers` was removable precisely because its loop body
+touched nothing but a local. `declare_attackers_banded`'s two big ones
+(`listeners`, `you_attack` — both whole-battlefield `flat_map`s over
+`triggered_abilities`) push onto `self.stack` in the drain, so the buffer is
+load-bearing and only a presence gate could help there — and the gate is the
+walk. **The tell is one line: does the drain touch `self`?** Check it first;
+it takes seconds and it is the difference between a one-line fix and a
+refactor that cannot pay.
+
+**The one refutation this entry ships with, because it is the boundary:**
+folding a per-sweep presence question into `sba_board_scan` — the walk that
+already visits every permanent — read **+0.295 % / +0.255 %** for
+`card_type_change_unscoped`'s battlefield leg. The standalone
+`any(card_can_change_card_types)` short-circuits per card; a scan bit cannot.
+**A presence bit belongs in a shared scan only when the question has no early
+exit of its own.** Third refutation of the (-6) fusion device inside
+`creature_death_possible` alone (+0.55 %, +1.24 %, +0.29 %).
+
+**And the sibling table nobody has run:** `--callers` on the *`Vec::clone`*
+and `RawVec::grow_one` rows is the same question asked of a different
+allocation shape. `finish_grow` is 11,680,360 / 0.73 % on `sos` and
+`Vec::clone` 12,902,527 / 0.81 %, and neither has ever had a caller table in
+this file.
 **(-44) `__memcpy` IS 5.55 % OF `sos` AND THE ALLOCATOR FAMILY 12.7 %, AND
 NEITHER HAS EVER HAD A CALLER TABLE READ BY Ir/CALL.** The sixtieth pass took
 `__memcpy` from 7.80 % to 5.55 % with one commit, and the way it found the row
