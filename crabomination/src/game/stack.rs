@@ -3552,6 +3552,11 @@ impl GameState {
         // `is_empty()` guard: `clear()` on an empty one still takes `&mut`,
         // and that unshares the whole cold group for nothing.
         for pl in &mut self.players {
+            // `Player` is a CoW handle over `PlayerData`, so each of the ~55
+            // writes below was its own `Player::deref_mut` -> `Arc::make_mut`.
+            // One reach for the whole reset: the same single unshare, and
+            // ~54 fewer refcount checks per seat per untap step.
+            let pl = &mut **pl;
             pl.was_dealt_damage_this_turn = false;
             pl.damage_taken_this_turn = 0;
             pl.combat_damage_taken_this_turn = 0;
