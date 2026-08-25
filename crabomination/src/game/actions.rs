@@ -303,6 +303,12 @@ pub fn color_index(c: ManaColor) -> usize {
 /// activate. See `GameState::mana_source_table`.
 struct ManaSourceInfo {
     id: CardId,
+    /// Where the source sat on the battlefield when the table was built, so
+    /// the two selection loops can re-read its `tapped` flag by index instead
+    /// of scanning for its id — see [`GameState::source_card`]. A hint, not a
+    /// key: a mana ability that sacrifices its own source shifts the indices
+    /// after it, and the id check catches that.
+    bf_idx: usize,
     /// Ability index used when any mana will do (the generic portion).
     first_idx: usize,
     rank: u8,
@@ -12440,10 +12446,11 @@ impl GameState {
         let mut abilities = Vec::new();
         self.battlefield
             .iter()
-            .filter(|c| c.controller == player && !c.tapped)
-            .filter(|c| !creature_only || self.permanent_is_creature(c.id))
-            .filter(|c| only.is_none_or(|set| set.contains(&c.id)))
-            .filter_map(|c| {
+            .enumerate()
+            .filter(|(_, c)| c.controller == player && !c.tapped)
+            .filter(|(_, c)| !creature_only || self.permanent_is_creature(c.id))
+            .filter(|(_, c)| only.is_none_or(|set| set.contains(&c.id)))
+            .filter_map(|(bf_idx, c)| {
                 self.effective_mana_abilities_into(c, &scan, &mut abilities);
                 let (first_idx, first) = abilities.first()?;
                 // One walk of each ability's effect tree, not one per colour:
@@ -12462,6 +12469,7 @@ impl GameState {
                 }
                 Some(ManaSourceInfo {
                     id: c.id,
+                    bf_idx,
                     first_idx: *first_idx,
                     rank: Self::mana_source_cost_rank(first),
                     colors,
@@ -12469,6 +12477,18 @@ impl GameState {
                 })
             })
             .collect()
+    }
+
+    /// A listed mana source's live battlefield entry. `battlefield_find` is a
+    /// linear scan and the two selection loops run one per live source per
+    /// pip, so the table carries the index it was built at and the scan is
+    /// the fallback for the case that invalidates it (a mana ability that
+    /// sacrifices its own source, shifting everything after it).
+    fn source_card(&self, s: &ManaSourceInfo) -> Option<&crate::card::CardInstance> {
+        match self.battlefield.get(s.bf_idx) {
+            Some(c) if c.id == s.id => Some(c),
+            _ => self.battlefield_find(s.id),
+        }
     }
 
     fn auto_tap_for_cost_inner(
@@ -12649,7 +12669,7 @@ impl GameState {
             // battlefield order still breaks remaining ties as before.
             let source = sources
                 .iter()
-                .filter(|s| !self.battlefield_find(s.id).is_some_and(|c| c.tapped))
+                .filter(|s| !self.source_card(s).is_some_and(|c| c.tapped))
                 .filter_map(|s| {
                     let idx = s.colors.contains(color).then(|| s.color_idx[color_index(color)])?;
                     let breadth = if smart { s.colors.len() } else { 0 };
@@ -12706,7 +12726,7 @@ impl GameState {
             let source = sources
                 .iter()
                 .enumerate()
-                .filter(|(_, s)| !self.battlefield_find(s.id).is_some_and(|c| c.tapped))
+                .filter(|(_, s)| !self.source_card(s).is_some_and(|c| c.tapped))
                 .map(|(i, s)| {
                     let keep = if smart { keep_by_idx[i] } else { 0 };
                     let fresh = if diverse {
