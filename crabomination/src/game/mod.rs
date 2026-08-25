@@ -10608,7 +10608,18 @@ impl GameState {
         // emblem carrying an anthem static (Gideon, Ally of Zendikar's −4) and
         // walk them alongside the real permanents. Their effects last
         // indefinitely rather than while-on-battlefield.
-        let emblem_anthems: Vec<CardInstance> = self
+        // Both of these run on every gather — 59,470 of them over six cube
+        // games — and both are empty on every board that has no emblem and no
+        // face-up command-zone object, which is nearly all of them. An empty
+        // `collect()` still calls `Vec::from_iter`, and the gather's
+        // `from_iter` traffic is 204,138 calls / 117.3 M Ir; two of those per
+        // gather are these. `Vec::new()` costs nothing and the two-player
+        // `is_empty` walk in front of it costs less than the call.
+        let any_emblem = self.players.iter().any(|p| !p.emblems.is_empty());
+        let emblem_anthems: Vec<CardInstance> = if !any_emblem {
+            Vec::new()
+        } else {
+            self
             .players
             .iter()
             .enumerate()
@@ -10640,16 +10651,21 @@ impl GameState {
                     Some(synth)
                 })
             })
-            .collect();
+            .collect()
+        };
         // CR 904.8 / 315.5 / 901.7 — a face-up scheme's, conspiracy's or
         // plane's statics function from the command zone, so they join the
         // anthem walk exactly like an emblem does.
-        let face_up_schemes: Vec<&CardInstance> = self
-            .players
-            .iter()
-            .flat_map(|p| p.command.iter())
-            .filter(|c| c.definition.is_scheme() || c.command_zone_abilities_active())
-            .collect();
+        let any_command = self.players.iter().any(|p| !p.command.is_empty());
+        let face_up_schemes: Vec<&CardInstance> = if !any_command {
+            Vec::new()
+        } else {
+            self.players
+                .iter()
+                .flat_map(|p| p.command.iter())
+                .filter(|c| c.definition.is_scheme() || c.command_zone_abilities_active())
+                .collect()
+        };
         // Which of the three sources a card came from is known from the
         // chain position, so pair it with the duration rather than asking
         // `battlefield.contains` per card — that was an O(n²) membership
