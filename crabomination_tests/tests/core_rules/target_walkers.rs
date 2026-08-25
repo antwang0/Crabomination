@@ -11,6 +11,8 @@
 //!
 //! This test closes the class: every `TargetFiltered { slot }` reachable in a
 //! catalog card's effect tree must be answerable by `target_filter_for_slot`.
+//! It runs as a ratchet: the baseline below is what the walker still cannot
+//! answer. Lower it as arms are added; it must never rise.
 
 use crabomination::card::CardDefinition;
 use crabomination::catalog;
@@ -24,8 +26,20 @@ fn is_nested_ability(map: &serde_json::Map<String, Value>) -> bool {
         && (map.contains_key("event") || map.contains_key("mana_cost") || map.contains_key("cost"))
 }
 
+/// Effect variants whose body is **deliberately** invisible to the cast /
+/// trigger-time walk, because it is auto-targeted fresh with its own slot
+/// numbering when it resolves. Both are CR 603.7 "when you do" payoffs and
+/// both say so in their own docs: `Reflexive` runs its body inline after the
+/// gating cost is paid (`run_effect` calls
+/// `auto_targets_for_effect_all_slots_sourced` on it), and `ReflexiveTrigger`
+/// pushes its body onto the stack with targets picked at push time (CR
+/// 603.7d, `auto_targets_for_effect_all_slots`). A slot under either is
+/// answered, not lost — counting it inflated the ratchet below from 19 to 39
+/// and hid how many real gaps are left.
+const RESOLUTION_TIME_TARGETING: &[&str] = &["Reflexive", "ReflexiveTrigger"];
+
 /// Every `slot` mentioned by a `Selector::TargetFiltered` in `v`, not
-/// descending into nested ability definitions.
+/// descending into nested ability definitions or resolution-time bodies.
 fn declared_slots(v: &Value, owner: &str, out: &mut Vec<(u8, String)>) {
     match v {
         Value::Object(map) => {
@@ -38,6 +52,9 @@ fn declared_slots(v: &Value, owner: &str, out: &mut Vec<(u8, String)>) {
                 out.push((slot as u8, owner.to_string()));
             }
             for (k, inner) in map {
+                if RESOLUTION_TIME_TARGETING.contains(&k.as_str()) {
+                    continue;
+                }
                 // An externally-tagged enum object names its variant; keep the
                 // nearest one so a finding points at the walker arm to add.
                 let next = if k.chars().next().is_some_and(char::is_uppercase) { k } else { owner };
@@ -103,8 +120,10 @@ fn every_declared_target_slot_is_answerable() {
     bad.dedup();
     // A ratchet, not a clean bill of health: the walker still can't answer
     // this many slots (see TODO.md — "The parallel target-walker class").
-    // Lower it as arms are added; it must never rise.
-    const BASELINE: usize = 39;
+    // 39 until `RESOLUTION_TIME_TARGETING` above stopped counting the twenty
+    // `Reflexive` / `ReflexiveTrigger` bodies the walker is deliberately blind
+    // to. Lower it as arms are added; it must never rise.
+    const BASELINE: usize = 19;
     assert!(
         bad.len() <= BASELINE,
         "{} effect bodies (baseline {BASELINE}) declare a TargetFiltered slot \
