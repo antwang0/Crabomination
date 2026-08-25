@@ -359,6 +359,37 @@ twice and `build` twice *per game*, so that was ~485 M Ir of deck building
 per 48 M Ir of simulation. The bench amortises it over 80 games an
 archetype and never sees it.
 
+**And once you have two pools, rank the rows by the RATIO of their shares,
+not by either share alone. That is a device, it is one script, and it found
+the sixty-second pass's second commit.** A row that is 0.61 % of `cube` is
+nowhere near the top of any table and nobody would look at it. The same row
+is 0.12 % of `sos` — **5.08x** — and *that* is a pointer: whatever it does,
+the grant-heavy pool does five times more of it per instruction, so the work
+is pool-specific and structural rather than diffuse. Dump both pools at one
+tip, parse `cg_edges.py <dump> --rows 0` into `{row: share}` for each, and
+sort by `cube% / sos%` over the rows above ~0.45 % of cube:
+
+```text
+cube%   sos%     x    row                                    (sixty-second tip)
+ 0.61   0.12  5.08    layers::affected_includes_gated        <- taken, -28 % of itself
+ 0.90   0.43  2.09    bot::pick_blocks_inner
+ 0.81   0.44  1.84    CardInstance::has_keyword              <- 494,394 calls, flat, no
+ 1.03   0.56  1.84    evaluate_requirement_static_hinted
+ 1.38   1.04  1.33    card_can_grant_keyword                 <- (-11), demoted
+```
+
+**Use `--rows 0` on both sides or the ratio lies.** A default listing
+truncates, so a row present in one dump and merely *below the cutoff* in the
+other reads as an infinite ratio. Five rows came out `inf` on the first
+attempt here and all five were truncation, not pool-specific work.
+
+**The ratio is a pointer, not a size.** Confirm with the Ir/call read before
+writing anything: `affected_includes_gated` was 236,026 calls at 71 Ir of
+*self* each with only 0.6 M in its callees, which says the cost is inlined
+predicate work inside the function — takeable. `has_keyword` right below it
+is 494,394 calls at a flat ~46 Ir across every caller, which says diffuse —
+not takeable, and the ratio alone could not tell them apart.
+
 **The rule.** A change to statics, grants, layers or the requirement walker
 gets a `--decks cube` reading as well as a `fixed` one. A change anywhere in
 `draft.rs` / `recommend.rs` / `selfplay.rs` gets `--decks sealed --games 1`,
@@ -2155,12 +2186,52 @@ the table above is safe to compress:
 
 ## Log
 
-### Sixty-second pass — the suggestion asked a global index about a card it was holding
+### Sixty-second pass — two questions that were asked before they were needed
 
 This session's line, run concurrently with the sixty-first pass below; its
-four commits are under neither column here. One commit, `718a66f8`, base
-`b370d69e`. `profiling-fast --no-default-features`, callgrind, 1 thread,
-`--a gang --b gang --games 6 --seed 1`.
+four commits are under neither of (A)'s columns. Two code commits and three
+measurement ones. Both code commits are the same shape from two directions:
+**work done to answer a question whose answer was already to hand, or whose
+asking could have stopped at the first term.**
+
+**(B) `655e1e47` — six predicates computed before the AND that could reject
+on the first. `cube` -0.170 %, `sos` -0.069 %, `fixed` -0.047 %; the
+function itself -28.0 % / -45.1 % / -15.7 %.** `affected_includes_gated` is
+the filter body of a collect over the battlefield (236,026 calls on cube),
+and four of its arms bound every predicate to a `let` and ANDed the lot at
+the end. The first term is one integer compare that rejects about half the
+board; below it sat two `cost.symbols` walks and a `card_types` walk that
+ran regardless. The predicates are pure, so cheapest-first `&&` is the same
+function.
+
+**LLVM does not fix this for you, and that is the transferable half.** A
+loop is not something it will sink past a branch it cannot prove, so the
+usual "the optimizer will short-circuit pure code anyway" intuition is
+wrong for exactly the terms that cost the most. Identical call counts on
+every pool and the whole-program delta agreeing with the function's delta to
+within 0.1 % on cube and fixed:
+
+| pool | calls | fn before | fn after | Ir/call | fn | program |
+|---|---|---|---|---|---|---|
+| cube | 236,026 | 16,799,876 | 12,095,286 | 71.2 -> 51.2 | **-28.0 %** | -0.170 % |
+| sos | 29,436 | 1,839,932 | 1,010,872 | 62.5 -> 34.3 | **-45.1 %** | -0.069 % |
+| fixed | 79,728 | 3,561,560 | 3,003,464 | 44.7 -> 37.7 | **-15.7 %** | -0.047 % |
+
+**The program column is what ships and it is under the clock's resolution**,
+so nothing here is a claimed throughput win. The pool spread is the arm mix:
+cube runs the most `AffectedPermanents::All` and gets the most absolute; sos
+gets the largest fraction because its calls skew to arms where the seat
+compare fails.
+
+**How it was found is written up in "Which pool a change moves" and is the
+more reusable output of this pass**: rank rows by `cube% / sos%`, not by
+either share. At 0.61 % of cube this row is invisible in any top-N table;
+at **5.08x** sos it is the most pool-specific thing in the profile.
+
+**(A) `718a66f8` — the suggestion asked a global index about a card it was
+holding.** One commit, base `b370d69e`. `profiling-fast
+--no-default-features`, callgrind, 1 thread, `--a gang --b gang --games 6
+--seed 1`.
 
 | pool | before | after | delta |
 |---|---|---|---|

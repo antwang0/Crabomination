@@ -28,12 +28,21 @@ rounds per commit.**
    peak RSS 21.9 -> 17.7 MiB. Pass 61, the other session: `fixed`
    **-0.984 %**, `sos` -0.862 %, `cube` -0.879 % — measured at base
    `ba15f249`, so `6344adf6` is under neither of its columns. Pass 62, this
-   session, one commit `718a66f8` and **flat** (`sos` -0.280 %, `cube`
-   +0.026 %, `fixed` +0.025 %), landed as correctness/clarity: `NameCard`'s
-   namespace filter stopped asking a global index about names it already
-   held.
-2. **Two devices, both cheap to re-run, both found their pass's biggest
-   commit.** (a) Read a caller table's **Ir/call** column: an allocation far
+   session, two code commits, both **under the clock's resolution** and both
+   landed as correctness/clarity: `718a66f8` (`NameCard`'s namespace filter
+   stopped asking a global index about names it already held) and
+   `655e1e47` (`affected_includes_gated` computed six predicates before the
+   AND that could reject on the first — the function itself **-28 % on
+   cube, -45 % on sos**, the program -0.170 % / -0.069 % / -0.047 %).
+2. **Three devices, all cheap to re-run, each found its pass's biggest
+   commit.** (c) **Rank rows by `cube% / sos%`, not by either share** — dump
+   both pools at one tip, `cg_edges.py --rows 0` on each (`--rows 0` on
+   *both*, or truncation reads as an infinite ratio), sort the ratio. That
+   is how pass 62 found a row that is 0.61 % of cube and 5.08x its sos
+   share. **The ratio is a pointer, not a size**: confirm with Ir/call
+   before writing code — the row below it in that same table
+   (`has_keyword`, 494,394 calls at a flat 46 Ir) is diffuse and was not
+   taken. Write-up in "Which pool a change moves". (a) Read a caller table's **Ir/call** column: an allocation far
    above the family mean is an allocation of something big (`__memcpy` ->
    `CardInstance::new` at 8,242 Ir = `size_of::<CardDefinition>()`). **Do
    NOT re-run it on the allocator — both sides are now read and both are
