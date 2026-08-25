@@ -449,6 +449,17 @@ in that function **80,148 -> 41,200**; `--decks sos` **1,607,757,957 ->
 have read -2.069 %, seventeen times the real win, and the seventh commit
 directly above is where that missing -1.946 % went. See (-42).
 
+**And a ninth, the same device off the untap step entirely**, at the three
+sites a call-count sweep of `make_mut`'s callers found: `advance_step`'s
+cleanup-step seat reset **51,142 -> 9,198 (-82.0 %)**,
+`deal_combat_damage_to_target` **21,012 -> 10,008 (-52.4 %)**, and
+`clear_step_bounded_may_play`'s per-seat zone sweep. `--decks sos`
+**1,605,824,543 -> 1,604,031,880, -0.112 %**, `--decks cube`
+**2,885,591,189 -> 2,882,468,355, -0.108 %**. **Program-wide the three
+CoW-handle commits take `make_mut` on `sos` from 582,552 calls to 475,676,
+-18.3 %**; what is left, and the reason half of it is *not* this device, is
+the new candidate (-43).
+
 **Both game pools read slightly *down* rather than flat, and the reason is
 the binary.** No commit here is on the game loop; `_dl_relocate_object` is
 2.31 % of the deck-build workload and `build_shape` shrank, so the process
@@ -3967,8 +3978,47 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-42) MOSTLY PAID at the fifty-eighth pass: `sos` -0.261 %, `cube`
--0.253 %, and `do_untap`'s `make_mut` calls went 212,012 -> 80,148.** The
+**(-43) THE CoW-HANDLE FAMILY, READ FROM THE TOP AT THE FIFTY-EIGHTH TIP.
+`make_mut` on `sos` is 475,676 calls after three commits took it down from
+582,552 (-18.3 %), and the table below is where the rest of it is.** This
+is (-42) generalised: `Player`, `CardInstance` and `CowBox` are all CoW
+handles whose `DerefMut` is `Arc::make_mut`, so a run of writes through one
+pays an unshare per write.
+
+```text
+callers of make_mut, --decks sos, at the fifty-eighth tip
+  calls        Ir        Ir/call  caller
+  52,110   12,005,430      230    cast_spell_with_convoke
+  46,992    2,315,765       49    finalize_cast
+  41,200    4,572,433      111    do_untap            (paid; residual is singletons)
+  37,532    3,959,023      105    resolve_top_of_stack_inner
+  30,208   13,848,574      458    activate_ability_inner
+  28,722    9,731,410      339    declare_attackers_banded
+  26,538      875,532       33    resolve_combat
+  24,352      700,120       29    on_left_battlefield
+ 188,022         —          —     60 more rows (39.5 %)
+```
+
+**Read the Ir/call column before picking a row, because it splits the family
+in two and only one half is the (-42) device.** A caller at ~30 Ir/call is
+paying the refcount check and nothing else — that is a run of writes on an
+already-unshared handle, and `let x = &mut *…` collapses it, which is what
+the three commits did (`advance_step` 51,142 -> 9,198, `do_untap` 80,148 ->
+41,200, `deal_combat_damage_to_target` 21,012 -> 10,008). A caller at
+230-458 Ir/call is *actually cloning*: the `Arc` is genuinely shared at that
+point, and binding once saves nothing because the second write through the
+same binding was already cheap. `activate_ability_inner` (13.85 M Ir, the
+largest in the table) and `cast_spell_with_convoke` (12.01 M) are that
+second kind, and **the question for them is not "bind once", it is "who else
+holds this `Arc`, and does the write have to happen while they do"** — a
+snapshot, a `clone()` kept across the call, or a handle parked in a local.
+Size the prize off the Ir column, not the calls column: the two clone-shaped
+rows are 25.9 M Ir together, 1.6 % of `sos`, against 8.5 M for the whole
+bind-once half.
+
+**(-42) PAID at the fifty-eighth pass, in two commits: `sos` -0.261 % then
+-0.120 %, `cube` -0.253 % then -0.115 %, and `do_untap`'s `make_mut` calls
+went 212,012 -> 41,200.** The
 answer was **`Player` is itself a CoW handle** — `Player::deref_mut` is
 `Arc::make_mut` — so the `for pl in &mut self.players` per-turn reset, about
 fifty-five field writes per seat, took one unshare *per field*. One

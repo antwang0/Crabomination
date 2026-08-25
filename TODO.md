@@ -41,7 +41,17 @@ candidate, and budget two callgrind rounds.**
    }`) read +0.234 % where the slice swap read +1.076 % on the same base. It
    is a ~2,000-line re-indent of thirty-eight blocks; take it when the branch
    is quiet.
-3. **Top candidate: (-42), then (-41).** The deck builder is *done* for now:
+3. **Top candidate: (-43), the CoW-handle family.** `make_mut` on `sos` is
+   475,676 calls / ~50 M Ir after this pass took it down 18.3 %, and (-43)
+   has the caller table. **Read its Ir/call column first — it splits the
+   family in two.** ~30 Ir/call is a refcount check on an already-unshared
+   handle and `let x = &mut *…` collapses it (that is the paid half). 230-458
+   Ir/call is a *real clone*, binding once buys nothing, and the question is
+   who else holds the `Arc`. The two clone-shaped rows
+   (`activate_ability_inner` 13.85 M, `cast_spell_with_convoke` 12.01 M) are
+   1.6 % of `sos` between them — the largest single thing this pass found and
+   did not take.
+   The deck builder is *done* for now:
    (-39)'s copy-cap head is paid, and what is left of it is `build_shape`'s
    24.77 % residual (diffuse for three passes), `__memcpy` 9.49 % (the pools'
    definitions, built once) and a scorer whose colour argument genuinely
@@ -53,10 +63,11 @@ candidate, and budget two callgrind rounds.**
    `make_mut` 212,012 -> 80,148); the follow-up took the tail's three write
    runs and three more seat loops (**sos -0.120 %, cube -0.115 %**,
    80,148 -> 41,200). What is left is per-card singletons with nothing to
-   bind. **The device generalises and is the open work** — bind the handle
-   once wherever a sweep writes a run of its fields. Next sites, unmeasured:
-   `stack.rs:666` (cleanup step, ~16 writes/seat) and `mod.rs:15793`
-   (three `iter_mut` zone sweeps/seat).
+   bind. A third commit took the same device off the untap step entirely —
+   `advance_step`'s cleanup reset (51,142 -> 9,198), combat damage's tally
+   (21,012 -> 10,008), the per-seat zone sweep — for **sos -0.112 %, cube
+   -0.108 %**. A `--callers make_mut` sweep is what found all three; run it
+   before guessing at a site. **What is left is (-43), item 3.**
    **Re-read the base after a rebase — this is not just a `sealed` rule.**
    The follow-up first read -2.069 % against the Baseline block's
    `1,639,754,965`, which predates `cae6b605` rebasing in underneath; the
