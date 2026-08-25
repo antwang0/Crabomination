@@ -1995,6 +1995,52 @@ the table above is safe to compress:
 
 ## Log
 
+### Fifty-ninth pass — the clock gets a harness, and the arc gets measured on it
+
+Four commits, base `7112d857` (pass 58's tip after its doc reconciliation).
+Three of them are measurement and build-time work whose write-ups live in the
+sections above — `ff929e7f` (`scripts/ab_wall.py`, its ABBA schedule and its
++/-2 % calibration: **How to measure**), `5c590e9a` (passes 57-59 on the
+clock, Ir over-reads ~1.7x on `sos` and ~2.8x on `cube`: **How to measure**),
+`e23286d9` + `49c7220d` (twenty test executables to twelve, relink **-23.5 %**:
+**Build time**). Read them there; this entry exists so the fourth is on the
+record with its numbers.
+
+**`ba15f249` — the CR 104.4b loop watchdog's digest ran SipHash over fifty
+small integers. `sos` -0.578 %, `cube` -0.397 %, `fixed` -0.139 %.**
+`loop_fingerprint` builds the state digest — turn number, stack depth, five
+fields a seat, four per battlefield permanent — into a `DefaultHasher`, i.e.
+SipHash-1-3 at ~52 Ir per `write`. On `--decks sos` that was **2,424 calls for
+12,546,606 Ir, 0.78 % of a six-game run**, and 203,496 of the program's
+204,774 `sip::Hasher::write` calls. It runs after every triggered-ability
+resolution, so a trigger-heavy pool pays it constantly and almost always to
+learn that the state moved. SplitMix64's finalizer chained over the same field
+stream avalanches every input bit across all 64 output bits in ten
+instructions, which is exactly the property the function's own doc asks for —
+"a false *negative* just means the draw isn't detected, while a false positive
+would end a live game".
+
+```text
+                     base (58346b57)   tip (ba15f249)
+I refs, --decks fixed  1,219,893,985   1,218,193,228   -0.139 %
+I refs, --decks cube   2,878,150,309   2,866,725,942   -0.397 %
+I refs, --decks sos    1,603,088,243   1,593,828,683   -0.578 %
+```
+
+**The engine's vendored `fxhash` would have been a weakening and this is
+not.** `fxhash`'s own doc says it is not collision-resistant, and it is a
+*map* hasher — chosen for iteration determinism, not for a 64-bit digest that
+decides a draw. The digest's *values* change, so the two watch counters compare
+different numbers, but only ever against numbers this same function produced
+inside one process. `--bench` decisions **196,220 byte-identical**, turns/game
+27.53, 0 stalls (cap 0 / stuck 0 / draw 0), determinism ok; the full ladder
+printout diffs identically on `fixed`, `cube` and `sos`; suite 18,735 passed /
+0 failed / 5 ignored with **golden traces unchanged**.
+
+**Anchors at this pass's tip** (`ba15f249`), same recipe as the block in
+**Baseline**: `--decks fixed` **1,218,193,228**, `--decks cube`
+**2,866,725,942**, `--decks sos` **1,593,828,683**.
+
 ### Fifty-eighth pass — the shape lattice's last per-shape re-derivations
 
 Four commits, base `c18552fd` (pass 57's tip). One workload moves: `--decks
