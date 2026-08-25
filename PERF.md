@@ -341,36 +341,39 @@ it.
 ## Baseline
 
 **Fifty-fifth pass, base `bf4917a5` (pass 54's tip) vs its own tip
-`8779aa9f`.** One commit: **the requirement walker's subtype arms stop
-gathering where the printed line answers.** Ir readings `profiling-fast
+`19b1c2dd`.** Two commits: **(A) the requirement walker's subtype arms stop
+gathering where the printed line answers**, and **(B) the freeze scope's
+depth and gate slots come out of the mutex** — (B) is what turns (A)'s
+0.1 % cost on the non-cube pools into a win on all three. Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --seed 1` unless the row says otherwise.
 
 ```text
-                          base (bf4917a5)   tip (8779aa9f)
-I refs, --decks cube        4,012,095,058   3,332,029,985  -16.95 %
-I refs, --decks fixed       1,248,407,927   1,249,622,086   +0.097 %
-I refs, --decks sos         1,760,442,504   1,761,529,321   +0.062 %
-I refs, --decks sealed      3,497,162,303   3,500,013,528   +0.082 %
-deck build alone               34,506,869      34,859,382   +1.02 %
+                          base (bf4917a5)   (A) 8779aa9f     tip (B)
+I refs, --decks cube        4,012,095,058   3,332,029,985   3,308,407,431  -17.54 %
+I refs, --decks fixed       1,248,407,927   1,249,622,086   1,246,171,974   -0.179 %
+I refs, --decks sos         1,760,442,504   1,761,529,321   1,755,105,701   -0.303 %
+I refs, --decks sealed      3,497,162,303   3,500,013,528   3,489,058,164   -0.232 %
+deck build alone               34,506,869      34,859,382      34,607,871   +0.293 %
   (--decks sealed --games 1: 0 games played, all setup)
 ```
 
 **The deck-build row is layout, and the profile says so rather than the
-usual hand-wave.** `creature_type_change_in_scope` and
-`land_type_change_in_scope` do not appear in that dump at all — the deck
-builder never reaches the requirement walker — and the whole +352,513 sits
-in `LocalKey::with` (207 attributed calls before, 4,850 after), i.e. the
-`card_def` front cache inlining differently under a bigger binary. Check
-the callee before blaming a row like this; here it cost one `cg_edges.py`
-run to rule out.
+usual hand-wave.** At (A) it read +1.02 %, and
+`creature_type_change_in_scope` / `land_type_change_in_scope` do not appear
+in that dump at all — the deck builder never reaches the requirement walker.
+The whole +352,513 sat in `LocalKey::with` (207 attributed calls before,
+4,850 after), i.e. the `card_def` front cache inlining differently under a
+bigger binary; (B) moved it back to +0.293 % without touching that code,
+which is the confirmation. Check the callee before blaming a row like this;
+here it cost one `cg_edges.py` run to rule out.
 
 ```text
 decisions        196,220 -> 196,220        byte-identical
 turns_per_game   27.53   -> 27.53
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0 (both)
 determinism      ok (all pairs split, both)
-suite            18,716 passed / 0 failed / 5 ignored over 22 binaries
+suite            18,723 passed / 0 failed / 5 ignored over 22 binaries
 golden traces    all unchanged
 clippy           `--workspace --all-targets` clean
 rustc            1.95.0 (59807616e 2026-04-14)
@@ -3266,8 +3269,9 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-FIFTH TIP (3,332 M),
-and this is where the next pass should start.** The cube profile moved 17 %
+**(-40) THE CUBE POOL, READ FROM THE TOP AT THE FIFTY-FIFTH TIP (3,332 M,
+before (B) took it to 3,308 M — the shares below are (A)'s and are within a
+point), and this is where the next pass should start.** The cube profile moved 17 %
 under it, so every share below is fresh. Self cost:
 
 | row | % | note |
@@ -3278,7 +3282,7 @@ under it, so every share below is fresh. Self cost:
 | `evaluate_requirement_static_hinted` | 3.32 + 1.35 | two arities |
 | allocator family | ~11 | `_int_free` 3.74, `malloc` 2.79, `_int_malloc` 2.60, `free` 2.30 |
 | `Arc::clone_from_ref_in` | 2.92 | |
-| `creature_type_change_in_scope` | 0.93 | **the fifty-fifth pass's own gate**, 410,900 calls at 75 Ir — a mutex lock/unlock per memo hit. An atomic depth mirror on `LayerFreeze` would take most of it, and `card_type_change_in_scope` and `computed_permanent`'s own depth probe with it |
+| `creature_type_change_in_scope` | 0.93 | the fifty-fifth pass's own gate — **PAID by (B)**, which took the mutex off the memo hit |
 
 **The gather is the target, and the question is scope count, not gating.**
 59,470 gathers for six games; a freeze scope's *first* computed read gathers
