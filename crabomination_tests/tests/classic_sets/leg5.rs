@@ -65,16 +65,20 @@ fn to_upkeep(g: &mut GameState) {
     drain_stack(g);
 }
 
-/// Abomination kills a green blocker at end of combat, not on impact.
+/// Abomination kills a green blocker at end of combat, not on impact. The
+/// blocker outlives the 2 combat damage, so only the trigger can kill it —
+/// with `grizzly_bears` here the assert passed while the gate was reading
+/// Abomination's own (black) colour and never firing.
 #[test]
 fn abomination_kills_its_green_blocker_at_end_of_combat() {
     let mut g = main_phase();
     let abom = g.add_card_to_battlefield(0, catalog::abomination());
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    block(&mut g, abom, bear);
-    assert!(g.battlefield_find(bear).is_some(), "not yet");
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    g.battlefield_find_mut(elf).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+    block(&mut g, abom, elf);
+    assert!(g.battlefield_find(elf).is_some(), "survives the damage");
     to_end_of_combat(&mut g);
-    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.battlefield_find(elf).is_none(), "the trigger, not the damage");
 }
 
 /// A blue blocker walks away — the trigger is colour-gated.
@@ -97,6 +101,36 @@ fn infernal_medusa_spares_walls_that_block_it() {
     block(&mut g, medusa, wall);
     to_end_of_combat(&mut g);
     assert!(g.battlefield_find(wall).is_some());
+    assert!(g.battlefield_find(medusa).is_some(), "and the Medusa is not the one that dies");
+}
+
+/// "That creature" is the *blocker*. Both halves of this card used to read
+/// `Selector::TriggerSource`, which on a `SelfSource` block trigger binds the
+/// Medusa itself — so the attacking Medusa destroyed itself and its blocker
+/// walked away.
+#[test]
+fn infernal_medusa_kills_the_non_wall_that_blocks_it() {
+    let mut g = main_phase();
+    let medusa = g.add_card_to_battlefield(0, catalog::infernal_medusa());
+    // 3/3, so it survives the 2 damage and the kill is the trigger's, not
+    // combat's.
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    block(&mut g, medusa, giant);
+    assert!(g.battlefield_find(giant).is_some(), "not yet");
+    to_end_of_combat(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "the blocker dies");
+    assert!(g.battlefield_find(medusa).is_some(), "the Medusa does not");
+}
+
+/// The blocking half: the attacker the Medusa blocks dies at end of combat.
+#[test]
+fn infernal_medusa_kills_the_creature_it_blocks() {
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let medusa = g.add_card_to_battlefield(1, catalog::infernal_medusa());
+    block(&mut g, giant, medusa);
+    to_end_of_combat(&mut g);
+    assert!(g.battlefield_find(giant).is_none(), "the blocked attacker dies");
 }
 
 /// Aisling Leprechaun repaints its blocker for good.

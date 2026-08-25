@@ -1128,3 +1128,28 @@ fn choking_vines_is_declare_blockers_only() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(attacker).unwrap().damage, 1);
 }
+
+/// "That creature" is the blocker. The body used to read
+/// `Selector::TriggerSource`, which on a `SelfSource` `BecomesBlocked`
+/// trigger is the Entrancer — so seat 0 gained control of its own creature.
+#[test]
+fn tolarian_entrancer_steals_its_blocker() {
+    let mut g = two_player_game();
+    let entrancer = ready(&mut g, 0, catalog::tolarian_entrancer());
+    // 0/6, so the 1/1 Entrancer survives its own combat and the assertion is
+    // about the selector, not about a delayed trigger with a dead source.
+    let blocker = ready(&mut g, 1, catalog::wall_of_opposition());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: entrancer,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, entrancer)])).expect("block");
+    advance_to(&mut g, TurnStep::EndCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(blocker).expect("giant lives").controller, 0);
+}

@@ -45,27 +45,16 @@ fn upkeep(scope: EventScope) -> EventSpec {
     EventSpec::new(EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), scope)
 }
 
-/// "Whenever this blocks or becomes blocked by a [filter] creature, destroy
-/// that creature at end of combat" — the Legends fight-and-kill shape.
-fn kills_what_it_meets(filter: R) -> Vec<TriggeredAbility> {
-    let body = || Effect::AtEndOfCombat {
-        body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
-    };
-    [EventKind::Blocks, EventKind::BecomesBlocked]
-        .into_iter()
-        .map(|kind| TriggeredAbility {
-            event: EventSpec::new(kind, EventScope::SelfSource).with_filter(
-                Predicate::EntityMatches { what: Selector::TriggerSource, filter: filter.clone() },
-            ),
-            effect: body(),
-        })
-        .collect()
-}
-
 /// Abomination — anything green or white it meets in combat dies.
+///
+/// This was a local copy of `shortcut::combat_partner_punisher` that gated on
+/// `Selector::TriggerSource` instead of the partner: on a `SelfSource` block
+/// trigger that binds Abomination itself, which is black, so the gate never
+/// opened. The shared shortcut remembers the partner while `block_map` is
+/// still live and destroys the remembered one at end of combat.
 pub fn abomination() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: kills_what_it_meets(
+        triggered_abilities: crate::effect::shortcut::combat_partner_punisher(
             R::HasColor(Color::Green).or(R::HasColor(Color::White)),
         ),
         ..creature("Abomination", cost(&[generic(3), b(), b()]), vec![CreatureType::Horror], 2, 6)
@@ -76,20 +65,30 @@ pub fn abomination() -> CardDefinition {
 pub fn infernal_medusa() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
+            // "That creature" is the *partner*, not the Medusa: on a
+            // `SelfSource` block trigger `Selector::TriggerSource` binds the
+            // trigger's own side of the pair, so this used to destroy itself.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
                 effect: Effect::AtEndOfCombat {
-                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                    body: Box::new(Effect::Destroy {
+                        what: Selector::CreaturesBlockedBySourceThisTurn,
+                    }),
                 },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource)
-                    .with_filter(Predicate::Not(Box::new(Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
-                        filter: R::HasCreatureType(CreatureType::Wall),
-                    }))),
+                    .with_filter(Predicate::EntityMatchesAny {
+                        what: Selector::BlockingCreatures,
+                        filter: R::HasCreatureType(CreatureType::Wall).negate(),
+                    }),
                 effect: Effect::AtEndOfCombat {
-                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                    body: Box::new(Effect::Destroy {
+                        what: Selector::EachPermanent(
+                            R::BlockedSourceThisTurn
+                                .and(R::HasCreatureType(CreatureType::Wall).negate()),
+                        ),
+                    }),
                 },
             },
         ],

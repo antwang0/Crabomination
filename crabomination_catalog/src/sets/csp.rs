@@ -232,8 +232,12 @@ pub fn frostweb_spider() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
-                filter: Some(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
+                // "A creature with flying" is the attacker it blocked;
+                // `TriggerSource` on a `SelfSource` `Blocks` trigger is the
+                // Spider itself, which has reach, not flying — so the gate
+                // never opened.
+                filter: Some(Predicate::EntityMatchesAny {
+                    what: Selector::BlockedAttacker,
                     filter: R::HasKeyword(Keyword::Flying),
                 }),
                 ..EventSpec::new(EventKind::Blocks, EventScope::SelfSource)

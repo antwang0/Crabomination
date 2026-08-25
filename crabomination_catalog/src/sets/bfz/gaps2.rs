@@ -393,9 +393,12 @@ pub fn hedron_blade() -> CardDefinition {
             power: 1,
             toughness: 1,
             triggered_abilities: vec![TriggeredAbility {
+                // "One or more colorless creatures" is the blocking side; the
+                // ability is granted to the host, so `TriggerSource` here was
+                // the equipped creature testing its own colour.
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource)
-                    .with_filter(Predicate::EntityMatches {
-                        what: Selector::TriggerSource,
+                    .with_filter(Predicate::EntityMatchesAny {
+                        what: Selector::BlockingCreatures,
                         filter: R::Colorless,
                     }),
                 effect: Effect::GrantKeyword {

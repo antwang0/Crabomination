@@ -2380,6 +2380,12 @@ pub enum SelectionRequirement {
     /// `blocked_attackers_this_turn`, so it still answers after combat has
     /// been torn down (Wall of Nets' end-of-combat exile).
     BlockedBySourceThisTurn,
+    /// The mirror: "creatures that blocked [source] this turn". Reads
+    /// `GameState.blocks_declared_this_turn`, not the candidate's own field,
+    /// so it still answers after `resolve_combat` has dropped `block_map` —
+    /// which is where every "whenever this becomes blocked … at end of combat"
+    /// body needs it (Tolarian Entrancer, Infernal Medusa).
+    BlockedSourceThisTurn,
     /// True when the candidate is blocking, or is blocked by, the ability's
     /// source — the symmetric combat-partner filter (Sisters of Stone Death's
     /// "creature blocking or blocked by this creature").

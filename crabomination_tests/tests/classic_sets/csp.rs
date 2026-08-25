@@ -414,3 +414,42 @@ fn blocked_triggers_fire() {
         }
     }
 }
+
+/// Frostweb Spider's gate names the creature it blocked, not itself. It used
+/// to read `Selector::TriggerSource`, which on a `SelfSource` `Blocks` trigger
+/// is the Spider — reach, never flying — so the counter never arrived.
+#[test]
+fn frostweb_spider_counters_a_flying_blocker_target() {
+    for (attacker_def, want) in [
+        (catalog::wind_drake as fn() -> CardDefinition, 1),
+        (catalog::grizzly_bears as fn() -> CardDefinition, 0),
+    ] {
+        let mut g = two_player_game();
+        let spider = ready(&mut g, 0, catalog::frostweb_spider());
+        let attacker = ready(&mut g, 1, attacker_def());
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker,
+            target: AttackTarget::Player(0),
+        }]))
+        .expect("attack");
+        drain_stack(&mut g);
+        while g.step != TurnStep::DeclareBlockers {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            drain_stack(&mut g);
+        }
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareBlockers(vec![(spider, attacker)])).expect("block");
+        drain_stack(&mut g);
+        while g.step != TurnStep::EndCombat {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            drain_stack(&mut g);
+        }
+        let n = g.battlefield_find(spider).expect("spider lives").counter_count(
+            CounterType::PlusOnePlusOne,
+        );
+        assert_eq!(n, want, "{}", attacker_def().name);
+    }
+}

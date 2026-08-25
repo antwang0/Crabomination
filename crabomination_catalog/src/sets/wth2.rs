@@ -1314,9 +1314,12 @@ pub fn tolarian_entrancer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            // "That creature" is the blocker. `TriggerSource` on a
+            // `SelfSource` `BecomesBlocked` trigger is the Entrancer itself,
+            // so this used to gain control of a creature you already had.
             effect: Effect::AtEndOfCombat {
                 body: Box::new(Effect::GainControl {
-                    what: Selector::TriggerSource,
+                    what: Selector::EachPermanent(R::BlockedSourceThisTurn),
                     to: None,
                     duration: Duration::Permanent,
                 }),

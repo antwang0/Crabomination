@@ -611,3 +611,43 @@ fn gruesome_slaughter_grants_a_tap_to_ping() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "an 8/9 pinging a 2/2 kills it");
 }
+
+/// Hedron Blade reads the *blocking* side. Its gate used to read
+/// `Selector::TriggerSource`, which on a host-granted `SelfSource`
+/// `BecomesBlocked` trigger is the equipped creature testing its own colour —
+/// so a green bear never got deathtouch and a colourless one always did.
+#[test]
+fn hedron_blade_grants_deathtouch_on_a_colorless_blocker() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    for (blocker_def, want) in [
+        (catalog::phyrexian_walker as fn() -> crabomination::card::CardDefinition, true),
+        (catalog::grizzly_bears as fn() -> crabomination::card::CardDefinition, false),
+    ] {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let blade = g.add_card_to_battlefield(0, catalog::hedron_blade());
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::Equip { equipment: blade, target: bear }).expect("equip");
+        let blocker = g.add_card_to_battlefield(1, blocker_def());
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: bear,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        drain_stack(&mut g);
+        while g.step != TurnStep::DeclareBlockers {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+            drain_stack(&mut g);
+        }
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).expect("block");
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(bear).unwrap();
+        let has = cp.keywords.iter().any(|k| matches!(k, Keyword::Deathtouch));
+        assert_eq!(has, want, "{}", blocker_def().name);
+    }
+}

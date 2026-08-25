@@ -3503,6 +3503,12 @@ impl GameState {
                     R::BlockedBySourceThisTurn => source
                         .and_then(|s| self.battlefield_find(s))
                         .is_some_and(|src| src.blocked_attackers_this_turn.contains(&card.id)),
+                    // The game-level pair log, not the candidate's own field:
+                    // the body that asks is an end-of-combat one and
+                    // `resolve_combat` has already dropped `block_map`.
+                    R::BlockedSourceThisTurn => source.is_some_and(|s| {
+                        self.blocks_declared_this_turn.contains(&(card.id, s))
+                    }),
                     // Brine Hag fires from the graveyard, so the source's own
                     // damage log comes off its leaves-battlefield LKI.
                     R::DealtDamageToSourceThisTurn => source
@@ -4842,6 +4848,7 @@ impl GameState {
             | R::DamagedBySourceThisTurn | R::DealtDamageToSourceThisTurn
             | R::BlockingOrBlockedBySource
             | R::BlockedBySourceThisTurn
+            | R::BlockedSourceThisTurn
             | R::PlayerDamagedBySourceThisTurn
             | R::SaddledSourceThisTurn => false,
         }
