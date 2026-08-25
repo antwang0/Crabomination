@@ -9,6 +9,25 @@ use crate::mana::{Color as ManaColor, ManaSymbol};
 /// `Value::Sacrificed*` and `Predicate::SacrificedWas*`.
 type SacrificeSnapshot = (CardId, u32, bool, i32, u32, bool, bool, Vec<ManaColor>);
 
+/// CR 804.2 — the 2HG deploy-creatures option's grant, "{T}: Target teammate
+/// gains control of this creature. Activate only as a sorcery."
+///
+/// A constant because it is the one ability
+/// [`GameState::granted_abilities_of`] hands back that is not borrowed from
+/// the game state; that function returns `&ActivatedAbility` so its hot
+/// callers stop deep-copying every grant.
+static DEPLOY_CREATURES_ABILITY: std::sync::LazyLock<crate::effect::ActivatedAbility> =
+    std::sync::LazyLock::new(|| crate::effect::ActivatedAbility {
+        tap_cost: true,
+        sorcery_speed: true,
+        effect: crate::effect::Effect::GainControl {
+            what: crate::effect::Selector::This,
+            to: Some(crate::effect::PlayerRef::EachTeammate),
+            duration: crate::effect::Duration::Permanent,
+        },
+        ..Default::default()
+    });
+
 /// The grant sources live on the board right now, independent of which
 /// permanent is asking — see [`GameState::grant_scan`]. Borrows the state it
 /// was scanned from, so it can't outlive a board change.
@@ -12913,11 +12932,11 @@ impl GameState {
     /// [`effective_mana_abilities`](Self::effective_mana_abilities) against a
     /// prebuilt [`grant_scan`](Self::grant_scan) — `mana_source_table_inner`
     /// asks this per untapped permanent, so the scan is built once per table.
-    pub(crate) fn effective_mana_abilities_with(
-        &self,
+    pub(crate) fn effective_mana_abilities_with<'a>(
+        &'a self,
         card_id: CardId,
-        scan: &GrantScan<'_>,
-    ) -> Vec<(usize, AbilityRef<'_>)> {
+        scan: &GrantScan<'a>,
+    ) -> Vec<(usize, AbilityRef<'a>)> {
         let Some(card) = self.battlefield_find(card_id) else {
             return vec![];
         };
@@ -12932,7 +12951,7 @@ impl GameState {
     pub(crate) fn effective_mana_abilities_of<'a>(
         &'a self,
         card: &'a crate::card::CardInstance,
-        scan: &GrantScan<'_>,
+        scan: &GrantScan<'a>,
     ) -> Vec<(usize, AbilityRef<'a>)> {
         let mut out = Vec::new();
         self.effective_mana_abilities_into(card, scan, &mut out);
@@ -12950,7 +12969,7 @@ impl GameState {
     pub(crate) fn effective_mana_abilities_into<'a>(
         &'a self,
         card: &'a crate::card::CardInstance,
-        scan: &GrantScan<'_>,
+        scan: &GrantScan<'a>,
         out: &mut Vec<(usize, AbilityRef<'a>)>,
     ) {
         out.clear();
@@ -13020,7 +13039,7 @@ impl GameState {
         let gc = granted.len();
         for (j, a) in granted.into_iter().enumerate() {
             if is_mana_ability(&a.effect) {
-                out.push((printed_count + j, AbilityRef::Synth(Box::new(a))));
+                out.push((printed_count + j, AbilityRef::Printed(a)));
             }
         }
         for (k, a) in Self::intrinsic_land_mana_abilities_with(card, computed_land_types)
@@ -13194,16 +13213,20 @@ impl GameState {
         &self,
         card_id: CardId,
     ) -> Vec<crate::effect::ActivatedAbility> {
-        self.granted_abilities_with(card_id, &self.grant_scan())
+        // The one caller that cannot borrow: the scan is a temporary here, so
+        // the list is cloned out of it. Every hot caller holds its own scan
+        // and takes the borrowing form.
+        let scan = self.grant_scan();
+        self.granted_abilities_with(card_id, &scan).into_iter().cloned().collect()
     }
 
     /// [`granted_abilities_for`](Self::granted_abilities_for) against a
     /// prebuilt [`grant_scan`](Self::grant_scan).
-    pub(crate) fn granted_abilities_with(
-        &self,
+    pub(crate) fn granted_abilities_with<'a>(
+        &'a self,
         card_id: CardId,
-        scan: &GrantScan<'_>,
-    ) -> Vec<crate::effect::ActivatedAbility> {
+        scan: &GrantScan<'a>,
+    ) -> Vec<&'a crate::effect::ActivatedAbility> {
         // One lookup, reused by every `me`-reading block below: this is called
         // ~272 k times per six bot games and `battlefield_find` is a linear
         // scan of the whole battlefield.
@@ -13212,8 +13235,8 @@ impl GameState {
             // — Cursecloth Wrappings hands a graveyard creature card embalm.
             let mut out = Vec::new();
             if let Some(c) = self.find_card_anywhere(card_id) {
-                out.extend(c.granted_activated_abilities.iter().cloned());
-                out.extend(c.granted_activated_eot.iter().cloned());
+                out.extend(c.granted_activated_abilities.iter());
+                out.extend(c.granted_activated_eot.iter());
             }
             return out;
         };
@@ -13225,11 +13248,21 @@ impl GameState {
     /// with a `battlefield_find`, and its hot callers — `available_mana`,
     /// `effective_mana_abilities_with`, the bot's activatable sweep — are all
     /// already iterating the battlefield, so that scan is pure duplication.
-    pub(crate) fn granted_abilities_of(
-        &self,
-        me: &CardInstance,
-        scan: &GrantScan<'_>,
-    ) -> Vec<crate::effect::ActivatedAbility> {
+    ///
+    /// **Borrows rather than clones.** Every source it can draw from — the
+    /// instance's own grant lists, the scan's statics and graveyard grants, an
+    /// imprint pile, another permanent's or a graveyard card's definition — is
+    /// reachable from `&'a self`, `me` or the scan, and the caller either
+    /// folds the list or wraps each element in an `AbilityRef`. Deep-copying
+    /// them was `ActivatedAbility::clone` **11,324 calls / 7,868,320 Ir on
+    /// `--decks sos`** at the fifty-eighth tip, plus a `Box` per element in
+    /// two of the three callers. The single ability with nothing to borrow
+    /// from — CR 804.2's deploy-creatures grant — is a `LazyLock` constant.
+    pub(crate) fn granted_abilities_of<'a>(
+        &'a self,
+        me: &'a CardInstance,
+        scan: &GrantScan<'a>,
+    ) -> Vec<&'a crate::effect::ActivatedAbility> {
         use crate::effect::{Selector, StaticEffect};
         let card_id = me.id;
         let mut out = Vec::new();
@@ -13256,29 +13289,20 @@ impl GameState {
         // Instance-granted abilities first (Urza's Saga chapters) — the
         // client view lists printed + instance-granted in this order, so
         // their indices must come before the battlefield-static grants.
-        out.extend(me.granted_activated_abilities.iter().cloned());
-        out.extend(me.granted_activated_eot.iter().cloned());
+        out.extend(me.granted_activated_abilities.iter());
+        out.extend(me.granted_activated_eot.iter());
         // Myr Welder — "has all activated abilities of all cards exiled
         // with it", read live off the imprint pile.
         if welder {
             for imp in self.exile.iter().filter(|e| e.exiled_with == Some(card_id)) {
-                out.extend(imp.definition.activated_abilities.iter().cloned());
+                out.extend(imp.definition.activated_abilities.iter());
             }
         }
         // CR 804.2 — the deploy creatures option gives every creature
         // "{T}: Target teammate gains control of this creature. Activate
         // only as a sorcery."
         if self.deploy_creatures && me.definition.is_creature() {
-            out.push(crate::effect::ActivatedAbility {
-                tap_cost: true,
-                sorcery_speed: true,
-                effect: Effect::GainControl {
-                    what: Selector::This,
-                    to: Some(crate::effect::PlayerRef::EachTeammate),
-                    duration: crate::effect::Duration::Permanent,
-                },
-                ..Default::default()
-            });
+            out.push(&DEPLOY_CREATURES_ABILITY);
         }
         // CR 315.5 — battlefield and command-zone `GrantActivatedAbility`
         // statics that are already known live (see `grant_scan`).
@@ -13295,21 +13319,21 @@ impl GameState {
                     // (permanent x grant), on a path the mana sweep runs for
                     // every untapped permanent.
                     if self.evaluate_requirement_static_on(req, me, src.controller, Some(src.id)) {
-                        out.push((*ability).clone());
+                        out.push(*ability);
                     }
                 }
                 // "Enchanted/equipped creature has [ability]" — the
                 // grant rides the attachment link (Splinter Twin).
                 Selector::AttachedTo(inner) if matches!(**inner, Selector::This) => {
                     if src.attached_to == Some(card_id) {
-                        out.push((*ability).clone());
+                        out.push(*ability);
                     }
                 }
                 // Self-grant — "this creature has '[ability]'", optionally
                 // condition-gated (Gobhobbler Rats' Hellbent regenerate).
                 Selector::This => {
                     if src.id == card_id {
-                        out.push((*ability).clone());
+                        out.push(*ability);
                     }
                 }
                 _ => continue,
@@ -13320,7 +13344,7 @@ impl GameState {
         // scoped to the owning seat's permanents.
         for (req, ability, seat, src_id) in &scan.graveyard {
             if self.evaluate_requirement_static_on(req, me, *seat, Some(*src_id)) {
-                out.push((*ability).clone());
+                out.push(*ability);
             }
         }
         // Necrotic Ooze — a permanent with
@@ -13338,7 +13362,7 @@ impl GameState {
                         if ab.from_graveyard || ab.exile_self_cost {
                             continue;
                         }
-                        out.push(ab.clone());
+                        out.push(ab);
                     }
                 }
             }
@@ -13354,7 +13378,7 @@ impl GameState {
                 {
                     continue;
                 }
-                out.extend(other.definition.activated_abilities.iter().cloned());
+                out.extend(other.definition.activated_abilities.iter());
             }
         }
         // Experiment Kraj — every activated ability of each *other* creature
@@ -13367,7 +13391,7 @@ impl GameState {
                 {
                     continue;
                 }
-                out.extend(other.definition.activated_abilities.iter().cloned());
+                out.extend(other.definition.activated_abilities.iter());
             }
         }
         // Mirran Safehouse — every battlefield-usable activated ability of
@@ -13382,7 +13406,7 @@ impl GameState {
                         if ab.from_graveyard || ab.exile_self_cost {
                             continue;
                         }
-                        out.push(ab.clone());
+                        out.push(ab);
                     }
                 }
             }
@@ -13403,7 +13427,7 @@ impl GameState {
                         if ab.from_graveyard || ab.exile_self_cost || ab.from_hand {
                             continue;
                         }
-                        out.push(ab.clone());
+                        out.push(ab);
                     }
                 }
             }
@@ -13441,7 +13465,7 @@ impl GameState {
                         if ab.from_graveyard || ab.exile_self_cost {
                             continue;
                         }
-                        out.push(ab.clone());
+                        out.push(ab);
                     }
                 }
             }
@@ -13451,7 +13475,7 @@ impl GameState {
         // `activated_abilities` grants them to BOTH itself and its partner.
         for (src_id, partner, abilities) in &scan.soulbond {
             if *src_id == card_id || *partner == card_id {
-                out.extend(abilities.iter().cloned());
+                out.extend(abilities.iter());
             }
         }
         // CR 702.6e — Equipment-granted activated abilities. An Equipment whose
@@ -13462,7 +13486,7 @@ impl GameState {
                 continue;
             }
             if let Some(bonus) = &eq.definition.equipped_bonus {
-                out.extend(bonus.activated_abilities.iter().cloned());
+                out.extend(bonus.activated_abilities.iter());
                 // Host-conditional grants ("as long as enchanted creature is a
                 // Wizard, it has …" — Lavamancer's Skill).
                 for cond in &bonus.conditional {
@@ -13470,7 +13494,7 @@ impl GameState {
                         continue;
                     }
                     if self.evaluate_requirement_on_card(&cond.host_filter, me, eq.controller) {
-                        out.extend(cond.activated_abilities.iter().cloned());
+                        out.extend(cond.activated_abilities.iter());
                     }
                 }
             }
@@ -13481,7 +13505,7 @@ impl GameState {
         if !me.definition.station.is_empty() {
             let charges = me.counter_count(crate::card::CounterType::Charge);
             for band in me.definition.station.iter().filter(|b| charges >= b.min) {
-                out.extend(band.activated.iter().cloned());
+                out.extend(band.activated.iter());
             }
         }
         out

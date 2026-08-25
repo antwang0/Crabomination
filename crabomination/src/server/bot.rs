@@ -6341,9 +6341,9 @@ fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// allocation per permanent per generator — six generators over the same
 /// battlefield.
 fn usable_abilities<'a>(
-    state: &GameState,
+    state: &'a GameState,
     card: &'a crate::card::CardInstance,
-    scan: &crate::game::actions::GrantScan<'_>,
+    scan: &crate::game::actions::GrantScan<'a>,
 ) -> impl Iterator<Item = (usize, AbilityRef<'a>)> {
     let printed = &card.definition.activated_abilities;
     let n = printed.len();
@@ -6356,7 +6356,7 @@ fn usable_abilities<'a>(
                 .granted_abilities_of(card, scan)
                 .into_iter()
                 .enumerate()
-                .map(move |(i, ab)| (n + i, AbilityRef::Synth(Box::new(ab)))),
+                .map(move |(i, ab)| (n + i, AbilityRef::Printed(ab))),
         )
 }
 
@@ -9107,7 +9107,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // granted mana ability doesn't read as "no mana here".
         let granted = state.granted_abilities_of(p, &scan);
         let mut best = 0u32;
-        for a in p.definition.activated_abilities.iter().chain(granted.iter()) {
+        for a in p.definition.activated_abilities.iter().chain(granted.iter().copied()) {
             if !is_countable_mana_ability(a) {
                 continue;
             }
