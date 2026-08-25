@@ -35,14 +35,7 @@ rounds per commit.**
    AND that could reject on the first — the function itself **-28 % on
    cube, -45 % on sos**, the program -0.170 % / -0.069 % / -0.047 %).
 2. **Three devices, all cheap to re-run, each found its pass's biggest
-   commit.** (c) **Rank rows by `cube% / sos%`, not by either share** — dump
-   both pools at one tip, `cg_edges.py --rows 0` on each (`--rows 0` on
-   *both*, or truncation reads as an infinite ratio), sort the ratio. That
-   is how pass 62 found a row that is 0.61 % of cube and 5.08x its sos
-   share. **The ratio is a pointer, not a size**: confirm with Ir/call
-   before writing code — the row below it in that same table
-   (`has_keyword`, 494,394 calls at a flat 46 Ir) is diffuse and was not
-   taken. Write-up in "Which pool a change moves". (a) Read a caller table's **Ir/call** column: an allocation far
+   commit.** (a) Read a caller table's **Ir/call** column: an allocation far
    above the family mean is an allocation of something big (`__memcpy` ->
    `CardInstance::new` at 8,242 Ir = `size_of::<CardDefinition>()`). **Do
    NOT re-run it on the allocator — both sides are now read and both are
@@ -51,6 +44,14 @@ rounds per commit.**
    closed; what is left of it is `__memcpy`'s own rows. (b) `cg_edges.py
    --callers SpecFromIterNested` ranked by **calls**, then ask which collects
    can be non-empty on the pools the actors play — that is (-45).
+   (c) **Rank rows by `cube% / sos%`, not by either share** — dump both
+   pools at one tip, `cg_edges.py --rows 0` on each (`--rows 0` on *both*,
+   or truncation reads as an infinite ratio), sort the ratio. That is how
+   pass 62 found a row that is 0.61 % of cube and **5.08x** its sos share.
+   **The ratio is a pointer, not a size**: confirm with Ir/call before
+   writing code — the row below it in that same table (`has_keyword`,
+   494,394 calls at a flat 46 Ir) is diffuse and was not taken. Write-up in
+   "Which pool a change moves".
 3. **Top candidate is still (-43), the CoW clone cost** — 80.9 M Ir, ~5 % of
    `sos`, paying side unread. **The bind-once half is done; don't grind it.**
    Then (-44) (`__memcpy`/allocator) and (-45) (the cost of asking).
