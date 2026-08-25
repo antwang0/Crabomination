@@ -334,36 +334,60 @@ pub fn suggest_main_deck_in_colors<R: Rng>(
     rng: &mut R,
     quality: bool,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
-    let pick_colors = colors_of_picks(picks);
-    suggest_main_deck_in_colors_with(
-        picks,
-        colors,
-        splash,
-        target_spells,
-        noise,
-        rng,
-        quality,
-        &pick_colors,
-    )
+    let scores = PoolScores::new(picks, quality);
+    suggest_main_deck_in_colors_with(&scores, colors, splash, target_spells, noise, rng)
 }
 
-/// [`suggest_main_deck_in_colors`] with the pile's pip totals supplied.
-/// `picks` is the whole sealed pool and does not change between shapes, so
-/// the shape lattice was summing the identical `ColorCounts` — a
-/// `card_brief` lookup per pool card — once per shape.
-#[allow(clippy::too_many_arguments)]
+/// Everything the shape lattice reads off a pool card that does not depend
+/// on the shape: its brief, and its scorer output against the pool's own pip
+/// totals.
+///
+/// The scorer's colour argument is `colors_of_picks(picks)` — a property of
+/// the *pool*, not of the candidate — so a card's base score is the same for
+/// all ~57 shapes, and only the pick jitter and the fixing bonus (a function
+/// of `colors.len()`) vary. The builder used to recompute all of it per
+/// shape: a `card_brief` lookup and a `score_card_with_colors` per pool card
+/// per shape.
+pub struct PoolScores<'a> {
+    picks: &'a [CardFactory],
+    /// `(brief, base score)` per entry of `picks`, in order.
+    cards: Vec<(&'static crate::cube::CardBrief, i32)>,
+}
+
+impl<'a> PoolScores<'a> {
+    pub fn new(picks: &'a [CardFactory], quality: bool) -> Self {
+        let pick_colors = colors_of_picks(picks);
+        let cards = picks
+            .iter()
+            .map(|&f| {
+                let brief = crate::cube::card_brief(f);
+                let base = if quality {
+                    crate::draft::score_brief_quality(brief, &pick_colors)
+                } else {
+                    crate::draft::score_brief_with_colors(brief, &pick_colors)
+                };
+                (brief, base)
+            })
+            .collect();
+        Self { picks, cards }
+    }
+
+    /// The pool these scores were built from.
+    pub fn picks(&self) -> &'a [CardFactory] {
+        self.picks
+    }
+}
+
+/// [`suggest_main_deck_in_colors`] against a prebuilt [`PoolScores`].
 pub fn suggest_main_deck_in_colors_with<R: Rng>(
-    picks: &[CardFactory],
+    scores: &PoolScores<'_>,
     colors: &[Color],
     splash: &[CardFactory],
     target_spells: usize,
     noise: i32,
     rng: &mut R,
-    quality: bool,
-    pick_colors: &crate::draft::ColorCounts,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
-    // Takes the brief the caller is already holding: one `card_brief` per
-    // pool card per shape, where this and the two scorers below made three.
+    let picks = scores.picks;
     let allowed = |f: CardFactory, brief: &crate::cube::CardBrief| -> bool {
         // Lands never occupy spell slots in the sealed builder —
         // `assemble_lands` owns the land base. (High jitter used to
@@ -387,8 +411,7 @@ pub fn suggest_main_deck_in_colors_with<R: Rng>(
     // was the largest single caller of `RawVec::grow_one` in the build.
     let mut scored: Vec<(CardFactory, i32)> = Vec::with_capacity(picks.len());
     let mut off: Vec<CardFactory> = Vec::with_capacity(picks.len());
-    for &f in picks {
-        let brief = crate::cube::card_brief(f);
+    for (&f, &(brief, base)) in picks.iter().zip(&scores.cards) {
         if allowed(f, brief) {
             let jitter = if noise > 0 { rng.random_range(-noise..=noise) } else { 0 };
             // Lands never take spell slots — they're assigned by
@@ -397,11 +420,6 @@ pub fn suggest_main_deck_in_colors_with<R: Rng>(
                 fixing_bonus
             } else {
                 0
-            };
-            let base = if quality {
-                crate::draft::score_brief_quality(brief, pick_colors)
-            } else {
-                crate::draft::score_brief_with_colors(brief, pick_colors)
             };
             scored.push((f, base + jitter + fix));
         } else {
@@ -715,9 +733,8 @@ fn build_shape<R: Rng>(
     shape: (usize, u32, i32),
     cfg: &SimConfig,
     rng: &mut R,
-    // `colors_of_picks(pool)`, which is invariant across shapes — see
-    // `suggest_main_deck_in_colors_with`.
-    pick_colors: &crate::draft::ColorCounts,
+    // The pool's shape-invariant per-card facts — see [`PoolScores`].
+    scores: &PoolScores<'_>,
 ) -> Option<CandidateBuild> {
     let (spells, lands, noise) = shape;
     let splash: Vec<CardFactory> = splash_colors
@@ -727,16 +744,8 @@ fn build_shape<R: Rng>(
     if !splash_colors.is_empty() && splash.is_empty() {
         return None;
     }
-    let (main, mut leftovers) = suggest_main_deck_in_colors_with(
-        pool,
-        colors,
-        &splash,
-        spells,
-        noise,
-        rng,
-        cfg.builder_v2,
-        pick_colors,
-    );
+    let (main, mut leftovers) =
+        suggest_main_deck_in_colors_with(scores, colors, &splash, spells, noise, rng);
     if main.is_empty() {
         return None;
     }
@@ -791,8 +800,8 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
     let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
     let mut out: Vec<CandidateBuild> = Vec::new();
     let mut seen_mains: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
-    // Invariant across the ~57 shapes below, and each of them summed it.
-    let pick_colors = colors_of_picks(pool);
+    // Invariant across the ~57 shapes below, and each of them rebuilt it.
+    let scores = PoolScores::new(pool, cfg.builder_v2);
     for (colors, splash_colors) in shapes {
         let Some(build) = build_shape(
             pool,
@@ -801,7 +810,7 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
             (cfg.target_spells, cfg.total_lands, 0),
             cfg,
             &mut rng,
-            &pick_colors,
+            &scores,
         ) else {
             continue;
         };
@@ -878,7 +887,7 @@ pub(crate) fn build_random_deck_from<R: Rng>(
     // field soft and inflated every candidate's measured win rate.
     let (spells, lands) = sample_deck_split(cfg, rng);
     let noise = (t * 2.0).round() as i32;
-    let pick_colors = colors_of_picks(pulls);
+    let scores = PoolScores::new(pulls, cfg.builder_v2);
     let build = build_shape(
         pulls,
         &chosen.colors,
@@ -886,7 +895,7 @@ pub(crate) fn build_random_deck_from<R: Rng>(
         (spells, lands, noise),
         cfg,
         rng,
-        &pick_colors,
+        &scores,
     )
     .unwrap_or_else(|| {
         // The noisy rebuild can only fail if the shape was hollow —
@@ -899,7 +908,7 @@ pub(crate) fn build_random_deck_from<R: Rng>(
             (cfg.target_spells, cfg.total_lands, 0),
             cfg,
             rng,
-            &pick_colors,
+            &scores,
         )
         .expect("enumerated shape rebuilds")
     });
@@ -2156,7 +2165,7 @@ impl Session {
         let mut variants: Vec<CandidateBuild> = Vec::new();
         let mut seen: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
         // Invariant across every shape and variant below.
-        let pick_colors = colors_of_picks(pool);
+        let scores = PoolScores::new(pool, cfg.builder_v2);
         for &ci in base.ranking.iter().take(cfg.refine_top) {
             let shape = &base.candidates[ci];
             for v in 0..cfg.variants_per_shape.max(1) {
@@ -2182,7 +2191,7 @@ impl Session {
                     (spells, lands, n),
                     &cfg,
                     &mut rng,
-                    &pick_colors,
+                    &scores,
                 ) else {
                     continue;
                 };
