@@ -626,6 +626,114 @@ build.
 
 ## Baseline
 
+**Sixty-eighth pass. Base `50dfa172` vs tip `a951b378`.** Three commits, one
+question asked three times: **what does a rollback, a gate, or a probe cost
+when it has nothing to do?** Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
+--threads 1 --seed 1`. The base column reproduces the sixty-seventh pass's
+tip to four digits on this box (`cube` 2,700,797,247 against its
+2,700,791,689), so the two blocks are comparable.
+
+```text
+                          base (50dfa172)   tip (a951b378)
+I refs, --decks fixed     1,167,057,320    1,156,966,317   -0.865 %
+I refs, --decks sos       1,501,695,839    1,489,892,855   -0.786 %
+I refs, --decks cube      2,700,797,247    2,653,967,864   -1.734 %
+```
+
+| step | commit | fixed | sos | cube | what |
+|---|---|---|---|---|---|
+| A | `a585bff2` | -0.088 % | -0.190 % | **-0.866 %** | a payment rollback rewrote every tapped flag it had snapshotted |
+| B | `5c0b07cc` | **-0.716 %** | **-0.548 %** | **-0.838 %** | the damage funnel asked the battlefield seven times per damage event |
+| C | `a951b378` | -0.062 % | -0.049 % | -0.038 % | the layer pass asked three questions of the effect list, once per permanent |
+
+**`cube` is 2.0x `fixed` and 2.2x `sos`** and A and B both contribute to
+that: A's waste is proportional to how many permanents the payer owns, and
+B's to how many static abilities the board carries. Full write-up, the three
+refutations and the rules in **Log**.
+
+**Wall clock, `--decks cube`, `scripts/ab_wall.py`, 6 ABBA blocks of
+`--games 1500 --threads 4`, `release-fast` both sides, A = base
+`50dfa172`. Two sittings, because the first had no valid null:**
+
+```text
+                          mean B/A   95 % CI            blocks B faster
+A/B  B = A+B (5c0b07cc)   0.9788     -3.72 .. -0.53 %   6/6
+A/B  B = tip  (a951b378)  0.9667     -6.03 .. -0.63 %   5/6
+null control (base/base)  1.0012     -3.19 .. +3.42 %   4/6   FLAT
+```
+
+**The honest statement is "2-3 % on `cube`", not one number**, and the null
+is why: it comes back flat but says this sitting cannot resolve anything
+smaller than **+/-3.3 %**, so the second run's -3.33 % sits at its own
+resolution. What carries the claim is that the two A/B sittings are
+independent, agree in sign, and are **11 of 12 blocks faster** against a null
+that splits 4/6.
+
+**And the wall win is larger than the Ir win, which is the opposite of this
+file's usual caution.** Ir reads -1.73 % on `cube`; the clock reads 2-3 %.
+The standing note says Ir *over*-reads by ~1.7-2.8x — that is calibrated on
+passes that remove battlefield walks and keyword scans, which are pure
+instruction count. This pass's largest commit removes **`Arc` deep copies**:
+an unshare is a handful of instructions plus an allocation and a cold write
+over a `PlayerData`/`CardData`-sized object, so the machine pays cache misses
+callgrind does not model. **A pass that removes clones should be sized on the
+clock, not on Ir.**
+
+**A null that resolves +/-3.3 % is worse than the +/-1 % this box gave the
+sixty-fourth pass**, and the difference is the workload, not the hour:
+`--decks cube --games 1500` is ~43 s a run against that entry's `--decks sos
+--games 2000` at ~28 s, on four threads either way, and the cube pool's deck
+build is seed-dependent in *content*. Use `sos` for a null-limited
+comparison; use `cube` when the effect is one only a grant-heavy board
+carries, as here, and accept the wider interval.
+
+```text
+decisions        196,220 -> 196,220        byte-identical
+turns_per_game   27.53   -> 27.53
+decisions_per_game 613.2
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
+suite            19,006 passed / 0 failed / 5 ignored, 19 test binaries
+golden traces    7 passed, all unchanged
+clippy           `--workspace --all-targets` clean (client excluded — see below)
+peak_rss_mib     27.0 / 27.1 / 27.3 over three `--bench` runs (release-fast, mimalloc)
+games_per_s      190.70 / 209.60 / 218.85 at host_calib_ms 48-52
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores
+```
+
+**`--bench` does not resolve this pass and the three runs above say why**:
+190.7 to 218.9 games/s is a 15 % spread within one binary on one box in one
+minute, against an `--decks fixed` effect of -0.87 % in Ir. The wall-clock
+claim is the `--decks cube` ABBA block above, which pairs the two binaries
+run-for-run; `--bench` is here for `decisions`, `stalls` and determinism,
+which are exact.
+
+**Crash-freedom on the `dev` profile rather than `overflow`, on purpose.**
+Commit B's soundness rests on the mask being a superset of what any gate can
+find, and the two gates that ask more than "does this variant exist on the
+battlefield" carry a `debug_assert!` that is compiled out of every release
+profile — including `overflow`. `dev` carries **both** `debug-assertions` and
+`overflow-checks`, so it is the build that audits this change. Same grid as
+the standing recipe, seeds 11 and 12:
+
+```text
+--decks all     --games 100   1,700 decided / 0 undecided per seed
+--decks cube    --games  60     480 decided / 0 undecided per seed
+--decks sealed  --games  60     720 decided / 0 undecided per seed
+```
+
+**5,800 games, no panic, no arithmetic overflow, no assertion**, and the same
+grid run again at the tip after commit C reads the same six lines. The count
+is lower than the usual 11,600 because `dev` runs the engine at opt-level 0
+(~10-12 games/s against `release-fast`'s ~200); the trade is deliberate —
+these games check the invariant the release grid cannot see. The 19,006-test
+suite runs under the same assertions.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState` or
+`Vocab` change is in this pass.
+
 **Sixty-third pass. Base `0036e238` vs tip `fa3bf671`.** Two commits, one
 class: **a loop over pairs charged per pair for facts belonging to one side
 of the pair.** Ir readings `profiling-fast --no-default-features`,
@@ -2387,6 +2495,140 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Sixty-eighth pass — the write that changes nothing is the one that deep-copies
+
+Two commits, base `50dfa172`. Both are the same question asked twice: **what
+does a rollback / a gate cost when it has nothing to do?**
+
+```text
+                          base (50dfa172)   after A         tip (A+B)
+I refs, --decks fixed     1,167,057,320    1,166,026,110   1,157,679,883   -0.803 %
+I refs, --decks sos       1,501,695,839    1,498,845,712   1,490,625,055   -0.737 %
+I refs, --decks cube      2,700,797,247    2,677,412,689   2,654,967,484   -1.697 %
+```
+
+| step | commit | fixed | sos | cube | what |
+|---|---|---|---|---|---|
+| A | `a585bff2` | -0.088 % | -0.190 % | **-0.866 %** | a payment rollback rewrote every tapped flag it had snapshotted |
+| B | `5c0b07cc` | -0.716 % | -0.548 % | **-0.838 %** | the damage funnel asked the battlefield seven times per damage event |
+
+**A — and the rule out of it is the pass's title.** `restore_payment_state`
+already gates its mutable pass on "did any flag move" — the fifty-fifth pass
+put that gate there — and then rewrites **every** card in the snapshot, which
+is every permanent the payer owns. `CardInstance` is a CoW handle, so each of
+those writes is an `Arc::make_mut`: **34,326 over 3,728 restores on `cube`,
+9.2 a call**, to put back the one or two lands auto-tap had touched. One
+`c.tapped != was` at the write site.
+
+```text
+                                     base            tip
+restore_payment_state, inclusive     24,200,044      5,655,187    -76.6 %
+  its make_mut edge                  34,326 calls    15,062 calls
+  and that edge's Ir                 19,006,953      436,030      -97.7 %
+Arc::clone_from_ref_in, self         94,325,714      82,062,630   -13.0 %
+```
+
+**The 19,264 calls removed cost 964 Ir apiece; the 15,062 that remain cost
+29.** That is the finding, and it inverts the intuition the (-42)/(-43)
+entries were built on: a handle the code genuinely wrote is *already
+unshared* by the write that moved it, so `make_mut` on it is a refcount
+check. It is the **untouched** object — still shared with every probe clone
+— whose redundant rewrite deep-copies. **Ranking a CoW site by how often it
+is written finds the cheap half.** Look for the write that is a no-op.
+
+**B — `apply_prevention_shields` is fourteen CR 615 gates and seven of them
+walk the whole battlefield.** The global `DamageCantBePrevented`, Questing
+Beast, Excruciator, Sphere of Purity, Shield of the Avatar (which also
+allocates a `Vec` per event), Energy Field, and the blocked/matching pair —
+each its own pass over `battlefield x static_abilities`, for families a
+normal board does not carry, on every damage event. Five more gates put a
+`battlefield_find` in front of a one-card static read.
+
+`prevent_static_scan` is **`cast_cost_scan`'s device one stage later in the
+game loop**: twelve bits, one walk, and a pure over-approximation — a gated
+block still runs its own controller / amount / filter tests, so a set bit can
+only cost a walk and a clear bit can only skip a no-op. Two `debug_assert!`s
+prove the skip on every damage event the suite deals. The Dark Sphere
+recursion takes the mask instead of rebuilding it, which is why the call
+count falls too.
+
+```text
+funnel cost summed over its callers
+            calls              Ir
+cube        25,824 -> 16,948   40,085,220 -> 13,537,540   -66.2 %
+sos         11,636 ->  8,400   14,234,482 ->  5,241,996   -63.2 %
+```
+
+The scan is `apply_prevention_shields_with`'s **6,762,004 self on `cube`
+(0.25 %)**, against the ~1,600 Ir a call it gates. The Absorb leg's 233,338
+`card_can_grant_keyword` calls are untouched: that one reads a *keyword*, not
+a static, so its board walk is `keyword_grant_in_scope`'s and belongs to
+(-11).
+
+**The transferable half of B is that the two devices are the same device.**
+`cast_cost_scan` (six questions per cast), `grant_scan` (three walks per
+mana-source table), `sba_board_scan`, `dispatch_board_scan` — and now
+`prevent_static_scan`. **When one function asks the battlefield N separate
+`any()` questions about static families, the `any()` early exit buys nothing,
+because on the board where it matters every answer is `false` and every walk
+runs to the end.** That is the boundary the standing "a presence bit belongs
+in a shared scan only when the question has no early exit" refutation does
+*not* cover: it is about folding a question into a scan that must finish
+anyway. A dedicated mask over N always-false questions is the other case, and
+it pays N-fold.
+
+**C — the layer pass asked three questions of the effect list, once per
+permanent.** `compute_permanent`'s three CR 613.8 gate probes (is there a
+power-gated effect / a creature-type changer / a creature-type lord) are
+properties of the *list*, not of the card, and each was its own
+`effects.iter().any()`; `apply_layers` ran all three per card over the same
+list. One walk answers all three and the whole-battlefield entry asks it
+once: `compute_permanent` self on `sos` **5,203,826 -> 2,589,526 (-50.2 %)**,
+end to end -0.049 %. The gap between those two numbers is the entry's own
+residual — **115,014 of the 190,992 calls arrive one card at a time through
+`computed_permanent`** and still pay a walk each; only `apply_layers`' 75,978
+get the hoist. Closing it wants a `SecondPass` slot beside `LayerFreeze`'s
+`TypeGate` array (~0.13 % of `sos`), which inherits that array's
+clear-at-scope-end discipline — the thing a past pass got wrong and broke
+Sarkhan the Masterless with. Filed, not done.
+
+**Three refutations from this pass, all measured, none shipped.**
+
+1. **`clear_summoning_sickness`'s guard is not dead, and the call-site guard
+   buys nothing.** (-14)'s rule — "`self.field.method()` fires `DerefMut`
+   before the method body runs, so the read must be at the call site" — reads
+   like it applies to `do_untap`'s eleven `card.clear_summoning_sickness()`
+   calls. It does not: the method is an inherent `impl CardInstance` method
+   (`card.rs:7214`), so its own `if self.summoning_sick` reads through
+   `Deref` and never unshares. Guarding all eleven call sites left
+   `do_untap`'s `make_mut` edge at **70,838 calls, byte-identical**. **Check
+   which impl block a method is in before applying (-14) to it.**
+2. **`auto_tap_for_cost_inner`'s `wants_ui` save/restore is not a no-op
+   write.** Two `players[player].wants_ui` writes per scripted any-colour tap
+   (9,690 of them on `cube`) look like the (-14) shape, and gating them left
+   the function's `make_mut` edge at **19,380 calls, byte-identical**, because
+   `wants_ui` is **true** in the bench workload — `recommend.rs`'s match
+   simulator sets it on both seats, and so does the `selfplay` actor path.
+   The writes are real. Making them free needs a non-CoW override field on
+   `GameState` rather than a toggle of a `PlayerData` flag; sized at ~1.9 M /
+   0.07 % of `cube` and filed under (-49).
+3. **(-45)'s "largest row" is a call count, not an allocation count, and
+   skipping the build costs more than the build.** `compute_permanent_pass`
+   collects its filtered effect list into a `Vec` 140,238 times on `cube`.
+   Making `gather_continuous_effects` leave the list layer-sorted — one
+   stable sort per gather, ~59 k against ~195 k passes — lets the pass walk
+   a `filter` instead, since `filter` preserves order and the per-pass sort
+   was stable. It read `fixed` **+0.173 %**, `sos` **+0.208 %**, `cube`
+   -0.205 %, and reverted. Two reasons, and both are the same fact: **a
+   gathered list is about two effects long.** So the `collect` whose result
+   is 0-1 elements never allocates — it is a `from_iter` call, not a malloc —
+   and the `is_layer_sorted` guard that keeps the skip sound for a
+   hand-built list (`apply_layers_one` is `pub`, and tests do build lists by
+   hand) costs two comparisons per pass against that. The refutation is
+   recorded in the code at the collect. **Before removing an allocation,
+   check that there is one**: `from_iter` shows up in an allocation table
+   because it is *reached from* one, not because every call allocates.
 
 ### Sixty-seventh pass — the caller table nobody had run, read by Ir/call
 
@@ -4953,6 +5195,52 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
+**(-50) THE NO-OP WRITE THROUGH A CoW HANDLE — the sixty-eighth pass's class,
+and it is the one that pays.** A handle the code genuinely wrote is already
+unshared by the write that moved it, so `make_mut` on it is a 29-Ir refcount
+check. It is the **untouched** object — still shared with every probe clone —
+whose redundant rewrite deep-copies at ~750-960 Ir. `restore_payment_state`'s
+19,264 removed writes cost **964 Ir apiece**; its 15,062 survivors cost 29.
+
+**So do not rank a CoW site by how often it is written** — that finds the
+cheap half, which is what the bind-once sweep of (-42) was and why it has a
+0.53 % ceiling. Rank it by **how often the value it writes is the value that
+was already there**. The shapes to grep for:
+
+- a rollback / restore that writes back a whole snapshot rather than the
+  entries that moved (`restore_payment_state`, TAKEN);
+- a sweep that assigns a constant to a field on every object in a zone
+  (`= false` in a cleanup or untap loop) rather than only where it differs;
+- a save / set / restore pair around a call, where the set is usually a
+  no-op — but **check the value first**, because
+  `auto_tap_for_cost_inner`'s `wants_ui` pair looked exactly like this and
+  is real (see the Log's refutation 2).
+
+**And check which impl block a method lives in before applying (-14) to it.**
+(-14) says an internal `if self.field` guard is dead behind a CoW handle
+because `DerefMut` runs first. That is true for a method on the *inner* type
+and false for one on the handle: `CardInstance::clear_summoning_sickness` is
+an inherent `impl CardInstance` method and guards correctly. Eleven
+call-site guards on it moved `do_untap`'s `make_mut` edge by **zero calls**.
+
+**(-49) `wants_ui` IS A `PlayerData` FIELD AND THE SCRIPTED-TAP DEVICE
+TOGGLES IT TWICE PER ANY-COLOUR TAP.** `auto_tap_for_cost_inner` swaps in a
+`ScriptedDecider` for an `AnyOneColor` source and forces synchronous
+resolution by writing `players[player].wants_ui = false`, then writing it
+back. `wants_ui` is **true** in every measured workload —
+`recommend.rs`'s match simulator sets it on both seats and so does the
+`selfplay` actor path — so both writes are real `PlayerData` unshares:
+**19,380 `make_mut` calls / 1,915,356 Ir on `cube`, 0.07 %**, two per
+scripted tap over 9,690 of them.
+
+The fix is not a guard (measured, byte-identical, see the Log) — it is to
+stop expressing "resolve this inline" as a write to a CoW-held player flag.
+A plain `GameState` field (`self.decider` is already one, so the struct has
+non-CoW fields) read alongside `wants_ui` wherever a decision decides whether
+to suspend would make the toggle free. Small, and it touches decision
+plumbing, so it wants the decision-plumbing audit's eye rather than a perf
+pass's.
+
 **(-48) CLOSED at the sixty-fourth pass: mimalloc is 5.99 % faster and costs
 9.7 MiB of RSS per process. The default is right and the memory is bought.**
 `scripts/ab_wall.py`, eight ABBA blocks, `release-fast` both sides at the
@@ -5137,6 +5425,19 @@ removed. `resolve_effect` **37,420 calls -> 4,930**,
 `fire_delayed_event_watchers` **18,638 -> 10,170**, `blockers_of` **10,836 ->
 6,364`. **The tell to grep for is a `collect()` whose very next line is an
 `is_empty()` on what it just built.**
+
+**The row this entry calls its largest is a call count, and skipping the
+build is REFUTED (sixty-eighth pass).** `compute_permanent_pass`'s collect is
+140,238 calls on `cube`, but a gathered effect list is **about two effects
+long**, so the filtered result is 0-1 elements and the `collect` does not
+allocate — it is `from_iter` *call* overhead. Sorting at the gather so the
+pass can walk a `filter` instead read `fixed` **+0.173 %**, `sos`
+**+0.208 %** (`cube` -0.205 %) and reverted: the `is_layer_sorted` guard that
+keeps the skip sound for `apply_layers_one`'s hand-built callers costs more
+than the `Vec`. **Before removing an allocation, check there is one** — a
+`from_iter` row appears in an allocation table because it is *reached from*
+one, not because every call allocates. The number is in the code at the
+collect.
 
 **Read the two columns against each other.** A row with many calls and few
 Ir apiece (`compute_permanent_pass`, `resolve_effect`,
@@ -5366,7 +5667,35 @@ never had, is 858,130 calls with the same shape and two rows that are
 larger there than on `sos`: `restore_payment_state` **34,326 / 18,996,709 =
 553 Ir/call** and `place_card_at_resolved_zone` **13,516 / 8,496,828 = 629**
 — both in the clone-shaped half, both above `activate_ability_inner`'s
-Ir/call, and neither has ever been read. **The paying side is
+Ir/call.
+
+**`restore_payment_state` is TAKEN at the sixty-eighth pass and it was
+almost all waste** — 34,326 calls / 19.0 M -> 15,062 / 436 k, `cube`
+-0.866 %; see (-50) for the class and the ranking rule that comes out of it.
+**`place_card_at_resolved_zone` is still unread**, and the shape to expect
+there is the opposite one: 13,516 `make_mut` over ~13,500 calls is one write
+per card placed, and a card that changes zone genuinely moves, so read it
+before costing it.
+
+**The clone-shaped rows on `cube` after that commit, by real deep copies
+(`--separate-callers=2` on `clone_from_ref_in`, 159,018 total), which is the
+table to start from rather than the `make_mut` one:**
+
+```text
+  32,782  make_mut <- activate_ability_inner        (50,402 calls: 0.65 clones each)
+  30,670  make_mut <- cast_spell_with_convoke       ( 9,600 calls: 3.2 each)
+  19,052  make_mut <- declare_attackers_banded      ( 7,578 calls: 2.5 each)
+   7,382  make_mut <- declare_blockers
+   6,658  make_mut <- place_card_at_resolved_zone
+   5,632  make_mut <- do_untap
+   2,402  GameState::deref_mut <- declare_blockers   <- the ColdState clone, (-14)
+```
+
+`cast_spell_with_convoke`'s **3.2 deep copies per cast attempt** is the
+largest unread number in it: the function removes the card from hand
+*before* its ~50 validation gates and pushes it back on each failure path,
+so a rejected cast pays the `PlayerData` and hand-`CowBox` unshares of a
+cast that never happened. **The paying side is
 `Arc::clone_from_ref_in`: 85,650 calls / 64,030,880 Ir on `sos` (4.20 %) and
 168,808 / 128,187,067 on `cube` (4.69 %), i.e. 19.4 % of unshares actually
 deep-copy, at ~747 Ir apiece.** That is the size of the prize and it is the

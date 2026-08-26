@@ -23,264 +23,64 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT (handoff — rewrite each run, keep it terse)
 
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
-claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
-**`git branch -a` does NOT list this branch before that fetch** — the clone
-carries `main` and whatever ref the session was started from, so an orient-
-yourself `git branch -a` reads as "the branch does not exist yet", and
-`git checkout -b claude/modern_decks` off `main` then works, builds, and
-tests green. It is 2,500 commits behind and nothing says so until the push
-is rejected. A session lost most of a run to exactly that at the
-sixty-seventh pass. Run the fetch **before** looking at anything else.
-**Sessions run this branch concurrently: read PERF's Log before starting the
-top candidate, re-read the base after every rebase, and budget two callgrind
-rounds per commit.**
-**And two sessions took (-48) in the same hour this run, each spending two
-11-minute builds and forty minutes of runs on it.** Nothing stops that: both
-read "the highest-value fresh item" and both had disk. **Before starting a
-named candidate, `git fetch` and grep PERF's Log for its number** — that is
-the whole mitigation, it costs one command, and it would have saved this run
-an hour. If you take one anyway, say so in the Log as a replication rather
-than rewriting the entry.
+claude/modern_decks origin/claude/modern_decks`. The container clones `main`,
+and **`git branch -a` does not list this branch before that fetch** — so an
+orient-yourself `git branch -a` reads as "it doesn't exist", `git checkout -b`
+off `main` then builds and tests green 2,500 commits behind, and nothing says
+so until the push is rejected. **Sessions run this branch concurrently:**
+before starting a named candidate, `git fetch` and grep PERF's Log for its
+number; two sessions took (-48) in the same hour once.
 
-0. **The sixty-seventh pass: (-45)'s sibling table run, two commits.** End
-   to end `fixed` **-0.360 %**, `sos` **-0.513 %** (`cube` -0.192 % on the
-   second commit; no `cube` base was taken before the first — that column is
-   a gap in the record, not a suspicion). Both came out of **one command**:
-   `cg_edges.py --callers` on the `Vec::clone` and `grow_one` rows, which
-   (-45) had flagged as "the sibling table nobody has run".
-0a. **And the rule is which column you sort it by.** (-45) says to rank an
-   allocation table by *calls* — that finds a `Vec` built to be thrown away.
-   The two rows this pass took sit at #4 and #5 by calls and would never have
-   been reached that way; they are outliers in **Ir/call**:
-   `continue_spell_resolution` at **1,601 Ir a call** was deep-copying the
-   resolving spell's whole `Effect` tree (it could not borrow, because `card`
-   is moved to the graveyard later — clone the `Arc<CardDefinition>` first
-   and it can), and `finalize_cast` at 677 was two
-   `mem::take().into_iter().partition()` round trips over a
-   `delayed_triggers` list that is empty on almost every cast. **Rank by
-   calls for a thrown-away `Vec`; rank by Ir/call for a tree being
-   deep-copied.** `alt_spell_half_of(&def)` is the shape for the borrow —
-   the existing walker's pick against a definition the caller holds, one
-   walker at two lifetimes, rather than a second copy of the pick.
-0b. **All three of those rows are now read, and all three are refuted.**
-   `declare_blockers` looked like the one to take — 4.2 grows a call plus
-   1.8 rehashes — and **reserving its buffers read `sos` +0.046 %**
-   (`fixed` -0.027 %, `cube` -0.063 %); the map half isolated at -0.005 /
-   -0.002 / -0.014 %, i.e. free and worthless, so the two `ids` reserves are
-   the regression. **The correction to the sizing device: grows-per-call
-   ranks a row, but the length the buffer *reaches* decides whether a
-   reserve pays.** Four grows over a list that ends at a handful of ids is
-   `1 -> 4 -> 8` — two 32/64-byte reallocs — and one right-sized allocation
-   can cost more. **A reserve pays when the buffer is long, not when it is
-   grown often.** `advance_step` is **READ and refuted**: 0.94 a call is the single
-   `events.push(StepChanged)` on a list the caller hands in empty, i.e. the
-   allocation that holds the returned event. `check_state_based_actions` is
-   1.7 a call and its named collects are *already* scan-gated; localizing
-   the rest needs `cg_contexts.py --separate-callers`, not a source read.
-   **Do NOT take `gather_continuous_effects_inner`'s row** — its buffer is
-   `sa_cards`, empty on a vanilla board, and a blanket
-   `+ battlefield.len()` reserve is the shape the fifty-eighth pass measured
-   at **+1.54 %**. See PERF's (-45), which now carries both tables.
-0c. **The archive triage is DONE — see item 10.**
-
-0z. **The sixty-fourth pass: (-44) closed, five of (-45)'s rows taken, (-48)
-   answered.** End to end `fixed` **-0.43 %**, `sos` **-1.06 %**, `cube`
-   **-0.96 %**. (-44) was a token mint building an 8,232-byte
-   `CardDefinition` *per token in the batch* (`sos` -0.605 %); (-45)'s row was
-   `compute_permanent_pass` collecting an **empty** iterator on 83.6 % of its
-   89,154 layer passes (`sos` -0.354 %); four more of its rows —
-   `resolve_effect` x2, `fire_delayed_event_watchers` x2, `blockers_of` —
-   went together for another `sos` -0.098 %, and **the tell there is
-   syntactic: a `collect()` whose next line is an `is_empty()` on what it
-   just built.**
-0b. **Three rules out of it.** (a) **A collect is worth what its *empty*
-   fraction is worth, and that fraction is a property of the pool** — cube
-   moved least on the layer-pass gate because a cube board carries statics.
-   Size the rest of (-45)'s table that way. (b) **The hoist, not the memo**:
-   -0.53 % came from moving one build out of a loop, -0.04 % from memoizing
-   it. (c) **Price a linear scan before writing a `Hash` impl** — (-44)
-   deferred the token memo for needing `TokenDefinition: Hash`; a capped `Vec`
-   over the derived `Eq` was enough and smaller. `cg_lines.py`'s location
-   column now carries a directory, which named
-   `check_state_based_actions`' largest row: `core/src/slice/iter/macros.rs`,
-   the sweep's own walks.
-1. **The sixty-third pass took (-47) and it read 5x its sizing.** Base
-   `0036e238` -> tip, two commits: `fixed` **-0.579 %**, `sos` **-0.446 %**,
-   `cube` **-1.289 %**. The entry costed only the attacker-resolution hoist
-   (~0.24 % of cube); what it missed was that the pair loop *above* the
-   check paid per pair for six attacker facts and two blocker facts, and
-   that two of the twelve gates *inside* the check never name an attacker.
-   `pick_blocks_inner` self on cube 24,906,488 -> 7,583,714.
-2. **The rule that pass yields, and it is cheap to re-run: in a loop over
-   pairs, ask of every term which side of the pair it belongs to.** The tell
-   is a callee count that is a *multiple* of the pair count —
-   `computed_permanent` sat at exactly 2x `blocker_can_block_attacker`.
-   `cg_edges.py --callees <fn>` ranked by **calls** is the table. Other pair
-   loops worth the same read: `legal_block_targets`, the combat-damage
-   assignment loops, `pick_attacks`'s blocker scan (see 5).
-3. **(-48) is CLOSED — mimalloc is 5.99 % faster and the memory is bought.**
-   Eight ABBA blocks, 8/8, CI **-7.04 .. -4.95 %**, null control flat
-   (+0.20 %, CI -0.79 .. +1.18 %); RSS 27.2 MiB against the system
-   allocator's 17.5 on `release-fast`. Six percent is larger than any single
-   perf commit in ten passes and 9.7 MiB an actor is not a constraint on any
-   box that runs four of them. **The null resolved +/-0.99 % on the 2.80 GHz
-   box, not the +/-2 % this file quotes for the 2.10 GHz one — run the null
-   where you are.** **Replicated on a second container the same hour** (the
-   other session took the entry concurrently): **+7.98 %**, CI +7.05..+8.91,
-   8/8, null flat at +/-1.03 %; RSS system 17.4-17.8 vs mimalloc 26.8-28.9.
-   The two CIs meet at ~7.0 % and do not overlap below it — **quote "6-8 %,
-   host-dependent", not one number** — and plan actors off **~27 MiB**.
-4. **Then (-43), the CoW clone cost, and its paying side is now read.**
-   `Arc::clone_from_ref_in` is 85,650 calls / 64.0 M on `sos` (**4.20 %**)
-   and 168,808 / 128.2 M on `cube` (**4.69 %**) — 19.4 % of `make_mut`
-   unshares actually deep-copy, at ~747 Ir apiece. **The caller table is
-   flat since the 58th tip; do not re-collect it.** The `cube` column is
-   new and has two unread clone-shaped rows: `restore_payment_state`
-   (553 Ir/call) and `place_card_at_resolved_zone` (629). **The bind-once
-   half is done; don't grind it.** **(-44) is now closed on both halves** —
-   its `__memcpy` table and its allocator table are both read and both flat —
-   so after (-43) the fresh queue is (-45) (the cost of asking).
-   **(-46) is deliberately last and should stay there** — see 9.
-5. **What is left of (-47) is small and needs measuring, not assuming.**
-   `pick_attacks`'s "unblockable by the current board" check is the same
-   shape, but only ~4,900 of 28,374 pair checks come from outside
-   `pick_blocks_inner`, and hoisting there resolves every opponent blocker
-   eagerly on boards where the branch is never reached. The two
-   `battlefield_find`s per composed `blocker_can_block_attacker` are (-38)'s.
-6. **Three devices, all cheap to re-run, each found a pass's biggest
-   commit.** (a) Read a caller table's **Ir/call** column: a cost far above
-   the family mean is a copy of something big. **Do NOT re-run it on the
-   allocator — both sides are read and both are flat.** (b) `cg_edges.py
-   --callers SpecFromIterNested` ranked by **calls**, then ask which
-   collects can be non-empty on the pools the actors play — that is (-45).
-   (c) **Rank rows by `cube% / sos%`, not by either share** —
-   `scripts/cg_ratio.py cg.cube.out cg.sos.out`, which exists now and reads
-   `cg_edges.py`'s parse directly, so the truncation-reads-as-infinite
-   failure cannot happen. That device found pass 62's second commit and
-   pointed pass 63 at `pick_blocks_inner` (2.09x). **The ratio is a pointer,
-   not a size** — confirm with Ir/call.
-7. **Crash-freedom recipe (unchanged, nearly free).** Add `--decks cube`
-   and `--decks sealed` (`--games 120 --threads 3`, two seeds) to the
-   standing `--decks all` grid whenever a pass touches rules code: `all` is
-   17 fixed archetypes and cannot reach a card they never draw, and the
-   `overflow` build is the expensive part either way.
-8. **Refuted, do not re-take:** a presence bit belongs in `sba_board_scan`
-   only when the question has no early exit of its own (third loss for the
-   fusion device in `creature_death_possible` alone). A collect whose drain
-   touches `self` is load-bearing — check that line first. Per-event
-   bitmasks for `is_event_hardcoded` read **+0.12 %**: see (-16), and the
-   rule that a line's Ir is not what removing the line would save.
-9. **Three measurement cautions before you rank anything.** (0) **RSS per
-   actor is the ML-relevant number and the file was quoting the wrong
-   build.** At one tip on one box: system allocator 17.6 MiB, shipped
-   `release`/mimalloc **24.0-24.3**, `overflow` 27.2. The sixtieth pass's
-   "-19 %, 17.7 MiB" is a `--no-default-features` reading and reproduces
-   exactly — but **plan actor counts off ~24 MiB**. Nor does RSS compare
-   across containers (2.10 GHz box 24.0-24.3, 2.80 GHz box 26.8-30.1). (a) Clock
-   numbers go through `scripts/ab_wall.py` with its null control. The
-   **+/-2 %** this file records was calibrated on the 2.10 GHz box; **both
-   nulls run on the 2.80 GHz one this run resolved about +/-1 %**, so the
-   resolution is a property of the host and the minute — run the null where
-   you are and quote what it says. Ir over-reads by ~2x. (b)
-   `name_index()` builds 22,568 `CardDefinition`s to read their names —
-   104.7 M Ir, **6.8 % of a six-game `sos` total and 0 % of `cube` and
-   `fixed`**. **Subtract it before quoting an `sos` share**, and note the
-   three pools' totals are not comparable to each other at that scale. It is
-   candidate (-46), ranked last on purpose: one-time per process, so
-   ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
-   and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping. The archive triage is DONE — don't re-take it.**
-   ENGINE_BACKLOG 5.2k -> **3.8k** and CARD_BACKLOG 4.2k -> **4.0k**, both
-   at the sixty-seventh pass. Shipped rows dropped *unless* the row carried
-   an open residual (`Residual:` / `Remaining` / `still` / ⏳ / 🟡 — 111 and
-   18 rows kept in place); no body edited; both files now open with an index
-   table. ENGINE_BACKLOG is ordered bugs / mechanics / rules-coverage /
-   tooling; CARD_BACKLOG is retitled by *subject* rather than by the run
-   that found it ("Noticed this run (Mirage wave 5)" -> "Mirage wave 5") and
-   ordered open-first. The ~400 lines of GUI backlog left with them, into
-   **`CLIENT_BACKLOG.md`**. TODO **856**, PERF 7.6k. Suite is **14 test
-   binaries / 19,170 tests**, not the "22" older blocks quote. The 47th
-   through 50th Log entries are folded (the 49th and 50th at the 66th pass:
-   344 lines to 103); **next folds are the 51st/52nd**. PERF is **7.7k** with
-   the sixty-seventh pass's entry in it.
-11. **Bugs: the parallel target-walker class is CLOSED** (`core_rules::
-   target_walkers` 39 -> **0**, and it asserts `is_empty()` now — add the
-   walker arm, do not reintroduce a threshold). 20 of the 39 were the test
-   counting `Reflexive` / `ReflexiveTrigger` bodies the walker is
-   deliberately blind to; **19 were real**, each a shipped card whose
-   targeted effect resolved against an empty list. Verified on the wider
-   crash-freedom grid at `aaadfdc2`: 11,600 games clean, `--bench`
-   `decisions` still 196,220. **It landed after the tip the Baseline's Ir
-   columns were measured at** — a `cube` / `sos` total taken now is not
-   comparable to them; re-base first.
-   **Both named successors are now CLOSED too, at the sixty-fifth pass.**
-   (a) `Selector::TriggerSource` on a **self-scoped** block trigger — closed
-   by `core_rules::block_trigger_selectors`, which found five abilities over
-   four cards past the three already rewritten: Abomination (a local copy of
-   `combat_partner_punisher` gating on `TriggerSource`; the card is black and
-   the gate asks green-or-white, so it never fired), Infernal Medusa,
-   Frostweb Spider, Tolarian Entrancer, Hedron Blade. **The scope is the
-   whole distinction**: on `AnyPlayer` / `YourControl`, and on an
-   `equipped_bonus` with `triggers_on_equipment`, the watcher is a third
-   object and `TriggerSource` *is* the partner — correct, and the test
-   exempts them. (b) `ChooseUnchosenMode` — `requires_target => false` is
-   right (it picks at resolution) but nothing bound the chosen mode's targets
-   either, so Silent Hallcreeper's copy mode has been dead since it shipped
-   *and* burned one of its three picks. Resolution auto-targets now, per
-   `Effect::Reflexive`; CR 601.2b drops unsatisfiable modes from the menu.
-   **The device both share, and it is the one to re-run:** a test whose ctx
-   hands in a target cannot see a binding bug, because a real trigger push
-   hands an empty list. **Four** shipped tests passed vacuously this run:
-   Abomination's blocker was dying to combat damage, Infernal Medusa's assert
-   only covered the survivor, the Hallcreeper's copy mode was fed the target
-   the engine never bound, and Absolver Thrull's enchantment was an unattached
-   Aura that SBA removes on its own (CR 704.5m). **Ask of any per-card test:
-   could this pass if the ability never fired?** Two cheap tells — the ctx
-   hands in a target, or the victim would die anyway.
-   **That audit was run at the sixty-fifth pass and it is now
-   `core_rules::unbound_target_slots`.** First run: **eleven bodies over nine
-   cards**, and eight were one missing arm each in `requires_target` —
-   `PreventNextDamageFromChosenSource` (six Circle-shaped cards that built no
-   `PreventionShield` at all), `SpellBecomesChosenColor`,
-   `ExileThenBranchByController`. The invariant has three exempt families and
-   they are the whole content of it: **resolution-time targeting**
-   (`Reflexive`, `ReflexiveTrigger`, `ChooseUnchosenMode`), **cast-time
-   modal** (the action carries the picks), and **deferred-fire**
-   (`HauntCreature`, `ReplaceYourNextDrawThisTurn` — correct *only* because
-   their fire sites call `auto_target*`, so a new entry has to be checked at
-   its fire site, not its resolution).
-   **The ninth card was the big one: creature Haunt has never worked.**
-   `primary_target_filter` (what the auto-picker aims with) had no
-   `HauntCreature` arm, and **`None` there is not "don't target" — it falls
-   back to `Any`** and walks players as well as permanents. It handed the
-   trigger `Target::Player(1)`; `target_filter_for_slot(0)` *does* have an arm
-   and demands `Enchantment`; CR 608.2b then returned `Ok(vec![])` and the
-   whole trigger did nothing, silently. Absolver Thrull and Orzhov Euthanist.
-   The picker now falls back to the checker's own filter before `Any`, so the
-   two agree by construction wherever the primary walker is silent. Verified
-   on the wide grid at `b1a772ec`: 11,600 games clean, `decisions` 196,220,
-   traces unchanged.
-   **And the delayed-trigger fire site**: `WhenCardDies` / `WhenTokenDies` /
-   `WhenHauntedCreatureDies` register with `target: None` and pushed with no
-   slot bound. CR 603.7c — they auto-target at push now.
-11b. **The next bug, and it is sized and diagnosed but not taken.** The
-   picker (`primary_target_filter`) and the CR 608.2b legality check
-   (`target_filter_for_slot(0)`) are two hand-written walks at opposite ends
-   of one target's life, and **27 single-slot bodies aim with one filter and
-   are checked against another** — e.g. `Jund Charm` picks `Creature` and
-   checks `Player`, `Overload` picks `ManaValueAtMost(5)` and checks `(2)`,
-   `Tear Asunder` picks `Nonland` and checks `Artifact|Enchantment`. Most are
-   modal (slot 0 differs per mode) so the walkers answer honestly-different
-   questions and a blanket invariant is a ratchet, not an invariant — which
-   is why the sixty-fifth pass wrote one, watched it need 587 -> 83 -> 27
-   exceptions, and **deleted it rather than ship a threshold**. Take it per
-   card, or make `primary_target_filter` mode-aware. The *silent-fallback*
-   half is already fixed: the picker now falls back to the checker's own
-   filter before `Any`.
-12. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
-   sacrifice / tap / discard" cluster is **read to the end**; the ~337
-   remaining are the "you may draw / search / put into hand" tail, where
-   declining is almost never right. **Top ML item is still a training run.**
+1. **Sixty-eighth pass: `fixed` -0.865 %, `sos` -0.786 %, `cube` -1.734 %** in
+   Ir, three commits, all "what does this cost when it has nothing to do" —
+   and **2-3 % of wall on `cube`** over two independent ABBA sittings, 11 of
+   12 blocks, null flat. **The wall win is bigger than the Ir win**, which is
+   the reverse of this branch's usual caution: the largest commit removes
+   `Arc` deep copies, and a clone's cache misses are wall-expensive and
+   Ir-cheap. **Size a clone-removal pass on the clock.** New candidates
+   **(-50)** (the no-op CoW write — the class *and* its ranking rule) and
+   **(-49)** (`wants_ui`, 0.07 %, wants the decision-plumbing audit's eye).
+2. **Top fresh perf item: `cast_spell_with_convoke` does 3.2 real deep copies
+   per cast attempt** — 30,670 of `cube`'s 159,018. It takes the card out of
+   hand *before* ~50 validation gates and pushes it back on every failure
+   path. Then the layer pass, whose subtree is **3.86 % of cube**: its
+   `printed_color_set` is **194,610 calls / 11.7 M / 0.44 %**, one per pass,
+   and it re-derives the colour set from the mana cost every time (caching it
+   on `CardDefinition` is blocked by the ~20 in-place definition mutations —
+   see (-11)). Do **not** re-take the `sorted` `Vec` (item 4).
+3. **Run `cg_contexts.py` over `--separate-callers=2` on
+   `clone_from_ref_in`, not the `make_mut` caller table** — the first says
+   who *clones*, the second says who *asks*, and (-50) is the difference.
+   `cg_ratio.py` still ranks pool outliers: `affected_includes_gated` is
+   **6.63x cube/sos and 0.46 % of cube**, i.e. the sixty-fourth pass's layer
+   gate does not fire on a grant-heavy board.
+4. **Refuted this run, do not re-take:** call-site guards on
+   `clear_summoning_sickness` (the method is an inherent `impl CardInstance`
+   one — its own guard is *not* dead) and gating
+   `auto_tap_for_cost_inner`'s `wants_ui` pair (it is **true** in every
+   measured workload); both left their `make_mut` edges byte-identical. And
+   **skipping `compute_permanent_pass`'s collect** by sorting at the gather:
+   `fixed` **+0.173 %**, `sos` **+0.208 %**, reverted, number in the code at
+   the collect. **A gathered effect list is ~2 long, so that `collect` was
+   never allocating** — check an allocation table's row *is* an allocation
+   before removing it. Older refutations are in PERF's standing rules.
+5. **Bugs:** ENGINE_BACKLOG P3 now carries the picker/checker disagreement
+   (27 single-slot bodies aim with one filter and are checked against
+   another). P2's deck-out-loss eagerness is the one open correctness item
+   with a written fix and ~24 tests to reseed.
+6. **Housekeeping.** TODO **719**, PERF **8.1k**,
+   ENGINE_BACKLOG 3.8k, CARD_BACKLOG 4.1k, CLIENT_BACKLOG 428. Suite
+   **19,006 passed / 0 failed / 5 ignored**, 7 golden traces. Next PERF Log
+   folds are the 51st/52nd. This NEXT was 262 lines before this pass; every
+   item it dropped is in PERF's Log/candidates, ENGINE_BACKLOG or
+   CARD_BACKLOG, not deleted.
+7. **Two standing measurement facts** (the rest are in PERF's "How to
+   measure"): plan actor counts off **~24 MiB** RSS, not the
+   `--no-default-features` 17.7; and `--decks fixed` is the *bench* pool —
+   a change to statics / grants / layers gets a `--decks cube` reading too.
+   **A change whose soundness rests on a `debug_assert!` is audited by the
+   `dev`-profile grid, not the `overflow` one**: release profiles compile
+   the assertion out.
 
 ## Standing rules for a perf pass
 

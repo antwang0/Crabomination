@@ -105,6 +105,22 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ### P3 — structural root causes (fix once, prevent the class)
 
+- 🟡 **The picker and the CR 608.2b checker are two walks of one target's
+  life, and 27 single-slot bodies disagree.** `primary_target_filter` (what
+  the auto-picker aims with) and `target_filter_for_slot(0)` (what CR 608.2b
+  checks against) are hand-written and independent: `Jund Charm` picks
+  `Creature` and checks `Player`, `Overload` picks `ManaValueAtMost(5)` and
+  checks `(2)`, `Tear Asunder` picks `Nonland` and checks
+  `Artifact|Enchantment`. Most are **modal** — slot 0 differs per mode — so
+  the two walkers answer honestly-different questions and a blanket
+  invariant is a ratchet, not an invariant: the sixty-fifth pass wrote one,
+  watched it need 587 -> 83 -> 27 exceptions, and deleted it rather than
+  ship a threshold. Fix per card, or make `primary_target_filter`
+  mode-aware. **The silent-fallback half is already fixed** — the picker
+  falls back to the checker's own filter before `Any`, so the two agree by
+  construction wherever the primary walker is silent (that fix is what made
+  creature Haunt work at all; see `core_rules::unbound_target_slots`).
+
 - 🟡 **Parallel hand-maintained walkers** — guard test
   `cr_601_2c_every_catalog_target_filter_is_surfaced` now serde-walks every
   catalog effect for `TargetFiltered` slots and asserts

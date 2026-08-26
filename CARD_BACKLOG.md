@@ -4043,3 +4043,13 @@ Open follow-ups:
   `PassPriority` with an empty stack.** Tests that arm a CR 603.8 state
   trigger have to call it by hand (`classic_sets/wth`'s `settle`). Worth
   confirming whether that matches CR 704.3 or is a fixture-only gap. ⏳
+
+## Dropped "may" clauses — `scripts/audit_dropped_may.py`
+
+Moved here from `TODO.md`'s NEXT at the sixty-eighth pass, where it was the
+only card item left. The script lists catalog effects whose printed "you
+may" was modelled as mandatory. The load-bearing cluster — "destroy /
+sacrifice / tap / discard", where declining is sometimes right — is **read
+to the end**. The **~337 remaining** are the "you may draw / search / put
+into hand" tail, where declining is almost never right; take them only when
+a specific card's ruling needs the choice.
