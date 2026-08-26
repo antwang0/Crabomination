@@ -6286,7 +6286,12 @@ impl GameState {
         // CR 702.95h — a card leaving the battlefield is no longer Soulbond-
         // paired. Clear its own link so a later re-entry can re-pair cleanly
         // (the SBA in `check_state_based_actions` clears the partner's side).
-        card.soulbond_partner = None;
+        // Gated: this is the first write of the reset chain, so an
+        // unconditional `= None` is what pays `CardInstance`'s deep copy for
+        // every permanent that leaves the battlefield unpaired.
+        if card.soulbond_partner.is_some() {
+            card.soulbond_partner = None;
+        }
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).
         card.turn_face_up();

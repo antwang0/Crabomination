@@ -6989,13 +6989,24 @@ impl CardInstance {
     ///
     /// [`make_licid_aura`]: Self::make_licid_aura
     pub fn undo_licid_aura(&mut self) {
+        if self.licid_creature_def.is_none() {
+            return;
+        }
         if let Some(def) = self.licid_creature_def.take() {
             self.definition = def;
             self.attached_to = None;
         }
     }
 
+    /// Each of the five `…_def.take()` resets below asks through `Deref`
+    /// before it takes. `take()` needs `&mut`, and `CardInstance`'s
+    /// `DerefMut` is `Arc::make_mut`, so an ungated take deep-copies a shared
+    /// card in order to write back the `None` that was already there — and
+    /// the zone-change path calls all five in a row on every permanent that
+    /// leaves the battlefield, where the answer is `None` for almost all of
+    /// them.
     pub fn turn_face_up(&mut self) -> Option<&'static str> {
+        self.face_up_def.as_ref()?;
         let real = self.face_up_def.take()?;
         let name = real.name;
         self.definition = real;
@@ -7029,6 +7040,9 @@ impl CardInstance {
     /// CR 710.2 — outside the battlefield only the unflipped characteristics
     /// exist; restore the top face as the card changes zones.
     pub fn revert_flip(&mut self) {
+        if self.unflipped_def.is_none() {
+            return;
+        }
         if let Some(top) = self.unflipped_def.take() {
             self.definition = top;
             self.flipped = false;
@@ -7039,6 +7053,9 @@ impl CardInstance {
     /// battlefield has only its front-face characteristics in the new zone.
     /// Restore the front face (no-op for a permanent showing its front).
     pub fn revert_transform(&mut self) {
+        if self.front_face.is_none() {
+            return;
+        }
         if let Some(front) = self.front_face.take() {
             self.definition = front;
             self.transformed = false;
@@ -7049,6 +7066,9 @@ impl CardInstance {
     /// printed (full, colorless) characteristics once it leaves the
     /// battlefield. Restore the printed definition as the card changes zones.
     pub fn revert_prototype(&mut self) {
+        if self.prototype_printed.is_none() {
+            return;
+        }
         if let Some(printed) = self.prototype_printed.take() {
             self.definition = printed;
             self.cast_as_prototype = false;

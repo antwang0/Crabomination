@@ -1293,8 +1293,15 @@ impl PlayerData {
     pub fn send_to_graveyard(&mut self, mut card: CardInstance) {
         // CR 122.2 — counters cease to exist on zone change; the graveyard
         // object carries none (dies-with-counters triggers read LKI caches).
-        card.counters.clear();
-        card.keyword_counters.clear();
+        // A `clear()` is a write, and `CardInstance`'s `DerefMut` is
+        // `Arc::make_mut` — so clearing an already-empty map deep-copies a
+        // shared card, and most permanents die with no counters at all.
+        if !card.counters.is_empty() {
+            card.counters.clear();
+        }
+        if !card.keyword_counters.is_empty() {
+            card.keyword_counters.clear();
+        }
         self.cards_to_graveyard_this_turn += 1;
         if card.definition.is_creature() {
             self.creature_cards_to_graveyard_this_turn += 1;
