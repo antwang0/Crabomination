@@ -31,11 +31,9 @@ not a lock:** fetch before starting a candidate, and **push the code commit
 before the tracker prose** — passes 68/69 and 71/72 each duplicated a whole
 commit that a fetch would have shown.
 
-<<<<<<< HEAD
-1. **Perf queue = PERF's candidates.** (-54) the sim's transaction checkpoint
-   (~0.93 % of `cube`; needs a *failure count* first, not a profile); (-53)
-   the cost-static bitmask (0.52 %, costs ~30 variants of enumeration);
-   (-51)(a) the 7,665-Ir land tap.
+1. **Perf queue = PERF's candidates.** (-54) is closed (see 4a); the top two
+   are (-53) the cost-static bitmask (0.52 %, costs ~30 variants of
+   enumeration) and (-51)(a) the 7,665-Ir land tap.
 2. **Read PERF's "Inside one attack sim" before anything bot-side:** the
    search is 59.6 % of `cube` and **37 % of the program is the engine
    advancing a turn inside one**, against `cast_candidates`' 3.6 %.
