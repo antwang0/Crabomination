@@ -53,9 +53,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crabomination::cube::{CardFactory, color_pair_name, cube_deck, random_color_pair};
 use rand::SeedableRng;
 use rand::rngs::StdRng;
+use crabomination::crossplay::{CrossGame, CrossLink, Msg};
 use crabomination::recommend::{
-    Pilot, SimCost, paired_stat, simulate_match_games_piloted, simulate_match_pairs_piloted,
-    wilson,
+    Pilot, SimCost, paired_stat, simulate_match_games_cross, simulate_match_pairs_cross, wilson,
 };
 use crabomination::server::{EvalWeights, MctsConfig};
 use crabomination::sos_mode::{College, sos_deck};
@@ -667,6 +667,10 @@ struct Args {
     deck_set: String,
     paired: bool,
     bench: bool,
+    /// `--vs PATH`: play this build's bot against the one in `PATH`.
+    vs: Option<String>,
+    /// `--peer`: this process is the far end of somebody's `--vs`.
+    peer: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -678,6 +682,8 @@ fn parse_args() -> Result<Args, String> {
     let mut threads = 0usize;
     let mut deck_set = "fixed".to_string();
     let mut paired = true;
+    let mut vs: Option<String> = None;
+    let mut peer = false;
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
     while i < argv.len() {
@@ -695,6 +701,11 @@ fn parse_args() -> Result<Args, String> {
             "--seed" => seed = need(i)?.parse().map_err(|_| "--seed must be a number")?,
             "--threads" => threads = need(i)?.parse().map_err(|_| "--threads must be a number")?,
             "--decks" => deck_set = need(i)?,
+            "--vs" => vs = Some(need(i)?),
+            "--peer" => {
+                peer = true;
+                step = 1;
+            }
             "--paired" => {
                 paired = true;
                 step = 1;
@@ -719,7 +730,13 @@ fn parse_args() -> Result<Args, String> {
                      --bench runs the committed throughput configuration ({BENCH_PROFILE}\n\
                      mirror, {BENCH_GAMES} games x fixed decks, seed {BENCH_SEED}) and reports\n\
                      games/sec, decisions/sec, turns/game, stalls and peak RSS. Compare\n\
-                     against the baseline in PERF.md; release builds only."
+                     against the baseline in PERF.md; release builds only.\n\
+                     --vs PATH plays THIS build's bot (side A) against the bot in the\n\
+                     bot_ladder at PATH (side B), one child process per thread, and\n\
+                     reports the win rate. Both builds play the same seeded games; a\n\
+                     state divergence aborts the run rather than being averaged in.\n\
+                     Run it against a copy of itself first: the null is every pair\n\
+                     split at 50.0%. --peer is the far end and is not run by hand."
                 );
                 std::process::exit(0);
             }
@@ -803,6 +820,8 @@ fn parse_args() -> Result<Args, String> {
         deck_set,
         paired,
         bench,
+        vs,
+        peer,
     })
 }
 
@@ -822,7 +841,19 @@ struct Row {
 /// count and assert the aggregate is unchanged — one job-loop, one measured
 /// invariant (see filter 11: a rule spelled out twice drifts). `quiet`
 /// suppresses the idle-worker note on the replay pass.
-fn run_jobs(field: &[Archetype], args: &Args, threads: usize, quiet: bool) -> (SimCost, Vec<Row>) {
+///
+/// `peers` is empty in the ordinary ladder and holds one peer process per
+/// worker under `--vs`: worker `w` sends its chunk to `peers[w]` as a
+/// [`Msg::Job`] and then plays it in lockstep with that process. The queue
+/// itself is not shared with the peers — they are told which chunk to play,
+/// so both sides walk the same schedule without a second job loop.
+fn run_jobs(
+    field: &[Archetype],
+    args: &Args,
+    threads: usize,
+    quiet: bool,
+    peers: &mut [Option<CrossGame>],
+) -> (SimCost, Vec<Row>) {
     // Split each archetype's games into chunks and hand them to a shared
     // job queue, so a slow archetype doesn't leave cores idle at the end.
     //
@@ -888,8 +919,17 @@ fn run_jobs(field: &[Archetype], args: &Args, threads: usize, quiet: bool) -> (S
             .collect(),
     );
 
+    // One worker faulting voids every other worker's games too, so they
+    // stop at the next chunk boundary rather than finishing a run whose
+    // aggregate no longer means anything.
+    let aborted = std::sync::atomic::AtomicBool::new(false);
     std::thread::scope(|s| {
+        let mut slots = peers.iter_mut();
         for _ in 0..threads {
+            let mut peer: Option<&mut CrossGame> = slots.next().and_then(|p| p.as_mut());
+            // Only `peer` is owned per worker; the rest is shared, so the
+            // `move` closure has to capture references to it.
+            let (jobs, next, cost, rows, aborted) = (&jobs, &next, &cost, &rows, &aborted);
             // A worker plays whole games, and resolution recurses through
             // `Effect` trees with debug-build frames big enough that the
             // 2 MB spawn default runs out on deep boards — this crashed a
@@ -897,19 +937,40 @@ fn run_jobs(field: &[Archetype], args: &Args, threads: usize, quiet: bool) -> (S
             // the same for the same reason.
             let builder = std::thread::Builder::new().stack_size(32 * 1024 * 1024);
             builder
-                .spawn_scoped(s, || {
+                .spawn_scoped(s, move || {
                     loop {
+                        if aborted.load(Ordering::Relaxed) {
+                            break;
+                        }
                         let i = next.fetch_add(1, Ordering::Relaxed);
                         let Some(job) = jobs.get(i) else { break };
+                        // Tell this worker's peer which chunk to play before
+                        // either side starts it; from here the two processes
+                        // walk the same schedule off the same seed.
+                        if let Some(cx) = peer.as_deref_mut() {
+                            let m = Msg::Job {
+                                arch: job.arch,
+                                units: job.units,
+                                seed: job.seed,
+                            };
+                            if let Err(e) = cx.link_mut().send(&m) {
+                                cx.fault.get_or_insert(e);
+                                aborted.store(true, Ordering::Relaxed);
+                                break;
+                            }
+                        }
+                        let cx: Option<&mut CrossGame> = peer.as_deref_mut();
                         let d = &field[job.arch].deck;
                         let (wins_a, wins_b, undecided, pairs, job_cost) = if args.paired {
-                            let t = simulate_match_pairs_piloted(
+                            let t = simulate_match_pairs_cross(
                                 d,
                                 d,
                                 job.units,
                                 [args.a, args.b],
                                 50_000,
                                 job.seed,
+                                cx,
+                                true,
                             );
                             // `CRAB_PAIR_SWEEPS=1`: name every pair that did
                             // *not* split. In a self-mirror the two games of a
@@ -940,16 +1001,24 @@ fn run_jobs(field: &[Archetype], args: &Args, threads: usize, quiet: bool) -> (S
                             }
                             (t.wins_a, t.wins_b, t.undecided, t.pairs, t.cost)
                         } else {
-                            let t = simulate_match_games_piloted(
+                            let t = simulate_match_games_cross(
                                 d,
                                 d,
                                 job.units,
                                 [args.a, args.b],
                                 50_000,
                                 Some(job.seed),
+                                cx,
+                                true,
                             );
                             (t.wins_a, t.wins_b, t.undecided, Vec::new(), t.cost)
                         };
+                        // A faulted chunk is not a partial result: its tally
+                        // stops mid-game, so it is dropped whole.
+                        if peer.as_deref().is_some_and(|c| c.fault.is_some()) {
+                            aborted.store(true, Ordering::Relaxed);
+                            break;
+                        }
                         *cost.lock().unwrap() += job_cost;
                         let mut rows = rows.lock().unwrap();
                         let row = &mut rows[job.arch];
@@ -958,12 +1027,182 @@ fn run_jobs(field: &[Archetype], args: &Args, threads: usize, quiet: bool) -> (S
                         row.undecided += undecided;
                         row.pairs.extend(pairs);
                     }
+                    // Let the peer exit on a message rather than on EOF, so
+                    // a clean end is distinguishable from a crash.
+                    if let Some(cx) = peer
+                        && cx.fault.is_none()
+                    {
+                        let _ = cx.link_mut().send(&Msg::Done);
+                    }
                 })
                 .expect("spawn ladder worker");
         }
     });
 
     (cost.into_inner().unwrap(), rows.into_inner().unwrap())
+}
+
+/// FNV-1a over the field both builds must agree on before a single game is
+/// worth playing: every archetype's name and the printed name of every card
+/// in its deck, in order.
+///
+/// The peer is handed this build's argv, so it constructs its own field from
+/// the same `--decks`/`--seed` rather than being sent one — which is only
+/// sound while the two builds' deck lists and card definitions still line
+/// up. A catalog rename, an archetype edit or a change to the cube/sealed
+/// sampler moves this number, and the handshake refuses rather than
+/// reporting a win rate over two different fields.
+fn field_digest(field: &[Archetype]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut mix = |bytes: &[u8]| {
+        for b in bytes {
+            h ^= *b as u64;
+            h = h.wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    };
+    for a in field {
+        mix(a.name.as_bytes());
+        mix(b"|");
+        for &f in &a.deck {
+            mix(crabomination::cube::card_arc(f).name.as_bytes());
+            mix(b",");
+        }
+        mix(b";");
+    }
+    h
+}
+
+/// Start one peer process per worker and shake hands with each.
+///
+/// The child gets this process's argv with `--vs PATH` removed and `--peer`
+/// appended, so it parses the same `--decks`, `--seed`, `--games`,
+/// `--paired` and profiles and builds the same field from them. Nothing
+/// about the schedule is sent; only the chunk assignments are.
+fn spawn_peers(
+    path: &str,
+    threads: usize,
+    field: &[Archetype],
+) -> Result<(Vec<Option<CrossGame>>, Vec<std::process::Child>), String> {
+    let mut argv: Vec<String> = Vec::new();
+    let raw: Vec<String> = std::env::args().skip(1).collect();
+    let mut i = 0;
+    while i < raw.len() {
+        if raw[i] == "--vs" {
+            i += 2;
+            continue;
+        }
+        argv.push(raw[i].clone());
+        i += 1;
+    }
+    argv.push("--peer".to_string());
+    let mine = field_digest(field);
+    let (mut peers, mut children) = (Vec::new(), Vec::new());
+    for w in 0..threads {
+        let mut child = std::process::Command::new(path)
+            .args(&argv)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("spawn peer {w}: {e}"))?;
+        let w_in = child.stdin.take().ok_or("peer stdin")?;
+        let r_out = child.stdout.take().ok_or("peer stdout")?;
+        let mut cx = CrossGame::new(CrossLink::new(Box::new(r_out), Box::new(w_in)));
+        cx.link_mut()
+            .send(&Msg::Hello { proto: crabomination::crossplay::PROTO, field: mine })
+            .map_err(|e| format!("peer {w}: {e}"))?;
+        match cx.link_mut().recv() {
+            Ok(Msg::HelloOk { proto, field: theirs, build }) => {
+                if proto != crabomination::crossplay::PROTO {
+                    return Err(format!("peer speaks protocol {proto}, this build {}",
+                        crabomination::crossplay::PROTO));
+                }
+                if theirs != mine {
+                    return Err(format!(
+                        "peer builds a different field ({theirs:#018x} vs {mine:#018x}) — \
+                         the two builds' decks or card names differ, so there is no \
+                         common workload to compare them on"
+                    ));
+                }
+                if w == 0 {
+                    println!("peer: {path} ({build} build)");
+                }
+            }
+            Ok(other) => return Err(format!("peer {w}: expected HelloOk, got {other:?}")),
+            Err(e) => return Err(format!("peer {w}: {e}")),
+        }
+        peers.push(Some(cx));
+        children.push(child);
+    }
+    Ok((peers, children))
+}
+
+/// `--peer`: be the far end of somebody's `--vs`. Reads jobs off stdin and
+/// plays each in lockstep with the parent, piloting side B.
+///
+/// Deliberately a mirror of the worker loop in [`run_jobs`] rather than a
+/// second scheduler: the parent names the chunk, so this side never decides
+/// what to play, only how to play it.
+fn run_peer(field: &[Archetype], args: &Args) -> i32 {
+    let mut cx = CrossGame::new(CrossLink::stdio());
+    let mine = field_digest(field);
+    match cx.link_mut().recv() {
+        Ok(Msg::Hello { proto, field: theirs }) => {
+            if proto != crabomination::crossplay::PROTO {
+                eprintln!("peer: protocol {proto} vs {}", crabomination::crossplay::PROTO);
+                return 3;
+            }
+            if theirs != mine {
+                eprintln!("peer: field digest {mine:#018x} vs parent's {theirs:#018x}");
+                return 3;
+            }
+        }
+        Ok(other) => {
+            eprintln!("peer: expected Hello, got {other:?}");
+            return 3;
+        }
+        Err(e) => {
+            eprintln!("peer: {e}");
+            return 3;
+        }
+    }
+    let ok = Msg::HelloOk { proto: crabomination::crossplay::PROTO, field: mine, build: build_profile().to_string() };
+    if let Err(e) = cx.link_mut().send(&ok) {
+        eprintln!("peer: {e}");
+        return 3;
+    }
+    loop {
+        let job = match cx.link_mut().recv() {
+            Ok(Msg::Job { arch, units, seed }) => (arch, units, seed),
+            Ok(Msg::Done) => return 0,
+            Ok(other) => {
+                eprintln!("peer: expected Job, got {other:?}");
+                return 3;
+            }
+            Err(e) => {
+                eprintln!("peer: {e}");
+                return 3;
+            }
+        };
+        let (arch, units, seed) = job;
+        let Some(a) = field.get(arch) else {
+            eprintln!("peer: parent named archetype {arch} of {}", field.len());
+            return 3;
+        };
+        let d = &a.deck;
+        if args.paired {
+            simulate_match_pairs_cross(
+                d, d, units, [args.a, args.b], 50_000, seed, Some(&mut cx), false,
+            );
+        } else {
+            simulate_match_games_cross(
+                d, d, units, [args.a, args.b], 50_000, Some(seed), Some(&mut cx), false,
+            );
+        }
+        if let Some(f) = &cx.fault {
+            eprintln!("peer: {f}");
+            return 3;
+        }
+    }
 }
 
 /// Whether two runs of the same workload produced the same outcome, ignoring
@@ -1044,6 +1283,9 @@ fn main() {
             std::process::exit(2);
         }
     };
+    if args.peer {
+        std::process::exit(run_peer(&field, &args));
+    }
     let threads = if args.threads > 0 {
         args.threads
     } else {
@@ -1052,10 +1294,30 @@ fn main() {
             .unwrap_or(1)
     };
 
+    // `--vs`: one peer process per worker, each handed this build's argv so
+    // it constructs the identical field, queue-free. Spawned before the
+    // banner so a handshake failure costs nothing.
+    let mut peers: Vec<Option<CrossGame>> = Vec::new();
+    let mut children: Vec<std::process::Child> = Vec::new();
+    if let Some(path) = &args.vs {
+        match spawn_peers(path, threads, &field) {
+            Ok((p, c)) => {
+                peers = p;
+                children = c;
+            }
+            Err(e) => {
+                eprintln!("error: --vs {path}: {e}");
+                std::process::exit(3);
+            }
+        }
+    }
+
     println!(
-        "ladder: {} (A) vs {} (B) — {} games x {} {} decks on {threads} threads, seed {}{}",
+        "ladder: {} (A{}) vs {} (B{}) — {} games x {} {} decks on {threads} threads, seed {}{}",
         args.a_name,
+        if args.vs.is_some() { ", this build" } else { "" },
         args.b_name,
+        if args.vs.is_some() { ", peer build" } else { "" },
         args.games,
         field.len(),
         args.deck_set,
@@ -1067,7 +1329,24 @@ fn main() {
     // opt-in thread-determinism guard below can replay the identical workload
     // without a second, drifting copy of the loop.
     let started = std::time::Instant::now();
-    let (cost, rows) = run_jobs(&field, &args, threads, false);
+    let (cost, rows) = run_jobs(&field, &args, threads, false, &mut peers);
+    // A fault is not a result: the two builds stopped agreeing about what an
+    // action does, so every game after it — on any worker — is void.
+    if let Some(f) = peers.iter().flatten().find_map(|c| c.fault.as_ref()) {
+        eprintln!("\ncross-ladder fault: {f}");
+        eprintln!(
+            "The two builds' ENGINES disagree, not just their bots. \
+             `--vs` gates a change to how the bot chooses; a change to how an \
+             action resolves shows up here and has to be gated on traces and \
+             the suite instead."
+        );
+        drop(peers);
+        for c in &mut children {
+            let _ = c.kill();
+            let _ = c.wait();
+        }
+        std::process::exit(3);
+    }
     const Z: f64 = 1.96;
     println!();
     println!(
@@ -1290,9 +1569,12 @@ fn main() {
             s[0].1, s[0].0, s[1].1, s[1].0, s[2].1, s[2].0,
         );
     }
-    if std::env::var_os("CRAB_THREAD_CHECK").is_some() {
+    // The peers were spawned one per worker, so a replay at a different
+    // thread count has no peer for the extra worker and would hang. The
+    // guard is about this process's own scheduling anyway.
+    if std::env::var_os("CRAB_THREAD_CHECK").is_some() && args.vs.is_none() {
         let alt = if threads <= 1 { 2 } else { 1 };
-        let (alt_cost, alt_rows) = run_jobs(&field, &args, alt, true);
+        let (alt_cost, alt_rows) = run_jobs(&field, &args, alt, true, &mut []);
         if outcomes_match((&cost, &rows), (&alt_cost, &alt_rows)) {
             println!("  thread_determinism ok ({threads} vs {alt} threads identical)");
         } else {
@@ -1303,6 +1585,17 @@ fn main() {
                 field.len(),
             );
             std::process::exit(1);
+        }
+    }
+
+    // Peers exit on the `Done` their worker sent; reap them so a non-zero
+    // status (a fault this side did not see first) is not lost.
+    drop(peers);
+    for (w, c) in children.iter_mut().enumerate() {
+        match c.wait() {
+            Ok(st) if st.success() => {}
+            Ok(st) => eprintln!("note: peer {w} exited {st}"),
+            Err(e) => eprintln!("note: peer {w}: {e}"),
         }
     }
 }

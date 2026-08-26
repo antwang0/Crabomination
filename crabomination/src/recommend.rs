@@ -1271,6 +1271,26 @@ pub fn simulate_match_games_piloted(
     max_actions: usize,
     seed_base: Option<u64>,
 ) -> MatchTally {
+    simulate_match_games_cross(deck_a, deck_b, games, pilots, max_actions, seed_base, None, true)
+}
+
+/// [`simulate_match_games_piloted`] against the build on the far end of
+/// `cross` — the unpaired control arm of the cross-binary ladder. The
+/// unseeded jitter this arm keeps is per-process and so costs the mirrors
+/// nothing: tie-breaks decide *actions*, and the actions are what crosses
+/// the link. `seed_base` must be `Some` (the shuffle is what both sides
+/// have to agree on).
+#[allow(clippy::too_many_arguments)]
+pub fn simulate_match_games_cross(
+    deck_a: &[CardFactory],
+    deck_b: &[CardFactory],
+    games: usize,
+    pilots: [Pilot; 2],
+    max_actions: usize,
+    seed_base: Option<u64>,
+    mut cross: Option<&mut crate::crossplay::CrossGame>,
+    i_am_a: bool,
+) -> MatchTally {
     // Build the two seat arrangements ONCE (libraries loaded, unshuffled)
     // and clone per game — definitions are Arc'd, so a state clone is a
     // fraction of re-invoking ~80 card factories per game.
@@ -1299,7 +1319,23 @@ pub fn simulate_match_games_piloted(
             if a_seat0 { [pilots[0], pilots[1]] } else { [pilots[1], pilots[0]] };
         // Unpaired games keep the unseeded jitter: this is the control
         // arm, and seeding it here would quietly change what it measures.
-        let outcome = play_one_game(template, seated, max_actions, shuffle_rng.as_mut(), None);
+        let outcome = match &mut cross {
+            None => play_one_game(template, seated, max_actions, shuffle_rng.as_mut(), None),
+            Some(cx) => {
+                cx.seat_at(usize::from(a_seat0 != i_am_a));
+                play_one_game_traced(
+                    template,
+                    seated,
+                    max_actions,
+                    shuffle_rng.as_mut(),
+                    None,
+                    GameHooks { cross: Some(&mut **cx), ..Default::default() },
+                )
+            }
+        };
+        if cross.as_ref().is_some_and(|cx| cx.fault.is_some()) {
+            return tally;
+        }
         tally.cost.record(&outcome);
         match outcome.winner {
             Some(seat) => {
@@ -1424,6 +1460,35 @@ pub fn simulate_match_pairs_piloted(
     max_actions: usize,
     seed_base: u64,
 ) -> PairedTally {
+    simulate_match_pairs_cross(deck_a, deck_b, pairs, pilots, max_actions, seed_base, None, true)
+}
+
+/// [`simulate_match_pairs_piloted`] with the other build on the far end of
+/// `cross`: side A is this process when `i_am_a`, and the pilot for the seat
+/// this process does *not* hold is the peer's bot rather than `pilots[..]`.
+///
+/// Both processes run this same loop over the same seeds, so the pair
+/// structure, the shuffles and the seat swap are identical on both sides and
+/// nothing about the schedule has to be sent. What differs is only which
+/// seat each polls. See `crate::crossplay`.
+///
+/// The jitter seed is salted by seat here and not in the in-process loop:
+/// one process interleaves both seats' draws on one stream, two processes
+/// each have their own, and salting keeps the two seats independent while
+/// leaving a pair's second game an exact replay of the first with the
+/// binaries swapped — which is what makes a self-vs-self run split every
+/// pair.
+#[allow(clippy::too_many_arguments)]
+pub fn simulate_match_pairs_cross(
+    deck_a: &[CardFactory],
+    deck_b: &[CardFactory],
+    pairs: usize,
+    pilots: [Pilot; 2],
+    max_actions: usize,
+    seed_base: u64,
+    mut cross: Option<&mut crate::crossplay::CrossGame>,
+    i_am_a: bool,
+) -> PairedTally {
     let template_a0 = build_match_template(deck_a, deck_b);
     let template_b0 = build_match_template(deck_b, deck_a);
     let mut tally = PairedTally {
@@ -1447,8 +1512,30 @@ pub fn simulate_match_pairs_piloted(
             // Both games of the pair get the *same* jitter stream, so the
             // bots' tie-breaks replay identically and the only thing left
             // that can separate the two games is the profiles themselves.
-            let outcome =
-                play_one_game(template, seated, max_actions, Some(&mut shuffle_rng), Some(seed));
+            let outcome = match &mut cross {
+                None => play_one_game(
+                    template,
+                    seated,
+                    max_actions,
+                    Some(&mut shuffle_rng),
+                    Some(seed),
+                ),
+                Some(cx) => {
+                    let my_seat = usize::from(a_seat0 != i_am_a);
+                    cx.seat_at(my_seat);
+                    play_one_game_traced(
+                        template,
+                        seated,
+                        max_actions,
+                        Some(&mut shuffle_rng),
+                        Some(seed ^ (my_seat as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)),
+                        GameHooks { cross: Some(&mut **cx), ..Default::default() },
+                    )
+                }
+            };
+            if cross.as_ref().is_some_and(|cx| cx.fault.is_some()) {
+                return tally;
+            }
             tally.cost.record(&outcome);
             match outcome.winner {
                 Some(seat) => {
@@ -1548,7 +1635,14 @@ pub(crate) fn play_one_game(
     shuffle_rng: Option<&mut StdRng>,
     jitter_seed: Option<u64>,
 ) -> GameOutcome {
-    play_one_game_traced(template, pilots, max_actions, shuffle_rng, jitter_seed, None)
+    play_one_game_traced(
+        template,
+        pilots,
+        max_actions,
+        shuffle_rng,
+        jitter_seed,
+        GameHooks::default(),
+    )
 }
 
 /// A full game's observable history: one line per accepted action, each
@@ -1611,7 +1705,7 @@ pub fn trace_game(
         max_actions,
         Some(&mut rng),
         Some(seed),
-        Some(&mut lines),
+        GameHooks { trace: Some(&mut lines), ..Default::default() },
     );
     GameTrace { lines, winner: o.winner, turns: o.turns }
 }
@@ -1643,14 +1737,28 @@ fn trace_state(g: &GameState) -> String {
     )
 }
 
+/// The optional observers a game can be played under. Both are off on the
+/// hot path; bundled so the play loop keeps one signature as they are added
+/// (see filter 11 — the alternative is a second hand-written copy of the
+/// loop per observer, and the two then drift).
+#[derive(Default)]
+pub(crate) struct GameHooks<'a> {
+    /// One line per accepted action; see [`GameTrace`].
+    pub trace: Option<&'a mut Vec<String>>,
+    /// The other build's half of a cross-binary game: this process polls
+    /// only `cross.seat` and reads the other seat's actions off the link.
+    pub cross: Option<&'a mut crate::crossplay::CrossGame>,
+}
+
 fn play_one_game_traced(
     template: &GameState,
     pilots: [Pilot; 2],
     max_actions: usize,
     shuffle_rng: Option<&mut StdRng>,
     jitter_seed: Option<u64>,
-    mut trace: Option<&mut Vec<String>>,
+    hooks: GameHooks<'_>,
 ) -> GameOutcome {
+    let GameHooks { mut trace, mut cross } = hooks;
     // Installed for the duration of this game and cleared after, so a
     // seeded game can't leak its stream into whatever the worker plays
     // next. See `bot::set_jitter_seed`.
@@ -1684,7 +1792,30 @@ fn play_one_game_traced(
     while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
-            let Some(step) = bot.next_action_settled(&g, s) else { continue };
+            // Cross-binary: poll only the seat this process pilots and
+            // publish what it chose; the other seat's action arrives on the
+            // link, carrying the peer's digest of the state it chose in.
+            // The peer's step is always `plain` — a settled state never
+            // crosses the wire, so the receiver runs the action itself,
+            // which is what `accept_on` documents as equivalent.
+            let step = match &mut cross {
+                Some(cx) => {
+                    let pre = crate::crossplay::state_digest(&g);
+                    let step = if cx.seat == s {
+                        let step = bot.next_action_settled(&g, s);
+                        cx.publish(step.as_ref().map(|b| &b.action), pre);
+                        step
+                    } else {
+                        cx.receive(pre).map(crate::server::bot::BotStep::plain)
+                    };
+                    if cx.fault.is_some() {
+                        break;
+                    }
+                    step
+                }
+                None => bot.next_action_settled(&g, s),
+            };
+            let Some(step) = step else { continue };
             let crate::server::bot::BotStep { action, settled } = step;
             // Formatted before the move, because `perform_action` takes it
             // by value; only kept when the move is accepted.
@@ -1722,6 +1853,12 @@ fn play_one_game_traced(
                     break;
                 }
             }
+        }
+        // A fault voids the run, not this game: the two builds no longer
+        // agree about what an action does, so nothing after it is a
+        // comparison. Stop here and let the caller report it.
+        if cross.as_ref().is_some_and(|cx| cx.fault.is_some()) {
+            break;
         }
         if any { stale = 0 } else { stale += 1 }
     }

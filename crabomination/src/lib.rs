@@ -23,6 +23,7 @@ mod card_registry;
 pub mod audit;
 
 pub mod cow;
+pub mod crossplay;
 pub mod cube;
 pub mod decklist;
 pub mod decision;
