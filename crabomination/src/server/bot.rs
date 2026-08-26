@@ -4154,6 +4154,10 @@ fn cast_candidates(
     seat: usize,
     probe: &ProbeCell,
     w: &EvalWeights,
+    // A [`SweepMana`] the caller already owns, so one tick's affordability
+    // reads — this function's *and* `sink_facts`' — share one
+    // `available_mana`. `None` builds a private one.
+    shared: Option<&SweepMana<'_>>,
 ) -> Vec<(GameAction, bool)> {
     // Build list of castable non-land spells. Affordability + target
     // pre-filters reduce the candidate set; the FINAL gate is still the
@@ -4173,7 +4177,14 @@ fn cast_candidates(
     let has_repartee = facts.repartee;
     // One producible-mana read for every affordability filter in this
     // function — see `SweepMana`.
-    let have_mana = SweepMana::new(state, seat);
+    let owned_mana;
+    let have_mana: &SweepMana<'_> = match shared {
+        Some(h) => h,
+        None => {
+            owned_mana = SweepMana::new(state, seat);
+            &owned_mana
+        }
+    };
     let mut unvalidated: Vec<GameAction> = state.players[seat]
         .hand
         .iter()
@@ -4190,7 +4201,7 @@ fn cast_candidates(
         // is a `SourceGiftPromised`-gated ETB) is wasted by a plain cast; it
         // gets a `CastGift` candidate in the gift block below instead.
         .filter(|c| !(c.definition.gift.is_some() && matches!(c.definition.effect, Effect::Noop)))
-        .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, have_mana))
         .flat_map(|c| {
             // For modal effects (ChooseMode), enumerate each mode so the
             // bot can pick (e.g.) Drown in the Loch's mode 1 (destroy
@@ -4417,7 +4428,7 @@ fn cast_candidates(
         .hand
         .iter()
         .filter(|c| c.definition.gift.is_some())
-        .filter(|c| can_afford_in_state_with(state, seat, c, w, &have_mana))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, have_mana))
     {
         let gifted = &c.definition.gift.as_ref().unwrap().gifted_effect;
         // The ETB payoff of a permanent gift lives on the creature, not the
@@ -5368,7 +5379,7 @@ fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
 
 /// One walk of the seat's hand, battlefield and graveyard for every fallback
 /// generator's entry predicate — see [`sink`].
-fn sink_facts(state: &GameState, seat: usize) -> u32 {
+fn sink_facts(state: &GameState, seat: usize, have: &SweepMana<'_>) -> u32 {
     use crate::card::{ArtifactSubtype, Keyword};
     let mut m = 0;
     for c in state.players[seat].hand.iter() {
@@ -5419,6 +5430,24 @@ fn sink_facts(state: &GameState, seat: usize) -> u32 {
                 )
             });
         for (_, ab) in usable_abilities(state, c, &scan) {
+            // An ability whose *colour* pips this board cannot cover can never
+            // be activated, so it must not light its sink bit: the gate is
+            // what keeps the whole `gated_pick!` chain below from walking the
+            // battlefield, building an action and paying for a ~50 k-Ir
+            // dry-run probe on it. 59 % of the simulator's non-mana
+            // activations failed their payment before this line. Sound
+            // against the printed cost — see `colors_coverable`.
+            // The coloured-pip test first, off the printed cost alone: it is
+            // what decides whether the sweep's `available_mana` has to be
+            // forced at all, and on an archetype pool whose abilities are
+            // `{T}` or generic that read is pure cost (measured +0.292 % of
+            // `fixed` when this gate was unconditional, against -0.562 % of
+            // `cube`).
+            if ab.mana_cost.symbols.iter().any(|sym| matches!(sym, crate::mana::ManaSymbol::Colored(_)))
+                && !colors_coverable(&ab.mana_cost, have.get())
+            {
+                continue;
+            }
             m |= ability_sink_bits(&ab);
         }
     }
@@ -5479,6 +5508,11 @@ fn main_phase_action_with(
     // this template instead of rebuilding one, and a `GameState` clone is
     // reference bumps over CoW zones (see `affordance_probe_template`).
     let probe = ProbeCell::new();
+    // One producible-mana read per tick, shared by `cast_candidates`' hand
+    // filter and `sink_facts`' ability gate. Lazy (`SweepMana`), so a tick
+    // that reaches neither pays nothing — pass 40 measured +0.35 % for an
+    // eager read here.
+    let have_mana = SweepMana::new(state, seat);
 
     // NOTE: the bot deliberately does *not* pre-tap its mana sources here.
     //
@@ -5519,7 +5553,7 @@ fn main_phase_action_with(
     }
 
     // Everything castable this tick — see `cast_candidates`.
-    let pool = cast_candidates(state, seat, &probe, w);
+    let pool = cast_candidates(state, seat, &probe, w, Some(&have_mana));
 
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
@@ -5737,7 +5771,7 @@ fn main_phase_action_with(
     // Below here the bot has no cast and no land, and every generator that
     // follows used to take its own walk of the seat's board to ask "is there
     // anything here for me". One walk answers all of them — see `sink`.
-    let sinks = sink_facts(state, seat);
+    let sinks = sink_facts(state, seat, &have_mana);
 
     // Morph / Disguise (CR 702.36 / 702.166): cast a hand card face down for
     // {3} as a 2/2 (with ward {2} for Disguise). Reached only when no normal
@@ -8015,7 +8049,7 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<Picked> {
         && g.active_player_idx == p
     {
         let probe = ProbeCell::new();
-        let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, p, &probe, w)
+        let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, p, &probe, w, None)
             .into_iter()
             .map(|(a, ok)| (score_candidate(g, p, &a, w), a, ok))
             .collect();
@@ -9225,7 +9259,14 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     // not, so this estimate sees a Mountain where auto-tap sees all five
     // colours. `false` from the gate is authoritative.
     if fused_relax || opaque_source || state.land_type_change_in_scope() {
-        out.by_color = [out.total; 5];
+        // `u32::MAX`, not `total`: widening to `total` is only as good as
+        // `total`, and `total` deliberately under-counts the same sources
+        // that force the widening. Two Treasures and nothing else read
+        // `total = 0`, so `[total; 5]` still rejected every coloured pip
+        // while the engine sacrificed a Treasure and paid — the whole point
+        // of the widening is that this estimate cannot bound the colour, and
+        // `cmc <= total` remains the separate test it always was.
+        out.by_color = [u32::MAX; 5];
     }
     out
 }
@@ -10776,7 +10817,7 @@ fn follow_up_candidates(g: &GameState, seat: usize, w: &EvalWeights) -> Vec<Game
         return Vec::new();
     }
     let probe = ProbeCell::new();
-    let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, seat, &probe, w)
+    let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(g, seat, &probe, w, None)
         .into_iter()
         .map(|(a, ok)| (score_candidate(g, seat, &a, w), a, ok))
         .collect();
@@ -11362,7 +11403,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
     w: &EvalWeights,
 ) -> Vec<(GameAction, i32)> {
     let probe = ProbeCell::new();
-    let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(state, seat, &probe, w)
+    let mut ranked: Vec<(i32, GameAction, bool)> = cast_candidates(state, seat, &probe, w, None)
         .into_iter()
         .map(|(a, ok)| (score_candidate(state, seat, &a, w), a, ok))
         .collect();
@@ -15541,7 +15582,7 @@ mod stack_response_tests {
         g.players[1].graveyard.push(card);
         let probe = ProbeCell::new();
         let has_arm = |w: &EvalWeights| {
-            cast_candidates(&g, 0, &probe, w).iter().any(|(a, _)| {
+            cast_candidates(&g, 0, &probe, w, None).iter().any(|(a, _)| {
                 matches!(a, GameAction::ActivateAbility { card_id, .. } if *card_id == archaic)
             })
         };
