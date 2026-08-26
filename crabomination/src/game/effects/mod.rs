@@ -1872,16 +1872,20 @@ impl GameState {
         self.named_card_this_resolution = None;
         self.names_this_resolution.clear();
         let mut events = vec![];
-        let prev_targets = std::mem::replace(
-            &mut self.resolution_targets,
+        // Most resolutions target nothing, and an empty `collect()` is still
+        // a `Vec::from_iter` call with its size-hint dance — see PERF's (-45).
+        let new_targets: Vec<CardId> = if ctx.targets.is_empty() {
+            Vec::new()
+        } else {
             ctx.targets
                 .iter()
                 .filter_map(|t| match t {
                     Target::Permanent(id) => Some(*id),
                     _ => None,
                 })
-                .collect(),
-        );
+                .collect()
+        };
+        let prev_targets = std::mem::replace(&mut self.resolution_targets, new_targets);
         let ran = self.run_effect(effect, ctx, &mut events);
         self.resolution_targets = prev_targets;
         self.resolution_depth = self.resolution_depth.saturating_sub(1);
@@ -1895,7 +1899,12 @@ impl GameState {
         // player's control mints one extra rider token per
         // `TokenCreationAddsToken` static that player controls (single
         // application per resolution, CR 614.13-flavor).
-        let minted_for: Vec<usize> = {
+        // Nothing minted, nothing to ride along — and the walk below opens
+        // with a `collect()` that is empty on every resolution that created
+        // no token, which is nearly all of them.
+        let minted_for: Vec<usize> = if self.last_created_tokens.is_empty() {
+            Vec::new()
+        } else {
             let mut v: Vec<usize> = self
                 .last_created_tokens
                 .iter()

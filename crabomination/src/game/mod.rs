@@ -13606,6 +13606,11 @@ impl GameState {
     }
 
     pub fn blockers_of(&self, attacker: CardId) -> Vec<CardId> {
+        // Asked outside combat and on every unblocked attacker; the map is
+        // empty for most of a game and an empty `collect()` is not free.
+        if self.block_map.is_empty() {
+            return Vec::new();
+        }
         let mut ids: Vec<CardId> = self
             .block_map
             .iter()
@@ -16590,17 +16595,30 @@ impl GameState {
         // `PermanentDied` covers non-creature deaths (a watched artifact —
         // Melira's return rider); a creature death lists its id twice, which
         // is harmless since a fired watcher is removed.
-        let died: Vec<CardId> = events
-            .iter()
-            .filter_map(|e| match e {
-                GameEvent::CreatureDied { card_id }
-                | GameEvent::PermanentDied { card_id, .. } => Some(*card_id),
-                _ => None,
-            })
-            // CR 700.4 — a redirected death (exile / library-top) never
-            // happened; "when [card] dies" watchers keep watching.
-            .filter(|card_id| !self.death_was_replaced(*card_id))
-            .collect();
+        // Ask the batch before building anything: most dispatches carry no
+        // death event at all, and an empty `collect()` is still a
+        // `Vec::from_iter` call with its size-hint dance (PERF's (-45)).
+        let any_death = events.iter().any(|e| {
+            matches!(
+                e,
+                GameEvent::CreatureDied { .. } | GameEvent::PermanentDied { .. }
+            )
+        });
+        let died: Vec<CardId> = if !any_death {
+            Vec::new()
+        } else {
+            events
+                .iter()
+                .filter_map(|e| match e {
+                    GameEvent::CreatureDied { card_id }
+                    | GameEvent::PermanentDied { card_id, .. } => Some(*card_id),
+                    _ => None,
+                })
+                // CR 700.4 — a redirected death (exile / library-top) never
+                // happened; "when [card] dies" watchers keep watching.
+                .filter(|card_id| !self.death_was_replaced(*card_id))
+                .collect()
+        };
         if !died.is_empty() {
             use crate::game::types::DelayedKind;
             let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
@@ -16665,13 +16683,18 @@ impl GameState {
         // "Whenever a creature attacks you or a planeswalker you control"
         // floating triggers (Tamiyo +2). Fire once per qualifying attacker;
         // the attacker is the trigger source.
-        let attackers: Vec<CardId> = events
-            .iter()
-            .filter_map(|e| match e {
-                GameEvent::AttackerDeclared(id) => Some(*id),
-                _ => None,
-            })
-            .collect();
+        let attackers: Vec<CardId> =
+            if !events.iter().any(|e| matches!(e, GameEvent::AttackerDeclared(_))) {
+                Vec::new()
+            } else {
+                events
+                    .iter()
+                    .filter_map(|e| match e {
+                        GameEvent::AttackerDeclared(id) => Some(*id),
+                        _ => None,
+                    })
+                    .collect()
+            };
         if !attackers.is_empty() {
             use crate::game::types::DelayedKind;
             let watchers: Vec<crate::game::types::DelayedTrigger> = self
