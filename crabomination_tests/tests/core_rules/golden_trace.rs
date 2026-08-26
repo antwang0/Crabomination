@@ -291,7 +291,15 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // where a seat within two swings of dead now chumps instead of
     // taking it. Same winner, same turn and action counts — only the
     // digest differs, which is what a single changed block looks like.
-    (2, Some(1), 16, 384, 0x5afa_f7ec_cd95_0dcd),
+    // Re-blessed 2026-08-26 for the per-colour affordability budget: the
+    // bot's pre-filter used to offer a spell whenever *some* source made
+    // each of its colours, so `{G}{G}` off a lone Forest reached the pick
+    // site and was thrown away by the engine's payment. Seed 2 contains one
+    // such offer; the bot now takes its next line instead. Same winner, same
+    // turn count, same action count — only the digest moves, and the filter
+    // is sound by measurement (zero cases where `could_pay_cost` accepts a
+    // cost the budget rejects, over 21 pool/seed configurations).
+    (2, Some(1), 16, 384, 0x3613_7e1d_7496_f4dc),
     (3, Some(0), 19, 439, 0x082b_ac63_0f2d_3f42),
     // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
     // auto-target path used to take the first legal permanent in

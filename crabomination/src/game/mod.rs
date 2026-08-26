@@ -7705,6 +7705,47 @@ impl GameState {
             || seat.is_some_and(|s| self.players[s].command.iter().any(spell_permission))
     }
 
+    /// A cheap *superset* of [`spend_mana_as_any_color_for_spell`] with the
+    /// spell unknown: true whenever some spell of `seat`'s could pick up the
+    /// CR 609.4b relaxation. The bot's per-card affordability filter has no
+    /// `SpellKind` to ask with, and it must not build a per-colour budget
+    /// while one of these could apply — the relaxation is exactly the case
+    /// where a colour's own producers stop bounding what can pay its pips.
+    ///
+    /// [`spend_mana_as_any_color_for_spell`]: Self::spend_mana_as_any_color_for_spell
+    pub fn spend_mana_as_any_color_possible_for(&self, seat: usize) -> bool {
+        if self.players[seat].may_spend_any_color_this_turn
+            || !self.colored_mana_becomes_this_turn.is_empty()
+        {
+            return true;
+        }
+        self.battlefield.iter().any(|c| self.card_may_grant_any_color_spend(c, seat))
+            || self.players[seat]
+                .command
+                .iter()
+                .any(|c| self.card_may_grant_any_color_spend(c, seat))
+    }
+
+    /// The per-card half of [`spend_mana_as_any_color_possible_for`], exposed
+    /// so a caller already walking the battlefield folds it into its own pass
+    /// instead of taking a second one (`bot::available_mana` does).
+    ///
+    /// [`spend_mana_as_any_color_possible_for`]: Self::spend_mana_as_any_color_possible_for
+    pub fn card_may_grant_any_color_spend(
+        &self,
+        c: &crate::card::CardInstance,
+        seat: usize,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        let mine = c.controller == seat && !c.face_down;
+        c.definition.static_abilities.iter().any(|sa| match sa.effect {
+            StaticEffect::PlayersMaySpendManaAsAnyColor => true,
+            StaticEffect::MaySpendManaAsAnyColorForNamedSpells
+            | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => mine,
+            _ => false,
+        })
+    }
+
     /// The cost as it must actually be paid: with a Lattice-style
     /// spend-as-any-color permission active, every coloured pip becomes generic
     /// (`{C}` pips are unaffected — CR 609.4b speaks of colours only).

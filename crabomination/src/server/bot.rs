@@ -9067,6 +9067,21 @@ struct AvailableMana {
     total: u32,
     /// Colors at least one source could produce.
     colors: crate::mana::ColorSet,
+    /// Per-colour upper bound, indexed by
+    /// [`crate::game::actions::color_index`] — the pool's mana of that colour
+    /// plus, for every untapped countable source that could make it, that
+    /// source's best single-activation amount. Deliberately over-counted (a
+    /// source that makes *one* of `{W}` or `{U}` adds its amount to both, and
+    /// a "{T}: add {C}{C}" / "{T}: add {G}" pair adds 2 to green), so a
+    /// shortfall here is a *proof* the colour can't be covered.
+    ///
+    /// `colors` alone answers "is there any producer", which passes
+    /// **{G}{G} against a lone Forest** — the largest class of cast attempt
+    /// the engine then rejects at payment (PERF (-51): 31.9 % of payments are
+    /// rolled back). This is the singleton case of Hall's condition; the
+    /// multi-colour subsets stay unasked, so the estimate is still an
+    /// over-approximation, just a tighter one.
+    by_color: [u32; 5],
     /// Whether true colorless ({C}) is producible.
     colorless: bool,
 }
@@ -9084,35 +9099,113 @@ struct AvailableMana {
 fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     use crate::mana::{Color, ColorSet};
     let pool = &state.players[seat].mana_pool;
+    use crate::game::actions::color_index;
     let mut out = AvailableMana {
         total: pool.total(),
         colors: ColorSet::empty(),
+        by_color: [0; 5],
         colorless: pool.colorless_amount() > 0,
     };
     for c in Color::ALL {
         if pool.amount(c) > 0 {
             out.colors.insert(c);
+            out.by_color[color_index(c)] += pool.amount(c);
         }
     }
     // One board-level grant scan for the whole sweep instead of one per
     // untapped permanent (see `GameState::grant_scan`).
     let scan = state.grant_scan();
-    for p in state.battlefield.iter().filter(|p| p.controller == seat && !p.tapped) {
+    // Two facts that invalidate a per-colour budget, folded into the walk
+    // below rather than paid as two more battlefield passes: a CR 609.4b
+    // spend-as-any-colour permission that could reach some spell of `seat`'s,
+    // and a mana-production multiplier (one source then covers two pips of
+    // its colour, which `mana_ability_output` does not model). The
+    // `debug_assert!` under the loop ties this copy of the variant list to
+    // the two engine functions it fuses — same device as `dispatch_board_scan`.
+    let mut fused_relax = state.players[seat].may_spend_any_color_this_turn
+        || !state.colored_mana_becomes_this_turn.is_empty()
+        || state.players[seat].command.iter().any(|c| {
+            state.card_may_grant_any_color_spend(c, seat)
+        });
+    // An untapped source whose mana shape this estimate cannot cost — see the
+    // `is_countable_mana_ability` arm in the loop.
+    let mut opaque_source = false;
+    for p in state.battlefield.iter() {
+        if !fused_relax {
+            use crate::effect::StaticEffect;
+            let mine = p.controller == seat;
+            fused_relax |= p.definition.static_abilities.iter().any(|sa| match sa.effect {
+                StaticEffect::PlayersMaySpendManaAsAnyColor => true,
+                StaticEffect::MaySpendManaAsAnyColorForNamedSpells
+                | StaticEffect::MaySpendManaAsAnyColorForCreaturesWithChosenMv => {
+                    mine && !p.face_down
+                }
+                StaticEffect::ManaProductionDoubled | StaticEffect::ManaProductionTripled => mine,
+                _ => false,
+            });
+        }
+        if p.controller != seat || p.tapped {
+            continue;
+        }
         // Printed abilities plus anything granted to it (Cryptolith Rite
         // turning creatures into mana sources, Urza's Saga chapters), so a
         // granted mana ability doesn't read as "no mana here".
         let granted = state.granted_abilities_of(p, &scan);
         let mut best = 0u32;
+        let mut mine = ColorSet::empty();
         for a in p.definition.activated_abilities.iter().chain(granted.iter().copied()) {
             if !is_countable_mana_ability(a) {
+                // Auto-tap reads its table through `effect_produced_colors`,
+                // which sees mana shapes this estimate does not: a filter
+                // land's `{R}, {T}: add {R}{R}` (non-empty `mana_cost`), a
+                // Lotus Petal (`sac_cost`), Crystalline Crawler (no `{T}` at
+                // all — a counter cost, so it can even fire twice). `total`
+                // and `colors` have always under-counted those on purpose —
+                // the bot would rather not commit to a line it can only pay
+                // by spending the source — but a *budget* that under-counts
+                // becomes a rejection, so a source with one of these gets no
+                // per-colour budget at all.
+                opaque_source |=
+                    !crate::game::actions::effect_produced_colors(&a.effect).is_empty();
                 continue;
             }
             let (amount, colors, colorless) = mana_ability_output(&a.effect);
+            // A dynamic amount ("add {G} for each creature you control") is
+            // rounded down to one by `mana_ability_output`; the engine gets
+            // however many it really is. Same reasoning as the arm above.
+            opaque_source |= mana_amount_is_dynamic(&a.effect);
             best = best.max(amount);
+            mine = mine.union(colors);
             out.colors = out.colors.union(colors);
             out.colorless |= colorless;
         }
         out.total += best;
+        // The source's whole budget against each colour it could make — see
+        // `by_color`'s doc for why over-counting here is the sound direction.
+        for c in mine.iter() {
+            out.by_color[color_index(c)] += best;
+        }
+    }
+    debug_assert_eq!(
+        fused_relax,
+        state.spend_mana_as_any_color_possible_for(seat)
+            || state.mana_production_multiplier_for(seat) > 1,
+        "available_mana's fused budget scan drifted from the two walks it fuses",
+    );
+    // CR 609.4b — under a spend-as-any-colour permission a colour's own
+    // producers stop bounding what can pay its pips, and a doubler makes one
+    // source cover two of them. `total` already under-counts a doubler (a
+    // pre-existing, deliberate bias); don't let the per-colour budget turn
+    // that into a *new* rejection. `relax_cost_colors` is asked here with
+    // `seat: None` and so misses the seat-scoped permissions (North Star,
+    // Unexpected Potential, Emissary's Ploy); the fused scan does not.
+    // CR 305.6 — a land-type rewrite (Dryad of the Ilysian Grove, Urborg,
+    // Blood Moon) changes what a land taps for. `mana_source_table` reads it
+    // through `scan_land_type_rewrites`; `granted_abilities_of` alone does
+    // not, so this estimate sees a Mountain where auto-tap sees all five
+    // colours. `false` from the gate is authoritative.
+    if fused_relax || opaque_source || state.land_type_change_in_scope() {
+        out.by_color = [out.total; 5];
     }
     out
 }
@@ -9143,6 +9236,26 @@ fn is_countable_mana_ability(a: &ActivatedAbility) -> bool {
         && !a.from_graveyard
         && !a.from_hand
         && matches!(a.effect, Effect::AddMana { .. })
+}
+
+/// Whether a mana ability's amount is a runtime `Value` rather than a
+/// constant — [`mana_ability_output`] reports one for those, which is a
+/// *lower* bound and so cannot be spent as a per-colour budget.
+fn mana_amount_is_dynamic(eff: &Effect) -> bool {
+    use crate::effect::Value;
+    let Effect::AddMana { pool, .. } = eff else { return false };
+    let dynamic = |v: &Value| !matches!(v, Value::Const(_));
+    match pool {
+        ManaPayload::Colorless(v)
+        | ManaPayload::OfColor(_, v)
+        | ManaPayload::OfColors(_, v)
+        | ManaPayload::AnyOneColor(v)
+        | ManaPayload::AnyColors(v) => dynamic(v),
+        ManaPayload::Colors(_) => false,
+        // The rest are board-dependent palettes `mana_ability_output` answers
+        // with a flat one — never a bound.
+        _ => true,
+    }
 }
 
 /// `(most mana produced, colors it could be, produces true colorless)` for
@@ -9258,13 +9371,16 @@ fn can_afford_in_state_with(
     can_afford_from(&cost, have.get(), extra, reduction)
 }
 
-/// Could `printed` be paid from `have`? Two independent tests: enough
-/// total mana for the (taxed, reduced) mana value, and a producible
-/// source for every coloured pip.
+/// Could `printed` be paid from `have`? Three independent tests: enough
+/// total mana for the (taxed, reduced) mana value, a producible source for
+/// every coloured pip, and enough *of* each colour to cover its pips.
 ///
 /// Hybrid pips pass if *either* half is producible and Phyrexian pips
 /// always pass (life is a legal payment), matching what the real payment
-/// funnel will accept.
+/// funnel will accept. Neither is counted against a single colour's budget:
+/// a hybrid can go to whichever half is free and Phyrexian to life, so
+/// charging them to one colour would be an *under*-estimate, and this filter
+/// is only allowed to err the other way.
 fn can_afford_from(
     printed: &ManaCost,
     have: &AvailableMana,
@@ -9285,6 +9401,19 @@ fn can_afford_from(
         cost.to_mut().reduce_generic(reduction);
     }
     if cost.cmc() + extra_generic > have.total {
+        return false;
+    }
+    // Hall's condition on the singleton colour sets: `{G}{G}` off a lone
+    // Forest has a producer for green and still cannot be paid. Counted in one
+    // pass and compared against the board-derived budget, so this is five
+    // adds and five compares per hand card. See `AvailableMana::by_color`.
+    let mut need = [0u32; 5];
+    for s in cost.symbols.iter() {
+        if let ManaSymbol::Colored(c) = s {
+            need[crate::game::actions::color_index(*c)] += 1;
+        }
+    }
+    if need.iter().zip(have.by_color.iter()).any(|(n, have)| n > have) {
         return false;
     }
     cost.symbols.iter().all(|s| match s {
