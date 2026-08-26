@@ -22,8 +22,20 @@ use crate::game::{GameEvent, GameState, TriggerPush};
 /// normal board does not have. A bit is a pure over-approximation: the block
 /// it gates still runs its own controller / amount / filter tests unchanged,
 /// so a set bit can only cost a walk and a clear bit can only skip work that
-/// was a no-op. Two `debug_assert!`s prove the skipped work *was* a no-op on
-/// every damage event the suite deals.
+/// was a no-op.
+///
+/// **Why that is sound by construction, and where it is not.** Every gated
+/// block's own test is a `matches!` for one `StaticEffect` variant on a
+/// battlefield card's `static_abilities` — either the whole zone or one card
+/// found in it — and that is exactly what this walk reads, so the mask is a
+/// strict superset of what any gate can find. The two blocks that ask for
+/// something *more* than "does this variant exist on the battlefield" (the
+/// global can't-be-prevented gate, and the blocked/matching pair, which both
+/// go through helpers with their own extra conditions) carry a
+/// `debug_assert!` instead. **A leg that reads statics from anywhere else is
+/// not gateable here and is deliberately left ungated** — the Ajani emblem
+/// (`players[seat].emblems`), `damage_prevented_sources`,
+/// `prevention_shields`, and the two player flags.
 pub(crate) mod prevent_static {
     /// `DamageCantBePrevented` (Flameshadow Conjuring-style global).
     pub const CANT_PREVENT: u32 = 1 << 0;
