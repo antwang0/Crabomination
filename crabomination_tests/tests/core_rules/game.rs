@@ -250,6 +250,48 @@ fn cast_creature_fails_without_mana() {
     assert!(g.players[0].has_in_hand(id));
 }
 
+/// CR 106.4 — a failed payment rolls back the sources auto-tap tapped, and
+/// auto-tap taps what the payer **controls**, not what they own. The payment
+/// snapshot recorded only *owned* permanents, so a stolen mana source tapped
+/// by a payment that then failed stayed tapped for good.
+///
+/// Exercised through `PayOrLoseGame` (Pact of Negation's upkeep) rather than
+/// a cast: a cast that returns `Err` is undone wholesale by
+/// `perform_action`'s checkpoint, which hides the leak. The Pact *handles*
+/// its own payment failure and carries on, so the rollback is the only thing
+/// that puts the source back — and the seat is given "can't lose the game"
+/// so the resolution does not end with it eliminated.
+#[test]
+fn failed_payment_untaps_a_stolen_mana_source() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    let mut g = two_player_game();
+    // P1 owns the Forest; P0 steals it and is the only one who can tap it.
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(forest)), 0, 0);
+    g.resolve_effect(
+        &Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::Permanent },
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(g.battlefield_find(forest).unwrap().controller, 0);
+    g.players[0].cant_lose_this_turn = true;
+
+    // {3} against one green source: auto-tap takes the Forest, the pay then
+    // fails, and the rollback has to give it back.
+    let pact = Effect::PayOrLoseGame {
+        mana_cost: crabomination::mana::cost(&[crabomination::mana::generic(3)]),
+        life_cost: 0,
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&pact, &ctx).unwrap();
+
+    assert!(
+        !g.battlefield_find(forest).unwrap().tapped,
+        "the stolen Forest must be untapped again after the failed payment",
+    );
+    assert_eq!(g.players[0].mana_pool.total(), 0, "and the pool must be back to empty");
+}
+
 // ── Instants ──────────────────────────────────────────────────────────────
 
 #[test]

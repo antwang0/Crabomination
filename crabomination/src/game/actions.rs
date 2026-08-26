@@ -11568,17 +11568,25 @@ impl GameState {
 
     // ── Payment snapshot / restore ───────────────────────────────────────────
 
-    /// Capture mana pool + tapped state of every permanent owned by `payer`.
+    /// Capture mana pool + tapped state of every permanent `payer` *controls*.
     /// Used by the cast/activate/counter paths so a payment that fails
     /// mid-way (after auto-tap has already tapped lands) can be reverted to
     /// pristine state.
+    ///
+    /// **Controller, not owner** (CR 106.4 / 302.1): auto-tap taps what the
+    /// payer *controls* (`mana_source_table_inner` filters on `controller`),
+    /// so a snapshot keyed on `owner` silently omitted every stolen mana
+    /// source — a Threaten'd Birds of Paradise or a Mind Control'd land that
+    /// a failed payment had tapped stayed tapped, because
+    /// `restore_payment_state` finds nothing to put back for a card the
+    /// snapshot never recorded.
     pub(crate) fn snapshot_payment_state(&self, payer: usize) -> PaymentSnapshot {
         PaymentSnapshot {
             pool: self.players[payer].mana_pool.clone(),
             tapped: self
                 .battlefield
                 .iter()
-                .filter(|c| c.owner == payer)
+                .filter(|c| c.controller == payer)
                 .map(|c| (c.id, c.tapped))
                 .collect(),
         }
