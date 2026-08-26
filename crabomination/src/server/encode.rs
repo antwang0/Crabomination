@@ -221,6 +221,17 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
         }
     }
 
+    // Every group's size is known before its loop, and an `EncodedObject` is
+    // ~190 bytes: pushing a battlefield of twenty into an empty `Vec` is five
+    // reallocations and four memcpys of the objects already written.
+    // `encode_state` took 19,909 `RawVec::grow_one` calls over twenty
+    // `selfplay_train` games — ten a state — for 9.7 M Ir, 0.75 % of an actor.
+    // The battlefield split is by controller, so both sides reserve its whole
+    // length rather than counting first; the surplus is one allocation's
+    // slack, not a second allocation.
+    let bf = g.battlefield.len();
+    s.groups[G_BF_SELF].reserve(bf);
+    s.groups[G_BF_OPP].reserve(bf);
     for c in g.battlefield.iter() {
         let group = if c.controller == seat { G_BF_SELF } else { G_BF_OPP };
         let mut o = encode_battlefield_object(g, c, vocab);
@@ -274,6 +285,7 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // computed against this seat's own untapped sources.
     let no_cast = ablated(ABLATE_CASTABILITY);
     let sources = if no_cast { Vec::new() } else { g.untapped_mana_colors(seat) };
+    s.groups[G_HAND_SELF].reserve(g.players[seat].hand.len());
     // One mask cover for the whole hand — see `source_cover`.
     let n_sources = sources.len() as u32;
     let cover = source_cover(&sources);
@@ -297,6 +309,7 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
         s.groups[G_HAND_SELF].push(o);
     }
     for (group, p) in [(G_GY_SELF, seat), (G_GY_OPP, opp)] {
+        s.groups[group].reserve(g.players[p].graveyard.len());
         for c in g.players[p].graveyard.iter() {
             s.groups[group].push(encode_card_object(c, vocab));
         }
@@ -455,6 +468,7 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
         let idx = vocab.index_of(c.definition.name);
         counts.entry(idx).and_modify(|e| e.1 += 1).or_insert((c, 1));
     }
+    s.groups[G_LIB_SELF].reserve(counts.len());
     for (_, (c, n)) in counts {
         let mut o = encode_card_object(c, vocab);
         o.feats[27] = n as f32 / 4.0;
@@ -471,6 +485,8 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
 fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
     use crate::game::types::StackItem;
     let n = g.stack.len();
+    s.groups[G_STACK_SELF].reserve(n);
+    s.groups[G_STACK_OPP].reserve(n);
     for (i, item) in g.stack.iter().enumerate() {
         let (mut o, controller) = match item {
             StackItem::Spell { card, caster, .. } => (encode_card_object(card, vocab), *caster),
