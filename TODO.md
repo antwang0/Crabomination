@@ -27,9 +27,15 @@ claude/modern_decks origin/claude/modern_decks`. The container clones `main`,
 and **`git branch -a` does not list this branch before that fetch** — so an
 orient-yourself `git branch -a` reads as "it doesn't exist", `git checkout -b`
 off `main` then builds and tests green 2,500 commits behind, and nothing says
-so until the push is rejected. **Sessions run this branch concurrently:**
-before starting a named candidate, `git fetch` and grep PERF's Log for its
-number; two sessions took (-48) in the same hour once.
+so until the push is rejected.
+
+**Sessions run this branch concurrently, and grepping the Log for a numbered
+candidate is not enough when the entry is a table.** Two sessions took
+`restore_payment_state` in the same hour at the sixty-eighth/sixty-ninth
+passes — same let-chain, same line — because both were reading the top
+Ir/call row of the `make_mut` caller table that (-43) points at. **Push the
+code commit before you write the tracker prose**; that is the only signal the
+other session's next fetch can see.
 
 1. **Sixty-eighth pass: `fixed` -1.032 %, `sos` -0.888 %, `cube` -1.879 %** in
    Ir, four perf commits plus one bug fix, all "what does this cost when it
@@ -41,6 +47,22 @@ number; two sessions took (-48) in the same hour once.
    Ir-cheap. **Size a clone-removal pass on the clock.** New candidates
    **(-50)** (the no-op CoW write — the class *and* its ranking rule) and
    **(-49)** (`wants_ui`, 0.07 %, wants the decision-plumbing audit's eye).
+1a. **Sixty-ninth pass: `fixed` -0.130 %, `sos` -0.130 %, `cube` -0.296 %**,
+   two commits, both **(-50)** at the *zone change* rather than the payment
+   rollback, measured base `795a296e` -> tip `8147836b`. The rule they yield
+   is in (-50): **a (-50) site is a chain, not a line.** Gating five of the
+   zone-change chain's six writes moved an 8.5 M-Ir edge and the *program* by
+   -0.050 %, because `send_to_graveyard`'s `counters.clear()` two frames down
+   absorbed it; gating that too landed -0.221 % of cube. Gate from where the
+   object is handed over to its last touch, in one commit — an intermediate
+   step reads as +0.022 % on a pool. **The tell that finds a site:
+   `cg_edges.py --callees <fn>` on a `make_mut` caller row, looking for a
+   callee count that is an exact multiple of the function's own call count**
+   — 2.000x is an unconditional line, a ragged ratio is the board width.
+   **No wall-clock pair was taken for it** and the pass above says why that
+   is a real loss: batch the next two or three (-50) sites and price the
+   batch with `ab_wall.py` rather than paying the ~35-minute setup per
+   commit.
 2. **Where the next one is, and it is not in a profile: read the three lines
    under an existing `*_scan` call.** Four of this pass's five commits were a
    whole-board question asked beside a mask that could have answered it —
@@ -84,9 +106,13 @@ number; two sessions took (-48) in the same hour once.
    code. ENGINE_BACKLOG P3 carries the picker/checker disagreement (27
    single-slot bodies); P2's deck-out-loss eagerness is the open correctness
    item with a written fix and ~24 tests to reseed.
-6. **Housekeeping.** TODO **728**, PERF **8.1k**,
+6. **Housekeeping.** TODO **~760**, PERF **8.4k**,
    ENGINE_BACKLOG 3.8k, CARD_BACKLOG 4.1k, CLIENT_BACKLOG 428. Suite
-   **19,007 passed / 0 failed / 5 ignored**, 7 golden traces. Next PERF Log
+   **19,007 passed / 0 failed / 5 ignored** — that figure is the workspace
+   less the client; the two-crate gate this file prescribes builds 14
+   binaries and reports **18,747**, and the other five crates hold 260. Both
+   numbers are in PERF now, because the two commands disagree and nothing
+   said which one the record quoted. 7 golden traces. Next PERF Log
    folds are the 51st/52nd. This NEXT was 262 lines before this pass; every
    item it dropped is in PERF's Log/candidates, ENGINE_BACKLOG or
    CARD_BACKLOG, not deleted.
@@ -96,7 +122,10 @@ number; two sessions took (-48) in the same hour once.
    a change to statics / grants / layers gets a `--decks cube` reading too.
    **A change whose soundness rests on a `debug_assert!` is audited by the
    `dev`-profile grid, not the `overflow` one**: release profiles compile
-   the assertion out.
+   the assertion out. **Callgrind Ir *is* portable across these containers**
+   — two boxes read the same commit within 0.0004 % at the sixty-ninth pass —
+   so a concurrent session's Ir column is a usable base; its wall-clock and
+   RSS columns still are not.
 
 ## Standing rules for a perf pass
 

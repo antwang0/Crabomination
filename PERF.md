@@ -626,6 +626,104 @@ build.
 
 ## Baseline
 
+**Sixty-ninth pass. Base `795a296e` vs tip `8147836b`.** Two commits, the
+same class as the pass above it — **(-50)'s no-op write through a CoW
+handle** — applied to the *other* end of a permanent's life, the zone change.
+Ir readings `profiling-fast --no-default-features`, callgrind, one thread,
+`--a gang --b gang --games 6 --threads 1 --seed 1`.
+
+```text
+                          base (795a296e)   tip (8147836b)
+I refs, --decks fixed     1,156,961,796    1,155,462,053   -0.130 %
+I refs, --decks sos       1,489,888,128    1,487,957,291   -0.130 %
+I refs, --decks cube      2,653,962,531    2,646,120,404   -0.296 %
+```
+
+| step | commit | fixed | sos | cube | what |
+|---|---|---|---|---|---|
+| A | `6234a7ed` | -0.057 % | -0.084 % | **-0.221 %** | six writes on every permanent that leaves the battlefield, none of which usually change anything |
+| B | `8147836b` | -0.072 % | -0.045 % | -0.072 % | `graveyard_exiled_for` *is* `graveyard_exile_redirects(..).0`, and both ran |
+
+**Three rebases in this pass, and that is why both columns are here.** A and
+B were first measured on top of `ae2f1fb8`, a commit byte-identical to the
+concurrent session's `a585bff2` (both sessions took `restore_payment_state`
+in the same hour — see the Log). The first rebase dropped it and put
+`5c0b07cc` and `a951b378` underneath, so the base was **re-read** before
+these deltas were quoted, per the standing rule, and **the per-commit
+attributions transferred exactly**: -0.057/-0.072, -0.084/-0.045,
+-0.221/-0.072 sum to -0.129/-0.129/-0.293 against the re-measured end-to-end
+-0.130/-0.130/-0.296.
+
+**A third rebase then put `86ec1bd8` … `ad39dcce` underneath, and those
+columns were NOT re-read.** Those four commits are the concurrent session's
+cast-path scans and its `restore_payment_state` owner/controller bug fix, all
+in `actions.rs`; none touches the zone-change chain or
+`graveyard_exile_redirects`, so **A and B's deltas stand and their absolute
+totals no longer describe the branch tip**. The two re-reads above are what
+licenses that: the same two commits transferred across one rebase without
+moving, which is the evidence the standing rule actually wants. **A fourth
+re-read was not worth two more 11-minute builds against a branch that took
+four commits from another session in ninety minutes** — and the honest
+version of that trade is to say so, not to quote the tip.
+
+**And the two boxes agree on Ir to four parts in a million.** The concurrent
+session's published `a951b378` column (`fixed` 1,156,966,317, `sos`
+1,489,892,855, `cube` 2,653,967,864) reads **+0.00039 % / +0.00032 % /
++0.00020 %** above this box's reading of the same code, and the same constant
+offset appears at `50dfa172`. Callgrind Ir is portable across these
+containers at three orders of magnitude below anything this file quotes;
+wall-clock and RSS still are not.
+
+```text
+decisions        196,220                   byte-identical
+turns_per_game   27.53
+decisions_per_game 613.2
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism      ok (all pairs split, rho -1.000 on all 160)
+ladder printout  identical on fixed / sos / cube at both commits
+peak_rss_mib     18.2 (profiling-fast, --no-default-features, system allocator)
+suite            19,007 passed / 0 failed / 5 ignored, workspace less client
+                 = 18,747 in the 14 crabomination + crabomination_tests
+                   binaries (the gate TODO prescribes) + 260 in the other five
+                   crates. Re-run after the third rebase, on its tip.
+golden traces    7 passed, unchanged
+clippy           `--workspace --all-targets` clean, all eight crates
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 46-50
+```
+
+**No wall-clock pair is quoted, and the pass above is why that is a real
+loss rather than a formality.** The sixty-eighth pass measured its
+clone-removal at **2-3 % of wall on `cube`** against -1.73 % in Ir — a
+clone's cache misses are wall-expensive and Ir-cheap, so an Ir number
+*understates* this class. -0.296 % of cube in Ir could therefore be worth
+more on the clock; six ABBA blocks plus a null is ~35 min and two
+`release-fast` builds, and this pass spent its build budget on re-reading the
+base after the rebase instead. **The next pass that takes another (-50) site
+should batch them and price the batch on the clock.**
+
+**Crash-freedom and determinism at the tip.** `overflow` profile
+(`release-fast` + `overflow-checks`), `--a gang --b gang --threads 3`, seeds
+11 and 12:
+
+```text
+--decks all     --games 200   3,400 decided / 0 undecided per seed, 1,700 pairs all split
+--decks cube    --games 120     960 decided / 0 undecided per seed,   480 pairs all split
+--decks sealed  --games 120   1,440 decided / 0 undecided per seed,   720 pairs all split
+```
+
+**11,600 games, no panic, no arithmetic overflow, `rho -1.000` on every
+pair.** `overflow` rather than the sixty-eighth pass's `dev` grid because
+neither commit here rests on a `debug_assert!` — both are `Deref` reads in
+front of writes that were already unconditional, and the 19,006-test suite
+runs under debug assertions anyway. `cube` and `sealed` are in the grid
+because the reset chain only has work to do on cards that are soulbonded,
+face-down, flipped, transformed, prototyped or carrying counters, and those
+are pool facts.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState` or
+`Vocab` change is in this pass.
+
 **Sixty-eighth pass. Base `50dfa172` vs tip `46d66933`.** Four perf commits
 and one bug fix, all one question: **what does a rollback, a gate, or a probe
 cost when it has nothing to do?** Ir readings `profiling-fast
@@ -2514,6 +2612,93 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Sixty-ninth pass — gating a prefix of a write chain moves the deep copy
+
+Two commits, base `795a296e`. Both are **(-50)** at the zone change instead
+of at the payment rollback, and the transferable finding is the failure in
+the middle of the first one.
+
+```text
+                          base (795a296e)   after A         tip (A+B)
+I refs, --decks fixed     1,156,961,796    —               1,155,462,053   -0.130 %
+I refs, --decks sos       1,489,888,128    —               1,487,957,291   -0.130 %
+I refs, --decks cube      2,653,962,531    —               2,646,120,404   -0.296 %
+```
+
+Per-commit columns are `-0.057 / -0.084 / -0.221` for A and
+`-0.072 / -0.045 / -0.072` for B, measured on the pre-rebase parent and
+re-verified against the end-to-end above; see this pass's Baseline for why
+there are two bases.
+
+**A — the zone-change reset chain deep-copied every card it reset nothing
+on.** Six writes run back to back on every permanent that leaves the
+battlefield: `card.soulbond_partner = None` in
+`place_card_at_resolved_zone`, four `…_def.take()` reverts on `CardInstance`
+(`turn_face_up`, `revert_flip`, `revert_transform`, `revert_prototype`), and
+`send_to_graveyard`'s two `clear()`s. Every one is a write through
+`CardInstance`, whose `DerefMut` is `Arc::make_mut`, and on a card that is
+neither soulbonded, face-down, flipped, transformed, prototyped nor carrying
+a counter — almost every card that dies — the chain unshares the card to
+write back what was already there. `take()` counts: it needs `&mut` and
+therefore unshares before it discovers the `None`.
+
+**The finding is what happened when only five of the six were gated.**
+`place_card_at_resolved_zone`'s `make_mut` edge went **13,516 calls /
+8,514,910 Ir -> 6,758 / 209,225** — and `send_to_graveyard`'s went
+**2,244,366 -> 10,319,209**, because its `counters.clear()` had become the
+chain's first write. Whole-program `cube` moved **-0.050 %** for an 8.3 M-Ir
+edge. Gating the two `clear()`s as well takes `send_to_graveyard` to
+**9,608 / 2,637,344** and lands the rest, `cube` -0.221 %. Program-wide
+`make_mut` calls **858,130 -> 815,046** (-5.0 %) counting the
+`restore_payment_state` commit both sessions wrote.
+
+**So a (-50) site is a *chain*, not a line.** Removing the first unshare
+hands the bill to the next unconditional write on the same handle; the
+saving is real only once every write between the object being handed over
+and its last touch is gated. **Read the whole chain before costing one line
+of it**, and if the total moves by a fraction of the edge you removed, the
+copy has moved rather than gone — the `make_mut` caller table names where.
+The two halves shipped as one commit for that reason: the second is
+**+0.022 % of `fixed`** on its own and a bisect would land on it.
+
+`reset_room_doors`, `reset_case` and `revert_copy_on_leave` were already
+gated this way and are what the shape was copied from — which is also the
+answer to "why did nobody see this": three of the nine writes in the chain
+already asked first, so the chain *looked* audited.
+
+**B — every card leaving the battlefield walked the board's statics twice.**
+`place_card_at_resolved_zone` called `graveyard_exiled_for(&card)` and then
+`graveyard_exile_redirects(&card)`, discarding the second call's first
+field — and `graveyard_exiled_for` is a one-line wrapper for
+`graveyard_exile_redirects(..).0`. The walk is every permanent on the
+battlefield times every static ability on each. **13,516 calls / 3,787,468 Ir
+-> 6,758 / 1,893,734.** Flat across the three pools: `cube`'s wider board
+makes each walk dearer and its games shorter, and the two cancel.
+
+**The device that found both, and it is one column of a table this file
+already tells you to read.** `cg_edges.py --callees <fn>` on the rows of the
+`make_mut` caller table, looking for **a callee count that is an exact
+multiple of the function's own call count**. `place_card_at_resolved_zone`
+sat at 13,516 `make_mut` and 13,516 `graveyard_exile_redirects` against
+6,758 calls of itself — 2.000x on both, which is not what a conditional
+write or a conditional walk looks like. `restore_payment_state` sat at 9.2x,
+which is the board width. **A ratio of exactly N is a line that runs
+unconditionally N times; a ragged ratio is the board.** Same tell as the
+sixty-third pass's pair loop (`computed_permanent` at exactly 2x
+`blocker_can_block_attacker`), one level down.
+
+**Both sessions took `restore_payment_state` in the same hour, again.** This
+session's `ae2f1fb8` and the concurrent one's `a585bff2` are the same
+let-chain on the same line, and the two boxes' numbers agree to four digits
+(`cube` 2,677,408,406 against 2,677,412,689). The mitigation NEXT already
+prescribes — `git fetch` and grep the Log for a candidate's number before
+starting it — does not cover this case: neither session was working a
+*numbered* candidate, both were reading the same `make_mut` caller table
+that (-43) points at, and the top row by Ir/call is the same row for
+everyone. **When the entry you are working is a table rather than a number,
+push the commit before you write the tracker prose**, so the other session's
+next fetch sees the row is taken.
 
 ### Sixty-eighth pass — the write that changes nothing is the one that deep-copies
 
@@ -5244,12 +5429,53 @@ was already there**. The shapes to grep for:
 
 - a rollback / restore that writes back a whole snapshot rather than the
   entries that moved (`restore_payment_state`, TAKEN);
+- a reset chain: several unconditional writes on one handle in a row
+  (the zone-change chain, TAKEN at the sixty-ninth pass — see below);
+- an `Option::take()` on a CoW-held field. It needs `&mut`, so it unshares
+  *before* it discovers the `None`; four of the zone-change chain's six
+  writes were takes;
 - a sweep that assigns a constant to a field on every object in a zone
   (`= false` in a cleanup or untap loop) rather than only where it differs;
 - a save / set / restore pair around a call, where the set is usually a
   no-op — but **check the value first**, because
   `auto_tap_for_cost_inner`'s `wants_ui` pair looked exactly like this and
   is real (see the Log's refutation 2).
+
+**A (-50) SITE IS A CHAIN, NOT A LINE — the sixty-ninth pass's addition, and
+it cost that pass a build to learn.** Gating the first unconditional write on
+a handle hands the bill to the next one. Five of the zone-change chain's six
+writes gated took `place_card_at_resolved_zone`'s `make_mut` edge from
+8,514,910 Ir to 209,225 and moved the whole program by **-0.050 % of cube**,
+because `send_to_graveyard`'s `counters.clear()` two frames down went
+**2,244,366 -> 10,319,209** and absorbed it. Gating that too landed
+-0.221 %. **If the program moves by a fraction of the edge you removed, the
+copy has moved rather than gone** — the `make_mut` caller table names where
+it went. Gate the whole chain, from the point the object is handed over to
+its last touch, and ship it as one commit: an intermediate step can read as a
+regression on a pool (that one is +0.022 % of `fixed` alone).
+
+**The tell that finds a site, and it is one column of a table this file
+already reads.** `cg_edges.py --callees <fn>` on a `make_mut` caller-table
+row: **a callee count that is an exact multiple of the function's own call
+count is a line that runs unconditionally**.
+`place_card_at_resolved_zone` was 6,758 calls with 13,516 `make_mut` *and*
+13,516 `graveyard_exile_redirects` — 2.000x on both, one a no-op write and
+one a duplicated walk. A ragged ratio (`restore_payment_state` at 9.2x) is
+the board width instead. Same tell as the sixty-third pass's pair loop, one
+level down.
+
+**Sites already gated, for the shape:** `reset_room_doors`, `reset_case`,
+`revert_copy_on_leave`, and now `turn_face_up` / `revert_flip` /
+`revert_transform` / `revert_prototype` / `undo_licid_aura`,
+`send_to_graveyard`'s two `clear()`s and `place_card_at_resolved_zone`'s
+`soulbond_partner`. **Unswept and named by the `make_mut` caller table on
+`cube` at the sixty-ninth base**, by Ir/call — `cast_spell_with_convoke`
+(119,138 calls / 26.5 M / 223 Ir), `activate_ability_inner` (50,594 / 23.0 M
+/ 454), `declare_attackers_banded` (63,090 / 17.9 M / 284), `declare_blockers`
+(14,940 / 5.79 M / 388), `try_pay_after_snapshot_mode` (11,456 / 3.59 M /
+314), `PlayerData::draw_top` (7,420 / 2.01 M / 271). The first of those is
+NEXT's top item and is a different mechanism (a card taken out of hand ahead
+of fifty gates), not a no-op write.
 
 **And check which impl block a method lives in before applying (-14) to it.**
 (-14) says an internal `if self.field` guard is dead behind a CoW handle
