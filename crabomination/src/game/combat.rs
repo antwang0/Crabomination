@@ -982,7 +982,15 @@ impl GameState {
                         return Err(GameError::CardIsTapped(id));
                     }
                     // CR 701.35 — a detained permanent can't attack.
-                    if card.detained_by.is_some()
+                    // `is_creature_now` leads the conjunction above and was
+                    // missing from this cascade, so a permanent that is not a
+                    // creature right now — a bestowed Aura (Kestia), a
+                    // de-animated Vehicle — fell through and was reported as
+                    // *summoning sick*, on a card whose `summoning_sick` is
+                    // false. Wrong label, and the one the seventy-fifth pass's
+                    // `CRAB_SIM_REJECTS=names` census tripped over first.
+                    if !is_creature_now
+                        || card.detained_by.is_some()
                         || defender_locked
                         || kws.has_kw(&Keyword::CantAttack)
                         || banned

@@ -7275,7 +7275,16 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                 && state
                     .computed_permanent(c.id)
                     .map(|cp| {
-                        (!c.summoning_sick || cp.keywords.has_kw(&Keyword::Haste))
+                        // CR 302.1 — only a creature attacks, and the printed
+                        // type line above is not the answer either: a bestowed
+                        // Kestia is an Aura, a de-animated Vehicle an artifact.
+                        // `declare_attackers_banded` leads its own conjunction
+                        // with exactly this test and rejects the batch
+                        // **whole**, so the sim's opponent declared no
+                        // attackers at all that turn. 52 of the 470 rejections
+                        // the `CRAB_SIM_REJECTS` census counted; PERF (-55).
+                        cp.card_types.contains(&crate::card::CardType::Creature)
+                            && (!c.summoning_sick || cp.keywords.has_kw(&Keyword::Haste))
                             && (!cp.keywords.has_kw(&Keyword::Defender)
                                 || state.ignores_defender_for_attack(c))
                             && !cp.keywords.has_kw(&Keyword::CantAttack)
