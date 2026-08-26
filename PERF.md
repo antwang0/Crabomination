@@ -702,6 +702,67 @@ build.
 
 ## Baseline
 
+**Eightieth pass. Base `8d21e898` (= the seventy-ninth tip) vs tip.** One
+commit, the fifth in the observation encoder and the last item NEXT named
+there: `Vocab::index_of` hashes a card name per encoded object, and a card's
+name is a `&'static str` literal owned by its catalog factory, so the same
+card always presents the same *pointer*. A second table keyed on
+`(name.as_ptr(), name.len())` replaces the string hash and the `memcmp` that
+confirms it with a pointer hash.
+
+```text
+selfplay_train --actors 1 --games 20 --steps 1 --seed 7, CRAB_NO_JITTER=1,
+profiling-fast --no-default-features, callgrind. Identical workload both
+sides — 1,788 rows, 1,990 `encode_state` calls.
+
+  I refs                 1,276,484,237 -> 1,269,619,087   -0.538 %
+  encode_state (incl.)      85,902,154 ->    78,971,603   -8.07 %
+
+  index_of, 136,684 calls: 6,747,460 Ir at the tip, ~49 Ir/call. The base
+  inlines it into all four callers, so there is no base row to subtract —
+  the program delta is the measurement, and it is ~50 Ir a lookup.
+```
+
+**Cumulative over the five encoder passes: `encode_state` 156,090,720 ->
+78,971,603, -49.4 %, and the actor -6.1 %.**
+
+**The base number in the seventy-ninth block is NOT this pass's base, and
+re-measuring is what caught it.** That block records 1,275,509,707 for its
+tip; this pass measured the same source at **1,276,484,237**, +0.076 %,
+because `611e9a3c` (a *correctness* commit, the sim's rollback fallback)
+landed between them and moved the actor. Trusting the recorded row would
+have credited this change with -0.569 % instead of -0.538 %. **A recorded
+baseline is only a baseline until the next commit; if any commit has landed
+since, re-measure the base — it is one run and it is the difference between
+a number and a guess.**
+
+**The `len` is load-bearing and costs 2.9 Ir a lookup.** Keying on the
+address alone reads 1,269,223,838 (-0.031 % against the shipped form) and is
+*unsound*: two `&str` at the same address with the same length are the same
+bytes, but the address alone does not identify a string — a linker is free to
+lay a short literal at the front of a longer one and hand both the same
+pointer, and the cache would then answer a lookup for `Forest` with the index
+of `Forestwalk`. Nothing in the suite would have caught it; the cache is a
+pure optimization, so a wrong hit is a silently mislabelled embedding row.
+**Buy the second `usize` compare.**
+
+**The nested `if` and the let-chain are the same program**, 1,269,615,393 vs
+1,269,619,087 over a 1.27 G run — 3,694 Ir, which is the clippy fix costing
+nothing and is also this file's smallest reproduced difference. Two builds of
+different source produced a **bit-identical** `encode_state` subtree
+(78,971,603), which is the cleanest available proof that the workload really
+was the same on both sides.
+
+**A pure optimization needs a test that it is still an optimization.** No
+other test in the suite can tell a cache that answers every lookup from one
+that misses every lookup and falls through to the string map — the answers
+are identical, only the Ir differs. `the_vocab_pointer_cache_hits_on_the_
+pool_and_misses_off_it` asserts the hit on every pool factory's name, so the
+day one of them builds its name at run time (a `format!`, a `String` field, a
+name assembled from a set code) the suite says so instead of the encoder just
+getting slower. **The same shape as the `*_scan` `debug_assert!`s: the
+mechanism that makes the fast path fast is itself an invariant.**
+
 **Seventy-ninth pass. Base `a2b19fea` (= the seventy-eighth tip) vs tip.**
 One commit, the fourth in the observation encoder and the smallest edit of
 the four: `ManaCost::colored_symbols` returns an iterator instead of a `Vec`.

@@ -41,6 +41,26 @@ use crate::mana::ManaCost;
 /// zero-padded rather than retired.
 pub struct Vocab {
     map: HashMap<&'static str, u16>,
+    /// The same table keyed on the name's **address**, holding its length
+    /// beside the index.
+    ///
+    /// A card's name is a `&'static str` literal owned by its catalog
+    /// factory, so the same card always presents the same pointer and a
+    /// pointer hash replaces a string hash *plus* the `memcmp` that confirms
+    /// it. `index_of` is ~137,000 calls over twenty `selfplay_train` games —
+    /// one per encoded object plus one per library card.
+    ///
+    /// **The length is not redundant.** Two `&str` at the same address with
+    /// the same length are the same bytes, so that pair identifies a string;
+    /// the address *alone* does not, because the linker is free to lay a
+    /// short literal at the front of a longer one and hand both the same
+    /// pointer. One `usize` compare closes that, and a miss is free anyway.
+    ///
+    /// A **cache, not a second source of truth**: it is filled from `map`, so
+    /// a hit returns exactly what `map` would, and anything whose name did
+    /// not come from a pool factory (a token, an off-set card) simply misses
+    /// and falls through.
+    by_ptr: HashMap<usize, (usize, u16)>,
 }
 
 impl Vocab {
@@ -68,7 +88,21 @@ impl Vocab {
         for (next, name) in (map.len() as u16 + 1..).zip(fresh) {
             map.insert(name, next);
         }
-        Vocab { map }
+        // Key the cache on the *pool's* name pointers, not the snapshot's:
+        // the snapshot is its own array of literals and a card's definition
+        // carries a different one, so a cache built from the snapshot would
+        // miss every lookup.
+        let mut by_ptr: HashMap<usize, (usize, u16)> = HashMap::default();
+        for name in crate::draft::sos_draft_pool()
+            .iter()
+            .map(|f| f().name)
+            .chain(["Plains", "Island", "Swamp", "Mountain", "Forest"])
+        {
+            if let Some(&i) = map.get(name) {
+                by_ptr.insert(name.as_ptr() as usize, (name.len(), i));
+            }
+        }
+        Vocab { map, by_ptr }
     }
 
     /// Total index count including the reserved unknown slot — the
@@ -79,6 +113,12 @@ impl Vocab {
 
     /// 0 for anything unrecognized (tokens, off-set cards).
     pub fn index_of(&self, name: &str) -> u16 {
+        if let Some(&(len, i)) = self.by_ptr.get(&(name.as_ptr() as usize))
+            && len == name.len()
+        {
+            debug_assert_eq!(Some(i), self.map.get(name).copied(), "vocab pointer cache drifted");
+            return i;
+        }
         self.map.get(name).copied().unwrap_or(0)
     }
 }
@@ -1055,6 +1095,41 @@ mod tests {
         use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
         let uniq: std::collections::BTreeSet<&str> = VOCAB_SNAPSHOT.iter().copied().collect();
         assert_eq!(uniq.len(), VOCAB_SNAPSHOT.len(), "duplicate name in VOCAB_SNAPSHOT");
+    }
+
+    /// The pointer cache has to actually *hit* on the pointer a real card
+    /// definition carries.
+    ///
+    /// It is a pure optimization, so nothing else in the suite can tell the
+    /// difference between a cache that answers every lookup and one that
+    /// misses every lookup and quietly falls through to the string map. The
+    /// day a pool factory builds its name at run time — a `format!`, a
+    /// `String` field, a name assembled from a set code — the hit rate goes
+    /// to zero and the encoder gets slower with no other symptom. Assert the
+    /// hit here, where the message says what happened.
+    #[test]
+    fn the_vocab_pointer_cache_hits_on_the_pool_and_misses_off_it() {
+        let v = Vocab::sos_sealed();
+        let hit = |name: &str| {
+            v.by_ptr.get(&(name.as_ptr() as usize)).is_some_and(|&(len, _)| len == name.len())
+        };
+        for f in crate::draft::sos_draft_pool() {
+            let def = f();
+            assert!(
+                hit(def.name),
+                "{} misses the vocab pointer cache — its name is no longer the \
+                 same `&'static str` the pool factory hands out, so `index_of` \
+                 is back to hashing a string per encoded object",
+                def.name
+            );
+            assert_eq!(v.index_of(def.name), v.map.get(def.name).copied().unwrap_or(0));
+        }
+        // A name that never came from a factory falls through to the map,
+        // and the map is still the only answer.
+        let token = String::from("Zombie");
+        assert!(!hit(&token));
+        assert_eq!(v.index_of(&token), v.map.get("Zombie").copied().unwrap_or(0));
+        assert_eq!(v.index_of("Definitely Not A Card"), 0);
     }
 
     #[test]
