@@ -187,6 +187,40 @@ At the seventy-fifth pass the same commit read `cube` **+0.503 %** live and
 -0.03 % apiece. It is a *measurement* switch — no shipped profile sets it,
 and a strength number taken under it is not a strength number.
 
+**AND WHEN THE QUESTION IS "IS IT STRONGER", NOT "IS IT THE SAME GAME":
+`--vs` PLAYS TWO BINARIES AGAINST EACH OTHER.** `--a/--b` compares two
+*profiles* inside one binary, so a code change that moves play could only
+ever be argued for. Build the tip and the base, then:
+
+```text
+cargo build --profile release-fast -p crabomination --bin bot_ladder
+cp target/release-fast/bot_ladder /tmp/base          # at the BASE commit
+# ...apply the change, rebuild...
+target/release-fast/bot_ladder --vs /tmp/base --a gang --b gang \
+  --games 2000 --threads 3 --decks fixed --seed 11
+```
+
+Side A is the binary you invoke, side B is the one at `--vs`. Both must
+carry the same `--a`/`--b` profile or the run measures the profile and the
+code at once. **Run the null first** — `--vs` a byte-identical copy has to
+read 50.0 % with every pair split (fixed/cube/sos, 400/160/100 pairs at the
+tip); anything else is a bug in `crossplay.rs`, not a result.
+
+**It gates a change to how the bot CHOOSES, and reports a change to how the
+engine RESOLVES as a fault.** The two processes mirror one game and exchange
+one `Option<GameAction>` per seat poll with a digest of the state it was
+chosen in; a mismatch means the engines disagree, which voids the run rather
+than one game of it, so it aborts with the seat, the poll and both digests
+and exits 3. Verified against a copy with one rules constant moved: fault at
+poll 50 of the first game.
+
+Costs **1.9x wall** (800 games, 3 threads: 4.9 s -> 9.1 s) — the peer
+replays every action, plus the round trips. **Its absolutes do not compare
+to the in-process ladder's**: one process interleaves both seats' tie-break
+draws on one jitter stream and two processes each draw their own. The
+*estimate* does — `--a gang --b atk-sim`, 800 games, seed 11, in-process
+51.1 % [49.9, 52.3] vs cross 51.2 % [50.1, 52.4].
+
 **WHAT THE SIMULATION'S OWN PICKERS PROPOSE AND THE ENGINE REJECTS.**
 `sim_step` quietly rolls a rejected declaration back and retries it as a
 priority pass, so a picker that proposes an illegal attack or block is

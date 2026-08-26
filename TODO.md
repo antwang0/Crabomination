@@ -77,11 +77,17 @@ commit that a fetch would have shown.
    per-site tag on `declare_attackers_banded`'s thirty `CannotAttack`
    returns before it can be bisected; **build that first**. Correctness lead
    with a small perf tail — fix the pickers, not the fallback.
-5. **Missing tool, and it has now blocked three commits:** there is no
-   win-rate gate for a *code* change. `bot_ladder --a/--b` compares two
-   profiles inside one binary and `ab_wall.py` only times two binaries, so
-   anything that moves play is justified by argument and invariants. A
-   two-binary ladder mode is the gap.
+5. **SHIPPED — the two-binary gate exists: `bot_ladder --vs PATH`.** Side A
+   is the binary you invoke, side B the one at `PATH`, one peer process per
+   worker, and the pair schedule is derived on both sides from the same argv
+   rather than sent. So a bot-side change now has a win rate instead of an
+   argument. Recipe and caveats in PERF's "How to measure"; the short form is
+   **run the null first** (`--vs` a byte-identical copy must read 50.0 % with
+   every pair split) and **give both sides the same `--a`/`--b`** or the run
+   measures the profile and the code together. It gates a change to how the
+   bot *chooses*; a change to how the engine *resolves* diverges the mirrors
+   and aborts with the poll and both digests (exit 3), which is a limit, not
+   a bug. Costs 1.9x wall.
 6. **Bugs:** ENGINE_BACKLOG P3's picker/checker bullet is closed; the open one
    is the two requirement walkers. P2 has no open correctness entries.
 7. **State (final checks, seventy-ninth tip):** two-crate gate **18,753 / 0 /
