@@ -4165,15 +4165,18 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
     m
 }
 
-fn cast_candidates(
-    state: &GameState,
+// `SweepMana<'a>` is invariant over `'a` (its `OnceCell` holds borrows of the
+// board), so the shared handle's lifetime has to be named rather than elided.
+fn cast_candidates<'a>(
+    state: &'a GameState,
     seat: usize,
     probe: &ProbeCell,
     w: &EvalWeights,
     // A [`SweepMana`] the caller already owns, so one tick's affordability
     // reads — this function's *and* `sink_facts`' — share one
-    // `available_mana`. `None` builds a private one.
-    shared: Option<&SweepMana<'_>>,
+    // `available_mana` and one `CostStaticSources`. `None` builds a private
+    // one.
+    shared: Option<&SweepMana<'a>>,
 ) -> Vec<(GameAction, bool)> {
     // Build list of castable non-land spells. Affordability + target
     // pre-filters reduce the candidate set; the FINAL gate is still the
@@ -9394,19 +9397,38 @@ struct SweepMana<'a> {
     state: &'a GameState,
     seat: usize,
     cell: std::cell::OnceCell<AvailableMana>,
+    /// The board's cost-static sources, shared by the same argument and paid
+    /// under the same laziness — see
+    /// [`CostStaticSources`](crate::game::actions::CostStaticSources).
+    srcs: std::cell::OnceCell<crate::game::actions::CostStaticSources<'a>>,
 }
 
 impl<'a> SweepMana<'a> {
     fn new(state: &'a GameState, seat: usize) -> Self {
-        Self { state, seat, cell: std::cell::OnceCell::new() }
+        Self {
+            state,
+            seat,
+            cell: std::cell::OnceCell::new(),
+            srcs: std::cell::OnceCell::new(),
+        }
     }
 
     fn get(&self) -> &AvailableMana {
         self.cell.get_or_init(|| available_mana(self.state, self.seat))
     }
+
+    fn cost_sources(&self) -> &crate::game::actions::CostStaticSources<'a> {
+        self.srcs
+            .get_or_init(|| crate::game::actions::CostStaticSources::gather(self.state))
+    }
 }
 
 /// `can_afford_in_state` against a sweep-shared producible-mana read.
+///
+/// `card` is a card in `seat`'s hand: every caller walks
+/// `state.players[seat].hand`, and the additional-cost read below is the
+/// from-hand one. The `debug_assert!` is the audit — the suite exercises
+/// every sweep this has.
 fn can_afford_in_state_with(
     state: &GameState,
     seat: usize,
@@ -9414,18 +9436,40 @@ fn can_afford_in_state_with(
     w: &EvalWeights,
     have: &SweepMana<'_>,
 ) -> bool {
-    let extra = state.extra_cost_for_card_in_hand(seat, card.id);
+    debug_assert!(
+        state.players[seat].hand.iter().any(|c| c.id == card.id),
+        "can_afford_in_state_with wants a card in the seat's hand",
+    );
+    // Three whole-board static walks per hand card, over one board — see
+    // `CostStaticSources`. The list is lazy for the same reason
+    // `SweepMana::get` is: `pick_combat_trick` usually filters its hand to
+    // nothing before any card reaches here.
+    let srcs = have.cost_sources();
+    let extra = crate::game::actions::extra_cost_for_spell_over(
+        state,
+        seat,
+        card,
+        None,
+        srcs.battlefield(),
+    );
     // Fold in generic cost *reductions* (Affinity, CostReduction statics,
     // graveyard-affinity) the same way the real cast path does — otherwise the
     // bot overestimates the cost of e.g. Tolarian Terror with a full graveyard
     // and never casts it. Target-dependent reductions are skipped (no target
     // chosen yet), so this stays conservative.
-    let reduction = crate::game::actions::cost_reduction_for_spell(state, seat, card, None);
+    let reduction = crate::game::actions::cost_reduction_for_spell_full_over(
+        state, seat, card, None, false, false, srcs.all(),
+    );
     // Coloured surcharges (the Leech cycle) can't ride the generic `extra`
     // channel, so they join the printed cost before relaxation. Borrowed when
     // there is no surcharge, which is every board without a Leech: the clone
     // only existed so the `extend` had somewhere to write.
-    let tax = crate::game::actions::colored_spell_tax_for_spell(state, seat, card);
+    let tax = crate::game::actions::colored_spell_tax_for_spell_over(
+        state,
+        seat,
+        card,
+        srcs.battlefield(),
+    );
     let printed: std::borrow::Cow<'_, crate::mana::ManaCost> = if tax.symbols.is_empty() {
         std::borrow::Cow::Borrowed(&card.definition.cost)
     } else {

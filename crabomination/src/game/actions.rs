@@ -521,11 +521,78 @@ pub fn strive_cost_for_spell(
     out
 }
 
+/// The static sources any of the three cost walks below can match, gathered
+/// once and handed to their `_over` forms.
+///
+/// A source whose `static_abilities` is empty contributes nothing to
+/// [`extra_cost_for_spell`], [`colored_spell_tax_for_spell`] or
+/// [`cost_reduction_for_spell_full`] — the walks load its `definition`
+/// through an `Arc`, read an empty slice and move on. That is the whole of
+/// their cost on a board with no cost statics, and the bot's affordability
+/// pre-filter pays it three times **per hand card**. Building this once per
+/// sweep is sound by construction: the filter drops only sources whose
+/// inner loop has nothing to iterate.
+///
+/// Battlefield sources come first so [`battlefield`](Self::battlefield) is a
+/// prefix; [`all`](Self::all) adds the CR 315.5 command-zone half that only
+/// `cost_reduction_for_spell_full` walks.
+pub(crate) struct CostStaticSources<'a> {
+    cards: Vec<&'a crate::card::CardInstance>,
+    bf: usize,
+}
+
+impl<'a> CostStaticSources<'a> {
+    pub(crate) fn gather(state: &'a crate::game::GameState) -> Self {
+        let mut cards: Vec<&crate::card::CardInstance> = state
+            .battlefield
+            .iter()
+            .filter(|c| !c.definition.static_abilities.is_empty())
+            .collect();
+        let bf = cards.len();
+        cards.extend(
+            state
+                .players
+                .iter()
+                .flat_map(|p| p.command.iter())
+                .filter(|c| {
+                    !c.definition.static_abilities.is_empty()
+                        && c.command_zone_abilities_active()
+                }),
+        );
+        Self { cards, bf }
+    }
+
+    /// The battlefield half — what `extra_cost_for_spell` and
+    /// `colored_spell_tax_for_spell` walk.
+    pub(crate) fn battlefield(&self) -> impl Iterator<Item = &'a crate::card::CardInstance> {
+        self.cards[..self.bf].iter().copied()
+    }
+
+    /// Battlefield + live command zone — what `cost_reduction_for_spell_full`
+    /// walks (`all_static_sources`).
+    pub(crate) fn all(&self) -> impl Iterator<Item = &'a crate::card::CardInstance> {
+        self.cards.iter().copied()
+    }
+}
+
 pub fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
     card: &crate::card::CardInstance,
     target: Option<&crate::game::Target>,
+) -> u32 {
+    extra_cost_for_spell_over(state, caster, card, target, state.battlefield.iter())
+}
+
+/// [`extra_cost_for_spell`] over a caller-supplied source list — see
+/// [`CostStaticSources`]. `srcs` must cover every battlefield permanent whose
+/// `static_abilities` is non-empty.
+pub(crate) fn extra_cost_for_spell_over<'a>(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
+    srcs: impl Iterator<Item = &'a crate::card::CardInstance>,
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut tax = 0u32;
@@ -571,7 +638,7 @@ pub fn extra_cost_for_spell(
         }
     }
     let already_cast = state.players[caster].spells_cast_this_turn;
-    for src in &state.battlefield {
+    for src in srcs {
         for sa in &src.definition.static_abilities {
             match &sa.effect {
                 StaticEffect::AdditionalCostAfterFirstSpell { filter, amount }
@@ -739,9 +806,20 @@ pub fn colored_spell_tax_for_spell(
     caster: usize,
     card: &crate::card::CardInstance,
 ) -> crate::mana::ManaCost {
+    colored_spell_tax_for_spell_over(state, caster, card, state.battlefield.iter())
+}
+
+/// [`colored_spell_tax_for_spell`] over a caller-supplied source list — see
+/// [`CostStaticSources`].
+pub(crate) fn colored_spell_tax_for_spell_over<'a>(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    srcs: impl Iterator<Item = &'a crate::card::CardInstance>,
+) -> crate::mana::ManaCost {
     use crate::effect::StaticEffect;
     let mut out = crate::mana::ManaCost::default();
-    for src in &state.battlefield {
+    for src in srcs {
         if src.controller != caster {
             continue;
         }
@@ -817,11 +895,34 @@ pub fn cost_reduction_for_spell_full(
     from_graveyard: bool,
     from_exile: bool,
 ) -> u32 {
+    cost_reduction_for_spell_full_over(
+        state,
+        caster,
+        card,
+        target,
+        from_graveyard,
+        from_exile,
+        state.all_static_sources(),
+    )
+}
+
+/// [`cost_reduction_for_spell_full`] over a caller-supplied source list — see
+/// [`CostStaticSources`]. `srcs` must cover every `all_static_sources` entry
+/// whose `static_abilities` is non-empty.
+pub(crate) fn cost_reduction_for_spell_full_over<'a>(
+    state: &crate::game::GameState,
+    caster: usize,
+    card: &crate::card::CardInstance,
+    target: Option<&crate::game::Target>,
+    from_graveyard: bool,
+    from_exile: bool,
+    srcs: impl Iterator<Item = &'a crate::card::CardInstance>,
+) -> u32 {
     use crate::effect::StaticEffect;
     let mut reduction = 0u32;
     // CR 315.5 — a face-up conspiracy's cost statics apply from the command
     // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
-    for src in state.all_static_sources() {
+    for src in srcs {
         for sa in &src.definition.static_abilities {
             // CR 716.2 — a Class's higher-level statics only apply once the
             // permanent has reached that level (Artist's Talent level 2).
