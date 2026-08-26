@@ -1098,88 +1098,11 @@ impl GameState {
             }
         }
 
-        // CR 508.1g — attack tax (Ghostly Prison / Propaganda). Sum {amount}
-        // for each attacker hitting a player who controls an
-        // `AttackTaxToController` static (copies stack), then pay it from the
-        // active player's pool, auto-tapping for any shortfall. Reject the
-        // whole declaration if it's unpayable.
-        debug_assert!(
-            statics & attack_static::ATTACK_TAX != 0
-                || !self.battlefield.iter().any(|c| c
-                    .definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(
-                        sa.effect,
-                        crate::effect::StaticEffect::AttackTaxToController { .. }
-                    ))),
-            "attack_static_scan missed an attack tax",
-        );
-        let mut total_tax = 0u32;
-        for atk in &attacks {
-            // The defending player whose statics apply, and whether the attack
-            // is aimed at a planeswalker (so `protect_planeswalkers` gates it).
-            let (defender, at_planeswalker) = match atk.target {
-                crate::game::types::AttackTarget::Player(d) => (Some(d), false),
-                crate::game::types::AttackTarget::Planeswalker(pw) => {
-                    (self.battlefield_find(pw).map(|c| c.controller), true)
-                }
-                // The protector's attack taxes apply when attacking their
-                // battle; not a planeswalker for `protect_planeswalkers`.
-                crate::game::types::AttackTarget::Battle(b) => {
-                    (self.battlefield_find(b).and_then(|c| c.protected_by), false)
-                }
-            };
-            let Some(d) = defender else { continue };
-            // Forbidding Spirit — a temporary Propaganda tax on the defender
-            // that also protects their planeswalkers.
-            total_tax += self.players[d].attack_tax_until_your_turn;
-            // War Tax — a symmetric per-attacker tax for the rest of the turn.
-            total_tax += self.attack_tax_this_turn;
-            // Evaluate each tax `amount` with the defender as "you" (and the
-            // tax permanent as source) so dynamic taxes — Sphere of Safety's
-            // "number of enchantments you control" — count the defender's
-            // board. Fixed taxes are `Value::Const(n)`.
-            for c in &self.battlefield {
-                if statics & attack_static::ATTACK_TAX == 0 {
-                    break; // no tax permanent anywhere — the loop body is a no-op
-                }
-                if c.controller != d {
-                    continue;
-                }
-                for sa in &c.definition.static_abilities {
-                    if let crate::effect::StaticEffect::AttackTaxToController {
-                        amount,
-                        protect_planeswalkers,
-                        filter,
-                    } = &sa.effect
-                        && (!at_planeswalker || *protect_planeswalkers)
-                        // Elephant Grass — the tax only bites on matching
-                        // attackers, and is charged once per such attacker.
-                        && filter.as_ref().is_none_or(|f| {
-                            self.evaluate_requirement_static(
-                                f,
-                                &crate::game::types::Target::Permanent(atk.attacker),
-                                d,
-                                Some(c.id),
-                            )
-                        })
-                    {
-                        let mut ctx = crate::game::effects::EffectContext::for_spell(d, None, 0, 0);
-                        ctx.source = Some(c.id);
-                        total_tax += self.evaluate_value(amount, &ctx).max(0) as u32;
-                    }
-                }
-            }
-        }
-        // CR 508.1g — per-attacker "can't attack unless its controller pays
-        // {N}" (Oppressive Rays). Same pool as the Propaganda tax above.
-        for atk in &attacks {
-            {
-                total_tax += self
-                    .attack_block_keyword_tax(atk.attacker, computed_kw(atk.attacker), true);
-            }
-        }
+        // CR 508.1g — the attack tax, computed by the one walker the bot's
+        // picker also calls so the two cannot drift (`attack_tax_for`).
+        let total_tax = self.attack_tax_for(&attacks, statics, |id| {
+            self.attack_block_keyword_tax(id, computed_kw(id), true)
+        });
         if total_tax > 0 {
             // Pay from the floating pool, auto-tapping mana sources for any
             // shortfall (rolled back atomically if unpayable).
@@ -4681,6 +4604,110 @@ impl GameState {
                     )
             })
             .map(|c| c.id)
+    }
+
+    /// CR 508.1g — the generic mana a declaration of `attacks` costs its
+    /// controller: the defenders' `AttackTaxToController` statics (Ghostly
+    /// Prison, Propaganda, Sphere of Safety, Elephant Grass), the two
+    /// turn-scoped taxes (War Tax, Forbidding Spirit), and each attacker's
+    /// own "can't attack unless you pay {N}" keyword through `keyword_tax`.
+    ///
+    /// **Additive per attacker, with no cross terms** — which is what makes
+    /// it usable by both callers. [`declare_attackers_banded`] pays it and
+    /// rejects the declaration *whole* when it can't; the bot's attack
+    /// picker calls the same function to trim the batch down to what it can
+    /// pay, and the monotonicity is why trimming terminates. Until the
+    /// eightieth pass the picker did not model the tax at all: against a
+    /// Propaganda it declared the board, could not pay, and lost its entire
+    /// combat to a batch rejection that blamed `attacks[0]`. PERF (-55).
+    ///
+    /// `keyword_tax` is injected rather than read here because the two
+    /// callers hold the computed keyword set differently — the engine has a
+    /// gated `Vec<ComputedPermanent>` in scope, the picker an `Arc` per
+    /// lookup — and re-deriving it inside would cost the engine its memo.
+    ///
+    /// [`declare_attackers_banded`]: Self::declare_attackers_banded
+    pub(crate) fn attack_tax_for(
+        &self,
+        attacks: &[Attack],
+        statics: u32,
+        keyword_tax: impl Fn(CardId) -> u32,
+    ) -> u32 {
+        debug_assert!(
+            statics & attack_static::ATTACK_TAX != 0
+                || !self.battlefield.iter().any(|c| c
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::AttackTaxToController { .. }
+                    ))),
+            "attack_static_scan missed an attack tax",
+        );
+        let mut total_tax = 0u32;
+        for atk in attacks {
+            // The defending player whose statics apply, and whether the attack
+            // is aimed at a planeswalker (so `protect_planeswalkers` gates it).
+            let (defender, at_planeswalker) = match atk.target {
+                crate::game::types::AttackTarget::Player(d) => (Some(d), false),
+                crate::game::types::AttackTarget::Planeswalker(pw) => {
+                    (self.battlefield_find(pw).map(|c| c.controller), true)
+                }
+                // The protector's attack taxes apply when attacking their
+                // battle; not a planeswalker for `protect_planeswalkers`.
+                crate::game::types::AttackTarget::Battle(b) => {
+                    (self.battlefield_find(b).and_then(|c| c.protected_by), false)
+                }
+            };
+            let Some(d) = defender else { continue };
+            // Forbidding Spirit — a temporary Propaganda tax on the defender
+            // that also protects their planeswalkers.
+            total_tax += self.players[d].attack_tax_until_your_turn;
+            // War Tax — a symmetric per-attacker tax for the rest of the turn.
+            total_tax += self.attack_tax_this_turn;
+            // Evaluate each tax `amount` with the defender as "you" (and the
+            // tax permanent as source) so dynamic taxes — Sphere of Safety's
+            // "number of enchantments you control" — count the defender's
+            // board. Fixed taxes are `Value::Const(n)`.
+            for c in &self.battlefield {
+                if statics & attack_static::ATTACK_TAX == 0 {
+                    break; // no tax permanent anywhere — the loop body is a no-op
+                }
+                if c.controller != d {
+                    continue;
+                }
+                for sa in &c.definition.static_abilities {
+                    if let crate::effect::StaticEffect::AttackTaxToController {
+                        amount,
+                        protect_planeswalkers,
+                        filter,
+                    } = &sa.effect
+                        && (!at_planeswalker || *protect_planeswalkers)
+                        // Elephant Grass — the tax only bites on matching
+                        // attackers, and is charged once per such attacker.
+                        && filter.as_ref().is_none_or(|f| {
+                            self.evaluate_requirement_static(
+                                f,
+                                &crate::game::types::Target::Permanent(atk.attacker),
+                                d,
+                                Some(c.id),
+                            )
+                        })
+                    {
+                        let mut ctx = crate::game::effects::EffectContext::for_spell(d, None, 0, 0);
+                        ctx.source = Some(c.id);
+                        total_tax += self.evaluate_value(amount, &ctx).max(0) as u32;
+                    }
+                }
+            }
+        }
+        // CR 508.1g — per-attacker "can't attack unless its controller pays
+        // {N}" (Oppressive Rays). Same pool as the Propaganda tax above.
+        for atk in attacks {
+            total_tax += keyword_tax(atk.attacker);
+        }
+        total_tax
     }
 
     /// CR 508.1a / 509.1a — the "can't attack or block unless its controller
