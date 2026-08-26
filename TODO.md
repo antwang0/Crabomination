@@ -73,10 +73,22 @@ commit that a fetch would have shown.
    whose `summoning_sick` is `false` (`Kestia`, 52) is a contradiction and
    the best lead — the picker gates on `c.has_keyword(Haste)` off the
    *instance* where the engine reads the computed view, the same
-   presence-vs-computed shape as passes 71 and 75. `Angel` at 154 needs a
-   per-site tag on `declare_attackers_banded`'s thirty `CannotAttack`
-   returns before it can be bisected; **build that first**. Correctness lead
-   with a small perf tail — fix the pickers, not the fallback.
+   presence-vs-computed shape as passes 71 and 75. **Both halves are fixed**
+   (`d0d1162d`): the picker now tests `cp.card_types` for creature-ness (a
+   bestowed Kestia is an Aura, and the batch was rejected *whole*, so the
+   sim's opponent declared nothing that turn), and the engine's cascade
+   reports `CannotAttack` where `is_creature_now` is false instead of
+   mislabelling it. 52 -> 0.
+4b. **The residual attack rows have a bound and it is worth acting on.**
+   `declare_attackers_banded` gates an attacker on **thirteen** prohibitions
+   (`detained_by`, `attack_ban`, Defender, `CantAttack`, cohort, hand, land,
+   delirium, descend, blessing, okk, the two attack-only-if riders) and
+   `pick_attacks_inner` models **three**. Every `CannotAttack` row the census
+   still names — `Angel` 160, `Whitemane Lion` 26, `Offender at Large` 10,
+   `Kestia` 24 — is inside that gap. **The per-site tag on those thirty `Err`
+   returns maps each row onto one of the ten unmodelled conditions**; build
+   it, then teach the picker the ones that fire. Correctness lead with a
+   small perf tail — fix the pickers, not the fallback.
 5. **SHIPPED — the two-binary gate exists: `bot_ladder --vs PATH`.** Side A
    is the binary you invoke, side B the one at `PATH`, one peer process per
    worker, and the pair schedule is derived on both sides from the same argv

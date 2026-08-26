@@ -6757,6 +6757,29 @@ first**, because nothing in the card's own keywords explains it.
 that used to be rejected as a batch now happen, so the games are longer. The
 direct cost is `blocker_can_block_attacker_pair` +0.08 %.
 
+**Two more, on the attack side, landed the same hour (`d0d1162d`).** The
+picker filtered attackers on `c.definition.is_creature()` — the *printed*
+line — and consulted the computed view for Defender and `CantAttack` but
+never for creature-ness, so a **bestowed Kestia (an Aura) and a de-animated
+Vehicle** were declared and the batch was rejected whole. And
+`is_creature_now` leads `declare_attackers_banded`'s conjunction but was
+missing from the error cascade under it, so that rejection came out as
+**`SummoningSickness` on a card whose `summoning_sick` is `false`** — the
+contradiction that made the census legible in the first place. 52 -> 0 on
+`cube --seed 11 --games 12`; `decisions` byte-identical on all three pinned
+callgrind workloads, which carry no permanent of the shape.
+
+**THE RESIDUAL ATTACK ROWS HAVE A BOUND, AND IT IS THE THING TO WRITE DOWN.**
+`declare_attackers_banded` gates an attacker on **thirteen** prohibitions —
+`detained_by`, `attack_ban`, Defender, `CantAttack`, cohort, hand, land,
+delirium, descend, blessing, okk, and the two attack-only-if riders — and
+`pick_attacks_inner` models **three** of them (Defender, `CantAttack`, the two
+riders). Every `CannotAttack` row the census still names (`Angel` 160,
+`Whitemane Lion` 26, `Offender at Large` 10, `Kestia` 24) is inside that gap.
+So the per-site tag is not just a diagnostic convenience: it maps each row
+onto one of ten named conditions, and the fix is to teach the picker the ones
+that fire.
+
 **(-55, as found) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
 OUT — 470 of 91,438, AND ON ONE `cube` BOARD 6.8 % OF THE ATTACKS.** Measured
 with `CRAB_SIM_REJECTS=1` (see "How to measure"), `--games 12 --threads 3`,
