@@ -6769,16 +6769,36 @@ contradiction that made the census legible in the first place. 52 -> 0 on
 `cube --seed 11 --games 12`; `decisions` byte-identical on all three pinned
 callgrind workloads, which carry no permanent of the shape.
 
-**THE RESIDUAL ATTACK ROWS HAVE A BOUND, AND IT IS THE THING TO WRITE DOWN.**
-`declare_attackers_banded` gates an attacker on **thirteen** prohibitions —
-`detained_by`, `attack_ban`, Defender, `CantAttack`, cohort, hand, land,
-delirium, descend, blessing, okk, and the two attack-only-if riders — and
-`pick_attacks_inner` models **three** of them (Defender, `CantAttack`, the two
-riders). Every `CannotAttack` row the census still names (`Angel` 160,
-`Whitemane Lion` 26, `Offender at Large` 10, `Kestia` 24) is inside that gap.
-So the per-site tag is not just a diagnostic convenience: it maps each row
-onto one of ten named conditions, and the fix is to teach the picker the ones
-that fire.
+**THE PER-SITE TAG IS BUILT AND THE RESIDUAL IS ONE RULE, NOT TEN.**
+`attack_reject(line!(), e)` now wraps all twenty-eight of
+`declare_attackers_banded`'s rejection returns (off behind
+`game::reject_trace_level`, the reader `bot::sim_rejects` shares). On
+`--decks cube --seed 11 --games 12 --threads 1`:
+
+```text
+718  combat.rs:1188  CannotAttack   CR 508.1g — the attack tax
+ 22  combat.rs:710   CannotAttack   CR 508.1d — "attacks each combat if able"
+  0  the other twenty-six sites
+fixed / sos / sealed: zero attack rejections at any site
+```
+
+**97 % of them are the attack tax, and the picker does not model it at all.**
+Propaganda / Ghostly Prison / Oppressive Rays / Sphere of Safety:
+`pick_attacks_inner` declares the whole board, `try_pay_with_auto_tap` cannot
+pay the sum, and the engine rejects the **batch**, blaming `attacks[0]` —
+which is why the card census read "154 `CannotAttack(Angel)`" when Angel was
+merely first in the list. **Naming the card was the wrong question and cost
+two rounds; the site tag answered it in one.** In the simulation the fallback
+then passes priority, so the modelled opponent attacks with *nothing*; on the
+real declaration path the action is rejected outright, so against a
+Propaganda this bot may never attack.
+
+**The fix is the seventy-first pass's shape one level over**: a pre-filter
+that prices what the engine will charge, and it should be **one walker, not
+two** — extract `declare_attackers_banded`'s ~85-line CR 508.1g block as a
+`&self` method and have the picker trim attackers until the sum is payable
+(attackers are taxed individually, so the sum is monotone in the set). It
+changes play, and the two-binary ladder (`--vs`) now exists to gate it.
 
 **(-55, as found) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
 OUT — 470 of 91,438, AND ON ONE `cube` BOARD 6.8 % OF THE ATTACKS.** Measured

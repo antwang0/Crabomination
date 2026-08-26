@@ -80,16 +80,26 @@ commit that a fetch would have shown.
    sim's opponent declared nothing that turn), and the engine's cascade
    reports `CannotAttack` where `is_creature_now` is false instead of
    mislabelling it. 52 -> 0.
-4b. **The residual attack rows have a bound and it is worth acting on.**
-   `declare_attackers_banded` gates an attacker on **thirteen** prohibitions
-   (`detained_by`, `attack_ban`, Defender, `CantAttack`, cohort, hand, land,
-   delirium, descend, blessing, okk, the two attack-only-if riders) and
-   `pick_attacks_inner` models **three**. Every `CannotAttack` row the census
-   still names — `Angel` 160, `Whitemane Lion` 26, `Offender at Large` 10,
-   `Kestia` 24 — is inside that gap. **The per-site tag on those thirty `Err`
-   returns maps each row onto one of the ten unmodelled conditions**; build
-   it, then teach the picker the ones that fire. Correctness lead with a
-   small perf tail — fix the pickers, not the fallback.
+4b. **The per-site tag is built, and the residual is ONE rule.**
+   `attack_reject(line!(), e)` wraps all 28 of `declare_attackers_banded`'s
+   rejection returns; on `cube --seed 11 --games 12 --threads 1`: **718 at
+   `combat.rs:1188` (CR 508.1g, the attack tax) and 22 at `combat.rs:710`
+   (CR 508.1d, "attacks each combat if able"), and zero at the other 26.**
+   `fixed`/`sos`/`sealed` are zero everywhere.
+4c. **NEXT RUN'S BEST BUG: `pick_attacks_inner` does not model the attack
+   tax.** Propaganda / Ghostly Prison / Oppressive Rays / Sphere of Safety —
+   the picker declares the whole board, `try_pay_with_auto_tap` cannot pay,
+   and the engine rejects the **batch** blaming `attacks[0]`. In a sim the
+   fallback passes priority, so the modelled opponent attacks with nothing;
+   on the real path the action is rejected, so **against a Propaganda this
+   bot may never attack**. Fix as **one walker, not two**: lift
+   `declare_attackers_banded`'s ~85-line CR 508.1g block into a `&self`
+   method, have the picker call it and trim attackers until payable (the tax
+   is per-attacker, so the sum is monotone in the set). Changes play; gate it
+   with the new two-binary `--vs` ladder. **And the meta-lesson: naming the
+   *card* was the wrong question** — `attacks[0]` is not the culprit for a
+   batch-level rejection, and two rounds went into chasing "Angel" before the
+   site tag answered it in one.
 5. **SHIPPED — the two-binary gate exists: `bot_ladder --vs PATH`.** Side A
    is the binary you invoke, side B the one at `PATH`, one peer process per
    worker, and the pair schedule is derived on both sides from the same argv
