@@ -11270,68 +11270,81 @@ impl GameState {
         // CR 603.7e — one-shot "when you cast your next spell this turn"
         // delayed triggers (Codie). Fire each matching watcher once, with
         // the cast spell bound as the trigger source, and consume it.
-        let cast_is_is = self.find_card_anywhere(cast_card).is_some_and(|c| {
-            c.definition.card_types.contains(&crate::card::CardType::Instant)
-                || c.definition.card_types.contains(&crate::card::CardType::Sorcery)
-        });
-        let (next_cast, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
-            .into_iter()
-            .partition(|dt| {
-                dt.controller == controller
-                    && (matches!(
-                        dt.kind,
-                        crate::game::types::DelayedKind::YourNextSpellCastThisTurn
-                    ) || (cast_is_is
-                        && matches!(
-                            dt.kind,
-                            crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
-                        )))
+        //
+        // (-45), the cost of asking. `delayed_triggers` is empty on almost
+        // every cast and the take / partition / reassign round trip costs the
+        // same either way: `Iterator::partition` under `finalize_cast` was
+        // 7,556 calls at 553 Ir each on `--decks sos` (4.18 M, 0.28 % of the
+        // program), twice a cast, plus two `find_card_anywhere` lookups that
+        // only these two blocks read. One length check answers all of it. The
+        // second block re-checks because the first pushes repeating watchers
+        // back.
+        if !self.delayed_triggers.is_empty() {
+            let cast_is_is = self.find_card_anywhere(cast_card).is_some_and(|c| {
+                c.definition.card_types.contains(&crate::card::CardType::Instant)
+                    || c.definition.card_types.contains(&crate::card::CardType::Sorcery)
             });
-        self.delayed_triggers = rest;
-        // Expose the cast spell's mana value so bodies can gate on it
-        // (Vivien, Monsters' Advocate — "a creature card with lesser mana
-        // value" via `ManaValueLessThanEventAmount`).
-        let cast_mv = self
-            .find_card_anywhere(cast_card)
-            .map(|c| c.definition.cost.cmc())
-            .unwrap_or(0);
-        for dt in next_cast {
-            self.stack.push(
-                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                    .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
-                    .event_amount(cast_mv)
-                    .build(),
-            );
-            // Repeating watchers ("whenever you cast a spell this turn",
-            // Rediscover the Way III) survive until cleanup clears them.
-            if !dt.fires_once {
-                self.delayed_triggers.push(dt);
+            let (next_cast, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
+                .into_iter()
+                .partition(|dt| {
+                    dt.controller == controller
+                        && (matches!(
+                            dt.kind,
+                            crate::game::types::DelayedKind::YourNextSpellCastThisTurn
+                        ) || (cast_is_is
+                            && matches!(
+                                dt.kind,
+                                crate::game::types::DelayedKind::YourNextInstantSorceryCastThisTurn
+                            )))
+                });
+            self.delayed_triggers = rest;
+            // Expose the cast spell's mana value so bodies can gate on it
+            // (Vivien, Monsters' Advocate — "a creature card with lesser mana
+            // value" via `ManaValueLessThanEventAmount`).
+            let cast_mv = self
+                .find_card_anywhere(cast_card)
+                .map(|c| c.definition.cost.cmc())
+                .unwrap_or(0);
+            for dt in next_cast {
+                self.stack.push(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                        .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                        .event_amount(cast_mv)
+                        .build(),
+                );
+                // Repeating watchers ("whenever you cast a spell this turn",
+                // Rediscover the Way III) survive until cleanup clears them.
+                if !dt.fires_once {
+                    self.delayed_triggers.push(dt);
+                }
             }
         }
         // CR 603.7e (name-gated) — "when you cast a spell with the chosen name
         // for the first time this turn" (Medomai's Prophecy III). Only a cast
         // whose name matches the watching source's `named_card` consumes the
         // one-shot; other casts leave it armed.
-        let cast_name = self
-            .find_card_anywhere(cast_card)
-            .map(|c| c.definition.name.to_string());
-        let (named_fire, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
-            .into_iter()
-            .partition(|dt| {
-                dt.controller == controller
-                    && matches!(dt.kind, crate::game::types::DelayedKind::YourNextNamedSpellThisTurn)
-                    && self
-                        .battlefield_find(dt.source)
-                        .and_then(|s| s.named_card.clone())
-                        == cast_name
-            });
-        self.delayed_triggers = rest;
-        for dt in named_fire {
-            self.stack.push(
-                TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
-                    .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
-                    .build(),
-            );
+        if !self.delayed_triggers.is_empty() {
+            let cast_name = self
+                .find_card_anywhere(cast_card)
+                .map(|c| c.definition.name.to_string());
+            let (named_fire, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
+                .into_iter()
+                .partition(|dt| {
+                    dt.controller == controller
+                        && matches!(dt.kind, crate::game::types::DelayedKind::YourNextNamedSpellThisTurn)
+                        && self
+                            .battlefield_find(dt.source)
+                            .and_then(|s| s.named_card.clone())
+                            == cast_name
+                });
+            self.delayed_triggers = rest;
+            for dt in named_fire {
+                self.stack.push(
+                    TriggerPush::new(dt.source, dt.controller, dt.effect.clone())
+                        .trigger_source(Some(crate::game::effects::EntityRef::Card(cast_card)))
+                        .build(),
+                );
+            }
         }
         // One battlefield pass for the ability-strip presence gate and both
         // grant lists (the dispatcher's `DispatchScan`), instead of one walk
