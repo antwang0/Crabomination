@@ -263,7 +263,6 @@ impl Effect {
             | Effect::EachPlayerMayDiscardUpToThenDamage { .. }
             | Effect::CoffinReturn
             | Effect::TransmuteArtifact
-            | Effect::ExileThenBranchByController { .. }
             | Effect::SacrificeSourceUnlessTapMatching { .. }
             | Effect::SearchForOtherChosenName
             | Effect::BasicLandFromOutsideGameToHand
@@ -346,7 +345,6 @@ impl Effect {
             | Effect::SacrificeSourceUnlessReturn { .. }
             | Effect::SacrificeSourceUnlessCost { .. }
             | Effect::ColoredManaBecomesThisTurn { .. }
-            | Effect::SpellBecomesChosenColor { .. }
             | Effect::OtherPlayerMayPayToCounter { .. }
             | Effect::HighestLifeWinsElseDraw
             | Effect::ReplaceLandManaThisTurn { .. }
@@ -762,7 +760,25 @@ impl Effect {
             Effect::FaceDownSpellsCostLessThisTurn { .. } => false,
             Effect::GrantKeywordsToSpell { what, .. } => sel_has_target(what),
             Effect::CastFromHandWithoutPaying { .. } => false,
-            Effect::PreventNextDamageFromChosenSource { .. } => false,
+            // The *chosen source* is a choice, not a target (CR 615.7) — but
+            // `to` is where the shield lands and `redirect_to` is where the
+            // damage goes, and both are printed "target" on the cards that
+            // use them (Charm Peddler's target creature). Reporting `false`
+            // here left `resolve_selector` with an empty `ctx.targets`, so the
+            // arm built no `PreventionShield` at all and six Circle-shaped
+            // cards did nothing.
+            Effect::PreventNextDamageFromChosenSource { to, redirect_to, .. } => {
+                to.as_ref().is_some_and(sel_has_target)
+                    || redirect_to.as_ref().is_some_and(sel_has_target)
+            }
+            // "Target spell becomes the color of your choice" — the colour is
+            // the choice, the spell is the target.
+            Effect::SpellBecomesChosenColor { what } => sel_has_target(what),
+            // "Exile target permanent, then …" — the branch body runs on the
+            // victim's side and can declare its own slot.
+            Effect::ExileThenBranchByController { what, theirs } => {
+                sel_has_target(what) || theirs.requires_target()
+            }
             Effect::RevealTopPayOrTake { .. } => false,
             Effect::DigForLandToBattlefield { .. } => false,
             Effect::Tribute { otherwise, .. } => otherwise.requires_target(),

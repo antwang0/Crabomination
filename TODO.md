@@ -179,6 +179,20 @@ than rewriting the entry.
    `ChooseModesByPoints` all return `false` there). Each `false` is either
    correct-because-resolution-targets or a dead mode; the two known answers
    split one each way.
+11b. **The next bug, and it is sized and diagnosed but not taken.** The
+   picker (`primary_target_filter`) and the CR 608.2b legality check
+   (`target_filter_for_slot(0)`) are two hand-written walks at opposite ends
+   of one target's life, and **27 single-slot bodies aim with one filter and
+   are checked against another** — e.g. `Jund Charm` picks `Creature` and
+   checks `Player`, `Overload` picks `ManaValueAtMost(5)` and checks `(2)`,
+   `Tear Asunder` picks `Nonland` and checks `Artifact|Enchantment`. Most are
+   modal (slot 0 differs per mode) so the walkers answer honestly-different
+   questions and a blanket invariant is a ratchet, not an invariant — which
+   is why the sixty-fifth pass wrote one, watched it need 587 -> 83 -> 27
+   exceptions, and **deleted it rather than ship a threshold**. Take it per
+   card, or make `primary_target_filter` mode-aware. The *silent-fallback*
+   half is already fixed: the picker now falls back to the checker's own
+   filter before `Any`.
 12. **Cards: `scripts/audit_dropped_may.py`.** The load-bearing "destroy /
    sacrifice / tap / discard" cluster is **read to the end**; the ~337
    remaining are the "you may draw / search / put into hand" tail, where

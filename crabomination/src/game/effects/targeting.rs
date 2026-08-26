@@ -103,8 +103,26 @@ impl GameState {
         // they accept any legal entity. Fall back to `Any` so the picker
         // walks players + permanents instead of short-circuiting to None.
         let any_filter = crate::card::SelectionRequirement::Any;
-        let req_owned =
-            eff.primary_target_filter().map(|f| f.resolve_x(x).resolve_converge(converge));
+        // `primary_target_filter` and `target_filter_for_slot` are two
+        // independent hand-written walks over ~1000 variants, and they sit at
+        // opposite ends of one target's life: this picker aims with the first,
+        // CR 608.2b re-checks with the second at resolution
+        // (`continue_trigger_resolution_with_source`). A variant with an arm in
+        // the slot walker and none here aimed at `Any` and was then thrown away
+        // by its own filter — a silent, total fizzle with nothing logged. That
+        // is how creature Haunt died: `HauntCreature` checks `Enchantment`,
+        // picked a *player*, and Absolver Thrull's and Orzhov Euthanist's
+        // "destroy target enchantment" halves did nothing.
+        //
+        // So fall back to the checker's own filter before falling back to
+        // `Any`, which makes the two agree by construction wherever the
+        // primary walker is silent. `Any` stays the last resort for a bare
+        // `Selector::Target(0)` ("any target"), which genuinely accepts
+        // anything and has no slot filter either.
+        let req_owned = eff
+            .primary_target_filter()
+            .or_else(|| eff.target_filter_for_slot(0))
+            .map(|f| f.resolve_x(x).resolve_converge(converge));
         let req = req_owned.as_ref().unwrap_or(&any_filter);
         // First opponent on a different team. Falls back to the next
         // seat in singleton-team / unknown-team cases so the legacy 1v1

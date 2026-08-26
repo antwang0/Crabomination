@@ -16635,9 +16635,27 @@ impl GameState {
                     .find_card_anywhere(cid)
                     .map(|c| c.definition.cost.cmc())
                     .unwrap_or(0);
+                // CR 603.7c — a delayed triggered ability chooses its targets
+                // as it goes on the stack. These three kinds register with
+                // `target: None` (there is nothing to capture at registration
+                // time), so a targeting body had no slot bound and resolved
+                // against an empty list — Absolver Thrull's and Orzhov
+                // Euthanist's haunt bodies ("destroy target enchantment").
+                let (mut target, mut additional) = (dt.target, Vec::new());
+                if target.is_none() && dt.effect.requires_target() {
+                    let (slot0, rest) = self.auto_targets_for_effect_all_slots_sourced(
+                        &dt.effect,
+                        dt.controller,
+                        None,
+                        Some(dt.source),
+                    );
+                    target = slot0;
+                    additional = rest;
+                }
                 self.stack.push(
                     TriggerPush::new(dt.source, dt.controller, dt.effect)
-                        .target(dt.target)
+                        .target(target)
+                        .additional_targets(additional)
                         .trigger_source(Some(crate::game::effects::EntityRef::Card(cid)))
                         .event_amount(mv)
                         .build(),

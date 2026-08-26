@@ -136,13 +136,47 @@ fn castigate_haunt_repeats_hand_exile() {
 }
 
 /// Absolver Thrull's enters-or-haunt trigger destroys an enchantment.
+///
+/// The enchantment is a *global* one on purpose: an unattached Aura is put
+/// into its owner's graveyard by SBA (CR 704.5m), so a `pacifism()` here made
+/// this assert pass whether or not the trigger fired at all.
 #[test]
 fn absolver_thrull_etb_destroys_enchantment() {
     let mut g = two_player_game();
-    let ench = g.add_card_to_battlefield(1, catalog::pacifism());
+    let ench = g.add_card_to_battlefield(1, catalog::heat_of_battle());
     g.move_card_to_battlefield_for_test(0, catalog::absolver_thrull());
     drain_stack(&mut g);
     assert!(g.battlefield_find(ench).is_none(), "ETB destroyed the enchantment");
+}
+
+/// CR 702.55 — the *haunt half*. The delayed `WhenHauntedCreatureDies` trigger
+/// registers with `target: None` (there is nothing to capture at registration),
+/// so a targeting body had no slot bound and destroyed nothing; the fire site
+/// auto-targets now (CR 603.7c — a delayed triggered ability chooses targets as
+/// it goes on the stack). The ETB test above passes either way, because that
+/// half is a bare `Destroy { TargetFiltered }` the trigger push targets
+/// normally.
+#[test]
+fn absolver_thrull_haunt_half_destroys_an_enchantment_too() {
+    let mut g = two_player_game();
+    let thrull = g.add_card_to_battlefield(0, catalog::absolver_thrull());
+    let host = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Clear the ETB half's victim before arming the haunt half.
+    drain_stack(&mut g);
+    let ench = g.add_card_to_battlefield(1, catalog::heat_of_battle());
+    // The Thrull dies and haunts the only other creature.
+    g.battlefield_find_mut(thrull).unwrap().damage = 4;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == thrull), "exiled haunting");
+    assert!(g.battlefield_find(ench).is_some(), "haunting is not the payoff");
+    // The haunted creature dies: "destroy target enchantment".
+    g.battlefield_find_mut(host).unwrap().damage = 4;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "the haunt half found its target");
 }
 
 // ── GPT gap cards (non-haunt + haunt reanimator) ─────────────────────────────
