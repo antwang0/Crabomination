@@ -2565,7 +2565,7 @@ impl GameState {
         self.attacking.clear();
         // Dropped, not cleared — see `resolve_combat`.
         self.block_map = Default::default();
-        clear_cold!(self.blocked_attackers);
+        self.blocked_attackers.clear();
         clear_cold!(self.attack_bands);
         self.blockers_declared = false;
         // CR 724.1d — the turn skips straight to the cleanup step.
@@ -4062,7 +4062,7 @@ impl GameState {
         retain_cold!(self.land_mana_replacements_this_turn, |r| r.indefinite);
         clear_cold!(self.targeting_damage_prevented_this_turn);
         clear_cold!(self.colored_mana_becomes_this_turn);
-        clear_cold!(self.blocks_declared_this_turn);
+        self.blocks_declared_this_turn.clear();
         clear_cold!(self.turn_granted_triggers);
         clear_cold!(self.cant_block_pairs);
         clear_cold!(self.cant_block_this_turn);

@@ -2810,7 +2810,7 @@ impl GameState {
         // boundary deep-copies the whole cold group (PERF, twenty-eighth
         // pass's rule, restated in the thirty-third's Log block).
         if !self.blocked_attackers.is_empty() {
-            clear_cold!(self.blocked_attackers);
+            self.blocked_attackers.clear();
         }
         if !self.attack_bands.is_empty() {
             clear_cold!(self.attack_bands);
@@ -3634,7 +3634,7 @@ impl GameState {
             // different game state from its siblings.
             if atk.assigns_as_unblocked {
                 blocker_ids.clear();
-                retain_cold!(self.blocked_attackers, |id| *id != atk.id);
+                self.blocked_attackers.retain(|id| *id != atk.id);
             }
             if blocker_ids.len() > 1
                 && let Some(order) = self.combat_damage_order.get(&atk.id)

@@ -690,12 +690,6 @@ pub struct ColdState {
     /// `prevent_combat_to_target` for the player-target case. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_to_players_this_turn: Vec<usize>,
-    /// CR 510.1c — attackers that became blocked this combat. An attacker
-    /// stays blocked even if all its blockers leave combat (double-strike
-    /// step-one kills, post-block removal): without trample it assigns no
-    /// combat damage. Cleared when combat ends.
-    #[serde(default)]
-    pub(crate) blocked_attackers: Vec<CardId>,
     /// CR 702.22c-f — the attacking bands declared this combat, each a list of
     /// still-attacking members. A band lasts for the rest of combat even if a
     /// member loses banding (CR 702.22e); a creature removed from combat drops
@@ -730,11 +724,6 @@ pub struct ColdState {
     /// other colour for the rest of the turn, and who may spend that colour as
     /// any colour (False Dawn). Cleared at cleanup.
     pub(crate) colored_mana_becomes_this_turn: Vec<(usize, crate::mana::Color)>,
-    /// `(blocker, attacker)` pairs declared this turn, kept off the permanents
-    /// so it survives the blocker's death — "destroy it and all creatures it
-    /// blocked this turn" (Defiant Vanguard). Cleared at cleanup.
-    #[serde(default)]
-    pub(crate) blocks_declared_this_turn: Vec<(CardId, CardId)>,
     /// "All combat damage that would be dealt to you this turn is dealt to
     /// `to` instead" — `(protected seat, to)` pairs (CR 614.9, Turn the
     /// Tables). Narrower than `damage_redirect_this_turn`: combat damage only,
@@ -1166,6 +1155,23 @@ pub struct GameState {
     pub(crate) combat_damage_plan_step: Option<TurnStep>,
     /// Set to true once `declare_blockers` has been called during the current DeclareBlockers step.
     pub(crate) blockers_declared: bool,
+    /// CR 510.1c — attackers that became blocked this combat. An attacker
+    /// stays blocked even if all its blockers leave combat (double-strike
+    /// step-one kills, post-block removal): without trample it assigns no
+    /// combat damage. Cleared when combat ends.
+    ///
+    /// A `GameState` field rather than a [`ColdState`] one, with its combat
+    /// siblings above: `declare_blockers` writes it once per declared block,
+    /// and in the cold group that write unshared ~89 collections. See PERF's
+    /// seventy-second pass.
+    #[serde(default)]
+    pub(crate) blocked_attackers: Vec<CardId>,
+    /// `(blocker, attacker)` pairs declared this turn, kept off the permanents
+    /// so it survives the blocker's death — "destroy it and all creatures it
+    /// blocked this turn" (Defiant Vanguard). Cleared at cleanup. Out of the
+    /// cold group for the same reason as `blocked_attackers`.
+    #[serde(default)]
+    pub(crate) blocks_declared_this_turn: Vec<(CardId, CardId)>,
     /// Skip the draw on the very first turn (turn 1, first player).
     pub skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
@@ -2278,6 +2284,8 @@ impl Clone for GameState {
             combat_damage_assignment: self.combat_damage_assignment.clone(),
             combat_damage_plan_step: self.combat_damage_plan_step,
             blockers_declared: self.blockers_declared,
+            blocked_attackers: self.blocked_attackers.clone(),
+            blocks_declared_this_turn: self.blocks_declared_this_turn.clone(),
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
             opponent_cast_since_your_turn: self.opponent_cast_since_your_turn,
@@ -2519,6 +2527,8 @@ impl GameState {
             combat_damage_assignment: Default::default(),
             combat_damage_plan_step: None,
             blockers_declared: false,
+            blocked_attackers: Vec::new(),
+            blocks_declared_this_turn: Vec::new(),
             // Multiplayer (3+) doesn't skip the first draw — only the 2-player
             // starting player does.
             skip_first_draw: n <= 2,
