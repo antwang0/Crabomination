@@ -3292,9 +3292,11 @@ the table above is safe to compress:
 
 ### Seventy-sixth pass — a refutation dates, and the thing that dates it is its own arithmetic
 
-One commit, base `5e4ec3bd`, **`fixed` -0.613 %, `sos` -0.425 %, `cube`
--0.577 %**, decision counts byte-identical on all three pools. The numbers and
-the change are in **Baseline**; what belongs here is the two rules.
+Two commits, base `5e4ec3bd`. The perf one reads **`fixed` -0.613 %, `sos`
+-0.425 %, `cube` -0.577 %** with decision counts byte-identical on all three
+pools; the second is a correctness fix and its columns are with the rules
+commit below. The numbers and the change are in **Baseline**; what belongs
+here is the three rules.
 
 **1. A "do not re-open" carries the workload it was measured on, and this
 branch's workload has moved 2.5x under several of them.** `can_afford_in_state`
@@ -3327,6 +3329,34 @@ surface, which is a real trade rather than an obvious one.
 
 The residue is written up in (-34): 13,696,074 Ir on `cube`, walks over the
 sources that *do* carry statics.
+
+**3. Two wrong walkers can cancel, and fixing one of them is what makes the
+other visible.** The pass's second commit is the half the picker/checker
+deferral left behind. `accepts_player_target`'s `Seq` arm picks the child that
+classifies a spell by "first one with a `primary_target_filter`", and that
+walker answers about non-target *subject* selectors — so `Reins of Power`'s
+leading `Untap(each creature)` classified the spell as permanent-targeting.
+While `primary_target_filter` was *also* returning that `Untap`'s filter the
+two errors agreed and `enumerate_legal_targets` came back full of creatures:
+wrong, and indistinguishable from right at every invariant this branch checks.
+The deferral made the filter correct, the classifier stayed wrong, and the
+list came back **empty** — which a behavioural test caught immediately.
+
+**The transferable half is which test found it.** The structural invariant
+(`primary_target_filter == target_filter_for_slot(0)` over the catalog) is 0
+either way, because by then both walkers agreed with each other. Only the test
+that asks the *consumer* for its answer — `enumerate_legal_targets` on two
+named cards — could see it. **When a fix makes two hand-written walkers agree,
+pin the consumer as well as the agreement**; the agreement is the thing you
+just arranged, and it cannot fail.
+
+**And this was a duplicated commit.** Two sessions wrote the deferral within
+the same hour, from the same census, three passes after NEXT started warning
+about exactly that. The fetch that would have shown it was taken before the
+other side pushed, which is the failure mode the rule already names — *fetch
+before you start a candidate, not just before you push* — and the only reason
+this run has something to show for it is that the other side's commit was
+missing a half.
 
 ### Seventy-fifth pass — a per-candidate random draw makes candidate-count a behaviour, and no committed invariant sees it
 

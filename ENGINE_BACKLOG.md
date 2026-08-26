@@ -107,40 +107,42 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ### P3 — structural root causes (fix once, prevent the class)
 
-- ✅ **CLOSED at the seventy-sixth pass — `primary_target_filter` defers to
-  `target_filter_for_slot(0)`, and the invariant is a test.** The census below
-  is what made the fix a one-liner rather than two card patches: the two bugs
-  were the same missing shape (a slot-0 `Selector::Player(Target(n))`), and
-  every other disagreement was the picker answering about a slot the checker
-  was not asked about. Deferring makes the two agree by construction wherever
-  the checker speaks, and hands the 253 definitions with a slot-0 filter and
-  no arm in the picker a filter where they had `None`. The fallback walk stays
-  for the 466 mass effects whose "subject" filter is not a target at all.
-  `core_rules::target_walkers::primary_target_filter_defers_to_the_608_2b_checker`
-  is the guard — **83 definitions** fail it without the deferral (65 spell
-  bodies plus 18 ability bodies the census did not walk), 0 with it. Whole
-  suite green and 7 golden traces unchanged; the pinned-jitter decision
-  columns are in PERF's Baseline.
+- ✅ **CLOSED — `primary_target_filter` defers to `target_filter_for_slot(0)`
+  (`5ae08799`), the classifier one level up follows it, and both are pinned by
+  tests.** The census below is what made the fix a one-liner rather than two
+  card patches: the two bugs were the same missing shape (a slot-0
+  `Selector::Player(Target(n))`), and every other disagreement was the picker
+  answering about a slot the checker was not asked about. Deferring makes the
+  two agree by construction wherever the checker speaks, and hands the 253
+  definitions with a slot-0 filter and no arm in the picker a filter where
+  they had `None`. The fallback walk stays for the 466 mass effects whose
+  "subject" filter is not a target at all.
 
-  **The deferral exposed the same bug one level up, and the fix is not
-  complete without it.** `accepts_player_target`'s `Seq` / `If` arms pick the
-  child to classify by "first one with a `primary_target_filter`" — which
-  answers about non-target *subject* selectors too. `Reins of Power` is
-  `Seq([Untap(each creature), GainControl(creatures target player controls),
-  …])`: the `Untap` names a group, owns no slot, and was deciding that the
-  spell targets permanents. With the picker's filter fixed and the classifier
-  still wrong, `enumerate_legal_targets` came back **empty** — a different
-  wrong answer, and the behavioural test caught it where the structural
-  invariant could not. Both arms look for the child that owns **slot 0**
-  first. Cling to Dust's ordering rule (the reason those arms exist) is
-  unchanged: its `Move` owns slot 0, so it is still the child that classifies.
+  **The deferral alone left `Reins of Power` with an empty legal-target list,
+  and nothing in the tree noticed.** `accepts_player_target`'s `Seq` / `If`
+  arms pick the child that classifies the spell by "first one with a
+  `primary_target_filter`" — and that walker answers about non-target
+  *subject* selectors too. Reins of Power is `Seq([Untap(each creature),
+  GainControl(creatures target player controls), …])`: the `Untap` names a
+  group, owns no slot, and was deciding that the spell targets permanents.
+  While the picker was *also* wrong the two errors cancelled and the list came
+  back full of creatures; once the picker answered with slot 0's player
+  filter, `legal_targets_for_filter` was asked for permanents matching a
+  player filter and returned nothing. Both arms look for the child that owns
+  **slot 0** first, then fall back as before. Cling to Dust's ordering rule
+  (the reason those arms exist) is unchanged: its `Move` owns slot 0.
+
+  **Two guards, and the second is what found the half above.**
+  `primary_target_filter_defers_to_the_608_2b_checker` is the equality over
+  `all_known_factories()` — **83 definitions** fail it without the deferral
+  (65 spell bodies plus 18 ability bodies the census did not walk), 0 with it.
   `feedback_bolt_and_reins_of_power_offer_players_not_permanents` pins both
-  cards at `enumerate_legal_targets`, which is the site the deferral actually
-  moved — the cast path reads the slot walker directly and was never wrong.
-  **This is not the blanket ratchet the sixty-fifth
-  pass deleted** — that one compared the two walkers everywhere and needed
-  587 -> 83 -> 27 exceptions; this one asserts an equality the code now
-  establishes, so it can have none.
+  cards at `enumerate_legal_targets`, the site the deferral actually moved
+  (the cast path reads the slot walker directly and was never wrong) — the
+  structural invariant could not have caught the classifier, because by then
+  both walkers agreed. Neither is the blanket ratchet the sixty-fifth pass
+  deleted: that one compared the walkers everywhere and needed 587 -> 83 -> 27
+  exceptions, and these assert what the code now establishes.
 
   The census, kept because it is the reason the fix is one line:
   `primary_target_filter` (what the auto-picker aims with) and
