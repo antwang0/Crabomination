@@ -101,6 +101,12 @@ fn unbound_slots(v: &Value, owner: &str, out: &mut Vec<(u64, String)>) {
 #[test]
 fn no_body_declares_a_slot_it_never_binds() {
     let mut bad: Vec<String> = Vec::new();
+    // How many bodies of each kind the walk actually reached. A green run is
+    // only worth something if it looked at something: this run found four
+    // shipped tests that passed without the ability under test ever firing,
+    // and a catalog walk that silently stops visiting a holder is the same
+    // failure one level up.
+    let mut seen: std::collections::BTreeMap<&'static str, usize> = Default::default();
     for factory in catalog::all_known_factories() {
         let def: CardDefinition = factory();
         let mut bodies: Vec<(&'static str, &Effect)> = vec![("spell", &def.effect)];
@@ -113,18 +119,56 @@ fn no_body_declares_a_slot_it_never_binds() {
         for l in &def.loyalty_abilities {
             bodies.push(("loyalty", &l.effect));
         }
+        // An `equipped_bonus` ability is granted to the host and pushed like
+        // any other trigger, so its slots are bound (or not) the same way.
+        if let Some(bonus) = def.equipped_bonus.as_ref() {
+            for t in &bonus.triggered_abilities {
+                bodies.push(("equip-bonus", &t.effect));
+            }
+            for a in &bonus.activated_abilities {
+                bodies.push(("equip-bonus", &a.effect));
+            }
+        }
+        // A back face is cast and resolves in its own right.
+        if let Some(back) = def.back_face.as_ref() {
+            bodies.push(("back-face", &back.effect));
+            for a in &back.activated_abilities {
+                bodies.push(("back-face", &a.effect));
+            }
+            for t in &back.triggered_abilities {
+                bodies.push(("back-face", &t.effect));
+            }
+            for l in &back.loyalty_abilities {
+                bodies.push(("back-face", &l.effect));
+            }
+        }
+        // CR 715 — an Adventure's instant/sorcery half is cast on its own.
+        if let Some(adv) = def.adventure.as_ref() {
+            bodies.push(("adventure", &adv.effect));
+        }
         for (kind, body) in bodies {
             // A body that demands a slot gets one; this invariant is only
             // about the bodies that say they need nothing.
             if body.requires_target() {
                 continue;
             }
+            *seen.entry(kind).or_default() += 1;
             let mut slots = Vec::new();
             unbound_slots(&serde_json::to_value(body).expect("effect serializes"), kind, &mut slots);
             for (slot, owner) in slots {
                 bad.push(format!("{} [{kind}] slot {slot} under {owner}", def.name));
             }
         }
+    }
+    // Floors, not exact counts: the catalog grows and these want to be
+    // maintenance-free. Each is well under the current figure.
+    for (kind, floor) in
+        [("spell", 5000), ("activated", 2000), ("triggered", 5000), ("loyalty", 100),
+         ("equip-bonus", 20), ("back-face", 100), ("adventure", 20)]
+    {
+        let n = seen.get(kind).copied().unwrap_or(0);
+        assert!(n >= floor, "the walk reached only {n} `{kind}` bodies, expected >= {floor} — a \
+                             holder stopped being visited and this invariant went vacuous");
     }
     bad.sort();
     bad.dedup();
