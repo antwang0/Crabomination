@@ -2444,6 +2444,17 @@ calls to find a `Vec` built to be thrown away; rank it by Ir/call to find a
 tree being deep-copied.** Both tables are one `cg_edges.py --callers` away
 and neither had ever been in this file.
 
+**And the pass's third experiment is a refutation, written up in (-45).**
+`declare_blockers` was the best-looking of the three unread `grow_one` rows
+by the sizing device this entry proposes (4.2 grows a call, 1.8 rehashes);
+reserving its buffers read **`sos` +0.046 %**. **Grows-per-call ranks a row,
+but the length the buffer reaches decides whether a reserve pays** — four
+grows over a list that ends at a handful of ids is `1 -> 4 -> 8`, and one
+right-sized allocation can cost more than the two small reallocs it
+replaces. A reserve pays when the buffer is *long*, not when it is grown
+*often*. That is the fifty-eighth pass's `sa_cards` refutation again, from
+the other side: there the buffer was empty, here it is short.
+
 **What the two tables still hold, and it is written up in (-45) and (-28).**
 `grow_one`'s top rows are unchanged by this pass and are a different entry:
 `gather_continuous_effects_inner` 30,758 / 3.95 M — **and the blanket
@@ -5207,13 +5218,27 @@ element at a time.
   here in an earlier pass). What is left is spread across `events` and the
   inner helpers; localizing it needs `cg_contexts.py` over
   `--separate-callers`, not a read of the source.
-- `declare_blockers` — **the best of the three, and the only one with
-  repeated per-call growth.** 11,466 grows over **2,732 calls = 4.2 a
-  call**, plus `RawTable::reserve_rehash` 5,034 (1.8 a call): several
-  buffers and a map being filled an element at a time per declare-blockers.
-  2.02 M, 0.134 % of `sos`. Size it with a line profile
-  (`profiling-lines`) before writing anything — four different buffers is
-  four different questions.
+- `declare_blockers` — looked like the best of the three (11,466 grows over
+  **2,732 calls = 4.2 a call**, plus `RawTable::reserve_rehash` 5,034 = 1.8
+  a call) and is **REFUTED**, twice, at the sixty-seventh pass.
+
+  Reserving the `ids` list in both combat gates (`declare_blockers`'
+  `assignments.len() * 2 + attacking.len() + block_map.len()`,
+  `declare_attackers`' `attacks.len() + attacking.len()`) **plus** the
+  `batch_blocks` map read `fixed` -0.027 %, **`sos` +0.046 %**, `cube`
+  -0.063 % — net zero with a pool going the wrong way. Isolating the map
+  (`HashMap::with_capacity_and_hasher(assignments.len(), ..)`, the row with
+  the clean 1.8-rehash mechanism) read `fixed` **-0.005 %**, `sos`
+  **-0.002 %**, `cube` **-0.014 %**: free, and worth nothing. By
+  subtraction the two `ids` reserves are the regression.
+
+  **The rule, and it corrects the sizing device this entry ships with:
+  grows-per-call ranks a row, but the length the buffer *reaches* decides
+  whether a reserve pays.** 4.2 grows a call over a list that ends at a
+  handful of ids is `1 -> 4 -> 8`, i.e. two reallocs of 32 and 64 bytes; a
+  right-sized `with_capacity` replaces two small reallocs with one larger
+  allocation and can cost more than it saves. A reserve pays when the buffer
+  is **long**, not when it is grown **often**. Both reverted.
 
 **(-46) `name_index()` BUILDS 22,568 `CardDefinition`s TO READ 22,568
 STRINGS — 104,687,400 Ir. RANKED LOW ON PURPOSE; READ THE SIZING BEFORE

@@ -55,11 +55,17 @@ than rewriting the entry.
    deep-copied.** `alt_spell_half_of(&def)` is the shape for the borrow —
    the existing walker's pick against a definition the caller holds, one
    walker at two lifetimes, rather than a second copy of the pick.
-0b. **The next rows are read and ranked, and the column that ranks them is
-   grows *per call*.** `declare_blockers` is the one to take: **11,466 grows
-   over 2,732 calls = 4.2 a call**, plus 1.8 `reserve_rehash` a call — four
-   buffers and a map filled an element at a time (2.02 M, 0.134 % of `sos`).
-   `advance_step` is **READ and refuted**: 0.94 a call is the single
+0b. **All three of those rows are now read, and all three are refuted.**
+   `declare_blockers` looked like the one to take — 4.2 grows a call plus
+   1.8 rehashes — and **reserving its buffers read `sos` +0.046 %**
+   (`fixed` -0.027 %, `cube` -0.063 %); the map half isolated at -0.005 /
+   -0.002 / -0.014 %, i.e. free and worthless, so the two `ids` reserves are
+   the regression. **The correction to the sizing device: grows-per-call
+   ranks a row, but the length the buffer *reaches* decides whether a
+   reserve pays.** Four grows over a list that ends at a handful of ids is
+   `1 -> 4 -> 8` — two 32/64-byte reallocs — and one right-sized allocation
+   can cost more. **A reserve pays when the buffer is long, not when it is
+   grown often.** `advance_step` is **READ and refuted**: 0.94 a call is the single
    `events.push(StepChanged)` on a list the caller hands in empty, i.e. the
    allocation that holds the returned event. `check_state_based_actions` is
    1.7 a call and its named collects are *already* scan-gated; localizing
