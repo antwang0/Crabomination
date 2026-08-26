@@ -13145,9 +13145,20 @@ impl GameState {
     /// effect with no duration (`EffectDuration::Indefinite`) doesn't depend on
     /// its source sticking around, so those survive (Chainer's reanimated
     /// Nightmares keep the type after he dies).
+    ///
+    /// Guarded: `continuous_effects` is a `CowBox` and `retain` unshares it
+    /// whether or not it drops anything. Every battlefield removal calls this
+    /// one frame ahead of `on_left_battlefield`, and on a normal board no
+    /// entry is sourced from the leaver.
     pub(crate) fn remove_effects_from_source(&mut self, id: CardId) {
-        self.continuous_effects
-            .retain(|e| e.source != id || e.duration == EffectDuration::Indefinite);
+        if self
+            .continuous_effects
+            .iter()
+            .any(|e| e.source == id && e.duration != EffectDuration::Indefinite)
+        {
+            self.continuous_effects
+                .retain(|e| e.source != id || e.duration == EffectDuration::Indefinite);
+        }
     }
 
     /// Expire all `UntilEndOfTurn` continuous effects (called during Cleanup).
@@ -13177,10 +13188,18 @@ impl GameState {
     }
 
     pub fn expire_end_of_turn_effects(&mut self) {
-        self.continuous_effects.retain(|e| {
-            e.duration != EffectDuration::UntilEndOfTurn
-                && e.duration != EffectDuration::UntilEndOfCombat
-        });
+        // Same `CowBox` guard as `remove_effects_from_source`: a cleanup step
+        // on a board with no turn-scoped effect otherwise deep-copies the
+        // whole list to keep every entry.
+        if self.continuous_effects.iter().any(|e| {
+            e.duration == EffectDuration::UntilEndOfTurn
+                || e.duration == EffectDuration::UntilEndOfCombat
+        }) {
+            self.continuous_effects.retain(|e| {
+                e.duration != EffectDuration::UntilEndOfTurn
+                    && e.duration != EffectDuration::UntilEndOfCombat
+            });
+        }
     }
 
     /// Revert temporary control changes (Act of Treason / Threaten) whose

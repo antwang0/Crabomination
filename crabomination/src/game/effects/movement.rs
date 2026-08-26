@@ -2649,15 +2649,23 @@ impl GameState {
         }
         // Source-bound control steals end with their source (Sower of
         // Temptation — CR 800.4 hands the permanent back).
-        let mut kept = Vec::new();
-        for tc in std::mem::take(&mut self.temporary_control) {
-            if tc.source == Some(id) {
-                self.change_control(tc.card, tc.original_controller);
-            } else {
-                kept.push(tc);
+        // `temporary_control` is a `ColdState` field, so the `take` is a
+        // write to the whole cold group: on a board with no steal bound to
+        // `id` — every leave-the-battlefield on a normal board — it deep-
+        // copied ~85 collections and put the same list back. Same guard
+        // `revert_temporary_control` already carries, narrowed to the source
+        // this call is about. Reads are free (`Deref`).
+        if self.temporary_control.iter().any(|tc| tc.source == Some(id)) {
+            let mut kept = Vec::new();
+            for tc in std::mem::take(&mut self.temporary_control) {
+                if tc.source == Some(id) {
+                    self.change_control(tc.card, tc.original_controller);
+                } else {
+                    kept.push(tc);
+                }
             }
+            self.temporary_control = kept;
         }
-        self.temporary_control = kept;
         // CR 400.7 — the card is a new object in its next zone: effects
         // that granted abilities to the permanent don't follow it, and
         // per-object activation limits (CR 602.5f "only once each turn",
@@ -2701,15 +2709,26 @@ impl GameState {
         }
         // CR 611.2c — continuous effects aimed at this specific permanent
         // end with it (don't re-attach if the same card re-enters).
-        for e in self.continuous_effects.iter_mut() {
-            if let crate::game::layers::AffectedPermanents::Specific(ids) = &mut e.affected {
-                ids.retain(|cid| *cid != id);
+        // `continuous_effects` is a `CowBox`, so `iter_mut` unshares and deep-
+        // copies the whole list even when no entry names `id`. The gate is the
+        // disjunction of what the two statements below can change — an entry
+        // holding `id`, or one already empty for the `retain` to drop — so a
+        // clear answer means both are no-ops.
+        if self.continuous_effects.iter().any(|e| {
+            matches!(&e.affected,
+                crate::game::layers::AffectedPermanents::Specific(ids)
+                if ids.contains(&id) || ids.is_empty())
+        }) {
+            for e in self.continuous_effects.iter_mut() {
+                if let crate::game::layers::AffectedPermanents::Specific(ids) = &mut e.affected {
+                    ids.retain(|cid| *cid != id);
+                }
             }
+            self.continuous_effects.retain(|e| {
+                !matches!(&e.affected,
+                    crate::game::layers::AffectedPermanents::Specific(ids) if ids.is_empty())
+            });
         }
-        self.continuous_effects.retain(|e| {
-            !matches!(&e.affected,
-                crate::game::layers::AffectedPermanents::Specific(ids) if ids.is_empty())
-        });
         use crate::game::types::DelayedKind;
         let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
         self.delayed_triggers.retain(|dt| {
