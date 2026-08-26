@@ -6547,10 +6547,20 @@ impl CardInstance {
     /// currently on the stack as, if any. While set, the card resolves down the
     /// spell path with the half's card types and effect (CR 715 / CR 702.183).
     pub fn alt_spell_half(&self) -> Option<&Adventure> {
+        self.alt_spell_half_of(&self.definition)
+    }
+
+    /// [`alt_spell_half`](Self::alt_spell_half)'s pick, resolved against a
+    /// definition the caller already holds — so the returned reference is tied
+    /// to `def`'s lifetime, not to this `CardInstance`'s. A resolver that owns
+    /// the card by value can then clone the `Arc<CardDefinition>` once and
+    /// *borrow* the resolving effect instead of deep-copying the tree
+    /// (`continue_spell_resolution`). One walker, two lifetimes.
+    pub fn alt_spell_half_of<'a>(&self, def: &'a CardDefinition) -> Option<&'a Adventure> {
         if self.adventuring {
-            self.definition.adventure.as_deref()
+            def.adventure.as_deref()
         } else if self.omen_casting {
-            self.definition.omen.as_deref()
+            def.omen.as_deref()
         } else {
             None
         }

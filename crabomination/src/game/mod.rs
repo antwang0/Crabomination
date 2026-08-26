@@ -20916,32 +20916,42 @@ impl GameState {
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let is_initial_pass = override_effect.is_none();
-        let effect = override_effect.unwrap_or_else(|| {
-            if let Some(half) = card.alt_spell_half() {
-                // CR 715 / 702.183 — resolve the Adventure/Omen half's effect,
-                // not the creature body.
-                half.effect.clone()
-            } else if card.gift_promised
-                && let Some(gift) = card.definition.gift.as_ref()
-            {
-                // CR 702.165 — the gift was promised: resolve the enhanced
-                // effect (which itself bestows the gift on the opponent).
-                gift.gifted_effect.clone()
-            } else if let (Some(half), Some(split)) =
-                (card.split_cast, card.definition.split.as_ref())
-            {
-                // CR 709 — resolve the chosen half. Left (0) is the main body;
-                // right (1) is `split.right`. Fused (2) resolves the left body
-                // here, then the right half runs in a second pass below with
-                // its own target (slot 0 of `additional_targets`).
-                match half {
-                    1 => split.right.effect.clone(),
-                    _ => card.definition.effect.clone(),
+        // Borrow the resolving effect rather than deep-copying it. Every
+        // branch below reads a subtree of the card's own `CardDefinition`, and
+        // an `Effect` tree is big: `Effect::clone` under this function was
+        // 1,954 calls at **1,601 Ir each** on `--decks sos` (3.13 M, 0.21 % of
+        // the program) at the sixty-sixth tip. Cloning the `Arc` keeps the
+        // definition alive independently of `card` — which is moved to the
+        // graveyard further down — for one refcount bump.
+        let def = card.definition.clone();
+        let effect: &Effect = match override_effect.as_ref() {
+            Some(e) => e,
+            None => {
+                if let Some(half) = card.alt_spell_half_of(&def) {
+                    // CR 715 / 702.183 — resolve the Adventure/Omen half's
+                    // effect, not the creature body.
+                    &half.effect
+                } else if card.gift_promised
+                    && let Some(gift) = def.gift.as_ref()
+                {
+                    // CR 702.165 — the gift was promised: resolve the enhanced
+                    // effect (which itself bestows the gift on the opponent).
+                    &gift.gifted_effect
+                } else if let (Some(half), Some(split)) = (card.split_cast, def.split.as_ref()) {
+                    // CR 709 — resolve the chosen half. Left (0) is the main
+                    // body; right (1) is `split.right`. Fused (2) resolves the
+                    // left body here, then the right half runs in a second
+                    // pass below with its own target (slot 0 of
+                    // `additional_targets`).
+                    match half {
+                        1 => &split.right.effect,
+                        _ => &def.effect,
+                    }
+                } else {
+                    &def.effect
                 }
-            } else {
-                card.definition.effect.clone()
             }
-        });
+        };
         // CR 608.2b — a spell whose single target is illegal as it tries to
         // resolve doesn't resolve. Applies when the primary target was a
         // battlefield permanent at cast time (zone-loose filters aimed at
@@ -21061,7 +21071,7 @@ impl GameState {
             card.definition.printed_colors(),
             card.definition.card_types.clone(),
         ));
-        let res = self.resolve_effect(&effect, &ctx);
+        let res = self.resolve_effect(effect, &ctx);
         self.resolving_source = prev_src;
         let mut events = res?;
         // CR 702.165 — a promised gift is given as the spell resolves its
@@ -21076,7 +21086,8 @@ impl GameState {
         if card.split_cast == Some(2)
             && let Some(split) = card.definition.split.as_ref()
         {
-            let right_effect = split.right.effect.clone();
+            // Borrowed for the same reason as the main effect above.
+            let right_effect = &split.right.effect;
             let right_ctx = EffectContext::for_spell_with_source_and_origin(
                 card.id,
                 card.definition.name,
@@ -21089,7 +21100,7 @@ impl GameState {
                 mana_spent,
                 card.cast_from_hand,
             );
-            let mut right_events = self.resolve_effect(&right_effect, &right_ctx)?;
+            let mut right_events = self.resolve_effect(right_effect, &right_ctx)?;
             events.append(&mut right_events);
         }
         // CR 702.47b — spliced rules text resolves after the main spell's
