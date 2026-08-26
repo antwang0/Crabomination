@@ -2404,8 +2404,9 @@ I refs, --decks cube      2,732,668,272    2,712,267,762   -0.747 %
 
 The layer-pass commit below was measured separately, at base `b8f695ad` — two
 of the other session's card commits landed between — and reads `fixed`
-**-0.319 %**, `sos` **-0.354 %**, `cube` **-0.131 %**. **End to end the pass
-is `fixed` -0.36 %, `sos` -0.96 %, `cube` -0.88 %.**
+**-0.319 %**, `sos` **-0.354 %**, `cube` **-0.131 %**. The four-collect commit is measured at its own base again (`ab6b645a`) and
+reads `fixed` **-0.069 %**, `sos` **-0.098 %**, `cube` **-0.079 %**. **End to
+end the pass is `fixed` -0.43 %, `sos` -1.06 %, `cube` -0.96 %.**
 
 **`CardDefinition` is 8,232 bytes and a token mint moved a whole one twice**:
 `token_to_card_definition` built it, `mint_token_onto_battlefield`'s by-value
@@ -2438,8 +2439,8 @@ in the program branches on definition pointer identity (`Arc::ptr_eq` appears
 once, on `CowBox`, in a test-only helper). The memo is a pure function of its
 key, so thread-local storage adds no cross-thread order to the game.
 
-**A third commit takes (-45)'s largest row, and it is the same question one
-layer down.** `compute_permanent_pass` collected an *empty* iterator on
+**A third and fourth commit take (-45)'s largest row and four more, and they
+are the same question one layer down.** `compute_permanent_pass` collected an *empty* iterator on
 83.6 % of its 89,154 passes — `Vec::from_iter` plus a `sort_by` over nothing,
 90,170 times — because the filter's body (`affected_includes_gated`) runs only
 29,436 times over those passes. Gating the collect: `fixed` **-0.319 %**,
@@ -2447,6 +2448,14 @@ layer down.** `compute_permanent_pass` collected an *empty* iterator on
 5,488,146 Ir -> 14,784 / 2,321,934**. **Cube moves least because a cube board
 carries statics** — the gate is worth what the *empty* fraction is worth, and
 that is a property of the pool, not of the function.
+
+**Then the same table, read again with that rule: four more rows, and the tell
+this time is syntactic.** `resolve_effect`'s two, `fire_delayed_event_watchers`'
+two and `blockers_of` all `collect()` and then test `is_empty()` on what they
+just built, one line down — so the question the `Vec` exists to answer was
+already askable without it. `fixed` **-0.069 %**, `cube` **-0.079 %**, `sos`
+**-0.098 %**, 45,430 collects removed. **Grep for a `collect()` whose next
+line is an `is_empty()`.**
 
 **The pass also answered (-48), which is measurement, not code: mimalloc is
 5.99 % faster than the system allocator** (eight ABBA blocks, 8/8, CI -7.04 ..
@@ -5174,6 +5183,17 @@ read `fixed` **-0.319 %**, `sos` **-0.354 %**, `cube` **-0.131 %**. **Cube
 moves least because a cube board carries statics**, so its gathered list is
 non-empty more often; the gate is worth what the *empty* fraction is worth,
 which is a pool question. That is the sizing rule for the rest of the table.
+
+**Four more rows PAID at the sixty-fourth pass, and every one of them was
+followed by an `is_empty()` test that could have been asked first.**
+`resolve_effect`'s two (the resolution's target list, and the Quina rider
+walk over `last_created_tokens`), `fire_delayed_event_watchers`' two (the
+batch's deaths and its attacker declarations), and `blockers_of`. Together
+`fixed` **-0.069 %**, `cube` **-0.079 %**, `sos` **-0.098 %**; 45,430 collects
+removed. `resolve_effect` **37,420 calls -> 4,930**,
+`fire_delayed_event_watchers` **18,638 -> 10,170**, `blockers_of` **10,836 ->
+6,364`. **The tell to grep for is a `collect()` whose very next line is an
+`is_empty()` on what it just built.**
 
 **Read the two columns against each other.** A row with many calls and few
 Ir apiece (`compute_permanent_pass`, `resolve_effect`,

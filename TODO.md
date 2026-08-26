@@ -29,12 +29,16 @@ the whole mitigation, it costs one command, and it would have saved this run
 an hour. If you take one anyway, say so in the Log as a replication rather
 than rewriting the entry.
 
-0. **The sixty-fourth pass: (-44) closed, (-45)'s largest row taken, (-48)
-   answered.** End to end `fixed` **-0.36 %**, `sos` **-0.96 %**, `cube`
-   **-0.88 %**. (-44) was a token mint building an 8,232-byte
+0. **The sixty-fourth pass: (-44) closed, five of (-45)'s rows taken, (-48)
+   answered.** End to end `fixed` **-0.43 %**, `sos` **-1.06 %**, `cube`
+   **-0.96 %**. (-44) was a token mint building an 8,232-byte
    `CardDefinition` *per token in the batch* (`sos` -0.605 %); (-45)'s row was
    `compute_permanent_pass` collecting an **empty** iterator on 83.6 % of its
-   89,154 layer passes (`sos` -0.354 %).
+   89,154 layer passes (`sos` -0.354 %); four more of its rows —
+   `resolve_effect` x2, `fire_delayed_event_watchers` x2, `blockers_of` —
+   went together for another `sos` -0.098 %, and **the tell there is
+   syntactic: a `collect()` whose next line is an `is_empty()` on what it
+   just built.**
 0b. **Three rules out of it.** (a) **A collect is worth what its *empty*
    fraction is worth, and that fraction is a property of the pool** — cube
    moved least on the layer-pass gate because a cube board carries statics.
