@@ -187,6 +187,21 @@ At the seventy-fifth pass the same commit read `cube` **+0.503 %** live and
 -0.03 % apiece. It is a *measurement* switch — no shipped profile sets it,
 and a strength number taken under it is not a strength number.
 
+**WHAT THE SIMULATION'S OWN PICKERS PROPOSE AND THE ENGINE REJECTS.**
+`sim_step` quietly rolls a rejected declaration back and retries it as a
+priority pass, so a picker that proposes an illegal attack or block is
+invisible to the suite, the traces and `--bench`. `CRAB_SIM_REJECTS` counts
+them; it is an early return on one `OnceLock` read when unset, so the hot
+path pays a relaxed load and a branch.
+
+```text
+CRAB_SIM_REJECTS=1     target/release-fast/bot_ladder --a gang --b gang \
+    --games 12 --threads 3 --seed 11 --decks cube      # prints the counts
+CRAB_SIM_REJECTS=names …  --threads 1  2>&1 | grep sim_reject | sort | uniq -c
+```
+
+The census that closed (-54) and opened (-55) is in the candidates section.
+
 **And a green trace suite is not evidence that a bot change is
 behaviour-preserving until you check the trace pool executes the code.** The
 `fixed` pool reaches none of `cast_candidates`' specialty blocks —
@@ -6631,8 +6646,62 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-54) THE SIMULATION TAKES A TRANSACTION CHECKPOINT ON A STATE IT OWNS AND
-THROWS AWAY — ~0.93 % OF `cube`, AND THE MISSING NUMBER IS A FAILURE COUNT.**
+**(-55) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
+OUT — 470 of 91,438, AND ON ONE `cube` BOARD 6.8 % OF THE ATTACKS.** Measured
+with `CRAB_SIM_REJECTS=1` (see "How to measure"), `--games 12 --threads 3`,
+four pools x three seeds:
+
+```text
+pool     seed   rejected / proposed          attack        block
+fixed    1/11/42   28/6,644  24/6,002  24/4,782      0        28 / 24 / 24
+cube     1         42/7,744  (0.54 %)             0/3,174     42/4,554
+cube     11       330/8,920  (3.70 %)         258/3,784      72/5,088
+cube     42         6/9,116  (0.07 %)             0/3,716      6/5,376
+sos      1/11/42    0 / 10 / 0                    0            0 / 10 / 0
+sealed   1/11/42    0 / 0 / 6                     0            0 / 0 / 6
+```
+
+**`Picked::Plain` never fails: 0 rejections in 88 proposals**, which is what
+`would_accept_on`/`accept_on` having already run it predicts. Every rejection
+is a *declaration*, and `CRAB_SIM_REJECTS=names` names them:
+
+```text
+154  CannotAttack        Angel                    sick=false  kw=[Flying]
+ 52  SummoningSickness   Kestia, the Cultivator   sick=false  kw=[]
+ 24  CannotAttack        Kestia, the Cultivator   sick=false  kw=[]
+ 20  CannotBlock         Veteran Armorer          sick=false  kw=[]
+ 16  MustBeBlockedIfAble Crested Craghorn         sick=false  kw=[Haste]
+ 12  CannotAttack        Whitemane Lion           sick=false  kw=[Flash]
+ 10  CannotAttack        Offender at Large        sick=false  kw=[Disguise]
+```
+
+**`SummoningSickness` on a card whose `summoning_sick` is `false` is a
+contradiction and the best lead in the table** — the picker's own gate is
+`!c.summoning_sick || c.has_keyword(Haste)` read off the *instance*, where
+`declare_attackers_banded` reads the computed view, so this is the
+presence-vs-computed shape the seventy-first and seventy-fifth passes both
+found one level up. `Angel` at 154 is one token on one board against one of
+`declare_attackers_banded`'s thirty `CannotAttack` sites; **that function
+needs a per-site tag before the next run can bisect it**, which is the first
+thing to build here. Each rejection costs a full `perform_action` +
+checkpoint + restore plus the retry pass, so this is a correctness lead with
+a perf tail, not the other way round — and at 0.51 % overall the perf tail is
+small. Fix the pickers, not the fallback.
+
+**(-54) CLOSED at the seventy-fifth pass — THE FALLBACK IS LOAD-BEARING AND
+HERE IS THE NUMBER.** The entry asked for a failure count before anything
+else: it is **470 of 91,438 non-pass `sim_step` calls (0.51 %)**, non-zero on
+every pool and as high as 3.70 % on one `cube` seed (table in (-55) above).
+So `sim_step`'s rollback-and-retry really does run, the checkpoint stays, and
+`fallibility_closure.py` agrees from the static side — `declare_attackers`
+reaches 6 `Result` functions and 2 raise, `declare_attackers_banded` alone
+carrying 38 `Err(` sites. The one shape that *is* provably infallible is
+`Picked::Plain` (0/88), and it is 0.5 % of the non-pass calls, so a fast path
+for it buys nothing. **What the count did find is (-55).**
+
+**(-54, original) THE SIMULATION TAKES A TRANSACTION CHECKPOINT ON A STATE IT
+OWNS AND THROWS AWAY — ~0.93 % OF `cube`, AND THE MISSING NUMBER IS A FAILURE
+COUNT.**
 `sim_step -> perform_action` is **4,322 calls / 177,669,748 Ir / 6.66 % of
 `cube`** at the seventy-fifth tip, and ~5,750 Ir of each is the checkpoint
 (-13) prices: clone 1,194, drop 2,324, plus the CoW unshares the action pays

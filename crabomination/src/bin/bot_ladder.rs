@@ -1278,6 +1278,18 @@ fn main() {
     // seed x thread sweep: any per-process RNG or global mutable state
     // leaking across threads (the filter-21 class — `restart_game` drawing
     // from OS entropy) diverges the two counts here.
+    // PERF (-54)/(-55): what the simulation's own pickers proposed and the
+    // engine threw out. Off unless `CRAB_SIM_REJECTS` is set.
+    if crabomination::server::bot::sim_rejects::level() > 0 {
+        let s = crabomination::server::bot::sim_rejects::snapshot();
+        let (calls, errs): (u64, u64) =
+            s.iter().fold((0, 0), |(a, b), (c, e)| (a + c, b + e));
+        println!(
+            "  sim_rejects {errs}/{calls} ({:.2} %) — attack {}/{}, block {}/{}, other {}/{}",
+            if calls == 0 { 0.0 } else { 100.0 * errs as f64 / calls as f64 },
+            s[0].1, s[0].0, s[1].1, s[1].0, s[2].1, s[2].0,
+        );
+    }
     if std::env::var_os("CRAB_THREAD_CHECK").is_some() {
         let alt = if threads <= 1 { 2 } else { 1 };
         let (alt_cost, alt_rows) = run_jobs(&field, &args, alt, true);

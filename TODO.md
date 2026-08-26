@@ -62,6 +62,21 @@ commit that a fetch would have shown.
    `--seed`? It would make training runs replayable and `--games N` fixed
    work; it also removes per-actor tie-break diversity. Not to be changed
    unilaterally.
+4a. **(-54) is CLOSED with its number and (-55) is what the number found.**
+   `CRAB_SIM_REJECTS=1` counts what the sim's own pickers propose and the
+   engine throws out: **470 of 91,438 non-pass `sim_step` calls (0.51 %)**,
+   non-zero on every pool and **3.70 % on `cube` seed 11 — 258 of 3,784
+   attacks**. So the rollback-and-retry fallback is load-bearing and the
+   checkpoint stays. `Picked::Plain` is 0/88, so a fast path for the one
+   provably-infallible kind buys nothing. **Every rejection is a
+   declaration**, and `=names` names them: `SummoningSickness` on a card
+   whose `summoning_sick` is `false` (`Kestia`, 52) is a contradiction and
+   the best lead — the picker gates on `c.has_keyword(Haste)` off the
+   *instance* where the engine reads the computed view, the same
+   presence-vs-computed shape as passes 71 and 75. `Angel` at 154 needs a
+   per-site tag on `declare_attackers_banded`'s thirty `CannotAttack`
+   returns before it can be bisected; **build that first**. Correctness lead
+   with a small perf tail — fix the pickers, not the fallback.
 5. **Missing tool, and it has now blocked three commits:** there is no
    win-rate gate for a *code* change. `bot_ladder --a/--b` compares two
    profiles inside one binary and `ab_wall.py` only times two binaries, so

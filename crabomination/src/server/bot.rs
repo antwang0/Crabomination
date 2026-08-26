@@ -7827,6 +7827,44 @@ fn dry_run(
 /// `ManualTapRequired`, which leaves exactly the state the retry would have
 /// seen, so that retry is kept and reads the same. Returns false when the
 /// simulation must be abandoned.
+/// The simulation's own declaration pickers against the engine, counted.
+///
+/// `sim_step`'s fallback quietly rolls a rejected declaration back and retries
+/// it as a priority pass, so a picker that proposes an illegal attack or block
+/// costs a full `perform_action` + checkpoint + restore and shows up nowhere:
+/// not in the suite, not in the traces, not in `--bench`. PERF's (-54) asked
+/// for the failure count and (-55) is what it found. Off by default and gated
+/// by one `OnceLock` read, so the hot path pays an atomic load and a branch.
+///
+/// ```text
+/// CRAB_SIM_REJECTS=1     bot_ladder … --decks cube    # the counts
+/// CRAB_SIM_REJECTS=names bot_ladder … --threads 1     # + card, sickness, computed keywords
+/// ```
+pub mod sim_rejects {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `[attack, block, other]` — proposals and rejections per action kind.
+    pub static CALLS: [AtomicU64; 3] =
+        [AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0)];
+    pub static ERRS: [AtomicU64; 3] =
+        [AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0)];
+
+    /// 0 = off, 1 = count, 2 = count and name each rejection.
+    pub fn level() -> u8 {
+        static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_SIM_REJECTS") {
+            Ok(v) if v == "names" => 2,
+            Ok(v) if !v.is_empty() && v != "0" => 1,
+            _ => 0,
+        })
+    }
+
+    /// `(proposals, rejections)` per kind, for a caller that wants to print.
+    pub fn snapshot() -> [(u64, u64); 3] {
+        std::array::from_fn(|i| (CALLS[i].load(Relaxed), ERRS[i].load(Relaxed)))
+    }
+}
+
 fn sim_step(g: &mut GameState, action: GameAction) -> bool {
     if matches!(action, GameAction::PassPriority) {
         return match g.perform_action_inner(GameAction::PassPriority) {
@@ -7837,7 +7875,38 @@ fn sim_step(g: &mut GameState, action: GameAction) -> bool {
             Err(_) => false,
         };
     }
-    g.perform_action(action).is_ok() || dry_run(g, GameAction::PassPriority).is_ok()
+    if sim_rejects::level() == 0 {
+        return g.perform_action(action).is_ok() || dry_run(g, GameAction::PassPriority).is_ok();
+    }
+    let kind = match &action {
+        GameAction::DeclareAttackers(_) => 0usize,
+        GameAction::DeclareBlockers(_) => 1,
+        _ => 2,
+    };
+    sim_rejects::CALLS[kind].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let r = g.perform_action(action);
+    if let Err(e) = &r {
+        sim_rejects::ERRS[kind].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if sim_rejects::level() >= 2 {
+            let id = match e {
+                crate::game::GameError::CannotAttack(i)
+                | crate::game::GameError::SummoningSickness(i)
+                | crate::game::GameError::CannotBlock(i)
+                | crate::game::GameError::MustBeBlockedIfAble(i) => Some(*i),
+                _ => None,
+            };
+            let card = id.and_then(|i| g.find_card_anywhere(i));
+            eprintln!(
+                "sim_reject kind={kind} {e:?} name={} sick={:?} computed_kw={}",
+                card.map(|c| c.definition.name).unwrap_or("?"),
+                card.map(|c| c.summoning_sick),
+                id.and_then(|i| g.computed_permanent(i))
+                    .map(|cp| format!("{:?}", cp.keywords))
+                    .unwrap_or_else(|| "-".into()),
+            );
+        }
+    }
+    r.is_ok() || dry_run(g, GameAction::PassPriority).is_ok()
 }
 
 fn simulate_attack_outcome_once(
