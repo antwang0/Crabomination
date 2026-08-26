@@ -626,6 +626,112 @@ build.
 
 ## Baseline
 
+**Seventy-first pass. Base `28f5c628` vs tip.** One commit, and it is not a
+`*_scan` bit: the bot's affordability pre-filter gets a **per-colour budget**.
+Ir readings `profiling-fast --no-default-features`, callgrind, one thread,
+`--a gang --b gang --games 6 --threads 1 --seed 1`.
+
+```text
+                          base (28f5c628)   tip
+I refs, --decks fixed     1,149,551,833    1,144,976,824   -0.398 %
+I refs, --decks sos       1,482,417,805    1,462,215,557   -1.363 %
+I refs, --decks cube      2,634,006,362    2,601,748,276   -1.225 %
+```
+
+**Both columns are the change in isolation.** The commit was rebased onto a
+concurrent session's `3cce6889` after the readings were taken, so its landed
+parent is one commit past the base named above; nothing in `3cce6889` touches
+the bot's pre-filter.
+
+**`AvailableMana` answered "is there a producer for this colour" and the
+question is "are there enough".** `{G}{G}` off a lone Forest passed the
+filter, reached the pick site, and was thrown away by the engine's payment —
+which is where PERF (-51)'s **31.9 % of payments rolled back** comes from.
+The budget is the singleton case of Hall's condition: one `[u32; 5]` built in
+the walk `available_mana` already takes (pool mana plus each untapped
+countable source's best single-activation amount, added to *every* colour it
+could make, so it over-counts by construction), five adds and five compares
+per hand card. What it removes, on `cube`:
+
+```text
+                                          base      tip
+cast_spell -> cast_spell_with_convoke     7,110     6,038    -1,072 attempts
+try_pay -> restore_payment_state          3,696     2,716      -980 rollbacks
+bot::accept_on (dry-run probes)          11,986    10,910    -1,076 probes
+cast_spell_with_convoke -> finalize_cast  4,720     4,720     byte-identical
+```
+
+**Every cast that used to happen still happens.** The filter removed 1,072
+attempts and 980 payment rollbacks and not one completed cast.
+
+**Sound is the whole commit, and four widenings are what makes it sound.**
+The budget is switched off entirely — `by_color = [total; 5]` — whenever the
+estimate cannot bound a colour, and each of the four was found by *measuring*
+against the engine, not by reading the code:
+
+| widening | found by |
+|---|---|
+| CR 609.4b spend-as-any-colour (Lattice, North Star, Unexpected Potential, Emissary's Ploy) | reasoning — `relax_cost_colors` is asked here with `seat: None` and misses the seat-scoped three |
+| a mana-production doubler (Mana Reflection, Nyxbloom) | reasoning — `total` already under-counts it, and an under-counted *budget* becomes a rejection |
+| an untapped source with a colour-producing ability `is_countable_mana_ability` rejects — filter lands, Lotus Petal, **Crystalline Crawler** (a counter cost and *no* `{T}`) | the oracle, `--decks sealed` and `--decks cube` |
+| CR 305.6 land-type rewrite (Dryad of the Ilysian Grove) — `mana_source_table` reads it through `scan_land_type_rewrites`, `granted_abilities_of` does not | the oracle, `--decks cube` seed 11: `engine_table=["WUBRG", "WUBRG", …]` against nine untapped Mountains |
+
+**The oracle is the transferable part of this pass.** The filter is only
+allowed to reject what the engine would also reject, and there is an engine
+function that answers exactly that — `could_pay_cost`, which runs
+`try_pay_with_auto_tap` on a clone. Wiring it behind an env var at the
+rejection site, printing only where the *old* colours test would have
+accepted, and sweeping pools x seeds turns "is my model of payment right?"
+into a count. It went 6 -> 6 -> 240 -> **0**, and each non-zero named the card
+that found the hole. **Any change that tightens a bot pre-filter should be
+landed this way**; the first two versions of this one looked correct and were
+not.
+
+```text
+oracle sweep at the tip: --games 12, seeds 1/7/11/12/23/31 x cube/sealed/all,
+                         --games 40 seeds 5/17/42 x all, and --bench
+                         = 0 cases where `could_pay_cost` accepts a cost the
+                           budget rejects
+```
+
+```text
+decisions        196,220 -> 195,886       -334 (-0.17 %), see below
+turns_per_game   27.53 -> 27.48
+decisions_per_game 613.2 -> 612.1
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism      ok (all pairs split)
+ladder printout  identical on fixed / sos / cube (6 games, seed 1)
+games_per_s      146.02 -> 149.57 (one run each, `--bench --threads 3`; inside
+                 this box's spread, quoted for the record not as a claim)
+peak_rss_mib     19.9 -> 20.0
+suite            18,749 passed / 0 failed / 5 ignored under `debug_assertions`,
+                 so the fused-scan `debug_assert_eq!` ran on every one
+golden traces    7 tests; `seeded_games_match_their_digests` seed 2 re-blessed
+                 — same winner, same 16 turns, same 384 actions, digest only
+clippy           `-p crabomination --all-targets` clean
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 50
+```
+
+**This pass is NOT behaviour-preserving and that is the point.** `decisions`
+moves by 334 over 320 bench games and one golden seed re-blesses, because the
+bot stops offering lines it cannot pay: where the top-scored candidate was
+unpayable, the old code offered it and something downstream discarded it, and
+`pick_combat_trick` (which picks without a probe) submitted it outright. The
+guarantee that makes that safe is the oracle's zero, not a digest: **no line
+the engine could have paid was removed** — the byte-identical `finalize_cast`
+count is the same statement from the other side.
+
+**Crash-freedom and determinism at the tip.** `overflow` profile
+(`release-fast` + `overflow-checks`), `--a gang --b gang --threads 3`, seeds
+11 and 12: `--decks all --games 200`, `--decks cube` and `--decks sealed` at
+`--games 120` = **11,600 games, 0 undecided, no panic, no arithmetic
+overflow**, every pair split.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState` or
+`Vocab` change is in this pass — the change is to a bot pre-filter, not to
+anything the net reads.
+
 **Seventieth pass. Base `d9583dba` vs tip `7ada03d9`.** One commit: the
 third `*_scan` bitmask, on the attack declaration. Ir readings
 `profiling-fast --no-default-features`, callgrind, one thread, `--a gang --b
@@ -2695,6 +2801,52 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Seventy-first pass — the pre-filter asked the wrong question, and an engine function was the oracle
+
+Base `28f5c628`, one commit, **`fixed` -0.398 %, `sos` -1.363 %, `cube`
+-1.225 %** — the largest single commit since the sixty-third pass, and the
+first in ten passes that is not a presence gate. Full numbers in **Baseline**.
+
+* **The finding is a shape, not a hot function.** `AvailableMana` carried a
+  `ColorSet` — a *presence* answer — where the question the payment funnel
+  asks is a *count*. `{G}{G}` off a lone Forest passed. Nothing in any profile
+  points at this: the cost shows up three frames away as
+  `try_pay_after_snapshot_mode` and `activate_ability`, and the self table
+  never names the filter at all. **It came from reading (-51)'s two numbers
+  next to each other** — 31.9 % of payments rolled back, and a pre-filter
+  whose own doc comment says it "ignores the assignment problem".
+* **A wrong pre-filter is invisible in every invariant this file checks.**
+  It costs Ir, not correctness, so it survives a green suite, identical
+  golden traces and a flat ladder indefinitely. The tell that finds one is
+  the *ratio* between what the bot offers and what the engine completes.
+* **`could_pay_cost` is an oracle and this file had never used it that way.**
+  Any bot-side estimate of a rules question has an engine function that
+  answers it exactly; wiring that function in behind an env var at the
+  divergence site, and reporting only where the *old* estimate would have
+  said yes, turns "is my model right?" into a count that names the card.
+  Three holes, three cards, three rounds: **Choreographed Sparks** (the first
+  oracle was `would_accept_on`, which accepts a *suspend* — use
+  `could_pay_cost`, which actually pays), **Crystalline Crawler** (a mana
+  ability with a counter cost and no `{T}` at all, so a `tap_cost` guard on
+  the widening missed it), **Dryad of the Ilysian Grove** (CR 305.6 land-type
+  rewrites reach `mana_source_table` through `scan_land_type_rewrites` and
+  reach `granted_abilities_of` not at all). The count went 6 -> 6 -> 240 -> 0.
+  **The first two versions of this commit looked correct and were not.**
+* **What "sound" buys, stated as a number.** Completed casts on `cube` are
+  **4,720 base and 4,720 tip, byte-identical**, while cast attempts fall
+  7,110 -> 6,038 and payment rollbacks 3,696 -> 2,716. That pair is the whole
+  argument: the filter removed attempts, not casts.
+* **And the pass is not behaviour-preserving**, which is new for this branch's
+  perf work. `decisions` moves 196,220 -> 195,886 and one golden seed
+  re-blesses (same winner, same turns, same action count). The bot stops
+  offering lines it cannot pay, and `pick_combat_trick` submits its pick
+  without a probe. The licence for that is the oracle's zero, not a digest.
+* **Refuted on the way, and worth the line:** deriving the budget from the
+  engine's own `untapped_mana_colors` (i.e. `mana_source_table`) is exact and
+  costs **6,690 Ir a call against a ~4,600 Ir win** — 10,268 sweeps would pay
+  68.7 M to save 47 M. An exact model of a cheap question can cost more than
+  the question.
 
 ### Seventieth pass — count the loop's trips before you write the bit
 
@@ -5691,8 +5843,21 @@ tapped whatever it *could* reach before `pay_for_spell` rejects the rest, and
 cube in taps plus ~0.7 % in tables, spent on payments that were never going
 to complete.
 
+**(b) IS HALF PAID at the seventy-first pass — the bot half, and it read
+`cube` -1.225 %.** Cast attempts 7,110 -> 6,038, payment rollbacks
+3,696 -> 2,716, probes 11,986 -> 10,910, completed casts byte-identical. See
+**Baseline**. What is left of this entry is **(a)**, the 7,555-Ir land tap,
+and the *engine-side* bail below — the remaining 2,716 rollbacks are the ones
+whose shortfall is generic rather than coloured, which no per-colour budget
+can see.
+
 **Two ways in, and the second is the sound one.**
-*Reject earlier in the bot.* `bot::available_mana` is documented as
+*Reject earlier in the bot.* **TAKEN, and the doc comment's warning was
+right**: the first two versions of the tightened filter each rejected a cast
+the engine could pay (Crystalline Crawler's counter-cost mana ability; a
+Dryad of the Ilysian Grove land-type rewrite). Both were found by the oracle
+this entry asked for, and neither by reading the code.
+*The original sizing, kept for the record.* `bot::available_mana` is documented as
 **deliberately optimistic** — it ignores the assignment problem, so a hand
 card whose pips each have *some* producer passes the filter even when no
 assignment covers them. Tightening it to a sound assignment test (Hall's

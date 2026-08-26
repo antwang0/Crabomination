@@ -37,6 +37,35 @@ Ir/call row of the `make_mut` caller table that (-43) points at. **Push the
 code commit before you write the tracker prose**; that is the only signal the
 other session's next fetch can see.
 
+1. **Seventy-first pass: `fixed` -0.398 %, `sos` -1.363 %, `cube` -1.225 %**,
+   one commit — the biggest single commit since the sixty-third pass and the
+   first in ten that is not a presence gate. `AvailableMana` answered "is
+   there a producer for this colour" where the payment funnel asks "are there
+   *enough*", so `{G}{G}` off a lone Forest passed the bot's pre-filter and
+   was thrown away at payment. A `[u32; 5]` budget (Hall's condition on the
+   singleton colour sets) built in the walk `available_mana` already takes:
+   cast attempts 7,110 -> 6,038, payment rollbacks 3,696 -> 2,716, dry-run
+   probes 11,986 -> 10,910, **completed casts 4,720 -> 4,720 byte-identical**.
+1d. **The reusable half is the oracle, and this branch should use it again.**
+   A bot-side estimate of a rules question has an engine function that answers
+   it exactly — here `could_pay_cost`, which runs `try_pay_with_auto_tap` on a
+   clone. Wire it behind an env var at the *divergence* site, report only
+   where the old estimate would have said yes, and sweep pools x seeds: the
+   count went **6 -> 6 -> 240 -> 0** and each non-zero named the card that
+   found the hole (Choreographed Sparks — `would_accept_on` accepts a
+   *suspend*, use `could_pay_cost`; Crystalline Crawler — a mana ability with
+   a counter cost and **no `{T}`**; Dryad of the Ilysian Grove — CR 305.6
+   land-type rewrites reach `mana_source_table` and not
+   `granted_abilities_of`). **The first two versions of that commit looked
+   correct and were not.** Refuted on the way: deriving the budget from
+   `untapped_mana_colors` is exact and costs 6,690 Ir a call against a ~4,600
+   Ir win.
+1e. **A wrong bot pre-filter is invisible to every invariant this file
+   checks** — it costs Ir, not correctness, so a green suite, identical golden
+   traces and a flat ladder all survive it indefinitely. The tell is the
+   *ratio* between what the bot offers and what the engine completes; grep the
+   other pre-filters (`ward_tax_payable`, `pick_combat_trick`,
+   `max_affordable_x`) for the same presence-vs-count shape.
 1. **Seventieth pass: `fixed` -0.399 %, `sos` -0.282 %, `cube` -0.394 %**, one
    commit — `attack_static_scan`, the third `*_scan` bitmask, on
    `declare_attackers_banded`'s four gateable static walks (two of them per
@@ -102,23 +131,31 @@ other session's next fetch can see.
    under an existing `*_scan` call.** Four of this pass's five commits were a
    whole-board question asked beside a mask that could have answered it —
    `cast_cost_scan` still covers only six of the nine its own function asks.
-   Then: **39 % of `cube` cast attempts fail** — 7,790 non-recursive
-   `cast_spell_with_convoke` calls reach `finalize_cast` only 4,720 times,
-   against the 94 % the forty-fifth pass measured on `fixed`. Each failure
-   still removes the card from hand and pushes it back, which is 2 of the
-   3.2 deep copies a cast attempt costs (30,670 of `cube`'s 159,018 clones).
-   **The lead is not "the engine removes the card too early" — it is why the
-   bot attempts 3,070 casts it cannot pay for**, i.e. `cast_candidates`'
-   affordability filter, which is (-41)/(-34). Also open: the layer pass's
+   Then: **the cast-failure lead is half taken** (item 1) — attempts are
+   6,038 and rollbacks 2,716 now. **What is left of it is the generic half**:
+   a per-colour budget cannot see a shortfall that is generic rather than
+   coloured, and no sound generic bound exists from `ManaSourceInfo`, which
+   carries colours but not amounts. The other half is **(-51)(a), a land tap
+   at 7,555 Ir over 21,566 taps — 6.19 % of cube** and the second-largest
+   call site in the simulator; it has never been costed and its obvious lever
+   (a cheaper `keyword_grant_in_scope`) needs the per-definition keyword-grant
+   bit, which is in the do-not-rebuild list. Also open: the layer pass's
    `printed_color_set`, **194,610 calls / 11.7 M / 0.44 % of cube**, one per
    pass (caching it on `CardDefinition` is blocked by the ~20 in-place
    definition mutations — see (-11)). Do **not** re-take the `sorted` `Vec`
    (item 4), and do not hoist `trigger_grant_sources` out of the combat
    damage loop — it is already once per damage event, and the remaining 1.7x
    would have to survive a rider resolving mid-loop.
-3. **Run `cg_contexts.py` over `--separate-callers=2` on
-   `clone_from_ref_in`, not the `make_mut` caller table** — the first says
-   who *clones*, the second says who *asks*, and (-50) is the difference.
+3. **DONE — the `clone_from_ref_in` context table is in PERF's Profile of
+   record** (`--separate-callers=2`, `cg_contexts.py`, tip `ee376912`).
+   157,402 real deep copies against 806,878 `make_mut` calls, and the two
+   tables rank differently. **The reusable column is the clone/ask ratio**:
+   65 % (`activate_ability_inner`) means the first `&mut` after the checkpoint
+   really is the first write and (-50) has nothing to gate there; 8 %
+   (`do_untap`) means the handle was already unshared. The same block records
+   that **the self table has stopped saying anything new** and that
+   `dispatch_triggers_for_events` line-profiles diffuse at this tip (largest
+   engine line 0.23 %) — do not spend another `profiling-lines` build on it.
    `cg_ratio.py` still ranks pool outliers: `affected_includes_gated` is
    **6.63x cube/sos and 0.46 % of cube**, i.e. the sixty-fourth pass's layer
    gate does not fire on a grant-heavy board.
@@ -133,7 +170,12 @@ other session's next fetch can see.
    never allocating** — check an allocation table's row *is* an allocation
    before removing it. And **the `*_scan` bitmask on `declare_blockers`**
    (`sos` +0.006 %, seventieth pass) — the shapes are identical to the attack
-   side's and the loop is not. Older refutations are in PERF's standing rules.
+   side's and the loop is not. And **the `*_scan` bitmask on `do_untap`** —
+   the forty-third pass built it and it read **+0.0001 %**: each of the six
+   walks short-circuits on `definition.static_abilities.is_empty()`, so six
+   specialised `any`s beat one general pass. `do_untap` is 1.55 % of cube and
+   **none of it is in those walks** — read its callee table, not its walk
+   count. Older refutations are in PERF's standing rules.
 5. **Bugs. ENGINE_BACKLOG's P2 has no open correctness entries now.** The
    deck-out item is fixed: `pending_deck_loss` is armed by the failed draw and
    promoted by the SBA sweep (CR 104.3c), which also closed the half nobody had
@@ -150,11 +192,16 @@ other session's next fetch can see.
    bug is only observable where the failure is *handled* rather than
    propagated. Still open: ENGINE_BACKLOG P3's picker/checker disagreement
    (27 single-slot bodies aim with one filter and are checked against another).
-6. **Housekeeping.** TODO **797**, PERF **8.5k**,
+6. **Housekeeping.** TODO **~850**, PERF **8.8k**,
    ENGINE_BACKLOG 3.8k, CARD_BACKLOG 4.1k, CLIENT_BACKLOG 428. Suite
    **19,009 passed / 0 failed / 5 ignored** — that figure is the workspace
    less the client; the two-crate gate this file prescribes builds 14
-   binaries and reports **18,749**, and the other five crates hold 260. Both
+   binaries and reports **18,749**, and the other five crates hold 260.
+   `cargo-nextest` **is** installable in this image
+   (`curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`,
+   a few seconds) and runs the two-crate gate in **104 s** after the build,
+   against `cargo test -j 2`'s ~25 minutes from cold; the note elsewhere in
+   this file saying there is no nextest is stale. Both
    numbers are in PERF now, because the two commands disagree and nothing
    said which one the record quoted. 7 golden traces. Next PERF Log
    folds are the 51st/52nd. This NEXT was 262 lines before this pass; every
