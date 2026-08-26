@@ -138,6 +138,9 @@ fn vaultborn_tyrant_etb_payoff() {
 #[test]
 fn vaultborn_tyrant_dies_into_artifact_copy() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let tyrant = g.add_card_to_battlefield(0, catalog::vaultborn_tyrant());
     g.remove_to_graveyard_with_triggers(tyrant);
     drain_stack(&mut g);

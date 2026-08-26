@@ -1508,6 +1508,9 @@ fn lorehold_warband_pumps_by_other_attackers() {
 #[test]
 fn fractal_bloom_mints_fractal_scaled_by_double_hand() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     // Set hand to exactly some count first, then cast.
     let id = g.add_card_to_hand(0, catalog::fractal_bloom());
     // Add 4 more cards to hand: total 5 in hand (1 will be cast)

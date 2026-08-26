@@ -140,6 +140,9 @@ fn cr_704_7_loss_reset_covers_draw_from_empty() {
         g.add_card_to_graveyard(0, catalog::grizzly_bears());
     }
     g.lose_to_empty_draw(0);
+    // CR 104.3c — the deck-out is armed by the draw and performed by the SBA
+    // check, which is also where CR 704.7's replacement gets to run.
+    let _ = g.check_state_based_actions();
     assert!(!g.players[0].eliminated);
     assert_eq!(g.players[0].hand.len(), 7);
     // The Mirror was an artifact you owned, so it went to the library too.

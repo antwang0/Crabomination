@@ -756,6 +756,15 @@ pub struct PlayerData {
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
     pub eliminated: bool,
+    /// CR 104.3c — this player has attempted to draw from an empty library
+    /// and loses the game *the next time a player would receive priority*,
+    /// i.e. at the next state-based-action check — not inside the draw.
+    /// Until then they are still in the game, so a spell that decks an
+    /// opponent and then says "each opponent" in the same resolution still
+    /// sees them. `check_state_based_actions` promotes this to `eliminated`,
+    /// which is also what routes them through CR 800.4a.
+    #[serde(default)]
+    pub pending_deck_loss: bool,
     /// CR 801.2a — this seat's own range of influence, overriding the table
     /// default (`GameState.range_of_influence`). Emperor games give the
     /// emperor 2 and each general 1 (CR 809.3a).
@@ -1209,6 +1218,7 @@ impl Player {
             city_blessing: false,
             max_hand_size: default_max_hand_size(),
             eliminated: false,
+            pending_deck_loss: false,
             last_drawn_card: None,
             range_of_influence: None,
             is_emperor: false,

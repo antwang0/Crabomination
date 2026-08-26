@@ -909,6 +909,9 @@ fn resurgent_belief_returns_each_enchantment_from_graveyard() {
 fn academic_dispute_pumps_friendly_and_grants_reach() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(friendly);
     let id = g.add_card_to_hand(0, catalog::academic_dispute());
@@ -940,6 +943,9 @@ fn academic_dispute_pumps_friendly_and_grants_reach() {
 #[test]
 fn enthusiastic_study_pumps_three_one_and_grants_trample() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::enthusiastic_study());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
@@ -2791,6 +2797,9 @@ fn lorehold_mascot_attack_gains_life_and_pumps() {
 fn adrix_and_nev_doubles_own_tokens_but_not_opponents() {
     // Own cast: Adrix doubles one Pest → two.
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     g.add_card_to_battlefield(0, catalog::adrix_and_nev_twincasters());
     let id = g.add_card_to_hand(0, catalog::hunt_for_specimens());
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -2806,6 +2815,9 @@ fn adrix_and_nev_doubles_own_tokens_but_not_opponents() {
 
     // Opponent's cast: Adrix is on P0's side, so opp's token mint stays at 1.
     let mut g = two_player_game();
+    // As above — the spell draws, and an empty library would deck seat 1 and
+    // take its fresh Pest off the battlefield before the count.
+    crabomination::game::stock_libraries(&mut g, 10);
     g.add_card_to_battlefield(0, catalog::adrix_and_nev_twincasters());
     let id = g.add_card_to_hand(1, catalog::hunt_for_specimens());
     g.players[1].mana_pool.add(Color::Black, 1);

@@ -2645,6 +2645,9 @@ fn turn_to_frog_makes_target_a_1_1_blue_frog_with_no_abilities() {
 fn kenriths_transformation_draws_and_makes_a_3_3_green_elk() {
     use crabomination::card::{CreatureType, Keyword};
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let hand_before = g.players[0].hand.len();
     let aura = g.add_card_to_hand(0, catalog::kenriths_transformation());
@@ -2655,8 +2658,11 @@ fn kenriths_transformation_draws_and_makes_a_3_3_green_elk() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Kenrith's Transformation castable for {1}{G}");
     drain_stack(&mut g);
-    // ETB draw nets +1 (the Aura left hand, one card drawn).
-    assert_eq!(g.players[0].hand.len(), hand_before, "ETB draw replaced the cast card");
+    // The Aura left hand and its ETB drew a card, so the net against the
+    // pre-Aura hand is +1. This read `== hand_before` and passed only because
+    // the library was empty and the draw silently did nothing — the ETB the
+    // test exists to check had never fired.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draw replaced the cast card");
     let cp = g.computed_permanent(angel).expect("angel still on bf");
     assert_eq!((cp.power, cp.toughness), (3, 3), "becomes 3/3");
     assert!(cp.subtypes.creature_types == vec![CreatureType::Elk], "becomes an Elk");

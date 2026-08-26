@@ -205,6 +205,9 @@ fn torture_chamber_spends_its_whole_pain_pile() {
 #[test]
 fn whispers_of_the_muse_returns_on_buyback() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let whispers = g.add_card_to_hand(0, catalog::whispers_of_the_muse());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(5);

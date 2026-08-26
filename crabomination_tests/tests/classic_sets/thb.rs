@@ -1924,6 +1924,9 @@ fn wrap_in_flames_pings_and_locks_blocking() {
 #[test]
 fn setessan_skirmisher_constellation_self_pump() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let sk = g.add_card_to_battlefield(0, catalog::setessan_skirmisher());
     let omen = g.add_card_to_hand(0, catalog::omen_of_the_sea());
     g.players[0].mana_pool.add(Color::Blue, 1);

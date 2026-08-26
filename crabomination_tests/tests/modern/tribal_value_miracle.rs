@@ -806,6 +806,9 @@ fn sword_of_light_and_shadow_gains_life_and_returns_creature() {
 fn sword_of_truth_and_justice_counters_and_proliferates() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
     let sword = g.add_card_to_battlefield(0, catalog::sword_of_truth_and_justice());
     g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
@@ -1313,6 +1316,9 @@ fn impending_time_counters_tick_off_and_it_becomes_a_creature() {
 #[test]
 fn impending_overlord_cast_normally_is_a_creature() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     let id = g.add_card_to_hand(0, catalog::overlord_of_the_floodpits());

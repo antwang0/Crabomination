@@ -120,6 +120,9 @@ fn calamity_copies_its_saddler_twice() {
 #[test]
 fn kellan_free_casts_a_permanent_after_a_graveyard_cast() {
     let mut g = main_phase();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     etb(&mut g, catalog::kellan_the_kid());
     let freebie = g.add_card_to_hand(0, catalog::grizzly_bears());
     // A flashback cast is not from hand.

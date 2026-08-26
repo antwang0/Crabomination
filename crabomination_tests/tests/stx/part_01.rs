@@ -878,6 +878,9 @@ fn environmental_sciences_gains_life_even_if_search_declined() {
 #[test]
 fn introduction_to_annihilation_destroys_nonland_permanent() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
     let id = g.add_card_to_hand(0, catalog::introduction_to_annihilation());
@@ -2072,6 +2075,9 @@ fn tezzerets_gambit_draws_two_then_proliferates() {
 fn proliferate_skips_enemy_plus_one_counters() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     // Friendly bear with +1/+1, enemy bear with +1/+1.
     let friend = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());

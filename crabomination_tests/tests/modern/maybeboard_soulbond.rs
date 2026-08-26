@@ -1124,6 +1124,9 @@ fn sword_of_body_and_mind_buffs_and_grants_double_protection() {
 #[test]
 fn sword_of_body_and_mind_combat_damage_makes_wolf_and_mills() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     // Shadow → unblockable, so combat damage reaches the player.
     let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
     let sword = g.add_card_to_battlefield(0, catalog::sword_of_body_and_mind());
@@ -1186,6 +1189,9 @@ fn umezawas_jitte_charges_on_combat_damage_then_shrinks() {
 #[test]
 fn sword_of_feast_and_famine_discards_and_untaps_lands() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
     let sword = g.add_card_to_battlefield(0, catalog::sword_of_feast_and_famine());
     g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);

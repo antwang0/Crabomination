@@ -6032,6 +6032,9 @@ fn cr_506_5_attacks_alone_requires_a_sole_attacker() {
 #[test]
 fn cr_601_2c_multitarget_spell_and_land_slots() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
     g.players[1].mana_pool.add(Color::Green, 1);
     g.players[1].mana_pool.add_colorless(1);

@@ -87,6 +87,21 @@ pub fn multi_player_game(n: usize) -> GameState {
     g
 }
 
+/// Put `n` Forests in every seat's library. [`two_player_game`] and
+/// [`multi_player_game`] seat *empty* libraries, so any test that resolves a
+/// draw decks the drawer — and since CR 104.3c/704.5b is a state-based action
+/// that routes through CR 800.4a, the drawer's whole board leaves the
+/// battlefield at the next SBA check. Call this in any test whose subject
+/// draws a card and whose assertions outlive the draw.
+#[doc(hidden)]
+pub fn stock_libraries(g: &mut GameState, n: usize) {
+    for seat in 0..g.players.len() {
+        for _ in 0..n {
+            g.add_card_to_library(seat, crate::catalog::forest());
+        }
+    }
+}
+
 /// `n`-player game with format-specific setup applied (starting life, draw-on-
 /// turn-1 rule). Pre-advanced to the pre-combat main phase like
 /// `two_player_game`.
@@ -15252,9 +15267,19 @@ impl GameState {
                     self.players[idx].loss_cause.get_or_insert(LossCause::Other);
                 }
             }
-        } else if !self.player_cant_lose_game(p) && !self.apply_loss_reset(p) {
-            self.players[p].eliminated = true;
-            self.players[p].loss_cause.get_or_insert(LossCause::Decked);
+        } else {
+            // CR 104.3c — the loss happens the next time a player would
+            // receive priority, i.e. at the next SBA check, *not* inside the
+            // draw. Arming a flag rather than eliminating here is what lets a
+            // spell that decks an opponent and then says "each opponent" in
+            // the same resolution still see them (`resolve_players` filters on
+            // `is_alive`), and it is also what routes the departure through
+            // `check_state_based_actions`' CR 800.4a leg — eliminating here
+            // never called `objects_leave_with_player`, so a decked player's
+            // permanents stayed on the battlefield forever.
+            // `player_cant_lose_game` / `apply_loss_reset` are checked where
+            // the SBA is performed, per CR 704.3.
+            self.players[p].pending_deck_loss = true;
         }
     }
 

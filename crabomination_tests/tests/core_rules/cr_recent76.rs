@@ -12,6 +12,9 @@ use crabomination::mana::Color;
 #[test]
 fn cr_115_7c_redirect_repoints_every_slot() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     let mine_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let mine_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(1, catalog::grizzly_bears());

@@ -5890,15 +5890,31 @@ impl GameState {
             // Phyrexian Unlife — the life half of the loss SBA is skipped
             // (poison / commander losses still apply).
             let unlife = self.player_unlife_active(i);
+            // CR 104.3c — a player who tried to draw from an empty library
+            // loses here, not inside the draw. `lose_to_empty_draw` arms the
+            // flag; this is the only place it becomes an elimination, so a
+            // decked player leaves through the CR 800.4a leg below like every
+            // other loss.
+            let decked = self.players[i].pending_deck_loss;
             let lost = (self.effective_life(i) <= 0 && !unlife)
                 || self.effective_poison(i) >= self.poison_loss_threshold(i)
-                || lost_to_commander;
+                || lost_to_commander
+                || decked;
             // CR 104.3d — a player who can't lose (Angel's Grace, Platinum
             // Angel, an opponent's Abyssal Persecutor) skips the loss SBAs;
             // the qualifying state (life ≤ 0, poison ≥ 10) persists.
             // CR 704.7 — a single loss replacement (Lich's Mirror) covers
             // every SBA that would end the game for this player at once.
-            if lost && !self.player_cant_lose_game(i) && !self.apply_loss_reset(i) {
+            // CR 704.7 — a loss replacement (Lich's Mirror) refills the
+            // library, so the armed deck-out is spent with it; leaving it set
+            // would kill the player on the next sweep anyway.
+            if lost && !self.player_cant_lose_game(i) {
+                if self.apply_loss_reset(i) {
+                    if decked {
+                        self.players[i].pending_deck_loss = false;
+                    }
+                    continue;
+                }
                 // Stamp the authoritative cause most-specific-first, matching
                 // the SBA order that would fire (life, then poison, then
                 // commander damage — CR 704.5a/c/v).
@@ -5907,8 +5923,10 @@ impl GameState {
                     LossCause::LifeDepleted
                 } else if self.effective_poison(i) >= self.poison_loss_threshold(i) {
                     LossCause::Poison
-                } else {
+                } else if lost_to_commander {
                     LossCause::CommanderDamage
+                } else {
+                    LossCause::Decked
                 };
                 self.players[i].eliminated = true;
                 self.players[i].loss_cause.get_or_insert(cause);

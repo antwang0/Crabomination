@@ -2005,6 +2005,9 @@ fn lost_days_tucks_and_clues() {
 #[test]
 fn sokkas_haiku_counters_and_untaps() {
     let mut g = two_player_game();
+    // Draws below would otherwise deck this seat: CR 104.3c/800.4a takes
+    // their whole board off the battlefield at the next SBA check.
+    crabomination::game::stock_libraries(&mut g, 10);
     // Opponent casts a creature spell.
     let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
     g.players[1].mana_pool.add(crabomination::mana::Color::Green, 1);
