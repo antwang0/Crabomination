@@ -726,6 +726,23 @@ commit adds a `SelectionRequirement` arm and rewrites five shipped block
 triggers; none of the five is in the `--bench` archetypes or the golden-trace
 decks, and the `cube` / `sealed` legs are the ones that can draw them.
 
+Re-run once more at `b1a772ec`, which is the widest-blast-radius rules change
+of the three: it moves the **auto-targeter's fallback** (the picker now aims
+with `target_filter_for_slot(0)` before `Any` when `primary_target_filter` is
+silent), so every auto-targeted spell, activation and trigger in every pool
+goes through the changed line. Same grid, same two seeds: `all` 3,400 decided
+/ 0 undecided per seed, `cube` 960, `sealed` 1,440 — **11,600 games, no panic,
+no arithmetic overflow, `rho -1.000` on every pair**. `--bench` `decisions`
+**196,220** byte-identical over two runs with `turns_per_game` 27.53, zero
+stalls, `peak_rss_mib` 26.9 / 28.7, and all seven golden traces unchanged.
+**A behaviour-preserving reading is the correct one here and it is not a
+coincidence:** the nine cards the pass fixes are absent from the bench
+archetypes and the trace decks, which is exactly why they went unnoticed, and
+the fallback only fires where the primary walker returns `None` — every such
+pick previously aimed at `Any` and was then re-checked against the same slot-0
+filter the picker now uses, so a pick that survived CR 608.2b before still
+survives it.
+
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState`
 or `Vocab` change is in this pass.
 

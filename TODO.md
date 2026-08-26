@@ -131,8 +131,8 @@ than rewriting the entry.
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **820**, PERF 7.7k. Suite is **14 test
-   binaries / 18,744 tests**, not the "22" older blocks quote. Next folds:
+10. **Housekeeping.** TODO **~850**, PERF 8.0k. Suite is **14 test
+   binaries / 18,746 tests**, not the "22" older blocks quote. Next folds:
    PERF's 49th/50th Log entries (the 47th and 48th are folded, the 48th at
    the 64th pass: 166 lines to 56), and
    ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k both want a topical triage — the
@@ -164,22 +164,39 @@ than rewriting the entry.
    `Effect::Reflexive`; CR 601.2b drops unsatisfiable modes from the menu.
    **The device both share, and it is the one to re-run:** a test whose ctx
    hands in a target cannot see a binding bug, because a real trigger push
-   hands an empty list. Two shipped tests passed vacuously that way this run
-   (Abomination's blocker died to combat damage; the Hallcreeper's was fed a
-   target). **Ask of any per-card test: could this pass if the ability never
-   fired?**
-   **Where the class goes next, and it is a whole-catalog invariant like the
-   other two.** Every `Effect` variant that runs a *sub-body with its own
-   targeting* is a place a slot can be declared and never bound. Three are
-   now handled — `Reflexive`, `ReflexiveTrigger`, `ChooseUnchosenMode` — and
-   `core_rules::target_walkers` exempts the first two by name. **The audit
-   nobody has run: for each variant `requires_target` answers `false` on,
-   does its body get auto-targeted at resolution, or does the slot just
-   vanish?** `query.rs`'s `requires_target` arm list is the worklist
-   (`ChooseUpToN`, `Spree`, `Tiered`, `ChooseModesCast`,
-   `ChooseModesByPoints` all return `false` there). Each `false` is either
-   correct-because-resolution-targets or a dead mode; the two known answers
-   split one each way.
+   hands an empty list. **Four** shipped tests passed vacuously this run:
+   Abomination's blocker was dying to combat damage, Infernal Medusa's assert
+   only covered the survivor, the Hallcreeper's copy mode was fed the target
+   the engine never bound, and Absolver Thrull's enchantment was an unattached
+   Aura that SBA removes on its own (CR 704.5m). **Ask of any per-card test:
+   could this pass if the ability never fired?** Two cheap tells — the ctx
+   hands in a target, or the victim would die anyway.
+   **That audit was run at the sixty-fifth pass and it is now
+   `core_rules::unbound_target_slots`.** First run: **eleven bodies over nine
+   cards**, and eight were one missing arm each in `requires_target` —
+   `PreventNextDamageFromChosenSource` (six Circle-shaped cards that built no
+   `PreventionShield` at all), `SpellBecomesChosenColor`,
+   `ExileThenBranchByController`. The invariant has three exempt families and
+   they are the whole content of it: **resolution-time targeting**
+   (`Reflexive`, `ReflexiveTrigger`, `ChooseUnchosenMode`), **cast-time
+   modal** (the action carries the picks), and **deferred-fire**
+   (`HauntCreature`, `ReplaceYourNextDrawThisTurn` — correct *only* because
+   their fire sites call `auto_target*`, so a new entry has to be checked at
+   its fire site, not its resolution).
+   **The ninth card was the big one: creature Haunt has never worked.**
+   `primary_target_filter` (what the auto-picker aims with) had no
+   `HauntCreature` arm, and **`None` there is not "don't target" — it falls
+   back to `Any`** and walks players as well as permanents. It handed the
+   trigger `Target::Player(1)`; `target_filter_for_slot(0)` *does* have an arm
+   and demands `Enchantment`; CR 608.2b then returned `Ok(vec![])` and the
+   whole trigger did nothing, silently. Absolver Thrull and Orzhov Euthanist.
+   The picker now falls back to the checker's own filter before `Any`, so the
+   two agree by construction wherever the primary walker is silent. Verified
+   on the wide grid at `b1a772ec`: 11,600 games clean, `decisions` 196,220,
+   traces unchanged.
+   **And the delayed-trigger fire site**: `WhenCardDies` / `WhenTokenDies` /
+   `WhenHauntedCreatureDies` register with `target: None` and pushed with no
+   slot bound. CR 603.7c — they auto-target at push now.
 11b. **The next bug, and it is sized and diagnosed but not taken.** The
    picker (`primary_target_filter`) and the CR 608.2b legality check
    (`target_filter_for_slot(0)`) are two hand-written walks at opposite ends
