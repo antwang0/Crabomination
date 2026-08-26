@@ -100,6 +100,18 @@ commit that a fetch would have shown.
    *card* was the wrong question** — `attacks[0]` is not the culprit for a
    batch-level rejection, and two rounds went into chasing "Angel" before the
    site tag answered it in one.
+4d. **And `combat.rs:710`'s 22 are diagnosed, not fixed** — small and
+   bounded. `pick_attacks_inner`'s must-attack escape is
+   `c.has_keyword(MustAttack) || !c.goaded_by.is_empty()`, off the
+   **instance**; the engine's is off the **computed** set and covers three
+   keywords — `MustAttack`, **`MustAttackOrBlock`**, and
+   **`MustAttackIfAnotherAttacks`** (Ekundu Cyclops, obliged only once
+   another attacker is declared). The fix wants a **repair pass, not a filter
+   predicate**, because the third is set-dependent: after `attackers` is
+   built, re-add any able creature the computed set says must attack and loop
+   until stable, since adding one can oblige another. Keep the ids of the
+   `raw_attackers` able-set — the current code consumes it with `into_iter()`.
+   Changes play; `--vs` gates it.
 5. **SHIPPED — the two-binary gate exists: `bot_ladder --vs PATH`.** Side A
    is the binary you invoke, side B the one at `PATH`, one peer process per
    worker, and the pair schedule is derived on both sides from the same argv
