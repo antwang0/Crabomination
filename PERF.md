@@ -4618,6 +4618,91 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### The three pools at `21a48317` — the re-based base
+
+Same binary, same config, one pool each: **`fixed` 1,172,084,149, `sos`
+1,510,906,673, `cube` 2,710,032,778.** Against the sixty-third tip's columns
+below: `fixed` **-0.310 %**, `sos` **-0.850 %**, `cube` **-0.828 %**. That
+span carries the sixty-fourth pass (token mint, layer-pass collect), the
+sixty-fifth's (-45) row, and three rules commits, so **it is not an
+attribution of anything** — it is a base. The rules commits are the reason
+the drop is a little smaller than the perf passes claimed end to end: nine
+cards that used to no-op now resolve, and the auto-targeter makes one extra
+walker call where `primary_target_filter` is silent. Paying Ir to make a card
+do its printed thing is the trade working.
+
+**Read the tip before using these columns.** They were measured at
+`21a48317`; the concurrent session pushed `780ef86c` (four more of (-45)'s
+rows) while the three runs were in flight, so a total taken after that commit
+is already a few tenths below these. That is the branch working as intended
+and it is why every block in this file carries its tip — the columns are
+comparable to each other, which is what a profile of record is for, not to
+whatever HEAD happens to be.
+
+| row | sos | fixed | cube |
+|---|---|---|---|
+| `dispatch_triggers_for_events` | **6.03 %** | **5.75 %** | **5.35 %** |
+| allocator (`_int_free`+`malloc`+`free`+`_int_malloc`) | 12.99 % | 10.83 % | 11.47 % |
+| `gather_continuous_effects_inner` | 3.81 % | 4.63 % | 4.18 % |
+| `__memcpy_avx_unaligned_erms` | 5.08 % | 2.57 % | 3.11 % |
+| `Arc::clone_from_ref_in` | 3.22 % | 3.33 % | 3.48 % |
+| `Vec::from_iter` (all monos) | 2.01 % | 2.78 % | 2.63 % |
+| `check_state_based_actions` | 2.48 % | 2.05 % | 1.95 % |
+| `sba_board_scan` | 1.86 % | 1.79 % | 1.48 % |
+| `GameState::clone` | 1.65 % | 1.85 % | 1.56 % |
+| `activate_ability_inner` | 1.46 % | 1.24 % | 1.40 % |
+| `dispatch_board_scan` | 1.44 % | 1.75 % | 1.29 % |
+| `perform_action_inner` | 1.39 % | 1.72 % | 1.26 % |
+| `computed_permanent` | 1.32 % | 1.38 % | 1.53 % |
+| `evaluate_requirement_static_hinted` | 1.30 % | 2.05 % | 1.23 % |
+| `compute_permanent_pass` | 1.17 % | 1.35 % | 1.63 % |
+| `card_can_grant_keyword` | 1.05 % | 1.45 % | 1.42 % |
+| `fire_combat_damage_triggers` | 0.89 % | 1.21 % | 1.26 % |
+
+**`dispatch_triggers_for_events` is still the largest engine self row on all
+three pools, and it has been since pass 43.** Its known devices are refuted:
+the trigger-carrier bitmask is in TODO's do-not-rebuild list and (-16) reads
+it as diffuse by line.
+
+**The pool-ratio device is mined out at this tip and the next run should not
+spend a round on it.** `scripts/cg_ratio.py cg.cube.out cg.sos.out --floor
+0.45` (its first real use) returns **nothing above 1.83x**, where the
+sixty-second tip had a 5.08x that became a commit and a 2.09x that pointed
+pass 63 at `pick_blocks_inner`:
+
+```text
+num%   den%      x    row                              (cube over sos, 21a48317)
+1.05   0.57   1.83   evaluate_requirement_static_hinted
+0.87   0.50   1.73   resolve_combat
+0.75   0.44   1.69   CardInstance::has_keyword          <- read at 1.84x, "flat, no"
+0.84   0.51   1.64   declare_blockers
+0.89   0.57   1.56   apply_prevention_shields           <- (-2b) already paid on it
+0.53   0.34   1.54   compute_permanent
+```
+
+`pick_blocks_inner` is absent from the listing entirely — pass 63 took it
+from 0.90 % of cube to 0.31 %, which is what a mined-out device looks like
+from the inside. **A flat ratio table is a result, not a failed run**: it
+says the remaining cost is diffuse across both pools rather than
+pool-specific, so the next pointer has to come from a different device
+(Ir/call outliers, or `--callers SpecFromIterNested` by call count).
+
+**And one standing caution in this file no longer reproduces — do not act on
+it until it is re-derived.** The "`name_index()` builds 22,568
+`CardDefinition`s, 104,687,400 Ir, **6.8 % of a six-game `sos` total**"
+figure, and its instruction to *subtract it before quoting an `sos` share*,
+is not visible here. Summing every `crabomination_catalog::` self row gives
+**sos 18,074,614 (1.20 %), cube 207,187 (0.01 %), fixed 23,424 (0.00 %)**,
+and `--callers OnceLock` finds six calls totalling under 4 k Ir with no
+`initialize` edge of anything like the recorded magnitude. Self rows
+understate an inclusive cost, so this is not proof the build is gone — but
+it is proof the 6.8 % figure is not this tip's. **Subtracting 104.7 M from a
+1.51 G `sos` total on the file's say-so would now distort every share by
+~7 %**, which is the exact failure CLAUDE.md's "a bare present-tense count
+goes stale and then misleads" rule exists to prevent. Re-derive before
+subtracting; (-46) wants re-sizing on this basis and stays ranked last
+either way.
+
 ### The three pools at the sixty-third tip (`fa3bf671`)
 
 Same binary, same config, one pool each: **`fixed` 1,175,724,194, `sos`
