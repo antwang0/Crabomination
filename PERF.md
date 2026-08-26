@@ -6177,6 +6177,49 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
+**(-52) CLOSED — ACTOR SCALING IS LINEAR TO THE CORE COUNT, AND RSS IS THE
+REPLAY WINDOW, NOT THE ACTORS.** Measured, not inferred:
+`release-fast selfplay_train --games 1200 --steps 1 --seed 7`, two reps, on
+the 4-core 2.80 GHz Xeon.
+
+```text
+actors   games/s (rep 1 / rep 2)   per actor   vs 1 actor
+1        37.2 / 41.1               39.2        1.00x
+2        79.6 / 80.2               40.0        1.02x
+3       122.1 / 115.5              39.6        1.01x
+4       165.2 / 156.2              40.2        1.03x
+6       169.8 / 160.0              27.5        +2.6 % over 4 — CPU-saturated
+```
+
+**There is no shared-state contention to find**: per-actor throughput is flat
+to the core count and the sixth actor buys nothing on four cores. The seed
+list's "find contention if sublinear" is answered — plan **one actor per
+core** and stop.
+
+**And the RSS planning figure this file carried is `bot_ladder`'s, not
+`selfplay_train`'s.** Peak RSS (`VmHWM`, same runs, 1000 games):
+
+```text
+actors 1   968 MiB      window  25,000   520 MiB   (4 actors, 600 games)
+actors 2   983 MiB      window 250,000   805 MiB   (same run otherwise)
+actors 4   987 MiB
+```
+
+**An extra actor costs ~6 MiB. The replay window costs ~1.3 KiB a row.** A
+`selfplay_train` process is ~0.5 GiB of fixed footprint plus its window, so
+the thing to size against a box's memory is `--window`, and the thing to size
+against its cores is `--actors`. The two knobs do not trade against each
+other, which is the opposite of what "plan actor counts off ~24 MiB RSS"
+implies.
+
+**A caution about the other scaling number in this file.** `bot_ladder
+--bench --threads N` reads 64.5 / 114.9 / 167.0 / 208.8 games/s at 1/2/3/4 —
+**83 % per-thread efficiency at four threads**, which looks like contention
+and is not: `--bench` is 320 games and 1.5 s of wall at four threads, so
+process startup and the main thread's aggregation are most of the gap. The
+actor sweep above runs 30 s at one actor and shows none of it. **Do not size
+parallel efficiency off `--bench`.**
+
 **(-51) A LAND TAP COSTS 7,555 Ir, AND A THIRD OF THE PAYMENTS ARE THROWN
 AWAY.** Sized at `ee376912` on `cube`; the two halves share a call path and
 neither has ever been costed in this file.

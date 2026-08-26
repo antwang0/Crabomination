@@ -312,8 +312,12 @@ N3. **Where the simulator's time actually is, read inclusively for the first
    item it dropped is in PERF's Log/candidates, ENGINE_BACKLOG or
    CARD_BACKLOG, not deleted.
 7. **Two standing measurement facts** (the rest are in PERF's "How to
-   measure"): plan actor counts off **~24 MiB** RSS, not the
-   `--no-default-features` 17.7; and `--decks fixed` is the *bench* pool —
+   measure"): **plan `selfplay_train` actor counts off *cores*, not RSS** —
+   scaling is linear to the core count (per-actor 39.2 / 40.0 / 39.6 / 40.2
+   games/s at 1/2/3/4 on this box, a sixth actor buys +2.6 %) and an extra
+   actor costs **~6 MiB**, while the replay window costs ~1.3 KiB a row and
+   is the whole ~0.5-1 GiB footprint. See (-52); the **~24 MiB** figure this
+   line used to carry is `bot_ladder`'s. And `--decks fixed` is the *bench* pool —
    a change to statics / grants / layers gets a `--decks cube` reading too.
    **A change whose soundness rests on a `debug_assert!` is audited by the
    `dev`-profile grid, not the `overflow` one**: release profiles compile
