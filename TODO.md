@@ -35,7 +35,43 @@ candidate is not enough when the entry is a table.** Two sessions took
 passes — same let-chain, same line — because both were reading the top
 Ir/call row of the `make_mut` caller table that (-43) points at. **Push the
 code commit before you write the tracker prose**; that is the only signal the
-other session's next fetch can see.
+other session's next fetch can see. **It happened again at the seventy-first
+and seventy-second passes**, three hours apart in the same hour: one session
+wrote item 1e's "grep the other pre-filters for the presence-vs-count shape"
+while the other was three edits from writing the same per-colour budget.
+Fetch before you start a candidate, not just before you push.
+
+0. **Seventy-second pass: `fixed` -0.209 %, `sos` -0.183 %, `cube` -0.218 %**,
+   two commits, both (-50). (a) The leave-the-battlefield chain's four no-op
+   writes — `temporary_control`'s `mem::take`, `on_left_battlefield`'s
+   `continuous_effects` pair, `remove_effects_from_source`,
+   `expire_end_of_turn_effects`. (b) `blocked_attackers` /
+   `blocks_declared_this_turn` out of `ColdState` into `GameState`, where
+   their combat siblings already live.
+0a. **Item 1c below was a mis-attribution and is now closed.** It said
+   `on_left_battlefield`'s `make_mut` edge came from `find_card_anywhere_mut`;
+   the callee table puts that function in its **own un-inlined row at 1.000x**,
+   so it was never on the edge, and the seventy-first pass's +0.083 % was a
+   correct measurement of the wrong hypothesis. **When a `--callers` row and a
+   `--callees` row name the same function, the edge is the caller's own
+   inlined code** — run `--callees` on the owner first.
+0b. **The `ColdState` no-op-write vein is worked out**, and the reason to
+   believe it is one short table: `cg_edges.py --callers "crabomination::game
+   ::GameState as core::ops::deref::DerefMut"` is now 19,048 calls in 17 rows,
+   3,020 of them real copies at 4,410 Ir, and every top row writes a value
+   that changed. **Do not go hunting another cold no-op write.** Two rules
+   priced in cash there: rank a `make_mut` edge by **Ir/call, not calls** (the
+   14,152 calls gated out of `on_left_battlefield` were 25 Ir each and the
+   5,232 left were 1,016), and before moving a field out of the cold group,
+   **name the next cold write in the same frame** — `note_creature_death`
+   absorbed 6.27 M of the 11.7 M that `declare_blockers` gave up.
+0c. **What is left of (-50) is not a no-op write.** `make_mut`'s own copies
+   are **146,820 / 108.4 M / 4.12 % of cube** and they are zone `Vec`s and
+   cards. The sized piece: `on_left_battlefield`'s remaining 5,232 x ~1,016 Ir
+   (**0.20 %**) is the CR 400.7 `cast_from_*` reset writing a card a probe
+   clone shares — real, so it wants the reset done **where the placer still
+   owns the card** (the callers have already unshared it), not a gate. Seven
+   call sites and a stale-flag failure mode; see (-50).
 
 1. **Seventy-first pass: `fixed` -0.398 %, `sos` -1.363 %, `cube` -1.225 %**,
    one commit — the biggest single commit since the sixty-third pass and the
@@ -85,17 +121,9 @@ other session's next fetch can see.
    byte-identical and traces unchanged. **A base column taken at `4f42c6b4`
    is ~0.06 % above one taken at `7ada03d9` — that is the trade, not a
    regression.**
-1c. **The best-sized open perf lead, and it is the zone chain's next link.**
-   `on_left_battlefield`'s `make_mut` edge is **19,384 calls / 5,665,537 Ir on
-   cube (0.19 %)** — same call count as before the sixty-ninth pass, eleven
-   times the Ir, because those unshares now genuinely deep-copy. **The
-   obvious gate is refuted** (ask through the shared `find_card_anywhere`
-   first: `fixed` +0.083 %, `sos` +0.036 %, `cube` +0.053 %, reverted) —
-   the `_mut` lookup's cost is the *search*, not the unshares, and the card
-   is already in a graveyard so both walks scan the battlefield first.
-   **What it needs is a cheaper locate, not a cheaper write**:
-   `place_card_at_resolved_zone` put the card in a known zone and could hand
-   that back. See (-50).
+1c. **CLOSED at the seventy-second pass — see item 0a.** The 19,384-call edge
+   was the `continuous_effects` pair and `temporary_control`, not
+   `find_card_anywhere_mut`; the surviving 0.20 % is item 0c.
 1b. **Where the device still has sites.** `cast_cost_scan` covers six of the
    nine its own function asks (the sixty-eighth pass's item, still open), and
    nothing has been scanned in `check_state_based_actions`, the layer pass or

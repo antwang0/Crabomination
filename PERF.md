@@ -626,6 +626,57 @@ build.
 
 ## Baseline
 
+**Seventy-second pass. Two commits, measured against two different bases —
+the branch carried a concurrent session's seventy-first pass in between.**
+Ir readings `profiling-fast --no-default-features`, callgrind, one thread,
+`--a gang --b gang --games 6 --threads 1 --seed 1`.
+
+```text
+                        base (28f5c628)  A: 3cce6889     B: a35cf054 vs A
+I refs, --decks fixed   1,149,551,851    1,148,002,377   1,147,144,140
+                                          -0.135 %        -0.075 %
+I refs, --decks sos     1,482,418,428    1,481,254,224   1,479,711,103
+                                          -0.079 %        -0.104 %
+I refs, --decks cube    2,634,005,617    2,630,813,719   2,628,245,776
+                                          -0.121 %        -0.098 %
+```
+
+**A — the leave-the-battlefield chain's four no-op writes.** (-50) at four
+sites on one call path: `on_left_battlefield`'s `mem::take` of
+`temporary_control` (a `ColdState` field, so the take *and* the write-back
+were two unshares of ~89 collections on every permanent that left), its
+`continuous_effects` `iter_mut` + `retain` pair, `remove_effects_from_source`
+one frame ahead of it on every removal, and `expire_end_of_turn_effects` at
+cleanup. `on_left_battlefield`'s `GameState::deref_mut` edge on cube:
+14,212 calls / 743,615 Ir -> **0**.
+
+**And it corrects the profile of record.** NEXT's item 1c blamed that
+function's `make_mut` edge on `find_card_anywhere_mut`, which is why gating
+*that* read +0.083 % at the seventy-first pass. `find_card_anywhere_mut` is
+its own row in the callee table — 7,106 calls, 1.000x, not inlined — so it
+was never in the edge. The edge was the two collections above.
+**Read the callee table of the function that owns the edge before naming
+the callee that pays it.**
+
+**B — `blocked_attackers` and `blocks_declared_this_turn` leave `ColdState`.**
+A cold write unshares the whole group at **4,689 Ir**, and `declare_blockers`
+wrote two cold fields per declared block: 9,124 of the program's 31,318
+`GameState::deref_mut` calls and **11,697,365 Ir (0.445 % of cube)**, ten
+times the next site. Both lists belong with `attacking` / `block_map` /
+`blockers_declared`, already `GameState` fields; `#[serde(flatten)]` keeps
+the JSON identical.
+
+**The chain rule takes most of B back, and that is the row worth keeping.**
+Cold clones 3,812 -> 3,020, their Ir 17.87 M -> 13.32 M (-4.55 M) — but
+`note_creature_death` went **1,110,418 -> 7,383,488 Ir**: it is now the first
+cold write in the frames `declare_blockers` used to own, and *its* writes are
+real. The program moved 2.57 M, not 4.55 M, and ~2 M of the difference is the
+two extra `Vec`s in `GameState::clone` over 32,580 clones. **A field moved
+out of the cold group is worth the clone it removes, minus the clone it adds
+to every state clone, minus whatever writes cold next in the same frame.**
+The cold group's standing cost after B is 3,020 copies x 4,410 Ir = **0.51 %
+of cube**, and the sites that pay it now write real values.
+
 **Seventy-first pass. Base `28f5c628` vs tip.** One commit, and it is not a
 `*_scan` bit: the bot's affordability pre-filter gets a **per-colour budget**.
 Ir readings `profiling-fast --no-default-features`, callgrind, one thread,
@@ -2801,6 +2852,48 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Seventy-second pass — an edge belongs to the function that owns it, and a moved field pays a clone at both ends
+
+Two commits, `fixed` **-0.209 %**, `sos` **-0.183 %**, `cube` **-0.218 %**
+end to end (two bases; see **Baseline**). Both are (-50), one at the write
+and one at the field.
+
+* **The refutation NEXT carried was a mis-attribution, not a refutation.**
+  Item 1c said `on_left_battlefield`'s 19,384-call `make_mut` edge came from
+  `find_card_anywhere_mut`, and the seventy-first pass measured a gate on
+  that read at +0.083 %. `cg_edges.py --callees on_left_battlefield` puts
+  `find_card_anywhere_mut` in its **own row at 7,106 calls / 1.000x** — a
+  separate, un-inlined function, so its `make_mut`s were never on this edge.
+  The edge was `continuous_effects.iter_mut()` + `retain` (14,212 of the
+  19,384 calls) and, one row down, `GameState::deref_mut` for
+  `temporary_control`. **When a caller row and a callee row name the same
+  function, the edge is the caller's own inlined code, not that callee's** —
+  run `--callees` on the owner before believing a `--callers` row's story.
+* **The cheap half of an edge and the expensive half look identical in the
+  call column.** Gating the `continuous_effects` pair removed 14,152 of the
+  19,384 calls and only **351,900 of the 5,665,537 Ir** — 25 Ir apiece,
+  i.e. that list was already unshared by the time the function ran. The
+  5,232 calls left are all real deep copies at ~1,016 Ir: the CR 400.7
+  `cast_from_*` reset writing a card still shared with a probe clone. **Rank
+  a `make_mut` edge by Ir/call, never by calls** — the sixty-seventh pass's
+  rule, and this is the case where the two orderings disagree inside one
+  edge.
+* **A field moved out of the cold group is priced at three places.** Moving
+  `blocked_attackers` / `blocks_declared_this_turn` to `GameState` removed
+  792 cold clones (-4.55 M Ir) and added ~2 M to `GameState::clone` over
+  32,580 clones, and `note_creature_death` absorbed 6.27 M by becoming the
+  frame's first cold write. Net 2.57 M. **Before moving a field out, name
+  the next cold write in the same frame** — if it is unconditional and
+  real, the copy relocates rather than goes, and the move still costs the
+  clone at every state clone.
+* **Where this class stands now.** After both commits the cold group costs
+  3,020 unshares x 4,410 Ir = **0.51 % of cube**, and its remaining callers
+  (`note_creature_death`, `remove_from_battlefield_to_graveyard_raw`,
+  `finish_cleanup`, `run_effect`) all write values that changed. The
+  no-op-write vein in `ColdState` is worked out; what is left in (-50) is
+  `make_mut`'s own 146,820 copies / 108.4 M / **4.12 % of cube**, and those
+  are zone `Vec`s and cards.
 
 ### Seventy-first pass — the pre-filter asked the wrong question, and an engine function was the oracle
 
@@ -5905,27 +5998,39 @@ was already there**. The shapes to grep for:
   `auto_tap_for_cost_inner`'s `wants_ui` pair looked exactly like this and
   is real (see the Log's refutation 2).
 
-**AND THE CHAIN'S NEXT LINK IS OPEN, SIZED, AND NOT TAKEABLE THE OBVIOUS
-WAY.** After the zone-chain commit, `on_left_battlefield`'s `make_mut` edge on
-cube went **19,384 calls / 510,460 Ir -> 19,384 / 5,665,537** — the same
-calls, eleven times the cost, i.e. those unshares now genuinely deep-copy
-because nothing upstream unshares the card for them any more. The whole-
-program reading still improved, so the commit is a win; **5.15 M Ir (0.19 %
-of cube) of it simply moved one function down and is still there.**
+**THE CHAIN'S NEXT LINK IS TAKEN (seventy-second pass), AND THE ENTRY THAT
+POINTED AT IT NAMED THE WRONG CALLEE.** After the zone-chain commit,
+`on_left_battlefield`'s `make_mut` edge on cube went **19,384 calls /
+510,460 Ir -> 19,384 / 5,665,537** — same calls, eleven times the cost. This
+entry, and NEXT's item 1c after it, said those calls came from
+`find_card_anywhere_mut(id)`. They did not: `cg_edges.py --callees
+on_left_battlefield` puts that function in its **own row, 7,106 calls,
+1.000x, un-inlined**, so its unshares were never on this edge. Gating it
+therefore measured **`fixed` +0.083 %, `sos` +0.036 %, `cube` +0.053 %** at
+the seventy-first pass and was reverted — a correct measurement of the wrong
+hypothesis. (The finding that survives is still worth having: a `_mut`
+lookup's cost is its *search*, and the card is already in a graveyard, so
+both walks scan the battlefield and the stack first. **A `_mut` lookup is
+not a (-50) site just because it usually writes nothing** — price the walk
+before gating it.)
 
-**The obvious fix is REFUTED — measured and reverted at the seventy-first
-pass.** The calls come from `find_card_anywhere_mut(id)`, which is called
-unconditionally and then usually writes nothing, so "ask through the shared
-`find_card_anywhere` first, take the `&mut` only if a flag needs clearing"
-looks like the same device one level up. It reads **`fixed` +0.083 %, `sos`
-+0.036 %, `cube` +0.053 %**. **The mutable walk's cost is the *search*, not
-the unshares**: the card has already moved to a graveyard, so both walks scan
-the battlefield and the stack first, and the gate buys a second full walk on
-the write path in exchange for CoW handles that were going to be written
-anyway. **A `_mut` lookup is not a (-50) site just because it usually writes
-nothing** — price the walk before gating it. What is left needs a cheaper
-*locate* (the zone is known at the call site: `place_card_at_resolved_zone`
-put the card there and could hand back where), not a cheaper write.
+**What the edge actually was, and what is left.** 14,212 of the 19,384 calls
+were `continuous_effects.iter_mut()` + `retain`, gated at the seventy-second
+pass along with `temporary_control`'s `mem::take`,
+`remove_effects_from_source` and `expire_end_of_turn_effects`
+(`fixed` -0.135 %, `sos` -0.079 %, `cube` -0.121 %). **They were worth
+351,900 Ir of the 5,665,537 — 25 Ir apiece**, because that list was already
+unshared by the time the function ran. The **5,232 calls that remain are the
+whole 5.31 M (0.20 % of cube)**, ~1,016 Ir each and every one a real
+`CardData` deep copy: the CR 400.7 reset clearing `cast_from_hand` and its
+five siblings on a card that a probe clone still shares. That write is not a
+no-op — the flag really is set on any permanent that was cast — so (-50)'s
+device does not reach it. What would: clearing the flags **while the placer
+still owns the card**, before it is pushed into the destination zone, where
+the callers have already unshared it (`card.tapped = false`,
+`card.counters.clear()`). Seven call sites, not all of which hold the card by
+value, and a missed path leaves a stale `cast_from_hand` — price the
+correctness risk against 0.20 % before taking it.
 
 **A (-50) SITE IS A CHAIN, NOT A LINE — the sixty-ninth pass's addition, and
 it cost that pass a build to learn.** Gating the first unconditional write on
@@ -5954,7 +6059,22 @@ level down.
 `revert_copy_on_leave`, and now `turn_face_up` / `revert_flip` /
 `revert_transform` / `revert_prototype` / `undo_licid_aura`,
 `send_to_graveyard`'s two `clear()`s and `place_card_at_resolved_zone`'s
-`soulbond_partner`. **Unswept and named by the `make_mut` caller table on
+`soulbond_partner`, and at the seventy-second pass `on_left_battlefield`'s
+`temporary_control` + `continuous_effects` pair, `remove_effects_from_source`
+and `expire_end_of_turn_effects`.
+
+**THE `ColdState` HALF OF THIS VEIN IS WORKED OUT (seventy-second pass).**
+A cold write unshares ~89 collections at **4,689 Ir**, so it ranked above
+everything else per call; after the two commits above and the
+`blocked_attackers` / `blocks_declared_this_turn` field move, cold unshares
+are **3,020 / 13.32 M / 0.51 % of cube** and every remaining caller
+(`note_creature_death`, `remove_from_battlefield_to_graveyard_raw`,
+`finish_cleanup`, `run_effect`, `discard_card`) writes a value that changed.
+Do not go looking for another no-op cold write; the table to re-read is
+`cg_edges.py --callers "crabomination::game::GameState as
+core::ops::deref::DerefMut"`, and it is short.
+
+**Unswept and named by the `make_mut` caller table on
 `cube` at the sixty-ninth base**, by Ir/call — `cast_spell_with_convoke`
 (119,138 calls / 26.5 M / 223 Ir), `activate_ability_inner` (50,594 / 23.0 M
 / 454), `declare_attackers_banded` (63,090 / 17.9 M / 284), `declare_blockers`
