@@ -5067,6 +5067,125 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### The three pools at the seventieth tip (`ee376912`) — and the *inclusive* half
+
+`fixed` **1,148,918,411**, `sos` **1,482,238,008**, `cube` **2,631,861,321**,
+one binary, one config, one pool each. Against the Baseline's columns for the
+same tip the totals agree to **362 Ir on cube and 493 on fixed (0.00001 %)** —
+a third box, a third reading, and the fourth independent confirmation that
+callgrind Ir is portable across these containers.
+
+| row (self) | sos | fixed | cube |
+|---|---|---|---|
+| `dispatch_triggers_for_events` | **6.14 %** | **5.86 %** | **5.51 %** |
+| allocator (`_int_free`+`malloc`+`_int_malloc`+`free`) | 13.04 % | 11.00 % | 11.46 % |
+| `gather_continuous_effects_inner` | 3.88 % | 4.72 % | 4.31 % |
+| `__memcpy_avx_unaligned_erms` | 5.14 % | 2.61 % | 3.19 % |
+| `Arc::clone_from_ref_in` | 3.13 % | 3.35 % | 3.08 % |
+| `Vec::from_iter` (SpecFromIterNested, all monos) | 1.92 % | 2.71 % | 2.64 % |
+| `check_state_based_actions` | 2.53 % | 2.09 % | 2.01 % |
+| `computed_permanent` | 1.44 % | 1.56 % | 1.75 % |
+| `compute_permanent_pass` | 1.20 % | 1.38 % | 1.68 % |
+| `GameState::clone` | 1.68 % | 1.89 % | 1.61 % |
+| `sba_board_scan` | 1.89 % | 1.82 % | 1.53 % |
+| `card_can_grant_keyword` | 1.07 % | 1.48 % | 1.46 % |
+| `activate_ability_inner` | 1.49 % | 1.26 % | 1.44 % |
+| `dispatch_board_scan` | 1.47 % | 1.79 % | 1.32 % |
+| `fire_combat_damage_triggers` | 0.91 % | 1.23 % | 1.30 % |
+| `perform_action_inner` | 1.42 % | 1.76 % | 1.29 % |
+| `card_type_change_unscoped` | 1.11 % | 1.03 % | 1.10 % |
+| `trigger_grant_sources` | 0.78 % | 1.20 % | 0.99 % |
+| `resolve_combat` | 0.55 % | 0.92 % | 0.98 % |
+| `Arc::make_mut` | 0.83 % | 0.99 % | 0.89 % |
+
+**The self table has stopped saying anything new and this is the fourth pass
+to notice it.** Every row above 1 % is either refuted by name in this file
+(`dispatch_triggers_for_events` — (-16), the trigger-carrier bitmask, the
+line-profile-is-not-a-saving rule), structural (`clone_from_ref_in` + the
+allocator + `memcpy` = **19.3 % of cube** and that *is* the checkpoint), or
+already carrying its own fused scan (`sba_board_scan`, `dispatch_board_scan`).
+**`dispatch_triggers_for_events` line-profiled again on `profiling-lines` at
+this tip and came back diffuse exactly as (-16) says**: the largest engine
+line in it is 0.23 % (`is_event_hardcoded`'s `match ev`, refuted at pass 61),
+the graveyard / exile / command walks at the tail are **1.5 M Ir between them
+(0.06 %)**, and the rest is `iter/macros.rs` and `ptr/*` — the loops
+themselves. *Do not re-line-profile this function.*
+
+**So read the inclusive column instead, and it says something the self column
+cannot.** Every figure below is `cg_edges.py --callers/--callees` on the
+`cube` dump at this tip.
+
+| call site | calls | inclusive Ir | % cube |
+|---|---|---|---|
+| `accept_on` -> `perform_action_inner` (the bot's dry-run probe) | 11,986 | 535,808,060 | **20.36** |
+| `auto_tap_for_cost_inner` -> `activate_ability` (tapping for mana) | 21,566 | 162,930,901 | **6.19** |
+| `cast_spell_with_convoke` -> `try_pay_after_snapshot_mode` | 7,186 | 233,173,980 | 8.86 |
+| `try_pay_after_snapshot_mode` -> `auto_tap_for_cost_inner` | 11,454 | 279,514,144 | 10.62 |
+| `cast_candidates` -> the candidate `collect` | 11,314 | 118,051,106 | 4.49 |
+| `can_afford_in_state_with` (the bot's affordability pre-filter) | 29,442 | 72,767,888 | 2.77 |
+| `auto_tap_for_cost_inner` -> `mana_source_table` | 8,986 | 60,112,994 | 2.28 |
+| `OnceCell::try_init` -> `bot::available_mana` | 10,268 | 30,908,232 | 1.17 |
+| `do_untap` (whole) | 2,566 | 40,730,961 | 1.55 |
+| `card_keyword_possible` <- `activate_ability_inner` | 25,268 | 28,951,558 | 1.10 |
+
+**A land tap costs 7,555 Ir.** That is `activate_ability` run in full for a
+`{T}: add mana` ability — the CR 602.5 gates (`card_keyword_possible` alone is
+1,146 Ir of it, 726 of *that* being `keyword_grant_in_scope`'s board walk),
+the cost machinery, the delayed-trigger plumbing and the event push. It is the
+second-largest single call site in the simulator and nothing in this file has
+ever costed it.
+
+**And a third of the payments the simulator makes are thrown away.**
+`restore_payment_state` runs **3,712 times against 11,634
+`try_pay_after_snapshot_mode` calls — 31.9 %**, and a failed payment has
+already built its `mana_source_table` (6,690 Ir) and tapped whatever it could
+before `pay_for_spell` rejects it. NEXT's cast-failure figure (39 % of `cube`
+cast attempts) is the same fact one frame up: 7,790 non-recursive
+`cast_spell_with_convoke` calls reach `finalize_cast` 4,720 times. See (-51).
+
+### `clone_from_ref_in` by calling context — NEXT's item 3, run
+
+`--separate-callers=2` on the same tip and pool, `cg_contexts.py`. **157,402
+actual deep copies**, against 806,878 `make_mut` *calls*: the caller table
+(-43) points at describes who *asks*, this one describes who *pays*, and the
+two rank differently. `activate_ability_inner` is 21 % of every deep copy in
+the program and does not head the `make_mut` table; `do_untap` heads a
+70,838-call `make_mut` row and clones 5,632 times (8 %).
+
+```text
+  32,782  make_mut <- activate_ability_inner          (65 % of its make_mut calls clone)
+  30,670  make_mut <- cast_spell_with_convoke         (26 %)
+  19,052  make_mut <- declare_attackers_banded        (30 %)
+   7,382  make_mut <- declare_blockers
+   5,632  make_mut <- do_untap                        (8 %)
+   5,304  make_mut <- PlayerData::send_to_graveyard
+   5,294  make_mut <- resolve_top_of_stack_inner
+   5,014  make_mut <- finalize_cast
+   4,240  make_mut <- on_left_battlefield             (NEXT 1c's lead)
+   4,062  make_mut <- PlayerData::draw_top
+   2,790  make_mut <- try_pay_after_snapshot_mode
+   2,404  PlayerData::deref_mut <- resolve_top_of_stack_inner
+   2,402  GameState::deref_mut <- declare_blockers
+   2,124  make_mut <- PlayerData::remove_from_hand
+   2,116  make_mut <- remove_from_battlefield_to_graveyard_raw
+   2,022  make_mut <- finish_cleanup
+   1,830  make_mut <- dispatch_triggers_for_events
+   1,544  make_mut <- objects_leave_with_player
+     902  make_mut <- auto_tap_for_cost_inner
+# 10,498 calls in 63 further contexts
+```
+
+**The clone/ask ratio is the column to read, not the clone count.** A site at
+65 % is one where the first `&mut` after every checkpoint is genuinely the
+first write — there is no no-op write to gate, which is why (-50)'s device
+does not apply to `activate_ability_inner` (tapping the source and paying from
+the pool are real writes). A site at 8 % is mostly re-writes of an already
+unshared handle, i.e. already paid for. **(-50) lives where the ratio is high
+*and* the write is a no-op**, and the two rows that still look like that are
+`declare_attackers_banded` (30 %) and `cast_spell_with_convoke` (26 %, and
+NEXT item 2b already names its mechanism: the card is taken out of hand ahead
+of fifty gates).
+
 ### The three pools at `21a48317` — the re-based base
 
 Same binary, same config, one pool each: **`fixed` 1,172,084,149, `sos`
@@ -5543,6 +5662,57 @@ deck construction (96 % of a deck build, and a training actor builds two
 decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
+
+**(-51) A LAND TAP COSTS 7,555 Ir, AND A THIRD OF THE PAYMENTS ARE THROWN
+AWAY.** Sized at `ee376912` on `cube`; the two halves share a call path and
+neither has ever been costed in this file.
+
+**(a) The tap.** `auto_tap_for_cost_inner -> activate_ability` is **21,566
+calls / 162,930,901 Ir / 6.19 % of cube** — the second-largest single call
+site in the simulator after the bot's dry-run probe. Every one of them is a
+`{T}: add mana` ability run through the full CR 602.5 activation gauntlet.
+The costed parts: `card_keyword_possible` **1,146 Ir** (its
+`keyword_grant_in_scope` board walk is 726 of that — 467,366
+`card_can_grant_keyword` calls come from here, 42 % of the program's 1.1 M),
+`card_type_change_unscoped` ~506, `make_mut` ~1,055 (32,782 real deep copies,
+the largest single source in the program — see the context table in Profile of
+record), and ~1,700 of `activate_ability_inner`'s own frame.
+**Do not open this with a parallel fast path**: a second activation walker is
+the exact class ENGINE_BACKLOG P3 tracks. What it wants is either fewer taps
+(see (b)) or a cheaper `keyword_grant_in_scope`, and the per-definition
+keyword-grant bit that would do the latter is in TODO's do-not-rebuild list.
+
+**(b) The waste.** `restore_payment_state` runs **3,712 times against 11,634
+`try_pay_after_snapshot_mode` calls — 31.9 % of every payment the simulator
+attempts is rolled back**. A failed payment has already built its
+`mana_source_table` (8,986 calls / 60.1 M / 2.28 %, 6,690 Ir apiece) and
+tapped whatever it *could* reach before `pay_for_spell` rejects the rest, and
+`restore_payment_state` then unwinds all of it. Pro-rata that is ~1.9 % of
+cube in taps plus ~0.7 % in tables, spent on payments that were never going
+to complete.
+
+**Two ways in, and the second is the sound one.**
+*Reject earlier in the bot.* `bot::available_mana` is documented as
+**deliberately optimistic** — it ignores the assignment problem, so a hand
+card whose pips each have *some* producer passes the filter even when no
+assignment covers them. Tightening it to a sound assignment test (Hall's
+condition over ≤5 colours and ≤~10 sources is ~300 ops) removes the probe
+entirely and is behaviour-preserving **only in the direction that rejects what
+the engine would also have rejected** — an over-tight filter makes a legal
+line permanently invisible, which the function's own doc comment calls out as
+the failure it exists to prevent. Any version of this needs the engine's
+answer as the oracle: run the tightened filter *alongside* the current one
+over a bench run and assert it never rejects a cast `would_accept_on` accepts.
+*Bail before tapping in the engine.* After `mana_source_table` is built,
+`auto_tap_for_cost_inner` knows every colour it can reach; a still-needed
+colour with no producer in the table means the colour loop will no-op on that
+pip whatever else it does. Returning early there skips the other pips' taps.
+**Sound only with two guards**, and both are outside `auto_tap`'s knowledge
+today: `channel_life_for_mana` (the caller's post-auto-tap retry reads the
+floated pool) and the `forced_only` human path (which deliberately keeps
+eager-tapped mana floating for the retry). The generic half is *not* soundly
+testable from the table at all — `ManaSourceInfo` carries colours, not
+amounts, so "N sources for M generic" under-counts a source that makes two.
 
 **(-50) THE NO-OP WRITE THROUGH A CoW HANDLE — the sixty-eighth pass's class,
 and it is the one that pays.** A handle the code genuinely wrote is already
