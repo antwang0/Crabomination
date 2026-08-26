@@ -653,6 +653,39 @@ build.
 
 ## Baseline
 
+**Seventy-ninth pass. Base `a2b19fea` (= the seventy-eighth tip) vs tip.**
+One commit, the fourth in the observation encoder and the smallest edit of
+the four: `ManaCost::colored_symbols` returns an iterator instead of a `Vec`.
+
+```text
+selfplay_train --actors 1 --games 20 --steps 1 --seed 7, CRAB_NO_JITTER=1,
+profiling-fast --no-default-features, callgrind. Identical workload both
+sides — 1,788 rows, 1,990 `encode_state` calls.
+
+  I refs                 1,290,226,662 -> 1,275,509,707   -1.141 %
+  encode_state (incl.)     100,714,414 ->    85,939,751   -14.7 %
+```
+
+**Cumulative over the four encoder passes: `encode_state` 156,090,720 ->
+85,939,751, -45.0 %, and the actor 1,351,728,059 -> 1,275,509,707,
+-5.64 %.**
+
+**The `Vec` had four callers and three of them only counted it** —
+`encode_card_object`'s colour-requirement features, the deck encoder's pip
+histogram, `affordable_covered`'s pip count. The fourth collects to escape a
+borrow and now says so. This file already documents the device one method
+above the one it fixes: `colors()` -> `color_set()`, *"the `Vec` form was the
+engine's fifth-largest source of `RawVec::grow_one`, and every consumer only
+ever asks `contains` or iterates."* **A `-> Vec<T>` whose callers all write
+`for x in f()` is a grep, not a profile** — and this one survived the earlier
+sweep because it is on `ManaCost`, not on the type the sweep was reading.
+
+**14.8 M against the 7.4 M the edge itself carried**, because
+`affordable_covered` was allocating too and the malloc/free pair went with
+both. `bot_ladder` is untouched by construction — three of the four sites are
+in the encoder, which is **0 calls** there, and the fourth is one rare mill
+effect — so no Ir column on that binary is claimed.
+
 **Seventy-eighth pass. Base `c9bf0b78` (= the seventy-seventh tip) vs tip.**
 Two commits, both in the observation encoder, both measured on the actor
 path with `CRAB_NO_JITTER=1` and an identical workload throughout — 1,788
