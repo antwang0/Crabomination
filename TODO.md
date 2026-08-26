@@ -41,6 +41,38 @@ wrote item 1e's "grep the other pre-filters for the presence-vs-count shape"
 while the other was three edits from writing the same per-colour budget.
 Fetch before you start a candidate, not just before you push.
 
+**Seventy-fifth pass: `fixed` +0.106 % (layout), `sos` -2.775 %, `cube`
+-1.618 %**, one commit, `CRAB_NO_JITTER=1` both columns with byte-identical
+decision counts. `cast_candidates`' nineteen pure-filter specialty blocks
+stop probing eagerly and push `(action, false)`; the five that probe to
+*decide* what to emit keep it. Probe count flat (9,146 on cube), casts
+4,720 -> 4,540 — the winner's probe is the state the caller adopts instead
+of a run thrown away ahead of a second identical one.
+
+N1. **A bot change cannot be measured without pinning the jitter, and this
+   cost a full A/B to learn.** The scored pickers draw one `jitter_below(4)`
+   **per candidate**, so offering one extra candidate — even one that fails
+   validation immediately — shifts every later draw and the games diverge
+   with the policy untouched. Live columns for that commit read `cube`
+   **+0.503 %**; pinned, **-1.618 %**. `CRAB_NO_JITTER=1` +
+   `cg_edges.py --callers next_action_settled` is the pair; see PERF's "How
+   to measure".
+N2. **And the trace suite could not see it**: all 7 goldens byte-identical
+   and `--bench` `decisions` 195,886 unchanged across a commit that moved
+   `cube` by 132 decisions, because **`--decks fixed` reaches none of
+   `cast_candidates`' specialty blocks** (`cast_candidates -> accept_on` is
+   absent from its profile). Item 1e one level up. **Check the trace pool
+   executes the code before calling a bot change behaviour-preserving.**
+N3. **Where the simulator's time actually is, read inclusively for the first
+   time.** `pick_attacks_scored` is **59.1 % of `cube`** and
+   `simulate_attack_outcome_once` **58.7 %** — 1,842 sims at ~827 k Ir each,
+   ~29 `sim_step`s apiece. Inside one: `sim_step -> perform_action_inner`
+   23.6 %, `sim_spell_action_inner` 15.9 % (of which `accept_on` 9.1 % and
+   `cast_candidates` 5.7 %), `pick_blocks` 2.5 %. **The self table has never
+   named any of this.** The eager half is now taken; what is left is the sim
+   genuinely casting spells, so the next lever here is either fewer sims
+   (ladder-gated) or a cheaper `perform_action_inner`.
+
 0. **Seventy-second pass: `fixed` -0.209 %, `sos` -0.183 %, `cube` -0.218 %**,
    two commits, both (-50). (a) The leave-the-battlefield chain's four no-op
    writes — `temporary_control`'s `mem::take`, `on_left_battlefield`'s

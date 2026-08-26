@@ -167,6 +167,33 @@ cargo test -p crabomination_tests --test core_rules golden_trace
 cargo build --timings -p crabomination
 ```
 
+**MEASURING A CHANGE TO THE BOT: PIN THE JITTER, OR THE COLUMN IS GAME
+LENGTH.** The scored pickers draw one `jitter_below(4)` per *candidate*, so
+any change to how many candidates reach a picker re-aligns the tie-break
+stream for the rest of the game and the two builds stop playing the same
+games — with the policy untouched. `CRAB_NO_JITTER=1` pins every draw to 0
+(one `OnceLock` read in `bot::jitter_below`); with it set, the decision count
+is byte-comparable and says outright whether the games moved.
+
+```text
+CRAB_NO_JITTER=1 RUST_MIN_STACK=33554432 valgrind --tool=callgrind \
+  --callgrind-out-file=cg.out target/profiling-fast/bot_ladder \
+  --a gang --b gang --games 6 --threads 1 --seed 1 --decks cube
+python3 scripts/cg_edges.py cg.out --callers next_action_settled   # the count
+```
+
+At the seventy-fifth pass the same commit read `cube` **+0.503 %** live and
+**-1.618 %** pinned; the gap was 24,880 -> 25,012 decisions at a flat
+-0.03 % apiece. It is a *measurement* switch — no shipped profile sets it,
+and a strength number taken under it is not a strength number.
+
+**And a green trace suite is not evidence that a bot change is
+behaviour-preserving until you check the trace pool executes the code.** The
+`fixed` pool reaches none of `cast_candidates`' specialty blocks —
+`cast_candidates -> accept_on` is absent from its profile — so all 7 golden
+traces and `--bench`'s `decisions` stayed byte-identical across a commit that
+moved `cube` by 132 decisions.
+
 **Iterating with `release-fast`.** A `release` rebuild of the engine is ~25 min
 on a 4-core box (`codegen-units = 1` + thin LTO); `release-fast` (cgu 16, no
 LTO) rebuilds in a few minutes and is what A/B iteration should use. It is a
@@ -625,6 +652,63 @@ matches `crabomination_base` and `crabomination_catalog` too and so forces the
 build.
 
 ## Baseline
+
+**Seventy-fifth pass. Base `1b67c154` vs tip `475e4332`.** One commit:
+`cast_candidates`' nineteen pure-filter specialty blocks stop probing eagerly.
+**Both columns are `CRAB_NO_JITTER=1`** — see below for why that is the only
+sound way to read this one; the decision counts are byte-identical on all
+three pools either side (`fixed` 17,064, `sos` 16,240, `cube` 25,532), so the
+two builds play the same games.
+
+```text
+                          base            tip
+I refs, --decks fixed     1,137,083,850   1,138,293,424   +0.106 %
+I refs, --decks sos       1,448,267,246   1,408,076,014   -2.775 %
+I refs, --decks cube      2,709,179,195   2,665,348,002   -1.618 %
+```
+
+**The `fixed` column is layout drift and the diff says so.** That pool reaches
+none of these blocks (`cast_candidates -> accept_on` is absent from its
+profile), and the whole +1.2 M sits in `dispatch_triggers_for_events`
+(+1,061,018) and `fire_combat_damage_triggers` (+341,320), neither of which
+this commit touches; `cast_candidates` itself reads **-13,382**. A diffuse
+profile whose top 45 rows are 68.5 % moves ±0.1 % on inlining alone.
+
+**The change.** The main candidate block has been lazy since the fiftieth
+pass — the engine dry run happens at the *pick site*, in score order, so a
+tick probes one or two candidates instead of the whole hand. The twenty-four
+specialty blocks were not: each ran `would_accept_on` per candidate and
+dropped the state it produced. Nineteen used it as a pure filter and now push
+`(action, false)`; the five that probe to *decide* what to emit (convoke's
+fewest-helpers walk, the two kicker-subset searches, the two that drop the
+plain cast of the same card) keep it. `castable` carries the flag instead of
+being an all-validated list, so no candidate changes position.
+
+```text
+cube                              base     tip
+probes (accept_on, all callers)   9,146    9,146
+  <- cast_candidates              1,482      254
+  <- main_phase_action_with       4,498    4,998
+  <- sim_spell_action_inner       3,166    3,894
+casts (finalize_cast <- cast_spell_with_convoke)   4,720    4,540
+sos probes                        6,448    6,146
+```
+
+**The probe count is flat and the cast count drops, which is the whole
+commit**: the winner's probe is now the state the caller adopts
+(`Picked::Probed` / `Finalist::settled`) instead of a run thrown away ahead of
+a second identical one.
+
+**AND THE MEASUREMENT ITSELF NEEDED A NEW SWITCH.** With jitter live the same
+pair reads `fixed` -0.036 %, `sos` -3.412 %, `cube` **+0.503 %** — and `cube`
+takes 24,880 -> 25,012 decisions, i.e. the games diverge. The cause is not
+the policy: **the scored pickers draw one `jitter_below(4)` per candidate**,
+so offering a candidate that later fails validation consumes a draw and
+re-aligns the tie-break stream for the rest of the game. Pinning the draws
+(`CRAB_NO_JITTER=1`, one `OnceLock` read) makes both builds play the same
+games and the columns above are what the code costs. **Read a bot-side
+refactor's Ir per decision, or pin the jitter** — `cube` at +0.503 % was
++0.53 % more decisions at -0.03 % apiece.
 
 **Seventy-fourth pass. Base `1772f35e` vs tip.** One commit: the colour
 budget reaches the *sink mask*, which is what gates the whole `gated_pick!`
@@ -2977,6 +3061,44 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Seventy-fifth pass — a per-candidate random draw makes candidate-count a behaviour, and no committed invariant sees it
+
+One commit, base `1b67c154`, **`fixed` +0.106 % (layout), `sos` -2.775 %,
+`cube` -1.618 %** with the tie-break stream pinned. Full numbers in
+**Baseline**.
+
+* **The find is the asymmetry, and it was in a comment.** `cast_candidates`
+  opens by saying the final gate "runs *lazily* at the pick site below, in
+  descending score order, so a typical tick probes one or two candidates
+  instead of the whole hand" — and then nineteen of its twenty-four specialty
+  blocks probe every candidate eagerly and drop the state. The fiftieth pass
+  ("the dry run *is* the action") reached the main block and not these.
+  **When a function documents a device, grep the rest of the same function
+  for the shape it replaced.**
+* **A bot refactor's Ir is not readable without pinning the jitter.** The
+  scored pickers draw one `jitter_below(4)` per *candidate*
+  (`main_phase_action_with`'s `ranked` map). Offer one more candidate — even
+  one that immediately fails validation — and every later draw in the game
+  shifts, so the run diverges with the policy unchanged. Live-jitter columns
+  for this commit read `cube` **+0.503 %** where the pinned ones read
+  **-1.618 %**, and the gap is entirely 24,880 -> 25,012 decisions at a flat
+  -0.03 % apiece. `CRAB_NO_JITTER=1` (a `OnceLock` in `bot::jitter_below`)
+  pins them; `cg_edges.py --callers next_action_settled` is then a
+  byte-comparable "did the games change".
+* **And the invariants this repo commits could not see any of it.** All 7
+  golden traces are byte-identical and `--bench` reports `decisions 195,886`
+  unchanged — because **the `fixed` pool reaches none of these blocks at
+  all**: `cast_candidates -> accept_on` does not appear in its profile. The
+  seventy-first pass's item 1e said a wrong bot pre-filter is invisible to
+  every invariant here; this is the same hole one level up, and the reason
+  the pinned-jitter decision count had to be the gate instead. **Before
+  trusting a green trace suite on a bot change, check that the trace pool
+  executes the code.**
+* **Where it leaves the sim.** `simulate_attack_outcome_once` is **58.7 % of
+  `cube`** on its own (1,842 calls at ~827 k Ir), and `sim_spell_action_inner`
+  is 15.9 % of that — `cast_candidates` 5.7 % and `accept_on` 9.1 %. This
+  commit takes the eager half; the rest is the sim genuinely casting spells.
 
 ### Seventy-second pass — an edge belongs to the function that owns it, and a moved field pays a clone at both ends
 
