@@ -653,6 +653,74 @@ build.
 
 ## Baseline
 
+**Seventy-sixth pass. Base `5e4ec3bd` (code-identical to the seventy-fifth
+tip) vs tip.** One commit: the bot's affordability pre-filter stops walking
+the whole board three times per hand card. Ir readings `profiling-fast
+--no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
+--threads 1 --seed 1`, **`CRAB_NO_JITTER=1` both columns**.
+
+```text
+                          base            tip
+I refs, --decks fixed     1,138,298,501   1,131,317,108   -0.613 %
+I refs, --decks sos       1,408,080,967   1,402,099,459   -0.425 %
+I refs, --decks cube      2,665,352,881   2,649,976,954   -0.577 %
+```
+
+Decision counts byte-identical on all three pools (`fixed` 17,064, `sos`
+16,240, `cube` 25,532), so the two builds play the same games; 7 golden
+traces unchanged, suite 18,749 passed / 0 failed / 5 ignored.
+
+**The base columns are the fourth independent confirmation that callgrind Ir
+is portable across these containers.** Against the seventy-fifth pass's tip
+columns for the same code — a different box, a different day — `fixed` reads
+**+5,077**, `sos` **+4,953**, `cube` **+4,879**, i.e. **0.0004 %** and all
+three the same absolute number, which is argv length.
+
+**The change, and the reason it is sound with no gate to audit.**
+`can_afford_in_state_with` calls `extra_cost_for_spell`,
+`cost_reduction_for_spell_full` and `colored_spell_tax_for_spell` once per
+hand card, and each walks every static source on the board. About half the
+permanents on these boards have an **empty** `static_abilities`, so half of
+every walk was an `Arc` deref to read an empty slice. `CostStaticSources`
+filters those out once per sweep and the three functions get `_over` forms
+that take the list. There is no variant enumeration and therefore no
+`debug_assert!` gate: dropping a source whose inner loop has nothing to
+iterate cannot change an answer.
+
+```text
+cube, edges out of can_afford_in_state_with   base         tip
+30,350 calls either side
+  cost_reduction_for_spell_full               17,075,918    9,694,528
+  extra_cost_for_spell                         7,221,562    2,561,506
+  colored_spell_tax_for_spell                  6,075,898    1,440,040
+                                              30,373,378   13,696,074
+program                                                    -15,375,927
+```
+
+**The gather costs ~1.3 M over 10,852 builds** (the difference between the
+edge saving and the program), i.e. ~120 Ir a sweep, and it is lazy: only
+10,852 of ~17,400 sweeps reach the affordability test at all.
+
+**This re-opens an entry that says "do not re-open", and the arithmetic is
+why.** The 2026-08-12 refutation measured **+0.066 %** for a *fused scan* on
+this function, with the four static walks at **0.29 %** of the profile and
+**1.13 cards per sweep**. Both halves have moved: the three walks are
+**1.14 % of `cube`** now over **30,350** calls against 12,114, and **2.80**
+cards reach the filter per sweep that reaches it at all. The old entry's own
+numbers are what date it — see (-34)'s block, which now carries both
+readings. The refutation's transferable half still stands and this change
+obeys it: **the scan has to be lazy**, because an eager one on
+`pick_combat_trick`'s empty sweeps cost +0.35 % at pass 40.
+
+**What is left of it, and it is the half the old entry was about.** The three
+edges are still **13,696,074 (0.52 % of `cube`)** and the walk that remains is
+over the sources that *do* carry statics, almost none of which are of the
+cost-changing families. A `cast_cost_scan`-style bitmask over
+`CostStaticSources::gather`'s existing walk would take most of that — but it
+is a hand-maintained enumeration of ~30 `StaticEffect` variants across the
+three functions, so it needs the `debug_assert!`-at-the-gated-site device the
+existing scan uses, and it is a separate commit.
+
 **Seventy-fifth pass. Base `1b67c154` vs tip `475e4332`.** One commit:
 `cast_candidates`' nineteen pure-filter specialty blocks stop probing eagerly.
 **Both columns are `CRAB_NO_JITTER=1`** — see below for why that is the only
@@ -3105,6 +3173,44 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Seventy-sixth pass — a refutation dates, and the thing that dates it is its own arithmetic
+
+One commit, base `5e4ec3bd`, **`fixed` -0.613 %, `sos` -0.425 %, `cube`
+-0.577 %**, decision counts byte-identical on all three pools. The numbers and
+the change are in **Baseline**; what belongs here is the two rules.
+
+**1. A "do not re-open" carries the workload it was measured on, and this
+branch's workload has moved 2.5x under several of them.** `can_afford_in_state`
+was closed on 2026-08-12 at **+0.066 %** with the four static walks at
+**0.29 %** of the profile and **1.13 cards per sweep**. Neither figure survived:
+the walks are **1.14 % of `cube`** and **2.80** cards reach the filter per
+sweep that reaches it at all, because the attack search runs 1,910 sims a run
+and each of them sweeps. **The entry's numbers are what let the re-check be
+cheap** — `cg_edges.py --callers` on the three functions is one command and it
+priced the whole item before a line was written. An entry that had recorded
+only the verdict would have cost this pass a build to re-derive, or (worse)
+would have stood.
+
+So: **before taking a candidate, re-read the refutation's own numbers against
+the current dump, not its conclusion.** The conclusion is a fact about a
+profile, and the profile is two dozen passes old.
+
+**2. Filtering a walk's input is not the same device as gating the walk, and
+it is the one that needs no audit.** The refuted fix was a *fused scan* — a
+bitmask over the cost-static families, which is an enumeration of ~30
+`StaticEffect` variants that has to be kept in step with three separate match
+blocks and is only sound because a `debug_assert!` at each gated site runs the
+walk anyway in debug. What shipped instead drops the sources whose
+`static_abilities` is **empty**: sound by construction (an empty inner loop
+contributes nothing), no enumeration, no gate, no audit. It takes **55 %** of
+the three edges where the bitmask would take most of the rest. **Prefer the
+structural filter first and price the enumeration against what it adds** —
+here it would be another ~0.5 % of `cube` for thirty variants of drift
+surface, which is a real trade rather than an obvious one.
+
+The residue is written up in (-34): 13,696,074 Ir on `cube`, walks over the
+sources that *do* carry statics.
 
 ### Seventy-fifth pass — a per-candidate random draw makes candidate-count a behaviour, and no committed invariant sees it
 
@@ -5603,6 +5709,58 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### Inside one attack sim, at the seventy-fifth tip (`5e4ec3bd`), `--decks cube`
+
+NEXT's item N3 read `pick_attacks_scored` inclusively for the first time. This
+is the level below: what the 1,910 sims of a `cube` run actually spend, taken
+with `cg_edges.py --callers/--callees` on the base dump of the seventy-sixth
+pass. **The whole search is 59.63 % of the program and one sim is 826,000 Ir**
+— 0.031 % of the run apiece.
+
+| edge | calls | inclusive Ir | % cube |
+|---|---|---|---|
+| `next_action_inner -> pick_attacks_scored` | 928 | 1,589,376,409 | **59.63** |
+| `pick_attacks_scored -> simulate_attack_outcome_once` | 1,910 | 1,577,542,477 | 59.19 |
+| `next_action_inner -> pick_blocks_scored` | 338 | 75,481,536 | 2.83 |
+
+Inside `simulate_attack_outcome_once` (per-sim rate in brackets):
+
+| callee | calls | inclusive Ir | % cube |
+|---|---|---|---|
+| `sim_step` (29.1/sim) | 55,510 | 799,456,685 | **30.0** |
+| `sim_spell_action_inner` (10.7/sim) | 20,388 | 413,788,025 | **15.5** |
+| `perform_action_inner` (the declaration + decisions) | 3,358 | 191,473,271 | 7.2 |
+| `pick_blocks` | 2,550 | 69,606,358 | 2.6 |
+| `drop_in_place<GameState>` | 4,670 | 30,572,125 | 1.15 |
+| `pick_attacks_inner` (the greedy re-declaration) | 1,766 | 28,594,797 | 1.07 |
+| `eval_material_frozen` | 1,910 | 18,447,619 | 0.69 |
+| `sim_start_state` (the clone) | 1,910 | 5,199,711 | 0.20 |
+
+And inside `sim_spell_action_inner`, which is the part that is *not* the
+engine advancing a turn:
+
+| callee | calls | inclusive Ir | % cube |
+|---|---|---|---|
+| `accept_on` — the cast the sim adopts | 3,910 | 284,124,532 | **10.66** |
+| `cast_candidates` | 6,210 | 96,013,585 | **3.60** |
+| `pick_combat_trick` | 5,830 | 8,354,437 | 0.31 |
+| `pick_stack_response` | 9,112 | 4,478,080 | 0.17 |
+
+**Three readings worth keeping.** (a) Of the 20,388 entries, **9,112 are the
+stack branch and 5,830 the blocker branch, and both are cheap**; the
+main-phase branch is 6,210 and carries everything. (b) **63 % of main-phase
+entries end in a probe** (3,910 of 6,210), and that probe *is* the cast — the
+sim adopts its state — so `accept_on` here is not waste and the fiftieth
+pass's bargain is working. (c) A sim probe costs **72,666 Ir against
+`main_phase_action_with`'s 45,146**, which is the one number in this block
+nobody has explained.
+
+**So the attack search's cost is the engine playing a turn, not the bot
+choosing.** `sim_step` + the direct `perform_action_inner` is 37.2 % of the
+program against `cast_candidates`' 3.6 %. The levers are fewer sims
+(ladder-gated: 928 decisions produce 1,910 sims, so most declarations already
+take the one-candidate early return) or a cheaper `perform_action_inner`.
+
 ### The three pools at the seventieth tip (`ee376912`) — and the *inclusive* half
 
 `fixed` **1,148,918,411**, `sos` **1,482,238,008**, `cube` **2,631,861,321**,
@@ -6199,6 +6357,23 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
+**(-53) THE COST-STATIC WALKS THAT SURVIVE THE SEVENTY-SIXTH PASS —
+13,696,074 Ir / 0.52 % OF `cube`, AND THE FIX IS AN ENUMERATION.**
+`can_afford_in_state_with` now walks only the sources that carry
+`static_abilities` (see (-34) and the seventy-sixth Baseline), which took 55 %
+of the three edges. What is left is walking those sources' statics per hand
+card for families a normal board does not have: `AdditionalCost` and its eight
+siblings (`extra_cost_for_spell`), `ColoredSpellTax`
+(`colored_spell_tax_for_spell`), and the twenty-two-variant reduction family
+(`cost_reduction_for_spell_full`). A bitmask over `CostStaticSources::gather`'s
+existing walk gates all three; it is the `cast_cost_scan` device exactly, with
+its `debug_assert!`-at-the-gated-site audit, and the non-board channels
+(`first_spell_tax_charges`, `turn_scoped_spell_taxes`, `turn_spell_discounts`,
+`extra_cast_reduction`, and the ~10 card-intrinsic reduction fields) stay
+outside the gate as cheap per-card reads. **Price the ~30 variants of drift
+surface against 0.5 % before taking it** — the structural filter that already
+shipped needed none.
+
 **(-52) CLOSED — ACTOR SCALING IS LINEAR TO THE CORE COUNT, AND RSS IS THE
 REPLAY WINDOW, NOT THE ACTORS.** Measured, not inferred:
 `release-fast selfplay_train --games 1200 --steps 1 --seed 7`, two reps, on
@@ -6269,6 +6444,45 @@ tapped whatever it *could* reach before `pay_for_spell` rejects the rest, and
 `restore_payment_state` then unwinds all of it. Pro-rata that is ~1.9 % of
 cube in taps plus ~0.7 % in tables, spent on payments that were never going
 to complete.
+
+**RE-SIZED AT THE SEVENTY-FIFTH TIP (`5e4ec3bd`), `--decks cube`, and both
+halves have shrunk.** (a) `auto_tap_for_cost_inner -> activate_ability` is
+**20,070 calls / 153,837,786 Ir / 5.77 %** (7,665 Ir a tap; it was 6.19 %),
+of which `card_keyword_possible` is 21,274 / 24,216,608 / **0.91 %** and
+`card_type_change_unscoped` 21,158 / 10,579,726 / **0.40 %** — that second row
+is *not* the summoning-sickness gate (a land ETBs with `summoning_sick =
+definition.is_creature()`, i.e. false) but the CR 106.12 `creature_source`
+read one block earlier. (b) `restore_payment_state` is **2,416 against 10,134
+`try_pay_after_snapshot_mode` calls — 23.8 %**, down from 31.9 %.
+`mana_source_table` is 7,426 / 51,527,862 / **1.93 %**.
+
+**And the rollbacks now have a caller table** (`--separate-callers=2`,
+`cg_contexts.py`), which supersedes the seventy-third pass's:
+
+```text
+  1,672  <- cast_spell_with_convoke        of 6,342   26.4 %
+    410  <- activate_ability_inner         of   816   50.2 %
+    152  <- try_pay_with_auto_tap_mode     of   164   92.7 %
+     92  <- cast_spell_alternative         of   162   56.8 %
+     46  <- cast_flashback                 of    80   57.5 %
+     26  <- cast_face_down                 of    26  100.0 %
+     16  <- run_effect <- resolve_effect
+```
+
+**The pile is `cast_spell_with_convoke`'s 1,672 and the bot pre-filters that
+path already** — `can_afford_from` tests `cmc + extra > have.total` *and* the
+per-colour budget, so these are failures the bot's estimate did not predict:
+an over-optimistic `total`, a cost the estimate does not model, or an auto-tap
+that stranded a colour it could have covered. **The last of those is a
+correctness bug, not a perf one** (a payable line becomes invisible), and
+nothing here distinguishes them yet. **The oracle is the instrument** — see
+1d — and it wants to classify a failed payment rather than a rejected
+candidate. The engine-side bail this entry proposes cannot be sized until
+that split is known: a colour bail needs an over-approximating colour set
+(`effect_produced_colors` returns **empty** for `Restricted` /
+`DevotionOfChosenColor` / `ChosenColorOfSource` payloads, and the *generic*
+tap loop can still tap those sources), and a generic bail needs a per-source
+mana *amount*, which `ManaSourceInfo` does not carry.
 
 **(b) IS HALF PAID at the seventy-first pass — the bot half, and it read
 `cube` -1.225 %.** Cast attempts 7,110 -> 6,038, payment rollbacks
@@ -8860,7 +9074,25 @@ of being actionable. All from `a58447d9`, `--tree=caller` /
    file rows — the 5.62 % inclusive is callees inlined into the
    `Vec::from_iter` frame, so read the annotated source, not the function
    list. Two callers, 3,382 and 3,642. By callee:
-   * `can_afford_in_state` — **CLOSED 2026-08-12, negative result.** The
+   * `can_afford_in_state` — **RE-OPENED AND PAID at the seventy-sixth pass
+     (`fixed` -0.613 %, `sos` -0.425 %, `cube` -0.577 %), and the reason the
+     2026-08-12 refutation below stopped applying is arithmetic, not
+     judgement.** That refutation is correct for what it measured — an
+     *eager* fused scan, four walks worth **0.29 %**, **1.13 cards per
+     sweep**. At the seventy-fifth tip the three surviving walks are
+     **1.14 % of `cube`** over **30,350** calls against 12,114, and **2.80**
+     cards reach the filter per sweep that reaches it at all. What shipped is
+     not the fused scan either: `CostStaticSources` drops the sources whose
+     `static_abilities` is empty (about half the board) and hands the list to
+     `_over` forms of the three functions, so there is no enumeration and no
+     gate. **The transferable half of the refutation still holds and the fix
+     obeys it — the list is lazy**, because an eager read on
+     `pick_combat_trick`'s empty sweeps cost +0.35 % at pass 40. **What is
+     left is 0.52 % of `cube`** in walks over the sources that *do* carry
+     statics; a `cast_cost_scan`-style bitmask would take most of it and
+     needs a ~30-variant enumeration with the `debug_assert!`-at-the-site
+     device. See the seventy-sixth pass's Baseline block.
+     **The 2026-08-12 reading, kept verbatim.** The
      fused-scan fix this entry prescribed measured **+0.066 %** and was
      reverted; see the twenty-seventh pass's Log block for why (1.13 cards
      per sweep, not 1.72 — the filter is not in `cast_candidates`). What is
@@ -8868,7 +9100,7 @@ of being actionable. All from `a58447d9`, `--tree=caller` /
      between them, `available_mana` is **1.14 %** and was 60 % of the
      function, and the part of `available_mana` that was real cost —
      `granted_abilities_with`'s redundant `battlefield_find` — is **paid**
-     (`granted_abilities_of`, -0.552 %). Do not re-open. The original
+     (`granted_abilities_of`, -0.552 %). The original
      measurement, kept because the arithmetic below is still the warning:
      **56,500,015 / 1.76 % over 12,114 calls (4,664 Ir each)**.
      Its body per hand card: `extra_cost_for_card_in_hand`,
