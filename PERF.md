@@ -2385,6 +2385,11 @@ I refs, --decks sos       1,523,857,356    1,514,644,234   -0.605 %
 I refs, --decks cube      2,732,668,272    2,712,267,762   -0.747 %
 ```
 
+The layer-pass commit below was measured separately, at base `b8f695ad` — two
+of the other session's card commits landed between — and reads `fixed`
+**-0.319 %**, `sos` **-0.354 %**, `cube` **-0.131 %**. **End to end the pass
+is `fixed` -0.36 %, `sos` -0.96 %, `cube` -0.88 %.**
+
 **`CardDefinition` is 8,232 bytes and a token mint moved a whole one twice**:
 `token_to_card_definition` built it, `mint_token_onto_battlefield`'s by-value
 argument moved it, `Arc::new` moved it again — and both `CreateToken` loops
@@ -2415,6 +2420,16 @@ definition goes through `Arc::make_mut`, which unshares first, and nothing
 in the program branches on definition pointer identity (`Arc::ptr_eq` appears
 once, on `CowBox`, in a test-only helper). The memo is a pure function of its
 key, so thread-local storage adds no cross-thread order to the game.
+
+**A third commit takes (-45)'s largest row, and it is the same question one
+layer down.** `compute_permanent_pass` collected an *empty* iterator on
+83.6 % of its 89,154 passes — `Vec::from_iter` plus a `sort_by` over nothing,
+90,170 times — because the filter's body (`affected_includes_gated`) runs only
+29,436 times over those passes. Gating the collect: `fixed` **-0.319 %**,
+`sos` **-0.354 %**, `cube` **-0.131 %**, and the row goes **90,170 calls /
+5,488,146 Ir -> 14,784 / 2,321,934**. **Cube moves least because a cube board
+carries statics** — the gate is worth what the *empty* fraction is worth, and
+that is a property of the pool, not of the function.
 
 **The pass also answered (-48), which is measurement, not code: mimalloc is
 5.99 % faster than the system allocator** (eight ABBA blocks, 8/8, CI -7.04 ..
@@ -5108,8 +5123,9 @@ that pass already took removed:
 
 ```text
   calls        Ir        caller
-  90,170    6,537,071    layers::compute_permanent_pass       <- 72 Ir each, 9.6 per
-                                                                 compute_permanents
+  90,170    6,537,071    layers::compute_permanent_pass       <- TAKEN, 64th pass:
+                                                                 90,170 -> 14,784 calls,
+                                                                 `sos` -0.354 %
   37,420    1,336,242    resolve_effect                       <- 36 Ir each
   21,912    7,323,096    declare_attackers_banded
   18,750      944,725    fire_delayed_event_watchers          <- 50 Ir each
@@ -5122,6 +5138,16 @@ that pass already took removed:
    9,374   13,233,290    compute_permanents
  149,490         —      103 more rows (38.07 % of the calls)
 ```
+
+**The top row is PAID at the sixty-fourth pass and it was the cheapest kind:
+the chain was empty on 83.6 % of the passes.** `affected_includes_gated`, the
+filter body inside that `from_iter`, runs 29,436 times over 89,154 layer
+passes on `sos` — a third of an effect apiece — and only 1,284 of the 90,170
+collects allocated. Gating the collect on "is there anything to filter"
+read `fixed` **-0.319 %**, `sos` **-0.354 %**, `cube` **-0.131 %**. **Cube
+moves least because a cube board carries statics**, so its gathered list is
+non-empty more often; the gate is worth what the *empty* fraction is worth,
+which is a pool question. That is the sizing rule for the rest of the table.
 
 **Read the two columns against each other.** A row with many calls and few
 Ir apiece (`compute_permanent_pass`, `resolve_effect`,
