@@ -5570,6 +5570,28 @@ was already there**. The shapes to grep for:
   `auto_tap_for_cost_inner`'s `wants_ui` pair looked exactly like this and
   is real (see the Log's refutation 2).
 
+**AND THE CHAIN'S NEXT LINK IS OPEN, SIZED, AND NOT TAKEABLE THE OBVIOUS
+WAY.** After the zone-chain commit, `on_left_battlefield`'s `make_mut` edge on
+cube went **19,384 calls / 510,460 Ir -> 19,384 / 5,665,537** — the same
+calls, eleven times the cost, i.e. those unshares now genuinely deep-copy
+because nothing upstream unshares the card for them any more. The whole-
+program reading still improved, so the commit is a win; **5.15 M Ir (0.19 %
+of cube) of it simply moved one function down and is still there.**
+
+**The obvious fix is REFUTED — measured and reverted at the seventy-first
+pass.** The calls come from `find_card_anywhere_mut(id)`, which is called
+unconditionally and then usually writes nothing, so "ask through the shared
+`find_card_anywhere` first, take the `&mut` only if a flag needs clearing"
+looks like the same device one level up. It reads **`fixed` +0.083 %, `sos`
++0.036 %, `cube` +0.053 %**. **The mutable walk's cost is the *search*, not
+the unshares**: the card has already moved to a graveyard, so both walks scan
+the battlefield and the stack first, and the gate buys a second full walk on
+the write path in exchange for CoW handles that were going to be written
+anyway. **A `_mut` lookup is not a (-50) site just because it usually writes
+nothing** — price the walk before gating it. What is left needs a cheaper
+*locate* (the zone is known at the call site: `place_card_at_resolved_zone`
+put the card there and could hand back where), not a cheaper write.
+
 **A (-50) SITE IS A CHAIN, NOT A LINE — the sixty-ninth pass's addition, and
 it cost that pass a build to learn.** Gating the first unconditional write on
 a handle hands the bill to the next one. Five of the zone-change chain's six

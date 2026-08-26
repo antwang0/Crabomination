@@ -56,6 +56,17 @@ other session's next fetch can see.
    byte-identical and traces unchanged. **A base column taken at `4f42c6b4`
    is ~0.06 % above one taken at `7ada03d9` — that is the trade, not a
    regression.**
+1c. **The best-sized open perf lead, and it is the zone chain's next link.**
+   `on_left_battlefield`'s `make_mut` edge is **19,384 calls / 5,665,537 Ir on
+   cube (0.19 %)** — same call count as before the sixty-ninth pass, eleven
+   times the Ir, because those unshares now genuinely deep-copy. **The
+   obvious gate is refuted** (ask through the shared `find_card_anywhere`
+   first: `fixed` +0.083 %, `sos` +0.036 %, `cube` +0.053 %, reverted) —
+   the `_mut` lookup's cost is the *search*, not the unshares, and the card
+   is already in a graveyard so both walks scan the battlefield first.
+   **What it needs is a cheaper locate, not a cheaper write**:
+   `place_card_at_resolved_zone` put the card in a known zone and could hand
+   that back. See (-50).
 1b. **Where the device still has sites.** `cast_cost_scan` covers six of the
    nine its own function asks (the sixty-eighth pass's item, still open), and
    nothing has been scanned in `check_state_based_actions`, the layer pass or
