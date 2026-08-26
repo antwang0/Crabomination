@@ -119,6 +119,13 @@ impl GameState {
         // primary walker is silent. `Any` stays the last resort for a bare
         // `Selector::Target(0)` ("any target"), which genuinely accepts
         // anything and has no slot filter either.
+        //
+        // Both calls are the *mode-blind* ones, deliberately.
+        // `auto_targets_for_effect_all_slots_kicked` reaches this picker only
+        // when the **chosen mode's** slot 0 has no filter, and CR 608.2b's
+        // re-check is mode-blind too — so aiming with the same call the
+        // checker uses is the whole point. Mode-aware picking already happens
+        // one level up, through `target_filter_for_slot_in_mode_kicked`.
         let req_owned = eff
             .primary_target_filter()
             .or_else(|| eff.target_filter_for_slot(0))
