@@ -626,6 +626,67 @@ build.
 
 ## Baseline
 
+**Seventy-fourth pass. Base `1772f35e` vs tip.** One commit: the colour
+budget reaches the *sink mask*, which is what gates the whole `gated_pick!`
+ability chain. Ir readings `profiling-fast --no-default-features`, callgrind,
+one thread, `--a gang --b gang --games 6 --threads 1 --seed 1`.
+
+```text
+                          base            tip
+I refs, --decks fixed     1,143,433,386   1,142,504,409   -0.081 %
+I refs, --decks sos       1,455,540,697   1,452,607,928   -0.201 %
+I refs, --decks cube      2,596,680,136   2,581,192,429   -0.596 %
+```
+
+`sink_facts` lit a bit for any ability of the right *shape*, so a
+`{1}{B}: destroy target creature` off two Mountains kept `sink::AB_DESTROY`
+set and `pick_removal_destroy` walked the battlefield, built an action and
+paid a ~50 k-Ir probe on a cost that could never be paid. Activations
+reaching payment on `cube` **1,242 -> 996**, and all 246 removed were
+rollbacks (`restore_payment_state` 2,852 -> 2,606).
+
+**A gate is only cheap where the thing it reads is already paid for, and
+this pass has the number.** `main_phase_action_with` now owns one
+`SweepMana` and hands it to `cast_candidates` and `sink_facts` both. Even so,
+an **unconditional** `have.get()` per ability read:
+
+```text
+                   unconditional gate   with the printed-pip pre-test
+--decks fixed      +0.292 %             -0.081 %
+--decks sos        -0.119 %             -0.201 %
+--decks cube       -0.562 %             -0.596 %
+```
+
+`fixed`'s archetypes activate `{T}` and generic abilities, so the forced
+`available_mana` (5,406 -> 6,290 calls) bought nothing there — its rollbacks
+did not move at all (230 either way). **Testing the printed cost for a
+coloured pip first decides whether the read happens**, and it is free: the
+cost is already in hand. Same shape as pass 40's refuted eager read, one
+level down.
+
+**And the pass found a real hole in the seventy-first's widening.**
+`by_color` was widened to `[total; 5]` wherever a colour could not be
+bounded — but `total` deliberately under-counts the very sources that force
+the widening. **Two Treasures and nothing else read `total = 0`**, so the
+"unbounded" budget still rejected every coloured pip while the engine
+sacrificed a Treasure and paid. `u32::MAX` is what the widening meant;
+`cmc <= total` stays the separate test it always was. **The rule: a widening
+must be widened to something the estimate does not also under-count.** Found
+by the oracle on `--decks all` seeds 11/12 (Kessig Wolf Run's `{X}{R}`),
+which is the third hole that harness has caught and the third that a reading
+of the code did not.
+
+```text
+oracle           0 over seeds 1/7/11/12/23/31 x cube/sealed/all at 12 games
+                 and --bench
+decisions        195,886 byte-identical
+turns_per_game   27.48, stalls 0, peak_rss_mib 18.4
+ladder printout  identical on fixed / sos / cube
+golden traces    7 passed, unchanged
+suite            18,749 passed / 0 failed / 5 ignored
+clippy           `-p crabomination --all-targets` clean
+```
+
 **Seventy-third pass. Base `db6abaa4` (= the seventy-second tip) vs tip.**
 One commit: the seventy-first pass's per-colour budget, applied to the two
 candidate blocks that never had a pre-filter at all. Ir readings

@@ -73,6 +73,23 @@ Fetch before you start a candidate, not just before you push.
    owns the card** (the callers have already unshared it), not a gate. Seven
    call sites and a stale-flag failure mode; see (-50).
 
+1. **Seventy-fourth pass: `fixed` -0.081 %, `sos` -0.201 %, `cube` -0.596 %**,
+   one commit — the colour budget reaches `sink_facts`, the presence mask that
+   gates the whole `gated_pick!` ability chain. Activations reaching payment
+   1,242 -> 996 on cube, every one of the 246 a rollback. **Two rules, both
+   measured.** (a) *A gate is only cheap where what it reads is already paid
+   for.* `main_phase_action_with` now owns one `SweepMana` for
+   `cast_candidates` and `sink_facts` both, and even so an unconditional
+   `have.get()` per ability read **+0.292 % of `fixed`** (whose abilities are
+   `{T}` or generic, so the forced `available_mana` bought nothing — its
+   rollbacks did not move). Testing the *printed* cost for a coloured pip
+   first decides whether the read happens at all, and it is free. (b) *A
+   widening must be widened to something the estimate does not also
+   under-count.* Pass 71 widened `by_color` to `[total; 5]`, and `total`
+   under-counts exactly the sources that force the widening — two Treasures
+   and nothing else read `total = 0`, so the "unbounded" budget still
+   rejected every coloured pip while the engine sacrificed one and paid.
+   `u32::MAX` is what it meant. **Found by the oracle, third time.**
 1. **Seventy-third pass: `fixed` -0.135 %, `sos` -0.456 %, `cube` -0.195 %**,
    one commit — the seventy-first pass's per-colour budget applied to the
    candidate blocks that had no pre-filter at all. **`restore_payment_state`
