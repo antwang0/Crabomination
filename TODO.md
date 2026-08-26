@@ -24,6 +24,13 @@ sixty-seventh pass, so don't re-take that.
 
 **FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
+**`git branch -a` does NOT list this branch before that fetch** — the clone
+carries `main` and whatever ref the session was started from, so an orient-
+yourself `git branch -a` reads as "the branch does not exist yet", and
+`git checkout -b claude/modern_decks` off `main` then works, builds, and
+tests green. It is 2,500 commits behind and nothing says so until the push
+is rejected. A session lost most of a run to exactly that at the
+sixty-seventh pass. Run the fetch **before** looking at anything else.
 **Sessions run this branch concurrently: read PERF's Log before starting the
 top candidate, re-read the base after every rebase, and budget two callgrind
 rounds per commit.**
