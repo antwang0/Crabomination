@@ -653,6 +653,66 @@ build.
 
 ## Baseline
 
+**Seventy-seventh pass. Base `fd8c307f` vs tip, and it is measured on the
+*actor* path, which this file had never profiled.** One commit: the
+observation encoder's twelve keyword questions inverted into one pass.
+
+```text
+selfplay_train --actors 1 --games 20 --steps 1 --seed 7, CRAB_NO_JITTER=1,
+profiling-fast --no-default-features, callgrind. Identical workload both
+sides — 1,788 rows, 1,990 `encode_state` calls.
+
+  I refs                 1,351,728,059 -> 1,309,077,782   -3.156 %
+  encode_state (incl.)     156,090,720 ->   113,710,320   -27.2 %
+  has_keyword calls            950,700 ->       110,124
+```
+
+**The finding is that a whole hot path was outside the profile of record.**
+Everything in this file is `bot_ladder`; a `selfplay_train` actor runs a
+different program on top of the same engine, and three of its top rows do not
+appear on `bot_ladder` at all:
+
+| row (self, `--actors 1 --games 20`) | actor | `--decks cube` |
+|---|---|---|
+| `CardInstance::has_keyword` | **3.21 %** | 0.77 % |
+| `recommend::build_shape` (deck construction, two decks a game) | 1.37 % | 0 |
+| `encode::encode_card_object` | 1.25 % | **0 calls** |
+| `encode::Vocab::index_of` | 1.02 % | 0 |
+| `encode::encode_state` | 0.97 % self, **11.6 % inclusive** | 0 |
+
+`encode_state` at 11.6 % is the shape to keep: **422 `has_keyword` calls per
+encoded state**, because `has_keyword` re-walks five lists per keyword asked
+and the encoder asked twelve. Inverting it makes the cost the card's keyword
+*count* instead of the encoder's question count. What is left of the encoder
+after the commit is `Vocab::index_of` and `encode_state`'s own walk.
+
+**And one artefact, so nobody chases it:** `rand_distr::Normal::sample` reads
+2.68 % of a 20-game actor run and is candle initialising the net's weights —
+722,816 draws through `CpuDevice::rand_normal`, once per process. It
+amortises to nothing on a real run.
+
+**⚠ `selfplay_train --seed N` DOES NOT REPRODUCE A RUN, and every number
+above needed `CRAB_NO_JITTER=1` to be comparable.** One binary, one seed,
+`--actors 1`:
+
+```text
+                  rows over 20 games
+default           1,788 / 1,770 / 1,776     <- three runs, same seed
+CRAB_NO_JITTER=1  1,788 / 1,788 / 1,788
+```
+
+The bot's tie-break draws go through `bot::jitter_below`, which uses the
+*thread* RNG unless something installs a seeded stream — and
+`set_jitter_seed` is the **ladder's** device for antithetic pairs. Nothing in
+the `selfplay` actor path installs one, so the seed names the deck pool and
+the shuffles and not the bot's tie-breaks. Consequences, in order of how
+much they cost: **a training run cannot be replayed**; an A/B of two builds
+on the actor path compares different workloads unless pinned (the first
+reading of this pass came out -0.674 % against a base that had played 1 %
+fewer rows, where the pinned pair reads -3.156 %); and `--games N` is not a
+fixed amount of work. Pin it for any measurement, and see TODO for the open
+question of whether the actor path *should* be seeded.
+
 **Seventy-sixth pass. Base `5e4ec3bd` (code-identical to the seventy-fifth
 tip) vs tip.** One commit: the bot's affordability pre-filter stops walking
 the whole board three times per hand card. Ir readings `profiling-fast

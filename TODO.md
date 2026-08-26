@@ -114,6 +114,30 @@ N3. **Where the simulator's time actually is, read inclusively for the first
    owns the card** (the callers have already unshared it), not a gate. Seven
    call sites and a stale-flag failure mode; see (-50).
 
+1. **Seventy-seventh pass: the actor path had never been profiled, and the
+   first look at it paid -3.156 %.** `selfplay_train --actors 1 --games 20`,
+   `CRAB_NO_JITTER=1`, identical workload both sides. The observation encoder
+   asked `has_keyword` twelve times per object — **422 calls per encoded
+   state**, 950,700 over twenty games — and `has_keyword` re-walks five lists
+   per keyword asked; one inverted pass took `encode_state` down **27.2 %**.
+   **Three of the actor's top rows do not appear on `bot_ladder` at all**
+   (`encode_card_object` is *0 calls* there), so this file's profile of record
+   describes half the program the ML phase runs. What is left of the encoder:
+   `Vocab::index_of` (1.02 %) and `encode_state`'s own walk (0.97 % self).
+   Deck construction is 1.37 % self / ~5 % inclusive, two decks a game.
+1a. **⚠ `selfplay_train --seed N` does not reproduce a run.** Same binary,
+   same seed, `--actors 1`: 1,788 / 1,770 / 1,776 rows over twenty games;
+   with `CRAB_NO_JITTER=1`, 1,788 every time. `bot::jitter_below` falls back
+   to the **thread** RNG unless a seeded stream is installed, and
+   `set_jitter_seed` is the *ladder's* device for antithetic pairs — nothing
+   in the actor path calls it. So the seed names the pool and the shuffles,
+   not the bot's tie-breaks. **Pin it for any actor-path measurement** (the
+   unpinned first reading of the pass above was -0.674 % against a base that
+   had played 1 % fewer rows). **Open question for a run with the ML context
+   to decide it:** should `selfplay` seed the jitter from `--seed`? It would
+   make training runs replayable and `--games N` a fixed amount of work; it
+   would also remove per-run tie-break diversity from the actors, which may
+   be why it is unseeded. Not changed unilaterally.
 1. **Seventy-fourth pass: `fixed` -0.081 %, `sos` -0.201 %, `cube` -0.596 %**,
    one commit — the colour budget reaches `sink_facts`, the presence mask that
    gates the whole `gated_pick!` ability chain. Activations reaching payment
