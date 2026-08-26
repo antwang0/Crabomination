@@ -7475,7 +7475,7 @@ impl GameState {
                     let colors: Vec<crate::mana::Color> = self.players[p]
                         .library
                         .first()
-                        .map(|c| c.definition.cost.colored_symbols())
+                        .map(|c| c.definition.cost.colored_symbols().collect())
                         .unwrap_or_default();
                     if let Some(card) = Self::take_card(&mut self.players[p].library, top) {
                         self.players[p].graveyard.push(card);

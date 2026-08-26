@@ -372,16 +372,19 @@ impl ManaCost {
     /// One entry per coloured mana symbol, in printed order — `{3}{U}{U}{B}`
     /// yields `[U, U, B]` (Charmed Pendant). Hybrids count once, as their
     /// first colour; Phyrexian pips count as their colour.
-    pub fn colored_symbols(&self) -> Vec<Color> {
-        self.symbols
-            .iter()
-            .filter_map(|s| match s {
-                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
-                ManaSymbol::Hybrid(a, _) | ManaSymbol::PhyrexianHybrid(a, _) => Some(*a),
-                ManaSymbol::MonoHybrid(_, c) => Some(*c),
-                _ => None,
-            })
-            .collect()
+    ///
+    /// An **iterator**, not a `Vec`: three of the four callers only count or
+    /// accumulate, and the allocation was 70,048 of them over twenty
+    /// `selfplay_train` games — 7.4 M Ir, 0.58 % of an actor — inside
+    /// `encode_card_object` alone. Same device as [`color_set`](Self::color_set)
+    /// against the older `colors()`, and for the same reason.
+    pub fn colored_symbols(&self) -> impl Iterator<Item = Color> + '_ {
+        self.symbols.iter().filter_map(|s| match s {
+            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
+            ManaSymbol::Hybrid(a, _) | ManaSymbol::PhyrexianHybrid(a, _) => Some(*a),
+            ManaSymbol::MonoHybrid(_, c) => Some(*c),
+            _ => None,
+        })
     }
 
     /// Returns the set of colors present in this mana cost.
