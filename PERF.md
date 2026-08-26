@@ -653,6 +653,52 @@ build.
 
 ## Baseline
 
+**Seventy-eighth pass. Base `c9bf0b78` (= the seventy-seventh tip) vs tip.**
+Two commits, both in the observation encoder, both measured on the actor
+path with `CRAB_NO_JITTER=1` and an identical workload throughout — 1,788
+rows, 1,990 `encode_state` calls on every reading below.
+
+```text
+                       base            A: cover hoist   B: reserves
+I refs                 1,309,077,782   1,295,972,442    1,290,226,662
+                                        -1.001 %         -0.443 %
+encode_state (incl.)     113,710,320     105,371,552      100,714,414
+                                        -7.3 %           -4.4 %
+```
+
+**Cumulative over the two encoder passes: `encode_state` 156,090,720 ->
+100,714,414, -35.5 %, and the actor 1,351,728,059 -> 1,290,226,662,
+-4.55 %.**
+
+* **A — the castability flags rebuilt the colour cover per hand card.**
+  `affordable` is Hall's condition over the seat's untapped sources: 31
+  masks, each counting how many sources make a colour in the mask. That count
+  is a function of the *sources* alone, and the hand loop recomputed it per
+  card — then the next-turn flag recomputed it again on a **clone** of the
+  whole source slice, per card. `source_cover` hoists it; `cover_with_extra`
+  derives the next-turn cover by adding one to every non-empty mask (a source
+  that makes every colour intersects them all), so the clone is gone. The
+  per-card half also stops looping five colours per mask — `need[mask]` comes
+  off the subset recurrence in 32 adds.
+* **B — every group grew from capacity zero.** An `EncodedObject` is ~190
+  bytes and `EncodedState::default` starts all eight groups empty, so a
+  battlefield of twenty is five reallocations and four memcpys of what was
+  already written: **19,909 `grow_one` calls out of `encode_state`, ten a
+  state, 9.7 M Ir -> 0.** Every size is known before its loop.
+* **The rule both halves share, and it is why the encoder had three of these
+  in a row:** the encoder is written per *object*, and per-object code
+  inherits the loop's iteration count for anything it recomputes. The
+  seventy-seventh pass's twelve keyword questions, A's 31-mask cover and B's
+  eight `Vec`s are the same mistake at three scales. **What is left is the
+  same shape**: `Vocab::index_of` is a name hash per object (1.02 % of the
+  actor) and `encode_library` builds and destroys a `BTreeMap` keyed on the
+  vocab index per state (~0.68 % across `or_insert`, `dying_next` and
+  `__memcmp`).
+
+Neither commit changes a feature value — no net needs retraining — and the
+encoder is **0 calls** on `bot_ladder`, so no Ir column there moves. Suite
+18,751 / 0 failed / 5 ignored, clippy clean.
+
 **Seventy-seventh pass. Base `fd8c307f` vs tip, and it is measured on the
 *actor* path, which this file had never profiled.** One commit: the
 observation encoder's twelve keyword questions inverted into one pass.

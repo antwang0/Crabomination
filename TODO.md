@@ -114,6 +114,17 @@ N3. **Where the simulator's time actually is, read inclusively for the first
    owns the card** (the callers have already unshared it), not a gate. Seven
    call sites and a stale-flag failure mode; see (-50).
 
+1. **Seventy-eighth pass: the actor -4.55 % cumulative, `encode_state`
+   -35.5 %**, two more encoder commits (the colour cover hoisted out of the
+   hand loop; the eight object groups reserved instead of grown from empty —
+   19,909 `grow_one` calls a twenty-game run to zero). **The rule they share
+   with the pass below: the encoder is written per *object*, so anything it
+   recomputes inherits the loop's iteration count.** Twelve keyword
+   questions, a 31-mask cover and eight `Vec`s are one mistake at three
+   scales. **What is left is the same shape** — `Vocab::index_of` is a name
+   hash per object (1.02 % of the actor) and `encode_library` builds and
+   destroys a `BTreeMap` per state (~0.68 %). All actor-path numbers want
+   `CRAB_NO_JITTER=1` (see 1a).
 1. **Seventy-seventh pass: the actor path had never been profiled, and the
    first look at it paid -3.156 %.** `selfplay_train --actors 1 --games 20`,
    `CRAB_NO_JITTER=1`, identical workload both sides. The observation encoder
