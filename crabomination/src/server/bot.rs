@@ -48,9 +48,25 @@ pub fn set_jitter_seed(seed: Option<u64>) {
     });
 }
 
+/// `CRAB_NO_JITTER=1` pins every tie-break draw to 0, read once.
+///
+/// A measurement switch, not a play mode. The scored pickers draw one
+/// `jitter_below` per *candidate*, so any refactor that changes how many
+/// candidates reach a picker re-aligns the stream for the rest of the game and
+/// the run diverges even where the policy is identical — which is invisible to
+/// the golden traces and to `--bench` (the `fixed` pool reaches none of
+/// `cast_candidates`' specialty blocks). With the draws pinned, two builds on
+/// one seed play the same game or they do not, and `cg_edges.py --callers
+/// next_action_settled` is the count that says which. See PERF's "How to
+/// measure".
+fn no_jitter() -> bool {
+    static NO_JITTER: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *NO_JITTER.get_or_init(|| std::env::var_os("CRAB_NO_JITTER").is_some())
+}
+
 /// A jitter draw in `0..n`, from the seeded stream when one is installed.
 fn jitter_below(n: usize) -> usize {
-    if n <= 1 {
+    if n <= 1 || no_jitter() {
         return 0;
     }
     JITTER.with(|j| match &mut *j.borrow_mut() {
@@ -4297,7 +4313,15 @@ fn cast_candidates(
     // loops need the accept/reject signal — max delve size, biggest
     // affordable kick count, conspire-over-plain preference), so they land
     // in `castable` already validated.
-    let mut castable: Vec<GameAction> = Vec::new();
+    // `(action, pre-validated)`. A block that probes to *decide* what to emit
+    // (convoke's fewest-helpers walk, the kicker subsets, the two that drop the
+    // plain cast of the same card) keeps its `would_accept_on` and pushes
+    // `true`; the nineteen that used it only as a filter push `false` and let
+    // the pick sites validate lazily, in score order, the way the main block
+    // already does. Same candidates in the same order — and the winner's probe
+    // is now the one the caller adopts, instead of a run thrown away ahead of
+    // a second identical one. See PERF's seventy-second pass.
+    let mut castable: Vec<(GameAction, bool)> = Vec::new();
 
     // Delve (CR 702.66): for any hand card with `Keyword::Delve` that the
     // bot can't (yet) afford, try exiling graveyard cards to pay the
@@ -4345,9 +4369,7 @@ fn cast_candidates(
             x_value: None,
             delve_cards,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4409,7 +4431,7 @@ fn cast_candidates(
                 convoke_creatures: ranked[..n].to_vec(),
             };
             if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                castable.push(action);
+                castable.push((action, true));
                 break;
             }
         }
@@ -4452,9 +4474,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4503,9 +4523,7 @@ fn cast_candidates(
         }
         for picks in candidates {
             let Some(action) = pick(picks) else { continue };
-            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                castable.push(action);
-            }
+            castable.push((action, false));
         }
     }
     });
@@ -4545,9 +4563,7 @@ fn cast_candidates(
             mode: None,
             x_value,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4597,9 +4613,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4657,7 +4671,7 @@ fn cast_candidates(
             let cid = c.id;
             unvalidated
                 .retain(|a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid));
-            castable.push(action);
+            castable.push((action, true));
         }
     }
     });
@@ -4702,7 +4716,7 @@ fn cast_candidates(
                     |a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid),
                 );
             }
-            castable.push(action);
+            castable.push((action, true));
         }
     }
     });
@@ -4747,7 +4761,7 @@ fn cast_candidates(
             let cid = c.id;
             unvalidated
                 .retain(|a| !matches!(a, GameAction::CastSpell { card_id, .. } if *card_id == cid));
-            castable.push(action);
+            castable.push((action, true));
         }
     }
     });
@@ -4780,7 +4794,7 @@ fn cast_candidates(
                 x_value: None,
             };
             if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                castable.push(action);
+                castable.push((action, true));
                 break;
             }
         }
@@ -4812,9 +4826,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4841,9 +4853,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4868,9 +4878,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4889,9 +4897,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4917,9 +4923,7 @@ fn cast_candidates(
         let action = GameAction::CastSplitRight {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4941,9 +4945,7 @@ fn cast_candidates(
         let action = GameAction::CastAftermath {
             card_id: c.id, target, additional_targets, mode: None, x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -4979,9 +4981,7 @@ fn cast_candidates(
             if !colors_coverable(fb_cost, have_mana.get()) {
                 continue;
             }
-            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                castable.push(action);
-            }
+            castable.push((action, false));
         }
         if c.definition.keywords.iter().any(|k| matches!(k, Keyword::Disturb(_))) {
             // The back face goes on the stack; an Aura back needs an enchant
@@ -5000,9 +5000,7 @@ fn cast_candidates(
                 let action = GameAction::CastDisturb {
                     card_id: c.id, target, additional_targets,
                 };
-                if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                    castable.push(action);
-                }
+                castable.push((action, false));
             }
         }
         // Mayhem (CR 702.187): if the card was discarded this turn and has a
@@ -5022,9 +5020,7 @@ fn cast_candidates(
             let action = GameAction::CastMayhem {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                castable.push(action);
-            }
+            castable.push((action, false));
         }
         // Harmonize (CR 702.180): cast from the graveyard for the harmonize
         // cost. The bot doesn't tap a creature to discount (a value call it
@@ -5043,9 +5039,7 @@ fn cast_candidates(
             let action = GameAction::CastHarmonize {
                 card_id: c.id, tap_creature: None, target, additional_targets, mode: None, x_value: None,
             };
-            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                castable.push(action);
-            }
+            castable.push((action, false));
         }
         // Graveyard-activated abilities (CR 702.84 Unearth, and the SOS
         // "return this from your graveyard" cycle): offer each `from_graveyard`
@@ -5067,9 +5061,7 @@ fn cast_candidates(
             let action = GameAction::ActivateAbility {
                 card_id: c.id, ability_index: idx, target, additional_targets, x_value: None, mode: None,
             };
-            if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-                castable.push(action);
-            }
+            castable.push((action, false));
         }
     }
     });
@@ -5109,9 +5101,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -5143,9 +5133,7 @@ fn cast_candidates(
         } else {
             continue;
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
 
     // Mana-only alternative costs (Dash CR 702.110, Blitz 702.152,
@@ -5190,9 +5178,7 @@ fn cast_candidates(
             mode: None,
             x_value: None,
         };
-        if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
-            castable.push(action);
-        }
+        castable.push((action, false));
     }
     });
 
@@ -5261,7 +5247,7 @@ fn cast_candidates(
     }
 
     let mut out: Vec<(GameAction, bool)> = Vec::with_capacity(castable.len() + unvalidated.len());
-    out.extend(castable.into_iter().map(|a| (a, true)));
+    out.extend(castable);
     out.extend(unvalidated.into_iter().map(|a| (a, false)));
     // Ward gate, applied once for every candidate block above: a cast
     // aimed at a warded permanent whose tax the bot can't pay after the
