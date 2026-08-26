@@ -785,9 +785,9 @@ three the same absolute number, which is argv length.
 **The change, and the reason it is sound with no gate to audit.**
 `can_afford_in_state_with` calls `extra_cost_for_spell`,
 `cost_reduction_for_spell_full` and `colored_spell_tax_for_spell` once per
-hand card, and each walks every static source on the board. About half the
-permanents on these boards have an **empty** `static_abilities`, so half of
-every walk was an `Arc` deref to read an empty slice. `CostStaticSources`
+hand card, and each walks every static source on the board. Most permanents on
+these boards have an **empty** `static_abilities`, so most of every walk was
+an `Arc` deref to read an empty slice. `CostStaticSources`
 filters those out once per sweep and the three functions get `_over` forms
 that take the list. There is no variant enumeration and therefore no
 `debug_assert!` gate: dropping a source whose inner loop has nothing to
@@ -802,6 +802,16 @@ cube, edges out of can_afford_in_state_with   base         tip
                                               30,373,378   13,696,074
 program                                                    -15,375,927
 ```
+
+**How much of the board carries statics, read off the three rows**: the
+`colored_spell_tax_for_spell` row is nothing *but* the walk and it drops
+**76 %**, so roughly one permanent in four carries a `static_abilities` entry
+at all. The other two rows drop less (65 % and 43 %) because they also do
+per-card work the filter cannot touch — `extra_cost_for_spell`'s
+`additional_cast_cost` reads and `cost_reduction_for_spell_full`'s ten
+card-intrinsic reduction fields. **The commit message for this change says
+"roughly half" and that is the one number in it that is wrong**; the edge
+table above is the derivation.
 
 **The gather costs ~1.3 M over 10,852 builds** (the difference between the
 edge saving and the program), i.e. ~120 Ir a sweep, and it is lazy: only
@@ -5906,6 +5916,30 @@ program against `cast_candidates`' 3.6 %. The levers are fewer sims
 (ladder-gated: 928 decisions produce 1,910 sims, so most declarations already
 take the one-candidate early return) or a cheaper `perform_action_inner`.
 
+**And one level further down, the step machinery, taken at the same tip:**
+
+| edge | calls | inclusive Ir | % cube |
+|---|---|---|---|
+| `sim_step -> perform_action_inner` (the pass) | 52,406 | 646,926,078 | **24.3** |
+| `sim_step -> perform_action` (the checkpointed branch) | 4,322 | 177,669,748 | **6.66** |
+| `pass_priority -> advance_step` | 35,800 | 566,139,820 | **21.2** |
+| `advance_step -> resolve_combat` | 4,480 | 341,332,087 | **12.8** |
+| `advance_step -> fire_step_triggers` | 22,466 | 76,101,195 | 2.86 |
+
+**`sim_step`'s checkpointed branch is a candidate nobody has costed**:
+4,322 actions at **41,100 Ir apiece**, and ~5,750 of each is
+`perform_action`'s checkpoint — clone 1,194, drop 2,324, plus the CoW
+unshares the action pays only because the checkpoint re-shared the zones the
+sim had already unshared. That is **~0.93 % of `cube` spent taking a snapshot
+of a state the caller owns and throws away.** It is *not* free to remove:
+`sim_step`'s documented fallback rolls a rejected declaration back and retries
+it as a priority pass, and `declare_blockers` / `declare_attackers_banded`
+hold 82 of the engine's `Err` sites between them — which is exactly the half
+(-13) calls "where the checkpoint earns its keep". What has never been
+measured is **how often those 4,322 actually fail**; if it is zero on every
+pool, the shape is (-13)'s fallibility closure applied to three action kinds
+rather than to `PassPriority`.
+
 ### The three pools at the seventieth tip (`ee376912`) — and the *inclusive* half
 
 `fixed` **1,148,918,411**, `sos` **1,482,238,008**, `cube` **2,631,861,321**,
@@ -6501,6 +6535,25 @@ deck construction (96 % of a deck build, and a training actor builds two
 decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
+
+**(-54) THE SIMULATION TAKES A TRANSACTION CHECKPOINT ON A STATE IT OWNS AND
+THROWS AWAY — ~0.93 % OF `cube`, AND THE MISSING NUMBER IS A FAILURE COUNT.**
+`sim_step -> perform_action` is **4,322 calls / 177,669,748 Ir / 6.66 % of
+`cube`** at the seventy-fifth tip, and ~5,750 Ir of each is the checkpoint
+(-13) prices: clone 1,194, drop 2,324, plus the CoW unshares the action pays
+only because the checkpoint re-shared zones the sim had already unshared. The
+sim's `g` is a throwaway clone; the *only* reason the checkpoint is not
+removable is `sim_step`'s documented fallback, which rolls a rejected
+declaration back and retries it as a priority pass — and `declare_blockers` /
+`declare_attackers_banded` hold 82 of the engine's `Err` sites between them.
+
+**Nobody has counted how often those 4,322 actually fail.** Count it first
+(the three action kinds are `DeclareAttackers`, `DeclareBlockers` and
+`sim_spell_action`'s `Picked::Plain`); if the failure rate is zero on every
+pool the shape is `scripts/fallibility_closure.py` applied to three action
+kinds instead of `PassPriority`, which is how the forty-fourth pass proved the
+round-closing pass and took **-2.842 %**. If it is not zero, the fallback is
+load-bearing and this entry is closed — say so with the number.
 
 **(-53) THE COST-STATIC WALKS THAT SURVIVE THE SEVENTY-SIXTH PASS —
 13,696,074 Ir / 0.52 % OF `cube`, AND THE FIX IS AN ENUMERATION.**
@@ -9228,7 +9281,8 @@ of being actionable. All from `a58447d9`, `--tree=caller` /
      **1.14 % of `cube`** over **30,350** calls against 12,114, and **2.80**
      cards reach the filter per sweep that reaches it at all. What shipped is
      not the fused scan either: `CostStaticSources` drops the sources whose
-     `static_abilities` is empty (about half the board) and hands the list to
+     `static_abilities` is empty (**~3 in 4** of these boards' permanents — see
+     the Baseline's edge table) and hands the list to
      `_over` forms of the three functions, so there is no enumeration and no
      gate. **The transferable half of the refutation still holds and the fix
      obeys it — the list is lazy**, because an eager read on

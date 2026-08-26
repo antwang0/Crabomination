@@ -2843,16 +2843,33 @@ impl Effect {
             // Without this rule the bot picked Player(opp) first, which
             // matched the `Any` filter but silently fizzled at Move
             // resolution (Move only consumes Permanent/Card refs).
+            // The child that *owns slot 0* comes first, and only then the
+            // one with a `primary_target_filter`: the latter answers about
+            // non-target subject selectors too, so a leading clause that
+            // merely names a group wins the `find` and decides the whole
+            // spell's target type. `Reins of Power` is
+            // `Seq([Untap(each creature), GainControl(creatures target
+            // player controls), …])` — the `Untap` has no slot and no target,
+            // and it was classifying the spell as permanent-targeting, so the
+            // clickable-target list came back empty once
+            // `primary_target_filter` started answering with slot 0's own
+            // filter. Same class as that deferral, one level up.
             Effect::Seq(v) => v
                 .iter()
-                .find(|e| e.primary_target_filter().is_some())
+                .find(|e| e.target_filter_for_slot(0).is_some())
+                .or_else(|| v.iter().find(|e| e.primary_target_filter().is_some()))
                 .map(|e| e.accepts_player_target())
                 .unwrap_or_else(|| v.iter().any(|e| e.accepts_player_target())),
             Effect::If { then, else_, .. } => {
                 // Prefer the `then` branch (the active outcome) — same
                 // logic as `ability_effect_label`. Fall back to else_'s
                 // classification if `then` doesn't have a primary target.
-                if then.primary_target_filter().is_some() {
+                // Slot 0 first, for the reason the `Seq` arm above gives.
+                if then.target_filter_for_slot(0).is_some() {
+                    then.accepts_player_target()
+                } else if else_.target_filter_for_slot(0).is_some() {
+                    else_.accepts_player_target()
+                } else if then.primary_target_filter().is_some() {
                     then.accepts_player_target()
                 } else if else_.primary_target_filter().is_some() {
                     else_.accepts_player_target()

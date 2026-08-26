@@ -107,9 +107,43 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ### P3 — structural root causes (fix once, prevent the class)
 
-- 🟡 **The picker and the CR 608.2b checker are two walks of one target's
-  life. Censused at the seventy-fifth pass: 65 disagreements, and only two
-  are bugs.** `primary_target_filter` (what the auto-picker aims with) and
+- ✅ **CLOSED at the seventy-sixth pass — `primary_target_filter` defers to
+  `target_filter_for_slot(0)`, and the invariant is a test.** The census below
+  is what made the fix a one-liner rather than two card patches: the two bugs
+  were the same missing shape (a slot-0 `Selector::Player(Target(n))`), and
+  every other disagreement was the picker answering about a slot the checker
+  was not asked about. Deferring makes the two agree by construction wherever
+  the checker speaks, and hands the 253 definitions with a slot-0 filter and
+  no arm in the picker a filter where they had `None`. The fallback walk stays
+  for the 466 mass effects whose "subject" filter is not a target at all.
+  `core_rules::target_walkers::primary_target_filter_defers_to_the_608_2b_checker`
+  is the guard — **83 definitions** fail it without the deferral (65 spell
+  bodies plus 18 ability bodies the census did not walk), 0 with it. Whole
+  suite green and 7 golden traces unchanged; the pinned-jitter decision
+  columns are in PERF's Baseline.
+
+  **The deferral exposed the same bug one level up, and the fix is not
+  complete without it.** `accepts_player_target`'s `Seq` / `If` arms pick the
+  child to classify by "first one with a `primary_target_filter`" — which
+  answers about non-target *subject* selectors too. `Reins of Power` is
+  `Seq([Untap(each creature), GainControl(creatures target player controls),
+  …])`: the `Untap` names a group, owns no slot, and was deciding that the
+  spell targets permanents. With the picker's filter fixed and the classifier
+  still wrong, `enumerate_legal_targets` came back **empty** — a different
+  wrong answer, and the behavioural test caught it where the structural
+  invariant could not. Both arms look for the child that owns **slot 0**
+  first. Cling to Dust's ordering rule (the reason those arms exist) is
+  unchanged: its `Move` owns slot 0, so it is still the child that classifies.
+  `feedback_bolt_and_reins_of_power_offer_players_not_permanents` pins both
+  cards at `enumerate_legal_targets`, which is the site the deferral actually
+  moved — the cast path reads the slot walker directly and was never wrong.
+  **This is not the blanket ratchet the sixty-fifth
+  pass deleted** — that one compared the two walkers everywhere and needed
+  587 -> 83 -> 27 exceptions; this one asserts an equality the code now
+  establishes, so it can have none.
+
+  The census, kept because it is the reason the fix is one line:
+  `primary_target_filter` (what the auto-picker aims with) and
   `target_filter_for_slot(0)` (what CR 608.2b checks against) are
   hand-written and independent. The measured breakdown over
   `all_known_factories()` (both walkers `Some` and unequal), which supersedes
@@ -149,10 +183,11 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   `bot_ladder` compares two *profiles* inside one binary, not two binaries,
   so the justification is the argument (the aim now uses the filter the check
   uses), the census, and 7 byte-identical golden traces.
-  **Do not re-add a blanket ratchet**: the sixty-fifth pass wrote one, watched
-  it need 587 -> 83 -> 27 exceptions, and deleted it. The invariant that
-  *does* hold with no exceptions is the narrow one — single-slot, non-modal,
-  non-kicker — and it has exactly the two failures above.
+  **The general invariant holds with no exceptions now** — the seventy-sixth
+  pass's guard test compares the two walkers over the whole catalog and finds
+  0, where the sixty-fifth pass's ratchet over the same comparison needed
+  587 -> 83 -> 27, because the deferral makes them equal by construction
+  rather than by exception list.
   **The silent-fallback half is already fixed** — the picker
   falls back to the checker's own filter before `Any`, so the two agree by
   construction wherever the primary walker is silent (that fix is what made

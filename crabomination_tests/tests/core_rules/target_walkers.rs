@@ -134,3 +134,101 @@ fn every_declared_target_slot_is_answerable() {
         bad.join("\n  ")
     );
 }
+
+/// The picker and the CR 608.2b checker aim at one slot, so they must not
+/// disagree about it.
+///
+/// `primary_target_filter` (what the auto-picker aims with) and
+/// `target_filter_for_slot(0)` (what CR 608.2b re-checks against at
+/// resolution) were independent hand-written walks, and the seventy-fifth
+/// pass's census found 65 definitions where both answered and the answers
+/// differed. Most were honest — the fight family describes slot 1 with one
+/// walker and slot 0 with the other, modal and kicker-branched bodies have a
+/// slot 0 that depends on the branch — but two were not: `Feedback Bolt` and
+/// `Reins of Power` target a **player** in slot 0, `primary_target_filter`
+/// had no arm for that shape, and it fell through to a non-target subject
+/// filter and aimed at a permanent the checker would then reject.
+///
+/// `primary_target_filter` defers to the checker now, so the two agree by
+/// construction wherever the checker speaks. This asserts that, which is what
+/// keeps the deferral from being "simplified" back out: a `sel_filter` arm
+/// added above the deferral would reopen the class.
+///
+/// **A blanket ratchet is the thing this replaces.** The sixty-fifth pass
+/// wrote one, watched it need 587 -> 83 -> 27 exceptions, and deleted it; the
+/// invariant that holds with no exceptions is this one.
+#[test]
+fn primary_target_filter_defers_to_the_608_2b_checker() {
+    let mut bad: Vec<String> = Vec::new();
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<&crabomination::effect::Effect> = vec![&def.effect];
+        for a in &def.activated_abilities {
+            bodies.push(&a.effect);
+        }
+        for t in &def.triggered_abilities {
+            bodies.push(&t.effect);
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(&l.effect);
+        }
+        for body in bodies {
+            let (Some(aim), Some(check)) =
+                (body.primary_target_filter(), body.target_filter_for_slot(0))
+            else {
+                continue;
+            };
+            if aim != check {
+                bad.push(format!("{}: aim {aim:?} vs check {check:?}", def.name));
+            }
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} definitions aim at slot 0 with a filter CR 608.2b will not \
+         re-check against:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+}
+
+/// The two cards the census named, at the site the deferral actually changed.
+///
+/// `Feedback Bolt` deals damage equal to your artifact count **to a player**;
+/// `primary_target_filter` returned the *artifact count's* filter, so
+/// `enumerate_legal_targets` — the client's clickable-target list and the two
+/// `bot.rs` fallback pickers — offered your own artifacts for a slot CR 608.2b
+/// only accepts a player in. The cast path was never affected (it reads the
+/// slot walker directly), which is why nothing failed and the bug sat there.
+///
+/// `Reins of Power` is the same shape one level in: its slot 0 is
+/// `ControlledBy { who: Target(0) }`, and the picker returned the `Creature`
+/// filter of the `Untap` clause that happens to be `Seq`'s first element.
+#[test]
+fn feedback_bolt_and_reins_of_power_offer_players_not_permanents() {
+    use crabomination::game::types::Target;
+    use crabomination::game::two_player_game;
+
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let mine = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    for (name, def) in
+        [("Feedback Bolt", catalog::feedback_bolt()), ("Reins of Power", catalog::reins_of_power())]
+    {
+        let legal = g.enumerate_legal_targets(&def.effect, 0);
+        assert!(
+            legal.iter().any(|t| matches!(t, Target::Player(_))),
+            "{name} targets a player in slot 0 and offered none: {legal:?}",
+        );
+        assert!(
+            !legal.contains(&Target::Permanent(mine))
+                && !legal.contains(&Target::Permanent(theirs)),
+            "{name} offered a permanent for a player slot: {legal:?}",
+        );
+    }
+}

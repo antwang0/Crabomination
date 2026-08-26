@@ -22,369 +22,46 @@ sixty-seventh pass, so don't re-take that.
 
 ## NEXT (handoff — rewrite each run, keep it terse)
 
-**FIRST COMMAND:** `git fetch origin claude/modern_decks && git checkout -B
-claude/modern_decks origin/claude/modern_decks`. The container clones `main`,
-and **`git branch -a` does not list this branch before that fetch** — so an
-orient-yourself `git branch -a` reads as "it doesn't exist", `git checkout -b`
-off `main` then builds and tests green 2,500 commits behind, and nothing says
-so until the push is rejected.
+**FIRST:** `git fetch origin claude/modern_decks && git checkout -B
+claude/modern_decks origin/claude/modern_decks`. The container clones `main`
+and `git branch -a` does not list this branch before that fetch, so an
+orient-yourself listing reads as "it doesn't exist" and you build 2,500
+commits behind. **Sessions run this branch concurrently and the tracker is
+not a lock:** fetch before starting a candidate, and **push the code commit
+before the tracker prose** — passes 68/69 and 71/72 each duplicated a whole
+commit that a fetch would have shown.
 
-**Sessions run this branch concurrently, and grepping the Log for a numbered
-candidate is not enough when the entry is a table.** Two sessions took
-`restore_payment_state` in the same hour at the sixty-eighth/sixty-ninth
-passes — same let-chain, same line — because both were reading the top
-Ir/call row of the `make_mut` caller table that (-43) points at. **Push the
-code commit before you write the tracker prose**; that is the only signal the
-other session's next fetch can see. **It happened again at the seventy-first
-and seventy-second passes**, three hours apart in the same hour: one session
-wrote item 1e's "grep the other pre-filters for the presence-vs-count shape"
-while the other was three edits from writing the same per-colour budget.
-Fetch before you start a candidate, not just before you push.
-
-**Seventy-fifth pass: `fixed` +0.106 % (layout), `sos` -2.775 %, `cube`
--1.618 %**, one commit, `CRAB_NO_JITTER=1` both columns with byte-identical
-decision counts. `cast_candidates`' nineteen pure-filter specialty blocks
-stop probing eagerly and push `(action, false)`; the five that probe to
-*decide* what to emit keep it. Probe count flat (9,146 on cube), casts
-4,720 -> 4,540 — the winner's probe is the state the caller adopts instead
-of a run thrown away ahead of a second identical one.
-
-N1. **A bot change cannot be measured without pinning the jitter, and this
-   cost a full A/B to learn.** The scored pickers draw one `jitter_below(4)`
-   **per candidate**, so offering one extra candidate — even one that fails
-   validation immediately — shifts every later draw and the games diverge
-   with the policy untouched. Live columns for that commit read `cube`
-   **+0.503 %**; pinned, **-1.618 %**. `CRAB_NO_JITTER=1` +
-   `cg_edges.py --callers next_action_settled` is the pair; see PERF's "How
-   to measure".
-N2. **And the trace suite could not see it**: all 7 goldens byte-identical
-   and `--bench` `decisions` 195,886 unchanged across a commit that moved
-   `cube` by 132 decisions, because **`--decks fixed` reaches none of
-   `cast_candidates`' specialty blocks** (`cast_candidates -> accept_on` is
-   absent from its profile). Item 1e one level up. **Check the trace pool
-   executes the code before calling a bot change behaviour-preserving.**
-N0. **Second commit of the pass, and it closes ENGINE_BACKLOG P3's older
-   half.** `primary_target_filter` defers to `target_filter_for_slot(0)`
-   where slot 0 exists, so the aim and the CR 608.2b check are the same
-   function. `fixed`/`cube` byte-identical games (+0.008 % / +0.030 % = the
-   extra walk); `sos` +128 decisions and **-2.037 % (-2.80 % per decision)**.
-   The census that made it landable: of 65 disagreeing definitions, 47 have a
-   slot 1, 10 are modal, 4 kicker-branched, and the 2 left were one bug (a
-   slot-0 *player* target has no `sel_filter` arm). **Classify the exceptions
-   instead of counting them** — that is why the sixty-fifth pass's ratchet
-   over all 65 needed a threshold and this one needs none.
-N0a. **There is no win-rate gate for a code change.** `bot_ladder --a/--b`
-   compares two *profiles* inside one binary; `ab_wall.py` takes two binaries
-   but only times them. Every commit that moves play is therefore justified by
-   argument + invariants, never measured. **A two-binary ladder mode is the
-   missing tool** and it would have gated this commit, the seventy-first
-   pass's, and anything that comes out of N3.
-N2a. **The clock was taken and the ratio is 2.15x.** `ab_wall.py`, 8 ABBA
-   blocks, `release-fast` + mimalloc, `CRAB_NO_JITTER=1` both sides,
-   `--games 2000 --decks sos --seed 11 --threads 4`: **-1.29 %, CI -2.19 ..
-   -0.39 %, 6/8 blocks**, against a null of +0.20 % (CI -0.70 .. +1.10,
-   FLAT, resolution ±0.90 %) on the same workload in the same hour. Ir read
-   -2.775 %. **What this commit removes is whole action executions, so Ir
-   over-reads it by about two** — unlike a clone removal (wall bigger than
-   Ir) or an allocator swap (Ir blind). Price the next sim-side commit with
-   that; under ~2 % of Ir will not show on this box's clock at all.
-N3. **Where the simulator's time actually is, read inclusively for the first
-   time.** `pick_attacks_scored` is **59.1 % of `cube`** and
-   `simulate_attack_outcome_once` **58.7 %** — 1,842 sims at ~827 k Ir each,
-   ~29 `sim_step`s apiece. Inside one: `sim_step -> perform_action_inner`
-   23.6 %, `sim_spell_action_inner` 15.9 % (of which `accept_on` 9.1 % and
-   `cast_candidates` 5.7 %), `pick_blocks` 2.5 %. **The self table has never
-   named any of this.** The eager half is now taken; what is left is the sim
-   genuinely casting spells, so the next lever here is either fewer sims
-   (ladder-gated) or a cheaper `perform_action_inner`.
-
-0. **Seventy-second pass: `fixed` -0.209 %, `sos` -0.183 %, `cube` -0.218 %**,
-   two commits, both (-50). (a) The leave-the-battlefield chain's four no-op
-   writes — `temporary_control`'s `mem::take`, `on_left_battlefield`'s
-   `continuous_effects` pair, `remove_effects_from_source`,
-   `expire_end_of_turn_effects`. (b) `blocked_attackers` /
-   `blocks_declared_this_turn` out of `ColdState` into `GameState`, where
-   their combat siblings already live.
-0a. **Item 1c below was a mis-attribution and is now closed.** It said
-   `on_left_battlefield`'s `make_mut` edge came from `find_card_anywhere_mut`;
-   the callee table puts that function in its **own un-inlined row at 1.000x**,
-   so it was never on the edge, and the seventy-first pass's +0.083 % was a
-   correct measurement of the wrong hypothesis. **When a `--callers` row and a
-   `--callees` row name the same function, the edge is the caller's own
-   inlined code** — run `--callees` on the owner first.
-0b. **The `ColdState` no-op-write vein is worked out**, and the reason to
-   believe it is one short table: `cg_edges.py --callers "crabomination::game
-   ::GameState as core::ops::deref::DerefMut"` is now 19,048 calls in 17 rows,
-   3,020 of them real copies at 4,410 Ir, and every top row writes a value
-   that changed. **Do not go hunting another cold no-op write.** Two rules
-   priced in cash there: rank a `make_mut` edge by **Ir/call, not calls** (the
-   14,152 calls gated out of `on_left_battlefield` were 25 Ir each and the
-   5,232 left were 1,016), and before moving a field out of the cold group,
-   **name the next cold write in the same frame** — `note_creature_death`
-   absorbed 6.27 M of the 11.7 M that `declare_blockers` gave up.
-0c. **What is left of (-50) is not a no-op write.** `make_mut`'s own copies
-   are **146,820 / 108.4 M / 4.12 % of cube** and they are zone `Vec`s and
-   cards. The sized piece: `on_left_battlefield`'s remaining 5,232 x ~1,016 Ir
-   (**0.20 %**) is the CR 400.7 `cast_from_*` reset writing a card a probe
-   clone shares — real, so it wants the reset done **where the placer still
-   owns the card** (the callers have already unshared it), not a gate. Seven
-   call sites and a stale-flag failure mode; see (-50).
-
-1. **Seventy-eighth pass: the actor -4.55 % cumulative, `encode_state`
-   -35.5 %**, two more encoder commits (the colour cover hoisted out of the
-   hand loop; the eight object groups reserved instead of grown from empty —
-   19,909 `grow_one` calls a twenty-game run to zero). **The rule they share
-   with the pass below: the encoder is written per *object*, so anything it
-   recomputes inherits the loop's iteration count.** Twelve keyword
-   questions, a 31-mask cover and eight `Vec`s are one mistake at three
-   scales. **What is left is the same shape** — `Vocab::index_of` is a name
-   hash per object (1.02 % of the actor) and `encode_library` builds and
-   destroys a `BTreeMap` per state (~0.68 %). All actor-path numbers want
-   `CRAB_NO_JITTER=1` (see 1a).
-1. **Seventy-seventh pass: the actor path had never been profiled, and the
-   first look at it paid -3.156 %.** `selfplay_train --actors 1 --games 20`,
-   `CRAB_NO_JITTER=1`, identical workload both sides. The observation encoder
-   asked `has_keyword` twelve times per object — **422 calls per encoded
-   state**, 950,700 over twenty games — and `has_keyword` re-walks five lists
-   per keyword asked; one inverted pass took `encode_state` down **27.2 %**.
-   **Three of the actor's top rows do not appear on `bot_ladder` at all**
-   (`encode_card_object` is *0 calls* there), so this file's profile of record
-   describes half the program the ML phase runs. What is left of the encoder:
-   `Vocab::index_of` (1.02 %) and `encode_state`'s own walk (0.97 % self).
-   Deck construction is 1.37 % self / ~5 % inclusive, two decks a game.
-1a. **⚠ `selfplay_train --seed N` does not reproduce a run.** Same binary,
-   same seed, `--actors 1`: 1,788 / 1,770 / 1,776 rows over twenty games;
-   with `CRAB_NO_JITTER=1`, 1,788 every time. `bot::jitter_below` falls back
-   to the **thread** RNG unless a seeded stream is installed, and
-   `set_jitter_seed` is the *ladder's* device for antithetic pairs — nothing
-   in the actor path calls it. So the seed names the pool and the shuffles,
-   not the bot's tie-breaks. **Pin it for any actor-path measurement** (the
-   unpinned first reading of the pass above was -0.674 % against a base that
-   had played 1 % fewer rows). **Open question for a run with the ML context
-   to decide it:** should `selfplay` seed the jitter from `--seed`? It would
-   make training runs replayable and `--games N` a fixed amount of work; it
-   would also remove per-run tie-break diversity from the actors, which may
-   be why it is unseeded. Not changed unilaterally.
-1. **Seventy-fourth pass: `fixed` -0.081 %, `sos` -0.201 %, `cube` -0.596 %**,
-   one commit — the colour budget reaches `sink_facts`, the presence mask that
-   gates the whole `gated_pick!` ability chain. Activations reaching payment
-   1,242 -> 996 on cube, every one of the 246 a rollback. **Two rules, both
-   measured.** (a) *A gate is only cheap where what it reads is already paid
-   for.* `main_phase_action_with` now owns one `SweepMana` for
-   `cast_candidates` and `sink_facts` both, and even so an unconditional
-   `have.get()` per ability read **+0.292 % of `fixed`** (whose abilities are
-   `{T}` or generic, so the forced `available_mana` bought nothing — its
-   rollbacks did not move). Testing the *printed* cost for a coloured pip
-   first decides whether the read happens at all, and it is free. (b) *A
-   widening must be widened to something the estimate does not also
-   under-count.* Pass 71 widened `by_color` to `[total; 5]`, and `total`
-   under-counts exactly the sources that force the widening — two Treasures
-   and nothing else read `total = 0`, so the "unbounded" budget still
-   rejected every coloured pip while the engine sacrificed one and paid.
-   `u32::MAX` is what it meant. **Found by the oracle, third time.**
-1. **Seventy-third pass: `fixed` -0.135 %, `sos` -0.456 %, `cube` -0.195 %**,
-   one commit — the seventy-first pass's per-colour budget applied to the
-   candidate blocks that had no pre-filter at all. **`restore_payment_state`
-   at `--separate-callers=2` is the map**: of 2,960 rollbacks on `cube`, the
-   pre-filtered cast path is the *best* of the six at 26 %, against
-   `activate_ability_inner` 59 % and `cast_flashback` 67 %. Everything the bot
-   proposes other than a cast reaches the engine on a ~50 k-Ir
-   `would_accept_on` probe alone. `colors_coverable` is the drop-in half of
-   the budget — **colour pips are the one part of a cost nothing in the
-   engine's adjustment machinery moves** (every activation and graveyard-cast
-   adjustment is `reduce_generic` / `add_generic`, `{X}` only adds pips, a
-   coloured tax only adds them), so it is sound against a *printed* cost with
-   no effective-cost computation. Next blocks to take it to:
-   `cast_spell_alternative` (36 %) and `cast_face_down`. And note
-   **`w.ability_arms` is off in every shipped profile**, so the 59 % is not
-   reachable from the block that block filters — it comes through the
-   `usable_abilities` pick_* helpers, and threading a *shared* `SweepMana`
-   through `main_phase_action_with` is what that needs (a per-helper
-   `available_mana` is ~3,000 Ir and pass 40 already refuted the eager read).
-1. **Seventy-first pass: `fixed` -0.398 %, `sos` -1.363 %, `cube` -1.225 %**,
-   one commit — the biggest single commit since the sixty-third pass and the
-   first in ten that is not a presence gate. `AvailableMana` answered "is
-   there a producer for this colour" where the payment funnel asks "are there
-   *enough*", so `{G}{G}` off a lone Forest passed the bot's pre-filter and
-   was thrown away at payment. A `[u32; 5]` budget (Hall's condition on the
-   singleton colour sets) built in the walk `available_mana` already takes:
-   cast attempts 7,110 -> 6,038, payment rollbacks 3,696 -> 2,716, dry-run
-   probes 11,986 -> 10,910, **completed casts 4,720 -> 4,720 byte-identical**.
-1d. **The reusable half is the oracle, and this branch should use it again.**
-   A bot-side estimate of a rules question has an engine function that answers
-   it exactly — here `could_pay_cost`, which runs `try_pay_with_auto_tap` on a
-   clone. Wire it behind an env var at the *divergence* site, report only
-   where the old estimate would have said yes, and sweep pools x seeds: the
-   count went **6 -> 6 -> 240 -> 0** and each non-zero named the card that
-   found the hole (Choreographed Sparks — `would_accept_on` accepts a
-   *suspend*, use `could_pay_cost`; Crystalline Crawler — a mana ability with
-   a counter cost and **no `{T}`**; Dryad of the Ilysian Grove — CR 305.6
-   land-type rewrites reach `mana_source_table` and not
-   `granted_abilities_of`). **The first two versions of that commit looked
-   correct and were not.** Refuted on the way: deriving the budget from
-   `untapped_mana_colors` is exact and costs 6,690 Ir a call against a ~4,600
-   Ir win.
-1e. **A wrong bot pre-filter is invisible to every invariant this file
-   checks** — it costs Ir, not correctness, so a green suite, identical golden
-   traces and a flat ladder all survive it indefinitely. The tell is the
-   *ratio* between what the bot offers and what the engine completes; grep the
-   other pre-filters (`ward_tax_payable`, `pick_combat_trick`,
-   `max_affordable_x`) for the same presence-vs-count shape.
-1. **Seventieth pass: `fixed` -0.399 %, `sos` -0.282 %, `cube` -0.394 %**, one
-   commit — `attack_static_scan`, the third `*_scan` bitmask, on
-   `declare_attackers_banded`'s four gateable static walks (two of them per
-   attacker). **And one refutation that is worth more than the commit: the
-   same device on `declare_blockers` reads `sos` +0.006 % and was reverted.**
-   A `*_scan` bit is worth the walks it removes *from a loop*; the attack
-   side's run once per attacker, the block side's once per declared blocker,
-   and the bench pools declare far fewer blockers. **Count the loop's trips
-   before writing the bit.** Second rule from the same commit: **a site is
-   gateable iff it tests `sa.effect` directly** — `active_static` peels
-   `WhileYourTurn`-style wrappers, so a raw-variant mask would miss a wrapped
-   one; two of the six walks are ungated for that reason and re-gating them
-   means a second copy of `active_static`'s wrapper list.
-1a. **A rules commit landed on top of that tip and costs Ir**: the deck-out
-   fix (item 5) reads `fixed` +0.055 %, `sos` +0.012 %, `cube` +0.082 %
-   against `7ada03d9`, one flag read per seat per SBA sweep, `decisions`
-   byte-identical and traces unchanged. **A base column taken at `4f42c6b4`
-   is ~0.06 % above one taken at `7ada03d9` — that is the trade, not a
-   regression.**
-1c. **CLOSED at the seventy-second pass — see item 0a.** The 19,384-call edge
-   was the `continuous_effects` pair and `temporary_control`, not
-   `find_card_anywhere_mut`; the surviving 0.20 % is item 0c.
-1b. **Where the device still has sites.** `cast_cost_scan` covers six of the
-   nine its own function asks (the sixty-eighth pass's item, still open), and
-   nothing has been scanned in `check_state_based_actions`, the layer pass or
-   `resolve_combat`. The test is mechanical: grep a hot function for
-   `static_abilities`, count the walks, count the loop trips around them.
-2. **Sixty-eighth pass: `fixed` -1.032 %, `sos` -0.888 %, `cube` -1.879 %** in
-   Ir, four perf commits plus one bug fix, all "what does this cost when it
-   has nothing to do" —
-   and **2-3 % of wall on `cube`** over two independent ABBA sittings, 11 of
-   12 blocks, null flat. **The wall win is bigger than the Ir win**, which is
-   the reverse of this branch's usual caution: the largest commit removes
-   `Arc` deep copies, and a clone's cache misses are wall-expensive and
-   Ir-cheap. **Size a clone-removal pass on the clock.** New candidates
-   **(-50)** (the no-op CoW write — the class *and* its ranking rule) and
-   **(-49)** (`wants_ui`, 0.07 %, wants the decision-plumbing audit's eye).
-2a. **Sixty-ninth pass: `fixed` -0.130 %, `sos` -0.130 %, `cube` -0.296 %**,
-   two commits, both **(-50)** at the *zone change* rather than the payment
-   rollback, measured base `795a296e` -> tip `8147836b`. The rule they yield
-   is in (-50): **a (-50) site is a chain, not a line.** Gating five of the
-   zone-change chain's six writes moved an 8.5 M-Ir edge and the *program* by
-   -0.050 %, because `send_to_graveyard`'s `counters.clear()` two frames down
-   absorbed it; gating that too landed -0.221 % of cube. Gate from where the
-   object is handed over to its last touch, in one commit — an intermediate
-   step reads as +0.022 % on a pool. **The tell that finds a site:
-   `cg_edges.py --callees <fn>` on a `make_mut` caller row, looking for a
-   callee count that is an exact multiple of the function's own call count**
-   — 2.000x is an unconditional line, a ragged ratio is the board width.
-   **No wall-clock pair was taken for it** and the pass above says why that
-   is a real loss: batch the next two or three (-50) sites and price the
-   batch with `ab_wall.py` rather than paying the ~35-minute setup per
-   commit.
-2b. **Where the next one is, and it is not in a profile: read the three lines
-   under an existing `*_scan` call.** Four of this pass's five commits were a
-   whole-board question asked beside a mask that could have answered it —
-   `cast_cost_scan` still covers only six of the nine its own function asks.
-   Then: **the cast-failure lead is half taken** (item 1) — attempts are
-   6,038 and rollbacks 2,716 now. **What is left of it is the generic half**:
-   a per-colour budget cannot see a shortfall that is generic rather than
-   coloured, and no sound generic bound exists from `ManaSourceInfo`, which
-   carries colours but not amounts. The other half is **(-51)(a), a land tap
-   at 7,555 Ir over 21,566 taps — 6.19 % of cube** and the second-largest
-   call site in the simulator; it has never been costed and its obvious lever
-   (a cheaper `keyword_grant_in_scope`) needs the per-definition keyword-grant
-   bit, which is in the do-not-rebuild list. Also open: the layer pass's
-   `printed_color_set`, **194,610 calls / 11.7 M / 0.44 % of cube**, one per
-   pass (caching it on `CardDefinition` is blocked by the ~20 in-place
-   definition mutations — see (-11)). Do **not** re-take the `sorted` `Vec`
-   (item 4), and do not hoist `trigger_grant_sources` out of the combat
-   damage loop — it is already once per damage event, and the remaining 1.7x
-   would have to survive a rider resolving mid-loop.
-3. **DONE — the `clone_from_ref_in` context table is in PERF's Profile of
-   record** (`--separate-callers=2`, `cg_contexts.py`, tip `ee376912`).
-   157,402 real deep copies against 806,878 `make_mut` calls, and the two
-   tables rank differently. **The reusable column is the clone/ask ratio**:
-   65 % (`activate_ability_inner`) means the first `&mut` after the checkpoint
-   really is the first write and (-50) has nothing to gate there; 8 %
-   (`do_untap`) means the handle was already unshared. The same block records
-   that **the self table has stopped saying anything new** and that
-   `dispatch_triggers_for_events` line-profiles diffuse at this tip (largest
-   engine line 0.23 %) — do not spend another `profiling-lines` build on it.
-   `cg_ratio.py` still ranks pool outliers: `affected_includes_gated` is
-   **6.63x cube/sos and 0.46 % of cube**, i.e. the sixty-fourth pass's layer
-   gate does not fire on a grant-heavy board.
-4. **Refuted, do not re-take:** call-site guards on
-   `clear_summoning_sickness` (the method is an inherent `impl CardInstance`
-   one — its own guard is *not* dead) and gating
-   `auto_tap_for_cost_inner`'s `wants_ui` pair (it is **true** in every
-   measured workload); both left their `make_mut` edges byte-identical. And
-   **skipping `compute_permanent_pass`'s collect** by sorting at the gather:
-   `fixed` **+0.173 %**, `sos` **+0.208 %**, reverted, number in the code at
-   the collect. **A gathered effect list is ~2 long, so that `collect` was
-   never allocating** — check an allocation table's row *is* an allocation
-   before removing it. And **the `*_scan` bitmask on `declare_blockers`**
-   (`sos` +0.006 %, seventieth pass) — the shapes are identical to the attack
-   side's and the loop is not. And **the multi-colour half of Hall's condition**
-   in the bot's affordability filter (seventy-fourth pass): the singleton case
-   is the one that pays, the subsets **rejected nothing at all** over the bench
-   workload and cost `fixed` +0.105 %, `sos` +0.104 %, `cube` +0.107 %. The
-   reason is worth keeping: **the widenings that keep the budget sound switch
-   it off on exactly the boards that would violate a subset** — a Treasure, a
-   filter land or a land-type rewrite makes the board `bounded = false`, and
-   those are the boards with interesting mana. And **the `*_scan` bitmask on
-   `do_untap`** —
-   the forty-third pass built it and it read **+0.0001 %**: each of the six
-   walks short-circuits on `definition.static_abilities.is_empty()`, so six
-   specialised `any`s beat one general pass. `do_untap` is 1.55 % of cube and
-   **none of it is in those walks** — read its callee table, not its walk
-   count. Older refutations are in PERF's standing rules.
-5. **Bugs. ENGINE_BACKLOG's P2 has no open correctness entries now.** The
-   deck-out item is fixed: `pending_deck_loss` is armed by the failed draw and
-   promoted by the SBA sweep (CR 104.3c), which also closed the half nobody had
-   noticed — `objects_leave_with_player` runs only for the seats the *sweep*
-   eliminated, so a decked player's board stayed on the battlefield forever
-   (CR 800.4a). Two rules to keep from it: **a bug whose only symptom is a
-   missing SBA leg is invisible to every test that does not run the sweep**,
-   and **`two_player_game()` seats empty libraries**, so any test whose subject
-   draws is decking itself — `game::stock_libraries(&mut g, n)` is the harness,
-   and one of the nineteen tests it fixed had been passing vacuously with a
-   dead ETB draw. Earlier bug of the same reading-the-profile kind: the payment
-   snapshot keyed on `owner` where auto-tap taps by `controller` (`86ec1bd8`),
-   and **the `perform_action` checkpoint hides that whole class** — a rollback
-   bug is only observable where the failure is *handled* rather than
-   propagated. Still open: ENGINE_BACKLOG P3's picker/checker disagreement
-   (27 single-slot bodies aim with one filter and are checked against another).
-6. **Housekeeping.** TODO **~850**, PERF **8.8k**,
-   ENGINE_BACKLOG 3.8k, CARD_BACKLOG 4.1k, CLIENT_BACKLOG 428. Suite
-   **19,009 passed / 0 failed / 5 ignored** — that figure is the workspace
-   less the client; the two-crate gate this file prescribes builds 14
-   binaries and reports **18,749**, and the other five crates hold 260.
-   `cargo-nextest` **is** installable in this image
-   (`curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`,
-   a few seconds) and runs the two-crate gate in **104 s** after the build,
-   against `cargo test -j 2`'s ~25 minutes from cold; the note elsewhere in
-   this file saying there is no nextest is stale. Both
-   numbers are in PERF now, because the two commands disagree and nothing
-   said which one the record quoted. 7 golden traces. Next PERF Log
-   folds are the 51st/52nd. This NEXT was 262 lines before this pass; every
-   item it dropped is in PERF's Log/candidates, ENGINE_BACKLOG or
-   CARD_BACKLOG, not deleted.
-7. **Two standing measurement facts** (the rest are in PERF's "How to
-   measure"): **plan `selfplay_train` actor counts off *cores*, not RSS** —
-   scaling is linear to the core count (per-actor 39.2 / 40.0 / 39.6 / 40.2
-   games/s at 1/2/3/4 on this box, a sixth actor buys +2.6 %) and an extra
-   actor costs **~6 MiB**, while the replay window costs ~1.3 KiB a row and
-   is the whole ~0.5-1 GiB footprint. See (-52); the **~24 MiB** figure this
-   line used to carry is `bot_ladder`'s. And `--decks fixed` is the *bench* pool —
-   a change to statics / grants / layers gets a `--decks cube` reading too.
-   **A change whose soundness rests on a `debug_assert!` is audited by the
-   `dev`-profile grid, not the `overflow` one**: release profiles compile
-   the assertion out. **Callgrind Ir *is* portable across these containers**
-   — two boxes read the same commit within 0.0004 % at the sixty-ninth pass —
-   so a concurrent session's Ir column is a usable base; its wall-clock and
-   RSS columns still are not.
+1. **Perf queue = PERF's candidates.** (-54) the sim's transaction checkpoint
+   (~0.93 % of `cube`; needs a *failure count* first, not a profile); (-53)
+   the cost-static bitmask (0.52 %, costs ~30 variants of enumeration);
+   (-51)(a) the 7,665-Ir land tap.
+2. **Read PERF's "Inside one attack sim" before anything bot-side:** the
+   search is 59.6 % of `cube` and **37 % of the program is the engine
+   advancing a turn inside one**, against `cast_candidates`' 3.6 %.
+3. **(-51)(b)'s 1,672 rollbacks are a correctness question first** — the bot
+   pre-filters that path on total *and* colour, so a failure is a bad estimate
+   or an auto-tap that stranded a payable colour. Oracle rule, PERF's caller
+   table.
+4. **The actor path is the other half of the ML phase and this file's profile
+   of record describes `bot_ladder` only** (passes 77/78, -4.55 % cumulative
+   on the actor). Three of the actor's top rows are **0 calls** on the bench.
+   What is left there: `Vocab::index_of` (a name hash per object, 1.02 %) and
+   `encode_library`'s per-state `BTreeMap` (~0.68 %). **Open question for a
+   run with the ML context:** should `selfplay` seed `jitter_below` from
+   `--seed`? It would make training runs replayable and `--games N` fixed
+   work; it also removes per-actor tie-break diversity. Not to be changed
+   unilaterally.
+5. **Missing tool, and it has now blocked three commits:** there is no
+   win-rate gate for a *code* change. `bot_ladder --a/--b` compares two
+   profiles inside one binary and `ab_wall.py` only times two binaries, so
+   anything that moves play is justified by argument and invariants. A
+   two-binary ladder mode is the gap.
+6. **Bugs:** ENGINE_BACKLOG P3's picker/checker bullet is closed; the open one
+   is the two requirement walkers. P2 has no open correctness entries.
+7. **State:** suite 18,751 / 0 / 5, 7 golden traces, `--bench` 195,886
+   decisions / 27.48 turns / 0 stalls. This section was 315 lines before the
+   seventy-sixth pass compacted it; everything it dropped is in "Standing
+   rules" below, PERF's Log/candidates, or ENGINE_BACKLOG.
 
 ## Standing rules for a perf pass
 
@@ -596,6 +273,60 @@ Log with its numbers; read the entry before re-proposing any of them.
   only `--bench`'s `decisions` and the Ir total catch it. Run
   `./target/profiling-fast/bot_ladder --bench --threads 3` on any change whose
   Ir moves more than its blast radius allows.
+- **Ir over-reads a commit that removes whole action executions by about
+  two** (pass 75's clock, `ab_wall.py`, 8 ABBA blocks, `release-fast` +
+  mimalloc, `CRAB_NO_JITTER=1` both sides, `--games 2000 --decks sos --seed 11
+  --threads 4`): **-1.29 %, CI -2.19 .. -0.39, 6/8 blocks** against a FLAT
+  null (+0.20 %, CI -0.70 .. +1.10, resolution ±0.90 %), where Ir read
+  -2.775 %. The direction is the opposite of a *clone* removal (wall bigger
+  than Ir, pass 68) and of an allocator swap (Ir blind to it, pass 64).
+  **Under ~2 % of Ir will not show on this box's clock at all**, so do not
+  promise a wall number for one.
+- **`selfplay_train --seed N` does not reproduce a run** (pass 77). Same
+  binary, same seed, `--actors 1`: 1,788 / 1,770 / 1,776 rows over twenty
+  games; with `CRAB_NO_JITTER=1`, 1,788 every time. `bot::jitter_below` falls
+  back to the *thread* RNG unless a seeded stream is installed, and
+  `set_jitter_seed` is the ladder's device for antithetic pairs — nothing in
+  the actor path calls it. **Pin the jitter for any actor-path measurement**;
+  an unpinned reading compared a base that had played 1 % fewer rows.
+- **Four standing measurement facts**, kept here because each has cost a pass
+  once. **Callgrind Ir is portable across these containers** — four
+  independent readings of one commit on four boxes agree to 0.0004 %, and the
+  whole difference is argv length — so another session's Ir column is a usable
+  base; its wall-clock and RSS columns are not. **A change whose soundness
+  rests on a `debug_assert!` is audited by the `dev`-profile grid, not the
+  `overflow` one**: release profiles compile the assertion out. **Plan actor
+  counts off ~24 MiB RSS**, not the `--no-default-features` 17.7 — mimalloc is
+  the shipped allocator and costs ~9.7 MiB a process. And **`--decks fixed` is
+  the bench pool**: a change to statics / grants / layers gets a `--decks
+  cube` reading too, and one under `draft.rs` / `recommend.rs` / `selfplay.rs`
+  gets `--decks sealed --games 1`.
+- **A refutation carries the workload it was measured on, and this branch's
+  workload moves.** The seventy-sixth pass re-opened `can_afford_in_state`,
+  closed at +0.066 % on 2026-08-12, and it paid -0.6 % on all three pools: the
+  entry's own figures — 0.29 % of the profile in the walks, 1.13 cards per
+  sweep — had become 1.14 % and 2.80, because the attack search now runs 1,910
+  sims a `cube` run and every one of them sweeps. **Re-read a refutation's
+  numbers against the current dump before trusting its verdict**, and record
+  numbers rather than verdicts so the next re-check is one `cg_edges.py` call.
+  This does *not* license re-taking anything under "Do not rebuild these"
+  below: those are refuted on a mechanism, not on a ratio.
+- **A wrong bot pre-filter is invisible to every invariant this file checks.**
+  It costs Ir, not correctness, so a green suite, identical golden traces and
+  a flat ladder all survive it indefinitely. The tell is the *ratio* between
+  what the bot offers and what the engine completes — `restore_payment_state`
+  against `try_pay_after_snapshot_mode`, `finalize_cast` against
+  `cast_spell_with_convoke`. Grep the other pre-filters (`ward_tax_payable`,
+  `pick_combat_trick`, `max_affordable_x`) for the presence-vs-count shape the
+  seventy-first pass found in `available_mana`.
+- **The oracle, and use it again.** A bot-side estimate of a rules question
+  usually has an engine function that answers it exactly (`could_pay_cost`,
+  `would_accept_on`). Wire it behind an env var at the *divergence* site,
+  report only where the old estimate would have said yes, and sweep pools x
+  seeds. At the seventy-first pass the count went **6 -> 6 -> 240 -> 0** and
+  every non-zero named the card that found the hole; **the first two versions
+  of that commit looked correct and were not**, and no reading of the code
+  found what the oracle did.
 - **Do not rebuild these.** The board-presence epoch, the `GameState` husk
   pool, gating `do_untap`, narrowing `GameState`, splitting the big engine
   files for build time, the per-definition keyword-grant bit, fusing
@@ -606,9 +337,15 @@ Log with its numbers; read the entry before re-proposing any of them.
   +0.123 % cube), and (-31)'s `improves_this_turn` reuse. And **never** skip
   `push_ordered_trigger_candidates` on an empty batch (+7.3 % *and* a
   correctness bug — it owns the per-batch `died_card_snapshots.clear()`).
-- **Env.** No `cargo-nextest`; `cargo test -j 2 -p crabomination -p
-  crabomination_tests` is the gate (18,728 / 0 / 5, 11 binaries running tests, at the
-  fifty-sixth tip; ~25 min from cold). Workspace
+- **Env.** `cargo-nextest` **is** installable in this image and this bullet
+  said the opposite for twenty passes:
+  `curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`
+  takes seconds, and `cargo nextest run -p crabomination -p
+  crabomination_tests` runs the gate in **~110 s** after the build against
+  `cargo test -j 2`'s ~25 minutes from cold. Cold everything (deps + catalog +
+  engine, two profiles in parallel on 4 cores) is **~45 min a profile**; a
+  warm engine-only rebuild is ~15 min, and a change in `crabomination_base`
+  costs the catalog too, so **batch base-crate edits**. Workspace
   clippy needs `apt-get update && apt-get install -y libwayland-dev
   libasound2-dev libudev-dev libxkbcommon-dev`. Cold `profiling-fast` engine
   build ~14 min, warm rebuild ~4m30s; callgrind ~4 min and contention-immune.
