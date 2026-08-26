@@ -572,17 +572,26 @@ fn compute_permanent_pass(
     let mut lost_all_abilities = false;
     let mut cant_have_keywords: Vec<Keyword> = Vec::new();
 
-    // Sort effects by layer, then sublayer, then timestamp.
-    let mut sorted: Vec<&ContinuousEffect> = effects
-        .iter()
-        .filter(|e| affects(e, card, gate_power, gate_types))
-        .chain(eot_grants.iter())
-        .collect();
-    sorted.sort_by(|a, b| {
-        a.layer.cmp(&b.layer)
-            .then(a.sublayer.cmp(&b.sublayer))
-            .then(a.timestamp.cmp(&b.timestamp))
-    });
+    // Sort effects by layer, then sublayer, then timestamp — but only build
+    // the list at all when there is something to put in it. The chain is
+    // empty on most passes (`affected_includes_gated` runs 29,436 times over
+    // 89,154 of them on `--decks sos`, i.e. a third of an effect apiece), and
+    // an empty `collect()` is still a `Vec::from_iter` call with its
+    // size-hint dance — 90,170 of them for 6.5 M Ir, which is candidate
+    // (-45)'s largest row. Two loads answer it instead.
+    let mut sorted: Vec<&ContinuousEffect> = Vec::new();
+    if !effects.is_empty() || !eot_grants.is_empty() {
+        sorted = effects
+            .iter()
+            .filter(|e| affects(e, card, gate_power, gate_types))
+            .chain(eot_grants.iter())
+            .collect();
+        sorted.sort_by(|a, b| {
+            a.layer.cmp(&b.layer)
+                .then(a.sublayer.cmp(&b.sublayer))
+                .then(a.timestamp.cmp(&b.timestamp))
+        });
+    }
 
     for effect in sorted {
         match &effect.modification {
