@@ -73,6 +73,25 @@ Fetch before you start a candidate, not just before you push.
    owns the card** (the callers have already unshared it), not a gate. Seven
    call sites and a stale-flag failure mode; see (-50).
 
+1. **Seventy-third pass: `fixed` -0.135 %, `sos` -0.456 %, `cube` -0.195 %**,
+   one commit — the seventy-first pass's per-colour budget applied to the
+   candidate blocks that had no pre-filter at all. **`restore_payment_state`
+   at `--separate-callers=2` is the map**: of 2,960 rollbacks on `cube`, the
+   pre-filtered cast path is the *best* of the six at 26 %, against
+   `activate_ability_inner` 59 % and `cast_flashback` 67 %. Everything the bot
+   proposes other than a cast reaches the engine on a ~50 k-Ir
+   `would_accept_on` probe alone. `colors_coverable` is the drop-in half of
+   the budget — **colour pips are the one part of a cost nothing in the
+   engine's adjustment machinery moves** (every activation and graveyard-cast
+   adjustment is `reduce_generic` / `add_generic`, `{X}` only adds pips, a
+   coloured tax only adds them), so it is sound against a *printed* cost with
+   no effective-cost computation. Next blocks to take it to:
+   `cast_spell_alternative` (36 %) and `cast_face_down`. And note
+   **`w.ability_arms` is off in every shipped profile**, so the 59 % is not
+   reachable from the block that block filters — it comes through the
+   `usable_abilities` pick_* helpers, and threading a *shared* `SweepMana`
+   through `main_phase_action_with` is what that needs (a per-helper
+   `available_mana` is ~3,000 Ir and pass 40 already refuted the eager read).
 1. **Seventy-first pass: `fixed` -0.398 %, `sos` -1.363 %, `cube` -1.225 %**,
    one commit — the biggest single commit since the sixty-third pass and the
    first in ten that is not a presence gate. `AvailableMana` answered "is

@@ -626,6 +626,70 @@ build.
 
 ## Baseline
 
+**Seventy-third pass. Base `db6abaa4` (= the seventy-second tip) vs tip.**
+One commit: the seventy-first pass's per-colour budget, applied to the two
+candidate blocks that never had a pre-filter at all. Ir readings
+`profiling-fast --no-default-features`, callgrind, one thread, `--a gang --b
+gang --games 6 --threads 1 --seed 1`.
+
+```text
+                          base            tip
+I refs, --decks fixed     1,144,976,824   1,143,433,386   -0.135 %
+I refs, --decks sos       1,462,215,557   1,455,540,697   -0.456 %
+I refs, --decks cube      2,601,748,276   2,596,680,136   -0.195 %
+```
+
+**The rollback table is the map, and it took `--separate-callers=2` to read
+it.** `restore_payment_state`'s one-level caller row is a single
+`try_pay_after_snapshot_mode` entry and says nothing; at depth 2 the 2,960
+rollbacks on `cube` split:
+
+```text
+   1,698  try_pay <- cast_spell_with_convoke     (of 6,418 casts,  26 %)
+     734  try_pay <- activate_ability_inner      (of 1,242 activations, 59 %)
+     214  try_pay <- try_pay_with_auto_tap_mode
+     170  try_pay <- cast_flashback              (of   252 flashbacks,  67 %)
+     100  try_pay <- cast_spell_alternative      (of   276,            36 %)
+      26  try_pay <- cast_face_down
+```
+
+**Casts are the pre-filtered path and they are the *best* of the six.**
+Everything else the bot proposes — activations, flashbacks, alternative
+costs — reaches the engine on a `would_accept_on` probe alone, and a probe is
+~50 k Ir.
+
+`colors_coverable` is the reusable half of the budget: **colour pips are the
+one part of a cost nothing in the engine's adjustment machinery moves.**
+Every activation and graveyard-cast adjustment is `reduce_generic` /
+`add_generic`, an `{X}` binding only *adds* pips, a coloured tax only adds
+them — so the check is sound against a **printed** cost, with no
+effective-cost computation and no `total` test. That is why it is worth
+having as a separate helper from `can_afford_from`: it needs nothing but the
+printed cost and the budget, so it drops into any candidate block.
+
+The flashback block is the measured win (payments 252 -> 144, rollbacks
+2,960 -> 2,852, probes 11,150 -> 11,010). The `w.ability_arms` block is the
+other call site and **its flag is off in every shipped profile**, so it is
+correct-but-unexercised here — worth knowing before anyone re-measures the
+59 % and finds it unmoved. Its old prefilter was `cmc > pool + untapped land
+count`, a count that says nothing about which colours those lands make.
+
+```text
+oracle           0 over seeds 1/7/11/12/23 x cube/sealed/all at 12 games,
+                 seeds 5/42 x all at 40, and --bench
+decisions        195,886 byte-identical
+turns_per_game   27.48, stalls 0 (0.00 %)
+ladder printout  identical on fixed / sos / cube
+golden traces    7 passed, unchanged
+suite            18,749 passed / 0 failed / 5 ignored
+clippy           `-p crabomination --all-targets` clean
+```
+
+**Still open on this path, and sized:** the 1,698 cast rollbacks that
+survive the colour budget are generic shortfalls, and `ManaSourceInfo`
+carries colours but not amounts, so no sound generic bound exists from it.
+See (-51).
+
 **Seventy-second pass. Two commits, measured against two different bases —
 the branch carried a concurrent session's seventy-first pass in between.**
 Ir readings `profiling-fast --no-default-features`, callgrind, one thread,
