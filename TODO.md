@@ -41,26 +41,28 @@ commit that a fetch would have shown.
    pre-filters that path on total *and* colour, so a failure is a bad estimate
    or an auto-tap that stranded a payable colour. Oracle rule, PERF's caller
    table.
-4. **The actor path is the other half of the ML phase and this file's profile
-   of record describes `bot_ladder` only** (passes 77/78/79, **-5.64 %
-   cumulative on the actor, `encode_state` -45.0 %**). Three of the actor's
-   top rows are **0 calls** on the bench. Pass 79's lesson is the cheapest of
-   the four: **a `-> Vec<T>` whose callers all write `for x in f()` is a grep,
-   not a profile** — `ManaCost::colored_symbols` survived the earlier
-   `colors()` -> `color_set()` sweep only because it is on a different type.
-   What is left there is **one item, not two**: `Vocab::index_of` (a name hash
-   per object, 1.02 %). **`encode_library`'s `BTreeMap` is refuted in both
-   directions** — deduping on the name first reads +0.217 % (a `&str` compare
-   is a `memcmp`, a `u16` compare is one instruction, so a fifteen-entry scan
-   costs more than the twenty-five hashes it saves), and keeping the hash but
-   replacing the map with a scanned `Vec` takes `encode_state` down 1.5 % and
-   moves the program **+0.024 %**. Second one is the rule: **a subtree win is
-   not a program win**, and on an allocation-heavy path they can differ by the
-   whole subtree. **Open question for a
-   run with the ML context:** should `selfplay` seed `jitter_below` from
-   `--seed`? It would make training runs replayable and `--games N` fixed
-   work; it also removes per-actor tie-break diversity. Not to be changed
-   unilaterally.
+4. **The encoder is MINED OUT and this file's profile of record still
+   describes `bot_ladder` only.** Five passes (77/78/79/80), **`encode_state`
+   156,090,720 -> 78,971,603, -49.4 %, the actor -6.1 %**, and three of the
+   actor's top rows are **0 calls** on the bench. Every lead NEXT ever named
+   there is now closed: pass 80 took the last one, `Vocab::index_of`, with a
+   `(ptr, len)`-keyed cache beside the string map (-0.538 % program, -8.07 %
+   `encode_state`) — **a card's name is a `&'static str` literal, so the same
+   card always presents the same address, and a pointer hash beats a string
+   hash plus its `memcmp`**. Three refutations bound what is left:
+   `encode_library`'s `BTreeMap` in **both** directions (name-dedupe +0.217 %,
+   a `&str` compare is a `memcmp` where a `u16` compare is one instruction;
+   index-keyed `Vec` -1.5 % on `encode_state` and **+0.024 %** on the
+   program — **a subtree win is not a program win**). **A new lead here needs
+   a fresh actor profile first, not this list.** Two rules pass 80 adds:
+   **re-measure the base if any commit landed since the recorded row** (the
+   seventy-ninth tip re-read +0.076 % because a correctness commit landed
+   between), and **a pure optimization needs a test that it is still an
+   optimization** — nothing else can tell a cache that always hits from one
+   that always misses. **Open question for a run with the ML context:** should
+   `selfplay` seed `jitter_below` from `--seed`? It would make training runs
+   replayable and `--games N` fixed work; it also removes per-actor tie-break
+   diversity. Not to be changed unilaterally.
 4a. **(-54) is CLOSED with its number and (-55) is what the number found.**
    `CRAB_SIM_REJECTS=1` counts what the sim's own pickers propose and the
    engine throws out: **470 of 91,438 non-pass `sim_step` calls (0.51 %)**,
@@ -123,15 +125,33 @@ commit that a fetch would have shown.
    a bug. Costs 1.9x wall.
 6. **Bugs:** ENGINE_BACKLOG P3's picker/checker bullet is closed; the open one
    is the two requirement walkers. P2 has no open correctness entries.
-7. **State (final checks, seventy-ninth tip):** two-crate gate **18,753 / 0 /
-   5**; `--workspace --exclude crabomination_client` **19,013 / 0 / 5**; 7
-   golden traces; clippy `--workspace --all-targets` clean **including the
-   client** (the four apt packages install in ~40 s — free
-   `target/debug/incremental` first, it was 15 GB this run and the box was at
-   92 %). `--bench` on `release-fast`: **195,886 decisions / 27.48 turns / 0
-   stalls**, `determinism ok`, peak RSS 27.2 MiB. `overflow` profile, seeds 11
-   and 12 over `all`/`cube`/`sealed`: **11,600 games, 0 undecided, no panic,
-   no arithmetic overflow.**
+7. **State (final checks, eightieth tip, all re-run at it):** two-crate gate
+   **18,775 / 0 / 5**; `--workspace --exclude crabomination_client`
+   **19,035 / 0 / 5**; 7 golden traces; clippy `--workspace --all-targets`
+   clean **including the client** (the four apt packages install in ~40 s —
+   free `target/debug/incremental` first, it was 14 GB this run and the box
+   was at 96 %). `--bench` on `release-fast`: **195,616 decisions / 27.44
+   turns / 0 stalls**, `determinism ok`, peak RSS 28.7 MiB, 262.2 games/s at
+   3 threads. `overflow` profile, seeds 11 and 12 over `all`/`cube`/`sealed`,
+   600 games/archetype: **44,400 games, no panic, no arithmetic overflow.**
+   The play-dependent rows were measured twice, side by side, at `21c0c97f`
+   and at `8450ba81` (the attack-tax walker), and are **bit-identical** —
+   195,616 decisions, 27.44 turns, the same 20 undecided in the same six
+   cells. So the tax walker does not bite on any deck in `fixed`, `cube`,
+   `sealed` or `all`: it is only reachable with a Propaganda-class permanent
+   on the board, and these pools do not put one there. **Which means the
+   ladder cannot gate that fix** — if it needs a win rate, it needs a pool
+   that contains the card.
+7z. **⚠ The one number that moved and nobody is chasing it: 20 undecided in
+   44,400 (0.045 %).** All twenty are on `all` (14, seed 11) and `cube` (4 +
+   2); `sealed` is 0 on both seeds and `--bench` reports `cap 0 / stuck 0 /
+   draw 0`, so **whatever this is, the bench does not see it** — that is the
+   gap, not the rate. The previous run's "11,600 games, 0 undecided" row was a
+   *smaller* sweep (this one is 3.8x the games), so treat this as the first
+   reading at this size, **not** as a regression against it. Cheapest next
+   step: `--decks cube --seed 11` reproduces 4 in 17 s; find whether
+   undecided means the turn cap, a draw, or a stuck game before deciding
+   whether it is worth a fix.
 7a. **⚠ The box changed mid-run and the wall-clock rows in this file did
    not.** This run's `--bench` reads **249.8 games/s at 3 threads on an Intel
    Xeon @ 2.10 GHz**, against 208-218 on the 2.80 GHz Xeon the seventy-fifth
