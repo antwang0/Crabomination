@@ -35,7 +35,36 @@ the whole mitigation, it costs one command, and it would have saved this run
 an hour. If you take one anyway, say so in the Log as a replication rather
 than rewriting the entry.
 
-0. **The sixty-fourth pass: (-44) closed, five of (-45)'s rows taken, (-48)
+0. **The sixty-seventh pass: (-45)'s sibling table run, two commits.** End
+   to end `fixed` **-0.360 %**, `sos` **-0.513 %** (`cube` -0.192 % on the
+   second commit; no `cube` base was taken before the first — that column is
+   a gap in the record, not a suspicion). Both came out of **one command**:
+   `cg_edges.py --callers` on the `Vec::clone` and `grow_one` rows, which
+   (-45) had flagged as "the sibling table nobody has run".
+0a. **And the rule is which column you sort it by.** (-45) says to rank an
+   allocation table by *calls* — that finds a `Vec` built to be thrown away.
+   The two rows this pass took sit at #4 and #5 by calls and would never have
+   been reached that way; they are outliers in **Ir/call**:
+   `continue_spell_resolution` at **1,601 Ir a call** was deep-copying the
+   resolving spell's whole `Effect` tree (it could not borrow, because `card`
+   is moved to the graveyard later — clone the `Arc<CardDefinition>` first
+   and it can), and `finalize_cast` at 677 was two
+   `mem::take().into_iter().partition()` round trips over a
+   `delayed_triggers` list that is empty on almost every cast. **Rank by
+   calls for a thrown-away `Vec`; rank by Ir/call for a tree being
+   deep-copied.** `alt_spell_half_of(&def)` is the shape for the borrow —
+   the existing walker's pick against a definition the caller holds, one
+   walker at two lifetimes, rather than a second copy of the pick.
+0b. **The next rows out of those two tables are named and unread**:
+   `check_state_based_actions` (22,604 grows / 2.89 M), `advance_step`
+   (20,664 / 2.48 M), `declare_blockers` (11,466 / 2.02 M). **Do NOT take
+   `gather_continuous_effects_inner`'s row that way** — its buffer is
+   `sa_cards`, empty on a vanilla board, and a blanket
+   `+ battlefield.len()` reserve is the shape the fifty-eighth pass measured
+   at **+1.54 %**. See PERF's (-45), which now carries both tables.
+0c. **The archive triage is DONE — see item 10.**
+
+0z. **The sixty-fourth pass: (-44) closed, five of (-45)'s rows taken, (-48)
    answered.** End to end `fixed` **-0.43 %**, `sos` **-1.06 %**, `cube`
    **-0.96 %**. (-44) was a token mint building an 8,232-byte
    `CardDefinition` *per token in the batch* (`sos` -0.605 %); (-45)'s row was
@@ -153,7 +182,8 @@ than rewriting the entry.
    **`CLIENT_BACKLOG.md`**. TODO **856**, PERF 7.6k. Suite is **14 test
    binaries / 19,170 tests**, not the "22" older blocks quote. The 47th
    through 50th Log entries are folded (the 49th and 50th at the 66th pass:
-   344 lines to 103); **next folds are the 51st/52nd**.
+   344 lines to 103); **next folds are the 51st/52nd**. PERF is **7.7k** with
+   the sixty-seventh pass's entry in it.
 11. **Bugs: the parallel target-walker class is CLOSED** (`core_rules::
    target_walkers` 39 -> **0**, and it asserts `is_empty()` now — add the
    walker arm, do not reintroduce a threshold). 20 of the 39 were the test

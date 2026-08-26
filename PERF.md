@@ -2388,6 +2388,85 @@ the table above is safe to compress:
 
 ## Log
 
+### Sixty-seventh pass — the caller table nobody had run, read by Ir/call
+
+Two commits, base `6aea90f9`. **Both came out of one command**: `cg_edges.py
+--callers` on the `Vec::clone` and `grow_one` rows, which (-45) had flagged as
+"the sibling table nobody has run", **ranked by the Ir/call column**.
+
+```text
+                          base (6aea90f9)   after #1        tip (#1+#2)
+I refs, --decks fixed     1,171,271,457    1,170,756,214   1,167,052,905   -0.360 %
+I refs, --decks sos       1,509,430,083    1,505,521,472   1,501,691,374   -0.513 %
+I refs, --decks cube             —         2,705,985,504   2,700,791,689   -0.192 % (#2 only)
+```
+
+No `cube` base was taken before the first commit — the binary had already been
+rebuilt when the pool came up — so `cube` is attributed to the second commit
+only and the pass's `cube` end-to-end is not measured. Both commits are
+mechanism-identical across pools, so the missing column is a gap in the
+record, not a suspicion.
+
+**#1 — the resolving spell deep-copied its own effect tree.**
+`continue_spell_resolution` opened with `card.definition.effect.clone()`.
+`Effect::clone` under it was **1,954 calls at 1,601 Ir each** (3.13 M, 0.21 %
+of `sos`) — the "a cost far above the family mean is a copy of something big"
+tell, in a table where the median row is ~30 Ir. Every branch of that
+`unwrap_or_else` reads a subtree of the card's own `CardDefinition`; the only
+reason it could not borrow is that `card` is moved to the graveyard further
+down. Cloning the `Arc<CardDefinition>` first keeps the definition alive
+independently of `card` for one refcount bump.
+`alt_spell_half_of(&def)` is `alt_spell_half`'s pick against a definition the
+caller holds — **one walker, two lifetimes**, so the Adventure/Omen branch
+borrows too, rather than growing a second copy of the pick. `Effect::clone`
+**36,233 -> 29,071 calls**. `fixed` -0.044 %, `sos` -0.259 %.
+
+**#2 — every cast partitioned a delayed-trigger list that is almost always
+empty.** `fire_spell_cast_triggers`' two CR 603.7e watcher blocks each do
+`mem::take(&mut self.delayed_triggers).into_iter().partition(..)` and write
+the remainder back, whether or not there is anything to partition:
+`Iterator::partition` under `finalize_cast` was **7,556 calls at 553 Ir
+each** (4.18 M, 0.28 % of `sos`), twice a cast, plus two
+`find_card_anywhere` lookups only those blocks read. One `is_empty()` in
+front of each. `finalize_cast` **45,556 -> 40,528 callee calls**; `partition`
+and `find_card_anywhere` are both gone from its table. `fixed` **-0.316 %**,
+`sos` -0.254 %, `cube` -0.192 %. This is (-45)'s shape exactly — a presence
+question whose *asking* costs the same when the answer is no — and it is the
+first one found by an allocation table rather than by
+`--callers SpecFromIterNested`.
+
+**The rule the pass yields, and it is one column of one table.** (-45) says
+to rank an allocation table by *calls*; that finds the many-small rows. The
+`Vec::clone` table's engine rows are the opposite shape — `finalize_cast` at
+677 Ir/call and `continue_spell_resolution` at 1,601 sit at rows 4 and 5 by
+calls and would never be reached that way. **Rank an allocation table by
+calls to find a `Vec` built to be thrown away; rank it by Ir/call to find a
+tree being deep-copied.** Both tables are one `cg_edges.py --callers` away
+and neither had ever been in this file.
+
+**What the two tables still hold, and it is written up in (-45) and (-28).**
+`grow_one`'s top rows are unchanged by this pass and are a different entry:
+`gather_continuous_effects_inner` 30,758 / 3.95 M — **and the blanket
+`+ battlefield.len()` headroom for its `sa_cards` buffer is the shape this
+file already refuted at +1.54 %** (fifty-eighth pass, item I), because
+`sa_cards` is empty on a vanilla board and a reserve there buys an allocation
+where there was none. `check_state_based_actions` 22,604 / 2.89 M,
+`advance_step` 20,664 / 2.48 M and `declare_blockers` 11,466 / 2.02 M have
+never been read. `__memcpy`'s two engine rows are `GameState::clone` 103,694
+and `finalize_cast` 90,004 — (-13) and (-28), both already ranked.
+
+**Final checks at the tip.** Suite **14 binaries / 18,746 passed / 0
+failed**, golden traces included; `--bench` **decisions 196,220
+byte-identical**, turns/game 27.53, 0 stalls (cap 0 / stuck 0 / draw 0),
+determinism ok, `peak_rss_mib` 26.9, 195.9 games/s at `host_calib_ms` 48
+(`release-fast`, mimalloc); `clippy --workspace --all-targets` clean.
+Crash-freedom: `--decks all --games 400 --threads 3` at seeds 11/12/13 =
+**20,400 games, 20,396 decided, no panic** (the four are seed 11's standing
+draws every pass since the forty-fourth records), `--decks cube` and
+`--decks sealed` at `--games 120`, seeds 11/12 = **4,800 games, 0
+undecided**. No encoding, pool, `TrainRow`, `EncodedState` or `Vocab` change
+— **no net needs retraining.**
+
 ### Sixty-fourth pass — a token mint built the token's definition, per token
 
 Two commits, base `a3c5eb97`. The base re-read here is **code-identical** to
@@ -5077,11 +5156,41 @@ already visits every permanent — read **+0.295 % / +0.255 %** for
 exit of its own.** Third refutation of the (-6) fusion device inside
 `creature_death_possible` alone (+0.55 %, +1.24 %, +0.29 %).
 
-**And the sibling table nobody has run:** `--callers` on the *`Vec::clone`*
-and `RawVec::grow_one` rows is the same question asked of a different
-allocation shape. `finish_grow` is 11,680,360 / 0.73 % on `sos` and
-`Vec::clone` 12,902,527 / 0.81 %, and neither has ever had a caller table in
-this file.
+**The sibling table is RUN, at the sixty-seventh pass, and it paid twice.**
+`--callers` on `Vec::clone` and `grow_one`, **ranked by Ir/call rather than
+by calls**, named `continue_spell_resolution` (1,601 Ir/call, a whole
+`Effect` tree) and `finalize_cast` (677) — rows 4 and 5 by *calls*, which is
+why ranking by calls alone had never reached them. Both are taken; `fixed`
+-0.360 %, `sos` -0.513 % end to end. **Rank an allocation table by calls to
+find a `Vec` built to be thrown away; rank it by Ir/call to find a tree being
+deep-copied.**
+
+**What those two tables still hold** (`sos`, sixty-seventh tip, 1,501,691,374):
+
+```text
+callers of grow_one — 249,744 calls
+  34,670    5,654,416   Vec::push_mut                        (generic)
+  30,758    3,951,887   gather_continuous_effects_inner      <- `sa_cards`; see below
+  22,604    2,893,995   check_state_based_actions            <- unread
+  20,664    2,479,680   advance_step                         <- unread
+  15,754    4,764,983   finalize_cast                        <- 302 Ir/call, (-28)'s
+  11,466    2,017,154   declare_blockers                     <- unread
+   9,802    1,269,800   granted_abilities_of
+   8,196    2,093,114   computed_permanent
+
+callers of __memcpy — 1,159,403 calls
+ 103,694    6,245,840   GameState::clone                     <- (-13)
+  90,004    7,833,802   finalize_cast                        <- (-28)
+  65,285    1,029,267   String as fmt::Write::write_str
+  60,720    1,821,600   computed_permanent
+```
+
+**`gather_continuous_effects_inner`'s row is NOT a reserve candidate** — the
+buffer it grows is `sa_cards`, which is *empty* on a vanilla board, and a
+blanket `+ battlefield.len()` headroom is the shape the fifty-eighth pass
+already measured at **+1.54 %** (item I: "the reserve has to be where the
+pushes are, not where the clone is"). The three unread rows are the ones to
+size next.
 
 **(-46) `name_index()` BUILDS 22,568 `CardDefinition`s TO READ 22,568
 STRINGS — 104,687,400 Ir. RANKED LOW ON PURPOSE; READ THE SIZING BEFORE
