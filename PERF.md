@@ -686,6 +686,38 @@ both. `bot_ladder` is untouched by construction — three of the four sites are
 in the encoder, which is **0 calls** there, and the fourth is one rare mill
 effect — so no Ir column on that binary is claimed.
 
+**Seventy-ninth pass, second half: `encode_library`'s `BTreeMap` is REFUTED
+in both directions — built twice, measured twice, reverted twice.** It is the
+one NEXT named as the encoder's remaining ~0.68 %, and it is not there.
+
+```text
+                                       vs a2b19fea+colored_symbols
+                                       program        encode_state
+A  dedupe on the card *name*, one       +0.217 %       +1.4 %
+   `index_of` per distinct name
+B  keep `index_of` per card, replace     +0.024 %       -1.5 %
+   the map with a linearly-scanned Vec
+```
+
+**A is the useful refutation.** The map hashes every library card's name and
+a forty-card library is ~fifteen distinct ones, so deduping on the name first
+looks like it saves twenty-five fx hashes. It does — and a `&str` linear
+scan over fifteen entries costs more than they did. **A `&str` compare is a
+`memcmp`; a `u16` compare is one instruction.** Key a small scan on the
+cheapest thing that distinguishes the entries, not on the thing you were
+going to look up anyway.
+
+**B is the more interesting one because the encoder really did get faster.**
+`encode_state` fell 1.5 % — the `BTreeMap`'s 56,845 `or_insert` calls and
+37,795 `IntoIter::dying_next` over twenty games are real — and **the program
+did not move**. The likeliest reading is that ~57 k node allocations a run
+were feeding the same allocator everything else uses, so removing them
+changed malloc's free-list state rather than the program's work; the base
+dump was lost to a container reset before it could be diffed, so that stays a
+reading rather than a finding. **The rule that does not depend on it: a
+subtree win is not a program win, and on an allocation-heavy path the two can
+differ by the whole of the subtree.**
+
 **Seventy-eighth pass. Base `c9bf0b78` (= the seventy-seventh tip) vs tip.**
 Two commits, both in the observation encoder, both measured on the actor
 path with `CRAB_NO_JITTER=1` and an identical workload throughout — 1,788

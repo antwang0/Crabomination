@@ -49,8 +49,15 @@ commit that a fetch would have shown.
    the four: **a `-> Vec<T>` whose callers all write `for x in f()` is a grep,
    not a profile** — `ManaCost::colored_symbols` survived the earlier
    `colors()` -> `color_set()` sweep only because it is on a different type.
-   What is left there: `Vocab::index_of` (a name hash per object, 1.02 %) and
-   `encode_library`'s per-state `BTreeMap` (~0.68 %). **Open question for a
+   What is left there is **one item, not two**: `Vocab::index_of` (a name hash
+   per object, 1.02 %). **`encode_library`'s `BTreeMap` is refuted in both
+   directions** — deduping on the name first reads +0.217 % (a `&str` compare
+   is a `memcmp`, a `u16` compare is one instruction, so a fifteen-entry scan
+   costs more than the twenty-five hashes it saves), and keeping the hash but
+   replacing the map with a scanned `Vec` takes `encode_state` down 1.5 % and
+   moves the program **+0.024 %**. Second one is the rule: **a subtree win is
+   not a program win**, and on an allocation-heavy path they can differ by the
+   whole subtree. **Open question for a
    run with the ML context:** should `selfplay` seed `jitter_below` from
    `--seed`? It would make training runs replayable and `--games N` fixed
    work; it also removes per-actor tie-break diversity. Not to be changed
