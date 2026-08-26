@@ -122,7 +122,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   | of those, effect also has a slot 1 | 47 | **not a bug** — the two walkers are describing different slots (the fight family: `Prey Upon`, `Rabid Bite`, `Pit Fight`, … all read pick=`Creature+ControlledByOpponent` / check=`Creature+ControlledByYou`) |
   | single-slot and modal | 10 | **not a bug** — slot 0 differs per mode; `target_filter_for_slot_in_mode` resolves it (`Jund Charm`, the Charm cycle, `Flame of Anor`) |
   | single-slot and kicker-branched | 4 | **not a bug** — `Bloodchief's Thirst`, `Overload`, `Prohibit`, `Tear Asunder`; `…_in_mode_kicked` resolves it |
-  | **single-slot, non-modal, non-kicker** | **2** | **bugs, one root cause** |
+  | **single-slot, non-modal, non-kicker** | **2** | **were bugs, one root cause — FIXED at the seventy-fifth pass** |
   | `primary_target_filter` `Some` / slot-0 `None` | 466 | mass effects; the primary walker is reporting a *subject* filter, not a target |
   | slot-0 `Some` / primary `None` | 253 | already covered by the picker's fallback |
 
@@ -138,11 +138,17 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   and never reaches the heuristic picker — so the blast radius is
   `enumerate_legal_targets_xc` (the client's legal-target list),
   `view.rs`'s `target_noun`, and the two `bot.rs` fallback pickers.
-  **The class fix is one line and has a real blast radius**: make
-  `primary_target_filter` defer to `target_filter_for_slot(0)` when that is
-  `Some`. That changes the answer for the 65 above *and* gives the 253 a
-  filter where they had none — ~318 definitions — so it wants its own
-  measured commit (traces + pinned-jitter decision counts), not a drive-by.
+  **FIXED at the seventy-fifth pass** (`5ae08799`): `primary_target_filter`
+  defers to `target_filter_for_slot(0)` when that answers, and keeps its own
+  walk for the 466 mass effects with no target at all. `--decks fixed` and
+  `--decks cube` play byte-identical games (so +0.008 % / +0.030 % is what
+  the extra walk costs); `--decks sos` diverges by 128 decisions and reads
+  **-2.037 %**, i.e. **-2.80 % per decision** — the bot stops enumerating and
+  probing targets the CR 608.2b check would have rejected. Completed casts
+  flat. **There is no strength gate available for a change of this shape**:
+  `bot_ladder` compares two *profiles* inside one binary, not two binaries,
+  so the justification is the argument (the aim now uses the filter the check
+  uses), the census, and 7 byte-identical golden traces.
   **Do not re-add a blanket ratchet**: the sixty-fifth pass wrote one, watched
   it need 587 -> 83 -> 27 exceptions, and deleted it. The invariant that
   *does* hold with no exceptions is the narrow one — single-slot, non-modal,

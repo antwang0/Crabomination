@@ -3320,6 +3320,45 @@ sources that *do* carry statics.
 
 ### Seventy-fifth pass — a per-candidate random draw makes candidate-count a behaviour, and no committed invariant sees it
 
+**Second commit (`5ae08799`), and it is a bug-class fix that pays.**
+`primary_target_filter` (what the auto-picker aims with) now defers to
+`target_filter_for_slot(0)` (what CR 608.2b re-checks against) wherever the
+effect declares slot 0, keeping its own walk only for the 466 mass effects
+with no target at all. Base `185da6fd`, `CRAB_NO_JITTER=1`:
+
+```text
+                      base            tip            decisions
+--decks fixed         1,138,293,424   1,138,379,236  17,064 -> 17,064
+--decks sos           1,408,076,014   1,379,390,009  16,240 -> 16,368
+--decks cube          2,665,348,002   2,666,156,226  25,532 -> 25,532
+```
+
+**Two of the three pools play byte-identical games**, so `fixed` +0.008 % and
+`cube` +0.030 % price the extra slot-0 walk. `sos` moves a target choice
+(+128 decisions, 0.79 %) and reads **-2.037 %, i.e. -2.80 % per decision** —
+the bot stops enumerating and probing targets the check would reject, and
+completed casts are flat (2,830 -> 2,790).
+
+* **The census is the reusable half.** Over `all_known_factories()`, 3,486
+  definitions have both walkers answering and **65 disagree** — but 47 have a
+  slot 1 (the two walkers honestly describe different slots: the whole fight
+  family), 10 are modal and 4 kicker-branched. **Two were bugs and they were
+  one bug**: a slot-0 *player* target (`Selector::Player(Target(n))`,
+  `ControlledBy { who: Target(n) }`) has no `sel_filter` arm, so `Feedback
+  Bolt` reported its artifact count and `Reins of Power` the `Untap` clause
+  that happens to be `Seq`'s first element. **The sixty-fifth pass's ratchet
+  failed because it was applied to all 65** and needed a threshold; the
+  invariant with zero exceptions is the narrow one — single-slot, non-modal,
+  non-kicker — and the way to find it was to *classify* the exceptions rather
+  than count them.
+* **A green trace suite was again not the gate.** All 7 traces and both
+  byte-identical pools survived a change that moved `sos` by 128 decisions.
+  What said the change was sound is the argument (the aim is now the same
+  function as the check) plus the classification, because **`bot_ladder`
+  compares two profiles inside one binary and cannot A/B two builds** — there
+  is no win-rate gate available for a code change of this shape. Worth
+  building one.
+
 One commit, base `1b67c154`, **`fixed` +0.106 % (layout), `sos` -2.775 %,
 `cube` -1.618 %** with the tie-break stream pinned. Full numbers in
 **Baseline**.

@@ -63,6 +63,22 @@ N2. **And the trace suite could not see it**: all 7 goldens byte-identical
    `cast_candidates`' specialty blocks** (`cast_candidates -> accept_on` is
    absent from its profile). Item 1e one level up. **Check the trace pool
    executes the code before calling a bot change behaviour-preserving.**
+N0. **Second commit of the pass, and it closes ENGINE_BACKLOG P3's older
+   half.** `primary_target_filter` defers to `target_filter_for_slot(0)`
+   where slot 0 exists, so the aim and the CR 608.2b check are the same
+   function. `fixed`/`cube` byte-identical games (+0.008 % / +0.030 % = the
+   extra walk); `sos` +128 decisions and **-2.037 % (-2.80 % per decision)**.
+   The census that made it landable: of 65 disagreeing definitions, 47 have a
+   slot 1, 10 are modal, 4 kicker-branched, and the 2 left were one bug (a
+   slot-0 *player* target has no `sel_filter` arm). **Classify the exceptions
+   instead of counting them** — that is why the sixty-fifth pass's ratchet
+   over all 65 needed a threshold and this one needs none.
+N0a. **There is no win-rate gate for a code change.** `bot_ladder --a/--b`
+   compares two *profiles* inside one binary; `ab_wall.py` takes two binaries
+   but only times them. Every commit that moves play is therefore justified by
+   argument + invariants, never measured. **A two-binary ladder mode is the
+   missing tool** and it would have gated this commit, the seventy-first
+   pass's, and anything that comes out of N3.
 N2a. **The clock was taken and the ratio is 2.15x.** `ab_wall.py`, 8 ABBA
    blocks, `release-fast` + mimalloc, `CRAB_NO_JITTER=1` both sides,
    `--games 2000 --decks sos --seed 11 --threads 4`: **-1.29 %, CI -2.19 ..
