@@ -903,6 +903,28 @@ concurrent session's `3cce6889` after the readings were taken, so its landed
 parent is one commit past the base named above; nothing in `3cce6889` touches
 the bot's pre-filter.
 
+**Re-checked against the jitter stream after `CRAB_NO_JITTER` landed** (the
+seventy-second pass's device: the scored pickers draw one `jitter_below` per
+*candidate*, so a change to how many candidates reach a picker re-aligns the
+stream and the run diverges even where the policy is identical). The tell is
+`cg_edges.py --callers next_action_settled`, read off the dumps these columns
+were taken from:
+
+```text
+                 base (28f5c628)   tip
+--decks fixed    17,058            17,058     identical
+--decks sos      16,044            16,020     -24
+--decks cube     24,896            24,880     -16
+```
+
+**`fixed` played a byte-identical game and still read -0.398 %**, so that
+column is pure work removed with no divergence in it at all; `sos` and `cube`
+diverge by 0.15 % and 0.06 % of their decisions, far too little to account for
+-1.363 % and -1.225 %, and the byte-identical `finalize_cast` count says the
+same thing from the other side. **The seventy-third and seventy-fourth passes
+are byte-identical on all three pools** (17,058 / 16,020 / 24,880 either
+side), so their columns carry no divergence either.
+
 **`AvailableMana` answered "is there a producer for this colour" and the
 question is "are there enough".** `{G}{G}` off a lone Forest passed the
 filter, reached the pick site, and was thrown away by the engine's payment —
