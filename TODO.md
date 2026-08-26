@@ -84,19 +84,34 @@ commit that a fetch would have shown.
    two-binary ladder mode is the gap.
 6. **Bugs:** ENGINE_BACKLOG P3's picker/checker bullet is closed; the open one
    is the two requirement walkers. P2 has no open correctness entries.
-7. **State (final checks, seventy-fifth/seventy-sixth tip):** two-crate gate
-   **18,753 / 0 / 5**; `--workspace --exclude crabomination_client` **19,011
-   / 0 / 5**; 7 golden traces; clippy `--workspace --all-targets` clean
-   **including the client** (the four apt packages install in ~40 s — free
-   `target/debug/incremental` first, it was 11 GB). `--bench` on
-   `release-fast`: 195,886 decisions / 27.48 turns / 0 stalls / peak RSS
-   26.8-27.1 MiB, `determinism ok` and `thread_determinism ok (3 vs 1)`,
-   **games/s 213.5 / 208.2 / 218.5** at `host_calib_ms` 72/46/46 (the
-   seventy-first-era row on the same profile read 202.1 / 195.9 / 201.3 —
-   directionally right, and `--bench`'s 11 % within-binary spread means it is
-   not a claim; the clock claim of this pass is the ABBA block in PERF). This section was 315 lines before the
-   seventy-sixth pass compacted it; everything it dropped is in "Standing
-   rules" below, PERF's Log/candidates, or ENGINE_BACKLOG.
+7. **State (final checks, seventy-ninth tip):** two-crate gate **18,753 / 0 /
+   5**; `--workspace --exclude crabomination_client` **19,013 / 0 / 5**; 7
+   golden traces; clippy `--workspace --all-targets` clean **including the
+   client** (the four apt packages install in ~40 s — free
+   `target/debug/incremental` first, it was 15 GB this run and the box was at
+   92 %). `--bench` on `release-fast`: **195,886 decisions / 27.48 turns / 0
+   stalls**, `determinism ok`, peak RSS 27.2 MiB. `overflow` profile, seeds 11
+   and 12 over `all`/`cube`/`sealed`: **11,600 games, 0 undecided, no panic,
+   no arithmetic overflow.**
+7a. **⚠ The box changed mid-run and the wall-clock rows in this file did
+   not.** This run's `--bench` reads **249.8 games/s at 3 threads on an Intel
+   Xeon @ 2.10 GHz**, against 208-218 on the 2.80 GHz Xeon the seventy-fifth
+   pass measured — *faster on a slower clock*, which is what happens when a
+   throughput number crosses hosts. **Read `host_cpu` and `host_calib_ms` off
+   the run before comparing any games/s row in this file to any other**; the
+   Ir columns are unaffected (callgrind Ir has now reproduced across four of
+   these containers).
+7b. **A container reset mid-session is a real hazard and it cost this run a
+   commit.** `target/` was wiped, `cargo-nextest` was gone, and the repo came
+   back checked out on the *system-prompt* branch with `claude/modern_decks`
+   absent locally — an uncommitted edit was lost and had to be re-applied
+   from the transcript. **Commit each measured change as soon as it measures**
+   rather than batching it with the tracker prose, and re-run FIRST after any
+   unexplained `git status`. `cargo-nextest` reinstalls in seconds:
+   `curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`.
+   This section was 315 lines before the seventy-sixth pass compacted it;
+   everything it dropped is in "Standing rules" below, PERF's Log/candidates,
+   or ENGINE_BACKLOG.
 
 ## Standing rules for a perf pass
 
