@@ -108,17 +108,46 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 ### P3 — structural root causes (fix once, prevent the class)
 
 - 🟡 **The picker and the CR 608.2b checker are two walks of one target's
-  life, and 27 single-slot bodies disagree.** `primary_target_filter` (what
-  the auto-picker aims with) and `target_filter_for_slot(0)` (what CR 608.2b
-  checks against) are hand-written and independent: `Jund Charm` picks
-  `Creature` and checks `Player`, `Overload` picks `ManaValueAtMost(5)` and
-  checks `(2)`, `Tear Asunder` picks `Nonland` and checks
-  `Artifact|Enchantment`. Most are **modal** — slot 0 differs per mode — so
-  the two walkers answer honestly-different questions and a blanket
-  invariant is a ratchet, not an invariant: the sixty-fifth pass wrote one,
-  watched it need 587 -> 83 -> 27 exceptions, and deleted it rather than
-  ship a threshold. Fix per card, or make `primary_target_filter`
-  mode-aware. **The silent-fallback half is already fixed** — the picker
+  life. Censused at the seventy-fifth pass: 65 disagreements, and only two
+  are bugs.** `primary_target_filter` (what the auto-picker aims with) and
+  `target_filter_for_slot(0)` (what CR 608.2b checks against) are
+  hand-written and independent. The measured breakdown over
+  `all_known_factories()` (both walkers `Some` and unequal), which supersedes
+  the "27 single-slot bodies" this entry used to claim:
+
+  | | count | verdict |
+  |---|---|---|
+  | both `Some`, agree | 3,421 | — |
+  | both `Some`, **disagree** | **65** | below |
+  | of those, effect also has a slot 1 | 47 | **not a bug** — the two walkers are describing different slots (the fight family: `Prey Upon`, `Rabid Bite`, `Pit Fight`, … all read pick=`Creature+ControlledByOpponent` / check=`Creature+ControlledByYou`) |
+  | single-slot and modal | 10 | **not a bug** — slot 0 differs per mode; `target_filter_for_slot_in_mode` resolves it (`Jund Charm`, the Charm cycle, `Flame of Anor`) |
+  | single-slot and kicker-branched | 4 | **not a bug** — `Bloodchief's Thirst`, `Overload`, `Prohibit`, `Tear Asunder`; `…_in_mode_kicked` resolves it |
+  | **single-slot, non-modal, non-kicker** | **2** | **bugs, one root cause** |
+  | `primary_target_filter` `Some` / slot-0 `None` | 466 | mass effects; the primary walker is reporting a *subject* filter, not a target |
+  | slot-0 `Some` / primary `None` | 253 | already covered by the picker's fallback |
+
+  **The two bugs share a root cause and it is not per-card.**
+  `Feedback Bolt` (pick `Artifact+ControlledByYou`, check `Player`) and
+  `Reins of Power` (pick `Creature`, check `Player`) both target a **player**
+  in slot 0, and `primary_target_filter`'s `sel_filter` has no arm for
+  `Selector::Player(Target(n))` / `ControlledBy { who: Target(n) }` — so it
+  falls through to a non-target `EachPermanent` subject filter (`Feedback
+  Bolt`'s artifact count, `Reins of Power`'s `Untap` clause, which is
+  `Seq`'s *first* element and wins the `find_map`). **The cast path is
+  unaffected** — `auto_targets_for_effect_all_slots` sees `slot0_has_filter`
+  and never reaches the heuristic picker — so the blast radius is
+  `enumerate_legal_targets_xc` (the client's legal-target list),
+  `view.rs`'s `target_noun`, and the two `bot.rs` fallback pickers.
+  **The class fix is one line and has a real blast radius**: make
+  `primary_target_filter` defer to `target_filter_for_slot(0)` when that is
+  `Some`. That changes the answer for the 65 above *and* gives the 253 a
+  filter where they had none — ~318 definitions — so it wants its own
+  measured commit (traces + pinned-jitter decision counts), not a drive-by.
+  **Do not re-add a blanket ratchet**: the sixty-fifth pass wrote one, watched
+  it need 587 -> 83 -> 27 exceptions, and deleted it. The invariant that
+  *does* hold with no exceptions is the narrow one — single-slot, non-modal,
+  non-kicker — and it has exactly the two failures above.
+  **The silent-fallback half is already fixed** — the picker
   falls back to the checker's own filter before `Any`, so the two agree by
   construction wherever the primary walker is silent (that fix is what made
   creature Haunt work at all; see `core_rules::unbound_target_slots`).
