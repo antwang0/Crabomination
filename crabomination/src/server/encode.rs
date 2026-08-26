@@ -578,6 +578,87 @@ pub fn encode_deck(
 
 /// Printed-card features shared by every zone (hand, graveyard, and the
 /// base of a battlefield object).
+/// The twelve keyword questions [`encode_card_object`] asks, as bits.
+mod okw {
+    pub const FLYING: u16 = 1 << 0;
+    pub const REACH: u16 = 1 << 1;
+    pub const MENACE: u16 = 1 << 2;
+    pub const DEATHTOUCH: u16 = 1 << 3;
+    pub const LIFELINK: u16 = 1 << 4;
+    pub const TRAMPLE: u16 = 1 << 5;
+    /// First strike and double strike share a flag — for a value function
+    /// they mean the same thing at this resolution.
+    pub const STRIKE: u16 = 1 << 6;
+    pub const VIGILANCE: u16 = 1 << 7;
+    pub const HASTE: u16 = 1 << 8;
+    pub const INDESTRUCTIBLE: u16 = 1 << 9;
+    pub const DEFENDER: u16 = 1 << 10;
+    pub const HARD_TO_TARGET: u16 = 1 << 11;
+    pub const HARD_TO_BLOCK: u16 = 1 << 12;
+}
+
+/// The exact-variant bit a keyword contributes, or 0.
+fn okw_exact_bit(k: &crate::card::Keyword) -> u16 {
+    use crate::card::Keyword as K;
+    match k {
+        K::Flying => okw::FLYING,
+        K::Reach => okw::REACH,
+        K::Menace => okw::MENACE,
+        K::Deathtouch => okw::DEATHTOUCH,
+        K::Lifelink => okw::LIFELINK,
+        K::Trample => okw::TRAMPLE,
+        K::FirstStrike | K::DoubleStrike => okw::STRIKE,
+        K::Vigilance => okw::VIGILANCE,
+        K::Haste => okw::HASTE,
+        K::Indestructible => okw::INDESTRUCTIBLE,
+        K::Defender => okw::DEFENDER,
+        _ => 0,
+    }
+}
+
+/// Every keyword bit [`encode_card_object`] needs, in **one** pass over this
+/// card's own lists.
+///
+/// [`CardInstance::has_keyword`] re-walks `removed_keywords`,
+/// `removed_keywords_eot`, the printed list, `granted_keywords_eot` and the
+/// counter `Vec` on every keyword asked — and the encoder asks twelve, plus
+/// two `any_keyword` class walks. On a `selfplay_train` actor that was
+/// **831,492 `has_keyword` calls / 37.6 M Ir / 2.85 %**, 422 per encoded
+/// state, and `encode_state` is 11.7 % of the actor to begin with. Inverting
+/// it makes the cost the card's keyword *count* instead of the encoder's
+/// question count.
+///
+/// Equivalent by construction and `debug_assert!`ed at the call site: a
+/// keyword contributes its bit exactly when it appears printed, EOT-granted
+/// or on a CR 122.1b counter and is not in either removal list — which is
+/// `has_keyword`'s own definition. The two class bits read printed and
+/// granted only, matching [`any_keyword`], which deliberately skips counters.
+fn object_keyword_bits(c: &CardInstance) -> u16 {
+    use crate::card::KeywordSlice;
+    let removed = |k: &crate::card::Keyword| {
+        c.removed_keywords.has_kw(k) || c.removed_keywords_eot.has_kw(k)
+    };
+    let mut m = 0u16;
+    for k in c.definition.keywords.iter().chain(c.granted_keywords_eot.iter()) {
+        if removed(k) {
+            continue;
+        }
+        m |= okw_exact_bit(k);
+        if is_hard_to_target(k) {
+            m |= okw::HARD_TO_TARGET;
+        }
+        if is_hard_to_block(k) {
+            m |= okw::HARD_TO_BLOCK;
+        }
+    }
+    for (k, n) in c.keyword_counters.iter() {
+        if *n > 0 && !removed(k) {
+            m |= okw_exact_bit(k);
+        }
+    }
+    m
+}
+
 fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     use crate::card::Keyword;
     let def = &c.definition;
@@ -592,25 +673,55 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     // reads printed + granted lists; the granted lists are simply empty
     // off the battlefield). First and double strike share a flag — for a
     // value function they mean the same thing at this resolution.
-    for (i, kw) in [
-        Keyword::Flying,
-        Keyword::Reach,
-        Keyword::Menace,
-        Keyword::Deathtouch,
-        Keyword::Lifelink,
-        Keyword::Trample,
-        Keyword::FirstStrike,
-        Keyword::Vigilance,
+    let kb = object_keyword_bits(c);
+    debug_assert_eq!(
+        kb,
+        {
+            let mut want = 0u16;
+            for (bit, kw) in [
+                (okw::FLYING, Keyword::Flying),
+                (okw::REACH, Keyword::Reach),
+                (okw::MENACE, Keyword::Menace),
+                (okw::DEATHTOUCH, Keyword::Deathtouch),
+                (okw::LIFELINK, Keyword::Lifelink),
+                (okw::TRAMPLE, Keyword::Trample),
+                (okw::STRIKE, Keyword::FirstStrike),
+                (okw::STRIKE, Keyword::DoubleStrike),
+                (okw::VIGILANCE, Keyword::Vigilance),
+                (okw::HASTE, Keyword::Haste),
+                (okw::INDESTRUCTIBLE, Keyword::Indestructible),
+                (okw::DEFENDER, Keyword::Defender),
+            ] {
+                if c.has_keyword(&kw) {
+                    want |= bit;
+                }
+            }
+            if any_keyword(c, is_hard_to_target) {
+                want |= okw::HARD_TO_TARGET;
+            }
+            if any_keyword(c, is_hard_to_block) {
+                want |= okw::HARD_TO_BLOCK;
+            }
+            want
+        },
+        "object_keyword_bits drifted from has_keyword / any_keyword",
+    );
+    for (i, bit) in [
+        okw::FLYING,
+        okw::REACH,
+        okw::MENACE,
+        okw::DEATHTOUCH,
+        okw::LIFELINK,
+        okw::TRAMPLE,
+        okw::STRIKE,
+        okw::VIGILANCE,
     ]
     .iter()
     .enumerate()
     {
-        if c.has_keyword(kw) {
+        if kb & bit != 0 {
             feats[12 + i] = 1.0;
         }
-    }
-    if c.has_keyword(&Keyword::DoubleStrike) {
-        feats[18] = 1.0;
     }
     // Colour requirement, printed. `cmc` alone said a card costs four; it
     // could not say the four was {2}{G}{G} in a deck with three Forests.
@@ -637,18 +748,16 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     // can't-be-blocked variant one "hard to block" bit — a value
     // function trades on the class, not the fine print.
     if !ablated(ABLATE_KW) {
-        for (i, kw) in
-            [Keyword::Haste, Keyword::Indestructible, Keyword::Defender].iter().enumerate()
-        {
+        for (i, bit) in [okw::HASTE, okw::INDESTRUCTIBLE, okw::DEFENDER].iter().enumerate() {
             // 40 haste, 42 indestructible, 44 defender.
-            if c.has_keyword(kw) {
+            if kb & bit != 0 {
                 feats[40 + 2 * i] = 1.0;
             }
         }
-        if c.ward().is_some() || any_keyword(c, is_hard_to_target) {
+        if c.ward().is_some() || kb & okw::HARD_TO_TARGET != 0 {
             feats[41] = 1.0;
         }
-        if any_keyword(c, is_hard_to_block) {
+        if kb & okw::HARD_TO_BLOCK != 0 {
             feats[43] = 1.0;
         }
     }
@@ -1343,6 +1452,33 @@ mod tests {
         let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
         assert_eq!(o.feats[41], 0.0, "removed hexproof does not flag");
         assert_eq!(o.feats[43], 1.0, "shadow unaffected");
+    }
+
+    /// CR 122.1b — a keyword *counter* grants the exact variant, and the
+    /// encoder's exact-variant flags read it. The class flags (41 / 43)
+    /// deliberately do not: `any_keyword` walks printed and granted only.
+    /// This is the leg `object_keyword_bits` handles by iterating the counter
+    /// list rather than probing it once per keyword, so it gets its own test.
+    #[test]
+    fn keyword_counters_reach_the_exact_flags_and_not_the_class_flags() {
+        use crate::card::Keyword;
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        let mut c = CardInstance::new(crate::card::CardId(1), catalog::grizzly_bears(), 0);
+        c.controller = 0;
+        c.keyword_counters.add(Keyword::Flying, 1);
+        c.keyword_counters.add(Keyword::Hexproof, 1);
+        g.battlefield.push(c);
+
+        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        assert_eq!(o.feats[12], 1.0, "a Flying counter sets the exact flag");
+        assert_eq!(o.feats[41], 0.0, "a Hexproof counter does not set the class flag");
+
+        // A removed keyword beats a counter, same as `has_keyword`.
+        g.battlefield[0].removed_keywords_eot.push(Keyword::Flying);
+        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        assert_eq!(o.feats[12], 0.0, "removal beats the counter");
     }
 
     /// The round-12 relation block: attachment edges split by controller,
