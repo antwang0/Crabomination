@@ -274,16 +274,25 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // computed against this seat's own untapped sources.
     let no_cast = ablated(ABLATE_CASTABILITY);
     let sources = if no_cast { Vec::new() } else { g.untapped_mana_colors(seat) };
+    // One mask cover for the whole hand — see `source_cover`.
+    let n_sources = sources.len() as u32;
+    let cover = source_cover(&sources);
+    let cover_extra = cover_with_extra(&cover);
     for c in g.players[seat].hand.iter() {
         let mut o = encode_card_object(c, vocab);
         if !no_cast && !c.definition.is_land() {
-            o.feats[25] = if affordable(&c.definition.cost, &sources) { 1.0 } else { 0.0 };
+            o.feats[25] =
+                if affordable_covered(&c.definition.cost, n_sources, &cover) { 1.0 } else { 0.0 };
             // Next turn is this turn plus one more source of any colour —
             // the land drop the seat has not made yet. Deliberately
             // optimistic about colour: "which of my cards come online if I
             // hit my drop" is the question, and a wrong-colour land is the
             // rarer case in a two-colour sealed deck.
-            o.feats[26] = if affordable_with_extra(&c.definition.cost, &sources) { 1.0 } else { 0.0 };
+            o.feats[26] = if affordable_covered(&c.definition.cost, n_sources + 1, &cover_extra) {
+                1.0
+            } else {
+                0.0
+            };
         }
         s.groups[G_HAND_SELF].push(o);
     }
@@ -496,7 +505,34 @@ fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab)
 /// (counted as their first half by `colored_symbols`) all fall outside it.
 /// This is a *feature* — "is this card roughly live" — not a legality
 /// check, and the real payment path is [`GameState::auto_tap_for_cost`].
+#[cfg(test)]
 fn affordable(cost: &ManaCost, sources: &[[bool; 5]]) -> bool {
+    affordable_covered(cost, sources.len() as u32, &source_cover(sources))
+}
+
+/// `[mask] -> how many of `sources` make at least one colour in `mask``.
+///
+/// The half of [`affordable`] that depends only on the *sources*, lifted out
+/// so a hand sweep pays it once instead of once per card — and twice per
+/// card, because the next-turn sibling used to clone the whole slice and walk
+/// it again. `encode_state` called `affordable` 11,630 times over
+/// twenty `selfplay_train` games for 11.3 M Ir (0.86 % of an actor), 5.8 per
+/// state against one hand's worth of sources.
+fn source_cover(sources: &[[bool; 5]]) -> [u32; 32] {
+    let mut have = [0u32; 32];
+    for s in sources {
+        let m: usize = (0..5).filter(|i| s[*i]).fold(0, |a, i| a | 1 << i);
+        for (mask, h) in have.iter_mut().enumerate().skip(1) {
+            if mask & m != 0 {
+                *h += 1;
+            }
+        }
+    }
+    have
+}
+
+/// [`affordable`] against a prebuilt [`source_cover`].
+fn affordable_covered(cost: &ManaCost, n_sources: u32, have: &[u32; 32]) -> bool {
     let mut pips = [0u32; 5];
     for c in cost.colored_symbols() {
         pips[color_index(c)] += 1;
@@ -505,25 +541,29 @@ fn affordable(cost: &ManaCost, sources: &[[bool; 5]]) -> bool {
     // `cmc` charges mono-hybrid its generic half while `colored_symbols`
     // also counts it as a pip; take whichever is larger so the total can
     // never come in under the coloured requirement.
-    if (sources.len() as u32) < cost.cmc().max(colored) {
+    if n_sources < cost.cmc().max(colored) {
         return false;
     }
-    (1u32..32).all(|mask| {
-        let need: u32 = (0..5).filter(|i| mask >> i & 1 == 1).map(|i| pips[i]).sum();
-        let have = sources
-            .iter()
-            .filter(|s| (0..5).any(|i| mask >> i & 1 == 1 && s[i]))
-            .count() as u32;
-        need <= have
-    })
+    // `need[mask]` by the subset recurrence — 32 adds rather than 31 inner
+    // loops over five colours.
+    let mut need = [0u32; 32];
+    for mask in 1usize..32 {
+        let low = mask.trailing_zeros() as usize;
+        need[mask] = need[mask & (mask - 1)] + pips[low];
+    }
+    (1usize..32).all(|mask| need[mask] <= have[mask])
 }
 
-/// [`affordable`] with one more source that makes any colour — the land
-/// drop the seat has not taken yet.
-fn affordable_with_extra(cost: &ManaCost, sources: &[[bool; 5]]) -> bool {
-    let mut plus = sources.to_vec();
-    plus.push([true; 5]);
-    affordable(cost, &plus)
+/// A [`source_cover`] plus one source that makes every colour — the land drop
+/// the seat has not taken yet. It intersects every non-empty mask, so each
+/// entry gains exactly one; the old form pushed `[true; 5]` onto a **clone**
+/// of the whole source slice, per hand card.
+fn cover_with_extra(have: &[u32; 32]) -> [u32; 32] {
+    let mut out = *have;
+    for h in out.iter_mut().skip(1) {
+        *h += 1;
+    }
+    out
 }
 
 /// Encode a decklist for the build net: vocab indices plus deck-level
@@ -1560,6 +1600,44 @@ mod tests {
         let colourless = [false; 5];
         assert!(affordable(&cost, &[w, u, colourless]));
         assert!(!affordable(&cost, &[w, colourless, colourless]));
+    }
+
+    /// `cover_with_extra` has to answer exactly what pushing a `[true; 5]`
+    /// source onto the slice answered — that equivalence is the whole reason
+    /// the next-turn flag no longer clones the source list per hand card.
+    #[test]
+    fn the_extra_source_cover_matches_pushing_an_any_colour_source() {
+        use crate::mana::{Color, cost, generic, colored};
+        let w = [true, false, false, false, false];
+        let u = [false, true, false, false, false];
+        let colourless = [false; 5];
+        let costs = [
+            cost(&[colored(Color::White), colored(Color::Blue)]),
+            cost(&[generic(2), colored(Color::Blue), colored(Color::Blue)]),
+            cost(&[generic(5)]),
+            cost(&[colored(Color::Green)]),
+        ];
+        for pool in [
+            &[][..],
+            &[w][..],
+            &[w, u][..],
+            &[w, w, colourless][..],
+            &[w, u, colourless, colourless][..],
+        ] {
+            let cover = source_cover(pool);
+            let extra = cover_with_extra(&cover);
+            let mut plus = pool.to_vec();
+            plus.push([true; 5]);
+            for c in &costs {
+                assert_eq!(
+                    affordable_covered(c, pool.len() as u32 + 1, &extra),
+                    affordable(c, &plus),
+                    "cost {} over {} sources",
+                    c.summary(),
+                    pool.len(),
+                );
+            }
+        }
     }
 }
 
