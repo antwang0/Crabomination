@@ -407,10 +407,44 @@ pub fn apply_layers(
     battlefield: &[crate::card::CardInstance],
     effects: &[ContinuousEffect],
 ) -> Vec<ComputedPermanent> {
+    let gates = SecondPass::of(effects);
     battlefield
         .iter()
-        .map(|card| compute_permanent(card, effects))
+        .map(|card| compute_permanent_gated(card, effects, gates))
         .collect()
+}
+
+/// Whether the two CR 613.8 gated re-runs can fire at all. **A property of
+/// the effect list, not of the permanent** — so a whole-battlefield pass asks
+/// it once rather than once per card, and asking it takes *one* walk rather
+/// than three: on a board carrying none of the three (the common one) every
+/// `any()` runs to the end, so the early exit buys nothing and three walks
+/// cost three times one.
+#[derive(Clone, Copy, Default)]
+struct SecondPass {
+    power: bool,
+    type_changer: bool,
+    type_lord: bool,
+}
+
+impl SecondPass {
+    fn of(effects: &[ContinuousEffect]) -> Self {
+        let mut g = Self::default();
+        for e in effects {
+            match e.affected {
+                AffectedPermanents::CardMatchPowerGated { .. } => g.power = true,
+                AffectedPermanents::AllWithCreatureType { .. } => g.type_lord = true,
+                _ => {}
+            }
+            if matches!(
+                e.modification,
+                Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_)
+            ) {
+                g.type_changer = true;
+            }
+        }
+        g
+    }
 }
 
 /// Apply all active continuous effects to a single permanent, returning
@@ -429,28 +463,25 @@ fn compute_permanent(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
 ) -> ComputedPermanent {
+    compute_permanent_gated(card, effects, SecondPass::of(effects))
+}
+
+fn compute_permanent_gated(
+    card: &crate::card::CardInstance,
+    effects: &[ContinuousEffect],
+    gates: SecondPass,
+) -> ComputedPermanent {
     // Power-gated effects (CR 613.8) need the card's gate-free power first:
     // pass 1 excludes them, pass 2 re-runs the full walk with each gate
     // resolved against that power. Keyword grants don't feed back into
     // layer 7, so the result is a fixpoint after one re-run.
-    let has_power_gated = effects
-        .iter()
-        .any(|e| matches!(e.affected, AffectedPermanents::CardMatchPowerGated { .. }));
+    //
     // CR 613.8 — a creature-type lord (AllWithCreatureType) must see the
     // *computed* types, so a creature animated/retyped into the lord's tribe
     // (Turn to Frog into a Frog lord, Arcane Adaptation, etc.) gets the buff.
     // Only re-run when both a type-changer and a type lord are present.
-    let has_type_changer = effects.iter().any(|e| {
-        matches!(
-            e.modification,
-            Modification::SetCreatureTypes(_) | Modification::AddCreatureType(_)
-        )
-    });
-    let has_type_lord = effects
-        .iter()
-        .any(|e| matches!(e.affected, AffectedPermanents::AllWithCreatureType { .. }));
-    let has_type_gated = has_type_changer && has_type_lord;
-    if !has_power_gated && !has_type_gated {
+    let has_type_gated = gates.type_changer && gates.type_lord;
+    if !gates.power && !has_type_gated {
         return compute_permanent_pass(card, effects, None, None);
     }
     let pass1 = compute_permanent_pass(card, effects, None, None);
@@ -579,6 +610,13 @@ fn compute_permanent_pass(
     // an empty `collect()` is still a `Vec::from_iter` call with its
     // size-hint dance — 90,170 of them for 6.5 M Ir, which is candidate
     // (-45)'s largest row. Two loads answer it instead.
+    //
+    // **Skipping the build is refuted** (sixty-eighth pass): making the
+    // gather leave the list layer-sorted and walking a `filter` instead read
+    // `fixed` +0.173 % and `sos` +0.208 % (`cube` -0.205 %). The list is ~2
+    // effects long, so a `collect` whose result is 0-1 elements never
+    // allocates, and the `is_layer_sorted` guard that made the skip sound for
+    // a hand-built list cost more than the `Vec` it avoided. See PERF's Log.
     let mut sorted: Vec<&ContinuousEffect> = Vec::new();
     if !effects.is_empty() || !eot_grants.is_empty() {
         sorted = effects
