@@ -10,6 +10,83 @@ use crate::card::{CardId, CardInstance, CounterType};
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
 use crate::game::{GameEvent, GameState, TriggerPush};
 
+/// Which of the damage-prevention funnel's battlefield statics exist right
+/// now, as a bit per family, gathered in one walk.
+///
+/// Same device as [`cast_static`](crate::game::actions::cast_static) one
+/// stage later in the game loop: `apply_prevention_shields` asked the
+/// battlefield **seven** separate times per damage event — the global
+/// can't-be-prevented static, Questing Beast, Excruciator, Sphere of Purity,
+/// Shield of the Avatar, Energy Field and the two blocked/matching shields —
+/// plus a `battlefield_find` in front of each single-card leg, for statics a
+/// normal board does not have. A bit is a pure over-approximation: the block
+/// it gates still runs its own controller / amount / filter tests unchanged,
+/// so a set bit can only cost a walk and a clear bit can only skip work that
+/// was a no-op. Two `debug_assert!`s prove the skipped work *was* a no-op on
+/// every damage event the suite deals.
+pub(crate) mod prevent_static {
+    /// `DamageCantBePrevented` (Flameshadow Conjuring-style global).
+    pub const CANT_PREVENT: u32 = 1 << 0;
+    /// `CombatDamageCantBePrevented` / `ControllerCreaturesCombatDamageCantBePrevented`.
+    pub const COMBAT_UNPREVENTABLE: u32 = 1 << 1;
+    /// `SourceDamageCantBePrevented` (Excruciator).
+    pub const SOURCE_UNPREVENTABLE: u32 = 1 << 2;
+    /// `PreventTargetingDamageWhileYouControlAnotherCreature` (Bronze Horse).
+    pub const TARGETING_SHIELD: u32 = 1 << 3;
+    /// `PreventAllDamageToThisFromBlocked` (Wall of Vapor).
+    pub const FROM_BLOCKED: u32 = 1 << 4;
+    /// `PreventCombatDamageToThisFromMatching`.
+    pub const FROM_MATCHING: u32 = 1 << 5;
+    /// `ReduceDamageToControllerFromSource` (Sphere of Purity).
+    pub const REDUCE_FROM_SOURCE: u32 = 1 << 6;
+    /// `PreventSmallDamageToThis` (Callous Giant).
+    pub const SMALL_DAMAGE: u32 = 1 << 7;
+    /// `PreventDamageToAttachedPerPermanent` (Shield of the Avatar).
+    pub const ATTACHED_PER_PERM: u32 = 1 << 8;
+    /// `PreventDamageByRemovingCounters` (Polukranos, Unchained).
+    pub const REMOVE_COUNTERS: u32 = 1 << 9;
+    /// `PreventDamageToThisRedirect` (Phyrexian Vindicator).
+    pub const THIS_REDIRECT: u32 = 1 << 10;
+    /// `PreventAllDamageToControllerFromOthersSources` (Energy Field).
+    pub const FROM_OTHERS: u32 = 1 << 11;
+}
+
+/// See [`prevent_static`]. One battlefield walk; `u32::MAX` is the ungated
+/// reading every gated site is equivalent to.
+pub(crate) fn prevent_static_scan(state: &GameState) -> u32 {
+    use crate::effect::StaticEffect as SE;
+    let mut m = 0u32;
+    for card in state.battlefield.iter() {
+        for sa in &card.definition.static_abilities {
+            m |= match sa.effect {
+                SE::DamageCantBePrevented => prevent_static::CANT_PREVENT,
+                SE::CombatDamageCantBePrevented
+                | SE::ControllerCreaturesCombatDamageCantBePrevented => {
+                    prevent_static::COMBAT_UNPREVENTABLE
+                }
+                SE::SourceDamageCantBePrevented => prevent_static::SOURCE_UNPREVENTABLE,
+                SE::PreventTargetingDamageWhileYouControlAnotherCreature => {
+                    prevent_static::TARGETING_SHIELD
+                }
+                SE::PreventAllDamageToThisFromBlocked => prevent_static::FROM_BLOCKED,
+                SE::PreventCombatDamageToThisFromMatching { .. } => prevent_static::FROM_MATCHING,
+                SE::ReduceDamageToControllerFromSource { .. } => {
+                    prevent_static::REDUCE_FROM_SOURCE
+                }
+                SE::PreventSmallDamageToThis { .. } => prevent_static::SMALL_DAMAGE,
+                SE::PreventDamageToAttachedPerPermanent { .. } => {
+                    prevent_static::ATTACHED_PER_PERM
+                }
+                SE::PreventDamageByRemovingCounters { .. } => prevent_static::REMOVE_COUNTERS,
+                SE::PreventDamageToThisRedirect => prevent_static::THIS_REDIRECT,
+                SE::PreventAllDamageToControllerFromOthersSources => prevent_static::FROM_OTHERS,
+                _ => 0,
+            };
+        }
+    }
+    m
+}
+
 impl GameState {
     /// CR 614.9 — if damage aimed at `ent` (a player, or a permanent that
     /// player controls) is covered by a `RedirectDamageToSelf` static
@@ -128,8 +205,30 @@ impl GameState {
         source: Option<crate::card::CardId>,
         events: &mut Vec<GameEvent>,
     ) -> u32 {
+        let statics = prevent_static_scan(self);
+        self.apply_prevention_shields_with(ent, amount, source, events, statics)
+    }
+
+    /// [`apply_prevention_shields`](Self::apply_prevention_shields) with
+    /// [`prevent_static_scan`]'s mask: each battlefield-static leg of the
+    /// funnel is skipped when no permanent carries its family. See
+    /// [`prevent_static`].
+    pub(crate) fn apply_prevention_shields_with(
+        &mut self,
+        ent: EntityRef,
+        amount: u32,
+        source: Option<crate::card::CardId>,
+        events: &mut Vec<GameEvent>,
+        statics: u32,
+    ) -> u32 {
         use crate::game::types::PreventionTarget;
-        if self.damage_cant_be_prevented_this_turn || self.damage_cant_be_prevented_now() {
+        debug_assert!(
+            statics & prevent_static::CANT_PREVENT != 0 || !self.damage_cant_be_prevented_now(),
+            "prevent_static_scan missed a DamageCantBePrevented static",
+        );
+        if self.damage_cant_be_prevented_this_turn
+            || (statics & prevent_static::CANT_PREVENT != 0 && self.damage_cant_be_prevented_now())
+        {
             return amount;
         }
         // Dark Sphere — "prevent half that damage, rounded down" from the next
@@ -146,12 +245,19 @@ impl GameState {
                     to_card: None,
                 });
             }
-            return self.apply_prevention_shields(ent, amount - prevented, source, events);
+            return self.apply_prevention_shields_with(
+                ent,
+                amount - prevented,
+                source,
+                events,
+                statics,
+            );
         }
         // CR 615.12 (scoped) — Questing Beast: combat damage dealt by creatures
         // the controller controls can't be prevented. Bypass shields when the
         // damage source is a creature whose controller has the static.
-        if let Some(src_id) = source
+        if statics & prevent_static::COMBAT_UNPREVENTABLE != 0
+            && let Some(src_id) = source
             && let Some(src) = self.battlefield_find(src_id)
             && src.definition.is_creature()
         {
@@ -172,7 +278,8 @@ impl GameState {
         }
         // CR 615.12 (source-scoped) — Excruciator: damage dealt by this
         // permanent can't be prevented. Keyed on the damage source itself.
-        if let Some(src_id) = source
+        if statics & prevent_static::SOURCE_UNPREVENTABLE != 0
+            && let Some(src_id) = source
             && self.battlefield_find(src_id).is_some_and(|src| {
                 src.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::SourceDamageCantBePrevented)
@@ -188,7 +295,8 @@ impl GameState {
             && self.resolution_targets.contains(&tgt)
         {
             let shielded = self.targeting_damage_prevented_this_turn.contains(&tgt)
-                || self.battlefield_find(tgt).is_some_and(|c| {
+                || (statics & prevent_static::TARGETING_SHIELD != 0
+                    && self.battlefield_find(tgt).is_some_and(|c| {
                     c.definition.static_abilities.iter().any(|sa| {
                         matches!(
                             sa.effect,
@@ -198,7 +306,7 @@ impl GameState {
                         .battlefield
                         .iter()
                         .any(|o| o.id != tgt && o.controller == c.controller && o.definition.is_creature())
-                });
+                }));
             if shielded {
                 if amount > 0 {
                     events.push(GameEvent::DamagePrevented {
@@ -213,7 +321,15 @@ impl GameState {
         // CR 615 — "prevent all damage that would be dealt to this creature by
         // creatures it's blocking" (Wall of Vapor). Combat and noncombat alike,
         // so it sits in the funnel rather than the combat resolver.
-        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+        debug_assert!(
+            statics & (prevent_static::FROM_BLOCKED | prevent_static::FROM_MATCHING) != 0
+                || !matches!((ent, source), (EntityRef::Permanent(t), Some(s))
+                    if self.damage_from_blocked_prevented(t, s)
+                        || self.combat_damage_from_matching_prevented(t, s)),
+            "prevent_static_scan missed a blocked/matching damage shield",
+        );
+        if statics & (prevent_static::FROM_BLOCKED | prevent_static::FROM_MATCHING) != 0
+            && let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
             && (self.damage_from_blocked_prevented(tgt, src)
                 || self.combat_damage_from_matching_prevented(tgt, src))
         {
@@ -302,7 +418,9 @@ impl GameState {
         // CR 615.10 — "if a [filter] source would deal damage to you, prevent
         // N of that damage" (Sphere of Purity). Per-event, controller-scoped.
         let mut amount = amount;
-        if let (EntityRef::Player(p), Some(src)) = (ent, source) {
+        if statics & prevent_static::REDUCE_FROM_SOURCE != 0
+            && let (EntityRef::Player(p), Some(src)) = (ent, source)
+        {
             let shaved: u32 = self
                 .battlefield
                 .iter()
@@ -340,7 +458,8 @@ impl GameState {
         }
         // Callous Giant — "if a source would deal N or less damage to this,
         // prevent that damage": all-or-nothing on the whole event.
-        if let EntityRef::Permanent(cid) = ent
+        if statics & prevent_static::SMALL_DAMAGE != 0
+            && let EntityRef::Permanent(cid) = ent
             && amount > 0
             && self.battlefield_find(cid).is_some_and(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
@@ -393,7 +512,8 @@ impl GameState {
         }
         // Shield of the Avatar — an attached source prevents N of the damage,
         // where N counts the equipment controller's matching permanents.
-        if let EntityRef::Permanent(cid) = ent
+        if statics & prevent_static::ATTACHED_PER_PERM != 0
+            && let EntityRef::Permanent(cid) = ent
             && amount > 0
         {
             let shields: Vec<_> = self
@@ -472,7 +592,8 @@ impl GameState {
         // "If damage would be dealt to this while it has a [kind] counter,
         // prevent that damage and remove that many counters" (Polukranos,
         // Unchained). Prevents the whole event; removes min(amount, counters).
-        if let EntityRef::Permanent(cid) = ent
+        if statics & prevent_static::REMOVE_COUNTERS != 0
+            && let EntityRef::Permanent(cid) = ent
             && amount > 0
             && let Some((kind, single)) = self.battlefield_find(cid).and_then(|c| {
                 c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
@@ -497,7 +618,8 @@ impl GameState {
         // Phyrexian Vindicator — "If damage would be dealt to this creature,
         // prevent that damage. When damage is prevented this way, this
         // creature deals that much damage to any other target" (auto-picked).
-        if let EntityRef::Permanent(cid) = ent
+        if statics & prevent_static::THIS_REDIRECT != 0
+            && let EntityRef::Permanent(cid) = ent
             && amount > 0
             && self.battlefield_find(cid).is_some_and(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
@@ -529,7 +651,8 @@ impl GameState {
         // Energy Field — "prevent all damage that would be dealt to you by
         // sources you don't control." The source's controller is read from the
         // battlefield, falling back to the resolving spell's caster.
-        if let EntityRef::Player(p) = ent
+        if statics & prevent_static::FROM_OTHERS != 0
+            && let EntityRef::Player(p) = ent
             && amount > 0
             && self.battlefield.iter().any(|c| {
                 c.controller == p
