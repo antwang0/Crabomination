@@ -626,6 +626,78 @@ build.
 
 ## Baseline
 
+**Seventieth pass. Base `d9583dba` vs tip `7ada03d9`.** One commit: the
+third `*_scan` bitmask, on the attack declaration. Ir readings
+`profiling-fast --no-default-features`, callgrind, one thread, `--a gang --b
+gang --games 6 --threads 1 --seed 1`.
+
+```text
+                          base (d9583dba)   tip (7ada03d9)
+I refs, --decks fixed     1,153,518,398    1,148,918,904   -0.399 %
+I refs, --decks sos       1,486,428,329    1,482,238,365   -0.282 %
+I refs, --decks cube      2,642,266,152    2,631,861,683   -0.394 %
+```
+
+**All three pools move together, which is the tell that the cost was
+per-attacker rather than per-board.** `declare_attackers_banded` asks six
+whole-battlefield questions of `static_abilities` and three of them sit
+inside the per-attacker loop, so the bill is (attackers x battlefield x
+statics); `fixed`'s archetypes attack wide, `cube`'s boards are wide, and the
+two arrive at the same number from opposite directions. Function self on
+cube **26,953,356 -> 22,909,226 (-15.0 %)**, callee count 751,906 ->
+735,444.
+
+**The same device on the *block* declaration is REFUTED — built, measured,
+reverted, and it is the useful half of this pass.** `declare_blockers` has
+two static walks of the identical shape, both per blocker: Void Winnower's
+`OpponentsCantBlockWithEvenMv` and `block_tax_for`'s
+`BlockTaxToController`. Gating both, with the two extra bits and the two
+`debug_assert!`s, read:
+
+```text
+                   vs 7ada03d9
+--decks fixed      -0.003 %
+--decks sos        +0.006 %      <- the wrong way
+--decks cube       -0.044 %
+```
+
+**A declaration is not a loop over the board the way an attack is.** The
+attack side's win comes from three walks *inside* a loop that runs once per
+attacker; the block side's two walks run once per **declared blocker**, and
+the bench pools declare far fewer blockers than attackers — so the branch
+costs about what the walk did. **Do not re-take `declare_blockers` with this
+device.** The general rule it yields: a `*_scan` bit pays for the walks it
+removes from a loop, so count the loop's trips before writing the bit — four
+gated sites and 0.4 %, or two gated sites and nothing, on the same file with
+the same shapes.
+
+```text
+decisions        196,220                   byte-identical
+turns_per_game   27.53
+decisions_per_game 613.2
+stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
+determinism      ok (all pairs split)
+ladder printout  identical on fixed / sos / cube
+peak_rss_mib     18.1 (profiling-fast, --no-default-features, system allocator)
+suite            18,747 passed / 0 failed / 5 ignored, 14 test binaries, under
+                 `debug_assertions` — so all four scan asserts ran and none fired
+golden traces    7 passed, unchanged
+clippy           `-p crabomination --all-targets` clean
+rustc            1.95.0 (59807616e 2026-04-14)
+host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores, host_calib_ms 49
+```
+
+**Crash-freedom and determinism at the tip.** `overflow` profile
+(`release-fast` + `overflow-checks`), `--a gang --b gang --threads 3`, seeds
+11 and 12: `--decks all --games 200`, `--decks cube` and `--decks sealed` at
+`--games 120` = **11,600 games, 0 undecided, no panic, no arithmetic
+overflow**, every pair split. `cube` and `sealed` are the pools that can
+actually put a Crawlspace / Ensnaring Bridge / Propaganda on the board, which
+is what the four gates skip.
+
+**No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState` or
+`Vocab` change is in this pass.
+
 **Sixty-ninth pass. Base `795a296e` vs tip `8147836b`.** Two commits, the
 same class as the pass above it — **(-50)'s no-op write through a CoW
 handle** — applied to the *other* end of a permanent's life, the zone change.
@@ -2612,6 +2684,52 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Seventieth pass — count the loop's trips before you write the bit
+
+One commit, base `d9583dba`: `fixed` **-0.399 %**, `sos` **-0.282 %**, `cube`
+**-0.394 %**, plus one refutation on the sibling function.
+
+**The commit.** `declare_attackers_banded` asks six whole-battlefield
+questions of `static_abilities`, and **three of them are inside the
+per-attacker loop** — so a five-attacker declaration on a twenty-permanent
+board walked a hundred cards' static lists per question to find nothing.
+`combat`'s `attack_static_scan` is the third instance of a device already in
+the tree twice (`cast_cost_scan`, `prevent_static_scan`): one walk up front,
+a bit per family, each gated block keeping its own controller / filter /
+amount tests so a set bit costs a walk and a clear bit skips a no-op.
+Gated: `AttackerCapAgainstController`, `AttackPowerCapByControllerHand`,
+`CreaturesCantAttackController`, `AttackTaxToController` — the last two per
+attacker. `declare_attackers_banded` self on cube **26,953,356 ->
+22,909,226 (-15.0 %)**.
+
+**Two of the six are deliberately ungated, and the reason is the soundness
+argument the other two scans ship with.** That argument is "every gated
+block's own test is a `matches!` for one `StaticEffect` variant read off a
+battlefield card's `static_abilities`, which is exactly what the scan reads,
+so the mask is a strict superset". Magnetic Web's `AttackTogether` and
+Arboria's `PlayersCantBeAttackedUnlessTheyActedLastTurn` go through
+**`active_static`, which peels `WhileYourTurn` / `WhileCondition` /
+`WhileCountersAtLeast` wrappers** — so a raw-variant scan would miss
+`WhileYourTurn { inner: AttackTogether }` and a clear bit would skip work
+that was **not** a no-op. **Check whether a candidate site reads
+`sa.effect` or `active_static(&sa.effect, c)` before adding its bit**; the
+first is gateable by construction and the second is not. Widening the scan
+means a second hand-written copy of `active_static`'s wrapper list, i.e. the
+parallel-walker drift class this repo has closed twice.
+
+**The refutation, and it is the transferable half.** `declare_blockers` has
+two walks of the identical shape (Void Winnower's
+`OpponentsCantBlockWithEvenMv`, `block_tax_for`'s `BlockTaxToController`),
+both per blocker. Built with two more bits and two more asserts, it read
+`fixed` **-0.003 %**, `sos` **+0.006 %**, `cube` **-0.044 %** — reverted.
+**A `*_scan` bit is worth the walks it removes from a loop, and the two
+functions differ in the loop, not in the shape.** The attack side's three
+gated walks run once per attacker; the block side's two run once per
+*declared blocker*, and the bench pools declare far fewer blockers than
+attackers, so the branch costs about what the walk did. **Count the loop's
+trips before writing the bit** — same file, same device, same care, 0.399 %
+and 0.000 %.
 
 ### Sixty-ninth pass — gating a prefix of a write chain moves the deep copy
 

@@ -37,7 +37,25 @@ Ir/call row of the `make_mut` caller table that (-43) points at. **Push the
 code commit before you write the tracker prose**; that is the only signal the
 other session's next fetch can see.
 
-1. **Sixty-eighth pass: `fixed` -1.032 %, `sos` -0.888 %, `cube` -1.879 %** in
+1. **Seventieth pass: `fixed` -0.399 %, `sos` -0.282 %, `cube` -0.394 %**, one
+   commit — `attack_static_scan`, the third `*_scan` bitmask, on
+   `declare_attackers_banded`'s four gateable static walks (two of them per
+   attacker). **And one refutation that is worth more than the commit: the
+   same device on `declare_blockers` reads `sos` +0.006 % and was reverted.**
+   A `*_scan` bit is worth the walks it removes *from a loop*; the attack
+   side's run once per attacker, the block side's once per declared blocker,
+   and the bench pools declare far fewer blockers. **Count the loop's trips
+   before writing the bit.** Second rule from the same commit: **a site is
+   gateable iff it tests `sa.effect` directly** — `active_static` peels
+   `WhileYourTurn`-style wrappers, so a raw-variant mask would miss a wrapped
+   one; two of the six walks are ungated for that reason and re-gating them
+   means a second copy of `active_static`'s wrapper list.
+1b. **Where the device still has sites.** `cast_cost_scan` covers six of the
+   nine its own function asks (the sixty-eighth pass's item, still open), and
+   nothing has been scanned in `check_state_based_actions`, the layer pass or
+   `resolve_combat`. The test is mechanical: grep a hot function for
+   `static_abilities`, count the walks, count the loop trips around them.
+2. **Sixty-eighth pass: `fixed` -1.032 %, `sos` -0.888 %, `cube` -1.879 %** in
    Ir, four perf commits plus one bug fix, all "what does this cost when it
    has nothing to do" —
    and **2-3 % of wall on `cube`** over two independent ABBA sittings, 11 of
@@ -47,7 +65,7 @@ other session's next fetch can see.
    Ir-cheap. **Size a clone-removal pass on the clock.** New candidates
    **(-50)** (the no-op CoW write — the class *and* its ranking rule) and
    **(-49)** (`wants_ui`, 0.07 %, wants the decision-plumbing audit's eye).
-1a. **Sixty-ninth pass: `fixed` -0.130 %, `sos` -0.130 %, `cube` -0.296 %**,
+2a. **Sixty-ninth pass: `fixed` -0.130 %, `sos` -0.130 %, `cube` -0.296 %**,
    two commits, both **(-50)** at the *zone change* rather than the payment
    rollback, measured base `795a296e` -> tip `8147836b`. The rule they yield
    is in (-50): **a (-50) site is a chain, not a line.** Gating five of the
@@ -63,7 +81,7 @@ other session's next fetch can see.
    is a real loss: batch the next two or three (-50) sites and price the
    batch with `ab_wall.py` rather than paying the ~35-minute setup per
    commit.
-2. **Where the next one is, and it is not in a profile: read the three lines
+2b. **Where the next one is, and it is not in a profile: read the three lines
    under an existing `*_scan` call.** Four of this pass's five commits were a
    whole-board question asked beside a mask that could have answered it —
    `cast_cost_scan` still covers only six of the nine its own function asks.
@@ -87,7 +105,7 @@ other session's next fetch can see.
    `cg_ratio.py` still ranks pool outliers: `affected_includes_gated` is
    **6.63x cube/sos and 0.46 % of cube**, i.e. the sixty-fourth pass's layer
    gate does not fire on a grant-heavy board.
-4. **Refuted this run, do not re-take:** call-site guards on
+4. **Refuted, do not re-take:** call-site guards on
    `clear_summoning_sickness` (the method is an inherent `impl CardInstance`
    one — its own guard is *not* dead) and gating
    `auto_tap_for_cost_inner`'s `wants_ui` pair (it is **true** in every
@@ -96,7 +114,9 @@ other session's next fetch can see.
    `fixed` **+0.173 %**, `sos` **+0.208 %**, reverted, number in the code at
    the collect. **A gathered effect list is ~2 long, so that `collect` was
    never allocating** — check an allocation table's row *is* an allocation
-   before removing it. Older refutations are in PERF's standing rules.
+   before removing it. And **the `*_scan` bitmask on `declare_blockers`**
+   (`sos` +0.006 %, seventieth pass) — the shapes are identical to the attack
+   side's and the loop is not. Older refutations are in PERF's standing rules.
 5. **Bugs.** One found by reading the profile, not a report: the payment
    snapshot keyed on `owner` where auto-tap taps by `controller`, so a failed
    payment left a stolen mana source tapped (`86ec1bd8`). **The
@@ -106,7 +126,7 @@ other session's next fetch can see.
    code. ENGINE_BACKLOG P3 carries the picker/checker disagreement (27
    single-slot bodies); P2's deck-out-loss eagerness is the open correctness
    item with a written fix and ~24 tests to reseed.
-6. **Housekeeping.** TODO **~760**, PERF **8.4k**,
+6. **Housekeeping.** TODO **~780**, PERF **8.5k**,
    ENGINE_BACKLOG 3.8k, CARD_BACKLOG 4.1k, CLIENT_BACKLOG 428. Suite
    **19,007 passed / 0 failed / 5 ignored** — that figure is the workspace
    less the client; the two-crate gate this file prescribes builds 14
