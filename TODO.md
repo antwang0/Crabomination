@@ -234,7 +234,15 @@ Fetch before you start a candidate, not just before you push.
    never allocating** — check an allocation table's row *is* an allocation
    before removing it. And **the `*_scan` bitmask on `declare_blockers`**
    (`sos` +0.006 %, seventieth pass) — the shapes are identical to the attack
-   side's and the loop is not. And **the `*_scan` bitmask on `do_untap`** —
+   side's and the loop is not. And **the multi-colour half of Hall's condition**
+   in the bot's affordability filter (seventy-fourth pass): the singleton case
+   is the one that pays, the subsets **rejected nothing at all** over the bench
+   workload and cost `fixed` +0.105 %, `sos` +0.104 %, `cube` +0.107 %. The
+   reason is worth keeping: **the widenings that keep the budget sound switch
+   it off on exactly the boards that would violate a subset** — a Treasure, a
+   filter land or a land-type rewrite makes the board `bounded = false`, and
+   those are the boards with interesting mana. And **the `*_scan` bitmask on
+   `do_untap`** —
    the forty-third pass built it and it read **+0.0001 %**: each of the six
    walks short-circuits on `definition.static_abilities.is_empty()`, so six
    specialised `any`s beat one general pass. `do_untap` is 1.55 % of cube and

@@ -6069,6 +6069,20 @@ and the *engine-side* bail below — the remaining 2,716 rollbacks are the ones
 whose shortfall is generic rather than coloured, which no per-colour budget
 can see.
 
+**THE MULTI-COLOUR HALF OF HALL'S CONDITION IS REFUTED — built, measured,
+reverted (seventy-fourth pass).** The singleton case is the one that pays;
+the subsets are not. `{U}{B}` off one Dimir dual and three Mountains passes
+every singleton test and has no assignment, so the shape is real — and over
+the bench workload it **rejected nothing at all**: `restore_payment_state`
+2,606 either way, and the `[u32; 32]` per-mask fill plus the subset walk read
+**`fixed` +0.105 %, `sos` +0.104 %, `cube` +0.107 %**. Two reasons, and the
+second is the transferable one: the singleton test already catches the
+colour failures these pools produce, and **the widenings that keep the budget
+sound switch the whole thing off on exactly the boards that would violate a
+subset** — a cube board with a Treasure, a filter land or a land-type rewrite
+is `bounded = false`, and those are the boards with interesting mana. Do not
+re-take it.
+
 **Two ways in, and the second is the sound one.**
 *Reject earlier in the bot.* **TAKEN, and the doc comment's warning was
 right**: the first two versions of the tightened filter each rejected a cast
