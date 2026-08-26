@@ -131,9 +131,10 @@ than rewriting the entry.
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **820**, PERF 7.9k. Suite is **14 test
+10. **Housekeeping.** TODO **820**, PERF 7.7k. Suite is **14 test
    binaries / 18,744 tests**, not the "22" older blocks quote. Next folds:
-   PERF's 49th/50th Log entries (the 47th and 48th are folded), and
+   PERF's 49th/50th Log entries (the 47th and 48th are folded, the 48th at
+   the 64th pass: 166 lines to 56), and
    ENGINE_BACKLOG 5.2k / CARD_BACKLOG 4.2k both want a topical triage — the
    backlog file's own header asks for one and nobody has done it.
 11. **Bugs: the parallel target-walker class is CLOSED** (`core_rules::

@@ -2445,11 +2445,20 @@ column was a bare basename. See **How to measure** — the row this file has
 called "a dependency's `macros.rs:332`" since the fifty-eighth pass is
 `core/src/slice/iter/macros.rs`, the SBA sweep's own battlefield walks.
 
-Suite 19,160 passed / 0 failed / 5 skipped, golden traces unchanged; `--bench`
-decisions **196,220 byte-identical**, turns/game 27.53, 0 stalls, determinism
-ok; the ladder printout diffs identically on all three pools at `--games 20
---seed 11`; `clippy --workspace --all-targets` clean. No encoding, pool,
-`TrainRow`, `EncodedState` or `Vocab` change — **no net needs retraining.**
+**Final checks at the pass's tip** (which also carries the other session's
+`cd67b81d` and the two card commits under it): suite **19,168 passed / 0
+failed / 5 skipped**, golden traces unchanged; `--bench` decisions **196,220
+byte-identical**, turns/game 27.53, 0 stalls (cap 0 / stuck 0 / draw 0),
+determinism ok, `peak_rss_mib` 29.1 (`release-fast`, mimalloc), 162.7
+games/s at `host_calib_ms` 55; the ladder printout diffs identically on all
+three pools at `--games 20 --seed 11`; `clippy --workspace --all-targets`
+clean. Crash-freedom on the wider grid: `--decks all` 400 games x 3 seats x
+three seeds = **20,400 games, 20,396 decided, no panic**, every one of the
+10,198 pairs split, and the four undecided are seed 11's standing-rules draws
+that every pass since the forty-fourth has recorded; `--decks cube` and
+`--decks sealed` at `--games 120`, two seeds each, **4,800 games, 0
+undecided, every pair split**. No encoding, pool, `TrainRow`, `EncodedState`
+or `Vocab` change — **no net needs retraining.**
 
 ### Sixty-third pass — the pair loop paid for the half of the pair that did not vary
 
