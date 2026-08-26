@@ -14076,6 +14076,71 @@ impl GameState {
         if self.blocker_matching_restriction_bars(blocker, &blocker_cp.keywords, attacker_id) {
             return false;
         }
+        // The rest of `declare_blockers`' attacker-keyword gates, in one pass
+        // over the computed set. **They were missing here and the bot noticed
+        // it 82 times in a twenty-game `cube` run** — an evasion keyword the
+        // planner could not see produced a batch the engine rejected, and the
+        // engine rejects the *batch*, so one islandwalker against a defender
+        // holding an Island cost the bot every block it had planned. See
+        // ENGINE_BACKLOG P3.
+        let defender = blocker.controller;
+        for kw in atk_kws {
+            let barred = match kw {
+                // CR 702.15 — plain landwalk, unless a `LandwalkIgnored`
+                // static blanks that flavour (Great Wall and friends).
+                Keyword::Landwalk(lt) => {
+                    self.defender_controls_land_type(defender, lt) && !self.landwalk_ignored(*lt)
+                }
+                // CR 702.14c — filtered landwalk (artifact / nonbasic / snow).
+                Keyword::LandwalkFiltered(f) => self.battlefield.iter().any(|c| {
+                    c.controller == defender
+                        && self.evaluate_requirement_static_on(f.as_ref(), c, defender, None)
+                }),
+                // CR 702.14 — legendary landwalk (Livonya Silone).
+                Keyword::LegendaryLandwalk => self.battlefield.iter().any(|c| {
+                    c.controller == defender
+                        && c.definition.is_land()
+                        && c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
+                }),
+                // CR 702.43 — domain landwalk: one landwalk per basic land
+                // type among the attacker's controller's lands.
+                Keyword::DomainLandwalk => crate::card::LandType::BASICS.iter().any(|lt| {
+                    self.battlefield
+                        .iter()
+                        .any(|c| c.controller == attacker.controller && c.definition.has_land_type(*lt))
+                        && self.defender_controls_land_type(defender, lt)
+                }),
+                // CR 509.1b — Illvoi Infiltrator's spell count.
+                Keyword::CantBeBlockedIfControllerCastSpells(n) => {
+                    self.players[attacker.controller].spells_cast_this_turn >= *n
+                }
+                // CR 509.1b — Graxiplon.
+                Keyword::CantBeBlockedUnlessDefenderSharedType(n) => {
+                    self.greatest_shared_type_count(defender) < *n as usize
+                }
+                // CR 509.1b — Kraken of the Straits.
+                Keyword::CantBeBlockedByPowerLessThanCount(f) => {
+                    let n = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == attacker.controller
+                                && self.evaluate_requirement_static_on(
+                                    f.as_ref(),
+                                    c,
+                                    attacker.controller,
+                                    None,
+                                )
+                        })
+                        .count() as i32;
+                    blocker_cp.power < n
+                }
+                _ => false,
+            };
+            if barred {
+                return false;
+            }
+        }
         can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power)
     }
 

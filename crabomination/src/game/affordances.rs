@@ -72,19 +72,6 @@ impl GameState {
         probe.pending_decision.as_ref().is_some_and(|pd| pd.resume.is_action_replay())
     }
 
-    /// A clone of `self` for use as a reusable dry-run *template* by the
-    /// from-hand affordance probes ([`would_accept_on`](Self::would_accept_on)).
-    ///
-    /// It used to empty every player's library first, back when a zone was a
-    /// plain `Vec` and the libraries were most of the clone's cost. They are
-    /// [`CowBox`](crate::cow::CowBox)es now: cloning one is a reference bump
-    /// whatever its length, so the strip bought nothing and *cost* a
-    /// `PlayerData` unshare per player per template (1.37 % of the profile).
-    /// A probe that never reaches resolution never touches a library either,
-    /// so the template now carries the real ones.
-    ///
-    /// `pub(crate)` so the bot's per-tick candidate sweep (`server::bot`)
-    /// shares the same one-template-many-light-probes pattern.
     /// Whether `seat` could pay `{n}` right now — floating mana plus what
     /// auto-tapping their untapped sources would add. Probed on a clone so
     /// nothing is spent; drives the "can't attack/block unless you pay"
@@ -101,15 +88,28 @@ impl GameState {
             || self.affordance_probe_template().try_pay_with_auto_tap(seat, cost).is_ok()
     }
 
+    /// A clone of `self` for use as a reusable dry-run *template* by the
+    /// from-hand affordance probes ([`would_accept_on`](Self::would_accept_on)).
+    ///
+    /// It used to empty every player's library first, back when a zone was a
+    /// plain `Vec` and the libraries were most of the clone's cost. They are
+    /// [`CowBox`](crate::cow::CowBox)es now: cloning one is a reference bump
+    /// whatever its length, so the strip bought nothing and *cost* a
+    /// `PlayerData` unshare per player per template (1.37 % of the profile).
+    /// A probe that never reaches resolution never touches a library either,
+    /// so the template now carries the real ones.
+    ///
+    /// `pub(crate)` so the bot's per-tick candidate sweep (`server::bot`)
+    /// shares the same one-template-many-light-probes pattern.
     pub(crate) fn affordance_probe_template(&self) -> GameState {
         self.clone()
     }
 
-    /// Dry-run `action` against a prebuilt [`affordance_probe_template`]
-    /// instead of cloning the whole `GameState`. Equivalent to
-    /// [`would_accept`](Self::would_accept) for cast / activate / play-land
-    /// actions (see the template doc for why library contents are
-    /// irrelevant to their legality), but cheap to repeat across a hand.
+    /// Dry-run `action` against a prebuilt [`affordance_probe_template`].
+    /// Equivalent to [`would_accept`](Self::would_accept) for cast / activate
+    /// / play-land actions, and it is the form a sweep uses: the template is
+    /// built once and every probe clones *it* rather than re-deriving one per
+    /// candidate.
     ///
     /// [`affordance_probe_template`]: Self::affordance_probe_template
     pub(crate) fn would_accept_on(template: &GameState, action: GameAction) -> bool {

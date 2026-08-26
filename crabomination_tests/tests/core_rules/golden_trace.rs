@@ -300,7 +300,14 @@ const DIGESTS: &[(u64, Option<usize>, u32, usize, u64)] = &[
     // is sound by measurement (zero cases where `could_pay_cost` accepts a
     // cost the budget rejects, over 21 pool/seed configurations).
     (2, Some(1), 16, 384, 0x3613_7e1d_7496_f4dc),
-    (3, Some(0), 19, 439, 0x082b_ac63_0f2d_3f42),
+    // Re-blessed 2026-08-26 for the combat-planner legality fixes: the block
+    // planner used to assemble batches `declare_blockers` rejects (a landwalk
+    // it could not see, a gang pass that skipped the pair gate, menace read
+    // off the printed keyword set instead of the computed one), and the
+    // engine rejects the *batch* — so the defender blocked with nothing. It
+    // blocks now, and seed 3 runs two turns longer (19 -> 21, 439 -> 484
+    // actions) for the same winner. Seeds 1, 2, 4 and 5 are untouched.
+    (3, Some(0), 21, 484, 0x7004_a1c5_7f75_f8c7),
     // Re-blessed 2026-08-22 for the slot-walk targeting fix: the filtered
     // auto-target path used to take the first legal permanent in
     // battlefield order, so Swords to Plowshares ("target creature", an

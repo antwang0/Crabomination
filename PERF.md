@@ -873,8 +873,42 @@ fewer rows, where the pinned pair reads -3.156 %); and `--games N` is not a
 fixed amount of work. Pin it for any measurement, and see TODO for the open
 question of whether the actor path *should* be seeded.
 
+**Seventy-sixth pass, third commit — the combat planners stop proposing
+declarations the engine rejects.** Base is the pass's second tip; the base
+binary predates two `encode.rs` commits that are 0-call on `bot_ladder`.
+
+```text
+                          base            tip
+I refs, --decks fixed     1,131,405,094   1,132,104,709   +0.062 %   17,064 decisions, identical
+I refs, --decks sos       1,373,764,548   1,374,976,391   +0.088 %   16,368 decisions, identical
+I refs, --decks cube      2,650,931,261   2,756,233,241   +3.97 %    25,532 -> 25,608
+```
+
+**`cube` +3.97 % is the game being played, not work added, and the diff is
+unambiguous about it.** The direct cost of the change is one row —
+`blocker_can_block_attacker_pair` **3,642,438 -> 5,762,458, +0.08 % of the
+program**, the new per-pair evasion loop. Everything else that moves is
+downstream and diffuse: `gather_continuous_effects_inner` +5.30 M,
+`dispatch_triggers_for_events` +4.76 M, the allocator +10.4 M,
+`compute_permanent_pass` +3.13 M. **Blocks that used to be rejected as a batch
+now happen**, so creatures trade, triggers fire, and games run longer — the
+golden trace for seed 3 goes 19 turns to 21. `fixed` and `sos` play
+byte-identical games and their columns are the 0.06-0.09 % the loop costs.
+
+**This is a throughput regression on the pool the ML phase actually runs, and
+it is the right trade**: the defect it fixes is the bot declaring no blocks at
+all on any board with an evasion keyword it could not see, which biases both
+play strength and the training data. It also **re-opens (-54)**: the checkpoint
+whose rollback this cost was paying for now fires zero times on every workload
+measured.
+
+**And the committed `--bench` invariants move with it** — `decisions`
+195,886 -> **195,616**, `turns_per_game` 27.48 -> **27.44**, stalls still 0,
+determinism ok. That is the intentional, explained change the baseline-refresh
+rule asks for; anything that moves them again without one is a regression.
+
 **Seventy-sixth pass. Base `5e4ec3bd` (code-identical to the seventy-fifth
-tip) vs tip.** One commit: the bot's affordability pre-filter stops walking
+tip) vs tip.** First commit: the bot's affordability pre-filter stops walking
 the whole board three times per hand card. Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --threads 1 --seed 1`, **`CRAB_NO_JITTER=1` both columns**.
@@ -3406,11 +3440,11 @@ the table above is safe to compress:
 
 ### Seventy-sixth pass — a refutation dates, and the thing that dates it is its own arithmetic
 
-Two commits, base `5e4ec3bd`. The perf one reads **`fixed` -0.613 %, `sos`
+Three commits, base `5e4ec3bd`. The perf one reads **`fixed` -0.613 %, `sos`
 -0.425 %, `cube` -0.577 %** with decision counts byte-identical on all three
-pools; the second is a correctness fix and its columns are with the rules
-commit below. The numbers and the change are in **Baseline**; what belongs
-here is the three rules.
+pools; the other two are correctness fixes and one of them costs `cube`
+**+3.97 %** because it makes blocks happen that used to be thrown away. The
+numbers are in **Baseline**; what belongs here is the four rules.
 
 **1. A "do not re-open" carries the workload it was measured on, and this
 branch's workload has moved 2.5x under several of them.** `can_afford_in_state`
@@ -3463,6 +3497,26 @@ that asks the *consumer* for its answer — `enumerate_legal_targets` on two
 named cards — could see it. **When a fix makes two hand-written walkers agree,
 pin the consumer as well as the agreement**; the agreement is the thing you
 just arranged, and it cannot fail.
+
+**4. The instrument that finds a bot/engine disagreement already existed and
+nothing was reading it.** The bot's declarations are the only actions in the
+simulator that go through `perform_action`'s checkpoint, so a declaration the
+engine rejects leaves exactly one trace: a rollback. `CRAB_SIM_REJECTS`
+(landed the same hour by the concurrent session as (-55)) reads **82 of 9,664
+on `cube` seed 7, 434 of 13,034 on seed 11, 64 of 33,608 on `all`** — every
+one a `DeclareBlockers` or `DeclareAttackers` the planner assembled illegally,
+and **the engine rejects the batch**, so each cost the defender every block it
+had planned. Five separate disagreements; ENGINE_BACKLOG P3 has the table.
+After the fixes: **0 / 372 / 0**, i.e. every block rejection on seed 7 and on
+`all` is gone, seed 11's blocks go 110 -> 48, and its 324 *attack* rejections
+are a different cause that P3 now names.
+
+**The rule: when two hand-written walkers must agree, find the place the
+disagreement is already recorded and count it.** Nothing else in this repo saw
+these — the suite was green, the traces were stable, the ladder was flat, and
+the profile showed the rollbacks as a perf line item ((-54)) rather than as a
+bug. A shape that reads as "the cost of a defensive mechanism" is worth asking
+what the mechanism is actually defending against.
 
 **And this was a duplicated commit.** Two sessions wrote the deferral within
 the same hour, from the same census, three passes after NEXT started warning
@@ -6680,7 +6734,30 @@ decks a game). "Which pool a change moves" at the top of this file is the
 device; the short version is that `--decks fixed` carries no
 `GrantTriggeredAbility` static and builds its decks once.
 
-**(-55) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
+**(-55) PARTLY PAID at the seventy-sixth pass — five picker/engine
+disagreements fixed, and every *block* rejection on three of the four
+workloads is gone.** Same instrument, `--games 20 --threads 1`:
+
+```text
+                     before                             after
+cube seed 7    82/9,664  (0.85 %) atk 18  blk 64    0/9,862    (0.00 %)
+cube seed 11  434/13,034 (3.33 %) atk 324 blk 110   372/13,428 (2.77 %) atk 324 blk 48
+all  seed 3    64/33,608 (0.19 %) atk 0   blk 64    0/33,714   (0.00 %)
+sos  seed 5     0/6,892                             0/6,892
+```
+
+The five are in ENGINE_BACKLOG P3 with the regression tests; four of them are
+one shape — **a legality question answered off the printed or instance view
+where the engine answers it off the computed one**. What is left is seed 11's
+324 attack rejections, and the `Angel` row below is still the lead: **build
+the per-site tag on `declare_attackers_banded`'s thirty `CannotAttack` returns
+first**, because nothing in the card's own keywords explains it.
+
+**The fix costs `cube` +3.97 % of Ir** and the Baseline block says why: blocks
+that used to be rejected as a batch now happen, so the games are longer. The
+direct cost is `blocker_can_block_attacker_pair` +0.08 %.
+
+**(-55, as found) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
 OUT — 470 of 91,438, AND ON ONE `cube` BOARD 6.8 % OF THE ATTACKS.** Measured
 with `CRAB_SIM_REJECTS=1` (see "How to measure"), `--games 12 --threads 3`,
 four pools x three seeds:
@@ -6744,14 +6821,6 @@ sim's `g` is a throwaway clone; the *only* reason the checkpoint is not
 removable is `sim_step`'s documented fallback, which rolls a rejected
 declaration back and retries it as a priority pass — and `declare_blockers` /
 `declare_attackers_banded` hold 82 of the engine's `Err` sites between them.
-
-**Nobody has counted how often those 4,322 actually fail.** Count it first
-(the three action kinds are `DeclareAttackers`, `DeclareBlockers` and
-`sim_spell_action`'s `Picked::Plain`); if the failure rate is zero on every
-pool the shape is `scripts/fallibility_closure.py` applied to three action
-kinds instead of `PassPriority`, which is how the forty-fourth pass proved the
-round-closing pass and took **-2.842 %**. If it is not zero, the fallback is
-load-bearing and this entry is closed — say so with the number.
 
 **(-53) THE COST-STATIC WALKS THAT SURVIVE THE SEVENTY-SIXTH PASS —
 13,696,074 Ir / 0.52 % OF `cube`, AND THE FIX IS AN ENUMERATION.**

@@ -2923,7 +2923,7 @@ impl GameState {
             .or(Some(None))
     }
 
-    fn defender_controls_land_type(
+    pub(crate) fn defender_controls_land_type(
         &self,
         defender: usize,
         lt: &crate::card::LandType,

@@ -195,6 +195,82 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   construction wherever the primary walker is silent (that fix is what made
   creature Haunt work at all; see `core_rules::unbound_target_slots`).
 
+- 🟡 **The combat planners and the combat legality checks are two readings of
+  the same rules, and five of them disagreed.** Found at the seventy-sixth
+  pass with `CRAB_SIM_REJECTS` (PERF's (-55)): the bot's declarations are the
+  only actions in the simulator that go through `perform_action`'s checkpoint,
+  so a rejected declaration leaves exactly one trace — a rollback — and until
+  that instrument landed nothing read it.
+
+```text
+  --games 20 --threads 1      before                            after
+  cube seed 7      82/9,664  (0.85 %) atk 18  blk 64    0/9,862    (0.00 %)
+  cube seed 11    434/13,034 (3.33 %) atk 324 blk 110   372/13,428 (2.77 %) atk 324 blk 48
+  all  seed 3      64/33,608 (0.19 %) atk 0   blk 64    0/33,714   (0.00 %)
+  sos  seed 5       0/6,892                             0/6,892
+```
+
+  **Every block rejection on `cube` seed 7 and `all` seed 3 is gone; seed 11's
+  blocks go 110 -> 48 and its 324 attack rejections are untouched**, because
+  they have a different cause — the open list at the end of this entry.
+
+  **The engine rejects the *batch*, not the pair**, which is what makes this
+  expensive: one illegal gang member cost the defender every block it had
+  planned, and in the simulator the candidate was then scored against a board
+  where nothing blocked at all.
+
+  | # | site | what it read | what `declare_*` reads |
+  |---|---|---|---|
+  | 1 | `blocker_can_block_attacker_pair` | no landwalk gate at all | CR 702.15 / 702.14c / 702.14 / 702.43, plus `CantBeBlockedIfControllerCastSpells`, `…UnlessDefenderSharedType`, `…ByPowerLessThanCount` |
+  | 2 | `pick_blocks_inner`'s gang pass | `bot_can_block` + flying/reach only | the whole pair gate |
+  | 3 | `min_blockers_required` | printed keywords + `granted_keywords_eot` | the **computed** set, so a granted Menace under-filled the block |
+  | 4 | `pick_attacks`' `raw_attackers` | printed `Haste` | the computed set, so a granted-haste must-attacker was left home (CR 508.1d) |
+  | 5 | `pick_attacks` | `CantAttackAlone` only | also `AttacksAlone` (CR 508.0), which bars a *multi*-attacker batch |
+
+  **The shape all five share: a legality question answered off the printed or
+  instance view when the engine answers it off the computed one, or a
+  candidate pass that skips the shared gate.** Four regression tests in
+  `server::bot::tests` pin them, and each ends by handing the plan to
+  `declare_attackers` / `declare_blockers` — the engine is the oracle, so the
+  test cannot drift away from the rule it is checking. Three of the four fail
+  without their fix; the landwalk one needed the defender put under life
+  pressure before the planner would try the block at all, which is the note
+  worth keeping: **a planner test that does not make the planner *want* the
+  illegal move proves nothing.**
+
+  **What `CRAB_SIM_REJECTS=names` still names on `cube` seed 11**, and these
+  are the next leads rather than anything this pass fixed:
+
+  | count | error | card | the tell |
+  |---|---|---|---|
+  | 154 | `CannotAttack` | `Angel`, `computed_kw=[Flying]` | no restriction keyword at all, so the batch is illegal for a *batch* reason attributed to one card — goading, or an external "attacks each combat if able" the planner never sees. `declare_attackers_banded`'s thirty `CannotAttack` returns need a per-site tag before this can be bisected; **build that first** |
+  | 56 | `SummoningSickness` | `Kestia, the Cultivator`, `sick=Some(false)` | a contradiction on its face — the engine says summoning-sick about a card whose flag is clear. Bestow, or a controller change this turn |
+  | 42 | `MustBeBlockedIfAble` | `Crested Craghorn` | CR 509.1c: the planner's must-be-blocked top-up found no legal blocker where the engine says one exists. `bot_can_block` requires *untapped*; `declare_blockers` allows a tapped blocker under `tapped_creatures_can_block` |
+  | 24 | `CannotAttack` | `Nimble Mongoose`, `computed_kw=[Shroud]` | the `Angel` row's shape again |
+  | 6 | `CannotBlock` | `Arclight Phoenix` | the residue of the pair gate below |
+
+  **Still open, and this is why the entry is 🟡.** The two readings are still
+  two hand-written lists. `declare_blockers` has ~20 per-pair gates and
+  `blocker_can_block_attacker_pair` now has ~12 of them; the rest are
+  blocker-side gates reached through `blocker_can_block_anything`, and nothing
+  proves the union is complete. **The class fix is to extract
+  `declare_blockers`' per-pair body into one function both call**, which is a
+  ~310-line mechanical move plus a cost problem: the bot asks the gate 25,694
+  times a `cube` run against the engine's handful, and the engine's body is
+  ~20 keyword scans. It wants a per-card "carries any block-restriction
+  keyword" bit (the `AttackerFacts` / blocker-facts structs already exist to
+  hold one) so the shared body runs only for the pairs that can fail.
+  **Until then `CRAB_SIM_REJECTS` is the guard**: `CRAB_SIM_REJECTS=1
+  bot_ladder --a gang --b gang --games 20 --threads 1 --decks all --seed 3`
+  reads 0; `=names` names anything that is not.
+
+  Two known non-bugs the counter also surfaces, both in
+  `attack_candidates_for_mcts` and both deliberate: the "all home" candidate
+  and any "greedy minus one" that drops a must-attack creature are illegal by
+  CR 508.1d, so `simulate_attack_outcome` scores them not at all (its doc says
+  so). They cost a sim start each — 62 in a twenty-game `cube` run — and the
+  candidate generator could skip them instead.
+
 - 🟡 **Parallel hand-maintained walkers** — guard test
   `cr_601_2c_every_catalog_target_filter_is_surfaced` now serde-walks every
   catalog effect for `TargetFiltered` slots and asserts

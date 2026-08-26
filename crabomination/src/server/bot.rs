@@ -7265,16 +7265,19 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                 // though no defender" grant (High Alert) applies.
                 && c.definition.is_creature()
                 && !c.tapped
-                && (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
-                && !c.has_keyword(&Keyword::CantAttack)
                 // Honor layer-granted Defender / can't-attack
-                // (Pacifism, crewed-Vehicle states) — can_attack
-                // only sees printed keywords.
+                // (Pacifism, crewed-Vehicle states) — and layer-granted
+                // *Haste*, which the printed read below used to miss:
+                // `declare_attackers` tests summoning sickness against the
+                // computed set, so a hasted-by-grant creature that "attacks
+                // each combat if able" was left home and the engine rejected
+                // the whole declaration (CR 508.1d).
                 && state
                     .computed_permanent(c.id)
                     .map(|cp| {
-                        (!cp.keywords.has_kw(&Keyword::Defender)
-                            || state.ignores_defender_for_attack(c))
+                        (!c.summoning_sick || cp.keywords.has_kw(&Keyword::Haste))
+                            && (!cp.keywords.has_kw(&Keyword::Defender)
+                                || state.ignores_defender_for_attack(c))
                             && !cp.keywords.has_kw(&Keyword::CantAttack)
                             // CR 508.1a — "can attack only if
                             // defending player controls [X]"
@@ -7334,7 +7337,13 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                                 _ => true,
                             })
                     })
-                    .unwrap_or(true)
+                    .unwrap_or_else(|| {
+                        // No computed view (not a battlefield permanent by
+                        // the time the pass ran): fall back to the printed
+                        // reads this filter used to make.
+                        (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
+                            && !c.has_keyword(&Keyword::CantAttack)
+                    })
         })
         .collect();
     // Use the damage-aware value so toughness-attackers (Doran,
@@ -7548,6 +7557,19 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
             .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantAttackAlone))
     {
         attackers.clear();
+    }
+    // CR 508.0, the other half — `AttacksAlone` (Aisling Leprechaun's
+    // cousins): a creature that *attacks alone* makes any batch with a
+    // second attacker illegal, and the engine rejects the batch rather than
+    // the pair. Drop those creatures from a multi-attacker declaration; a
+    // lone one is legal and stays. Keeping the loner instead would trade
+    // every other attacker for one body.
+    if attackers.len() > 1 {
+        attackers.retain(|id| {
+            !state
+                .computed_permanent(*id)
+                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::AttacksAlone))
+        });
     }
     // Find opponent planeswalkers in loyalty-ascending
     // order. The bot will redirect attacks at PWs whose
@@ -8663,10 +8685,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         .iter()
         .filter(|atk| state.defender_for(atk.target) == Some(seat))
         .filter_map(|atk| {
+            let cp = state.computed_permanent(atk.attacker);
             state.battlefield.iter().find(|c| c.id == atk.attacker).map(|a| AttackerFacts {
                 id: atk.attacker,
                 card: a,
-                cp: state.computed_permanent(atk.attacker),
+                cp: cp.clone(),
                 target: atk.target,
                 power: attacker_damage_value(state, atk.attacker),
                 toughness: a.toughness(),
@@ -8688,7 +8711,15 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     })
                     .max()
                     .unwrap_or(0),
-                min_blockers: min_blockers_required(a),
+                // CR 509.1b — the *computed* set, not the printed one: the
+                // engine's menace check reads it, and a granted Menace (a
+                // layer-6 `AddKeyword`, a keyword counter, CR 701.60 Suspect)
+                // is invisible to the instance walk. An under-filled
+                // multi-block is rejected as a whole batch.
+                min_blockers: match &cp {
+                    Some(c) => min_blockers_required_kws(&c.keywords),
+                    None => min_blockers_required(a),
+                },
                 poison: {
                     let mut p = 0u32;
                     if a.has_keyword(&Keyword::Infect) {
@@ -8958,6 +8989,15 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 if a_flying && !b_fly && !b_reach {
                     continue;
                 }
+                // The same legality gate the greedy pass above uses. Without
+                // it this pass assembled pairs the engine rejects — and it
+                // rejects the whole *batch*, so one illegal gang member cost
+                // every block the planner had made. `bot_can_block` is the
+                // printed/instance test only; the computed set is where a
+                // granted `CantBlock` and every evasion keyword live.
+                if !state.blocker_can_block_attacker(*b_id, a_id) {
+                    continue;
+                }
                 gang.push(*b_id);
                 dmg += *b_pow;
                 let eff_tough = a_tough + rampage * (gang.len() as i32 - 1);
@@ -9132,14 +9172,19 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
 /// such requirement, else 1. Reads printed + EOT-granted keywords (the same
 /// set [`CardInstance::has_keyword`] consults).
 fn min_blockers_required(attacker: &crate::card::CardInstance) -> usize {
+    let mut min = min_blockers_required_kws(&attacker.definition.keywords);
+    min = min.max(min_blockers_required_kws(&attacker.granted_keywords_eot));
+    min
+}
+
+/// [`min_blockers_required`] over an already-resolved keyword set — the form
+/// a caller holding the *computed* view uses. The engine's menace / "except
+/// by N" check reads the computed set, so a planner that reads the printed
+/// one under-fills a multi-block and the engine rejects the whole batch.
+fn min_blockers_required_kws(kws: &[crate::card::Keyword]) -> usize {
     use crate::card::Keyword;
     let mut min = 1usize;
-    for kw in attacker
-        .definition
-        .keywords
-        .iter()
-        .chain(attacker.granted_keywords_eot.iter())
-    {
+    for kw in kws {
         match kw {
             Keyword::Menace => min = min.max(2),
             Keyword::CantBeBlockedExceptByN(n) => min = min.max(*n as usize),
@@ -13161,6 +13206,168 @@ mod tests {
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }
+    }
+
+    /// The combat planners and `declare_attackers` / `declare_blockers` are
+    /// two hand-written readings of the same rules, and these four cases are
+    /// where they disagreed. Each one ends by handing the plan to the engine:
+    /// the engine is the oracle, and it rejects the whole **batch**, so one
+    /// illegal pair used to cost the bot every block or attack it had made.
+    ///
+    /// Found by counting `sim_step`'s checkpointed rollbacks, which is the
+    /// only place a rejected declaration leaves a trace — 82 in a twenty-game
+    /// `cube` run, 0 after these fixes. See ENGINE_BACKLOG P3.
+    #[test]
+    fn bot_block_plan_honours_landwalk() {
+        use crate::card::LandType;
+        let mut g = two_player_game();
+        // Defender controls a Mountain, so the mountainwalker is unblockable.
+        g.add_card_to_battlefield(1, catalog::mountain());
+        let walker = g.add_card_to_battlefield(0, catalog::sokenzan_bruiser());
+        g.clear_sickness(walker);
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        // Low enough that the planner wants to chump — without the pressure it
+        // declines the block for value reasons and the test cannot see the
+        // legality gate at all.
+        g.players[1].life = 2;
+        assert!(
+            g.defender_controls_land_type(1, &LandType::Mountain),
+            "the defender has the land the walk names",
+        );
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: walker,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.is_empty(), "nothing may block a mountainwalker here: {blocks:?}");
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 509.1b — menace read off the *computed* set. A granted Menace is
+    /// invisible to the printed keyword list, so the planner assigned one
+    /// blocker and the engine rejected the batch with
+    /// `MenaceRequiresTwoBlockers`.
+    #[test]
+    fn bot_block_plan_honours_granted_menace() {
+        use crate::card::{CardType, StaticAbility};
+        use crate::effect::{Selector, StaticEffect};
+        let anthem = CardDefinition {
+            name: "Menace Anthem",
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility {
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        crate::card::SelectionRequirement::Creature
+                            .and(crate::card::SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: crate::card::Keyword::Menace,
+                },
+                description: "Creatures you control have menace.",
+            }],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, anthem);
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        // Two possible blockers: the plan must use both or neither.
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.len() != 1, "menace takes 0 or 2+ blockers, got {blocks:?}");
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 508.1d — "attacks each combat if able" is judged against the
+    /// *computed* set on both sides. A must-attack creature that is
+    /// summoning-sick but hasted by a grant is able, and leaving it home made
+    /// the whole declaration illegal.
+    #[test]
+    fn bot_attack_plan_includes_a_granted_haste_must_attacker() {
+        use crate::card::{CardType, Keyword, StaticAbility};
+        use crate::effect::{Selector, StaticEffect};
+        let haste_anthem = CardDefinition {
+            name: "Haste Anthem",
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility {
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        crate::card::SelectionRequirement::Creature
+                            .and(crate::card::SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                },
+                description: "Creatures you control have haste.",
+            }],
+            ..Default::default()
+        };
+        let forced = CardDefinition {
+            name: "Forced Charger",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::MustAttack],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, haste_anthem);
+        let must = g.add_card_to_battlefield(0, forced);
+        // Deliberately left summoning-sick: the grant is what makes it able.
+        assert!(g.battlefield_find(must).is_some_and(|c| c.summoning_sick));
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let attacks = pick_attacks(&g, 0);
+        assert!(
+            attacks.iter().any(|a| a.attacker == must),
+            "a hasted must-attacker has to be in the batch: {attacks:?}",
+        );
+        let mut g2 = g.clone();
+        g2.declare_attackers(attacks).expect("the plan is legal");
+    }
+
+    /// CR 508.0 — `AttacksAlone`. A creature that attacks alone makes any
+    /// batch with a second attacker illegal, so the planner drops it rather
+    /// than losing the combat.
+    #[test]
+    fn bot_attack_plan_honours_attacks_alone() {
+        let mut g = two_player_game();
+        let loner = g.add_card_to_battlefield(0, catalog::master_of_cruelties());
+        g.clear_sickness(loner);
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let attacks = pick_attacks(&g, 0);
+        assert!(attacks.len() > 1, "the two bears want to swing: {attacks:?}");
+        assert!(
+            !attacks.iter().any(|a| a.attacker == loner),
+            "an attacks-alone creature cannot ride along: {attacks:?}",
+        );
+        let mut g2 = g.clone();
+        g2.declare_attackers(attacks).expect("the plan is legal");
     }
 
     /// CR 509.1b — the block planner honours the same cap.
