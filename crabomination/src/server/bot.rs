@@ -7964,14 +7964,11 @@ pub mod sim_rejects {
     pub static ERRS: [AtomicU64; 3] =
         [AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0)];
 
-    /// 0 = off, 1 = count, 2 = count and name each rejection.
+    /// 0 = off, 1 = count, 2 = count and name each rejection. One reader,
+    /// shared with the engine-side site tags — see
+    /// [`crate::game::reject_trace_level`].
     pub fn level() -> u8 {
-        static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
-        *LEVEL.get_or_init(|| match std::env::var("CRAB_SIM_REJECTS") {
-            Ok(v) if v == "names" => 2,
-            Ok(v) if !v.is_empty() && v != "0" => 1,
-            _ => 0,
-        })
+        crate::game::reject_trace_level()
     }
 
     /// `(proposals, rejections)` per kind, for a caller that wants to print.

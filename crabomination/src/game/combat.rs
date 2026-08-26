@@ -40,6 +40,23 @@ pub(crate) mod attack_static {
 
 /// See [`attack_static`]. One battlefield walk; `u32::MAX` is the ungated
 /// reading every gated site `debug_assert!`s against.
+/// Tag which of `declare_attackers_banded`'s rejections fired, under
+/// `CRAB_SIM_REJECTS=names`.
+///
+/// The function gates an attacker on thirteen prohibitions and returns the
+/// same three error kinds from twenty-eight places, so the census in PERF
+/// (-55) could name the *card* and never the *rule*. `line!()` at the return
+/// site is the cheapest unique tag there is and cannot drift from the code it
+/// names. Off by default: one atomic load and a branch, and the value is
+/// returned unchanged either way.
+#[inline]
+fn attack_reject(line: u32, e: GameError) -> GameError {
+    if crate::game::reject_trace_level() >= 2 {
+        eprintln!("attack_reject combat.rs:{line} {e:?}");
+    }
+    e
+}
+
 pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
     use crate::effect::StaticEffect as SE;
     let mut m = 0u32;
@@ -319,7 +336,7 @@ impl GameState {
         }
         // Peace Talks — CR 508.1a, nobody attacks for its two turns.
         if self.truce_active() && !attacks.is_empty() {
-            return Err(GameError::CannotAttack(attacks[0].attacker));
+            return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
         }
         let p = self.active_player_idx;
         // One battlefield walk for the four static prohibitions this
@@ -494,7 +511,7 @@ impl GameState {
                     })
                     .collect::<Result<_, _>>()?;
                 if targets.iter().any(|t| *t != targets[0]) {
-                    return Err(GameError::CannotAttack(first));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(first)));
                 }
                 let unbanded = members.iter().filter(|m| !has_banding(**m)).count();
                 let plain_band_ok = unbanded <= 1 && unbanded < members.len();
@@ -508,7 +525,7 @@ impl GameState {
                         })
                     });
                 if !plain_band_ok && !quality_band_ok {
-                    return Err(GameError::CannotAttack(first));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(first)));
                 }
             }
         }
@@ -583,7 +600,7 @@ impl GameState {
                     matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
                 })
             {
-                return Err(GameError::CannotAttack(attacks[0].attacker));
+                return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
             }
         }
 
@@ -599,7 +616,7 @@ impl GameState {
                     .is_some_and(|c| c.keywords.has_kw(&Keyword::AttacksAlone))
             })
         {
-            return Err(GameError::CannotAttack(attacks[0].attacker));
+            return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
         }
 
         // CR 508.0 — "can't attack alone" (Militia Rallier). A lone attacker
@@ -610,7 +627,7 @@ impl GameState {
                     || c.keywords.has_kw(&Keyword::CantAttackOrBlockAlone)
             })
         {
-            return Err(GameError::CannotAttack(attacks[0].attacker));
+            return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
         }
 
         // CR 506.2 — Silent Arbiter: "No more than N creatures can attack each
@@ -620,7 +637,7 @@ impl GameState {
             && let Some(first) = attacks.first()
             && self.attacking.len() + attacks.len() > cap as usize
         {
-            return Err(GameError::CannotAttack(first.attacker));
+            return Err(attack_reject(line!(), GameError::CannotAttack(first.attacker)));
         }
 
         let mut events = vec![];
@@ -649,7 +666,7 @@ impl GameState {
 
         if let Some(chosen) = mandate {
             if let Some(bad) = attacks.iter().find(|a| !chosen.contains(&a.attacker)) {
-                return Err(GameError::CannotAttack(bad.attacker));
+                return Err(attack_reject(line!(), GameError::CannotAttack(bad.attacker)));
             }
             for id in chosen {
                 let Some(c) = self.battlefield.iter().find(|c| c.id == id && c.controller == p)
@@ -663,7 +680,7 @@ impl GameState {
                     && !kws.has_kw(&Keyword::CantAttack)
                     && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if able && has_legal_target && !attacks.iter().any(|a| a.attacker == id) {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
             }
         }
@@ -690,7 +707,7 @@ impl GameState {
                     && !kws.has_kw(&Keyword::CantAttack)
                     && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
-                    return Err(GameError::CannotAttack(c.id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
         }
@@ -713,7 +730,7 @@ impl GameState {
                     && !kws.has_kw(&Keyword::CantAttack)
                     && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
-                    return Err(GameError::CannotAttack(c.id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
         }
@@ -755,13 +772,13 @@ impl GameState {
             for atk in &attacks {
                 let id = atk.attacker;
                 if !seen.insert(id) {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
                 // Ensnaring Bridge cap (computed power, CR 613).
                 if !attack_power_caps.is_empty() {
                     let power = self.computed_permanent(id).map(|c| c.power).unwrap_or(0);
                     if attack_power_caps.iter().any(|cap| power > *cap as i32) {
-                        return Err(GameError::CannotAttack(id));
+                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                     }
                 }
                 // "Can't attack unless defending player controls a [filter]"
@@ -777,7 +794,7 @@ impl GameState {
                         })
                     });
                     if !satisfied {
-                        return Err(GameError::CannotAttack(id));
+                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                     }
                 }
                 // CR 725 — Crown-Hunter Hireling: only the monarch can be
@@ -785,7 +802,7 @@ impl GameState {
                 if computed_kw(id).has_kw(&Keyword::CantAttackUnlessDefenderIsMonarch)
                     && self.defender_for(atk.target) != self.monarch
                 {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
                 // CR 508.1a — Merchant Ship: the defending player must control
                 // a land of the named type.
@@ -797,7 +814,7 @@ impl GameState {
                         c.controller == d && c.definition.subtypes.land_types.contains(&lt)
                     })
                 {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
                 // CR 508.1a — Branded Brawlers: the defender having any
                 // untapped land locks the attack.
@@ -807,7 +824,7 @@ impl GameState {
                         c.controller == d && c.definition.is_land() && !c.tapped
                     })
                 {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
                 // CR 508.1a — Mogg Toady: strictly more creatures than the
                 // defending player.
@@ -815,7 +832,7 @@ impl GameState {
                     && let Some(d) = self.defender_for(atk.target)
                     && self.creature_count(p) <= self.creature_count(d)
                 {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
                 // "Can't attack unless you control a [filter]" (Lovestruck Beast).
                 if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
@@ -826,7 +843,7 @@ impl GameState {
                         c.controller == p && self.evaluate_requirement_on_card(&req, c, p)
                     });
                     if !satisfied {
-                        return Err(GameError::CannotAttack(id));
+                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                     }
                 }
                 // "Can't attack unless you control N+ [filter]" (Topiary
@@ -847,7 +864,7 @@ impl GameState {
                         })
                         .count();
                     if (n as u32) < min {
-                        return Err(GameError::CannotAttack(id));
+                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                     }
                 }
                 // CR 508.1a — Monstrous Hound: more lands than the defender.
@@ -856,14 +873,14 @@ impl GameState {
                     && self.player_tally(p, crate::card::PlayerTally::LandsControlled)
                         <= self.player_tally(d, crate::card::PlayerTally::LandsControlled)
                 {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
                 // "Even number of counters" gate (Sab-Sunen). Zero is even.
                 if computed_kw(id).has_kw(&Keyword::CantAttackOrBlockUnlessEvenCounters)
                     && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
                     && c.counters.values().sum::<u32>() % 2 != 0
                 {
-                    return Err(GameError::CannotAttack(id));
+                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
                 // Controller (not owner) must be the active player.
                 let card = self
@@ -979,7 +996,7 @@ impl GameState {
                     && (!card.summoning_sick || kws.has_kw(&Keyword::Haste));
                 if !can_attack {
                     if card.tapped {
-                        return Err(GameError::CardIsTapped(id));
+                        return Err(attack_reject(line!(), GameError::CardIsTapped(id)));
                     }
                     // CR 701.35 — a detained permanent can't attack.
                     // `is_creature_now` leads the conjunction above and was
@@ -1002,9 +1019,9 @@ impl GameState {
                         || blessing_locked
                         || okk_locked
                     {
-                        return Err(GameError::CannotAttack(id));
+                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                     }
-                    return Err(GameError::SummoningSickness(id));
+                    return Err(attack_reject(line!(), GameError::SummoningSickness(id)));
                 }
             }
         }
@@ -1036,7 +1053,7 @@ impl GameState {
                     })
                 })
             {
-                return Err(GameError::CannotAttack(atk.attacker));
+                return Err(attack_reject(line!(), GameError::CannotAttack(atk.attacker)));
             }
             debug_assert!(
                 statics & attack_static::CANT_ATTACK_CONTROLLER != 0
@@ -1077,7 +1094,7 @@ impl GameState {
                     _ => false,
                 });
             if barred {
-                return Err(GameError::CannotAttack(atk.attacker));
+                return Err(attack_reject(line!(), GameError::CannotAttack(atk.attacker)));
             }
         }
 
@@ -1168,7 +1185,7 @@ impl GameState {
             // shortfall (rolled back atomically if unpayable).
             let tax_cost = crate::mana::cost(&[crate::mana::generic(total_tax)]);
             if self.try_pay_with_auto_tap(p, &tax_cost).is_err() {
-                return Err(GameError::CannotAttack(attacks[0].attacker));
+                return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
             }
         }
 

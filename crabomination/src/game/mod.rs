@@ -2165,6 +2165,23 @@ pub struct GameState {
     pub cold: CowBox<ColdState>,
 }
 
+/// `CRAB_SIM_REJECTS` — the picker/engine disagreement instrument's level.
+///
+/// 0 = off, 1 = count, 2 = count and name. Lives here rather than in
+/// `server::bot` because both the counter (`bot::sim_rejects`) and the
+/// engine-side site tags (`combat::declare_attackers_banded`) read it, and a
+/// second `env::var` would be a second thing to keep in step. Read once
+/// through a `OnceLock`, so every guarded site is an atomic load and a branch.
+/// See PERF's "How to measure" and (-55).
+pub fn reject_trace_level() -> u8 {
+    static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+    *LEVEL.get_or_init(|| match std::env::var("CRAB_SIM_REJECTS") {
+        Ok(v) if v == "names" => 2,
+        Ok(v) if !v.is_empty() && v != "0" => 1,
+        _ => 0,
+    })
+}
+
 /// Field access on the cold group reads like a `GameState` field.
 impl std::ops::Deref for GameState {
     type Target = ColdState;
