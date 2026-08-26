@@ -10,6 +10,55 @@ use crate::game::layers::ComputedPermanent;
 /// Kaito's "return one of them to hand").
 type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool);
 
+/// Static prohibitions `declare_attackers_banded` checks against the whole
+/// battlefield. Same device as [`crate::game::actions::cast_static`] and
+/// `prevent_static`: one walk up front, a bit per family, and each gated
+/// block still runs its own controller / filter / amount tests unchanged, so
+/// a set bit costs a walk and a clear bit skips work that was a no-op.
+///
+/// **Sound by construction, and only for these four.** Every block gated here
+/// tests `matches!` on one `StaticEffect` variant read straight off a
+/// battlefield card's `static_abilities`, which is exactly what the scan
+/// reads. The declaration's other two static walks — Magnetic Web's
+/// `AttackTogether` and Arboria's
+/// `PlayersCantBeAttackedUnlessTheyActedLastTurn` — go through
+/// `active_static`, which *peels* `WhileYourTurn`-style wrappers, so a raw
+/// variant scan would miss a wrapped one and skip work that was not a no-op.
+/// **They are deliberately left ungated**; widening the scan means peeling
+/// the same wrappers `active_static` does, and a second hand-written copy of
+/// that list is the walker-drift bug class this repo keeps closing.
+pub(crate) mod attack_static {
+    /// `AttackerCapAgainstController` (Silent Arbiter-style per-defender cap).
+    pub const ATTACKER_CAP: u32 = 1 << 0;
+    /// `AttackPowerCapByControllerHand` (Ghostly Prison-adjacent power caps).
+    pub const POWER_CAP: u32 = 1 << 1;
+    /// `CreaturesCantAttackController` (Propaganda's prohibition half).
+    pub const CANT_ATTACK_CONTROLLER: u32 = 1 << 2;
+    /// `AttackTaxToController` (Propaganda, Elephant Grass, Norn's Annex).
+    pub const ATTACK_TAX: u32 = 1 << 3;
+}
+
+/// See [`attack_static`]. One battlefield walk; `u32::MAX` is the ungated
+/// reading every gated site `debug_assert!`s against.
+pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
+    use crate::effect::StaticEffect as SE;
+    let mut m = 0u32;
+    for card in state.battlefield.iter() {
+        for sa in &card.definition.static_abilities {
+            m |= match sa.effect {
+                SE::AttackerCapAgainstController { .. } => attack_static::ATTACKER_CAP,
+                SE::AttackPowerCapByControllerHand => attack_static::POWER_CAP,
+                SE::CreaturesCantAttackController { .. } => {
+                    attack_static::CANT_ATTACK_CONTROLLER
+                }
+                SE::AttackTaxToController { .. } => attack_static::ATTACK_TAX,
+                _ => 0,
+            };
+        }
+    }
+    m
+}
+
 /// The `AttackBlockCostTapAnother` filters carried by a computed keyword list
 /// (Hollow Warrior) — one helper must be tapped per entry.
 fn tap_another_filters(kws: &[Keyword]) -> Vec<crate::card::SelectionRequirement> {
@@ -273,6 +322,12 @@ impl GameState {
             return Err(GameError::CannotAttack(attacks[0].attacker));
         }
         let p = self.active_player_idx;
+        // One battlefield walk for the four static prohibitions this
+        // declaration checks; see [`attack_static`]. Two of the four are
+        // asked *per attacker*, so on a board carrying none of them this
+        // replaces (attackers x battlefield x static abilities) with one
+        // pass.
+        let statics = attack_static_scan(self);
 
         // CR 803.1a/b — under the attack-left / attack-right option, the only
         // legal defending player is the nearest living opponent in that
@@ -460,7 +515,22 @@ impl GameState {
 
         // CR 508.1 — Crawlspace: no more than N creatures can attack a player
         // who controls an `AttackerCapAgainstController` permanent.
+        debug_assert!(
+            statics & attack_static::ATTACKER_CAP != 0
+                || !self.battlefield.iter().any(|c| c
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::AttackerCapAgainstController { .. }
+                    ))),
+            "attack_static_scan missed an attacker cap",
+        );
         for p in 0..self.players.len() {
+            if statics & attack_static::ATTACKER_CAP == 0 {
+                break; // no cap on the board — the per-seat walks below are all `None`
+            }
             let Some(cap) = self
                 .battlefield
                 .iter()
@@ -652,7 +722,10 @@ impl GameState {
         // any state is spent (attack tax) or mutated (tapping attackers) —
         // one illegal attacker must not corrupt the batch.
         {
-            let attack_power_caps: Vec<usize> = self
+            let attack_power_caps: Vec<usize> = if statics & attack_static::POWER_CAP == 0 {
+                Vec::new()
+            } else {
+                self
                 .battlefield
                 .iter()
                 .filter(|c| {
@@ -664,7 +737,20 @@ impl GameState {
                     })
                 })
                 .map(|c| self.players[c.controller].hand.len())
-                .collect();
+                .collect()
+            };
+            debug_assert!(
+                statics & attack_static::POWER_CAP != 0
+                    || !self.battlefield.iter().any(|c| c
+                        .definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::AttackPowerCapByControllerHand
+                        ))),
+                "attack_static_scan missed an attack power cap",
+            );
             let mut seen = crate::fxhash::HashSet::default();
             for atk in &attacks {
                 let id = atk.attacker;
@@ -944,11 +1030,24 @@ impl GameState {
             {
                 return Err(GameError::CannotAttack(atk.attacker));
             }
+            debug_assert!(
+                statics & attack_static::CANT_ATTACK_CONTROLLER != 0
+                    || !self.battlefield.iter().any(|c| c
+                        .definition
+                        .static_abilities
+                        .iter()
+                        .any(|sa| matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::CreaturesCantAttackController { .. }
+                        ))),
+                "attack_static_scan missed an attack prohibition",
+            );
             // Each live prohibition, asked in one pass: the old form collected
             // `(source id, cloned filter)` into a `Vec` and then ran `any` over
             // it, i.e. one allocation and one `SelectionRequirement` clone per
             // lock per attacker for a question that short-circuits.
-            let barred = self
+            let barred = statics & attack_static::CANT_ATTACK_CONTROLLER != 0
+                && self
                 .battlefield
                 .iter()
                 .filter(|c| c.controller == d)
@@ -979,6 +1078,18 @@ impl GameState {
         // `AttackTaxToController` static (copies stack), then pay it from the
         // active player's pool, auto-tapping for any shortfall. Reject the
         // whole declaration if it's unpayable.
+        debug_assert!(
+            statics & attack_static::ATTACK_TAX != 0
+                || !self.battlefield.iter().any(|c| c
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::AttackTaxToController { .. }
+                    ))),
+            "attack_static_scan missed an attack tax",
+        );
         let mut total_tax = 0u32;
         for atk in &attacks {
             // The defending player whose statics apply, and whether the attack
@@ -1005,6 +1116,9 @@ impl GameState {
             // "number of enchantments you control" — count the defender's
             // board. Fixed taxes are `Value::Const(n)`.
             for c in &self.battlefield {
+                if statics & attack_static::ATTACK_TAX == 0 {
+                    break; // no tax permanent anywhere — the loop body is a no-op
+                }
                 if c.controller != d {
                     continue;
                 }
