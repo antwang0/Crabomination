@@ -3945,350 +3945,109 @@ The refactor's ceiling (~1,520 adoptions × ~63 K Ir ≈ 7 %) is real only on
 `all`/`cube`/`sos`, which are not the throughput bench. Do not run it for
 the fixed-Ir number.
 
-### Fiftieth pass — the dry run *is* the action, and the simulator was paying for it twice
+### Fiftieth pass — the dry run *is* the action, and the simulator was paying for it twice — *folded*
 
-Base `e7b3b3d4` (pass 49's tip), read directly at **1,531,246,782** — eleven Ir
-under pass 49's recorded 1,531,246,793, which is argv length again (this run's
-`--callgrind-out-file` name is a character shorter; see **Baseline**). All
-readings `profiling-fast --no-default-features`, callgrind, `--a gang --b gang
---games 6 --threads 1 --seed 1 --decks fixed`. Rebased onto pass 50's
-concurrent run (`4107e017`, `49fce1ff`) after measuring; those two commits
-touch only `scripts/*.py` and the trackers, so both numbers stand unrederived.
+Base `e7b3b3d4` at **1,531,246,782**; the pass on the branch is
+`-> 1,314,288,098`, **-14.168 %** over five commits (A `-6.958 %`, B
+`-2.022 %`, C `-4.703 %`, D `-0.875 %`, E `-0.316 %`). `git log -- PERF.md`
+before the sixty-sixth pass has the full entry, its step table and its
+per-edge before/after rows. What still matters:
 
-| step | before -> after | what |
-|---|---|---|
-| A | 1,531,246,782 -> 1,424,690,649 (**-6.958 %**) | the attack/block sims adopt the state their own dry run produced instead of re-running the cast |
-| B | 1,424,690,649 -> 1,395,881,928 (**-2.022 %**) | the two validating pickers the sim shares with the real path hand their probe's state out too |
-| C | 1,395,881,928 -> 1,330,233,580 (**-4.703 %**) | the finalist carries its probe's state to the outcome eval and the summon-sick gate |
-| — | 1,330,233,580 -> 1,330,231,550 | a clippy `collapsible_if` on (C)'s loyalty-finalist filter; 2,030 Ir, not a fourth optimization |
-| D | 1,330,231,550 -> 1,318,590,025 (**-0.875 %**) | the probe template is built on first use, and the last consumer that forced it every tick goes behind a mask bit |
-| E | 1,318,590,025 -> **1,314,421,002** (**-0.316 %**) | the layer-4 card-type presence gate joins the freeze scope's memo |
+* **The class, and it is the largest one this file has named.**
+  `would_accept_on` clones the state and runs the action **to completion** —
+  5,260 calls, `perform_action_inner` **15.87 % of the program** — and then
+  drops the result, after which every caller performs the identical action on
+  a state equal to the one the probe started from. `GameState::accept_on` is
+  the same body returning `Some(probe)`; the sims, the two shared pickers
+  (`Picked::Probed(action, state)` / `Plain(action)`) and
+  `main_phase_action_with`'s `Finalist { settled }` adopt it. **The states are
+  equal because `Clone` reconstructs the three fields that could differ**
+  (`decider` fresh-by-kind, `in_layer_gather`, `layer_freeze`) and all three
+  already hold for a sim's `g`; the fourth difference is real and is paid
+  explicitly — `perform_action` ends with `clear_stale_target_suppression`, so
+  `accept_on` does.
+* **The last row of the class is the biggest single one left in the profile
+  and it is not another commit in this shape.** `main_phase_action_with`'s
+  2,036 probes (~95.7 M Ir, **7.2 %** of the tip) and `pick_land_to_play`'s
+  934 hand their action to the game driver across `Bot::next_action`; adopting
+  there means the *driver's* state, whose decider is live, and
+  `perform_action` swaps the live decider back on every restore precisely so a
+  `ScriptedDecider` survives a restore. Budget it as a `Decider`-trait change
+  with the server and the scripted-decider tests in scope.
+* **(D): a tick paying for a probe it does not use.** `affordance_probe_
+  template` is a whole `GameState` clone, built eagerly 7,238 times over six
+  bench games where `sim_spell_action_inner` probed on at most 1,552. One
+  consumer — the Splice sweep — ran on every tick and so kept it eager; behind
+  a `gated_block!` bit it is a `OnceCell` and `GameState::clone` falls
+  22,184 -> 17,808.
+* **A memo field that is cleared at only one of a scope's two exits leaks into
+  the next scope.** (E) added `card_type_change_in_scope` beside `memo` and
+  `perms` and cleared it in `with_frozen_layers`' `Unfreeze` guard but not in
+  `freeze_layers_pop`; `war::sarkhan_masterless_animates_and_pings` caught it.
+  Both exits call one `LayerFreezeState::end_of_scope` now. **The correct
+  version is 468 K Ir *more* expensive than the broken one** — the stale memo
+  was skipping walks it owed. (E) also splits the `&mut self` callers onto
+  `card_type_change_unscoped`, which are provably outside every scope and pay
+  neither lock nor memo slot: -0.277 % without that split, -0.316 % with it.
+* **Re-read your own base.** The chain ended at 1,314,421,002 on its own
+  commits and at 1,314,288,098 after the rebase onto three commits that are
+  not on the bench path; the 133 k between them is code layout, and a pass
+  that carried the first number forward would have booked it as a win.
+* `--bench --threads 3` invariants byte-identical at every step: decisions
+  196,220, turns 27.53, stalls 0, determinism ok. No encoding change.
+### Forty-ninth pass — a chain of twenty-four narrow generators is invisible in a profile until you read the counts — *folded*
 
-**The class, and it is the largest one this file has named.**
-`would_accept_on` clones the state and runs the action **to completion** —
-5,260 calls, `perform_action_inner` 242,970,273 Ir under them, **15.87 % of
-the program** — and then drops the result. Every caller then performs the
-identical action on a state equal to the one the probe started from. The
-simulator was paying for two casts per simulated cast.
+Ran concurrently with pass 48 and rebased on top of it: `1,625,264,320 ->
+1,531,246,793`, **-5.785 %** over five commits (A `-4.867 %`, B `-0.348 %`,
+C `-0.141 %`, D `-0.161 %`, E `-0.143 %`). `git log -- PERF.md` before the
+sixty-sixth pass has the full entry, its step table and its callee tables.
+What still matters:
 
-Where the 5,260 probes were, at the base tip:
-
-| caller | probes | Ir | owns its state? |
-|---|---|---|---|
-| `main_phase_action_with` | 2,036 | 101,010,033 | no — the action goes to the driver through `Bot::next_action` |
-| `sim_spell_action_inner` | 1,552 | 116,543,666 | **yes** — the attack sim's own throwaway clone |
-| `pick_land_to_play` | 934 | 12,335,382 | no |
-| `pick_stack_response` | 440 | 26,844,876 | mixed (sim + real) |
-| `pick_combat_trick` | 290 | 16,640,512 | mixed |
-
-(A) takes the second row. `GameState::accept_on` is `would_accept_on`'s body
-returning `Some(probe)` instead of `true` — plus the trailing
-`clear_stale_target_suppression` that `perform_action` does and
-`perform_action_inner` does not, so the state handed back is what a
-checkpointed action would have left. `would_accept_on` delegates to it, so
-there is one body, not two. `sim_spell_action` returns `SimSpell::Advanced`
-with that state and the two sim loops assign it to `g` and `continue` instead
-of calling `sim_step`.
-
-**Why the states are equal, which is the whole argument.** The probe is
-`g.clone()` then `perform_action_inner(a)`; `sim_step` was `g.clone()` (the
-checkpoint) then `perform_action_inner(a)` on `g`. `Clone` reconstructs three
-fields rather than copying them — `decider` fresh-by-kind, `in_layer_gather`
-false, `layer_freeze` unfrozen — and all three already hold for the sim's `g`,
-because `sim_start_state` built it by cloning too and the freeze scope
-`sim_spell_action` opens is popped before the loop resumes. The fourth
-difference was real and is paid for explicitly: `perform_action` ends with
-`clear_stale_target_suppression`, so `accept_on` does.
-
-Measured, and it is exactly the predicted removal:
-
-```text
-sim_step -> perform_action    4,568 calls / 209,220,325  ->  3,100 / 102,091,809
-sim_spell_action_inner probes 1,552 / 116,543,666        ->  1,552 / 111,211,472
-main_phase_action_with probes 2,036 / 101,010,033        ->  2,036 /  95,706,307
-```
-
-1,468 fewer checkpointed casts, 107,128,516 Ir off that one edge against
-106,556,133 off the program. The two probe rows each came down ~5 M as well:
-the accepted candidate no longer needs `a.clone()` to survive the probe.
-`--bench --threads 3` invariants byte-identical: decisions **196,220**,
-turns_per_game 27.53, stalls 0 (cap 0 / stuck 0 / draw 0), determinism ok.
-
-**(B) is the same trade in the two pickers the sim shares with the real
-path.** `pick_stack_response` and `pick_combat_trick` probe with
-`state.would_accept(a)` and return only the action; ~80 % and ~94 % of those
-probes are the sim's. Both now return `Picked` — `Probed(action, state)` when
-a dry run validated it, `Plain(action)` when nothing ran — and `Picked::action`
-is how the four real-game call sites drop the state they must not adopt.
-`GameState::accept` is `accept_on` against `self`, so there is still one body.
-`sim_step -> perform_action` falls again, 3,100 calls / 102,091,809 Ir to
-**2,636 / 72,020,298**: 464 more casts run once instead of twice, at ~64,800
-Ir each. The `a.clone()` that (A) had removed comes back — `Probed` carries
-the action for the real path — and costs ~75 Ir on 1,552 candidates, i.e.
-nothing against the 30 M removed. Invariants byte-identical again; traces
-unchanged.
-
-**(C) is the same trade a level up, and it is where the class stops being
-about the simulator.** `main_phase_action_with` probes up to `EVAL_TOP = 3`
-finalists with `accept_on`, and then the winner is run **twice more** on a
-clone of the same state: once by `evaluate_action_sequence` (`state.clone()`
-then `dry_run(action)`) and once by `improves_this_turn` (the same two lines).
-A `Finalist` now carries `settled` — its probe's result — and both consumers
-clone *that* instead. Both edges came off exactly:
-
-```text
-evaluate_action_sequence -> perform_action_inner  2,598 / 62,218,246 -> 1,756 / 22,156,413
-main_phase_action_with   -> perform_action_inner  1,514 / 42,673,732 -> 1,040 / 14,712,770
-```
-
--842 and -474 calls, 68.0 M off the two edges against 65.6 M off the program:
-the 1,316 `settled` clones are the ~2.9 M difference, at ~2,200 Ir against a
-~46,000 Ir cast. `evaluate_action_outcome` ignores `settled` when
-`w.determinize > 0` — the redeal makes it the wrong state, and every finalist
-has to be judged against the same one — so a determinized profile keeps the
-old path.
-
-**One field differs, and it is the reused state that is right.** `accept_on`
-ends with `clear_stale_target_suppression`, which `dry_run` does not, so the
-reused state has `suppress_extra_target_prompts` cleared where the old path
-left it set. That record is scoped to one cast attempt and the attempt ends
-when the cast lands — its own doc says so — so clearing it after a completed
-cast is the correct half of the pair. Golden traces unchanged either way.
-
-**(D) is what the class leaves behind: a tick paying for a probe it does not
-use.** `affordance_probe_template` is a whole `GameState` clone, and every use
-of it sits inside a gated block or a conditional — but it was built eagerly at
-the top of `cast_candidates`' two hot callers, 7,238 times over six bench
-games, and `sim_spell_action_inner` probed on at most 1,552 of its 3,732.
-One consumer kept it honest: the Splice sweep ran on **every** tick, so the
-template could never be lazy. It is a `gated_block!` on a new `spec::SPLICE`
-bit now — 7,238 calls to `spliceable_hand_cards_on` become **0** — and the
-template is a `OnceCell` filled by `probe_of` on first use. `GameState::clone`
-falls **22,184 -> 17,808**: 4,376 clones and their drops, ~12.8 M, against
-11.6 M off the program (the cell's own check is the difference). The mask
-rides `gated_block!`'s debug audit, so the 18,709-test suite proves it against
-real boards rather than a re-derived list.
-
-**(E) puts a third field in `LayerFreezeState`, on the argument the other two
-already stand on.** `card_type_change_in_scope` is two whole-collection walks
-(`continuous_effects`, then `battlefield`) at ~559 Ir, called **34,906** times,
-15,096 of them from `evaluate_requirement_static`'s card-type gate — ~5 asks
-per target enumeration, all with the same answer, because nothing it reads can
-change while a scope is frozen. Memoized beside `memo` and `perms` it costs
-254 Ir a call there. The other two callers (`activate_ability_inner`,
-`check_state_based_actions`) are `&mut self` and therefore *provably* outside
-every scope — a freeze scope borrows `&self` for its closure — so they take a
-new `card_type_change_unscoped` and pay neither the lock nor the memo slot they
-could never read. Without that split the pass reads -0.277 %; with it,
--0.316 %.
-
-**The suite caught a real bug in it, and the bug is filter 11's shape.**
-There are *two* scope exits — `with_frozen_layers`' `Unfreeze` guard and
-`freeze_layers_pop` — and the first version added the new field's clear to
-only one. A `freeze_layers_push`/`pop` scope therefore leaked a stale
-card-type gate into the next scope, and
-`war::sarkhan_masterless_animates_and_pings` failed: Sarkhan animates
-planeswalkers, so the gate's answer is the whole card. Both exits call one
-`LayerFreezeState::end_of_scope` now, so a fourth field cannot survive a scope
-by being forgotten at one of them. **The correct version is 468 K Ir *more*
-expensive than the broken one** — the stale memo was skipping walks it owed.
-
-**The pass on the branch: `1,531,246,782 -> 1,314,288,098`, -216,958,684 /
--14.168 %.** The (A)-(E) chain above was measured on this pass's own commits
-and ends at **1,314,421,002**; the branch was then rebased onto the concurrent
-run's three (`2e48c7a8`, `11116ea2`, `c6898506` — a threaded replay test, the
-`CRAB_PAIR_SWEEPS` reporter, and the `restart_game` RNG fix) and re-read at
-**1,314,288,098** at `03ab571d` (a reading at the head gives 1,314,290,577;
-the 2,479 between them is argv length). **The 133 k is not work.** `--bench`'s
-invariants are byte-identical across the rebase — same 196,220 decisions, same
-27.53 turns — so the program did the same things; and none of the three
-commits is on the bench path, `restart_game` needing a Karn ultimate to run at
-all. What is left is code layout, which is what a 33-line addition to
-`game/mod.rs` moves. **The rule this exercises is the standing one: re-read
-your own base.** A pass that had carried 1,314,421,002 forward as its base
-would have booked 133 k of layout as its first win.
-
-**What is left of the class, and why each row was not taken.**
-`main_phase_action_with`'s 2,036 probes and `pick_land_to_play`'s 934 hand
-their action to the game driver across the `Bot::next_action` boundary;
-adopting there means the *driver's* state, whose decider is live, and
-`perform_action`'s own doc says why swapping a fresh-by-kind decider in
-would wipe a `ScriptedDecider` mid-script. **That is the last row of the class
-and the biggest single one left in the profile — 2,036 probes, ~95.7 M Ir,
-7.2 % of the tip** — and it wants `Bot::next_action` to be able to hand the
-driver a state, not just an action. It is not another commit in this shape:
-the driver's decider is *live*, `GameState::clone` rebuilds one fresh-by-kind,
-and `perform_action` swaps the live one back on every restore precisely so a
-`ScriptedDecider` survives. Budget it as a `Decider`-trait change with the
-server and the scripted-decider tests in scope.
-
-### Forty-ninth pass — a chain of twenty-four narrow generators is invisible in a profile until you read the counts
-
-Ran concurrently with pass 48 and is **rebased on top of it**. Its own chain
-against pass 47's tip `40fb5e31`; then the branch. All readings
-`profiling-fast --no-default-features`, callgrind, `--a gang --b gang --games
-6 --threads 1 --seed 1 --decks fixed`. (The base reads 492 Ir below passes 47
-and 48's number for the same commit — argv length; see **Baseline**.)
-
-| step | before -> after | what |
-|---|---|---|
-| A | 1,645,831,476 -> 1,565,722,561 (**-4.867 %**) | `main_phase_action_with`'s twenty-four fallback generators go behind one board-facts mask |
-| B | 1,565,722,561 -> 1,560,268,509 (**-0.348 %**) | the three land blocks ask `can_player_play_land` once; a landless hand stops `pick_land_to_play`'s mana-base walks |
-| C | 1,540,962,924 -> 1,538,787,495 (**-0.141 %**) | the upkeep's keyword gate stops gathering to prove a negative — measured on the rebased branch, after (A) and (B) |
-| D | 1,535,903,173 -> 1,533,436,329 (**-0.161 %**) | the attack sim's spell layer asks whether there is a window before opening a freeze scope — measured after the second rebase |
-| E | 1,533,436,329 -> 1,531,246,793 (**-0.143 %**) | two clones taken only to hand a combat walk that skips the state it was given |
-
-**(A) and (B) sum to `1,645,831,476 -> 1,560,268,509`, -85,562,967 /
--5.198 %** on their own chain, and rebased onto pass 48 they read
-`1,628,220,915 -> 1,540,962,924`, -5.359 %. (C) was written after that rebase
-(-> 1,538,787,495). Three more of pass 48's commits then landed underneath,
-so the chain was rebased a second time and re-read end to end:
-`1,625,264,320 -> 1,535,903,173`, -5.498 %. (D) and (E) then took it to
-**1,531,246,793**, so the pass on the branch is
-**`1,625,264,320 -> 1,531,246,793`, -94,017,527 / -5.785 %.** `--bench --threads 3` invariants byte-identical at
-every step: decisions **196,220**, turns_per_game 27.53, stalls 0
-(cap 0 / stuck 0 / draw 0), determinism ok. Suite 18,709 / 0 failed /
-5 ignored, golden traces included. **No encoding change; no net needs
-retraining as of this tip.**
-
-**(A) is candidate (-26) read from the top, and the money was nowhere the
-entry pointed.** (-26) said to read `pick_by_outcome` first — 7.08 % over 920
-calls, 130,069 Ir each — and to check whether the count was a search-quality
-decision. It is one, and it is beside the point. `main_phase_action_with`'s
-33.00 % decomposes as `pick_by_outcome` 7.05 %, `would_accept` 6.35 %,
-**`simulate_through_combat` 5.71 % over 948 calls** (every one of them
-`improves_this_turn`'s two probes — see (-31)), `cast_candidates` 2.87 %,
-`perform_action_inner` 2.67 %, `computed_permanent` 1.19 % over 22,542 —
-and then **the tail below the cast block, which no profile had ever named,
-because every generator in it is under a tenth of a percent on its own.**
-
-The tail is two hand loops and twenty-two `pick_*` generators, reached on
-**2,176 of the 3,506 ticks** — every tick with no cast and no land. Each took
-its own walk of the seat's battlefield to ask "is there anything here for
-me", and three took much more than a walk:
-
-* `pick_sacrifice_value` opened with `eval_material` **and** `grant_scan`
-  before it knew whether a sacrifice ability existed — 11,951,510 / 0.73 %.
-* `pick_removal_ping`, `pick_removal_destroy` and `pick_removal_sacrifice`
-  each built a `foes` vector of **every opposing creature's computed power**
-  before checking for a matching ability. Three of the 22,542
-  `computed_permanent` calls per opposing creature per tick.
-* `pick_crack_lander` walked the whole **library** running
-  `IsBasicLand` per card before checking for a Lander on the board.
-* `pick_graveyard_recursion` deep-cloned `activated_abilities` for **every
-  graveyard card** every tick (`Vec::clone` 11,482 calls) and asked
-  `graveyard_granted_abilities` per card (11,482).
-* `pick_equip` ranked its own creatures by *computed* power — twice — before
-  checking for an Equipment.
-
-One walk of the hand, battlefield and graveyard now answers all of them
-(`sink_facts`), and `gated_pick!` skips a generator whose bit is clear. The
-device is `spec` / `gated_block!`'s, already in this file for
-`cast_candidates`, and so is the audit: a debug build runs the generator
-anyway and asserts it returned nothing, so the 18,709-test suite checks the
-mask against real boards instead of a re-derived list. Four nested shape
-predicates (`reach_amount`, `makes_token`, `grants_play`, `prepares_target`)
-were hoisted to module scope so the mask and the generator call one walker
-and cannot drift.
-
-`main_phase_action_with`'s direct callees, before -> after:
-
-```text
-computed_permanent            22,542 calls / 19,554,572 -> 238 / 15,044
-granted_abilities_of          74,530 /  8,102,598       -> 25,044 / 2,686,034
-grant_scan                     6,540 /  5,209,320       ->  2,442 / 2,005,684
-graveyard_granted_abilities   11,482 /  2,054,518       -> gone
-Vec::clone                    11,482 /  3,030,994       -> gone
-pick_sacrifice_value           2,176 / 11,951,510       -> gone
-pick_crew_vehicle              2,176 /  3,514,983       -> gone
-self                                    4,346,948       -> 2,876,216
-can_player_play_land (B)       9,590 /  5,600,262       ->  3,506 / 2,021,946
-```
-
-and every other tail generator with them. The mask's own cost is the residue
-in that table: 25,044 `granted_abilities_of`, one `grant_scan` per traversal
-instead of up to six, and ~19 k each of `is_planeswalker` / `crew_cost` /
-`saddle_cost` / `is_equipment` — about 4.4 M against 85 M removed.
-
-**The reusable finding: rank the tail, not the function.** A chain of narrow
-generators is invisible in a self-cost profile (none of these reaches 0.8 %)
-and invisible in a callee table sorted by Ir. It shows up only when the
-**call counts** are read: twenty-two rows, every one of them at exactly 2,176
-calls — once per traversal, on a board that had nothing for any of them. The
-forty-second pass's rule ("ask what an ordinary action pays that it cannot
-possibly need") finds these; sorting by Ir never will. **Anywhere the code
-reads as a fallback chain, count the rows before costing them.**
-
-Gating the generator is strictly better than reordering inside it, so none of
-the five expensive prologues above was reordered — the gate skips the whole
-call, prologue included.
-
-**(C) is pass 48's (E) at a third site, and the site pattern was already
-written down.** `board_keyword_matching` inside a freeze scope reads
-`frozen_effects()`, which gathers on the scope's first computed read, so the
-gate paid the gather it exists to avoid — and when it answers no, nothing else
-in that scope reads the memo. `do_untap` had been converted with a comment
-saying exactly this; `process_cumulative_upkeep` was the one site that was
-not. 1,788 gathers (3,447,071 Ir) become 1,788 `None` reads (78,672), and the
-gate's own `keyword_grant_in_scope` costs ~1.3 M of it back. **The remaining
-8,364 `board_keyword_in_scope` gathers are *not* this shape** — pass 48
-measured moving those and it is **+0.30 %**, because their callers go on to
-`compute_battlefield()` in the same scope. Read what else the scope does
-after the question; that is the whole rule.
-
-**(D) is the same shape as (A), one level down: the question outside, the
-work inside.** `sim_spell_action` opened a freeze scope on every one of the
-attack search's **35,430** sim-loop iterations, and on ~23,200 of them
-`sim_spell_action_inner`'s three entry tests all missed and the closure
-returned `None` having read nothing layer-aware. The tests are plain field
-reads (`stack`, `step`, `blockers_declared`, `active_player_idx`,
-`player_with_priority`), so they move outside. **A scope is not free even when
-nothing reads the memo**: the `Unfreeze` drop alone is 6,127,240 Ir of self
-across the program's ~50,000 scopes, ~122 Ir a scope, and the push/pop is
-another ~60. The debug audit is `gated_pick!`'s — run the closure anyway and
-assert it returned nothing.
-
-**(E) is the same question a third time — what does this cost when the answer
-is "nothing to do"?** `simulate_through_combat` returns `Skipped`, leaving its
-state byte-identical, on a board that is over, already past combat damage, or
-has no untapped unsick creature for the active seat. Both callers that clone
-*only* in order to simulate-then-score were paying for the clone anyway.
-`combat_sim_skips` is now the walk's own early-out, hoisted so the guard and
-the walk cannot drift, and **only the skip case takes the shortcut** — an
-`Incomplete` walk really has mutated the state and the `before` probe
-deliberately scores that torn board.
-
-**(-31) was read from the top this pass and is REFUTED on cost — do not build
-it.** The idea was that `improves_this_turn`'s "after" half repeats the clone,
-dry-run and combat walk `pick_by_outcome` had just done for the same winner.
-The call counts say how little of it is actually reusable:
-
-```text
-pick_by_outcome                920 calls
-evaluate_action_outcome        842      \
-evaluate_action_sequence       842       > all equal, so every finalist that
-score_settled_state            842      /  was evaluated ran the full path
-action_outcome_is_temporary    842      -- and none was pinned to baseline
-follow_up_candidates             0      -- `gang` has lookahead 0; the
-                                           sequence recursion is dead here
-improves_this_turn             474
-```
-
-**842 evaluated finalists across 920 calls, with `EVAL_TOP = 3`, means at
-least 499 of those calls returned at `finalists.len() <= 1` and evaluated
-nothing at all.** So on more than half the ticks that reach it there is no
-prior evaluation of the winner to reuse — `improves_this_turn` *is* the only
-clone-and-resolve the bot does there. Against that, the lift needs a second
-score threaded out of a recursive evaluator's depth-0 rung and a full
-fallback for `w.determinize > 0` (where the outcome eval runs on a redealt
-state and the gate's answer would change). Ceiling ~1.5 % for high call-site
-churn.
-
-**What the reading does say, and it is a strength question, not a perf one:**
-the `hold_sick` / `hold_instants` gate costs about 6 % of simulator throughput
-and on most of its firings is more expensive than the pick it gates. Whether
-it earns that belongs in a `bot_ladder` A/B, not in this file.
-
+* **The reusable finding: rank the tail, not the function.**
+  `main_phase_action_with`'s twenty-two `pick_*` generators and two hand loops
+  are reached on 2,176 of 3,506 ticks and **none of them reaches 0.8 %**, so
+  they are invisible in a self-cost profile and in a callee table sorted by
+  Ir. They show up only when the **call counts** are read: twenty-two rows, all
+  at exactly 2,176 calls, on boards that had nothing for any of them. One walk
+  of hand/battlefield/graveyard (`sink_facts`) answers all of them and
+  `gated_pick!` skips a generator whose bit is clear — 85 M removed against
+  4.4 M of mask. **Anywhere the code reads as a fallback chain, count the rows
+  before costing them.** Five of the generators had prologues far larger than a
+  walk (`eval_material` + `grant_scan` before knowing a sacrifice ability
+  existed; three removal picks building every opposing creature's *computed*
+  power; a whole-library `IsBasicLand` scan before checking for a Lander; a
+  deep `activated_abilities` clone per graveyard card, every tick).
+* **Gating the generator is strictly better than reordering inside it** — the
+  gate skips the call, prologue included — so none of those five was reordered.
+* **(C): read what else the scope does after the question.**
+  `board_keyword_matching` inside a freeze scope reads `frozen_effects()`,
+  which gathers on the scope's first computed read, so the gate paid the
+  gather it exists to avoid *and nothing else in that scope read the memo* —
+  1,788 gathers become 1,788 `None` reads. The other 8,364
+  `board_keyword_in_scope` gathers are **not** this shape and moving them is
+  **+0.30 %**, because their callers go on to `compute_battlefield()` in the
+  same scope.
+* **A freeze scope is not free even when nothing reads the memo.** The
+  `Unfreeze` drop alone is 6,127,240 Ir of self across the program's ~50,000
+  scopes, ~122 Ir a scope, and the push/pop is another ~60. (D) hoists
+  `sim_spell_action`'s three plain-field entry tests outside the scope; ~23,200
+  of 35,430 sim-loop iterations opened one and read nothing layer-aware.
+* **(E): what does this cost when the answer is "nothing to do"?**
+  `simulate_through_combat` returns `Skipped` with a byte-identical state on a
+  board that is over, past combat damage, or has no untapped unsick creature —
+  and both callers that cloned *only* in order to simulate-then-score paid for
+  the clone anyway. Only the skip case takes the shortcut: an `Incomplete` walk
+  really has mutated the state and the `before` probe deliberately scores that
+  torn board.
+* **(-31) was read from the top this pass and is REFUTED on cost** — the
+  candidates section carries the call-count table and the reasoning; the short
+  version is that 842 evaluated finalists across 920 `pick_by_outcome` calls
+  means at least 499 returned at `finalists.len() <= 1` and evaluated nothing,
+  so on more than half the ticks there is no prior evaluation to reuse.
+* **What the reading does say, and it is a strength question, not a perf one:**
+  the `hold_sick` / `hold_instants` gate costs about 6 % of simulator
+  throughput and on most of its firings is more expensive than the pick it
+  gates. Whether it earns that belongs in a `bot_ladder` A/B, not in this file.
 ### Forty-eighth pass — the profile came back, and the gate that pays is the one whose gather nobody else reads — *folded*
 
 Base `89f55a5c` at **1,662,145,003**; rows A-E sum to `1,643,104,718`
