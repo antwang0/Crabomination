@@ -710,6 +710,28 @@ games and the columns above are what the code costs. **Read a bot-side
 refactor's Ir per decision, or pin the jitter** — `cube` at +0.503 % was
 +0.53 % more decisions at -0.03 % apiece.
 
+**AND THE CLOCK WAS TAKEN, WHICH GIVES THIS FILE ITS FIRST Ir:WALL RATIO FOR
+A PROBE-REMOVAL CHANGE.** `scripts/ab_wall.py`, eight ABBA blocks,
+`release-fast` + mimalloc both sides (the shipped build), `CRAB_NO_JITTER=1`
+so the two binaries play the same games,
+`--a gang --b gang --games 2000 --decks sos --seed 11 --threads 4`:
+
+```text
+              mean B/A   95 % CI            blocks B faster   spread
+A/B           0.9871     -2.19 .. -0.39 %   6/8               A 5.4 %, B 5.5 %
+null control  1.0020     -0.70 .. +1.10 %   4/8      FLAT     resolution ±0.90 %
+```
+
+**-1.29 % of wall against -2.775 % of Ir — a ratio of 2.15x**, and the null
+is flat on the same workload and block count within the same hour.
+Compare (-48)'s allocator swap (Ir cannot see it at all) and the sixty-eighth
+pass's clone removal (wall *bigger* than Ir, because a clone's cache misses
+are Ir-cheap): **what this commit removes is whole action executions —
+branches and loads at ordinary IPC — so Ir over-reads it by about two.**
+That is the number to price the next sim-side commit with; the box resolves
+±0.90 % at eight blocks, so anything under ~2 % of Ir will not show on the
+clock here at all.
+
 **Seventy-fourth pass. Base `1772f35e` vs tip.** One commit: the colour
 budget reaches the *sink mask*, which is what gates the whole `gated_pick!`
 ability chain. Ir readings `profiling-fast --no-default-features`, callgrind,

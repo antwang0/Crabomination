@@ -63,6 +63,15 @@ N2. **And the trace suite could not see it**: all 7 goldens byte-identical
    `cast_candidates`' specialty blocks** (`cast_candidates -> accept_on` is
    absent from its profile). Item 1e one level up. **Check the trace pool
    executes the code before calling a bot change behaviour-preserving.**
+N2a. **The clock was taken and the ratio is 2.15x.** `ab_wall.py`, 8 ABBA
+   blocks, `release-fast` + mimalloc, `CRAB_NO_JITTER=1` both sides,
+   `--games 2000 --decks sos --seed 11 --threads 4`: **-1.29 %, CI -2.19 ..
+   -0.39 %, 6/8 blocks**, against a null of +0.20 % (CI -0.70 .. +1.10,
+   FLAT, resolution ±0.90 %) on the same workload in the same hour. Ir read
+   -2.775 %. **What this commit removes is whole action executions, so Ir
+   over-reads it by about two** — unlike a clone removal (wall bigger than
+   Ir) or an allocator swap (Ir blind). Price the next sim-side commit with
+   that; under ~2 % of Ir will not show on this box's clock at all.
 N3. **Where the simulator's time actually is, read inclusively for the first
    time.** `pick_attacks_scored` is **59.1 % of `cube`** and
    `simulate_attack_outcome_once` **58.7 %** — 1,842 sims at ~827 k Ir each,
