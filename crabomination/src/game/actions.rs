@@ -11602,8 +11602,15 @@ impl GameState {
         if !self.battlefield.iter().any(|c| restore(c).is_some_and(|was| was != c.tapped)) {
             return;
         }
+        // `CardInstance` is a CoW handle too, so the write below is a second
+        // unshare — per card. The gate above says *some* flag moved, not
+        // that this one did, and a snapshot covers every permanent the payer
+        // owns: rewriting all of them deep-copied the whole owned board to
+        // put back the one or two lands auto-tap had touched.
         for c in self.battlefield.iter_mut() {
-            if let Some(was) = snapshot.tapped.iter().find(|(id, _)| *id == c.id).map(|(_, w)| *w) {
+            if let Some(was) = snapshot.tapped.iter().find(|(id, _)| *id == c.id).map(|(_, w)| *w)
+                && c.tapped != was
+            {
                 c.tapped = was;
             }
         }
