@@ -5189,8 +5189,31 @@ callers of __memcpy — 1,159,403 calls
 buffer it grows is `sa_cards`, which is *empty* on a vanilla board, and a
 blanket `+ battlefield.len()` headroom is the shape the fifty-eighth pass
 already measured at **+1.54 %** (item I: "the reserve has to be where the
-pushes are, not where the clone is"). The three unread rows are the ones to
-size next.
+pushes are, not where the clone is").
+
+**The other three were read at the sixty-seventh tip, and the number that
+sorts them is grows *per call*, not grows.** A row at ~1 grow a call is one
+allocation a `Vec` genuinely needs; a row at 4 is a buffer being filled an
+element at a time.
+
+- `advance_step` — **READ, and it is not a candidate.** 22,162 grows over
+  23,660 calls is **0.94 a call**, which is the single `events.push(
+  GameEvent::StepChanged(next))` on a list the caller hands in empty and
+  gets back. The allocation holds the event that is returned; there is
+  nothing to reserve and nothing to skip.
+- `check_state_based_actions` — 22,604 over 13,274 calls, **1.7 a call**,
+  and **its named collects are already scan-gated** (`scan.flip_predicate`,
+  `scan.sacrifice_when`, `scan.state_trigger` — (-45)'s treatment landed
+  here in an earlier pass). What is left is spread across `events` and the
+  inner helpers; localizing it needs `cg_contexts.py` over
+  `--separate-callers`, not a read of the source.
+- `declare_blockers` — **the best of the three, and the only one with
+  repeated per-call growth.** 11,466 grows over **2,732 calls = 4.2 a
+  call**, plus `RawTable::reserve_rehash` 5,034 (1.8 a call): several
+  buffers and a map being filled an element at a time per declare-blockers.
+  2.02 M, 0.134 % of `sos`. Size it with a line profile
+  (`profiling-lines`) before writing anything — four different buffers is
+  four different questions.
 
 **(-46) `name_index()` BUILDS 22,568 `CardDefinition`s TO READ 22,568
 STRINGS — 104,687,400 Ir. RANKED LOW ON PURPOSE; READ THE SIZING BEFORE

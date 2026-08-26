@@ -55,10 +55,16 @@ than rewriting the entry.
    deep-copied.** `alt_spell_half_of(&def)` is the shape for the borrow —
    the existing walker's pick against a definition the caller holds, one
    walker at two lifetimes, rather than a second copy of the pick.
-0b. **The next rows out of those two tables are named and unread**:
-   `check_state_based_actions` (22,604 grows / 2.89 M), `advance_step`
-   (20,664 / 2.48 M), `declare_blockers` (11,466 / 2.02 M). **Do NOT take
-   `gather_continuous_effects_inner`'s row that way** — its buffer is
+0b. **The next rows are read and ranked, and the column that ranks them is
+   grows *per call*.** `declare_blockers` is the one to take: **11,466 grows
+   over 2,732 calls = 4.2 a call**, plus 1.8 `reserve_rehash` a call — four
+   buffers and a map filled an element at a time (2.02 M, 0.134 % of `sos`).
+   `advance_step` is **READ and refuted**: 0.94 a call is the single
+   `events.push(StepChanged)` on a list the caller hands in empty, i.e. the
+   allocation that holds the returned event. `check_state_based_actions` is
+   1.7 a call and its named collects are *already* scan-gated; localizing
+   the rest needs `cg_contexts.py --separate-callers`, not a source read.
+   **Do NOT take `gather_continuous_effects_inner`'s row** — its buffer is
    `sa_cards`, empty on a vanilla board, and a blanket
    `+ battlefield.len()` reserve is the shape the fifty-eighth pass measured
    at **+1.54 %**. See PERF's (-45), which now carries both tables.
