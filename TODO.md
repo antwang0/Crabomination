@@ -45,13 +45,20 @@ number; two sessions took (-48) in the same hour once.
    under an existing `*_scan` call.** Four of this pass's five commits were a
    whole-board question asked beside a mask that could have answered it —
    `cast_cost_scan` still covers only six of the nine its own function asks.
-   Then: **`cast_spell_with_convoke` does 3.2 real deep copies per cast
-   attempt** (30,670 of `cube`'s 159,018) because it takes the card out of
-   hand *before* ~50 validation gates and pushes it back on each failure
-   path; and the layer pass's `printed_color_set`, **194,610 calls / 11.7 M /
-   0.44 % of cube**, one per pass (caching it on `CardDefinition` is blocked
-   by the ~20 in-place definition mutations — see (-11)). Do **not** re-take
-   the `sorted` `Vec` (item 4).
+   Then: **39 % of `cube` cast attempts fail** — 7,790 non-recursive
+   `cast_spell_with_convoke` calls reach `finalize_cast` only 4,720 times,
+   against the 94 % the forty-fifth pass measured on `fixed`. Each failure
+   still removes the card from hand and pushes it back, which is 2 of the
+   3.2 deep copies a cast attempt costs (30,670 of `cube`'s 159,018 clones).
+   **The lead is not "the engine removes the card too early" — it is why the
+   bot attempts 3,070 casts it cannot pay for**, i.e. `cast_candidates`'
+   affordability filter, which is (-41)/(-34). Also open: the layer pass's
+   `printed_color_set`, **194,610 calls / 11.7 M / 0.44 % of cube**, one per
+   pass (caching it on `CardDefinition` is blocked by the ~20 in-place
+   definition mutations — see (-11)). Do **not** re-take the `sorted` `Vec`
+   (item 4), and do not hoist `trigger_grant_sources` out of the combat
+   damage loop — it is already once per damage event, and the remaining 1.7x
+   would have to survive a rider resolving mid-loop.
 3. **Run `cg_contexts.py` over `--separate-callers=2` on
    `clone_from_ref_in`, not the `make_mut` caller table** — the first says
    who *clones*, the second says who *asks*, and (-50) is the difference.

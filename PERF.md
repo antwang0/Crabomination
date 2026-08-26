@@ -5727,10 +5727,15 @@ table to start from rather than the `make_mut` one:**
 ```
 
 `cast_spell_with_convoke`'s **3.2 deep copies per cast attempt** is the
-largest unread number in it: the function removes the card from hand
-*before* its ~50 validation gates and pushes it back on each failure path,
-so a rejected cast pays the `PlayerData` and hand-`CowBox` unshares of a
-cast that never happened. **The paying side is
+largest unread number in it, and the sixty-eighth pass read it far enough to
+say what it is *not*. The function removes the card from hand before its ~50
+validation gates and pushes it back on each failure path — but on `cube`
+**7,790 non-recursive attempts reach `finalize_cast` 4,720 times, a 39 %
+failure rate**, against the 94 % completion (-24) measured on `fixed` at the
+forty-fifth tip. So the removal is genuine work on the 61 % that finish, and
+the waste is the 39 % that do not: **the lever is the bot's affordability
+filter, not the cast's ordering.** `try_pay_after_snapshot_mode` fails 3,712
+times on `cube`, which is the same population. See (-41) / (-34). **The paying side is
 `Arc::clone_from_ref_in`: 85,650 calls / 64,030,880 Ir on `sos` (4.20 %) and
 168,808 / 128,187,067 on `cube` (4.69 %), i.e. 19.4 % of unshares actually
 deep-copy, at ~747 Ir apiece.** That is the size of the prize and it is the
