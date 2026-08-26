@@ -4959,6 +4959,15 @@ fn cast_candidates(
             let action = GameAction::CastFlashback {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
+            // 67 % of the simulator's flashback casts failed their payment
+            // (170 of 252 at the seventy-first tip). `flashback_cost_shift`
+            // and the graveyard-cast reductions are generic-only, so the
+            // colour half of the printed flashback cost is exact.
+            let fb = c.effective_flashback();
+            let fb_cost = fb.unwrap_or(&c.definition.cost);
+            if !colors_coverable(fb_cost, have_mana.get()) {
+                continue;
+            }
             if GameState::would_accept_on(probe_of(probe, state), action.clone()) {
                 castable.push(action);
             }
@@ -5200,6 +5209,17 @@ fn cast_candidates(
                 }
                 let cmc = ab.mana_cost.cmc();
                 if cmc > available {
+                    continue;
+                }
+                // `available` is a count of untapped lands: it says nothing
+                // about *which* colours they make, so a `{1}{B}` ability was
+                // offered off two Mountains. 59 % of the simulator's non-mana
+                // activations failed their payment before this line
+                // (734 `restore_payment_state` against 1,242 snapshots at the
+                // seventy-first tip), and unlike a cast nothing pre-filtered
+                // them. Sound against the *printed* cost: every adjustment
+                // `activate_ability_inner` applies is generic-only.
+                if !colors_coverable(&ab.mana_cost, have_mana.get()) {
                     continue;
                 }
                 let (target, additional_targets) = if ab.effect.requires_target() {
@@ -9293,6 +9313,30 @@ fn mana_ability_output(eff: &Effect) -> (u32, crate::mana::ColorSet, bool) {
         }
     };
     (amount, colors, colorless)
+}
+
+/// Whether `seat` can produce enough of each *colour* `cost` demands.
+///
+/// The colour pips are the one part of a cost nothing in the engine's
+/// adjustment machinery moves: every activation and alternative-cost
+/// adjustment in `activate_ability_inner` / `cast_flashback` is
+/// `reduce_generic` / `add_generic`, and an `{X}` binding only *adds* pips.
+/// So this is sound against a **printed** cost with no effective-cost
+/// computation — and deliberately says nothing about the generic half, which
+/// a reduction really can move.
+///
+/// [`AvailableMana::by_color`] is already widened to `total` wherever a
+/// colour cannot be bounded (see `available_mana`), so this answers `true`
+/// there.
+fn colors_coverable(cost: &ManaCost, have: &AvailableMana) -> bool {
+    use crate::mana::ManaSymbol;
+    let mut need = [0u32; 5];
+    for s in cost.symbols.iter() {
+        if let ManaSymbol::Colored(c) = s {
+            need[crate::game::actions::color_index(*c)] += 1;
+        }
+    }
+    need.iter().zip(have.by_color.iter()).all(|(n, have)| n <= have)
 }
 
 /// State-aware affordability check: queries the engine for any
