@@ -6298,9 +6298,12 @@ impl GameState {
         // The graveyard→exile redirect (Rest in Peace / Leyline / Disturb back
         // face, CR 614.6 / 702.146e) and its void-counter rider read the back
         // face, so capture them *before* the CR 712.4 front-face revert.
-        let exile_on_graveyard = self.graveyard_exiled_for(&card) || card.disturb_back_exiles();
-        let (_, void_counter_on_exile, exile_stamped_by) =
+        // One walk, not two: `graveyard_exiled_for` *is*
+        // `graveyard_exile_redirects(..).0`, and both walked every static
+        // ability on the battlefield.
+        let (redirects, void_counter_on_exile, exile_stamped_by) =
             self.graveyard_exile_redirects(&card);
+        let exile_on_graveyard = redirects || card.disturb_back_exiles();
         // CR 710.4 / 712.4 — flip cards and transformed DFCs revert to their
         // unflipped / front face off the battlefield.
         card.revert_flip();
