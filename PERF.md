@@ -698,6 +698,17 @@ is what the four gates skip.
 **No net needs retraining.** No encoding, pool, `TrainRow`, `EncodedState` or
 `Vocab` change is in this pass.
 
+**And one rules commit landed on top of this tip, `4f42c6b4`, which costs
+Ir.** The deck-out loss became a state-based action (CR 104.3c) and a decked
+player's permanents now leave with them (CR 800.4a): `fixed` **+0.055 %**,
+`sos` **+0.012 %**, `cube` **+0.082 %** against `7ada03d9`, one flag read per
+seat per SBA sweep. `--bench` `decisions` is **196,220 byte-identical** and
+the golden traces are unchanged — no bench or ladder seed decks a player —
+so the cost is the sweep's, not a changed game. **Recorded here so the next
+pass's base column is not read as a regression**: a total taken at
+`4f42c6b4` is ~0.06 % above one taken at `7ada03d9`, and that is the trade
+working.
+
 **Sixty-ninth pass. Base `795a296e` vs tip `8147836b`.** Two commits, the
 same class as the pass above it — **(-50)'s no-op write through a CoW
 handle** — applied to the *other* end of a permanent's life, the zone change.

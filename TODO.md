@@ -50,6 +50,12 @@ other session's next fetch can see.
    `WhileYourTurn`-style wrappers, so a raw-variant mask would miss a wrapped
    one; two of the six walks are ungated for that reason and re-gating them
    means a second copy of `active_static`'s wrapper list.
+1a. **A rules commit landed on top of that tip and costs Ir**: the deck-out
+   fix (item 5) reads `fixed` +0.055 %, `sos` +0.012 %, `cube` +0.082 %
+   against `7ada03d9`, one flag read per seat per SBA sweep, `decisions`
+   byte-identical and traces unchanged. **A base column taken at `4f42c6b4`
+   is ~0.06 % above one taken at `7ada03d9` — that is the trade, not a
+   regression.**
 1b. **Where the device still has sites.** `cast_cost_scan` covers six of the
    nine its own function asks (the sixty-eighth pass's item, still open), and
    nothing has been scanned in `check_state_based_actions`, the layer pass or
@@ -117,20 +123,27 @@ other session's next fetch can see.
    before removing it. And **the `*_scan` bitmask on `declare_blockers`**
    (`sos` +0.006 %, seventieth pass) — the shapes are identical to the attack
    side's and the loop is not. Older refutations are in PERF's standing rules.
-5. **Bugs.** One found by reading the profile, not a report: the payment
-   snapshot keyed on `owner` where auto-tap taps by `controller`, so a failed
-   payment left a stolen mana source tapped (`86ec1bd8`). **The
-   `perform_action` checkpoint hides that whole class** — a rollback bug is
-   only observable where the failure is *handled* rather than propagated, and
-   the first version of the test went through a cast and passed on the broken
-   code. ENGINE_BACKLOG P3 carries the picker/checker disagreement (27
-   single-slot bodies); P2's deck-out-loss eagerness is the open correctness
-   item with a written fix and ~24 tests to reseed.
-6. **Housekeeping.** TODO **~780**, PERF **8.5k**,
+5. **Bugs. ENGINE_BACKLOG's P2 has no open correctness entries now.** The
+   deck-out item is fixed: `pending_deck_loss` is armed by the failed draw and
+   promoted by the SBA sweep (CR 104.3c), which also closed the half nobody had
+   noticed — `objects_leave_with_player` runs only for the seats the *sweep*
+   eliminated, so a decked player's board stayed on the battlefield forever
+   (CR 800.4a). Two rules to keep from it: **a bug whose only symptom is a
+   missing SBA leg is invisible to every test that does not run the sweep**,
+   and **`two_player_game()` seats empty libraries**, so any test whose subject
+   draws is decking itself — `game::stock_libraries(&mut g, n)` is the harness,
+   and one of the nineteen tests it fixed had been passing vacuously with a
+   dead ETB draw. Earlier bug of the same reading-the-profile kind: the payment
+   snapshot keyed on `owner` where auto-tap taps by `controller` (`86ec1bd8`),
+   and **the `perform_action` checkpoint hides that whole class** — a rollback
+   bug is only observable where the failure is *handled* rather than
+   propagated. Still open: ENGINE_BACKLOG P3's picker/checker disagreement
+   (27 single-slot bodies aim with one filter and are checked against another).
+6. **Housekeeping.** TODO **797**, PERF **8.5k**,
    ENGINE_BACKLOG 3.8k, CARD_BACKLOG 4.1k, CLIENT_BACKLOG 428. Suite
-   **19,007 passed / 0 failed / 5 ignored** — that figure is the workspace
+   **19,009 passed / 0 failed / 5 ignored** — that figure is the workspace
    less the client; the two-crate gate this file prescribes builds 14
-   binaries and reports **18,747**, and the other five crates hold 260. Both
+   binaries and reports **18,749**, and the other five crates hold 260. Both
    numbers are in PERF now, because the two commands disagree and nothing
    said which one the record quoted. 7 golden traces. Next PERF Log
    folds are the 51st/52nd. This NEXT was 262 lines before this pass; every

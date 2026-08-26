@@ -60,20 +60,22 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
 
 ### P2 — open
 
-- 🟡 **Deck-out loss is applied too eagerly (CR 104.3c / 704.5c).**
-  `lose_to_empty_draw` sets `eliminated = true` *inside* the failed draw, so a
-  player who is decked mid-resolution is immediately excluded from
-  `resolve_players(EachOpponent/EachPlayer)` (which filters on `is_alive()`).
-  A spell that decks an opponent and then references "each opponent" in the
-  same resolution wrongly skips them (surfaced building Consumed by Greed;
-  worked around in the test by giving the opponent a library). The deck-out is
-  a state-based action and should be deferred to the next SBA sweep. A clean
-  fix (flag `pending_deck_loss`, promote in `check_state_based_actions`) was
-  prototyped but reverted: it also makes the decked player's permanents
-  correctly leave via CR 800.4a, which breaks ~24 unrelated feature tests that
-  cast a draw/looter spell into an empty `two_player_game()` library and rely
-  on the caster's board persisting. Landing it needs those tests to seed a
-  library first (or a shared harness with non-empty libraries).
+- ✅ **Deck-out loss is applied too eagerly (CR 104.3c / 704.5c)** — FIXED.
+  `PlayerData::pending_deck_loss` is armed by the failed draw and promoted by
+  `check_state_based_actions`, behind the same `player_cant_lose_game` /
+  `apply_loss_reset` guards as the other loss SBAs. That also closes the
+  second half nobody had noticed: `objects_leave_with_player` runs only for
+  the seats the SBA sweep itself eliminated, so a decked player's whole board
+  used to stay on the battlefield for the rest of the game (CR 800.4a).
+  The ~24 tests this entry warned about were **19**, all of them decking
+  themselves by accident because `two_player_game()` seats empty libraries;
+  `game::stock_libraries(&mut g, n)` is the shared harness, one call each.
+  One of the nineteen (`kenriths_transformation_draws_and_makes_a_3_3_green_elk`)
+  was passing vacuously — its ETB draw had never fired. Regression tests:
+  `core_rules::cr_recent16::cr_104_3c_decked_opponent_still_seen_by_the_same_resolution`
+  and `::cr_800_4a_decked_players_permanents_leave_with_them`.
+
+**P2 has no open correctness entries.**
 
 ### P2 — performance
 
