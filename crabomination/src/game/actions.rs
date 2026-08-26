@@ -1484,6 +1484,10 @@ pub(crate) mod cast_static {
     /// `NoncreatureSpellsCantBeCastIf` / `NoncreatureSpellsWithChosenManaValueCantBeCast`
     /// (Gaddock Teeg, Sanctum Prelate).
     pub const NONCREATURE_LOCK: u32 = 1 << 5;
+    /// `NamedSpellCantBeCast` / `OpponentsCantCastNamed` /
+    /// `OpponentsCantCastNamesExiledWithSource` — the three name locks at the
+    /// very top of the cast (Meddling Mage, Ashiok's Erasure, Circu).
+    pub const NAME_LOCK: u32 = 1 << 6;
 }
 
 /// See [`cast_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -1505,6 +1509,9 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
                 | SE::NoncreatureSpellsWithChosenManaValueCantBeCast => {
                     cast_static::NONCREATURE_LOCK
                 }
+                SE::NamedSpellCantBeCast
+                | SE::OpponentsCantCastNamed
+                | SE::OpponentsCantCastNamesExiledWithSource => cast_static::NAME_LOCK,
                 _ => 0,
             };
         }
@@ -6135,12 +6142,41 @@ impl GameState {
         // function used to ask about separately — see `cast_cost_scan`.
         let cost_statics = cast_cost_scan(self);
 
-        // Meddling Mage — spells with the chosen name can't be cast.
-        let spell_name = self.players[p]
-            .hand
+        // The four name locks below are the same shape as the cost statics
+        // above — three battlefield walks and a hand lookup, per cast, for
+        // statics a normal board does not carry. `NAME_LOCK` rides
+        // `cast_cost_scan`'s existing walk; the fourth lock lives on a
+        // *player*, not a permanent, so it gets the cheap presence test its
+        // own field affords. With both clear the spell's name is never
+        // looked up.
+        let name_locked_seat = self
+            .players
             .iter()
-            .find(|c| c.id == card_id)
-            .map(|c| c.definition.name);
+            .any(|pl| !pl.opponents_cant_cast_named.is_empty());
+        let spell_name = (cost_statics & cast_static::NAME_LOCK != 0 || name_locked_seat)
+            .then(|| {
+                self.players[p]
+                    .hand
+                    .iter()
+                    .find(|c| c.id == card_id)
+                    .map(|c| c.definition.name)
+            })
+            .flatten();
+        debug_assert!(
+            cost_statics & cast_static::NAME_LOCK != 0
+                || !self.battlefield.iter().any(|c| c
+                    .definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::NamedSpellCantBeCast
+                            | crate::effect::StaticEffect::OpponentsCantCastNamed
+                            | crate::effect::StaticEffect::OpponentsCantCastNamesExiledWithSource
+                    ))),
+            "cast_cost_scan missed a name-lock static",
+        );
+        // Meddling Mage — spells with the chosen name can't be cast.
         if let Some(name) = spell_name
             && self.battlefield.iter().any(|c| {
                 c.named_card.as_deref() == Some(name)
