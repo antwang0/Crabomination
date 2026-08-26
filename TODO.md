@@ -31,8 +31,9 @@ so until the push is rejected. **Sessions run this branch concurrently:**
 before starting a named candidate, `git fetch` and grep PERF's Log for its
 number; two sessions took (-48) in the same hour once.
 
-1. **Sixty-eighth pass: `fixed` -0.865 %, `sos` -0.786 %, `cube` -1.734 %** in
-   Ir, three commits, all "what does this cost when it has nothing to do" —
+1. **Sixty-eighth pass: `fixed` -1.032 %, `sos` -0.888 %, `cube` -1.879 %** in
+   Ir, four perf commits plus one bug fix, all "what does this cost when it
+   has nothing to do" —
    and **2-3 % of wall on `cube`** over two independent ABBA sittings, 11 of
    12 blocks, null flat. **The wall win is bigger than the Ir win**, which is
    the reverse of this branch's usual caution: the largest commit removes
@@ -40,14 +41,17 @@ number; two sessions took (-48) in the same hour once.
    Ir-cheap. **Size a clone-removal pass on the clock.** New candidates
    **(-50)** (the no-op CoW write — the class *and* its ranking rule) and
    **(-49)** (`wants_ui`, 0.07 %, wants the decision-plumbing audit's eye).
-2. **Top fresh perf item: `cast_spell_with_convoke` does 3.2 real deep copies
-   per cast attempt** — 30,670 of `cube`'s 159,018. It takes the card out of
-   hand *before* ~50 validation gates and pushes it back on every failure
-   path. Then the layer pass, whose subtree is **3.86 % of cube**: its
-   `printed_color_set` is **194,610 calls / 11.7 M / 0.44 %**, one per pass,
-   and it re-derives the colour set from the mana cost every time (caching it
-   on `CardDefinition` is blocked by the ~20 in-place definition mutations —
-   see (-11)). Do **not** re-take the `sorted` `Vec` (item 4).
+2. **Where the next one is, and it is not in a profile: read the three lines
+   under an existing `*_scan` call.** Four of this pass's five commits were a
+   whole-board question asked beside a mask that could have answered it —
+   `cast_cost_scan` still covers only six of the nine its own function asks.
+   Then: **`cast_spell_with_convoke` does 3.2 real deep copies per cast
+   attempt** (30,670 of `cube`'s 159,018) because it takes the card out of
+   hand *before* ~50 validation gates and pushes it back on each failure
+   path; and the layer pass's `printed_color_set`, **194,610 calls / 11.7 M /
+   0.44 % of cube**, one per pass (caching it on `CardDefinition` is blocked
+   by the ~20 in-place definition mutations — see (-11)). Do **not** re-take
+   the `sorted` `Vec` (item 4).
 3. **Run `cg_contexts.py` over `--separate-callers=2` on
    `clone_from_ref_in`, not the `make_mut` caller table** — the first says
    who *clones*, the second says who *asks*, and (-50) is the difference.
@@ -64,13 +68,18 @@ number; two sessions took (-48) in the same hour once.
    the collect. **A gathered effect list is ~2 long, so that `collect` was
    never allocating** — check an allocation table's row *is* an allocation
    before removing it. Older refutations are in PERF's standing rules.
-5. **Bugs:** ENGINE_BACKLOG P3 now carries the picker/checker disagreement
-   (27 single-slot bodies aim with one filter and are checked against
-   another). P2's deck-out-loss eagerness is the one open correctness item
-   with a written fix and ~24 tests to reseed.
-6. **Housekeeping.** TODO **719**, PERF **8.1k**,
+5. **Bugs.** One found by reading the profile, not a report: the payment
+   snapshot keyed on `owner` where auto-tap taps by `controller`, so a failed
+   payment left a stolen mana source tapped (`86ec1bd8`). **The
+   `perform_action` checkpoint hides that whole class** — a rollback bug is
+   only observable where the failure is *handled* rather than propagated, and
+   the first version of the test went through a cast and passed on the broken
+   code. ENGINE_BACKLOG P3 carries the picker/checker disagreement (27
+   single-slot bodies); P2's deck-out-loss eagerness is the open correctness
+   item with a written fix and ~24 tests to reseed.
+6. **Housekeeping.** TODO **728**, PERF **8.1k**,
    ENGINE_BACKLOG 3.8k, CARD_BACKLOG 4.1k, CLIENT_BACKLOG 428. Suite
-   **19,006 passed / 0 failed / 5 ignored**, 7 golden traces. Next PERF Log
+   **19,007 passed / 0 failed / 5 ignored**, 7 golden traces. Next PERF Log
    folds are the 51st/52nd. This NEXT was 262 lines before this pass; every
    item it dropped is in PERF's Log/candidates, ENGINE_BACKLOG or
    CARD_BACKLOG, not deleted.

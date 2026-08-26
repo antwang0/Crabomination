@@ -626,19 +626,19 @@ build.
 
 ## Baseline
 
-**Sixty-eighth pass. Base `50dfa172` vs tip `a951b378`.** Three commits, one
-question asked three times: **what does a rollback, a gate, or a probe cost
-when it has nothing to do?** Ir readings `profiling-fast
+**Sixty-eighth pass. Base `50dfa172` vs tip `46d66933`.** Four perf commits
+and one bug fix, all one question: **what does a rollback, a gate, or a probe
+cost when it has nothing to do?** Ir readings `profiling-fast
 --no-default-features`, callgrind, one thread, `--a gang --b gang --games 6
 --threads 1 --seed 1`. The base column reproduces the sixty-seventh pass's
 tip to four digits on this box (`cube` 2,700,797,247 against its
 2,700,791,689), so the two blocks are comparable.
 
 ```text
-                          base (50dfa172)   tip (a951b378)
-I refs, --decks fixed     1,167,057,320    1,156,966,317   -0.865 %
-I refs, --decks sos       1,501,695,839    1,489,892,855   -0.786 %
-I refs, --decks cube      2,700,797,247    2,653,967,864   -1.734 %
+                          base (50dfa172)   tip (46d66933)
+I refs, --decks fixed     1,167,057,320    1,155,019,903   -1.032 %
+I refs, --decks sos       1,501,695,839    1,488,365,013   -0.888 %
+I refs, --decks cube      2,700,797,247    2,650,054,606   -1.879 %
 ```
 
 | step | commit | fixed | sos | cube | what |
@@ -646,11 +646,26 @@ I refs, --decks cube      2,700,797,247    2,653,967,864   -1.734 %
 | A | `a585bff2` | -0.088 % | -0.190 % | **-0.866 %** | a payment rollback rewrote every tapped flag it had snapshotted |
 | B | `5c0b07cc` | **-0.716 %** | **-0.548 %** | **-0.838 %** | the damage funnel asked the battlefield seven times per damage event |
 | C | `a951b378` | -0.062 % | -0.049 % | -0.038 % | the layer pass asked three questions of the effect list, once per permanent |
+| — | `86ec1bd8` | — | — | — | **bug**: the payment snapshot keyed on owner where auto-tap taps by controller |
+| D | `46d66933` | -0.168 % | -0.103 % | -0.147 % | every cast asked the battlefield three more times, for three name locks |
 
-**`cube` is 2.0x `fixed` and 2.2x `sos`** and A and B both contribute to
-that: A's waste is proportional to how many permanents the payer owns, and
-B's to how many static abilities the board carries. Full write-up, the three
+**`cube` is 1.8x `fixed` and 2.1x `sos`** and A and B both drive that: A's
+waste is proportional to how many permanents the payer controls, and B's to
+how many static abilities the board carries. Full write-up, the three
 refutations and the rules in **Log**.
+
+**The bug fix is cost-neutral and was measured rather than assumed** —
+`snapshot_payment_state`'s self cost is **byte-identical (1,270,624) across
+the two binaries** and its inclusive cost moves 0.19 %, so D's column is D's.
+It is `owner` -> `controller` on one filter: auto-tap taps what the payer
+*controls*, so a stolen mana source a failed payment had tapped was never in
+the snapshot and never came back. Invisible through a cast (`perform_action`'s
+checkpoint undoes the whole action on `Err`) and visible through
+`Effect::PayOrLoseGame`, which handles its own payment failure and carries on.
+Regression test `core_rules::game::failed_payment_untaps_a_stolen_mana_source`
+— **checked against the old filter, where it fails**; the first version of it
+went through a cast and passed either way, which is the vacuous-test tell this
+branch keeps re-learning.
 
 **Wall clock, `--decks cube`, `scripts/ab_wall.py`, 6 ABBA blocks of
 `--games 1500 --threads 4`, `release-fast` both sides, A = base
@@ -659,9 +674,12 @@ refutations and the rules in **Log**.
 ```text
                           mean B/A   95 % CI            blocks B faster
 A/B  B = A+B (5c0b07cc)   0.9788     -3.72 .. -0.53 %   6/6
-A/B  B = tip  (a951b378)  0.9667     -6.03 .. -0.63 %   5/6
+A/B  B = A..C (a951b378)  0.9667     -6.03 .. -0.63 %   5/6
 null control (base/base)  1.0012     -3.19 .. +3.42 %   4/6   FLAT
 ```
+
+Both A/B rows predate `46d66933`, which adds another -0.147 % of `cube` in
+Ir — inside the noise of either interval, so neither was re-run.
 
 **The honest statement is "2-3 % on `cube`", not one number**, and the null
 is why: it comes back flat but says this sitting cannot resolve anything
@@ -694,18 +712,18 @@ turns_per_game   27.53   -> 27.53
 decisions_per_game 613.2
 stalls           0 (0.00 %), cap 0 / stuck 0 / draw 0
 determinism      ok (all pairs split); thread_determinism ok (3 vs 1 identical)
-suite            19,006 passed / 0 failed / 5 ignored, 19 test binaries
+suite            19,007 passed / 0 failed / 5 ignored, 19 test binaries
 golden traces    7 passed, all unchanged
 clippy           `--workspace --all-targets` clean (client excluded — see below)
-peak_rss_mib     27.0 / 27.1 / 27.3 over three `--bench` runs (release-fast, mimalloc)
-games_per_s      190.70 / 209.60 / 218.85 at host_calib_ms 48-52
+peak_rss_mib     26.9 / 26.9 / 26.9 over three `--bench` runs (release-fast, mimalloc)
+games_per_s      200.34 / 214.93 / 222.69 at host_calib_ms 46-50
 rustc            1.95.0 (59807616e 2026-04-14)
 host_cpu         Intel(R) Xeon(R) Processor @ 2.80GHz, 4 cores
 ```
 
 **`--bench` does not resolve this pass and the three runs above say why**:
-190.7 to 218.9 games/s is a 15 % spread within one binary on one box in one
-minute, against an `--decks fixed` effect of -0.87 % in Ir. The wall-clock
+200.3 to 222.7 games/s is an 11 % spread within one binary on one box in one
+minute, against an `--decks fixed` effect of -1.03 % in Ir. The wall-clock
 claim is the `--decks cube` ABBA block above, which pairs the two binaries
 run-for-run; `--bench` is here for `decisions`, `stalls` and determinism,
 which are exact.
@@ -725,7 +743,8 @@ the standing recipe, seeds 11 and 12:
 ```
 
 **5,800 games, no panic, no arithmetic overflow, no assertion**, and the same
-grid run again at the tip after commit C reads the same six lines. The count
+grid re-run at the tip after C and again after the bug fix + D reads the same
+six lines each time. The count
 is lower than the usual 11,600 because `dev` runs the engine at opt-level 0
 (~10-12 games/s against `release-fast`'s ~200); the trade is deliberate —
 these games check the invariant the release grid cannot see. The 19,006-test
@@ -2592,6 +2611,22 @@ get the hoist. Closing it wants a `SecondPass` slot beside `LayerFreeze`'s
 `TypeGate` array (~0.13 % of `sos`), which inherits that array's
 clear-at-scope-end discipline — the thing a past pass got wrong and broke
 Sarkhan the Masterless with. Filed, not done.
+
+**D — every cast asked the battlefield three more times, for three name
+locks.** `cast_spell_with_convoke` opens with `cast_cost_scan` — the mask that
+exists *because* the cast asked the battlefield six separate times — and then,
+four lines later, asks it three more times for Meddling Mage, Ashiok's
+Erasure and Circu. One `NAME_LOCK` bit on the same walk;
+`cast_spell_with_convoke` self on `cube` **16,002,488 -> 12,477,070
+(-22.0 %)**. The fourth name lock (Academic Probation) lives on a *player*
+field, so it gets the presence test that field affords, and with both clear
+the spell's name is never looked up in hand.
+
+**That is the pass's fourth instance of one shape, and the shape now has a
+name: a scan gets written, and then the next question of the same kind gets
+asked with a fresh walk anyway.** `cast_cost_scan` covers six of the nine
+whole-board questions its own function asks. The place to look for the next
+one is not a profile — it is the three lines under an existing `*_scan` call.
 
 **Three refutations from this pass, all measured, none shipped.**
 
