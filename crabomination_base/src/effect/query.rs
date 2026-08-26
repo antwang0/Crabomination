@@ -1557,7 +1557,27 @@ impl Effect {
 
     /// Extract the target's filter if this effect's top-level "what"/"to" is
     /// `Selector::Target(0)`. Used by UI/bot for target selection.
+    ///
+    /// **Slot 0's own filter wins when the effect has one.** This walk and
+    /// [`target_filter_for_slot`](Self::target_filter_for_slot) are two
+    /// hand-written passes over the same enum sitting at opposite ends of one
+    /// target's life — this one aims, that one re-checks at CR 608.2b — and a
+    /// census over the catalog at the seventy-fifth pass found 65 definitions
+    /// where they disagreed. 63 were honest (a slot-1 filter for the fight
+    /// family, a per-mode or per-kicker branch); **two were bugs with one
+    /// cause**: `sel_filter` has no arm for a *player* target
+    /// (`Selector::Player(Target(n))`, `ControlledBy { who: Target(n) }`), so
+    /// `Feedback Bolt` reported its artifact-count subject filter and
+    /// `Reins of Power` reported the `Untap` clause that happens to be
+    /// `Seq`'s first element. Deferring makes the aim and the check the same
+    /// function wherever the effect declares slot 0, and leaves the walk below
+    /// for what it is actually good at — the 466 mass effects with no target
+    /// at all, whose *subject* filter is what the UI noun and the random
+    /// retarget want. See ENGINE_BACKLOG's P3.
     pub fn primary_target_filter(&self) -> Option<&SelectionRequirement> {
+        if let Some(f) = self.target_filter_for_slot(0) {
+            return Some(f);
+        }
         fn sel_filter(s: &Selector) -> Option<&SelectionRequirement> {
             match s {
                 Selector::EachMatching { filter, .. } => Some(filter),
