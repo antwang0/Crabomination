@@ -2471,8 +2471,17 @@ column was a bare basename. See **How to measure** — the row this file has
 called "a dependency's `macros.rs:332`" since the fifty-eighth pass is
 `core/src/slice/iter/macros.rs`, the SBA sweep's own battlefield walks.
 
-**Final checks at the pass's tip** (which also carries the other session's
-`cd67b81d` and the two card commits under it): suite **19,168 passed / 0
+**Final checks re-run at the branch tip after the four-collect commit**
+(which also carries the other session's `cd67b81d`, `b1a772ec` and
+`00ad7ad4`): suite **19,170 passed / 0 failed / 5 skipped**, golden traces
+unchanged, `clippy --workspace --all-targets` clean, `--bench` decisions
+**196,220**, turns/game 27.53, 0 stalls, determinism ok, 167.4 games/s at
+`host_calib_ms` 54, `peak_rss_mib` 26.6; crash-freedom `--decks all` three
+seeds **20,400 games / 20,396 decided / all pairs split**, `cube` and
+`sealed` at `--games 120` clean.
+
+**Final checks after the pass's first two commits** (the numbers the columns
+above were taken at): suite **19,168 passed / 0
 failed / 5 skipped**, golden traces unchanged; `--bench` decisions **196,220
 byte-identical**, turns/game 27.53, 0 stalls (cap 0 / stuck 0 / draw 0),
 determinism ok, `peak_rss_mib` 29.1 (`release-fast`, mimalloc), 162.7

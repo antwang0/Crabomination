@@ -135,7 +135,7 @@ than rewriting the entry.
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **~850**, PERF 8.0k. Suite is **14 test
+10. **Housekeeping.** TODO **856**, PERF 8.0k. Suite is **14 test
    binaries / 18,746 tests**, not the "22" older blocks quote. Next folds:
    PERF's 49th/50th Log entries (the 47th and 48th are folded, the 48th at
    the 64th pass: 166 lines to 56), and
