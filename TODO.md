@@ -4,14 +4,20 @@ Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
 
 
-Split for size (this file is the working handoff; the two archives below are
-reference and want their own triage pass):
+Split for size — this file is the working handoff, the archives below are
+reference. All three carry an index table at the top; triaged at the
+sixty-seventh pass, so don't re-take that.
 
-- `ENGINE_BACKLOG.md` — the long engine/rules/client backlogs and audits
-  (follow-ups not yet done, suggested next-up tasks, the CR coverage audit,
-  the decision-plumbing audit, client UX/visualization).
-- `CARD_BACKLOG.md` — per-set and per-run card residuals: what each closed set
-  still approximates, and the remaining gap lists.
+- `ENGINE_BACKLOG.md` — engine backlog and audits, ordered **bugs /
+  mechanics & primitives / rules coverage / tooling**: the correctness audit,
+  the robustness filters, the decision-plumbing audit, missing mechanics,
+  follow-ups not yet done, suggested next-up tasks, the CR coverage audit.
+- `CARD_BACKLOG.md` — per-set card residuals: what each set still
+  approximates, and the remaining gap lists. Titled by **subject**, ordered
+  open-first, then the closed sets whose only content is residuals.
+- `CLIENT_BACKLOG.md` — the Bevy GUI backlog (visualization / UX / refactor).
+  The client **does** build here after four apt packages; that file's header
+  has the command and the disk caveat.
 - `PERF.md` — the perf record: baseline, log, profile of record, candidates.
 
 ## NEXT (handoff — rewrite each run, keep it terse)
@@ -135,12 +141,19 @@ than rewriting the entry.
    candidate (-46), ranked last on purpose: one-time per process, so
    ~0.001 % of a training actor. **A cost that is 6.8 % of the measurement
    and 0.001 % of the workload is not a perf candidate.**
-10. **Housekeeping.** TODO **856**, PERF 7.6k. Suite is **14 test
+10. **Housekeeping. The archive triage is DONE — don't re-take it.**
+   ENGINE_BACKLOG 5.2k -> **3.8k** and CARD_BACKLOG 4.2k -> **4.0k**, both
+   at the sixty-seventh pass. Shipped rows dropped *unless* the row carried
+   an open residual (`Residual:` / `Remaining` / `still` / ⏳ / 🟡 — 111 and
+   18 rows kept in place); no body edited; both files now open with an index
+   table. ENGINE_BACKLOG is ordered bugs / mechanics / rules-coverage /
+   tooling; CARD_BACKLOG is retitled by *subject* rather than by the run
+   that found it ("Noticed this run (Mirage wave 5)" -> "Mirage wave 5") and
+   ordered open-first. The ~400 lines of GUI backlog left with them, into
+   **`CLIENT_BACKLOG.md`**. TODO **856**, PERF 7.6k. Suite is **14 test
    binaries / 19,170 tests**, not the "22" older blocks quote. The 47th
    through 50th Log entries are folded (the 49th and 50th at the 66th pass:
-   344 lines to 103); **next folds are the 51st/52nd**. ENGINE_BACKLOG 5.2k /
-   CARD_BACKLOG 4.2k both want a topical triage — the backlog file's own
-   header asks for one and nobody has done it.
+   344 lines to 103); **next folds are the 51st/52nd**.
 11. **Bugs: the parallel target-walker class is CLOSED** (`core_rules::
    target_walkers` 39 -> **0**, and it asserts `is_empty()` now — add the
    walker arm, do not reintroduce a threshold). 20 of the 39 were the test
@@ -452,8 +465,9 @@ Log with its numbers; read the entry before re-proposing any of them.
 - **Trackers.** TODO 1.0k, ROADMAP 0.66k, PERF 6.0k (**passes 45-49's
   Baseline blocks are one table plus the lessons they carried, and passes 45
   and 46's Log entries are folded, at the 58th tip**; the 48th's and 49th's
-  Log entries are the next fold). ENGINE_BACKLOG 4.9k and CARD_BACKLOG 4.2k
-  are the archives and still want their own triage pass.
+  Log entries are the next fold). ENGINE_BACKLOG **3.8k**, CARD_BACKLOG
+  **4.0k**, CLIENT_BACKLOG 0.4k — all three triaged and indexed at the
+  sixty-seventh pass; see NEXT item 10.
 
 ## Environment note
 
