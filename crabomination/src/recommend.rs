@@ -452,6 +452,15 @@ const ALLOW_WORDS: usize = 16;
 const ALLOW_BITS: usize = ALLOW_WORDS * 64;
 
 /// The two piles plus what [`assemble_lands`] needs to skip re-deriving them.
+/// How much of a shape a caller needs. `Ranked` stops at the spells and the
+/// score; `Full` also builds the leftovers pile and the pool-land index, which
+/// exist only to feed [`assemble_lands`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Detail {
+    Ranked,
+    Full,
+}
+
 struct MainDeck {
     main: Vec<CardFactory>,
     leftovers: Vec<CardFactory>,
@@ -473,7 +482,7 @@ pub fn suggest_main_deck_in_colors_with<R: Rng>(
     noise: i32,
     rng: &mut R,
 ) -> (Vec<CardFactory>, Vec<CardFactory>) {
-    let d = suggest_main_deck_shape(scores, colors, splash, target_spells, noise, rng);
+    let d = suggest_main_deck_shape(scores, colors, splash, target_spells, noise, rng, Detail::Full);
     (d.main, d.leftovers)
 }
 
@@ -486,8 +495,13 @@ fn suggest_main_deck_shape<R: Rng>(
     target_spells: usize,
     noise: i32,
     rng: &mut R,
+    detail: Detail,
 ) -> MainDeck {
     let picks = scores.picks;
+    // `leftovers`/`lands` exist for `assemble_lands` and nothing else, so a
+    // caller that only ranks the shape pays neither the two pool-sized vectors
+    // nor the copy that joins them (PERF (-63)).
+    let full = detail == Detail::Full;
     // The shape's colours as a five-bit field: "castable in these colours" is
     // then one `&`-and-compare per pool card rather than a `contains` scan per
     // pip colour, and it runs once per (pool card x shape). A colourless card
@@ -525,17 +539,20 @@ fn suggest_main_deck_shape<R: Rng>(
     // copy cap can read the dense card id off it.
     let mut scored: Vec<(u32, i32)> =
         Vec::with_capacity(if ordered.is_some() { 0 } else { picks.len() });
-    let mut off: Vec<CardFactory> = Vec::with_capacity(picks.len());
+    let mut off: Vec<CardFactory> = Vec::with_capacity(if full { picks.len() } else { 0 });
     // A sealed pool is about a fifth lands; one allocation rather than five
     // doublings.
-    let mut lands: Vec<(u32, crate::mana::ColorSet)> = Vec::with_capacity(picks.len() / 4);
+    let mut lands: Vec<(u32, crate::mana::ColorSet)> =
+        Vec::with_capacity(if full { picks.len() / 4 } else { 0 });
     let mut allow = [0u64; ALLOW_WORDS];
     for (i, (&f, &(brief, base))) in picks.iter().zip(&scores.cards).enumerate() {
         if !allowed(f, brief) {
-            if brief.is_land {
-                lands.push((off.len() as u32, brief.produces));
+            if full {
+                if brief.is_land {
+                    lands.push((off.len() as u32, brief.produces));
+                }
+                off.push(f);
             }
-            off.push(f);
             continue;
         }
         if ordered.is_some() {
@@ -564,38 +581,41 @@ fn suggest_main_deck_shape<R: Rng>(
         target_spells: usize,
         main: &mut Vec<CardFactory>,
         leftovers: &mut Vec<CardFactory>,
+        full: bool,
     ) {
         let f = scores.picks[at as usize];
         let count = &mut counts[scores.dup_group[at as usize] as usize];
         if main.len() < target_spells && u32::from(*count) < COPY_CAP {
             *count += 1;
             main.push(f);
-        } else {
+        } else if full {
             leftovers.push(f);
         }
     }
     let mut counts: Vec<u8> = vec![0; scores.groups];
     let mut main = Vec::with_capacity(target_spells);
-    let mut leftovers = Vec::with_capacity(picks.len());
+    let mut leftovers = Vec::with_capacity(if full { picks.len() } else { 0 });
     if let Some(order) = ordered {
         for &i in order {
             if allow[i as usize >> 6] & (1u64 << (i & 63)) != 0 {
-                take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers);
+                take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full);
             }
         }
     } else {
         scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
         for (i, _) in scored {
-            take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers);
+            take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full);
         }
     }
-    // `off` is appended whole, so a land's index in `leftovers` is its index
-    // in `off` shifted by whatever the scored pile left behind.
-    let off_start = leftovers.len() as u32;
-    for (at, _) in &mut lands {
-        *at += off_start;
+    if full {
+        // `off` is appended whole, so a land's index in `leftovers` is its
+        // index in `off` shifted by whatever the scored pile left behind.
+        let off_start = leftovers.len() as u32;
+        for (at, _) in &mut lands {
+            *at += off_start;
+        }
+        leftovers.extend(off);
     }
-    leftovers.extend(off);
     MainDeck { main, leftovers, lands }
 }
 
@@ -919,6 +939,9 @@ pub(crate) struct ShapeBuild {
     land_slots: Vec<(u32, crate::mana::ColorSet)>,
     /// Land slots to fill, after the 40-card floor.
     lands: u32,
+    /// Whether the two fields above were built — [`Self::complete`] needs
+    /// them, and a `Ranked` shape does not carry them.
+    detail: Detail,
 }
 
 /// [`build_shape`] as far as the ranking needs: chosen spells and static
@@ -935,6 +958,7 @@ fn rank_shape<R: Rng>(
     rng: &mut R,
     // The pool and its shape-invariant per-card facts — see [`PoolScores`].
     scores: &PoolScores<'_>,
+    detail: Detail,
 ) -> Option<ShapeBuild> {
     debug_assert_eq!(
         scores.quality, cfg.builder_v2,
@@ -949,7 +973,7 @@ fn rank_shape<R: Rng>(
         return None;
     }
     let MainDeck { main, leftovers, lands: land_slots } =
-        suggest_main_deck_shape(scores, colors, &splash, spells, noise, rng);
+        suggest_main_deck_shape(scores, colors, &splash, spells, noise, rng, detail);
     if main.is_empty() {
         return None;
     }
@@ -967,14 +991,17 @@ fn rank_shape<R: Rng>(
         main,
         leftovers,
         land_slots,
+        detail,
     })
 }
 
 impl ShapeBuild {
     /// Give the shape its land base and its label.
     fn complete(self, cfg: &SimConfig) -> CandidateBuild {
-        let ShapeBuild { colors, splash, main, static_score, mut leftovers, land_slots, lands } =
-            self;
+        debug_assert_eq!(self.detail, Detail::Full, "a Ranked shape has no leftovers to draw duals from");
+        let ShapeBuild {
+            colors, splash, main, static_score, mut leftovers, land_slots, lands, detail: _,
+        } = self;
         // Land colors: main colors plus any splash color actually present.
         let mut land_colors = Vec::with_capacity(colors.len() + splash.len());
         land_colors.extend_from_slice(&colors);
@@ -1009,7 +1036,7 @@ fn build_shape<R: Rng>(
     rng: &mut R,
     scores: &PoolScores<'_>,
 ) -> Option<CandidateBuild> {
-    rank_shape(colors, splash_colors, shape, cfg, rng, scores).map(|s| s.complete(cfg))
+    rank_shape(colors, splash_colors, shape, cfg, rng, scores, Detail::Full).map(|s| s.complete(cfg))
 }
 
 /// Enumerate every candidate build for `pool`: 10 pairs, pair + splash,
@@ -1028,14 +1055,19 @@ pub(crate) fn enumerate_candidates_with(
     scores: &PoolScores<'_>,
     cfg: &SimConfig,
 ) -> Vec<CandidateBuild> {
-    enumerate_shapes(scores, cfg).into_iter().map(|s| s.complete(cfg)).collect()
+    lattice(scores, cfg, Detail::Full).into_iter().map(|s| s.complete(cfg)).collect()
 }
 
 /// [`enumerate_candidates_with`] stopping at the ranking — the lattice as
-/// [`ShapeBuild`]s, in the same order, with no land base or label built. What
-/// [`build_random_deck_from`] wants: it reads the score and the colours and
-/// rebuilds the shape it picks.
+/// [`ShapeBuild`]s, in the same order, with no land base, leftovers pile or
+/// label built. What [`build_random_deck_from`] wants: it reads the score and
+/// the colours and rebuilds the shape it picks.
 pub(crate) fn enumerate_shapes(scores: &PoolScores<'_>, cfg: &SimConfig) -> Vec<ShapeBuild> {
+    lattice(scores, cfg, Detail::Ranked)
+}
+
+/// The shape lattice itself, at whichever detail the caller can use.
+fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<ShapeBuild> {
     // (main colors, splash colors) shapes.
     let mut shapes: Vec<(Vec<Color>, Vec<Color>)> = Vec::new();
     for pair in color_subsets(&[2]) {
@@ -1061,6 +1093,7 @@ pub(crate) fn enumerate_shapes(scores: &PoolScores<'_>, cfg: &SimConfig) -> Vec<
             cfg,
             &mut rng,
             scores,
+            detail,
         ) else {
             continue;
         };
