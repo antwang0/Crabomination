@@ -43,8 +43,25 @@ a lost race — the loser usually holds something the winner does not.
    splits by pool and loses on `fixed`), a second freeze scope over the
    candidate menus (**+0.001 %** — `next_action` already freezes the whole
    tick, bot.rs:1661), and (-57)'s `eval_material` prize, which is one gather
-   per evaluation and already at the floor. (-52)/(-53)/(-54) closed;
+   per evaluation and already at the floor. **And (-56b): the same
+   function's `sorted` collect (189,480 calls / 46,426,567 Ir) is refuted
+   four ways** — a twelve-slot stack buffer is the only one with a win and it
+   reads `fixed` +0.151 % / `cube` -0.381 %, the same pool split. Durable
+   lesson there: **`collect` is internal iteration and your loop is not**;
+   replacing one costs the `Chain<Filter<_>>` specialisation, ~0.15 % of
+   `fixed`, before it saves an allocation. (-52)/(-53)/(-54) closed;
    (-51)(a) wants a device on the do-not-rebuild list.
+1e. **The two biggest unclaimed rows, both seeded this pass with tables.**
+   **(-59) `dispatch_triggers_for_events` is the largest self row in the
+   program — 198,765,010 Ir / 5.58 % of `cube` / 139,500 calls / 1,425 Ir of
+   self each** — and no entry had ever named it. It wants a **line profile**
+   (`profiling-lines` + `cg_lines.py`, a cold build) because five plausible
+   sub-costs at ~300 Ir are unreadable from the source. **(-60)
+   `trigger_grant_sources` is 1.00 % of `cube` and finds 0.25 grants per
+   call over 57,596 of them**; the CR 510.2 creature-damage batch's 12,858
+   were hoisted this pass (`cube` -0.299 %, `fixed` -0.006 %), and
+   `fire_step_triggers`' 23,526 are already one-per-call, so what is left
+   there is *why 619 Ir*, not *how often*.
 1c. **The gather is 30 % `resolve_combat`, the prize is `cube` -1.6 %, and
    the obvious route is REFUTED with a counterexample — see (-58).** Seeding
    the batch's per-pair freeze scopes from one gather measures **fixed
@@ -60,17 +77,6 @@ a lost race — the loser usually holds something the winner does not.
    thing it replaces, and a `-C debug-assertions=yes` ladder run is the
    audit — 18,795 tests missed this, 60 games of `cube` found it in four
    seconds.**
-1d. **(background) The gather is 30 % `resolve_combat`.**
-   PERF's context table: 71,884 gathers on a six-game `cube` run, ~21,500 of
-   them under `resolve_combat`, whose `computed_permanent` edge is 18,888
-   calls / 92,837,604 Ir / **2.61 % of `cube`** with 68 % of the calls
-   rebuilding the list. It runs on the *sim's cloned* state (a clone gets
-   `LayerFreeze::default()`), so no tick scope covers it, and it **mutates**,
-   so it cannot simply be wrapped — a memo that survives a mutation is a
-   wrong game, not a slow one. The invalidating-memo shape is the board
-   epoch, refuted at (-18). Untried: freezing the read-only sub-regions
-   between its mutations, or handing its readers the
-   `combat_damage_computed` snapshot it already builds.
 1a. **⚠ The eightieth-pass block cost `fixed` +2.833 % and `cube` +1.712 %,
    and no commit in it recorded an Ir row.** Play is identical across it, so
    that is cost alone, and it is almost all one row: `computed_permanent`
@@ -87,9 +93,14 @@ a lost race — the loser usually holds something the winner does not.
    23.50 M + 9,628 drops / 15.11 M = 1.08 % of `cube`**, taken on a state the
    sim owns and throws away, to support a fallback whose failure rate the
    picker fixes have driven from 470/91,438 to ~14/8,610 on the one pool that
-   still has any. Removing it is **not** free — it is the partial-mutation
-   guarantee (`perform_action`'s doc) — so it wants an atomicity proof, not a
-   deletion.
+   still has any. **The atomicity proof this asked for is DISPROVED — see
+   (-54b).** Both declarations pay costs mid-validation and reject afterwards
+   (`declare_attackers_banded` at 1259/1313/1366 with `Err`s at 1306/1359/
+   1387; `declare_blockers` at 1995/2022 with eight `Err`s after), so the
+   checkpoint is load-bearing. Reordering all four cost families to select
+   before any applies is **not** behaviour-preserving — the tax taps the
+   lands a tap-another cost then looks for — so what is left is a CR 601.2h
+   simultaneity question to price, not a deletion.
 2. **Encoder is mined out** — passes 77-80, `encode_state` -49.4 %, actor
    -6.1 %, three refutations in PERF bounding what is left. A new lead there
    needs a fresh profile, not a list.

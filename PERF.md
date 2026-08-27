@@ -733,6 +733,48 @@ build.
 
 ## Baseline
 
+**Eighty-second pass, the perf half. Two commits, both behaviour-preserving
+(suite green and golden traces identical across each), and both are the same
+device: stop redoing per-item what is a property of the batch.**
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.
+
+(1) `Printed<Vec<_>>::push` materializes with `len + 1`.  Base c1450677.
+      fixed  1,168,055,399 -> 1,167,067,975   -0.085 %
+      cube   3,561,559,147 -> 3,540,505,639   -0.591 %
+      compute_permanent_pass's callee list loses Vec::clone (51,706),
+      grow_one (51,706) and __rust_alloc (51,706) entirely — 1,690,086
+      calls -> 1,483,582.
+
+(2) CR 510.2 — one `trigger_grant_sources` walk for the combat-damage
+    batch instead of one per damaged creature.  Base 31eb7333.
+      fixed  1,171,020,837 -> 1,170,949,456   -0.006 %
+      cube   3,547,606,488 -> 3,536,989,067   -0.299 %
+```
+
+**The two bases differ because a concurrent session landed a play-changing
+block-rule commit between them**, so the absolutes are not a chain; each row
+is its own A/B on its own base. That is the branch's normal state now and the
+reason every row here names one.
+
+**`fixed` moves by a twentieth of what `cube` does on (1) and not at all on
+(2), and both times for the same reason:** neither the `Printed` materialize
+nor the grant walk has anything to do on a board with no keyword grants and
+no `GrantTriggeredAbility` static. **A layers-or-grants change measured only
+on `--bench` reads as noise.**
+
+**And the pass's most useful number is a refutation.** Four ways of removing
+`compute_permanent_pass`'s *other* allocation — the `sorted` collect, 189,480
+calls / 46,426,567 Ir — all read worse than the collect on `fixed` (see
+(-56b)). The finding underneath is not about this function: **`Vec::from_iter`
+is internal iteration and a hand-written loop is not.** A `Chain<Filter<_>>`
+iterates internally through `fold` and externally through a state machine, and
+the difference is worth ~0.15 % of `fixed` here — more than the allocation the
+replacement was removing. Removing the stack buffer entirely read *worse*
+still, which is what pins the cause on the iteration rather than the buffer.
+
 **Eighty-first pass. Base `694fdb05`, two commits, and the second is the
 measurement worth keeping.** Both are behaviour-preserving; `--bench` is
 byte-identical across both (195,616 / 27.44 / 0 stalls) and
@@ -6983,6 +7025,126 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-59) `dispatch_triggers_for_events` IS THE LARGEST SELF ROW IN THE
+PROGRAM AND NO ENTRY HAS EVER NAMED IT — 198,765,010 Ir / 5.58 % OF `cube` /
+139,500 CALLS / 1,425 Ir OF SELF EACH.** Read at `c1450677`, `--decks cube`,
+`cg_edges.py` self table. For scale, the next four rows are the gather
+(4.81 %) and three allocator symbols.
+
+```text
+callers                                     calls    inclusive Ir
+  perform_action_inner                    114,834     281,333,427   7.90 %
+  declare_attackers_banded                 13,092         615,324
+  finalize_cast                             7,008      23,794,641
+  submit_decision                           2,078      22,855,387
+  do_untap                                  2,102       9,699,368
+its own callees, the two that are rows of their own
+  dispatch_board_scan                      74,800      44,863,784   1.26 %
+  statics_granted_triggers_inner (via the per-card loop)
+```
+
+**1,425 Ir of *self* is the batch's fixed cost before a single trigger
+fires**, and the function's shape says where it goes: an `events` walk to
+stamp entry turns, four more `events.iter()` passes (the graveyard-batch
+collapse, the synthesis fold, the delayed-trigger filters), a whole-
+battlefield loop, and a `died_card_snapshots` walk at the tail. The
+`no_grants` fast skip inside the battlefield loop is already there and is not
+the question. **What this wants first is a line profile** — `profiling-lines`
+plus `cg_lines.py`, which is a cold build and the reason nobody has run it —
+because five candidate sub-costs at ~300 Ir each are indistinguishable from
+one at 1,400 by reading the source.
+
+**(-60) `trigger_grant_sources` WALKS EVERY STATIC ABILITY ON THE BOARD TO
+FIND A QUARTER OF A GRANT, 57,596 TIMES — 35,656,442 Ir OF SELF / 1.00 % OF
+`cube`.** Its callee list is 2.1 M, so essentially all of it is the walk plus
+the inlined `active_static`; `resolve_named_by_source` fires 14,444 times
+across those 57,596 calls, i.e. **0.25 grants found per call**.
+
+The CR 510.2 creature-damage batch (12,858 of them) was taken at the
+eighty-second pass — hoisted to one walk per batch, `cube` **-0.299 %**,
+`fixed` -0.006 %. What is left, with the shape each one wants:
+
+```text
+  23,526  fire_step_triggers          already one per call; the walk itself
+                                      is the cost (14.6 M / 0.41 % of cube)
+   7,070  fire_combat_damage_to_player_triggers   per-attacker, deep inside
+                                      the mutating target match — the same
+                                      hoist, harder
+   4,164  resolve_top_of_stack_inner
+   3,352  fire_self_etb_triggers
+```
+
+`fire_step_triggers` is the interesting one because it is *already* hoisted
+correctly and still costs 0.41 %: there the question is not "how often" but
+"why 619 Ir". A presence gate does not answer it — the walk **is** the gate,
+and on `cube` the grants exist. The shape that would is a per-`CardDefinition`
+"carries a `GrantTriggeredAbility` static" bit, computed once for an
+immutable `Arc<CardDefinition>` rather than per walk; `static_effect_gather_bits`
+is the existing precedent for the shape question and `gather_continuous_effects_inner`
+already recomputes it per card per gather, so the bit would pay twice.
+
+**(-56b) REFUTED: `compute_permanent_pass`'s `sorted` COLLECT IS 189,480
+CALLS / 46,426,567 Ir AND FOUR WAYS OF NOT ALLOCATING IT ARE ALL WORSE.**
+Base `31eb7333`, same instrument, all four built and measured:
+
+```text
+                                                  fixed        cube
+  [Option<&CE>; 12] + `for` loop                +0.151 %    -0.381 %
+  peel the first two by hand, Vec beyond        +0.184 %    -0.322 %
+  `for_each` into one/many accumulator          +0.311 %    +0.054 %
+  [Option<&CE>; 4]  + `for_each`                +0.269 %    +0.0005 %
+```
+
+**Only the first has a win and it splits by pool, which is the same verdict
+the two `sa_cards` reserves got one entry down.** On `fixed` the filtered list
+is empty on most passes, so `collect` never allocates there and every one of
+these is pure added cost; on `cube` it allocates often enough to pay.
+
+**Two things here are durable and neither was obvious.** (a) *The stack buffer
+is not the expensive part.* Removing it entirely (row 2) read **worse** on
+`fixed` than the twelve-slot version, so the ~0.15 % is not the array's
+initialisation — it is the hand-written iteration. (b) **`collect` is
+internal iteration and a hand-written loop is not.** A `Chain<Filter<_>>`
+iterates internally through `fold` and externally through a state machine;
+`Vec::from_iter` takes the internal path and every replacement here took the
+external one. Rows 3 and 4 confirm it from the other side: moving back to
+`for_each` (internal) but with a per-element accumulator body gave the cost
+back and lost the `cube` win as well, because the closure's captured `n` and
+spill vector defeat what the collect loop keeps in registers. **A collect is
+not just an allocation — replacing one costs the iterator specialisation
+too, and that is worth ~0.15 % of `fixed` here.** The way to keep both would
+be a stack-backed `Extend` target (a `SmallVec`), which is a dependency
+decision, not a code one.
+
+**(-54b) THE `sim_step` CHECKPOINT CANNOT BE REMOVED BY AN ATOMICITY PROOF,
+BECAUSE NEITHER DECLARATION IS ATOMIC. DISPROVED BY READING, NO BUILD.**
+NEXT's item 1b asks for "an atomicity proof, not a deletion" of
+`perform_action`'s checkpoint on the two declaration kinds (1.08 % of `cube`).
+Both functions mutate before their last `Err`:
+
+```text
+declare_attackers_banded        combat.rs (line numbers at f51e695b)
+  1259  try_pay_with_auto_tap    <- the CR 508.1g attack tax, PAID
+  1306  return Err               <- Floodtide Serpent's cost unpayable
+  1313  move_card_to             <- that cost, APPLIED
+  1359  return Err               <- Leviathan's sacrifice cost unpayable
+  1366  sacrifice_one            <- that cost, APPLIED
+  1387  return Err               <- Hollow Warrior's tap cost unpayable
+declare_blockers                (line numbers at f51e695b)
+  1995  try_pay_with_auto_tap    <- the CR 509.1b block tax, PAID
+  2022  battlefield_find_mut     <- a block cost, APPLIED
+  2039, 2055, 2089, 2114, 2137, 2166, 2194, 2222   eight more `return Err`
+```
+
+Each cost family is already select-all-then-apply *internally*; what is not
+atomic is the **sequence** of families, and reordering them so all four
+select before any applies is not behaviour-preserving: the tax taps lands, and
+`find_tap_helper` looks for an *untapped* permanent, so a tap-another cost
+would gain access to the lands the tax spent. That is a simultaneity question
+(CR 601.2h) with a real answer, not a refactor. **The checkpoint is the
+cheapest correct implementation of it**, and this entry exists so the next
+run prices the restructure rather than the deletion.
 
 **(-58) THE COMBAT DAMAGE BATCH'S PER-PAIR GATHER IS WORTH `cube` -1.6 %,
 AND SHARING IT IS UNSOUND. BUILT, MEASURED, REFUTED — WITH THE
