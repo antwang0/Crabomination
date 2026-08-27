@@ -11578,7 +11578,7 @@ impl GameState {
             let static_granted = if any_static_grant || !c.definition.station.is_empty() {
                 self.statics_granted_triggers_on(c, &trigger_grants)
             } else {
-                Vec::new()
+                SmallVec::new()
             };
             let equip_granted = if any_equip_grant {
                 self.equip_granted_triggers_with(c, &equip_grants)

@@ -3356,7 +3356,7 @@ impl GameState {
         &'a self,
         card: &'a CardInstance,
         grants: &[TriggerGrant<'a>],
-    ) -> Vec<&'a crate::card::TriggeredAbility> {
+    ) -> SmallVec<[&'a crate::card::TriggeredAbility; 2]> {
         self.statics_granted_triggers_inner(card, grants, Some(card))
     }
 
@@ -3365,7 +3365,7 @@ impl GameState {
         card: &'a CardInstance,
         grants: &[TriggerGrant<'a>],
         hint: Option<&CardInstance>,
-    ) -> Vec<&'a crate::card::TriggeredAbility> {
+    ) -> SmallVec<[&'a crate::card::TriggeredAbility; 2]> {
         let matches = |req: &crate::card::SelectionRequirement,
                        controller: usize,
                        source: Option<CardId>| match hint {
@@ -3377,7 +3377,7 @@ impl GameState {
                 source,
             ),
         };
-        let mut out = Vec::new();
+        let mut out: SmallVec<[&'a crate::card::TriggeredAbility; 2]> = SmallVec::new();
         for g in grants {
             if matches(&g.filter, g.controller, Some(g.source)) {
                 out.push(g.ability);
@@ -17725,7 +17725,7 @@ impl GameState {
             let static_granted = if any_static_grant || !card.definition.station.is_empty() {
                 self.statics_granted_triggers_on(card, &trigger_grants)
             } else {
-                Vec::new()
+                SmallVec::new()
             };
             let own_granted: &[crate::card::TriggeredAbility] =
                 if any_own_grant { self.granted_triggers(card.id) } else { &[] };
