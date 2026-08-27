@@ -52,9 +52,17 @@ went in on top as `6c9746ec`, and a measurement of the alternative shape).
    tap, and its own entry says what it wants is either fewer taps or a cheaper
    `keyword_grant_in_scope` — and the bit that would do the latter is on the
    do-not-rebuild list.** So **the next perf pass needs a fresh profile, not
-   this queue** — and it should be of `selfplay_train`, which is the ML
-   phase's actual workload and which this file's profile of record still does
-   not describe (see 4).
+   this queue** — and PERF's **"THE ACTOR, at the eightieth tip"** is now that
+   profile. Its answer: the actor is *not* a different animal. Top rows are
+   the engine (allocation+copy 17.7 %, `dispatch_triggers_for_events` 4.91 %,
+   the layer gather 3.21 %), and the shape is the ladder's —
+   **`pick_attacks_scored` 46.3 %** at 1.78 M Ir a decision,
+   `main_phase_action_with` 27.9 %, `perform_action` 6.9 %, the whole encoder
+   **6.1 %**. **The attack search is the ML pipeline's largest number and
+   nothing has attacked it directly.** ⚠ Profile the actor at **60 games**,
+   not 20: net init is 59 M Ir of fixed cost that reads 4.34 % at 20 games and
+   1.40 % at 60, and `Normal::sample` sits at #8 in the short table with the
+   same absolute Ir it has at #40 in the long one.
 2. **Read PERF's "Inside one attack sim" before anything bot-side:** the
    search is 59.6 % of `cube` and **37 % of the program is the engine
    advancing a turn inside one**, against `cast_candidates`' 3.6 %.

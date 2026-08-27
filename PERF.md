@@ -6182,6 +6182,74 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### THE ACTOR, at the eightieth tip — the ML workload, profiled at last
+
+NEXT has said for four passes that this file describes `bot_ladder` only.
+Here is the other one.
+
+```text
+CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60 --steps 1 --seed 7
+profiling-fast --no-default-features, callgrind.  4,228,661,490 Ir.
+
+  inclusive, top-down
+   3,275,831,114  77.5 %  HeuristicBot::next_action     32,402 calls
+     1,956,331,551  46.3 %    pick_attacks_scored        1,102   1.78 M each
+     1,181,904,885  27.9 %    main_phase_action_with     6,895
+     291,221,400   6.9 %  GameState::perform_action     27,701   (the real game)
+     259,906,228   6.1 %  encode_state                   6,386
+      59,354,329   1.4 %  net init (VarBuilder::get)        20   ONE-TIME
+
+  self, top ten
+   212,915,362  5.04 %  __memcpy_avx_unaligned_erms
+   207,716,264  4.91 %  dispatch_triggers_for_events
+   162,417,603  3.84 %  _int_free
+   143,477,492  3.39 %  _int_malloc
+   135,897,243  3.21 %  gather_continuous_effects_inner
+   123,360,589  2.92 %  malloc
+   115,308,969  2.73 %  Arc::clone_from_ref_in
+    98,590,762  2.33 %  free
+    92,984,331  2.20 %  Vec::spec_from_iter_nested
+    83,263,034  1.97 %  computed_permanent
+```
+
+**The headline is that the actor is not a different animal.** Its top rows
+are the *engine* — allocation and copying 17.7 % between five symbols, the
+trigger dispatcher 4.91 %, the layer gather 3.21 % — and its shape is the
+ladder's shape: an attack search that is half the program, a main phase that
+is a quarter, and the game itself under 7 %. The encoder, four passes of work,
+is **6.1 %**. So a lead found on `bot_ladder` mostly transfers, and the
+"three of the actor's top rows are 0 calls on the bench" line in NEXT was
+about the *encoder's* rows, not about the profile as a whole.
+
+**One attack decision costs 1.78 M Ir.** The ladder's figure is 826 k for one
+*sim* and 59.6 % for the whole search on `cube`; this is the same device on
+`sos` decks, and it is the largest single number in the ML pipeline.
+
+**⚠ READ THE RUN LENGTH BEFORE READING ANY SHARE HERE.** A `selfplay_train`
+process pays a fixed startup — a randomly-initialized net, 722,816 normal
+samples — and at a short run that fixed cost looks like a hot path:
+
+```text
+                                       20 games        60 games
+  rand_distr Normal::sample      35,325,414  2.58 %   35,317,689  0.84 %
+  net init, inclusive            59,354,329  4.34 %   59,354,329  1.40 %
+```
+
+**The same absolute Ir, three times the share.** `Normal::sample` sits at #8
+in a 20-game self-cost table and vanishes from a 60-game one, and nothing
+about the program changed. It is not waste — `--steps 1` genuinely starts a
+fresh net — it is fixed cost, and **a share is a ratio whose denominator you
+chose**. Profile the actor at 60 games, or subtract two run lengths; the
+20-game runs the encoder passes measured against carried ~4.5 % of this, so
+those deltas are all slightly *understated* against real game work.
+
+**Correction to `6c9746ec`'s message**, which said the Monte Carlo bot is
+"the path the training actors take": `selfplay_train`'s `--mcts-actors`
+defaults to **0**, so actors run `HeuristicBot` unless asked otherwise —
+which is exactly what this profile shows. The MctsBot test that commit added
+is still worth having (it covers a supported actor mode and the only consumer
+that can play an unfiltered menu entry), but it is not on the default path.
+
 ### Inside one attack sim, at the seventy-fifth tip (`5e4ec3bd`), `--decks cube`
 
 NEXT's item N3 read `pick_attacks_scored` inclusively for the first time. This
