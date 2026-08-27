@@ -167,6 +167,32 @@ cargo test -p crabomination_tests --test core_rules golden_trace
 cargo build --timings -p crabomination
 ```
 
+**Hazards of this container, moved here from TODO's NEXT at the eighty-third
+pass because they are measurement rules, not handoff.**
+
+* ⚠ **Wall-clock rows do not cross hosts, and `host_calib_ms` is a
+  *fingerprint*, not a correction factor.** Three rows this file carries are
+  170-175 games/s at calib 51-57 on a 2.80 GHz box, 277-308 at 64-71 on a
+  2.10 GHz one, and 239.9 at 53 on a 2.80 GHz one — a faster rate at a worse
+  calib on a slower nominal clock, twice. If a games/s row looks wrong, build
+  both sides in one sitting.
+* ⚠ **`peak_rss_mib` is an allocator reading and therefore a distribution:
+  take three before calling a difference.** A "13 % step" flagged at the
+  eighty-second pass did not reproduce.
+* ⚠ **A container reset wipes `target/`, removes `cargo-nextest`, and checks
+  the repo out on the *system-prompt* branch.** Commit each measured change as
+  soon as it measures, re-run the branch fetch after any surprising `git
+  status`, and reinstall nextest with
+  `curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`.
+* ⚠ **Disk.** A cold `release` + `profiling-fast` + `profiling-lines` +
+  `overflow`-audit set of target dirs does not fit beside a debug build:
+  `target/debug/incremental` is 7-15 GB and is the first thing to delete
+  (`rm -rf target/debug/incremental`) — it costs the next debug build its
+  incremental cache and nothing else.
+* ⚠ **Two cargo builds at once take ~1.5x each on four cores**, and a cold
+  `release` of this workspace is ~25 min on its own. Start the one whose
+  result gates the next step first.
+
 **MEASURING A CHANGE TO THE BOT: PIN THE JITTER, OR THE COLUMN IS GAME
 LENGTH.** The scored pickers draw one `jitter_below(4)` per *candidate*, so
 any change to how many candidates reach a picker re-aligns the tie-break
@@ -778,6 +804,28 @@ matches `crabomination_base` and `crabomination_catalog` too and so forces the
 build.
 
 ## Baseline
+
+**Eighty-third pass. One perf commit, behaviour-preserving, and the pass's
+other two numbers are a priced candidate and a suite defect.**
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base ae2b107d.
+
+(1) CR 613.8's `SecondPass::of` gate walk, hoisted out of the two ways an
+    effect list reaches several permanents.
+      fixed  1,167,670,783 -> 1,166,181,370   -0.128 %
+      cube   3,550,805,805 -> 3,542,194,720   -0.242 %
+```
+
+`--bench` byte-identical across it: **195,528 decisions / 27.44 turns /
+0 stalls / determinism ok**, unchanged from the eighty-second pass's refresh
+and unchanged again across the concurrent CR 509.1c commit. Suite 19,050 /
+0 / 5 at the tip, clippy `--workspace --exclude crabomination_client
+--all-targets` clean, golden traces unmoved. Wall-clock on this container:
+**239.9 games/s at `host_calib_ms` 53** on a 2.80 GHz Xeon, `release` build,
+`peak_rss_mib` 24.2 — a *different* box from the eighty-second pass's
+170-175 at 51-57, so read the hazard note in TODO before comparing them.
 
 **Eighty-second pass, the perf half. Two commits, both behaviour-preserving
 (suite green and golden traces identical across each), and both are the same
@@ -3754,6 +3802,53 @@ the table above is safe to compress:
 
 ## Log
 
+### Eighty-third pass — a gate walk hoisted, an ungated walk priced, and a suite gate that was a coin flip
+
+**1. `SecondPass::of` was the entry the candidate list said to price first,
+and the price is `cube` -0.242 % / `fixed` -0.128 %.** (-57) asked for it
+before ranking "resolve the board in one call". The gate answers *can either
+CR 613.8 re-run fire at all* by walking the whole effect list, and it is a
+property of the list, not of the permanent. `apply_layers` had hoisted it out
+of its per-card map since it was written; the other two ways a list reaches
+several permanents had not — `compute_permanents(ids)` walked the list once
+per id (a six-attacker combat-damage batch: six walks), and inside a freeze
+scope the memoized list is immutable and `computed_permanent` still
+re-derived the same three bits for every distinct card the scope asked about.
+The gates ride in the freeze memo now. Numbers in **Baseline**. **The entry
+this was gating is closed at this size** — the prize it was sizing was the
+per-evaluation gather, and that is 6x smaller than the entry claimed.
+
+**2. The layer gather has an ungated whole-graveyard walk and it is worth
+more on the bench pool than the commit above — priced, not taken. See
+(-62).** Measured by deletion, one build and two callgrind runs: `fixed`
+**-0.440 %**, `cube` **-0.251 %**, `--bench` byte-identical (so no pool here
+carries a `GraveyardAnthem` card and the deletion changed no play). It is
+not taken because every sound gate for it is a maintained flag over a zone
+with 334 write sites, and the newtype that would make the invalidation
+complete has `Deref`-shaped blast radius across 2,033 read sites. The entry
+carries the design and what would make it safe.
+
+**3. Seven ML convergence thresholds were coin flips on entropy, and the
+mutex written against the symptom cannot fix it.** `policy_head_learns_to_
+rank_candidates` failed once inside a full-suite run, then passed alone,
+under eight-way CPU load, and in every isolated repeat. candle's CPU backend
+draws every initial parameter from `rand::rng()` and `CpuDevice::set_seed`
+*bails* rather than seeding, so each trainer starts from weights no test
+chose. `TRAIN_SERIAL`, added against an earlier sighting of the same
+symptom, is inert under `nextest` — which gives every test its own process,
+so it is never contended.
+
+**And the first fix was wrong in a way worth keeping.** Redrawing each
+parameter at *the spread its own entropy values happened to have* leaves
+most of the flip in place: a sample standard deviation is itself a random
+variable, ±18 % on a 16-element head. The scale has to come from the
+**shape**. Then the constant-parameter test has the same shape of bug — "has
+no spread" is not "is a constant", because a one-element head bias has no
+spread and is still a draw. Both were caught by asserting the property
+directly (`reseeding_makes_two_trainers_identical`) rather than by the seven
+tests passing, which they did either way. **A determinism fix needs a test
+that asserts determinism, not a suite that stops flaking.**
+
 ### Seventy-sixth pass — a refutation dates, and the thing that dates it is its own arithmetic
 
 Three commits, base `5e4ec3bd`. The perf one reads **`fixed` -0.613 %, `sos`
@@ -6378,6 +6473,51 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### THE WHOLE PROGRAM BY SOURCE LINE, at the eighty-third tip (`34d118fe`), `--decks cube`
+
+**Run once so nobody has to run it again: the simulator has no hot line, and
+this is the table that says so.** `profiling-lines` + `--dump-instr=yes` +
+`cg_lines.py` with no `--in`, so every function's inlined body is attributed.
+96.1 % of the run resolves. **The largest single source line in the program
+is 0.82 %**, and only six named engine lines clear 0.25 %:
+
+```text
+  24,285,248  0.82%  ptr/mod.rs:1917       Arc::clone_from_ref_in   (the CoW deep copy)
+  19,461,794  0.66%  game/mod.rs:?         dispatch_triggers_for_events
+  17,159,388  0.58%  iter/macros.rs:?      gather_continuous_effects_inner
+  16,294,384  0.55%  game/mod.rs:2283      GameState::clone — `players: self.players.clone()`
+  15,352,974  0.52%  game/stack.rs:?       sba_board_scan
+  14,559,528  0.49%  ptr/non_null.rs:444   gather_continuous_effects_inner
+  13,769,886  0.47%  effects/eval.rs:3117  evaluate_requirement_static_hinted (prologue)
+  12,593,316  0.43%  vec/mod.rs:464        dispatch_triggers_for_events
+  11,441,834  0.39%  iter/macros.rs:332    check_state_based_actions
+   9,344,330  0.32%  iter/macros.rs:180    card_type_change_unscoped
+   7,653,600  0.26%  game/mod.rs:14805     perform_action_inner (the action match)
+```
+
+**The one line worth an entry is `game/mod.rs:2283`.** `GameState::clone`'s
+whole inline group is 46,128,094 Ir (1.6 % of `cube`) over **34,522 clones**,
+and **35 % of it is one field**: `players: self.players.clone()`, **472 Ir a
+clone**, which is a `malloc` and two `Arc` bumps for a two-element `Vec`.
+Every other zone in `GameState` is `CowBox`-wrapped and clones for a
+refcount; `players` is a bare `Vec<Player>` and clones for an allocation.
+Wrapping it moves that allocation from *every* clone to the first `&mut`
+reach — a real win only on the clones that never write a player, and
+**allocation-shaped, so Ir overstates it** (mimalloc ships; PERF's pass-54
+rule). Size it against `selfplay_train` throughput before building it.
+
+The gather's own line profile is in the same run and reads like the
+dispatcher's: **no hot line**. Its inline group is 174,780,740 Ir (5.9 %),
+its largest named source line is `any_attached |= card.attached_to.is_some()`
+at 3,548,308 (0.12 %), the whole per-card prologue's named lines are ~10.5 M
+(0.30 %), and `sa_open`'s `bits & bit != 0` is 4,411,586 (0.15 %) — that is
+what the thirty-eight-pass gate device costs to *ask*. **Do not re-run this
+profile to look for a hot line in either function.** What it does not show is
+(-62): the ungated graveyard walk has no row of its own, because it is
+inlined into a 3,581-line function and its cost lands in `iter/macros.rs`.
+**A line profile finds hot lines; it does not find cheap lines repeated over
+a collection nobody gated.** That one was found by reading the function.
+
 ### THE ACTOR RE-READ at the eighty-first pass — and the base had moved
 
 The eightieth tip's actor profile is the block below. Re-running the same
@@ -7160,6 +7300,63 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-62) THE LAYER GATHER WALKS EVERY CARD IN EVERY GRAVEYARD ON EVERY
+RECOMPUTE, UNGATED, AND IT IS WORTH `fixed` -0.440 % / `cube` -0.251 %.
+PRICED BY DELETION AT THE EIGHTY-THIRD PASS; NOT TAKEN, AND THE REASON IS
+THE GATE, NOT THE NUMBER.**
+
+`gather_continuous_effects_inner`'s tail (`game/mod.rs`, the
+`GraveyardAnthem` pass — the Incarnation cycle's "as long as this card is in
+your graveyard and you control a [Land subtype], creatures you control have
+[keyword]") is
+
+```text
+for player in &self.players { for card in &player.graveyard {
+    for sa in &card.definition.static_abilities { ... } } }
+```
+
+with no presence gate in front of it. Every other whole-collection pass in
+that function is behind one (`sa_mask`, `any_dynamic_pt`, `any_soulbond_
+bonus`, …); this one is not, and it is ~8 Ir a graveyard card — three
+pointer chases, `CardInstance` -> `CardData` -> `Arc<CardDefinition>` ->
+the `Vec` header — times a graveyard that reaches twenty-plus cards a side
+by mid-game, times **every** gather.
+
+```text
+measured by replacing the outer iterator with `std::iter::empty()`,
+profiling-fast --no-default-features, base 34d118fe (the SecondPass tip)
+  fixed  1,166,181,370 -> 1,161,055,975   -0.440 %
+  cube   3,542,194,720 -> 3,533,307,199   -0.251 %
+  --bench 195,528 / 27.44 / 0 stalls — byte-identical, so neither pool
+  carries a GraveyardAnthem card and the deletion moved no play
+```
+
+**The walk *is* the gate**, the way `trigger_grant_sources`' is in (-60), so
+the only lever is a maintained answer. Four shapes considered:
+
+* **A `GameState` flag invalidated at the graveyard write sites.** 334 sites
+  match a write-shaped grep. Missing one is a silent wrong game (an
+  Incarnation's anthem stops applying), not a crash.
+* **A newtype around `graveyard: CowBox<Vec<CardInstance>>` carrying the
+  answer, cleared in its `DerefMut` and its `&mut IntoIterator`** — the two
+  entry points (-18) established are *complete*, so the invalidation is
+  provable rather than enumerated. `Deref` keeps the 2,033 read sites
+  untouched; the work is the ~75 construction/assignment sites and serde.
+  **This is the shape that would ship**, and it is a session's work on its
+  own, not a corner of one.
+* **A board-epoch key** — (-18), refuted, and its lesson applies here in the
+  narrow direction: the counter is only free if it is on the *one* zone that
+  wants it, which is what the newtype is.
+* **A length-based key** (`(Arc::as_ptr, Vec::as_ptr, len)`) — unsound: a
+  remove-then-push of a different card can hold all three fixed.
+
+**And the general finding is bigger than the entry: this is the one pass in
+the gather nobody gated, and it was found by *reading the function for
+ungated whole-collection walks*, not by a profile row** — it has no row of
+its own, being inlined into a 3,581-line function. Grep the gather for
+`self.players` / `graveyard.iter` / `exile.iter` before trusting a self
+table to have found everything in it.
 
 **(-59) `dispatch_triggers_for_events` IS THE LARGEST SELF ROW IN THE
 PROGRAM AND NO ENTRY HAS EVER NAMED IT — 198,765,010 Ir / 5.58 % OF `cube` /
