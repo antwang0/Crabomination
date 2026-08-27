@@ -1049,7 +1049,22 @@ seeded cube smoke  4,000 pairings, all terminate; bot_rejection_count **0**,
           none of it is comparable to anything; the invariant above is)
 whole-program Ir **at `49748e1f`**, same configuration as the rows above
   fixed  1,126,243,545        cube  3,431,708,160
+and at `7c725dc0`, i.e. `e9a509e6` (the concurrent half's recorded tip) plus
+this half's two rules commits — the CR 508.1d cost gate and the off-board
+gate's revert:
+  fixed  1,113,096,892 -> 1,113,114,995   +0.0016 %
+  cube   3,386,393,977 -> 3,386,372,363   -0.0006 %
 ```
+
+**Those two rows are what says the rules changes cost nothing, and they are a
+*cross-container* difference of one part in sixty thousand.** The gates are
+the reason: `attack_cost_payable` sits behind `attack_tax_possible` *and*
+behind the must-attack presence gate both callers already pay, so on a board
+with no attack tax — which is both bench pools — the whole addition is one bit
+test inside a function that is not reached. `cg_edges.py` reports 0 calls for
+all four new symbols on both pools, which on `profiling-fast` means *inlined*
+rather than *not executed*, so it is the totals above and not that table that
+carry the claim.
 
 **Those two totals are a cross-session control and they held.** A concurrent
 session recorded `fixed 1,126,243,196 / cube 3,431,711,282` at `41ff9d00`,
