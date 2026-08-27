@@ -7385,8 +7385,21 @@ profiling-fast --no-default-features, base 34d118fe (the SecondPass tip)
 the only lever is a maintained answer. Four shapes considered:
 
 * **A `GameState` flag invalidated at the graveyard write sites.** 334 sites
-  match a write-shaped grep. Missing one is a silent wrong game (an
-  Incarnation's anthem stops applying), not a crash.
+  match a write-shaped grep (19 of them are *insertions*, which is all the
+  flag needs — a stale "yes" only costs the walk). Missing one is a silent
+  wrong game (an Incarnation's anthem stops applying), not a crash.
+* **A flag on `PlayerData`, cleared in `Player`'s `DerefMut`** — one plain
+  byte store at the single point every `&mut` reach into a seat goes through,
+  so the invalidation is *provable* rather than enumerated, and it needs no
+  newtype. **Ruled out on frequency, measured before building:**
+  `cg_sites.py` prices the whole inlined `Player::deref_mut` family at
+  **2,361,894 Ir (0.08 % of `cube`)**, i.e. ~120-240 k calls against the
+  gather's 71,884 — two to three player mutations per gather — and its
+  largest single site is `check_state_based_actions`, which runs after every
+  action. **The cache would be cold at almost every read.** The rule:
+  **price the invalidation point's frequency against the memo's read
+  frequency before writing either.** That ratio, not soundness, is what
+  decides a zone memo, and it is one `cg_sites.py` run.
 * **A newtype around `graveyard: CowBox<Vec<CardInstance>>` carrying the
   answer, cleared in its `DerefMut` and its `&mut IntoIterator`** — the two
   entry points (-18) established are *complete*, so the invalidation is
