@@ -2288,6 +2288,7 @@ mod tests {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_policy_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(43);
 
         let snapshot = |t: &Trainer, name: &str| -> Vec<f32> {
@@ -2376,6 +2377,7 @@ mod tests {
         let successors: Vec<EncodedState> =
             (0..3).map(|_| random_state(&mut rng, cfg.vocab)).collect();
         let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        reseed_params(&t.varmap, &t.dev, 11);
 
         let played_2 = DecisionRow {
             successors: successors.clone(),
@@ -2413,6 +2415,7 @@ mod tests {
         let wide: Vec<EncodedState> =
             (0..12).map(|_| random_state(&mut rng, cfg.vocab)).collect();
         let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        reseed_params(&t.varmap, &t.dev, 11);
 
         // 12 candidates, chosen = 11 → the trained window is [4..=11].
         // Values: junk in the head, a sharp favourite at index 10. If the
@@ -2541,6 +2544,7 @@ mod tests {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_policy_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(61);
 
         let rows: Vec<DecisionRow> = (0..16)
@@ -2592,6 +2596,7 @@ mod tests {
         let cfg = small_cfg();
         let mut rng = StdRng::seed_from_u64(67);
         let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        reseed_params(&t.varmap, &t.dev, 11);
 
         let ucb1 = DecisionRow {
             successors: (0..3).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
@@ -2838,6 +2843,7 @@ mod tests {
         // lr 0: the net never moves, so every loss below is a pure
         // readout of the target against one fixed set of predictions.
         let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        reseed_params(&t.varmap, &t.dev, 11);
         let loss = |t: &mut Trainer, row: &DecisionRow, temp: f32| {
             t.train_policy_step_temp(&[row], temp).expect("step").loss
         };
@@ -2884,6 +2890,7 @@ mod tests {
             visits: None,
         };
         let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        reseed_params(&t.varmap, &t.dev, 11);
         let sharp = t.train_policy_step_temp(&[&row], 0.05).expect("sharp").loss;
         let soft = t.train_policy_step_temp(&[&row], 5.0).expect("soft").loss;
         assert!(sharp.is_finite() && soft.is_finite());
@@ -2950,6 +2957,7 @@ mod tests {
     fn padding_does_not_compete_for_probability_mass() {
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 0.0).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(3);
         let narrow = DecisionRow {
             successors: (0..2).map(|_| random_state(&mut rng, cfg.vocab)).collect(),
@@ -2986,6 +2994,7 @@ mod tests {
     fn degenerate_decisions_are_skipped() {
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(5);
         let single = DecisionRow {
             successors: vec![random_state(&mut rng, cfg.vocab)],
@@ -3094,6 +3103,13 @@ mod tests {
         // fitting the opposite label hard, then measure one step back.
         let train_to_wrong = |bce: bool| -> (f32, f32) {
             let mut t = Trainer::new(&cfg, 5e-2).expect("trainer");
+            // "From identical weights" is the whole measurement, and
+            // `Trainer::new` draws from entropy — see `reseed_params`. Without
+            // this the two copies reach *different* confidently-wrong points
+            // (0.00077 and 0.000000087 on the run that caught it) and the
+            // absolute movements are not comparable, so the assertion below
+            // is a coin flip on the draw rather than a statement about BCE.
+            reseed_params(&t.varmap, &t.dev, 11);
             let wrong = TrainRow { win: 0.0, ..row.clone() };
             for _ in 0..300 {
                 let b: Vec<&TrainRow> = vec![&wrong; 8];
@@ -3111,6 +3127,14 @@ mod tests {
         assert!(
             mse_before < 0.1 && bce_before < 0.1,
             "the setup failed to reach a confident wrong opinion: {mse_before} / {bce_before}"
+        );
+        // The reseed makes the two copies the same net, so the two 300-step
+        // MSE drives land in the same place. If this ever fires, the drive is
+        // no longer deterministic and the comparison below is meaningless
+        // rather than merely wrong.
+        assert!(
+            (mse_before - bce_before).abs() < 1e-6,
+            "the two copies started from different weights: {mse_before} vs {bce_before}"
         );
         assert!(
             (bce_after - bce_before) > (mse_after - mse_before),
@@ -3179,6 +3203,11 @@ mod tests {
         let first = {
             let batch: Vec<&TrainRow> = rows[..64].iter().collect();
             let mut t2 = Trainer::new(&cfg, 0.0).expect("probe trainer");
+            // The same seed as `trainer` above: `first` is meant to be *this
+            // net's* untrained loss, and an unseeded probe measures a
+            // different net's, which is what put a drawn number on both sides
+            // of the `last < first * 0.5` assert.
+            reseed_params(&t2.varmap, &t2.dev, 11);
             t2.train_step(&batch).expect("loss probe").total
         };
         let mut last = f32::MAX;
@@ -3197,13 +3226,15 @@ mod tests {
 
         // The learned rule generalizes to fresh states. **1000 samples, not
         // 100**: the trained accuracy on this synthetic signal is ~90.9 %
-        // (ten runs: 893-920 per 1000), and weight init comes from candle's
-        // process-global device RNG, so the model is not fixed run to run.
-        // At 100 samples the *measurement*'s own noise is ~3 points, which
-        // put the old `>= 85` assert inside one sigma of the mean and failed
-        // the suite roughly one run in eight (seen at 83 and 84). More
-        // training doesn't help — the loss assert above already passed on
-        // those runs. Ten times the sample puts the floor ~7 sigma out.
+        // (ten runs: 893-920 per 1000). At 100 samples the *measurement*'s
+        // own noise is ~3 points, which put the old `>= 85` assert inside one
+        // sigma of the mean and failed the suite roughly one run in eight
+        // (seen at 83 and 84). More training doesn't help — the loss assert
+        // above already passed on those runs. Ten times the sample puts the
+        // floor ~7 sigma out. (The spread the note used to blame on candle's
+        // process-global weight init is gone — `reseed_params` fixes the
+        // init — but the sampling noise it also measured is not, and that is
+        // what the 1000 is for.)
         let mut correct = 0;
         for _ in 0..1000 {
             let s = random_state(&mut rng, cfg.vocab);
@@ -3222,6 +3253,7 @@ mod tests {
     fn aux_head_trains_and_the_engine_ignores_it() {
         let cfg = NetConfig { aux: true, ..small_cfg() };
         let mut trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(3);
         let rows: Vec<TrainRow> = (0..8)
             .map(|_| TrainRow {
