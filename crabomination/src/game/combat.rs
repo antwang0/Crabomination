@@ -3835,9 +3835,29 @@ impl GameState {
         }
         // CR 510.2 — now that all combat damage in this step has been dealt,
         // put `DealsCombatDamageToCreature` triggers on the stack.
-        for (source, damaged, amount) in creature_damage {
+        //
+        // One `trigger_grant_sources` walk for the whole batch, not one per
+        // damaged creature. That walk is a whole-board pass over every static
+        // ability, it found 0.25 grants per call at the eighty-second tip, and
+        // the per-event rebuild made it 12,858 calls / 25,617,351 Ir / 0.72 %
+        // of `cube` between them. Reading the grants once, before any of this
+        // batch's triggers reach the stack, is also the CR 510.2 order: the
+        // per-event rebuild was re-evaluating each grant's gate against a
+        // stack that already held the earlier triggers.
+        let granted: Vec<Vec<crate::card::TriggeredAbility>> = {
+            let grants = self.trigger_grant_sources();
+            creature_damage
+                .iter()
+                .map(|&(source, ..)| {
+                    self.battlefield_find(source)
+                        .map(|c| self.statics_granted_triggers_with(c, &grants))
+                        .unwrap_or_default()
+                })
+                .collect()
+        };
+        for ((source, damaged, amount), granted) in creature_damage.into_iter().zip(granted) {
             self.fire_source_dealt_damage_watchers(source, amount);
-            self.fire_combat_damage_to_creature_triggers(source, damaged, amount);
+            self.fire_combat_damage_to_creature_triggers(source, damaged, amount, &granted);
         }
 
         Ok(events)
@@ -5058,13 +5078,16 @@ impl GameState {
     /// pair; an equipped creature blocked by several creatures therefore
     /// charges Jitte once per blocker (a minor over-count for the rare
     /// multi-block case).
+    /// `granted` is `source`'s `GrantTriggeredAbility` set, built by the
+    /// caller: the CR 510.2 batch fires this once per damaged creature and
+    /// deriving it here rebuilt the whole-board grant list every time.
     pub(crate) fn fire_combat_damage_to_creature_triggers(
         &mut self,
         source: CardId,
         damaged_creature: CardId,
         damage_amount: u32,
+        granted: &[crate::card::TriggeredAbility],
     ) {
-        let granted = self.static_granted_triggers_of(source);
         // Combat damage is damage: the combat-agnostic wordings fire too.
         self.fire_combat_damage_triggers(
             source,
@@ -5076,7 +5099,7 @@ impl GameState {
             ],
             Target::Permanent(damaged_creature),
             damage_amount,
-            &granted,
+            granted,
         );
     }
 
@@ -5130,8 +5153,9 @@ impl GameState {
     /// `YourControl`-scope listeners, and `FromYourGraveyard` triggers, pushing
     /// each onto the stack with `default_target` bound to slot 0.
     /// The `GrantTriggeredAbility` set a battlefield permanent currently
-    /// carries — empty when it has left. Board-level, so the damage-trigger
-    /// callers build it once per damage event.
+    /// carries — empty when it has left. Rebuilds the whole-board grant list,
+    /// so a caller firing a *batch* hoists `trigger_grant_sources` itself and
+    /// uses `statics_granted_triggers_with` (see the CR 510.2 loop).
     fn static_granted_triggers_of(&self, source: CardId) -> Vec<crate::card::TriggeredAbility> {
         self.battlefield
             .iter()
