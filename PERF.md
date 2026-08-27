@@ -7245,6 +7245,48 @@ statement: `--vs` reads 6 A-sweeps to 4 on the Bridge seed (9,600 games),
 having as correctness**, and the census is what says so: 740 attack and 102
 block rejections at the seventy-ninth tip, **44 and 6** now.
 
+**AND THE "44 AND 6" ABOVE WAS A THREE-SEED SAMPLE, WHICH IS THE SAME
+MISTAKE THIS SECTION ENDS BY WARNING ABOUT.** A sweep of `cube` seeds 1-24
+and 42 at `--games 20` — four seconds a seed — found **186** block rejections
+across **eight** seeds where the three-seed census read 6. None of them is a
+rule the fixes above missed; they are four rules nothing had reached, because
+no seed in the sample carried them:
+
+```text
+cube, --games 20 --threads 1, block rejections    32fa1675    tip
+s15   CR 509.1c Lure, and the contradiction below      92       6
+s23   CR 509.1g CantBeBlockedByMoreThanOne             50       0
+s5    CR 509.1c true Lure (AllMustBlock)               18       0
+s42   CR 509.1c MustBlock, asked of the blocker         8       0
+s19   Lure                                              8       0
+s13 / s24 / s10                                    4 / 4 / 2    0
+                                             total     186       6
+```
+
+`all` seeds 15 and 23 go 4 -> 0 and 8 -> 0 on the same change; the attack half
+is untouched on every seed. **So the standing rule now applies to the census
+itself, not only to `--vs`: sweep 1-24 before writing that a half is closed.**
+A `--games 8` sweep over 24 seeds is ~90 s and it is the cheapest claim-check
+in this file.
+
+**And one of the eight was not a planner bug at all — it was a board with no
+legal block declaration.** An attacker with Lure *and* Menace facing exactly
+one able blocker: block with nobody and CR 509.1c rejects it, block with the
+one body and CR 509.1b rejects it. CR 509.1c already resolves it — the
+defender picks the *legal* declaration satisfying the most requirements, so a
+requirement no legal declaration can meet does not bind — and
+`block_requirement_binds` is that gate, consulted by all four requirement
+loops and by the planner. **Worth generalising: wherever this engine models a
+"must" and a "can't" as two independent checks, the pair can be
+unsatisfiable, and the census is the only thing that finds it** — the tag
+named CR 509.1b on a board whose bug was CR 509.1c.
+
+**A note on what the site tag cannot do, earned over two wasted builds.** It
+names the *clause* that rejected a declaration; it never names the *pass that
+built it*. Two plausible fixes to the wrong pass measured as exactly inert
+before a probe printing the plan at the point of rejection showed the pin came
+from somewhere else. If this recurs, build that probe first.
+
 **AND THE MEASUREMENT LESSON, WHICH IS ABOUT THE POOL AND NOT THE CODE.**
 This file briefly recorded that the `--vs` ladder "cannot gate that fix"
 because `--bench` and the wide sweep read bit-identically across the walker

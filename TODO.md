@@ -77,15 +77,24 @@ a lost race — the loser usually holds something the winner does not.
 2. **Encoder is mined out** — passes 77-80, `encode_state` -49.4 %, actor
    -6.1 %, three refutations in PERF bounding what is left. A new lead there
    needs a fresh profile, not a list.
-3. **(-55) is effectively closed.** Census at this tip, `CRAB_SIM_REJECTS=1
-   --games 12 --threads 3`: cube s1 **0**/8,372, s10 **0**/7,010, fixed s11
-   **0**/6,006, cube s11 **14**/8,610 — from 470/91,438. Residual by site
-   (`=names --threads 1`): **34 `combat.rs:1114`**, the attack tax's
-   `available_mana` optimism, which is the (-51)(b) question and not a
-   missing rule; **6 `combat.rs:2418`** (CR 509.1b must-be-blocked); **2
-   `combat.rs:1896`** (CR 701.35 detain) — and `bot_can_block` *does* test
-   `detained_by`, so the proposer is the menu/repair path, not the predicate.
-   That last one is the open question and nobody has looked at it.
+3. **(-55): the block half IS now closed, and "effectively closed" was a
+   three-seed sample twice over.** A sweep of `cube` 1-24 + 42 at `--games
+   20` found **186 block rejections across eight seeds** where the sampled
+   census read 6 — four rules nothing had reached (`AllMustBlock` true Lure,
+   blocker-side `MustBlock`, CR 509.1g `CantBeBlockedByMoreThanOne`, and a
+   board with *no legal declaration at all*). Now **6, on s15 alone**;
+   `all` s15/s23 also went 4 -> 0 and 8 -> 0. **Rule, and it is cheap:
+   sweep 1-24 (~90 s at `--games 8`) before writing that a half is closed.**
+   What is left: the **attack** half's `combat.rs:1114`, the tax's
+   `available_mana` optimism — the (-51)(b) question, not a missing rule
+   (cube s2 32, s11 10, s19 16, s20/s21/s22 12) — and the 6 on s15, which
+   need a probe naming the *pass that built the plan*: the site tag names
+   the clause that rejected it and two plausible fixes measured inert
+   before a hand-built probe found the cause. **Generalisable finding:**
+   a "must" and a "can't" written as two independent checks can be jointly
+   unsatisfiable, and only the census finds it — CR 509.1b now gates CR
+   509.1c through `block_requirement_binds`; ENGINE_BACKLOG P3 lists the two
+   remaining pairs to audit.
 4. **Anything that moves play is gated by `bot_ladder --vs PATH`:** run the
    null first (a byte-identical copy must read 50.0 %, every pair split),
    same `--a`/`--b` both sides, 1.9x wall. **Sweep `CRAB_SIM_REJECTS=1` over
@@ -117,7 +126,14 @@ a lost race — the loser usually holds something the winner does not.
    arithmetic overflow.**
 8. **Hazards.** ⚠ Wall-clock rows do not cross hosts — read `host_cpu` /
    `host_calib_ms` off the run before comparing any games/s in PERF; Ir is
-   unaffected. ⚠ A container reset wipes `target/`, removes `cargo-nextest`
+   unaffected. **A third host, and it settles that `host_calib_ms` cannot be
+   used as a correction factor:** a 2.80 GHz Xeon reading **173 games/s at
+   `host_calib_ms` 49** — the *same* calib the eightieth tip recorded 262.2
+   at. Two builds went into ruling that out as a regression; the check that
+   ends it is an A/B in one sitting (a binary built from the recorded tip
+   read 175.3 here against the current tip's 173.5), never a scaling
+   correction. If a games/s row looks wrong, build both sides now rather
+   than reasoning from the fingerprint. ⚠ A container reset wipes `target/`, removes `cargo-nextest`
    and checks the repo out on the *system-prompt* branch: commit each
    measured change as soon as it measures, re-run FIRST after any surprising
    `git status`, and reinstall with `curl -sSLf

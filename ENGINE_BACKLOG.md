@@ -262,7 +262,37 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   hold one) so the shared body runs only for the pairs that can fail.
   **Until then `CRAB_SIM_REJECTS` is the guard**: `CRAB_SIM_REJECTS=1
   bot_ladder --a gang --b gang --games 20 --threads 1 --decks all --seed 3`
-  reads 0; `=names` names anything that is not.
+  reads 0; `=names` names anything that is not. **Run it over `cube` seeds
+  1-24, not three of them** — the three-seed census read the block half as
+  closed while eight other seeds carried 186 rejections between them across
+  four unmodelled rules (PERF (-55)). ~90 s at `--games 8`.
+
+  **The CR 509.1 requirement family is now one predicate, and the count rule
+  gates it.** `block_requirement_able` is the single "able" the four
+  requirement loops ask (Provoke's `must_block`, `MustBeBlocked`,
+  `AllMustBlock`, and the blocker-side `MustBlock`/`MustAttackOrBlock`); three
+  of the four had drifted from it on the tapped term before the unification.
+  `block_requirement_binds` is CR 509.1b outranking CR 509.1c: a requirement
+  no *legal* declaration can satisfy does not bind. Without it the engine
+  demanded a declaration it also forbade — a Lure+Menace attacker facing one
+  able blocker had **no legal block at all**, and that board is reachable in
+  `cube` seed 15. Pinned by
+  `server::bot::tests::a_count_restriction_unbinds_a_block_requirement`.
+
+  **The general shape is worth stating, because this is the second family it
+  has bitten:** wherever a "must" and a "can't" are two independent checks,
+  the pair can be unsatisfiable, and only the census finds it — the site tag
+  named CR 509.1b on a board whose actual defect was CR 509.1c's binding rule.
+  The remaining candidates to audit for it are CR 509.1b's
+  `CantBeBlockedUnlessAllBlock` (Tromokratis) against `CantBlock` grants, and
+  CR 508.1d's must-attack against the CR 613 hand-size power cap.
+
+  **Open on this entry, and small: 6 rejections on `cube` s15**, all at the
+  `AllMustBlock` loop, on a board where the planner leaves one able defender
+  unassigned. Not the contradiction above (that one is closed). The instrument
+  it wants is a probe naming the *pass that built the plan*, not the clause
+  that rejected it — the site tag cannot answer that, and two plausible fixes
+  measured exactly inert before a hand-built probe found the real cause.
 
   Two known non-bugs the counter also surfaces, both in
   `attack_candidates_for_mcts` and both deliberate: the "all home" candidate
