@@ -189,9 +189,10 @@ a lost race — the loser usually holds something the winner does not.
    `--workspace --exclude crabomination_client` **19,063 / 0 / 5**; clippy
    `--workspace --all-targets` clean **including the client** (four apt
    packages, ~40 s; free `target/debug/incremental` first, 11 GB here); 7
-   golden traces unmoved; `--bench` **195,616 decisions / 27.44 turns / 0
-   stalls**, `determinism ok`, `thread_determinism ok (3 vs 1)`, **170.4 /
-   175.3 / 171.7 games/s**. `--vs` null against a byte-identical copy:
+   golden traces unmoved; `--bench` **195,528 decisions / 27.44 turns / 0
+   stalls** (**was 195,616 — moved at `50a075fa`, which did not record it;
+   the refresh and the reason are in PERF's Baseline**), `determinism ok`,
+   `thread_determinism ok (3 vs 1)`, **170.4 / 175.3 / 171.7 games/s**. `--vs` null against a byte-identical copy:
    fixed 200/200, cube 400/400, sos 250/250 pairs split. `overflow`, seeds
    11/12 over `all`/`cube`/`sealed` at 600 games/archetype: **44,400 games,
    0 capped, 0 stuck, 22 draws, no panic, no arithmetic overflow** (measured

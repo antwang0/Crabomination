@@ -765,6 +765,20 @@ nor the grant walk has anything to do on a board with no keyword grants and
 no `GrantTriggeredAbility` static. **A layers-or-grants change measured only
 on `--bench` reads as noise.**
 
+**⚠ THE COMMITTED `--bench` INVARIANT MOVED AT `50a075fa` AND THAT COMMIT DID
+NOT RECORD IT.** `decisions` **195,616 -> 195,528**; `turns_per_game` 27.44,
+stalls 0 and `determinism ok` are unchanged. Measured here: 195,616 across
+three runs at `27af76f4`, 195,528 at `73ed66e7`, and the only code commit
+between them is `50a075fa` (CR 602.5g/h — `available_mana` stops counting a
+summoning-sick creature's `{T}` mana). **That is a picker fix, so it is
+allowed to move play, and this is the baseline refresh it needed.** The
+seventy-seventh pass's block two sections down is the precedent for the shape.
+The rule it restates: **`--bench`'s decision count is a committed invariant,
+so a commit that moves it says so in its own message** — a later run reading
+195,616 off this file and 195,528 off the binary has no way to tell an
+intended change from a regression. Anything that moves them again without an
+explanation is a regression.
+
 **And the pass's most useful number is a refutation.** Four ways of removing
 `compute_permanent_pass`'s *other* allocation — the `sorted` collect, 189,480
 calls / 46,426,567 Ir — all read worse than the collect on `fixed` (see
