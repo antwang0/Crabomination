@@ -12094,9 +12094,11 @@ impl GameState {
             let pool_after_auto_tap = self.players[payer].mana_pool.clone();
             return match self.players[payer].mana_pool.pay_for_spell(cost, kind) {
                 Ok(side_effects) => {
+                    crate::game::pay_census::record(line!(), cost, None);
                     Ok(PaymentReceipt { auto_events: events, side_effects, pool_before: pool_after_auto_tap })
                 }
                 Err(e) => {
+                    crate::game::pay_census::record(line!(), cost, Some(&e));
                     self.restore_payment_state(payer, snapshot);
                     Err(GameError::Mana(e))
                 }
@@ -12117,11 +12119,14 @@ impl GameState {
         // difference. The original snapshot is still used for rollback.
         let pool_after_auto_tap = self.players[payer].mana_pool.clone();
         match self.players[payer].mana_pool.pay_for_spell(cost, kind) {
-            Ok(side_effects) => Ok(PaymentReceipt {
-                auto_events,
-                side_effects,
-                pool_before: pool_after_auto_tap,
-            }),
+            Ok(side_effects) => {
+                crate::game::pay_census::record(line!(), cost, None);
+                Ok(PaymentReceipt {
+                    auto_events,
+                    side_effects,
+                    pool_before: pool_after_auto_tap,
+                })
+            }
             Err(e) => {
                 // Channel — convert life 1:1 into the colorless shortfall
                 // ("you may pay 1 life: add {C}", active until end of turn).
@@ -12143,6 +12148,7 @@ impl GameState {
                         return Ok(PaymentReceipt { auto_events, side_effects, pool_before });
                     }
                 }
+                crate::game::pay_census::record(line!(), cost, Some(&e));
                 self.restore_payment_state(payer, snapshot);
                 Err(GameError::Mana(e))
             }

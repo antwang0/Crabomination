@@ -2185,6 +2185,90 @@ pub fn reject_trace_level() -> u8 {
     })
 }
 
+/// `CRAB_PAY_FAILS` — the payment-rollback census.
+///
+/// PERF (-51)(b) sizes `restore_payment_state` at **23.8 % of every payment
+/// the simulator attempts**, and the entry's own next step is written there:
+/// *"the oracle is the instrument, and it wants to classify a failed payment
+/// rather than a rejected candidate"*. A rolled-back payment has already
+/// built its `mana_source_table` and tapped whatever it could reach, so the
+/// three causes cost the same and want different fixes:
+///
+/// * **generic** — the bot's `total` was over-optimistic. A perf bug, and the
+///   same asymmetry the CR 508.1g tax trim hit: an estimate consumed as a
+///   gate. Fixable in the estimate.
+/// * **coloured / colorless / snow** — the pips had producers but no
+///   *assignment* covers them, which is the Hall's-condition shape whose
+///   multi-colour half is refuted at (-51). Or auto-tap stranded a colour it
+///   could have covered, which is a **correctness** bug: a payable line
+///   becomes invisible.
+/// * **hybrid** — neither half is payable.
+///
+/// Counting them apart is what tells the engine-side bail proposed in (-51)
+/// which shape to test, and that is the only thing blocking its sizing.
+///
+/// Same device as [`reject_trace_level`]: 0 = off, 1 = count, 2 = also name
+/// each failure with its cost and the caller's line. One `OnceLock` read, so
+/// an unset run pays a relaxed load and a branch on the *failing* path only.
+pub mod pay_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `[generic, coloured, colorless, snow, hybrid]`, indexed by
+    /// [`class_of`].
+    pub static FAILS: [AtomicU64; 5] = [
+        AtomicU64::new(0),
+        AtomicU64::new(0),
+        AtomicU64::new(0),
+        AtomicU64::new(0),
+        AtomicU64::new(0),
+    ];
+    /// Every payment that reached `pay_for_spell`, failing or not.
+    pub static ATTEMPTS: AtomicU64 = AtomicU64::new(0);
+
+    pub fn level() -> u8 {
+        static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_PAY_FAILS") {
+            Ok(v) if v == "names" => 2,
+            Ok(v) if !v.is_empty() && v != "0" => 1,
+            _ => 0,
+        })
+    }
+
+    pub const CLASSES: [&str; 5] = ["generic", "coloured", "colorless", "snow", "hybrid"];
+
+    pub fn class_of(e: &crate::mana::ManaError) -> usize {
+        use crate::mana::ManaError as M;
+        match e {
+            M::InsufficientGeneric { .. } => 0,
+            M::InsufficientColored { .. } => 1,
+            M::InsufficientColorless { .. } => 2,
+            M::InsufficientSnow { .. } => 3,
+            M::CannotPayHybrid { .. } => 4,
+        }
+    }
+
+    /// `(attempts, per-class failures)`, for a caller that wants to print.
+    pub fn snapshot() -> (u64, [u64; 5]) {
+        (ATTEMPTS.load(Relaxed), std::array::from_fn(|i| FAILS[i].load(Relaxed)))
+    }
+
+    /// Record one payment outcome. `site` is the caller's `line!()`, so a
+    /// class can be traced to the path that produced it the way
+    /// `attack_reject` traces a rejection to its clause.
+    pub fn record(site: u32, cost: &crate::mana::ManaCost, e: Option<&crate::mana::ManaError>) {
+        let lvl = level();
+        if lvl == 0 {
+            return;
+        }
+        ATTEMPTS.fetch_add(1, Relaxed);
+        let Some(e) = e else { return };
+        FAILS[class_of(e)].fetch_add(1, Relaxed);
+        if lvl >= 2 {
+            eprintln!("pay_fail actions.rs:{site} {} cost={:?}", CLASSES[class_of(e)], cost);
+        }
+    }
+}
+
 /// Field access on the cold group reads like a `GameState` field.
 impl std::ops::Deref for GameState {
     type Target = ColdState;

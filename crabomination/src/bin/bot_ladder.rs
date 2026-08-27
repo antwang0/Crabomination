@@ -1593,6 +1593,23 @@ fn main() {
             s[0].1, s[0].0, s[1].1, s[1].0, s[2].1, s[2].0,
         );
     }
+    // PERF (-51)(b): what the simulator's payments cost when they fail, split
+    // by *why*. Off unless `CRAB_PAY_FAILS` is set.
+    if crabomination::game::pay_census::level() > 0 {
+        let (attempts, fails) = crabomination::game::pay_census::snapshot();
+        let total: u64 = fails.iter().sum();
+        let by: Vec<String> = crabomination::game::pay_census::CLASSES
+            .iter()
+            .zip(fails.iter())
+            .filter(|(_, n)| **n > 0)
+            .map(|(c, n)| format!("{c} {n}"))
+            .collect();
+        println!(
+            "  pay_fails {total}/{attempts} ({:.2} %) — {}",
+            if attempts == 0 { 0.0 } else { 100.0 * total as f64 / attempts as f64 },
+            if by.is_empty() { "none".to_string() } else { by.join(", ") },
+        );
+    }
     // The peers were spawned one per worker, so a replay at a different
     // thread count has no peer for the extra worker and would hang. The
     // guard is about this process's own scheduling anyway.
