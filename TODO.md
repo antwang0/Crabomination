@@ -158,16 +158,26 @@ a lost race — the loser usually holds something the winner does not.
    five pools x six seeds, no panic, no assertion, no overflow, 0
    undecided**. It is also what refuted (-58) in four seconds. **Run it after
    anything that adds an invariant.**
-7. **State (eighty-first tip):** two-crate gate **18,795 / 0 / 5**; clippy
-   `--workspace --exclude crabomination_client --all-targets` clean;
-   `--bench` **195,616 decisions / 27.44 turns / 0 stalls**, determinism ok,
-   224.6 games/s at 3 threads on a 2.10 GHz Xeon (`host_calib_ms` 47 — do not
-   compare that figure to the 297.7 below, which is a different host). The
-   eightieth tip's wider state, still current for what it covers:
-   `--workspace --exclude crabomination_client` **19,047 / 0 / 5**; clippy
-   clean **including the client**; 297.7 games/s at 3 threads; `overflow`, seeds 11/12 over `all`/`cube`/`sealed` at 600
-   games/archetype: **44,400 games, 0 capped, 0 stuck, 22 draws, no panic, no
-   arithmetic overflow.**
+7. **State, re-run at `05015235` on an Intel Xeon @ 2.80 GHz
+   (`host_calib_ms` 51-57 — a different host from the 224.6 and 297.7 rows
+   this item used to carry, so those figures do not compare):**
+   `--workspace --exclude crabomination_client` **19,063 / 0 / 5**; clippy
+   `--workspace --all-targets` clean **including the client** (four apt
+   packages, ~40 s; free `target/debug/incremental` first, 11 GB here); 7
+   golden traces unmoved; `--bench` **195,616 decisions / 27.44 turns / 0
+   stalls**, `determinism ok`, `thread_determinism ok (3 vs 1)`, **170.4 /
+   175.3 / 171.7 games/s**. `--vs` null against a byte-identical copy:
+   fixed 200/200, cube 400/400, sos 250/250 pairs split. `overflow`, seeds
+   11/12 over `all`/`cube`/`sealed` at 600 games/archetype: **44,400 games,
+   0 capped, 0 stuck, 22 draws, no panic, no arithmetic overflow** (measured
+   at the eighty-first tip; nothing since touches arithmetic).
+7a. **⚠ `peak_rss_mib` moved and it is not the block walker.** 27.3-27.6 at
+   `60cfef4c`, **29.0-31.4** at `05015235`, on the same box in the same
+   minutes; the walker itself reads 27.4-29.5, i.e. its base's band. The
+   commits in between are the batch-gather caching ones. It is an allocator
+   reading and this file says so, but a 13 % step is at the top of that
+   caveat rather than inside it — **whoever owns those caches should confirm
+   the trade was intended.**
 8. **Hazards.** ⚠ Wall-clock rows do not cross hosts — read `host_cpu` /
    `host_calib_ms` off the run before comparing any games/s in PERF; Ir is
    unaffected. **A third host, and it settles that `host_calib_ms` cannot be
