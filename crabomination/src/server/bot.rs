@@ -7341,130 +7341,35 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     // One battlefield walk for both prohibitions this function has to model,
     // the same bitmask `declare_attackers_banded` gates its own blocks on.
     let statics = crate::game::combat::attack_static_scan(state);
-    // CR 613 — Ensnaring Bridge: a creature whose *computed* power exceeds
-    // the smallest "cards in your hand" cap on the board can't attack, and
-    // the engine rejects the batch that contains it whole. Symmetric, so the
-    // cap is the minimum over every such permanent's controller's hand,
-    // whoever controls it. Unmodelled until the eightieth pass: on `cube
-    // --seed 10` it was **410 of 3,232 attack proposals (12.7 %)**, the
-    // largest single rejection site left after the attack tax.
-    let power_cap: Option<i32> = (statics & crate::game::combat::attack_static::POWER_CAP != 0)
-        .then(|| {
-            state
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::AttackPowerCapByControllerHand
-                        )
-                    })
-                })
-                .map(|c| state.players[c.controller].hand.len() as i32)
-                .min()
-        })
-        .flatten();
+    // CR 508.1a — the picker asks the *engine* which creatures may be
+    // declared rather than re-deriving the gate. Its own copy answered nine
+    // of the ~26 restriction families, drifted on the printed-vs-computed
+    // reads twice (PERF (-55)), and had just been hand-patched a tenth time
+    // for CR 613's power cap; a batch the engine rejects costs the bot its
+    // whole combat, so a filter that is merely *close* is worse than one that
+    // cannot drift. Batch-level rules (attacks-alone, the participation cap,
+    // the attack tax) stay below, where the batch exists.
+    let attack_power_caps = state.attack_power_caps(statics);
     let raw_attackers: Vec<&crate::card::CardInstance> = state
         .battlefield
         .iter()
         .filter(|c| {
+            // Two instance reads before the layer view: `computed_permanent`
+            // is ~1.5 k Ir on a first read and asking it about every land and
+            // enchantment the seat controls read `fixed` +0.62 %. Both gates
+            // are the ones this filter already made, so the candidate set is
+            // unchanged — including its one limitation, that a permanent
+            // *animated* into a creature is never considered.
             c.controller == seat
-                // `can_attack()`'s components minus its printed-
-                // Defender gate, which is re-checked below against
-                // the computed keyword set so a team "attack as
-                // though no defender" grant (High Alert) applies.
-                && c.definition.is_creature()
                 && !c.tapped
-                // Honor layer-granted Defender / can't-attack
-                // (Pacifism, crewed-Vehicle states) — and layer-granted
-                // *Haste*, which the printed read below used to miss:
-                // `declare_attackers` tests summoning sickness against the
-                // computed set, so a hasted-by-grant creature that "attacks
-                // each combat if able" was left home and the engine rejected
-                // the whole declaration (CR 508.1d).
-                && state
-                    .computed_permanent(c.id)
-                    .map(|cp| {
-                        // CR 302.1 — only a creature attacks, and the printed
-                        // type line above is not the answer either: a bestowed
-                        // Kestia is an Aura, a de-animated Vehicle an artifact.
-                        // `declare_attackers_banded` leads its own conjunction
-                        // with exactly this test and rejects the batch
-                        // **whole**, so the sim's opponent declared no
-                        // attackers at all that turn. 52 of the 470 rejections
-                        // the `CRAB_SIM_REJECTS` census counted; PERF (-55).
-                        cp.card_types.contains(&crate::card::CardType::Creature)
-                            && power_cap.is_none_or(|cap| cp.power <= cap)
-                            && (!c.summoning_sick || cp.keywords.has_kw(&Keyword::Haste))
-                            && (!cp.keywords.has_kw(&Keyword::Defender)
-                                || state.ignores_defender_for_attack(c))
-                            && !cp.keywords.has_kw(&Keyword::CantAttack)
-                            // CR 508.1a — "can attack only if
-                            // defending player controls [X]"
-                            // (Dandân). Don't declare it into a
-                            // defender whose board fails the
-                            // filter, or the whole batch is
-                            // rejected.
-                            && cp.keywords.iter().all(|kw| match kw {
-                                Keyword::CanAttackOnlyIfDefenderControls(req) => {
-                                    state.battlefield.iter().any(|d| {
-                                        d.controller == target_player
-                                            && state.evaluate_requirement_on_card(
-                                                req, d, target_player,
-                                            )
-                                    })
-                                }
-                                Keyword::CanAttackOnlyIfYouControl(req) => {
-                                    state.battlefield.iter().any(|d| {
-                                        d.controller == c.controller
-                                            && state.evaluate_requirement_on_card(
-                                                req, d, c.controller,
-                                            )
-                                    })
-                                }
-                                Keyword::CantAttackOrBlockUnlessEvenCounters => {
-                                    c.counters.values().sum::<u32>() % 2 == 0
-                                }
-                                Keyword::CantAttackOrBlockUnlessYouControlCount {
-                                    filter,
-                                    min,
-                                    block_only,
-                                    exclude_self,
-                                    ..
-                                } => {
-                                    // A block-only gate never
-                                    // restricts attacking. `exclude_self`
-                                    // drops the gated creature from the
-                                    // count ("another …" — Tiger-Dillo).
-                                    *block_only
-                                        || state
-                                            .battlefield
-                                            .iter()
-                                            .filter(|d| {
-                                                d.controller == c.controller
-                                                    && !(*exclude_self && d.id == c.id)
-                                                    && state
-                                                        .evaluate_requirement_on_card(
-                                                            filter,
-                                                            d,
-                                                            c.controller,
-                                                        )
-                                            })
-                                            .count()
-                                            as u32
-                                            >= *min
-                                }
-                                _ => true,
-                            })
-                    })
-                    .unwrap_or_else(|| {
-                        // No computed view (not a battlefield permanent by
-                        // the time the pass ran): fall back to the printed
-                        // reads this filter used to make.
-                        (!c.summoning_sick || c.has_keyword(&Keyword::Haste))
-                            && !c.has_keyword(&Keyword::CantAttack)
-                    })
+                && c.definition.is_creature()
+                && state.may_declare_attacker(
+                    seat,
+                    c,
+                    state.computed_permanent(c.id).as_deref(),
+                    &attack_power_caps,
+                    Some(target_player),
+                )
         })
         .collect();
     // Use the damage-aware value so toughness-attackers (Doran,
@@ -7657,7 +7562,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         .collect();
     // CR 508.1d — before the cap, because a creature the rules oblige to
     // attack makes the whole declaration illegal by its absence.
-    restore_forced_attackers(state, seat, &mut attackers);
+    restore_forced_attackers(state, seat, &attack_power_caps, &mut attackers);
     // CR 506.2 — Silent Arbiter caps the whole combat. An
     // over-sized batch is rejected outright, so trim to the
     // cap keeping the biggest attackers.
@@ -7815,11 +7720,16 @@ fn must_attack(
 /// **set-dependent**: adding one attacker can oblige another, so it loops to
 /// a fixed point. Gated on the same board presence question the engine uses
 /// to decide whether to compute the whole battlefield at all.
-fn restore_forced_attackers(state: &GameState, seat: usize, attackers: &mut Vec<CardId>) {
+fn restore_forced_attackers(
+    state: &GameState,
+    seat: usize,
+    power_caps: &[usize],
+    attackers: &mut Vec<CardId>,
+) {
     if !attack_requirement_present(state) {
         return;
     }
-    restore_forced_attackers_unchecked(state, seat, attackers);
+    restore_forced_attackers_unchecked(state, seat, power_caps, attackers);
 }
 
 /// Can any permanent on this board carry an attack requirement at all? The
@@ -7840,6 +7750,7 @@ fn attack_requirement_present(state: &GameState) -> bool {
 fn restore_forced_attackers_unchecked(
     state: &GameState,
     seat: usize,
+    power_caps: &[usize],
     attackers: &mut Vec<CardId>,
 ) {
     loop {
@@ -7854,7 +7765,7 @@ fn restore_forced_attackers_unchecked(
             // spells it so the two read alike.
             let others = attackers.iter().any(|id| *id != c.id);
             if !must_attack(c, &cp.keywords, others)
-                || !state.attack_requirement_able(c, &cp.keywords)
+                || !state.attacker_is_able(seat, c, Some(&cp), power_caps)
             {
                 continue;
             }
@@ -8044,11 +7955,13 @@ pub(crate) fn attack_candidates_for_mcts(
     // per own creature per candidate, and outside a scope each read rebuilds
     // the layer gather.
     if state.with_frozen_layers(attack_requirement_present) {
+        let power_caps =
+            state.attack_power_caps(crate::game::combat::attack_static_scan(state));
         state.with_frozen_layers(|st| {
             for cand in candidates.iter_mut() {
                 let mut ids: Vec<CardId> = cand.iter().map(|a| a.attacker).collect();
                 let before = ids.len();
-                restore_forced_attackers_unchecked(st, seat, &mut ids);
+                restore_forced_attackers_unchecked(st, seat, &power_caps, &mut ids);
                 for id in ids.into_iter().skip(before) {
                     if let Some(a) = greedy.iter().find(|a| a.attacker == id) {
                         cand.push(*a);
@@ -14316,6 +14229,34 @@ mod tests {
         // Empty the hand and nothing may attack at all.
         g.players[1].hand.clear();
         assert!(pick_attacks(&g, 0).is_empty(), "a zero cap bars every attacker");
+    }
+
+    /// CR 508.1a — the picker asks the engine which creatures may be
+    /// declared, so a restriction it never modelled by hand (Goblin Cohort's
+    /// "unless you cast a creature this turn") keeps its creature out of the
+    /// batch instead of costing the whole combat. One of the ~16 families the
+    /// filter's own copy did not read.
+    #[test]
+    fn bot_attack_plan_honours_a_restriction_it_never_modelled() {
+        use crate::card::{CardType, Keyword};
+        let cohort = CardDefinition {
+            name: "Cohort Test",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 1,
+            keywords: vec![Keyword::CantAttackUnlessCastCreatureThisTurn],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let locked = g.add_card_to_battlefield(0, cohort);
+        g.clear_sickness(locked);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        assert_eq!(g.players[0].creatures_cast_this_turn, 0);
+        let attacks = pick_attacks(&g, 0);
+        assert!(attacks.is_empty(), "the cohort is locked: {attacks:?}");
+        g.clone().declare_attackers(attacks).expect("the plan is legal");
     }
 
     /// CR 508.1d — the attack search's holdbacks are subsets, and a subset

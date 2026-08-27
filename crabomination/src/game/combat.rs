@@ -322,6 +322,362 @@ impl GameState {
 
     // ── Declare attackers ─────────────────────────────────────────────────────
 
+    /// CR 508.1a — the restrictions on one attacker that depend only on the
+    /// creature and the board: not on which defender it is aimed at (see
+    /// [`Self::attacker_target_block`]) and not on the rest of the batch
+    /// (Okk's bigger partner, the participation cap).
+    ///
+    /// One walker, so [`Self::declare_attackers_banded`]'s declaration gate
+    /// and its three CR 508.1d "attacks each combat if able" requirement
+    /// loops cannot disagree about which creatures are *able*. Those loops
+    /// used to spell out five of these families by hand, so a creature that
+    /// had to attack and carried any of the other twenty was **required to
+    /// attack and then rejected for attacking** — an unsatisfiable
+    /// declaration that costs the seat its whole combat, with no legal move
+    /// out of it.
+    ///
+    /// Returns the rejecting site's line alongside the error so the per-site
+    /// census (`CRAB_SIM_REJECTS=names`) still names the rule, not the card.
+    pub(crate) fn attacker_self_block(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        cp: Option<&ComputedPermanent>,
+        power_caps: &[usize],
+    ) -> Option<(u32, GameError)> {
+        let id = card.id;
+        let kws: &[Keyword] = cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        // The instance reads first — they need no keyword walk at all, and the
+        // cascade's order is the one `declare_attackers_banded` reported
+        // before the two walkers were merged.
+        if card.tapped {
+            return Some((line!(), GameError::CardIsTapped(id)));
+        }
+        let is_creature_now = cp
+            .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+            .unwrap_or_else(|| card.definition.is_creature());
+        // CR 701.35 — detain; CR 508.1a — Wall of Dust's one-turn ban. Both
+        // report `CannotAttack`, as does a permanent that is not a creature
+        // right now: a bestowed Aura (Kestia) or a de-animated Vehicle, which
+        // used to fall through this cascade and come out labelled *summoning
+        // sick* on a card whose `summoning_sick` is false.
+        if !is_creature_now
+            || card.detained_by.is_some()
+            || card.attack_ban == crate::card::AttackBan::Active
+        {
+            return Some((line!(), GameError::CannotAttack(id)));
+        }
+        // Ensnaring Bridge cap (computed power, CR 613).
+        if !power_caps.is_empty()
+            && let power = cp.map(|c| c.power).unwrap_or(0)
+            && power_caps.iter().any(|cap| power > *cap as i32)
+        {
+            return Some((line!(), GameError::CannotAttack(id)));
+        }
+        // **One walk over the computed keywords.** Twenty `has_kw` /
+        // `iter().any()` scans of the same short slice is twenty times the
+        // loop, and this runs once per attack candidate inside the bot's
+        // search — asking the families one at a time read `fixed` +0.17 %.
+        let mut hasted = false;
+        for k in kws {
+            match k {
+                Keyword::Haste => hasted = true,
+                Keyword::CantAttack => {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                Keyword::Defender if !self.ignores_defender_for_attack(card) => {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Goblin Cohort: unless you cast a creature spell
+                // this turn.
+                Keyword::CantAttackUnlessCastCreatureThisTurn
+                    if self.players[p].creatures_cast_this_turn == 0 =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Hazoret-class: unless the hand is small.
+                Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)
+                    if self.players[p].hand.len() as u32 > *n =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Patchwork Beastie's delirium gate.
+                Keyword::CantAttackOrBlockUnlessDelirium if !self.delirium_active(p) => {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Bontu the Glorified: a creature died this turn.
+                Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn
+                    if self.players[p].creatures_died_this_turn == 0 =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — The Ancient One's descend gate.
+                Keyword::CantAttackOrBlockUnlessDescend(n)
+                    if self.descend_count(p) < *n as usize =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Wayward Swordtooth's city's blessing.
+                Keyword::CantAttackOrBlockUnlessCityBlessing
+                    if !self.players[p].city_blessing =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Glacial Crasher: a land of the named type is on
+                // the battlefield (anyone's).
+                Keyword::CantAttackUnlessLandTypeOnBattlefield(lt)
+                    if !self
+                        .battlefield
+                        .iter()
+                        .any(|c| c.definition.subtypes.land_types.contains(lt)) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Harbor Serpent: five or more Islands.
+                Keyword::CantAttackUnlessLandCount(lt, n)
+                    if (self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.definition.subtypes.land_types.contains(lt))
+                        .count() as u32)
+                        < *n =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Bloodcrazed Goblin: an opponent took damage.
+                Keyword::CantAttackUnlessOpponentDamaged
+                    if !self
+                        .players
+                        .iter()
+                        .enumerate()
+                        .any(|(i, pl)| !self.same_team(i, p) && pl.was_dealt_damage_this_turn) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Giant Turtle: not if it attacked last turn.
+                Keyword::CantAttackIfAttackedLastTurn if card.attacked_last_turn => {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Ketramose: seven or more cards in exile.
+                Keyword::CantAttackOrBlockUnlessCardsInExile(n)
+                    if (self.exile.len() as u32) < *n =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // "Even number of counters" gate (Sab-Sunen). Zero is even.
+                Keyword::CantAttackOrBlockUnlessEvenCounters
+                    if card.counters.values().sum::<u32>() % 2 != 0 =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // "Can't attack unless you control a [filter]" (Lovestruck
+                // Beast).
+                Keyword::CanAttackOnlyIfYouControl(req)
+                    if !self.battlefield.iter().any(|c| {
+                        c.controller == p && self.evaluate_requirement_on_card(req, c, p)
+                    }) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // "Can't attack unless you control N+ [filter]" (Topiary
+                // Stomper — seven or more lands).
+                Keyword::CantAttackOrBlockUnlessYouControlCount {
+                    filter,
+                    min,
+                    block_only: false,
+                    exclude_self,
+                    ..
+                } if (self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && !(*exclude_self && c.id == id)
+                            && self.evaluate_requirement_on_card(filter, c, p)
+                    })
+                    .count() as u32)
+                    < *min =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                _ => {}
+            }
+        }
+        if card.summoning_sick && !hasted {
+            return Some((line!(), GameError::SummoningSickness(id)));
+        }
+        None
+    }
+
+    /// CR 508.1a — the restrictions on one attacker that depend on *which*
+    /// defender it is aimed at. Split from [`Self::attacker_self_block`] so
+    /// [`Self::attacker_is_able`] can ask whether **any** defender would do
+    /// without re-deriving the six families by hand.
+    pub(crate) fn attacker_target_block(
+        &self,
+        p: usize,
+        id: CardId,
+        kws: &[Keyword],
+        defender: Option<usize>,
+    ) -> Option<(u32, GameError)> {
+        // One walk, same reason as `attacker_self_block`.
+        for k in kws {
+            match k {
+                // "Can't attack unless defending player controls a [filter]"
+                // (Dandân).
+                Keyword::CanAttackOnlyIfDefenderControls(req)
+                    if !defender.is_some_and(|d| {
+                        self.battlefield.iter().any(|c| {
+                            c.controller == d && self.evaluate_requirement_on_card(req, c, d)
+                        })
+                    }) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 725 — Crown-Hunter Hireling: only the monarch.
+                Keyword::CantAttackUnlessDefenderIsMonarch if defender != self.monarch => {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Merchant Ship: the defender controls a land of
+                // the named type.
+                Keyword::CantAttackUnlessDefenderControlsLandType(lt)
+                    if defender.is_some_and(|d| {
+                        !self.battlefield.iter().any(|c| {
+                            c.controller == d && c.definition.subtypes.land_types.contains(lt)
+                        })
+                    }) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Branded Brawlers: any untapped land locks it.
+                Keyword::CantAttackIfDefenderHasUntappedLand
+                    if defender.is_some_and(|d| {
+                        self.battlefield
+                            .iter()
+                            .any(|c| c.controller == d && c.definition.is_land() && !c.tapped)
+                    }) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Mogg Toady: strictly more creatures.
+                Keyword::CantAttackUnlessMoreCreaturesThanDefender
+                    if defender
+                        .is_some_and(|d| self.creature_count(p) <= self.creature_count(d)) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                // CR 508.1a — Monstrous Hound: more lands than the defender.
+                Keyword::CantAttackUnlessMoreLandsThanDefender
+                    if defender.is_some_and(|d| {
+                        self.player_tally(p, crate::card::PlayerTally::LandsControlled)
+                            <= self.player_tally(d, crate::card::PlayerTally::LandsControlled)
+                    }) =>
+                {
+                    return Some((line!(), GameError::CannotAttack(id)));
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Does `kws` carry any family [`Self::attacker_target_block`] answers?
+    /// The requirement loops walk the whole battlefield, so the "any legal
+    /// defender" search stays off boards that cannot ask the question.
+    fn has_defender_dependent_restriction(kws: &[Keyword]) -> bool {
+        kws.iter().any(|k| {
+            matches!(
+                k,
+                Keyword::CanAttackOnlyIfDefenderControls(_)
+                    | Keyword::CantAttackUnlessDefenderIsMonarch
+                    | Keyword::CantAttackUnlessDefenderControlsLandType(_)
+                    | Keyword::CantAttackIfDefenderHasUntappedLand
+                    | Keyword::CantAttackUnlessMoreCreaturesThanDefender
+                    | Keyword::CantAttackUnlessMoreLandsThanDefender
+            )
+        })
+    }
+
+    /// The Ensnaring Bridge-style caps in scope, one per static (CR 613 —
+    /// each reads its own controller's hand). `statics` is
+    /// [`attack_static_scan`]'s bitmask, so a board without the family pays
+    /// one bit test.
+    pub(crate) fn attack_power_caps(&self, statics: u32) -> Vec<usize> {
+        if statics & attack_static::POWER_CAP == 0 {
+            return Vec::new();
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::AttackPowerCapByControllerHand
+                    )
+                })
+            })
+            .map(|c| self.players[c.controller].hand.len())
+            .collect()
+    }
+
+    /// The engine's own answer to "may `card` be declared as an attacker
+    /// against `defender`", batch-independent.
+    ///
+    /// The bot's attack picker calls this instead of re-deriving the gate, so
+    /// its candidate filter cannot drift from
+    /// [`Self::declare_attackers_banded`] — the picker/engine disagreement
+    /// class PERF (-55) is made of. Batch-level rules (Okk's bigger partner,
+    /// the participation cap, attacks-alone) are the caller's, because they
+    /// are not properties of one creature.
+    pub(crate) fn may_declare_attacker(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        cp: Option<&ComputedPermanent>,
+        power_caps: &[usize],
+        defender: Option<usize>,
+    ) -> bool {
+        self.attacker_self_block(p, card, cp, power_caps).is_none()
+            && self
+                .attacker_target_block(
+                    p,
+                    card.id,
+                    cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]),
+                    defender,
+                )
+                .is_none()
+    }
+
+    /// CR 508.1d — is `card` *able* to attack at all? The predicate the three
+    /// "attacks each combat if able" requirement loops share: nothing about
+    /// the creature or the board blocks it, and at least one legal defending
+    /// player survives the defender-dependent restrictions.
+    ///
+    /// Deliberately the same walkers the declaration gate runs, because a
+    /// requirement the gate then rejects has no legal answer.
+    pub(crate) fn attacker_is_able(
+        &self,
+        p: usize,
+        card: &crate::card::CardInstance,
+        cp: Option<&ComputedPermanent>,
+        power_caps: &[usize],
+    ) -> bool {
+        if self.attacker_self_block(p, card, cp, power_caps).is_some() {
+            return false;
+        }
+        let kws: &[Keyword] = cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        if !Self::has_defender_dependent_restriction(kws) {
+            return true;
+        }
+        (0..self.players.len()).any(|d| {
+            !self.same_team(p, d)
+                && self.players[d].is_alive()
+                && self.player_in_range_of(p, d)
+                && self.attacker_target_block(p, card.id, kws, Some(d)).is_none()
+        })
+    }
+
+
     pub fn declare_attackers(
         &mut self,
         attacks: Vec<Attack>,
@@ -677,6 +1033,25 @@ impl GameState {
                 .unwrap_or(&[])
         };
 
+        // Hoisted above the CR 508.1d requirement loops: an Ensnaring Bridge
+        // cap is one of the restrictions that make a must-attack creature
+        // *unable*, so those loops need it too. Gated by the
+        // `attack_static_scan` bitmask, so a board without the family pays
+        // one bit test.
+        let attack_power_caps = self.attack_power_caps(statics);
+        // CR 508.1d — one *able* predicate for all three requirement loops
+        // below and for the declaration gate under them. Asking a narrower
+        // question here than the gate asks is what leaves a seat with no
+        // legal declaration in either direction: see `attacker_is_able`.
+        let able_to_attack = |c: &crate::card::CardInstance| {
+            self.attacker_is_able(
+                p,
+                c,
+                computed.iter().find(|x| x.id == c.id),
+                &attack_power_caps,
+            )
+        };
+
         if let Some(chosen) = mandate {
             if let Some(bad) = attacks.iter().find(|a| !chosen.contains(&a.attacker)) {
                 return Err(attack_reject(line!(), GameError::CannotAttack(bad.attacker)));
@@ -686,13 +1061,10 @@ impl GameState {
                 else {
                     continue;
                 };
-                let kws = computed_kw(id);
-                let able = c.definition.is_creature()
-                    && !c.tapped
-                    && !kws.has_kw(&Keyword::Defender)
-                    && !kws.has_kw(&Keyword::CantAttack)
-                    && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
-                if able && has_legal_target && !attacks.iter().any(|a| a.attacker == id) {
+                if able_to_attack(c)
+                    && has_legal_target
+                    && !attacks.iter().any(|a| a.attacker == id)
+                {
                     return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
             }
@@ -713,8 +1085,7 @@ impl GameState {
                 if c.controller != p || !must {
                     continue;
                 }
-                let able = self.attack_requirement_able(c, computed_kw(c.id));
-                if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
+                if able_to_attack(c) && !attacks.iter().any(|atk| atk.attacker == c.id) {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
@@ -731,8 +1102,7 @@ impl GameState {
                 if c.controller != p || !matches(c.id) {
                     continue;
                 }
-                let able = self.attack_requirement_able(c, computed_kw(c.id));
-                if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
+                if able_to_attack(c) && !attacks.iter().any(|atk| atk.attacker == c.id) {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
             }
@@ -742,23 +1112,6 @@ impl GameState {
         // any state is spent (attack tax) or mutated (tapping attackers) —
         // one illegal attacker must not corrupt the batch.
         {
-            let attack_power_caps: Vec<usize> = if statics & attack_static::POWER_CAP == 0 {
-                Vec::new()
-            } else {
-                self
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::AttackPowerCapByControllerHand
-                        )
-                    })
-                })
-                .map(|c| self.players[c.controller].hand.len())
-                .collect()
-            };
             debug_assert!(
                 statics & attack_static::POWER_CAP != 0
                     || !self.battlefield.iter().any(|c| c
@@ -777,200 +1130,37 @@ impl GameState {
                 if !seen.insert(id) {
                     return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                 }
-                // Ensnaring Bridge cap (computed power, CR 613).
-                if !attack_power_caps.is_empty() {
-                    let power = self.computed_permanent(id).map(|c| c.power).unwrap_or(0);
-                    if attack_power_caps.iter().any(|cap| power > *cap as i32) {
-                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                    }
-                }
-                // "Can't attack unless defending player controls a [filter]"
-                // (Dandân).
-                if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
-                    Keyword::CanAttackOnlyIfDefenderControls(r) => Some(r.clone()),
-                    _ => None,
-                }) {
-                    let defender = self.defender_for(atk.target);
-                    let satisfied = defender.is_some_and(|d| {
-                        self.battlefield.iter().any(|c| {
-                            c.controller == d && self.evaluate_requirement_on_card(&req, c, d)
-                        })
-                    });
-                    if !satisfied {
-                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                    }
-                }
-                // CR 725 — Crown-Hunter Hireling: only the monarch can be
-                // attacked.
-                if computed_kw(id).has_kw(&Keyword::CantAttackUnlessDefenderIsMonarch)
-                    && self.defender_for(atk.target) != self.monarch
-                {
-                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                }
-                // CR 508.1a — Merchant Ship: the defending player must control
-                // a land of the named type.
-                if let Some(lt) = computed_kw(id).iter().find_map(|k| match k {
-                    Keyword::CantAttackUnlessDefenderControlsLandType(lt) => Some(*lt),
-                    _ => None,
-                }) && let Some(d) = self.defender_for(atk.target)
-                    && !self.battlefield.iter().any(|c| {
-                        c.controller == d && c.definition.subtypes.land_types.contains(&lt)
-                    })
-                {
-                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                }
-                // CR 508.1a — Branded Brawlers: the defender having any
-                // untapped land locks the attack.
-                if computed_kw(id).has_kw(&Keyword::CantAttackIfDefenderHasUntappedLand)
-                    && let Some(d) = self.defender_for(atk.target)
-                    && self.battlefield.iter().any(|c| {
-                        c.controller == d && c.definition.is_land() && !c.tapped
-                    })
-                {
-                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                }
-                // CR 508.1a — Mogg Toady: strictly more creatures than the
-                // defending player.
-                if computed_kw(id).has_kw(&Keyword::CantAttackUnlessMoreCreaturesThanDefender)
-                    && let Some(d) = self.defender_for(atk.target)
-                    && self.creature_count(p) <= self.creature_count(d)
-                {
-                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                }
-                // "Can't attack unless you control a [filter]" (Lovestruck Beast).
-                if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
-                    Keyword::CanAttackOnlyIfYouControl(r) => Some(r.clone()),
-                    _ => None,
-                }) {
-                    let satisfied = self.battlefield.iter().any(|c| {
-                        c.controller == p && self.evaluate_requirement_on_card(&req, c, p)
-                    });
-                    if !satisfied {
-                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                    }
-                }
-                // "Can't attack unless you control N+ [filter]" (Topiary
-                // Stomper — seven or more lands).
-                if let Some((req, min, excl)) = computed_kw(id).iter().find_map(|kw| match kw {
-                    Keyword::CantAttackOrBlockUnlessYouControlCount {
-                        filter, min, block_only: false, exclude_self, ..
-                    } => Some((filter.clone(), *min, *exclude_self)),
-                    _ => None,
-                }) {
-                    let n = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| {
-                            c.controller == p
-                                && !(excl && c.id == id)
-                                && self.evaluate_requirement_on_card(&req, c, p)
-                        })
-                        .count();
-                    if (n as u32) < min {
-                        return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                    }
-                }
-                // CR 508.1a — Monstrous Hound: more lands than the defender.
-                if computed_kw(id).has_kw(&Keyword::CantAttackUnlessMoreLandsThanDefender)
-                    && let Some(d) = self.defender_for(atk.target)
-                    && self.player_tally(p, crate::card::PlayerTally::LandsControlled)
-                        <= self.player_tally(d, crate::card::PlayerTally::LandsControlled)
-                {
-                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                }
-                // "Even number of counters" gate (Sab-Sunen). Zero is even.
-                if computed_kw(id).has_kw(&Keyword::CantAttackOrBlockUnlessEvenCounters)
-                    && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
-                    && c.counters.values().sum::<u32>() % 2 != 0
-                {
-                    return Err(attack_reject(line!(), GameError::CannotAttack(id)));
-                }
                 // Controller (not owner) must be the active player.
                 let card = self
                     .battlefield
                     .iter()
                     .find(|c| c.id == id && c.controller == p)
                     .ok_or(GameError::CardNotOnBattlefield(id))?;
-                let is_creature_now = computed
-                    .iter()
-                    .find(|c| c.id == id)
-                    .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
-                    .unwrap_or_else(|| card.definition.is_creature());
+                let cp = computed.iter().find(|c| c.id == id);
                 let kws = computed_kw(id);
-                // CR 508.1a — Goblin Cohort can't attack unless its controller
-                // cast a creature spell this turn.
-                let cohort_locked = kws
-                    .has_kw(&Keyword::CantAttackUnlessCastCreatureThisTurn)
-                    && self.players[p].creatures_cast_this_turn == 0;
-                // CR 508.1a — Hazoret-class: can't attack unless hand is small.
-                let hand_locked = kws.iter().any(|k| {
-                    matches!(k, Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n)
-                        if self.players[p].hand.len() as u32 > *n)
-                });
-                // CR 508.1a — Delirium gate (Patchwork Beastie).
-                let delirium_locked = kws.has_kw(&Keyword::CantAttackOrBlockUnlessDelirium)
-                    && !self.delirium_active(p);
-                // CR 508.1a — "a creature died under your control this turn"
-                // gate (Bontu the Glorified).
-                let creature_died_locked =
-                    kws.has_kw(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn)
-                        && self.players[p].creatures_died_this_turn == 0;
-                // CR 508.1a — Descend N gate (The Ancient One).
-                let descend_locked = kws.iter().any(|k| {
-                    matches!(k, Keyword::CantAttackOrBlockUnlessDescend(n)
-                        if self.descend_count(p) < *n as usize)
-                });
-                // CR 508.1a — city's blessing gate (Wayward Swordtooth).
-                let blessing_locked =
-                    kws.has_kw(&Keyword::CantAttackOrBlockUnlessCityBlessing)
-                        && !self.players[p].city_blessing;
-                // CR 508.1a — Glacial Crasher: needs a land of the named
-                // type on the battlefield (anyone's).
-                let land_locked = kws.iter().any(|k| {
-                    matches!(k, Keyword::CantAttackUnlessLandTypeOnBattlefield(lt)
-                        if !self.battlefield.iter().any(|c| c.definition.subtypes.land_types.contains(lt)))
-                });
-                // CR 508.1a — Harbor Serpent's "five or more Islands on the
-                // battlefield" and Bloodcrazed Goblin's "an opponent has been
-                // dealt damage this turn".
-                let predicate_locked = kws.iter().any(|k| match k {
-                    Keyword::CantAttackUnlessLandCount(lt, n) => {
-                        (self
-                            .battlefield
-                            .iter()
-                            .filter(|c| c.definition.subtypes.land_types.contains(lt))
-                            .count() as u32)
-                            < *n
-                    }
-                    Keyword::CantAttackUnlessOpponentDamaged => !self
-                        .players
-                        .iter()
-                        .enumerate()
-                        .any(|(i, pl)| !self.same_team(i, p) && pl.was_dealt_damage_this_turn),
-                    // Giant Turtle — "can't attack if it attacked during your
-                    // last turn".
-                    Keyword::CantAttackIfAttackedLastTurn => {
-                        self.battlefield_find(id).is_some_and(|c| c.attacked_last_turn)
-                    }
-                    // Ketramose — "unless there are seven or more cards in exile".
-                    Keyword::CantAttackOrBlockUnlessCardsInExile(n) => {
-                        (self.exile.len() as u32) < *n
-                    }
-                    _ => false,
-                });
-                // CR 508.1a — Wall of Dust's ban, live for exactly this turn.
-                let banned = self
-                    .battlefield_find(id)
-                    .is_some_and(|c| c.attack_ban == crate::card::AttackBan::Active);
+                // CR 508.1a — every restriction that reads only the creature
+                // and the board, in the one walker the CR 508.1d requirement
+                // loops above share. Two hand-written copies of this list is
+                // the drift that made a must-attack creature unable to attack
+                // and illegal not to.
+                if let Some((line, e)) = self.attacker_self_block(p, card, cp, &attack_power_caps)
+                {
+                    return Err(attack_reject(line, e));
+                }
+                // CR 508.1a — and every restriction that reads *this* attack's
+                // defender.
+                if let Some((line, e)) =
+                    self.attacker_target_block(p, id, kws, self.defender_for(atk.target))
+                {
+                    return Err(attack_reject(line, e));
+                }
                 // CR 508.1a — Okk: needs a strictly bigger partner in the same
-                // declared batch (already-declared attackers count too).
-                let okk_locked = kws.has_kw(&Keyword::CantAttackUnlessGreaterPowerAttacks) && {
-                    let mine = computed
-                        .iter()
-                        .find(|c| c.id == id)
-                        .map(|c| c.power)
-                        .unwrap_or(0);
-                    !attacks
+                // declared batch (already-declared attackers count too). The
+                // one per-attacker restriction that depends on the rest of the
+                // batch, so it cannot move into the shared walker.
+                if kws.has_kw(&Keyword::CantAttackUnlessGreaterPowerAttacks) {
+                    let mine = cp.map(|c| c.power).unwrap_or(0);
+                    if !attacks
                         .iter()
                         .map(|a| a.attacker)
                         .chain(self.attacking.iter().map(|a| a.attacker))
@@ -978,53 +1168,9 @@ impl GameState {
                         .any(|other| {
                             computed.iter().find(|c| c.id == other).is_some_and(|c| c.power > mine)
                         })
-                };
-                let defender_locked =
-                    kws.has_kw(&Keyword::Defender) && !self.ignores_defender_for_attack(card);
-                let can_attack = is_creature_now
-                    && !card.tapped
-                    && card.detained_by.is_none()
-                    && !defender_locked
-                    && !kws.has_kw(&Keyword::CantAttack)
-                    && !predicate_locked
-                    && !banned
-                    && !cohort_locked
-                    && !land_locked
-                    && !hand_locked
-                    && !delirium_locked
-                    && !creature_died_locked
-                    && !descend_locked
-                    && !blessing_locked
-                    && !okk_locked
-                    && (!card.summoning_sick || kws.has_kw(&Keyword::Haste));
-                if !can_attack {
-                    if card.tapped {
-                        return Err(attack_reject(line!(), GameError::CardIsTapped(id)));
-                    }
-                    // CR 701.35 — a detained permanent can't attack.
-                    // `is_creature_now` leads the conjunction above and was
-                    // missing from this cascade, so a permanent that is not a
-                    // creature right now — a bestowed Aura (Kestia), a
-                    // de-animated Vehicle — fell through and was reported as
-                    // *summoning sick*, on a card whose `summoning_sick` is
-                    // false. Wrong label, and the one the seventy-fifth pass's
-                    // `CRAB_SIM_REJECTS=names` census tripped over first.
-                    if !is_creature_now
-                        || card.detained_by.is_some()
-                        || defender_locked
-                        || kws.has_kw(&Keyword::CantAttack)
-                        || banned
-                        || cohort_locked
-                        || land_locked
-                        || hand_locked
-                        || delirium_locked
-                        || descend_locked
-                        || blessing_locked
-                        || okk_locked
                     {
                         return Err(attack_reject(line!(), GameError::CannotAttack(id)));
                     }
-                    return Err(attack_reject(line!(), GameError::SummoningSickness(id)));
                 }
             }
         }
@@ -4649,33 +4795,6 @@ impl GameState {
         let atk_power = acp.as_ref().map(|c| c.power).unwrap_or_else(|| attacker.power());
         let atk_kws: &[Keyword] = acp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
         super::can_block_attacker_computed(b, &bcp, atk_kws, atk_colors, atk_power)
-    }
-
-    /// CR 508.1d — whether `c` is *able* to attack, for the purpose of a
-    /// requirement that says it must. The four gates a "attacks each combat
-    /// if able" creature has to clear before its absence makes the whole
-    /// declaration illegal.
-    ///
-    /// Shared with the bot's attack picker, which has to reproduce this
-    /// exactly or it declares a batch the engine throws out. It was written
-    /// by hand at two sites here and a third, drifted, one there.
-    ///
-    /// **Two things it deliberately is not.** It reads the *printed* type
-    /// line where the main legality conjunction reads `is_creature_now`, and
-    /// the mandate loop above (`Effect::AttackWith`) keeps its own copy
-    /// without the `ignores_defender_for_attack` escape. Both are older
-    /// behaviour and both would be rules changes to unify; this method is
-    /// the pure extraction of the requirement loop's version.
-    pub(crate) fn attack_requirement_able(
-        &self,
-        c: &crate::card::CardInstance,
-        kws: &[Keyword],
-    ) -> bool {
-        c.definition.is_creature()
-            && !c.tapped
-            && (!kws.has_kw(&Keyword::Defender) || self.ignores_defender_for_attack(c))
-            && !kws.has_kw(&Keyword::CantAttack)
-            && (!c.summoning_sick || kws.has_kw(&Keyword::Haste))
     }
 
     /// CR 508.1g — the generic mana a declaration of `attacks` costs its
