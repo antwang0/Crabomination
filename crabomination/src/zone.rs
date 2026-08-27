@@ -73,6 +73,14 @@ impl Graveyard {
         }
     }
 
+    /// Append, through [`CowBox`]'s own `push` so an unshare materializes
+    /// with room for the card. Inherent, so it shadows the `Deref`'d
+    /// `Vec::push`; the memo is invalidated exactly as `DerefMut` would.
+    pub fn push(&mut self, card: CardInstance) {
+        self.anthem.store(UNKNOWN, Ordering::Relaxed);
+        self.cards.push(card);
+    }
+
     /// True when both handles still share one allocation — the [`CowBox`]
     /// contract, forwarded for the zone tests.
     pub fn shares_with(&self, other: &Self) -> bool {

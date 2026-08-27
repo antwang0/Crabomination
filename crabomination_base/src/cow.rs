@@ -42,6 +42,30 @@ impl<T: Clone> CowBox<T> {
     }
 }
 
+/// The one write shape that is not a general `DerefMut`: appending.
+///
+/// `Arc::make_mut` materializes with `Vec::clone`, which hands back
+/// `capacity == len` — so the push that follows the first write after a state
+/// clone **always** reallocates, two allocations for one appended element.
+/// Materializing with room for it removes the second. Inherent, so it shadows
+/// the `Deref`'d `Vec::push` at every existing call site without touching one.
+///
+/// Same device as `layers::Printed<Vec<_>>::push` one level out: there the
+/// copy is the layer override, here it is the CoW unshare.
+impl<T: Clone> CowBox<Vec<T>> {
+    #[inline]
+    pub fn push(&mut self, value: T) {
+        if let Some(v) = Arc::get_mut(&mut self.0) {
+            v.push(value);
+            return;
+        }
+        let mut v = Vec::with_capacity(self.0.len() + 1);
+        v.extend_from_slice(&self.0);
+        v.push(value);
+        self.0 = Arc::new(v);
+    }
+}
+
 impl<T: Clone> Clone for CowBox<T> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
