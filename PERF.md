@@ -6921,6 +6921,39 @@ nothing else — **mean +0.56 %, CI -0.26 .. +1.39 %, FLAT**, and the null
 control on the same workload resolves only +/-2.34 %. `--bench` byte-
 identical (195,616 / 27.44 / 0 stalls).
 
+**AND FOUR MORE OF THE SAME SHAPE, ALL FOUND BY A SITE TAG AND ALL FIXED THE
+SAME WAY.** Every one is a per-attacker or per-blocker rule the planner did
+not model, whose violation the engine rejects the declaration **whole** for —
+so the cost is the bot's entire combat, not one body, and in a simulation the
+`sim_step` fallback then passes priority so the modelled side declares
+nothing at all.
+
+```text
+site              rule                       pool/seed    before  after
+combat.rs:771     CR 613 Ensnaring Bridge    cube s10        410      0
+combat.rs:710     CR 508.1d must-attack      cube s11         22      0
+combat.rs:2324    CR 702.39 Provoke          cube s11         82      0
+combat.rs:2136    CR 509.1b Menace subsets   cube s1 / sealed 16      0
+combat.rs:1762    CR 509.1a computed CantBlock  fixed s11      4      0
+```
+
+Two devices did all of it. **A shared predicate where the planner had its own
+copy** — `attack_requirement_able`, `provoked_block_is_able`, and
+`attack_tax_for` are each one method the engine and the picker both call.
+**And a repair pass over the search menu**, because
+`attack_candidates_for_mcts` and `block_candidates_for_mcts` both offer
+*subsets* of a legal declaration, and a subset can leave an obliged attacker
+home, release a provoked creature, or strip the second blocker off a Menace
+attacker. Those candidates were not rejected loudly — their opening dry run
+failed, they scored `None`, and the menu silently shrank.
+
+**None of the four moves strength measurably**, and that is the honest
+statement: `--vs` reads 6 A-sweeps to 4 on the Bridge seed (9,600 games),
+2 to 2 for the must-attack repair (19,200 games), 8 to 1 for the block three
+(3,200 games, 50.2 %). Only the attack tax has a win rate. **They are worth
+having as correctness**, and the census is what says so: 740 attack and 102
+block rejections at the seventy-ninth tip, **44 and 6** now.
+
 **AND THE MEASUREMENT LESSON, WHICH IS ABOUT THE POOL AND NOT THE CODE.**
 This file briefly recorded that the `--vs` ladder "cannot gate that fix"
 because `--bench` and the wide sweep read bit-identically across the walker

@@ -112,18 +112,49 @@ went in on top as `6c9746ec`, and a measurement of the alternative shape).
    +/-2.34 %**. **Meta-lesson: naming the *card* was the wrong question** —
    `attacks[0]` is not the culprit for a batch-level rejection, and two
    rounds went into chasing "Angel" before the site tag answered it in one.
-4d. **And `combat.rs:710`'s 22 are diagnosed, not fixed** — small and
-   bounded. `pick_attacks_inner`'s must-attack escape is
-   `c.has_keyword(MustAttack) || !c.goaded_by.is_empty()`, off the
-   **instance**; the engine's is off the **computed** set and covers three
-   keywords — `MustAttack`, **`MustAttackOrBlock`**, and
-   **`MustAttackIfAnotherAttacks`** (Ekundu Cyclops, obliged only once
-   another attacker is declared). The fix wants a **repair pass, not a filter
-   predicate**, because the third is set-dependent: after `attackers` is
-   built, re-add any able creature the computed set says must attack and loop
-   until stable, since adding one can oblige another. Keep the ids of the
-   `raw_attackers` able-set — the current code consumes it with `into_iter()`.
-   Changes play; `--vs` gates it.
+4d. **FIXED (`7384e79b` + `6c9746ec`).** One `must_attack(c, kws, others)`
+   predicate off the computed set, `restore_forced_attackers` as a repair
+   pass to a fixed point (the third keyword is set-dependent), the engine's
+   `able` conjunction extracted as `attack_requirement_able`, and the search
+   menu repaired so no candidate leaves an obliged attacker home. 22 -> 0 on
+   `cube --seed 11`; strength flat over 19,200 `--vs` games (2 A-sweeps to
+   2), so it is a correctness change with no win to claim.
+4e. **AND TWO MORE PROHIBITIONS THE PICKER DID NOT MODEL, both found by the
+   site tag and both the same shape: a per-attacker rule whose violation the
+   engine rejects the batch *whole* for.**
+   * **CR 613, Ensnaring Bridge** (`AttackPowerCapByControllerHand`) —
+     **410 of 3,232 attack proposals (12.7 %) on `cube --seed 10`**, the only
+     seed in 1-24 whose pool carries one. 410 -> 0. Strength flat (9,600
+     games, 6 A-sweeps to 4).
+   * **CR 508.1g, the attack tax** — see 4c.
+   Read from `attack_static_scan`, taken once at the top of
+   `pick_attacks_inner` and shared with the tax trim.
+4f. **The BLOCK side had three of the same, and the block tag found them all
+   in one run** (`block_reject(line!(), e)` now wraps all 44 of
+   `declare_blockers`' rejection returns).
+   * **CR 509.1a** — `bot_can_block` read the *printed* view where the engine
+     reads the computed one. 4 a run on the **bench** pool. Still refuses a
+     tapped blocker on purpose: the engine's `tapped_creatures_can_block`
+     escape is a widening, not a bug fix, and wants its own gate.
+   * **CR 702.39, Provoke** — not modelled at all, 82 on `cube --seed 11`.
+     `provoked_block_is_able` is now one method both sides call.
+   * **CR 509.1b, Menace** — the block search's subsets stripped the second
+     blocker, 14 on `cube --seed 1` and 2 on `sealed`. `repair_block_candidate`
+     is the block twin of the attack menu's repair.
+   102 -> 6 between them; strength `--vs` 8 A-sweeps to 1 on cube s11
+   (50.2 %), flat elsewhere.
+4g. **WHAT IS LEFT OF (-55), AND IT IS ONE SITE ON EACH SIDE.** Both are a
+   *cost* the planner does not price, and both have the same fix shape as the
+   attack tax — one walker, then trim:
+   * `combat.rs:2418` — the **block** cost (CR 509.1d `BlockTaxToController`
+     + CR 509.1b's per-blocker keyword tax). 6 on `cube --seed 11`. The
+     engine's `block_tax_for` is still a closure inside `declare_blockers`;
+     lift it the way `attack_tax_for` was lifted. Note the trim interacts
+     with `repair_block_candidate` (dropping a blocker can break a minimum
+     count or release a provoked creature), so trim, repair, re-trim once.
+   * `combat.rs:1101` — the **attack** tax's residual 34, which is
+     `available_mana`'s optimism, not a missing rule. Tightening it is the
+     (-51)(b) correctness question, not this one.
 5. **SHIPPED — the two-binary gate exists: `bot_ladder --vs PATH`.** Side A
    is the binary you invoke, side B the one at `PATH`, one peer process per
    worker, and the pair schedule is derived on both sides from the same argv
