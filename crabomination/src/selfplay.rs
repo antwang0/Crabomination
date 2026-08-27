@@ -21,7 +21,7 @@ use rand::seq::SliceRandom;
 use crabomination_nn::TrainRow;
 
 use crate::cube::CardFactory;
-use crate::draft::{SosPacks, sos_draft_pool};
+use crate::draft::SosPacks;
 use crate::game::GameState;
 use crate::recommend::{
     STALE_ROUNDS, SimConfig, StopReason, build_match_template, build_random_deck,
@@ -76,9 +76,10 @@ pub const SEALED_PACKS: usize = 6;
 /// stronger deck, which is how a bot opponent is given a handicap edge
 /// without touching the builder.
 pub fn sealed_pool_packs(seed: u64, packs: usize) -> Vec<CardFactory> {
-    let pool = sos_draft_pool();
     let mut rng = StdRng::seed_from_u64(seed);
-    let rolls = SosPacks::new(&pool);
+    // Both the pool and its bucketing are process constants; a training actor
+    // opens two pools a game and rebuilt them each time (PERF (-66)).
+    let rolls = SosPacks::sos_default();
     (0..packs.max(1)).flat_map(|_| rolls.roll(&mut rng)).collect()
 }
 

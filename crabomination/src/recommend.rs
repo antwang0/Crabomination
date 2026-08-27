@@ -40,8 +40,8 @@ use rand::{Rng, RngExt, SeedableRng};
 
 use crate::cube::CardFactory;
 use crate::draft::{
-    COPY_CAP, SosPacks, colors_of_cost, colors_of_picks, score_card_with_colors,
-    sos_draft_pool,
+    COPY_CAP, SosPacks, colors_of_cost, colors_of_picks,
+    sos_draft_pool_ref,
 };
 use crate::game::GameState;
 use crate::mana::Color;
@@ -1266,7 +1266,7 @@ pub(crate) fn build_random_deck_from<R: Rng>(
 /// (6 SOS packs each), one randomized build per pool. Fully determined
 /// by `cfg.seed`.
 pub fn generate_gauntlet(cfg: &SimConfig) -> Vec<GauntletDeck> {
-    let pool = sos_draft_pool();
+    let pool = sos_draft_pool_ref();
     let n = cfg.gauntlet_size;
     // Pools are independent and per-index seeded, so building them in
     // parallel changes nothing about determinism — only wall clock.
@@ -1287,7 +1287,7 @@ pub fn generate_gauntlet(cfg: &SimConfig) -> Vec<GauntletDeck> {
                         cfg.seed
                             ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1),
                     );
-                    let rolls = SosPacks::new(&pool);
+                    let rolls = SosPacks::new(pool);
                     let pulls: Vec<CardFactory> =
                         (0..6).flat_map(|_| rolls.roll(&mut rng)).collect();
                     let deck = build_random_deck(&pulls, cfg, &mut rng);

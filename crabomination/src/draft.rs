@@ -174,6 +174,20 @@ pub struct SosPacks<'a> {
     by_bucket: crate::fxhash::HashMap<SosBucket, Vec<usize>>,
 }
 
+impl SosPacks<'static> {
+    /// The pack roller for [`sos_draft_pool_ref`], built once per process.
+    ///
+    /// `new` is a whole-pool walk that buckets by rarity and colour through
+    /// two hash containers, and it depends on nothing but the pool — which is
+    /// itself a constant. `sealed_pool_packs` built one per pool: 492,678 Ir
+    /// over the twelve of `--decks sealed --games 1` at `00fd1ad8`
+    /// (PERF (-66)).
+    pub fn sos_default() -> &'static SosPacks<'static> {
+        static PACKS: std::sync::OnceLock<SosPacks<'static>> = std::sync::OnceLock::new();
+        PACKS.get_or_init(|| SosPacks::new(sos_draft_pool_ref()))
+    }
+}
+
 impl<'a> SosPacks<'a> {
     pub fn new(pool: &'a [CardFactory]) -> Self {
         // The Special Guests sheet is collated separately (see
@@ -861,13 +875,29 @@ pub fn draft_pool() -> Vec<CardFactory> {
 /// — defensive only, since none of the SoS names overlap the cube's
 /// engine-invented entries.
 pub fn sos_draft_pool() -> Vec<CardFactory> {
-    crate::sos_mode::all_sos_cards()
-        .into_iter()
-        .filter(|f| {
-            let name = crate::cube::card_def(*f).name;
-            !FICTIONAL_CARD_NAMES.iter().any(|x| x.eq_ignore_ascii_case(name))
-        })
-        .collect()
+    sos_draft_pool_ref().to_vec()
+}
+
+/// [`sos_draft_pool`] without the copy, computed once per process.
+///
+/// The pool is a constant — `all_sos_cards` walks five colleges' sub-pools,
+/// dedups them through a `HashSet` and hands back a fresh `Vec`, and this
+/// filter then looks a `CardDefinition` up per entry to compare its name
+/// against `FICTIONAL_CARD_NAMES` — and `sealed_pool_packs` rebuilt the whole
+/// thing per pool, which is **twice a game in a `selfplay_train` actor**.
+/// `all_sos_cards` alone was 517,390 Ir over the twelve pools of
+/// `--decks sealed --games 1` at `00fd1ad8` (PERF (-66)).
+pub fn sos_draft_pool_ref() -> &'static [CardFactory] {
+    static POOL: std::sync::OnceLock<Vec<CardFactory>> = std::sync::OnceLock::new();
+    POOL.get_or_init(|| {
+        crate::sos_mode::all_sos_cards()
+            .into_iter()
+            .filter(|f| {
+                let name = crate::cube::card_def(*f).name;
+                !FICTIONAL_CARD_NAMES.iter().any(|x| x.eq_ignore_ascii_case(name))
+            })
+            .collect()
+    })
 }
 
 /// Which set of cards a draft draws from. Cube is the existing 309-card
