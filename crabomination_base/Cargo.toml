@@ -5,3 +5,7 @@ edition = "2024"
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
+# Inline storage for the small per-turn lists on `CardData`. `union` for the
+# reason `crabomination/Cargo.toml` gives; `serde` so the fields keep their
+# derived (sequence) wire shape.
+smallvec = { version = "1.15", features = ["union", "serde"] }

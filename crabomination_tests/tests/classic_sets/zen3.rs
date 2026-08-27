@@ -682,7 +682,7 @@ fn gomazoa_bounces_the_whole_block_to_libraries() {
     g.clear_sickness(gomazoa);
     let attacker = g.add_card_to_battlefield(1, catalog::serra_angel());
     g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
-    g.block_map.insert(gomazoa, vec![attacker]);
+    g.block_map.insert(gomazoa, [attacker].into_iter().collect());
     g.perform_action(GameAction::ActivateAbility {
         card_id: gomazoa,
         ability_index: 0,

@@ -1361,7 +1361,7 @@ mod tests {
             attacker: crate::card::CardId(100),
             target: crate::game::types::AttackTarget::Player(1),
         });
-        g.block_map.insert(crate::card::CardId(101), vec![crate::card::CardId(100)]);
+        g.block_map.insert(crate::card::CardId(101), smallvec::smallvec![crate::card::CardId(100)]);
         off(&[]);
         let with_rel = encode_state(&g, 0, &vocab);
         assert!(with_rel.groups[G_BF_SELF].iter().any(|o| o.feats[29] == 1.0), "blocked flag on");
@@ -1507,8 +1507,8 @@ mod tests {
                 target: crate::game::types::AttackTarget::Player(0),
             });
         }
-        g.block_map.insert(crate::card::CardId(3), vec![crate::card::CardId(1)]);
-        g.block_map.insert(crate::card::CardId(4), vec![crate::card::CardId(1)]);
+        g.block_map.insert(crate::card::CardId(3), smallvec::smallvec![crate::card::CardId(1)]);
+        g.block_map.insert(crate::card::CardId(4), smallvec::smallvec![crate::card::CardId(1)]);
 
         let s = encode_state(&g, 0, &vocab);
         // Both creatures are off the SOS vocab (index 0), so objects are

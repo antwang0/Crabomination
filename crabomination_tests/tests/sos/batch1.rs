@@ -2207,7 +2207,7 @@ fn quandrix_charm_castable_hint_probes_every_mode() {
         attacker: atk,
         target: crabomination::game::types::AttackTarget::Player(0),
     }];
-    g.block_map.insert(atk, vec![fractal]);
+    g.block_map.insert(atk, [fractal].into_iter().collect());
     g.priority.player_with_priority = 0;
     let charm = g.add_card_to_hand(0, catalog::quandrix_charm());
     g.players[0].mana_pool.add(Color::Green, 1);

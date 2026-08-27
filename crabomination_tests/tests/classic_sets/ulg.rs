@@ -617,8 +617,8 @@ fn gang_of_elk_grows_per_blocker() {
         attacker: gang,
         target: crabomination::game::types::AttackTarget::Player(1),
     });
-    g.block_map.insert(a, vec![gang]);
-    g.block_map.insert(b, vec![gang]);
+    g.block_map.insert(a, [gang].into_iter().collect());
+    g.block_map.insert(b, [gang].into_iter().collect());
     g.dispatch_triggers_for_events(&[
         GameEvent::BlockerDeclared { blocker: a, attacker: gang },
         GameEvent::BlockerDeclared { blocker: b, attacker: gang },
@@ -746,7 +746,7 @@ fn treefolk_mystic_strips_auras_from_its_blocker() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let aura = g.add_card_to_battlefield(1, catalog::granite_grip());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
-    g.block_map.insert(bear, vec![mystic]);
+    g.block_map.insert(bear, [mystic].into_iter().collect());
     g.dispatch_triggers_for_events(&[GameEvent::BlockerDeclared {
         blocker: bear,
         attacker: mystic,

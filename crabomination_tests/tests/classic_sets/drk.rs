@@ -1343,8 +1343,8 @@ fn sorrows_path_swaps_two_blockers_and_burns_its_controller() {
     })
     .expect("activate");
     drain_stack(&mut g);
-    assert_eq!(g.block_map().get(&x), Some(&vec![b]));
-    assert_eq!(g.block_map().get(&y), Some(&vec![a]));
+    assert_eq!(g.block_map().get(&x).map(|v| &v[..]), Some(&[b][..]));
+    assert_eq!(g.block_map().get(&y).map(|v| &v[..]), Some(&[a][..]));
     // Tapping the land burned its controller and their creatures.
     assert_eq!(g.players[0].life, 18);
     assert!(g.battlefield_find(mine).expect("bear").damage >= 2);

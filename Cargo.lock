@@ -2447,6 +2447,7 @@ name = "crabomination_base"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "smallvec",
 ]
 
 [[package]]
