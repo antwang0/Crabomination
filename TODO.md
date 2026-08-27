@@ -34,10 +34,17 @@ lines at the eighty-second pass and 145 at the eighty-third by restating what
 PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 
 1. **Perf queue** — PERF "Perf candidates", ranked: **(-62)** the gather's
-   ungated graveyard walk (priced, wants a zone newtype), (-60), (-61),
-   (-51)(a)/(b), (-59). **Refuted with numbers:** (-18) (-54b) (-56) (-56b)
-   (-57) (-58). The attack search is 46.3 % of the actor and nothing has
-   aimed at it.
+   ungated graveyard walk (priced at `fixed` -0.44 %, wants a zone newtype),
+   (-60), (-61), (-51)(a)/(b), (-59). **Refuted with numbers:** (-18) (-56)
+   (-56b) (-57) (-58). (-13)/(-54b) are **closed** — the sim's half was taken
+   this pass, the live game's half is a rules argument and stays.
+1a. **The device that unlocked the largest row in fifteen passes was a
+   census, not a profile.** `CRAB_SIM_REJECTS` read zero long enough that a
+   rollback nobody could prove unnecessary became provably unused. **Read the
+   instruments before the profile:** `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
+   `--bench`'s stall split. A "do not re-open" written against an *argument*
+   dates when the evidence moves; one written against a *measurement* does
+   not.
 2. **A commit that moves play** — PERF "How to measure": `--vs` after the
    null run, `CRAB_SIM_REJECTS` and `CRAB_PAY_FAILS` **swept, not sampled**,
    Ir on both pools. **`--bench`'s decision count is a committed invariant —
@@ -50,12 +57,13 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    `evaluate_requirement_on_card`) is *structurally* closed — the static
    walker's catch-all delegates, the card walker is exhaustive — so it wants
    a guard, not a fix. `audit_stubs` 0/21,795, `audit_incomplete` 0,
-   `CRAB_SIM_REJECTS` 0 in 69 configurations. The dropped-"may" tail
+   `CRAB_SIM_REJECTS` 0 in 129 configurations. The dropped-"may" tail
    (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent: **the
    next card sweep needs a different filter.**
 5. **Robustness gate, one RUSTFLAG** — `-C debug-assertions=yes` on the
    `overflow` build, recipe in `Cargo.toml`'s `[profile.overflow]` comment.
-   Run it after anything that adds an invariant or touches the layer path.
+   **71,760 games clean at this tip** (PERF Baseline). Run it after anything
+   that adds an invariant or touches the layer or simulation path.
 6. **Tip state and container hazards** — PERF "Baseline" / "How to measure".
    Do not copy either back here.
 7. **ML** — deck judge `nets/deck-champion.safetensors`, 60.3 % pooled

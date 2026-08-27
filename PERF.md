@@ -805,27 +805,56 @@ build.
 
 ## Baseline
 
-**Eighty-third pass. One perf commit, behaviour-preserving, and the pass's
-other two numbers are a priced candidate and a suite defect.**
+**Eighty-third pass. Two perf commits, and the larger one is a *census*
+cashed in: (-13)'s remaining half was takeable the moment the instrument said
+the rollback never runs.**
 
 ```text
 bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
-profiling-fast --no-default-features.  Base ae2b107d.
+profiling-fast --no-default-features.
 
 (1) CR 613.8's `SecondPass::of` gate walk, hoisted out of the two ways an
-    effect list reaches several permanents.
+    effect list reaches several permanents.  Base ae2b107d.
       fixed  1,167,670,783 -> 1,166,181,370   -0.128 %
       cube   3,550,805,805 -> 3,542,194,720   -0.242 %
+
+(2) `sim_step` abandons a rejected action instead of rolling it back, so the
+    simulation stops taking `perform_action`'s checkpoint.  Base 5f71b77e.
+      fixed  1,166,252,055 -> 1,153,737,518   -1.073 %
+      cube   3,542,580,434 -> 3,516,749,547   -0.729 %
 ```
 
-`--bench` byte-identical across it: **195,528 decisions / 27.44 turns /
-0 stalls / determinism ok**, unchanged from the eighty-second pass's refresh
-and unchanged again across the concurrent CR 509.1c commit. Suite 19,050 /
-0 / 5 at the tip, clippy `--workspace --exclude crabomination_client
---all-targets` clean, golden traces unmoved. Wall-clock on this container:
+**(2) is the largest single row on this branch in fifteen passes, and none of
+it is cleverness — it is the census.** (-54b) proved the checkpoint could not
+be removed by an atomicity argument (both declarations pay costs mid-
+validation, and that is still true). The argument it did not try is that the
+*simulation* never needs the rollback: `CRAB_SIM_REJECTS` reads **0 in 129
+configurations** between the census's own 69 and the 60 swept for this commit,
+and `sim_step` owns its state — a caller that gets `false` drops it unread.
+**An instrument that has read zero for long enough is a licence, not just a
+guard.** The live game's checkpoint is untouched.
+
+**And (2) is worth more than the clone it removes, which is why (-13) kept
+under-pricing it.** The checkpoint re-shares every CoW zone the simulation had
+already unshared, so the action's first write to each zone deep-copies it
+again; the clone and the drop are ~3.5 k Ir of the ~5.7 k it cost.
+
+**Base re-measured for (2) rather than carried from (1)**, per the eightieth
+pass's rule — the payment census landed between them and moved `fixed`
++0.006 % / `cube` +0.011 %. Both rows are behaviour-preserving: `--bench`
+byte-identical across each (**195,528 decisions / 27.44 turns / 0 stalls /
+determinism ok**, unchanged since the eighty-second pass's refresh and across
+four concurrent commits), golden traces unmoved, suite 19,050 / 0 / 5, clippy
+`--workspace --exclude crabomination_client --all-targets` clean.
+
+**Robustness gate at this tip, and it is the largest sweep the branch has
+run:** `-C debug-assertions=yes` on the `overflow` build, 65 cells over five
+pools x thirteen seeds x 120 games/archetype — **71,760 games, no panic, no
+assertion, no arithmetic overflow, 0 capped, 0 stuck**, 2 draws. (55,200 of
+the same sweep at the pre-(2) tip, also clean.) Wall-clock on this container:
 **239.9 games/s at `host_calib_ms` 53** on a 2.80 GHz Xeon, `release` build,
-`peak_rss_mib` 24.2 — a *different* box from the eighty-second pass's
-170-175 at 51-57, so read the hazard note in TODO before comparing them.
+`peak_rss_mib` 24.2 — a *different* box from the eighty-second pass's 170-175
+at 51-57, so read "How to measure"'s hazards before comparing them.
 
 **Eighty-second pass, the perf half. Two commits, both behaviour-preserving
 (suite green and golden traces identical across each), and both are the same
@@ -3803,6 +3832,26 @@ the table above is safe to compress:
 ## Log
 
 ### Eighty-third pass — a gate walk hoisted, an ungated walk priced, and a suite gate that was a coin flip
+
+**0. The pass's largest row came from an instrument, not from a profile, and
+that is the finding.** `sim_step`'s checkpoint is **1.07 % of `fixed` and
+0.73 % of `cube`**, and it was refused twice on argument: (-13) said the
+checkpoint is where partial-mutation bugs die, (-54b) proved no atomicity
+proof reaches it because both declarations pay costs mid-validation. Both are
+still true *of the live game*. What changed is that `CRAB_SIM_REJECTS` — an
+instrument built two passes ago to find picker/engine disagreements — has now
+read **zero in 129 configurations**, which says the rollback the simulation
+takes the checkpoint *for* never runs. **An instrument that has read zero for
+long enough stops being a guard and becomes a licence**, and the licence was
+worth more than any profile row on the list. Nothing about the sim's cost
+profile changed between the refusals and the taking; only what was known
+about its control flow did.
+
+The corollary is the ranking rule: **a "do not re-open" written against an
+argument dates when the evidence moves, and a "do not re-open" written against
+a measurement does not.** (-58)'s counterexample (a lifelink blocker flipping
+a static mid-batch) will be true forever. (-13)'s "the checkpoint earns its
+keep" was a claim about how often it earns it, and nobody had counted.
 
 **1. `SecondPass::of` was the entry the candidate list said to price first,
 and the price is `cube` -0.242 % / `fixed` -0.128 %.** (-57) asked for it
@@ -7542,8 +7591,19 @@ too, and that is worth ~0.15 % of `fixed` here.** The way to keep both would
 be a stack-backed `Extend` target (a `SmallVec`), which is a dependency
 decision, not a code one.
 
-**(-54b) THE `sim_step` CHECKPOINT CANNOT BE REMOVED BY AN ATOMICITY PROOF,
-BECAUSE NEITHER DECLARATION IS ATOMIC. DISPROVED BY READING, NO BUILD.**
+**(-54b) CLOSED AT THE EIGHTY-THIRD PASS — AND NOT BY THE PROOF THIS ENTRY
+ASKED FOR. `fixed` -1.073 %, `cube` -0.729 %; see Baseline (2).** Everything
+below stays true and is the reason the *live game* keeps its checkpoint:
+neither declaration is atomic, so no reordering removes it there. What the
+entry did not consider is that the **simulation** does not need a rollback at
+all — it owns its state and drops it unread on `false` — and that
+`CRAB_SIM_REJECTS` has now read zero in 129 configurations, so the retry the
+rollback existed to enable never fires. **The entry asked for a proof about
+the engine when the answer was a count about the workload.**
+
+**(-54b, as found) THE `sim_step` CHECKPOINT CANNOT BE REMOVED BY AN
+ATOMICITY PROOF, BECAUSE NEITHER DECLARATION IS ATOMIC. DISPROVED BY READING,
+NO BUILD.**
 NEXT's item 1b asks for "an atomicity proof, not a deletion" of
 `perform_action`'s checkpoint on the two declaration kinds (1.08 % of `cube`).
 Both functions mutate before their last `Err`:
@@ -7570,6 +7630,12 @@ would gain access to the lands the tax spent. That is a simultaneity question
 (CR 601.2h) with a real answer, not a refactor. **The checkpoint is the
 cheapest correct implementation of it**, and this entry exists so the next
 run prices the restructure rather than the deletion.
+
+**What is left of (-13) after this**: the *live* game's checkpoint on every
+non-pass action. It is pinned by `cow::tests::rejected_action_restores_state_
+exactly`, it is what structurally kills the audit-P0 partial-mutation family,
+and narrowing it is a rules-correctness argument first. The simulation's half
+is gone and there is no third half.
 
 **(-58) THE COMBAT DAMAGE BATCH'S PER-PAIR GATHER IS WORTH `cube` -1.6 %,
 AND SHARING IT IS UNSOUND. BUILT, MEASURED, REFUTED — WITH THE
