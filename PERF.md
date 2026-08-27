@@ -4318,10 +4318,25 @@ because the `Box` is what keeps `ComputedPermanent` small and that struct is
 seven `Vec`s = 168 bytes inline. The narrower version — unbox only the three
 `Printed<Vec<_>>` fields and leave `Subtypes` boxed — is +48 bytes rather than
 ~+200, i.e. ~+0.42 % by the same scaling, against the 0.32 % the boxes cost;
-**it does not close either, so do not build it.** The reusable half: **an
-allocation count is not a cost until you have priced the struct size that
-buys it**, and this is the third reading of that trade in the file (the
-`sa_cards` reserve and the whole-board headroom are the other two).
+**it does not close either, so do not build it.**
+
+**The one variant that is not obviously priced out, written down so the next
+run does not re-derive it.** Every one of the 51,798 box allocations is the
+**keywords** list — `Printed::push` is only ever called on it — so a
+keyword-only `Option<Box<[Keyword]>>` is a *fat* pointer, **+8 bytes** on
+`ComputedPermanent` rather than +200, and one allocation rather than two. By
+the same linear scaling that is ~+0.067 % of `fixed` against a saving of
+0.33 % of `cube` and **0.10 % of `fixed`** (5,348 materializations there
+against 51,798 on `cube`). So: a real `cube` row, a wash on `fixed`, an
+extrapolation from a single data point at +208 bytes where the true curve is
+almost certainly not linear, and a `Deref<Target = [Keyword]>` blast radius
+over every `cp.keywords` read. **Measure it or leave it** — do not take it on
+this arithmetic.
+
+The reusable half: **an allocation count is not a cost until you have priced
+the struct size that buys it**, and this is the third reading of that trade in
+the file (the `sa_cards` reserve and the whole-board headroom are the other
+two).
 
 **3. Seven ML convergence thresholds were coin flips on entropy, and the
 mutex written against the symptom cannot fix it.** `policy_head_learns_to_
