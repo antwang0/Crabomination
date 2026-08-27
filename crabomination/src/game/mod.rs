@@ -167,6 +167,7 @@ use crate::game::layers::{
 use crate::cow::CowBox;
 use crate::player::Player;
 use crate::fxhash::HashMap;
+use smallvec::SmallVec;
 
 // ── Decider serde adapter ────────────────────────────────────────────────────
 //
@@ -9201,7 +9202,23 @@ impl GameState {
         // with one keyword scan per card replaces eleven; each pass keeps its
         // place and iterates an empty slice when its flag is clear, so the
         // emitted effect sequence is unchanged.
-        let mut sa_cards: Vec<(&CardInstance, u64)> = Vec::new();
+        // Inline storage rather than `Vec::new()`: this buffer never escapes
+        // the function, and its first `push` was the largest single `grow_one`
+        // caller in the program — 69,896 growths over 71,930 `cube` gathers,
+        // i.e. one allocation per gather (PERF (-71)). Sixteen slots is 256
+        // bytes of an already enormous frame, `SmallVec::new()` initialises
+        // none of it, and a board with more than sixteen static-ability
+        // permanents spills to the heap exactly as before. Four slots removes
+        // the same growths and 10,782 more spill allocations, so the extra
+        // 192 bytes are free.
+        //
+        // **The `union` feature on the dependency is load-bearing**: without
+        // it `SmallVecData` is an *enum*, so every read matches a discriminant
+        // on top of the `spilled()` compare. That cost ~40 Ir a gather and made
+        // this **+0.108 % on `--decks fixed`**, where the four bench archetypes
+        // carry no static-ability permanent at all and there is no allocation
+        // to remove. With the union it is -0.012 % there and -0.513 % on `cube`.
+        let mut sa_cards: SmallVec<[(&CardInstance, u64); 16]> = SmallVec::new();
         let (mut any_equipped_bonus, mut any_soulbond_bonus, mut any_attached) =
             (false, false, false);
         let (mut any_reconfigure, mut any_impending, mut any_unleash) = (false, false, false);

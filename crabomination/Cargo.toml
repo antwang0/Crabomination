@@ -11,6 +11,15 @@ thiserror = "2.0.18"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 rand = "0.10.2"
+# Inline-storage vectors for the hot local accumulators PERF's allocation
+# table names: a buffer that never escapes its function can stop allocating
+# entirely rather than allocate more cheaply. Already resolved in
+# `Cargo.lock` (bevy pulls it), so it costs no download and ~1 s of build.
+# `union` is not optional: without it `SmallVecData` is an enum and every
+# read pays a discriminant match on top of the spilled check — measured at
+# ~40 Ir a call site's owner, enough to turn (-71) from -0.5 % into +0.1 %
+# on `--decks fixed`. See the comment at `sa_cards`.
+smallvec = { version = "1.15", features = ["union"] }
 
 ctor = "1.0.7"
 

@@ -902,6 +902,68 @@ build.
 
 ## Baseline
 
+### Eighty-sixth pass — the local accumulator that allocates, and a dependency feature that was worth 0.12 % of `fixed`
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base c8ebea50 (fixed 1,113,113,776 /
+cube 3,386,370,818 / sealed 3,321,932,106 on this box).
+
+(1) (-71): `gather_continuous_effects_inner`'s `sa_cards` is inline storage
+    (`SmallVec<[_; 16]>`), so the gather stops allocating once per gather.
+      fixed   1,113,113,776 -> 1,112,977,809   -0.012 %
+      cube    3,386,370,818 -> 3,368,986,404   -0.513 %
+      sealed  3,321,932,106 -> 3,308,449,213   -0.406 %
+      cube allocations  1,832,924 -> 1,782,746   -50,178  (-2.7 %)
+      cube grow_one       546,800 ->   482,428   -64,372  (-11.8 %)
+```
+
+**The `union` feature on `smallvec` is 0.12 % of `fixed` on its own, and
+without it this entry does not ship.** Measured, both variants built:
+
+```text
+                              fixed      cube      sealed
+  SmallVec<[_;16]>, enum     +0.108 %   -0.458 %   -0.351 %
+  SmallVec<[_;16]>, union    -0.012 %   -0.513 %   -0.406 %
+  SmallVec<[_;4]>,  enum     +0.108 %   -0.334 %   -0.315 %
+  slice-shadowed, enum       +0.337 %   -0.261 %   -0.157 %
+```
+
+Without `union`, `SmallVecData` is an **enum**: every read matches a
+discriminant on top of the `spilled()` compare, ~40 Ir per gather. On `cube`
+that is repaid many times over by the allocations removed; on `--decks
+fixed` it is not repaid **at all**, because the four bench archetypes carry
+no permanent with a `static_abilities` entry — the base and the enum build
+have *byte-identical* allocation tables there (643,753 allocations,
+174,265 `grow_one`), so `sa_cards` never allocated on that pool in the first
+place and the whole +0.108 % was bookkeeping. With the union it is a small
+win on `fixed` too, and the change stops being a pool split.
+
+**Two things not to rebuild.** Inline capacity **4** removes exactly the same
+64,372 growths as 16 (`grow_one` 482,428 either way) and then pays 10,782
+*spill* allocations, so the extra 192 bytes of frame are free and the smaller
+buffer is strictly worse. And **shadowing the buffer with a `&[T]` slice**
+after the prologue — one `Deref` for the whole function instead of ~forty —
+is worse on every pool: holding a borrow of the buffer across 3,600 lines
+costs more than the derefs it removes.
+
+**STATE AT the eighty-sixth pass's first commit.**
+
+```text
+suite  cargo nextest run --workspace --exclude crabomination_client
+       19,056 / 0 / 5   (86 s after the build; nextest reinstalls in seconds)
+clippy --workspace --exclude crabomination_client --all-targets   clean
+golden traces  unmoved (they run inside the suite above)
+--bench  195,528 decisions / 27.44 turns / 611.0 decisions a game /
+         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok
+         — **byte-identical to the committed invariant**
+         202.3-215.1 games/s, peak_rss_mib 27.1-27.7, host_calib_ms 51-61
+         over three runs (`release-fast`, mimalloc, 2.80 GHz Xeon, 3 threads;
+         the same binary configuration read 211.1-224.1 at calib 46-49
+         earlier in the same session, which is the container's spread and
+         not a difference — the invariant is what carries)
+```
+
 **Eighty-fifth pass, the concurrent half — four more perf commits on top of
 the six below, and three of the four are a *stale abstraction* rather than a
 hot loop.** A colour list that had to be a `Vec` before it was six bytes; a
@@ -7465,6 +7527,78 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### THE ALLOCATION TABLE at the eighty-sixth base (`c8ebea50`), `--decks cube`
+
+The table that has found the most in this file — callers of `__rust_alloc`
+ranked by **call count**, not Ir. Re-read after five passes; two rows the
+eighty-first tip's copy carried are gone.
+
+```text
+1,832,924 allocations (was 1,988,682 at the eighty-first tip)
+  495,777  RawVecInner::finish_grow        27.0 %   a Vec that outgrew itself
+  244,032  Arc::clone_from_ref_in          13.3 %   the CoW deep copy
+  227,430  GameState::computed_permanent   12.4 %   the Arc<ComputedPermanent>
+  176,719  Vec::from_iter (nested)          9.6 %
+   82,830  Vec::from_iter (nested)'2        4.5 %
+   76,612  gather_continuous_effects_inner  4.2 %   `all_effects`'s with_capacity
+   56,414  <GameState as Clone>::clone      3.1 %   2.49 per clone
+   52,138  PrintedList::push                2.8 %
+   49,096  hashbrown fallible_with_capacity 2.7 %
+   48,545  Vec::clone                       2.6 %
+
+callers of `grow_one` (546,800 of the 654,597 `finish_grow` calls)
+  69,896  gather_continuous_effects_inner  14,105,371 Ir   0.42 %  <- (-71), TAKEN
+  62,632  Vec::push_mut                    11,798,939      0.35 %
+  37,670  stack::advance_step               4,522,660
+  36,526  combat::declare_blockers          7,966,197      0.24 %
+  29,474  GameState::dispatch_board_scan    3,544,522
+  26,942  check_state_based_actions         4,718,160
+  22,930  actions::finalize_cast            7,335,377      0.22 %
+  21,120  GameState::computed_permanent     7,203,581
+```
+
+**`layers::compute_permanent_pass`'s 51,706 growths are gone** — a concurrent
+session took them at `31eb7333` (`Printed<Vec<_>>`'s materialize sizing at
+`len + 1`), which is most of the 155,758-allocation fall.
+**`Vec::push_mut` is an out-of-line `Vec::push`, so its growths belong to
+*its* callers**: `static_effect_to_effects` 64,740 (i.e. the gather's
+`all_effects`), `activate_ability_inner` 44,776, `declare_attackers_banded`
+27,098, `run_effect` 24,970.
+
+**⚠ A `grow_one` row named for a function is not necessarily the buffer you
+think.** `gather_continuous_effects_inner`'s row on **`fixed`** (9,836
+growths) is *not* `sa_cards` — the four bench archetypes carry no permanent
+with a `static_abilities` entry, so `sa_cards` never allocates there at all,
+and those growths are `all_effects` outgrowing its `base.len() +
+sa_cards.len()` reserve. (-71) proved it by shipping and reading a
+byte-identical allocation table on that pool. Check the pool before pricing a
+row off one dump.
+
+**The whole family is 11.3 % of `cube` and 10.9 % of `fixed`** (`_int_free`
+3.45 / 3.64, `_int_malloc` 2.63 / 2.25, `malloc` 2.58 / 2.72, `free` 2.11 /
+2.26, `_int_free_merge_chunk` 0.51), plus `__memcpy` at 2.32 / 1.91. Read the
+mimalloc entry before sizing anything off it: callgrind runs the system
+allocator and the shipped build does not.
+
+### `GameState::clone` at the same tip — 22,684 calls on `cube`, 10,822 on `fixed`
+
+```text
+cube  22,684 clones, ~50.7 M Ir inclusive over its callers, 1.50 % of the run
+      (accept_on 11,936 / perform_action 4,964 / sim_start_state 2,338 /
+       evaluate_action_sequence 1,408 / main_phase_action_with 1,354)
+fixed 10,822 clones, ~23.6 M Ir, 2.12 % of the run
+callees, cube:  Vec::clone 136,148 (6.0 a clone) / __memcpy 100,912 /
+      RawTable::clone 68,052 / __rust_alloc 56,414 (2.49 a clone) /
+      Box::clone 21,440
+```
+
+**2.49 allocations per clone, and one of them has a name**: `players:
+self.players.clone()` is a `Vec<Player>` of two `Arc` handles, i.e. a malloc
+and a free for 16 bytes. The eighty-third pass's line profile priced it at
+**472 Ir a clone, 35 % of the clone's whole inline group** — 0.32 % of `cube`
+and 0.46 % of `fixed` at this tip's clone counts, before the matching `free`.
+See candidate (-72).
+
 ### THE WHOLE PROGRAM BY SOURCE LINE, at the eighty-third tip (`34d118fe`), `--decks cube`
 
 **Run once so nobody has to run it again: the simulator has no hot line, and
@@ -8363,6 +8497,66 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-71) TAKEN at the eighty-sixth pass — `cube` -0.513 %, `sealed` -0.406 %,
+`fixed` -0.012 %; 50,178 fewer allocations and 64,372 fewer `grow_one` calls
+a `cube` run.** `gather_continuous_effects_inner`'s `sa_cards` is
+`SmallVec<[(&CardInstance, u64); 16]>`. **The `union` feature on the
+dependency is the entry**, not the inline buffer: without it the same change
+is **+0.108 % on `fixed`**, because `SmallVecData` is an enum and every read
+matches a discriminant. See the Baseline for the four-variant table and the
+two shapes not to rebuild (capacity 4, and shadowing the buffer with a
+`&[T]`).
+
+**The generalisation is the worklist and it is the allocation table's
+`grow_one` half.** `declare_blockers` (36,526 growths / 7,966,197 Ir),
+`finalize_cast` (22,930 / 7,335,377), `advance_step` (37,670 / 4,522,660),
+`check_state_based_actions` (26,942 / 4,718,160) and `dispatch_board_scan`
+(29,474 / 3,544,522) are the same shape — a `Vec::new()` local accumulator
+whose first `push` is the allocation — at half the size each, ~1.2 % of
+`cube` between them. Two cautions from this entry before taking any of them:
+
+* **Check the pool before pricing the row.** The `fixed` half of (-71)'s own
+  row was a *different buffer* (`all_effects`), and the tell was that the
+  shipped change left `fixed`'s allocation table byte-identical.
+* **A buffer that is returned is not this shape.** `dispatch_board_scan`'s two
+  `Vec`s go out in a `DispatchScan`, so an inline buffer moves its bytes at
+  every return; the entry above is specifically about a local that dies in
+  its own frame.
+
+**(-72) `GameState::clone`'s `players` FIELD IS A MALLOC AND A FREE FOR
+SIXTEEN BYTES, ON EVERY CLONE — 472 Ir, 35 % OF THE CLONE'S WHOLE INLINE
+GROUP, 0.32 % OF `cube` AND 0.46 % OF `fixed`.** Priced by the eighty-third
+pass's line profile (`game/mod.rs:2283`, 16,294,384 Ir / 0.55 % at that tip's
+clone count) and re-based on the eighty-sixth tip's counts (22,684 clones on
+`cube`, 10,822 on `fixed`); the Profile of record's `GameState::clone` block
+has the callee table.
+
+`players: Vec<Player>` where `Player` is an eight-byte `Arc<PlayerData>`
+handle. **Every other zone in `GameState` is `CowBox`-wrapped and clones for
+a refcount; this one clones for an allocation** — and it is the only field of
+~250 whose clone costs more than the whole rest of the struct's memcpy.
+
+**`CowBox` is the wrong tool here and the arithmetic says so before the
+build.** `CowBox<Vec<Player>>` is `Arc<Vec<Player>>`: the clone becomes one
+atomic increment, but the first `&mut` reach allocates *twice* (the `Arc`
+header and the `Vec` buffer) where today's clone allocates once, and a bot
+probe that resolves any damage or taps any mana writes a seat. It pays only
+if most clones never touch `players`, which is exactly the assumption this
+file's CoW entries keep getting wrong.
+
+**Inline storage is the shape**, i.e. (-71)'s device on a struct field rather
+than a local: `SmallVec<[Player; 4]>` clones two atomic increments and no
+malloc, spills correctly for a commander pod, and costs nothing on the write
+path. The blast radius is two type mentions (`GameState::players` and
+`GameState::new`'s parameter, which stays `Vec<Player>` and converts at the
+boundary): `.players` has ~35 k uses and every one is `iter` / `len` / index
+/ `get` / `get_mut` / `iter_mut`, i.e. `Deref<Target = [Player]>`. The one
+`push` is in `cr_recent43.rs`. **Two things to check that (-71) did not have
+to:** the field is *moved* with the struct, so the inline bytes are memcpy'd
+on every clone and every move of a `GameState` — price capacity 2 against 4
+— and the wire format has to stay a sequence, which smallvec's `serde`
+feature gives (no snapshot and no trained net is invalidated).
 
 **(-68) TAKEN at `e9a509e6` — `fixed` -0.215 %, `cube` -0.317 %, and the
 function's own row -17.7 % / -21.3 %.** Two walks instead of six: the dealer

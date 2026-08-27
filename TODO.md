@@ -86,6 +86,23 @@ one-sentence claim plus the pass that measured it; do not delete one, because
 the point of the section is that a rule refuted on a *mechanism* stays
 refuted.
 
+- **A `SmallVec` without the `union` feature is an *enum*, and the
+  discriminant match is the whole trade** (pass 86, `(-71)`; 0.12 % of
+  `fixed`). Inlining the gather's `sa_cards` buffer read **+0.108 % on
+  `fixed`** and -0.458 % on `cube` — a pool split — until the feature was
+  turned on, after which it is -0.012 % / -0.513 %. Every read of a non-union
+  `SmallVec` matches a discriminant on top of the `spilled()` compare, ~40 Ir
+  per owner call. Two shapes measured and refuted alongside it: inline
+  capacity 4 (removes the same growths, then pays 10,782 spill allocations)
+  and shadowing the buffer with a `&[T]` after the fill (holding the borrow
+  across 3,600 lines is worse on every pool).
+- **The `grow_one` caller table ranks the local accumulators, and a row named
+  for a function is not necessarily the buffer you think** (same entry).
+  `gather_continuous_effects_inner`'s row on `fixed` is `all_effects`, not
+  `sa_cards` — the four bench archetypes carry no permanent with a
+  `static_abilities` entry, so that buffer never allocates on that pool, and
+  the shipped change left `fixed`'s allocation table *byte-identical*. Read
+  the row on the pool the change is aimed at.
 - **A gate that rides on an existing *early-exiting* scan is not free**
   (pass 85, the concurrent half, `(-68)`; estimated 0.5-0.8 % of `cube` and
   measured 0.317 %). Three of `fire_combat_damage_triggers`' six battlefield
