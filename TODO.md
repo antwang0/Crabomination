@@ -80,8 +80,10 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    **71,760 games clean this pass**, the largest sweep the branch has run.
    Run it after anything that adds an invariant or touches the layer or
    simulation path. `--vs` reads the null on all three pools (PERF Baseline).
-6. **Tip state and container hazards** — PERF "Baseline" / "How to measure".
-   Do not copy either back here.
+6. **Tip state and container hazards** — PERF "Baseline" ("STATE AT …") and
+   "How to measure". Do not copy either back here. ⚠ **A wall-clock row is
+   not comparable across a run**: the box is quiet at the end and busy in the
+   middle, `host_calib_ms` moves with it, and this box resolves ±2 %.
 7. **ML** — deck judge `nets/deck-champion.safetensors`, 60.3 % pooled
    (ML_NOTES). Open, needs the ML context: should `selfplay` seed
    `jitter_below` from `--seed`? Buys replayable runs and a fixed `--games

@@ -869,14 +869,37 @@ determinism ok**, unchanged since the eighty-second pass's refresh and across
 four concurrent commits), golden traces unmoved, suite 19,050 / 0 / 5, clippy
 `--workspace --exclude crabomination_client --all-targets` clean.
 
-**Robustness gate at this tip, and it is the largest sweep the branch has
-run:** `-C debug-assertions=yes` on the `overflow` build, 65 cells over five
-pools x thirteen seeds x 120 games/archetype — **71,760 games, no panic, no
-assertion, no arithmetic overflow, 0 capped, 0 stuck**, 2 draws. (55,200 of
-the same sweep at the pre-(2) tip, also clean.) Wall-clock on this container:
-**239.9 games/s at `host_calib_ms` 53** on a 2.80 GHz Xeon, `release` build,
-`peak_rss_mib` 24.2 — a *different* box from the eighty-second pass's 170-175
-at 51-57, so read "How to measure"'s hazards before comparing them.
+**Robustness gate, and it is the largest sweep the branch has run:**
+`-C debug-assertions=yes` on the `overflow` build, 65 cells over five pools x
+thirteen seeds x 120 games/archetype — **71,760 games, no panic, no
+assertion, no arithmetic overflow, 0 capped, 0 stuck**, 2 draws. Run twice:
+once at the pre-(2) tip and once at `cfc684fc`, clean both times. (55,200 of
+the same sweep at an earlier tip, also clean.)
+
+**STATE AT `cfc684fc`, the pass's last commit** — the row a later run
+compares against, and the only one in this section measured on the whole
+pass rather than on one commit:
+
+```text
+suite  --workspace --exclude crabomination_client   19,054 / 0 / 5
+clippy --workspace --exclude crabomination_client --all-targets   clean
+--bench   195,528 decisions / 27.44 turns / 0 stalls / determinism ok
+          thread_determinism ok (3 vs 1 threads identical)
+          242.9 / 247.6 / 247.2 games/s at host_calib_ms 45-51
+          peak_rss_mib 24.3-24.4      (release, 2.80 GHz Xeon, 3 threads)
+golden traces  unmoved
+overflow + -C debug-assertions=yes   71,760 games, 0 faults
+```
+
+**The wall-clock row is not comparable to the one this run opened with**
+(239.9 at calib 53, same box, same binary configuration): the container was
+building for most of the run and quiet at the end, and `host_calib_ms` moved
+53 -> 45 with it. The four commits above are worth ~1.9 % of `fixed` in Ir
+and this box resolves ±2 % at 32 runs a side (`ab_wall.py`'s calibration), so
+**do not read the games/s difference as the change** — that is what the Ir
+rows are for. It is also a *different* box from the eighty-second pass's
+170-175 at 51-57; read "How to measure"'s hazards before comparing any two
+wall-clock rows in this file.
 
 **Eighty-second pass, the perf half. Two commits, both behaviour-preserving
 (suite green and golden traces identical across each), and both are the same
