@@ -327,6 +327,32 @@ impl<T: Clone> Printed<T> {
     }
 }
 
+/// The one write shape that is not a general `DerefMut`: appending.
+///
+/// `deref_mut` materializes with `proj(src).clone()`, and `Vec::clone` hands
+/// back `capacity == len` — so the push that follows the first write always
+/// reallocates. At the eighty-first tip that pairing is exact on a `cube` run:
+/// `compute_permanent_pass` makes **51,706 `Vec::clone` calls, 51,706
+/// `grow_one` calls and 51,706 `__rust_alloc` calls**, three allocations for
+/// one appended keyword. Materializing with room for the element removes the
+/// third. Inherent, so it shadows the `Deref`'d `Vec::push` at every existing
+/// call site without touching one.
+impl<T: Clone> Printed<Vec<T>> {
+    #[inline]
+    pub(crate) fn push(&mut self, value: T) {
+        match &mut self.over {
+            Some(v) => v.push(value),
+            None => {
+                let printed = (self.proj)(&self.src);
+                let mut v = Vec::with_capacity(printed.len() + 1);
+                v.extend_from_slice(printed);
+                v.push(value);
+                self.over = Some(Box::new(v));
+            }
+        }
+    }
+}
+
 impl<T: Clone> std::ops::Deref for Printed<T> {
     type Target = T;
     #[inline]
