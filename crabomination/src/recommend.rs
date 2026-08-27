@@ -712,13 +712,21 @@ pub(crate) fn curve_penalty(main: &[CardFactory]) -> i32 {
 /// the per-card score were re-derived once per splash shape, thirty times
 /// over one pool.
 fn splash_cards(scores: &PoolScores<'_>, pair: &[Color], third: Color, cfg: &SimConfig) -> Vec<CardFactory> {
+    // Same five-bit test `suggest_main_deck_shape` uses, and the same reason:
+    // this is a whole-pool walk run once per splash shape — 30 of the 56 — so
+    // the `colors().all(|c| ... pair.contains(&c))` scan was paid ~2,550 times
+    // a build.
+    let want = pair.iter().fold(crate::mana::ColorSet::single(third), |mut s, &c| {
+        s.insert(c);
+        s
+    });
     let mut hits: Vec<(CardFactory, i32)> = scores
         .picks
         .iter()
         .zip(&scores.cards)
         .filter_map(|(&f, &(brief, base))| {
             let pips = &brief.pips;
-            if !(pips.get(third) > 0 && pips.colors().all(|c| c == third || pair.contains(&c))) {
+            if !(brief.pip_colors.contains(third) && brief.pip_colors.is_subset_of(want)) {
                 return None;
             }
             // A splash is a handful of off-color sources, so it can only
