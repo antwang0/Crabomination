@@ -19,7 +19,7 @@ rand = "0.10.2"
 # read pays a discriminant match on top of the spilled check — measured at
 # ~40 Ir a call site's owner, enough to turn (-71) from -0.5 % into +0.1 %
 # on `--decks fixed`. See the comment at `sa_cards`.
-smallvec = { version = "1.15", features = ["union"] }
+smallvec = { version = "1.15", features = ["union", "serde"] }
 
 ctor = "1.0.7"
 

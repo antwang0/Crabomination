@@ -816,13 +816,13 @@ pub struct PlayerData {
     /// Names of the spells this player has cast this turn (Grim Reminder).
     /// Cleared at untap.
     #[serde(with = "crate::static_str_serde::vec", default)]
-    pub spell_names_cast_this_turn: Vec<crate::static_str_serde::StaticStr>,
+    pub spell_names_cast_this_turn: smallvec::SmallVec<[crate::static_str_serde::StaticStr; 1]>,
     /// Card ids of the spells this player has cast this turn, in cast order —
     /// "the first instant spell … you've cast this turn" (Alania, Divergent
     /// Storm) resolves each id through `find_card_anywhere`. Cleared with
     /// `spell_names_cast_this_turn`.
     #[serde(default)]
-    pub spell_ids_cast_this_turn: Vec<crate::card::CardId>,
+    pub spell_ids_cast_this_turn: smallvec::SmallVec<[crate::card::CardId; 4]>,
     /// Turn number through which this player may cast creature spells from
     /// their graveyard by foraging (Osteomancer Adept). Cleared at cleanup.
     #[serde(default)]
@@ -937,7 +937,7 @@ pub struct PlayerData {
     /// `Predicate::CastSpellThisTurnWith` — the Trap alternative costs
     /// ("if an opponent cast a blue spell this turn", Ricochet Trap).
     #[serde(default)]
-    pub spell_casts_this_turn: Vec<crate::game::types::CastProfile>,
+    pub spell_casts_this_turn: smallvec::SmallVec<[crate::game::types::CastProfile; 1]>,
     /// True while this player has hexproof until the start of their next
     /// turn (Blossoming Calm). Set by `Effect::GainHexproofUntilYourNextTurn`;
     /// cleared at this player's `do_untap`. `#[serde(default)]`.
@@ -1201,7 +1201,7 @@ impl Player {
             creature_spells_uncounterable_this_turn: false,
             hexproof_until_next_turn: false,
             cast_blue_or_black_this_turn: false,
-            spell_casts_this_turn: Vec::new(),
+            spell_casts_this_turn: smallvec::SmallVec::new(),
             cant_cast_noncreature_this_turn: false,
             free_spells_from_hand_this_turn: false,
             play_from_graveyard_this_turn: false,
@@ -1229,8 +1229,8 @@ impl Player {
             cant_lose_this_turn: false,
             damage_floor_this_turn: false,
             attack_tax_until_your_turn: 0,
-            spell_names_cast_this_turn: Vec::new(),
-            spell_ids_cast_this_turn: Vec::new(),
+            spell_names_cast_this_turn: smallvec::SmallVec::new(),
+            spell_ids_cast_this_turn: smallvec::SmallVec::new(),
             forage_graveyard_casts_turn: None,
             skip_turns: 0,
             skip_next_untap_step: 0,

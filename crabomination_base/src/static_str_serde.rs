@@ -89,13 +89,19 @@ pub mod vec {
     use serde::de::Deserialize;
     use serde::{Deserializer, Serializer};
 
-    pub fn serialize<S: Serializer>(v: &Vec<super::StaticStr>, ser: S) -> Result<S::Ok, S::Error> {
-        serde::Serialize::serialize(v, ser)
+    // Generic over the container so an inline-storage field (`SmallVec`) uses
+    // the same module and the same wire shape — a sequence either way.
+    pub fn serialize<S: Serializer, C>(v: &C, ser: S) -> Result<S::Ok, S::Error>
+    where
+        C: std::ops::Deref<Target = [super::StaticStr]>,
+    {
+        serde::Serialize::serialize(&**v, ser)
     }
 
-    pub fn deserialize<'de, D: Deserializer<'de>>(
-        de: D,
-    ) -> Result<Vec<super::StaticStr>, D::Error> {
+    pub fn deserialize<'de, D: Deserializer<'de>, C>(de: D) -> Result<C, D::Error>
+    where
+        C: FromIterator<super::StaticStr>,
+    {
         Ok(Vec::<String>::deserialize(de)?.into_iter().map(super::intern).collect())
     }
 }
