@@ -20,147 +20,42 @@ sixty-seventh pass, so don't re-take that.
   has the command and the disk caveat.
 - `PERF.md` — the perf record: baseline, log, profile of record, candidates.
 
-## NEXT (handoff — rewrite each run, keep it terse)
+## NEXT (handoff — an INDEX, rewritten each run. Detail lives in PERF; nothing here restates a number.)
 
 **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
-claude/modern_decks origin/claude/modern_decks` — the container clones `main`
-and does not list this branch before that fetch. **Sessions run it
-concurrently and this file is not a lock:** push code before tracker prose,
-do not take a top-ranked item you cannot push within the hour, and diff
-before discarding a lost race.
+claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
+Sessions run concurrently: push code before tracker prose, rebase rather than
+force, and diff before discarding a lost race.
 
-**This is an INDEX: a pointer per topic, never the numbers.** It reached 221
-lines at the eighty-second pass and 145 at the eighty-third by restating what
-PERF and ENGINE_BACKLOG already hold. Keep it near this length.
+**An INDEX: one pointer per topic, no numbers.** It was 221 lines at the
+eighty-second pass, 145 at the eighty-third and 110 at the eighty-fourth,
+because every pass restated what PERF already held. Everything below has a
+home in PERF's "Perf candidates", "How to measure" or Log, or in the standing
+rules under this section; add a pointer here, put the detail there.
 
-**And when this file crosses ~1k lines, "Standing rules for a perf pass" is
-the compaction** — it is 380 of them and every rule is a refutation written up
-with its numbers in PERF's Log, which is where the detail belongs. Collapse
-each to its one-sentence claim plus the pass that measured it; do not delete
-one, because the point of the section is that a rule refuted on a *mechanism*
-stays refuted.
-
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-63)** deck
-   construction, **5.37 % of the training actor and invisible on `--bench`**,
-   fresh from the eighty-third pass's actor profile; **(-51)(b)** (open, and
-   1b below says what it is now asking for); **(-65)** (seeded with counts,
-   ~0.2 % of `cube`); then (-60), (-61), (-51)(a), (-59). **Refuted with
-   numbers:** (-18) (-56) (-56b) (-57) (-58), and now unboxing
-   `layers::Printed` (see "Do not rebuild"). **Closed this pass:**
-   (-13)/(-54b) (the sim's half taken, the live game's half is a rules
-   argument and stays), (-62) (the `zone::Graveyard` memo) and **(-64)'s
-   half** (the state clone's `Vec<bool>`; what is left of that entry is four
-   bullets saying why the other 2.5 allocations are not the same shape).
-   **The list is thin and everything left on it is "fewer calls", not
-   "cheaper call" — re-profile before ranking.** The attack search is 45.7 %
-   of the actor and nothing has aimed at it, and the whole-program line
-   profile at PERF's "Profile of record" says the simulator has **no hot
-   line** (largest 0.82 %) — so the next find will be a *count* or a *pool*,
-   not a row. (-63) is the pool case: it came out of re-reading the actor,
-   the profile that dates fastest and the one the ladder cannot stand in
-   for. The `Option::or_else` row is the count case: 2.2 M calls at ~5 Ir,
-   invisible to every table that ranks by Ir (see the first standing rule).
-   **A thin list is not an empty engine.** Three of this pass's eight rows
-   were on no candidate and in no self table — `Option::or_else`, the boxed
-   keyword list, and `printed_color_set` — and all three came from *counting*
-   (call counts, allocations per call, a hot function's callee list), which
-   is the first three standing rules below.
-1a. **The device that unlocked the largest row in fifteen passes was a
-   census, not a profile.** `CRAB_SIM_REJECTS` read zero long enough that a
-   rollback nobody could prove unnecessary became provably unused. **Read the
-   instruments before the profile:** `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
-   `--bench`'s stall split. A "do not re-open" written against an *argument*
-   dates when the evidence moves; one written against a *measurement* does
-   not.
-1d. **⚠ `ab_wall` CANNOT RESOLVE A SUB-1 % CHANGE AND ITS CI WILL NOT SAY SO
-   — use callgrind Ir under ~2 %.** Two claims this branch published off the
-   wall clock were re-measured with Ir and are wrong by 25x and 8x
-   (**0.045 %** read as -1.31 %, **-0.282 %** read as -2.20 %), each with
-   direction-correct, interval-clearing, *repeatable* readings. The cause is
-   code layout: it is a fixed property of the binary pair, so the ABBA
-   schedule cancels host drift and never touches it. Ir's mirror-image blind
-   spot is memory — quote both for a change that moves allocations. Full
-   write-up in PERF "How to measure" and the eighty-fourth-pass Log.
-   **Refuted this pass, do not re-take:** the battlefield-index hint on the
-   tap path (`activate_ability_at`), flat by Ir as well as by clock.
-1c. **A helper that takes an *id* where its caller holds the *thing* turns a
-   memoized lookup into a search.** This branch's own CR 602.5g/h extraction
-   did it on the tap path; **`fixed` -0.045 % / `cube` -0.063 % by Ir** to
-   pass the borrow instead. Second time unification has hidden a cost
-   here. When merging two walkers, check what each caller had already
-   resolved before fixing the parameter list.
-1b. **`CRAB_PAY_FAILS` has now rewritten (-51)(b) twice, and both are in
-   PERF.** Its class split refuted the entry's "generic rather than coloured"
-   (coloured leads on four of five pools, 100 % of `fixed`); its
-   probe/committed split refuted the framing — **310 of 30,272 rollbacks are
-   committed, 1.02 %**, so what is left in the 23.8 % is the affordance sweep
-   and the lever is a **cheaper or rarer probe**, not a better estimate. One
-   such path is taken (`pick_stack_response`, and the whole family is
-   `fixed` **-0.282 % by Ir**); the census
-   will name the next one the same way — read it per pool, because the pools
-   disagree completely. **And count the thing you are about to blame:** the
-   widening hypothesis was good, and a counter killed it in one run at 0.0 %
-   on the pool that had the problem. **And it now reports cost, not just
-   count** (`pay_taps`: calls / early returns / tables / taps) — 700 probes
-   removed measures ~10x what 64 do — and **not** because the 64 were cheap:
-   `pay_fails_costly` says 98.7-100 % of remaining failures on every pool had
-   already built a source table. **(-51)(b) still holds ~1 % of `cube` and
-   none of `fixed`.**
-2. **A commit that moves play** — PERF "How to measure": `--vs` after the
-   null run, `CRAB_SIM_REJECTS` and `CRAB_PAY_FAILS` **swept, not sampled**,
-   Ir on both pools. **`--bench`'s decision count is a committed invariant —
-   a commit that moves it says so.**
-3. **Encoding caution** — the SOS/cube pool, `Vocab`, `TrainRow`/
-   `EncodedState`, the observation/deck encoding: a change **invalidates the
-   trained nets**. Say so in the commit and here.
-4. **Bugs** — ENGINE_BACKLOG. P2 clean; P3's combat walker pair closed both
-   sides. Its last item (`evaluate_requirement_static` vs
-   `evaluate_requirement_on_card`) is *structurally* closed — the static
-   walker's catch-all delegates, the card walker is exhaustive — so it wants
-   a guard — **which now exists, and the defect it found is fixed.** The
-   walkers differ on fourteen requirements *by design* (the card walker is
-   the library/hand-search path); the allowlist is that, machine-checked. The
-   bug was one level up: the counting requirements walked `self.battlefield`
-   through the zone-blind walker, so a `Tapped` inner filter counted zero.
-   `--bench` byte-identical on all five pools — no bench deck reaches it. `audit_stubs` 0/21,795, `audit_incomplete` 0,
-   `CRAB_SIM_REJECTS` 0 in 129 configurations. The dropped-"may" tail
-   (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent, and so
-   is the third filter: `scripts/audit_variant_coverage.py` asks whether a
-   shipped card's ability lands in a **no-op engine arm** — the failure both
-   audit binaries are structurally unable to see, because they look inside
-   one card's tree — and reads **0 over 1,695 variants** (~40 s, no build).
-   It leaves three *dead primitives*: implemented effects nothing builds,
-   i.e. free capability for whichever card wanted them (INCOMPLETE_CARDS,
-   "The other direction"). **A fourth filter still has to come from somewhere
-   else.**
-4a. **A suite gate can be a coin flip and still be green** (PERF's Log, pass
-   83 item 3). candle's CPU backend seeds every parameter from entropy and
-   `set_seed` bails there, so `crabomination_ml`'s convergence thresholds were
-   one flip per run; `reseed_params` fixes the class and
-   `reseeding_makes_two_trainers_identical` pins it. **A determinism fix
-   needs a test that asserts determinism, not a suite that stops flaking** —
-   the first two attempts there passed all seven tests and were both wrong.
-   **And "the ones that flaked" is not the class.** That pass fixed the seven
-   it had *seen* fail; eleven more were still drawing their weights, and one
-   of them failed a full-suite run here. The filter is one grep — a test that
-   constructs a `Trainer` and calls `train_step` without `reseed_params` — and
-   it now reads **0 of 45**. Re-run it after adding an ML test.
-5. **Robustness gate, one RUSTFLAG** — `-C debug-assertions=yes` on the
-   `overflow` build, recipe in `Cargo.toml`'s `[profile.overflow]` comment.
-   **71,758 games clean twice this pass**, the largest sweep the branch has
-   run, and it is now also the audit of `zone::Graveyard`'s memo. Run it
-   after anything that adds an invariant or touches the layer or simulation
-   path. `--vs` reads the null on all three pools (PERF Baseline).
-6. **Tip state and container hazards** — PERF "Baseline" ("STATE AT …",
-   which now also carries the tip's **whole-program Ir on both pools**, so a
-   base is a read rather than a ten-minute measurement — re-measure only if a
-   commit landed after the one it names) and "How to measure". Do not copy either back here. ⚠ **A wall-clock row is
-   not comparable across a run**: the box is quiet at the end and busy in the
-   middle, `host_calib_ms` moves with it, and this box resolves ±2 %.
-7. **ML** — deck judge `nets/deck-champion.safetensors`, 60.3 % pooled
-   (ML_NOTES). Open, needs the ML context: should `selfplay` seed
-   `jitter_below` from `--seed`? Buys replayable runs and a fixed `--games
-   N`, costs per-actor tie-break diversity. Not to be changed unilaterally.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-51)(b)**, then (-60),
+   (-61), (-51)(a), (-59), plus (-63)'s three unpriced residues at the foot of
+   its entry. Closed at the eighty-fifth pass: **(-65)** and **(-63)**.
+   The list is thin: **read the instruments before the profile**
+   (`CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`, `server::bot_rejection_count`,
+   `--bench`'s stall split), and see "Standing rules for a perf pass" below
+   for every refutation worth knowing.
+2. **Measuring** — PERF "How to measure" and "Which pool a change moves".
+   ⚠ `ab_wall` cannot resolve sub-1 %; use callgrind Ir under ~2 %.
+   `--decks sealed --games 1` is the deck-construction instrument.
+3. **Encoding caution** — pool / `Vocab` / `TrainRow` / the observation and
+   deck encodings: a change **invalidates the trained nets**. Say so here.
+4. **Bugs** — ENGINE_BACKLOG, whose live-match section is the eighty-fifth
+   pass's: `build_cube_state_seeded(3637)` is an open reproducer.
+   **Robustness gate:** `-C debug-assertions=yes` on `[profile.overflow]`.
+   **Tip state:** PERF "Baseline"'s "STATE AT …", which carries the suite,
+   clippy and both pools' whole-program Ir.
+5. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open and not to be changed
+   unilaterally: should `selfplay` seed `jitter_below` from `--seed`?
+6. **Filters that now read zero, so a new one has to come from elsewhere** —
+   `audit_stubs`, `audit_incomplete`, `audit_variant_coverage`, the
+   requirement-walker allowlist guard, and the ML `reseed_params` grep (0 of
+   45; re-run it after adding a `crabomination_ml` test that trains).
 
 
 ## Standing rules for a perf pass
@@ -168,6 +63,39 @@ stays refuted.
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
 
+**And when this file crosses ~1k lines, this section is the compaction** — it
+is 380 of them and every rule is a refutation written up with its numbers in
+PERF's Log, which is where the detail belongs. Collapse each to its
+one-sentence claim plus the pass that measured it; do not delete one, because
+the point of the section is that a rule refuted on a *mechanism* stays
+refuted.
+
+- **A thin candidate list is not an empty engine** (pass 84). Three of that
+  pass's eight rows were on no candidate and in no self table —
+  `Option::or_else`, the boxed keyword list, `printed_color_set` — and all
+  three came from *counting* (call counts, allocations per call, a hot
+  function's callee list), which is the three rules below this one.
+
+- **Read the instruments before the profile, and know which kind of "no" you
+  are holding.** `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS` and `--bench`'s stall
+  split are counts of the *workload*, and the largest row in fifteen passes
+  came from one of them rather than from a dump (PERF's Log, pass 83 item 0).
+  **A "do not re-open" written against an *argument* dates the moment the
+  evidence moves; one written against a *measurement* does not.**
+- **A shrinking instrument is not a dead one** (pass 85 item 2). `--decks
+  sealed --games 1` was retired in two sections of PERF for having fallen from
+  2.9 G Ir to 21.9 M, and it is 76.5 % deck construction — the fall was five
+  passes of work on the thing it measures. Read a candidate instrument's
+  callee table before retiring it; an absolute is not a share.
+- **Size a clone removal by the copy's whole lifecycle** (pass 85 item 0).
+  (-65) was priced at ~0.2 % off `TriggeredAbility::clone`'s own row and
+  shipped at 1.195 % of `cube`: the allocation, the `memcpy`, the `grow_one`,
+  the drop and the `free` were all outside the row that named it, and the
+  `clone` row was the smallest of the five.
+- **After deferring work out of a hot path, re-read what the path still
+  computes for it** (pass 85 item 1(d)). Moving land assembly off the shape
+  lattice left two pool-sized vectors per shape being built, joined and
+  dropped with no reader. **Removing a caller does not remove what fed it.**
 - **Rank the dump by call count and read the Ir/call column** (pass 83's
   fifth commit, `fixed` -0.444 % / `cube` -0.568 %). `Option::or_else` was the
   most-called function in the program — 2,187,078 calls, all but 54 of them

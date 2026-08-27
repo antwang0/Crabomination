@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [Open — found by the seeded cube smoke test (eighty-fifth pass)](#open--found-by-the-seeded-cube-smoke-test-eighty-fifth-pass) | 63 |
 | Bugs & robustness | [Engine correctness audit — 2026-06-11](#engine-correctness-audit--2026-06-11) | 83 |
 | Bugs & robustness | [Engine — Robustness / defects: the closed audits and the twenty-three filters](#engine--robustness--defects-the-closed-audits-and-the-twenty-three-filters) | 238 |
 | Bugs & robustness | [Decision-plumbing audit (2026-07): bare `decider.decide` sites](#decision-plumbing-audit-2026-07-bare-deciderdecide-sites) | 91 |
@@ -31,6 +32,65 @@ the handoff.
 
 
 # Bugs & robustness
+
+## Open — found by the seeded cube smoke test (eighty-fifth pass)
+
+`server::tests::bot_vs_bot_random_cube_decks_terminate` draws from
+`crate::cube::build_cube_state_seeded(seed)`, which pins the decks, the
+shuffle and `GameState::rng`; the test installs the bot's tie-break seed
+inside the match thread, so a trial replays exactly. A sweep of **4,000 seeds
+runs in ~700 s in a debug build** and every one terminates.
+`server::bot_rejection_count()` — the live-match twin of `CRAB_SIM_REJECTS` —
+counted four illegal bot actions across those 4,000 games. Three were one bug
+and are fixed; this is the fourth.
+
+### CR 508.1d requires an attack whose CR 508.1g tax is unpayable
+
+**Reproducer: `build_cube_state_seeded(3637)`.** Seat 0 controls a Juggernaut
+("attacks each combat if able") behind a 2-mana attack tax it has no mana for.
+
+```text
+CRAB_SIM_REJECTS=names, debug build
+  attack_reject combat.rs:1260 CannotAttack(CardId(26))     x5
+  trim_attacks_to_payable_tax: total=2 budget=0, forced attacker
+                               CardId(26) t=2 name="Juggernaut"
+  server: bot seat 0 action rejected: Creature CardId(26) cannot attack
+```
+
+Both sides read the board correctly and neither has a legal move:
+
+* `GameState::attacker_is_able` (combat.rs) asks `attacker_self_block` and
+  `attacker_target_block` and **not** whether the attack cost can be paid, so
+  the CR 508.1d requirement loops demand the Juggernaut attack.
+* `bot::trim_attacks_to_payable_tax` keeps a forced attacker unconditionally —
+  correctly, given the above: "CR 508.1d would reject the batch for its
+  absence instead."
+* The declaration gate then rejects the batch at combat.rs:1260 because
+  `try_pay_with_auto_tap` cannot cover the tax. The seat loses its whole
+  combat; a human seat would be stuck the same way.
+
+**The rules answer is that the creature is not *able*.** CR 508.1g: a cost
+associated with attacking must be paid for the creature to attack, so a
+creature whose attack cost is unpayable cannot attack, and CR 508.1d ("attacks
+each combat if able") does not require it. This is exactly the failure mode
+`attacker_self_block`'s own doc comment names — "required to attack and then
+rejected for attacking… with no legal move out of it" — reappearing through
+the one restriction that lives outside that walker.
+
+**Shape of the fix, and why it is not a one-liner.** `attacker_is_able` would
+have to take the `attack_static_scan` bitmask and, when a tax is possible at
+all (`ATTACK_TAX`, `attack_tax_this_turn`, any seat's
+`attack_tax_until_your_turn`), require `could_pay_generic` for this attacker's
+single-attacker tax against some legal defender. That probe is a state clone
+plus an auto-tap, so it must stay behind the presence gate; its two callers
+are the requirement loops and `bot::restore_forced_attackers_unchecked`, both
+of which are already gated on a must-attack keyword being present. The bot's
+trim then stops treating a forced-but-unaffordable attacker as forced. Both
+halves have to land together or the batch is rejected for the attacker's
+*absence* instead.
+
+**Gate for it:** add seed 3637 to the smoke test's list. The assertion on
+`bot_rejection_count()` is already there and already fails on it.
 
 ## Engine correctness audit — 2026-06-11
 

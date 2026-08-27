@@ -603,6 +603,17 @@ twice and `build` twice *per game*, so that was ~485 M Ir of deck building
 per 48 M Ir of simulation. The bench amortises it over 80 games an
 archetype and never sees it.
 
+**That recipe still works and this file wrongly said it did not — corrected
+at the eighty-fifth pass.** It runs **21,864,561 Ir** now rather than 2.9 G,
+and a note added here and to (-63) read the fall as "it plays no games *and*
+builds no decks, so it isolates nothing". It builds the same twelve decks;
+`heuristic_sealed_build` inclusive is **16,732,968 of the 21,864,561, 76.5 %**
+(`cg_edges.py --callees heuristic_sealed_build`). The 130x fall is five
+passes of deck-builder work on the thing it measures. **Use it for anything
+under `draft.rs` / `recommend.rs` / `selfplay.rs`:** twenty seconds under
+callgrind, no `crabomination_ml` build, and 100 % of the delta lands in rows
+you can name.
+
 **And once you have two pools, rank the rows by the RATIO of their shares,
 not by either share alone. That is a device, it is one script, and it found
 the sixty-second pass's second commit.** A row that is 0.61 % of `cube` is
@@ -653,9 +664,9 @@ gets a `--decks cube` reading as well as a `fixed` one. A change anywhere in
 `draft.rs` / `recommend.rs` / `selfplay.rs` gets a **four-game actor run**
 (`CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 4 --steps 1 --seed 7`,
 ~1 minute under callgrind), which isolates deck construction exactly.
-**⚠ `--decks sealed --games 1` no longer does and the old text here said it
-did**: it ran 2.9 G Ir when this section was written and runs **21.9 M**
-now, because it plays no games *and* builds no decks. See (-63).
+**and `--decks sealed --games 1` does the same job for a twentieth of the
+cost** — see the correction under point 2 above; the claim that it "builds no
+decks" was wrong and stood for two passes.
 `fixed` stays the committed bench
 because it is reproducible, cheap and *is* representative of the game loop
 — it is the pool the Log's absolutes are comparable across — but it is not
@@ -891,7 +902,53 @@ build.
 
 ## Baseline
 
-**Eighty-third pass. Eight perf commits, and the largest is a *census* cashed
+**Eighty-fifth pass. Six perf commits and one bug fix: one perf commit on the
+ladder and five on deck construction, which the ladder cannot see.**
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.
+
+(1) (-65): the granted-trigger walk returns `Vec<&TriggeredAbility>`, so the
+    three callers that filter it on `event.kind` stop deep-copying what they
+    drop.  Base b653ee0b.
+      fixed  1,136,504,564 -> 1,126,484,194   -0.882 %
+      cube   3,473,417,095 -> 3,431,926,862   -1.195 %
+
+(2-6) (-63), five commits, measured on `--decks sealed --games 1` because
+    `fixed`/`cube` build their decks once. Run total 21,864,561 ->
+    14,248,408; `heuristic_sealed_build` **16,732,968 -> 9,146,042, -45.3 %**,
+    which at 4.02 % of a `selfplay_train` actor is ~1.8 % of the actor.
+    Per-commit rows in the Log's eighty-fifth-pass item 1.
+      the ladder across all five:  fixed -0.021 %, cube -0.006 %
+```
+
+**STATE AT THE EIGHTY-FIFTH PASS'S TIP.** The suite and clippy rows are the
+tip's, i.e. they carry the exile-target bug fix as well as the six perf
+commits; the two Ir totals were taken at `49748e1f`, the last perf commit
+under it, and the fix moves neither — `--decks fixed` and `--decks cube` reach
+no trigger whose target filter has an off-board match.
+
+```text
+suite  --workspace --exclude crabomination_client   19,054 / 0 / 5
+clippy --workspace --exclude crabomination_client --all-targets   clean
+golden traces  unmoved (they run inside the suite above)
+seeded cube smoke  4,000 pairings, all terminate; bot_rejection_count 1 in
+                   4,000 and it is `build_cube_state_seeded(3637)`, open
+whole-program Ir at `49748e1f`, same configuration as the rows above
+  fixed  1,126,243,545        cube  3,431,708,160
+```
+
+**Those two totals are a cross-session control and they held.** A concurrent
+session recorded `fixed 1,126,243,196 / cube 3,431,711,282` at `41ff9d00`,
+which carries (-65) and the first (-63) commit; this run's tip carries four
+more (-63) commits and reads within 350 and 3,100 Ir of it **on a different
+box**. Deck-construction work is invisible on the ladder to five significant
+figures, and the ladder is reproducible across containers to the same.
+
+### Eighty-third pass — the pass below
+
+**Eight perf commits, and the largest is a *census* cashed
 in: (-13)'s remaining half was takeable the moment the instrument said the
 rollback never runs.**
 
@@ -4042,6 +4099,139 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Eighty-fifth pass — a clone removal that was six times its estimate, an instrument this file had declared dead, and a target in exile
+
+**0. The estimate was wrong in a way that generalises: (-65) priced a dropped
+deep copy by its `clone` row.** The entry said "~0.2 % of `cube`", read off
+`TriggeredAbility::clone`'s 7.7 M under the walk. It shipped at `fixed`
+**-0.882 %** / `cube` **-1.195 %** — a whole-program delta of **41.5 M**
+against 18.4 M of named rows. The other 23 M is everything the copy drags
+behind it:
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base b653ee0b.
+  fixed  1,136,504,564 -> 1,126,484,194   -0.882 %
+  cube   3,473,417,095 -> 3,431,926,862   -1.195 %
+
+where the cube delta lands, by row
+  -18,699,215  __memcpy_avx_unaligned_erms
+   -5,961,162  dispatch_triggers_for_events
+   -4,792,050  IntoIter::drop            <- the copies being dropped
+   -4,418,071  _int_malloc
+   -3,093,632  finalize_cast
+   -2,259,778  Vec::from_iter (spec)
+   -1,090,880  TriggeredAbility::clone   <- residual, the owned wrappers
+     -847,348  fire_step_triggers
+      +161,326 statics_granted_triggers_for  <- the wrapper's own `.cloned()`
+  sum -41,490,233, which is the whole-program figure exactly
+```
+
+**So the rule is: size a clone removal by the copy's whole lifecycle** — the
+allocation, the `memcpy`, the `grow_one`, the drop and the `free` — **not by
+its `clone` row.** The `clone` row is the smallest of the five here.
+
+The shape is the one the entry named: `statics_granted_triggers_on` returned
+`Vec<TriggeredAbility>` and all three of its per-battlefield callers dropped
+every entry whose `event.kind` was not the one being dispatched. It returns
+`Vec<&TriggeredAbility>` now; the two callers that keep a result across a
+`&mut self` clone at the boundary. Play byte-identical on both pools.
+
+**1. (-63) went in five commits and the largest of them was not an
+optimization — it was noticing that the lattice's 56 shapes exist to be
+ranked.** `enumerate_candidates_with` built a full `CandidateBuild` per shape
+and `build_random_deck_from` reads three fields off them. Measured on
+`--decks sealed --games 1`, which is 76.5 % deck construction (see item 2):
+
+```text
+                                             run total    build_random_deck
+  base 15558656                              21,864,561        16,728,204
+  (a) lattice ranks, land base deferred      18,548,330        13,519,533
+  (b) shape colour filter -> ColorSet subset 16,865,222        11,816,034
+  (c) splash walk, same subset test          16,240,707        11,208,018
+  (d) Detail::Ranked skips the leftovers pile 15,284,300       10,230,774
+  (e) dedup on the copy-cap counts           14,248,408         9,146,042
+
+  heuristic_sealed_build   16,732,968 -> 9,146,042    -45.3 %
+```
+
+At 4.02 % of a `selfplay_train` actor that is **~1.8 % of the actor**, and
+`fixed`/`cube` move by -0.021 % and -0.006 % across all five — the ladder
+cannot see any of it, which is the whole reason the entry existed.
+
+**Two of the five are the same two-instruction change**, (b) and (c): the
+builder asked "do this card's pips fit these colours" with
+`pips.colors().all(|c| colors.contains(&c))`, a `Filter` over five slots
+feeding a linear scan of a `Vec<Color>`, ~4,800 times a build in one walk and
+~2,550 in the other. `CardBrief` now carries the pip colours as a `ColorSet`
+and the test is `is_subset_of`. **(b) alone took `rank_shape`'s self cost down
+32 %** and it is two lines.
+
+**And (d) is the one worth generalising: after (a), two pool-sized vectors
+per shape had no reader left.** `leftovers` and the pool-land index feed
+`assemble_lands` and nothing else; once land assembly moved off the lattice
+they were still built, joined by an `extend`, and dropped. **Removing a caller
+does not remove what fed it — after deferring work out of a hot path, re-read
+what the path still computes for it.**
+
+**2. `--decks sealed --games 1` was declared dead in this file and is 76.5 %
+deck construction.** Both "Which pool a change moves" and (-63) said it
+"plays no games *and* builds no decks, so it isolates nothing", because it had
+fallen from 2.9 G Ir to 21.9 M between the fifty-third pass and now. It plays
+no games. It builds **twelve** sealed decks, and `heuristic_sealed_build`
+inclusive is **16,732,968 of 21,864,561** at `15558656`; the 130x fall is what
+five passes of deck-builder work did to it. Every row in item 1 was measured
+on it, in twenty seconds a side, against the `selfplay_train --actors 1
+--games 4` recipe those sections point at — a minute under callgrind plus a
+`crabomination_ml` build.
+
+**The rule: a shrinking instrument is not a dead one.** One
+`cg_edges.py --callees` on the dump would have said so at any point in the two
+passes the claim stood. What made it plausible is that the *absolute* fell by
+two orders of magnitude, and an absolute is not a share.
+
+**3. A seeded smoke test found three shipped bugs in one afternoon, and the
+seeding is the finding.** `server::tests::bot_vs_bot_random_cube_decks_
+terminate` built its decks from `rand::rng()`. It timed out once inside a
+full-suite run; forty solo runs (200 fresh pairings) never reproduced it,
+because the pairing that did it was gone. Seeded — decks, shuffle,
+`GameState::rng` and the bot's tie-break stream all pinned —, **4,000
+pairings run in 700 s** and four of them rejected a bot action:
+
+```text
+seed 2113  Tester of the Tangential   ChooseCards over a card in exile
+seed 2719  Nekrataal                  "
+seed 3789  Kor Sanctifiers            "
+seed 3637  Juggernaut                 CR 508.1d requires an attack whose
+                                      CR 508.1g tax is unpayable
+```
+
+The first three are one bug: `legal_targets_for_filter` walks graveyards and
+exile with the same zone-blind filter it applies to the battlefield, so an
+exiled creature card satisfies "target creature", and the trigger-target
+picker posed a `min: 1` modal over those matches whenever nothing on the board
+was legal. Fixed; the fourth is open with its reproducer in ENGINE_BACKLOG.
+
+**`server::bot_rejection_count()` is the live-match twin of
+`CRAB_SIM_REJECTS`, and the reason none of this had been seen is that nothing
+counted it.** `bot_ladder` and the training actors never call `run_match`, so
+this path is the client's bot-vs-bot mode and this crate's own smoke test —
+and the rejection printed an `eprintln!` nobody read. **A census is what turns
+"the test still passes" into a finding**, which is the same device the
+eighty-third pass's largest row came from.
+
+**4. Two rows that look like candidates and are not, checked so nobody spends
+a pass on them.** `<&mut F as FnMut>::call_mut` is **650,974 calls / 45,346,050
+Ir of self, 1.32 % of `cube`**, and 553,778 of the calls come from
+`SpecFromIterNested::from_iter` — `Filter`/`FlatMap` internal iteration passes
+`&mut predicate` through this impl, so every filtered `collect` in the program
+lands here. It reads like pure trampoline overhead at 70 Ir a call. It is not:
+its named callees are 288 M inclusive against 45 M of self, and the 45 M is the
+*predicate bodies* inlined into it. **A std forwarding impl with a large self
+cost is an attribution artifact — check its callee total before ranking it.**
+The other is `CardDefinition::is_creature` at 1,042,332 calls and 15 Ir each,
+which is the trap this file already documents.
 
 ### Eighty-fourth pass — the wall clock overstated a change twenty-five-fold, and the census had to learn what a unit of cost is
 
@@ -7971,9 +8161,28 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-63) DECK CONSTRUCTION IS 5.37 % OF THE TRAINING ACTOR AND `--bench`
-CANNOT SEE ANY OF IT. FRESH AT THE EIGHTY-THIRD TIP; NOBODY HAS READ IT
-SINCE THE FIFTY-FOURTH PASS TOOK IT 3.28x.**
+**(-63) TAKEN AT THE EIGHTY-FIFTH PASS IN FIVE COMMITS — A HEURISTIC SEALED
+BUILD IS 16,732,968 -> 9,146,042 Ir, `-45.3 %`, WHICH AT 4.02 % OF THE ACTOR
+IS ~1.8 % OF IT. THE ENTRY'S OWN FRAMING WAS WRONG IN THE USEFUL DIRECTION:
+IT SAID THE ONLY FREE LEVER WAS "A CHEAPER 56", MEANING THE PER-SHAPE
+ALLOCATIONS, AND FOUR OF THE FIVE COMMITS INSTEAD REMOVED WORK THE 56 SHAPES
+DID FOR NOBODY.** See the eighty-fifth pass's Log item 1 for the rows.
+
+**AND THE INSTRUMENT THIS ENTRY DECLARED DEAD IS ALIVE — `--decks sealed
+--games 1` IS 76.5 % DECK CONSTRUCTION AND COSTS TWENTY SECONDS UNDER
+CALLGRIND.** The entry (and "Which pool a change moves") said it "plays no
+games *and* builds no decks, so it isolates nothing" because it had fallen
+from 2.9 G Ir to 21.9 M. It plays no games; it still builds **twelve** sealed
+decks, and `heuristic_sealed_build` inclusive was **16,732,968 of the
+21,864,561** at `15558656`. The 130x fall is what five passes of deck-builder
+work did to it, not evidence that the decks stopped being built. **A shrinking
+instrument is not a dead one: read its callee table before retiring it** — the
+`selfplay_train --actors 1 --games 4` recipe the entry sent readers to costs a
+minute under callgrind and a `crabomination_ml` build, and this costs neither.
+
+**(-63, as found) DECK CONSTRUCTION IS 5.37 % OF THE TRAINING ACTOR AND
+`--bench` CANNOT SEE ANY OF IT. FRESH AT THE EIGHTY-THIRD TIP; NOBODY HAD READ
+IT SINCE THE FIFTY-FOURTH PASS TOOK IT 3.28x.**
 
 One `actor_loop` iteration over 60 games, from the actor profile above:
 `heuristic_sealed_build` **168,509,048 Ir over 120 builds** (two a game),
@@ -8036,6 +8245,34 @@ free:**
   (-56) first: an *exact* size ships and headroom does not, and `duals` is
   usually 0-3 against a `total` of ~17, so reserving `total` is the trap.
 
+**WHAT IS LEFT, at `49748e1f`, `--decks sealed --games 1` = 14,248,408 Ir of
+which `build_random_deck` is 9,146,042 over twelve builds (762 k a build).**
+Nothing here is ranked above the ladder's queue; it is written down so the
+next reader does not re-derive it.
+
+```text
+  3,230,204  rank_shape self          684 calls, 4,722 each: two walks of an
+                                      ~85-card pool per shape, ~28 Ir a card
+  2,032,767  static_build_score       684 calls; 1,393,624 of it is 15,733
+                                      score_brief_with_colors at 89 Ir
+    476,338  SpecFromIterNested       the splash collect, was 1,611,224
+    351,866  HashMap::insert          seen_mains (672) + PoolScores ids (1,020)
+    297,670  __rust_alloc from lattice 1,392 calls = 116 a build, of which ~60
+                                      are the shape lattice's own Vec<Color>s
+    227,961  driftsort_main           out.sort_by_key over 56 ShapeBuilds,
+                                      +93 k when the struct grew a field
+    145,488  color_subsets            24 calls, 2 a build
+```
+
+Three things are shaped like a next commit and none is priced: (i)
+**`static_build_score`'s `colors_of_picks(main)` is a second walk of the cards
+`take` just chose** — `take` holds the index and `PoolScores::cards` holds the
+brief, so the `ColorCounts` could be accumulated there for free; (ii) **the
+shape lattice is 56 fixed `(Vec<Color>, Vec<Color>)` pairs rebuilt per deck
+build** — `color_subsets` plus ~60 small allocations, worth ~440 k, and a
+`LazyLock` static answers it; (iii) `out.sort_by_key` moves 56 x ~136 bytes
+and could sort indices instead.
+
 **(-64) THE `Vec<bool>` HALF TAKEN AT THE EIGHTY-FOURTH PASS — `fixed`
 -0.328 % / `cube` -0.280 %, see Log item 4 and Baseline (6). THE REST OF THE CLONE IS STILL
 HERE AND STILL UNTAKEN.** What shipped is the `acted_on_own_turn` bitmask
@@ -8069,8 +8306,21 @@ Reading the field list against those counts:
   ~89 collections at ~4,689 Ir (see (-50)), so a field written even a few
   thousand times costs more there than the clone it saves.
 
-**(-65) `statics_granted_triggers_inner` DEEP-COPIES ABILITIES ITS CALLER
-FILTERS OUT.** 142,744 calls at `3509ec81` on `cube`; its callee list is
+**(-65) TAKEN AT THE EIGHTY-FIFTH PASS AND IT IS SIX TIMES THE ENTRY'S
+ESTIMATE: `fixed` -0.882 %, `cube` -1.195 %.** The entry priced it at "~0.2 %
+of `cube` on Ir" off the clone's own rows and that was the mistake — **a
+dropped deep copy costs its allocation, its `memcpy`, its `grow_one`, its
+drop and its `free`, and only the first was in the entry.** Measured:
+`TriggeredAbility::clone` under the walk 7,706,934 -> 0 and `grow_one`
+10,701,492 -> 2,498,092, i.e. 18.4 M of named rows — against a whole-program
+delta of **41.5 M**, the rest being `__memcpy` (-18,699,215),
+`IntoIter::drop` (-4,792,050) and `_int_malloc` (-4,418,071). See the
+eighty-fifth pass's Log item 0. **The rule: size a clone removal by the
+clone's whole lifecycle, not by its `clone` row.** The reading below is what
+the entry carried.
+
+**(-65, as found) `statics_granted_triggers_inner` DEEP-COPIES ABILITIES ITS
+CALLER FILTERS OUT.** 142,744 calls at `3509ec81` on `cube`; its callee list is
 `evaluate_requirement_static_hinted` 142,094 / 48.7 M (**1.39 %**),
 `TriggeredAbility::clone` 20,886 / **7.7 M**, `grow_one` 19,128 / **10.8 M**
 and `__memcpy` 20,886 / 2.1 M. 85,066 of the calls are `fire_step_triggers`,
