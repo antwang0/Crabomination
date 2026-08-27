@@ -2002,8 +2002,17 @@ pub struct GameState {
     /// Per seat: this player cast a spell or put a nontoken permanent onto the
     /// battlefield during their own most recent turn (Arboria). Reset for a
     /// player as their untap step begins.
+    ///
+    /// A bitmask rather than a `Vec<bool>` because `do_untap` sized the vector
+    /// to the seat count every turn, which made it the one small `Vec` on this
+    /// struct that a state clone always had to allocate — one `__rust_alloc`,
+    /// one `__rust_dealloc` and one `Vec::clone` per clone, and this state is
+    /// cloned 13,640 times on a six-game `--decks fixed` run (PERF (-64)).
+    /// Seats beyond 63 are not tracked; no format has that many.
+    /// Renamed rather than retyped so a pre-mask snapshot deserializes (the
+    /// old array key is simply unknown and this one defaults to 0).
     #[serde(default)]
-    pub acted_on_own_turn: Vec<bool>,
+    pub acted_on_own_turn_mask: u64,
     /// CR — Shadow of Doubt: no player may search a library this turn.
     pub no_search_this_turn: bool,
     /// CR 701.38 — the seat whose vote the running `VoteTally::PerVote` body
@@ -2684,7 +2693,7 @@ impl Clone for GameState {
             step_bounded_may_play: self.step_bounded_may_play,
             attack_tax_this_turn: self.attack_tax_this_turn,
             block_tax_this_turn: self.block_tax_this_turn,
-            acted_on_own_turn: self.acted_on_own_turn.clone(),
+            acted_on_own_turn_mask: self.acted_on_own_turn_mask,
             damaged_creatures_die_this_turn: self.damaged_creatures_die_this_turn,
             creature_deaths_drain_toughness_this_turn: self.creature_deaths_drain_toughness_this_turn,
             no_search_this_turn: self.no_search_this_turn,
@@ -2928,7 +2937,7 @@ impl GameState {
             step_bounded_may_play: false,
             attack_tax_this_turn: 0,
             block_tax_this_turn: 0,
-            acted_on_own_turn: Vec::new(),
+            acted_on_own_turn_mask: 0,
             damaged_creatures_die_this_turn: false,
             creature_deaths_drain_toughness_this_turn: false,
             no_search_this_turn: false,
@@ -6101,10 +6110,8 @@ impl GameState {
         if p != self.active_player_idx {
             return;
         }
-        if self.acted_on_own_turn.len() < self.players.len() {
-            self.acted_on_own_turn.resize(self.players.len(), false);
-        }
-        self.acted_on_own_turn[p] = true;
+        debug_assert!(p < 64, "seat {p} is beyond the acted-on-own-turn mask");
+        self.acted_on_own_turn_mask |= 1u64 << (p & 63);
     }
 
     /// Land Equilibrium — a land just entered under `p`. For each opponent's
@@ -6180,7 +6187,7 @@ impl GameState {
     /// cleared as `p`'s untap step begins, so during any other player's turn it
     /// still describes `p`'s last turn.
     pub(crate) fn acted_on_their_last_turn(&self, p: usize) -> bool {
-        self.acted_on_own_turn.get(p).copied().unwrap_or(false)
+        p < 64 && self.acted_on_own_turn_mask & (1u64 << p) != 0
     }
 
     /// Remove one time counter from a suspended card in exile; when the last

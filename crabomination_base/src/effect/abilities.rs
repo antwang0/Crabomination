@@ -2556,7 +2556,8 @@ pub enum StaticEffect {
     ChainsOfMephistopheles,
     /// CR 508.1 — Arboria: "Creatures can't attack a player unless that player
     /// cast a spell or put a nontoken permanent onto the battlefield during
-    /// their last turn." Global; read off `GameState.acted_on_own_turn`.
+    /// their last turn." Global; read off `GameState`'s
+    /// `acted_on_their_last_turn`.
     PlayersCantBeAttackedUnlessTheyActedLastTurn,
     /// CR 614 — Land Equilibrium: a land entering under an opponent who
     /// controls at least as many lands as the source's controller brings a
