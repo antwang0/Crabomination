@@ -31,205 +31,84 @@ commit before the tracker prose; a fetch only rules out work already
 hour (pass 80 duplicated a whole item end-to-end), and diff before discarding
 a lost race — the loser usually holds something the winner does not.
 
-1. **Perf queue: (-56)'s last growth site SHIPPED at `31eb7333`** —
-   `Printed<Vec<_>>`'s materialize reserved `len + 1`, `fixed` -0.085 %,
-   `cube` -0.591 %, taken by a concurrent session from this entry's own
-   pointer. That is the third reading of the `Vec::clone` hands back
-   `capacity == len` trap and **the only one that pays on both pools, because
-   it is the only one where the reserve is exact rather than headroom.**
-   Three things in that entry are refuted with numbers, do not re-take them:
-   the
-   `sa_cards` reserve (both a whole-board and an exactly-counted one; it
-   splits by pool and loses on `fixed`), a second freeze scope over the
-   candidate menus (**+0.001 %** — `next_action` already freezes the whole
-   tick, bot.rs:1661), and (-57)'s `eval_material` prize, which is one gather
-   per evaluation and already at the floor. **And (-56b): the same
-   function's `sorted` collect (189,480 calls / 46,426,567 Ir) is refuted
-   four ways** — a twelve-slot stack buffer is the only one with a win and it
-   reads `fixed` +0.151 % / `cube` -0.381 %, the same pool split. Durable
-   lesson there: **`collect` is internal iteration and your loop is not**;
-   replacing one costs the `Chain<Filter<_>>` specialisation, ~0.15 % of
-   `fixed`, before it saves an allocation. (-52)/(-53)/(-54) closed;
-   (-51)(a) wants a device on the do-not-rebuild list.
-1e. **The three biggest unclaimed rows, all three seeded this pass with
-   tables, and the biggest one is already answered.** **(-59)
-   `dispatch_triggers_for_events` is the largest self row in the program —
-   198,765,010 Ir / 5.58 % of `cube` / 139,500 calls — and its line profile is
-   RUN (`profiling-lines` + `cg_lines.py`, in the entry): **there is no hot
-   line.** Largest is 0.23 %; the per-card loop prologue is 0.44 % and the
-   per-(trigger, event) loop 0.39 %, the rest thirty-odd million of iterator
-   internals over a dozen narrow passes. The two loops a source read flags
-   (graveyard, death snapshots) are not in the top forty. **Do not re-run that
-   profile; the lever is fewer dispatches, and 114,834 of the 139,500 are
-   `perform_action_inner` draining one action's events.** **(-60)
-   `trigger_grant_sources` is 1.00 % of `cube` and finds 0.25 grants per
-   call over 57,596 of them**; the CR 510.2 creature-damage batch's 12,858
-   were hoisted this pass (`cube` -0.299 %, `fixed` -0.006 %), and
-   `fire_step_triggers`' 23,526 are already one-per-call, so what is left
-   there is *why 619 Ir*, not *how often*. **(-61) `keyword_grant_in_scope`
-   is 1,713,848 `card_can_grant_keyword` calls / 1.67 % of `cube`** — but its
-   largest site, the CR 702.64 Absorb gate, is **already a 4.5x trade** and
-   the entry lists four routes off it that all fail. The one untried thing
-   there is free and small: `activate_ability_inner`'s gates exist to avoid
-   `bf_cp!()`, so `bf_cp.is_some()` short-circuits them exactly.
-1c. **The gather is 30 % `resolve_combat`, the prize is `cube` -1.6 %, and
-   the obvious route is REFUTED with a counterexample — see (-58).** Seeding
-   the batch's per-pair freeze scopes from one gather measures **fixed
-   -0.178 %, cube -1.615 %** with `--bench` byte-identical, and a
-   `debug_assert!` auditing the seed against a fresh gather fired on `cube
-   --seed 3` inside 60 games: a lifelink blocker gains life mid-batch and
-   flips *Ulna Alley Shopkeep*'s "+2/+0 as long as you've gained life this
-   turn" on. **Player life is a layer input**; no collection-length or
-   timestamp epoch can see it, because the effect is derived and carries an
-   old timestamp. What is left needs an invalidating memo (the board epoch,
-   refuted at (-18)) or an incremental gather. **The device is the takeaway:
-   a memo whose soundness is an argument gets a `debug_assert!` against the
-   thing it replaces, and a `-C debug-assertions=yes` ladder run is the
-   audit — 18,795 tests missed this, 60 games of `cube` found it in four
-   seconds.**
-1a. **⚠ The eightieth-pass block cost `fixed` +2.833 % and `cube` +1.712 %,
-   and no commit in it recorded an Ir row.** Play is identical across it, so
-   that is cost alone, and it is almost all one row: `computed_permanent`
-   +57 % on `fixed`, whose largest new caller was `bot_can_block`. The
-   eighty-first pass took about a fifth of it back (`legal_blockers`).
-   **A correctness commit is a perf commit on the workload it runs in; report
-   Ir on anything that lands in the picker, not just `--bench` decisions.**
-1b. **The attack search is still the largest number in the pipeline and
-   nothing has aimed at it.** PERF's **"THE ACTOR, at the eightieth tip"**:
-   `pick_attacks_scored` **46.3 %** at 1.78 M Ir a decision,
-   `main_phase_action_with` 27.9 %, allocation+copy 17.7 %, the whole encoder
-   6.1 %. Profile actors at **60 games**, not 20. The sub-lever with a number
-   on it is `sim_step -> perform_action`'s checkpoint: **9,628 clones /
-   23.50 M + 9,628 drops / 15.11 M = 1.08 % of `cube`**, taken on a state the
-   sim owns and throws away, to support a fallback whose failure rate the
-   picker fixes have driven from 470/91,438 to ~14/8,610 on the one pool that
-   still has any. **The atomicity proof this asked for is DISPROVED — see
-   (-54b).** Both declarations pay costs mid-validation and reject afterwards
-   (`declare_attackers_banded` at 1259/1313/1366 with `Err`s at 1306/1359/
-   1387; `declare_blockers` at 1995/2022 with eight `Err`s after), so the
-   checkpoint is load-bearing. Reordering all four cost families to select
-   before any applies is **not** behaviour-preserving — the tax taps the
-   lands a tap-another cost then looks for — so what is left is a CR 601.2h
-   simultaneity question to price, not a deletion.
-1f. **The actor is FLAT across this pass, and the base had moved — read
-   PERF's "THE ACTOR RE-READ".** Same workload as the eightieth tip's
-   profile, play byte-identical (32,402 `next_action`, 1,102
-   `pick_attacks_scored`): recorded `a4b24308` 4,228,661,490 -> `be4a9987`
-   **4,236,954,968 (+0.196 %)** -> `a828b393` **4,235,372,210 (-0.037 % vs
-   base)**. Reading it against the recorded row instead of the real base
-   would have reported a 0.16 % regression that does not exist. **A recorded
-   total is a measurement of a commit, not of a branch — re-measure.** The
-   row split is in the entry, and its finding is that **the attack-side and
-   block-side walker unifications land on opposite sides here**: the attack
-   one is a net win on the actor and on both ladder pools, the block one is a
-   ladder win and ~+6.9 M on the actor, whose sealed boards are wider than
-   `fixed`'s. Fifty-third pass's ranking rule, reappearing on the ML
-   workload.
+**This section is an INDEX, not a record.** It went to 221 lines at the
+eighty-second pass by restating entries that already carry their numbers in
+`PERF.md` / `ENGINE_BACKLOG.md` / `Cargo.toml`. Every item below names where
+its numbers live; put new numbers *there* and a pointer here.
 
-2. **Encoder is mined out** — passes 77-80, `encode_state` -49.4 %, actor
-   -6.1 %, three refutations in PERF bounding what is left. A new lead there
-   needs a fresh profile, not a list.
-3. **(-55): the block half IS now closed, and "effectively closed" was a
-   three-seed sample twice over.** A sweep of `cube` 1-24 + 42 at `--games
-   20` found **186 block rejections across eight seeds** where the sampled
-   census read 6 — four rules nothing had reached (`AllMustBlock` true Lure,
-   blocker-side `MustBlock`, CR 509.1g `CantBeBlockedByMoreThanOne`, and a
-   board with *no legal declaration at all*). Now **6, on s15 alone**;
-   `all` s15/s23 also went 4 -> 0 and 8 -> 0. **Rule, and it is cheap:
-   sweep 1-24 (~90 s at `--games 8`) before writing that a half is closed.**
-   What is left: the **attack** half's `combat.rs:1114`, the tax's
-   `available_mana` optimism — the (-51)(b) question, not a missing rule
-   (cube s2 32, s11 10, s19 16, s20/s21/s22 12) — and the 6 on s15, which
-   need a probe naming the *pass that built the plan*: the site tag names
-   the clause that rejected it and two plausible fixes measured inert
-   before a hand-built probe found the cause. **Generalisable finding:**
-   a "must" and a "can't" written as two independent checks can be jointly
-   unsatisfiable, and only the census finds it — CR 509.1b now gates CR
-   509.1c through `block_requirement_binds`; ENGINE_BACKLOG P3 lists the two
-   remaining pairs to audit.
-4. **Anything that moves play is gated by `bot_ladder --vs PATH`:** run the
-   null first (a byte-identical copy must read 50.0 %, every pair split),
-   same `--a`/`--b` both sides, 1.9x wall. **Sweep `CRAB_SIM_REJECTS=1` over
-   seeds before concluding a pool cannot reach your code** — `cube` deck
-   content is seed-dependent and the sweep is ~4 s a seed.
-5. **Encoding caution:** any change to the SOS/cube pool, `Vocab`,
+1. **Perf queue, open and ranked** (PERF's "Perf candidates"). **(-60)**
+   `trigger_grant_sources` — 1.00 % of `cube`, 0.25 grants found per call over
+   57,596; the CR 510.2 batch's 12,858 were hoisted this pass, and
+   `fire_step_triggers`' 23,526 are already one-per-call, so the residue is a
+   *why 619 Ir* question. **(-61)** `keyword_grant_in_scope` — 1.67 %, but its
+   largest site is already a 4.5x trade with four routes off it written up as
+   failing; the one free thing is `bf_cp.is_some()` in
+   `activate_ability_inner`. **(-51)(a)/(b)**. **(-59)**
+   `dispatch_triggers_for_events` is the largest self row at 5.58 % and its
+   line profile is run — **there is no hot line**, so the lever is fewer
+   dispatches, not a cheaper one. **Do not re-run that profile.**
+2. **Refuted with numbers — do not re-take.** (-56) the `sa_cards` reserve,
+   both forms, splits by pool. (-56b) the `sorted` collect, four forms, same
+   split, and the lesson under it: **`collect` is internal iteration and a
+   hand-written loop is not**; replacing one costs the `Chain<Filter<_>>`
+   specialisation before it saves an allocation. (-57) `eval_material`'s
+   prize, 6x over-stated — one gather per evaluation is the floor. (-58) the
+   batch gather: worth `cube` **-1.6 %** and **unsound**, because player life
+   is a layer input. (-54b) the `sim_step` checkpoint's atomicity proof,
+   disproved by reading — both declarations pay costs mid-validation. A second
+   freeze scope over the candidate menus (+0.001 %: `next_action` already
+   freezes the tick). `incremental` on `release-fast` (+2.2 % of code).
+   **The attack search is still the largest number in the pipeline (46.3 % of
+   the actor) and nothing has aimed at it.**
+3. **Rules for a commit that moves play.** Gate it with `bot_ladder --vs
+   PATH` — null first, a byte-identical copy must read 50.0 % with every pair
+   split, 1.9x wall. **Sweep `CRAB_SIM_REJECTS=1` over `cube` seeds 1-24
+   before writing that a rejection half is closed**: deck content is
+   seed-dependent, it is ~4 s a seed, and two passes called a half closed off
+   three seeds and were wrong both times. **Report Ir** — a correctness commit
+   is a perf commit on the workload it runs in. **And `--bench`'s decision
+   count is a committed invariant: a commit that moves it says so** (`50a075fa`
+   did not; PERF's Baseline carries the refresh and the reason).
+4. **Encoding caution:** any change to the SOS/cube pool, `Vocab`,
    `TrainRow`/`EncodedState`, or the observation/deck encoding **invalidates
    the trained nets**. Say so prominently in the commit and here.
-6. **Bugs:** ENGINE_BACKLOG P3's requirement-walker item is **closed for
-   combat, both sides.** The attack side is one walker (`attacker_self_block`
-   / `attacker_target_block` / `attacker_is_able` / `may_declare_attacker`)
-   and so is the block side (`blocker_self_block` / `blocker_pair_block`, with
-   `block_requirement_able` and `blocker_can_block_anything`/`_pair` as
-   compositions of the two, and `bot_can_block` delegating). Each hid the same
-   deadlock — a creature *required* to act and then *rejected* for acting, so
-   the seat had no legal declaration at all. On the block side the drift also
-   ran the other way: **seven `CantAttackOrBlock*` families (hand size,
-   delirium, a creature died, Descend N, the city's blessing, cards in exile,
-   Hollow Warrior) and Space Beleren's sector lock were enforced only in the
-   bot's mirror**, so on the real declaration path those cards' blocking
-   restrictions did nothing. Eleven tests in `cr_recent100` between the two
-   sides. What is left in P3 is `evaluate_requirement_static` vs
-   `evaluate_requirement_on_card`. P2 has no open correctness entries. Both audits clean at this tip —
-   `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, and dead
-   modes are now suite-gated against `audit::REVIEWED_DEAD_MODES`.
-6a. **NEW ROBUSTNESS GATE, and it is one RUSTFLAG.** `release-fast` (and so
-   `overflow`, which inherits it) has `debug_assertions` **off**, so the
-   documented overflow sweep never reaches a single `debug_assert!` — and the
-   suite does not either, because an assertion needs a *board* to fire on and
-   18,795 tests carry fewer interesting boards than 60 games of `cube`. Adding
-   `-C debug-assertions=yes` to the overflow build turns the ladder into an
-   audit of every engine invariant at once. Recipe in Cargo.toml's
-   `[profile.overflow]` comment; eighty-first pass reads **34,560 games over
-   five pools x six seeds, no panic, no assertion, no overflow, 0
-   undecided**. It is also what refuted (-58) in four seconds. **Run it after
-   anything that adds an invariant.**
-7. **State, re-run at `05015235` on an Intel Xeon @ 2.80 GHz
-   (`host_calib_ms` 51-57 — a different host from the 224.6 and 297.7 rows
-   this item used to carry, so those figures do not compare):**
-   `--workspace --exclude crabomination_client` **19,063 / 0 / 5**; clippy
-   `--workspace --all-targets` clean **including the client** (four apt
-   packages, ~40 s; free `target/debug/incremental` first, 11 GB here); 7
-   golden traces unmoved; `--bench` **195,528 decisions / 27.44 turns / 0
-   stalls** (**was 195,616 — moved at `50a075fa`, which did not record it;
-   the refresh and the reason are in PERF's Baseline**), `determinism ok`,
-   `thread_determinism ok (3 vs 1)`, **170.4 / 175.3 / 171.7 games/s**. `--vs` null against a byte-identical copy:
-   fixed 200/200, cube 400/400, sos 250/250 pairs split. `overflow`, seeds
-   11/12 over `all`/`cube`/`sealed` at 600 games/archetype: **44,400 games,
-   0 capped, 0 stuck, 22 draws, no panic, no arithmetic overflow** (measured
-   at the eighty-first tip). **Re-run at `27af76f4`**, which does touch
-   arithmetic-adjacent code (the CR 510.2 hoist): `overflow`, seeds 11/12/13
-   over `all` plus seed 11 over `cube`/`sealed`/`sos` at 300 games/archetype
-   — **22,800 games, 0 capped, 0 stuck, 4 draws, no panic, no arithmetic
-   overflow**; and `release-fast --decks all --games 400 --seed 11`, 6,800
-   games, 12 draws, all 3,394 pairs split.
-7a. **`peak_rss_mib`: the step does not reproduce at `27af76f4`, and three
-   runs is why.** The reading above (27.3-27.6 at `60cfef4c` -> 29.0-31.4 at
-   `05015235`) was one run a tip. Three `--bench` runs back to back at
-   `27af76f4` on a 2.10 GHz Xeon read **27.8 / 29.3 / 27.5** — one sample
-   lands in each of the two "bands", and an earlier run at `c1450677` read
-   29.5. **The spread is within-tip variance, not a step**, so nothing here
-   needs owning. The transferable bit is the one this file already says about
-   games/s and had not applied to RSS: **an allocator reading is a
-   distribution; take three before you call a difference.**
-7b. **Second host on the same day, for the wall-clock table:** 2.10 GHz Xeon,
-   `host_calib_ms` 65-71, **299.8 / 300.1 / 307.9 games/s** at `27af76f4`,
-   against the 2.80 GHz box's 170-175 at `host_calib_ms` 51-57. That is a
-   *faster* games/s at a *worse* calib on a *slower* nominal clock, which is
-   item 8's point made a third time: `host_calib_ms` fingerprints the host, it
-   does not scale between them.
-8. **Hazards.** ⚠ Wall-clock rows do not cross hosts — read `host_cpu` /
-   `host_calib_ms` off the run before comparing any games/s in PERF; Ir is
-   unaffected. **A third host, and it settles that `host_calib_ms` cannot be
-   used as a correction factor:** a 2.80 GHz Xeon reading **173 games/s at
-   `host_calib_ms` 49** — the *same* calib the eightieth tip recorded 262.2
-   at. Two builds went into ruling that out as a regression; the check that
-   ends it is an A/B in one sitting (a binary built from the recorded tip
-   read 175.3 here against the current tip's 173.5), never a scaling
-   correction. If a games/s row looks wrong, build both sides now rather
-   than reasoning from the fingerprint. ⚠ A container reset wipes `target/`, removes `cargo-nextest`
-   and checks the repo out on the *system-prompt* branch: commit each
-   measured change as soon as it measures, re-run FIRST after any surprising
-   `git status`, and reinstall with `curl -sSLf
+5. **Bugs** (ENGINE_BACKLOG). P3's requirement-walker item is **closed for
+   combat, both sides**; what is left is `evaluate_requirement_static` vs
+   `evaluate_requirement_on_card`. P2 has no open correctness entries.
+   `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, dead modes
+   suite-gated. (-55)'s residue: the attack half's `combat.rs:1114` — the
+   tax's `available_mana` optimism, which is (-51)(b) and not a missing rule —
+   and 6 block rejections on `cube` s15. **Generalisable, and it found two
+   bugs:** a "must" and a "can't" written as independent checks can be jointly
+   unsatisfiable, leaving a seat no legal declaration at all; only the census
+   finds it.
+6. **Robustness gate, and it is one RUSTFLAG.** `-C debug-assertions=yes` on
+   the `overflow` build turns a ladder run into an audit of every engine
+   invariant at once — `release-fast` has assertions off, and the suite has
+   fewer interesting boards than 60 games of `cube`. Recipe and the
+   34,560-game result are in `Cargo.toml`'s `[profile.overflow]` comment. It
+   is what refuted (-58) in four seconds. **Run it after anything that adds an
+   invariant.**
+7. **State at `0b008b2e`.** Suite `--workspace --exclude crabomination_client`
+   **19,063 / 0 / 5**, golden traces unmoved; clippy clean (with the client at
+   `05015235`, four apt packages); `--bench` **195,528 decisions / 27.44 turns
+   / 0 stalls**, `determinism ok`, `thread_determinism ok (3 vs 1)`; `--vs`
+   null split every pair on fixed/cube/sos. `overflow` sweeps: 34,560 games
+   with the RUSTFLAG at the eighty-first tip, 22,800 at `27af76f4` — no panic,
+   no assertion, no arithmetic overflow, 0 capped, 0 stuck. Thread scaling
+   **3.79x on four cores** (PERF Baseline). Wall-clock: **170-175 games/s at
+   `host_calib_ms` 51-57** on a 2.80 GHz box, **277-308 at 64-71** on a
+   2.10 GHz one.
+8. **Hazards.** ⚠ Wall-clock rows do not cross hosts, and `host_calib_ms` is
+   a *fingerprint*, not a correction factor — the two rows in item 7 are a
+   faster rate at a worse calib on a slower nominal clock. If a games/s row
+   looks wrong, build both sides in one sitting. ⚠ `peak_rss_mib` is an
+   allocator reading and therefore a distribution: **take three before calling
+   a difference** — a "13 % step" flagged at the eighty-second pass did not
+   reproduce. ⚠ A container reset wipes `target/`, removes `cargo-nextest`
+   and checks the repo out on the *system-prompt* branch: commit each measured
+   change as soon as it measures, re-run FIRST after any surprising `git
+   status`, and reinstall with `curl -sSLf
    https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`. ⚠ Disk:
    free `target/debug/incremental` (7-15 GB) before a client clippy.
 9. **Deck net:** `nets/deck-champion.safetensors`, gated **60.3 % pooled**
