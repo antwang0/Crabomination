@@ -142,6 +142,17 @@ pub struct CardBrief {
     /// the largest single line in `build_shape`'s line profile (PERF (-63)).
     /// A subset test on a five-bit field is two instructions.
     pub pip_colors: crate::mana::ColorSet,
+    /// `pips` summed. [`crate::draft::score_brief_in_colors`] wants the
+    /// on-colour half and the total; the off-colour half is the difference,
+    /// so the five-slot walk it did per (card x shape) is one masked sum.
+    pub pips_total: u32,
+    /// The colour-independent half of
+    /// [`crate::draft::score_brief_with_colors`]: the card-type weight, the
+    /// mana-value weight, and the colourless-nonland bonus — which is a
+    /// property of the card, not of the shape it is being scored for. The
+    /// sealed builder asks for the whole score once per main-deck card per
+    /// shape, 23 x 56 a build (PERF (-63)).
+    pub base_score: i32,
     pub cmc: u32,
     pub is_land: bool,
     pub is_creature: bool,
@@ -160,6 +171,12 @@ impl CardBrief {
     fn of(def: &'static CardDefinition) -> CardBrief {
         use crate::card::CardType;
         let pips = crate::draft::pip_counts(&def.cost);
+        let pips_total: u32 = pips.iter().map(|(_, n)| n).sum();
+        let cmc = def.cost.cmc();
+        let is_land = def.card_types.contains(&CardType::Land);
+        let is_creature = def.card_types.contains(&CardType::Creature);
+        let is_instant_or_sorcery = def.card_types.contains(&CardType::Instant)
+            || def.card_types.contains(&CardType::Sorcery);
         CardBrief {
             def,
             pip_colors: pips.colors().fold(crate::mana::ColorSet::empty(), |mut s, c| {
@@ -167,11 +184,25 @@ impl CardBrief {
                 s
             }),
             pips,
-            cmc: def.cost.cmc(),
-            is_land: def.card_types.contains(&CardType::Land),
-            is_creature: def.card_types.contains(&CardType::Creature),
-            is_instant_or_sorcery: def.card_types.contains(&CardType::Instant)
-                || def.card_types.contains(&CardType::Sorcery),
+            pips_total,
+            // The arms of `score_brief_with_colors` that do not read the
+            // seat's colours, in its order: the colourless-nonland bonus,
+            // the card-type weight, the curve weight.
+            base_score: i32::from(pips_total == 0 && !is_land) * 5
+                + i32::from(is_creature) * 3
+                + i32::from(is_instant_or_sorcery) * 2
+                + i32::from(is_land)
+                + match cmc {
+                    0 => 0,
+                    1 => 1,
+                    2..=4 => 3,
+                    5 => 2,
+                    _ => 1,
+                },
+            cmc,
+            is_land,
+            is_creature,
+            is_instant_or_sorcery,
             quality: crate::draft::card_quality(def),
             is_fixing: crate::recommend::is_fixing_card(def),
             produces: crate::recommend::land_produced_colors(def),

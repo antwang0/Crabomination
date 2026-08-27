@@ -403,76 +403,42 @@ pub(crate) fn score_brief_with_colors(
     brief: &crate::cube::CardBrief,
     seat_colors: &ColorCounts,
 ) -> i32 {
-    let mut score: i32 = 0;
+    score_brief_in_colors(brief, seat_colors.support())
+}
 
-    // ── Color fit (the dominant signal once you have ~5 picks) ──
-    // The pip distribution, the card types and the mana value are all read
-    // off the memo: they are pure functions of the definition, and this
-    // function is called per (pick x candidate x colour shape).
-    let card_pips = &brief.pips;
-    if card_pips.is_empty() {
-        // Colorless / artifact / generic-only NONLAND cards: slot into any
-        // deck. Priced just under a single on-color pip (+6) — the old +2
-        // made "castable everywhere" function as a penalty, so no colorless
-        // card ever survived the sealed builder's cut regardless of body.
-        // Lands are excluded: they'd sneak into SPELL slots on this bonus
-        // (the sealed builder assigns lands separately in assemble_lands),
-        // producing accidental 18-land/21-spell decks.
-        if !brief.is_land {
-            score += 5;
-        }
-    } else if seat_colors.is_empty() {
-        // First few picks before any colors are committed: don't
-        // penalize colored cards at all — early picks define the
-        // seat's colors. Treat each colored pip as a small positive
-        // signal so a {1}{G} bear still beats a colorless {1}
-        // artifact at first pick.
-        let pips: u32 = card_pips.iter().map(|(_, n)| n).sum();
-        score += (pips as i32) * 2;
+/// [`score_brief_with_colors`] against the seat's colours as a bitmask, and
+/// the form the sealed builder's shape ranker calls: it scores 23 main-deck
+/// cards against one colour set, 56 times a build.
+///
+/// The scorer reads `seat_colors` only through `is_empty` and `get(c) > 0`,
+/// so the colour term is a function of the *set*. On-colour pips are worth
+/// +6 and off-colour -4, and `off = total - on`, so the two accumulators
+/// collapse to `10 * on - 4 * total` over a single masked sum. Everything
+/// left — the card-type weight, the mana-value weight and the
+/// colourless-nonland bonus — is a property of the card and is precomputed
+/// as [`CardBrief::base_score`](crate::cube::CardBrief::base_score).
+///
+/// The arithmetic is the original's, term for term; see the commit for the
+/// identity.
+pub(crate) fn score_brief_in_colors(
+    brief: &crate::cube::CardBrief,
+    seat: crate::mana::ColorSet,
+) -> i32 {
+    let total = brief.pips_total as i32;
+    // Colorless / artifact / generic-only cards carry their whole colour
+    // term in `base_score` (+5 unless a land): they slot into any deck.
+    // Lands are excluded there because the bonus would sneak them into
+    // SPELL slots, which `assemble_lands` owns.
+    let color_term = if total == 0 {
+        0
+    } else if seat.is_empty() {
+        // First few picks before any colors are committed: don't penalize
+        // colored cards at all — early picks define the seat's colors.
+        total * 2
     } else {
-        let mut on_color_pips = 0i32;
-        let mut off_color_pips = 0i32;
-        for (c, n) in card_pips.iter() {
-            if n == 0 {
-                continue;
-            }
-            if seat_colors.get(c) > 0 {
-                on_color_pips += n as i32;
-            } else {
-                off_color_pips += n as i32;
-            }
-        }
-        // Each on-color pip is +6 (strong enough to dominate the curve
-        // tweak). Each off-color pip is -4. Net effect: a 2-color spell
-        // whose splash is already in the seat scores positively, while
-        // a card that adds a third color is mildly punished.
-        score += on_color_pips * 6;
-        score -= off_color_pips * 4;
-    }
-
-    // ── Card-type weight ──
-    if brief.is_creature {
-        score += 3;
-    }
-    if brief.is_instant_or_sorcery {
-        score += 2;
-    }
-    if brief.is_land {
-        // Non-basic lands are fine fixing but aren't a high pick
-        // priority — basics get added by the deck-builder.
-        score += 1;
-    }
-
-    // ── Mana-value (curve) weight ──
-    score += match brief.cmc {
-        0 => 0,
-        1 => 1,
-        2..=4 => 3,
-        5 => 2,
-        _ => 1,
+        brief.pips.masked_sum(seat) as i32 * 10 - total * 4
     };
-
-    score
+    brief.base_score + color_term
 }
 
 /// Auto-pick a card from `pack` for a seat with `seat_picks_so_far`.
@@ -538,6 +504,28 @@ impl ColorCounts {
     /// only reached it via a symbol that referenced it.
     pub fn is_empty(&self) -> bool {
         self.0.iter().all(|n| *n == 0)
+    }
+
+    /// The colors with at least one pip, as a bitmask. WUBRG-indexed both
+    /// sides, so the bit for a color is its slot here.
+    pub fn support(&self) -> crate::mana::ColorSet {
+        let mut bits = 0u8;
+        for (i, n) in self.0.iter().enumerate() {
+            bits |= u8::from(*n > 0) << i;
+        }
+        crate::mana::ColorSet(bits)
+    }
+
+    /// The pips in `set`, summed — the on-colour half of
+    /// [`score_brief_in_colors`].
+    pub fn masked_sum(&self, set: crate::mana::ColorSet) -> u32 {
+        let mut n = 0;
+        for (i, v) in self.0.iter().enumerate() {
+            if set.0 & (1 << i) != 0 {
+                n += v;
+            }
+        }
+        n
     }
 
     /// Every color with its total, in WUBRG order — including zeros.

@@ -712,7 +712,14 @@ fn sorted_pip_totals(totals: &crate::draft::ColorCounts) -> [i32; 5] {
 /// (what a 3+-color build pays in mana reliability).
 pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> i32 {
     let main_colors = colors_of_picks(main);
-    let mut score: i32 = main.iter().map(|&f| score_card_with_colors(f, &main_colors)).sum();
+    // One `support()` for the whole main deck rather than one `is_empty` and
+    // five `get`s per card: the shape ranker runs this 56 times a build over
+    // ~23 cards each (PERF (-63)).
+    let seat = main_colors.support();
+    let mut score: i32 = main
+        .iter()
+        .map(|&f| crate::draft::score_brief_in_colors(crate::cube::card_brief(f), seat))
+        .sum();
     let shortfall = target_spells.saturating_sub(main.len()) as i32;
     score -= shortfall * 8;
     let pips = sorted_pip_totals(&main_colors);
