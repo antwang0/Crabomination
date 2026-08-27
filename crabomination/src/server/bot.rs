@@ -7338,6 +7338,33 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     // similar deathtouch defenders.
     let opp_seat = target_player;
     let opp_life = state.players[opp_seat].life;
+    // One battlefield walk for both prohibitions this function has to model,
+    // the same bitmask `declare_attackers_banded` gates its own blocks on.
+    let statics = crate::game::combat::attack_static_scan(state);
+    // CR 613 — Ensnaring Bridge: a creature whose *computed* power exceeds
+    // the smallest "cards in your hand" cap on the board can't attack, and
+    // the engine rejects the batch that contains it whole. Symmetric, so the
+    // cap is the minimum over every such permanent's controller's hand,
+    // whoever controls it. Unmodelled until the eightieth pass: on `cube
+    // --seed 10` it was **410 of 3,232 attack proposals (12.7 %)**, the
+    // largest single rejection site left after the attack tax.
+    let power_cap: Option<i32> = (statics & crate::game::combat::attack_static::POWER_CAP != 0)
+        .then(|| {
+            state
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.definition.static_abilities.iter().any(|sa| {
+                        matches!(
+                            sa.effect,
+                            crate::effect::StaticEffect::AttackPowerCapByControllerHand
+                        )
+                    })
+                })
+                .map(|c| state.players[c.controller].hand.len() as i32)
+                .min()
+        })
+        .flatten();
     let raw_attackers: Vec<&crate::card::CardInstance> = state
         .battlefield
         .iter()
@@ -7368,6 +7395,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                         // attackers at all that turn. 52 of the 470 rejections
                         // the `CRAB_SIM_REJECTS` census counted; PERF (-55).
                         cp.card_types.contains(&crate::card::CardType::Creature)
+                            && power_cap.is_none_or(|cap| cp.power <= cap)
                             && (!c.summoning_sick || cp.keywords.has_kw(&Keyword::Haste))
                             && (!cp.keywords.has_kw(&Keyword::Defender)
                                 || state.ignores_defender_for_attack(c))
@@ -7750,7 +7778,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         });
     }
     // Last, because the tax depends on what each attacker is aimed at.
-    trim_attacks_to_payable_tax(state, seat, &mut attacks);
+    trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
     attacks
 }
 
@@ -7858,11 +7886,15 @@ fn restore_forced_attackers_unchecked(
 ///
 /// Untaxed attackers are never dropped, and neither is a must-attack one —
 /// CR 508.1d would reject the batch for its absence instead.
-fn trim_attacks_to_payable_tax(state: &GameState, seat: usize, attacks: &mut Vec<Attack>) {
+fn trim_attacks_to_payable_tax(
+    state: &GameState,
+    seat: usize,
+    statics: u32,
+    attacks: &mut Vec<Attack>,
+) {
     if attacks.is_empty() {
         return;
     }
-    let statics = crate::game::combat::attack_static_scan(state);
     let keyword_tax = |id: CardId| {
         state
             .computed_permanent(id)
@@ -13794,6 +13826,38 @@ mod tests {
             "the flier's swing obliges it to join: {with_company:?}",
         );
         g.clone().declare_attackers(with_company).expect("the plan is legal");
+    }
+
+    /// CR 613 — Ensnaring Bridge caps attacking power at the *controller's*
+    /// hand size and is symmetric, so it bites the bot's own board. An
+    /// over-cap attacker gets the whole declaration rejected, so the planner
+    /// has to leave it home rather than lose the combat.
+    #[test]
+    fn bot_attack_plan_honours_the_ensnaring_bridge_power_cap() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(1, catalog::ensnaring_bridge());
+        let big = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+        let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        g.clear_sickness(big);
+        g.clear_sickness(small);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Two cards in the Bridge controller's hand: power 3 is barred,
+        // power 2 is not.
+        for _ in 0..2 {
+            g.add_card_to_hand(1, catalog::plains());
+        }
+        let attacks = pick_attacks(&g, 0);
+        assert!(
+            attacks.iter().any(|a| a.attacker == small)
+                && !attacks.iter().any(|a| a.attacker == big),
+            "only the creature under the cap may attack: {attacks:?}",
+        );
+        g.clone().declare_attackers(attacks).expect("the plan is legal");
+        // Empty the hand and nothing may attack at all.
+        g.players[1].hand.clear();
+        assert!(pick_attacks(&g, 0).is_empty(), "a zero cap bars every attacker");
     }
 
     /// CR 508.1d — the attack search's holdbacks are subsets, and a subset
