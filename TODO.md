@@ -130,6 +130,17 @@ a lost race — the loser usually holds something the winner does not.
    `evaluate_requirement_on_card`. P2 has no open correctness entries. Both audits clean at this tip —
    `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, and dead
    modes are now suite-gated against `audit::REVIEWED_DEAD_MODES`.
+6a. **NEW ROBUSTNESS GATE, and it is one RUSTFLAG.** `release-fast` (and so
+   `overflow`, which inherits it) has `debug_assertions` **off**, so the
+   documented overflow sweep never reaches a single `debug_assert!` — and the
+   suite does not either, because an assertion needs a *board* to fire on and
+   18,795 tests carry fewer interesting boards than 60 games of `cube`. Adding
+   `-C debug-assertions=yes` to the overflow build turns the ladder into an
+   audit of every engine invariant at once. Recipe in Cargo.toml's
+   `[profile.overflow]` comment; eighty-first pass reads **34,560 games over
+   five pools x six seeds, no panic, no assertion, no overflow, 0
+   undecided**. It is also what refuted (-58) in four seconds. **Run it after
+   anything that adds an invariant.**
 7. **State (eighty-first tip):** two-crate gate **18,795 / 0 / 5**; clippy
    `--workspace --exclude crabomination_client --all-targets` clean;
    `--bench` **195,616 decisions / 27.44 turns / 0 stalls**, determinism ok,

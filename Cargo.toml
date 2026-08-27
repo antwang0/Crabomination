@@ -100,6 +100,22 @@ split-debuginfo = "off"
 #   cargo build --profile overflow -p crabomination --bin bot_ladder
 #   target/overflow/bot_ladder --a gang --b gang --games 400 --threads 3 \
 #     --seed <n> --decks all      # fixed + cube + sos, i.e. the widest pool
+#
+# **Add `-C debug-assertions=yes` and the same run also audits every
+# `debug_assert!` in the engine** — the `*_scan` presence-gate audits, the
+# `computed_kw` gated-subset guard, and any invariant a later pass writes.
+# `debug_assertions` is off in `release-fast`, so the sweep above does not
+# reach them, and the suite does not either: a `debug_assert!` needs a *board*
+# to fire on, and 18,795 tests carry fewer interesting boards than 60 games of
+# `cube`. Costs a separate target dir (the flag re-fingerprints every crate)
+# and ~9 min of cold build. Eighty-first pass: 30 cells, five pools x six
+# seeds x 120 games/archetype, **34,560 games, no panic, no assertion, no
+# overflow, 0 undecided**.
+#
+#   RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit \
+#     cargo build --profile overflow -p crabomination --bin bot_ladder
+#   RUST_MIN_STACK=33554432 target-audit/overflow/bot_ladder --a gang --b gang \
+#     --games 120 --threads 3 --seed <n> --decks <pool>
 [profile.overflow]
 inherits = "release-fast"
 overflow-checks = true
