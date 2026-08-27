@@ -8564,3 +8564,79 @@ fn a_bounced_creature_is_summoning_sick_again_when_recast() {
         "declaring it as an attacker is illegal",
     );
 }
+
+/// CR 306.5b — a planeswalker spell resolving enters with its printed
+/// loyalty, *every* time it is cast.
+///
+/// `CardInstance::new` seeds the loyalty counter, so a walker cast from a
+/// fresh draw was fine; and the zone-move path re-seeds it, so reanimation
+/// and blinks were fine. The cast-resolution path only touched loyalty for
+/// the Compleated case — but CR 122.2 clears counters when a permanent
+/// leaves the battlefield, so a walker that was exiled or bounced and then
+/// *recast* entered at 0 loyalty and died to state-based actions on the
+/// spot. Recorded replay (2026-08-27): the bot Suspend Aggressions the
+/// owner's Professor Dellian Fel; the owner replays it from exile via the
+/// may-play grant; `SpellCast → PermanentEntered → PlaneswalkerDied` in a
+/// single batch. Third instance of this exact pattern — summoning sickness
+/// and token enters-with counters fell to it earlier the same week.
+#[test]
+fn a_recast_planeswalker_enters_with_its_printed_loyalty() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let fel = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+    assert_eq!(
+        g.battlefield_find(fel).unwrap().counter_count(CounterType::Loyalty),
+        5,
+        "enters with printed loyalty the first time",
+    );
+
+    // The bot exiles it with Suspend Aggression, granting its owner may-play.
+    let sa = g.add_card_to_hand(1, catalog::suspend_aggression());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sa,
+        target: Some(Target::Permanent(fel)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Suspend Aggression castable for {1}{R}{W}");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == fel).expect("Fel exiled");
+    assert!(exiled.may_play_until.is_some(), "its owner may play it");
+    assert_eq!(
+        exiled.counter_count(CounterType::Loyalty),
+        0,
+        "CR 122.2 — the counters cleared when it left the battlefield",
+    );
+
+    // Its owner recasts it from exile, paying the printed {2}{B}{G}.
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: fel,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the may-play grant lets its owner cast it from exile");
+    drain_stack(&mut g);
+
+    let back = g
+        .battlefield_find(fel)
+        .expect("the recast walker survives — it must not die to SBA on entry");
+    assert_eq!(
+        back.counter_count(CounterType::Loyalty),
+        5,
+        "CR 306.5b — it enters with printed loyalty, not its cleared count",
+    );
+}

@@ -2413,3 +2413,69 @@ fn together_as_one_names_the_part_each_target_slot_feeds() {
     assert_eq!(g.players[0].life, 23, "converge 3 → gain 3");
     assert!(g.battlefield_find(bear).is_none(), "the 2/2 took 3 damage");
 }
+
+/// An opponent's "each player sacrifices a creature of their choice" (Social
+/// Snub) suspends mid-resolution on the *viewer's* pick, while priority still
+/// sits with the opponent. The server routes the answer by the decision's
+/// `acting_player`, not by priority — this pins that contract, because the
+/// client's input gate used to check priority alone and ate every click on
+/// the highlighted creatures (recorded replay 2026-08-27: the game hung on
+/// the pick and the player quit).
+#[test]
+fn an_opponents_edict_takes_the_viewers_pick_while_off_priority() {
+    use crabomination::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let snub = g.add_card_to_hand(1, catalog::social_snub());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = crabomination::TurnStep::PostCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: snub,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Social Snub castable for {1}{W}{B}");
+    for _ in 0..6 {
+        if g.pending_decision.is_some() {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("resolve toward the edict");
+    }
+
+    // The suspend is the viewer's decision even though priority is not theirs
+    // — the exact shape the client's input gate must let through.
+    let pd = g.pending_decision.as_ref().expect("the sacrifice pick is pending");
+    assert_eq!(pd.acting_player(), 0, "the pick belongs to the viewer");
+    assert_eq!(g.player_with_priority(), 1, "while the caster still holds priority");
+    match &pd.decision {
+        Decision::ChooseTarget { legal, .. } => {
+            assert!(
+                legal.contains(&Target::Permanent(bear))
+                    && legal.contains(&Target::Permanent(dragon)),
+                "both of the viewer's creatures are offered",
+            );
+        }
+        other => panic!("expected the in-scene sacrifice pick, got {other:?}"),
+    }
+
+    // The viewer's answer is accepted off-priority, and the spell finishes:
+    // their pick dies, the bot auto-sacrificed its own, and the drain lands.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(
+        Target::Permanent(bear),
+    )))
+    .expect("the acting player's answer is accepted while off-priority");
+    assert!(g.battlefield_find(bear).is_none(), "the chosen creature was sacrificed");
+    assert!(g.battlefield_find(dragon).is_some(), "the other one was the player's to keep");
+    assert!(g.battlefield_find(theirs).is_none(), "the caster sacrificed too");
+    assert_eq!(g.players[0].life, 19, "each opponent loses 1");
+    assert_eq!(g.players[1].life, 21, "and the caster gains it");
+}

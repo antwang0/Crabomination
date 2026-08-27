@@ -3764,7 +3764,23 @@ pub fn handle_game_input(
             }
         }
 
-        if cv.game_over.is_some() || cv.priority != your_seat { return; }
+        // Off-priority input is dropped — with one exception: a pending
+        // decision *acting on this seat*. A resolving opponent spell can
+        // suspend on the viewer's choice ("each player sacrifices a creature
+        // of their choice" — the bot's Social Snub) while priority still
+        // sits with the opponent mid-resolution; the engine routes the
+        // answer by `acting_player`, not by priority. Gating on priority
+        // alone ate every click on the highlighted creatures and the pick
+        // was unanswerable (recorded replay 2026-08-27: the game hung on
+        // the sacrifice and the player quit). Trigger picks on your own
+        // turn never hit this — acting player and priority coincide there.
+        let deciding = cv
+            .pending_decision
+            .as_ref()
+            .is_some_and(|pd| pd.acting_player == your_seat);
+        if cv.game_over.is_some() || (cv.priority != your_seat && !deciding) {
+            return;
+        }
 
         // ── Targeting mode ────────────────────────────────────────────────────
         if targeting.active {

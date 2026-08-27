@@ -1812,9 +1812,21 @@ impl GameState {
                     // Stamp the cast's X so ETB *triggered* abilities can read
                     // it (Dune Drifter's MV-≤-X graveyard return).
                     card.cast_x_value = x_value;
-                    // CR 702.150c — a Compleated planeswalker cast with life
-                    // enters with two fewer loyalty per pip paid with life.
-                    if card.compleated_life_paid > 0 && card.definition.is_planeswalker() {
+                    // CR 306.5b — a planeswalker spell resolving enters with
+                    // its printed loyalty. Unconditional, not only the
+                    // Compleated case it used to be: a fresh card carries the
+                    // `CardInstance::new` seed, but a walker that had been on
+                    // the battlefield had its counters cleared when it left
+                    // (CR 122.2), and a *recast* — Suspend Aggression's
+                    // "its owner may play it", a bounce, any exile-and-return
+                    // that casts rather than moves — entered at 0 loyalty and
+                    // died to SBA on the spot (recorded replay, 2026-08-27:
+                    // SpellCast → PermanentEntered → PlaneswalkerDied in one
+                    // batch). The zone-*move* path already re-seeds for the
+                    // same reason; the cast path was the gap. CR 702.150c —
+                    // a Compleated walker cast with life still enters with
+                    // two fewer per {C/P} pip paid with life.
+                    if card.definition.is_planeswalker() && card.definition.base_loyalty > 0 {
                         let loyalty = card
                             .definition
                             .base_loyalty
@@ -1826,6 +1838,12 @@ impl GameState {
                         } else {
                             card.counters.remove(&crate::card::CounterType::Loyalty);
                         }
+                    }
+                    // CR 310.7 — likewise a Battle's defense counters, which
+                    // the move path also re-seeds and this path also dropped.
+                    if card.definition.is_battle() && card.definition.defense > 0 {
+                        let defense = card.definition.defense;
+                        card.counters.insert(crate::card::CounterType::Defense, defense);
                     }
                     let room_door = card.definition.room.as_ref().map(|_| {
                         usize::from(card.split_cast == Some(1))
