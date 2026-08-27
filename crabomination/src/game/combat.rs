@@ -2084,6 +2084,7 @@ impl GameState {
                     && !self.is_blocking(b.id)
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
                     && self.block_requirement_able(b, atk.attacker)
+                    && !self.block_spoken_for_elsewhere(b, atk.attacker, &assignments)
             });
             if idle_able_blocker {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
@@ -2109,6 +2110,7 @@ impl GameState {
                     // Able to block it but not assigned to it (here or earlier).
                     && !self.blocks(b.id, atk.attacker)
                     && !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
+                    && !self.block_spoken_for_elsewhere(b, atk.attacker, &assignments)
             });
             if unmet {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
@@ -2133,7 +2135,7 @@ impl GameState {
             }
             let assigned = self.blocks(b.id, required)
                 || assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required);
-            if !assigned {
+            if !assigned && !self.block_spoken_for_elsewhere(b, required, &assignments) {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(required)));
             }
         }
@@ -4667,6 +4669,50 @@ impl GameState {
                     b.controller,
                 )
                 .is_none()
+    }
+
+    /// CR 509.1c — is `b` already **spoken for** by a different block
+    /// requirement, and therefore not idle for this one?
+    ///
+    /// The rule the five requirement loops implement one at a time is
+    /// "satisfy the *maximum number* of requirements without violating a
+    /// restriction". Checked independently they demand more than that:
+    /// a creature can block only one attacker, so two requirements that both
+    /// name it can never both be met, and asking each in isolation makes
+    /// **every** declaration illegal. A Lure attacker plus a provoker plus
+    /// one able defender had exactly that shape — block nobody, block the
+    /// Lure, block the provoker, all three rejected — and it is `cube` seed
+    /// 15's whole residual.
+    ///
+    /// A creature that satisfies one binding requirement is the most any
+    /// declaration can get out of it, so a declaration in which every obliged
+    /// creature blocks *something that obliges it* is already maximal. That
+    /// is what this tests, and it is the cheap half of the general rule: the
+    /// blocker is assigned to some attacker other than `except`, and that
+    /// attacker's own requirement binds this blocker.
+    ///
+    /// Full CR 509.1c maximization over arbitrary requirement sets is still
+    /// an approximation here — see the loops' own note.
+    pub(crate) fn block_spoken_for_elsewhere(
+        &self,
+        b: &crate::card::CardInstance,
+        except: CardId,
+        assignments: &[(CardId, CardId)],
+    ) -> bool {
+        let claims = |other: CardId| -> bool {
+            if other == except {
+                return false;
+            }
+            if b.must_block == Some(other) {
+                return true;
+            }
+            let Some(acp) = self.computed_permanent(other) else { return false };
+            (acp.keywords.has_kw(&Keyword::AllMustBlock)
+                || acp.keywords.has_kw(&Keyword::MustBeBlocked))
+                && self.block_requirement_able(b, other)
+        };
+        assignments.iter().any(|(bid, aid)| *bid == b.id && claims(*aid))
+            || self.block_map.get(&b.id).is_some_and(|v| v.iter().copied().any(claims))
     }
 
     /// CR 509.1c — does a "must block" requirement on `attacker` **bind** at

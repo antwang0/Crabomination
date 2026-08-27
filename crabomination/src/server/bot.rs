@@ -14250,6 +14250,56 @@ mod tests {
         g.declare_blockers(picked).expect("and the planner picks a legal one");
     }
 
+    /// CR 509.1c — "the **maximum number** of requirements". Two requirements
+    /// that both name the same creature can never both be satisfied, because
+    /// it blocks one attacker; asking each in isolation made every
+    /// declaration illegal.
+    ///
+    /// A Lure attacker, a provoker, and one able defender: block nobody and
+    /// the Lure rejects it, block the Lure and Provoke rejects it, block the
+    /// provoker and the Lure rejects it. All three, on a board reachable in
+    /// `cube` seed 15 — where it was the entire remaining rejection census.
+    /// A creature blocking *something that obliges it* is the most any
+    /// declaration gets out of it, so both single-block plans are maximal and
+    /// legal, and "block with nobody" is still not.
+    #[test]
+    fn two_block_requirements_on_one_creature_are_both_satisfiable() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        let mut lure = vanilla_creature("Lure Beast", 3, 3);
+        lure.keywords.push(Keyword::AllMustBlock);
+        let lured = g.add_card_to_battlefield(0, lure);
+        g.clear_sickness(lured);
+        let provoker = g.add_card_to_battlefield(0, vanilla_creature("Provoker", 2, 2));
+        g.clear_sickness(provoker);
+        let only = g.add_card_to_battlefield(1, vanilla_creature("Only", 2, 2));
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![
+            crate::game::Attack { attacker: lured, target: crate::game::AttackTarget::Player(1) },
+            crate::game::Attack {
+                attacker: provoker,
+                target: crate::game::AttackTarget::Player(1),
+            },
+        ])
+        .expect("attack");
+        g.battlefield_find_mut(only).expect("on the battlefield").must_block = Some(provoker);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        g.clone().declare_blockers(vec![(only, lured)]).expect("satisfying the Lure is legal");
+        g.clone()
+            .declare_blockers(vec![(only, provoker)])
+            .expect("satisfying the Provoke is legal");
+        assert!(
+            g.clone().declare_blockers(vec![]).is_err(),
+            "and satisfying neither is still illegal",
+        );
+        let picked = pick_blocks_for_test(&g, 1);
+        assert!(!picked.is_empty(), "the planner picks one of them: {picked:?}");
+        g.declare_blockers(picked).expect("and it is legal");
+    }
+
     /// CR 509.1c, `MustBlock` — "blocks each combat if able", asked of the
     /// *blocker*. The planner had no pass for it at all: 8 of `cube` seed
     /// 42's block rejections, and the only site the census reached on a seed
