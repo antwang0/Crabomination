@@ -24,148 +24,45 @@ sixty-seventh pass, so don't re-take that.
 
 **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`
-and `git branch -a` does not list this branch before that fetch. **Sessions
-run this branch concurrently and this file is not a lock:** push the code
-commit before the tracker prose; a fetch only rules out work already
-*pushed*, so do not take the top-ranked item unless you can push within the
-hour (pass 80 duplicated a whole item end-to-end), and diff before discarding
-a lost race — the loser usually holds something the winner does not.
+and does not list this branch before that fetch. **Sessions run it
+concurrently and this file is not a lock:** push code before tracker prose,
+do not take a top-ranked item you cannot push within the hour, and diff
+before discarding a lost race.
 
-**This section is an INDEX, not a record.** It went to 221 lines at the
-eighty-second pass by restating entries that already carry their numbers in
-`PERF.md` / `ENGINE_BACKLOG.md` / `Cargo.toml`. Every item below names where
-its numbers live; put new numbers *there* and a pointer here.
+**This is an INDEX: a pointer per topic, never the numbers.** It reached 221
+lines at the eighty-second pass and 145 at the eighty-third by restating what
+PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 
-1. **Perf queue, open and ranked** (PERF's "Perf candidates"). **(-60)**
-   `trigger_grant_sources` — 1.00 % of `cube`, 0.25 grants found per call over
-   57,596; the CR 510.2 batch's 12,858 were hoisted this pass, and
-   `fire_step_triggers`' 23,526 are already one-per-call, so the residue is a
-   *why 619 Ir* question. **(-61)** `keyword_grant_in_scope` — 1.67 %, but its
-   largest site is already a 4.5x trade with four routes off it written up as
-   failing; the one free thing is `bf_cp.is_some()` in
-   `activate_ability_inner`. **(-51)(a)/(b)**. **(-59)**
-   `dispatch_triggers_for_events` is the largest self row at 5.58 % and its
-   line profile is run — **there is no hot line**, so the lever is fewer
-   dispatches, not a cheaper one. **Do not re-run that profile.**
-2. **Refuted with numbers — do not re-take.** (-56) the `sa_cards` reserve,
-   both forms, splits by pool. (-56b) the `sorted` collect, four forms, same
-   split, and the lesson under it: **`collect` is internal iteration and a
-   hand-written loop is not**; replacing one costs the `Chain<Filter<_>>`
-   specialisation before it saves an allocation. (-57) `eval_material`'s
-   prize, 6x over-stated — one gather per evaluation is the floor. (-58) the
-   batch gather: worth `cube` **-1.6 %** and **unsound**, because player life
-   is a layer input. (-54b) the `sim_step` checkpoint's atomicity proof,
-   disproved by reading — both declarations pay costs mid-validation. A second
-   freeze scope over the candidate menus (+0.001 %: `next_action` already
-   freezes the tick). `incremental` on `release-fast` (+2.2 % of code).
-   **The attack search is still the largest number in the pipeline (46.3 % of
-   the actor) and nothing has aimed at it.**
-2a. **Two censuses, both env-gated and both free when off** (PERF, "How to
-   measure"). `CRAB_SIM_REJECTS` — picker/engine disagreements, **0 in all 69
-   configurations swept**, and it stays the guard for anything touching a
-   picker or a combat check. `CRAB_PAY_FAILS` — payment rollbacks split by the
-   `ManaError` they failed with, which is the instrument (-51)(b) asked for
-   and **refutes that entry's own reading**: coloured is the larger class on
-   four of five pools and 100 % of `fixed`, not generic. Table in PERF
-   (-51)(b). **Sweep seeds, don't sample three.**
-3. **Rules for a commit that moves play.** Gate it with `bot_ladder --vs
-   PATH` — null first, a byte-identical copy must read 50.0 % with every pair
-   split, 1.9x wall. **Sweep `CRAB_SIM_REJECTS=1` over `cube` seeds 1-24
-   before writing that a rejection half is closed**: deck content is
-   seed-dependent, it is ~4 s a seed, and two passes called a half closed off
-   three seeds and were wrong both times. **Report Ir** — a correctness commit
-   is a perf commit on the workload it runs in. **And `--bench`'s decision
-   count is a committed invariant: a commit that moves it says so** (`50a075fa`
-   did not; PERF's Baseline carries the refresh and the reason).
-4. **Encoding caution:** any change to the SOS/cube pool, `Vocab`,
-   `TrainRow`/`EncodedState`, or the observation/deck encoding **invalidates
-   the trained nets**. Say so prominently in the commit and here.
-5. **Bugs** (ENGINE_BACKLOG). P3's requirement-walker item is **closed for
-   combat, both sides**; what is left is `evaluate_requirement_static` vs
-   `evaluate_requirement_on_card`. P2 has no open correctness entries.
-   `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, dead modes
-   suite-gated. **(-55) IS CLOSED: `CRAB_SIM_REJECTS` reads 0 in all 69
-   configurations tried** — `cube` 1-24+42 at `--games 20`, `cube` 25-45 at
-   `--games 12`, `all`/`sealed`/`sos`/`fixed` 1-12 at `--games 8` — from
-   470/91,438 when the instrument landed. **It stays the guard**: run it
-   before and after anything that touches a picker or a combat check, and
-   sweep seeds rather than sampling three. Three durable findings, all in
-   PERF (-55): a **restriction** and a **requirement** written as independent
-   checks can be jointly unsatisfiable (CR 509.1b vs 509.1c); **two
-   requirements naming one creature** are the same trap one level up, and
-   CR 509.1c's "maximum number" is the rule that resolves it; and **an
-   estimate consumed as a *budget* fails asymmetrically** — under-count loses
-   a swing, over-count loses the whole declaration — so ask the engine at the
-   sites that trim, and only there. Method note worth keeping: the site tag
-   names the clause that rejected a declaration and **never the pass that
-   built it**, and two plausible fixes measured exactly inert before a probe
-   printing the plan found the cause. Build that probe first next time.
-5a. **The dropped-"may" tail has one filter left worth running, and it is
-   spent.** `audit_dropped_may.py`'s 341 findings were triaged twice by verb;
-   the third cut is **"you may X. If you do, Y" in the *full* oracle** — 46 of
-   the 341, and there a dropped "may" forces the consequence too, so the card
-   pays a printed cost it could decline. Four lines against
-   `.scryfall_cache.json`; grepping the auditor's own output finds none of
-   them, because it truncates its snippet at 80 chars. Two were real
-   (Sanctuary Wall's forced self-stun, Frantic Scapegoat's absent second
-   ability) and both are fixed with tests; the rest route through
-   `CollectEvidence` / `If`, whose forced branch is already gated on being
-   able to pay, or through a bespoke optional primitive the auditor's
-   `OPTIONAL` list does not name (Obzedat's
-   `MayExileSelfReturnNextUpkeepHaste`). Write-up in INCOMPLETE_CARDS.
-   **Nothing is left in that tail; the next card sweep needs a different
-   filter.**
-5b. **The data-test sweep is finished and it buys no build time.**
-   `find_data_tests.sh`'s last nineteen non-sacred candidates are deleted
-   (199 lines); three of its twenty-three are false positives and one is
-   already the table-driven form. Timed both ways, one integration binary
-   rebuilds in **7.50 s either side** — 199 lines of 377,435 is 0.05 %, so
-   **the convention's "the cost is compile + link" does not transfer to a
-   sweep this size** (PERF, "Test-suite cleanup does not buy build time").
-   The levers that move that number are structural and already taken. Do not
-   sell the next sweep on compile time.
-6. **Robustness gate, and it is one RUSTFLAG.** `-C debug-assertions=yes` on
-   the `overflow` build turns a ladder run into an audit of every engine
-   invariant at once — `release-fast` has assertions off, and the suite has
-   fewer interesting boards than 60 games of `cube`. Recipe and the
-   34,560-game result are in `Cargo.toml`'s `[profile.overflow]` comment. It
-   is what refuted (-58) in four seconds. **Run it after anything that adds an
-   invariant.**
-7. **State at `0b008b2e`**, and re-run at `1745a37a`: two-crate gate
-   **18,788 / 0 / 5** (-19, the data-test sweep), clippy `--workspace
-   --exclude crabomination_client --all-targets` clean, `--bench` **195,528
-   decisions / 27.44 turns / 0 stalls**, `determinism ok`,
-   `thread_determinism ok (3 vs 1)`, 207-230 games/s at `host_calib_ms` 46-48
-   on the 2.10 GHz Xeon. Suite `--workspace
-   --exclude crabomination_client`
-   **19,063 / 0 / 5**, golden traces unmoved; clippy clean (with the client at
-   `05015235`, four apt packages); `--bench` **195,528 decisions / 27.44 turns
-   / 0 stalls**, `determinism ok`, `thread_determinism ok (3 vs 1)`; `--vs`
-   null split every pair on fixed/cube/sos. `overflow` sweeps: 34,560 games
-   with the RUSTFLAG at the eighty-first tip, 22,800 at `27af76f4` — no panic,
-   no assertion, no arithmetic overflow, 0 capped, 0 stuck. Thread scaling
-   **3.79x on four cores** (PERF Baseline). Wall-clock: **170-175 games/s at
-   `host_calib_ms` 51-57** on a 2.80 GHz box, **277-308 at 64-71** on a
-   2.10 GHz one.
-8. **Hazards.** ⚠ Wall-clock rows do not cross hosts, and `host_calib_ms` is
-   a *fingerprint*, not a correction factor — the two rows in item 7 are a
-   faster rate at a worse calib on a slower nominal clock. If a games/s row
-   looks wrong, build both sides in one sitting. ⚠ `peak_rss_mib` is an
-   allocator reading and therefore a distribution: **take three before calling
-   a difference** — a "13 % step" flagged at the eighty-second pass did not
-   reproduce. ⚠ A container reset wipes `target/`, removes `cargo-nextest`
-   and checks the repo out on the *system-prompt* branch: commit each measured
-   change as soon as it measures, re-run FIRST after any surprising `git
-   status`, and reinstall with `curl -sSLf
-   https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`. ⚠ Disk:
-   free `target/debug/incremental` (7-15 GB) before a client clippy.
-9. **Deck net:** `nets/deck-champion.safetensors`, gated **60.3 % pooled**
-   over 19,200 games against the static judge, so `--use-deck-best` has a
-   committed judge. Write-up in ML_NOTES ("Deck-net re-gate").
-10. **Open question for a run with the ML context:** should `selfplay` seed
-   `jitter_below` from `--seed`? It would make training runs replayable and
-   `--games N` fixed work, and it removes per-actor tie-break diversity. Not
-   to be changed unilaterally.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-62)** the gather's
+   ungated graveyard walk (priced, wants a zone newtype), (-60), (-61),
+   (-51)(a)/(b), (-59). **Refuted with numbers:** (-18) (-54b) (-56) (-56b)
+   (-57) (-58). The attack search is 46.3 % of the actor and nothing has
+   aimed at it.
+2. **A commit that moves play** — PERF "How to measure": `--vs` after the
+   null run, `CRAB_SIM_REJECTS` and `CRAB_PAY_FAILS` **swept, not sampled**,
+   Ir on both pools. **`--bench`'s decision count is a committed invariant —
+   a commit that moves it says so.**
+3. **Encoding caution** — the SOS/cube pool, `Vocab`, `TrainRow`/
+   `EncodedState`, the observation/deck encoding: a change **invalidates the
+   trained nets**. Say so in the commit and here.
+4. **Bugs** — ENGINE_BACKLOG. P2 clean; P3's combat walker pair closed both
+   sides. Its last item (`evaluate_requirement_static` vs
+   `evaluate_requirement_on_card`) is *structurally* closed — the static
+   walker's catch-all delegates, the card walker is exhaustive — so it wants
+   a guard, not a fix. `audit_stubs` 0/21,795, `audit_incomplete` 0,
+   `CRAB_SIM_REJECTS` 0 in 69 configurations. The dropped-"may" tail
+   (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent: **the
+   next card sweep needs a different filter.**
+5. **Robustness gate, one RUSTFLAG** — `-C debug-assertions=yes` on the
+   `overflow` build, recipe in `Cargo.toml`'s `[profile.overflow]` comment.
+   Run it after anything that adds an invariant or touches the layer path.
+6. **Tip state and container hazards** — PERF "Baseline" / "How to measure".
+   Do not copy either back here.
+7. **ML** — deck judge `nets/deck-champion.safetensors`, 60.3 % pooled
+   (ML_NOTES). Open, needs the ML context: should `selfplay` seed
+   `jitter_below` from `--seed`? Buys replayable runs and a fixed `--games
+   N`, costs per-actor tie-break diversity. Not to be changed unilaterally.
+
 
 ## Standing rules for a perf pass
 
