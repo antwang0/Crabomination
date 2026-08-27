@@ -8490,6 +8490,60 @@ impl GameState {
         }) || self.battlefield.iter().any(card_can_change_card_types)
     }
 
+    /// CR 602.5g/h — is `card_id`'s `{T}`/`{Q}` ability barred right now
+    /// because the permanent is a summoning-sick creature?
+    ///
+    /// Callers must have established that the ability actually has a tap cost
+    /// and that the source is on the battlefield; this is the sickness half
+    /// alone. `p` is the activating player, for the Tyvar-style
+    /// "as though they had haste" static, which is controller-scoped.
+    ///
+    /// **Shared with the bot's `available_mana`**, which counts untapped
+    /// sources toward what a declaration or a cast can pay. It had no
+    /// sickness gate at all, so a summoning-sick Llanowar Elves read as one
+    /// mana the engine's auto-tap then refused — and an *over*-counted budget
+    /// is not a conservative estimate, it is a rejected declaration. The rest
+    /// of that estimate deliberately under-counts (sac costs, dynamic
+    /// amounts); this was the one term biased the other way.
+    ///
+    /// Three reads, cheapest first, each behind its own gate: the sickness
+    /// flag is on the instance, creature-ness is the printed type line unless
+    /// layer 4 or `bestowed` can move it, and Haste needs the computed view
+    /// only when something in scope can grant it. A summoning-sick vanilla
+    /// creature costs two battlefield walks where it used to cost a gather.
+    pub(crate) fn tap_ability_summoning_sick(&self, card_id: CardId, p: usize) -> bool {
+        let src = self.battlefield_find(card_id);
+        if !src.is_some_and(|c| c.summoning_sick) {
+            return false;
+        }
+        let bestowed = src.is_some_and(|c| c.bestowed);
+        let is_creature = if bestowed || self.card_type_change_unscoped() {
+            self.computed_permanent(card_id)
+                .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
+        } else {
+            src.is_some_and(|c| c.definition.is_creature())
+        };
+        if !is_creature {
+            return false;
+        }
+        if self.card_keyword_possible(card_id, |k| *k == Keyword::Haste)
+            && self
+                .computed_permanent(card_id)
+                .is_some_and(|c| c.keywords.has_kw(&Keyword::Haste))
+        {
+            return false;
+        }
+        !self.battlefield.iter().any(|c| {
+            c.controller == p
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::ControllerCreatureAbilitiesAsThoughHaste
+                    )
+                })
+        })
+    }
+
     /// Both legs of the ability-strip presence gate in one call, for a caller
     /// that holds no [`GrantScan`] to read `strip_on_battlefield` off. Same
     /// contract: `false` is authoritative, `true` only means the gather has to

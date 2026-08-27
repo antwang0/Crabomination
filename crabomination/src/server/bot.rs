@@ -9998,6 +9998,20 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         if p.controller != seat || p.tapped {
             continue;
         }
+        // CR 602.5g/h — every ability this loop counts has a `{T}` cost
+        // (`is_countable_mana_ability` requires it), so a summoning-sick
+        // creature contributes nothing: `try_pay_with_auto_tap` refuses it.
+        // This estimate had no sickness gate, and a summoning-sick Llanowar
+        // Elves read as one mana. **Every other bias here is downward on
+        // purpose** — sac costs and dynamic amounts are left out so the bot
+        // does not commit to a line it can only pay by spending something —
+        // and an upward one is a different animal: the attack tax's trim
+        // treats `total` as a *budget*, so over-counting it does not make the
+        // bot optimistic, it makes the engine reject the whole declaration.
+        // One method with the engine, so the two cannot drift.
+        if p.summoning_sick && state.tap_ability_summoning_sick(p.id, seat) {
+            continue;
+        }
         // Printed abilities plus anything granted to it (Cryptolith Rite
         // turning creatures into mana sources, Urza's Saga chapters), so a
         // granted mana ability doesn't read as "no mana here".

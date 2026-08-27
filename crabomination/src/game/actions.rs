@@ -14392,45 +14392,13 @@ impl GameState {
 
         // CR 602.5g/h — a creature's ability with a {T} or {Q} cost can't be
         // activated while the creature is summoning-sick, unless it has haste
-        // or its controller has a Tyvar-style "as though they had haste" static.
-        if tap_gated && on_battlefield {
-            // Three reads, cheapest first, each behind its own gate: the
-            // sickness flag is on the instance, creature-ness is the printed
-            // type line unless layer 4 or `bestowed` can move it, and Haste
-            // needs the view only when something in scope can grant it. A
-            // summoning-sick vanilla creature costs two battlefield walks
-            // where it used to cost a gather.
-            let mut sick = bf_src!().is_some_and(|c| c.summoning_sick);
-            if sick {
-                let bestowed = bf_src!().is_some_and(|c| c.bestowed);
-                sick = if bestowed || self.card_type_change_unscoped() {
-                    bf_cp!()
-                        .as_ref()
-                        .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
-                } else {
-                    bf_src!().is_some_and(|c| c.definition.is_creature())
-                };
-            }
-            if sick
-                && self.card_keyword_possible(card_id, |k| *k == Keyword::Haste)
-                && bf_cp!().as_ref().is_some_and(|c| c.keywords.has_kw(&Keyword::Haste))
-            {
-                sick = false;
-            }
-            if sick {
-                let exempt = self.battlefield.iter().any(|c| {
-                    c.controller == p
-                        && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                sa.effect,
-                                crate::effect::StaticEffect::ControllerCreatureAbilitiesAsThoughHaste
-                            )
-                        })
-                });
-                if !exempt {
-                    return Err(GameError::SummoningSickness(card_id));
-                }
-            }
+        // or its controller has a Tyvar-style "as though they had haste"
+        // static. One method, because the bot's `available_mana` has to
+        // answer it identically: a source it counts and auto-tap refuses is
+        // a *budget* that over-counts, and a budget that over-counts becomes
+        // a rejected declaration.
+        if tap_gated && on_battlefield && self.tap_ability_summoning_sick(card_id, p) {
+            return Err(GameError::SummoningSickness(card_id));
         }
 
         // CR 602.5c — a permanent whose *computed* keyword set carries
