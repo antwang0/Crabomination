@@ -101,6 +101,21 @@ a lost race — the loser usually holds something the winner does not.
    before any applies is **not** behaviour-preserving — the tax taps the
    lands a tap-another cost then looks for — so what is left is a CR 601.2h
    simultaneity question to price, not a deletion.
+1f. **The actor is FLAT across this pass, and the base had moved — read
+   PERF's "THE ACTOR RE-READ".** Same workload as the eightieth tip's
+   profile, play byte-identical (32,402 `next_action`, 1,102
+   `pick_attacks_scored`): recorded `a4b24308` 4,228,661,490 -> `be4a9987`
+   **4,236,954,968 (+0.196 %)** -> `a828b393` **4,235,372,210 (-0.037 % vs
+   base)**. Reading it against the recorded row instead of the real base
+   would have reported a 0.16 % regression that does not exist. **A recorded
+   total is a measurement of a commit, not of a branch — re-measure.** The
+   row split is in the entry, and its finding is that **the attack-side and
+   block-side walker unifications land on opposite sides here**: the attack
+   one is a net win on the actor and on both ladder pools, the block one is a
+   ladder win and ~+6.9 M on the actor, whose sealed boards are wider than
+   `fixed`'s. Fifty-third pass's ranking rule, reappearing on the ML
+   workload.
+
 2. **Encoder is mined out** — passes 77-80, `encode_state` -49.4 %, actor
    -6.1 %, three refutations in PERF bounding what is left. A new lead there
    needs a fresh profile, not a list.

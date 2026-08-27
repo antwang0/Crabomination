@@ -6295,6 +6295,58 @@ settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b
 gang --games 6 --seed 1 --decks fixed`.
 
+### THE ACTOR RE-READ at the eighty-first pass — and the base had moved
+
+The eightieth tip's actor profile is the block below. Re-running the same
+workload after the eighty-first pass's first half looked like a **+0.159 %
+regression** against its recorded total — and it is not, because the recorded
+total is not this pass's base. `be4a9987` (the previous pass's last commit,
+the CR 509.1d block tax) landed between them and moved the actor on its own.
+
+```text
+CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60 --steps 1 --seed 7
+profiling-fast --no-default-features, callgrind. Play byte-identical across
+all three: 32,402 `next_action`, 1,102 `pick_attacks_scored`, 6,386
+`encode_state`, 6,895 `main_phase_action_with`.
+
+  a4b24308 (recorded, eightieth tip)   4,228,661,490
+  be4a9987 (this pass's real base)     4,236,954,968     +0.196 %
+  a828b393 (eighty-first, first half)  4,235,372,210     -0.037 % vs base
+```
+
+**So the pass is flat on the actor and the queue's rule paid for itself
+again**: "re-measure the base if any commit landed since the recorded row"
+(eightieth pass) is the difference between reporting a 0.16 % regression and
+reporting the truth. **A recorded total is a measurement of a commit, not of
+a branch.**
+
+Row-level, `be4a9987` -> `a828b393`, and it splits cleanly by author:
+
+```text
+  -7,099,670  declare_attackers_banded      \  the CR 508.1a walker unification:
+  +2,466,577  attacker_self_block           /   net -4.6 M
+  -5,795,203  bot_can_block                     `legal_blockers`, net -5.8 M
+  -7,352,274  computed_permanent                both of those, plus `Printed`
+
+  +12,540,432  blocker_self_block           \  the CR 509.1a/b blocker walker:
+  +10,111,869  blocker_pair_block            |  net +6.9 M, and its ladder rows
+   -7,620,697  declare_blockers              |  are wins — see "which pool"
+   -5,431,781  blocker_can_block_attacker_pair|
+   -2,678,499  blocker_side_gates_allow_block/
+   +6,233,130  board_keyword_in_scope
+
+  -10,730,478  can_afford_in_state_with     \  (-53)'s close: the two `*_over`
+   +7,801,660  cost_reduction_for_spell_full_over|  helpers stopped inlining,
+   +3,442,781  extra_cost_for_spell_over    /   net ~+0.5 M, i.e. attribution
+```
+
+**The two walker unifications land on opposite sides on this workload**, and
+neither is a mistake: the attack one is a net win on the actor *and* on both
+ladder pools, the block one is a win on the ladder and a small cost here. The
+actor's pools are sealed decks and its blocker boards are wider than
+`fixed`'s, which is the fifty-third pass's ranking rule (**ask which pool the
+change lives on**) reappearing on the ML workload rather than the bench.
+
 ### THE ACTOR, at the eightieth tip — the ML workload, profiled at last
 
 NEXT has said for four passes that this file describes `bot_ladder` only.
