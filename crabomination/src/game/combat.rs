@@ -1880,7 +1880,7 @@ impl GameState {
         // block more (`CanBlockAdditional` / `CanBlockAnyNumber`); count the
         // merged set (already-declared blocks plus this batch) against the
         // allowance, and reject a repeat of the same pair.
-        let mut batch_blocks: crate::fxhash::HashMap<CardId, Vec<CardId>> =
+        let mut batch_blocks: crate::fxhash::HashMap<CardId, SmallVec<[CardId; 4]>> =
             crate::fxhash::HashMap::default();
         // CR 509.1b — Silent Arbiter: "No more than N creatures can block each
         // combat." Count distinct blockers across already-declared blocks and
@@ -2293,7 +2293,7 @@ impl GameState {
                 ids.push(a);
             }
         }
-        let computed: Vec<(CardId, Vec<Keyword>)> = self.with_frozen_layers(|g| {
+        let computed: SmallVec<[(CardId, Vec<Keyword>); 8]> = self.with_frozen_layers(|g| {
             ids.iter()
                 .map(|&id| {
                     let kws =
@@ -2400,7 +2400,7 @@ impl GameState {
         // CR 509.3g — emit `AttackerWentUnblocked` for each attacker
         // with no blockers assigned. Trigger source is the unblocked
         // attacker; consumers can read it via `Selector::TriggerSource`.
-        let mut frenzy_deltas: Vec<(CardId, i32)> = Vec::new();
+        let mut frenzy_deltas: SmallVec<[(CardId, i32); 8]> = SmallVec::new();
         // One gather for the whole sweep. `computed_permanent` is `&self` and
         // this loop runs at depth 0, so unfrozen it rebuilds the full effect
         // set once per unblocked attacker to read one keyword.
