@@ -1917,7 +1917,100 @@ mod tests {
     /// passed alone and failed in the same suite. Serialising the tests
     /// that actually train restores determinism; the fix is not a looser
     /// threshold, which only hides the nondeterminism one run at a time.
+    ///
+    /// **It is not the whole cause, and under `nextest` it is not any of it**:
+    /// nextest runs every test in its own process, so this mutex is never
+    /// contended there. What is left is [`reseed_params`], below.
     static TRAIN_SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Replace every trained parameter with a deterministic draw from `seed`.
+    ///
+    /// candle's CPU backend draws initial parameters from `rand::rng()` —
+    /// entropy, per process — and its `Device::set_seed` *bails* on CPU, so a
+    /// trainer built here starts from weights no test chose. A threshold on
+    /// what it then learns is one coin flip per run:
+    /// `policy_head_learns_to_rank_candidates` failed once in a full-suite run
+    /// and passed alone, under load, and in every isolated repeat afterwards.
+    /// The whole `*_learns_*` family is exposed the same way, so this is the
+    /// class fix, not that one test's.
+    ///
+    /// Kaiming-normal weights (`sqrt(2 / fan_in)`, candle's own default for
+    /// `linear`) and zero biases. Deriving the scale from the *shape* rather
+    /// than from the entropy values it is replacing is the whole point: a
+    /// sample standard deviation is itself a random variable — ±18 % on a
+    /// 16-element head — so measuring it would have left most of the coin
+    /// flip in place. A parameter candle initialized to a constant
+    /// (layer-norm scale and shift) is already deterministic and is left
+    /// alone. Names are sorted so a `HashMap`'s walk order cannot reach the
+    /// draw.
+    fn reseed_params(varmap: &VarMap, dev: &Device, seed: u64) {
+        let mut rng = StdRng::seed_from_u64(seed);
+        let data = varmap.data().lock().unwrap();
+        let mut names: Vec<&String> = data.keys().collect();
+        names.sort();
+        for name in names {
+            let var = &data[name];
+            let dims = var.dims().to_vec();
+            let n: usize = dims.iter().product();
+            // `Init::Const` is already deterministic — layer-norm scale
+            // (ones) and shift (zeros) — and a drawn value is exactly 0.0 or
+            // exactly 1.0 with probability zero, so this cannot mistake one
+            // for the other. A *spread* test cannot do this job: a
+            // single-element head bias has no spread and is still a draw.
+            let vals: Vec<f32> = var.as_tensor().flatten_all().unwrap().to_vec1().unwrap();
+            if vals.iter().all(|v| *v == 0.0) || vals.iter().all(|v| *v == 1.0) {
+                continue;
+            }
+            let sd = match dims.len() {
+                0 | 1 => 0.0,
+                _ => (2.0f32 / dims[1] as f32).sqrt(),
+            };
+            let fresh: Vec<f32> = (0..n)
+                .map(|_| {
+                    if sd == 0.0 {
+                        return 0.0;
+                    }
+                    // Box-Muller off the seeded uniform stream; `rand_distr`
+                    // is not a dependency here and one normal draw does not
+                    // earn it.
+                    let u1: f32 = rng.random_range(1e-7f32..1.0);
+                    let u2: f32 = rng.random_range(0.0f32..1.0);
+                    sd * (-2.0 * u1.ln()).sqrt() * (std::f32::consts::TAU * u2).cos()
+                })
+                .collect();
+            var.set(&Tensor::from_vec(fresh, dims, dev).unwrap()).unwrap();
+        }
+    }
+
+    /// The property the seven `*_learns_*` tests rely on: same seed, same
+    /// weights, whatever candle's entropy handed each trainer. Without it
+    /// those tests are thresholds on a coin flip — see [`reseed_params`].
+    #[test]
+    fn reseeding_makes_two_trainers_identical() {
+        let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let cfg = small_policy_cfg();
+        let dump = |t: &Trainer| -> Vec<(String, Vec<f32>)> {
+            let data = t.varmap.data().lock().unwrap();
+            let mut names: Vec<&String> = data.keys().collect();
+            names.sort();
+            names
+                .iter()
+                .map(|n| {
+                    let v: Vec<f32> =
+                        data[*n].as_tensor().flatten_all().unwrap().to_vec1().unwrap();
+                    ((*n).clone(), v)
+                })
+                .collect()
+        };
+        let a = Trainer::new(&cfg, 3e-3).expect("trainer a");
+        let b = Trainer::new(&cfg, 3e-3).expect("trainer b");
+        assert_ne!(dump(&a), dump(&b), "candle stopped drawing init from entropy");
+        reseed_params(&a.varmap, &a.dev, 47);
+        reseed_params(&b.varmap, &b.dev, 47);
+        assert_eq!(dump(&a), dump(&b), "reseeded trainers still differ");
+        reseed_params(&b.varmap, &b.dev, 48);
+        assert_ne!(dump(&a), dump(&b), "a different seed drew the same weights");
+    }
 
     fn small_cfg() -> NetConfig {
         NetConfig {
@@ -2237,6 +2330,7 @@ mod tests {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_policy_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 47);
         let mut rng = StdRng::seed_from_u64(47);
 
         let make = |rng: &mut StdRng| -> DecisionRow {
@@ -2399,6 +2493,7 @@ mod tests {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = NetConfig { opp: true, ..small_cfg() };
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 73);
         let mut rng = StdRng::seed_from_u64(73);
         let rows: Vec<TrainRow> = (0..32)
             .map(|_| TrainRow {
@@ -2628,6 +2723,7 @@ mod tests {
             MuonParams { lr: 0.02, momentum: 0.95, adamw_lr: 3e-3 },
         )
         .expect("muon trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(11);
         let rows: Vec<TrainRow> = (0..512)
             .map(|_| {
@@ -2802,6 +2898,7 @@ mod tests {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 31);
         let mut rng = StdRng::seed_from_u64(31);
 
         // The rule: prefer the successor with the larger global[0]. Each
@@ -3030,6 +3127,7 @@ mod tests {
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
         trainer.set_bce(true);
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(11);
         let rows: Vec<TrainRow> = (0..512)
             .map(|_| {
@@ -3067,6 +3165,7 @@ mod tests {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = small_cfg();
         let mut trainer = Trainer::new(&cfg, 3e-3).expect("trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 11);
         let mut rng = StdRng::seed_from_u64(11);
         let rows: Vec<TrainRow> = (0..512)
             .map(|_| {
@@ -3246,6 +3345,7 @@ mod tests {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let cfg = DeckNetConfig { vocab: 20, emb_dim: 8, h1: 32, h2: 16 };
         let mut trainer = DeckTrainer::new(&cfg, 3e-3).expect("deck trainer");
+        reseed_params(&trainer.varmap, &trainer.dev, 29);
         let mut rng = StdRng::seed_from_u64(29);
         let rows: Vec<DeckRow> = (0..512)
             .map(|_| {
