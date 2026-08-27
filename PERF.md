@@ -765,6 +765,29 @@ nor the grant walk has anything to do on a board with no keyword grants and
 no `GrantTriggeredAbility` static. **A layers-or-grants change measured only
 on `--bench` reads as noise.**
 
+**THREAD SCALING IS LINEAR TO THE CORE COUNT, MEASURED AT LAST.** The
+candidate list has carried "games/sec at 1, half, full actor counts — find
+contention if sublinear" since it was seeded and nobody had run it. Four
+cores, `--a gang --b gang --games 480 --seed 20250808`, `release-fast`
+(mimalloc), 1,920 games a row, `--decks fixed`:
+
+```text
+  threads   wall            games/s   per thread   speedup
+     1      20.1 / 19.8 / 19.1 s        95.5         95.5     1.00x
+     2       9.7 s                     197.9         99.0     2.07x
+     3       6.8 s                     282.4         94.1     2.96x
+     4       5.3 / 5.2 / 5.4 s         362.3         90.6     3.79x
+```
+
+**3.5-3.9x on four cores across three repeats of the endpoints — 92 % of
+linear, and the 2-thread row is above 1.00 per thread, so what is left is
+cache and turbo, not contention.** Use `--games 120` or more or the queue
+starves the workers and the flattening is the harness, not the program (see
+"How to measure"). This says nothing about `selfplay_train` at 24 actors,
+where the allocator row in PERF's mimalloc entry already shows the RSS cost
+growing — but at the thread counts this box can run, **there is no contention
+to find**, and the entry can stop asking.
+
 **⚠ THE COMMITTED `--bench` INVARIANT MOVED AT `50a075fa` AND THAT COMMIT DID
 NOT RECORD IT.** `decisions` **195,616 -> 195,528**; `turns_per_game` 27.44,
 stalls 0 and `determinism ok` are unchanged. Measured here: 195,616 across
