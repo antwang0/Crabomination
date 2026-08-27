@@ -33,11 +33,15 @@ before discarding a lost race.
 lines at the eighty-second pass and 145 at the eighty-third by restating what
 PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-62)** the gather's
-   ungated graveyard walk (priced at `fixed` -0.44 %, wants a zone newtype),
-   (-60), (-61), (-51)(a)/(b), (-59). **Refuted with numbers:** (-18) (-56)
-   (-56b) (-57) (-58). (-13)/(-54b) are **closed** — the sim's half was taken
-   this pass, the live game's half is a rules argument and stays.
+1. **Perf queue** — PERF "Perf candidates", ranked: (-60), (-61), (-51)(a),
+   (-59). **Refuted with numbers:** (-18) (-56) (-56b) (-57) (-58).
+   **Closed this pass:** (-13)/(-54b) (the sim's half taken, the live game's
+   half is a rules argument and stays), (-62) (the `zone::Graveyard` memo),
+   (-51)(b) (rewritten twice by its own census). **The list is thin — the
+   next perf run re-profiles before it ranks.** The attack search is still
+   46.3 % of the actor, and the whole-program line profile at PERF's "Profile
+   of record" says the simulator has no hot line (largest 0.82 %), so the
+   next find will be a *count*, not a row.
 1a. **The device that unlocked the largest row in fifteen passes was a
    census, not a profile.** `CRAB_SIM_REJECTS` read zero long enough that a
    rollback nobody could prove unnecessary became provably unused. **Read the
@@ -73,8 +77,9 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    next card sweep needs a different filter.**
 5. **Robustness gate, one RUSTFLAG** — `-C debug-assertions=yes` on the
    `overflow` build, recipe in `Cargo.toml`'s `[profile.overflow]` comment.
-   **71,760 games clean at this tip** (PERF Baseline). Run it after anything
-   that adds an invariant or touches the layer or simulation path.
+   **71,760 games clean this pass**, the largest sweep the branch has run.
+   Run it after anything that adds an invariant or touches the layer or
+   simulation path. `--vs` reads the null on all three pools (PERF Baseline).
 6. **Tip state and container hazards** — PERF "Baseline" / "How to measure".
    Do not copy either back here.
 7. **ML** — deck judge `nets/deck-champion.safetensors`, 60.3 % pooled

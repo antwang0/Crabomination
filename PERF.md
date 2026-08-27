@@ -822,7 +822,21 @@ profiling-fast --no-default-features.
     simulation stops taking `perform_action`'s checkpoint.  Base 5f71b77e.
       fixed  1,166,252,055 -> 1,153,737,518   -1.073 %
       cube   3,542,580,434 -> 3,516,749,547   -0.729 %
+
+(3) The same gate hoist as (1) on the third site — the SBA death sweep's
+    `compute_battlefield_creatures`.  Base d919b606.
+      fixed  1,154,148,607 -> 1,154,012,056   -0.012 %
+      cube   3,518,102,194 -> 3,516,335,058   -0.050 %
 ```
+
+**(2) is gated by `--vs`, not only by `--bench`, because `--bench` is one
+pool and the rejection it changes was last seen on another.** Tip against the
+`29cfaaf3` base, `release-fast`, `--games 200 --threads 3 --seed 11`: the
+**null** on all three pools — `fixed` 400 pairs, `cube` 800, `sos` 500,
+**50.0 % with every pair split and no engine-disagreement fault**, against a
+base-vs-base control that reads the same. That is the strongest available
+statement that the two binaries play byte-identical games, and it covers
+`cube`, where the last non-zero `CRAB_SIM_REJECTS` reading lived.
 
 **(2) is the largest single row on this branch in fifteen passes, and none of
 it is cleverness — it is the census.** (-54b) proved the checkpoint could not
@@ -7350,10 +7364,19 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-62) THE LAYER GATHER WALKS EVERY CARD IN EVERY GRAVEYARD ON EVERY
-RECOMPUTE, UNGATED, AND IT IS WORTH `fixed` -0.440 % / `cube` -0.251 %.
-PRICED BY DELETION AT THE EIGHTY-THIRD PASS; NOT TAKEN, AND THE REASON IS
-THE GATE, NOT THE NUMBER.**
+**(-62) TAKEN, SAME PASS, BY THE SHAPE THIS ENTRY NAMED.** `crate::zone::
+Graveyard` wraps the CoW card list with the memo; `fixed` **-0.499 %**,
+`cube` **-0.267 %**, and it caught `keyword_grant_in_scope`'s off-battlefield
+tail as well, which this entry had not noticed was the same walk. See
+Baseline. **The memo captures 70 % / 63 % of the deletion ceiling**; the rest
+is the miss path, i.e. a write clearing the memo before the next question.
+The entry stays below because the four-shape analysis is the reusable part —
+in particular the one that says *why* the newtype and not the flag.
+
+**(-62, as priced) THE LAYER GATHER WALKS EVERY CARD IN EVERY GRAVEYARD ON
+EVERY RECOMPUTE, UNGATED, AND IT IS WORTH `fixed` -0.440 % / `cube`
+-0.251 %. PRICED BY DELETION AT THE EIGHTY-THIRD PASS; THE REASON IT WAS NOT
+TAKEN IN THE SAME BREATH IS THE GATE, NOT THE NUMBER.**
 
 `gather_continuous_effects_inner`'s tail (`game/mod.rs`, the
 `GraveyardAnthem` pass — the Incarnation cycle's "as long as this card is in
