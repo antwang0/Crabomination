@@ -702,6 +702,34 @@ build.
 
 ## Baseline
 
+**Eightieth pass, a measurement of the road not taken on CR 508.1d.** The
+must-attack fix that shipped is `7384e79b`'s, from a concurrent session; an
+independent one built here was discarded. One number from it is worth
+keeping, because it says where a presence gate pays and where it does not.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features. Play identical on `fixed` both sides
+(--bench byte-identical, 195,616 / 27.44), so this is cost alone.
+
+  the discarded fix, walking `raw_attackers`
+  inside one `with_frozen_layers`                fixed +0.090 %  cube +0.087 %
+  the same walk behind a hoisted
+  `keyword_grant_in_scope` presence gate         fixed +0.275 %  cube +0.172 %
+```
+
+**The gate cost three times what it saved.** It is a whole battlefield walk
+per combat, and what it buys is skipping `computed_permanent` reads that are
+*inside a freeze* — sharing one gather the surrounding code already pays for.
+**A presence gate prices against an ungated read, so its value depends on
+what that read costs, and a frozen read is nearly free.** Note that
+`7384e79b` uses a gate (`attack_requirement_present`) and is right to: its
+repair loop walks the **whole battlefield** with **unfrozen**
+`computed_permanent` calls, which is the expensive read the device exists
+for. Same device, opposite verdicts, and the difference is the callee, not
+the gate. This is the fourth reading of the shape — see the `has_atype` /
+`has_stype` gates (pass 56, +0.123 % cube) in TODO's do-not-rebuild list.
+
 **Eightieth pass. Base `8d21e898` (= the seventy-ninth tip) vs tip.** One
 commit, the fifth in the observation encoder and the last item NEXT named
 there: `Vocab::index_of` hashes a card name per encoded object, and a card's

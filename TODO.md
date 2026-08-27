@@ -31,6 +31,18 @@ not a lock:** fetch before starting a candidate, and **push the code commit
 before the tracker prose** — passes 68/69 and 71/72 each duplicated a whole
 commit that a fetch would have shown.
 
+**A fetch before starting is NOT enough, and pass 80 proved it: 4d was
+duplicated end-to-end** — diagnosed, fixed, tested and measured on both
+sides — because the other session started it *after* that fetch and landed
+first (`7384e79b`). A fetch only rules out work already pushed. **The
+collision is structural: this file ranks the queue and marks one item "NEXT
+RUN'S BEST BUG", so two sessions independently pick the same one.** So:
+**take the marked item only if you can push something within the hour, and
+otherwise take from the middle of the queue** — and when you lose the race,
+diff the two before discarding yours, because the loser usually holds
+something the winner does not (here: the test covering the *consumer*, which
+went in on top as `6c9746ec`, and a measurement of the alternative shape).
+
 1. **Perf queue = PERF's candidates.** (-54) is closed (see 4a); the top two
    are (-53) the cost-static bitmask (0.52 %, costs ~30 variants of
    enumeration) and (-51)(a) the 7,665-Ir land tap.
