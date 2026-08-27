@@ -995,6 +995,13 @@ clippy --workspace --exclude crabomination_client --all-targets   clean
 golden traces  unmoved (they run inside the suite above)
 seeded cube smoke  4,000 pairings, all terminate; bot_rejection_count 1 in
                    4,000 and it is `build_cube_state_seeded(3637)`, open
+--bench   195,528 decisions / 27.44 turns / 0 stalls (cap 0 / stuck 0 /
+          draw 0) / determinism ok / thread_determinism ok (3 vs 1)
+          — **byte-identical to the committed invariant**
+          304.5-314.6 games/s, peak_rss_mib 29.8-30.0, host_calib_ms 67-74
+          (`release-fast`, mimalloc, 2.10 GHz Xeon, 3 threads — a different
+          profile and a different box from the 242.9 recorded below, so the
+          rate is a fingerprint of this container and not comparable)
 whole-program Ir at `49748e1f`, same configuration as the rows above
   fixed  1,126,243,545        cube  3,431,708,160
 ```
