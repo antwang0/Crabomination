@@ -7498,7 +7498,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
             // CR 508.1d — must-attack creatures (Juggernaut,
             // goaded) have no choice; always include them so
             // the engine's requirement check accepts the batch.
-            if c.has_keyword(&Keyword::MustAttack) || !c.goaded_by.is_empty() {
+            if must_attack(c) {
                 return true;
             }
             // Always attack on lethal swings — the bot
@@ -7748,7 +7748,98 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
             target: AttackTarget::Player(target_player),
         });
     }
+    // Last, because the tax depends on what each attacker is aimed at.
+    trim_attacks_to_payable_tax(state, seat, &mut attacks);
     attacks
+}
+
+/// CR 508.1d — a creature the rules oblige to attack. The picker force-
+/// includes these and the tax trim refuses to drop them; both read the same
+/// predicate so they cannot disagree about which creatures are exempt.
+fn must_attack(c: &crate::card::CardInstance) -> bool {
+    c.has_keyword(&crate::card::Keyword::MustAttack) || !c.goaded_by.is_empty()
+}
+
+/// CR 508.1g — drop attackers until the declaration's tax is payable.
+///
+/// The tax is charged per attacker and the engine rejects the declaration
+/// **whole** when the auto-tap can't cover it, so an unaffordable batch
+/// costs the bot its entire combat rather than one attacker. Against a
+/// Propaganda that meant it never attacked at all: 718 of the 740 attack
+/// rejections the `CRAB_SIM_REJECTS` census counted on `cube --seed 11` are
+/// this one gate, and in a simulation the rollback fallback then passes
+/// priority, so the *modelled* opponent declared nothing either.
+///
+/// [`GameState::attack_tax_for`] is the engine's own walker, so the two
+/// can't disagree about the amount. What the picker supplies is the budget,
+/// and `available_mana` is deliberately optimistic — so this drops the
+/// batches that are clearly unaffordable and leaves the engine to reject
+/// what is left, which is the safe direction: an over-tight trim would
+/// silently decline legal attacks.
+///
+/// Untaxed attackers are never dropped, and neither is a must-attack one —
+/// CR 508.1d would reject the batch for its absence instead.
+fn trim_attacks_to_payable_tax(state: &GameState, seat: usize, attacks: &mut Vec<Attack>) {
+    if attacks.is_empty() {
+        return;
+    }
+    let statics = crate::game::combat::attack_static_scan(state);
+    let keyword_tax = |id: CardId| {
+        state
+            .computed_permanent(id)
+            .map(|cp| state.attack_block_keyword_tax(id, &cp.keywords, true))
+            .unwrap_or(0)
+    };
+    let total = state.attack_tax_for(attacks, statics, keyword_tax);
+    if total == 0 {
+        return;
+    }
+    // `available_mana` counts the floating pool and every untapped source.
+    let budget = available_mana(state, seat).total;
+    if total <= budget {
+        return;
+    }
+    // Per-attacker taxes, reached only on a taxed board the bot can't pay
+    // for outright. The tax is additive per attacker with no cross terms
+    // (see `attack_tax_for`), so the parts sum to the whole.
+    let mut spend = 0u32;
+    let mut taxed: Vec<(usize, u32, i32)> = Vec::new();
+    for (i, a) in attacks.iter().enumerate() {
+        let t = state.attack_tax_for(std::slice::from_ref(a), statics, keyword_tax);
+        if t == 0 {
+            continue;
+        }
+        if state.battlefield_find(a.attacker).is_some_and(must_attack) {
+            spend += t;
+            continue;
+        }
+        taxed.push((i, t, attacker_damage_value(state, a.attacker)));
+    }
+    // Damage per mana, descending: the trim keeps the swings that pay for
+    // themselves rather than whichever came first in board order.
+    taxed.sort_by(|x, y| (y.2 as i64 * x.1 as i64).cmp(&(x.2 as i64 * y.1 as i64)));
+    let mut keep = vec![true; attacks.len()];
+    for (i, t, _) in taxed {
+        match spend.checked_add(t).filter(|s| *s <= budget) {
+            Some(s) => spend = s,
+            None => keep[i] = false,
+        }
+    }
+    let mut i = 0;
+    attacks.retain(|_| {
+        let k = keep[i];
+        i += 1;
+        k
+    });
+    // CR 508.0 — the trim must not manufacture the rejection the picker
+    // already guards against one step up: a lone `CantAttackAlone` attacker.
+    if attacks.len() == 1
+        && state
+            .computed_permanent(attacks[0].attacker)
+            .is_some_and(|cp| cp.keywords.has_kw(&crate::card::Keyword::CantAttackAlone))
+    {
+        attacks.clear();
+    }
 }
 
 /// The attack declaration, chosen by search rather than by rule.
@@ -13458,6 +13549,58 @@ mod tests {
         );
         let mut g2 = g.clone();
         g2.declare_attackers(attacks).expect("the plan is legal");
+    }
+
+    /// CR 508.1g — the attack tax is charged per attacker and the engine
+    /// rejects the declaration *whole*, so a planner that ignores it loses
+    /// its whole combat, not one attacker. PERF (-55): 718 of the 740 attack
+    /// rejections on `cube --seed 11` were this gate, and against a
+    /// Propaganda the bot never attacked at all.
+    #[test]
+    fn bot_attack_plan_trims_to_the_payable_attack_tax() {
+        let setup = |lands: usize| {
+            let mut g = two_player_game();
+            g.add_card_to_battlefield(1, catalog::propaganda());
+            for _ in 0..2 {
+                let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+                g.clear_sickness(c);
+            }
+            for _ in 0..lands {
+                g.add_card_to_battlefield(0, catalog::plains());
+            }
+            g.step = TurnStep::DeclareAttackers;
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g
+        };
+        // Propaganda is {2} per attacker, so the plan is the budget / 2.
+        for (lands, want) in [(0usize, 0usize), (2, 1), (4, 2)] {
+            let g = setup(lands);
+            let attacks = pick_attacks(&g, 0);
+            assert_eq!(
+                attacks.len(),
+                want,
+                "{lands} untapped lands fund {want} attackers: {attacks:?}",
+            );
+            let mut g2 = g.clone();
+            g2.declare_attackers(attacks).expect("the plan the picker made is payable");
+        }
+    }
+
+    /// The same trim must not fire when there is no tax: `available_mana` is
+    /// deliberately optimistic, and a trim that ran on an untaxed board
+    /// would decline legal attacks for nothing.
+    #[test]
+    fn bot_attack_plan_is_untouched_without_a_tax() {
+        let mut g = two_player_game();
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        assert_eq!(pick_attacks(&g, 0).len(), 2, "no tax, no trim");
     }
 
     /// CR 509.1b — the block planner honours the same cap.
