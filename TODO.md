@@ -33,15 +33,15 @@ before discarding a lost race.
 lines at the eighty-second pass and 145 at the eighty-third by restating what
 PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: (-60), (-61), (-51)(a),
-   (-59). **Refuted with numbers:** (-18) (-56) (-56b) (-57) (-58).
-   **Closed this pass:** (-13)/(-54b) (the sim's half taken, the live game's
-   half is a rules argument and stays), (-62) (the `zone::Graveyard` memo),
-   (-51)(b) (rewritten twice by its own census). **The list is thin — the
-   next perf run re-profiles before it ranks.** The attack search is still
-   46.3 % of the actor, and the whole-program line profile at PERF's "Profile
-   of record" says the simulator has no hot line (largest 0.82 %), so the
-   next find will be a *count*, not a row.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-51)(b)** (open, and
+   1b below says what it is now asking for), (-60), (-61), (-51)(a), (-59).
+   **Refuted with numbers:** (-18) (-56) (-56b) (-57) (-58). **Closed this
+   pass:** (-13)/(-54b) (the sim's half taken, the live game's half is a
+   rules argument and stays) and (-62) (the `zone::Graveyard` memo). **The
+   list is thin — the next perf run re-profiles before it ranks.** The attack
+   search is still 46.3 % of the actor, and the whole-program line profile at
+   PERF's "Profile of record" says the simulator has **no hot line** (largest
+   0.82 %), so the next find will be a *count*, not a row.
 1a. **The device that unlocked the largest row in fifteen passes was a
    census, not a profile.** `CRAB_SIM_REJECTS` read zero long enough that a
    rollback nobody could prove unnecessary became provably unused. **Read the
@@ -75,6 +75,13 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    `CRAB_SIM_REJECTS` 0 in 129 configurations. The dropped-"may" tail
    (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent: **the
    next card sweep needs a different filter.**
+4a. **A suite gate can be a coin flip and still be green** (PERF's Log, pass
+   83 item 3). candle's CPU backend seeds every parameter from entropy and
+   `set_seed` bails there, so seven `crabomination_ml` convergence thresholds
+   were one flip per run; `reseed_params` fixes the class and
+   `reseeding_makes_two_trainers_identical` pins it. **A determinism fix
+   needs a test that asserts determinism, not a suite that stops flaking** —
+   the first two attempts here passed all seven tests and were both wrong.
 5. **Robustness gate, one RUSTFLAG** — `-C debug-assertions=yes` on the
    `overflow` build, recipe in `Cargo.toml`'s `[profile.overflow]` comment.
    **71,760 games clean this pass**, the largest sweep the branch has run.
