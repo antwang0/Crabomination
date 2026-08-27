@@ -76,7 +76,6 @@ its numbers live; put new numbers *there* and a pointer here.
    combat, both sides**; what is left is `evaluate_requirement_static` vs
    `evaluate_requirement_on_card`. P2 has no open correctness entries.
    `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, dead modes
-<<<<<<< Updated upstream
    suite-gated. **(-55) is down to 6**, all of them one site — the
    `AllMustBlock` loop on `cube` s15 — across `cube` 1-24+42 at `--games 20`
    and four other pools; the attack half is **0** everywhere. The tax's
@@ -90,13 +89,6 @@ its numbers live; put new numbers *there* and a pointer here.
    either. The 6 want a probe naming the *pass that built the plan*: the site
    tag names the clause that rejected it, and two plausible fixes measured
    exactly inert before a hand-built probe found the real cause.
-=======
-   suite-gated. (-55)'s residue: the attack half's `combat.rs:1114` — the
-   tax's `available_mana` optimism, which is (-51)(b) and not a missing rule —
-   and 6 block rejections on `cube` s15. **Generalisable, and it found two
-   bugs:** a "must" and a "can't" written as independent checks can be jointly
-   unsatisfiable, leaving a seat no legal declaration at all; only the census
-   finds it.
 5a. **The dropped-"may" tail has one filter left worth running, and it is
    spent.** `audit_dropped_may.py`'s 341 findings were triaged twice by verb;
    the third cut is **"you may X. If you do, Y" in the *full* oracle** — 46 of
@@ -112,7 +104,6 @@ its numbers live; put new numbers *there* and a pointer here.
    `MayExileSelfReturnNextUpkeepHaste`). Write-up in INCOMPLETE_CARDS.
    **Nothing is left in that tail; the next card sweep needs a different
    filter.**
->>>>>>> Stashed changes
 5b. **The data-test sweep is finished and it buys no build time.**
    `find_data_tests.sh`'s last nineteen non-sacred candidates are deleted
    (199 lines); three of its twenty-three are false positives and one is
