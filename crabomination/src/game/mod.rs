@@ -2317,6 +2317,36 @@ pub mod pay_census {
     pub fn origin_snapshot() -> (u64, u64) {
         (BY_ORIGIN[0].load(Relaxed), BY_ORIGIN[1].load(Relaxed))
     }
+
+    /// `[calls, spend-as-any-colour or doubler, opaque source, land-type
+    /// rewrite]` — how often the bot's per-colour budget is computed, and how
+    /// often each of the three facts that make it unusable is in scope.
+    ///
+    /// The budget is `[u32::MAX; 5]` when any of them fires, which switches
+    /// off the singleton Hall test in `can_afford_from` and lets a cost the
+    /// board cannot pay reach a full `mana_source_table` build. A widening
+    /// that is rare is a non-issue; one that is on most of the time means the
+    /// pre-filter is not running at all on that pool, which is a different
+    /// (and much cheaper) thing to fix than the estimate.
+    pub static BUDGET: [AtomicU64; 4] =
+        [AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0)];
+
+    /// Record one per-colour budget computation and which widenings fired.
+    pub fn record_budget(relax: bool, opaque: bool, land_type: bool) {
+        if level() == 0 {
+            return;
+        }
+        BUDGET[0].fetch_add(1, Relaxed);
+        for (i, hit) in [relax, opaque, land_type].into_iter().enumerate() {
+            if hit {
+                BUDGET[i + 1].fetch_add(1, Relaxed);
+            }
+        }
+    }
+
+    pub fn budget_snapshot() -> [u64; 4] {
+        std::array::from_fn(|i| BUDGET[i].load(Relaxed))
+    }
 }
 
 /// Field access on the cold group reads like a `GameState` field.

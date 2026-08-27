@@ -1605,6 +1605,14 @@ fn main() {
             .map(|(c, n)| format!("{c} {n}"))
             .collect();
         let (probe, committed) = crabomination::game::pay_census::origin_snapshot();
+        let b = crabomination::game::pay_census::budget_snapshot();
+        println!(
+            "  pay_budget {} calls — widened {} ({:.1} %): relax {}, opaque {}, land-type {}",
+            b[0],
+            b[1] + b[2] + b[3],
+            if b[0] == 0 { 0.0 } else { 100.0 * (b[1] + b[2] + b[3]) as f64 / b[0] as f64 },
+            b[1], b[2], b[3],
+        );
         println!(
             "  pay_fails {total}/{attempts} ({:.2} %) — {} | probe {probe}, committed {committed}",
             if attempts == 0 { 0.0 } else { 100.0 * total as f64 / attempts as f64 },

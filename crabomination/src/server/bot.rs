@@ -10120,7 +10120,9 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
     // through `scan_land_type_rewrites`; `granted_abilities_of` alone does
     // not, so this estimate sees a Mountain where auto-tap sees all five
     // colours. `false` from the gate is authoritative.
-    if fused_relax || opaque_source || state.land_type_change_in_scope() {
+    let land_type = state.land_type_change_in_scope();
+    crate::game::pay_census::record_budget(fused_relax, opaque_source, land_type);
+    if fused_relax || opaque_source || land_type {
         // `u32::MAX`, not `total`: widening to `total` is only as good as
         // `total`, and `total` deliberately under-counts the same sources
         // that force the widening. Two Treasures and nothing else read
