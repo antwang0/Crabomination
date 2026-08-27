@@ -185,14 +185,27 @@ a lost race — the loser usually holds something the winner does not.
    fixed 200/200, cube 400/400, sos 250/250 pairs split. `overflow`, seeds
    11/12 over `all`/`cube`/`sealed` at 600 games/archetype: **44,400 games,
    0 capped, 0 stuck, 22 draws, no panic, no arithmetic overflow** (measured
-   at the eighty-first tip; nothing since touches arithmetic).
-7a. **⚠ `peak_rss_mib` moved and it is not the block walker.** 27.3-27.6 at
-   `60cfef4c`, **29.0-31.4** at `05015235`, on the same box in the same
-   minutes; the walker itself reads 27.4-29.5, i.e. its base's band. The
-   commits in between are the batch-gather caching ones. It is an allocator
-   reading and this file says so, but a 13 % step is at the top of that
-   caveat rather than inside it — **whoever owns those caches should confirm
-   the trade was intended.**
+   at the eighty-first tip). **Re-run at `27af76f4`**, which does touch
+   arithmetic-adjacent code (the CR 510.2 hoist): `overflow`, seeds 11/12/13
+   over `all` plus seed 11 over `cube`/`sealed`/`sos` at 300 games/archetype
+   — **22,800 games, 0 capped, 0 stuck, 4 draws, no panic, no arithmetic
+   overflow**; and `release-fast --decks all --games 400 --seed 11`, 6,800
+   games, 12 draws, all 3,394 pairs split.
+7a. **`peak_rss_mib`: the step does not reproduce at `27af76f4`, and three
+   runs is why.** The reading above (27.3-27.6 at `60cfef4c` -> 29.0-31.4 at
+   `05015235`) was one run a tip. Three `--bench` runs back to back at
+   `27af76f4` on a 2.10 GHz Xeon read **27.8 / 29.3 / 27.5** — one sample
+   lands in each of the two "bands", and an earlier run at `c1450677` read
+   29.5. **The spread is within-tip variance, not a step**, so nothing here
+   needs owning. The transferable bit is the one this file already says about
+   games/s and had not applied to RSS: **an allocator reading is a
+   distribution; take three before you call a difference.**
+7b. **Second host on the same day, for the wall-clock table:** 2.10 GHz Xeon,
+   `host_calib_ms` 65-71, **299.8 / 300.1 / 307.9 games/s** at `27af76f4`,
+   against the 2.80 GHz box's 170-175 at `host_calib_ms` 51-57. That is a
+   *faster* games/s at a *worse* calib on a *slower* nominal clock, which is
+   item 8's point made a third time: `host_calib_ms` fingerprints the host, it
+   does not scale between them.
 8. **Hazards.** ⚠ Wall-clock rows do not cross hosts — read `host_cpu` /
    `host_calib_ms` off the run before comparing any games/s in PERF; Ir is
    unaffected. **A third host, and it settles that `host_calib_ms` cannot be

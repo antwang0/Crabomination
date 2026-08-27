@@ -7167,13 +7167,38 @@ freeze scopes, so a scope-level memo (the `TypeGate` device, which has three
 slots and no keyword slot) would collapse repeats *within* a pair and not
 across them — the same wall (-58) hit.
 
-**What has not been tried:** the local shortcut. `activate_ability_inner`'s
-gates exist only to avoid `bf_cp!()`, its take-once computed-permanent read
-(actions.rs:13971) — and PERF's forty-seventh pass rule is that **a gate that
-stands in for a gather stops paying once the gather has run**. `bf_cp.is_some()`
-short-circuits the gate exactly, for free, and `layers_memoized()` is the same
-device one level up. It is small, but it is the only thing here that costs
-nothing to be wrong about.
+**And the largest single one of these gates is already a 4.5x trade — do not
+take it.** `apply_prevention_shields_with`'s 461,668 calls are one site: the
+**CR 702.64 Absorb gate** (movement.rs:496), which asks "can any permanent
+have `Absorb`" before reading the damaged permanent's computed view. It is
+**1,068 Ir a damage event, 13,594,100 Ir, 0.38 % of `cube`, and 58 % of the
+whole prevention funnel's cost** — and it exists to avoid an unfrozen
+`computed_permanent`, which is ~4,900 Ir. Four things were considered and all
+four are worse or unsound:
+
+* **Fold it into `prevent_static_scan`'s existing walk.** Same frequency (the
+  scan is per damage event too, inlined at movement.rs:220), and the per-card
+  cost is `card_can_grant_keyword` either way — the shared iteration is ~10 %
+  of it. Nothing.
+* **Hoist the scan to once per damage batch.** This is the (-58) shape: the
+  mask is a function of the whole state, a rider (New Way Forward) can resolve
+  mid-batch, and the audit that would make it safe is (-58)'s
+  `debug_assert!`-plus-`-C debug-assertions=yes` ladder run. Priceable, not
+  free.
+* **Memoize it in a freeze scope.** `apply_prevention_shields` runs *after*
+  `resolve_combat_damage_with_filter`'s per-pair scope closes — that scope
+  ends at the first `&mut self`, which is this call.
+* **Delete the gate.** Four and a half times worse.
+
+**What has not been tried:** the local shortcut, on the *other* caller.
+`activate_ability_inner`'s three gates exist only to avoid `bf_cp!()`, its
+take-once computed-permanent read (actions.rs:13971) — and PERF's forty-
+seventh pass rule is that **a gate that stands in for a gather stops paying
+once the gather has run**. `bf_cp.is_some()` short-circuits the gate exactly,
+for free, and `layers_memoized()` is the same device one level up. It is
+small — `bf_cp` is itself behind three presence gates and is usually still
+`None` by then — but it is the only thing here that costs nothing to be wrong
+about.
 
 **(-60) `trigger_grant_sources` WALKS EVERY STATIC ABILITY ON THE BOARD TO
 FIND A QUARTER OF A GRANT, 57,596 TIMES — 35,656,442 Ir OF SELF / 1.00 % OF
