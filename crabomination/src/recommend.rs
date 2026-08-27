@@ -463,6 +463,12 @@ enum Detail {
 
 struct MainDeck {
     main: Vec<CardFactory>,
+    /// Copies of each of the pool's distinct cards (`PoolScores::dup_group`'s
+    /// dense ids) that reached `main`. The copy cap builds it anyway, and it
+    /// *is* the main deck as a multiset — which is what the lattice dedups on,
+    /// so `lattice` uses it as the key rather than sorting a fresh
+    /// `Vec<CardFactory>` per shape (PERF (-63)).
+    counts: Vec<u8>,
     leftovers: Vec<CardFactory>,
     /// `(index in leftovers, colours it taps for)` per pool land, ascending.
     ///
@@ -616,7 +622,7 @@ fn suggest_main_deck_shape<R: Rng>(
         }
         leftovers.extend(off);
     }
-    MainDeck { main, leftovers, lands }
+    MainDeck { main, counts, leftovers, lands }
 }
 
 /// True when a card helps cast a multicolor deck's spells: it taps for
@@ -959,7 +965,7 @@ fn rank_shape<R: Rng>(
     // The pool and its shape-invariant per-card facts — see [`PoolScores`].
     scores: &PoolScores<'_>,
     detail: Detail,
-) -> Option<ShapeBuild> {
+) -> Option<(ShapeBuild, Vec<u8>)> {
     debug_assert_eq!(
         scores.quality, cfg.builder_v2,
         "PoolScores was built under the other scorer; splash_cards reads its base scores",
@@ -972,12 +978,12 @@ fn rank_shape<R: Rng>(
     if !splash_colors.is_empty() && splash.is_empty() {
         return None;
     }
-    let MainDeck { main, leftovers, lands: land_slots } =
+    let MainDeck { main, counts, leftovers, lands: land_slots } =
         suggest_main_deck_shape(scores, colors, &splash, spells, noise, rng, detail);
     if main.is_empty() {
         return None;
     }
-    Some(ShapeBuild {
+    Some((ShapeBuild {
         static_score: if cfg.builder_v3 {
             static_build_score_v3(&main, spells)
         } else {
@@ -992,7 +998,7 @@ fn rank_shape<R: Rng>(
         leftovers,
         land_slots,
         detail,
-    })
+    }, counts))
 }
 
 impl ShapeBuild {
@@ -1036,7 +1042,8 @@ fn build_shape<R: Rng>(
     rng: &mut R,
     scores: &PoolScores<'_>,
 ) -> Option<CandidateBuild> {
-    rank_shape(colors, splash_colors, shape, cfg, rng, scores, Detail::Full).map(|s| s.complete(cfg))
+    rank_shape(colors, splash_colors, shape, cfg, rng, scores, Detail::Full)
+        .map(|(s, _)| s.complete(cfg))
 }
 
 /// Enumerate every candidate build for `pool`: 10 pairs, pair + splash,
@@ -1084,9 +1091,13 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
 
     let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
     let mut out: Vec<ShapeBuild> = Vec::new();
-    let mut seen_mains: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
+    // Keyed on the copy-cap counts, which the builder already has: two shapes
+    // agree iff their main decks are the same multiset, and that is exactly
+    // what `counts` records. Sorting a fresh `Vec<CardFactory>` per shape to
+    // ask the same question was 652,126 Ir of `ipnsort` over twelve builds.
+    let mut seen_mains: crate::fxhash::HashSet<Vec<u8>> = crate::fxhash::HashSet::default();
     for (colors, splash_colors) in shapes {
-        let Some(build) = rank_shape(
+        let Some((build, counts)) = rank_shape(
             &colors,
             &splash_colors,
             (cfg.target_spells, cfg.total_lands, 0),
@@ -1097,9 +1108,7 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
         ) else {
             continue;
         };
-        let mut key: Vec<usize> = build.main.iter().map(|&f| f as usize).collect();
-        key.sort_unstable();
-        if !seen_mains.insert(key) {
+        if !seen_mains.insert(counts) {
             continue;
         }
         out.push(build);
