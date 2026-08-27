@@ -1054,6 +1054,75 @@ mod tests {
         );
     }
 
+    /// CR 508.1d — the declaration this bot *returns* has to be legal, and
+    /// nothing between the menu and the return checks that.
+    ///
+    /// Every candidate becomes an arm and `search` picks one on rollout
+    /// score alone. The rollouts run through `sim_step`, where a rejected
+    /// declaration is rolled back and retried as a priority pass — so an
+    /// illegal arm does not score badly, it scores as a perfectly ordinary
+    /// "attacked with nobody" line and can win the search outright. The real
+    /// `perform_action` then rejects it and the bot loses its whole combat.
+    ///
+    /// This is the half of the menu bug the heuristic search cannot show:
+    /// `pick_attacks_scored` scores its candidates with a direct
+    /// `declare_attackers`, so an illegal one comes back `None` and is
+    /// skipped. Only the Monte Carlo consumer can actually play one, and it
+    /// is the consumer the training actors use.
+    #[test]
+    fn combat_search_never_returns_an_illegal_declaration() {
+        use crate::card::Keyword;
+        use crate::player::Player;
+
+        let players = vec![Player::new(0, "A"), Player::new(1, "B")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        // Attacking is a losing line on this board — a 1/1 and a 2/2 into an
+        // untapped 6/6 — so "attack with nobody" is what the rollouts
+        // actually prefer. That is the arm the rules forbid.
+        // The grant, not a printed keyword: `CardInstance::has_keyword`
+        // cannot see a layer-6 `AddKeyword`, which is the read the planner
+        // used to make, so this is the board that separates the two.
+        let anthem = crate::card::CardDefinition {
+            name: "Bloodlust Anthem",
+            card_types: vec![crate::card::CardType::Enchantment],
+            static_abilities: vec![crate::card::StaticAbility {
+                effect: crate::effect::StaticEffect::GrantKeyword {
+                    applies_to: crate::effect::Selector::EachPermanent(
+                        crate::card::SelectionRequirement::Creature
+                            .and(crate::card::SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::MustAttack,
+                },
+                description: "Creatures you control attack each combat if able.",
+            }],
+            ..Default::default()
+        };
+        g.add_card_to_battlefield(0, anthem);
+        g.add_card_to_battlefield(0, creature("Reluctant Squire", 1, 1));
+        g.add_card_to_battlefield(1, creature("Fatty", 6, 6));
+        for c in g.battlefield.iter_mut() {
+            c.summoning_sick = false;
+        }
+
+        // Several seeds: the search picks by score, and a bug that only
+        // shows when the illegal arm happens to win is still a bug.
+        for iterations in [4, 8, 16, 32] {
+            let mut bot =
+                MctsBot::new(MctsConfig { iterations, search_combat: true, ..Default::default() });
+            let a = bot.next_action(&g, 0);
+            let Some(GameAction::DeclareAttackers(atk)) = a else {
+                panic!("expected a searched declaration, got {a:?}");
+            };
+            let mut probe = g.clone();
+            probe.declare_attackers(atk.clone()).unwrap_or_else(|e| {
+                panic!("MCTS returned a declaration the engine rejects at {iterations} iterations: {atk:?} -> {e:?}")
+            });
+        }
+    }
+
     /// The attack arm, and the off switch: with `search_combat` false the
     /// declaration is the fallback heuristic's exactly as before round 31.
     #[test]
