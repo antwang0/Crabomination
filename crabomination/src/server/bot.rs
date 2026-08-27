@@ -7797,6 +7797,48 @@ fn restore_forced_attackers_unchecked(
 ///
 /// Untaxed attackers are never dropped, and neither is a must-attack one —
 /// CR 508.1d would reject the batch for its absence instead.
+/// The largest generic mana `seat` can **actually** pay right now, measured
+/// against the engine's own auto-tap rather than estimated, capped at `want`.
+///
+/// [`available_mana`]'s `total` is an estimate, and every other bias in it is
+/// downward on purpose — sac costs and dynamic amounts are left out so the bot
+/// does not commit to a line it can only pay by spending something it would
+/// rather keep. **A trim uses it as a *budget*, where an upward bias is a
+/// different animal entirely: it does not make the bot optimistic, it makes
+/// the engine reject the whole declaration**, and the batch rejection costs
+/// the bot its entire combat. On `cube` seed 2 the two disagreed by one or two
+/// mana on ordinary board shapes — three lands and a Coalition Relic reading
+/// as three where auto-tap could reach two — and those disagreements were
+/// every attack rejection left on six `cube` seeds.
+///
+/// It runs in both directions. A lone Lotus Petal reads as 0 to the estimate
+/// (right for a *casting* decision, and pinned by a test) where auto-tap will
+/// sacrifice it to pay a tax the rules have already forced on the bot; the
+/// trim was dropping swings for mana that was there.
+///
+/// `could_pay_generic` is the engine's own dry run (a clone plus an auto-tap),
+/// so this cannot drift from what `declare_attackers_banded` will do. The
+/// predicate is monotone in `n`, so a binary search bounds the probes at
+/// `1 + log2(want)` — and the first probe is the whole answer whenever the
+/// declaration is affordable, which is the common case. Reached only on a
+/// board that charges a tax at all.
+fn payable_generic_budget(state: &GameState, seat: usize, want: u32) -> u32 {
+    if want == 0 || state.could_pay_generic(seat, want) {
+        return want;
+    }
+    // `lo` is known payable, `hi` known not.
+    let (mut lo, mut hi) = (0u32, want);
+    while hi - lo > 1 {
+        let mid = lo + (hi - lo) / 2;
+        if state.could_pay_generic(seat, mid) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    lo
+}
+
 fn trim_attacks_to_payable_tax(
     state: &GameState,
     seat: usize,
@@ -7816,8 +7858,10 @@ fn trim_attacks_to_payable_tax(
     if total == 0 {
         return;
     }
-    // `available_mana` counts the floating pool and every untapped source.
-    let budget = available_mana(state, seat).total;
+    // Measured against the engine's auto-tap, not estimated — see
+    // `payable_generic_budget` for why an over-counted budget is a rejected
+    // declaration rather than an optimistic bot.
+    let budget = payable_generic_budget(state, seat, total);
     if total <= budget {
         return;
     }
@@ -9177,6 +9221,13 @@ fn trim_blocks_to_payable_tax(
     if owed == (0, 0) {
         return;
     }
+    // **Deliberately the estimate, where the attack trim measures.** This
+    // trim runs once per *candidate* in `block_candidates_for_mcts`, not once
+    // per declaration, and measuring it there read +2.11 % wall on `cube`
+    // (`ab_wall`, 6 blocks, CI +0.99 .. +3.24 %, against a null that resolves
+    // +/-1.47 %) for a defect the census never observed: the block half was
+    // already 0 rejections on every pool and seed swept. Measure the budget
+    // where it is wrong, not everywhere it is used.
     let budget = available_mana(state, seat).total;
     let life = state.players[seat].life.max(0) as u32;
     if owed.0 <= budget && owed.1 <= life {
@@ -15502,6 +15553,38 @@ mod tests {
             2,
             "both Forests are what should have been tapped",
         );
+    }
+
+    /// A trim's budget is measured, not estimated, and the two differ in
+    /// **both** directions — which is why `payable_generic_budget` exists
+    /// rather than a one-sided correction to [`available_mana`].
+    ///
+    /// Downward, deliberately: a Lotus Petal is not spare mana to the
+    /// estimate (the test below pins that, and it is right for *casting*
+    /// decisions), but the engine's auto-tap will sacrifice it to pay a tax
+    /// the rules already forced on the bot. Trimming an attacker for mana
+    /// that is there loses a swing for nothing.
+    ///
+    /// Upward, accidentally: that direction is the one with teeth, because
+    /// the engine rejects the declaration **whole** — see
+    /// `payable_generic_budget`'s doc for the `cube` seed 2 shape.
+    #[test]
+    fn a_trims_budget_is_measured_not_estimated() {
+        let mut g = two_player_game();
+        let petal = g.add_card_to_battlefield(0, catalog::lotus_petal());
+        g.clear_sickness(petal);
+        assert_eq!(available_mana(&g, 0).total, 0, "the estimate does not count a Petal");
+        assert!(g.could_pay_generic(0, 1), "but the engine's auto-tap sacrifices it");
+        assert_eq!(
+            payable_generic_budget(&g, 0, 1),
+            1,
+            "so a trim that used the estimate would drop a swing for mana that is there",
+        );
+        // And the cap holds: the budget never exceeds what was asked for, so
+        // the binary search cannot run away on a board with no tax.
+        assert_eq!(payable_generic_budget(&g, 0, 0), 0);
+        let empty = two_player_game();
+        assert_eq!(payable_generic_budget(&empty, 0, 4), 0, "nothing on the board pays nothing");
     }
 
     /// Sac-cost sources are deliberately *not* counted toward what the bot
