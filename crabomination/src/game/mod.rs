@@ -2378,6 +2378,40 @@ pub mod pay_census {
     pub fn budget_snapshot() -> [u64; 4] {
         std::array::from_fn(|i| BUDGET[i].load(Relaxed))
     }
+
+    /// `[auto-tap calls, calls that returned before building the source
+    /// table, source tables built, sources tapped]`.
+    ///
+    /// **A failed payment is not a unit of cost, and counting them as if it
+    /// were is how this census misled its own author.** `auto_tap_for_cost_
+    /// inner` returns early when the pool already covers the cost or the
+    /// board has nothing to tap; a probe that takes that exit is a `GameState`
+    /// clone and little else. One that does not builds a `mana_source_table`
+    /// and taps — the two rows (-51)(a) prices, and three orders of magnitude
+    /// more expensive.
+    ///
+    /// Sixty-four probes removed from a pool read **flat** while seven
+    /// hundred removed from the same pool read **-2.20 %**; these counters
+    /// are what tells the two apart *before* a build. Multiply them by the Ir
+    /// figures in (-51)(a) — read them off the entry, at the tip they were
+    /// measured at, not from a constant here.
+    pub static TAP: [AtomicU64; 4] = [
+        AtomicU64::new(0),
+        AtomicU64::new(0),
+        AtomicU64::new(0),
+        AtomicU64::new(0),
+    ];
+
+    pub fn record_tap(i: usize, n: u64) {
+        if level() == 0 {
+            return;
+        }
+        TAP[i].fetch_add(n, Relaxed);
+    }
+
+    pub fn tap_snapshot() -> [u64; 4] {
+        std::array::from_fn(|i| TAP[i].load(Relaxed))
+    }
 }
 
 /// Field access on the cold group reads like a `GameState` field.

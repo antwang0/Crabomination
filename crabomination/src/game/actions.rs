@@ -12719,6 +12719,7 @@ impl GameState {
         only: Option<&crate::fxhash::HashSet<CardId>>,
     ) -> Vec<GameEvent> {
         let mut events = Vec::new();
+        crate::game::pay_census::record_tap(0, 1);
         // Off, the two selection loops below fall back to "cheapest
         // activation, then battlefield order" — the historical behaviour,
         // kept as the ladder control.
@@ -12835,12 +12836,14 @@ impl GameState {
         // off it) and every caller whose pool already covers the cost was
         // paying for it.
         if still_need_colors.is_empty() && generic_to_tap == 0 {
+            crate::game::pay_census::record_tap(1, 1);
             return events;
         }
 
         // Built once; the selection loops below re-check `tapped` live but
         // read colours and costs from here. See `mana_source_table`.
         let sources = self.mana_source_table(player, creature_only, only);
+        crate::game::pay_census::record_tap(2, 1);
 
         // Converge (`diverse`): colors already certain to be spent — the
         // cost's own colored pips, and pool surplus the diverse generic
@@ -12912,6 +12915,7 @@ impl GameState {
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
                 let result = self.activate_ability(id, idx, None, Vec::new(), None, None);
+                crate::game::pay_census::record_tap(3, 1);
                 self.decider = prev_decider;
                 self.players[player].wants_ui = prev_wants_ui;
                 if let Ok(mut evs) = result {
@@ -12983,6 +12987,7 @@ impl GameState {
                 self.activate_ability(id, idx, None, Vec::new(), None, None)
             };
             if let Ok(mut evs) = result {
+                crate::game::pay_census::record_tap(3, 1);
                 events.append(&mut evs);
             } else {
                 break;

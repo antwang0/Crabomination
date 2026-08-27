@@ -1604,6 +1604,15 @@ fn main() {
             .filter(|(_, n)| **n > 0)
             .map(|(c, n)| format!("{c} {n}"))
             .collect();
+        let t = crabomination::game::pay_census::tap_snapshot();
+        println!(
+            "  pay_taps {} auto-tap calls — {} returned early ({:.1} %), {} source tables built, {} sources tapped",
+            t[0],
+            t[1],
+            if t[0] == 0 { 0.0 } else { 100.0 * t[1] as f64 / t[0] as f64 },
+            t[2],
+            t[3],
+        );
         let (probe, committed) = crabomination::game::pay_census::origin_snapshot();
         let b = crabomination::game::pay_census::budget_snapshot();
         println!(
