@@ -38,8 +38,6 @@ pub(crate) mod attack_static {
     pub const ATTACK_TAX: u32 = 1 << 3;
 }
 
-/// See [`attack_static`]. One battlefield walk; `u32::MAX` is the ungated
-/// reading every gated site `debug_assert!`s against.
 /// Tag which of `declare_attackers_banded`'s rejections fired, under
 /// `CRAB_SIM_REJECTS=names`.
 ///
@@ -57,6 +55,21 @@ fn attack_reject(line: u32, e: GameError) -> GameError {
     e
 }
 
+/// [`attack_reject`] for `declare_blockers`, which has forty-four rejection
+/// returns and the same problem: `CannotBlock(id)` names the blocker and
+/// never which of the ~twenty prohibitions barred it, and the batch-level
+/// ones (`MustBeBlockedIfAble`, the block cost) name a card that is not the
+/// one at fault at all.
+#[inline]
+fn block_reject(line: u32, e: GameError) -> GameError {
+    if crate::game::reject_trace_level() >= 2 {
+        eprintln!("block_reject combat.rs:{line} {e:?}");
+    }
+    e
+}
+
+/// See [`attack_static`]. One battlefield walk; `u32::MAX` is the ungated
+/// reading every gated site `debug_assert!`s against.
 pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
     use crate::effect::StaticEffect as SE;
     let mut m = 0u32;
@@ -1599,7 +1612,7 @@ impl GameState {
         assignments: Vec<(CardId, CardId)>,
     ) -> Result<Vec<GameEvent>, GameError> {
         if self.step != TurnStep::DeclareBlockers {
-            return Err(GameError::WrongStep { actual: self.step });
+            return Err(block_reject(line!(), GameError::WrongStep { actual: self.step }));
         }
         // Master Warcraft / Invasion Plans — only the chooser may submit.
         // (Without one the engine keeps trusting the caller; blocker
@@ -1607,7 +1620,7 @@ impl GameState {
         if let Some(chooser) = self.block_chooser()
             && self.priority.player_with_priority != chooser
         {
-            return Err(GameError::NotYourPriority);
+            return Err(block_reject(line!(), GameError::NotYourPriority));
         }
 
         // One layer pass for the whole declaration. Every consumer below is a
@@ -1688,18 +1701,18 @@ impl GameState {
                 self.block_map.keys().copied().collect();
             distinct.extend(assignments.iter().map(|(b, _)| *b));
             if distinct.len() > cap as usize {
-                return Err(GameError::CannotBlock(first));
+                return Err(block_reject(line!(), GameError::CannotBlock(first)));
             }
         }
         for &(blocker_id, attacker_id) in &assignments {
             let taken = batch_blocks.entry(blocker_id).or_default();
             if taken.contains(&attacker_id) || self.blocks(blocker_id, attacker_id) {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
             taken.push(attacker_id);
             let total = taken.len() + self.attackers_blocked_by(blocker_id).len();
             if total > self.max_blocks_on(blocker_id, kws_of(blocker_id)) {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
             let atk = self
                 .attack_for(attacker_id)
@@ -1719,7 +1732,7 @@ impl GameState {
             // may block. In 1v1 / FFA `same_team(a, b)` collapses to
             // `a == b`, so this preserves the historical behavior.
             if !self.same_team(blocker.controller, defender_idx) {
-                return Err(GameError::BlockerWrongDefender { blocker: blocker_id });
+                return Err(block_reject(line!(), GameError::BlockerWrongDefender { blocker: blocker_id }));
             }
 
             // CR 509.1a — blocker legality reads the computed view, so an
@@ -1731,12 +1744,12 @@ impl GameState {
             if !blocker_is_creature
                 || (blocker.tapped && !self.tapped_creatures_can_block(blocker.controller))
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // CR 701.35 — a detained permanent can't block.
             if blocker.detained_by.is_some() {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // `Keyword::CantBlock` is enforced from the *computed* keyword
@@ -1746,7 +1759,7 @@ impl GameState {
             if kws_of(blocker_id).has_kw(&Keyword::CantBlock)
                 || kws_of(blocker_id).has_kw(&Keyword::Decayed)
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // CR 509.1b — "can't block [creature type]s" (Burden of Proof).
@@ -1759,7 +1772,7 @@ impl GameState {
                     matches!(k, Keyword::CantBlockCreatureType(t) if a.subtypes.creature_types.contains(t))
                 })
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // CR 509.1b — "can't block [filter] creatures" (Gibbering Hyenas).
@@ -1769,7 +1782,7 @@ impl GameState {
                 kws_of(blocker_id),
                 attacker_id,
             ) {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // CR 509.1b — "can't block creatures with power equal to or
@@ -1778,7 +1791,7 @@ impl GameState {
                 && let (Some(b), Some(a)) = (cp_of(blocker_id), cp_of(attacker_id))
                 && a.power >= b.toughness
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // CR 509.1b — Monstrous Hound: more lands than the attacker.
@@ -1787,18 +1800,18 @@ impl GameState {
                 && self.player_tally(blocker.controller, crate::card::PlayerTally::LandsControlled)
                     <= self.player_tally(a.controller, crate::card::PlayerTally::LandsControlled)
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // CR 509.1b — a blanket "can't block this turn" (Concussive
             // Bolt's metalcraft rider) bars every block.
             if self.cant_block_this_turn.contains(&blocker_id) {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
             // Per-pair "can't block this creature this turn" (Kozilek's
             // Pathfinder): the blocker is barred only from this attacker.
             if self.cant_block_pairs.contains(&(blocker_id, attacker_id)) {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
 
@@ -1807,7 +1820,7 @@ impl GameState {
             if kws_of(blocker_id).has_kw(&Keyword::CantAttackOrBlockUnlessEvenCounters)
                 && blocker.counters.values().sum::<u32>() % 2 != 0
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // Void Winnower — a creature with an even mana value can't block
@@ -1822,7 +1835,7 @@ impl GameState {
                     }) && !self.same_team(c.controller, blocker.controller)
                 })
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // "Can't block unless you control N+ [filter]" (Topiary Stomper).
@@ -1844,7 +1857,7 @@ impl GameState {
                     })
                     .count();
                 if (n as u32) < min {
-                    return Err(GameError::CannotBlock(blocker_id));
+                    return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                 }
             }
 
@@ -1859,7 +1872,7 @@ impl GameState {
                     c.controller == blocker.controller && c.definition.is_land() && !c.tapped
                 })
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
             // CR 509.1b — Mogg Toady: strictly more creatures than the
             // attacker's controller.
@@ -1867,7 +1880,7 @@ impl GameState {
                 && self.creature_count(blocker.controller)
                     <= self.creature_count(attacker.controller)
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             let blocker_cp = cp_of(blocker_id).ok_or(GameError::CannotBlock(blocker_id))?;
@@ -1880,14 +1893,14 @@ impl GameState {
                 atk_colors,
                 atk_power,
             ) {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
             if self.block_barred_by_protection_filter(
                 kws_of(attacker_id),
                 attacker.controller,
                 blocker_id,
             ) {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // CR 701.54c (level 1+) — a Ring-bearer can't be blocked by
@@ -1896,7 +1909,7 @@ impl GameState {
                 && self.players[attacker.controller].ring_temptations >= 1
                 && blocker_cp.power > atk_power
             {
-                return Err(GameError::CannotBlock(blocker_id));
+                return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
 
             // Landwalk (CR 702.15): the attacker can't be blocked while the
@@ -1910,7 +1923,7 @@ impl GameState {
                     // / Gosta Dirk / Lord Magnus blank one landwalk flavor.
                     && !self.landwalk_ignored(*lt)
                 {
-                    return Err(GameError::CannotBlock(blocker_id));
+                    return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                 }
                 // CR 702.14c — filtered landwalk (artifact/nonbasic/snow).
                 if let Keyword::LandwalkFiltered(f) = kw
@@ -1924,7 +1937,7 @@ impl GameState {
                             )
                     })
                 {
-                    return Err(GameError::CannotBlock(blocker_id));
+                    return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                 }
                 // CR 702.14 — legendary landwalk (Livonya Silone).
                 if matches!(kw, Keyword::LegendaryLandwalk)
@@ -1934,7 +1947,7 @@ impl GameState {
                             && c.definition.supertypes.contains(&crate::card::Supertype::Legendary)
                     })
                 {
-                    return Err(GameError::CannotBlock(blocker_id));
+                    return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                 }
                 // CR 702.43 — domain landwalk: one landwalk per basic land
                 // type among the attacker's controller's lands.
@@ -1945,7 +1958,7 @@ impl GameState {
                         }) && self.defender_controls_land_type(defender_idx, lt)
                     })
                 {
-                    return Err(GameError::CannotBlock(blocker_id));
+                    return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                 }
             }
 
@@ -1958,7 +1971,7 @@ impl GameState {
                     if let Keyword::CantBeBlockedIfControllerCastSpells(n) = kw
                         && self.players[atk_ctl].spells_cast_this_turn >= *n
                     {
-                        return Err(GameError::CannotBlock(blocker_id));
+                        return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                     }
                     // CR 509.1b — "can't be blocked as long as defending player
                     // controls a [filter]" (Neurok Spy).
@@ -1976,7 +1989,7 @@ impl GameState {
                                     None,
                                 )
                         }) {
-                            return Err(GameError::CannotBlock(blocker_id));
+                            return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                         }
                     }
                     // CR 509.1b — "can't be blocked unless defending player
@@ -1988,7 +2001,7 @@ impl GameState {
                             .map(|c| c.controller)
                             .unwrap_or(atk_ctl);
                         if self.greatest_shared_type_count(def) < *n as usize {
-                            return Err(GameError::CannotBlock(blocker_id));
+                            return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                         }
                     }
                     // CR 509.1b — "creatures with power less than the number of
@@ -2008,7 +2021,7 @@ impl GameState {
                             })
                             .count() as i32;
                         if blocker_cp.power < n {
-                            return Err(GameError::CannotBlock(blocker_id));
+                            return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                         }
                     }
                 }
@@ -2026,7 +2039,7 @@ impl GameState {
             if all_blockers.len() == 1 {
                 for &(blocker_id, _) in &assignments {
                     if kws_of(blocker_id).has_kw(&Keyword::CantAttackOrBlockAlone) {
-                        return Err(GameError::CannotBlock(blocker_id));
+                        return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                     }
                 }
             }
@@ -2041,7 +2054,7 @@ impl GameState {
                 if kws_of(blocker_id).has_kw(&Keyword::CantBlockUnlessGreaterPowerBlocks) {
                     let mine = power_of(blocker_id);
                     if !all_blockers.iter().any(|&o| o != blocker_id && power_of(o) > mine) {
-                        return Err(GameError::CannotBlock(blocker_id));
+                        return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
                     }
                 }
             }
@@ -2120,7 +2133,7 @@ impl GameState {
                     .count()
                     + self.blocker_count_of(atk.attacker);
                 if blocker_count == 1 {
-                    return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
+                    return Err(block_reject(line!(), GameError::MenaceRequiresTwoBlockers(atk.attacker)));
                 }
             }
         }
@@ -2140,7 +2153,7 @@ impl GameState {
             for (seat, amount) in owed {
                 let tax = crate::mana::cost(&[crate::mana::generic(amount)]);
                 if self.try_pay_with_auto_tap(seat, &tax).is_err() {
-                    return Err(GameError::CannotBlock(assignments[0].0));
+                    return Err(block_reject(line!(), GameError::CannotBlock(assignments[0].0)));
                 }
             }
         }
@@ -2161,7 +2174,7 @@ impl GameState {
                 for f in tap_another_filters(kws_of(blocker_id)) {
                     match self.find_tap_helper(seat, &f, blocker_id, &declared, &tapped) {
                         Some(id) => tapped.push(id),
-                        None => return Err(GameError::CannotBlock(blocker_id)),
+                        None => return Err(block_reject(line!(), GameError::CannotBlock(blocker_id))),
                     }
                 }
             }
@@ -2183,7 +2196,7 @@ impl GameState {
                         .count()
                         + self.blocker_count_of(atk.attacker);
                     if blocker_count > 0 && (blocker_count as u32) < *n {
-                        return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
+                        return Err(block_reject(line!(), GameError::MenaceRequiresTwoBlockers(atk.attacker)));
                     }
                 }
             }
@@ -2199,7 +2212,7 @@ impl GameState {
                     .count()
                     + self.blocker_count_of(atk.attacker);
                 if blocker_count > 1 {
-                    return Err(GameError::CannotBeBlockedByMoreThanOne(atk.attacker));
+                    return Err(block_reject(line!(), GameError::CannotBeBlockedByMoreThanOne(atk.attacker)));
                 }
             }
         }
@@ -2241,7 +2254,7 @@ impl GameState {
                     })
             });
             if idle_able_blocker {
-                return Err(GameError::MustBeBlockedIfAble(atk.attacker));
+                return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
             }
         }
 
@@ -2274,7 +2287,7 @@ impl GameState {
                     && !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
             });
             if unmet {
-                return Err(GameError::MustBeBlockedIfAble(atk.attacker));
+                return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
             }
         }
 
@@ -2308,7 +2321,7 @@ impl GameState {
             let assigned = self.blocks(b.id, required)
                 || assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required);
             if !assigned {
-                return Err(GameError::MustBeBlockedIfAble(required));
+                return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(required)));
             }
         }
 
@@ -2344,7 +2357,7 @@ impl GameState {
                     })
             });
             if unmet {
-                return Err(GameError::CannotBlock(atk.attacker));
+                return Err(block_reject(line!(), GameError::CannotBlock(atk.attacker)));
             }
         }
 
@@ -2390,7 +2403,7 @@ impl GameState {
                         })
             });
             if could_block {
-                return Err(GameError::MustBeBlockedIfAble(b.id));
+                return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(b.id)));
             }
         }
 
@@ -2418,7 +2431,7 @@ impl GameState {
                     for (p, n) in life_paid {
                         self.players[p].life += n as i32;
                     }
-                    return Err(GameError::CannotBlock(assignments[0].0));
+                    return Err(block_reject(line!(), GameError::CannotBlock(assignments[0].0)));
                 }
                 if life > 0 {
                     self.players[player].life -= life as i32;
