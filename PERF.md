@@ -7085,6 +7085,38 @@ outside the gate as cheap per-card reads. **Price the ~30 variants of drift
 surface against 0.5 % before taking it** — the structural filter that already
 shipped needed none.
 
+**CLOSED AT THE EIGHTIETH PASS, AND NOT BECAUSE IT SHRANK — BECAUSE THE LOOP
+IT WOULD GATE NO LONGER EXISTS.** Re-sized on the current tip, same workload
+(`--decks cube --games 6 --threads 1 --seed 1`):
+
+```text
+                              recorded        now
+  the three families        13,696,074     7,448,194 Ir   -46 %
+  share of cube                  0.52 %        0.209 %
+  callers, now:  extra_cost_for_spell        7,360 <- cast_spell_with_convoke
+                 cost_reduction_for_spell_full 7,360 <- cast_spell_with_convoke
+                 colored_spell_tax_for_spell     0 <- the cast path at all
+  can_afford_in_state_with: 32,570 calls, and its callee list reaches
+  NONE of the three.
+```
+
+**The entry's premise was "walking those sources' statics *per hand card*",
+and the bot does not do that any more** — the seventy-sixth pass's structural
+filter took the last of it, and what remains is the engine paying each family
+**once per actual cast attempt** on the real cast path. So the `*_scan` rule
+answers it: *a bit pays for the walks it removes from a loop, so count the
+loop's trips*, and the trips are now one. A per-cast scan costs about what
+the walk it replaces costs; the only version that could win is one **cached
+across casts and invalidated on board change**, which is the board-presence
+epoch on TODO's do-not-rebuild list. **Do not take this. ~30 variants of
+drift surface for at most 0.209 %, against a device that is refuted.**
+
+Note the share fell further than the work did: the program grew 2.63 G ->
+3.57 G over the same passes (the attack search), so a third of the drop in
+*percent* is denominator. **Re-size a candidate before ranking it, and read
+the absolute Ir next to the share** — one of them is about your code and the
+other is about everyone else's.
+
 **(-52) CLOSED — ACTOR SCALING IS LINEAR TO THE CORE COUNT, AND RSS IS THE
 REPLAY WINDOW, NOT THE ACTORS.** Measured, not inferred:
 `release-fast selfplay_train --games 1200 --steps 1 --seed 7`, two reps, on

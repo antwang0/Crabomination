@@ -43,9 +43,18 @@ diff the two before discarding yours, because the loser usually holds
 something the winner does not (here: the test covering the *consumer*, which
 went in on top as `6c9746ec`, and a measurement of the alternative shape).
 
-1. **Perf queue = PERF's candidates.** (-54) is closed (see 4a); the top two
-   are (-53) the cost-static bitmask (0.52 %, costs ~30 variants of
-   enumeration) and (-51)(a) the 7,665-Ir land tap.
+1. **Perf queue = PERF's candidates, and it is nearly empty.** (-54) closed
+   (see 4a); **(-53) closed at pass 80** — re-sized to 0.209 % and, more to
+   the point, the per-hand-card loop it was written to gate is gone
+   (`can_afford_in_state_with` reaches none of the three families now), so the
+   `*_scan` rule refuses it: one trip per cast, and a per-cast scan costs what
+   the walk costs. **The only named item left is (-51)(a), the 7,665-Ir land
+   tap, and its own entry says what it wants is either fewer taps or a cheaper
+   `keyword_grant_in_scope` — and the bit that would do the latter is on the
+   do-not-rebuild list.** So **the next perf pass needs a fresh profile, not
+   this queue** — and it should be of `selfplay_train`, which is the ML
+   phase's actual workload and which this file's profile of record still does
+   not describe (see 4).
 2. **Read PERF's "Inside one attack sim" before anything bot-side:** the
    search is 59.6 % of `cube` and **37 % of the program is the engine
    advancing a turn inside one**, against `cast_candidates`' 3.6 %.
