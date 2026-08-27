@@ -684,10 +684,41 @@ tests. **Nothing left here is worth a risk.**
 **The standing rule gains a clause**, now in CLAUDE.md: a new `[[bin]]` with
 no `#[cfg(test)]` block gets `test = false`.
 
-Not measured here, and still open: the `release` / `profiling-fast` rebuild
-(~13 min cold for the engine) is a codegen-bound build where CGU partitioning,
-not query invalidation, decides the cost. Nothing above says anything about
-it.
+**`incremental = true` ON `release-fast` IS A TRAP — 3.1x faster to build
+and 2.2 % worse code, measured at the eightieth pass.** It is the obvious
+answer to the optimized-rebuild cost and it must not be taken, because
+`release-fast` is where `--bench` runs.
+
+```text
+warm rebuild, engine edit, `-p crabomination --bin bot_ladder`, 4 cores
+  release-fast as shipped     108 / 108 s
+  + incremental = true         34 /  35 s      (a `touch` reads 5 s and is
+                                                not a real edit — rustc
+                                                reuses every CGU)
+  one-off priming build       357 s, and target/release-fast 1.8G -> 4.0G
+
+same binary, callgrind, --decks fixed --games 6 --threads 1 --seed 1
+  no incremental        1,141,851,263
+  incremental           1,166,977,048        +2.20 %
+  --bench identical both sides (195,616 decisions / 27.44 turns), so the
+  delta is codegen and nothing else; the incremental binary is also 12 %
+  *smaller* (125 MB vs 141 MB), which is the lost inlining showing up.
+```
+
+**A 2.2 % codegen shift on the benchmark profile is worse than a 3x build
+win is good.** Every `--bench` row and every release-fast Ir in this file
+would move by more than most of the wins it records, all of them at once and
+none of them real — and future perf work would be optimizing code the
+shipped profile does not generate. **The rule this makes explicit: the
+profile you measure on is an instrument, and you do not adjust an instrument
+to make it more convenient.** If the iteration cost is worth paying down, it
+wants a *separate* profile that nothing measures on — which costs a cold
+build (~45 min) and 4 GB on a box that hit 93 % twice in one session, so it
+is a real trade and not a free one.
+
+Still open, and untouched by the above: the *cold* `release` /
+`profiling-fast` engine build (~13 min) is codegen-bound, where CGU
+partitioning rather than query invalidation decides the cost.
 
 **The probe loop, measured at the forty-sixth pass, because it changes
 iteration by 4x.** A cold whole-workspace `profiling-fast` build of
