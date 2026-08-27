@@ -982,27 +982,27 @@ profiling-fast --no-default-features.
       the ladder across all five:  fixed -0.021 %, cube -0.006 %
 ```
 
-**STATE BELOW PREDATES THE FOUR COMMITS ABOVE** — it is the tip of the six,
-`49748e1f`, which is the base of row (1). **The suite and clippy rows are the
-tip's**, i.e. they carry the exile-target bug fix as well as the six perf
-commits; the two Ir totals were taken at `49748e1f`, the last perf commit
-under it, and the fix moves neither — `--decks fixed` and `--decks cube` reach
-no trigger whose target filter has an off-board match.
+**STATE — the whole pass, both halves, at `1f5274f1`.** The two Ir totals are
+the exception and are labelled: they were taken at `49748e1f`, the tip of the
+six commits below, which is the base of row (1) above; the four rows above
+moved them and each records its own. Everything else here was run on the
+pass's final tip.
 
 ```text
-suite  --workspace --exclude crabomination_client   19,054 / 0 / 5
+suite  --workspace --exclude crabomination_client   19,056 / 0 / 5
 clippy --workspace --exclude crabomination_client --all-targets   clean
 golden traces  unmoved (they run inside the suite above)
 seeded cube smoke  4,000 pairings, all terminate; bot_rejection_count 1 in
                    4,000 and it is `build_cube_state_seeded(3637)`, open
 --bench   195,528 decisions / 27.44 turns / 0 stalls (cap 0 / stuck 0 /
           draw 0) / determinism ok / thread_determinism ok (3 vs 1)
-          — **byte-identical to the committed invariant**
+          — **byte-identical to the committed invariant across all ten
+          commits**, which is what says the pass moved no play
           304.5-314.6 games/s, peak_rss_mib 29.8-30.0, host_calib_ms 67-74
           (`release-fast`, mimalloc, 2.10 GHz Xeon, 3 threads — a different
           profile and a different box from the 242.9 recorded below, so the
-          rate is a fingerprint of this container and not comparable)
-whole-program Ir at `49748e1f`, same configuration as the rows above
+          rate is this container's fingerprint and not comparable)
+whole-program Ir **at `49748e1f`**, same configuration as the rows above
   fixed  1,126,243,545        cube  3,431,708,160
 ```
 
