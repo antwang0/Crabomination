@@ -93,6 +93,21 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
 
+- **A ceiling measured by short-circuiting a condition is an upper bound on
+  the *code*, not on the walk** (pass 83's (-62), and it is 30 % of one).
+  `false &&` and `std::iter::empty()` let the optimizer take the surrounding
+  structure with it, so the graveyard pair priced at `fixed` -0.717 % by
+  deletion shipped at -0.499 %. Both candidate explanations for the
+  difference were built and measured **flat** — the memo's miss path
+  (-0.003 %) and the memo read itself (0.027 % of the program; splitting it
+  for inlining read +0.016 %). Read such a ceiling as "no implementation of
+  this gate beats X" and do not spend a pass chasing the rest.
+- **Before pricing a walk, grep for the other consumers of the fact it
+  computes** (same entry, and it was 63 % more prize than the entry carried).
+  (-62) sized `gather_continuous_effects_inner`'s `GraveyardAnthem` pass;
+  `keyword_grant_in_scope` walks the same zone for the same variant and no
+  entry had named it. Both match the variant by name, so the second walker
+  was one grep away.
 - **A number a sweep reports needs its breakdown at the same call site**, or
   the sweep only generates a follow-up question. The undecided count is the
   case: `SimCost::record` split capped / stuck / draw the moment a game

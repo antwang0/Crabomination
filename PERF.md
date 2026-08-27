@@ -805,9 +805,9 @@ build.
 
 ## Baseline
 
-**Eighty-third pass. Two perf commits, and the larger one is a *census*
-cashed in: (-13)'s remaining half was takeable the moment the instrument said
-the rollback never runs.**
+**Eighty-third pass. Four perf commits, and the largest is a *census* cashed
+in: (-13)'s remaining half was takeable the moment the instrument said the
+rollback never runs.**
 
 ```text
 bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
@@ -827,6 +827,14 @@ profiling-fast --no-default-features.
     `compute_battlefield_creatures`.  Base d919b606.
       fixed  1,154,148,607 -> 1,154,012,056   -0.012 %
       cube   3,518,102,194 -> 3,516,335,058   -0.050 %
+
+(4) (-62): `crate::zone::Graveyard` carries the "is there a `GraveyardAnthem`
+    here" answer, so neither `gather_continuous_effects_inner` nor
+    `keyword_grant_in_scope` walks the zone to ask.  Base 408ed3fc.
+      fixed  1,154,146,337 -> 1,148,391,412   -0.499 %
+      cube   3,518,099,807 -> 3,508,715,284   -0.267 %
+    ceiling, both walks deleted outright, same base
+      fixed  1,145,865,968  -0.717 %   cube  3,503,216,156  -0.423 %
 ```
 
 **(2) is gated by `--vs`, not only by `--bench`, because `--bench` is one
@@ -3845,7 +3853,7 @@ the table above is safe to compress:
 
 ## Log
 
-### Eighty-third pass — a gate walk hoisted, an ungated walk priced, and a suite gate that was a coin flip
+### Eighty-third pass — a gate walk hoisted, an ungated walk priced and then taken, and a suite gate that was a coin flip
 
 **0. The pass's largest row came from an instrument, not from a profile, and
 that is the finding.** `sim_step`'s checkpoint is **1.07 % of `fixed` and
@@ -3881,15 +3889,55 @@ The gates ride in the freeze memo now. Numbers in **Baseline**. **The entry
 this was gating is closed at this size** — the prize it was sizing was the
 per-evaluation gather, and that is 6x smaller than the entry claimed.
 
-**2. The layer gather has an ungated whole-graveyard walk and it is worth
-more on the bench pool than the commit above — priced, not taken. See
-(-62).** Measured by deletion, one build and two callgrind runs: `fixed`
-**-0.440 %**, `cube` **-0.251 %**, `--bench` byte-identical (so no pool here
-carries a `GraveyardAnthem` card and the deletion changed no play). It is
-not taken because every sound gate for it is a maintained flag over a zone
-with 334 write sites, and the newtype that would make the invalidation
-complete has `Deref`-shaped blast radius across 2,033 read sites. The entry
-carries the design and what would make it safe.
+**2. The layer gather has an ungated whole-graveyard walk — priced, then
+taken in the same pass by a second session, and it was worth 63 % more than
+the price. See (-62).** As priced by deletion: `fixed` **-0.440 %**, `cube`
+**-0.251 %**, `--bench` byte-identical (so no pool here carries a
+`GraveyardAnthem` card and the deletion changed no play). **What the pricing
+missed is that there are two walkers, not one**:
+`keyword_grant_in_scope`'s off-battlefield tail passes over the same zone for
+the same `StaticEffect` variant, and no entry had ever named it. Deleting
+both is `fixed` **-0.717 %** / `cube` **-0.423 %**. Both walkers match the
+variant *by name*, so the second one was one `grep GraveyardAnthem` away.
+**Before pricing a walk, grep for the other consumers of the fact it
+computes.**
+
+`crate::zone::Graveyard` — the newtype this entry called the shape that would
+ship — takes `fixed` **-0.499 %** / `cube` **-0.267 %** of that ceiling, and
+its `Deref`-shaped blast radius turned out to be ten call sites, not the 2,033
+read sites the "not taken" reasoning feared: `Deref` covers a read, and only a
+`match` arm that also picks a `CowBox` zone needs a type named. Numbers in
+**Baseline** (4).
+
+**2a. The 30 % the memo does not capture is neither of the two things it looks
+like, and both were built and measured.** Base is the newtype tip rebased onto
+`ccf967d6` (`fixed` 1,145,398,561 / `cube` 3,506,394,243):
+
+```text
+(a) memo-preserving mutators — inherent `push` / `remove` / `pop` /
+    `retain` / `clear` / `take_card` shadowing `Vec`'s, so a removal or a
+    plain push keeps an ABSENT answer instead of clearing it through
+    `DerefMut` (48 `Self::take_card(&mut …graveyard, …)` sites rewritten)
+      fixed  -0.0028 %      cube  +0.0010 %
+(b) the `has_kw` device — `has_anthem` split into a load-compare-branch hit
+    path plus an `#[inline(never)]` miss path, and the gather's `filter`
+    adapter turned back into a `continue`
+      fixed  +0.0159 %      cube  +0.0076 %
+```
+
+**(a) says the miss path is not it** — the zone's invalidation rate is already
+low enough that re-walking after a write costs nothing measurable, which is
+(-62)'s invalidation/read ratio confirmed from the other end. **(b) says the
+memo read is not it either**: 134,856 calls / 943 k Ir inclusive on `cube` is
+0.027 % of the program, and making it inlinable reads *worse*.
+
+**So the transferable half is about the ceiling, not the memo: a ceiling
+measured by short-circuiting a condition is an upper bound on the *code*, not
+on the walk.** `false &&` and `std::iter::empty()` let the optimizer take the
+surrounding structure with it — the closure's captures, the enclosing loop,
+the register pressure around it. Read such a ceiling as "no implementation of
+this gate beats X", never as "the walk costs X", and do not spend a pass
+chasing the difference.
 
 **3. Seven ML convergence thresholds were coin flips on entropy, and the
 mutex written against the symptom cannot fix it.** `policy_head_learns_to_
@@ -7368,10 +7416,13 @@ goes thin or stale.
 Graveyard` wraps the CoW card list with the memo; `fixed` **-0.499 %**,
 `cube` **-0.267 %**, and it caught `keyword_grant_in_scope`'s off-battlefield
 tail as well, which this entry had not noticed was the same walk. See
-Baseline. **The memo captures 70 % / 63 % of the deletion ceiling**; the rest
-is the miss path, i.e. a write clearing the memo before the next question.
-The entry stays below because the four-shape analysis is the reusable part —
-in particular the one that says *why* the newtype and not the flag.
+Baseline (4). **The memo captures 70 % / 63 % of the deletion ceiling, and
+the rest is not the miss path** — that reading was the obvious one and it is
+refuted with numbers in Log item 2a, along with the memo read itself. What
+the difference is is the deletion probe over-reading: `false &&` lets the
+optimizer delete the structure around the walk too. The entry stays below
+because the four-shape analysis is the reusable part — in particular the one
+that says *why* the newtype and not the flag.
 
 **(-62, as priced) THE LAYER GATHER WALKS EVERY CARD IN EVERY GRAVEYARD ON
 EVERY RECOMPUTE, UNGATED, AND IT IS WORTH `fixed` -0.440 % / `cube`
