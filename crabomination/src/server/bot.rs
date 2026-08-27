@@ -7756,7 +7756,8 @@ fn restore_forced_attackers(
     if !attack_requirement_present(state) {
         return;
     }
-    restore_forced_attackers_unchecked(state, seat, power_caps, attackers);
+    let statics = crate::game::combat::attack_static_scan(state);
+    restore_forced_attackers_unchecked(state, seat, power_caps, statics, attackers);
 }
 
 /// Can any permanent on this board carry an attack requirement at all? The
@@ -7778,6 +7779,9 @@ fn restore_forced_attackers_unchecked(
     state: &GameState,
     seat: usize,
     power_caps: &[usize],
+    // `attack_static_scan`, for the CR 508.1g cost gate inside
+    // `attacker_is_able` — a whole-board walk, so the caller hoists it.
+    statics: u32,
     attackers: &mut Vec<CardId>,
 ) {
     loop {
@@ -7792,7 +7796,7 @@ fn restore_forced_attackers_unchecked(
             // spells it so the two read alike.
             let others = attackers.iter().any(|id| *id != c.id);
             if !must_attack(c, &cp.keywords, others)
-                || !state.attacker_is_able(seat, c, Some(&cp), power_caps)
+                || !state.attacker_is_able(seat, c, Some(&cp), power_caps, statics)
             {
                 continue;
             }
@@ -7910,7 +7914,14 @@ fn trim_attacks_to_payable_tax(
                 .computed_permanent(a.attacker)
                 .is_some_and(|cp| must_attack(c, &cp.keywords, attacks.len() > 1))
         });
-        if forced {
+        // CR 508.1a/508.1g — a forced attacker is kept only while its own tax
+        // fits the budget, which is exactly the question `attacker_is_able`
+        // now asks: a creature whose attack cost cannot be paid is not *able*,
+        // so CR 508.1d does not require it and dropping it is legal. Keeping
+        // it unconditionally is what cost seat 0 its whole combat on
+        // `build_cube_state_seeded(3637)` — a Juggernaut behind a two-mana tax
+        // with no mana, required to attack and rejected for attacking.
+        if forced && t <= budget {
             spend += t;
             continue;
         }
@@ -8026,13 +8037,13 @@ pub(crate) fn attack_candidates_for_mcts(
     // per own creature per candidate, and outside a scope each read rebuilds
     // the layer gather.
     if state.with_frozen_layers(attack_requirement_present) {
-        let power_caps =
-            state.attack_power_caps(crate::game::combat::attack_static_scan(state));
+        let statics = crate::game::combat::attack_static_scan(state);
+        let power_caps = state.attack_power_caps(statics);
         state.with_frozen_layers(|st| {
             for cand in candidates.iter_mut() {
                 let mut ids: Vec<CardId> = cand.iter().map(|a| a.attacker).collect();
                 let before = ids.len();
-                restore_forced_attackers_unchecked(st, seat, &power_caps, &mut ids);
+                restore_forced_attackers_unchecked(st, seat, &power_caps, statics, &mut ids);
                 for id in ids.into_iter().skip(before) {
                     if let Some(a) = greedy.iter().find(|a| a.attacker == id) {
                         cand.push(*a);

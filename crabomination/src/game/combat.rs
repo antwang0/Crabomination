@@ -661,12 +661,14 @@ impl GameState {
         card: &crate::card::CardInstance,
         cp: Option<&ComputedPermanent>,
         power_caps: &[usize],
+        statics: u32,
     ) -> bool {
         if self.attacker_self_block(p, card, cp, power_caps).is_some() {
             return false;
         }
         let kws: &[Keyword] = cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
-        if !Self::has_defender_dependent_restriction(kws) {
+        let taxed = self.attack_tax_possible(statics);
+        if !Self::has_defender_dependent_restriction(kws) && !taxed {
             return true;
         }
         (0..self.players.len()).any(|d| {
@@ -674,7 +676,48 @@ impl GameState {
                 && self.players[d].is_alive()
                 && self.player_in_range_of(p, d)
                 && self.attacker_target_block(p, card.id, kws, Some(d)).is_none()
+                && (!taxed || self.attack_cost_payable(p, card.id, kws, d, statics))
         })
+    }
+
+    /// CR 508.1g — can attacking cost anything at all on this board? Three
+    /// sources, and `attack_static_scan`'s bitmask covers only the first: the
+    /// `AttackTaxToController` statics (Propaganda, Sphere of Safety), War
+    /// Tax's turn-scoped symmetric tax, and Forbidding Spirit's per-seat one.
+    pub(crate) fn attack_tax_possible(&self, statics: u32) -> bool {
+        statics & attack_static::ATTACK_TAX != 0
+            || self.attack_tax_this_turn > 0
+            || self.players.iter().any(|pl| pl.attack_tax_until_your_turn > 0)
+    }
+
+    /// CR 508.1g — could `p` pay what it costs for `id` to attack `d`?
+    ///
+    /// **A creature whose attack cost cannot be paid is not *able* to attack,
+    /// so CR 508.1d must not require it.** Without this, a Juggernaut behind a
+    /// Propaganda its controller has no mana for is required to attack by the
+    /// requirement loops and rejected for attacking by the tax gate below
+    /// them — the seat has no legal declaration in either direction and loses
+    /// its whole combat. `build_cube_state_seeded(3637)` is that board.
+    ///
+    /// The probe is a state clone plus an auto-tap ([`could_pay_generic`]), so
+    /// every caller reaches it behind [`attack_tax_possible`] *and* behind a
+    /// must-attack presence gate. It prices this attacker alone; the batch's
+    /// total is the declaration gate's business, and asking the narrower
+    /// question here is the safe direction — a requirement that is weaker than
+    /// the gate leaves a legal declaration, and one that is stronger does not.
+    fn attack_cost_payable(
+        &self,
+        p: usize,
+        id: CardId,
+        kws: &[Keyword],
+        d: usize,
+        statics: u32,
+    ) -> bool {
+        let atk = Attack { attacker: id, target: crate::game::types::AttackTarget::Player(d) };
+        let tax = self.attack_tax_for(std::slice::from_ref(&atk), statics, |_| {
+            self.attack_block_keyword_tax(id, kws, true)
+        });
+        tax == 0 || self.could_pay_generic(p, tax)
     }
 
 
@@ -1049,6 +1092,7 @@ impl GameState {
                 c,
                 computed.iter().find(|x| x.id == c.id),
                 &attack_power_caps,
+                statics,
             )
         };
 
