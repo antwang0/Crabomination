@@ -14408,7 +14408,10 @@ impl GameState {
         // answer it identically: a source it counts and auto-tap refuses is
         // a *budget* that over-counts, and a budget that over-counts becomes
         // a rejected declaration.
-        if tap_gated && on_battlefield && self.tap_ability_summoning_sick(card_id, p) {
+        if tap_gated
+            && on_battlefield
+            && bf_src!().is_some_and(|src| self.tap_ability_summoning_sick(src, p))
+        {
             return Err(GameError::SummoningSickness(card_id));
         }
 

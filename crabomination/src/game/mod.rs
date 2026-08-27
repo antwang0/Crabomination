@@ -2379,6 +2379,14 @@ pub mod pay_census {
         std::array::from_fn(|i| BUDGET[i].load(Relaxed))
     }
 
+    /// **Not split by probe/committed, deliberately.** 100 % of `fixed`'s
+    /// taps and 99.3 % of `cube`'s land inside [`in_probe`], because
+    /// `accept_on` is how the bot performs *every* action — the ones it
+    /// adopts as much as the ones it discards. The split that would matter,
+    /// evaluated-and-dropped against chosen-and-kept, is invisible from here,
+    /// and a "99 % of taps are inside a probe" line reads like waste when it
+    /// is the funnel. Measured, then removed.
+    ///
     /// `[auto-tap calls, calls that returned before building the source
     /// table, source tables built, sources tapped]`.
     ///
@@ -2412,6 +2420,7 @@ pub mod pay_census {
     pub fn tap_snapshot() -> [u64; 4] {
         std::array::from_fn(|i| TAP[i].load(Relaxed))
     }
+
 }
 
 /// Field access on the cold group reads like a `GameState` field.
@@ -8751,17 +8760,27 @@ impl GameState {
     /// layer 4 or `bestowed` can move it, and Haste needs the computed view
     /// only when something in scope can grant it. A summoning-sick vanilla
     /// creature costs two battlefield walks where it used to cost a gather.
-    pub(crate) fn tap_ability_summoning_sick(&self, card_id: CardId, p: usize) -> bool {
-        let src = self.battlefield_find(card_id);
-        if !src.is_some_and(|c| c.summoning_sick) {
+    /// `src` is the battlefield entry, passed in rather than looked up: both
+    /// callers already hold it, and `activate_ability_inner` holds it behind
+    /// a *memoized* index. Taking `card_id` here instead turned that memo
+    /// into a linear `battlefield_find` on the hottest path in the profile —
+    /// (-51)(a) counts 19,478 mana taps in twelve `fixed` games, every one of
+    /// them tap-gated and on the battlefield.
+    pub(crate) fn tap_ability_summoning_sick(
+        &self,
+        src: &crate::card::CardInstance,
+        p: usize,
+    ) -> bool {
+        if !src.summoning_sick {
             return false;
         }
-        let bestowed = src.is_some_and(|c| c.bestowed);
+        let card_id = src.id;
+        let bestowed = src.bestowed;
         let is_creature = if bestowed || self.card_type_change_unscoped() {
             self.computed_permanent(card_id)
                 .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
         } else {
-            src.is_some_and(|c| c.definition.is_creature())
+            src.definition.is_creature()
         };
         if !is_creature {
             return false;

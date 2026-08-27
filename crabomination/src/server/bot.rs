@@ -10126,7 +10126,7 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // treats `total` as a *budget*, so over-counting it does not make the
         // bot optimistic, it makes the engine reject the whole declaration.
         // One method with the engine, so the two cannot drift.
-        if p.summoning_sick && state.tap_ability_summoning_sick(p.id, seat) {
+        if p.summoning_sick && state.tap_ability_summoning_sick(p, seat) {
             continue;
         }
         // Printed abilities plus anything granted to it (Cryptolith Rite
