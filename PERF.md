@@ -1024,8 +1024,11 @@ profiling-fast --no-default-features.
       the ladder across all five:  fixed -0.021 %, cube -0.006 %
 ```
 
-**STATE AT `39a9f618`** — this half's six perf commits, its three bug commits
-and the concurrent half above it. The two Ir totals are the exception and are
+**STATE AT `fede5014`** — this half's six perf commits, its four bug commits
+and the concurrent half above it. Suite, clippy and the 4,000-seed sweep were
+re-run at this tip; the `--bench` and Ir rows were taken two commits below it,
+at `7c725dc0`, and the commits between them touch only `decide_choose_cards`'s
+`min` fill, which the bench pool does not reach. The two Ir totals are the exception and are
 labelled: they were taken at `49748e1f`, the tip of the six perf commits below,
 which is the base of the concurrent half's row (1); those four rows moved them
 and each records its own.
@@ -1035,7 +1038,9 @@ suite  --workspace --exclude crabomination_client   19,056 / 0 / 5
 clippy --workspace --exclude crabomination_client --all-targets   clean
 golden traces  unmoved (they run inside the suite above)
 seeded cube smoke  4,000 pairings, all terminate; bot_rejection_count **0**,
-                   where the same sweep before this pass read four
+                   where the same sweep before this pass read four. Run three
+                   times over the pass: before the fixes (four), after them
+                   (zero) and again at this tip (zero)
 --bench   195,528 decisions / 27.44 turns / 0 stalls (cap 0 / stuck 0 /
           draw 0) / determinism ok / thread_determinism ok (3 vs 1)
           — **byte-identical to the committed invariant across every commit
