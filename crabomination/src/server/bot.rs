@@ -13926,6 +13926,43 @@ mod tests {
         g2.declare_attackers(attacks).expect("the plan is legal");
     }
 
+    /// CR 508.1a — creature-ness off the *computed* type line. A bestowed
+    /// creature is an Aura while it is attached; the attack planner read the
+    /// printed line, declared it as an attacker, and `declare_attackers`
+    /// rejected the batch and reported `SummoningSickness` on a card whose
+    /// flag was clear — the contradiction that made the lead unreadable for
+    /// two sessions. Both halves shipped at `d0d1162d` with no test on the
+    /// planner side, so this is a pin, not a failing case.
+    #[test]
+    fn bot_attack_plan_leaves_a_bestowed_aura_home() {
+        let mut g = two_player_game();
+        let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(host);
+        let aura = g.add_card_to_battlefield(0, catalog::kestia_the_cultivator());
+        g.clear_sickness(aura);
+        // Bestowed: attached to the host, and an Aura until it comes loose.
+        {
+            let c = g.battlefield_find_mut(aura).expect("on the battlefield");
+            c.bestowed = true;
+            c.attached_to = Some(host);
+        }
+        assert!(
+            !g.computed_permanent(aura)
+                .is_some_and(|cp| cp.card_types.contains(&crate::card::CardType::Creature)),
+            "a bestowed permanent is not a creature",
+        );
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let attacks = pick_attacks(&g, 0);
+        assert!(
+            !attacks.iter().any(|a| a.attacker == aura),
+            "a bestowed Aura cannot attack: {attacks:?}",
+        );
+        let mut g2 = g.clone();
+        g2.declare_attackers(attacks).expect("the plan is legal");
+    }
+
     /// CR 508.0 — `AttacksAlone`. A creature that attacks alone makes any
     /// batch with a second attacker illegal, so the planner drops it rather
     /// than losing the combat.
