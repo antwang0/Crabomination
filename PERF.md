@@ -952,6 +952,21 @@ overflow + -C debug-assertions=yes   65 cells, five pools x thirteen seeds
           memo's `debug_assert!`.
 ```
 
+**Whole-program Ir at `41ff9d00`, so the next run has a base it did not have
+to measure** (the same configuration as every row above — `--a gang --b gang
+--games 6 --threads 1 --seed 1`, callgrind, `profiling-fast
+--no-default-features`):
+
+```text
+  fixed  1,126,243,196        cube  3,431,711,282
+  --bench 195,528 / 27.44 / 0 stalls at the same tip
+```
+
+**Read your own base anyway if a commit landed after that one** — this branch
+takes several a day from concurrent sessions, and the eightieth pass's rule
+(re-measure the base rather than carrying it) is why every row above names
+its own.
+
 **Re-taken at the `(-64)` tip, and it is a fourth wall-clock fingerprint that
 does not compare to the other three:**
 

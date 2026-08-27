@@ -123,8 +123,10 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    run, and it is now also the audit of `zone::Graveyard`'s memo. Run it
    after anything that adds an invariant or touches the layer or simulation
    path. `--vs` reads the null on all three pools (PERF Baseline).
-6. **Tip state and container hazards** — PERF "Baseline" ("STATE AT …") and
-   "How to measure". Do not copy either back here. ⚠ **A wall-clock row is
+6. **Tip state and container hazards** — PERF "Baseline" ("STATE AT …",
+   which now also carries the tip's **whole-program Ir on both pools**, so a
+   base is a read rather than a ten-minute measurement — re-measure only if a
+   commit landed after the one it names) and "How to measure". Do not copy either back here. ⚠ **A wall-clock row is
    not comparable across a run**: the box is quiet at the end and busy in the
    middle, `host_calib_ms` moves with it, and this box resolves ±2 %.
 7. **ML** — deck judge `nets/deck-champion.safetensors`, 60.3 % pooled
