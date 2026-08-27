@@ -916,7 +916,22 @@ cube 3,386,370,818 / sealed 3,321,932,106 on this box).
       sealed  3,321,932,106 -> 3,308,449,213   -0.406 %
       cube allocations  1,832,924 -> 1,782,746   -50,178  (-2.7 %)
       cube grow_one       546,800 ->   482,428   -64,372  (-11.8 %)
+
+(2) (-73): `LayerFreezeState::perms` is inline storage too — the scope memo
+    that `Clone for LayerFreeze` empties on every `GameState` clone.
+    Base 0e86d36f (which carries (1) and a concurrent session's bot fix).
+      fixed   1,112,827,516 -> 1,109,689,934   -0.282 %
+      cube    3,368,684,452 -> 3,363,324,209   -0.159 %
+      sealed  3,307,990,133 -> 3,301,557,606   -0.194 %
+      `computed_permanent` leaves the `grow_one` table entirely
+      (21,120 -> 0); cube allocations 1,782,746 -> 1,777,364
 ```
+
+**Eight inline slots takes all 21,120 growths and sixteen would take none
+more**, so the capacity question answered itself: only 5,382 of the 21,120
+were *first* allocations — the rest were `realloc`s through `finish_grow`,
+which is why the allocation count falls by so much less than the growth
+count. **Read both columns before sizing an inline buffer.**
 
 **(-72), the same device on a struct field, is refuted in the same pass** —
 `players: SmallVec<[Player; 4]>` reads `fixed` +0.600 % / `cube` +0.490 % /
@@ -8529,6 +8544,25 @@ whose first `push` is the allocation — at half the size each, ~1.2 % of
   `Vec`s go out in a `DispatchScan`, so an inline buffer moves its bytes at
   every return; the entry above is specifically about a local that dies in
   its own frame.
+
+**(-73) TAKEN at the eighty-sixth pass — `fixed` -0.282 %, `cube` -0.159 %,
+`sealed` -0.194 %, and `computed_permanent` leaves the `grow_one` table
+entirely (21,120 -> 0).** `LayerFreezeState::perms` — the freeze scope's
+per-card layer memo — is `SmallVec<[(CardId, Arc<ComputedPermanent>); 8]>`.
+`clear()` keeps capacity, so the field looked like it allocated once per
+*process*; what it actually does is allocate once per **`GameState` clone**,
+because `Clone for LayerFreeze` is `default()` and hands every probe a fresh
+empty `Vec`. 21,120 growths against 22,684 clones on `cube`.
+
+**It passes (-72)'s test where `players` failed it: three read sites** (the
+linear scan, the push, the clear), all inside `computed_permanent` and
+`end_of_scope`. The +128 bytes it puts on `GameState` cost less than the
+allocation on all three pools.
+
+**Only 5,382 of the 21,120 growths were first allocations** — the rest are
+`realloc`s through `finish_grow`, which is why the allocation count falls by
+a quarter of the growth count. Sixteen slots would take no more growths than
+eight does.
 
 **(-72) BUILT, MEASURED AND REFUTED at the eighty-sixth pass — `fixed`
 **+0.600 %**, `cube` **+0.490 %**, `sealed` **+0.542 %**, and the allocation

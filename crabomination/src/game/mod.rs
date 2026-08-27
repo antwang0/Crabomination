@@ -294,7 +294,14 @@ struct LayerFreezeState {
     /// second `computed_permanent` for the same card is the same answer.
     /// Short — one entry per permanent actually asked about — so a linear
     /// scan beats hashing. Cleared with `memo`.
-    perms: Vec<(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>)>,
+    ///
+    /// Inline storage, by (-71)'s device: `clear()` keeps capacity, but
+    /// `Clone for LayerFreeze` is `default()`, so **every** `GameState` clone
+    /// gets a fresh empty `Vec` and its scope's first computed read pays the
+    /// allocation — 21,120 `grow_one` calls against 22,684 clones on a `cube`
+    /// run. Three read sites (the scan, the push, the clear), which is what
+    /// (-72) says the device needs.
+    perms: SmallVec<[(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>); 8]>,
 }
 
 /// The layer-4 type families with a presence gate, and the slot each one
