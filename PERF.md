@@ -7050,10 +7050,78 @@ stamp entry turns, four more `events.iter()` passes (the graveyard-batch
 collapse, the synthesis fold, the delayed-trigger filters), a whole-
 battlefield loop, and a `died_card_snapshots` walk at the tail. The
 `no_grants` fast skip inside the battlefield loop is already there and is not
-the question. **What this wants first is a line profile** — `profiling-lines`
-plus `cg_lines.py`, which is a cold build and the reason nobody has run it —
-because five candidate sub-costs at ~300 Ir each are indistinguishable from
-one at 1,400 by reading the source.
+the question.
+
+**THE LINE PROFILE IS RUN AND THE ANSWER IS "THERE IS NO HOT LINE".**
+`profiling-lines` + `--dump-instr=yes` + `cg_lines.py --in
+dispatch_triggers_for_events`, `--decks cube`, at `bb22e774`. The inline group
+is **203,632,136 Ir, 6.9 % of the run** (larger than the self row because it
+carries everything inlined into it), and the largest single line in it is
+**0.23 %**:
+
+```text
+  19,459,084  0.66%  game/mod.rs:?          (unattributed within the fn)
+  12,593,348  0.43%  vec/mod.rs:464
+  11,575,534  0.39%  iter/macros.rs:?
+   8,699,548  0.29%  ptr/non_null.rs:444
+   6,939,582  0.23%  game/mod.rs:22260      is_event_hardcoded's `match ev`
+   6,907,298  0.23%  ptr/mut_ptr.rs:961
+   4,442,364  0.15%  game/mod.rs:17315      the battlefield loop's skip check
+   4,066,796  0.14%  game/mod.rs:17461      event_subject, innermost loop
+   3,937,416  0.13%  game/mod.rs:17443      is_event_hardcoded call site
+   2,405,960  0.08%  game/mod.rs:17460      event_matches_spec call site
+```
+
+Grouped by region: the **per-card battlefield loop prologue** (17314-17316,
+17328, 17353-17359, 17374 — the skip check plus the three grant lookups) is
+**~13 M / 0.44 %**; the **per-(trigger, event) inner loop** (17443-17461) is
+**~11.4 M / 0.39 %**; the rest is ~30 M of iterator and pointer internals
+spread across a dozen narrow passes, none above 0.1 %. **The graveyard walk
+and the death-snapshot walk — the two ungated whole-collection loops a source
+read flags as suspects — do not appear in the top forty at all.**
+
+**So the lever is fewer dispatches, not a cheaper dispatch.** 114,834 of the
+139,500 come from `perform_action_inner` draining one action's event list.
+Nothing here is takeable by a gate; anything that moves it has to remove
+whole calls. **Do not re-run this line profile** — it cost a cold
+`profiling-lines` build and this table is its whole result.
+
+**(-61) `keyword_grant_in_scope` IS 1.7 MILLION `card_can_grant_keyword`
+CALLS — 59,569,000 Ir OF SELF / 1.67 % OF `cube` — AND ITS THREE CALLERS ARE
+EACH ONE WHOLE-BOARD WALK PER QUESTION.** Read at `f51e695b`, `--decks cube`.
+The presence gate itself is already tight (~35 Ir a card, and the per-card
+disqualifier is five `is_empty` loads), so the lever is **fewer walks**, not a
+cheaper one:
+
+```text
+callers of card_can_grant_keyword     1,713,848 calls
+  543,758   21,702,216  card_keyword_possible        <- 21.6 cards a question
+  461,668   13,594,100  apply_prevention_shields_with
+  430,086   16,602,010  damage_prevented_by_protection
+  104,598    3,198,300  advance_step
+   52,560    1,649,470  do_untap
+
+and one level up
+  25,204   29,946,272  activate_ability_inner -> card_keyword_possible  0.85 %
+  12,740   23,300,482  resolve_combat -> apply_prevention_shields_with  0.66 %
+```
+
+**`activate_ability_inner` asks three of these** (CR 602.5's
+`CantActivateTapAbilities`, `Haste`, `CantActivateAbilities`) at 1,188 Ir a
+question, over 50,058 calls — but only **0.5 questions per call**, so fusing
+them into one union walk buys almost nothing and was dropped before it was
+built. The two prevention callers are inside `resolve_combat`'s **per-pair**
+freeze scopes, so a scope-level memo (the `TypeGate` device, which has three
+slots and no keyword slot) would collapse repeats *within* a pair and not
+across them — the same wall (-58) hit.
+
+**What has not been tried:** the local shortcut. `activate_ability_inner`'s
+gates exist only to avoid `bf_cp!()`, its take-once computed-permanent read
+(actions.rs:13971) — and PERF's forty-seventh pass rule is that **a gate that
+stands in for a gather stops paying once the gather has run**. `bf_cp.is_some()`
+short-circuits the gate exactly, for free, and `layers_memoized()` is the same
+device one level up. It is small, but it is the only thing here that costs
+nothing to be wrong about.
 
 **(-60) `trigger_grant_sources` WALKS EVERY STATIC ABILITY ON THE BOARD TO
 FIND A QUARTER OF A GRANT, 57,596 TIMES — 35,656,442 Ir OF SELF / 1.00 % OF
