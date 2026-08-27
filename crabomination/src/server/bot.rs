@@ -8138,24 +8138,35 @@ fn dry_run(
     g.perform_action_inner(action)
 }
 
-/// The simulation loops' action step, with the historical fallback: a rejected
-/// action is rolled back and retried as a priority pass.
+/// The simulation loops' action step. A rejected action abandons the
+/// simulation; `false` says so.
 ///
-/// When the action *is* a pass, the fallback is a no-op — the engine is
-/// deterministic, so retrying the same call on the restored state fails the
-/// same way — which is why a pass takes the checkpoint-free path and abandons
-/// on `Err`. The one error `perform_action` deliberately does not roll back is
-/// `ManualTapRequired`, which leaves exactly the state the retry would have
-/// seen, so that retry is kept and reads the same. Returns false when the
-/// simulation must be abandoned.
+/// **This used to take `perform_action`'s transaction checkpoint so a rejected
+/// declaration could be rolled back and retried as a priority pass, and that
+/// checkpoint was ~0.9 % of a `cube` run for a path that never runs.** The
+/// census below is what settled it: `CRAB_SIM_REJECTS` reads **0 in 73
+/// configurations** across five pools, and the sim owns `g` outright — a
+/// caller that gets `false` drops it unread, so a partially-mutated state is
+/// never observed. That is also the semantics
+/// [`simulate_attack_outcome`]'s own doc already promises for the *opening*
+/// declaration ("an unfinished turn is scored not at all rather than scored
+/// wrong"); this makes the loop's later declarations agree with it.
+///
+/// The one error kept: `ManualTapRequired` is a suspension dressed as an
+/// `Err`, and `perform_action` deliberately does not roll it back because it
+/// leaves exactly the state a retry would have seen — so the retry is kept and
+/// reads the same, here as on the pass branch.
+///
+/// [`simulate_attack_outcome`]: fn@simulate_attack_outcome
 /// The simulation's own declaration pickers against the engine, counted.
 ///
-/// `sim_step`'s fallback quietly rolls a rejected declaration back and retries
-/// it as a priority pass, so a picker that proposes an illegal attack or block
-/// costs a full `perform_action` + checkpoint + restore and shows up nowhere:
-/// not in the suite, not in the traces, not in `--bench`. PERF's (-54) asked
-/// for the failure count and (-55) is what it found. Off by default and gated
-/// by one `OnceLock` read, so the hot path pays an atomic load and a branch.
+/// A picker that proposes an illegal attack or block shows up nowhere on its
+/// own — not in the suite, not in the traces, not in `--bench`. PERF's (-54)
+/// asked for the failure count, (-55) is what it found, and it is now the
+/// guard that keeps `sim_step`'s abandon-on-`Err` honest: **run it before and
+/// after anything that touches a picker or a combat check, and sweep seeds
+/// rather than sampling three.** Off by default and gated by one `OnceLock`
+/// read, so the hot path pays an atomic load and a branch.
 ///
 /// ```text
 /// CRAB_SIM_REJECTS=1     bot_ladder … --decks cube    # the counts
@@ -8194,7 +8205,8 @@ fn sim_step(g: &mut GameState, action: GameAction) -> bool {
         };
     }
     if sim_rejects::level() == 0 {
-        return g.perform_action(action).is_ok() || dry_run(g, GameAction::PassPriority).is_ok();
+        let r = dry_run(g, action);
+        return sim_outcome(g, r);
     }
     let kind = match &action {
         GameAction::DeclareAttackers(_) => 0usize,
@@ -8202,7 +8214,7 @@ fn sim_step(g: &mut GameState, action: GameAction) -> bool {
         _ => 2,
     };
     sim_rejects::CALLS[kind].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let r = g.perform_action(action);
+    let r = dry_run(g, action);
     if let Err(e) = &r {
         sim_rejects::ERRS[kind].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         if sim_rejects::level() >= 2 {
@@ -8224,7 +8236,24 @@ fn sim_step(g: &mut GameState, action: GameAction) -> bool {
             );
         }
     }
-    r.is_ok() || dry_run(g, GameAction::PassPriority).is_ok()
+    sim_outcome(g, r)
+}
+
+/// `sim_step`'s verdict on one engine call: keep going, or abandon.
+///
+/// The `ManualTapRequired` retry is the whole reason this is a function and
+/// not `is_ok()` — see [`sim_step`].
+fn sim_outcome(
+    g: &mut GameState,
+    r: Result<Vec<crate::game::GameEvent>, crate::game::GameError>,
+) -> bool {
+    match r {
+        Ok(_) => true,
+        Err(crate::game::GameError::ManualTapRequired { .. }) => {
+            dry_run(g, GameAction::PassPriority).is_ok()
+        }
+        Err(_) => false,
+    }
 }
 
 fn simulate_attack_outcome_once(
