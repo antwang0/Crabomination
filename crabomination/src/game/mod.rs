@@ -2341,6 +2341,11 @@ pub mod pay_census {
         ATTEMPTS.fetch_add(1, Relaxed);
         let Some(e) = e else { return };
         FAILS[class_of(e)].fetch_add(1, Relaxed);
+        let tables = TABLES_THIS_PAY.with(|c| c.get());
+        if tables > 0 {
+            EXPENSIVE_FAILS[0].fetch_add(1, Relaxed);
+            EXPENSIVE_FAILS[1].fetch_add(tables, Relaxed);
+        }
         let probe = probing();
         BY_ORIGIN[usize::from(!probe)].fetch_add(1, Relaxed);
         if lvl >= 2 {
@@ -2419,11 +2424,40 @@ pub mod pay_census {
         AtomicU64::new(0),
     ];
 
+    thread_local! {
+        /// Source tables built since the current payment began — see
+        /// [`EXPENSIVE_FAILS`].
+        static TABLES_THIS_PAY: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    }
+
+    /// Failed payments that had already built a source table when they
+    /// failed, and the taps those payments made.
+    ///
+    /// The half of the failure population that is worth removing: the rest
+    /// took `auto_tap_for_cost_inner`'s early exit and cost a clone.
+    pub static EXPENSIVE_FAILS: [AtomicU64; 2] = [AtomicU64::new(0), AtomicU64::new(0)];
+
+    /// Called when a payment attempt begins, so the per-payment table count
+    /// starts from zero.
+    pub fn begin_payment() {
+        if level() == 0 {
+            return;
+        }
+        TABLES_THIS_PAY.with(|c| c.set(0));
+    }
+
     pub fn record_tap(i: usize, n: u64) {
         if level() == 0 {
             return;
         }
         TAP[i].fetch_add(n, Relaxed);
+        if i == 2 {
+            TABLES_THIS_PAY.with(|c| c.set(c.get() + n));
+        }
+    }
+
+    pub fn expensive_snapshot() -> [u64; 2] {
+        std::array::from_fn(|i| EXPENSIVE_FAILS[i].load(Relaxed))
     }
 
     pub fn tap_snapshot() -> [u64; 4] {

@@ -1613,6 +1613,13 @@ fn main() {
             t[2],
             t[3],
         );
+        let ex = crabomination::game::pay_census::expensive_snapshot();
+        println!(
+            "  pay_fails_costly {} of {total} failures had built a source table ({:.1} %), {} tables",
+            ex[0],
+            if total == 0 { 0.0 } else { 100.0 * ex[0] as f64 / total as f64 },
+            ex[1],
+        );
         let (probe, committed) = crabomination::game::pay_census::origin_snapshot();
         let b = crabomination::game::pay_census::budget_snapshot();
         println!(

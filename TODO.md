@@ -90,8 +90,10 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    widening hypothesis was good, and a counter killed it in one run at 0.0 %
    on the pool that had the problem. **And it now reports cost, not just
    count** (`pay_taps`: calls / early returns / tables / taps) — 700 probes
-   removed measures ~10x what 64 do, and only the work counter tells them
-   apart before a build.
+   removed measures ~10x what 64 do — and **not** because the 64 were cheap:
+   `pay_fails_costly` says 98.7-100 % of remaining failures on every pool had
+   already built a source table. **(-51)(b) still holds ~1 % of `cube` and
+   none of `fixed`.**
 2. **A commit that moves play** — PERF "How to measure": `--vs` after the
    null run, `CRAB_SIM_REJECTS` and `CRAB_PAY_FAILS` **swept, not sampled**,
    Ir on both pools. **`--bench`'s decision count is a committed invariant —

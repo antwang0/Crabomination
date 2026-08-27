@@ -11978,6 +11978,7 @@ impl GameState {
         // `forced_only` (human) path.
         spend_float: Option<bool>,
     ) -> Result<PaymentReceipt, GameError> {
+        crate::game::pay_census::begin_payment();
         // CR 609.4b — Mycosynth Lattice's "players may spend mana as though it
         // were mana of any color": relax the coloured pips before anything
         // downstream (auto-tap, float protection, `pay_for_spell`) reads them.

@@ -294,9 +294,11 @@ different place. The tables are in (-51)(b).
 AUTHOR BY IMPLYING IT WAS.** `auto_tap_for_cost_inner` returns before building
 anything when the pool already covers the cost or the board has nothing to
 tap; a probe that takes that exit is a `GameState` clone and little else.
-Removing **700** such probes from `fixed` is worth **-0.282 %** (Ir, all
-four filters); removing **64** from the same pool one commit later is worth
-nothing measurable. So `pay_taps` reports the
+Removing **700** such probes from `fixed` is worth **-0.282 %** (Ir, all four
+filters); removing **64** is worth about a tenth of that, which is under the
+clock's floor. **Not because the 64 were cheap** — `pay_fails_costly` says
+98.7-100 % of failures on every pool had already built a source table — but
+because 64 of anything is small. So `pay_taps` reports the
 work, not the count:
 
 ```text
@@ -4104,14 +4106,38 @@ caller's version had already resolved before deciding the parameter list.
 This is the second cost that unification has hidden on this branch (the first
 was the tapped term drifting between four copies of one conjunction).
 
-**1. The payment census learned that a failed payment is not a unit of cost.**
-Removing 700 probes from `fixed` is worth -0.282 % by Ir; removing 64 from
-the same pool one commit later is worth nothing measurable, because `auto_tap_for_cost_inner` returns before
-building anything when the pool covers the cost or the board has nothing to
-tap. `pay_taps` now reports calls / early returns / tables / taps, which is
-the work rather than the count — see "How to measure". **A census that counts
-events has to say what an event costs, or its next reader sizes a change by
-counting.**
+**1. The payment census reports work, not just count — and the reason first
+given for needing it was a third invented mechanism.** The entry originally
+said 700 probes removed read -2.20 % and 64 read flat *because*
+`auto_tap_for_cost_inner` returns before building anything when the pool
+covers the cost. The cross-tab says otherwise: **98.7-100 % of the remaining
+failures on every pool had already built a source table** when they failed.
+There was no cheap-failure population — there was a 700-probe change worth
+0.282 % and a 64-probe change worth about a tenth of that, both under the
+clock's floor, and only one of them happened to read significant.
+
+**Three explanations were invented in this pass for one mis-measured number**
+— a duplicate-versus-first walk, a cheap-versus-expensive failure, and a
+factor-of-two in `ab_wall`'s CI — and each looked like a finding. **A
+measurement you cannot reproduce with a second instrument will generate as
+many mechanisms as you ask it for.**
+
+The counters stay, because they size what is left rather than count it:
+
+```text
+--games 12 --threads 1   failures   had built a table   ~Ir at 6,690 a table
+cube   s1                   5,414       5,378 (99.3 %)    36.0 M = 1.05 % of cube
+all    s1                   4,320       4,264 (98.7 %)    28.5 M
+sealed s1                   2,058       2,058 (100 %)     13.8 M
+sos    s1                     754         754 (100 %)      5.0 M
+fixed  s1                       0           0                 0
+```
+
+**So (-51)(b) still has about a point of `cube` in it**, and `fixed` has none
+— which is why that entry's pool split matters more than its total.
+`pay_taps` reports calls / early returns / tables / taps and
+`pay_fails_costly` reports the cross-tab. **A census that counts events has to
+say what an event costs, or its next reader sizes a change by counting.**
 
 **2. Three more response paths got the affordability filter, and it is flat.**
 `pick_ability_counter_response`, `pick_buff_response` and
