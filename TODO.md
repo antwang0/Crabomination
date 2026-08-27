@@ -33,10 +33,14 @@ because every pass restated what PERF already held. Everything below has a
 home in PERF's "Perf candidates", "How to measure" or Log, or in the standing
 rules under this section; add a pointer here, put the detail there.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-51)(b)**, then (-60),
-   (-61), (-51)(a), (-59), plus (-63)'s three unpriced residues at the foot of
-   its entry. Closed at the eighty-fifth pass: **(-65)** and **(-63)**.
-   The list is thin: **read the instruments before the profile**
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-68)**
+   (`fire_combat_damage_triggers`, six battlefield walks a damage event,
+   1.51 % of `cube`, priced by reading), **(-69)** (the two `Vec::from_iter`
+   monos, 3.45 % of `cube`, `check_state_based_actions` unclaimed in its
+   by-count table), then **(-51)(b)**, (-60), (-61), (-51)(a), (-59), plus
+   (-63)'s residues at the foot of its entry. Closed at the eighty-fifth
+   pass: **(-65)**, **(-63)** (both halves), **(-66)**, **(-67)**.
+   **Read the instruments before the profile**
    (`CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`, `server::bot_rejection_count`,
    `--bench`'s stall split), and see "Standing rules for a perf pass" below
    for every refutation worth knowing.
@@ -70,7 +74,29 @@ one-sentence claim plus the pass that measured it; do not delete one, because
 the point of the section is that a rule refuted on a *mechanism* stays
 refuted.
 
-- **A thin candidate list is not an empty engine** (pass 84). Three of that
+- **When a pass deletes the work an abstraction existed to amortise, the
+  abstraction is the next thing to read — and its doc comment will not tell
+  you** (pass 85, the concurrent half, item 1; `fixed` -0.901 %, `cube`
+  -0.806 %). `bot::ProbeCell` cached `state.affordance_probe_template()` for
+  probes that each cloned it; the function had become plain `self.clone()`
+  when a different pass deleted the library strip it existed to amortise, so
+  the cached value was equal to the state it was made from. The cell was
+  lazy, documented and carried real numbers — about work that no longer
+  existed. **Grep for the shape, not the symptom:** `affordances.rs` still
+  has ~12 of it.
+- **Ask whether a function reads its parameter's *value* or its *support***
+  (pass 85, the concurrent half, item 2; -58.5 % of `static_build_score`).
+  `score_brief_with_colors` took a `ColorCounts` and touched it only through
+  `is_empty()` and `get(c) > 0`, which makes its colour term a function of a
+  five-bit set — and then `off = total - on` collapses two accumulators into
+  one masked sum and the rest of the function into a memo field.
+- **Memoize the pool, not just the cards** (pass 85, the concurrent half,
+  item 3; `sealed_pool` -25.9 %). The card definitions had been memoized for
+  thirty passes; `sos_draft_pool` and `SosPacks::new` rebuilt the *pool* made
+  out of them per pool. **No profile row said so** — the cost was spread over
+  three small ones. Ask what else in a prologue has no inputs.
+- **A thin candidate list is not an empty engine** (pass 84, and pass 85's
+  concurrent half is three of four). Three of that
   pass's eight rows were on no candidate and in no self table —
   `Option::or_else`, the boxed keyword list, `printed_color_set` — and all
   three came from *counting* (call counts, allocations per call, a hot

@@ -902,6 +902,65 @@ build.
 
 ## Baseline
 
+**Eighty-fifth pass, the concurrent half — four more perf commits on top of
+the six below, and three of the four are a *stale abstraction* rather than a
+hot loop.** A colour list that had to be a `Vec` before it was six bytes; a
+per-card score whose colour term nobody had noticed was closed-form; a pool
+constant rebuilt per pool; and a probe *template* whose cached value became
+equal to the state it cached the moment a different pass deleted the work it
+existed to amortise.
+
+```text
+bot_ladder --a gang --b gang --games 1 --threads 1 --seed 1 --decks sealed,
+callgrind, profiling-fast --no-default-features.  (1)-(3) are deck
+construction, which the ladder cannot see; each row's base is the row above.
+
+(1) (-63): the 56-shape lattice's colour lists are inline `[Color; 5]`, so it
+    stops allocating 60 `Vec`s a build and two more per shape.
+    Base 3c939502 (the tip of the six commits below).
+      run total                14,244,236 -> 13,335,416   -6.38 %
+      heuristic_sealed_build    9,148,732 ->  8,269,322   -9.61 %
+      program allocations           6,985 ->      4,897  -29.9 %
+
+(2) (-63): the card score's colour term is `10*on - 4*total` over the seat's
+    five-bit mask; everything else in it is a `CardBrief` field.
+      run total                13,335,416 -> 12,130,329   -9.04 %
+      heuristic_sealed_build    8,269,322 ->  7,058,782  -14.64 %
+      static_build_score        2,044,015 ->    849,074  -58.5 %
+
+(3) (-66): `sos_draft_pool` and `SosPacks::new` are `OnceLock`s.
+      run total                12,130,329 -> 11,225,734   -7.46 %
+      sealed_pool               3,856,940 ->  2,858,254  -25.9 %
+
+    Across (1)-(3) the run is 14,244,236 -> 11,225,734 (**-21.2 %**), a
+    heuristic sealed build **762,394 -> 594,245 Ir (-22.1 %)** on top of the
+    -45.3 % below, and a sealed pool 321,412 -> 238,188. Decks byte-identical
+    at every step (`--decks sealed --games 8 --threads 1 --seed 1`).
+
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, same binary
+configuration.
+
+(4) (-67): the affordance sweep's probe template was a clone of the state
+    that every probe cloned again.
+      fixed  1,126,344,191 -> 1,116,191,782   -0.901 %
+      cube   3,425,701,888 -> 3,398,074,516   -0.806 %
+      GameState::clone   cube 29,652 -> 22,688 calls, fixed 13,640 -> 10,822
+```
+
+**A build is 1,394,414 Ir at the eighty-fourth tip and 594,245 after both
+halves of this pass — 2.35x.** The actor figure is arithmetic, not a
+measurement: `heuristic_sealed_build` was 4.02 % of a `selfplay_train` actor
+at 1,404,242 Ir a build, so the two halves together are worth roughly
+**2.3 % of the actor**, of which this half is ~0.5 %, plus ~0.1 % for
+`sealed_pool`. Quote it that way or re-measure the actor.
+
+**⚠ These rows' bases are the row above, and the `Base <hash>` lines inside
+the four commit messages name pre-rebase objects.** The commits landed on top
+of the six below and were rebased before pushing. Sixth time this file has
+recorded the hash-in-a-doc hazard; the durable form is in "Standing rules" —
+**cite a hash only for a commit already on `origin`**, which for a Baseline
+row means writing it after the push.
+
 **Eighty-fifth pass. Six perf commits and one bug fix: one perf commit on the
 ladder and five on deck construction, which the ladder cannot see.**
 
@@ -923,8 +982,9 @@ profiling-fast --no-default-features.
       the ladder across all five:  fixed -0.021 %, cube -0.006 %
 ```
 
-**STATE AT THE EIGHTY-FIFTH PASS'S TIP.** The suite and clippy rows are the
-tip's, i.e. they carry the exile-target bug fix as well as the six perf
+**STATE BELOW PREDATES THE FOUR COMMITS ABOVE** — it is the tip of the six,
+`49748e1f`, which is the base of row (1). **The suite and clippy rows are the
+tip's**, i.e. they carry the exile-target bug fix as well as the six perf
 commits; the two Ir totals were taken at `49748e1f`, the last perf commit
 under it, and the fix moves neither — `--decks fixed` and `--decks cube` reach
 no trigger whose target filter has an off-board match.
@@ -4099,6 +4159,59 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Eighty-fifth pass, the concurrent half — three of four wins were a stale abstraction, and one of them was a cache of a value equal to what it cached
+
+**1. When a pass deletes the work an abstraction existed to amortise, the
+abstraction is the next thing to read — and its doc comment will not tell
+you.** `bot::ProbeCell` held `state.affordance_probe_template()` and every
+probe in the tick cloned *that*. The template earned its keep by stripping
+the libraries once for many probes; a later pass deleted the strip (a
+`CowBox` library clones for a refcount, so the strip cost a `PlayerData`
+unshare per player and saved nothing), which left the function as literal
+`self.clone()` — so the cache was a clone of `state` that every probe cloned
+again, one whole extra `GameState` clone and drop per sweep. **`fixed`
+-0.901 %, `cube` -0.806 %**, `GameState::clone` -23.5 % of its calls on
+`cube` with `accept_on`'s own 11,936 untouched. Nothing about the cell looked
+wrong: it was lazy, documented, and its comment carried real numbers — about
+a body of work that no longer existed. **Grep for the shape, not the
+symptom:** `affordances.rs` has ~12 `self.<x>_on(&self.affordance_probe_
+template(), seat)` entry points of the same kind, left alone because they are
+the client-view projection and appear nowhere in the bot's clone table.
+
+**2. Ask whether a function reads its parameter's *value* or its *support*.**
+`score_brief_with_colors` took a `ColorCounts` and touched it only through
+`is_empty()` and `get(c) > 0`. That makes the colour term a function of a
+five-bit set, and once it is, `off = total - on` collapses two accumulators
+to `10*on - 4*total` over one masked sum, and everything else in the function
+is a property of the card and precomputable in the `CardBrief` memo that was
+already there. **`static_build_score` -58.5 %.** This is the fifty-fourth
+pass's memo rule one level down: a memoized *object* being asked a question
+whose answer is constant across the 56 shapes it is asked for.
+
+**3. And one level *out*: memoize the pool, not just the cards.**
+`sos_draft_pool` walks five colleges' sub-pools, dedups through a `HashSet`
+and filters on a per-card `CardDefinition` name lookup; `SosPacks::new`
+buckets the result. Both are functions of nothing and both were rebuilt per
+pool — twice a game in a training actor. `--decks sealed --games 1` -7.46 %,
+`sealed_pool` -25.9 %. **No profile row said so**, because the cost is spread
+over `all_sos_cards`, a `Vec` collect and a hash build, none of which is
+large on its own.
+
+**4. Sizing note, against this file's own habit.** Every row in items 2-3 and
+the lattice commit is allocation-shaped, and the pass-54 rule says Ir
+overstates those because callgrind runs the system allocator while mimalloc
+ships. Ir is still the right instrument here — the changes remove
+*allocations*, not allocator time, and the counts are exact (program
+allocations 6,985 -> 4,897; `GameState::clone` -23.5 %) — but the share a
+`selfplay_train` actor sees will be smaller. Do not quote these as actor
+numbers without measuring the actor.
+
+**5. The two sessions found the same instrument correction independently**
+(`--decks sealed --games 1` is the deck-builder instrument, not a dead
+recipe). That is worth one line because it is the second time this pass a
+*wrong note in a tracker* cost real work: the note was confident, carried a
+number, and was written by the same pass that had made it wrong.
 
 ### Eighty-fifth pass — a clone removal that was six times its estimate, an instrument this file had declared dead, and a target in exile
 
@@ -8161,9 +8274,78 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-68) `fire_combat_damage_triggers` WALKS THE BATTLEFIELD SIX TIMES PER
+DAMAGE EVENT — 51,274,236 Ir OF SELF / 1.51 % OF `cube` / 19,830 TOP-LEVEL
+CALLS / 2,586 Ir OF SELF EACH, AND NO ENTRY HAS EVER NAMED IT.** Read at
+`a63b1934`, `--decks cube`, `cg_edges.py` self table. Its callee list is
+almost empty (20,022 `__rust_alloc` for 1.1 M — the one
+`Vec<Vec<DamageTrigger>>` a call), so essentially all of it is the function's
+own inlined walks:
+
+```text
+  battlefield.iter().find(|c| c.id == source)     the dealer  (short-circuits)
+  phase 1b   for eq in &self.battlefield          equipment-granted
+  phase aura for aura in &self.battlefield        EnchantedBySource
+  phase soul for src in &self.battlefield         CR 702.95 soulbond
+  phase 1.5  for c in &self.battlefield           YourControl listeners
+  phase 1.6  for c in &self.battlefield           AnyPlayer listeners
+```
+
+Six walks of ~10 permanents at ~50 Ir a visit is 2,500, which is the 2,586.
+**Two of them fuse and three of them gate**, and the ordering constraint is
+what makes it fiddly rather than free: the phases push into `by_kind[i]` in
+phase order and that order reaches the stack, so a naive single walk
+interleaves them. 1.5 and 1.6 fuse if 1.6's hits go through a buffer that is
+`Vec::new()` (so allocation-free) on every board without an `AnyPlayer`
+listener and is drained after; 1b / aura / soulbond gate on "anything
+attached to the dealer" and "a soulbond pair involving the dealer", both of
+which the dealer lookup can compute for free by not short-circuiting.
+
+**(-69) `Vec::from_iter`'s TWO MONOS ARE 3.45 % OF `cube` AND THE CALLER TABLE
+BY COUNT HAS TWO ROWS NOBODY HAS COSTED.** Read at `a63b1934`, 778,489 calls:
+
+```text
+  234,574     56,658,210  compute_permanent_pass          <- (-56b), REFUTED
+   37,196     27,872,140  declare_attackers_banded
+   36,150     98,042,596  check_state_based_actions       <- unclaimed
+   23,726      4,993,835  blockers_of
+   18,258     80,643,480  compute_permanents              <- unclaimed
+   15,966    114,396,124  pick_blocks_inner
+   12,774    170,721,347  cast_candidates
+```
+
+The inclusive columns are subtrees, not the collect, so they rank the *call
+site* rather than the allocation. `check_state_based_actions` at 36,150
+collects is the one to read first — the sweep runs after every action, and
+(-44)'s question is the one to ask of it: **how often is the collected `Vec`
+empty?** Read (-56b) before proposing a replacement: `collect` is internal
+iteration and a hand-written loop is not, and that cost ~0.15 % of `fixed`
+the last time somebody swapped one.
+
+**(-67) TAKEN at `a63b1934` — `fixed` -0.901 %, `cube` -0.806 %.** The bot's
+affordance sweep cached a `GameState` clone as a "probe template" and every
+probe cloned *that*; `affordance_probe_template` had become plain
+`self.clone()` when the library strip came off it, so the cached value was
+equal to the state it was made from. `GameState::clone` -23.5 % of its calls
+on `cube`. **The find is a stale abstraction, not a hot loop** — see the Log.
+`affordances.rs` has ~12 more of the same shape, unmeasured and untouched.
+
+**(-66) TAKEN at `abdb6373` — `--decks sealed --games 1` -7.46 %,
+`sealed_pool` -25.9 %.** `sos_draft_pool` and `SosPacks::new` are functions
+of nothing and were rebuilt per pool, i.e. twice a game in a training actor;
+both are `OnceLock`s now. **The device is the fifty-fourth pass's memo rule
+one level out:** memoizing the card definitions does not help if the *pool*
+built from them is re-derived. Ask what else in a prologue has no inputs.
+
 **(-63) TAKEN AT THE EIGHTY-FIFTH PASS IN FIVE COMMITS — A HEURISTIC SEALED
 BUILD IS 16,732,968 -> 9,146,042 Ir, `-45.3 %`, WHICH AT 4.02 % OF THE ACTOR
-IS ~1.8 % OF IT. THE ENTRY'S OWN FRAMING WAS WRONG IN THE USEFUL DIRECTION:
+IS ~1.8 % OF IT — AND THE CONCURRENT SESSION TOOK ANOTHER **-22.1 %** OUT OF
+IT IN THE SAME PASS (762,394 -> 594,245 a build; see the Baseline's
+concurrent-half block), SO A BUILD IS 2.35x CHEAPER ACROSS THE TWO HALVES.
+WHAT IS LEFT IS `rank_shape`'s OWN BODY — 3,315,654 Ir of self over 672
+shapes, 29.5 % of `--decks sealed --games 1`, no hot line, and the only
+remaining lever is **fewer shapes**, which is the training-distribution
+argument this entry has always flagged as not-unilateral. THE ENTRY'S OWN FRAMING WAS WRONG IN THE USEFUL DIRECTION:
 IT SAID THE ONLY FREE LEVER WAS "A CHEAPER 56", MEANING THE PER-SHAPE
 ALLOCATIONS, AND FOUR OF THE FIVE COMMITS INSTEAD REMOVED WORK THE 56 SHAPES
 DID FOR NOBODY.** See the eighty-fifth pass's Log item 1 for the rows.
