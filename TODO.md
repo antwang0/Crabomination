@@ -60,6 +60,14 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    `--bench`'s stall split. A "do not re-open" written against an *argument*
    dates when the evidence moves; one written against a *measurement* does
    not.
+1d. **`ab_wall`'s CI is within-run.** The same pair, box and workload read
+   -1.31 % [-2.34, -0.27] and -2.5 % [-5.18, +0.10] on two sittings — one
+   clears zero, one does not. **Repeat the pair before quoting anything under
+   ~2 %**, and quote direction and block count with the interval. **Refuted
+   this pass, do not re-take:** the battlefield-index hint on the tap path
+   (`activate_ability_at`), flat on both pools — its scan is the *first* walk
+   of the Vec, where the one that paid 1.4 % was a *duplicate*. A duplicate
+   walk and a first walk are not the same cost.
 1c. **A helper that takes an *id* where its caller holds the *thing* turns a
    memoized lookup into a search.** This branch's own CR 602.5g/h extraction
    did it on the tap path and cost **`cube` 1.46 % / `fixed` 1.31 %** until it

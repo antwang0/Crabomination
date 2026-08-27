@@ -3979,7 +3979,19 @@ games**.
 ab_wall, --warmup, 3 threads          median B/A      95 % CI        blocks
 cube  400 games x 8, seed 11, 10 blk    0.9854    -2.68 .. -0.23 %    8/10
 fixed 2,000 games x 4, seed 11, 8 blk   0.9869    -2.34 .. -0.27 %    7/8
+fixed  same pair, repeated               0.975    -5.18 .. +0.10 %    7/8
 ```
+
+**That third row is the pass's other lesson, and it is about `ab_wall` rather
+than about the code.** The same binary pair on the same box, same workload,
+same eight blocks: **-1.31 % [-2.34, -0.27] and -2.5 % [-5.18, +0.10]**. The
+point estimates differ by a factor of two and one interval clears zero while
+the other does not. **The reported CI is within-run: it prices the block
+spread of that sitting, not the spread of sittings.** Twenty-two of twenty-six
+blocks across all three runs came back faster, which is what actually carries
+the claim. **Repeat the pair before quoting anything under about 2 %**, and
+quote the direction and the block count alongside the interval — a lone
+"significant" row is one quiet minute away from being a lone "flat" one.
 
 **The rule, and it is about extraction rather than about mana: a helper that
 takes an *id* where its caller holds the *thing* converts a memoized lookup
@@ -4035,6 +4047,27 @@ on the serialized snapshot format, so `acted_on_own_turn_mask` is a *new*
 pre-mask snapshot deserializes to `0`, which is the same thing the old empty
 `Vec` meant. A type change in place would have made every existing snapshot a
 hard parse error for a field whose whole content is two bits.
+
+**5. REFUTED — the battlefield-index hint on the tap path, built and
+reverted.** `activate_ability_inner` opens with
+`self.battlefield.iter().position(|c| c.id == card_id)`, once per activation;
+the auto-tapper's two selection loops already carry `ManaSourceInfo::bf_idx`
+(`source_card` uses it), so an `activate_ability_at` taking a validated hint
+removes that scan from all ~113 k bench taps. **Flat on both pools** —
+`cube` 400x8 10 blocks **-1.91 .. +2.75 %**, `fixed` 2,000x4 8 blocks
+**-2.08 .. +1.46 %** — with `--bench` and `cube` byte-identical, so it is
+cost or nothing, and it was nothing. Reverted: a second entry point and a
+seventh parameter are not worth an unmeasurable scan.
+
+**And the contrast with item 0 is the finding.** Structurally the same
+change — remove one linear battlefield scan from the same function on the
+same path — and one pays 1.3-1.5 % while the other pays zero. The difference
+is that item 0's scan was a *duplicate*: `bf_pos` is computed regardless and
+`bf_src!()` memoizes it, so the extracted gate's own `battlefield_find` was
+the second walk of the same Vec, run after the first had already pulled it
+through cache. **A duplicate walk and a first walk are not the same cost, and
+"it is O(n) on a hot path" does not distinguish them.** Look for the walk that
+something else has already done.
 
 ### Eighty-third pass — a gate walk hoisted, an ungated walk priced and then taken, and a suite gate that was a coin flip
 
