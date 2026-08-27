@@ -301,16 +301,36 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   so). They cost a sim start each — 62 in a twenty-game `cube` run — and the
   candidate generator could skip them instead.
 
-- 🟡 **Parallel hand-maintained walkers** — guard test
+- 🟡 **Parallel hand-maintained walkers** (combat pair closed) — guard test
   `cr_601_2c_every_catalog_target_filter_is_surfaced` now serde-walks every
   catalog effect for `TargetFiltered` slots and asserts
   `target_filter_for_slot_in_mode_kicked` surfaces each one (caught + fixed
   `DiscardChosen` / `ManaClash` holes; ChooseN gets a cast-time fallback
   filter). `evaluate_requirement_static` no longer `unreachable!`s on
   zone-agnostic atoms (HasSpellSubtype/HasEnchantmentSubtype/…) — it delegates
-  to `evaluate_requirement_on_card` against the located card. Remaining: the
-  printed-vs-computed combat checks still lack guards, and the two requirement
-  walkers should be unified rather than kept in delegation lockstep.
+  to `evaluate_requirement_on_card` against the located card.
+
+  **The combat pair is CLOSED at the eighty-first pass, both sides, and each
+  one was hiding a state with no legal declaration at all.** Attack:
+  `attacker_self_block` / `attacker_target_block`, with `attacker_is_able` and
+  `may_declare_attacker` as compositions — a must-attack creature under any of
+  the twenty-two restrictions the four-gate `able` never read was *required to
+  attack and then rejected for attacking*. Block: `blocker_self_block` /
+  `blocker_pair_block`, with `block_requirement_able`,
+  `blocker_can_block_anything`/`_pair` and the planner's `bot_can_block` all
+  compositions of those two — a provoked creature that is detained, or that
+  its provoker islandwalks past, could neither block nor be left home. **And
+  the block drift ran the other way too:** seven `CantAttackOrBlock*` families
+  (hand size, delirium, a creature died this turn, Descend N, the city's
+  blessing, cards in exile, Hollow Warrior's helper) plus Space Beleren's
+  sector lock lived only in the *mirror*, so `declare_blockers` never enforced
+  them and those cards' blocking restrictions did nothing on the real play
+  path. Eleven tests in `cr_recent100`. Both walkers return `(site, error)`,
+  so `CRAB_SIM_REJECTS=names` still names the rule rather than the card.
+
+  Remaining: the printed-vs-computed combat checks still lack guards, and
+  `evaluate_requirement_static` vs `evaluate_requirement_on_card` is the last
+  pair in this entry.
 
 ## Engine — Robustness / defects: the closed audits and the twenty-three filters
 

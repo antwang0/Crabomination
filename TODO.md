@@ -119,14 +119,20 @@ a lost race — the loser usually holds something the winner does not.
 5. **Encoding caution:** any change to the SOS/cube pool, `Vocab`,
    `TrainRow`/`EncodedState`, or the observation/deck encoding **invalidates
    the trained nets**. Say so prominently in the commit and here.
-6. **Bugs:** ENGINE_BACKLOG P3's requirement-walker item is **half closed** —
-   the attack side is one walker now (`attacker_self_block` /
-   `attacker_target_block` / `attacker_is_able` / `may_declare_attacker`), and
-   with it the CR 508.1d deadlock it was hiding: a must-attack creature under
-   any of the twenty-two restrictions the four-gate `able` never read was
-   *required to attack and then rejected for attacking*, leaving the seat no
-   legal declaration at all (`cr_recent100`, six tests). What is left there is
-   the **block** side and `evaluate_requirement_static` vs
+6. **Bugs:** ENGINE_BACKLOG P3's requirement-walker item is **closed for
+   combat, both sides.** The attack side is one walker (`attacker_self_block`
+   / `attacker_target_block` / `attacker_is_able` / `may_declare_attacker`)
+   and so is the block side (`blocker_self_block` / `blocker_pair_block`, with
+   `block_requirement_able` and `blocker_can_block_anything`/`_pair` as
+   compositions of the two, and `bot_can_block` delegating). Each hid the same
+   deadlock — a creature *required* to act and then *rejected* for acting, so
+   the seat had no legal declaration at all. On the block side the drift also
+   ran the other way: **seven `CantAttackOrBlock*` families (hand size,
+   delirium, a creature died, Descend N, the city's blessing, cards in exile,
+   Hollow Warrior) and Space Beleren's sector lock were enforced only in the
+   bot's mirror**, so on the real declaration path those cards' blocking
+   restrictions did nothing. Eleven tests in `cr_recent100` between the two
+   sides. What is left in P3 is `evaluate_requirement_static` vs
    `evaluate_requirement_on_card`. P2 has no open correctness entries. Both audits clean at this tip —
    `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, and dead
    modes are now suite-gated against `audit::REVIEWED_DEAD_MODES`.
