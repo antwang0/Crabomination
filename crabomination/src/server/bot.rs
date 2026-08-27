@@ -2314,7 +2314,20 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
         .collect();
     // Cheapest answer first — hold the expensive counter for later.
     counters.sort_by_key(|c| c.definition.cost.cmc());
+    // The same affordability pre-filter the main hand sweep runs, for the
+    // same reason and now with a number: this path had none, so a counter the
+    // board cannot pay for was probed in full — a `GameState` clone, a
+    // `mana_source_table` build, the taps it could reach, and a rollback — on
+    // every threatening spell, every time. `CRAB_PAY_FAILS` measured **700 of
+    // `fixed`'s 704 failed payments as one cost, `{U}{U}`**: this deck's
+    // Counterspell, asked and re-asked against two Islands that were not
+    // there. The dry run is still the final gate; this only skips the ones
+    // the cheap test already answers.
+    let sweep = SweepMana::new(state, seat);
     for c in counters {
+        if !can_afford_in_state_with(state, seat, c, w, &sweep) {
+            continue;
+        }
         let action = GameAction::CastSpell {
             card_id: c.id,
             target: Some(crate::game::Target::Permanent(spell_id)),
