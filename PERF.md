@@ -3982,6 +3982,32 @@ throughput, and the census is why that could be said rather than guessed.
 and not the waste: `accept_on` is how the bot performs every action. The
 counter was deleted and the reasoning left in `pay_census::TAP`'s doc.
 
+**4. (-64) taken: the one small `Vec` a state clone always had to allocate.**
+`acted_on_own_turn: Vec<bool>` was resized to the seat count by `do_untap`
+every turn, so from turn one it was the only small `Vec` on `GameState` that a
+clone deep-copied unconditionally — one `__rust_alloc`, one `__rust_dealloc`
+and one `Vec::clone` per clone, against 13,640 clones on a six-game `fixed`
+run and 29,692 on `cube`. Two seats' booleans are a `u64`.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base 3509ec81.
+  fixed  1,140,632,403 -> 1,136,891,471   -0.328 %
+  cube   3,485,011,167 -> 3,475,270,004   -0.280 %
+```
+
+The entry had priced it at ~0.22 % of `cube` off the per-clone Ir; it read
+0.28 %, because the field is a `__rust_dealloc` as well as an alloc and the
+entry only counted the allocation side. `--bench` byte-identical (195,528 /
+27.44 / 0 stalls / determinism ok), suite 19,054 / 0 / 5, clippy clean.
+
+**Renamed rather than retyped, and that is the reusable half.** The field is
+on the serialized snapshot format, so `acted_on_own_turn_mask` is a *new*
+`#[serde(default)]` field and the old array key becomes one serde ignores — a
+pre-mask snapshot deserializes to `0`, which is the same thing the old empty
+`Vec` meant. A type change in place would have made every existing snapshot a
+hard parse error for a field whose whole content is two bits.
+
 ### Eighty-third pass — a gate walk hoisted, an ungated walk priced and then taken, and a suite gate that was a coin flip
 
 **0. The pass's largest row came from an instrument, not from a profile, and
@@ -7728,7 +7754,14 @@ free:**
   (-56) first: an *exact* size ships and headroom does not, and `duals` is
   usually 0-3 against a `total` of ~17, so reserving `total` is the trap.
 
-**(-64) THE STATE CLONE ALLOCATES 3.5 TIMES, AND ONE OF THEM IS A
+**(-64) THE `Vec<bool>` HALF TAKEN AT THE EIGHTY-FOURTH PASS — `fixed`
+-0.328 % / `cube` -0.280 %, see Log item 4. THE REST OF THE CLONE IS STILL
+HERE AND STILL UNTAKEN.** What shipped is the `acted_on_own_turn` bitmask
+only; the `Box<dyn Decider>` clone (28,172 calls / 3.36 M) and the ~2.5
+remaining `__rust_alloc` a clone are open, and the reading below is the
+inventory to work from.
+
+**(-64, as found) THE STATE CLONE ALLOCATES 3.5 TIMES, AND ONE OF THEM IS A
 TWO-ELEMENT `Vec<bool>`.** `<GameState as Clone>::clone` is **29,692 calls /
 ~70.2 M Ir / 2.01 % of `cube`** at `3509ec81` (11,976 from `accept_on`'s
 probe, 6,964 from a `OnceCell::try_init`, 4,968 from `perform_action`'s
