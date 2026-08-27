@@ -113,6 +113,15 @@ its numbers live; put new numbers *there* and a pointer here.
    **Nothing is left in that tail; the next card sweep needs a different
    filter.**
 >>>>>>> Stashed changes
+5b. **The data-test sweep is finished and it buys no build time.**
+   `find_data_tests.sh`'s last nineteen non-sacred candidates are deleted
+   (199 lines); three of its twenty-three are false positives and one is
+   already the table-driven form. Timed both ways, one integration binary
+   rebuilds in **7.50 s either side** — 199 lines of 377,435 is 0.05 %, so
+   **the convention's "the cost is compile + link" does not transfer to a
+   sweep this size** (PERF, "Test-suite cleanup does not buy build time").
+   The levers that move that number are structural and already taken. Do not
+   sell the next sweep on compile time.
 6. **Robustness gate, and it is one RUSTFLAG.** `-C debug-assertions=yes` on
    the `overflow` build turns a ladder run into an audit of every engine
    invariant at once — `release-fast` has assertions off, and the suite has
@@ -120,8 +129,12 @@ its numbers live; put new numbers *there* and a pointer here.
    34,560-game result are in `Cargo.toml`'s `[profile.overflow]` comment. It
    is what refuted (-58) in four seconds. **Run it after anything that adds an
    invariant.**
-7. **State at `0b008b2e`**, and re-run at `08cac0d2` (two-crate gate
-   **18,806 / 0 / 5**, clippy clean, `--bench` unmoved). Suite `--workspace
+7. **State at `0b008b2e`**, and re-run at `1745a37a`: two-crate gate
+   **18,788 / 0 / 5** (-19, the data-test sweep), clippy `--workspace
+   --exclude crabomination_client --all-targets` clean, `--bench` **195,528
+   decisions / 27.44 turns / 0 stalls**, `determinism ok`,
+   `thread_determinism ok (3 vs 1)`, 207-230 games/s at `host_calib_ms` 46-48
+   on the 2.10 GHz Xeon. Suite `--workspace
    --exclude crabomination_client`
    **19,063 / 0 / 5**, golden traces unmoved; clippy clean (with the client at
    `05015235`, four apt packages); `--bench` **195,528 decisions / 27.44 turns
