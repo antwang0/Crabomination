@@ -981,6 +981,11 @@ golden traces  unmoved (they run inside the suite above)
 whole-program Ir at `e9a509e6`, `--a gang --b gang --games 6 --threads 1
 --seed 1`, callgrind, profiling-fast --no-default-features
   fixed  1,113,096,892        cube  3,386,393,977
+overflow + -C debug-assertions=yes, run at `2bb47a02` (which is `e9a509e6`
+plus the other half's CR 508.1d fix and this file): 65 cells, five pools x
+thirteen seeds x 120 games/archetype — **71,760 games, 0 undecided in every
+cell, no panic, no assertion, no arithmetic overflow**. Sixth clean run of
+this sweep, and the first that audits `(-68)`'s combat-damage trigger walk.
 ```
 
 **⚠ The games/s row is not comparable to the 304.5-314.6 recorded above.**
