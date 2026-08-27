@@ -36,17 +36,21 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 1. **Perf queue** — PERF "Perf candidates", ranked: **(-63)** deck
    construction, **5.37 % of the training actor and invisible on `--bench`**,
    fresh from the eighty-third pass's actor profile; **(-51)(b)** (open, and
-   1b below says what it is now asking for), (-60), (-61), (-51)(a), (-59).
-   **Refuted with numbers:** (-18) (-56) (-56b) (-57) (-58). **Closed this
-   pass:** (-13)/(-54b) (the sim's half taken, the live game's half is a
-   rules argument and stays) and (-62) (the `zone::Graveyard` memo). **The
-   list is thin — the next perf run re-profiles before it ranks.** The attack
-   search is 45.7 % of the actor and nothing has aimed at it, and the
-   whole-program line profile at PERF's "Profile of record" says the
-   simulator has **no hot line** (largest 0.82 %) — so the next find will be
-   a *count* or a *pool*, not a row. (-63) is the pool case: it came out of
-   re-reading the actor, which is the profile that dates fastest and the one
-   the ladder cannot stand in for.
+   1b below says what it is now asking for); **(-64)** and **(-65)**, both
+   seeded this pass with counts (~0.22 % and ~0.2 % of `cube`); then (-60),
+   (-61), (-51)(a), (-59). **Refuted with numbers:** (-18) (-56) (-56b) (-57)
+   (-58), and now unboxing `layers::Printed` (see "Do not rebuild").
+   **Closed this pass:** (-13)/(-54b) (the sim's half taken, the live game's
+   half is a rules argument and stays) and (-62) (the `zone::Graveyard`
+   memo). **The list is thin and everything left on it is "fewer calls", not
+   "cheaper call" — re-profile before ranking.** The attack search is 45.7 %
+   of the actor and nothing has aimed at it, and the whole-program line
+   profile at PERF's "Profile of record" says the simulator has **no hot
+   line** (largest 0.82 %) — so the next find will be a *count* or a *pool*,
+   not a row. (-63) is the pool case: it came out of re-reading the actor,
+   the profile that dates fastest and the one the ladder cannot stand in
+   for. The `Option::or_else` row is the count case: 2.2 M calls at ~5 Ir,
+   invisible to every table that ranks by Ir (see the first standing rule).
 1a. **The device that unlocked the largest row in fifteen passes was a
    census, not a profile.** `CRAB_SIM_REJECTS` read zero long enough that a
    rollback nobody could prove unnecessary became provably unused. **Read the
@@ -89,9 +93,10 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    the first two attempts here passed all seven tests and were both wrong.
 5. **Robustness gate, one RUSTFLAG** — `-C debug-assertions=yes` on the
    `overflow` build, recipe in `Cargo.toml`'s `[profile.overflow]` comment.
-   **71,760 games clean this pass**, the largest sweep the branch has run.
-   Run it after anything that adds an invariant or touches the layer or
-   simulation path. `--vs` reads the null on all three pools (PERF Baseline).
+   **71,758 games clean twice this pass**, the largest sweep the branch has
+   run, and it is now also the audit of `zone::Graveyard`'s memo. Run it
+   after anything that adds an invariant or touches the layer or simulation
+   path. `--vs` reads the null on all three pools (PERF Baseline).
 6. **Tip state and container hazards** — PERF "Baseline" ("STATE AT …") and
    "How to measure". Do not copy either back here. ⚠ **A wall-clock row is
    not comparable across a run**: the box is quiet at the end and busy in the
@@ -107,6 +112,17 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
 
+- **Rank the dump by call count and read the Ir/call column** (pass 83's
+  fifth commit, `fixed` -0.444 % / `cube` -0.568 %). `Option::or_else` was the
+  most-called function in the program — 2,187,078 calls, all but 54 of them
+  `evaluate_requirement_static_hinted`'s fallback chains, ~5 Ir apiece and
+  invisible to a self table, a callee table and a line profile alike. A row
+  with a million calls and single-digit Ir/call is pure call overhead, and the
+  only question is which kind: a non-generic `crabomination_base` callee is a
+  **profile artifact** (`release`'s thin LTO inlines it — the
+  `CardDefinition::is_creature` trap), while a std generic the local inliner
+  declined is **real**, and the fix is restructuring the call site, never an
+  `#[inline]`.
 - **A ceiling measured by short-circuiting a condition is an upper bound on
   the *code*, not on the walk** (pass 83's (-62), and it is 30 % of one).
   `false &&` and `std::iter::empty()` let the optimizer take the surrounding
@@ -395,7 +411,10 @@ Log with its numbers; read the entry before re-proposing any of them.
   every non-zero named the card that found the hole; **the first two versions
   of that commit looked correct and were not**, and no reading of the code
   found what the oracle did.
-- **Do not rebuild these.** The board-presence epoch, the `GameState` husk
+- **Do not rebuild these.** Unboxing `layers::Printed`'s override
+  (`Option<Box<T>>` -> `Option<T>`; +1.755 % `fixed` / +1.317 % `cube`, and
+  the narrower three-field version prices out worse than the boxes cost),
+  the board-presence epoch, the `GameState` husk
   pool, gating `do_untap`, narrowing `GameState`, splitting the big engine
   files for build time, the per-definition keyword-grant bit, fusing
   `card_type_change_in_scope`, the `LayerFreeze` depth shadow, the

@@ -805,7 +805,7 @@ build.
 
 ## Baseline
 
-**Eighty-third pass. Four perf commits, and the largest is a *census* cashed
+**Eighty-third pass. Five perf commits, and the largest is a *census* cashed
 in: (-13)'s remaining half was takeable the moment the instrument said the
 rollback never runs.**
 
@@ -835,6 +835,13 @@ profiling-fast --no-default-features.
       cube   3,518,099,807 -> 3,508,715,284   -0.267 %
     ceiling, both walks deleted outright, same base
       fixed  1,145,865,968  -0.717 %   cube  3,503,216,156  -0.423 %
+
+(5) The requirement walker takes its fallback chains in a `match` arm
+    instead of two-to-eight `Option::or_else` links, and its card lookup's
+    off-battlefield tail moves out of line.  Base 8e025be5.
+      fixed  1,145,258,420 -> 1,140,173,403   -0.444 %
+      cube   3,504,621,705 -> 3,484,724,591   -0.568 %
+    `Option::or_else` 2,187,078 calls -> 54 on `cube`.
 ```
 
 **(2) is gated by `--vs`, not only by `--bench`, because `--bench` is one
@@ -876,9 +883,10 @@ assertion, no arithmetic overflow, 0 capped, 0 stuck**, 2 draws. Run twice:
 once at the pre-(2) tip and once at `cfc684fc`, clean both times. (55,200 of
 the same sweep at an earlier tip, also clean.)
 
-**STATE AT `cfc684fc`, the pass's last commit** — the row a later run
-compares against, and the only one in this section measured on the whole
-pass rather than on one commit:
+**STATE AT `3509ec81`** — the row a later run compares against, and the only
+one in this section measured on the whole pass rather than on one commit.
+(First taken at `cfc684fc` and re-taken at `3509ec81`, two commits later:
+every row below is identical across the pair.)
 
 ```text
 suite  --workspace --exclude crabomination_client   19,054 / 0 / 5
@@ -888,8 +896,17 @@ clippy --workspace --exclude crabomination_client --all-targets   clean
           242.9 / 247.6 / 247.2 games/s at host_calib_ms 45-51
           peak_rss_mib 24.3-24.4      (release, 2.80 GHz Xeon, 3 threads)
 golden traces  unmoved
-overflow + -C debug-assertions=yes   71,760 games, 0 faults
+overflow + -C debug-assertions=yes   65 cells, five pools x thirteen seeds
+          x 120 games/archetype: 71,758 decided, 0 panic / 0 assertion /
+          0 overflow, 2 draws (`all` s37) and nothing capped or stuck.
+          Run at `cfc684fc` and again at `3509ec81`, byte-identical.
 ```
+
+**The `Graveyard` memo's `debug_assert!` is inside that sweep**, and it is the
+reason to re-run it rather than carry the earlier reading forward: the
+assertion compares a non-UNKNOWN memo against a fresh walk on every read, so
+71,758 games of five pools is what says no write path reaches the zone's cards
+without clearing it. 19,054 tests do the same thing on far duller boards.
 
 **The wall-clock row is not comparable to the one this run opened with**
 (239.9 at calib 53, same box, same binary configuration): the container was
@@ -3961,6 +3978,57 @@ surrounding structure with it — the closure's captures, the enclosing loop,
 the register pressure around it. Read such a ceiling as "no implementation of
 this gate beats X", never as "the walk costs X", and do not spend a pass
 chasing the difference.
+
+**2b. `Option::or_else` was the most-called function in the program, and all
+but 54 of its 2,187,078 calls were one function's fallback chains.** There is
+no LTO in any profile this file quotes, so every link in an `or_else` chain is
+a call and a return *even when the first `Option` already answered* — and
+`evaluate_requirement_static_hinted` is built out of them: an eight-link "find
+this card anywhere" tail behind a battlefield read that succeeds on almost
+every call, plus two-link controller lookups in four arms. Same lookups, same
+order, taken in a `match` arm instead, with the eight-link tail moved into an
+`#[inline(never)]` helper (it is the cold half): `fixed` **-0.444 %**, `cube`
+**-0.568 %**, and the walker's two self rows go 97,428,130 -> 85,878,810 Ir.
+Numbers in **Baseline** (5).
+
+**The device is pass 49's "rank the tail, not the function" with the reason
+named.** A fallback chain has no hot line and no expensive callee — every one
+of these `or_else` calls is ~5 Ir — so nothing in a self table, a callee table
+or a line profile points at it. What points at it is **ranking every function
+in the dump by call count and reading the Ir/call column**: a row with a
+million calls and single-digit Ir/call is pure call overhead, and the question
+is only whether the call is structural or an inliner's decision. `Option::
+or_else` is `#[inline]` and generic, so it is instantiated in this crate — it
+is not inlined here because the chains sit inside a function already at the
+inliner's size limit, which thin LTO does not change. **That is the test:
+before spending a build on a small-Ir/call row, ask whether the callee is a
+non-generic `crabomination_base` function** (then it is a *profile artifact* —
+`release`'s thin LTO inlines it and the row is worth nothing, which is what
+the `CardDefinition::is_creature` note further down says) **or a std generic
+the local inliner declined** (then it is real, and restructuring the call site
+is the fix — never an `#[inline]`).
+
+**2c. The `Box` in `layers::Printed` costs 51,798 extra allocations on `cube`
+and removing it costs 1.3-1.8 %. Built, measured, reverted.** `Printed<T>`'s
+override is `Option<Box<T>>`, so `Printed<Vec<T>>::push` is exactly **2.0
+`__rust_alloc` calls per call** (52,118 calls / 103,596 allocations — the
+(-50) "exact multiple" tell): one for the materialized `Vec`, one for the
+`Box` around it. Unboxing it (`Option<T>`) reads
+
+```text
+base 3509ec81      fixed  1,140,632,403 -> 1,160,648,389   +1.755 %
+                   cube   3,485,011,167 -> 3,530,897,591   +1.317 %
+```
+
+because the `Box` is what keeps `ComputedPermanent` small and that struct is
+`Arc`-allocated **227,418 times** a six-game run. `Printed<Subtypes>` alone is
+seven `Vec`s = 168 bytes inline. The narrower version — unbox only the three
+`Printed<Vec<_>>` fields and leave `Subtypes` boxed — is +48 bytes rather than
+~+200, i.e. ~+0.42 % by the same scaling, against the 0.32 % the boxes cost;
+**it does not close either, so do not build it.** The reusable half: **an
+allocation count is not a cost until you have priced the struct size that
+buys it**, and this is the third reading of that trade in the file (the
+`sa_cards` reserve and the whole-board headroom are the other two).
 
 **3. Seven ML convergence thresholds were coin flips on entropy, and the
 mutex written against the symptom cannot fix it.** `policy_head_learns_to_
@@ -7530,6 +7598,50 @@ what a 56-shapes-per-build row looks like.
 isolates deck construction exactly (PERF's "Which pool a change moves"), and
 confirm on the actor, because the ladder builds its decks once and this
 entry lives entirely in the difference.
+**(-64) THE STATE CLONE ALLOCATES 3.5 TIMES, AND ONE OF THEM IS A
+TWO-ELEMENT `Vec<bool>`.** `<GameState as Clone>::clone` is **29,692 calls /
+~70.2 M Ir / 2.01 % of `cube`** at `3509ec81` (11,976 from `accept_on`'s
+probe, 6,964 from a `OnceCell::try_init`, 4,968 from `perform_action`'s
+checkpoint). Per clone: **1,357 Ir of self**, 6.0 `Vec::clone` (39 Ir each,
+so most are empty), 3.0 `RawTable::clone` (26 Ir, likewise), 5.4 `__memcpy`
+and **3.48 `__rust_alloc`**.
+
+Reading the field list against those counts:
+
+* `acted_on_own_turn: Vec<bool>` is the **only** small `Vec` on `GameState`
+  that is always allocated — `do_untap` resizes it to `players.len()` every
+  turn — so it is one `__rust_alloc` + one `__rust_dealloc` + one
+  `Vec::clone` per state clone, ~257 Ir, **~0.22 % of `cube`**. Seats are
+  single digits; a `u64` bitmask removes the heap entirely. The only cost is
+  serde: the field is on the snapshot format, so it wants a new name plus
+  `#[serde(default)]` rather than a type change in place.
+* `controlled_by: Vec<Option<usize>>` is `Vec::new()` unless a seat is
+  Mindslavered, so it is a 39-Ir empty clone and nothing else. Not worth a
+  commit on its own.
+* `decider: Box<dyn Decider + Send + Sync>` costs 28,172 `Box::clone` /
+  3.36 M. **`Arc` is not the fix**: `Decider::decide` takes `&mut self`.
+* **`ColdState` is the wrong home for any of them.** A cold write unshares
+  ~89 collections at ~4,689 Ir (see (-50)), so a field written even a few
+  thousand times costs more there than the clone it saves.
+
+**(-65) `statics_granted_triggers_inner` DEEP-COPIES ABILITIES ITS CALLER
+FILTERS OUT.** 142,744 calls at `3509ec81` on `cube`; its callee list is
+`evaluate_requirement_static_hinted` 142,094 / 48.7 M (**1.39 %**),
+`TriggeredAbility::clone` 20,886 / **7.7 M**, `grow_one` 19,128 / **10.8 M**
+and `__memcpy` 20,886 / 2.1 M. 85,066 of the calls are `fire_step_triggers`,
+which does `for t in self.statics_granted_triggers_on(c, &grants)` and then
+**drops every `t` whose `event.kind` is not this step's** — the printed-
+trigger loop three lines above it already filters on the borrowed ability and
+clones only the survivors, and this one does not.
+
+Every source the function pushes from is borrowable (`grants` is
+`&[TriggerGrant<'_>]`, `turn_granted_triggers` is `&self`, the station bands
+are `&card.definition`), so `Vec<&TriggeredAbility>` type-checks. **Size it
+before building it**: this is pass 57's `granted_abilities_of` shape, which
+read `sos` -1.946 % on Ir and was **flat on the clock** — the difference here
+is that the clones are *dropped*, not moved, so the removal is real work
+rather than a copy turned into a pointer chase. Worth ~0.2 % of `cube` on Ir
+and the clock question is open.
 
 **(-62) TAKEN, SAME PASS, BY THE SHAPE THIS ENTRY NAMED.** `crate::zone::
 Graveyard` wraps the CoW card list with the memo; `fixed` **-0.499 %**,
