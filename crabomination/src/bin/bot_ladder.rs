@@ -1604,8 +1604,9 @@ fn main() {
             .filter(|(_, n)| **n > 0)
             .map(|(c, n)| format!("{c} {n}"))
             .collect();
+        let (probe, committed) = crabomination::game::pay_census::origin_snapshot();
         println!(
-            "  pay_fails {total}/{attempts} ({:.2} %) — {}",
+            "  pay_fails {total}/{attempts} ({:.2} %) — {} | probe {probe}, committed {committed}",
             if attempts == 0 { 0.0 } else { 100.0 * total as f64 / attempts as f64 },
             if by.is_empty() { "none".to_string() } else { by.join(", ") },
         );

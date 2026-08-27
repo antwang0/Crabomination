@@ -2252,6 +2252,44 @@ pub mod pay_census {
         (ATTEMPTS.load(Relaxed), std::array::from_fn(|i| FAILS[i].load(Relaxed)))
     }
 
+    thread_local! {
+        /// Non-zero while a payment is running inside an affordance *probe*
+        /// (`accept_on` and the `could_pay_*` dry runs) rather than inside an
+        /// action the caller has committed to.
+        ///
+        /// The distinction is the one (-51)(b) turns on. Both kinds roll back
+        /// identically, but a failed probe is the bot **asking** — the answer
+        /// is the point — while a failed committed payment is the bot having
+        /// been wrong. Only the second is waste in the sense that entry
+        /// means, and nothing before this could tell them apart.
+        ///
+        /// A thread-local counter rather than a `GameState` field because the
+        /// probe runs on a *clone*: a field would have to be written on every
+        /// template, unsharing the cold group once per probe, to answer a
+        /// question only the census asks. Maintained only when the census is
+        /// on, so an unset run pays one `OnceLock` read at the entry points.
+        static PROBE_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    }
+
+    /// Run `f` marked as an affordance probe — see [`PROBE_DEPTH`].
+    pub fn in_probe<R>(f: impl FnOnce() -> R) -> R {
+        if level() == 0 {
+            return f();
+        }
+        PROBE_DEPTH.with(|d| d.set(d.get() + 1));
+        let r = f();
+        PROBE_DEPTH.with(|d| d.set(d.get() - 1));
+        r
+    }
+
+    fn probing() -> bool {
+        PROBE_DEPTH.with(|d| d.get()) > 0
+    }
+
+    /// `[probe, committed]` failures, so the split can be printed without a
+    /// second pass over the classes.
+    pub static BY_ORIGIN: [AtomicU64; 2] = [AtomicU64::new(0), AtomicU64::new(0)];
+
     /// Record one payment outcome. `site` is the caller's `line!()`, so a
     /// class can be traced to the path that produced it the way
     /// `attack_reject` traces a rejection to its clause.
@@ -2263,9 +2301,21 @@ pub mod pay_census {
         ATTEMPTS.fetch_add(1, Relaxed);
         let Some(e) = e else { return };
         FAILS[class_of(e)].fetch_add(1, Relaxed);
+        let probe = probing();
+        BY_ORIGIN[usize::from(!probe)].fetch_add(1, Relaxed);
         if lvl >= 2 {
-            eprintln!("pay_fail actions.rs:{site} {} cost={:?}", CLASSES[class_of(e)], cost);
+            eprintln!(
+                "pay_fail actions.rs:{site} {} {} {e:?} cost={:?}",
+                CLASSES[class_of(e)],
+                if probe { "probe" } else { "committed" },
+                cost,
+            );
         }
+    }
+
+    /// `(probe, committed)` failure counts.
+    pub fn origin_snapshot() -> (u64, u64) {
+        (BY_ORIGIN[0].load(Relaxed), BY_ORIGIN[1].load(Relaxed))
     }
 }
 

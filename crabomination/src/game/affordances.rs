@@ -85,7 +85,9 @@ impl GameState {
     /// so nothing is spent.
     pub(crate) fn could_pay_cost(&self, seat: usize, cost: &crate::mana::ManaCost) -> bool {
         cost.cmc() == 0
-            || self.affordance_probe_template().try_pay_with_auto_tap(seat, cost).is_ok()
+            || crate::game::pay_census::in_probe(|| {
+                self.affordance_probe_template().try_pay_with_auto_tap(seat, cost).is_ok()
+            })
     }
 
     /// A clone of `self` for use as a reusable dry-run *template* by the
@@ -135,14 +137,16 @@ impl GameState {
     /// checkpoint, so only adopt it where a rejected action would have been
     /// abandoned rather than restored.
     pub(crate) fn accept_on(template: &GameState, action: GameAction) -> Option<GameState> {
-        let mut probe = template.clone();
-        let acting = template.priority.player_with_priority;
-        let ok = probe.perform_action_inner(action).is_ok();
-        if !ok || template.suspended_without_completing(&probe, acting) {
-            return None;
-        }
-        probe.clear_stale_target_suppression();
-        Some(probe)
+        crate::game::pay_census::in_probe(|| {
+            let mut probe = template.clone();
+            let acting = template.priority.player_with_priority;
+            let ok = probe.perform_action_inner(action).is_ok();
+            if !ok || template.suspended_without_completing(&probe, acting) {
+                return None;
+            }
+            probe.clear_stale_target_suppression();
+            Some(probe)
+        })
     }
 
     /// CardIds in `caster`'s hand they could begin casting (or play, for
