@@ -2293,6 +2293,37 @@ pub mod pay_census {
     /// Record one payment outcome. `site` is the caller's `line!()`, so a
     /// class can be traced to the path that produced it the way
     /// `attack_reject` traces a rejection to its clause.
+    /// [`record`] with the payment's [`SpellKind`](crate::mana::SpellKind)
+    /// folded into the `names` line.
+    ///
+    /// The class (generic / coloured / hybrid) says what the payment ran out
+    /// of; this says *what was being paid for*, which is what points at the
+    /// path. `fixed`'s failures were 100 % `instant/sorcery` and turned out
+    /// to be three response paths probing without an affordability filter;
+    /// `cube`'s are mostly `creature` and `ability`, which is a different
+    /// question in a different place. Four lines and a `%s` — the whole
+    /// investigation before it existed was guessing between them.
+    pub fn record_kind(
+        site: u32,
+        cost: &crate::mana::ManaCost,
+        kind: &crate::mana::SpellKind,
+        e: Option<&crate::mana::ManaError>,
+    ) {
+        if level() >= 2 && e.is_some() {
+            let what = if kind.activating_ability || kind.creature_ability || kind.land_ability {
+                "ability"
+            } else if kind.instant_or_sorcery {
+                "instant/sorcery"
+            } else if kind.creature {
+                "creature"
+            } else {
+                "other"
+            };
+            eprintln!("pay_kind {what}");
+        }
+        record(site, cost, e);
+    }
+
     pub fn record(site: u32, cost: &crate::mana::ManaCost, e: Option<&crate::mana::ManaError>) {
         let lvl = level();
         if lvl == 0 {

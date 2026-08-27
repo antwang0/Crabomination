@@ -1799,7 +1799,7 @@ impl HeuristicBot {
                     if let Some(picked) = pick_stack_response(state, seat, &self.weights) {
                         return Some(picked.into_step());
                     }
-                    if let Some(a) = pick_ability_counter_response(state, seat)
+                    if let Some(a) = pick_ability_counter_response(state, seat, &self.weights)
                         .or_else(|| pick_prepare_response(state, seat, &self.weights))
                         .or_else(|| pick_buff_response(state, seat, &self.weights))
                     {
@@ -1845,7 +1845,7 @@ impl HeuristicBot {
                 if let Some(picked) = pick_stack_response(state, seat, &self.weights) {
                     return Some(picked.into_step());
                 }
-                let action = pick_ability_counter_response(state, seat)
+                let action = pick_ability_counter_response(state, seat, &self.weights)
                     .or_else(|| pick_prepare_response(state, seat, &self.weights))
                     .or_else(|| pick_buff_response(state, seat, &self.weights))
                     // Defender windows in the attack steps (the picker
@@ -2346,7 +2346,11 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
 /// ability-counter card (Stifle / Disallow). The ability's source is the
 /// target slot. Held separate from `pick_stack_response`'s spell logic so a
 /// counter that can only hit abilities still gets used.
-fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameAction> {
+fn pick_ability_counter_response(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+) -> Option<GameAction> {
     use crate::game::types::StackItem;
     // Topmost opponent ability on the stack — counter the most recent one.
     let source = state.stack.iter().rev().find_map(|si| match si {
@@ -2362,7 +2366,17 @@ fn pick_ability_counter_response(state: &GameState, seat: usize) -> Option<GameA
         })
         .collect();
     counters.sort_by_key(|c| c.definition.cost.cmc());
+    // The affordability pre-filter every hand-probing response path now
+    // runs — see `pick_stack_response`. Without it a spell the board cannot
+    // pay for costs a full probe (clone, `mana_source_table`, taps, rollback)
+    // to learn what five adds and five compares already knew, and
+    // `CRAB_PAY_FAILS` caught these paths probing with **zero untapped
+    // sources and an empty pool**.
+    let sweep = SweepMana::new(state, seat);
     for c in counters {
+        if !can_afford_in_state_with(state, seat, c, w, &sweep) {
+            continue;
+        }
         let action = GameAction::CastSpell {
             card_id: c.id,
             target: Some(crate::game::Target::Permanent(source)),
@@ -2425,10 +2439,18 @@ fn pick_buff_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option
     if permanent_value(state, victim, w) + buff_cmc * w.unit < 6 * w.unit {
         return None;
     }
+    // The affordability pre-filter every hand-probing response path now
+    // runs — see `pick_stack_response`. Without it a spell the board cannot
+    // pay for costs a full probe (clone, `mana_source_table`, taps, rollback)
+    // to learn what five adds and five compares already knew, and
+    // `CRAB_PAY_FAILS` caught these paths probing with **zero untapped
+    // sources and an empty pool**.
+    let sweep = SweepMana::new(state, seat);
     for c in state.players[seat]
         .hand
         .iter()
         .filter(|c| c.definition.card_types.contains(&CardType::Instant))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &sweep))
     {
         // Same first-leaf removal shapes as `pick_defensive_removal`.
         fn removal_leaf(e: &Effect) -> Option<&Effect> {
@@ -2511,10 +2533,12 @@ fn pick_defensive_removal(state: &GameState, seat: usize, w: &EvalWeights) -> Op
             _ => None,
         }
     }
+    let sweep = SweepMana::new(state, seat);
     for c in state.players[seat]
         .hand
         .iter()
         .filter(|c| c.definition.card_types.contains(&CardType::Instant))
+        .filter(|c| can_afford_in_state_with(state, seat, c, w, &sweep))
     {
         let Some(leaf) = removal_leaf(&c.definition.effect) else { continue };
         for &atk in &attackers {
@@ -8456,7 +8480,7 @@ fn sim_spell_action_inner(g: &GameState, w: &EvalWeights) -> Option<Picked> {
     let p = g.player_with_priority();
     if !g.stack.is_empty() {
         return pick_stack_response(g, p, w)
-            .or_else(|| pick_ability_counter_response(g, p).map(Picked::Plain))
+            .or_else(|| pick_ability_counter_response(g, p, w).map(Picked::Plain))
             .or_else(|| pick_prepare_response(g, p, w).map(Picked::Plain))
             .or_else(|| pick_buff_response(g, p, w).map(Picked::Plain));
     }

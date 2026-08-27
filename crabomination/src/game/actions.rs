@@ -12098,7 +12098,7 @@ impl GameState {
                     Ok(PaymentReceipt { auto_events: events, side_effects, pool_before: pool_after_auto_tap })
                 }
                 Err(e) => {
-                    crate::game::pay_census::record(line!(), cost, Some(&e));
+                    crate::game::pay_census::record_kind(line!(), cost, kind, Some(&e));
                     self.restore_payment_state(payer, snapshot);
                     Err(GameError::Mana(e))
                 }
@@ -12148,7 +12148,7 @@ impl GameState {
                         return Ok(PaymentReceipt { auto_events, side_effects, pool_before });
                     }
                 }
-                crate::game::pay_census::record(line!(), cost, Some(&e));
+                crate::game::pay_census::record_kind(line!(), cost, kind, Some(&e));
                 self.restore_payment_state(payer, snapshot);
                 Err(GameError::Mana(e))
             }
