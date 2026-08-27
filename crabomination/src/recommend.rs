@@ -883,12 +883,34 @@ fn candidate_label(colors: &[Color], splash: &[Color]) -> String {
     s
 }
 
-/// Build one deck of the given shape: chosen spells, on-color duals,
-/// basic split, static score. `noise > 0` jitters the card picks for
+/// One shape's spells, ranked but not yet given a land base — everything
+/// [`ShapeBuild::complete`] needs to finish it into a [`CandidateBuild`].
+///
+/// The lattice exists to be *ranked*: `build_random_deck_from` reads only
+/// `static_score`, `colors` and `splash` off its 56 entries and then rebuilds
+/// the one it picked. Land assembly is 12.3 % of a deck build and the label
+/// is another 0.5 %, so both are deferred to the caller that actually wants a
+/// deck (PERF (-63)).
+pub(crate) struct ShapeBuild {
+    pub colors: Vec<Color>,
+    pub splash: Vec<Color>,
+    pub main: Vec<CardFactory>,
+    pub static_score: i32,
+    /// Pool cards not in the main deck — `assemble_lands` takes its duals out
+    /// of this and compacts it.
+    leftovers: Vec<CardFactory>,
+    /// `(index into leftovers, colors produced)` per land in the pool.
+    land_slots: Vec<(u32, crate::mana::ColorSet)>,
+    /// Land slots to fill, after the 40-card floor.
+    lands: u32,
+}
+
+/// [`build_shape`] as far as the ranking needs: chosen spells and static
+/// score, no land base and no label. `noise > 0` jitters the card picks for
 /// randomized (gauntlet / variant) builds. `None` when the shape is
 /// hollow — no splash-worthy cards for a splash shape, or no playables
 /// at all.
-fn build_shape<R: Rng>(
+fn rank_shape<R: Rng>(
     colors: &[Color],
     splash_colors: &[Color],
     // (spell slots, land count, pick jitter)
@@ -897,7 +919,7 @@ fn build_shape<R: Rng>(
     rng: &mut R,
     // The pool and its shape-invariant per-card facts — see [`PoolScores`].
     scores: &PoolScores<'_>,
-) -> Option<CandidateBuild> {
+) -> Option<ShapeBuild> {
     debug_assert_eq!(
         scores.quality, cfg.builder_v2,
         "PoolScores was built under the other scorer; splash_cards reads its base scores",
@@ -910,38 +932,68 @@ fn build_shape<R: Rng>(
     if !splash_colors.is_empty() && splash.is_empty() {
         return None;
     }
-    let MainDeck { main, mut leftovers, lands: land_slots } =
+    let MainDeck { main, leftovers, lands: land_slots } =
         suggest_main_deck_shape(scores, colors, &splash, spells, noise, rng);
     if main.is_empty() {
         return None;
     }
-    // Land colors: main colors plus any splash color actually present.
-    let mut land_colors = Vec::with_capacity(colors.len() + splash_colors.len());
-    land_colors.extend_from_slice(colors);
-    for &c in splash_colors {
-        if main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) > 0) {
-            land_colors.push(c);
-        }
-    }
-    // Legal-deck floor: when the pool can't fill the requested spell
-    // count, pad lands so the deck still reaches 40 cards.
-    let lands = lands.max(40u32.saturating_sub(main.len() as u32));
-    let (duals, basics) =
-        assemble_lands(&mut leftovers, &land_slots, &main, &land_colors, lands, cfg.builder_v2);
-    Some(CandidateBuild {
+    Some(ShapeBuild {
         static_score: if cfg.builder_v3 {
             static_build_score_v3(&main, spells)
         } else {
             static_build_score(&main, spells)
         },
-        label: candidate_label(colors, splash_colors),
         colors: colors.to_vec(),
         splash: splash_colors.to_vec(),
+        // Legal-deck floor: when the pool can't fill the requested spell
+        // count, pad lands so the deck still reaches 40 cards.
+        lands: lands.max(40u32.saturating_sub(main.len() as u32)),
         main,
-        duals,
-        basics,
         leftovers,
+        land_slots,
     })
+}
+
+impl ShapeBuild {
+    /// Give the shape its land base and its label.
+    fn complete(self, cfg: &SimConfig) -> CandidateBuild {
+        let ShapeBuild { colors, splash, main, static_score, mut leftovers, land_slots, lands } =
+            self;
+        // Land colors: main colors plus any splash color actually present.
+        let mut land_colors = Vec::with_capacity(colors.len() + splash.len());
+        land_colors.extend_from_slice(&colors);
+        for &c in &splash {
+            if main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) > 0) {
+                land_colors.push(c);
+            }
+        }
+        let (duals, basics) =
+            assemble_lands(&mut leftovers, &land_slots, &main, &land_colors, lands, cfg.builder_v2);
+        CandidateBuild {
+            static_score,
+            label: candidate_label(&colors, &splash),
+            colors,
+            splash,
+            main,
+            duals,
+            basics,
+            leftovers,
+        }
+    }
+}
+
+/// Build one deck of the given shape: chosen spells, on-color duals,
+/// basic split, static score. See [`rank_shape`] for the half a caller that
+/// only ranks shapes needs.
+fn build_shape<R: Rng>(
+    colors: &[Color],
+    splash_colors: &[Color],
+    shape: (usize, u32, i32),
+    cfg: &SimConfig,
+    rng: &mut R,
+    scores: &PoolScores<'_>,
+) -> Option<CandidateBuild> {
+    rank_shape(colors, splash_colors, shape, cfg, rng, scores).map(|s| s.complete(cfg))
 }
 
 /// Enumerate every candidate build for `pool`: 10 pairs, pair + splash,
@@ -960,6 +1012,14 @@ pub(crate) fn enumerate_candidates_with(
     scores: &PoolScores<'_>,
     cfg: &SimConfig,
 ) -> Vec<CandidateBuild> {
+    enumerate_shapes(scores, cfg).into_iter().map(|s| s.complete(cfg)).collect()
+}
+
+/// [`enumerate_candidates_with`] stopping at the ranking — the lattice as
+/// [`ShapeBuild`]s, in the same order, with no land base or label built. What
+/// [`build_random_deck_from`] wants: it reads the score and the colours and
+/// rebuilds the shape it picks.
+pub(crate) fn enumerate_shapes(scores: &PoolScores<'_>, cfg: &SimConfig) -> Vec<ShapeBuild> {
     // (main colors, splash colors) shapes.
     let mut shapes: Vec<(Vec<Color>, Vec<Color>)> = Vec::new();
     for pair in color_subsets(&[2]) {
@@ -975,10 +1035,10 @@ pub(crate) fn enumerate_candidates_with(
     }
 
     let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
-    let mut out: Vec<CandidateBuild> = Vec::new();
+    let mut out: Vec<ShapeBuild> = Vec::new();
     let mut seen_mains: crate::fxhash::HashSet<Vec<usize>> = crate::fxhash::HashSet::default();
     for (colors, splash_colors) in shapes {
-        let Some(build) = build_shape(
+        let Some(build) = rank_shape(
             &colors,
             &splash_colors,
             (cfg.target_spells, cfg.total_lands, 0),
@@ -1011,28 +1071,28 @@ pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, 
     // A field that only ever builds pairs never bombs back at splash-shaped
     // candidates — inflating their measured win rates.
     let scores = PoolScores::new(pulls, cfg.builder_v2);
-    let shapes = enumerate_candidates_with(&scores, cfg);
+    let shapes = enumerate_shapes(&scores, cfg);
     build_random_deck_from(&shapes, &scores, cfg, rng)
 }
 
 /// [`build_random_deck`] with the shape lattice already enumerated.
 ///
-/// `enumerate_candidates(pulls, cfg)` runs one `build_shape` per shape —
+/// `enumerate_shapes(scores, cfg)` runs one `rank_shape` per shape —
 /// ~26 of them — and is **deterministic in `(pulls, cfg)`**: its own rng is
 /// `StdRng::seed_from_u64(cfg.seed)` and `noise = 0` means it never draws
 /// from it. So a caller building *n* random decks from one pool
 /// (`selfplay::build_candidates`, which `best_build_by` runs at n = 32 per
 /// side per game under `selfplay_train --use-deck-best`, and
 /// `recommend_pool` at n = 512) was re-deriving the identical lattice every
-/// time: n x 26 `build_shape` calls where 26 + n do. Everything that varies
+/// time: n x 26 `rank_shape` calls where 26 + n do. Everything that varies
 /// per candidate — the softmax roll, the spell/land split, the pick jitter —
 /// is downstream of the lattice and reads only `rng`.
 ///
 /// `scores` is that pool's [`PoolScores`], for the same reason:
-/// `enumerate_candidates` had to build one to produce `shapes`, and this
+/// `enumerate_shapes` had to build one to produce `shapes`, and this
 /// function built a second one per candidate.
 pub(crate) fn build_random_deck_from<R: Rng>(
-    shapes: &[CandidateBuild],
+    shapes: &[ShapeBuild],
     scores: &PoolScores<'_>,
     cfg: &SimConfig,
     rng: &mut R,

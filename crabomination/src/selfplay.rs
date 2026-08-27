@@ -172,7 +172,7 @@ pub fn build_candidates_cfg(
     // is 32 x ~26 `build_shape` calls replaced by ~26 + 32. The pool's
     // `PoolScores` is invariant across both loops for the same reason.
     let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2);
-    let shapes = crate::recommend::enumerate_candidates_with(&scores, cfg);
+    let shapes = crate::recommend::enumerate_shapes(&scores, cfg);
     let out: Vec<Vec<CardFactory>> = (0..n as u64)
         .map(|i| {
             let mut rng =
