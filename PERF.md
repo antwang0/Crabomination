@@ -952,6 +952,26 @@ overflow + -C debug-assertions=yes   65 cells, five pools x thirteen seeds
           memo's `debug_assert!`.
 ```
 
+**Re-taken at the `(-64)` tip, and it is a fourth wall-clock fingerprint that
+does not compare to the other three:**
+
+```text
+--bench, release, 3 threads, three consecutive runs
+  247.2 / 255.2 / 284.7 games/s at host_calib_ms 78 / 68 / 82
+  peak_rss_mib 24.3 / 24.4 / 26.0
+  decisions 195,528 / turns 27.44 / 0 stalls / determinism ok
+  thread_determinism ok (3 vs 1 threads identical)
+```
+
+**Higher games/s at a *worse* `host_calib_ms` than the 242.9-247.6 at 45-51
+above** — the third hazard in "How to measure" exactly, and the third time
+this file has recorded it. The two rows are not a before/after of anything.
+What *is* comparable is everything above them: the decision count, the turn
+count, the stall count and both determinism checks are byte-identical across
+all six of this pass's perf commits, and `peak_rss_mib`'s 26.0 is one draw
+from a distribution (the hazard note's "take three before calling a
+difference" — the other two read 24.3 and 24.4).
+
 **The `Graveyard` memo's `debug_assert!` is inside that sweep**, and it is the
 reason to re-run it rather than carry the earlier reading forward: the
 assertion compares a non-UNKNOWN memo against a fresh walk on every read, so
