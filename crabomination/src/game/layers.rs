@@ -447,14 +447,14 @@ pub fn apply_layers(
 /// `any()` runs to the end, so the early exit buys nothing and three walks
 /// cost three times one.
 #[derive(Clone, Copy, Default)]
-struct SecondPass {
+pub(crate) struct SecondPass {
     power: bool,
     type_changer: bool,
     type_lord: bool,
 }
 
 impl SecondPass {
-    fn of(effects: &[ContinuousEffect]) -> Self {
+    pub(crate) fn of(effects: &[ContinuousEffect]) -> Self {
         let mut g = Self::default();
         for e in effects {
             match e.affected {
@@ -483,6 +483,19 @@ pub fn apply_layers_one(
     effects: &[ContinuousEffect],
 ) -> ComputedPermanent {
     compute_permanent(card, effects)
+}
+
+/// [`apply_layers_one`] with the effect list's [`SecondPass`] gates already
+/// resolved — for a caller applying *one* list to several permanents, which
+/// pays that walk per card otherwise. The gates are a function of the list
+/// alone, so passing a set taken from the same list is exactly the answer
+/// this would have computed.
+pub(crate) fn apply_layers_one_gated(
+    card: &crate::card::CardInstance,
+    effects: &[ContinuousEffect],
+    gates: SecondPass,
+) -> ComputedPermanent {
+    compute_permanent_gated(card, effects, gates)
 }
 
 fn compute_permanent(

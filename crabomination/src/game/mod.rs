@@ -283,8 +283,11 @@ pub(crate) struct LayerFreeze {
 #[derive(Default)]
 struct LayerFreezeState {
     /// Lazily-gathered effect set, populated on the first computed read
-    /// inside a scope and cleared when the outermost scope exits.
-    memo: Option<std::sync::Arc<Vec<ContinuousEffect>>>,
+    /// inside a scope and cleared when the outermost scope exits. Carries
+    /// the list's CR 613.8 gate set alongside it: those are a function of
+    /// the list, so a scope that applies it to five permanents used to walk
+    /// it five times to re-derive the same three bits.
+    memo: Option<(std::sync::Arc<Vec<ContinuousEffect>>, crate::game::layers::SecondPass)>,
     /// Per-card layer results for this scope, by the same argument as
     /// `memo`: nothing the layer pass reads can change while frozen, so a
     /// second `computed_permanent` for the same card is the same answer.
@@ -8246,9 +8249,13 @@ impl GameState {
             fx: &[ContinuousEffect],
             ids: &[CardId],
         ) -> Vec<ComputedPermanent> {
+            // One CR 613.8 gate walk for the whole list, as `apply_layers`
+            // does — the gates are a property of `fx`, and this used to pay
+            // that walk once per id.
+            let gates = crate::game::layers::SecondPass::of(fx);
             ids.iter()
                 .filter_map(|id| bf.iter().find(|c| c.id == *id))
-                .map(|c| crate::game::layers::apply_layers_one(c, fx))
+                .map(|c| crate::game::layers::apply_layers_one_gated(c, fx, gates))
                 .collect()
         }
         if let Some(fx) = self.frozen_effects() {
@@ -8781,14 +8788,15 @@ impl GameState {
         if self.layer_freeze.depth() == 0 {
             return None;
         }
-        if let Some(fx) = &self.layer_freeze.lock().memo {
+        if let Some((fx, _)) = &self.layer_freeze.lock().memo {
             return Some(fx.clone());
         }
         // First computed read in this scope: gather outside the lock (the
         // gather itself re-enters `frozen_effects` via guarded eval paths).
         let fx = std::sync::Arc::new(self.gather_continuous_effects());
+        let gates = crate::game::layers::SecondPass::of(&fx);
         let mut st = self.layer_freeze.lock();
-        st.memo = Some(fx.clone());
+        st.memo = Some((fx.clone(), gates));
         Some(fx)
     }
 
@@ -12541,17 +12549,20 @@ impl GameState {
         if let Some(memo) = frozen_fx {
             // Inside a scope; `memo` is `None` only on its first computed
             // read, which fills it exactly as `frozen_effects` would.
-            let fx = match memo {
-                Some(fx) => fx,
+            let (fx, gates) = match memo {
+                Some(pair) => pair,
                 None => {
                     let fx = std::sync::Arc::new(self.gather_continuous_effects());
+                    let gates = crate::game::layers::SecondPass::of(&fx);
                     if self.layer_freeze.depth() > 0 {
-                        self.layer_freeze.lock().memo = Some(fx.clone());
+                        self.layer_freeze.lock().memo = Some((fx.clone(), gates));
                     }
-                    fx
+                    (fx, gates)
                 }
             };
-            let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &fx));
+            let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(
+                card, &fx, gates,
+            ));
             // Re-check: an entry stored after the scope closed would outlive
             // the state it describes, and nothing would clear it.
             if self.layer_freeze.depth() > 0 {
