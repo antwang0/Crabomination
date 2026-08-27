@@ -20984,15 +20984,16 @@ impl GameState {
                 let mut events = vec![];
                 if !name.is_empty() {
                     for zone in ["gy", "hand", "lib"] {
-                        let ids: Vec<CardId> = match zone {
-                            "gy" => &*self.players[who].graveyard,
-                            "hand" => &*self.players[who].hand,
-                            _ => &*self.players[who].library,
-                        }
-                        .iter()
-                        .filter(|c| c.definition.name == name)
-                        .map(|c| c.id)
-                        .collect();
+                        let src: &[crate::card::CardInstance] = match zone {
+                            "gy" => &self.players[who].graveyard,
+                            "hand" => &self.players[who].hand,
+                            _ => &self.players[who].library,
+                        };
+                        let ids: Vec<CardId> = src
+                            .iter()
+                            .filter(|c| c.definition.name == name)
+                            .map(|c| c.id)
+                            .collect();
                         for id in ids {
                             let taken = match zone {
                                 "gy" => Self::take_card(&mut self.players[who].graveyard, id),

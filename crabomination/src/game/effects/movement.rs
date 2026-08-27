@@ -1918,14 +1918,12 @@ impl GameState {
             // the zones are CoW boxes, so taking `&mut` on a zone with no
             // match unshares it for nothing.
             let pl = &self.players[owner];
-            let present = match zi {
-                0 => &*pl.graveyard,
-                1 => &*pl.hand,
-                _ => &*pl.library,
-            }
-            .iter()
-            .any(|c| c.definition.name == name.as_str());
-            if !present {
+            let cards: &[crate::card::CardInstance] = match zi {
+                0 => &pl.graveyard,
+                1 => &pl.hand,
+                _ => &pl.library,
+            };
+            if !cards.iter().any(|c| c.definition.name == name.as_str()) {
                 continue;
             }
             let pl = &mut self.players[owner];
