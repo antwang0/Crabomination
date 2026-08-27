@@ -271,25 +271,6 @@ fn sidequest_raise_a_chocobo_transforms_on_four_birds() {
 
 // ── Transforming legends ────────────────────────────────────────────────────
 
-/// Every transforming-legend factory is registered.
-#[test]
-fn fin2_transformers_are_registered() {
-    let names: Vec<&str> = crabomination_catalog::sets::all_factories::all_catalog_card_factories()
-        .map(|f| f().name)
-        .collect();
-    for f in [
-        catalog::exdeath_void_warlock as fn() -> crabomination::card::CardDefinition,
-        catalog::emet_selch_unsundered,
-        catalog::kuja_genome_sorcerer,
-        catalog::the_emperor_of_palamecia,
-        catalog::vincent_valentine,
-        catalog::ultimecia_time_sorceress,
-    ] {
-        let name = f().name;
-        assert!(names.contains(&name), "{name} is not registered");
-    }
-}
-
 /// Exdeath flips on six permanent cards in the graveyard; Neo Exdeath's power
 /// reads that pile.
 #[test]
@@ -386,22 +367,6 @@ fn vincent_valentine_eats_the_power_of_the_dead() {
         Some(4),
         "Serra Angel's power"
     );
-}
-
-/// The Emperor's mana only funds noncreature spells.
-#[test]
-fn the_emperor_taps_for_noncreature_only_mana() {
-    let d = catalog::the_emperor_of_palamecia();
-    assert_eq!(d.activated_abilities.len(), 1);
-    assert!(matches!(
-        d.activated_abilities[0].effect,
-        crabomination::effect::Effect::AddMana {
-            pool: crabomination::effect::ManaPayload::Restricted(_, _),
-            ..
-        }
-    ));
-    let back = d.back_face.as_ref().expect("back face");
-    assert_eq!(back.name, "The Lord Master of Hell");
 }
 
 /// Ultimecia's flip takes an extra turn.

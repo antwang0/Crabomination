@@ -181,16 +181,6 @@ fn absolver_thrull_haunt_half_destroys_an_enchantment_too() {
 
 // ── GPT gap cards (non-haunt + haunt reanimator) ─────────────────────────────
 
-/// Giant Solifuge — 4/1 with trample, haste, shroud.
-#[test]
-fn giant_solifuge_stat_line() {
-    let s = catalog::giant_solifuge();
-    assert_eq!((s.power, s.toughness), (4, 1));
-    for kw in [Keyword::Trample, Keyword::Haste, Keyword::Shroud] {
-        assert!(s.keywords.contains(&kw), "has {kw:?}");
-    }
-}
-
 /// Crystal Seer's activated ability bounces itself back to hand.
 #[test]
 fn crystal_seer_returns_itself() {

@@ -148,14 +148,6 @@ fn the_kobold_lords_pump_each_other_but_not_themselves() {
     );
 }
 
-/// Free Kobolds are red despite having no mana cost.
-#[test]
-fn kobolds_are_red_with_no_mana_cost() {
-    let def = catalog::kobolds_of_kher_keep();
-    assert_eq!(def.cost.cmc(), 0);
-    assert_eq!(def.printed_colors(), vec![Color::Red]);
-}
-
 /// Divine Offering pays back the artifact's mana value.
 #[test]
 fn divine_offering_refunds_the_mana_value() {
@@ -260,13 +252,6 @@ fn immolation_swings_the_stats() {
     .expect("cast");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "a 2/2 at +2/-2 is 4/0 and dies to SBA");
-}
-
-/// Amrou Kithkin walks past anything big.
-#[test]
-fn amrou_kithkin_dodges_big_blockers() {
-    let def = catalog::amrou_kithkin();
-    assert!(def.keywords.contains(&Keyword::CantBeBlockedByPowerAtLeast(3)));
 }
 
 /// The colour-shift cycle repaints a creature for the turn.

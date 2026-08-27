@@ -5,21 +5,6 @@ use crabomination::catalog;
 use crabomination::game::*;
 use crabomination::mana::Color;
 
-/// Static stat/keyword lines for the vanilla and french-vanilla RAV creatures.
-#[test]
-fn rav_stat_and_keyword_lines() {
-    let sword = catalog::boros_swiftblade();
-    assert_eq!((sword.power, sword.toughness), (1, 2));
-    assert!(sword.keywords.contains(&Keyword::DoubleStrike));
-
-    let hawk = catalog::courier_hawk();
-    assert_eq!((hawk.power, hawk.toughness), (1, 2));
-    assert!(hawk.keywords.contains(&Keyword::Flying) && hawk.keywords.contains(&Keyword::Vigilance));
-
-    let eq = catalog::conclave_equenaut();
-    assert!(eq.keywords.contains(&Keyword::Convoke) && eq.keywords.contains(&Keyword::Flying));
-}
-
 /// Barbarian Riftcutter sacrifices itself to destroy a land.
 #[test]
 fn barbarian_riftcutter_destroys_a_land() {
@@ -344,15 +329,6 @@ fn conclaves_blessing_scales_toughness() {
     assert_eq!(g.computed_permanent(host).map(|c| c.toughness), Some(8), "+2 toughness per creature");
 }
 
-/// Autochthon Wurm is a 9/14 with Convoke and Trample.
-#[test]
-fn autochthon_wurm_stats_and_keywords() {
-    let w = catalog::autochthon_wurm();
-    assert_eq!((w.power, w.toughness), (9, 14));
-    assert!(w.keywords.contains(&Keyword::Convoke));
-    assert!(w.keywords.contains(&Keyword::Trample));
-}
-
 /// Cackling Imp's tap ability drains a target player 1 life.
 #[test]
 fn cackling_imp_drains_a_life() {
@@ -371,25 +347,6 @@ fn cackling_imp_drains_a_life() {
 }
 
 // ── RAV gap wave 2 ───────────────────────────────────────────────────────────
-
-/// Stat/keyword lines for the vanilla and french-vanilla gap-wave-2 creatures.
-#[test]
-fn rav_gap2_stat_lines() {
-    let golem = catalog::glass_golem();
-    assert_eq!((golem.power, golem.toughness), (6, 2));
-    assert!(golem.card_types.contains(&crabomination::card::CardType::Artifact));
-
-    let spider = catalog::goliath_spider();
-    assert_eq!((spider.power, spider.toughness), (7, 6));
-    assert!(spider.keywords.contains(&Keyword::Reach));
-
-    let gharial = catalog::grayscaled_gharial();
-    assert!(gharial.keywords.iter().any(|k| matches!(k,
-        Keyword::Landwalk(crabomination::card::LandType::Island))));
-
-    let fiend = catalog::goblin_fire_fiend();
-    assert!(fiend.keywords.contains(&Keyword::Haste) && fiend.keywords.contains(&Keyword::MustBeBlocked));
-}
 
 /// Greater Forgeling pumps +3/-3 until end of turn.
 #[test]
@@ -608,18 +565,6 @@ fn lore_broker_each_player_loots() {
 
 // ── Hunted cycle (gap wave 4) ────────────────────────────────────────────────
 
-/// Stat/keyword lines for the Hunted cycle.
-#[test]
-fn hunted_cycle_stat_lines() {
-    let h = catalog::hunted_horror();
-    assert_eq!((h.power, h.toughness), (7, 7));
-    assert!(h.keywords.contains(&Keyword::Trample));
-    assert!(catalog::hunted_phantasm().keywords.contains(&Keyword::Unblockable));
-    let d = catalog::hunted_dragon();
-    assert!(d.keywords.contains(&Keyword::Flying) && d.keywords.contains(&Keyword::Haste));
-    assert_eq!((catalog::hunted_troll().power, catalog::hunted_troll().toughness), (8, 4));
-}
-
 /// Hunted Lammasu's ETB gives a *target opponent* a 4/4 Horror token.
 #[test]
 fn hunted_lammasu_gifts_opponent_a_horror() {
@@ -732,14 +677,6 @@ fn siege_of_towers_animates_a_mountain() {
     assert!(cp.card_types.contains(&CardType::Land), "still a land");
 }
 
-/// Greater Mossdog is a 3/3 with dredge 3.
-#[test]
-fn greater_mossdog_stat_and_dredge() {
-    let m = catalog::greater_mossdog();
-    assert_eq!((m.power, m.toughness), (3, 3));
-    assert!(m.keywords.iter().any(|k| matches!(k, Keyword::Dredge(3))));
-}
-
 /// Flow of Ideas draws one card per Island you control.
 #[test]
 fn flow_of_ideas_draws_per_island() {
@@ -770,14 +707,6 @@ fn hour_of_reckoning_spares_tokens() {
     g.dispatch_triggers_for_events(&evs);
     assert!(g.battlefield_find(real).is_none(), "nontoken creature destroyed");
     assert!(g.battlefield_find(token).is_some(), "token spared");
-}
-
-/// Guardian of Vitu-Ghazi is a 4/7 with convoke and vigilance.
-#[test]
-fn guardian_of_vitu_ghazi_stat_line() {
-    let g = catalog::guardian_of_vitu_ghazi();
-    assert_eq!((g.power, g.toughness), (4, 7));
-    assert!(g.keywords.contains(&Keyword::Convoke) && g.keywords.contains(&Keyword::Vigilance));
 }
 
 // ── RAV gap wave 6 (gaps6.rs) ────────────────────────────────────────────────
@@ -1177,16 +1106,6 @@ fn strands_of_undeath_etb_discard() {
     assert_eq!(g.players[1].hand.len(), 0, "discarded two");
 }
 
-/// Wizened Snitches is a 1/3 flyer that reveals library tops.
-#[test]
-fn wizened_snitches_stat_line() {
-    let s = catalog::wizened_snitches();
-    assert_eq!((s.power, s.toughness), (1, 3));
-    assert!(s.keywords.contains(&Keyword::Flying));
-    assert!(s.static_abilities.iter().any(|a| matches!(
-        a.effect, crabomination::effect::StaticEffect::AllLibraryTopsRevealed)));
-}
-
 fn resolve_spell_r(g: &mut GameState, def: crabomination::card::CardDefinition, targets: Vec<Target>) {
     let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
     ctx.targets = targets;
@@ -1372,14 +1291,6 @@ fn sunhome_grants_double_strike() {
     }).expect("double strike");
     drain_stack(&mut g);
     assert!(g.computed_permanent(cre).unwrap().keywords.contains(&Keyword::DoubleStrike));
-}
-
-/// Copy Enchantment is set up to enter as a copy of any enchantment.
-#[test]
-fn copy_enchantment_enters_as_copy() {
-    let ce = catalog::copy_enchantment();
-    let eac = ce.enters_as_copy.expect("has enters_as_copy");
-    assert_eq!(eac.filter, crabomination::card::SelectionRequirement::Enchantment);
 }
 
 /// Glare of Subdual taps a target creature (paying by tapping one of your own).

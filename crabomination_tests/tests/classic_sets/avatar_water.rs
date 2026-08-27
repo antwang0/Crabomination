@@ -305,18 +305,6 @@ fn waterbender_ascension_draws_at_four_quests() {
     assert_eq!(g.players[0].hand.len(), before + 1, "reaching 4 quests draws a card");
 }
 
-#[test]
-fn water_tribe_rallier_is_a_waterbend_ability() {
-    let def = catalog::water_tribe_rallier();
-    assert!(def.activated_abilities[0].waterbend);
-}
-
-#[test]
-fn watery_grasp_and_unagi_are_defined() {
-    assert!(catalog::watery_grasp().activated_abilities[0].waterbend);
-    assert!(catalog::the_unagi_of_kyoshi_island().keywords.iter().any(|k| matches!(k, Keyword::Ward(_))));
-}
-
 /// Crashing Wave taps X target creatures (waterbend X), then distributes three
 /// stun counters among tapped creatures an opponent controls.
 #[test]

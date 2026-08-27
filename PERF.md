@@ -584,6 +584,29 @@ things: 0.1 % is `selfplay_train`, 3 actors, one-second runs; the 6.5 % is
 `bot_ladder`, 4 threads, ~30-60 s runs. **Use these bullets to take a single
 honest absolute; use `ab_wall.py` for any comparison between two binaries.**
 
+## Test-suite cleanup does not buy build time at this scale — measured 2026-08-27
+
+The suite convention says "test *execution* is nearly free; the cost is
+compile + link", which is the reason given for deleting pure-data tests. At
+the eighty-second pass nineteen of them went (the last of what
+`find_data_tests.sh` finds that is not a false positive), and the number says
+the motivation does not transfer to a sweep this size:
+
+```text
+cargo test -p crabomination_tests --test classic_sets --no-run,
+one file touched, two readings a side
+
+  before  11.85 s / 7.50 s        after  7.50 s / 7.64 s
+```
+
+**7.50 s both ways** — the 11.85 is a first-reading artifact and the second
+readings are identical. 199 lines of the suite's 377,435 is 0.05 %, and one
+integration binary rebuilds in 7.5 s either way. **So a data-test sweep is a
+convention and clarity change, not a build-time one**; the levers that do move
+this number are the ones already taken (fewer binaries, `test = false` on
+bin targets) and they are structural, not per-test. Do not sell the next
+sweep on compile time.
+
 ## Build time — the file-size lever is dead, measured 2026-08-23
 
 **"Oversized engine files dominate incremental rebuilds" is false on this

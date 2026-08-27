@@ -626,14 +626,6 @@ fn griffin_canyon_untaps_a_griffin() {
     assert_eq!(g.computed_permanent(griffin).unwrap().power, 3, "+1/+1");
 }
 
-/// Scalebane's Elite carries protection from black.
-#[test]
-fn scalebanes_elite_has_pro_black() {
-    let d = catalog::scalebanes_elite();
-    assert_eq!((d.power, d.toughness), (4, 4));
-    assert!(d.keywords.contains(&Keyword::Protection(Color::Black)));
-}
-
 /// Righteous War hands protection out along the colour line.
 #[test]
 fn righteous_war_protects_both_halves() {

@@ -479,16 +479,6 @@ fn leg2_bodies_have_their_printed_stats() {
     }
 }
 
-/// Rampage and the legendary supertype ride along where they should.
-#[test]
-fn leg2_keywords_and_supertypes() {
-    assert!(catalog::aerathi_berserker().keywords.contains(&Keyword::Rampage(3)));
-    assert!(catalog::hunding_gjornersen().keywords.contains(&Keyword::Rampage(1)));
-    assert!(catalog::lost_soul().keywords.contains(&Keyword::Landwalk(LandType::Swamp)));
-    assert!(catalog::ramirez_depietro().supertypes.contains(&Supertype::Legendary));
-    assert!(!catalog::keepers_of_the_faith().supertypes.contains(&Supertype::Legendary));
-}
-
 /// Jacques le Vert only pumps green creatures; Fortified Area only Walls.
 #[test]
 fn the_filtered_anthems_only_hit_their_filter() {

@@ -371,13 +371,6 @@ fn goblin_assault_team_counter_on_death() {
     assert_eq!(g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-/// Duskmantle Operative can't be blocked by power-4+ creatures.
-#[test]
-fn duskmantle_operative_evasion() {
-    let op = catalog::duskmantle_operative();
-    assert!(op.keywords.contains(&Keyword::CantBeBlockedByPowerAtLeast(4)));
-}
-
 // ── Batch 2 (2026-07-23) ──────────────────────────────────────────────────────
 
 /// Topple the Statue taps a permanent, destroys it if an artifact, and draws.
@@ -2001,19 +1994,6 @@ fn kaya_ignores_opponent_hexproof() {
     g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: kaya, ability_index: 0, target: Some(Target::Permanent(foe)), x_value: None }).expect("-3");
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none(), "exiled");
-}
-
-/// Planewide Celebration is a choose-four-with-repeats modal sorcery.
-#[test]
-fn planewide_celebration_is_choose_four() {
-    let def = catalog::planewide_celebration();
-    match def.effect {
-        crabomination::effect::Effect::ChooseModesCast { ref modes, min, max, allow_repeats } => {
-            assert_eq!((min, max, allow_repeats), (4, 4, true));
-            assert_eq!(modes.len(), 4, "four printed modes");
-        }
-        _ => panic!("expected ChooseModesCast"),
-    }
 }
 
 /// Devouring Hellion enters with twice as many +1/+1 counters as creatures
