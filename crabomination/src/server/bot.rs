@@ -3495,6 +3495,28 @@ fn decide_choose_cards(
     max: u32,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
+    // **An answer shorter than `min` is rejected, and a rejected answer ends
+    // the match**: `drive_bots` counts only accepted actions as progress, so a
+    // seat that can only propose one illegal answer stops proposing anything.
+    // Each branch below fills `min` from the pile it understands — the hand,
+    // the board, our own graveyard — and each has a shape it does not: a
+    // candidate in exile, or in a graveyard the owner lookup does not resolve,
+    // left the answer empty. Three shipped cards did exactly that at the
+    // eighty-fifth pass (see ENGINE_BACKLOG). The engine no longer offers
+    // those modals, so this has no live reproducer; it is here because a
+    // *well-formed* answer is always available — the candidate list — and
+    // answering with nothing is never better than answering with it.
+    let fill_to_min = |mut chosen: Vec<crate::card::CardId>| -> DecisionAnswer {
+        for (id, _) in candidates {
+            if chosen.len() >= min as usize {
+                break;
+            }
+            if !chosen.contains(id) {
+                chosen.push(*id);
+            }
+        }
+        DecisionAnswer::Cards(chosen)
+    };
     // A sacrifice/discard prompt is a COST — the pick should minimize what
     // we give up, not maximize it. Everything else (draft into hand, tap
     // opposing creatures, exile from graveyards) is upside and keeps the
@@ -3513,7 +3535,7 @@ fn decide_choose_cards(
                 .into_iter()
                 .take(min as usize)
                 .collect();
-            return DecisionAnswer::Cards(chosen);
+            return fill_to_min(chosen);
         }
         // Beneficial: take the biggest card(s) we can.
         let mut ranked: Vec<(crate::card::CardId, i32, i32)> = candidates
@@ -3526,7 +3548,7 @@ fn decide_choose_cards(
         // Biggest first: highest mana value, then highest power.
         ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
         let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
-        return DecisionAnswer::Cards(chosen);
+        return fill_to_min(chosen);
     }
     // Battlefield-source pick (Archipelagore's "tap up to X target creatures",
     // and similar resolution-time multi-target taps): the AutoDecider declines,
@@ -3551,7 +3573,7 @@ fn decide_choose_cards(
         if detrimental {
             let chosen: Vec<_> =
                 own_least_valuable_first().into_iter().take(min as usize).collect();
-            return DecisionAnswer::Cards(chosen);
+            return fill_to_min(chosen);
         }
         let mut ranked: Vec<(crate::card::CardId, i32)> = candidates
             .iter()
@@ -3578,7 +3600,7 @@ fn decide_choose_cards(
                 }
             }
         }
-        return DecisionAnswer::Cards(chosen);
+        return fill_to_min(chosen);
     }
     let owner_of = |id: crate::card::CardId| -> Option<usize> {
         state
@@ -3605,7 +3627,7 @@ fn decide_choose_cards(
         own.sort_by_key(|b| std::cmp::Reverse(b.1));
         chosen = own.into_iter().take((min as usize).max(1)).map(|(id, _)| id).collect();
     }
-    DecisionAnswer::Cards(chosen)
+    fill_to_min(chosen)
 }
 
 /// Bot heuristic for a self-discard (cleanup discard-to-hand-size, rummaging,

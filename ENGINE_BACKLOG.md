@@ -86,17 +86,17 @@ trigger with no legal battlefield creature auto-targets an exiled card in the
 resolving targetless. Not observed as a wrong outcome; recorded because it is
 the same defect on the side no instrument watches.
 
-### The bot answers a mandatory off-board modal with nothing
+### ~~The bot answers a mandatory off-board modal with nothing~~ — fixed
 
-`bot::decide_choose_cards`'s third branch (neither all-in-hand nor
-all-on-battlefield) filters candidates to *opponents'* graveyards, and its
-`min >= 1` fill searches **the bot's own graveyard only**. A candidate in
-exile, or in a graveyard the branch's owner lookup does not resolve, leaves
-the answer empty — and `min: 1` rejects an empty answer, which ends the match
-where it stands. It has no live reproducer now that the enumerator no longer
-offers such modals, which is why it is filed rather than fixed: the honest
-fix is a final fallback that answers with the first `min` candidates rather
-than none.
+`bot::decide_choose_cards`'s five exits each filled `min` from the pile that
+branch understands (the hand, the board, the bot's own graveyard) and none
+covered a candidate in exile or in a graveyard the owner lookup did not
+resolve, so the answer came back empty — and `min: 1` rejects an empty
+answer, which ends the match where it stands. Every exit now goes through a
+`fill_to_min` that tops up from the candidate list itself, so a well-formed
+answer is always produced when one exists. Behaviour-identical wherever the
+old answer was already legal (it only adds while `len < min`, and `min <=
+max`); suite 19,056 / 0 / 5 and the seeded sweep unchanged.
 
 ## Engine correctness audit — 2026-06-11
 
