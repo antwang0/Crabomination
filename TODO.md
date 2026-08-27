@@ -76,12 +76,19 @@ its numbers live; put new numbers *there* and a pointer here.
    combat, both sides**; what is left is `evaluate_requirement_static` vs
    `evaluate_requirement_on_card`. P2 has no open correctness entries.
    `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, dead modes
-   suite-gated. (-55)'s residue: the attack half's `combat.rs:1114` — the
-   tax's `available_mana` optimism, which is (-51)(b) and not a missing rule —
-   and 6 block rejections on `cube` s15. **Generalisable, and it found two
-   bugs:** a "must" and a "can't" written as independent checks can be jointly
-   unsatisfiable, leaving a seat no legal declaration at all; only the census
-   finds it.
+   suite-gated. **(-55) is down to 6**, all of them one site — the
+   `AllMustBlock` loop on `cube` s15 — across `cube` 1-24+42 at `--games 20`
+   and four other pools; the attack half is **0** everywhere. The tax's
+   `available_mana` optimism was it, and the fix is to stop estimating: PERF
+   (-55) carries the numbers and the +1.83 % it cost. **Generalisable, and it
+   found three bugs:** a "must" and a "can't" written as independent checks
+   can be jointly unsatisfiable, leaving a seat no legal declaration at all;
+   and **an estimate consumed as a *budget* has an asymmetric failure mode** —
+   under-count loses a swing, over-count loses the whole declaration — so ask
+   the engine at the sites that trim, and only there. Only the census finds
+   either. The 6 want a probe naming the *pass that built the plan*: the site
+   tag names the clause that rejected it, and two plausible fixes measured
+   exactly inert before a hand-built probe found the real cause.
 6. **Robustness gate, and it is one RUSTFLAG.** `-C debug-assertions=yes` on
    the `overflow` build turns a ladder run into an audit of every engine
    invariant at once — `release-fast` has assertions off, and the suite has

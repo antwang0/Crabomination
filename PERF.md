@@ -7704,6 +7704,60 @@ cube seeds 1-24, base binary, attack rejections
 **Sweep the census before concluding a pool cannot reach the code.** The
 same sweep is how to find a gating pool for the next play-changing fix.
 
+**AND THE ATTACK HALF REACHES ZERO, BY DELETING AN ESTIMATE RATHER THAN
+CORRECTING ONE.** Every attack rejection left anywhere was the same shape:
+`trim_attacks_to_payable_tax` trims until `available_mana(state, seat).total`
+covers the CR 508.1g tax, the engine then pays with `try_pay_with_auto_tap`,
+and on ordinary `cube` boards the two disagreed by one or two mana.
+`payable_generic_budget` asks `could_pay_generic` — the engine's own dry run —
+with a binary search that costs **one** probe whenever the declaration is
+affordable, and only on a board that charges a tax at all.
+
+```text
+CRAB_SIM_REJECTS=1, cube 1-24+42 at --games 20 plus four pools x five seeds
+                     base 50a075fa      tip
+cube s2        32/13,290 (0.24 %)         0
+all  s11       36/11,898 (0.30 %)         0
+cube s19                       16         0
+cube s20 / s21 / s22       12 each        0
+cube s11                       10         0
+cube s15        6/10,340 (block)          6   the one open CR 509.1c site
+                    ----------------------------
+              total          118          6
+```
+
+**The general rule, and it is the durable part: an estimate consumed as a
+*budget* has an asymmetric failure mode.** `available_mana` is biased
+*downward* everywhere on purpose — sac costs, dynamic amounts and doublers are
+left out so the bot does not commit to a line it can only pay by spending
+something it would rather keep. That is right for a *casting* decision, where
+an over-estimate wastes a probe. It is wrong for a *trim*, where an
+over-estimate does not make the bot optimistic — it makes the engine reject
+the declaration **whole**, and the bot attacks with nobody. Two consumers,
+opposite requirements, one number. Ask the engine at the sites that trim.
+
+**Cost, and it is real: `cube` +1.83 %.** `ab_wall`, 6 ABBA blocks, 400 games
+x 8 archetypes, seed 11, 3 threads: mean B/A 1.0183, **CI +0.35 .. +3.32 %**,
+0 of 6 blocks faster, against a null on the same workload resolving
++/-1.47 %. That is a `mana_source_table` build (6,690 Ir at the (-51) sizing)
+and its taps, per taxed declaration. **The cheaper form does not fall out:**
+`ManaSourceInfo` carries a colour set and a cost rank but **no amount**, so
+summing the table is not a sound bound — a filter land (`{R}, {T}: add
+{R}{R}`) is an entry that nets nothing. A non-mutating "what can auto-tap
+reach" that returns a quantity is the open lever here.
+
+**And measure the budget where it is wrong, not everywhere it is used.**
+Doing the same to `trim_blocks_to_payable_tax` reads **+2.11 % (CI +0.99 ..
++3.24 %)** — significant where the attack half is marginal — because that trim
+runs once per *candidate* in `block_candidates_for_mcts` rather than once per
+declaration, and it buys nothing: the block half was already 0 on every pool
+and seed swept. Shipped attack-side only.
+
+**Strength: flat.** `--vs` against the base, 400 games x 8 archetypes on each
+of the four taxed seeds (12,800 games): s2 9 A-sweeps to 5 at 50.1 %, s22 4 to
+1, s11 2 to 0, s19 0 to 1. Directionally positive and resolvable by nothing at
+this sample — which is what 118 rejections in a 20-game census predicts.
+
 **(-55, as found) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
 OUT — 470 of 91,438, AND ON ONE `cube` BOARD 6.8 % OF THE ATTACKS.** Measured
 with `CRAB_SIM_REJECTS=1` (see "How to measure"), `--games 12 --threads 3`,
