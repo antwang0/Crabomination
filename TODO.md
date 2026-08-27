@@ -33,15 +33,20 @@ before discarding a lost race.
 lines at the eighty-second pass and 145 at the eighty-third by restating what
 PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-51)(b)** (open, and
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-63)** deck
+   construction, **5.37 % of the training actor and invisible on `--bench`**,
+   fresh from the eighty-third pass's actor profile; **(-51)(b)** (open, and
    1b below says what it is now asking for), (-60), (-61), (-51)(a), (-59).
    **Refuted with numbers:** (-18) (-56) (-56b) (-57) (-58). **Closed this
    pass:** (-13)/(-54b) (the sim's half taken, the live game's half is a
    rules argument and stays) and (-62) (the `zone::Graveyard` memo). **The
    list is thin — the next perf run re-profiles before it ranks.** The attack
-   search is still 46.3 % of the actor, and the whole-program line profile at
-   PERF's "Profile of record" says the simulator has **no hot line** (largest
-   0.82 %), so the next find will be a *count*, not a row.
+   search is 45.7 % of the actor and nothing has aimed at it, and the
+   whole-program line profile at PERF's "Profile of record" says the
+   simulator has **no hot line** (largest 0.82 %) — so the next find will be
+   a *count* or a *pool*, not a row. (-63) is the pool case: it came out of
+   re-reading the actor, which is the profile that dates fastest and the one
+   the ladder cannot stand in for.
 1a. **The device that unlocked the largest row in fifteen passes was a
    census, not a profile.** `CRAB_SIM_REJECTS` read zero long enough that a
    rollback nobody could prove unnecessary became provably unused. **Read the

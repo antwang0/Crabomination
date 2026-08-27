@@ -6652,6 +6652,77 @@ inlined into a 3,581-line function and its cost lands in `iter/macros.rs`.
 **A line profile finds hot lines; it does not find cheap lines repeated over
 a collection nobody gated.** That one was found by reading the function.
 
+### THE ACTOR at the eighty-third tip (`651a98f2`) — and deck construction is on the table again
+
+Same workload as the two blocks below, so the three are comparable:
+`CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60 --steps 1 --seed 7`,
+`profiling-fast --no-default-features`, callgrind. **Play is byte-identical
+to both earlier readings** — 32,402 `next_action`, 1,102
+`pick_attacks_scored`, 6,386 `encode_state`, 6,895 `main_phase_action_with` —
+which is what makes the totals a comparison rather than a coincidence.
+
+```text
+  a828b393 (eighty-first)   4,235,372,210
+  651a98f2 (eighty-third)   4,187,375,624     -1.13 %
+```
+
+**That span is a whole pass, not one commit, so it is a base and not an
+attribution** — the file's own rule. What is in it: the `sim_step`
+checkpoint, the `zone::Graveyard` memo, the three `SecondPass::of` hoists,
+`pick_stack_response`'s filter, and the requirement walker's fallback chains.
+
+**One `actor_loop` iteration, top-down** — the level nobody had recorded, and
+the one that says what a *training* actor pays outside the games:
+
+```text
+  3,877,448,028  92.6 %  play_recorded_game_mcts       60 games
+    168,509,048   4.02 % heuristic_sealed_build       120  (two a game)
+     28,058,541   0.67 % encode_deck                  120
+     17,852,492   0.43 % sealed_pool                  120
+     10,279,007   0.25 % sealed_game_template          60
+```
+
+**Deck construction is 5.37 % of the actor** — build + pool + template +
+`encode_deck` — at ~1.87 M Ir a build. The fifty-third pass found it at
+*ten times the simulation* and the deck-builder fix took it 3.28x; this is
+where that landed. It is still **invisible on `--bench`**, which builds its
+decks once, and it is 87 % of the encoder's share for a fifth of the passes
+spent on the encoder. `recommend::build_shape` is 54,029,042 Ir of *self*
+(1.29 %, 6,840 calls) and is the largest single row inside it.
+
+**Inside the games, and the shape has not moved:**
+
+```text
+  inclusive, top-down
+   3,222,789,991  76.97 %  HeuristicBot::next_action     32,402 calls
+     1,914,936,337  45.73 %   pick_attacks_scored          1,102
+     1,183,552,872  28.26 %   main_phase_action_with       6,895
+     260,128,409   6.21 %  encode_state                    6,386
+
+  self, top ten
+   209,403,502  5.00 %  __memcpy_avx_unaligned_erms
+   207,716,264  4.96 %  dispatch_triggers_for_events
+   159,467,263  3.81 %  _int_free
+   141,446,867  3.38 %  _int_malloc
+   131,229,904  3.13 %  gather_continuous_effects_inner
+   121,131,123  2.89 %  malloc
+   110,942,742  2.65 %  Arc::clone_from_ref_in
+    96,751,249  2.31 %  free
+    91,555,500  2.19 %  Vec::spec_from_iter_nested
+    82,562,743  1.97 %  check_state_based_actions
+```
+
+**`sim_step` is 74,388 calls and every one of them is `perform_action_inner`
+now** — the checkpoint row is gone from the actor as well as the ladder.
+`simulate_attack_outcome_once` reaches it 72,819 times for 850,191,378 Ir,
+and its other half is `sim_spell_action_inner` at 30,748 / 527,154,621.
+
+**The allocator family is 12.4 % between four symbols and `memcpy` is the
+largest self row in the program**, which is the same story the eightieth
+pass told and the one thing no pass has aimed at directly. Read PERF's
+mimalloc entry before sizing anything from those rows: callgrind runs the
+system allocator and the shipped build does not.
+
 ### THE ACTOR RE-READ at the eighty-first pass — and the base had moved
 
 The eightieth tip's actor profile is the block below. Re-running the same
@@ -7434,6 +7505,31 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-63) DECK CONSTRUCTION IS 5.37 % OF THE TRAINING ACTOR AND `--bench`
+CANNOT SEE ANY OF IT. FRESH AT THE EIGHTY-THIRD TIP; NOBODY HAS READ IT
+SINCE THE FIFTY-FOURTH PASS TOOK IT 3.28x.**
+
+One `actor_loop` iteration over 60 games, from the actor profile above:
+`heuristic_sealed_build` **168,509,048 Ir over 120 builds** (two a game),
+plus `encode_deck` 28,058,541, `sealed_pool` 17,852,492 and
+`sealed_game_template` 10,279,007 — **224.7 M, 5.37 %**, at ~1.87 M Ir a
+build. For scale that is 87 % of what the *encoder* costs (6.21 %), and the
+encoder has had four passes of work against this entry's zero since the
+builder fix landed.
+
+`recommend::build_shape` is the largest row inside it: **54,029,042 Ir of
+self, 1.29 % of the actor, 6,840 calls** — 6,720 of them from
+`enumerate_candidates_with`, i.e. 56 shapes per build. The fifty-fourth
+pass's finding is the one to read first (`CardBrief`, "a memoized object is
+not a memoized *answer*"), because the shape it names — re-deriving per
+(pick x candidate x colour shape) what a memo already holds — is exactly
+what a 56-shapes-per-build row looks like.
+
+**Measure it with `--decks sealed --games 1`**, which plays no games and so
+isolates deck construction exactly (PERF's "Which pool a change moves"), and
+confirm on the actor, because the ladder builds its decks once and this
+entry lives entirely in the difference.
 
 **(-62) TAKEN, SAME PASS, BY THE SHAPE THIS ENTRY NAMED.** `crate::zone::
 Graveyard` wraps the CoW card list with the memo; `fixed` **-0.499 %**,
