@@ -327,6 +327,114 @@ impl<T: Clone> Printed<T> {
     }
 }
 
+/// [`Printed`] for a *list*, with the override stored as a `Box<[T]>`.
+///
+/// `Box<Vec<T>>` is two allocations — the boxed header and the `Vec`'s buffer
+/// — and `Printed<Vec<_>>::push` was making both, 51,798 times on a six-game
+/// `cube` run, for a list that is materialized once and then appended to once.
+/// The growth headroom a `Vec` exists for is never used here. `Box<[T]>` is
+/// one allocation; the cost is the fat pointer, **+8 bytes** on
+/// `ComputedPermanent`, which is `Arc`-allocated 227,418 times a run.
+///
+/// Both halves are measured rather than argued (eighty-fourth pass): the
+/// eight bytes alone, by padding the struct, read `fixed` **+0.040 %** /
+/// `cube` **+0.058 %**, against allocations worth 0.10 % / 0.33 %. Unboxing
+/// the override entirely — `Option<T>`, +208 bytes — reads **+1.755 %** and
+/// is in TODO's "do not rebuild".
+///
+/// `Deref<Target = [T]>` rather than `&Vec<T>`: every read site uses slice
+/// API (`contains`, `iter`, `has_kw`, `is_empty`), and the four writers are
+/// the inherent methods below.
+pub struct PrintedList<T: Clone + 'static> {
+    src: std::sync::Arc<crate::card::CardDefinition>,
+    proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
+    over: Option<Box<[T]>>,
+}
+
+impl<T: Clone> PrintedList<T> {
+    #[inline]
+    pub(crate) fn new(
+        src: std::sync::Arc<crate::card::CardDefinition>,
+        proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
+    ) -> Self {
+        Self { src, proj, over: None }
+    }
+
+    /// The printed list, or the override once one exists.
+    #[inline]
+    fn current(&self) -> &[T] {
+        match &self.over {
+            Some(v) => v,
+            None => (self.proj)(&self.src),
+        }
+    }
+
+    /// The elements as a slice. Inherent because `[T]`'s own `as_slice` is
+    /// unstable, and ten call sites already read the field that way.
+    #[inline]
+    pub(crate) fn as_slice(&self) -> &[T] {
+        self.current()
+    }
+
+    /// Append, materializing with room for the element in one allocation.
+    pub(crate) fn push(&mut self, value: T) {
+        let mut v: Vec<T> = Vec::with_capacity(self.current().len() + 1);
+        v.extend_from_slice(self.current());
+        v.push(value);
+        self.over = Some(v.into_boxed_slice());
+    }
+
+    /// `Vec::retain`, materializing the survivors. One allocation whether or
+    /// not an override already exists — the printed side is far the common
+    /// one, and every caller here is behind a presence gate.
+    pub(crate) fn retain(&mut self, mut f: impl FnMut(&T) -> bool) {
+        let kept: Vec<T> = self.current().iter().filter(|x| f(x)).cloned().collect();
+        self.over = Some(kept.into_boxed_slice());
+    }
+
+    /// Empty the list (CR 113.10b's "loses all abilities"). No allocation —
+    /// an empty `Box<[T]>` is a dangling pointer.
+    pub(crate) fn clear(&mut self) {
+        self.over = Some(Vec::new().into_boxed_slice());
+    }
+
+    /// Mutable access to the elements, materializing first. Cannot change the
+    /// length — the two callers rewrite keywords in place (Trait Doctoring's
+    /// protection-colour swap, the landwalk retype).
+    pub(crate) fn iter_mut(&mut self) -> std::slice::IterMut<'_, T> {
+        if self.over.is_none() {
+            self.over = Some(self.current().to_vec().into_boxed_slice());
+        }
+        self.over.as_mut().unwrap().iter_mut()
+    }
+}
+
+impl<T: Clone> std::ops::Deref for PrintedList<T> {
+    type Target = [T];
+    #[inline]
+    fn deref(&self) -> &[T] {
+        self.current()
+    }
+}
+
+impl<T: Clone> Clone for PrintedList<T> {
+    fn clone(&self) -> Self {
+        Self { src: self.src.clone(), proj: self.proj, over: self.over.clone() }
+    }
+}
+
+impl<T: Clone + std::fmt::Debug> std::fmt::Debug for PrintedList<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&**self, f)
+    }
+}
+
+impl<T: Clone + PartialEq> PartialEq for PrintedList<T> {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+
 /// The one write shape that is not a general `DerefMut`: appending.
 ///
 /// `deref_mut` materializes with `proj(src).clone()`, and `Vec::clone` hands
@@ -409,7 +517,7 @@ pub struct ComputedPermanent {
     pub supertypes: Printed<Vec<Supertype>>,
     pub subtypes: Printed<Subtypes>,
     pub colors: ColorSet,
-    pub keywords: Printed<Vec<Keyword>>,
+    pub keywords: PrintedList<Keyword>,
     pub power: i32,
     pub toughness: i32,
     /// True when at least one `Modification::RemoveAllAbilities` continuous
@@ -560,7 +668,7 @@ fn compute_permanent_pass(
         }
     }
     let mut colors = colors_from_card(card);
-    let mut keywords = Printed::new(def.clone(), |d| &d.keywords);
+    let mut keywords = PrintedList::new(def.clone(), |d| &d.keywords);
     // EOT-granted keywords join the layer walk as synthetic L6 effects at
     // their grant timestamps (CR 613.7), so a grant resolved *after* a
     // RemoveAllAbilities / RemoveKeyword effect survives it while an
