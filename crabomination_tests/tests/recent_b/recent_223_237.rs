@@ -332,11 +332,12 @@ mod recent225 {
 }
 
 mod recent226 {
-    use crabomination::card::Keyword;
+    use crabomination::card::{CardId, Keyword};
     use crabomination::catalog;
+    use crabomination::decision::DecisionAnswer;
     use crabomination::game::effects::EffectContext;
-    use crabomination::game::types::Target;
-    use crabomination::game::two_player_game;
+    use crabomination::game::types::{GameAction, Target, TurnStep};
+    use crabomination::game::{drain_stack, two_player_game};
 
     /// Doorkeeper Thrull suppresses an entering artifact's ETB trigger.
     #[test]
@@ -349,18 +350,54 @@ mod recent226 {
         assert_eq!(etb_fired, 0, "artifact/creature ETB triggers suppressed");
     }
 
-    /// Sanctuary Wall taps and stuns a target and itself.
-    #[test]
-    fn sanctuary_wall_taps_and_stuns() {
+    /// Sanctuary Wall taps its target; the stun pair is the printed "you may",
+    /// so accepting stuns both and declining stuns neither — the tap stands
+    /// either way. Without the choice the activation stunned the Wall itself
+    /// every time, which is a cost the card does not print.
+    fn sanctuary_wall_activation(accept: bool) -> (crabomination::game::GameState, CardId, CardId) {
         let mut g = two_player_game();
+        g.players[0].wants_ui = true;
         let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let wall = g.add_card_to_battlefield(0, catalog::sanctuary_wall());
-        let effect = catalog::sanctuary_wall().activated_abilities[0].effect.clone();
-        let ctx = EffectContext { targets: vec![Target::Permanent(enemy)], ..EffectContext::for_ability(wall, 0, None) };
-        g.resolve_effect(&effect, &ctx).unwrap();
+        g.clear_sickness(wall);
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, catalog::plains());
+        }
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: wall,
+            ability_index: 0,
+            target: Some(Target::Permanent(enemy)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("activate");
+        drain_stack(&mut g);
+        assert!(g.pending_decision.is_some(), "the stun pair is a printed choice");
+        g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(accept)))
+            .expect("answer");
+        (g, wall, enemy)
+    }
+
+    #[test]
+    fn sanctuary_wall_taps_and_may_stun_both() {
+        use crabomination::card::CounterType;
+        let (g, wall, enemy) = sanctuary_wall_activation(true);
         assert!(g.battlefield_find(enemy).unwrap().tapped, "target tapped");
-        assert!(g.battlefield_find(enemy).unwrap().counter_count(crabomination::card::CounterType::Stun) > 0);
-        assert!(g.battlefield_find(wall).unwrap().counter_count(crabomination::card::CounterType::Stun) > 0);
+        assert!(g.battlefield_find(enemy).unwrap().counter_count(CounterType::Stun) > 0);
+        assert!(g.battlefield_find(wall).unwrap().counter_count(CounterType::Stun) > 0);
+    }
+
+    #[test]
+    fn sanctuary_wall_declining_the_stun_spares_its_own_untap() {
+        use crabomination::card::CounterType;
+        let (g, wall, enemy) = sanctuary_wall_activation(false);
+        assert!(g.battlefield_find(enemy).unwrap().tapped, "the tap is not optional");
+        assert_eq!(g.battlefield_find(enemy).unwrap().counter_count(CounterType::Stun), 0);
+        assert_eq!(g.battlefield_find(wall).unwrap().counter_count(CounterType::Stun), 0);
     }
 
     /// All-Out Assault buffs the team with +1/+1 and deathtouch.

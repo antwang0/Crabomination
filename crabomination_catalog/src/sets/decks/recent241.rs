@@ -830,8 +830,22 @@ pub fn hotshot_investigators() -> CardDefinition {
     }
 }
 
-/// Frantic Scapegoat — {R} Goat 1/1, haste. ETB: suspect it. (The "move the
-/// suspicion to another creature you control" upkeep-shuffle rider is dropped.)
+/// Frantic Scapegoat — {R} Goat 1/1, haste. ETB: suspect it. Whenever another
+/// creature you control enters, if this creature is suspected, you may suspect
+/// that creature instead — this one is then no longer suspected.
+///
+/// The second ability is the card: suspected (CR 701.60) is menace **and
+/// can't block**, so a 1/1 that can shed it onto a fresh body is a very
+/// different card from one that keeps it forever, which is what shipped. The
+/// "you may" is load-bearing in the other direction too — suspecting one of
+/// your own creatures is a cost, and without the choice the trigger would
+/// hand the drawback to whatever entered.
+///
+/// Two approximations, both in the direction of the printed card: the target
+/// is "another creature you control" rather than specifically one of the
+/// creatures that entered in this batch (the engine has no
+/// entered-this-batch selector), and the trigger fires per entering creature
+/// rather than once per simultaneous batch.
 pub fn frantic_scapegoat() -> CardDefinition {
     CardDefinition {
         name: "Frantic Scapegoat",
@@ -844,9 +858,38 @@ pub fn frantic_scapegoat() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![etb(Effect::Suspect {
-            what: Selector::This,
-        })],
+        triggered_abilities: vec![
+            etb(Effect::Suspect { what: Selector::This }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::Creature.and(R::OtherThanSource),
+                    }),
+                effect: Effect::If {
+                    // CR 603.4 intervening 'if' — only while this one is
+                    // suspected is there anything to move.
+                    cond: Predicate::SelectorExists(Selector::EachPermanent(
+                        R::IsSource.and(R::IsSuspected),
+                    )),
+                    then: Box::new(Effect::MayDo {
+                        description: "Suspect another creature you control instead?".into(),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::Suspect {
+                                what: Selector::TargetFiltered {
+                                    slot: 0,
+                                    filter: R::Creature
+                                        .and(R::ControlledByYou)
+                                        .and(R::OtherThanSource),
+                                },
+                            },
+                            Effect::ClearSuspected { what: Selector::This },
+                        ])),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

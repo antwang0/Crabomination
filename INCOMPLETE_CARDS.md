@@ -223,6 +223,29 @@ tail**, where declining is almost never right and the dropped choice costs a
 game nothing. Read the oracle before fixing one; the residue still has false
 positives, and this pass's four are the reason.
 
+**THE LESSON WAS TESTED AT THE EIGHTY-FIRST PASS AND IT HOLDS — filter the
+tail by "If you do".** Of the 341 findings, **46 have "you may X. If you do,
+Y" in the full oracle**, and that is the sub-tail worth reading: a dropped
+"may" there means the *consequence* is forced too, so the card pays a printed
+cost it was allowed to decline. The filter is four lines against
+`.scryfall_cache.json` (the auditor truncates its snippet at 80 chars, so
+`grep` on its output finds none of them). Two of the 46 were real and both
+are now fixed:
+
+| Card | Was | Now |
+|---|---|---|
+| ~~Sanctuary Wall~~ ✅ | `{2}{W}, {T}`: tap target **and** stun it **and** stun itself, unconditionally — the activation cost its own untap step every time | the stun pair is one `Effect::MayDo`; the tap is still mandatory. Tests take it and decline it |
+| ~~Frantic Scapegoat~~ ✅ | a 1/1 haste body with only the ETB self-suspect — **the second ability was absent**, so it kept menace-and-can't-block forever | "whenever another creature you control enters, **if this is suspected**, you may suspect that one instead" — `EntersBattlefield`/`YourControl` + `Predicate::SelectorExists(IsSource.and(IsSuspected))` (CR 603.4) + `MayDo(Suspect, ClearSuspected)`. Two approximations, both documented on the card: "another creature you control" rather than one of this batch, and per-creature rather than per-batch |
+
+And the third thing the sub-tail teaches, which is the same shape as the
+2026-08-25 pass's false positives: **check for a bespoke optional primitive
+before writing a fix.** Obzedat, Ghost Council reads as a dropped "may" and
+is not one — it is `Effect::MayExileSelfReturnNextUpkeepHaste`, an optional
+effect the auditor's `OPTIONAL` list does not name. Of the rest, the
+cost-bearing ones (Lamplight Phoenix, Izoni, Kozilek's Return, Aphemia) route
+through `Effect::CollectEvidence` / `Effect::If`, where the forced branch is
+already gated on being able to pay and the payoff dominates.
+
 **The lesson for the next sweep**: the dropped-"may" audit is a *body-stub*
 finder as much as an optionality finder. A card whose printed text is "you may
 X. If you do, Y" and whose definition has neither X nor the choice reads to

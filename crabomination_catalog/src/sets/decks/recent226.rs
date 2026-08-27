@@ -35,9 +35,13 @@ pub fn doorkeeper_thrull() -> CardDefinition {
     }
 }
 
-/// Sanctuary Wall — {1}{W} 0/4 Wall. Defender; {2}{W}, {T}: Tap target creature
-/// and put a stun counter on it and on this creature. (The "you may" on the
-/// stun is folded into an always-stun.)
+/// Sanctuary Wall — {1}{W} 0/4 Wall. Defender; {2}{W}, {T}: Tap target creature.
+/// You may put a stun counter on it; if you do, put one on this creature too.
+///
+/// The stun pair is one optional package (`MayDo`), not two mandatory writes:
+/// the printed "you may" is the only thing that stops the activation from
+/// stunning your own Wall every time, and folding it away made the ability
+/// cost its own untap step with no way to decline.
 pub fn sanctuary_wall() -> CardDefinition {
     CardDefinition {
         name: "Sanctuary Wall",
@@ -60,15 +64,20 @@ pub fn sanctuary_wall() -> CardDefinition {
                         filter: R::Creature,
                     },
                 },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
+                Effect::MayDo {
+                    description: "Put a stun counter on it and on this creature?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::Stun,
+                            amount: Value::Const(1),
+                        },
+                        Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::Stun,
+                            amount: Value::Const(1),
+                        },
+                    ])),
                 },
             ]),
             ..Default::default()

@@ -1388,6 +1388,50 @@ mod recent241 {
         assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
     }
 
+    /// CR 701.60 — the Scapegoat's second ability, and it is the card: while
+    /// it is suspected, another creature entering lets it hand the suspicion
+    /// (menace **and can't block**) over. Shipped as a body with only the ETB
+    /// until the eighty-first pass, which is a strictly worse card.
+    #[test]
+    fn frantic_scapegoat_moves_the_suspicion_to_a_fresh_body() {
+        let mut g = two_player_game();
+        let goat = g.add_card_to_battlefield(0, catalog::frantic_scapegoat());
+        g.fire_self_etb_triggers(goat, 0);
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(goat).unwrap().suspected, "ETB suspected it");
+        // Accept the choice and aim it at the creature that just entered.
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let effect = catalog::frantic_scapegoat().triggered_abilities[1].effect.clone();
+        let ctx = EffectContext {
+            targets: vec![Target::Permanent(bear)],
+            ..EffectContext::for_trigger(goat, 0, None, 0)
+        };
+        g.resolve_effect(&effect, &ctx).unwrap();
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(bear).unwrap().suspected, "the new body takes it");
+        assert!(!g.battlefield_find(goat).unwrap().suspected, "and the Goat sheds it");
+    }
+
+    /// CR 603.4 — the intervening 'if'. An unsuspected Scapegoat has nothing
+    /// to move, so the trigger must not offer to suspect a creature for free.
+    #[test]
+    fn frantic_scapegoat_does_nothing_while_unsuspected() {
+        let mut g = two_player_game();
+        let goat = g.add_card_to_battlefield(0, catalog::frantic_scapegoat());
+        assert!(!g.battlefield_find(goat).unwrap().suspected);
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let effect = catalog::frantic_scapegoat().triggered_abilities[1].effect.clone();
+        let ctx = EffectContext {
+            targets: vec![Target::Permanent(bear)],
+            ..EffectContext::for_trigger(goat, 0, None, 0)
+        };
+        g.resolve_effect(&effect, &ctx).unwrap();
+        drain_stack(&mut g);
+        assert!(!g.battlefield_find(bear).unwrap().suspected, "nothing to hand over");
+    }
+
     /// Slice from the Shadows gives target creature -X/-X and can't be countered.
     #[test]
     fn slice_from_the_shadows_shrinks() {
