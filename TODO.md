@@ -86,20 +86,20 @@ commit that a fetch would have shown.
    `combat.rs:1188` (CR 508.1g, the attack tax) and 22 at `combat.rs:710`
    (CR 508.1d, "attacks each combat if able"), and zero at the other 26.**
    `fixed`/`sos`/`sealed` are zero everywhere.
-4c. **NEXT RUN'S BEST BUG: `pick_attacks_inner` does not model the attack
-   tax.** Propaganda / Ghostly Prison / Oppressive Rays / Sphere of Safety —
-   the picker declares the whole board, `try_pay_with_auto_tap` cannot pay,
-   and the engine rejects the **batch** blaming `attacks[0]`. In a sim the
-   fallback passes priority, so the modelled opponent attacks with nothing;
-   on the real path the action is rejected, so **against a Propaganda this
-   bot may never attack**. Fix as **one walker, not two**: lift
-   `declare_attackers_banded`'s ~85-line CR 508.1g block into a `&self`
-   method, have the picker call it and trim attackers until payable (the tax
-   is per-attacker, so the sum is monotone in the set). Changes play; gate it
-   with the new two-binary `--vs` ladder. **And the meta-lesson: naming the
-   *card* was the wrong question** — `attacks[0]` is not the culprit for a
-   batch-level rejection, and two rounds went into chasing "Angel" before the
-   site tag answered it in one.
+4c. **FIXED, and it is the first change on this branch with a win rate
+   instead of an argument.** `attack_tax_for` is now one walker the engine
+   and `trim_attacks_to_payable_tax` both call; the picker drops taxed
+   attackers by damage-per-mana until `available_mana` covers the rest,
+   never dropping an untaxed or a must-attack one. Sim rejections on `cube
+   --seed 11`: **attack 110 -> 10**, total 156/8,656 -> 54/8,596. `--vs`
+   over the eight cube seeds whose pool carries a tax, 3,200 games each:
+   **49 A-sweeps against 14 B-sweeps, never worse on a seed** (s11 50.5 %,
+   s20/s22 50.2 %, s8/s21 50.1 %, s9/s10/s18 50.0 %); the seeds with no tax
+   split 1600/1600. Clock cost, `ab_wall` on `fixed` where play is identical
+   both sides: **+0.56 %, CI -0.26 .. +1.39 %, and the null resolves only
+   +/-2.34 %**. **Meta-lesson: naming the *card* was the wrong question** —
+   `attacks[0]` is not the culprit for a batch-level rejection, and two
+   rounds went into chasing "Angel" before the site tag answered it in one.
 4d. **And `combat.rs:710`'s 22 are diagnosed, not fixed** — small and
    bounded. `pick_attacks_inner`'s must-attack escape is
    `c.has_keyword(MustAttack) || !c.goaded_by.is_empty()`, off the
@@ -136,13 +136,22 @@ commit that a fetch would have shown.
    600 games/archetype: **44,400 games, 0 capped and 0 stuck, no panic, no
    arithmetic overflow** (20 draws, see 7z).
    The play-dependent rows were measured twice, side by side, at `21c0c97f`
-   and at `8450ba81` (the attack-tax walker), and are **bit-identical** —
-   195,616 decisions, 27.44 turns, the same 20 undecided in the same six
-   cells. So the tax walker does not bite on any deck in `fixed`, `cube`,
-   `sealed` or `all`: it is only reachable with a Propaganda-class permanent
-   on the board, and these pools do not put one there. **Which means the
-   ladder cannot gate that fix** — if it needs a win rate, it needs a pool
-   that contains the card.
+   and at `8450ba81` (the attack-tax *walker*, which is a pure extraction and
+   moves nothing), and are **bit-identical** — 195,616 decisions, 27.44
+   turns, the same 20 undecided in the same six cells.
+7y. **"The pool does not contain the card" is a statement about a SEED, not
+   about the pool, and this file made the stronger claim for one commit.** It
+   read the bit-identical rows above and concluded the `--vs` ladder could
+   not gate the attack-tax fix "on any deck in `fixed`, `cube`, `sealed` or
+   `all`". `fixed` is right — it is four hand-built decks and none carries a
+   Propaganda. `cube` is **seed-dependent in deck content**, which this file
+   already says two sections up, and a sweep of `CRAB_SIM_REJECTS=1` over
+   seeds 1-24 finds a tax in **8 of them** (8, 9, 10, 11, 18, 20, 21, 22 —
+   0/1,884 at seed 1, 92/2,020 at seed 11). Those eight are what gated the
+   fix. **Ask the census, not the intuition: one `CRAB_SIM_REJECTS=1` run a
+   seed at `--games 6` is ~4 s and says outright whether a pool reaches the
+   code.** The same sweep is how to find a pool for the next play-changing
+   fix.
 7z. **CLOSED, and the answer is "no stalls at all": all 20 undecided in
    44,400 are DRAWS — `cap 0 / stuck 0 / draw 20`.** A draw is CR 104.4, a
    rules outcome, so the sweep's real reading is **zero capped and zero stuck

@@ -6854,12 +6854,62 @@ then passes priority, so the modelled opponent attacks with *nothing*; on the
 real declaration path the action is rejected outright, so against a
 Propaganda this bot may never attack.
 
-**The fix is the seventy-first pass's shape one level over**: a pre-filter
-that prices what the engine will charge, and it should be **one walker, not
-two** — extract `declare_attackers_banded`'s ~85-line CR 508.1g block as a
-`&self` method and have the picker trim attackers until the sum is payable
-(attackers are taxed individually, so the sum is monotone in the set). It
-changes play, and the two-binary ladder (`--vs`) now exists to gate it.
+**THE ATTACK TAX IS PAID — and it is the first change on this branch gated
+on a win rate rather than an argument.** `attack_tax_for(attacks, statics,
+keyword_tax)` is the extracted walker; `declare_attackers_banded` charges it
+and `trim_attacks_to_payable_tax` (last in `pick_attacks_inner`, because the
+tax depends on what each attacker is aimed at) prices the batch against
+`available_mana` and drops taxed attackers by damage-per-mana ascending.
+Untaxed attackers are never dropped and neither is a must-attack one — CR
+508.1d would reject the batch for its absence instead — and the budget stays
+deliberately optimistic, so the trim errs toward letting the engine reject
+rather than declining a legal attack.
+
+```text
+CRAB_SIM_REJECTS=1, --games 12 --threads 3      base            tip
+cube  seed 11                                 156/8,656       54/8,596
+  of which attack                                 110              10
+cube seed 1 / seed 42, fixed/sos/sealed seed 11   unchanged (0, 4, 0)
+```
+
+**Strength, `bot_ladder --vs`, `release-fast`, tip = A, 400 games x 8 cube
+archetypes = 3,200 games a seed.** The eight seeds are the ones whose pool
+carries a tax at all (see the sweep below); the pools that carry none play
+byte-identical games, which is the change's own null.
+
+```text
+seed     8     9    10    11    18    20    21    22   total
+A-sw     3     5     0    18     2    11     5     5     49
+B-sw     1     4     0     3     2     3     1     0     14
+A win% 50.1  50.0  50.0  50.5  50.0  50.2  50.1  50.2
+cube s5 / s23 (no tax): 1,600/1,600 pairs split, 50.0 %
+fixed s11    (no tax):    800/800   pairs split, 50.0 %
+```
+
+49 decisive pairs to A against 14 to B over 25,600 games, never worse on a
+seed. Clock: `ab_wall.py`, 6 ABBA blocks, `--decks fixed`, where play is
+identical both sides so the timing is the added `attack_static_scan` and
+nothing else — **mean +0.56 %, CI -0.26 .. +1.39 %, FLAT**, and the null
+control on the same workload resolves only +/-2.34 %. `--bench` byte-
+identical (195,616 / 27.44 / 0 stalls).
+
+**AND THE MEASUREMENT LESSON, WHICH IS ABOUT THE POOL AND NOT THE CODE.**
+This file briefly recorded that the `--vs` ladder "cannot gate that fix"
+because `--bench` and the wide sweep read bit-identically across the walker
+extraction. That is true of `fixed` — four hand-built decks, no Propaganda —
+and **false of `cube`, whose deck *content* is seed-dependent**, which is a
+rule this file already states two sections up. `CRAB_SIM_REJECTS=1` at
+`--games 6` costs ~4 s a seed and answers it outright:
+
+```text
+cube seeds 1-24, base binary, attack rejections
+  0 at seeds 1-7, 12-17, 19, 23, 24
+  6/1,426 (s8)  16/1,422 (s9)  84/1,428 (s10)  92/2,020 (s11)
+ 12/1,242 (s18) 20/1,854 (s20)  8/1,282 (s21)  60/2,000 (s22)
+```
+
+**Sweep the census before concluding a pool cannot reach the code.** The
+same sweep is how to find a gating pool for the next play-changing fix.
 
 **(-55, as found) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
 OUT — 470 of 91,438, AND ON ONE `cube` BOARD 6.8 % OF THE ATTACKS.** Measured
