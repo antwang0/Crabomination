@@ -51,17 +51,27 @@ a lost race — the loser usually holds something the winner does not.
    replacing one costs the `Chain<Filter<_>>` specialisation, ~0.15 % of
    `fixed`, before it saves an allocation. (-52)/(-53)/(-54) closed;
    (-51)(a) wants a device on the do-not-rebuild list.
-1e. **The two biggest unclaimed rows, both seeded this pass with tables.**
-   **(-59) `dispatch_triggers_for_events` is the largest self row in the
-   program — 198,765,010 Ir / 5.58 % of `cube` / 139,500 calls / 1,425 Ir of
-   self each** — and no entry had ever named it. It wants a **line profile**
-   (`profiling-lines` + `cg_lines.py`, a cold build) because five plausible
-   sub-costs at ~300 Ir are unreadable from the source. **(-60)
+1e. **The three biggest unclaimed rows, all three seeded this pass with
+   tables, and the biggest one is already answered.** **(-59)
+   `dispatch_triggers_for_events` is the largest self row in the program —
+   198,765,010 Ir / 5.58 % of `cube` / 139,500 calls — and its line profile is
+   RUN (`profiling-lines` + `cg_lines.py`, in the entry): **there is no hot
+   line.** Largest is 0.23 %; the per-card loop prologue is 0.44 % and the
+   per-(trigger, event) loop 0.39 %, the rest thirty-odd million of iterator
+   internals over a dozen narrow passes. The two loops a source read flags
+   (graveyard, death snapshots) are not in the top forty. **Do not re-run that
+   profile; the lever is fewer dispatches, and 114,834 of the 139,500 are
+   `perform_action_inner` draining one action's events.** **(-60)
    `trigger_grant_sources` is 1.00 % of `cube` and finds 0.25 grants per
    call over 57,596 of them**; the CR 510.2 creature-damage batch's 12,858
    were hoisted this pass (`cube` -0.299 %, `fixed` -0.006 %), and
    `fire_step_triggers`' 23,526 are already one-per-call, so what is left
-   there is *why 619 Ir*, not *how often*.
+   there is *why 619 Ir*, not *how often*. **(-61) `keyword_grant_in_scope`
+   is 1,713,848 `card_can_grant_keyword` calls / 1.67 % of `cube`** — but its
+   largest site, the CR 702.64 Absorb gate, is **already a 4.5x trade** and
+   the entry lists four routes off it that all fail. The one untried thing
+   there is free and small: `activate_ability_inner`'s gates exist to avoid
+   `bf_cp!()`, so `bf_cp.is_some()` short-circuits them exactly.
 1c. **The gather is 30 % `resolve_combat`, the prize is `cube` -1.6 %, and
    the obvious route is REFUTED with a counterexample — see (-58).** Seeding
    the batch's per-pair freeze scopes from one gather measures **fixed
