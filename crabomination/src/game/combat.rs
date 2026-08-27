@@ -2,6 +2,7 @@ use super::*;
 use crate::card::Keyword;
 use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
+use smallvec::SmallVec;
 
 /// One combat/noncombat damage trigger gathered by `fire_combat_damage_
 /// triggers`, before its intervening-'if' runs: `(source, effect,
@@ -882,7 +883,7 @@ impl GameState {
             if requirement || !groups.is_empty() {
                 return (g.compute_battlefield(), requirement);
             }
-            let mut ids: Vec<CardId> = Vec::new();
+            let mut ids: SmallVec<[CardId; 8]> = SmallVec::new();
             let mut want = |id: CardId| {
                 if !ids.contains(&id) {
                     ids.push(id);
@@ -1423,7 +1424,7 @@ impl GameState {
                 .any(|k| matches!(k, Keyword::AttackBlockCostTapAnother(_)))
         }) {
             let declared: Vec<CardId> = attacks.iter().map(|a| a.attacker).collect();
-            let mut tapped: Vec<CardId> = Vec::new();
+            let mut tapped: SmallVec<[CardId; 4]> = SmallVec::new();
             for atk in &attacks {
                 for f in tap_another_filters(computed_kw(atk.attacker)) {
                     match self.find_tap_helper(p, &f, atk.attacker, &declared, &tapped) {
@@ -1833,7 +1834,7 @@ impl GameState {
             if requirement {
                 return (g.compute_battlefield(), requirement);
             }
-            let mut ids: Vec<CardId> = Vec::new();
+            let mut ids: SmallVec<[CardId; 8]> = SmallVec::new();
             let mut want = |id: CardId| {
                 if !ids.contains(&id) {
                     ids.push(id);
@@ -2050,7 +2051,7 @@ impl GameState {
                 .map(|(b, _)| *b)
                 .chain(self.attacking.iter().map(|a| a.attacker))
                 .collect();
-            let mut tapped: Vec<CardId> = Vec::new();
+            let mut tapped: SmallVec<[CardId; 4]> = SmallVec::new();
             for &(blocker_id, _) in &assignments {
                 let Some(seat) = self.battlefield_find(blocker_id).map(|c| c.controller) else {
                     continue;
@@ -2249,7 +2250,7 @@ impl GameState {
             let mut payers: Vec<(usize, (u32, u32))> =
                 block_tax_by_controller.into_iter().collect();
             payers.sort_by_key(|(p, _)| *p);
-            let mut life_paid: Vec<(usize, u32)> = Vec::new();
+            let mut life_paid: SmallVec<[(usize, u32); 2]> = SmallVec::new();
             for (player, (mana, life)) in payers {
                 let snap = self.snapshot_payment_state(player);
                 // CR 119.4 — a life cost is unpayable below the amount owed.
@@ -2283,7 +2284,7 @@ impl GameState {
         // compute those instead of the whole board: the freeze scope pays one
         // gather and one layer pass per participant, against ~23 passes for a
         // bench board.
-        let mut ids: Vec<CardId> = Vec::new();
+        let mut ids: SmallVec<[CardId; 8]> = SmallVec::new();
         for &(b, a) in &assignments {
             if !ids.contains(&b) {
                 ids.push(b);
@@ -2307,7 +2308,7 @@ impl GameState {
         let sum_n = |kws: &[Keyword], pick: fn(&Keyword) -> Option<i32>| -> i32 {
             kws.iter().filter_map(pick).sum()
         };
-        let mut pt_deltas: Vec<(CardId, i32)> = vec![];
+        let mut pt_deltas: SmallVec<[(CardId, i32); 8]> = SmallVec::new();
         let mut blocked: crate::fxhash::HashMap<CardId, usize> = crate::fxhash::HashMap::default();
         for &(b, a) in &assignments {
             *blocked.entry(a).or_insert(0) += 1;
@@ -2523,7 +2524,7 @@ impl GameState {
     /// [`free_division_targets`]: Self::free_division_targets
     /// [`resolve_combat_damage_with_filter`]: Self::resolve_combat_damage_with_filter
     fn combat_damage_computed(&self) -> Vec<ComputedPermanent> {
-        let mut ids: Vec<CardId> = Vec::new();
+        let mut ids: SmallVec<[CardId; 8]> = SmallVec::new();
         for atk in &self.attacking {
             if !ids.contains(&atk.attacker) {
                 ids.push(atk.attacker);
@@ -3377,7 +3378,7 @@ impl GameState {
         // Creature-vs-creature combat damage recorded here and dispatched after
         // all damage in this step is dealt, so `DealsCombatDamageToCreature`
         // triggers (CR 510.2) go on the stack simultaneously (CR 603.3b).
-        let mut creature_damage: Vec<(CardId, CardId, u32)> = vec![];
+        let mut creature_damage: SmallVec<[(CardId, CardId, u32); 8]> = SmallVec::new();
 
         for atk in &attacker_infos {
             // Fog (per-dealer) OR "prevent all combat damage it would deal"

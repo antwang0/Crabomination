@@ -927,6 +927,24 @@ cube 3,386,370,818 / sealed 3,321,932,106 on this box).
       (21,120 -> 0); cube allocations 1,782,746 -> 1,777,364
 ```
 
+```text
+(3) (-71)'s sweep, first instalment: nine `Vec::new()` locals in `combat.rs`
+    are inline buffers — `declare_blockers`/`declare_attackers_banded`'s four
+    `ids` and two `tapped`, `pt_deltas`, `life_paid`, and the combat-damage
+    batch's `creature_damage`.  Base = row (2)'s tip.
+      fixed   1,109,689,934 -> 1,106,711,404   -0.268 %
+      cube    3,363,324,209 -> 3,355,240,795   -0.240 %
+      sealed  3,301,557,606 -> 3,291,519,150   -0.304 %
+      cube grow_one 461,308 -> 428,190 (-33,118); allocations
+      1,777,364 -> 1,759,090; `declare_blockers`' own row 36,526 -> 25,220
+```
+
+**Across the pass's three perf commits, from `c8ebea50`:** `fixed`
+1,113,113,776 -> 1,106,711,404 (**-0.575 %**), `cube` 3,386,370,818 ->
+3,355,240,795 (**-0.919 %**), `sealed` 3,321,932,106 -> 3,291,519,150
+(**-0.915 %**). A concurrent session's bot fix landed between (1) and (2) and
+is inside those spans; each row above names its own base.
+
 **Eight inline slots takes all 21,120 growths and sixteen would take none
 more**, so the capacity question answered itself: only 5,382 of the 21,120
 were *first* allocations — the rest were `realloc`s through `finish_grow`,
@@ -8529,8 +8547,24 @@ matches a discriminant. See the Baseline for the four-variant table and the
 two shapes not to rebuild (capacity 4, and shadowing the buffer with a
 `&[T]`).
 
-**The generalisation is the worklist and it is the allocation table's
-`grow_one` half.** `declare_blockers` (36,526 growths / 7,966,197 Ir),
+**The generalisation's first instalment is TAKEN in the same pass** — nine
+`Vec::new()` locals in `combat.rs` (four `ids`, two `tapped`, `pt_deltas`,
+`life_paid`, `creature_damage`), `fixed` **-0.268 %**, `cube` **-0.240 %**,
+`sealed` **-0.304 %**, `grow_one` 461,308 -> 428,190. All nine are small
+elements (4-12 bytes), a handful of read sites each, and die in their own
+frame. **What is left in `combat.rs` is the `events: Vec<GameEvent>`
+accumulators**, and those are a different problem: they are *returned*, the
+element is a large enum, and the fix for that family is threading one
+`&mut Vec<GameEvent>` through the callees rather than an inline buffer —
+`advance_step` already takes its events by value, so the shape half-exists.
+Sized at ~0.8 % of `cube` across `advance_step`, `declare_blockers`,
+`check_state_based_actions`, `resolve_combat`, `deal_combat_damage_to_target`
+and `resolve_top_of_stack_inner`; it is a signature change across the engine
+core and every `?` path that discards events has to be re-read, so it is not
+a quiet-afternoon change.
+
+**The rest of the worklist, and it is the allocation table's `grow_one`
+half.** `declare_blockers` (36,526 growths / 7,966,197 Ir),
 `finalize_cast` (22,930 / 7,335,377), `advance_step` (37,670 / 4,522,660),
 `check_state_based_actions` (26,942 / 4,718,160) and `dispatch_board_scan`
 (29,474 / 3,544,522) are the same shape — a `Vec::new()` local accumulator
@@ -8544,6 +8578,55 @@ whose first `push` is the allocation — at half the size each, ~1.2 % of
   `Vec`s go out in a `DispatchScan`, so an inline buffer moves its bytes at
   every return; the entry above is specifically about a local that dies in
   its own frame.
+
+**(-74) THE `CardData` SIZE LEVER IS PRICED BY PROBE AND IT DOES NOT PAY —
++64 BYTES IS `cube` **+0.058 %**, i.e. **0.00091 % A BYTE**, SO THE ~150
+BYTES OF MOVABLE CAST-TIME RIDERS ARE **0.14 %** AND A SECOND CoW GROUP IS
+NOT WORTH BUILDING.** Measured at the eighty-sixth pass on top of (-73), the
+eighty-fourth pass's padding-probe device (`_probe_pad: [u64; 8]` on
+`CardData`, two lines, no refactor):
+
+```text
+  fixed   1,109,689,934 -> 1,110,067,791   +0.034 %
+  cube    3,363,324,209 -> 3,365,270,311   +0.058 %
+  sealed  3,301,557,606 -> 3,303,729,394   +0.066 %
+```
+
+**The question it was asked, and the arithmetic that made it look promising.**
+The CoW deep copy (`Arc::clone_from_ref_in`) is 160,364 calls and ~4.2 % of
+`cube` including its allocation and `Vec::clone` subtrees, and `CardData` —
+~130 fields, a dozen `Vec`s, ~800 bytes — is the biggest `T` going through
+it. Extending the `CardCold` split with a second, *warm* group for the ~45
+cast-time rider bools and ~10 `u32`s looked like it should move real money.
+It does not: `ComputedPermanent`'s probe reads +8 bytes = +0.058 % of `cube`
+on 227,430 allocations, i.e. **8x more per byte**, and extrapolating from
+that number is what over-priced this one.
+
+**And the context table says which copies they are.** `--separate-callers=2`
+on `cg.cube` at the eighty-sixth tip, by calling context:
+
+```text
+160,364 CoW deep copies
+  32,374  make_mut <- activate_ability_inner
+  30,758  make_mut <- cast_spell_with_convoke
+  17,260  make_mut <- declare_attackers_banded
+   8,174  make_mut <- declare_blockers
+   6,810  make_mut <- do_untap
+   6,000  make_mut <- resolve_top_of_stack_inner
+   5,962  make_mut <- PlayerData::send_to_graveyard
+   5,446  make_mut <- on_left_battlefield
+   5,414  make_mut <- finalize_cast
+   4,522  make_mut <- PlayerData::draw_top
+```
+
+**Of the 160,364, exactly 68,610 are `CardData`** — `ColorMemo::clone` only
+exists on that type and is called 68,610 times from inside the copy — and
+2,876 are `PlayerData` (`String::clone`, the seat name). The rest are
+`CardCold`, `PlayerCold` and the `CowBox` zones. `Vec::clone` runs 287,910
+times inside the copies (1.8 each) and `__rust_alloc` 244,032 (1.52 each).
+**So the lever is fewer deep copies, not smaller ones**, and the two biggest
+contexts are the mana-tap paths — which is (-51)(a), where the entry already
+says what not to try.
 
 **(-73) TAKEN at the eighty-sixth pass — `fixed` -0.282 %, `cube` -0.159 %,
 `sealed` -0.194 %, and `computed_permanent` leaves the `grow_one` table
