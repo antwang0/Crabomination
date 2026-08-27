@@ -86,6 +86,16 @@ one-sentence claim plus the pass that measured it; do not delete one, because
 the point of the section is that a rule refuted on a *mechanism* stays
 refuted.
 
+- **Inline storage is a *local's* device; on a struct field the read count
+  pays for it** (pass 86, `(-72)`, built and refuted: `fixed` +0.600 %,
+  `cube` +0.490 %, `sealed` +0.542 %). `players: SmallVec<[Player; 4]>`
+  removed 22,684 allocations on `cube` — one per `GameState` clone, to the
+  unit — and cost 16.5 M Ir, because `sa_cards` has ~forty read sites in one
+  function and `.players` has **~35,000** across the workspace, each paying
+  the `spilled()` compare. `dispatch_triggers_for_events` alone took
+  +3.6 M Ir without touching an allocation. **Count the read sites before
+  moving a buffer inline**, and do not retry it at a smaller inline capacity:
+  the cost is per read, not per byte.
 - **A `SmallVec` without the `union` feature is an *enum*, and the
   discriminant match is the whole trade** (pass 86, `(-71)`; 0.12 % of
   `fixed`). Inlining the gather's `sa_cards` buffer read **+0.108 % on

@@ -918,6 +918,12 @@ cube 3,386,370,818 / sealed 3,321,932,106 on this box).
       cube grow_one       546,800 ->   482,428   -64,372  (-11.8 %)
 ```
 
+**(-72), the same device on a struct field, is refuted in the same pass** —
+`players: SmallVec<[Player; 4]>` reads `fixed` +0.600 % / `cube` +0.490 % /
+`sealed` +0.542 % while removing exactly the 22,684 allocations it promised.
+The difference between the two is the *read count*: forty sites in one
+function against ~35,000 across the workspace. See the candidates section.
+
 **The `union` feature on `smallvec` is 0.12 % of `fixed` on its own, and
 without it this entry does not ship.** Measured, both variants built:
 
@@ -8524,7 +8530,40 @@ whose first `push` is the allocation — at half the size each, ~1.2 % of
   every return; the entry above is specifically about a local that dies in
   its own frame.
 
-**(-72) `GameState::clone`'s `players` FIELD IS A MALLOC AND A FREE FOR
+**(-72) BUILT, MEASURED AND REFUTED at the eighty-sixth pass — `fixed`
+**+0.600 %**, `cube` **+0.490 %**, `sealed` **+0.542 %**, and the allocation
+saving was exactly what the entry predicted.** `players: SmallVec<[Player;
+4]>` removed **22,684 allocations on `cube`, one per `GameState` clone, to
+the unit** — and the run got 16.5 M Ir *slower*, because the saving is ~6.6 M
+and the read tax is ~23 M.
+
+**(-71)'s device does not generalise from a local to a struct field, and the
+reason is the read count, not the size.** `sa_cards` has ~forty read sites
+inside one function; `.players` has **~35,000** across the workspace, and
+every one of them pays `SmallVec`'s `spilled()` compare and pointer select —
+even with the `union` feature, which is what made (-71) ship.
+`dispatch_triggers_for_events` alone got **+3,633,386 Ir** without touching
+an allocation. `GameState::clone`'s own self row moved by -585,498, i.e. the
+malloc it stopped making is a rounding error against what the field costs to
+*read*.
+
+```text
+base 0e86d36f                fixed              cube             sealed
+  SmallVec<[Player; 4]>    +0.600 %          +0.490 %          +0.542 %
+  cube allocations         1,782,746 -> 1,760,062  (-22,684, as predicted)
+```
+
+**Do not rebuild it with a smaller inline capacity.** The +16 bytes on
+`GameState` are worth ~2 Ir a clone (45 k Ir over the run); capacity 2 would
+recover that and nothing else, because the cost is per *read*, not per clone
+or per byte. **And do not reach for `CowBox` on the strength of this
+refutation either** — the arithmetic below still holds, and a `CowBox` read
+is a pointer load at all 35,000 sites on top of a doubled write path.
+
+**The entry as found, kept because the 472 Ir is real and something else may
+yet collect it:**
+
+**`GameState::clone`'s `players` FIELD IS A MALLOC AND A FREE FOR
 SIXTEEN BYTES, ON EVERY CLONE — 472 Ir, 35 % OF THE CLONE'S WHOLE INLINE
 GROUP, 0.32 % OF `cube` AND 0.46 % OF `fixed`.** Priced by the eighty-third
 pass's line profile (`game/mod.rs:2283`, 16,294,384 Ir / 0.55 % at that tip's
@@ -8545,18 +8584,14 @@ probe that resolves any damage or taps any mana writes a seat. It pays only
 if most clones never touch `players`, which is exactly the assumption this
 file's CoW entries keep getting wrong.
 
-**Inline storage is the shape**, i.e. (-71)'s device on a struct field rather
-than a local: `SmallVec<[Player; 4]>` clones two atomic increments and no
-malloc, spills correctly for a commander pod, and costs nothing on the write
-path. The blast radius is two type mentions (`GameState::players` and
-`GameState::new`'s parameter, which stays `Vec<Player>` and converts at the
-boundary): `.players` has ~35 k uses and every one is `iter` / `len` / index
-/ `get` / `get_mut` / `iter_mut`, i.e. `Deref<Target = [Player]>`. The one
-`push` is in `cr_recent43.rs`. **Two things to check that (-71) did not have
-to:** the field is *moved* with the struct, so the inline bytes are memcpy'd
-on every clone and every move of a `GameState` — price capacity 2 against 4
-— and the wire format has to stay a sequence, which smallvec's `serde`
-feature gives (no snapshot and no trained net is invalidated).
+**Inline storage was the shape and it is the thing that was refuted**, above:
+`SmallVec<[Player; 4]>` is a three-line change (`GameState::players`,
+`GameState::new`'s conversion, `shuffle_seating`'s scratch buffer) that
+compiles the whole workspace with **no call-site edits at all** — the
+`Deref<Target = [Player]>` covers every one of the ~35,000 `.players` uses —
+and that is exactly why it loses. The wire format did stay a sequence
+(smallvec's `serde` feature), so nothing was invalidated; the change simply
+costs more to read than it saves to clone.
 
 **(-68) TAKEN at `e9a509e6` — `fixed` -0.215 %, `cube` -0.317 %, and the
 function's own row -17.7 % / -21.3 %.** Two walks instead of six: the dealer
