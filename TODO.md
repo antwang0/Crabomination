@@ -63,10 +63,15 @@ rules under this section; add a pointer here, put the detail there.
    clippy and both pools' whole-program Ir.
 5. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open and not to be changed
    unilaterally: should `selfplay` seed `jitter_below` from `--seed`?
-6. **Filters that now read zero, so a new one has to come from elsewhere** —
+6. **Filters that read zero — and the one that did not.** Zero:
    `audit_stubs`, `audit_incomplete`, `audit_variant_coverage`, the
-   requirement-walker allowlist guard, and the ML `reseed_params` grep (0 of
-   45; re-run it after adding a `crabomination_ml` test that trains).
+   requirement-walker allowlist guard, the ML `reseed_params` grep (0 of 45;
+   re-run after adding a `crabomination_ml` test that trains). **Not zero, and
+   it is the fourth filter this file kept asking for:**
+   `server::bot_rejection_count()` over the seeded cube sweep found two
+   shipped bugs in 4,000 pairings. It watches the *live server* path, which
+   `bot_ladder` and the training actors never take, so it sees a class the
+   other five structurally cannot.
 
 
 ## Standing rules for a perf pass
@@ -109,6 +114,11 @@ refuted.
   thirty passes; `sos_draft_pool` and `SosPacks::new` rebuilt the *pool* made
   out of them per pool. **No profile row said so** — the cost was spread over
   three small ones. Ask what else in a prologue has no inputs.
+- **Run a sweep on the range you found the bug in, before *and* after**
+  (pass 85). A fix's own insurance was a second bug, on a seed the pre-fix
+  sweep had passed; only the same 4,000-seed range re-run afterwards told a
+  fix from a trade. **A sweep that runs only after the change cannot tell
+  those apart**, and "the tests still pass" is not the same statement.
 - **A thin candidate list is not an empty engine** (pass 84, and pass 85's
   concurrent half is three of four). Three of that
   pass's eight rows were on no candidate and in no self table —
