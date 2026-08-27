@@ -20,58 +20,31 @@ sixty-seventh pass, so don't re-take that.
   has the command and the disk caveat.
 - `PERF.md` — the perf record: baseline, log, profile of record, candidates.
 
-## NEXT (handoff — an INDEX, rewritten each run. Detail lives in PERF; nothing here restates a number.)
+## NEXT (handoff — an INDEX. Every number lives in PERF; nothing here restates one.)
 
 **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
-claude/modern_decks origin/claude/modern_decks` — the container clones `main`.
-Sessions run concurrently: push code before tracker prose, rebase rather than
-force, and diff before discarding a lost race.
+claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
+and sessions run concurrently: push code before tracker prose, rebase not force.
 
-**An INDEX: one pointer per topic, no numbers.** It was 221 lines at the
-eighty-second pass, 145 at the eighty-third and 110 at the eighty-fourth,
-because every pass restated what PERF already held. Everything below has a
-home in PERF's "Perf candidates", "How to measure" or Log, or in the standing
-rules under this section; add a pointer here, put the detail there.
-
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-70)** (four
-   `Arc<CardDefinition>` handles per `ComputedPermanent` where one would do —
-   **priced by probe** at `fixed` 0.532 % / `cube` 0.580 %, and wanting a
-   quiet window because it is 600-800 call sites), **(-69)** (the two
-   `Vec::from_iter` monos, 3.45 % of `cube`; the
-   `check_state_based_actions` row is **refuted as a collect entry** — all
-   twenty-two of its collects are gated and the 2.71 % is
-   `compute_battlefield_creatures` — so `compute_permanents` and
-   `declare_attackers_banded` are what is left unclaimed), then **(-51)(b)**, (-60), (-61),
-   (-51)(a), (-59), plus (-63)'s residues at the foot of its entry. Closed at
-   the eighty-fifth pass: **(-65)**, **(-63)** (both halves), **(-66)**,
-   **(-67)**, **(-68)**.
-   **Read the instruments before the profile**
-   (`CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`, `server::bot_rejection_count`,
-   `--bench`'s stall split), and see "Standing rules for a perf pass" below
-   for every refutation worth knowing.
-2. **Measuring** — PERF "How to measure" and "Which pool a change moves".
-   ⚠ `ab_wall` cannot resolve sub-1 %; use callgrind Ir under ~2 %.
-   `--decks sealed --games 1` is the deck-construction instrument.
-3. **Encoding caution** — pool / `Vocab` / `TrainRow` / the observation and
-   deck encodings: a change **invalidates the trained nets**. Say so here.
-4. **Bugs** — ENGINE_BACKLOG's live-match section is the eighty-fifth pass's:
-   both bugs fixed, two defects under them open, and the sweep that finds
-   this class is a `0..4000u64` loop in the cube smoke test (~870 s, debug)
-   read through `server::bot_rejection_count()`.
-   **Robustness gate:** `-C debug-assertions=yes` on `[profile.overflow]`.
-   **Tip state:** PERF "Baseline"'s "STATE AT …", which carries the suite,
-   clippy and both pools' whole-program Ir.
-5. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open and not to be changed
-   unilaterally: should `selfplay` seed `jitter_below` from `--seed`?
-6. **Filters that read zero — and the one that did not.** Zero:
-   `audit_stubs`, `audit_incomplete`, `audit_variant_coverage`, the
-   requirement-walker allowlist guard, the ML `reseed_params` grep (0 of 45;
-   re-run after adding a `crabomination_ml` test that trains). **Not zero, and
-   it is the fourth filter this file kept asking for:**
-   `server::bot_rejection_count()` over the seeded cube sweep found two
-   shipped bugs in 4,000 pairings. It watches the *live server* path, which
-   `bot_ladder` and the training actors never take, so it sees a class the
-   other five structurally cannot.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-75)**, (-70) (quiet
+   window only), (-69)'s two unclaimed rows, (-51)(b), (-60), (-61), (-51)(a),
+   (-59). Pass 86 closed (-71)+its first sweep and (-73), refuted (-72), (-74).
+2. **Perf method** — PERF "How to measure" and "Which pool a change moves",
+   then the standing rules below. **Read all three pools**: pass 86 had one
+   change that split by pool and one that did not.
+3. **Instruments before profiles** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
+   `server::bot_rejection_count`, `--bench`'s stall split.
+4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
+   encodings: a change **invalidates the trained nets**. Say so here.
+5. **Bugs** — ENGINE_BACKLOG's live-match section; its sweep is a `0..4000u64`
+   loop in the cube smoke test read through `bot_rejection_count()`, run
+   **before and after**. Robustness gate: `-C debug-assertions=yes` on
+   `[profile.overflow]`.
+6. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
+   `selfplay` seed `jitter_below` from `--seed`?
+7. **Filters** — five read zero; `bot_rejection_count()` over the seeded cube
+   sweep is the one that does not, because it watches the live-server path.
+8. **Tip state** — PERF "Baseline"'s newest "STATE AT …".
 
 
 ## Standing rules for a perf pass

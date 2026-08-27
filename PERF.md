@@ -986,22 +986,34 @@ after the prologue — one `Deref` for the whole function instead of ~forty —
 is worse on every pool: holding a borrow of the buffer across 3,600 lines
 costs more than the derefs it removes.
 
-**STATE AT the eighty-sixth pass's first commit.**
+**STATE AT the eighty-sixth pass's third perf commit** — the gate was run in
+full at each of the three, not once at the end.
 
 ```text
 suite  cargo nextest run --workspace --exclude crabomination_client
-       19,056 / 0 / 5   (86 s after the build; nextest reinstalls in seconds)
+       19,056 / 0 / 5   (~85 s after the build; nextest reinstalls in seconds)
 clippy --workspace --exclude crabomination_client --all-targets   clean
 golden traces  unmoved (they run inside the suite above)
 --bench  195,528 decisions / 27.44 turns / 611.0 decisions a game /
-         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok
-         — **byte-identical to the committed invariant**
-         202.3-215.1 games/s, peak_rss_mib 27.1-27.7, host_calib_ms 51-61
-         over three runs (`release-fast`, mimalloc, 2.80 GHz Xeon, 3 threads;
-         the same binary configuration read 211.1-224.1 at calib 46-49
-         earlier in the same session, which is the container's spread and
-         not a difference — the invariant is what carries)
+         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok /
+         thread_determinism ok (3 vs 1 threads identical, CRAB_THREAD_CHECK=1)
+         — **byte-identical to the committed invariant at every commit**
+         224.4-228.9 games/s, peak_rss_mib 27.9-28.3, host_calib_ms 45-48
+         (`release-fast`, mimalloc, 2.80 GHz Xeon, 3 threads), against the
+         pass base's 211.1-224.1 at calib 46-49 in the same container and
+         202.3-215.1 at calib 51-61 in the middle of it. **Three readings
+         of one configuration spanning 202-229 is why the Ir rows carry the
+         claim and this column does not.**
+whole-program Ir, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1
+  fixed  1,106,711,404   cube  3,355,240,795   sealed  3,291,519,150
 ```
+
+⚠ **`target/debug/incremental` filled the disk mid-pass** and the fix is the
+one TODO's Env bullet names: `rm -rf target/debug/incremental`. It costs the
+next debug build its incremental cache and nothing else. Callgrind dumps are
+the other pile — a `--separate-callers=2` dump is ~10 MB and a plain one
+~1.3 MB; delete them once the numbers are in the file.
 
 **Eighty-fifth pass, the concurrent half — four more perf commits on top of
 the six below, and three of the four are a *stale abstraction* rather than a
@@ -8578,6 +8590,43 @@ whose first `push` is the allocation — at half the size each, ~1.2 % of
   `Vec`s go out in a `DispatchScan`, so an inline buffer moves its bytes at
   every return; the entry above is specifically about a local that dies in
   its own frame.
+
+**(-75) THE `events: Vec<GameEvent>` ACCUMULATOR FAMILY IS ~0.8 % OF `cube`
+IN `grow_one` ALONE, AND IT IS WHAT IS LEFT AFTER (-71)'s SWEEP.** Read at
+the eighty-sixth tip, `--decks cube`, from the `grow_one` caller table:
+
+```text
+  37,670   4,522,709  stack::advance_step
+  26,942   4,705,310  check_state_based_actions
+  25,220   4,853,034  combat::declare_blockers          (post-sweep residue)
+  22,930   7,237,460  actions::finalize_cast
+  19,578   ~4,900,000 combat::resolve_combat
+  13,104   ~2,460,000 combat::deal_combat_damage_to_target
+   8,900   ~3,040,000 stack::resolve_top_of_stack_inner
+```
+
+Every one of these is the same shape: a function builds a
+`Vec<GameEvent>` from `vec![]`, pushes a handful, returns it, and its caller
+does `events.append(&mut theirs)`. **The first `push` is the allocation** —
+`grow_one` fires ~1.3 times per call, so the row is essentially one malloc
+and one free per call, on a workload that makes 114,834 actions a six-game
+`cube` run.
+
+**Inline storage is the wrong fix here and (-71)/(-72) say why**: the buffer
+is *returned*, so an inline `SmallVec` moves its bytes at every return, and
+`GameEvent` is a large enum, so even four slots is a big move. **The fix is
+threading one `&mut Vec<GameEvent>` down through the callees** so the whole
+action's events accumulate in one buffer that the caller already owns.
+`advance_step` already takes `mut events: Vec<GameEvent>` by value, so the
+shape half-exists and the precedent is in the file.
+
+**Why it is filed rather than taken:** it is a signature change across the
+engine's core (`check_state_based_actions` alone has ~30 call sites), and
+every `?` path that today discards a callee's events by dropping its `Vec`
+would instead have to unwind a shared buffer — which is a *rules* question
+(does a rejected action leave its events behind?) and not a refactor. Take it
+with the `perform_action` checkpoint's contract in hand, one callee per
+commit, and keep the golden traces identical.
 
 **(-74) THE `CardData` SIZE LEVER IS PRICED BY PROBE AND IT DOES NOT PAY —
 +64 BYTES IS `cube` **+0.058 %**, i.e. **0.00091 % A BYTE**, SO THE ~150
