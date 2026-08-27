@@ -5237,8 +5237,26 @@ impl GameState {
 
         // One lookup of the dealer, not two: the controller Phase 1b onward
         // needs is a field of the card Phase 1 walks the battlefield to find.
+        //
+        // The `find` short-circuited, and the three attachment phases below
+        // each walked the whole battlefield to learn there was nothing
+        // attached to the dealer and no soulbond pair touching it. This walk
+        // does not short-circuit and answers both, so three walks become one
+        // that was already half paid for (PERF (-68)).
         let mut attacker_controller = None;
-        if let Some(c) = self.battlefield.iter().find(|c| c.id == source) {
+        let mut dealer: Option<&crate::card::CardInstance> = None;
+        let mut any_attached = false;
+        let mut soulbond_pair = false;
+        for c in self.battlefield.iter() {
+            if c.id == source {
+                dealer = Some(c);
+            }
+            any_attached |= c.attached_to == Some(source);
+            soulbond_pair |= c.definition.soulbond_bonus.is_some()
+                && c.soulbond_partner.is_some()
+                && (c.id == source || c.soulbond_partner == Some(source));
+        }
+        if let Some(c) = dealer {
             attacker_controller = Some(c.controller);
             // Printed + statics-granted ("Slivers you control have
             // '…combat damage…'" — Tempered/Virulent) + instance-granted
@@ -5276,7 +5294,7 @@ impl GameState {
         // triggered_abilities` to the creature; a `DealsCombatDamageToPlayer`
         // one fires here (the Sword cycle's "create a token / mill / draw"
         // riders), bound to the attacker's controller.
-        if let Some(atk_ctrl) = attacker_controller {
+        if let Some(atk_ctrl) = attacker_controller.filter(|_| any_attached) {
             for eq in &self.battlefield {
                 if eq.attached_to != Some(source) {
                     continue;
@@ -5325,10 +5343,15 @@ impl GameState {
                     }
                 }
             }
-            // CR 702.95 — Soulbond-granted combat-damage triggers. A paired
-            // creature carrying `soulbond_bonus.triggered_abilities` grants
-            // them to BOTH members; a `DealsCombatDamageToPlayer` one fires off
-            // the attacker (Tandem Lookout's "deals combat damage → draw").
+        }
+
+        // CR 702.95 — Soulbond-granted combat-damage triggers. A paired
+        // creature carrying `soulbond_bonus.triggered_abilities` grants them
+        // to BOTH members; a `DealsCombatDamageToPlayer` one fires off the
+        // attacker (Tandem Lookout's "deals combat damage → draw"). Gated on
+        // the dealer walk's `soulbond_pair`, which is the loop's own
+        // `src.id != source && partner != source` test hoisted.
+        if let Some(atk_ctrl) = attacker_controller.filter(|_| soulbond_pair) {
             for src in &self.battlefield {
                 let Some(bonus) = &src.definition.soulbond_bonus else { continue };
                 let Some(partner) = src.soulbond_partner else { continue };
@@ -5352,72 +5375,81 @@ impl GameState {
             }
         }
 
-        // Phase 1.5: walk all battlefield permanents for `YourControl`-scope
-        // combat-damage triggers. This handles "whenever a creature you
-        // control deals combat damage to a player" listeners (e.g.,
-        // Quandrix Echocrasher b171, Enduring Curiosity). The listener's
-        // controller must match the attacker's controller. The source itself
-        // counts ("a creature you control" includes the dealer) — its
-        // `YourControl` trigger isn't gathered in Phase 1 (SelfSource-only),
-        // so it would otherwise never fire.
-        if let Some(atk_ctrl) = attacker_controller {
-            for c in &self.battlefield {
-                if c.controller != atk_ctrl {
-                    continue;
-                }
-                for t in &c.definition.triggered_abilities {
-                    if matches!(t.event.scope, crate::effect::EventScope::YourControl)
-                        && let Some(i) = slot(&t.event.kind)
-                    {
-                        by_kind[i].push((
-                            c.id,
-                            t.effect.clone(),
-                            c.controller,
-                            t.event.filter.clone(),
-                            true,
-                        ));
-                    }
-                }
-            }
-        }
-
-        // Phase 1.6: `AnyPlayer`-scope listeners on *other* permanents —
+        // Phases 1.5 and 1.6, in one walk of the battlefield and one walk of
+        // each permanent's printed trigger list.
+        //
+        // **1.5** — `YourControl`-scope listeners: "whenever a creature you
+        // control deals combat damage to a player" (Quandrix Echocrasher
+        // b171, Enduring Curiosity). The listener's controller must match the
+        // attacker's. The source itself counts ("a creature you control"
+        // includes the dealer) — its `YourControl` trigger isn't gathered in
+        // Phase 1, which is `SelfSource`-only, so it would otherwise never
+        // fire.
+        //
+        // **1.6** — `AnyPlayer`-scope listeners on *other* permanents:
         // "whenever a Goblin deals combat damage to a player" (Cabal Slaver),
         // which cares about the dealer's characteristics rather than its
         // controller. `EventSpec.dealer_filter` gates on the dealing creature;
         // the dealer's own `AnyPlayer` trigger already fired in Phase 1.
         //
+        // The two used to be separate walks. Fusing them has to keep every
+        // 1.5 push ahead of every 1.6 push inside a `by_kind` bucket — the
+        // buckets reach the stack in order — so 1.6's hits go through
+        // `any_player`, which is `Vec::new()` and therefore allocation-free
+        // on every board without such a listener, and is drained after
+        // (PERF (-68)).
+        //
         // A plain nested loop, not the `filter`/`flat_map`/`filter`/`map`
-        // chain this used to `collect()` into a `Vec`: nothing in it borrows
+        // chain 1.6 used to `collect()` into a `Vec`: nothing in it borrows
         // `self` mutably, so there was never anything to buffer, and the
         // adapter stack was **3,671,940 Ir / 0.30 % of a six-game `--decks
-        // fixed` run** in `Map::try_fold` alone (fifty-ninth pass) against a
-        // `Vec` that is empty on every board without an `AnyPlayer` listener.
+        // fixed` run** in `Map::try_fold` alone (fifty-ninth pass).
+        let mut any_player: Vec<(usize, DamageTrigger)> = Vec::new();
         for c in &self.battlefield {
-            if c.id == source {
-                continue;
-            }
+            let mine = attacker_controller == Some(c.controller);
+            let other = c.id != source;
             for t in &c.definition.triggered_abilities {
-                if matches!(t.event.scope, crate::effect::EventScope::AnyPlayer)
-                    && let Some(i) = slot(&t.event.kind)
-                    && t.event.dealer_filter.as_ref().is_none_or(|f| {
-                        self.evaluate_requirement_static(
-                            f,
-                            &Target::Permanent(source),
-                            c.controller,
-                            None,
-                        )
-                    })
-                {
-                    by_kind[i].push((
-                        c.id,
-                        t.effect.clone(),
-                        c.controller,
-                        t.event.filter.clone(),
-                        true,
-                    ));
+                match t.event.scope {
+                    crate::effect::EventScope::YourControl if mine => {
+                        if let Some(i) = slot(&t.event.kind) {
+                            by_kind[i].push((
+                                c.id,
+                                t.effect.clone(),
+                                c.controller,
+                                t.event.filter.clone(),
+                                true,
+                            ));
+                        }
+                    }
+                    crate::effect::EventScope::AnyPlayer if other => {
+                        if let Some(i) = slot(&t.event.kind)
+                            && t.event.dealer_filter.as_ref().is_none_or(|f| {
+                                self.evaluate_requirement_static(
+                                    f,
+                                    &Target::Permanent(source),
+                                    c.controller,
+                                    None,
+                                )
+                            })
+                        {
+                            any_player.push((
+                                i,
+                                (
+                                    c.id,
+                                    t.effect.clone(),
+                                    c.controller,
+                                    t.event.filter.clone(),
+                                    true,
+                                ),
+                            ));
+                        }
+                    }
+                    _ => {}
                 }
             }
+        }
+        for (i, trig) in any_player {
+            by_kind[i].push(trig);
         }
 
         // Phase 2: walk every player's graveyard for `FromYourGraveyard`
