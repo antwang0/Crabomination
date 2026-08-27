@@ -891,7 +891,7 @@ build.
 
 ## Baseline
 
-**Eighty-third pass. Six perf commits, and the largest is a *census* cashed
+**Eighty-third pass. Seven perf commits, and the largest is a *census* cashed
 in: (-13)'s remaining half was takeable the moment the instrument said the
 rollback never runs.**
 
@@ -934,6 +934,15 @@ profiling-fast --no-default-features.
     Base 3509ec81.
       fixed  1,140,632,403 -> 1,136,891,471   -0.328 %
       cube   3,485,011,167 -> 3,475,270,004   -0.280 %
+
+(7) `ComputedPermanent::keywords` becomes a `PrintedList` — the override is
+    a `Box<[Keyword]>`, so materializing it is one allocation rather than
+    the `Vec` buffer plus the `Box` around its header.  Base 94c1f8b7.
+      fixed  1,126,241,376 -> 1,126,329,500   +0.008 %
+      cube   3,431,706,805 -> 3,425,948,531   -0.168 %
+    the +8 bytes it costs, priced alone by padding the struct
+      fixed  +0.040 %   cube  +0.058 %
+    program allocations 1,908,884 -> 1,857,406
 ```
 
 **(2) is gated by `--vs`, not only by `--bench`, because `--bench` is one
@@ -991,9 +1000,9 @@ golden traces  unmoved
 overflow + -C debug-assertions=yes   65 cells, five pools x thirteen seeds
           x 120 games/archetype: 71,758 decided, 0 panic / 0 assertion /
           0 overflow, 2 draws (`all` s37) and nothing capped or stuck.
-          Run at `cfc684fc`, `3509ec81` and the `(-64)` tip — byte-identical
-          all three times, and the last two also audit the `Graveyard`
-          memo's `debug_assert!`.
+          Run at `cfc684fc`, `3509ec81`, the `(-64)` tip and the
+          `PrintedList` tip — byte-identical all four times, and the last
+          three also audit the `Graveyard` memo's `debug_assert!`.
 ```
 
 **Whole-program Ir at `41ff9d00`, so the next run has a base it did not have
@@ -4346,18 +4355,35 @@ seven `Vec`s = 168 bytes inline. The narrower version — unbox only the three
 ~+200, i.e. ~+0.42 % by the same scaling, against the 0.32 % the boxes cost;
 **it does not close either, so do not build it.**
 
-**The one variant that is not obviously priced out, written down so the next
-run does not re-derive it.** Every one of the 51,798 box allocations is the
-**keywords** list — `Printed::push` is only ever called on it — so a
-keyword-only `Option<Box<[Keyword]>>` is a *fat* pointer, **+8 bytes** on
-`ComputedPermanent` rather than +200, and one allocation rather than two. By
-the same linear scaling that is ~+0.067 % of `fixed` against a saving of
-0.33 % of `cube` and **0.10 % of `fixed`** (5,348 materializations there
-against 51,798 on `cube`). So: a real `cube` row, a wash on `fixed`, an
-extrapolation from a single data point at +208 bytes where the true curve is
-almost certainly not linear, and a `Deref<Target = [Keyword]>` blast radius
-over every `cp.keywords` read. **Measure it or leave it** — do not take it on
-this arithmetic.
+**The one variant that is not priced out — TAKEN, `cube` -0.168 %, and the
+way it was decided is the point.** Every one of the 51,798 box allocations is
+the **keywords** list (`Printed::push` is only ever called on it), so a
+keyword-only `Option<Box<[Keyword]>>` is a *fat* pointer: **+8 bytes** on
+`ComputedPermanent` rather than +200, and one allocation rather than two.
+Extrapolating the +208-byte refutation linearly said ~+0.067 % of `fixed`
+against a saving of 0.33 % of `cube` and 0.10 % of `fixed` — a real `cube`
+row from a curve that is almost certainly not linear, which is not a basis to
+spend a refactor on.
+
+**So the eight bytes were measured on their own, by adding a `u64` of padding
+to `ComputedPermanent` and changing nothing else** — one build, two callgrind
+runs, and it isolates exactly the half the extrapolation was guessing:
+
+```text
+base 94c1f8b7, +8 bytes of padding
+  fixed  1,126,241,376 -> 1,126,688,151   +0.040 %
+  cube   3,431,706,805 -> 3,433,682,779   +0.058 %
+```
+
+Under the saving on both pools, so the change was worth building. `PrintedList`
+then read `fixed` **+0.008 %** / `cube` **-0.168 %** — free on the bench pool,
+a row on the one `selfplay_train` plays, with program allocations 1,908,884 ->
+1,857,406. Numbers in **Baseline** (7).
+
+**The device: when a change trades a known saving against an unknown cost,
+build the cost alone first.** A field of padding is a two-line probe that
+prices a struct-size change exactly, and it turned a refusal ("do not take it
+on this arithmetic") into a decision in one build.
 
 The reusable half: **an allocation count is not a cost until you have priced
 the struct size that buys it**, and this is the third reading of that trade in

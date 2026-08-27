@@ -162,6 +162,14 @@ Log with its numbers; read the entry before re-proposing any of them.
   `CardDefinition::is_creature` trap), while a std generic the local inliner
   declined is **real**, and the fix is restructuring the call site, never an
   `#[inline]`.
+- **When a change trades a known saving against an unknown cost, build the
+  cost alone first** (pass 83's seventh commit). Unboxing `layers::Printed`
+  read +1.755 % and the narrower keyword-only version needed the *struct-size*
+  half priced without the refactor: **a `u64` of padding on
+  `ComputedPermanent`, two lines**, read `fixed` +0.040 % / `cube` +0.058 %,
+  under the saving on both pools. That turned "do not take it on this
+  arithmetic" into a decision in one build, and a linear extrapolation from
+  the +208-byte data point would have over-priced it by 70 %.
 - **A ceiling measured by short-circuiting a condition is an upper bound on
   the *code*, not on the walk** (pass 83's (-62), and it is 30 % of one).
   `false &&` and `std::iter::empty()` let the optimizer take the surrounding
@@ -452,7 +460,9 @@ Log with its numbers; read the entry before re-proposing any of them.
   found what the oracle did.
 - **Do not rebuild these.** Unboxing `layers::Printed`'s override
   (`Option<Box<T>>` -> `Option<T>`; +1.755 % `fixed` / +1.317 % `cube`, and
-  the narrower three-field version prices out worse than the boxes cost),
+  the narrower three-field version prices out worse than the boxes cost — the
+  *keyword-only* `Box<[Keyword]>` is the one that shipped, see PERF's
+  Baseline (7)),
   the board-presence epoch, the `GameState` husk
   pool, gating `do_untap`, narrowing `GameState`, splitting the big engine
   files for build time, the per-definition keyword-grant bit, fusing
