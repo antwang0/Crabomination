@@ -3287,6 +3287,9 @@ impl GameState {
         grants: &[TriggerGrant<'_>],
     ) -> Vec<crate::card::TriggeredAbility> {
         self.statics_granted_triggers_inner(card, grants, None)
+            .into_iter()
+            .cloned()
+            .collect()
     }
 
     /// The same walk for a caller *iterating the battlefield*, which can hand
@@ -3300,20 +3303,27 @@ impl GameState {
     /// equivalent to the walk when `card` *is* the battlefield permanent with
     /// that id, which `evaluate_requirement_static_on` `debug_assert!`s — so
     /// a caller that cannot promise it keeps the plain form above.
-    pub(crate) fn statics_granted_triggers_on(
-        &self,
-        card: &CardInstance,
-        grants: &[TriggerGrant<'_>],
-    ) -> Vec<crate::card::TriggeredAbility> {
+    ///
+    /// Borrows rather than clones, because all three of those callers filter
+    /// the result on `event.kind` and drop most of it: at the eighty-fourth
+    /// tip the owning form ran 20,886 `TriggeredAbility::clone` (7.7 M Ir) and
+    /// 19,128 `grow_one` (10.8 M) on a six-game `cube` run for abilities the
+    /// caller never read. The printed-trigger loop next to each of them
+    /// already had this shape (PERF (-65)).
+    pub(crate) fn statics_granted_triggers_on<'a>(
+        &'a self,
+        card: &'a CardInstance,
+        grants: &[TriggerGrant<'a>],
+    ) -> Vec<&'a crate::card::TriggeredAbility> {
         self.statics_granted_triggers_inner(card, grants, Some(card))
     }
 
-    fn statics_granted_triggers_inner(
-        &self,
-        card: &CardInstance,
-        grants: &[TriggerGrant<'_>],
+    fn statics_granted_triggers_inner<'a>(
+        &'a self,
+        card: &'a CardInstance,
+        grants: &[TriggerGrant<'a>],
         hint: Option<&CardInstance>,
-    ) -> Vec<crate::card::TriggeredAbility> {
+    ) -> Vec<&'a crate::card::TriggeredAbility> {
         let matches = |req: &crate::card::SelectionRequirement,
                        controller: usize,
                        source: Option<CardId>| match hint {
@@ -3328,7 +3338,7 @@ impl GameState {
         let mut out = Vec::new();
         for g in grants {
             if matches(&g.filter, g.controller, Some(g.source)) {
-                out.push((*g.ability).clone());
+                out.push(g.ability);
             }
         }
         // CR 611.2 — turn-scoped floating watchers ("whenever a creature blocks
@@ -3336,7 +3346,7 @@ impl GameState {
         // that enter after the granting spell resolved.
         for (filter, ability) in &self.turn_granted_triggers {
             if matches(filter, card.controller, None) {
-                out.push(ability.clone());
+                out.push(ability);
             }
         }
         // CR 721.2a — a station card's own `{N+}` triggered-ability striations,
@@ -3344,7 +3354,7 @@ impl GameState {
         if !card.definition.station.is_empty() {
             let charges = card.counter_count(crate::card::CounterType::Charge);
             for band in card.definition.station.iter().filter(|b| charges >= b.min) {
-                out.extend(band.triggers.iter().cloned());
+                out.extend(band.triggers.iter());
             }
         }
         out
@@ -17679,9 +17689,10 @@ impl GameState {
             // most permanents carry no trigger at all, so the three `extend`s
             // were paying reserve/set_len per card to build an empty vector.
             let empty: &[crate::card::TriggeredAbility] = &[];
+            let empty_refs: &[&crate::card::TriggeredAbility] = &[];
             let printed = if stripped { empty } else { &card.definition.triggered_abilities[..] };
             let own_granted = if stripped { empty } else { own_granted };
-            let static_granted = if stripped { empty } else { &static_granted[..] };
+            let static_granted = if stripped { empty_refs } else { &static_granted[..] };
             if printed.is_empty()
                 && own_granted.is_empty()
                 && static_granted.is_empty()
@@ -17693,7 +17704,7 @@ impl GameState {
                 .iter()
                 .enumerate()
                 .chain(own_granted.iter().map(|t| (usize::MAX, t)))
-                .chain(static_granted.iter().map(|t| (usize::MAX, t)))
+                .chain(static_granted.iter().map(|t| (usize::MAX, *t)))
                 .chain(equip_granted.iter().map(|t| (usize::MAX, t)));
             for (trig_idx, ta) in all_triggers {
                 // A `FromYourGraveyard`-scoped trigger functions ONLY while

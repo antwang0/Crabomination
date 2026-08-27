@@ -838,7 +838,7 @@ impl GameState {
             if any_static_grant || !c.definition.station.is_empty() {
                 for t in self.statics_granted_triggers_on(c, &trigger_grants) {
                     if t.event.kind == kind && scope_matches(&t.event.scope, c.controller) {
-                        candidates.push((c.id, t.effect, c.controller, t.event.filter));
+                        candidates.push((c.id, t.effect.clone(), c.controller, t.event.filter.clone()));
                     }
                 }
             }

@@ -11585,9 +11585,16 @@ impl GameState {
             } else {
                 Vec::new()
             };
-            for t in static_granted.into_iter().chain(equip_granted) {
+            for t in static_granted.iter().copied().chain(equip_granted.iter()) {
                 if t.event.kind == EventKind::SpellCast && scope_matches(t.event.scope, c_controller) {
-                    candidates.push((cid, c_controller, t.effect, t.event.filter, usize::MAX, false));
+                    candidates.push((
+                        cid,
+                        c_controller,
+                        t.effect.clone(),
+                        t.event.filter.clone(),
+                        usize::MAX,
+                        false,
+                    ));
                 }
             }
         }
