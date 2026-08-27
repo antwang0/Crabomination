@@ -59,6 +59,21 @@ one-sentence claim plus the pass that measured it; do not delete one, because
 the point of the section is that a rule refuted on a *mechanism* stays
 refuted.
 
+- **A "more exact" reserve is still a reserve, and `ContinuousEffect` is a
+  large struct** (pass 86; `fixed` +0.461 %, `cube` +0.401 %, `sealed`
+  +0.373 %). The gather sizes `all_effects` by a *card* count while
+  `push_static_ability_effects` emits per *ability*, so sizing it by the
+  ability count is strictly closer — and it is the fifty-fourth pass's
+  `+ battlefield.len()` (+1.54 %) all over again, because most statics emit
+  nothing and every extra slot is a kilobyte on 71,930 gathers. "Exact" in
+  that entry means exact in *emitted effects*, which nothing cheap knows.
+- **Compare a buffer's growth count to its *call* count before inlining it**
+  (pass 86, `(-71)`'s sweep). A `grow_one` row says how often the buffer
+  allocated; the `SmallVec` is paid on every call. The gather's `sa_cards` is
+  69,896 growths over 71,930 calls (97 %) and shipped at `cube` -0.513 %;
+  `statics_granted_triggers_inner` is 19,128 over **142,744** (13 %) and
+  measured **nothing**, because a returned buffer costs a 40-byte move on the
+  87 % of calls that never allocate. Reverted.
 - **Inline storage is a *local's* device; on a struct field the read count
   pays for it** (pass 86, `(-72)`, built and refuted: `fixed` +0.600 %,
   `cube` +0.490 %, `sealed` +0.542 %). `players: SmallVec<[Player; 4]>`
@@ -68,7 +83,12 @@ refuted.
   the `spilled()` compare. `dispatch_triggers_for_events` alone took
   +3.6 M Ir without touching an allocation. **Count the read sites before
   moving a buffer inline**, and do not retry it at a smaller inline capacity:
-  the cost is per read, not per byte.
+  the cost is per read, not per byte. **Confirmed a second time in the same
+  pass**: `PlayerData`'s `spell_ids_cast_this_turn` and `spell_casts_this_turn`
+  are `clear()`ed per turn and regrow only because the CoW deep copy's
+  `Vec::clone` hands back `capacity == len`; inlining them removed all 22,930
+  of `finalize_cast`'s growths — the largest `grow_one` row on `fixed` — and
+  read `fixed` +0.366 % / `cube` +0.291 % / `sealed` +0.322 %.
 - **A `SmallVec` without the `union` feature is an *enum*, and the
   discriminant match is the whole trade** (pass 86, `(-71)`; 0.12 % of
   `fixed`). Inlining the gather's `sa_cards` buffer read **+0.108 % on

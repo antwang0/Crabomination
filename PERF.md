@@ -8575,6 +8575,48 @@ and `resolve_top_of_stack_inner`; it is a signature change across the engine
 core and every `?` path that discards events has to be re-read, so it is not
 a quiet-afternoon change.
 
+**TWO MORE SITES WERE BUILT AND BOTH ARE REFUTED, AND BETWEEN THEM THEY GIVE
+THE ENTRY ITS SELECTION RULE: COMPARE THE GROWTH COUNT TO THE *CALL* COUNT.**
+A `grow_one` row says how often a buffer allocated; the SmallVec is paid on
+every call whether or not that call would have allocated.
+
+```text
+                                     growths   calls    ratio   measured
+  gather's `sa_cards`                 69,896   71,930    97 %   cube -0.513 %
+  combat.rs's nine locals             33,118   (high)     -     cube -0.240 %
+  statics_granted_triggers_inner      19,128  142,744    13 %   ~0 (-0.015 %)
+  PlayerData's two per-turn tallies   22,930   (high)     -     cube +0.291 %
+```
+
+* **`statics_granted_triggers_inner`** returns its buffer, so a
+  `SmallVec<[&TriggeredAbility; 4]>` is a 40-byte move on **142,744** calls to
+  save an allocation on 19,128 of them. Measured at `fixed` -0.015 % — i.e.
+  nothing — and reverted for being more machinery than a null deserves.
+* **`PlayerData::spell_ids_cast_this_turn` and `spell_casts_this_turn`** are
+  `clear()`ed per turn, so they look like they allocate once; what actually
+  regrows them is the CoW deep copy, because `Vec::clone` hands back
+  `capacity == len`. Inlining them removed all 22,930 of `finalize_cast`'s
+  growths — the largest single `grow_one` row on `fixed` — and read `fixed`
+  **+0.366 %**, `cube` **+0.291 %**, `sealed` **+0.322 %**. Same verdict as
+  (-72) on `GameState::players`, and the same shape: a hot struct field read
+  through `Deref` far more often than it is grown. **Both halves were measured
+  separately** (the pair together read `fixed` +0.351 %), which is what says
+  the seat tallies are the whole regression.
+
+**AND THE `all_effects` RESERVE IS REFUTED A THIRD TIME, WITH THE TIGHTEST
+ESTIMATE ANYONE HAS TRIED.** The gather sizes `all_effects` at `base.len() +
+sa_cards.len()`, i.e. a *card* count, while `push_static_ability_effects`
+emits per *ability* — so sizing it at `base.len() + sa_total` (the sum of
+`def.static_abilities.len()`, which the prologue walk already reads, so the
+count is free) is strictly closer to the truth. It reads **`fixed`
++0.461 %, `cube` +0.401 %, `sealed` +0.373 %**. `ContinuousEffect` is a large
+struct, so a handful of extra slots is a kilobyte of allocation on every one
+of 71,930 gathers, and the emitted count is far *below* the ability count
+because most statics emit nothing. **Same verdict as the fifty-fourth pass's
+`+ battlefield.len()` (+1.54 %) and for the same reason; the entry's demand
+for an "exact" size means exact in *emitted effects*, which nothing cheap
+knows.** Do not rebuild this.
+
 **The rest of the worklist, and it is the allocation table's `grow_one`
 half.** `declare_blockers` (36,526 growths / 7,966,197 Ir),
 `finalize_cast` (22,930 / 7,335,377), `advance_step` (37,670 / 4,522,660),
