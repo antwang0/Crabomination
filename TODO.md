@@ -36,13 +36,15 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 1. **Perf queue** — PERF "Perf candidates", ranked: **(-63)** deck
    construction, **5.37 % of the training actor and invisible on `--bench`**,
    fresh from the eighty-third pass's actor profile; **(-51)(b)** (open, and
-   1b below says what it is now asking for); **(-64)** and **(-65)**, both
-   seeded this pass with counts (~0.22 % and ~0.2 % of `cube`); then (-60),
-   (-61), (-51)(a), (-59). **Refuted with numbers:** (-18) (-56) (-56b) (-57)
-   (-58), and now unboxing `layers::Printed` (see "Do not rebuild").
-   **Closed this pass:** (-13)/(-54b) (the sim's half taken, the live game's
-   half is a rules argument and stays) and (-62) (the `zone::Graveyard`
-   memo). **The list is thin and everything left on it is "fewer calls", not
+   1b below says what it is now asking for); **(-65)** (seeded with counts,
+   ~0.2 % of `cube`); then (-60), (-61), (-51)(a), (-59). **Refuted with
+   numbers:** (-18) (-56) (-56b) (-57) (-58), and now unboxing
+   `layers::Printed` (see "Do not rebuild"). **Closed this pass:**
+   (-13)/(-54b) (the sim's half taken, the live game's half is a rules
+   argument and stays), (-62) (the `zone::Graveyard` memo) and **(-64)'s
+   half** (the state clone's `Vec<bool>`; what is left of that entry is four
+   bullets saying why the other 2.5 allocations are not the same shape).
+   **The list is thin and everything left on it is "fewer calls", not
    "cheaper call" — re-profile before ranking.** The attack search is 45.7 %
    of the actor and nothing has aimed at it, and the whole-program line
    profile at PERF's "Profile of record" says the simulator has **no hot

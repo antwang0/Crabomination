@@ -847,7 +847,7 @@ build.
 
 ## Baseline
 
-**Eighty-third pass. Five perf commits, and the largest is a *census* cashed
+**Eighty-third pass. Six perf commits, and the largest is a *census* cashed
 in: (-13)'s remaining half was takeable the moment the instrument said the
 rollback never runs.**
 
@@ -884,6 +884,12 @@ profiling-fast --no-default-features.
       fixed  1,145,258,420 -> 1,140,173,403   -0.444 %
       cube   3,504,621,705 -> 3,484,724,591   -0.568 %
     `Option::or_else` 2,187,078 calls -> 54 on `cube`.
+
+(6) (-64): `acted_on_own_turn` becomes a `u64` bitmask, so a state clone
+    stops allocating, copying and freeing a two-element `Vec<bool>`.
+    Base 3509ec81.
+      fixed  1,140,632,403 -> 1,136,891,471   -0.328 %
+      cube   3,485,011,167 -> 3,475,270,004   -0.280 %
 ```
 
 **(2) is gated by `--vs`, not only by `--bench`, because `--bench` is one
@@ -941,7 +947,9 @@ golden traces  unmoved
 overflow + -C debug-assertions=yes   65 cells, five pools x thirteen seeds
           x 120 games/archetype: 71,758 decided, 0 panic / 0 assertion /
           0 overflow, 2 draws (`all` s37) and nothing capped or stuck.
-          Run at `cfc684fc` and again at `3509ec81`, byte-identical.
+          Run at `cfc684fc`, `3509ec81` and the `(-64)` tip — byte-identical
+          all three times, and the last two also audit the `Graveyard`
+          memo's `debug_assert!`.
 ```
 
 **The `Graveyard` memo's `debug_assert!` is inside that sweep**, and it is the
@@ -4122,6 +4130,19 @@ non-generic `crabomination_base` function** (then it is a *profile artifact* —
 the `CardDefinition::is_creature` note further down says) **or a std generic
 the local inliner declined** (then it is real, and restructuring the call site
 is the fix — never an `#[inline]`).
+
+**2d. No profile row says *which* field a struct's allocations belong to, and
+the method that found (-64) is to read the field list against the callee
+count.** `<GameState as Clone>::clone` makes **3.48 `__rust_alloc` calls per
+clone** on `cube` (3.25 on `fixed`) and 6.0 `Vec::clone` calls, most of them
+empty — but every one of those allocations is charged to `__rust_alloc`, so
+the caller table names the *clone* and never the field. Listing `GameState`'s
+eight heap-owning fields and asking of each "is it empty in practice" answers
+it by hand in a minute: seven are (`controlled_by` unless a seat is
+Mindslavered, `cost_sacrificed_batch` and `damaged_this_resolution` between
+resolutions, `attacking` outside combat), and the eighth is resized to the
+seat count by `do_untap` every turn. The row it shipped as is the eighty-
+fourth pass's Log item 4.
 
 **2c. The `Box` in `layers::Printed` costs 51,798 extra allocations on `cube`
 and removing it costs 1.3-1.8 %. Built, measured, reverted.** `Printed<T>`'s
@@ -7755,7 +7776,7 @@ free:**
   usually 0-3 against a `total` of ~17, so reserving `total` is the trap.
 
 **(-64) THE `Vec<bool>` HALF TAKEN AT THE EIGHTY-FOURTH PASS — `fixed`
--0.328 % / `cube` -0.280 %, see Log item 4. THE REST OF THE CLONE IS STILL
+-0.328 % / `cube` -0.280 %, see Log item 4 and Baseline (6). THE REST OF THE CLONE IS STILL
 HERE AND STILL UNTAKEN.** What shipped is the `acted_on_own_turn` bitmask
 only; the `Box<dyn Decider>` clone (28,172 calls / 3.36 M) and the ~2.5
 remaining `__rust_alloc` a clone are open, and the reading below is the
