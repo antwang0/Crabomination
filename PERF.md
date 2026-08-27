@@ -4022,6 +4022,28 @@ the table above is safe to compress:
 
 ### Eighty-fourth pass — the wall clock overstated a change twenty-five-fold, and the census had to learn what a unit of cost is
 
+**0. "The tests that flaked" is not the class, and the class is one grep.**
+The eighty-third pass found candle's CPU backend drawing every initial
+parameter from entropy (`CpuDevice::set_seed` *bails*), built `reseed_params`,
+and applied it to the seven `crabomination_ml` tests that had been *seen* to
+fail. `bce_updates_harder_than_mse_when_confidently_wrong` had not, and it
+failed a full-suite run at this tip — its two copies reached confidently-wrong
+predictions of **0.00077 and 0.000000087** and it compared their absolute
+movements, against a doc comment that says "from identical weights".
+
+The filter that finds the rest needs no run: **a test that constructs a
+`Trainer` and calls `train_step` without `reseed_params` is asserting a
+threshold on a coin flip whether or not it has lost yet.** Ten more matched,
+plus one untrained-loss *probe* that drew a second net to produce the `first`
+in `last < first * 0.5`. All reseeded; the grep reads 0 of 45, and the suite
+is 45/45 over seven consecutive runs.
+
+**The transferable half is about what a flake fix is finished by.** A
+symptom-driven fix is finished when the observed failure stops; a class fix is
+finished when the *shape* has no instances left, and only the second one has a
+check you can re-run. Here the shape is mechanical enough to be a grep, which
+is the cheapest possible form of that check.
+
 **0. `fixed` -0.045 % / `cube` -0.063 % from restoring one memoized lookup —
 and this entry first claimed thirty times that, off `ab_wall`.** `c248e18d` pulled the CR 602.5g/h
 summoning-sickness gate out of `activate_ability_inner` so the bot's

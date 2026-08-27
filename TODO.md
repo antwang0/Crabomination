@@ -116,11 +116,16 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    else.**
 4a. **A suite gate can be a coin flip and still be green** (PERF's Log, pass
    83 item 3). candle's CPU backend seeds every parameter from entropy and
-   `set_seed` bails there, so seven `crabomination_ml` convergence thresholds
-   were one flip per run; `reseed_params` fixes the class and
+   `set_seed` bails there, so `crabomination_ml`'s convergence thresholds were
+   one flip per run; `reseed_params` fixes the class and
    `reseeding_makes_two_trainers_identical` pins it. **A determinism fix
    needs a test that asserts determinism, not a suite that stops flaking** —
-   the first two attempts here passed all seven tests and were both wrong.
+   the first two attempts there passed all seven tests and were both wrong.
+   **And "the ones that flaked" is not the class.** That pass fixed the seven
+   it had *seen* fail; eleven more were still drawing their weights, and one
+   of them failed a full-suite run here. The filter is one grep — a test that
+   constructs a `Trainer` and calls `train_step` without `reseed_params` — and
+   it now reads **0 of 45**. Re-run it after adding an ML test.
 5. **Robustness gate, one RUSTFLAG** — `-C debug-assertions=yes` on the
    `overflow` build, recipe in `Cargo.toml`'s `[profile.overflow]` comment.
    **71,758 games clean twice this pass**, the largest sweep the branch has
