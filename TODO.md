@@ -167,6 +167,20 @@ Log with its numbers; read the entry before re-proposing any of them.
   `CardDefinition::is_creature` trap), while a std generic the local inliner
   declined is **real**, and the fix is restructuring the call site, never an
   `#[inline]`.
+- **Read a hot function's callee list and ask which rows are doing *work***
+  (pass 83's eighth commit, `fixed` -0.173 % / `cube` -0.184 %).
+  `compute_permanent_pass` makes three per-call definition reads;
+  `base_power` and `base_toughness` are 13 Ir and `printed_color_set` is
+  **56**, because it walks the keyword list, the colour indicator and every
+  mana symbol. It is 32nd by call count and never rises above the noise in a
+  self table. Three rows at the same call count with one an order of
+  magnitude dearer is the tell.
+- **A memo's invalidation point is priced by the *write* rate, and the
+  tightest-looking key is not always sound** (same commit). Keying the colour
+  memo on `Arc::as_ptr(&definition)` misses the MDFC face-swap and Mind
+  Bend's override, which `Arc::make_mut` performs **in place** on a uniquely
+  owned definition; `CardInstance::DerefMut` is the one point both must pass.
+  It is also hot enough that the clear eats about half of what the hits save.
 - **When a change trades a known saving against an unknown cost, build the
   cost alone first** (pass 83's seventh commit). Unboxing `layers::Printed`
   read +1.755 % and the narrower keyword-only version needed the *struct-size*

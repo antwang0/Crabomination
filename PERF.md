@@ -891,7 +891,7 @@ build.
 
 ## Baseline
 
-**Eighty-third pass. Seven perf commits, and the largest is a *census* cashed
+**Eighty-third pass. Eight perf commits, and the largest is a *census* cashed
 in: (-13)'s remaining half was takeable the moment the instrument said the
 rollback never runs.**
 
@@ -943,6 +943,14 @@ profiling-fast --no-default-features.
     the +8 bytes it costs, priced alone by padding the struct
       fixed  +0.040 %   cube  +0.058 %
     program allocations 1,908,884 -> 1,857,406
+
+(8) `ColorMemo`: a permanent's printed colour set is memoized on `CardData`
+    and cleared in `CardInstance`'s `DerefMut`, so `compute_permanent_pass`
+    stops re-deriving it per pass.  Base 3c939502.
+      fixed  1,126,329,500 -> 1,124,375,678   -0.173 %
+      cube   3,425,948,531 -> 3,419,653,513   -0.184 %
+    `compute_permanent_pass -> printed_color_set` 301,838 -> 55,050 on cube,
+    95,792 -> 17,720 on fixed — an 81-82 % hit rate
 ```
 
 **(2) is gated by `--vs`, not only by `--bench`, because `--bench` is one
@@ -4322,6 +4330,31 @@ non-generic `crabomination_base` function** (then it is a *profile artifact* —
 the `CardDefinition::is_creature` note further down says) **or a std generic
 the local inliner declined** (then it is real, and restructuring the call site
 is the fix — never an `#[inline]`).
+
+**2e. The third row of `compute_permanent_pass`'s per-call definition reads
+was 0.5 % of the program, and it had no row of its own.** The function makes
+three: `base_power` and `base_toughness` at 13 Ir, and `printed_color_set` at
+**56** — a colour override check, a `Devoid` scan of the keyword list, the
+colour indicator and every symbol of the mana cost, re-derived 301,838 times a
+`cube` run for an answer that is a pure function of the definition. `cg_edges`
+ranks it 32nd by call count and it never appears in a self table above the
+noise; what finds it is **reading a hot function's callee list and asking
+which of the rows is doing work rather than a load**.
+
+The memo is `ColorMemo`, one `AtomicU8` on `CardData`, cleared in
+`CardInstance`'s `DerefMut` — `fixed` -0.173 % / `cube` -0.184 %, Baseline (8),
+at an **81-82 % hit rate**. Two things about the shape are worth carrying:
+
+* **The invalidation point is the *card*, not the definition**, and that is
+  not conservatism for its own sake. Keying the memo on
+  `Arc::as_ptr(&definition)` looks tighter and is wrong: the MDFC face-swap
+  and Mind Bend's colour override reach the definition through
+  `Arc::make_mut`, which rewrites it **in place** when it is uniquely owned,
+  leaving the pointer unchanged. `DerefMut` is the one point both must pass.
+* **A clear on a `DerefMut` that hot is not free** — it eats about half of
+  what the hits save (13.8 M of hits against a 6.3 M net on `cube`). A memo
+  whose invalidation sits on the write path is priced by the *write* rate,
+  which is the same ratio (-62) and (-64) turn on, read from the third side.
 
 **2d. No profile row says *which* field a struct's allocations belong to, and
 the method that found (-64) is to read the field list against the callee
