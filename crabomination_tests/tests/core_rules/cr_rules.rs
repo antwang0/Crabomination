@@ -1638,6 +1638,44 @@ fn cr_514_3a_discard_trigger_grants_cleanup_priority_then_repeats() {
 
 // ── Audit P3 — walker exhaustiveness guard ──────────────────────────────────
 
+/// The counting requirements walk `self.battlefield` and used to filter it
+/// through `evaluate_requirement_on_card`, which answers `false` for every
+/// battlefield-state predicate by design (it is the library/hand-search
+/// path). So `ManaValueAtMostYourCount(Tapped)` counted **zero** tapped
+/// permanents on a board full of them.
+///
+/// No bench pool reaches it — `--bench` is byte-identical on all five across
+/// the fix — which is exactly why it needs a test rather than a ladder run.
+#[test]
+fn a_counting_requirement_counts_tapped_permanents() {
+    use crabomination::card::SelectionRequirement as R;
+    let mut g = two_player_game();
+    let subject = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..2 {
+        let t = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(t).expect("on the battlefield").tapped = true;
+    }
+    let card = g.battlefield_find(subject).expect("on the battlefield").clone();
+    let req = R::ManaValueAtMostYourCount(Box::new(R::Tapped));
+    // Grizzly Bears is {1}{G}, mana value 2, against two tapped permanents.
+    assert!(
+        g.evaluate_requirement_static(&req, &Target::Permanent(subject), 0, None),
+        "the static walker counts the two tapped permanents",
+    );
+    assert!(
+        g.evaluate_requirement_on_card(&req, &card, 0),
+        "and so does the card walker — the count is a battlefield walk in both",
+    );
+    // One tapped permanent is not enough for a mana value of 2.
+    let one = g.battlefield.iter().find(|c| c.tapped).expect("a tapped one").id;
+    g.battlefield_find_mut(one).expect("on the battlefield").tapped = false;
+    let card = g.battlefield_find(subject).expect("on the battlefield").clone();
+    assert!(
+        !g.evaluate_requirement_on_card(&req, &card, 0),
+        "and the count is a real count, not a constant",
+    );
+}
+
 /// The last pair in audit P3: `evaluate_requirement_static` and
 /// `evaluate_requirement_on_card` are two hand-written walkers over one enum,
 /// and the static one only delegates to the card one from its catch-all — so
@@ -1692,39 +1730,71 @@ fn audit_p3_requirement_walkers_agree_on_an_unlayered_permanent() {
     }
     assert!(reqs.len() > 50, "the catalog should surface many requirements, got {}", reqs.len());
 
-    // One vanilla creature, nothing else: no continuous effect, so the
+    // Vanilla creatures and nothing else: no continuous effect, so the
     // computed view and the printed card are the same object.
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.clear_sickness(id);
-    let card = g.battlefield_find(id).expect("on the battlefield").clone();
-
-    // The three the guard found on its first run. Each is a variant
-    // `evaluate_requirement_on_card` has **no arm for at all**, so it takes
-    // the catch-all `false`: the two board-wide superlatives need the whole
-    // battlefield, and `Untapped` needs the zone. Filed in ENGINE_BACKLOG's
-    // P3 entry with the evidence that the card walker *is* handed battlefield
-    // cards (`ManaValueAtMostYourCount` and its siblings filter
-    // `self.battlefield.iter()` through it), so these are gaps rather than
-    // deliberate zone-blindness. Listed here rather than fixed in the same
-    // commit as the guard: closing them moves play and wants its own gate.
     //
-    // **A new drift is a test failure, which is the whole point** — this list
-    // shrinks, never grows.
+    // **Three board states, because one cannot see a variant that answers
+    // `false` on it.** A lone untapped 2/2 makes `Tapped` false on both sides
+    // whether or not the card walker has an arm for it, and makes every
+    // "greatest among" question trivially true. Tapping the card and adding a
+    // bigger creature turn both into real questions.
+    let mut boards: Vec<(GameState, crabomination::card::CardId)> = Vec::new();
+    for (tapped, rival) in [(false, false), (true, false), (false, true)] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(id);
+        if tapped {
+            g.battlefield_find_mut(id).expect("on the battlefield").tapped = true;
+        }
+        if rival {
+            let other = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+            g.clear_sickness(other);
+        }
+        boards.push((g, id));
+    }
+
+    // **These disagree on purpose, and the list is the machine-checked
+    // record of which ones may.** `evaluate_requirement_on_card` is the
+    // library/hand-search path; it answers `false` for every
+    // battlefield-state predicate through explicit arms that say so
+    // ("Battlefield-state predicates can't be evaluated for library cards").
+    // So the invariant this test enforces is not "the two always agree" — it
+    // is **"they differ only where a documented arm says they may"**, and a
+    // variant that starts differing without one is a failure.
+    //
+    // Reading it as a *missing* arm cost a build: the compiler answered with
+    // `unreachable pattern` on the fix. The real defect the list exposed was
+    // one level up — the counting requirements walked `self.battlefield`
+    // through the zone-blind walker, so a `Tapped` inner filter counted zero.
+    // Fixed at the call sites, where the battlefield-aware `_static_on`
+    // belongs; the walkers themselves are both right.
     let known: &[&str] = &[
+        "\"Tapped\"",
         "\"Untapped\"",
         "\"HasGreatestPowerAmongAllCreatures\"",
         "{\"And\":[\"Creature\",\"HasGreatestPowerAmongAllCreatures\"]}",
         "{\"And\":[\"Creature\",\"Untapped\"]}",
         "{\"And\":[{\"And\":[\"Creature\",\"ControlledByYou\"]},\"Untapped\"]}",
         "{\"HasGreatestManaValueAmongControlled\":{\"Or\":[\"Creature\",\"Planeswalker\"]}}",
+        "{\"And\":[\"ControlledByYou\",\"Tapped\"]}",
+        "{\"And\":[\"Creature\",\"Tapped\"]}",
+        "{\"And\":[\"Creature\",{\"Or\":[{\"Or\":[\"IsAttacking\",\"IsBlocking\"]},\"Tapped\"]}]}",
+        "{\"And\":[\"Permanent\",\"Tapped\"]}",
+        "{\"Or\":[\"Artifact\",{\"And\":[\"Creature\",\"Tapped\"]}]}",
+        "{\"Or\":[{\"Or\":[\"Artifact\",\"Enchantment\"]},{\"And\":[\"Creature\",\"Tapped\"]}]}",
+        "{\"Or\":[{\"Or\":[\"IsAttacking\",\"IsBlocking\"]},\"Tapped\"]}",
     ];
+    let disagrees = |req: &R| {
+        boards.iter().any(|(g, id)| {
+            let card = g.battlefield_find(*id).expect("on the battlefield").clone();
+            g.evaluate_requirement_static(req, &Target::Permanent(*id), 0, None)
+                != g.evaluate_requirement_on_card(req, &card, 0)
+        })
+    };
     let mut drift = Vec::new();
     for (key, req) in &reqs {
-        let by_target = g.evaluate_requirement_static(req, &Target::Permanent(id), 0, None);
-        let by_card = g.evaluate_requirement_on_card(req, &card, 0);
-        if by_target != by_card && !known.contains(&key.as_str()) {
-            drift.push(format!("{key}: static={by_target} on_card={by_card}"));
+        if disagrees(req) && !known.contains(&key.as_str()) {
+            drift.push(key.clone());
         }
     }
     assert!(
@@ -1737,16 +1807,8 @@ fn audit_p3_requirement_walkers_agree_on_an_unlayered_permanent() {
     );
     // And the allowlist is itself guarded: a fix that closes one of these
     // must delete its line here.
-    let still_drifting: Vec<&str> = known
-        .iter()
-        .copied()
-        .filter(|k| {
-            reqs.get(*k).is_some_and(|req| {
-                g.evaluate_requirement_static(req, &Target::Permanent(id), 0, None)
-                    != g.evaluate_requirement_on_card(req, &card, 0)
-            })
-        })
-        .collect();
+    let still_drifting: Vec<&str> =
+        known.iter().copied().filter(|k| reqs.get(*k).is_some_and(disagrees)).collect();
     assert_eq!(
         still_drifting.len(),
         known.len(),

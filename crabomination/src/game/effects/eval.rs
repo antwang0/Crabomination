@@ -3869,11 +3869,18 @@ impl GameState {
                     R::ManaValueAtMostDevotion(color) => {
                         card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
                     }
+                    // Battlefield permanents, so the *battlefield-aware*
+                    // walker: `evaluate_requirement_on_card` answers `false`
+                    // for every battlefield-state predicate (`Tapped`, the
+                    // "greatest among" superlatives) by design — it is the
+                    // library/hand-search path — so counting through it made
+                    // a `Tapped` inner filter count zero. `_static_on` takes
+                    // the instance, so this costs no lookup.
                     R::ManaValueAtMostYourCount(inner) => {
                         let n = self
                             .battlefield
                             .iter()
-                            .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                            .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                             .count() as u32;
                         card.definition.cost.cmc() <= n
                     }
@@ -3881,7 +3888,7 @@ impl GameState {
                         let n = self
                             .battlefield
                             .iter()
-                            .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                            .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                             .count() as i32;
                         card.definition.is_creature()
                             && self
@@ -3933,7 +3940,7 @@ impl GameState {
                         let n = self
                             .battlefield
                             .iter()
-                            .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                            .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                             .count() as i32;
                         card.definition.is_creature()
                             && self
@@ -4607,11 +4614,13 @@ impl GameState {
             R::ManaValueAtMostDevotion(color) => {
                 card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
             }
+            // Same battlefield-aware walk as the static side — see the
+            // note on its `ManaValueAtMostYourCount` arm.
             R::ManaValueAtMostYourCount(inner) => {
                 let n = self
                     .battlefield
                     .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                     .count() as u32;
                 card.definition.cost.cmc() <= n
             }
@@ -4637,7 +4646,7 @@ impl GameState {
                 let n = self
                     .battlefield
                     .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                     .count() as i32;
                 card.definition.is_creature()
                     && self
@@ -4650,7 +4659,7 @@ impl GameState {
                 let n = self
                     .battlefield
                     .iter()
-                    .filter(|c| self.evaluate_requirement_on_card(inner, c, controller))
+                    .filter(|c| self.evaluate_requirement_static_on(inner, c, controller, None))
                     .count() as i32;
                 card.definition.is_creature()
                     && self

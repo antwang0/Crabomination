@@ -351,24 +351,33 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   play**, where computed equals printed. Off the battlefield or under layers
   they are supposed to differ; that is what `_on_card` is for.
 
-  **Three variants have no arm in `evaluate_requirement_on_card` at all and
-  take its catch-all `false`:** `Untapped`, `HasGreatestPowerAmongAllCreatures`
-  and `HasGreatestManaValueAmongControlled` (plus the three `And`
-  compositions the catalog builds from them). The two superlatives need the
-  whole battlefield and the third needs the zone — but the walker holds
-  `&self`, so it *could* answer all three.
+  **Fourteen disagreements, from four root variants — and they are all
+  deliberate.** `Tapped`, `Untapped`, `HasGreatestPowerAmongAllCreatures`
+  and `HasGreatestManaValueAmongControlled` (plus the `And`/`Or` compositions
+  the catalog builds from them) have explicit `false` arms in
+  `evaluate_requirement_on_card` that say why: *"Battlefield-state predicates
+  can't be evaluated for library cards."* It is the library/hand-search path.
+  So the invariant the test enforces is not "the two agree" — it is **"they
+  differ only where a documented arm says they may"**, and the allowlist is
+  that documentation, machine-checked and self-guarding: each entry is
+  asserted to *still* differ, so a change cannot silently close one.
 
-  **They are gaps, not deliberate zone-blindness, and the evidence is the
-  call sites:** `ManaValueAtMostYourCount`, `ToughnessAtMostYourCount` and
-  their siblings filter `self.battlefield.iter()` through
-  `evaluate_requirement_on_card`. A counting requirement whose inner filter is
-  `Untapped` therefore counts **zero** untapped permanents, silently.
-  `SelectionRequirement::Untapped` appears at ten catalog sites.
+  **The real defect the list exposed was one level up, and it is fixed.**
+  `ManaValueAtMostYourCount`, `ToughnessAtMostYourCount` and
+  `PowerAtMostYourCount` (both walkers' copies, six sites) walk
+  `self.battlefield` and filtered it through the *zone-blind* walker, so a
+  counting requirement whose inner filter is `Tapped` counted **zero** tapped
+  permanents on a board full of them. They now use
+  `evaluate_requirement_static_on`, which takes the instance and costs no
+  lookup. Pinned by
+  `a_counting_requirement_counts_tapped_permanents`, verified by putting the
+  bug back. **`--bench` is byte-identical on all five pools**, so no bench
+  deck reaches it — which is why it needed a test and not a ladder run.
 
-  Open, and it is a play-moving fix: closing them wants `--vs`, a
-  `CRAB_SIM_REJECTS` sweep and its own commit. The allowlist in the test is
-  self-guarding — it asserts each entry *still* drifts, so a fix cannot land
-  without deleting its line.
+  **Method note: the first reading of the list was "these variants have no
+  arm", and the compiler refuted it** — the fix drew `unreachable pattern` on
+  arms that were already there. The allowlist was evidence of a defect, just
+  not the one it looked like.
 
   Also remaining: the printed-vs-computed combat checks still lack guards.
 

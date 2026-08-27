@@ -105,12 +105,12 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    sides. Its last item (`evaluate_requirement_static` vs
    `evaluate_requirement_on_card`) is *structurally* closed — the static
    walker's catch-all delegates, the card walker is exhaustive — so it wants
-   a guard — **which now exists and found drift on its first run**: three
-   variants (`Untapped`, `HasGreatestPowerAmongAllCreatures`,
-   `HasGreatestManaValueAmongControlled`) have no arm in the card walker and
-   take its catch-all `false`, while its callers filter
-   `self.battlefield.iter()` through it. Gaps, not zone-blindness; the fix
-   moves play and wants its own gate. ENGINE_BACKLOG P3 has the evidence. `audit_stubs` 0/21,795, `audit_incomplete` 0,
+   a guard — **which now exists, and the defect it found is fixed.** The
+   walkers differ on fourteen requirements *by design* (the card walker is
+   the library/hand-search path); the allowlist is that, machine-checked. The
+   bug was one level up: the counting requirements walked `self.battlefield`
+   through the zone-blind walker, so a `Tapped` inner filter counted zero.
+   `--bench` byte-identical on all five pools — no bench deck reaches it. `audit_stubs` 0/21,795, `audit_incomplete` 0,
    `CRAB_SIM_REJECTS` 0 in 129 configurations. The dropped-"may" tail
    (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent, and so
    is the third filter: `scripts/audit_variant_coverage.py` asks whether a
