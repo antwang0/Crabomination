@@ -31,20 +31,36 @@ commit before the tracker prose; a fetch only rules out work already
 hour (pass 80 duplicated a whole item end-to-end), and diff before discarding
 a lost race — the loser usually holds something the winner does not.
 
-1. **Perf queue: what is LEFT of (-56) is `compute_permanent_pass`'s 51,706
-   Vec growths (19.5 M Ir), and it wants a line profile first.** The likely
-   shape is `Printed<Vec<_>>`'s materialize — `Vec::clone` hands back
-   `capacity == len`, so the first layer write reallocates and memcpys the
-   printed list — and it is the only one of the three growth sites where the
-   fix is **exact** (`len + 1`) rather than headroom. Three things in that
-   entry are already refuted with numbers, do not re-take them: the
+1. **Perf queue: (-56)'s last growth site SHIPPED at `31eb7333`** —
+   `Printed<Vec<_>>`'s materialize reserved `len + 1`, `fixed` -0.085 %,
+   `cube` -0.591 %, taken by a concurrent session from this entry's own
+   pointer. That is the third reading of the `Vec::clone` hands back
+   `capacity == len` trap and **the only one that pays on both pools, because
+   it is the only one where the reserve is exact rather than headroom.**
+   Three things in that entry are refuted with numbers, do not re-take them:
+   the
    `sa_cards` reserve (both a whole-board and an exactly-counted one; it
    splits by pool and loses on `fixed`), a second freeze scope over the
    candidate menus (**+0.001 %** — `next_action` already freezes the whole
    tick, bot.rs:1661), and (-57)'s `eval_material` prize, which is one gather
    per evaluation and already at the floor. (-52)/(-53)/(-54) closed;
    (-51)(a) wants a device on the do-not-rebuild list.
-1c. **The gather is 30 % `resolve_combat`, and that is the open question.**
+1c. **The gather is 30 % `resolve_combat`, the prize is `cube` -1.6 %, and
+   the obvious route is REFUTED with a counterexample — see (-58).** Seeding
+   the batch's per-pair freeze scopes from one gather measures **fixed
+   -0.178 %, cube -1.615 %** with `--bench` byte-identical, and a
+   `debug_assert!` auditing the seed against a fresh gather fired on `cube
+   --seed 3` inside 60 games: a lifelink blocker gains life mid-batch and
+   flips *Ulna Alley Shopkeep*'s "+2/+0 as long as you've gained life this
+   turn" on. **Player life is a layer input**; no collection-length or
+   timestamp epoch can see it, because the effect is derived and carries an
+   old timestamp. What is left needs an invalidating memo (the board epoch,
+   refuted at (-18)) or an incremental gather. **The device is the takeaway:
+   a memo whose soundness is an argument gets a `debug_assert!` against the
+   thing it replaces, and a `-C debug-assertions=yes` ladder run is the
+   audit — 18,795 tests missed this, 60 games of `cube` found it in four
+   seconds.**
+1d. **(background) The gather is 30 % `resolve_combat`.**
    PERF's context table: 71,884 gathers on a six-game `cube` run, ~21,500 of
    them under `resolve_combat`, whose `computed_permanent` edge is 18,888
    calls / 92,837,604 Ir / **2.61 % of `cube`** with 68 % of the calls

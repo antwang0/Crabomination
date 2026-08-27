@@ -6984,6 +6984,60 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-58) THE COMBAT DAMAGE BATCH'S PER-PAIR GATHER IS WORTH `cube` -1.6 %,
+AND SHARING IT IS UNSOUND. BUILT, MEASURED, REFUTED — WITH THE
+COUNTEREXAMPLE.**
+
+`resolve_combat_damage_with_filter` opens three `&self` freeze scopes inside
+its pair loops — ~12,700 on a six-game `cube` run — and each takes its own
+gather, which is 68 % of `resolve_combat`'s `computed_permanent` calls and
+**2.61 % of the program**. Seeding every scope from one gather taken at the
+top of the batch (`with_frozen_effects`, re-derives per-permanent views inside
+the scope so counters and damage marks are still seen) measures:
+
+```text
+callgrind, --games 6 --threads 1 --seed 1
+  --decks fixed   1,168,055,373 -> 1,165,974,624   -0.178 %
+  --decks cube    3,561,558,835 -> 3,504,054,147   -1.615 %
+```
+
+`--bench` byte-identical, `CRAB_SIM_REJECTS=1` identical on nine pool/seed
+cells, suite 18,795 / 0 / 5. **And it is wrong.** The seed carried a
+`debug_assert!` comparing it against a fresh gather on every call, and a
+ladder run built with `-C debug-assertions=yes` fired it on `cube --seed 3`
+inside 60 games:
+
+```text
+FXDIFF seeded=0 fresh=1
+  +ADD ts=11 src=CardId(119) name="Ulna Alley Shopkeep"
+       L=L7PowerTough m=ModifyPowerToughness(2, 0) affected=Source
+```
+
+**"Infusion — +2/+0 as long as you've gained life this turn."** A lifelink
+blocker deals damage in the *same batch*, its controller gains life, the
+static's condition flips, and the gather grows an effect. The epoch this was
+guarded with — `(battlefield.len(), continuous_effects.len(),
+next_effect_timestamp)` — cannot see it in any direction: nothing entered or
+left, and the effect is **derived**, so it carries the source's old
+`battlefield_timestamp` (11) rather than a fresh one.
+
+**The rule, and it is the reusable half: a continuous-effect gather is a
+function of the whole game state, not of a few collections.** Player life
+totals are a layer input. Any memo that spans a mutation therefore needs
+invalidation *at* the mutation, which is the board epoch — built, measured
+and refuted at the forty-fifth pass, **(-18)**. What is left of the 2.61 %
+needs either that, or a way to make the gather itself incremental. **Do not
+re-take the seeded-scope shape without one of those.**
+
+**And the device that caught it is worth more than the entry.** A memo whose
+soundness is an argument gets a `debug_assert!` comparing it against the
+thing it replaces, and then the suite and any `-C debug-assertions=yes`
+ladder run are the audit — 18,795 tests missed this and 60 games of `cube`
+found it in four seconds, because the suite has no Shopkeep-plus-lifelink
+board and the ladder deals it every few games. **Build the audit before the
+optimization; it is one `debug_assert!` and it is the difference between a
+refutation and a silent wrong game.**
+
 **(-56) HALF-REFUTED AT THE EIGHTY-FIRST PASS: THE `sa_cards` RESERVE IS THE
 FIFTY-FOURTH PASS'S TRAP ON A SECOND VEC, AND IT SPLITS BY POOL.**
 `gather_continuous_effects_inner` runs **71,884 times on a six-game `cube`
@@ -7007,12 +7061,13 @@ costs, and on `fixed` there was **no** growth to remove — `sa_cards` never
 outgrows its first capacity there, so the reserve is pure loss. **A growth
 count is per-pool, and a reserve that pays for itself on one board is a tax
 on the board that never grows.** What is left of this entry is
-`compute_permanent_pass`'s 51,706 growths (19,552,222 Ir), and that one needs
-a line profile first: the likely shape is `Printed<Vec<_>>`'s materialize,
-where `Vec::clone` hands back `capacity == len` so the first layer write
-reallocates and memcpys the whole printed list — the same trap a third time,
-and the only one of the three where the fix is exact (`len + 1`) rather than
-headroom.
+`compute_permanent_pass`'s 51,706 growths (19,552,222 Ir) — **and a
+concurrent session took exactly the shape this entry named** at `31eb7333`:
+`Printed<Vec<_>>`'s materialize, where `Vec::clone` hands back
+`capacity == len` so the first layer write reallocates and memcpys the whole
+printed list. `fixed` -0.085 %, `cube` -0.591 %. That is the third reading of
+the same trap and the only one where the fix is **exact** (`len + 1`) rather
+than headroom, which is why it is also the only one that pays on both pools.
 
 **AND THE FREEZE SCOPE IS ALREADY THERE: the candidate menus are inside one,
 and wrapping them again is a no-op to five decimal places.**
