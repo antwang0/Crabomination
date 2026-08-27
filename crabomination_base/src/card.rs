@@ -5926,11 +5926,61 @@ impl KeywordSlice for [Keyword] {
     }
 }
 
+/// A card's printed colour set, memoized on the object.
+///
+/// [`CardDefinition::printed_color_set`] is a pure function of the
+/// (immutable, `Arc`-shared) definition and `compute_permanent_pass` asks it
+/// **once per permanent per layer pass** — 301,838 times on a six-game `cube`
+/// run at ~56 Ir apiece, 0.52 % of the program, 0.59 % of `fixed`. Nothing
+/// about the answer changes between two passes over an untouched board.
+///
+/// Bit 7 is the "computed" flag and bits 0-4 are the [`ColorSet`]; zero is
+/// "unknown". Atomic rather than a `Cell` because `CardData` sits behind an
+/// `Arc` that has to stay `Send`.
+#[derive(Debug, Default)]
+pub struct ColorMemo(std::sync::atomic::AtomicU8);
+
+impl ColorMemo {
+    const VALID: u8 = 0x80;
+
+    #[inline]
+    fn get(&self) -> Option<crate::mana::ColorSet> {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::VALID != 0).then_some(crate::mana::ColorSet(v & 0x1f))
+    }
+
+    #[inline]
+    fn set(&self, cs: crate::mana::ColorSet) {
+        self.0.store(cs.0 | Self::VALID, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// The invalidation, called from [`CardInstance`]'s `DerefMut`.
+    #[inline]
+    fn clear(&self) {
+        self.0.store(0, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+impl Clone for ColorMemo {
+    /// The clone describes the same definition, so it keeps the answer.
+    fn clone(&self) -> Self {
+        Self(std::sync::atomic::AtomicU8::new(
+            self.0.load(std::sync::atomic::Ordering::Relaxed),
+        ))
+    }
+}
+
 /// A card's mutable per-object state. Reached only through
 /// [`CardInstance`], which owns it behind an `Arc` — see that type for why.
 #[derive(Debug, Clone)]
 pub struct CardData {
     pub id: CardId,
+    /// Memo for [`Self::printed_color_set`]; see [`ColorMemo`]. Not `pub`,
+    /// not serialized, and cleared by `CardInstance`'s `DerefMut` — the one
+    /// unshare point every `&mut` reach into a card goes through, so the
+    /// invalidation is provable rather than an enumeration of the paths that
+    /// rewrite a definition.
+    printed_colors: ColorMemo,
     /// Static blueprint, shared behind an `Arc` so materializing a
     /// `CardData` (which the CoW handle does only for a card actually being
     /// written) doesn't deep-copy the definition's ~two dozen `Vec` fields.
@@ -6477,6 +6527,29 @@ pub struct CardData {
 }
 
 /// Field access on the cold group reads like a `CardData` field.
+impl CardData {
+    /// [`CardDefinition::printed_color_set`] for this object, memoized.
+    ///
+    /// The `debug_assert!` is the audit: it costs nothing in any release
+    /// profile and makes the whole suite — and any `-C debug-assertions=yes`
+    /// ladder run — a check that no write path reaches a card without
+    /// clearing the memo.
+    #[inline]
+    pub fn printed_color_set(&self) -> crate::mana::ColorSet {
+        if let Some(cs) = self.printed_colors.get() {
+            debug_assert_eq!(
+                cs,
+                self.definition.printed_color_set(),
+                "printed-colour memo is stale: a definition rewrite did not clear it",
+            );
+            return cs;
+        }
+        let cs = self.definition.printed_color_set();
+        self.printed_colors.set(cs);
+        cs
+    }
+}
+
 impl std::ops::Deref for CardData {
     type Target = CardCold;
     #[inline]
@@ -6522,11 +6595,19 @@ impl std::ops::Deref for CardInstance {
 }
 
 /// The unshare point: every `&mut` reach into a card goes through here, so a
-/// shared card is cloned exactly once and then written in place.
+/// shared card is cloned exactly once and then written in place — and so this
+/// is also where a memo of anything derived from the card is invalidated.
 impl std::ops::DerefMut for CardInstance {
     #[inline]
     fn deref_mut(&mut self) -> &mut CardData {
-        Arc::make_mut(&mut self.0)
+        let d = Arc::make_mut(&mut self.0);
+        // Conservative: a write reaching the card at all clears the colour
+        // memo, whether or not it touches the definition. `Arc::make_mut` on
+        // a *uniquely owned* definition rewrites it in place, so keying the
+        // memo on the definition pointer would not see the MDFC face-swap or
+        // the Mind Bend colour override.
+        d.printed_colors.clear();
+        d
     }
 }
 
@@ -6588,6 +6669,7 @@ impl CardInstance {
         }
         CardData {
             id,
+            printed_colors: ColorMemo::default(),
             definition,
             owner,
             controller: owner,
