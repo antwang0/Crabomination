@@ -8384,6 +8384,49 @@ Anything aimed at this row says which pool it moves before it claims a win.
 2,416/10,134 = 23.8 % at the seventy-fifth tip — two independent instruments
 on one population, nine passes of code apart.
 
+**AND THEN THE SPLIT THAT REWRITES THE ENTRY: 99 % OF THOSE ROLLBACKS ARE THE
+BOT *ASKING*, NOT THE BOT BEING WRONG.** A failed affordance probe is the
+answer mechanism working; a failed *committed* payment is an estimate that
+missed. Both roll back identically, and this entry's "spent on payments that
+were never going to complete" reads as if they were all the second kind.
+`in_probe` is a thread-local depth counter (not a `GameState` field: the probe
+runs on a clone, and a field would unshare the cold group per template to
+answer a question only the census asks):
+
+```text
+--games 12 --threads 1     failures    probe   committed
+cube s1 / s11           5,478/3,494  5,468/3,418     10/76
+all  s1 / s11           5,084/7,514  5,084/7,390      0/124
+sealed s1 / s11         2,304/3,220  2,244/3,184     60/36
+sos  s1 / s11             754/956      754/952         0/4
+fixed s1 / s11            704/764      704/764         0/0
+                            ------      ------      ------
+                            30,272      29,962         310
+```
+
+**310 of 30,272 — 1.02 %**, and zero on four of the ten runs. The bot-side
+half that landed at the seventy-first pass did its job. **What is left in the
+23.8 % is the sweep, so the lever is a cheaper or a rarer probe, not a better
+estimate** — which is a different entry from the one that was written here.
+
+**Taken, and it was a path with no filter at all.** `pick_stack_response`
+went from "is this an instant that counters spells" straight to the dry run.
+`fixed`'s 704 failures were **700 of one cost, `{U}{U}`** — "azorius skies"
+asking about its Counterspell against Islands that were not there — and
+adding the `can_afford_in_state_with` the main hand sweep already runs took
+that pool to **4**, worth **`fixed` -2.20 %** (`ab_wall` 6 blocks, 2,000
+games x 4, CI -3.63 .. -0.78 %, 6 of 6 blocks faster) with `--bench`
+byte-identical. `cube` -1.00 % with the CI straddling zero, and the census
+says why: cube's failures are mostly elsewhere.
+
+**The method note is the durable half.** The first hypothesis — that the
+per-colour budget had been *widened* to `[u32::MAX; 5]` and so was not
+filtering — was good and wrong, and a counter settled it in one run: the
+widening fires **0.0 % of the time on `fixed`** and 3.9-11.9 % elsewhere,
+with the spend-as-any-colour leg never firing at all. **Count the thing you
+are about to blame.** Tightening the widening would have bought nothing on
+the one pool that had the problem.
+
 **THE MULTI-COLOUR HALF OF HALL'S CONDITION IS REFUTED — built, measured,
 reverted (seventy-fourth pass).** The singleton case is the one that pays;
 the subsets are not. `{U}{B}` off one Dimir dual and three Mountains passes

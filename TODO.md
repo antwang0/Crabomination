@@ -45,6 +45,17 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    `--bench`'s stall split. A "do not re-open" written against an *argument*
    dates when the evidence moves; one written against a *measurement* does
    not.
+1b. **`CRAB_PAY_FAILS` has now rewritten (-51)(b) twice, and both are in
+   PERF.** Its class split refuted the entry's "generic rather than coloured"
+   (coloured leads on four of five pools, 100 % of `fixed`); its
+   probe/committed split refuted the framing — **310 of 30,272 rollbacks are
+   committed, 1.02 %**, so what is left in the 23.8 % is the affordance sweep
+   and the lever is a **cheaper or rarer probe**, not a better estimate. One
+   such path is taken (`pick_stack_response`, `fixed` **-2.20 %**); the census
+   will name the next one the same way — read it per pool, because the pools
+   disagree completely. **And count the thing you are about to blame:** the
+   widening hypothesis was good, and a counter killed it in one run at 0.0 %
+   on the pool that had the problem.
 2. **A commit that moves play** — PERF "How to measure": `--vs` after the
    null run, `CRAB_SIM_REJECTS` and `CRAB_PAY_FAILS` **swept, not sampled**,
    Ir on both pools. **`--bench`'s decision count is a committed invariant —
