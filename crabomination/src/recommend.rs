@@ -302,23 +302,57 @@ fn color_letter(c: Color) -> char {
     }
 }
 
-/// All k-subsets of the 5 colors, k in `sizes`.
-fn color_subsets(sizes: &[usize]) -> Vec<Vec<Color>> {
-    let mut out = Vec::new();
-    for mask in 1u8..(1 << 5) {
-        let k = mask.count_ones() as usize;
-        if !sizes.contains(&k) {
-            continue;
+/// Up to five colours, inline.
+///
+/// A shape's colour list is at most WUBRG and its splash is one colour, so
+/// both fit in six bytes — and the lattice describes 56 shapes with them
+/// before `rank_shape` reads one. As `Vec`s that was 60 allocations to build
+/// the shape list, two more per shape to copy them into the [`ShapeBuild`],
+/// and 36 extra bytes per element in the sort that ranks the result
+/// (PERF (-63)).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ColorList {
+    buf: [Color; 5],
+    len: u8,
+}
+
+impl ColorList {
+    const EMPTY: Self = Self { buf: Color::ALL, len: 0 };
+
+    /// The mask's colours in WUBRG order — the order the `Color::ALL` walk
+    /// this replaces produced, and the lattice's order is a tie-break in a
+    /// stable sort, so it is not free to change.
+    fn from_mask(mask: u8) -> Self {
+        let mut out = Self::EMPTY;
+        for (i, c) in Color::ALL.into_iter().enumerate() {
+            if mask & (1 << i) != 0 {
+                out.buf[out.len as usize] = c;
+                out.len += 1;
+            }
         }
-        let set: Vec<Color> = Color::ALL
-            .into_iter()
-            .enumerate()
-            .filter(|(i, _)| mask & (1 << i) != 0)
-            .map(|(_, c)| c)
-            .collect();
-        out.push(set);
+        out
     }
-    out
+
+    fn one(c: Color) -> Self {
+        Self { buf: [c; 5], len: 1 }
+    }
+
+    /// A caller's `&[Color]` as an inline list. Colour lists are subsets of
+    /// WUBRG everywhere this is reached, so the `take` is a bound, not a
+    /// truncation.
+    fn of(colors: &[Color]) -> Self {
+        debug_assert!(colors.len() <= 5, "a colour list is a subset of WUBRG");
+        let mut out = Self::EMPTY;
+        for &c in colors.iter().take(5) {
+            out.buf[out.len as usize] = c;
+            out.len += 1;
+        }
+        out
+    }
+
+    fn as_slice(&self) -> &[Color] {
+        &self.buf[..self.len as usize]
+    }
 }
 
 /// Build a main deck restricted to `colors` (plus the explicitly allowed
@@ -934,8 +968,8 @@ fn candidate_label(colors: &[Color], splash: &[Color]) -> String {
 /// is another 0.5 %, so both are deferred to the caller that actually wants a
 /// deck (PERF (-63)).
 pub(crate) struct ShapeBuild {
-    pub colors: Vec<Color>,
-    pub splash: Vec<Color>,
+    pub colors: ColorList,
+    pub splash: ColorList,
     pub main: Vec<CardFactory>,
     pub static_score: i32,
     /// Pool cards not in the main deck — `assemble_lands` takes its duals out
@@ -989,8 +1023,8 @@ fn rank_shape<R: Rng>(
         } else {
             static_build_score(&main, spells)
         },
-        colors: colors.to_vec(),
-        splash: splash_colors.to_vec(),
+        colors: ColorList::of(colors),
+        splash: ColorList::of(splash_colors),
         // Legal-deck floor: when the pool can't fill the requested spell
         // count, pad lands so the deck still reaches 40 cards.
         lands: lands.max(40u32.saturating_sub(main.len() as u32)),
@@ -1009,9 +1043,10 @@ impl ShapeBuild {
             colors, splash, main, static_score, mut leftovers, land_slots, lands, detail: _,
         } = self;
         // Land colors: main colors plus any splash color actually present.
+        let (colors, splash) = (colors.as_slice(), splash.as_slice());
         let mut land_colors = Vec::with_capacity(colors.len() + splash.len());
-        land_colors.extend_from_slice(&colors);
-        for &c in &splash {
+        land_colors.extend_from_slice(colors);
+        for &c in splash {
             if main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) > 0) {
                 land_colors.push(c);
             }
@@ -1020,9 +1055,9 @@ impl ShapeBuild {
             assemble_lands(&mut leftovers, &land_slots, &main, &land_colors, lands, cfg.builder_v2);
         CandidateBuild {
             static_score,
-            label: candidate_label(&colors, &splash),
-            colors,
-            splash,
+            label: candidate_label(colors, splash),
+            colors: colors.to_vec(),
+            splash: splash.to_vec(),
             main,
             duals,
             basics,
@@ -1075,22 +1110,33 @@ pub(crate) fn enumerate_shapes(scores: &PoolScores<'_>, cfg: &SimConfig) -> Vec<
 
 /// The shape lattice itself, at whichever detail the caller can use.
 fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<ShapeBuild> {
-    // (main colors, splash colors) shapes.
-    let mut shapes: Vec<(Vec<Color>, Vec<Color>)> = Vec::new();
-    for pair in color_subsets(&[2]) {
-        for third in Color::ALL {
-            if !pair.contains(&third) {
-                shapes.push((pair.clone(), vec![third]));
+    // (main colors, splash colors) shapes: 10 pairs each with its three
+    // splashes then bare, then the 16 wide subsets — the order the two
+    // `color_subsets` passes this replaces produced, and the sort below is
+    // stable, so it is a tie-break rather than presentation.
+    const SHAPES: usize = 56;
+    let mut shapes: Vec<(ColorList, ColorList)> = Vec::with_capacity(SHAPES);
+    for mask in 1u8..(1 << 5) {
+        if mask.count_ones() != 2 {
+            continue;
+        }
+        let pair = ColorList::from_mask(mask);
+        for (i, third) in Color::ALL.into_iter().enumerate() {
+            if mask & (1 << i) == 0 {
+                shapes.push((pair, ColorList::one(third)));
             }
         }
-        shapes.push((pair, vec![]));
+        shapes.push((pair, ColorList::EMPTY));
     }
-    for wide in color_subsets(&[3, 4, 5]) {
-        shapes.push((wide, vec![]));
+    for mask in 1u8..(1 << 5) {
+        if (3..=5).contains(&mask.count_ones()) {
+            shapes.push((ColorList::from_mask(mask), ColorList::EMPTY));
+        }
     }
+    debug_assert_eq!(shapes.len(), SHAPES);
 
     let mut rng = StdRng::seed_from_u64(cfg.seed); // noise=0 → unused; keeps API one-shape
-    let mut out: Vec<ShapeBuild> = Vec::new();
+    let mut out: Vec<ShapeBuild> = Vec::with_capacity(SHAPES);
     // Keyed on the copy-cap counts, which the builder already has: two shapes
     // agree iff their main decks are the same multiset, and that is exactly
     // what `counts` records. Sorting a fresh `Vec<CardFactory>` per shape to
@@ -1098,8 +1144,8 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
     let mut seen_mains: crate::fxhash::HashSet<Vec<u8>> = crate::fxhash::HashSet::default();
     for (colors, splash_colors) in shapes {
         let Some((build, counts)) = rank_shape(
-            &colors,
-            &splash_colors,
+            colors.as_slice(),
+            splash_colors.as_slice(),
             (cfg.target_spells, cfg.total_lands, 0),
             cfg,
             &mut rng,
@@ -1185,8 +1231,8 @@ pub(crate) fn build_random_deck_from<R: Rng>(
     let (spells, lands) = sample_deck_split(cfg, rng);
     let noise = (t * 2.0).round() as i32;
     let build = build_shape(
-        &chosen.colors,
-        &chosen.splash,
+        chosen.colors.as_slice(),
+        chosen.splash.as_slice(),
         (spells, lands, noise),
         cfg,
         rng,
@@ -1197,8 +1243,8 @@ pub(crate) fn build_random_deck_from<R: Rng>(
         // and it came from enumerate, so it isn't. Defensive: fall
         // back to the enumerated build itself.
         build_shape(
-            &chosen.colors,
-            &chosen.splash,
+            chosen.colors.as_slice(),
+            chosen.splash.as_slice(),
             (cfg.target_spells, cfg.total_lands, 0),
             cfg,
             rng,
