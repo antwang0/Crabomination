@@ -8604,10 +8604,9 @@ fn chump_block_candidates(
         return Vec::new();
     }
     incoming.sort_by_key(|&(_, p)| std::cmp::Reverse(p));
-    let mut idle: Vec<CardId> = state
-        .battlefield
-        .iter()
-        .filter(|c| c.controller == seat && bot_can_block(state, c) && !used.contains(&c.id))
+    let mut idle: Vec<CardId> = legal_blockers(state, seat)
+        .into_iter()
+        .filter(|c| !used.contains(&c.id))
         .map(|c| c.id)
         .collect();
     idle.sort_by_cached_key(|&id| permanent_value(state, id, w));
@@ -8657,10 +8656,9 @@ fn gang_block_candidates(
 
     // Idle bodies, cheapest first: the gang should cost as little as it
     // can and still kill.
-    let mut idle: Vec<&crate::card::CardInstance> = state
-        .battlefield
-        .iter()
-        .filter(|c| c.controller == seat && bot_can_block(state, c) && !used.contains(&c.id))
+    let mut idle: Vec<&crate::card::CardInstance> = legal_blockers(state, seat)
+        .into_iter()
+        .filter(|c| !used.contains(&c.id))
         .collect();
     idle.sort_by_cached_key(|c| permanent_value(state, c.id, w));
     if idle.len() < 2 {
@@ -9082,6 +9080,27 @@ fn bot_can_block(state: &GameState, c: &crate::card::CardInstance) -> bool {
         && !cp.keywords.has_kw(&Keyword::Decayed)
 }
 
+/// The seat's legal blockers, resolved once (CR 509.1a).
+///
+/// [`bot_can_block`] costs a `computed_permanent` per own permanent — a
+/// layer-memo probe on a hit and a whole `apply_layers_one` on a miss — and
+/// the planner asks it over the whole battlefield five times per declaration,
+/// plus once more from each candidate helper. At `be4a9987` that was
+/// **117,028 calls / 65,311,295 Ir / 1.83 % of `cube`** and 2.03 % of
+/// `fixed`, for an answer that cannot change inside one declaration: nothing
+/// in the planner mutates `state`.
+///
+/// Returns the instances, not ids: the five passes below then iterate the
+/// handful of legal blockers directly instead of re-walking the whole
+/// battlefield and re-finding each one.
+fn legal_blockers(state: &GameState, seat: usize) -> Vec<&crate::card::CardInstance> {
+    state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && bot_can_block(state, c))
+        .collect()
+}
+
 /// Everything the block planner wants to know about one declared attacker.
 ///
 /// Each field is a property of the *attacker alone*, and the planner's inner
@@ -9252,13 +9271,14 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         incoming_poison > 0 && state.players[seat].poison_counters + incoming_poison >= 10;
     let life_threatened = state.players[seat].life <= total_incoming || poison_threatened;
 
-    let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = state
-        .battlefield
+    // CR 509.1a — one resolution for the five passes below. `can_block()`
+    // only checks creature-ness + untapped; `bot_can_block` also excludes
+    // creatures that genuinely can't block (Decayed CR 702.147, or a granted
+    // "can't block") so the bot never submits an illegal block — and it costs
+    // a `computed_permanent` apiece, which is why it is asked once.
+    let may_block = legal_blockers(state, seat);
+    let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = may_block
         .iter()
-        // `can_block()` only checks creature-ness + untapped; also exclude
-        // creatures that genuinely can't block (Decayed CR 702.147, or a
-        // granted "can't block") so the bot never submits an illegal block.
-        .filter(|c| c.controller == seat && bot_can_block(state, c))
         .map(|c| {
             (
                 c.id,
@@ -9415,10 +9435,9 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     if life_threatened {
         let mut used: crate::fxhash::HashSet<CardId> =
             assignments.iter().map(|(b, _)| *b).collect();
-        let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = state
-            .battlefield
+        let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = may_block
             .iter()
-            .filter(|c| c.controller == seat && bot_can_block(state, c) && !used.contains(&c.id))
+            .filter(|c| !used.contains(&c.id))
             .map(|c| {
                 (
                     c.id,
@@ -9489,13 +9508,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         }
         // Pick the cheapest (lowest-power) legal idle blocker so a forced block
         // doesn't throw away the bot's best body.
-        if let Some(idle) = state
-            .battlefield
+        if let Some(idle) = may_block
             .iter()
             .filter(|c| {
-                c.controller == seat
-                    && bot_can_block(state, c)
-                    && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                !assignments.iter().any(|(bid, _)| *bid == c.id)
                     && (!a_flying
                         || c.has_keyword(&Keyword::Flying)
                         || c.has_keyword(&Keyword::Reach))
@@ -9548,13 +9564,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         while count < min_blockers {
             // Cheapest legal idle blocker first — minimise value lost to the
             // forced multi-block.
-            let extra = state
-                .battlefield
+            let extra = may_block
                 .iter()
                 .filter(|c| {
-                    c.controller == seat
-                        && bot_can_block(state, c)
-                        && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                    !assignments.iter().any(|(bid, _)| *bid == c.id)
                         && (!a_flying
                             || c.has_keyword(&Keyword::Flying)
                             || c.has_keyword(&Keyword::Reach))
@@ -9599,13 +9612,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // nothing and isn't needed against lethal, so it never gets picked up
     // there — but it can still soak the whole swing for free.
     let mut multi: Vec<CardId> = Vec::new();
-    let seeds = assignments.iter().map(|(b, _)| *b).chain(
-        state
-            .battlefield
-            .iter()
-            .filter(|c| c.controller == seat && bot_can_block(state, c))
-            .map(|c| c.id),
-    );
+    let seeds = assignments
+        .iter()
+        .map(|(b, _)| *b)
+        .chain(may_block.iter().map(|c| c.id));
     for id in seeds {
         if !multi.contains(&id) && extra_capacity(id) > 0 {
             multi.push(id);
