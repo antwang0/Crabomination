@@ -18898,11 +18898,22 @@ impl GameState {
                 // at the eighty-fifth pass on `build_cube_state_seeded` seeds
                 // 2113 / 2719 / 3789 — Nekrataal, Kor Sanctifiers and Tester
                 // of the Tangential, each offered a card in exile.
+                //
+                // `mentions_offboard_zone` and nothing else: adding
+                // `prefers_graveyard_target` to it was tried and reverted at
+                // the same pass. It is true for a `Move`-to-hand trigger whose
+                // filter is a bare `Not(Player)` (Timeless Witness), and the
+                // off-board set that filter matches is *every* card in every
+                // graveyard **and in exile** — so the modal it then posed was
+                // one the bot answered with no cards for exactly the reason
+                // above. Before and after this commit such a trigger gets the
+                // battlefield cursor; that is its own (older) defect, filed in
+                // ENGINE_BACKLOG rather than traded for this one.
+                // `build_cube_state_seeded(62)` is that board.
                 let zone_filter = pending
                     .effect
                     .primary_target_filter()
-                    .is_some_and(|f| f.mentions_offboard_zone())
-                    || pending.effect.prefers_graveyard_target();
+                    .is_some_and(|f| f.mentions_offboard_zone());
                 let offboard = if zone_filter { offboard } else { Vec::new() };
                 // Nothing legal after the drop: this trigger has no target, so
                 // take the same route the empty-enumeration case above does

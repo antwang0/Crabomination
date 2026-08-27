@@ -2326,14 +2326,20 @@ mod tests {
     #[test]
     fn bot_vs_bot_random_cube_decks_terminate() {
         let rejections_before = bot_rejection_count();
-        // 0..5 are the smoke trials; the four named seeds are regressions.
+        // 0..5 are the smoke trials; the five named seeds are regressions.
         // 2113 / 2719 / 3789 posed a `ChooseCards` target modal over cards in
         // *exile* for a board-shaped filter (Tester of the Tangential,
         // Nekrataal, Kor Sanctifiers), which the bot could only answer with no
         // cards and the engine then rejected. 3637 is a Juggernaut behind an
         // unpayable CR 508.1g attack tax: required to attack by CR 508.1d and
-        // rejected for attacking by the tax gate.
-        for seed in [0u64, 1, 2, 3, 4, 2113, 2719, 3637, 3789] {
+        // rejected for attacking by the tax gate. 62 is Timeless Witness, and
+        // it guards the *other* direction — widening the off-board gate to
+        // `prefers_graveyard_target` poses that modal over every card in every
+        // graveyard and in exile, which the bot answers with none.
+        //
+        // The whole seed range is a sweep, not just these ten: 4,000 pairings
+        // run in ~870 s in a debug build and are clean at the tip.
+        for seed in [0u64, 1, 2, 3, 4, 62, 2113, 2719, 3637, 3789] {
             let state = crate::cube::build_cube_state_seeded(seed);
             let (done_tx, done_rx) = mpsc::channel();
             let handle = thread::spawn(move || {
