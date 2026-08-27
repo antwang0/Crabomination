@@ -3114,6 +3114,47 @@ impl GameState {
         }
     }
 
+    /// The off-battlefield half of the requirement walker's card lookup:
+    /// the two LKI caches, then graveyards, exile, the stack, libraries and
+    /// hands. Out of line and behind the battlefield answer — the walk stops
+    /// at the battlefield on almost every call, and the chain that looks past
+    /// it is eight `Option::or_else` calls, none of them inlined here.
+    ///
+    /// Dies-trigger filters (Felisa's "with a +1/+1 counter on it") read the
+    /// dying object's last-known battlefield state, not the counter-stripped
+    /// graveyard copy (CR 603.10 LKI; CR 122.2 cleared the counters on the
+    /// zone change), so the LKI caches come before the terminal zones.
+    /// Library / hand are needed by "look at top of library" predicates
+    /// (Lurking Predators) and discard-from-hand pickers; hidden-zone reads
+    /// are permission-checked at the call site.
+    #[inline(never)]
+    fn requirement_card_off_battlefield(&self, cid: CardId) -> Option<&CardInstance> {
+        if let Some(c) = self.died_card_snapshots.get(&cid) {
+            return Some(c);
+        }
+        if self.resolving_lki_source == Some(cid)
+            && let Some(c) = self.leaves_bf_lki.get(&cid)
+        {
+            return Some(c);
+        }
+        if let Some(c) = self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == cid)) {
+            return Some(c);
+        }
+        if let Some(c) = self.exile.iter().find(|c| c.id == cid) {
+            return Some(c);
+        }
+        if let Some(c) = self.stack.iter().find_map(|si| match si {
+            StackItem::Spell { card, .. } if card.id == cid => Some(&**card),
+            _ => None,
+        }) {
+            return Some(c);
+        }
+        if let Some(c) = self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == cid)) {
+            return Some(c);
+        }
+        self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == cid))
+    }
+
     fn evaluate_requirement_static_hinted<'a>(
         &'a self,
         req: &SelectionRequirement,
@@ -3158,13 +3199,18 @@ impl GameState {
                 // (a die-trigger reading "a creature you control dies" off a
                 // graveyard source), fall back to the CR 603.10 last-known
                 // controller in `died_card_snapshots`.
-                Target::Permanent(cid) => self
-                    .bf_hint_or_find(*cid, hint)
-                    .map(|c| c.controller)
-                    .or_else(|| self.stack_spell_caster(*cid))
-                    .or_else(|| self.died_card_snapshots.get(cid).map(|c| c.controller))
-                    .map(|ctrl| ctrl == controller)
-                    .unwrap_or(false),
+                // The battlefield answers first and the two fallbacks are
+                // out-of-line `or_else` calls in this build, so they sit
+                // behind a branch rather than in the chain.
+                Target::Permanent(cid) => {
+                    let ctrl = match self.bf_hint_or_find(*cid, hint) {
+                        Some(c) => Some(c.controller),
+                        None => self
+                            .stack_spell_caster(*cid)
+                            .or_else(|| self.died_card_snapshots.get(cid).map(|c| c.controller)),
+                    };
+                    ctrl == Some(controller)
+                }
                 Target::Player(p) => *p == controller,
             },
             // CR 601.2c — "controlled by the same player as slot N". The
@@ -3172,10 +3218,10 @@ impl GameState {
             // the cast/activation validator; an unstamped slot passes.
             R::SameControllerAsTargetSlot(slot) => {
                 let ctrl_of = |t: &Target| match t {
-                    Target::Permanent(cid) => self
-                        .bf_hint_or_find(*cid, hint)
-                        .map(|c| c.controller)
-                        .or_else(|| self.stack_spell_caster(*cid)),
+                    Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
+                        Some(c) => Some(c.controller),
+                        None => self.stack_spell_caster(*cid),
+                    },
                     Target::Player(p) => Some(*p),
                 };
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
@@ -3194,26 +3240,30 @@ impl GameState {
                 Target::Player(p) => *p == self.active_player_idx,
             },
             R::ControlledByOpponent => match target {
-                Target::Permanent(cid) => self
-                    .bf_hint_or_find(*cid, hint)
-                    .map(|c| c.controller)
-                    .or_else(|| self.stack_spell_caster(*cid))
-                    .map(|ctrl| !self.same_team(ctrl, controller))
-                    .unwrap_or(false),
+                Target::Permanent(cid) => match self.bf_hint_or_find(*cid, hint) {
+                    Some(c) => !self.same_team(c.controller, controller),
+                    None => self
+                        .stack_spell_caster(*cid)
+                        .is_some_and(|ctrl| !self.same_team(ctrl, controller)),
+                },
                 Target::Player(p) => !self.same_team(*p, controller),
             },
             R::ControlledByTriggerPlayer => {
                 let Some(who) = self.trigger_event_player_scratch else { return false };
                 match target {
-                    Target::Permanent(cid) => self
-                        .bf_hint_or_find(*cid, hint)
-                        .map(|c| c.controller)
-                        .or_else(|| self.stack_spell_caster(*cid))
-                        // CR 108.4 — a card in a hidden/terminal zone has no
-                        // controller; its owner stands in (Wrexial's "target
-                        // instant or sorcery card in that player's graveyard").
-                        .or_else(|| self.find_card_anywhere(*cid).map(|c| c.owner))
-                        .is_some_and(|ctrl| ctrl == who),
+                    Target::Permanent(cid) => {
+                        let ctrl = match self.bf_hint_or_find(*cid, hint) {
+                            Some(c) => Some(c.controller),
+                            None => self
+                                .stack_spell_caster(*cid)
+                                // CR 108.4 — a card in a hidden/terminal zone
+                                // has no controller; its owner stands in
+                                // (Wrexial's "target instant or sorcery card
+                                // in that player's graveyard").
+                                .or_else(|| self.find_card_anywhere(*cid).map(|c| c.owner)),
+                        };
+                        ctrl == Some(who)
+                    }
                     Target::Player(p) => *p == who,
                 }
             }
@@ -3325,36 +3375,14 @@ impl GameState {
                 // at the battlefield on almost every call, and the stack scan
                 // used to run before it on all of them.
                 let bf_card = self.bf_hint_or_find(*cid, hint);
-                let card = bf_card
-                    // Dies-trigger filters (Felisa's "with a +1/+1 counter on
-                    // it") read the dying object's last-known battlefield
-                    // state, not the counter-stripped graveyard copy
-                    // (CR 603.10 LKI; CR 122.2 cleared the counters on the
-                    // zone change). Consulted before the terminal zones; the
-                    // cache only holds cards from the in-flight die batch.
-                    .or_else(|| self.died_card_snapshots.get(cid))
-                    .or_else(|| {
-                        self.resolving_lki_source
-                            .filter(|s| s == cid)
-                            .and_then(|_| self.leaves_bf_lki.get(cid))
-                    })
-                    .or_else(|| self.players.iter().find_map(|p| p.graveyard.iter().find(|c| c.id == *cid)))
-                    .or_else(|| self.exile.iter().find(|c| c.id == *cid))
-                    .or_else(|| {
-                        self.stack.iter().find_map(|si| match si {
-                            StackItem::Spell { card, .. } if card.id == *cid => Some(&**card),
-                            _ => None,
-                        })
-                    })
-                    // Library / hand: needed by "look at top of library"
-                    // predicates (Lurking Predators: "if it's a creature
-                    // card, …"), discard-from-hand pickers, and any future
-                    // hidden-zone filter check. Library cards have hidden
-                    // info for opponents in real play, but the engine is
-                    // permission-checked at the call site (effects target
-                    // the controller's own library).
-                    .or_else(|| self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == *cid)))
-                    .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)));
+                // The seven other places a card can be are one branch away,
+                // not eight `Option::or_else` links: this build has no LTO, so
+                // each link is an out-of-line call paid on the path where
+                // `bf_card` has already answered.
+                let card = match bf_card {
+                    Some(c) => Some(c),
+                    None => self.requirement_card_off_battlefield(*cid),
+                };
                 let Some(card) = card else { return false; };
                 // Layer-4-aware card types for battlefield permanents
                 // (CR 613.2): an artifact-ized creature (Phyrexian
