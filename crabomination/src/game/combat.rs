@@ -700,12 +700,7 @@ impl GameState {
                 if c.controller != p || !must {
                     continue;
                 }
-                let kws = computed_kw(c.id);
-                let able = c.definition.is_creature()
-                    && !c.tapped
-                    && (!kws.has_kw(&Keyword::Defender) || self.ignores_defender_for_attack(c))
-                    && !kws.has_kw(&Keyword::CantAttack)
-                    && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
+                let able = self.attack_requirement_able(c, computed_kw(c.id));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
@@ -723,12 +718,7 @@ impl GameState {
                 if c.controller != p || !matches(c.id) {
                     continue;
                 }
-                let kws = computed_kw(c.id);
-                let able = c.definition.is_creature()
-                    && !c.tapped
-                    && (!kws.has_kw(&Keyword::Defender) || self.ignores_defender_for_attack(c))
-                    && !kws.has_kw(&Keyword::CantAttack)
-                    && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
+                let able = self.attack_requirement_able(c, computed_kw(c.id));
                 if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
                     return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
                 }
@@ -4604,6 +4594,33 @@ impl GameState {
                     )
             })
             .map(|c| c.id)
+    }
+
+    /// CR 508.1d — whether `c` is *able* to attack, for the purpose of a
+    /// requirement that says it must. The four gates a "attacks each combat
+    /// if able" creature has to clear before its absence makes the whole
+    /// declaration illegal.
+    ///
+    /// Shared with the bot's attack picker, which has to reproduce this
+    /// exactly or it declares a batch the engine throws out. It was written
+    /// by hand at two sites here and a third, drifted, one there.
+    ///
+    /// **Two things it deliberately is not.** It reads the *printed* type
+    /// line where the main legality conjunction reads `is_creature_now`, and
+    /// the mandate loop above (`Effect::AttackWith`) keeps its own copy
+    /// without the `ignores_defender_for_attack` escape. Both are older
+    /// behaviour and both would be rules changes to unify; this method is
+    /// the pure extraction of the requirement loop's version.
+    pub(crate) fn attack_requirement_able(
+        &self,
+        c: &crate::card::CardInstance,
+        kws: &[Keyword],
+    ) -> bool {
+        c.definition.is_creature()
+            && !c.tapped
+            && (!kws.has_kw(&Keyword::Defender) || self.ignores_defender_for_attack(c))
+            && !kws.has_kw(&Keyword::CantAttack)
+            && (!c.summoning_sick || kws.has_kw(&Keyword::Haste))
     }
 
     /// CR 508.1g — the generic mana a declaration of `attacks` costs its

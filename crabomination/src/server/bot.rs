@@ -7495,12 +7495,10 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     let mut attackers: Vec<crate::card::CardId> = raw_attackers
         .into_iter()
         .filter(|c| {
-            // CR 508.1d — must-attack creatures (Juggernaut,
-            // goaded) have no choice; always include them so
-            // the engine's requirement check accepts the batch.
-            if must_attack(c) {
-                return true;
-            }
+            // CR 508.1d's must-attack creatures are NOT force-included
+            // here: `restore_forced_attackers` below re-adds every one
+            // the *computed* set obliges, which is the same membership
+            // and one predicate instead of two that drifted.
             // Always attack on lethal swings — the bot
             // would rather suicide than miss a kill.
             if lethal_swing {
@@ -7629,6 +7627,9 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         })
         .map(|c| c.id)
         .collect();
+    // CR 508.1d — before the cap, because a creature the rules oblige to
+    // attack makes the whole declaration illegal by its absence.
+    restore_forced_attackers(state, seat, &mut attackers);
     // CR 506.2 — Silent Arbiter caps the whole combat. An
     // over-sized batch is rejected outright, so trim to the
     // cap keeping the biggest attackers.
@@ -7753,11 +7754,89 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     attacks
 }
 
-/// CR 508.1d — a creature the rules oblige to attack. The picker force-
-/// includes these and the tax trim refuses to drop them; both read the same
-/// predicate so they cannot disagree about which creatures are exempt.
-fn must_attack(c: &crate::card::CardInstance) -> bool {
-    c.has_keyword(&crate::card::Keyword::MustAttack) || !c.goaded_by.is_empty()
+/// CR 508.1d — a creature the rules oblige to attack, read off the
+/// **computed** keyword set because that is where the engine reads it.
+///
+/// `others_attacking` is `MustAttackIfAnotherAttacks`'s condition (Ekundu
+/// Cyclops is obliged only once somebody else has been declared), which is
+/// what makes the obligation set-dependent and the repair below a loop.
+fn must_attack(
+    c: &crate::card::CardInstance,
+    kws: &[crate::card::Keyword],
+    others_attacking: bool,
+) -> bool {
+    use crate::card::Keyword;
+    kws.has_kw(&Keyword::MustAttack)
+        || kws.has_kw(&Keyword::MustAttackOrBlock)
+        || (kws.has_kw(&Keyword::MustAttackIfAnotherAttacks) && others_attacking)
+        || !c.goaded_by.is_empty()
+}
+
+/// CR 508.1d — re-add every creature the rules oblige to attack that the
+/// planner's heuristics dropped.
+///
+/// A missing must-attacker makes the **whole** declaration illegal, not that
+/// one attacker, so this costs a combat rather than a body. The picker used
+/// to force-include them from its own filter, off the *instance* view and
+/// naming one of the three keywords the engine names — so a granted
+/// `MustAttackOrBlock`, or an Ekundu Cyclops that had to join once another
+/// attacker was declared, was left home and the batch was rejected (22 of
+/// the residual attack rejections on `cube --seed 11`; PERF (-55)).
+///
+/// A repair pass rather than a filter predicate because the obligation is
+/// **set-dependent**: adding one attacker can oblige another, so it loops to
+/// a fixed point. Gated on the same board presence question the engine uses
+/// to decide whether to compute the whole battlefield at all.
+fn restore_forced_attackers(state: &GameState, seat: usize, attackers: &mut Vec<CardId>) {
+    if !attack_requirement_present(state) {
+        return;
+    }
+    restore_forced_attackers_unchecked(state, seat, attackers);
+}
+
+/// Can any permanent on this board carry an attack requirement at all? The
+/// same question `declare_attackers_banded` asks before deciding whether to
+/// compute the whole battlefield, hoisted so a caller with several
+/// declarations to repair pays it once.
+fn attack_requirement_present(state: &GameState) -> bool {
+    use crate::card::Keyword;
+    state.battlefield.iter().any(|c| !c.goaded_by.is_empty())
+        || state.board_keyword_in_scope(&[
+            Keyword::MustAttack,
+            Keyword::MustAttackOrBlock,
+            Keyword::MustAttackIfAnotherAttacks,
+        ])
+}
+
+/// [`restore_forced_attackers`] with the presence gate already answered.
+fn restore_forced_attackers_unchecked(
+    state: &GameState,
+    seat: usize,
+    attackers: &mut Vec<CardId>,
+) {
+    loop {
+        let mut added = false;
+        for c in state.battlefield.iter() {
+            if c.controller != seat || attackers.contains(&c.id) {
+                continue;
+            }
+            let Some(cp) = state.computed_permanent(c.id) else { continue };
+            // `attackers` never holds `c.id` here, so "another attacker
+            // exists" is just a non-empty batch; spelled as the engine
+            // spells it so the two read alike.
+            let others = attackers.iter().any(|id| *id != c.id);
+            if !must_attack(c, &cp.keywords, others)
+                || !state.attack_requirement_able(c, &cp.keywords)
+            {
+                continue;
+            }
+            attackers.push(c.id);
+            added = true;
+        }
+        if !added {
+            break;
+        }
+    }
 }
 
 /// CR 508.1g — drop attackers until the declaration's tax is payable.
@@ -7809,7 +7888,15 @@ fn trim_attacks_to_payable_tax(state: &GameState, seat: usize, attacks: &mut Vec
         if t == 0 {
             continue;
         }
-        if state.battlefield_find(a.attacker).is_some_and(must_attack) {
+        // A must-attacker is never the one dropped: CR 508.1d would reject
+        // the batch for its absence instead. `attacks` still holds it, so
+        // "another attacker exists" is a batch of more than one.
+        let forced = state.battlefield_find(a.attacker).is_some_and(|c| {
+            state
+                .computed_permanent(a.attacker)
+                .is_some_and(|cp| must_attack(c, &cp.keywords, attacks.len() > 1))
+        });
+        if forced {
             spend += t;
             continue;
         }
@@ -7908,6 +7995,40 @@ pub(crate) fn attack_candidates_for_mcts(
             alt.remove(i);
             candidates.push(alt);
         }
+    }
+    // CR 508.1d — every holdback here is a *subset*, and a subset that
+    // leaves an obliged attacker home is rejected whole: the candidate's
+    // opening `dry_run` fails, it scores `None`, and the search silently
+    // spends a slot on a declaration it could never make. Twenty-two of the
+    // residual attack rejections on `cube --seed 11` are exactly this, and
+    // "attack with nobody" is one of them whenever anything is goaded.
+    //
+    // Repair rather than discard: an obliged attacker is put back with the
+    // target the greedy declaration gave it, so "all home" becomes "only the
+    // obliged ones" — a legal alternative the menu could not express before
+    // — and a holdback that repairs back into greedy is deduped away rather
+    // than scored twice.
+    if attack_requirement_present(state) {
+        for cand in candidates.iter_mut() {
+            let mut ids: Vec<CardId> = cand.iter().map(|a| a.attacker).collect();
+            let before = ids.len();
+            restore_forced_attackers_unchecked(state, seat, &mut ids);
+            for id in ids.into_iter().skip(before) {
+                if let Some(a) = greedy.iter().find(|a| a.attacker == id) {
+                    cand.push(*a);
+                }
+            }
+        }
+        let mut seen: Vec<Vec<u32>> = Vec::new();
+        candidates.retain(|c| {
+            let mut ids: Vec<u32> = c.iter().map(|a| a.attacker.0).collect();
+            ids.sort_unstable();
+            let fresh = !seen.contains(&ids);
+            if fresh {
+                seen.push(ids);
+            }
+            fresh
+        });
     }
     // Walker chip candidate (flag): the greedy pass only attacks a
     // walker it can finish, so a healthy one sits unpressured to its
@@ -13584,6 +13705,134 @@ mod tests {
             );
             let mut g2 = g.clone();
             g2.declare_attackers(attacks).expect("the plan the picker made is payable");
+        }
+    }
+
+    /// CR 508.1d — the requirement is three keywords read off the *computed*
+    /// set, not one read off the instance. A `MustAttackOrBlock` creature the
+    /// suicide filter holds back makes the whole declaration illegal by its
+    /// absence, so the repair pass has to put it back.
+    #[test]
+    fn bot_attack_plan_restores_a_must_attack_or_block_creature() {
+        use crate::card::{CardType, Keyword};
+        let obliged = CardDefinition {
+            name: "Obliged Skirmisher",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::MustAttackOrBlock],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let me = g.add_card_to_battlefield(0, obliged);
+        g.clear_sickness(me);
+        // A blocker that eats it, so the suicide filter drops it first.
+        let wall = g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.clear_sickness(wall);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let attacks = pick_attacks(&g, 0);
+        assert!(
+            attacks.iter().any(|a| a.attacker == me),
+            "a must-attack-or-block creature is obliged: {attacks:?}",
+        );
+        let mut g2 = g.clone();
+        g2.declare_attackers(attacks).expect("the plan is legal");
+    }
+
+    /// CR 508.1d — Ekundu Cyclops joins an attack somebody else started and
+    /// is free to stay home otherwise, so the obligation is set-dependent and
+    /// the repair has to be a pass rather than a filter.
+    #[test]
+    fn bot_attack_plan_joins_a_conditional_must_attacker_only_with_company() {
+        use crate::card::{CardType, Keyword};
+        let conditional = || CardDefinition {
+            name: "Reluctant Cyclops",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::MustAttackIfAnotherAttacks],
+            ..Default::default()
+        };
+        let flier = || CardDefinition {
+            name: "Free Swinger",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        };
+        let setup = |with_company: bool| {
+            let mut g = two_player_game();
+            let me = g.add_card_to_battlefield(0, conditional());
+            g.clear_sickness(me);
+            if with_company {
+                let f = g.add_card_to_battlefield(0, flier());
+                g.clear_sickness(f);
+            }
+            // Ground-only, so the flier swings free and the 1/1 does not.
+            let wall = g.add_card_to_battlefield(1, catalog::hill_giant());
+            g.clear_sickness(wall);
+            g.step = TurnStep::DeclareAttackers;
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            (g, me)
+        };
+        let (g, me) = setup(false);
+        let alone = pick_attacks(&g, 0);
+        assert!(
+            !alone.iter().any(|a| a.attacker == me),
+            "nobody else is attacking, so it is not obliged: {alone:?}",
+        );
+        g.clone().declare_attackers(alone).expect("staying home is legal");
+
+        let (g, me) = setup(true);
+        let with_company = pick_attacks(&g, 0);
+        assert!(
+            with_company.len() == 2 && with_company.iter().any(|a| a.attacker == me),
+            "the flier's swing obliges it to join: {with_company:?}",
+        );
+        g.clone().declare_attackers(with_company).expect("the plan is legal");
+    }
+
+    /// CR 508.1d — the attack search's holdbacks are subsets, and a subset
+    /// that leaves an obliged attacker home is rejected *whole*: the
+    /// candidate's opening dry run fails and it scores nothing, so the menu
+    /// silently shrinks. Every candidate has to be a declaration the engine
+    /// will accept.
+    #[test]
+    fn attack_search_candidates_are_all_legal_declarations() {
+        use crate::card::{CardType, Keyword};
+        let obliged = CardDefinition {
+            name: "Rolling Juggernaut",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::MustAttack],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let must = g.add_card_to_battlefield(0, obliged);
+        g.clear_sickness(must);
+        for _ in 0..2 {
+            let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(c);
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let w = EvalWeights { attack_search: 3, ..EvalWeights::default() };
+        let candidates = attack_candidates_for_mcts(&g, 0, &w);
+        assert!(candidates.len() > 1, "the search has a menu: {candidates:?}");
+        for c in &candidates {
+            assert!(
+                c.iter().any(|a| a.attacker == must),
+                "no candidate may leave the must-attacker home: {c:?}",
+            );
+            g.clone()
+                .declare_attackers(c.clone())
+                .expect("every candidate is a legal declaration");
         }
     }
 
