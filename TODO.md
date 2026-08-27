@@ -101,8 +101,15 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    walker's catch-all delegates, the card walker is exhaustive — so it wants
    a guard, not a fix. `audit_stubs` 0/21,795, `audit_incomplete` 0,
    `CRAB_SIM_REJECTS` 0 in 129 configurations. The dropped-"may" tail
-   (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent: **the
-   next card sweep needs a different filter.**
+   (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent, and so
+   is the third filter: `scripts/audit_variant_coverage.py` asks whether a
+   shipped card's ability lands in a **no-op engine arm** — the failure both
+   audit binaries are structurally unable to see, because they look inside
+   one card's tree — and reads **0 over 1,695 variants** (~40 s, no build).
+   It leaves three *dead primitives*: implemented effects nothing builds,
+   i.e. free capability for whichever card wanted them (INCOMPLETE_CARDS,
+   "The other direction"). **A fourth filter still has to come from somewhere
+   else.**
 4a. **A suite gate can be a coin flip and still be green** (PERF's Log, pass
    83 item 3). candle's CPU backend seeds every parameter from entropy and
    `set_seed` bails there, so seven `crabomination_ml` convergence thresholds

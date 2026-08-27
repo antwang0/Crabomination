@@ -13,6 +13,7 @@ Run the companion auditor:
 cargo run -p crabomination --bin audit_incomplete                  # both passes
 cargo run -p crabomination --bin audit_incomplete -- --structural-only
 cargo run -p crabomination --bin audit_incomplete -- --comments-only
+python3 scripts/audit_variant_coverage.py     # the third filter, no build
 ```
 
 It has two independent passes:
@@ -30,6 +31,13 @@ It has two independent passes:
    22,568 factories** across 707 catalog files carry such a note (was 470 of
    8,092 — the catalog has roughly tripled since, and the *rate* is flat at
    ~4 %).
+
+3. **Variant coverage** (`scripts/audit_variant_coverage.py`, comment-free,
+   no build): the two passes above look *inside* one card's effect tree, so
+   neither can see a card whose tree is fine and whose *engine* arm is a
+   no-op. This one cross-references each capability enum against the catalog
+   and the engine both ways. **2026-08-27: 0 dead capabilities over 1,695
+   variants; 3 dead primitives.** See "The other direction" below.
 
 The tables below are a human triage of those 470 + the structural findings,
 grouped by the **missing engine primitive** so each cluster is one work-item.
@@ -84,6 +92,37 @@ the helper rather than per card — see the commit):
 
 > Note: an earlier manual pass mislabeled the Sublime Epiphany finding as a
 > card called "Persist" — the structural auditor is the source of truth.
+
+### The other direction — a shipped card whose ability the *engine* drops
+
+Both audit binaries look **inside** one card's effect tree, so neither can see
+the failure where the tree is well-formed and the engine has nothing to do
+with it: an exhaustive `match` is satisfied by an `A | B | C => {}` arm, so a
+variant can be on shipped cards, type-check everywhere, resolve without a
+panic, and do nothing. `scripts/audit_variant_coverage.py` asks that question
+by cross-referencing each capability enum against the catalog and the engine,
+with the no-op arms **discovered** rather than hardcoded (the layer pass's
+"these statics are not continuous effects" arm alone is 780 lines).
+
+**Reading at 2026-08-27 — zero.** Over `StaticEffect` (471 variants), `Effect`
+(987) and `Keyword` (237): **no variant that shipped cards use lacks an engine
+arm outside a no-op**, including all 441 statics the layer pass explicitly
+declines to turn into continuous effects. The filter is cheap (~40 s, no
+build) and it gates on this half only.
+
+**Three dead primitives fell out of the other direction** — implemented
+effects nothing constructs, i.e. capability waiting for the card that wanted
+it, at no engine cost:
+
+| Primitive | Resolver | The card shape it is for |
+|---|---|---|
+| `Effect::AddRadCounters { who, amount }` | `effects/mod.rs` | rad counters (Fallout) |
+| `Effect::ExileTopAndMayCastUpToMv { who, amount, max_mv }` | `effects/mod.rs` | "exile the top N, you may cast those with mana value ≤ X" |
+| `Effect::GrantCastBackFromGraveyard { what }` | `effects/mod.rs` | "you may cast it from your graveyard" |
+
+**Check the encoding caution in TODO before adding a card for one**: whether a
+new catalog entry moves `Vocab` decides whether it invalidates the trained
+nets, and that question is not answered here.
 
 ---
 
