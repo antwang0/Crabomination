@@ -8423,18 +8423,34 @@ site* rather than the allocation. Read (-56b) before proposing a replacement:
 `collect` is internal iteration and a hand-written loop is not, and that cost
 ~0.15 % of `fixed` the last time somebody swapped one.
 
-**`check_state_based_actions` narrowed at `e9a509e6`, by reading rather than
-by a second profile.** 20,152 SBA calls on `cube`; the `from_iter` edge under
-it is **33,694 calls / 91,688,893 Ir inclusive, 2.71 % of the run**, i.e. 1.67
-collects an SBA call at 2,721 Ir of subtree each. **Every collect in the
-function's first ~350 lines is already behind an `sba_board_scan` flag or an
-`any()` presence test and is `Vec::new()` on an ordinary board** —
-`flip_keyword`, `flip_predicate`, `sacrifice_when`, `state_trigger`,
-`steal_penalty`, `no_other`, the three continuous-effect lapse sweeps and the
-legend rule, nine of them, all checked. So the 33,694 live in the **second
-half** (the death sweep, the Aura/Equipment sweeps, the loss conditions —
-`stack.rs` 5100-6015), and that is where to start rather than re-deriving
-this. Two rows from the same callee table recorded as *non*-leads so nobody
+**`check_state_based_actions`' SHARE OF THIS IS REFUTED AS A *COLLECT*
+ENTRY — read at `e9a509e6`, by reading rather than by a second profile, and
+the answer is that every one of its collects is already gated.** 20,152 SBA
+calls on `cube`; the `from_iter` edge under it is 33,694 calls / 91,688,893 Ir
+inclusive, **2.71 % of the run**, 1.67 collects a call at 2,721 Ir of subtree
+each — which looks exactly like (-44)'s shape and is not. All twenty-two
+`.collect()` sites in the function were checked one by one:
+
+* the first half's nine (`flip_keyword`, `flip_predicate`, `sacrifice_when`,
+  `state_trigger`, `steal_penalty`, `no_other`, and the three
+  continuous-effect lapse sweeps) are `if scan.<flag> { … } else {
+  Vec::new() }` or sit behind an `any()` presence test;
+* the second half's (Saga, planeswalker, battle, bestow, orphaned Auras,
+  stale Roles, Equipment links, Soulbond, the legend rule) are the same
+  shape against their own `sba_board_scan` flags;
+* and the **death sweep** — the only one that is not conditional on a
+  narrow card class — is behind `creature_death_possible(&scan)`, which
+  the code's own comment measures as skipping **86.5 % of sweeps on
+  `fixed`**.
+
+**So the 2.71 % is not an ungated collect; it is `compute_battlefield_
+creatures` doing real work on the sweeps where a death genuinely is
+possible**, which on a grant-heavy pool is a much larger fraction than on
+`fixed`. That is the layer gather, i.e. (-62)/(-58) territory and the
+most-worked path on the branch — **not a `Vec` nobody wanted.** Rank the
+entry's other two unclaimed rows above this one.
+
+Two rows from the same callee table recorded as *non*-leads so nobody
 re-reads them: `CardDefinition::is_creature` at 352,032 calls (17.5 an SBA
 call, 5,358,714 Ir) is the standing rules' named profile artifact —
 `release`'s thin LTO inlines it — and `card_type_change_unscoped` at 19,508

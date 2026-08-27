@@ -37,9 +37,11 @@ rules under this section; add a pointer here, put the detail there.
    `Arc<CardDefinition>` handles per `ComputedPermanent` where one would do —
    **priced by probe** at `fixed` 0.532 % / `cube` 0.580 %, and wanting a
    quiet window because it is 600-800 call sites), **(-69)** (the two
-   `Vec::from_iter` monos, 3.45 % of `cube`, with
-   `check_state_based_actions` — 36,150 collects — and `compute_permanents`
-   unclaimed in its by-count caller table), then **(-51)(b)**, (-60), (-61),
+   `Vec::from_iter` monos, 3.45 % of `cube`; the
+   `check_state_based_actions` row is **refuted as a collect entry** — all
+   twenty-two of its collects are gated and the 2.71 % is
+   `compute_battlefield_creatures` — so `compute_permanents` and
+   `declare_attackers_banded` are what is left unclaimed), then **(-51)(b)**, (-60), (-61),
    (-51)(a), (-59), plus (-63)'s residues at the foot of its entry. Closed at
    the eighty-fifth pass: **(-65)**, **(-63)** (both halves), **(-66)**,
    **(-67)**, **(-68)**.
