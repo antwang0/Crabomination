@@ -60,6 +60,11 @@ stays refuted.
    the profile that dates fastest and the one the ladder cannot stand in
    for. The `Option::or_else` row is the count case: 2.2 M calls at ~5 Ir,
    invisible to every table that ranks by Ir (see the first standing rule).
+   **A thin list is not an empty engine.** Three of this pass's eight rows
+   were on no candidate and in no self table — `Option::or_else`, the boxed
+   keyword list, and `printed_color_set` — and all three came from *counting*
+   (call counts, allocations per call, a hot function's callee list), which
+   is the first three standing rules below.
 1a. **The device that unlocked the largest row in fifteen passes was a
    census, not a profile.** `CRAB_SIM_REJECTS` read zero long enough that a
    rollback nobody could prove unnecessary became provably unused. **Read the
