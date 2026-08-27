@@ -58,6 +58,12 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    `--bench`'s stall split. A "do not re-open" written against an *argument*
    dates when the evidence moves; one written against a *measurement* does
    not.
+1c. **A helper that takes an *id* where its caller holds the *thing* turns a
+   memoized lookup into a search.** This branch's own CR 602.5g/h extraction
+   did it on the tap path and cost **`cube` 1.46 % / `fixed` 1.31 %** until it
+   was passed the borrow instead. Second time unification has hidden a cost
+   here. When merging two walkers, check what each caller had already
+   resolved before fixing the parameter list.
 1b. **`CRAB_PAY_FAILS` has now rewritten (-51)(b) twice, and both are in
    PERF.** Its class split refuted the entry's "generic rather than coloured"
    (coloured leads on four of five pools, 100 % of `fixed`); its
@@ -68,7 +74,10 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    will name the next one the same way — read it per pool, because the pools
    disagree completely. **And count the thing you are about to blame:** the
    widening hypothesis was good, and a counter killed it in one run at 0.0 %
-   on the pool that had the problem.
+   on the pool that had the problem. **And it now reports cost, not just
+   count** (`pay_taps`: calls / early returns / tables / taps) — 700 probes
+   removed read -2.20 %, 64 read flat, and only the work counter tells them
+   apart before a build.
 2. **A commit that moves play** — PERF "How to measure": `--vs` after the
    null run, `CRAB_SIM_REJECTS` and `CRAB_PAY_FAILS` **swept, not sampled**,
    Ir on both pools. **`--bench`'s decision count is a committed invariant —

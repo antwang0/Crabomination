@@ -267,23 +267,60 @@ picker or a combat check, and **sweep seeds rather than sampling three** —
 `cube` deck content is seed-dependent and two passes called a half closed off
 three seeds and were wrong both times.
 
-**AND WHAT THE SIMULATION'S OWN PAYMENTS COST WHEN THEY FAIL.** A rolled-back
-payment has already built its `mana_source_table` and tapped whatever it could
-reach, so the causes cost the same and want different fixes; `CRAB_PAY_FAILS`
-splits them by the `ManaError` the payment actually failed with. Same device
-and the same off-cost as above.
+**AND WHAT THE SIMULATION'S OWN PAYMENTS COST.** `CRAB_PAY_FAILS` splits
+rolled-back payments by the `ManaError` they failed with, by what was being
+paid for, and — the part that matters most — reports the **auto-tap work the
+whole population does**, failing or not. Same device and the same off-cost as
+above.
 
 ```text
 CRAB_PAY_FAILS=1     target/release-fast/bot_ladder --a gang --b gang \
-    --games 12 --threads 1 --seed 1 --decks cube       # prints the split
+    --games 12 --threads 1 --seed 1 --decks cube       # the split + the cost
 CRAB_PAY_FAILS=names …  2>&1 | grep '^pay_fail ' | sort | uniq -c   # + cost, site
+CRAB_PAY_FAILS=names …  2>&1 | grep '^pay_kind ' | sort | uniq -c   # + what for
 ```
 
 **generic** is the bot's `total` over-estimating — the (-51)(b) perf bug, and
 the same asymmetry the CR 508.1g trim hit. **coloured / colorless / snow** is
 the assignment problem, or auto-tap stranding a colour it could have covered,
 which is a *correctness* bug: a payable line becomes invisible. **hybrid** is
-neither half payable. The table is in (-51)(b).
+neither half payable. `pay_kind` says *what was being paid for* — `fixed`'s
+failures were 100 % `instant/sorcery` and were three response paths with no
+affordability filter; `cube`'s are 1,352 `creature` / 508 `ability` / 478
+`instant/sorcery` / 414 `other` in six games, a different question in a
+different place. The tables are in (-51)(b).
+
+**⚠ A FAILED PAYMENT IS NOT A UNIT OF COST, AND THIS CENSUS MISLED ITS OWN
+AUTHOR BY IMPLYING IT WAS.** `auto_tap_for_cost_inner` returns before building
+anything when the pool already covers the cost or the board has nothing to
+tap; a probe that takes that exit is a `GameState` clone and little else.
+Removing **700** such probes from `fixed` read **-2.20 %**; removing **64**
+from the same pool one commit later read **flat**. So `pay_taps` reports the
+work, not the count:
+
+```text
+  pay_taps N auto-tap calls — M returned early (x %), T tables, S sources tapped
+
+--games 12 --threads 1   calls   returned early   tables    taps
+fixed  s1               11,298   3,802 (33.7 %)    7,496   19,478
+cube   s1               21,142   5,518 (26.1 %)   15,624   41,698
+all    s1               35,336  10,284 (29.1 %)   25,052   71,376
+--bench (320 games)     64,678  21,276 (32.9 %)   43,402  113,204
+```
+
+Priced against (-51)(a) — **6,690 Ir a table, 7,665 Ir a tap**, both at the
+seventy-fifth tip, read them off that entry rather than trusting a copy — the
+bench workload spends ~290 M Ir on tables and ~868 M on taps. **1.75 sources
+tapped per call, and taps outweigh tables three to one.** `--bench` also gives
+the ratio that sizes the menu: **0.33 auto-tap calls per decision**, so the
+cast sweep is not probing twenty candidates a tick.
+
+**Do not split those taps by probe/committed — it was tried and it lies.**
+The reading is 100 % of `fixed`'s and 99.3 % of `cube`'s inside a probe,
+because `accept_on` is how the bot performs *every* action, the ones it adopts
+as much as the ones it discards. The split that would matter,
+evaluated-and-dropped against chosen-and-kept, is invisible from that call
+site.
 
 **And a green trace suite is not evidence that a bot change is
 behaviour-preserving until you check the trace pool executes the code.** The
@@ -3897,6 +3934,53 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Eighty-fourth pass — an extraction that cost 1.4 %, and a census that had to learn what a unit of cost is
+
+**0. `cube` -1.46 % / `fixed` -1.31 % from restoring one memoized lookup, and
+the bug was in this branch's own refactor.** `c248e18d` pulled the CR 602.5g/h
+summoning-sickness gate out of `activate_ability_inner` so the bot's
+`available_mana` could ask it too, and took `card_id` as its parameter. Inside
+that function the battlefield entry is reached through `bf_src!()`, a
+*memoized* index; the extracted method did its own `battlefield_find`, which
+is a linear scan. Every tap-gated activation paid the scan — and
+`CRAB_PAY_FAILS` counts **113,204 mana taps in the bench workload's 320
+games**.
+
+```text
+ab_wall, --warmup, 3 threads          median B/A      95 % CI        blocks
+cube  400 games x 8, seed 11, 10 blk    0.9854    -2.68 .. -0.23 %    8/10
+fixed 2,000 games x 4, seed 11, 8 blk   0.9869    -2.34 .. -0.27 %    7/8
+```
+
+**The rule, and it is about extraction rather than about mana: a helper that
+takes an *id* where its caller holds the *thing* converts a memoized lookup
+into a search, silently.** Both callers already held the `CardInstance`. Pass
+the borrow, not the key — and when unifying two walkers, check what the
+caller's version had already resolved before deciding the parameter list.
+This is the second cost that unification has hidden on this branch (the first
+was the tapped term drifting between four copies of one conjunction).
+
+**1. The payment census learned that a failed payment is not a unit of cost.**
+Removing 700 probes from `fixed` read -2.20 %; removing 64 from the same pool
+one commit later read flat, because `auto_tap_for_cost_inner` returns before
+building anything when the pool covers the cost or the board has nothing to
+tap. `pay_taps` now reports calls / early returns / tables / taps, which is
+the work rather than the count — see "How to measure". **A census that counts
+events has to say what an event costs, or its next reader sizes a change by
+counting.**
+
+**2. Three more response paths got the affordability filter, and it is flat.**
+`pick_ability_counter_response`, `pick_buff_response` and
+`pick_defensive_removal` probed the hand filtered only on card type and effect
+shape. Same fix as `pick_stack_response`, sixty-four probes a run at the best
+of it, **play byte-identical on all five pools** — landed as consistency, not
+throughput, and the census is why that could be said rather than guessed.
+
+**3. Measured and removed rather than reported.** Splitting the tap counter by
+`in_probe` reads 100 % of `fixed`'s taps inside a probe, which is the funnel
+and not the waste: `accept_on` is how the bot performs every action. The
+counter was deleted and the reasoning left in `pay_census::TAP`'s doc.
 
 ### Eighty-third pass — a gate walk hoisted, an ungated walk priced and then taken, and a suite gate that was a coin flip
 
