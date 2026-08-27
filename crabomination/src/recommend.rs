@@ -488,6 +488,15 @@ fn suggest_main_deck_shape<R: Rng>(
     rng: &mut R,
 ) -> MainDeck {
     let picks = scores.picks;
+    // The shape's colours as a five-bit field: "castable in these colours" is
+    // then one `&`-and-compare per pool card rather than a `contains` scan per
+    // pip colour, and it runs once per (pool card x shape). A colourless card
+    // has an empty `pip_colors`, which is a subset of everything — the
+    // `pips.is_empty()` leg this replaces.
+    let want = colors.iter().fold(crate::mana::ColorSet::empty(), |mut s, &c| {
+        s.insert(c);
+        s
+    });
     let allowed = |f: CardFactory, brief: &crate::cube::CardBrief| -> bool {
         // Lands never occupy spell slots in the sealed builder —
         // `assemble_lands` owns the land base. (High jitter used to
@@ -495,8 +504,7 @@ fn suggest_main_deck_shape<R: Rng>(
         if brief.is_land {
             return false;
         }
-        brief.pips.is_empty()
-            || brief.pips.colors().all(|c| colors.contains(&c))
+        brief.pip_colors.is_subset_of(want)
             || splash.iter().any(|s| *s as usize == f as usize)
     };
     // Fixing-aware bonus: mana rocks / land fetchers earn their keep in

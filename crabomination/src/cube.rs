@@ -136,6 +136,12 @@ pub struct CardBrief {
     pub def: &'static CardDefinition,
     /// Colored pips per colour — [`crate::draft::pip_counts`].
     pub pips: crate::draft::ColorCounts,
+    /// The colours in `pips`, as a bitmask. The sealed builder asks "does this
+    /// card fit these colours" once per (pool card x shape) — 56 shapes a
+    /// build — and the `pips.colors().all(|c| colors.contains(&c))` form was
+    /// the largest single line in `build_shape`'s line profile (PERF (-63)).
+    /// A subset test on a five-bit field is two instructions.
+    pub pip_colors: crate::mana::ColorSet,
     pub cmc: u32,
     pub is_land: bool,
     pub is_creature: bool,
@@ -153,9 +159,14 @@ pub struct CardBrief {
 impl CardBrief {
     fn of(def: &'static CardDefinition) -> CardBrief {
         use crate::card::CardType;
+        let pips = crate::draft::pip_counts(&def.cost);
         CardBrief {
             def,
-            pips: crate::draft::pip_counts(&def.cost),
+            pip_colors: pips.colors().fold(crate::mana::ColorSet::empty(), |mut s, c| {
+                s.insert(c);
+                s
+            }),
+            pips,
             cmc: def.cost.cmc(),
             is_land: def.card_types.contains(&CardType::Land),
             is_creature: def.card_types.contains(&CardType::Creature),
