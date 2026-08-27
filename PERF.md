@@ -294,8 +294,9 @@ different place. The tables are in (-51)(b).
 AUTHOR BY IMPLYING IT WAS.** `auto_tap_for_cost_inner` returns before building
 anything when the pool already covers the cost or the board has nothing to
 tap; a probe that takes that exit is a `GameState` clone and little else.
-Removing **700** such probes from `fixed` read **-2.20 %**; removing **64**
-from the same pool one commit later read **flat**. So `pay_taps` reports the
+Removing **700** such probes from `fixed` is worth **-0.282 %** (Ir, all
+four filters); removing **64** from the same pool one commit later is worth
+nothing measurable. So `pay_taps` reports the
 work, not the count:
 
 ```text
@@ -437,6 +438,33 @@ suite. Recorded
 as candidate (-46) at that honest size — a measurement artefact first and a
 throughput item barely at all — so that nobody reads the 6.8 % as a
 simulator cost and spends a pass on it.
+
+**⚠ `ab_wall` CANNOT RESOLVE A SUB-1 % CHANGE, AND ITS CONFIDENCE INTERVAL
+WILL NOT TELL YOU SO.** Measured at the eighty-fourth pass, twice, against
+callgrind: a scan removal worth **0.045 %** by Ir read **-1.31 % [-2.34,
+-0.27]** and **-1.46 % [-2.68, -0.23]** over three sittings with **22 of 26
+blocks faster**. The four response-path filters, worth **-0.282 %** by Ir,
+read **-2.20 % [-3.63, -0.78]** with 6 of 6 blocks faster.
+
+**The mechanism is code layout and the ABBA schedule does not cancel it.**
+Moving one function's body shifts every function after it, and I-cache and
+branch-predictor alignment shift with it. That bias is a *fixed property of
+the binary pair*: every block sees the same amount of it, so the block-to-block
+variance the CI prices says nothing about it. A repeatable, direction-correct,
+interval-clearing result is exactly what layout bias looks like.
+
+**So: callgrind Ir for anything under ~2 %.** It is deterministic and
+layout-blind, one run per binary settles it, and the recipe is at the top of
+this section. `ab_wall` is for changes big enough to clear layout bias, and
+for changes Ir cannot see.
+
+**And Ir has the mirror-image blind spot: it cannot price memory.** An
+allocator call and a cache miss are one `call` and one `mov` to callgrind. The
+scan removal, which allocates nothing, shows a 25x Ir-to-wall gap — pure
+layout. The response-path filters, which remove ~700 `GameState` *clones* a
+run, show 8x, and some of that is real work Ir undercounts. **Quote both
+numbers whenever a change adds or removes allocations, and let neither stand
+alone.**
 
 **When you do want a clock number, use `scripts/ab_wall.py` and run its null
 control — and read the null's own resolution, because it is the box's, not the
@@ -3978,10 +4006,10 @@ the table above is safe to compress:
 
 ## Log
 
-### Eighty-fourth pass — an extraction that cost 1.4 %, and a census that had to learn what a unit of cost is
+### Eighty-fourth pass — the wall clock overstated a change twenty-five-fold, and the census had to learn what a unit of cost is
 
-**0. `cube` -1.46 % / `fixed` -1.31 % from restoring one memoized lookup, and
-the bug was in this branch's own refactor.** `c248e18d` pulled the CR 602.5g/h
+**0. `fixed` -0.045 % / `cube` -0.063 % from restoring one memoized lookup —
+and this entry first claimed thirty times that, off `ab_wall`.** `c248e18d` pulled the CR 602.5g/h
 summoning-sickness gate out of `activate_ability_inner` so the bot's
 `available_mana` could ask it too, and took `card_id` as its parameter. Inside
 that function the battlefield entry is reached through `bf_src!()`, a
@@ -3991,22 +4019,46 @@ is a linear scan. Every tap-gated activation paid the scan — and
 games**.
 
 ```text
-ab_wall, --warmup, 3 threads          median B/A      95 % CI        blocks
-cube  400 games x 8, seed 11, 10 blk    0.9854    -2.68 .. -0.23 %    8/10
-fixed 2,000 games x 4, seed 11, 8 blk   0.9869    -2.34 .. -0.27 %    7/8
-fixed  same pair, repeated               0.975    -5.18 .. +0.10 %    7/8
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+  fixed  1,126,746,424 -> 1,126,244,131   -0.045 %
+  cube   3,433,890,251 -> 3,431,710,915   -0.063 %
 ```
 
-**That third row is the pass's other lesson, and it is about `ab_wall` rather
-than about the code.** The same binary pair on the same box, same workload,
-same eight blocks: **-1.31 % [-2.34, -0.27] and -2.5 % [-5.18, +0.10]**. The
-point estimates differ by a factor of two and one interval clears zero while
-the other does not. **The reported CI is within-run: it prices the block
-spread of that sitting, not the spread of sittings.** Twenty-two of twenty-six
-blocks across all three runs came back faster, which is what actually carries
-the claim. **Repeat the pair before quoting anything under about 2 %**, and
-quote the direction and the block count alongside the interval — a lone
-"significant" row is one quiet minute away from being a lone "flat" one.
+**⚠ THOSE ARE NOT THE NUMBERS THIS ENTRY WAS FIRST WRITTEN WITH, AND THE
+CORRECTION IS THE MOST USEFUL THING IN THE PASS.** It shipped quoting
+`ab_wall`: **`cube` -1.46 % [-2.68, -0.23] over 10 blocks and `fixed` -1.31 %
+[-2.34, -0.27] over 8**, and a third run of the same pair read -2.5 %
+[-5.18, +0.10]. Three sittings, **22 of 26 blocks faster**, two intervals
+clearing zero — and the change is worth **0.045 %**. The wall clock overstated
+it by a factor of twenty-five, *repeatably and in the right direction*.
+
+**The mechanism is code layout, and ABBA does not cancel it.** Moving one
+function's body shifts every function after it; I-cache and branch-predictor
+alignment shift with it, and that bias is a fixed property of the binary pair.
+Every block sees the same bias, so block-to-block variance — which is what the
+CI prices — says nothing about it. **The interval measures the box's noise
+between blocks, never the layout difference between the two binaries.**
+
+**So the rule is about which instrument, not about how many blocks.**
+*Callgrind Ir for anything under ~2 %*: it is deterministic, layout-blind, and
+one run per binary settles it. `ab_wall` is for changes big enough to clear
+layout bias, and for changes Ir cannot see at all.
+
+**Which is the other half, and it cuts the other way.** Ir counts
+instructions, not memory: an allocator call and a cache miss are one `call`
+and one `mov` to callgrind. The four response-path filters (item 2 and
+`1f007fee`) remove ~700 `GameState` *clones* a run from `fixed`, and read
+**-0.282 % by Ir against -2.20 % by wall clock** — an 8x gap where this
+entry's scan removal, which allocates nothing, shows 25x. Part of that gap is
+layout and part is real memory work Ir cannot price. **Quote both numbers for
+a change that adds or removes allocations, and do not let either stand
+alone.**
+
+```text
+all four response-path filters, same callgrind recipe
+  fixed  1,129,428,617 -> 1,126,244,131   -0.282 %   (ab_wall read -2.20 %)
+  cube   3,434,209,196 -> 3,431,710,915   -0.073 %
+```
 
 **The rule, and it is about extraction rather than about mana: a helper that
 takes an *id* where its caller holds the *thing* converts a memoized lookup
@@ -4017,8 +4069,8 @@ This is the second cost that unification has hidden on this branch (the first
 was the tapped term drifting between four copies of one conjunction).
 
 **1. The payment census learned that a failed payment is not a unit of cost.**
-Removing 700 probes from `fixed` read -2.20 %; removing 64 from the same pool
-one commit later read flat, because `auto_tap_for_cost_inner` returns before
+Removing 700 probes from `fixed` is worth -0.282 % by Ir; removing 64 from
+the same pool one commit later is worth nothing measurable, because `auto_tap_for_cost_inner` returns before
 building anything when the pool covers the cost or the board has nothing to
 tap. `pay_taps` now reports calls / early returns / tables / taps, which is
 the work rather than the count — see "How to measure". **A census that counts
@@ -4064,7 +4116,7 @@ pre-mask snapshot deserializes to `0`, which is the same thing the old empty
 hard parse error for a field whose whole content is two bits.
 
 **5. REFUTED — the battlefield-index hint on the tap path, built and
-reverted.** `activate_ability_inner` opens with
+reverted, and item 0's correction is what makes the refutation safe.** `activate_ability_inner` opens with
 `self.battlefield.iter().position(|c| c.id == card_id)`, once per activation;
 the auto-tapper's two selection loops already carry `ManaSourceInfo::bf_idx`
 (`source_card` uses it), so an `activate_ability_at` taking a validated hint
@@ -4074,15 +4126,16 @@ removes that scan from all ~113 k bench taps. **Flat on both pools** —
 cost or nothing, and it was nothing. Reverted: a second entry point and a
 seventh parameter are not worth an unmeasurable scan.
 
-**And the contrast with item 0 is the finding.** Structurally the same
-change — remove one linear battlefield scan from the same function on the
-same path — and one pays 1.3-1.5 % while the other pays zero. The difference
-is that item 0's scan was a *duplicate*: `bf_pos` is computed regardless and
-`bf_src!()` memoizes it, so the extracted gate's own `battlefield_find` was
-the second walk of the same Vec, run after the first had already pulled it
-through cache. **A duplicate walk and a first walk are not the same cost, and
-"it is O(n) on a hot path" does not distinguish them.** Look for the walk that
-something else has already done.
+**The `ab_wall` reading was FLAT and the reason it can be trusted is Ir.**
+When item 0's wall-clock number was still believed, this looked like the
+puzzle of the pass: two structurally identical scan removals on one path, one
+worth 1.4 % and one worth nothing. Ir dissolves it — item 0 is 0.045 %, so
+both are the same size, which is *below what the wall clock can resolve*.
+There was never an asymmetry to explain. **A contradiction between two
+measurements of the same shape is a reason to distrust the instrument before
+inventing a mechanism**, and the mechanism invented here (a duplicate walk
+costing more than a first one) was plausible enough to have been written down
+as a rule.
 
 ### Eighty-third pass — a gate walk hoisted, an ungated walk priced and then taken, and a suite gate that was a coin flip
 

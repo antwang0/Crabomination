@@ -60,18 +60,21 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    `--bench`'s stall split. A "do not re-open" written against an *argument*
    dates when the evidence moves; one written against a *measurement* does
    not.
-1d. **`ab_wall`'s CI is within-run.** The same pair, box and workload read
-   -1.31 % [-2.34, -0.27] and -2.5 % [-5.18, +0.10] on two sittings — one
-   clears zero, one does not. **Repeat the pair before quoting anything under
-   ~2 %**, and quote direction and block count with the interval. **Refuted
-   this pass, do not re-take:** the battlefield-index hint on the tap path
-   (`activate_ability_at`), flat on both pools — its scan is the *first* walk
-   of the Vec, where the one that paid 1.4 % was a *duplicate*. A duplicate
-   walk and a first walk are not the same cost.
+1d. **⚠ `ab_wall` CANNOT RESOLVE A SUB-1 % CHANGE AND ITS CI WILL NOT SAY SO
+   — use callgrind Ir under ~2 %.** Two claims this branch published off the
+   wall clock were re-measured with Ir and are wrong by 25x and 8x
+   (**0.045 %** read as -1.31 %, **-0.282 %** read as -2.20 %), each with
+   direction-correct, interval-clearing, *repeatable* readings. The cause is
+   code layout: it is a fixed property of the binary pair, so the ABBA
+   schedule cancels host drift and never touches it. Ir's mirror-image blind
+   spot is memory — quote both for a change that moves allocations. Full
+   write-up in PERF "How to measure" and the eighty-fourth-pass Log.
+   **Refuted this pass, do not re-take:** the battlefield-index hint on the
+   tap path (`activate_ability_at`), flat by Ir as well as by clock.
 1c. **A helper that takes an *id* where its caller holds the *thing* turns a
    memoized lookup into a search.** This branch's own CR 602.5g/h extraction
-   did it on the tap path and cost **`cube` 1.46 % / `fixed` 1.31 %** until it
-   was passed the borrow instead. Second time unification has hidden a cost
+   did it on the tap path; **`fixed` -0.045 % / `cube` -0.063 % by Ir** to
+   pass the borrow instead. Second time unification has hidden a cost
    here. When merging two walkers, check what each caller had already
    resolved before fixing the parameter list.
 1b. **`CRAB_PAY_FAILS` has now rewritten (-51)(b) twice, and both are in
@@ -80,13 +83,14 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    probe/committed split refuted the framing — **310 of 30,272 rollbacks are
    committed, 1.02 %**, so what is left in the 23.8 % is the affordance sweep
    and the lever is a **cheaper or rarer probe**, not a better estimate. One
-   such path is taken (`pick_stack_response`, `fixed` **-2.20 %**); the census
+   such path is taken (`pick_stack_response`, and the whole family is
+   `fixed` **-0.282 % by Ir**); the census
    will name the next one the same way — read it per pool, because the pools
    disagree completely. **And count the thing you are about to blame:** the
    widening hypothesis was good, and a counter killed it in one run at 0.0 %
    on the pool that had the problem. **And it now reports cost, not just
    count** (`pay_taps`: calls / early returns / tables / taps) — 700 probes
-   removed read -2.20 %, 64 read flat, and only the work counter tells them
+   removed measures ~10x what 64 do, and only the work counter tells them
    apart before a build.
 2. **A commit that moves play** — PERF "How to measure": `--vs` after the
    null run, `CRAB_SIM_REJECTS` and `CRAB_PAY_FAILS` **swept, not sampled**,
