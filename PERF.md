@@ -453,6 +453,20 @@ the binary pair*: every block sees the same amount of it, so the block-to-block
 variance the CI prices says nothing about it. A repeatable, direction-correct,
 interval-clearing result is exactly what layout bias looks like.
 
+**And the null control does not catch it** — the script's footer says to run
+one, and it is still worth running, but a null puts the *same binary* on both
+sides, so its layout difference is zero by construction. **The null validates
+the box; nothing in this harness validates the pair.**
+
+**This does not contradict the seventy-third pass's Ir:wall ratio of 2.15x**
+(the probe-removal entry below, `-1.29 %` wall against `-2.775 %` Ir with a
+same-hour flat null). That change was ~2.8 % of Ir — *above* the layout floor,
+where the ratio means something. Both of the numbers corrected here were under
+0.3 % of Ir, where it means nothing. That entry's own closing line already
+said it: **"anything under ~2 % of Ir will not show on the clock here at
+all."** What the eighty-fourth pass adds is that it does not fail to show —
+it shows as a significant result of the wrong size.
+
 **So: callgrind Ir for anything under ~2 %.** It is deterministic and
 layout-blind, one run per binary settles it, and the recipe is at the top of
 this section. `ab_wall` is for changes big enough to clear layout bias, and
