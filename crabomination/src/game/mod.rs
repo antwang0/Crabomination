@@ -8504,9 +8504,13 @@ impl GameState {
             if type_changing {
                 return crate::game::layers::apply_layers(bf, fx);
             }
+            // One CR 613.8 gate walk for the whole board, as `apply_layers`
+            // does on the branch above — the third site the eighty-third
+            // pass's hoist missed, and the one the SBA sweep reaches.
+            let gates = crate::game::layers::SecondPass::of(fx);
             bf.iter()
                 .filter(|c| c.definition.is_creature())
-                .map(|c| crate::game::layers::apply_layers_one(c, fx))
+                .map(|c| crate::game::layers::apply_layers_one_gated(c, fx, gates))
                 .collect()
         }
         if let Some(fx) = self.frozen_effects() {
