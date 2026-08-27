@@ -9210,39 +9210,19 @@ fn trim_blocks_to_payable_tax(
     blocks.retain(|(b, _)| keep.contains(b));
 }
 
-/// A creature the bot may legally declare as a blocker — `declare_blockers`'
-/// opening conjunction (CR 509.1a), read off the **computed** view the way
-/// the engine reads it.
+/// A creature the bot may legally declare as a blocker: the engine's own
+/// `blocker_self_block`, so the planner cannot offer a blocker the
+/// declaration gate then rejects — and cannot decline one a CR 509.1b
+/// requirement obliges either, which is the direction that deadlocks.
 ///
-/// Every term here is one the engine will reject the whole declaration for,
-/// and three of them were previously read off the instance: a granted
-/// `CantBlock` (Duel Tactics, Postmortem Professor) or `Decayed` bars a
-/// blocker the printed walk still offers, and `can_block()`'s printed type
-/// line calls a de-animated Vehicle a creature and an animated land not one.
-/// Four rejections a run on the *bench* pool alone (PERF (-55),
-/// `combat.rs:1762`).
-///
-/// Deliberately still stricter than the engine in one place: it refuses a
-/// tapped blocker outright where the engine has a `tapped_creatures_can_block`
-/// escape. Offering those is a widening, not a bug fix, so it wants its own
-/// gate.
-///
-/// Used by every blocker-candidate pass, so the gang-block / must-be-blocked
-/// / menace top-up passes cannot assemble a declaration the engine throws out.
+/// It used to be a hand-written subset read off the *printed* view. See
+/// `GameState::blocker_self_block` for what each of the four copies missed.
 fn bot_can_block(state: &GameState, c: &crate::card::CardInstance) -> bool {
-    use crate::card::Keyword;
-    let Some(cp) = state.computed_permanent(c.id) else {
-        // Not a battlefield permanent by the time the pass ran; the printed
-        // reads are all there is.
-        return c.can_block()
-            && !c.has_keyword(&Keyword::Decayed)
-            && !c.has_keyword(&Keyword::CantBlock);
-    };
-    cp.card_types.contains(&crate::card::CardType::Creature)
-        && !c.tapped
-        && c.detained_by.is_none()
-        && !cp.keywords.has_kw(&Keyword::CantBlock)
-        && !cp.keywords.has_kw(&Keyword::Decayed)
+    match state.computed_permanent(c.id) {
+        Some(cp) => state.blocker_can_block_anything(c, &cp),
+        // Not a battlefield permanent by the time the pass ran.
+        None => false,
+    }
 }
 
 /// The seat's legal blockers, resolved once (CR 509.1a).

@@ -167,3 +167,116 @@ fn cr_508_1d_a_non_creature_must_attacker_is_not_able() {
     g.perform_action(GameAction::DeclareAttackers(vec![]))
         .expect("an uncrewed Vehicle is not a creature, so it is not able");
 }
+
+// ── The block side of the same class ────────────────────────────────────────
+//
+// CR 702.39's Provoke and CR 509.1b's "must block if able" ask the same
+// question about a *blocker*, and their `able` was four gates against the
+// declaration gate's ~twenty. Same consequence, one step later in the turn:
+// the requirement says a creature is able, the gate rejects it, and the
+// defending seat has no legal block declaration in either direction.
+
+fn provoked_board(prep: impl FnOnce(&mut GameState, CardId, CardId)) -> GameState {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.clear_sickness(atk);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    // CR 702.39 — the provoke resolution sets `must_block` and untaps.
+    g.battlefield_find_mut(blocker).expect("on the battlefield").must_block = Some(atk);
+    prep(&mut g, blocker, atk);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g
+}
+
+/// The control, and it is what stops the fix from being "delete the
+/// requirement": an unrestricted provoked creature really must block.
+#[test]
+fn cr_702_39_an_unrestricted_provoked_creature_is_still_required() {
+    let mut g = provoked_board(|_, _, _| {});
+    g.perform_action(GameAction::DeclareBlockers(vec![]))
+        .expect_err("CR 702.39 — it is able, so it must block its provoker");
+}
+
+/// CR 701.35 — a detained creature can't block, so it is not able and
+/// declaring no blocks is legal. Before the walkers were unified the seat had
+/// no legal declaration in either direction.
+#[test]
+fn cr_702_39_a_detained_provoked_creature_is_not_able() {
+    let mut g = provoked_board(|g, b, _| {
+        g.battlefield_find_mut(b).expect("on the battlefield").detained_by = Some(0);
+    });
+    let blocker = g.battlefield.iter().find(|c| c.controller == 1).expect("blocker").id;
+    let attacker = g.attacking()[0].attacker;
+    g.clone()
+        .perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect_err("CR 701.35 — a detained permanent can't block");
+    g.perform_action(GameAction::DeclareBlockers(vec![]))
+        .expect("and so it is not able, and blocking with nobody is legal");
+}
+
+/// CR 702.15 — landwalk is a *pair* rule the two-creature check cannot see,
+/// because it reads the defending player's board. A provoked creature that
+/// cannot legally block its provoker is not able.
+#[test]
+fn cr_702_39_a_landwalked_provoked_creature_is_not_able() {
+    let mut g = provoked_board(|g, _, atk| {
+        g.battlefield_find_mut(atk)
+            .expect("on the battlefield")
+            .granted_keywords_eot
+            .push(Keyword::Landwalk(LandType::Island));
+        g.add_card_to_battlefield(1, catalog::island());
+    });
+    let blocker = g.battlefield.iter().find(|c| c.controller == 1).expect("blocker").id;
+    let attacker = g.attacking()[0].attacker;
+    g.clone()
+        .perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect_err("CR 702.15 — islandwalk is unblockable while they control an Island");
+    g.perform_action(GameAction::DeclareBlockers(vec![]))
+        .expect("and so it is not able, and blocking with nobody is legal");
+}
+
+/// CR 509.1b — and the drift ran the *other* way too: seven
+/// "can't block unless …" families lived only in the bot's mirror, so the
+/// declaration gate did not enforce them at all and the restriction did
+/// nothing on the real play path.
+#[test]
+fn cr_509_1b_the_declaration_gate_enforces_the_unless_families() {
+    for kw in [
+        Keyword::CantAttackOrBlockUnlessCityBlessing,
+        Keyword::CantAttackOrBlockUnlessDelirium,
+        Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn,
+        Keyword::CantAttackOrBlockUnlessDescend(3),
+        Keyword::CantAttackOrBlockUnlessCardsInExile(7),
+        Keyword::CantAttackOrBlockUnlessHandSizeAtMost(0),
+    ] {
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, catalog::hill_giant());
+        g.clear_sickness(atk);
+        let gated = CardDefinition {
+            name: "Gated Wall",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 4,
+            keywords: vec![kw.clone()],
+            ..Default::default()
+        };
+        let blocker = g.add_card_to_battlefield(1, gated);
+        // A card in hand, so the hand-size gate has something to fail on.
+        g.add_card_to_hand(1, catalog::plains());
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: atk,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("attack");
+        advance_to(&mut g, TurnStep::DeclareBlockers);
+        g.perform_action(GameAction::DeclareBlockers(vec![(blocker, atk)]))
+            .unwrap_err();
+    }
+}

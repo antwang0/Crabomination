@@ -13858,99 +13858,6 @@ impl GameState {
             .collect()
     }
 
-    /// True if `blocker_id` can legally block at least one of the prebuilt
-    /// attacker views (build them with [`computed_attackers`]).
-    ///
-    /// [`computed_attackers`]: Self::computed_attackers
-    /// CR 509.1a/b — the blocker-side gates that don't depend on which
-    /// attacker is being blocked. Shared by `can_block_any_computed_attacker`
-    /// (the affordance/bot scan) and `blocker_can_block_attacker` (the
-    /// per-pair check) so the two can't drift apart.
-    fn blocker_side_gates_allow_block(
-        &self,
-        blocker: &CardInstance,
-        blocker_cp: &ComputedPermanent,
-    ) -> bool {
-        let owner = blocker.controller;
-        if blocker_cp.keywords.has_kw(&Keyword::CantBlock)
-            || blocker_cp.keywords.has_kw(&Keyword::Decayed)
-        {
-            return false;
-        }
-        if blocker_cp.keywords.has_kw(&Keyword::CantAttackOrBlockUnlessEvenCounters)
-            && blocker.counters.values().sum::<u32>() % 2 != 0
-        {
-            return false;
-        }
-        // CR 508.1g — the whole "unless its controller pays {N}" family (flat,
-        // per-counter, per-enchanter-hand-card, per-permanent) is legal only if
-        // the seat can actually produce the tax.
-        let tax = self.attack_block_keyword_tax(blocker.id, &blocker_cp.keywords, false);
-        if tax > 0 && !self.could_pay_generic(owner, tax) {
-            return false;
-        }
-        // Hazoret-class hand-size gate, delirium, "a creature died this turn",
-        // Descend N and the city's blessing.
-        if blocker_cp.keywords.iter().any(|k| match k {
-            Keyword::CantAttackOrBlockUnlessHandSizeAtMost(n) => {
-                self.players[owner].hand.len() as u32 > *n
-            }
-            Keyword::CantAttackOrBlockUnlessDelirium => !self.delirium_active(owner),
-            Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn => {
-                self.players[owner].creatures_died_this_turn == 0
-            }
-            Keyword::CantAttackOrBlockUnlessDescend(n) => {
-                self.descend_count(owner) < *n as usize
-            }
-            Keyword::CantAttackOrBlockUnlessCityBlessing => !self.players[owner].city_blessing,
-            Keyword::CantAttackOrBlockUnlessCardsInExile(n) => (self.exile.len() as u32) < *n,
-            // Branded Brawlers: your own untapped land locks the block.
-            Keyword::CantBlockIfYouHaveUntappedLand => self
-                .battlefield
-                .iter()
-                .any(|c| c.controller == owner && c.definition.is_land() && !c.tapped),
-            _ => false,
-        }) {
-            return false;
-        }
-        // CR 509.1b — Hollow Warrior: a spare untapped match must exist to tap,
-        // and it can be neither the blocker nor a declared attacker.
-        if let Some(f) = blocker_cp.keywords.iter().find_map(|kw| match kw {
-            Keyword::AttackBlockCostTapAnother(f) => Some((**f).clone()),
-            _ => None,
-        }) && !self.battlefield.iter().any(|c| {
-            c.controller == owner
-                && !c.tapped
-                && c.id != blocker.id
-                && !self.attacking.iter().any(|a| a.attacker == c.id)
-                && self.evaluate_requirement_on_card(&f, c, owner)
-        }) {
-            return false;
-        }
-        // "Can't block unless you control N+ [filter]" (Topiary Stomper).
-        // Attack-only gates (Lambholt Pacifist) don't restrict blocking.
-        if let Some((req, min, excl)) = blocker_cp.keywords.iter().find_map(|kw| match kw {
-            Keyword::CantAttackOrBlockUnlessYouControlCount {
-                filter, min, attack_only: false, exclude_self, ..
-            } => Some((filter.clone(), *min, *exclude_self)),
-            _ => None,
-        }) {
-            let n = self
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.controller == owner
-                        && !(excl && c.id == blocker.id)
-                        && self.evaluate_requirement_on_card(&req, c, owner)
-                })
-                .count();
-            if (n as u32) < min {
-                return false;
-            }
-        }
-        true
-    }
-
     pub(crate) fn can_block_any_computed_attacker(
         &self,
         blocker_id: CardId,
@@ -14017,9 +13924,7 @@ impl GameState {
         blocker: &CardInstance,
         blocker_cp: &ComputedPermanent,
     ) -> bool {
-        blocker_cp.card_types.contains(&crate::card::CardType::Creature)
-            && !blocker.tapped
-            && self.blocker_side_gates_allow_block(blocker, blocker_cp)
+        self.blocker_self_block(blocker, Some(blocker_cp)).is_none()
     }
 
     /// True if `blocker_id` can legally block `attacker_id`.
@@ -14049,27 +13954,32 @@ impl GameState {
     /// pair. **Callers must have checked [`blocker_can_block_anything`]
     /// first**; the two halves together are the whole rule, and
     /// `blocker_can_block_attacker` is the composition that can't drift.
-    pub(crate) fn blocker_can_block_attacker_pair(
+    pub(crate) fn blocker_pair_block(
         &self,
         blocker: &CardInstance,
         blocker_cp: &ComputedPermanent,
         attacker: &CardInstance,
         atk_cp: Option<&ComputedPermanent>,
-    ) -> bool {
+        // CR 702.15 reads the *defending player*'s lands, which is the
+        // blocker's controller except in a team format where a teammate is
+        // blocking. `declare_blockers` knows it exactly; the planner and the
+        // client pass the blocker's own seat.
+        defender: usize,
+    ) -> Option<(u32, GameError)> {
         let attacker_id = attacker.id;
         // CR 702.158d — Space Beleren's +1: creatures can be blocked this turn
         // only by creatures in the same sector.
         if self.sector_block_lock_turn == Some(self.turn_number)
             && blocker.sector != attacker.sector
         {
-            return false;
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         // CR 509.1b — Mogg Toady: strictly more creatures than the attacker's
         // controller. Attacker-dependent, so it stays here.
         if blocker_cp.keywords.has_kw(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
             && self.creature_count(blocker.controller) <= self.creature_count(attacker.controller)
         {
-            return false;
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
         let atk_colors = atk_cp.map(|c| c.colors).unwrap_or_default();
@@ -14090,7 +14000,7 @@ impl GameState {
             }),
             _ => false,
         }) {
-            return false;
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         // CR 701.54c (level 1+) — "Your Ring-bearer … can't be blocked by
         // creatures with greater power." Same shape as Skulk, but keyed on the
@@ -14099,13 +14009,13 @@ impl GameState {
             && self.players[attacker.controller].ring_temptations >= 1
             && blocker_cp.power > atk_power
         {
-            return false;
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         if self.block_barred_by_protection_filter(atk_kws, attacker.controller, blocker.id) {
-            return false;
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         if self.blocker_matching_restriction_bars(blocker, &blocker_cp.keywords, attacker_id) {
-            return false;
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         // The rest of `declare_blockers`' attacker-keyword gates, in one pass
         // over the computed set. **They were missing here and the bot noticed
@@ -14114,7 +14024,6 @@ impl GameState {
         // engine rejects the *batch*, so one islandwalker against a defender
         // holding an Island cost the bot every block it had planned. See
         // ENGINE_BACKLOG P3.
-        let defender = blocker.controller;
         for kw in atk_kws {
             let barred = match kw {
                 // CR 702.15 — plain landwalk, unless a `LandwalkIgnored`
@@ -14169,10 +14078,60 @@ impl GameState {
                 _ => false,
             };
             if barred {
-                return false;
+                return Some((line!(), GameError::CannotBlock(blocker.id)));
             }
         }
-        can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power)
+        // CR 509.1b — the four families that lived only in
+        // `declare_blockers` until the eighty-first pass, so the planner and
+        // the requirement loops could not see them.
+        //
+        // Kozilek's Pathfinder — "can't block this creature this turn".
+        if self.cant_block_pairs.contains(&(blocker.id, attacker_id)) {
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
+        }
+        // Burden of Proof — "can't block [creature type]s".
+        if let Some(a) = atk_cp
+            && blocker_cp.keywords.iter().any(|k| {
+                matches!(k, Keyword::CantBlockCreatureType(t)
+                    if a.subtypes.creature_types.contains(t))
+            })
+        {
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
+        }
+        // Ironclaw Curse — "can't block creatures with power equal to or
+        // greater than this creature's toughness".
+        if blocker_cp.keywords.has_kw(&Keyword::CantBlockPowerAtLeastOwnToughness)
+            && atk_cp.is_some_and(|a| a.power >= blocker_cp.toughness)
+        {
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
+        }
+        // Monstrous Hound — more lands than the attacker's controller.
+        if blocker_cp.keywords.has_kw(&Keyword::CantBlockUnlessMoreLandsThanAttacker)
+            && self.player_tally(blocker.controller, crate::card::PlayerTally::LandsControlled)
+                <= self.player_tally(attacker.controller, crate::card::PlayerTally::LandsControlled)
+        {
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
+        }
+        if !can_block_attacker_computed(blocker, blocker_cp, atk_kws, atk_colors, atk_power) {
+            return Some((line!(), GameError::CannotBlock(blocker.id)));
+        }
+        None
+    }
+
+    /// [`blocker_pair_block`](Self::blocker_pair_block) as a bool, for the
+    /// callers that only need the answer. **Callers must have checked
+    /// [`blocker_can_block_anything`](Self::blocker_can_block_anything)
+    /// first**; the two halves together are the whole rule, and
+    /// `blocker_can_block_attacker` is the composition that can't drift.
+    pub(crate) fn blocker_can_block_attacker_pair(
+        &self,
+        blocker: &CardInstance,
+        blocker_cp: &ComputedPermanent,
+        attacker: &CardInstance,
+        atk_cp: Option<&ComputedPermanent>,
+    ) -> bool {
+        self.blocker_pair_block(blocker, blocker_cp, attacker, atk_cp, blocker.controller)
+            .is_none()
     }
 
     /// True when some opponent of `seat` controls a battlefield permanent with
