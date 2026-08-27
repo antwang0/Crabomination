@@ -41,6 +41,7 @@ pub mod server;
 pub mod snapshot;
 pub mod sos_mode;
 pub mod team;
+pub mod zone;
 
 // `CardInstance` (in `crabomination_base`) round-trips through serde by card
 // *name* and rebuilds the definition via a resolver hook. Install that resolver

@@ -18268,9 +18268,9 @@ impl GameState {
                         let mut hand_exiled = 0usize;
                         for zone in ["gy", "hand", "lib"] {
                             let ids: Vec<CardId> = match zone {
-                                "gy" => &self.players[owner].graveyard,
-                                "hand" => &self.players[owner].hand,
-                                _ => &self.players[owner].library,
+                                "gy" => &*self.players[owner].graveyard,
+                                "hand" => &*self.players[owner].hand,
+                                _ => &*self.players[owner].library,
                             }
                             .iter()
                             .filter(|c| c.definition.name == name)
@@ -24608,9 +24608,9 @@ impl GameState {
 
             Effect::ExchangeGraveyardAndLibrary { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
-                let gy = std::mem::take(&mut self.players[p].graveyard);
-                let lib = std::mem::replace(&mut self.players[p].library, gy);
-                self.players[p].graveyard = lib;
+                let gy = std::mem::take(&mut *self.players[p].graveyard);
+                let lib = std::mem::replace(&mut *self.players[p].library, gy);
+                *self.players[p].graveyard = lib;
                 self.shuffle_library(p, events);
                 Ok(())
             }

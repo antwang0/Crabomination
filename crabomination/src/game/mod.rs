@@ -8826,16 +8826,16 @@ impl GameState {
                     })
                     // The Incarnation cycle's `GraveyardAnthem` is the gather's
                     // one zone-special grant — read off *graveyard* cards'
-                    // printed statics. Matched by variant rather than through
-                    // `card_can_grant_keyword` so the walk stays a length check
-                    // per card on a zone that grows all game.
-                    || p.graveyard.iter().any(|c| {
+                    // printed statics. The zone answers "is there one here" off
+                    // its own memo (`crate::zone::Graveyard`), so a graveyard
+                    // that grows all game costs one load rather than a walk.
+                    || (p.graveyard.has_anthem() && p.graveyard.iter().any(|c| {
                         c.definition.static_abilities.iter().any(|sa| {
                             matches!(&sa.effect,
                                 crate::effect::StaticEffect::GraveyardAnthem { keyword, .. }
                                 if pred(keyword))
                         })
-                    })
+                    }))
             })
     }
 
@@ -12541,7 +12541,12 @@ impl GameState {
         // printed statics, gated on the owner controlling a land of the
         // required subtype. The effect's `source` is the gy card's id, so
         // removing the gy card causes the effect to fall out.
-        for player in &self.players {
+        //
+        // Every other whole-collection pass in this function is behind a
+        // presence gate and this one has nowhere to put one — the walk *is*
+        // the gate — so the gate lives on the zone: `Graveyard::has_anthem`
+        // is a memo cleared by the zone's own `&mut` entry points.
+        for player in self.players.iter().filter(|p| p.graveyard.has_anthem()) {
             for card in &player.graveyard {
                 for sa in &card.definition.static_abilities {
                     let crate::effect::StaticEffect::GraveyardAnthem { land_type, keyword } =
@@ -13772,13 +13777,13 @@ impl GameState {
             // `&mut` zone borrows can't be live at once.
             for zi in 0..4 {
                 let pl = &mut self.players[p];
-                let zone = match zi {
+                let zone: &mut Vec<crate::card::CardInstance> = match zi {
                     0 => &mut pl.library,
                     1 => &mut pl.hand,
                     2 => &mut pl.graveyard,
                     _ => &mut pl.command,
                 };
-                collect(std::mem::take(&mut **zone), &mut owned);
+                collect(std::mem::take(zone), &mut owned);
             }
         }
 
@@ -20369,9 +20374,9 @@ impl GameState {
                         // Grafdigger's Cage — a locked card can't leave the
                         // library/graveyard for the battlefield while up.
                         let src = match from_zone {
-                            crate::card::Zone::Graveyard => &self.players[player].graveyard,
-                            crate::card::Zone::Hand => &self.players[player].hand,
-                            _ => &self.players[player].library,
+                            crate::card::Zone::Graveyard => &*self.players[player].graveyard,
+                            crate::card::Zone::Hand => &*self.players[player].hand,
+                            _ => &*self.players[player].library,
                         };
                         let def = src.iter().find(|c| c.id == *card_id).map(|c| c.definition.clone());
                         let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
@@ -20381,14 +20386,16 @@ impl GameState {
                         let taken = if blocked {
                             None
                         } else {
-                            let src = match from_zone {
-                                crate::card::Zone::Graveyard => {
-                                    &mut self.players[player].graveyard
+                            match from_zone {
+                                crate::card::Zone::Graveyard => Self::take_card(
+                                    &mut self.players[player].graveyard,
+                                    *card_id,
+                                ),
+                                crate::card::Zone::Hand => {
+                                    Self::take_card(&mut self.players[player].hand, *card_id)
                                 }
-                                crate::card::Zone::Hand => &mut self.players[player].hand,
-                                _ => &mut self.players[player].library,
-                            };
-                            Self::take_card(src, *card_id)
+                                _ => Self::take_card(&mut self.players[player].library, *card_id),
+                            }
                         };
                         if let Some(card) = taken {
                             self.place_card_in_dest(card, player, &to, &mut events);
@@ -20974,9 +20981,9 @@ impl GameState {
                 if !name.is_empty() {
                     for zone in ["gy", "hand", "lib"] {
                         let ids: Vec<CardId> = match zone {
-                            "gy" => &self.players[who].graveyard,
-                            "hand" => &self.players[who].hand,
-                            _ => &self.players[who].library,
+                            "gy" => &*self.players[who].graveyard,
+                            "hand" => &*self.players[who].hand,
+                            _ => &*self.players[who].library,
                         }
                         .iter()
                         .filter(|c| c.definition.name == name)
@@ -22294,7 +22301,7 @@ impl GameState {
             _ => None,
         }));
         for p in &self.players {
-            for z in [&p.graveyard, &p.hand, &p.ante, &p.library] {
+            for z in [&*p.graveyard, &*p.hand, &*p.ante, &*p.library] {
                 ids.extend(z.iter().map(|c| c.id));
             }
         }
@@ -22317,7 +22324,7 @@ impl GameState {
         // is a CoW handle, so an `iter_mut()` per zone would both borrow the
         // whole seat *and* unshare it on every miss.
         let found = self.players.iter().enumerate().find_map(|(pi, p)| {
-            let zone = |z: usize, v: &CowBox<Vec<CardInstance>>| {
+            let zone = |z: usize, v: &[CardInstance]| {
                 v.iter().position(|c| c.id == id).map(|i| (pi, z, i))
             };
             zone(0, &p.hand)

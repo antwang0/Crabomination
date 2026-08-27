@@ -188,7 +188,10 @@ pub struct PlayerData {
     /// until written — see `crate::cow`.
     pub library: CowBox<Vec<CardInstance>>,
     pub hand: CowBox<Vec<CardInstance>>,
-    pub graveyard: CowBox<Vec<CardInstance>>,
+    /// The graveyard is the one zone with a wrapper of its own: it also
+    /// carries the answer two hot walkers ask of it. Reads and writes go
+    /// through `Deref`/`DerefMut` unchanged — see [`crate::zone::Graveyard`].
+    pub graveyard: crate::zone::Graveyard,
     /// The command zone — Commander commanders, Conspiracies, etc.
     /// (Phase I.) Cards arrive here either at game start (initial
     /// commander seating via `seat_commanders`) or via a zone-change
@@ -1103,7 +1106,7 @@ impl Player {
             kept_mana_this_turn: ManaPool::new(),
             library: CowBox::default(),
             hand: CowBox::default(),
-            graveyard: CowBox::default(),
+            graveyard: crate::zone::Graveyard::default(),
             command: CowBox::default(),
             may_spend_any_color_this_turn: false,
             ante: CowBox::default(),

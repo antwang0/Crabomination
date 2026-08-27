@@ -1914,8 +1914,22 @@ impl GameState {
         // Re-borrow the seat per zone: `Player` is a CoW handle, so three
         // `&mut` zone borrows can't be live at once.
         for zi in 0..3 {
+            // Ask with a shared borrow first: `Player` is a CoW handle and
+            // the zones are CoW boxes, so taking `&mut` on a zone with no
+            // match unshares it for nothing.
+            let pl = &self.players[owner];
+            let present = match zi {
+                0 => &*pl.graveyard,
+                1 => &*pl.hand,
+                _ => &*pl.library,
+            }
+            .iter()
+            .any(|c| c.definition.name == name.as_str());
+            if !present {
+                continue;
+            }
             let pl = &mut self.players[owner];
-            let zone = match zi {
+            let zone: &mut Vec<crate::card::CardInstance> = match zi {
                 0 => &mut pl.graveyard,
                 1 => &mut pl.hand,
                 _ => &mut pl.library,
