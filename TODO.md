@@ -76,19 +76,22 @@ its numbers live; put new numbers *there* and a pointer here.
    combat, both sides**; what is left is `evaluate_requirement_static` vs
    `evaluate_requirement_on_card`. P2 has no open correctness entries.
    `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, dead modes
-   suite-gated. **(-55) is down to 6**, all of them one site — the
-   `AllMustBlock` loop on `cube` s15 — across `cube` 1-24+42 at `--games 20`
-   and four other pools; the attack half is **0** everywhere. The tax's
-   `available_mana` optimism was it, and the fix is to stop estimating: PERF
-   (-55) carries the numbers and the +1.83 % it cost. **Generalisable, and it
-   found three bugs:** a "must" and a "can't" written as independent checks
-   can be jointly unsatisfiable, leaving a seat no legal declaration at all;
-   and **an estimate consumed as a *budget* has an asymmetric failure mode** —
-   under-count loses a swing, over-count loses the whole declaration — so ask
-   the engine at the sites that trim, and only there. Only the census finds
-   either. The 6 want a probe naming the *pass that built the plan*: the site
-   tag names the clause that rejected it, and two plausible fixes measured
-   exactly inert before a hand-built probe found the real cause.
+   suite-gated. **(-55) IS CLOSED: `CRAB_SIM_REJECTS` reads 0 in all 69
+   configurations tried** — `cube` 1-24+42 at `--games 20`, `cube` 25-45 at
+   `--games 12`, `all`/`sealed`/`sos`/`fixed` 1-12 at `--games 8` — from
+   470/91,438 when the instrument landed. **It stays the guard**: run it
+   before and after anything that touches a picker or a combat check, and
+   sweep seeds rather than sampling three. Three durable findings, all in
+   PERF (-55): a **restriction** and a **requirement** written as independent
+   checks can be jointly unsatisfiable (CR 509.1b vs 509.1c); **two
+   requirements naming one creature** are the same trap one level up, and
+   CR 509.1c's "maximum number" is the rule that resolves it; and **an
+   estimate consumed as a *budget* fails asymmetrically** — under-count loses
+   a swing, over-count loses the whole declaration — so ask the engine at the
+   sites that trim, and only there. Method note worth keeping: the site tag
+   names the clause that rejected a declaration and **never the pass that
+   built it**, and two plausible fixes measured exactly inert before a probe
+   printing the plan found the cause. Build that probe first next time.
 5a. **The dropped-"may" tail has one filter left worth running, and it is
    spent.** `audit_dropped_may.py`'s 341 findings were triaged twice by verb;
    the third cut is **"you may X. If you do, Y" in the *full* oracle** — 46 of

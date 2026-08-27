@@ -287,12 +287,26 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   `CantBeBlockedUnlessAllBlock` (Tromokratis) against `CantBlock` grants, and
   CR 508.1d's must-attack against the CR 613 hand-size power cap.
 
-  **Open on this entry, and small: 6 rejections on `cube` s15**, all at the
-  `AllMustBlock` loop, on a board where the planner leaves one able defender
-  unassigned. Not the contradiction above (that one is closed). The instrument
-  it wants is a probe naming the *pass that built the plan*, not the clause
-  that rejected it — the site tag cannot answer that, and two plausible fixes
-  measured exactly inert before a hand-built probe found the real cause.
+  **And the same trap one level up, which was the last six rejections: two
+  *requirements* naming one creature.** It blocks one attacker, so they can
+  never both be satisfied, and each loop asked about its own in isolation — a
+  Lure attacker, a provoker and one able defender had no legal declaration
+  either. CR 509.1c's "the **maximum number** of requirements" is the rule;
+  `block_spoken_for_elsewhere` excuses a blocker already assigned to an
+  attacker whose own requirement binds it, so both single-block plans are
+  legal and "block with nobody" is not. Pinned by
+  `server::bot::tests::two_block_requirements_on_one_creature_are_both_satisfiable`.
+  Full maximization over arbitrary requirement sets is still the documented
+  approximation; what is handled is the case that a creature can only be in
+  one place.
+
+  **`CRAB_SIM_REJECTS` now reads 0 in all 69 configurations run** — `cube`
+  1-24+42 at `--games 20`, `cube` 25-45 at `--games 12`, and the four other
+  pools at seeds 1-12 — from 470/91,438 when the instrument landed. Method
+  note: **the site tag names the clause that rejected a declaration and never
+  the pass that built it**, and two plausible fixes to the wrong pass measured
+  exactly inert before a throwaway probe printing the plan at each pass
+  boundary found the cause in one run. Build that probe first.
 
   Two known non-bugs the counter also surfaces, both in
   `attack_candidates_for_mcts` and both deliberate: the "all home" candidate

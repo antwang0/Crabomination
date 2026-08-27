@@ -7781,6 +7781,44 @@ of the four taxed seeds (12,800 games): s2 9 A-sweeps to 5 at 50.1 %, s22 4 to
 1, s11 2 to 0, s19 0 to 1. Directionally positive and resolvable by nothing at
 this sample — which is what 118 rejections in a 20-game census predicts.
 
+**AND THE LAST SIX WERE A CONTRADICTION BETWEEN TWO *REQUIREMENTS*, WHICH IS
+THE 509.1b/509.1c TRAP ONE LEVEL UP. (-55) IS CLOSED.** Two requirements that
+name the same creature can never both be satisfied — it blocks one attacker —
+and the five requirement loops each asked whether *their* requirement was met
+in isolation. A Lure attacker, a provoker, and one able defender: block
+nobody, block the Lure, block the provoker, **all three rejected**. CR 509.1c
+already resolves it — the defender satisfies the *maximum number* of
+requirements, and a creature blocking something that obliges it is the most
+any declaration gets out of it — so `block_spoken_for_elsewhere` excuses a
+blocker that is already assigned to an attacker whose own requirement binds
+it. The planner needed no change: `enforce_block_requirements` pins one
+requirement per blocker, first come, which was already the maximal
+declaration; the checker would not take it.
+
+```text
+CRAB_SIM_REJECTS=1, every configuration run          rejections
+cube 1-24 + 42   --games 20                                   0
+cube 25-45       --games 12                                   0
+all/sealed/sos/fixed seeds 1-12  --games 8                    0
+                                                    -----------
+                          69 configurations                   0
+```
+
+From 470/91,438 when the instrument landed, 118 at `50a075fa`, 6 before this.
+Flat on the clock (`ab_wall` 6 blocks on `cube` s15, mean 0.9894, CI -3.23 ..
++1.12 %, null +/-2.18 %) and `--bench` byte-identical.
+
+**Two notes on method, both earned expensively.**
+**`--vs` cannot gate a change to how the engine *resolves*** — it compares how
+two binaries *choose*, and this one read 50.0 % with all 160 pairs split over
+320 games on the very seed that carries the board, because the cross-play
+schedule draws its own jitter and never reached it. The census and a direct
+`declare_blockers` test are the gate.
+**The site tag names the clause that rejected a declaration and never the
+pass that built it.** Two plausible fixes to the wrong pass measured *exactly*
+inert before a throwaway probe printing the plan at each pass boundary found
+the cause in one run. Build that probe first.
+
 **(-55, as found) THE SIMULATION'S OWN PICKERS PROPOSE DECLARATIONS THE ENGINE THROWS
 OUT — 470 of 91,438, AND ON ONE `cube` BOARD 6.8 % OF THE ATTACKS.** Measured
 with `CRAB_SIM_REJECTS=1` (see "How to measure"), `--games 12 --threads 3`,
