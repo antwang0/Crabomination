@@ -105,7 +105,12 @@ PERF and ENGINE_BACKLOG already hold. Keep it near this length.
    sides. Its last item (`evaluate_requirement_static` vs
    `evaluate_requirement_on_card`) is *structurally* closed — the static
    walker's catch-all delegates, the card walker is exhaustive — so it wants
-   a guard, not a fix. `audit_stubs` 0/21,795, `audit_incomplete` 0,
+   a guard — **which now exists and found drift on its first run**: three
+   variants (`Untapped`, `HasGreatestPowerAmongAllCreatures`,
+   `HasGreatestManaValueAmongControlled`) have no arm in the card walker and
+   take its catch-all `false`, while its callers filter
+   `self.battlefield.iter()` through it. Gaps, not zone-blindness; the fix
+   moves play and wants its own gate. ENGINE_BACKLOG P3 has the evidence. `audit_stubs` 0/21,795, `audit_incomplete` 0,
    `CRAB_SIM_REJECTS` 0 in 129 configurations. The dropped-"may" tail
    (INCOMPLETE_CARDS) and the data-test sweep (PERF) are both spent, and so
    is the third filter: `scripts/audit_variant_coverage.py` asks whether a

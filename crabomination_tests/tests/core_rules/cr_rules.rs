@@ -1638,6 +1638,123 @@ fn cr_514_3a_discard_trigger_grants_cleanup_priority_then_repeats() {
 
 // ── Audit P3 — walker exhaustiveness guard ──────────────────────────────────
 
+/// The last pair in audit P3: `evaluate_requirement_static` and
+/// `evaluate_requirement_on_card` are two hand-written walkers over one enum,
+/// and the static one only delegates to the card one from its catch-all — so
+/// any variant it *does* match explicitly can drift from the card walker's
+/// answer without anything noticing.
+///
+/// The invariant that pins them: **on a battlefield permanent with no
+/// continuous effect in play, computed equals printed, so the two walkers
+/// must agree.** Off the battlefield, or under layers, they are supposed to
+/// differ — that is what `_on_card` is for.
+///
+/// Requirements come from the catalog's own serde trees rather than a
+/// hand-written variant list, so a new variant reaches this test the moment a
+/// card uses it. `SelectionRequirement` is externally tagged, so every
+/// non-unit variant is a one-key object and every unit variant is a string;
+/// that is the whole filter.
+#[test]
+fn audit_p3_requirement_walkers_agree_on_an_unlayered_permanent() {
+    use crabomination::card::SelectionRequirement as R;
+    use serde_json::Value as J;
+
+    fn collect(j: &J, out: &mut std::collections::BTreeMap<String, R>) {
+        let candidate = match j {
+            J::String(_) => true,
+            J::Object(m) => m.len() == 1,
+            _ => false,
+        };
+        if candidate && let Ok(r) = serde_json::from_value::<R>(j.clone()) {
+            out.insert(j.to_string(), r);
+        }
+        match j {
+            J::Object(m) => {
+                for v in m.values() {
+                    collect(v, out);
+                }
+            }
+            J::Array(a) => {
+                for v in a {
+                    collect(v, out);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut reqs = std::collections::BTreeMap::new();
+    for f in crabomination::catalog::all_known_factories() {
+        let def = f();
+        if let Ok(j) = serde_json::to_value(&def.effect) {
+            collect(&j, &mut reqs);
+        }
+    }
+    assert!(reqs.len() > 50, "the catalog should surface many requirements, got {}", reqs.len());
+
+    // One vanilla creature, nothing else: no continuous effect, so the
+    // computed view and the printed card are the same object.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(id);
+    let card = g.battlefield_find(id).expect("on the battlefield").clone();
+
+    // The three the guard found on its first run. Each is a variant
+    // `evaluate_requirement_on_card` has **no arm for at all**, so it takes
+    // the catch-all `false`: the two board-wide superlatives need the whole
+    // battlefield, and `Untapped` needs the zone. Filed in ENGINE_BACKLOG's
+    // P3 entry with the evidence that the card walker *is* handed battlefield
+    // cards (`ManaValueAtMostYourCount` and its siblings filter
+    // `self.battlefield.iter()` through it), so these are gaps rather than
+    // deliberate zone-blindness. Listed here rather than fixed in the same
+    // commit as the guard: closing them moves play and wants its own gate.
+    //
+    // **A new drift is a test failure, which is the whole point** — this list
+    // shrinks, never grows.
+    let known: &[&str] = &[
+        "\"Untapped\"",
+        "\"HasGreatestPowerAmongAllCreatures\"",
+        "{\"And\":[\"Creature\",\"HasGreatestPowerAmongAllCreatures\"]}",
+        "{\"And\":[\"Creature\",\"Untapped\"]}",
+        "{\"And\":[{\"And\":[\"Creature\",\"ControlledByYou\"]},\"Untapped\"]}",
+        "{\"HasGreatestManaValueAmongControlled\":{\"Or\":[\"Creature\",\"Planeswalker\"]}}",
+    ];
+    let mut drift = Vec::new();
+    for (key, req) in &reqs {
+        let by_target = g.evaluate_requirement_static(req, &Target::Permanent(id), 0, None);
+        let by_card = g.evaluate_requirement_on_card(req, &card, 0);
+        if by_target != by_card && !known.contains(&key.as_str()) {
+            drift.push(format!("{key}: static={by_target} on_card={by_card}"));
+        }
+    }
+    assert!(
+        drift.is_empty(),
+        "{} of {} requirements newly disagree between the two walkers on an \
+         unlayered battlefield permanent:\n  {}",
+        drift.len(),
+        reqs.len(),
+        drift.join("\n  "),
+    );
+    // And the allowlist is itself guarded: a fix that closes one of these
+    // must delete its line here.
+    let still_drifting: Vec<&str> = known
+        .iter()
+        .copied()
+        .filter(|k| {
+            reqs.get(*k).is_some_and(|req| {
+                g.evaluate_requirement_static(req, &Target::Permanent(id), 0, None)
+                    != g.evaluate_requirement_on_card(req, &card, 0)
+            })
+        })
+        .collect();
+    assert_eq!(
+        still_drifting.len(),
+        known.len(),
+        "a known drift is fixed (or its card left the catalog) — delete it from `known`: {:?}",
+        known.iter().filter(|k| !still_drifting.contains(k)).collect::<Vec<_>>(),
+    );
+}
+
 /// Every `Selector::TargetFiltered` slot reachable in a catalog card's spell
 /// effect must be surfaced by `target_filter_for_slot_in_mode_kicked` for
 /// some mode/kicker state — otherwise the filter is unenforced at cast time

@@ -342,9 +342,35 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   path. Eleven tests in `cr_recent100`. Both walkers return `(site, error)`,
   so `CRAB_SIM_REJECTS=names` still names the rule rather than the card.
 
-  Remaining: the printed-vs-computed combat checks still lack guards, and
-  `evaluate_requirement_static` vs `evaluate_requirement_on_card` is the last
-  pair in this entry.
+  **The last pair now has its guard, and the guard found drift on its first
+  run.** `audit_p3_requirement_walkers_agree_on_an_unlayered_permanent`
+  (`core_rules/cr_rules.rs`) collects every `SelectionRequirement` the catalog
+  actually uses — 882 of them, off the effects' own serde trees, so a new
+  variant reaches the test the moment a card uses it — and asserts the two
+  walkers agree **on a battlefield permanent with no continuous effect in
+  play**, where computed equals printed. Off the battlefield or under layers
+  they are supposed to differ; that is what `_on_card` is for.
+
+  **Three variants have no arm in `evaluate_requirement_on_card` at all and
+  take its catch-all `false`:** `Untapped`, `HasGreatestPowerAmongAllCreatures`
+  and `HasGreatestManaValueAmongControlled` (plus the three `And`
+  compositions the catalog builds from them). The two superlatives need the
+  whole battlefield and the third needs the zone — but the walker holds
+  `&self`, so it *could* answer all three.
+
+  **They are gaps, not deliberate zone-blindness, and the evidence is the
+  call sites:** `ManaValueAtMostYourCount`, `ToughnessAtMostYourCount` and
+  their siblings filter `self.battlefield.iter()` through
+  `evaluate_requirement_on_card`. A counting requirement whose inner filter is
+  `Untapped` therefore counts **zero** untapped permanents, silently.
+  `SelectionRequirement::Untapped` appears at ten catalog sites.
+
+  Open, and it is a play-moving fix: closing them wants `--vs`, a
+  `CRAB_SIM_REJECTS` sweep and its own commit. The allowlist in the test is
+  self-guarding — it asserts each entry *still* drifts, so a fix cannot land
+  without deleting its line.
+
+  Also remaining: the printed-vs-computed combat checks still lack guards.
 
 ## Engine — Robustness / defects: the closed audits and the twenty-three filters
 
