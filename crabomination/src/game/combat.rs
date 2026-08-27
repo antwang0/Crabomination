@@ -2299,23 +2299,7 @@ impl GameState {
             let Some(required) = b.must_block else { continue };
             // The provoker must still be attacking for the requirement to bind.
             if !self.attacking.iter().any(|a| a.attacker == required) { continue; }
-            let b_is_creature = cp_of(b.id)
-                .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
-            if !b_is_creature
-                || (b.tapped && !self.tapped_creatures_can_block(b.controller))
-                || kws_of(b.id).has_kw(&Keyword::CantBlock)
-            {
-                continue;
-            }
-            let Some(attacker) = self.battlefield_find(required) else { continue };
-            let atk_colors = cp_of(required).map(|c| c.colors).unwrap_or_default();
-            let atk_power = cp_of(required).map(|c| c.power).unwrap_or_else(|| attacker.power());
-            let able = cp_of(b.id).is_some_and(|bcp| {
-                super::can_block_attacker_computed(
-                    b, bcp, kws_of(required), atk_colors, atk_power,
-                )
-            });
-            if !able {
+            if !self.provoked_block_is_able(b, required) {
                 continue;
             }
             let assigned = self.blocks(b.id, required)
@@ -4607,6 +4591,38 @@ impl GameState {
                     )
             })
             .map(|c| c.id)
+    }
+
+    /// CR 702.39 — can `b` block the creature that provoked it?
+    ///
+    /// [`declare_blockers`](Self::declare_blockers) rejects the **whole**
+    /// declaration when a provoked creature able to block its provoker is
+    /// not assigned to it, so the bot's block planner has to answer this
+    /// identically or it loses its entire block step. One method, called
+    /// from both.
+    ///
+    /// Reads `computed_permanent` rather than the declaration's gated
+    /// subset: the loop that calls it exits on `must_block` being `None`
+    /// before touching anything, so on a board with no Provoke it costs a
+    /// field read per permanent and nothing else.
+    pub(crate) fn provoked_block_is_able(
+        &self,
+        b: &crate::card::CardInstance,
+        required: CardId,
+    ) -> bool {
+        let Some(bcp) = self.computed_permanent(b.id) else { return false };
+        if !bcp.card_types.contains(&crate::card::CardType::Creature)
+            || (b.tapped && !self.tapped_creatures_can_block(b.controller))
+            || bcp.keywords.has_kw(&Keyword::CantBlock)
+        {
+            return false;
+        }
+        let Some(attacker) = self.battlefield_find(required) else { return false };
+        let acp = self.computed_permanent(required);
+        let atk_colors = acp.as_ref().map(|c| c.colors).unwrap_or_default();
+        let atk_power = acp.as_ref().map(|c| c.power).unwrap_or_else(|| attacker.power());
+        let atk_kws: &[Keyword] = acp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        super::can_block_attacker_computed(b, &bcp, atk_kws, atk_colors, atk_power)
     }
 
     /// CR 508.1d — whether `c` is *able* to attack, for the purpose of a

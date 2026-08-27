@@ -8519,6 +8519,10 @@ pub(crate) fn block_candidates_for_mcts(
     let greedy = pick_blocks(state, seat);
     let chumps =
         if w.chump_blocks { chump_block_candidates(state, seat, &greedy, w) } else { Vec::new() };
+    // See `repair_block_candidate`: every candidate below `greedy` is a
+    // subset, and a subset can release a provoked creature or strip the
+    // second blocker off a Menace attacker.
+    let repair = |c: &mut Vec<(CardId, CardId)>| repair_block_candidate(state, seat, c);
     if (w.block_search == 0 || greedy.is_empty()) && chumps.is_empty() {
         return vec![greedy];
     }
@@ -8542,7 +8546,85 @@ pub(crate) fn block_candidates_for_mcts(
     if w.block_gang {
         candidates.extend(gang_block_candidates(state, seat, &greedy, w));
     }
+    if block_requirement_present(state) {
+        for c in candidates.iter_mut() {
+            repair(c);
+        }
+        // Repairing collapses candidates onto each other; index 0 stays
+        // greedy, which is the tie-break the search depends on.
+        let mut seen: Vec<Vec<(u32, u32)>> = Vec::new();
+        candidates.retain(|c| {
+            let mut key: Vec<(u32, u32)> = c.iter().map(|(b, a)| (b.0, a.0)).collect();
+            key.sort_unstable();
+            let fresh = !seen.contains(&key);
+            if fresh {
+                seen.push(key);
+            }
+            fresh
+        });
+    }
     candidates
+}
+
+/// Is any attacker on this board subject to a requirement a *subset* of a
+/// legal block assignment can violate? One walk, so the repair below is only
+/// paid on the boards that need it.
+fn block_requirement_present(state: &GameState) -> bool {
+    state.battlefield.iter().any(|c| c.must_block.is_some())
+        || state.attacking().iter().any(|a| {
+            state
+                .computed_permanent(a.attacker)
+                .is_some_and(|cp| min_blockers_required_kws(&cp.keywords) > 1)
+        })
+}
+
+/// CR 509.1b / 702.39 — make a block assignment legal in the two ways the
+/// search's edits break it.
+///
+/// Every candidate below greedy is a **subset** — "block with nobody",
+/// greedy minus one — and a subset can release a provoked creature or strip
+/// the second blocker off a Menace attacker. Either makes the *whole*
+/// declaration illegal, so the candidate's opening dry run fails, it scores
+/// `None`, and the menu silently shrinks to whichever subsets happened to
+/// stay legal. Same shape as the attack search's CR 508.1d repair.
+///
+/// Provoke runs first because it can add a block the count rule then sees;
+/// the count rule in turn refuses to release a provoked assignment, so the
+/// two cannot oscillate. A board where a provoked creature is the only
+/// blocker a Menace attacker can have is unsatisfiable either way, and this
+/// leaves it to the engine to say so.
+fn repair_block_candidate(state: &GameState, seat: usize, blocks: &mut Vec<(CardId, CardId)>) {
+    let mut provoked: Vec<(CardId, CardId)> = Vec::new();
+    for b in state.battlefield.iter() {
+        let Some(required) = b.must_block else { continue };
+        if b.controller != seat
+            || !state.attacking().iter().any(|a| a.attacker == required)
+            || !state.provoked_block_is_able(b, required)
+        {
+            continue;
+        }
+        blocks.retain(|(bid, aid)| *bid != b.id || *aid == required);
+        if !blocks.iter().any(|(bid, aid)| *bid == b.id && *aid == required) {
+            blocks.push((b.id, required));
+        }
+        provoked.push((b.id, required));
+    }
+    let attackers: Vec<CardId> = state.attacking().iter().map(|a| a.attacker).collect();
+    for a_id in attackers {
+        let min_b = state
+            .computed_permanent(a_id)
+            .map(|cp| min_blockers_required_kws(&cp.keywords))
+            .unwrap_or(1);
+        if min_b <= 1 {
+            continue;
+        }
+        let count =
+            blocks.iter().filter(|(_, aid)| *aid == a_id).count() + state.blocker_count_of(a_id);
+        if count == 0 || count >= min_b {
+            continue;
+        }
+        blocks.retain(|(bid, aid)| *aid != a_id || provoked.contains(&(*bid, *aid)));
+    }
 }
 
 fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
@@ -8595,7 +8677,7 @@ fn chump_block_candidates(
     let mut idle: Vec<CardId> = state
         .battlefield
         .iter()
-        .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
+        .filter(|c| c.controller == seat && bot_can_block(state, c) && !used.contains(&c.id))
         .map(|c| c.id)
         .collect();
     idle.sort_by_cached_key(|&id| permanent_value(state, id, w));
@@ -8648,7 +8730,7 @@ fn gang_block_candidates(
     let mut idle: Vec<&crate::card::CardInstance> = state
         .battlefield
         .iter()
-        .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
+        .filter(|c| c.controller == seat && bot_can_block(state, c) && !used.contains(&c.id))
         .collect();
     idle.sort_by_cached_key(|c| permanent_value(state, c.id, w));
     if idle.len() < 2 {
@@ -8946,14 +9028,39 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     blocks
 }
 
-/// A creature the bot may legally declare as a blocker: `can_block()` only
-/// checks creature-ness + untapped, so also exclude Decayed (CR 702.147 — a
-/// Decayed creature can't block) and a granted/printed `CantBlock`. Used by
-/// every blocker-candidate pass so the gang-block / must-be-blocked / menace
-/// top-up passes never assemble an illegal declaration the engine rejects.
-fn bot_can_block(c: &crate::card::CardInstance) -> bool {
+/// A creature the bot may legally declare as a blocker — `declare_blockers`'
+/// opening conjunction (CR 509.1a), read off the **computed** view the way
+/// the engine reads it.
+///
+/// Every term here is one the engine will reject the whole declaration for,
+/// and three of them were previously read off the instance: a granted
+/// `CantBlock` (Duel Tactics, Postmortem Professor) or `Decayed` bars a
+/// blocker the printed walk still offers, and `can_block()`'s printed type
+/// line calls a de-animated Vehicle a creature and an animated land not one.
+/// Four rejections a run on the *bench* pool alone (PERF (-55),
+/// `combat.rs:1762`).
+///
+/// Deliberately still stricter than the engine in one place: it refuses a
+/// tapped blocker outright where the engine has a `tapped_creatures_can_block`
+/// escape. Offering those is a widening, not a bug fix, so it wants its own
+/// gate.
+///
+/// Used by every blocker-candidate pass, so the gang-block / must-be-blocked
+/// / menace top-up passes cannot assemble a declaration the engine throws out.
+fn bot_can_block(state: &GameState, c: &crate::card::CardInstance) -> bool {
     use crate::card::Keyword;
-    c.can_block() && !c.has_keyword(&Keyword::Decayed) && !c.has_keyword(&Keyword::CantBlock)
+    let Some(cp) = state.computed_permanent(c.id) else {
+        // Not a battlefield permanent by the time the pass ran; the printed
+        // reads are all there is.
+        return c.can_block()
+            && !c.has_keyword(&Keyword::Decayed)
+            && !c.has_keyword(&Keyword::CantBlock);
+    };
+    cp.card_types.contains(&crate::card::CardType::Creature)
+        && !c.tapped
+        && c.detained_by.is_none()
+        && !cp.keywords.has_kw(&Keyword::CantBlock)
+        && !cp.keywords.has_kw(&Keyword::Decayed)
 }
 
 /// Everything the block planner wants to know about one declared attacker.
@@ -9132,7 +9239,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         // `can_block()` only checks creature-ness + untapped; also exclude
         // creatures that genuinely can't block (Decayed CR 702.147, or a
         // granted "can't block") so the bot never submits an illegal block.
-        .filter(|c| c.controller == seat && bot_can_block(c))
+        .filter(|c| c.controller == seat && bot_can_block(state, c))
         .map(|c| {
             (
                 c.id,
@@ -9292,7 +9399,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = state
             .battlefield
             .iter()
-            .filter(|c| c.controller == seat && bot_can_block(c) && !used.contains(&c.id))
+            .filter(|c| c.controller == seat && bot_can_block(state, c) && !used.contains(&c.id))
             .map(|c| {
                 (
                     c.id,
@@ -9368,7 +9475,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             .iter()
             .filter(|c| {
                 c.controller == seat
-                    && bot_can_block(c)
+                    && bot_can_block(state, c)
                     && !assignments.iter().any(|(bid, _)| *bid == c.id)
                     && (!a_flying
                         || c.has_keyword(&Keyword::Flying)
@@ -9378,6 +9485,27 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             .min_by_key(|c| c.power())
         {
             assignments.push((idle.id, *a_id));
+        }
+    }
+
+    // CR 702.39 — Provoke. A creature the attacker provoked must be assigned
+    // to block it if able, and the engine rejects the whole declaration when
+    // it is not: 82 of the block rejections on `cube --seed 11` and the
+    // largest one left (PERF (-55), `combat.rs:2324`). Force it in ahead of
+    // the minimum-count repair, displacing whatever the scoring loop gave it,
+    // and read ability off `provoked_block_is_able` — the engine's own
+    // predicate, so the two cannot disagree about who is obliged.
+    for b in state.battlefield.iter() {
+        let Some(required) = b.must_block else { continue };
+        if b.controller != seat
+            || !state.attacking().iter().any(|a| a.attacker == required)
+            || !state.provoked_block_is_able(b, required)
+        {
+            continue;
+        }
+        assignments.retain(|(bid, aid)| *bid != b.id || *aid == required);
+        if !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required) {
+            assignments.push((b.id, required));
         }
     }
 
@@ -9406,7 +9534,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .iter()
                 .filter(|c| {
                     c.controller == seat
-                        && bot_can_block(c)
+                        && bot_can_block(state, c)
                         && !assignments.iter().any(|(bid, _)| *bid == c.id)
                         && (!a_flying
                             || c.has_keyword(&Keyword::Flying)
@@ -9456,7 +9584,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         state
             .battlefield
             .iter()
-            .filter(|c| c.controller == seat && bot_can_block(c))
+            .filter(|c| c.controller == seat && bot_can_block(state, c))
             .map(|c| c.id),
     );
     for id in seeds {
@@ -13628,6 +13756,125 @@ mod tests {
         g.priority.player_with_priority = 1;
         let blocks = pick_blocks_for_test(&g, 1);
         assert!(blocks.len() != 1, "menace takes 0 or 2+ blockers, got {blocks:?}");
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 702.39 — a provoked creature must be assigned to block its
+    /// provoker if able, and the engine rejects the whole declaration when
+    /// it is not: 82 of the block rejections on `cube --seed 11`.
+    #[test]
+    fn bot_block_plan_honours_provoke() {
+        let mut g = two_player_game();
+        let provoker = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+        g.clear_sickness(provoker);
+        // A body the greedy planner would rather keep home than trade away.
+        let provoked = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: provoker,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.battlefield_find_mut(provoked).expect("on the battlefield").must_block =
+            Some(provoker);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(
+            blocks.contains(&(provoked, provoker)),
+            "the provoked creature has to block its provoker: {blocks:?}",
+        );
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 509.1b / 702.39 — the block search's candidates are subsets, and a
+    /// subset can release a provoked creature or strip the second blocker off
+    /// a Menace attacker. Every candidate on the menu has to be a declaration
+    /// the engine accepts.
+    #[test]
+    fn block_search_candidates_are_all_legal_declarations() {
+        use crate::card::{CardType, Keyword};
+        let menacing = CardDefinition {
+            name: "Skulking Brute",
+            card_types: vec![CardType::Creature],
+            power: 3,
+            toughness: 3,
+            keywords: vec![Keyword::Menace],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, menacing);
+        g.clear_sickness(atk);
+        for _ in 0..3 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let w = EvalWeights { block_search: 3, ..EvalWeights::default() };
+        let candidates = block_candidates_for_mcts(&g, 1, &w);
+        for c in &candidates {
+            assert_ne!(
+                c.iter().filter(|(_, a)| *a == atk).count(),
+                1,
+                "menace takes 0 or 2+ blockers, never 1: {c:?}",
+            );
+            g.clone().declare_blockers(c.clone()).expect("every candidate is legal");
+        }
+    }
+
+    /// CR 509.1a — `CantBlock` is enforced from the *computed* set, so a
+    /// grant bars a blocker whose printed keywords say nothing. Offering one
+    /// gets the whole declaration rejected, which is the bot's entire block
+    /// step: four a run on the bench pool before this (PERF (-55),
+    /// `combat.rs:1762`).
+    #[test]
+    fn bot_block_plan_honours_a_granted_cant_block() {
+        use crate::card::{CardType, Keyword, StaticAbility};
+        use crate::effect::{Selector, StaticEffect};
+        let curse = CardDefinition {
+            name: "Chill of Fear",
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility {
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        crate::card::SelectionRequirement::Creature
+                            .and(crate::card::SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::CantBlock,
+                },
+                description: "Creatures you control can't block.",
+            }],
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, catalog::hill_giant());
+        g.clear_sickness(atk);
+        g.add_card_to_battlefield(1, curse);
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.is_empty(), "every blocker is barred by the grant: {blocks:?}");
         g.declare_blockers(blocks).expect("the plan is legal");
     }
 
