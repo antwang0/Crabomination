@@ -6984,8 +6984,79 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-56) THE ALLOCATION TABLE IS A THIRD REALLOCATION, AND TWO CALLERS OWN
-HALF OF IT.** Read at the eighty-first tip, `--decks cube`, the table that
+**(-56) HALF-REFUTED AT THE EIGHTY-FIRST PASS: THE `sa_cards` RESERVE IS THE
+FIFTY-FOURTH PASS'S TRAP ON A SECOND VEC, AND IT SPLITS BY POOL.**
+`gather_continuous_effects_inner` runs **71,884 times on a six-game `cube`
+run and grows a Vec 69,890 times — 0.97 growths a gather**, which is
+`sa_cards`' first allocation and (on a busier board) its first doubling. Two
+ways to remove it, both built and measured against `32fa1675`:
+
+```text
+                                                 fixed        cube
+  Vec::with_capacity(battlefield.len())         +0.439 %     -0.242 %
+  Vec::with_capacity(<counted static cards>)    +0.371 %     -0.041 %
+```
+
+**Neither ships.** The whole-board reserve is the fifty-fourth pass's finding
+exactly — a bigger allocation on every gather costs more than the growths it
+removes — and it only *looks* different here because the element is 16 bytes
+rather than ~100, so the trade flips sign between the two pools instead of
+being negative on both. The exact count is worse still: the extra battlefield
+walk (~15 cards of `static_abilities.is_empty()`) costs about what one growth
+costs, and on `fixed` there was **no** growth to remove — `sa_cards` never
+outgrows its first capacity there, so the reserve is pure loss. **A growth
+count is per-pool, and a reserve that pays for itself on one board is a tax
+on the board that never grows.** What is left of this entry is
+`compute_permanent_pass`'s 51,706 growths (19,552,222 Ir), and that one needs
+a line profile first: the likely shape is `Printed<Vec<_>>`'s materialize,
+where `Vec::clone` hands back `capacity == len` so the first layer write
+reallocates and memcpys the whole printed list — the same trap a third time,
+and the only one of the three where the fix is exact (`len + 1`) rather than
+headroom.
+
+**AND THE FREEZE SCOPE IS ALREADY THERE: the candidate menus are inside one,
+and wrapping them again is a no-op to five decimal places.**
+`block_candidates_for_mcts` and `attack_candidates_for_mcts` call
+`pick_blocks` / `pick_attacks` and their helpers, each of which opens its own
+`with_frozen_layers`; wrapping both menus in one outer scope so the inner ones
+share a memo read **`fixed` +0.001 %, `cube` +0.0004 %** — the push and the
+pop and nothing else. `HeuristicBot::next_action` already runs *the whole
+tick* inside one scope (bot.rs:1661), so every read on the live state was
+memoized before any of this. **Check for an enclosing scope before proposing
+one.**
+
+**So where do 48,810 unfrozen `computed_permanent` gathers come from?** From
+the sims, and the table is worth keeping (`--separate-callers=3`,
+`cg_contexts.py`, `--decks cube`, eighty-first tip):
+
+```text
+71,884 gathers, by calling context
+  8,598  computed_permanent <- {closure} <- Vec::from_iter
+  6,956  computed_permanent <- resolve_combat <- advance_step
+  6,546  frozen_effects <- board_keyword_in_scope <- declare_attackers_banded
+  6,036  compute_permanents <- combat_damage_computed <- resolve_combat
+  5,816  computed_permanent <- resolve_combat <- submit_decision
+  5,394  computed_permanent <- permanent_value_with <- eval_material_inner
+  4,870  frozen_effects <- board_keyword_in_scope <- declare_blockers
+  4,290  computed_permanent <- with_frozen_layers <- declare_blockers
+  2,184  check_state_based_actions <- resolve_combat <- advance_step
+```
+
+**`resolve_combat` drives ~21,500 of them, 30 % of every gather in the
+program** — `resolve_combat -> computed_permanent` is 18,888 calls /
+92,837,604 Ir / **2.61 % of `cube`**, and 68 % of those calls rebuild the
+list. It runs inside `sim_step` on the sim's *cloned* state, whose
+`LayerFreeze` is `default()` (see `Clone for GameState`), so the tick's scope
+does not cover it — and it **cannot** simply be wrapped, because it mutates:
+damage, deaths, triggers. A memo that survives a mutation is a stale layer
+view, which is a wrong game, not a slow one. The shape that would work is an
+invalidating memo, i.e. the board epoch — **built, measured and refuted at the
+forty-fifth pass, (-18)**. What has *not* been tried is freezing the
+read-only sub-regions between `resolve_combat`'s mutations, or handing its
+readers the `combat_damage_computed` snapshot it already builds.
+
+**(-56, as found) THE ALLOCATION TABLE IS A THIRD REALLOCATION, AND TWO
+CALLERS OWN HALF OF IT.** Read at the eighty-first tip, `--decks cube`, the table that
 has found the most in this file (callers of `__rust_alloc` by *count*):
 
 ```text
@@ -7015,8 +7086,16 @@ So this entry wants **exact or near-exact** sizes, not headroom —
 away, and `compute_permanent_pass` needs a line profile before anyone guesses
 which of its pushes grow.
 
-**(-57) `eval_material_inner` IS THE LAST BIG `computed_permanent` CALLER —
-36,668 calls / 57,985,103 Ir / 1.63 % OF `cube`.** It walks the whole
+**(-57) MOSTLY ANSWERED BY THE CONTEXT TABLE ABOVE, AND THE ANSWER IS "ONE
+GATHER PER EVALUATION, WHICH IS THE FLOOR".** `eval_material` opens its own
+freeze scope (bot.rs:10979), so of its 36,668 `computed_permanent` calls only
+**5,394 rebuild the list** — one per evaluation, on the sim's cloned state
+where no outer scope exists. The remaining 31,274 are memo probes. The entry
+below over-stated the prize by 6x; what is actually available is the
+per-evaluation gather, and that is the same question `resolve_combat` asks.
+
+**(-57, as found) `eval_material_inner` IS THE LAST BIG `computed_permanent`
+CALLER — 36,668 calls / 57,985,103 Ir / 1.63 % OF `cube`.** It walks the whole
 battlefield and asks `permanent_value_with` for every non-land permanent,
 which is one `computed_permanent` apiece. Unlike (2) in the Baseline above
 this is **not** a repeated question — one pass per evaluation — so the shape

@@ -31,17 +31,30 @@ commit before the tracker prose; a fetch only rules out work already
 hour (pass 80 duplicated a whole item end-to-end), and diff before discarding
 a lost race — the loser usually holds something the winner does not.
 
-1. **Perf queue: (-56) and (-57), both seeded at the eighty-first pass with
-   their tables.** (-56) is the allocation table — **a quarter of every
-   allocation in the program is a `Vec` that started at zero and doubled**,
-   and `gather_continuous_effects_inner` (69,890 growths) and
-   `compute_permanent_pass` (51,706) own a fifth of that between them. Read
-   the fifty-fourth pass's warning in the entry first: **exact sizes, not
-   headroom** — blanket headroom on the same Vec measured +1.54 %. (-57) is
-   `eval_material_inner`'s 36,668 `computed_permanent` calls (1.63 % of
-   `cube`), and it wants `SecondPass::of` priced before anything is built.
-   (-52)/(-53)/(-54) closed; (-51)(a) wants a device on the do-not-rebuild
-   list.
+1. **Perf queue: what is LEFT of (-56) is `compute_permanent_pass`'s 51,706
+   Vec growths (19.5 M Ir), and it wants a line profile first.** The likely
+   shape is `Printed<Vec<_>>`'s materialize — `Vec::clone` hands back
+   `capacity == len`, so the first layer write reallocates and memcpys the
+   printed list — and it is the only one of the three growth sites where the
+   fix is **exact** (`len + 1`) rather than headroom. Three things in that
+   entry are already refuted with numbers, do not re-take them: the
+   `sa_cards` reserve (both a whole-board and an exactly-counted one; it
+   splits by pool and loses on `fixed`), a second freeze scope over the
+   candidate menus (**+0.001 %** — `next_action` already freezes the whole
+   tick, bot.rs:1661), and (-57)'s `eval_material` prize, which is one gather
+   per evaluation and already at the floor. (-52)/(-53)/(-54) closed;
+   (-51)(a) wants a device on the do-not-rebuild list.
+1c. **The gather is 30 % `resolve_combat`, and that is the open question.**
+   PERF's context table: 71,884 gathers on a six-game `cube` run, ~21,500 of
+   them under `resolve_combat`, whose `computed_permanent` edge is 18,888
+   calls / 92,837,604 Ir / **2.61 % of `cube`** with 68 % of the calls
+   rebuilding the list. It runs on the *sim's cloned* state (a clone gets
+   `LayerFreeze::default()`), so no tick scope covers it, and it **mutates**,
+   so it cannot simply be wrapped — a memo that survives a mutation is a
+   wrong game, not a slow one. The invalidating-memo shape is the board
+   epoch, refuted at (-18). Untried: freezing the read-only sub-regions
+   between its mutations, or handing its readers the
+   `combat_damage_computed` snapshot it already builds.
 1a. **⚠ The eightieth-pass block cost `fixed` +2.833 % and `cube` +1.712 %,
    and no commit in it recorded an Ir row.** Play is identical across it, so
    that is cost alone, and it is almost all one row: `computed_permanent`
