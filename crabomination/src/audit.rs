@@ -13,10 +13,32 @@
 //! [`dead_capabilities`] is also asserted over the whole catalog by
 //! `crabomination_tests` (`core_rules::structural_audit`), so a card shipped
 //! with a dead mode or a dead ability fails the suite instead of waiting for
-//! someone to re-run the auditor.
+//! someone to re-run the auditor. Dead abilities are gated outright; dead
+//! modes are gated against [`REVIEWED_DEAD_MODES`], because a `Noop` arm is
+//! also how a printed "you may … (or decline)" is spelled.
 
 use crabomination_base::card::CardDefinition;
 use serde_json::Value;
+
+/// The dead *modes* that are correct, and why each one is.
+///
+/// A `Noop` arm is genuinely ambiguous: it is both how a missing primitive
+/// looks and how a printed "you may … (or decline)" is spelled. That is why
+/// the suite gated dead *abilities* and left modes to whoever next ran the
+/// auditor by hand — and it meant the auditor reported one card every run,
+/// forever, so the only signal a new one gave was a count going from 1 to 2.
+/// Nobody diffs a count they have learned to expect.
+///
+/// An allowlist converts the triage into a gate. A new dead mode fails the
+/// suite with the card's name; a reviewer either implements the arm or adds
+/// it here with the printed text that makes it correct. The list is asserted
+/// in **both** directions, so an entry whose card stopped having a dead mode
+/// fails too rather than quietly licensing a future one.
+pub const REVIEWED_DEAD_MODES: &[(&str, &str)] = &[(
+    "Elite Interceptor",
+    "\"You may tap or untap target creature\" — declining is the empty arm, \
+     which is the printed card and not a gap",
+)];
 
 /// A selectable capability that resolves to nothing.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -9,10 +9,13 @@
 //! `audit_incomplete` by hand. This is that auditor's pass 1, wired into the
 //! suite so the class can't come back silently.
 //!
-//! Dead *modes* are deliberately not asserted: a `Noop` arm is also the
-//! idiom for "you may … (or decline)", so they need triage rather than a
-//! gate. `cargo run -p crabomination --bin audit_incomplete --
-//! --structural-only` still lists them.
+//! Dead *modes* are gated too, but against an allowlist
+//! ([`crabomination::audit::REVIEWED_DEAD_MODES`]) rather than outright: a
+//! `Noop` arm is also the idiom for "you may … (or decline)", so it needs a
+//! reviewer's judgement once — and then it needs to stop costing that
+//! judgement every run. Before the allowlist the auditor reported exactly one
+//! card forever, so the only signal a *new* dead mode gave was a count going
+//! from 1 to 2 in a report nobody diffs.
 
 use crabomination::audit::{DeadCapability, dead_capabilities};
 use crabomination::catalog::all_known_factories;
@@ -40,6 +43,64 @@ fn no_shipped_card_has_a_dead_ability() {
          its printed effect or stop emitting the ability:\n  {}",
         bad.len(),
         bad.join("\n  "),
+    );
+}
+
+/// The mode half, gated against the reviewed list — in both directions.
+///
+/// Forwards: a card that grows a dead mode fails here by name, so the
+/// reviewer decides once instead of the auditor asking forever. Backwards: an
+/// entry whose card no longer *has* a dead mode fails too. Without that, a
+/// list entry outlives the thing it excused and silently licenses the next
+/// dead mode on the same card — an allowlist that cannot go stale is the
+/// only kind worth having.
+#[test]
+fn every_dead_mode_is_one_a_reviewer_signed_off() {
+    use crabomination::audit::REVIEWED_DEAD_MODES;
+
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut found: Vec<(&'static str, String)> = Vec::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        for f in dead_capabilities(&def) {
+            if matches!(f, DeadCapability::Mode { .. }) {
+                found.push((def.name, f.to_string()));
+            }
+        }
+    }
+    found.sort();
+
+    let reviewed: HashSet<&str> = REVIEWED_DEAD_MODES.iter().map(|(n, _)| *n).collect();
+    let unreviewed: Vec<String> = found
+        .iter()
+        .filter(|(name, _)| !reviewed.contains(name))
+        .map(|(name, f)| format!("{name}: {f}"))
+        .collect();
+    assert!(
+        unreviewed.is_empty(),
+        "{} card(s) have a mode that resolves to nothing and nobody has said \
+         which kind it is. If the arm is a missing primitive, implement it. If \
+         it is the printed \"you may … (or decline)\", add the card to \
+         `crabomination::audit::REVIEWED_DEAD_MODES` with the printed text \
+         that makes the empty arm correct:\n  {}",
+        unreviewed.len(),
+        unreviewed.join("\n  "),
+    );
+
+    let live: HashSet<&str> = found.iter().map(|(name, _)| *name).collect();
+    let stale: Vec<&str> =
+        REVIEWED_DEAD_MODES.iter().map(|(n, _)| *n).filter(|n| !live.contains(n)).collect();
+    assert!(
+        stale.is_empty(),
+        "{} entr(ies) in `REVIEWED_DEAD_MODES` name a card with no dead mode \
+         any more — the arm was implemented, or the card was renamed or \
+         dropped. Remove them, or they will excuse the next dead mode on that \
+         card:\n  {}",
+        stale.len(),
+        stale.join("\n  "),
     );
 }
 

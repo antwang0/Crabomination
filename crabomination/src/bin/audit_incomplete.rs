@@ -62,12 +62,34 @@ fn run_structural() {
     }
 
     flagged.sort_by(|a, b| a.0.cmp(&b.0));
+    // Separate the cards a reviewer has already signed off from the ones
+    // nobody has looked at. This report used to list the one reviewed card
+    // every run, so a *new* finding was a count going 1 -> 2 in a report
+    // nobody diffs; now the headline number is the one that needs work and
+    // the reviewed tail is a footnote. The suite gates both halves — see
+    // `core_rules::structural_audit`.
+    let reviewed: HashSet<&str> =
+        crabomination::audit::REVIEWED_DEAD_MODES.iter().map(|(n, _)| *n).collect();
+    let (known, fresh): (Vec<_>, Vec<_>) =
+        flagged.iter().partition(|(name, _)| reviewed.contains(name.as_str()));
     eprintln!("── STRUCTURAL ──────────────────────────────────────────────");
-    eprintln!("Scanned {total} unique cards; {} have dead modes/abilities.\n", flagged.len());
-    for (name, findings) in &flagged {
+    eprintln!(
+        "Scanned {total} unique cards; {} need review ({} already reviewed).\n",
+        fresh.len(),
+        known.len(),
+    );
+    for (name, findings) in &fresh {
         for f in findings {
             eprintln!("  {name}  — {f}");
         }
+    }
+    for (name, _) in &known {
+        let why = crabomination::audit::REVIEWED_DEAD_MODES
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, w)| *w)
+            .unwrap_or("");
+        eprintln!("  (reviewed) {name}  — {why}");
     }
     eprintln!();
 }
