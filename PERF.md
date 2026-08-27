@@ -1034,8 +1034,8 @@ pass's final tip.
 suite  --workspace --exclude crabomination_client   19,056 / 0 / 5
 clippy --workspace --exclude crabomination_client --all-targets   clean
 golden traces  unmoved (they run inside the suite above)
-seeded cube smoke  4,000 pairings, all terminate; bot_rejection_count 1 in
-                   4,000 and it is `build_cube_state_seeded(3637)`, open
+seeded cube smoke  4,000 pairings, all terminate; bot_rejection_count **0**,
+                   where the same sweep before this pass read four
 --bench   195,528 decisions / 27.44 turns / 0 stalls (cap 0 / stuck 0 /
           draw 0) / determinism ok / thread_determinism ok (3 vs 1)
           — **byte-identical to the committed invariant across all ten
@@ -4353,13 +4353,14 @@ on it, in twenty seconds a side, against the `selfplay_train --actors 1
 passes the claim stood. What made it plausible is that the *absolute* fell by
 two orders of magnitude, and an absolute is not a share.
 
-**3. A seeded smoke test found three shipped bugs in one afternoon, and the
-seeding is the finding.** `server::tests::bot_vs_bot_random_cube_decks_
-terminate` built its decks from `rand::rng()`. It timed out once inside a
-full-suite run; forty solo runs (200 fresh pairings) never reproduced it,
-because the pairing that did it was gone. Seeded — decks, shuffle,
-`GameState::rng` and the bot's tie-break stream all pinned —, **4,000
-pairings run in 700 s** and four of them rejected a bot action:
+**3. A seeded smoke test plus a rejection census found and closed two shipped
+bug classes, and the seeding is the finding.**
+`server::tests::bot_vs_bot_random_cube_decks_terminate` built its decks from
+`rand::rng()`. It timed out once inside a full-suite run; forty solo runs
+(200 fresh pairings) never reproduced it, because the pairing that did it was
+gone. Seeded — decks, shuffle, `GameState::rng` and the bot's tie-break stream
+all pinned — **4,000 pairings run in ~870 s** and four of them rejected a bot
+action:
 
 ```text
 seed 2113  Tester of the Tangential   ChooseCards over a card in exile
@@ -4367,13 +4368,19 @@ seed 2719  Nekrataal                  "
 seed 3789  Kor Sanctifiers            "
 seed 3637  Juggernaut                 CR 508.1d requires an attack whose
                                       CR 508.1g tax is unpayable
+  after both fixes, the same 4,000: bot_rejection_count 0
 ```
 
 The first three are one bug: `legal_targets_for_filter` walks graveyards and
 exile with the same zone-blind filter it applies to the battlefield, so an
 exiled creature card satisfies "target creature", and the trigger-target
 picker posed a `min: 1` modal over those matches whenever nothing on the board
-was legal. Fixed; the fourth is open with its reproducer in ENGINE_BACKLOG.
+was legal. The fourth is `attacker_is_able` asking every restriction except
+cost: a Juggernaut behind an unpayable attack tax is required to attack by
+CR 508.1d and rejected for attacking by the tax gate, so the seat loses its
+whole combat with no legal move in either direction — the failure
+`attacker_self_block`'s own doc comment was written against, reappearing
+through the one restriction that lives outside that walker.
 
 **`server::bot_rejection_count()` is the live-match twin of
 `CRAB_SIM_REJECTS`, and the reason none of this had been seen is that nothing
@@ -4382,6 +4389,17 @@ this path is the client's bot-vs-bot mode and this crate's own smoke test —
 and the rejection printed an `eprintln!` nobody read. **A census is what turns
 "the test still passes" into a finding**, which is the same device the
 eighty-third pass's largest row came from.
+
+**And the first fix's own insurance was a second bug, caught by the same
+sweep.** The off-board gate was widened to `mentions_offboard_zone() ||
+prefers_graveyard_target()` so that an effect reaching a graveyard without
+saying so in its filter would keep its modal. `prefers_graveyard_target` is
+true for a `Move`-to-hand trigger whose filter is a bare `Not(Player)`
+(Timeless Witness), and *that* filter's off-board matches are every card in
+every graveyard and in exile — so the widening posed exactly the modal it was
+meant to prevent, on a seed (62) the pre-fix sweep had passed. Reverted, and
+seed 62 is in the test. **A sweep that only runs after the fix cannot tell a
+fix from a trade; run it on the same range you found the bug in.**
 
 **4. Two rows that look like candidates and are not, checked so nobody spends
 a pass on them.** `<&mut F as FnMut>::call_mut` is **650,974 calls / 45,346,050

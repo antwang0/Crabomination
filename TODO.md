@@ -54,8 +54,10 @@ rules under this section; add a pointer here, put the detail there.
    `--decks sealed --games 1` is the deck-construction instrument.
 3. **Encoding caution** — pool / `Vocab` / `TrainRow` / the observation and
    deck encodings: a change **invalidates the trained nets**. Say so here.
-4. **Bugs** — ENGINE_BACKLOG, whose live-match section is the eighty-fifth
-   pass's: `build_cube_state_seeded(3637)` is an open reproducer.
+4. **Bugs** — ENGINE_BACKLOG's live-match section is the eighty-fifth pass's:
+   both bugs fixed, two defects under them open, and the sweep that finds
+   this class is a `0..4000u64` loop in the cube smoke test (~870 s, debug)
+   read through `server::bot_rejection_count()`.
    **Robustness gate:** `-C debug-assertions=yes` on `[profile.overflow]`.
    **Tip state:** PERF "Baseline"'s "STATE AT …", which carries the suite,
    clippy and both pools' whole-program Ir.

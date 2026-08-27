@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [Open — found by the seeded cube smoke test (eighty-fifth pass)](#open--found-by-the-seeded-cube-smoke-test-eighty-fifth-pass) | 63 |
+| Bugs & robustness | [Open — what the seeded cube smoke test left behind (eighty-fifth pass)](#open--what-the-seeded-cube-smoke-test-left-behind-eighty-fifth-pass) | 66 |
 | Bugs & robustness | [Engine correctness audit — 2026-06-11](#engine-correctness-audit--2026-06-11) | 83 |
 | Bugs & robustness | [Engine — Robustness / defects: the closed audits and the twenty-three filters](#engine--robustness--defects-the-closed-audits-and-the-twenty-three-filters) | 238 |
 | Bugs & robustness | [Decision-plumbing audit (2026-07): bare `decider.decide` sites](#decision-plumbing-audit-2026-07-bare-deciderdecide-sites) | 91 |
@@ -33,64 +33,70 @@ the handoff.
 
 # Bugs & robustness
 
-## Open — found by the seeded cube smoke test (eighty-fifth pass)
+## Open — what the seeded cube smoke test left behind (eighty-fifth pass)
 
 `server::tests::bot_vs_bot_random_cube_decks_terminate` draws from
 `crate::cube::build_cube_state_seeded(seed)`, which pins the decks, the
 shuffle and `GameState::rng`; the test installs the bot's tie-break seed
-inside the match thread, so a trial replays exactly. A sweep of **4,000 seeds
-runs in ~700 s in a debug build** and every one terminates.
+inside the match thread, so a trial replays exactly. A **4,000-seed sweep runs
+in ~870 s in a debug build**: set the loop to `0..4000u64`, add an
+`eprintln!` of the seed, and run it `--no-capture`.
+
 `server::bot_rejection_count()` — the live-match twin of `CRAB_SIM_REJECTS` —
-counted four illegal bot actions across those 4,000 games. Three were one bug
-and are fixed; this is the fourth.
+counted **four** illegal bot actions across those 4,000 games before this
+pass and **zero** after it. Both bugs are fixed (the exile-target modal and
+CR 508.1d vs the attack tax). What is open is the pair of defects underneath
+them, neither of which the sweep can currently see because the thing that
+would surface them is gated off.
 
-### CR 508.1d requires an attack whose CR 508.1g tax is unpayable
+### The target enumerator is zone-blind, and one gate stands in for a zone
 
-**Reproducer: `build_cube_state_seeded(3637)`.** Seat 0 controls a Juggernaut
-("attacks each combat if able") behind a 2-mana attack tax it has no mana for.
+`legal_targets_for_filter_inner` (`game/effects/targeting.rs`) walks the
+battlefield, then every graveyard, then exile, applying the *same*
+`SelectionRequirement` to all three. The filter language has no zone
+predicate, so an exiled creature card satisfies "target creature" and a bare
+`Not(Player)` satisfies everything anywhere. Callers separate the results with
+`SelectionRequirement::mentions_offboard_zone()`, which is true only for
+`InGraveyard` / `InYourGraveyard` / `InOpponentGraveyard` / `InExile`.
 
-```text
-CRAB_SIM_REJECTS=names, debug build
-  attack_reject combat.rs:1260 CannotAttack(CardId(26))     x5
-  trim_attacks_to_payable_tax: total=2 budget=0, forced attacker
-                               CardId(26) t=2 name="Juggernaut"
-  server: bot seat 0 action rejected: Creature CardId(26) cannot attack
-```
+Two consequences, one fixed and one open:
 
-Both sides read the board correctly and neither has a legal move:
+* **Fixed** — a board-shaped filter's off-board matches used to be posed to
+  the player as a `ChooseCards` modal whenever nothing on the board was
+  legal. They are dropped now, and an empty legal set resolves targetless.
+* **Open** — an effect that genuinely reaches a graveyard *without saying so
+  in its filter* gets a battlefield cursor. Timeless Witness's ETB is `Move {
+  what: TargetFiltered { filter: Not(Player) }, to: Hand(You) }`;
+  `build_cube_state_seeded(62)` is that board.
 
-* `GameState::attacker_is_able` (combat.rs) asks `attacker_self_block` and
-  `attacker_target_block` and **not** whether the attack cost can be paid, so
-  the CR 508.1d requirement loops demand the Juggernaut attack.
-* `bot::trim_attacks_to_payable_tax` keeps a forced attacker unconditionally —
-  correctly, given the above: "CR 508.1d would reject the batch for its
-  absence instead."
-* The declaration gate then rejects the batch at combat.rs:1260 because
-  `try_pay_with_auto_tap` cannot cover the tax. The seat loses its whole
-  combat; a human seat would be stuck the same way.
+**Do not fix it by widening the gate to `Effect::prefers_graveyard_target`.**
+That was tried in this pass and reverted: it is true for exactly this effect,
+and `Not(Player)` then matches every card in every graveyard *and in exile*,
+so the modal offers illegal candidates and the bot answers with none. Seed 62
+is in the smoke test to keep that from being re-added silently. The fix that
+would work is a zone in the filter (a `Not(Player)` that means "a card in a
+graveyard" should say so) or a zone argument to the enumerator; both are
+catalog-wide.
 
-**The rules answer is that the creature is not *able*.** CR 508.1g: a cost
-associated with attacking must be paid for the creature to attack, so a
-creature whose attack cost is unpayable cannot attack, and CR 508.1d ("attacks
-each combat if able") does not require it. This is exactly the failure mode
-`attacker_self_block`'s own doc comment names — "required to attack and then
-rejected for attacking… with no legal move out of it" — reappearing through
-the one restriction that lives outside that walker.
+**And the auto-picker has the same blindness with no gate at all.**
+`auto_target_for_effect_avoiding_set_xc_inner`'s final fallback walks every
+graveyard and then exile for *any* filter, so a "destroy target creature"
+trigger with no legal battlefield creature auto-targets an exiled card in the
+**training** path (`wants_ui` false), where it silently fizzles instead of
+resolving targetless. Not observed as a wrong outcome; recorded because it is
+the same defect on the side no instrument watches.
 
-**Shape of the fix, and why it is not a one-liner.** `attacker_is_able` would
-have to take the `attack_static_scan` bitmask and, when a tax is possible at
-all (`ATTACK_TAX`, `attack_tax_this_turn`, any seat's
-`attack_tax_until_your_turn`), require `could_pay_generic` for this attacker's
-single-attacker tax against some legal defender. That probe is a state clone
-plus an auto-tap, so it must stay behind the presence gate; its two callers
-are the requirement loops and `bot::restore_forced_attackers_unchecked`, both
-of which are already gated on a must-attack keyword being present. The bot's
-trim then stops treating a forced-but-unaffordable attacker as forced. Both
-halves have to land together or the batch is rejected for the attacker's
-*absence* instead.
+### The bot answers a mandatory off-board modal with nothing
 
-**Gate for it:** add seed 3637 to the smoke test's list. The assertion on
-`bot_rejection_count()` is already there and already fails on it.
+`bot::decide_choose_cards`'s third branch (neither all-in-hand nor
+all-on-battlefield) filters candidates to *opponents'* graveyards, and its
+`min >= 1` fill searches **the bot's own graveyard only**. A candidate in
+exile, or in a graveyard the branch's owner lookup does not resolve, leaves
+the answer empty — and `min: 1` rejects an empty answer, which ends the match
+where it stands. It has no live reproducer now that the enumerator no longer
+offers such modals, which is why it is filed rather than fixed: the honest
+fix is a final fallback that answers with the first `min` candidates rather
+than none.
 
 ## Engine correctness audit — 2026-06-11
 
