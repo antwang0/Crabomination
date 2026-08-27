@@ -23,240 +23,87 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT (handoff — rewrite each run, keep it terse)
 
 **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
-claude/modern_decks origin/claude/modern_decks`. The container clones `main`
-and `git branch -a` does not list this branch before that fetch, so an
-orient-yourself listing reads as "it doesn't exist" and you build 2,500
-commits behind. **Sessions run this branch concurrently and the tracker is
-not a lock:** fetch before starting a candidate, and **push the code commit
-before the tracker prose** — passes 68/69 and 71/72 each duplicated a whole
-commit that a fetch would have shown.
+claude/modern_decks origin/claude/modern_decks` — the container clones `main`
+and `git branch -a` does not list this branch before that fetch. **Sessions
+run this branch concurrently and this file is not a lock:** push the code
+commit before the tracker prose; a fetch only rules out work already
+*pushed*, so do not take the top-ranked item unless you can push within the
+hour (pass 80 duplicated a whole item end-to-end), and diff before discarding
+a lost race — the loser usually holds something the winner does not.
 
-**A fetch before starting is NOT enough, and pass 80 proved it: 4d was
-duplicated end-to-end** — diagnosed, fixed, tested and measured on both
-sides — because the other session started it *after* that fetch and landed
-first (`7384e79b`). A fetch only rules out work already pushed. **The
-collision is structural: this file ranks the queue and marks one item "NEXT
-RUN'S BEST BUG", so two sessions independently pick the same one.** So:
-**take the marked item only if you can push something within the hour, and
-otherwise take from the middle of the queue** — and when you lose the race,
-diff the two before discarding yours, because the loser usually holds
-something the winner does not (here: the test covering the *consumer*, which
-went in on top as `6c9746ec`, and a measurement of the alternative shape).
-
-1. **Perf queue = PERF's candidates, and it is nearly empty.** (-54) closed
-   (see 4a); **(-53) closed at pass 80** — re-sized to 0.209 % and, more to
-   the point, the per-hand-card loop it was written to gate is gone
-   (`can_afford_in_state_with` reaches none of the three families now), so the
-   `*_scan` rule refuses it: one trip per cast, and a per-cast scan costs what
-   the walk costs. **The only named item left is (-51)(a), the 7,665-Ir land
-   tap, and its own entry says what it wants is either fewer taps or a cheaper
-   `keyword_grant_in_scope` — and the bit that would do the latter is on the
-   do-not-rebuild list.** So **the next perf pass needs a fresh profile, not
-   this queue** — and PERF's **"THE ACTOR, at the eightieth tip"** is now that
-   profile. Its answer: the actor is *not* a different animal. Top rows are
-   the engine (allocation+copy 17.7 %, `dispatch_triggers_for_events` 4.91 %,
-   the layer gather 3.21 %), and the shape is the ladder's —
-   **`pick_attacks_scored` 46.3 %** at 1.78 M Ir a decision,
-   `main_phase_action_with` 27.9 %, `perform_action` 6.9 %, the whole encoder
-   **6.1 %**. **The attack search is the ML pipeline's largest number and
-   nothing has attacked it directly.** ⚠ Profile the actor at **60 games**,
-   not 20: net init is 59 M Ir of fixed cost that reads 4.34 % at 20 games and
-   1.40 % at 60, and `Normal::sample` sits at #8 in the short table with the
-   same absolute Ir it has at #40 in the long one.
-2. **Read PERF's "Inside one attack sim" before anything bot-side:** the
-   search is 59.6 % of `cube` and **37 % of the program is the engine
-   advancing a turn inside one**, against `cast_candidates`' 3.6 %.
-3. **(-51)(b)'s 1,672 rollbacks are a correctness question first** — the bot
-   pre-filters that path on total *and* colour, so a failure is a bad estimate
-   or an auto-tap that stranded a payable colour. Oracle rule, PERF's caller
-   table.
-4. **The encoder is MINED OUT and this file's profile of record still
-   describes `bot_ladder` only.** Five passes (77/78/79/80), **`encode_state`
-   156,090,720 -> 78,971,603, -49.4 %, the actor -6.1 %**, and three of the
-   actor's top rows are **0 calls** on the bench. Every lead NEXT ever named
-   there is now closed: pass 80 took the last one, `Vocab::index_of`, with a
-   `(ptr, len)`-keyed cache beside the string map (-0.538 % program, -8.07 %
-   `encode_state`) — **a card's name is a `&'static str` literal, so the same
-   card always presents the same address, and a pointer hash beats a string
-   hash plus its `memcmp`**. Three refutations bound what is left:
-   `encode_library`'s `BTreeMap` in **both** directions (name-dedupe +0.217 %,
-   a `&str` compare is a `memcmp` where a `u16` compare is one instruction;
-   index-keyed `Vec` -1.5 % on `encode_state` and **+0.024 %** on the
-   program — **a subtree win is not a program win**). **A new lead here needs
-   a fresh actor profile first, not this list.** Two rules pass 80 adds:
-   **re-measure the base if any commit landed since the recorded row** (the
-   seventy-ninth tip re-read +0.076 % because a correctness commit landed
-   between), and **a pure optimization needs a test that it is still an
-   optimization** — nothing else can tell a cache that always hits from one
-   that always misses. **Open question for a run with the ML context:** should
-   `selfplay` seed `jitter_below` from `--seed`? It would make training runs
-   replayable and `--games N` fixed work; it also removes per-actor tie-break
-   diversity. Not to be changed unilaterally.
-4a. **(-54) is CLOSED with its number and (-55) is what the number found.**
-   `CRAB_SIM_REJECTS=1` counts what the sim's own pickers propose and the
-   engine throws out: **470 of 91,438 non-pass `sim_step` calls (0.51 %)**,
-   non-zero on every pool and **3.70 % on `cube` seed 11 — 258 of 3,784
-   attacks**. So the rollback-and-retry fallback is load-bearing and the
-   checkpoint stays. `Picked::Plain` is 0/88, so a fast path for the one
-   provably-infallible kind buys nothing. **Every rejection is a
-   declaration**, and `=names` names them: `SummoningSickness` on a card
-   whose `summoning_sick` is `false` (`Kestia`, 52) is a contradiction and
-   the best lead — the picker gates on `c.has_keyword(Haste)` off the
-   *instance* where the engine reads the computed view, the same
-   presence-vs-computed shape as passes 71 and 75. **Both halves are fixed**
-   (`d0d1162d`): the picker now tests `cp.card_types` for creature-ness (a
-   bestowed Kestia is an Aura, and the batch was rejected *whole*, so the
-   sim's opponent declared nothing that turn), and the engine's cascade
-   reports `CannotAttack` where `is_creature_now` is false instead of
-   mislabelling it. 52 -> 0.
-4b. **The per-site tag is built, and the residual is ONE rule.**
-   `attack_reject(line!(), e)` wraps all 28 of `declare_attackers_banded`'s
-   rejection returns; on `cube --seed 11 --games 12 --threads 1`: **718 at
-   `combat.rs:1188` (CR 508.1g, the attack tax) and 22 at `combat.rs:710`
-   (CR 508.1d, "attacks each combat if able"), and zero at the other 26.**
-   `fixed`/`sos`/`sealed` are zero everywhere.
-4c. **FIXED, and it is the first change on this branch with a win rate
-   instead of an argument.** `attack_tax_for` is now one walker the engine
-   and `trim_attacks_to_payable_tax` both call; the picker drops taxed
-   attackers by damage-per-mana until `available_mana` covers the rest,
-   never dropping an untaxed or a must-attack one. Sim rejections on `cube
-   --seed 11`: **attack 110 -> 10**, total 156/8,656 -> 54/8,596. `--vs`
-   over the eight cube seeds whose pool carries a tax, 3,200 games each:
-   **49 A-sweeps against 14 B-sweeps, never worse on a seed** (s11 50.5 %,
-   s20/s22 50.2 %, s8/s21 50.1 %, s9/s10/s18 50.0 %); the seeds with no tax
-   split 1600/1600. Clock cost, `ab_wall` on `fixed` where play is identical
-   both sides: **+0.56 %, CI -0.26 .. +1.39 %, and the null resolves only
-   +/-2.34 %**. **Meta-lesson: naming the *card* was the wrong question** —
-   `attacks[0]` is not the culprit for a batch-level rejection, and two
-   rounds went into chasing "Angel" before the site tag answered it in one.
-4d. **FIXED (`7384e79b` + `6c9746ec`).** One `must_attack(c, kws, others)`
-   predicate off the computed set, `restore_forced_attackers` as a repair
-   pass to a fixed point (the third keyword is set-dependent), the engine's
-   `able` conjunction extracted as `attack_requirement_able`, and the search
-   menu repaired so no candidate leaves an obliged attacker home. 22 -> 0 on
-   `cube --seed 11`; strength flat over 19,200 `--vs` games (2 A-sweeps to
-   2), so it is a correctness change with no win to claim.
-4e. **AND TWO MORE PROHIBITIONS THE PICKER DID NOT MODEL, both found by the
-   site tag and both the same shape: a per-attacker rule whose violation the
-   engine rejects the batch *whole* for.**
-   * **CR 613, Ensnaring Bridge** (`AttackPowerCapByControllerHand`) —
-     **410 of 3,232 attack proposals (12.7 %) on `cube --seed 10`**, the only
-     seed in 1-24 whose pool carries one. 410 -> 0. Strength flat (9,600
-     games, 6 A-sweeps to 4).
-   * **CR 508.1g, the attack tax** — see 4c.
-   Read from `attack_static_scan`, taken once at the top of
-   `pick_attacks_inner` and shared with the tax trim.
-4f. **The BLOCK side had three of the same, and the block tag found them all
-   in one run** (`block_reject(line!(), e)` now wraps all 44 of
-   `declare_blockers`' rejection returns).
-   * **CR 509.1a** — `bot_can_block` read the *printed* view where the engine
-     reads the computed one. 4 a run on the **bench** pool. Still refuses a
-     tapped blocker on purpose: the engine's `tapped_creatures_can_block`
-     escape is a widening, not a bug fix, and wants its own gate.
-   * **CR 702.39, Provoke** — not modelled at all, 82 on `cube --seed 11`.
-     `provoked_block_is_able` is now one method both sides call.
-   * **CR 509.1b, Menace** — the block search's subsets stripped the second
-     blocker, 14 on `cube --seed 1` and 2 on `sealed`. `repair_block_candidate`
-     is the block twin of the attack menu's repair.
-   102 -> 6 between them; strength `--vs` 8 A-sweeps to 1 on cube s11
-   (50.2 %), flat elsewhere.
-4g. **WHAT IS LEFT OF (-55), AND IT IS ONE SITE ON EACH SIDE.** Both are a
-   *cost* the planner does not price, and both have the same fix shape as the
-   attack tax — one walker, then trim:
-   * `combat.rs:2418` — the **block** cost (CR 509.1d `BlockTaxToController`
-     + CR 509.1b's per-blocker keyword tax). 6 on `cube --seed 11`. The
-     engine's `block_tax_for` is still a closure inside `declare_blockers`;
-     lift it the way `attack_tax_for` was lifted. Note the trim interacts
-     with `repair_block_candidate` (dropping a blocker can break a minimum
-     count or release a provoked creature), so trim, repair, re-trim once.
-   * `combat.rs:1101` — the **attack** tax's residual 34, which is
-     `available_mana`'s optimism, not a missing rule. Tightening it is the
-     (-51)(b) correctness question, not this one.
-5. **SHIPPED — the two-binary gate exists: `bot_ladder --vs PATH`.** Side A
-   is the binary you invoke, side B the one at `PATH`, one peer process per
-   worker, and the pair schedule is derived on both sides from the same argv
-   rather than sent. So a bot-side change now has a win rate instead of an
-   argument. Recipe and caveats in PERF's "How to measure"; the short form is
-   **run the null first** (`--vs` a byte-identical copy must read 50.0 % with
-   every pair split) and **give both sides the same `--a`/`--b`** or the run
-   measures the profile and the code together. It gates a change to how the
-   bot *chooses*; a change to how the engine *resolves* diverges the mirrors
-   and aborts with the poll and both digests (exit 3), which is a limit, not
-   a bug. Costs 1.9x wall.
-6. **Bugs:** ENGINE_BACKLOG P3's picker/checker bullet is closed; the open one
-   is the two requirement walkers. P2 has no open correctness entries.
-7. **State (final checks, eightieth tip, all re-run at it):** two-crate gate
-   **18,775 / 0 / 5**; `--workspace --exclude crabomination_client`
-   **19,035 / 0 / 5**; 7 golden traces; clippy `--workspace --all-targets`
-   clean **including the client** (the four apt packages install in ~40 s —
-   free `target/debug/incremental` first, it was 14 GB this run and the box
-   was at 96 %). `--bench` on `release-fast`: **195,616 decisions / 27.44
-   turns / 0 stalls**, `determinism ok`, peak RSS 28.7 MiB, 262.2 games/s at
-   3 threads. `overflow` profile, seeds 11 and 12 over `all`/`cube`/`sealed`,
-   600 games/archetype: **44,400 games, 0 capped and 0 stuck, no panic, no
-   arithmetic overflow** (20 draws, see 7z).
-   The play-dependent rows were measured twice, side by side, at `21c0c97f`
-   and at `8450ba81` (the attack-tax *walker*, which is a pure extraction and
-   moves nothing), and are **bit-identical** — 195,616 decisions, 27.44
-   turns, the same 20 undecided in the same six cells.
-7y. **"The pool does not contain the card" is a statement about a SEED, not
-   about the pool, and this file made the stronger claim for one commit.** It
-   read the bit-identical rows above and concluded the `--vs` ladder could
-   not gate the attack-tax fix "on any deck in `fixed`, `cube`, `sealed` or
-   `all`". `fixed` is right — it is four hand-built decks and none carries a
-   Propaganda. `cube` is **seed-dependent in deck content**, which this file
-   already says two sections up, and a sweep of `CRAB_SIM_REJECTS=1` over
-   seeds 1-24 finds a tax in **8 of them** (8, 9, 10, 11, 18, 20, 21, 22 —
-   0/1,884 at seed 1, 92/2,020 at seed 11). Those eight are what gated the
-   fix. **Ask the census, not the intuition: one `CRAB_SIM_REJECTS=1` run a
-   seed at `--games 6` is ~4 s and says outright whether a pool reaches the
-   code.** The same sweep is how to find a pool for the next play-changing
-   fix.
-7z. **CLOSED, and the answer is "no stalls at all": all 20 undecided in
-   44,400 are DRAWS — `cap 0 / stuck 0 / draw 20`.** A draw is CR 104.4, a
-   rules outcome, so the sweep's real reading is **zero capped and zero stuck
-   games in 44,400**, which is a stronger robustness result than the bare
-   "20 undecided" looked like. They concentrate in two slow *cube* decks in
-   a mirror (one WU 10, one GR 4, one WU 2) and are 0 on every aggro deck,
-   on `sealed`, and on `fixed` — consistent with both seats decking out on
-   the same turn, which is what a mirror of a control deck does. Deterministic:
-   the same six cells reproduced across two builds and four runs.
-   **The tally existed the whole time and only `--bench` printed it**, so a
-   `--decks` sweep reported a bare count and the obvious next question cost a
-   rebuild. The ladder now prints `undecided_by cap/stuck/draw` whenever the
-   count is non-zero. **Rule: a number a sweep reports needs its breakdown at
-   the same call site, or the sweep just generates a follow-up question.**
-7a. **⚠ The box changed mid-run and the wall-clock rows in this file did
-   not.** This run's `--bench` reads **249.8 games/s at 3 threads on an Intel
-   Xeon @ 2.10 GHz**, against 208-218 on the 2.80 GHz Xeon the seventy-fifth
-   pass measured — *faster on a slower clock*, which is what happens when a
-   throughput number crosses hosts. **Read `host_cpu` and `host_calib_ms` off
-   the run before comparing any games/s row in this file to any other**; the
-   Ir columns are unaffected (callgrind Ir has now reproduced across four of
-   these containers).
-7b. **A container reset mid-session is a real hazard and it cost this run a
-   commit.** `target/` was wiped, `cargo-nextest` was gone, and the repo came
-   back checked out on the *system-prompt* branch with `claude/modern_decks`
-   absent locally — an uncommitted edit was lost and had to be re-applied
-   from the transcript. **Commit each measured change as soon as it measures**
-   rather than batching it with the tracker prose, and re-run FIRST after any
-   unexplained `git status`. `cargo-nextest` reinstalls in seconds:
-   `curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`.
-   This section was 315 lines before the seventy-sixth pass compacted it;
-   everything it dropped is in "Standing rules" below, PERF's Log/candidates,
-   or ENGINE_BACKLOG.
-8. **Deck net revived (2026-08-24):** `nets/deck-champion.safetensors` — the
-   r45 run's ride-along deck net, gated **60.3 % pooled** over 19,200 games
-   vs the static judge (`.ladder/run_deck_regate.sh`), so `--use-deck-best`
-   has a committed judge again. Post-freeze size (164 rows), loads under
-   `vocab_fit`. Write-up in ML_NOTES ("Deck-net re-gate") and the defect
-   index below.
+1. **Perf: the candidate queue is empty, so the profile is the queue.**
+   (-52)/(-53)/(-54) closed; (-51)(a) wants a device on the do-not-rebuild
+   list. PERF's **"THE ACTOR, at the eightieth tip"** is the ML workload's
+   first profile: `pick_attacks_scored` **46.3 %** at 1.78 M Ir a decision,
+   `main_phase_action_with` 27.9 %, allocation+copy 17.7 %, the whole encoder
+   6.1 %. **The attack search is the largest number in the pipeline and
+   nothing has aimed at it.** Profile actors at **60 games**, not 20.
+2. **Encoder is mined out** — passes 77-80, `encode_state` -49.4 %, actor
+   -6.1 %, three refutations in PERF bounding what is left. A new lead there
+   needs a fresh profile, not a list.
+3. **(-55) is effectively closed.** Census at this tip, `CRAB_SIM_REJECTS=1
+   --games 12 --threads 3`: cube s1 **0**/8,372, s10 **0**/7,010, fixed s11
+   **0**/6,006, cube s11 **14**/8,610 — from 470/91,438. Residual by site
+   (`=names --threads 1`): **34 `combat.rs:1114`**, the attack tax's
+   `available_mana` optimism, which is the (-51)(b) question and not a
+   missing rule; **6 `combat.rs:2418`** (CR 509.1b must-be-blocked); **2
+   `combat.rs:1896`** (CR 701.35 detain) — and `bot_can_block` *does* test
+   `detained_by`, so the proposer is the menu/repair path, not the predicate.
+   That last one is the open question and nobody has looked at it.
+4. **Anything that moves play is gated by `bot_ladder --vs PATH`:** run the
+   null first (a byte-identical copy must read 50.0 %, every pair split),
+   same `--a`/`--b` both sides, 1.9x wall. **Sweep `CRAB_SIM_REJECTS=1` over
+   seeds before concluding a pool cannot reach your code** — `cube` deck
+   content is seed-dependent and the sweep is ~4 s a seed.
+5. **Encoding caution:** any change to the SOS/cube pool, `Vocab`,
+   `TrainRow`/`EncodedState`, or the observation/deck encoding **invalidates
+   the trained nets**. Say so prominently in the commit and here.
+6. **Bugs:** ENGINE_BACKLOG P3's open item is the two requirement walkers; P2
+   has no open correctness entries. Both audits clean at this tip —
+   `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, and dead
+   modes are now suite-gated against `audit::REVIEWED_DEAD_MODES`.
+7. **State, all re-run at this tip:** `--workspace --exclude
+   crabomination_client` **19,047 / 0 / 5**; clippy `--workspace
+   --all-targets` clean **including the client**; `--bench` **195,616
+   decisions / 27.44 turns / 0 stalls**, determinism ok, 297.7 games/s at 3
+   threads; `overflow`, seeds 11/12 over `all`/`cube`/`sealed` at 600
+   games/archetype: **44,400 games, 0 capped, 0 stuck, 22 draws, no panic, no
+   arithmetic overflow.**
+8. **Hazards.** ⚠ Wall-clock rows do not cross hosts — read `host_cpu` /
+   `host_calib_ms` off the run before comparing any games/s in PERF; Ir is
+   unaffected. ⚠ A container reset wipes `target/`, removes `cargo-nextest`
+   and checks the repo out on the *system-prompt* branch: commit each
+   measured change as soon as it measures, re-run FIRST after any surprising
+   `git status`, and reinstall with `curl -sSLf
+   https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`. ⚠ Disk:
+   free `target/debug/incremental` (7-15 GB) before a client clippy.
+9. **Deck net:** `nets/deck-champion.safetensors`, gated **60.3 % pooled**
+   over 19,200 games against the static judge, so `--use-deck-best` has a
+   committed judge. Write-up in ML_NOTES ("Deck-net re-gate").
+10. **Open question for a run with the ML context:** should `selfplay` seed
+   `jitter_below` from `--seed`? It would make training runs replayable and
+   `--games N` fixed work, and it removes per-actor tie-break diversity. Not
+   to be changed unilaterally.
 
 ## Standing rules for a perf pass
 
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
 
+- **A number a sweep reports needs its breakdown at the same call site**, or
+  the sweep only generates a follow-up question. The undecided count is the
+  case: `SimCost::record` split capped / stuck / draw the moment a game
+  ended, and only `--bench` printed the split, so a robustness sweep on
+  `--decks` reported a bare "20 undecided in 44,400" and answering the one
+  question that matters — rules outcome or broken loop? — cost a rebuild.
+  They were all draws, i.e. **zero capped and zero stuck**, a much stronger
+  result than the bare count looked like.
+- **A share is a ratio whose denominator you chose.** Read the absolute Ir
+  next to the percentage: one is about your code and the other is about
+  everyone else's. Two ways this has bitten — a fixed startup cost that reads
+  4.34 % at 20 games and 1.40 % at 60 with *identical* Ir (PERF's actor
+  profile), and (-53)'s share falling a third further than its work did
+  because the program grew 2.63 G -> 3.57 G around it.
 - **Ask what the answer costs when it is "no"** (pass 59, ~1.5 % of `sos`
   across four sites). None of them was a hot function: a SipHash of ~84
   small integers for a digest compared only within one process, an
