@@ -2045,7 +2045,13 @@ impl GameState {
 
         // CR 509.1b — the blocking half of Hollow Warrior's tap cost. Helpers
         // may be neither an attacker nor one of the declared blockers.
-        {
+        // The presence gate is the attack side's (`AttackBlockCostTapAnother`
+        // is one keyword on a handful of cards, and `tap_another_filters` is
+        // already gated on it) — without it the `declared` list below is built
+        // on every declaration for a keyword no board plays.
+        if assignments.iter().any(|&(b, _)| {
+            kws_of(b).iter().any(|k| matches!(k, Keyword::AttackBlockCostTapAnother(_)))
+        }) {
             let declared: Vec<CardId> = assignments
                 .iter()
                 .map(|(b, _)| *b)
