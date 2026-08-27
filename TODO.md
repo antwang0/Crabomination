@@ -31,13 +31,36 @@ commit before the tracker prose; a fetch only rules out work already
 hour (pass 80 duplicated a whole item end-to-end), and diff before discarding
 a lost race — the loser usually holds something the winner does not.
 
-1. **Perf: the candidate queue is empty, so the profile is the queue.**
+1. **Perf queue: (-56) and (-57), both seeded at the eighty-first pass with
+   their tables.** (-56) is the allocation table — **a quarter of every
+   allocation in the program is a `Vec` that started at zero and doubled**,
+   and `gather_continuous_effects_inner` (69,890 growths) and
+   `compute_permanent_pass` (51,706) own a fifth of that between them. Read
+   the fifty-fourth pass's warning in the entry first: **exact sizes, not
+   headroom** — blanket headroom on the same Vec measured +1.54 %. (-57) is
+   `eval_material_inner`'s 36,668 `computed_permanent` calls (1.63 % of
+   `cube`), and it wants `SecondPass::of` priced before anything is built.
    (-52)/(-53)/(-54) closed; (-51)(a) wants a device on the do-not-rebuild
-   list. PERF's **"THE ACTOR, at the eightieth tip"** is the ML workload's
-   first profile: `pick_attacks_scored` **46.3 %** at 1.78 M Ir a decision,
+   list.
+1a. **⚠ The eightieth-pass block cost `fixed` +2.833 % and `cube` +1.712 %,
+   and no commit in it recorded an Ir row.** Play is identical across it, so
+   that is cost alone, and it is almost all one row: `computed_permanent`
+   +57 % on `fixed`, whose largest new caller was `bot_can_block`. The
+   eighty-first pass took about a fifth of it back (`legal_blockers`).
+   **A correctness commit is a perf commit on the workload it runs in; report
+   Ir on anything that lands in the picker, not just `--bench` decisions.**
+1b. **The attack search is still the largest number in the pipeline and
+   nothing has aimed at it.** PERF's **"THE ACTOR, at the eightieth tip"**:
+   `pick_attacks_scored` **46.3 %** at 1.78 M Ir a decision,
    `main_phase_action_with` 27.9 %, allocation+copy 17.7 %, the whole encoder
-   6.1 %. **The attack search is the largest number in the pipeline and
-   nothing has aimed at it.** Profile actors at **60 games**, not 20.
+   6.1 %. Profile actors at **60 games**, not 20. The sub-lever with a number
+   on it is `sim_step -> perform_action`'s checkpoint: **9,628 clones /
+   23.50 M + 9,628 drops / 15.11 M = 1.08 % of `cube`**, taken on a state the
+   sim owns and throws away, to support a fallback whose failure rate the
+   picker fixes have driven from 470/91,438 to ~14/8,610 on the one pool that
+   still has any. Removing it is **not** free — it is the partial-mutation
+   guarantee (`perform_action`'s doc) — so it wants an atomicity proof, not a
+   deletion.
 2. **Encoder is mined out** — passes 77-80, `encode_state` -49.4 %, actor
    -6.1 %, three refutations in PERF bounding what is left. A new lead there
    needs a fresh profile, not a list.
@@ -58,15 +81,25 @@ a lost race — the loser usually holds something the winner does not.
 5. **Encoding caution:** any change to the SOS/cube pool, `Vocab`,
    `TrainRow`/`EncodedState`, or the observation/deck encoding **invalidates
    the trained nets**. Say so prominently in the commit and here.
-6. **Bugs:** ENGINE_BACKLOG P3's open item is the two requirement walkers; P2
-   has no open correctness entries. Both audits clean at this tip —
+6. **Bugs:** ENGINE_BACKLOG P3's requirement-walker item is **half closed** —
+   the attack side is one walker now (`attacker_self_block` /
+   `attacker_target_block` / `attacker_is_able` / `may_declare_attacker`), and
+   with it the CR 508.1d deadlock it was hiding: a must-attack creature under
+   any of the twenty-two restrictions the four-gate `able` never read was
+   *required to attack and then rejected for attacking*, leaving the seat no
+   legal declaration at all (`cr_recent100`, six tests). What is left there is
+   the **block** side and `evaluate_requirement_static` vs
+   `evaluate_requirement_on_card`. P2 has no open correctness entries. Both audits clean at this tip —
    `audit_stubs` 0/21,795, `audit_incomplete` 0 needing review, and dead
    modes are now suite-gated against `audit::REVIEWED_DEAD_MODES`.
-7. **State, all re-run at this tip:** `--workspace --exclude
-   crabomination_client` **19,047 / 0 / 5**; clippy `--workspace
-   --all-targets` clean **including the client**; `--bench` **195,616
-   decisions / 27.44 turns / 0 stalls**, determinism ok, 297.7 games/s at 3
-   threads; `overflow`, seeds 11/12 over `all`/`cube`/`sealed` at 600
+7. **State (eighty-first tip):** two-crate gate **18,795 / 0 / 5**; clippy
+   `--workspace --exclude crabomination_client --all-targets` clean;
+   `--bench` **195,616 decisions / 27.44 turns / 0 stalls**, determinism ok,
+   224.6 games/s at 3 threads on a 2.10 GHz Xeon (`host_calib_ms` 47 — do not
+   compare that figure to the 297.7 below, which is a different host). The
+   eightieth tip's wider state, still current for what it covers:
+   `--workspace --exclude crabomination_client` **19,047 / 0 / 5**; clippy
+   clean **including the client**; 297.7 games/s at 3 threads; `overflow`, seeds 11/12 over `all`/`cube`/`sealed` at 600
    games/archetype: **44,400 games, 0 capped, 0 stuck, 22 draws, no panic, no
    arithmetic overflow.**
 8. **Hazards.** ⚠ Wall-clock rows do not cross hosts — read `host_cpu` /

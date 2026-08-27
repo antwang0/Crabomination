@@ -733,6 +733,77 @@ build.
 
 ## Baseline
 
+**Eighty-first pass. Base `694fdb05`, two commits, and the second is the
+measurement worth keeping.** Both are behaviour-preserving; `--bench` is
+byte-identical across both (195,616 / 27.44 / 0 stalls) and
+`CRAB_SIM_REJECTS=1` reports the same rejected/proposed counts on every pool
+swept.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.
+
+(1) CR 508.1a — one attacker-legality walker for the gate, the three CR
+    508.1d requirement loops and the bot's picker.  Base be4a9987.
+      fixed  1,172,261,514 -> 1,171,526,095   -0.063 %
+      cube   3,576,010,802 -> 3,571,844,511   -0.117 %
+
+(2) `legal_blockers` — resolve the block planner's CR 509.1a set once a
+    declaration instead of seven times.  Base 694fdb05.
+      fixed  1,171,526,095 -> 1,168,055,373   -0.296 %
+      cube   3,571,844,511 -> 3,561,558,835   -0.288 %
+      computed_permanent, cube  455,592 calls / 99,866,368 Ir
+                             -> 387,980 calls / 90,626,464 Ir
+```
+
+**Twenty restriction families were added to a hot filter for nothing, and the
+reason is the shape of the question.** (1) replaced the picker's nine
+hand-written families with the engine's ~26 and still read *cheaper*, because
+`attacker_self_block` asks them in **one walk** over the computed keyword
+slice. The first version asked each family its own `has_kw` / `iter().any()`
+— twenty scans of the same three-element slice — and measured **`fixed`
++0.17 %**. A restriction list is a `match` inside one loop, not a
+conjunction of scans.
+
+**And the same commit's first draft cost `fixed` +0.62 %, from one missing
+instance gate.** The picker's filter delegated to the engine walker for
+*every permanent the seat controls*, where the version it replaced tested
+`!tapped && definition.is_creature()` first. `computed_permanent` is ~1.5 k Ir
+on a first read, so asking it about every land and enchantment is the whole
+cost of the change and then some. **A delegation is only free if it inherits
+the caller's cheap gates.**
+
+**(2) is the block-side twin of the same lesson, and it says a Vec of ids is
+the wrong return type.** `bot_can_block` is one `computed_permanent` per own
+permanent, and `pick_blocks_inner` asked it over the whole battlefield five
+times per declaration plus once per candidate helper — **117,028 calls /
+65,311,295 Ir / 1.83 % of `cube`** at `be4a9987`, the largest single caller of
+`computed_permanent` in the program, for an answer that cannot change inside
+one declaration. Returning `Vec<CardId>` and testing `may_block.contains()`
+inside the same battlefield walks was built and measured first: **cube
+-0.110 %**, less than half. Returning `Vec<&CardInstance>` so the five passes
+iterate the handful of legal blockers *instead of* the battlefield reads
+**-0.288 %**. The membership test hands back in scan what it saves in layer
+probes; the win is deleting the walk, not the predicate.
+
+**⚠ The eightieth-pass block cost the bench pool 2.8 %, and nothing in this
+file recorded it.** `1a05baa7` -> `be4a9987`, same instrument:
+
+```text
+  fixed  1,139,970,357 -> 1,172,261,514   +2.833 %
+  cube   3,515,821,864 -> 3,576,010,802   +1.712 %
+```
+
+Play is identical across it (`--bench` byte-identical throughout), so it is
+cost alone. The diff is almost entirely one row — **`computed_permanent`
++10.73 M on `fixed` (+57 %)**, plus its `compute_permanent_pass` +4.02 M,
+`Arc::drop_slow` +3.01 M and ~6 M of allocator underneath — and its largest
+new caller is `bot_can_block`, which (2) above takes back about a fifth of.
+**A correctness commit is still a perf commit on the workload it runs in:
+each of those commits reported `--bench` byte-identical decisions and none
+reported Ir, and byte-identical play is exactly the condition under which a
+cost shows up undiluted.**
+
 **Eightieth pass, a measurement of the road not taken on CR 508.1d.** The
 must-attack fix that shipped is `7384e79b`'s, from a concurrent session; an
 independent one built here was discarded. One number from it is worth
@@ -6912,6 +6983,48 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-56) THE ALLOCATION TABLE IS A THIRD REALLOCATION, AND TWO CALLERS OWN
+HALF OF IT.** Read at the eighty-first tip, `--decks cube`, the table that
+has found the most in this file (callers of `__rust_alloc` by *count*):
+
+```text
+1,988,682 allocations
+  521,425  RawVecInner::finish_grow          26.2 %   <- a Vec that outgrew its capacity
+  261,200  Arc::clone_from_ref_in            13.1 %
+  227,436  GameState::computed_permanent     11.4 %
+  174,717  Vec::from_iter (nested)            8.8 %
+  122,896  <GameState as Clone>::clone        6.2 %
+
+callers of `grow_one` (607,072 of the 715,503 `finish_grow` calls)
+  69,890  gather_continuous_effects_inner    14,742,457 Ir
+  62,866  Vec::push_mut                      12,144,426
+  51,706  layers::compute_permanent_pass     19,552,222
+  37,670  stack::advance_step                 4,522,534
+  36,478  combat::declare_blockers            8,253,535
+```
+
+**A quarter of every allocation in the program is a `Vec` that started at
+zero and doubled**, and the two biggest are inside the layer machinery. The
+fifty-fourth pass already took the top-level one (`all_effects` is sized off
+the `sa_cards` walk) and its note is the warning to read first: a blanket
+`+ battlefield.len()` headroom measured **+1.54 %**, because a bigger
+allocation on all 32,002 gathers is worse than the 10,040 growths it removes.
+So this entry wants **exact or near-exact** sizes, not headroom —
+`sa_cards`'s own `Vec::new()` (~2.2 growths a gather) is a two-pass count
+away, and `compute_permanent_pass` needs a line profile before anyone guesses
+which of its pushes grow.
+
+**(-57) `eval_material_inner` IS THE LAST BIG `computed_permanent` CALLER —
+36,668 calls / 57,985,103 Ir / 1.63 % OF `cube`.** It walks the whole
+battlefield and asks `permanent_value_with` for every non-land permanent,
+which is one `computed_permanent` apiece. Unlike (2) in the Baseline above
+this is **not** a repeated question — one pass per evaluation — so the shape
+that pays is not "resolve once" but "resolve the board in one call":
+`apply_layers` computes `SecondPass::of(effects)` once for the whole
+battlefield where `apply_layers_one` recomputes it per card. **Price
+`SecondPass::of` first**; if it is small the entry is closed, and if it is
+not it is the same win on every whole-board consumer, not just this one.
 
 **Ranking rule added by the fifty-third pass, and it is about the workload,
 not the code: ask which pool the change lives on before you cost it.** Two
