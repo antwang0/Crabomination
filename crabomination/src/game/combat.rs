@@ -2068,48 +2068,12 @@ impl GameState {
         // The tax is summed per blocker, since a source may narrow itself to
         // some of them (Heat Wave taxes only nonblue blockers) and may charge
         // life rather than mana.
-        let block_tax_for = |st: &Self, blocker: CardId| -> (u32, u32) {
-            let (mut mana, mut life) = (st.block_tax_this_turn, 0u32);
-            for c in &st.battlefield {
-                for sa in &c.definition.static_abilities {
-                    if let crate::effect::StaticEffect::BlockTaxToController {
-                        amount,
-                        only_while_attacking,
-                        filter,
-                        life: as_life,
-                    } = &sa.effect
-                    {
-                        if *only_while_attacking
-                            && !st.attacking.iter().any(|a| a.attacker == c.id)
-                        {
-                            continue;
-                        }
-                        if !filter.as_ref().is_none_or(|f| {
-                            st.evaluate_requirement_static(
-                                f,
-                                &crate::game::types::Target::Permanent(blocker),
-                                c.controller,
-                                Some(c.id),
-                            )
-                        }) {
-                            continue;
-                        }
-                        let mut ctx =
-                            crate::game::effects::EffectContext::for_spell(c.controller, None, 0, 0);
-                        ctx.source = Some(c.id);
-                        let n = st.evaluate_value(amount, &ctx).max(0) as u32;
-                        if *as_life { life += n } else { mana += n }
-                    }
-                }
-            }
-            (mana, life)
-        };
         // The spend is deferred to after every block-legality check so a
         // rejected declaration never costs mana (CR 601.2h-style atomicity).
         let mut block_tax_by_controller: crate::fxhash::HashMap<usize, (u32, u32)> =
             crate::fxhash::HashMap::default();
         for &(blocker_id, _) in &assignments {
-            let (mana, life) = block_tax_for(self, blocker_id);
+            let (mana, life) = self.block_tax_for(blocker_id);
             if mana == 0 && life == 0 {
                 continue;
             }
@@ -4591,6 +4555,68 @@ impl GameState {
                     )
             })
             .map(|c| c.id)
+    }
+
+    /// CR 509.1d — `(mana, life)` one declared blocker costs its controller:
+    /// every active `BlockTaxToController` (Archangel of Tithes, Heat Wave,
+    /// Norn's Annex) plus the turn-scoped `block_tax_this_turn`.
+    ///
+    /// Per blocker and additive, because a source may narrow itself to some
+    /// of them and may charge life rather than mana — which is also what
+    /// lets the bot's block planner trim a batch down to what it can pay.
+    /// The engine pays it after every legality check has passed and rejects
+    /// the declaration whole when a player cannot cover theirs, so a planner
+    /// that does not price it loses the block step rather than a blocker.
+    pub(crate) fn block_tax_for(&self, blocker: CardId) -> (u32, u32) {
+        let (mut mana, mut life) = (self.block_tax_this_turn, 0u32);
+        for c in &self.battlefield {
+            for sa in &c.definition.static_abilities {
+                if let crate::effect::StaticEffect::BlockTaxToController {
+                    amount,
+                    only_while_attacking,
+                    filter,
+                    life: as_life,
+                } = &sa.effect
+                {
+                    if *only_while_attacking
+                        && !self.attacking.iter().any(|a| a.attacker == c.id)
+                    {
+                        continue;
+                    }
+                    if !filter.as_ref().is_none_or(|f| {
+                        self.evaluate_requirement_static(
+                            f,
+                            &crate::game::types::Target::Permanent(blocker),
+                            c.controller,
+                            Some(c.id),
+                        )
+                    }) {
+                        continue;
+                    }
+                    let mut ctx =
+                        crate::game::effects::EffectContext::for_spell(c.controller, None, 0, 0);
+                    ctx.source = Some(c.id);
+                    let n = self.evaluate_value(amount, &ctx).max(0) as u32;
+                    if *as_life { life += n } else { mana += n }
+                }
+            }
+        }
+        (mana, life)
+    }
+
+    /// Does any permanent on this board charge a block tax at all? One walk,
+    /// so [`block_tax_for`](Self::block_tax_for)'s per-blocker walk is only
+    /// paid on the boards that have one.
+    pub(crate) fn block_tax_present(&self) -> bool {
+        self.block_tax_this_turn > 0
+            || self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::BlockTaxToController { .. }
+                    )
+                })
+            })
     }
 
     /// CR 702.39 — can `b` block the creature that provoked it?

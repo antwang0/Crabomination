@@ -8040,17 +8040,22 @@ pub(crate) fn attack_candidates_for_mcts(
     // obliged ones" — a legal alternative the menu could not express before
     // — and a holdback that repairs back into greedy is deduped away rather
     // than scored twice.
-    if attack_requirement_present(state) {
-        for cand in candidates.iter_mut() {
-            let mut ids: Vec<CardId> = cand.iter().map(|a| a.attacker).collect();
-            let before = ids.len();
-            restore_forced_attackers_unchecked(state, seat, &mut ids);
-            for id in ids.into_iter().skip(before) {
-                if let Some(a) = greedy.iter().find(|a| a.attacker == id) {
-                    cand.push(*a);
+    // One freeze scope for the sweep: the repair reads `computed_permanent`
+    // per own creature per candidate, and outside a scope each read rebuilds
+    // the layer gather.
+    if state.with_frozen_layers(attack_requirement_present) {
+        state.with_frozen_layers(|st| {
+            for cand in candidates.iter_mut() {
+                let mut ids: Vec<CardId> = cand.iter().map(|a| a.attacker).collect();
+                let before = ids.len();
+                restore_forced_attackers_unchecked(st, seat, &mut ids);
+                for id in ids.into_iter().skip(before) {
+                    if let Some(a) = greedy.iter().find(|a| a.attacker == id) {
+                        cand.push(*a);
+                    }
                 }
             }
-        }
+        });
         let mut seen: Vec<Vec<u32>> = Vec::new();
         candidates.retain(|c| {
             let mut ids: Vec<u32> = c.iter().map(|a| a.attacker.0).collect();
@@ -8522,7 +8527,13 @@ pub(crate) fn block_candidates_for_mcts(
     // See `repair_block_candidate`: every candidate below `greedy` is a
     // subset, and a subset can release a provoked creature or strip the
     // second blocker off a Menace attacker.
-    let repair = |c: &mut Vec<(CardId, CardId)>| repair_block_candidate(state, seat, c);
+    // Trim first, then repair: a requirement wins over the cost, so a batch
+    // the rules force and the pool cannot pay is left for the engine to
+    // reject rather than quietly made illegal a second way.
+    let repair = |c: &mut Vec<(CardId, CardId)>| {
+        trim_blocks_to_payable_tax(state, seat, c);
+        repair_block_candidate(state, seat, c);
+    };
     if (w.block_search == 0 || greedy.is_empty()) && chumps.is_empty() {
         return vec![greedy];
     }
@@ -8546,7 +8557,13 @@ pub(crate) fn block_candidates_for_mcts(
     if w.block_gang {
         candidates.extend(gang_block_candidates(state, seat, &greedy, w));
     }
-    if block_requirement_present(state) {
+    // One freeze scope for the whole sweep: every candidate's requirement and
+    // cost read goes through `computed_permanent`, and outside a scope each
+    // of those rebuilds the layer gather.
+    state.with_frozen_layers(|st| {
+        if !block_requirement_present(st) && !st.block_tax_present() {
+            return;
+        }
         for c in candidates.iter_mut() {
             repair(c);
         }
@@ -8562,7 +8579,7 @@ pub(crate) fn block_candidates_for_mcts(
             }
             fresh
         });
-    }
+    });
     candidates
 }
 
@@ -9007,25 +9024,114 @@ fn simulate_block_outcome_once(
 
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // The heuristic probes block legality per blocker×attacker pair, each a
-    // layer-aware check — share one gather across the whole scan.
-    let mut blocks = state.with_frozen_layers(|state| pick_blocks_inner(state, seat));
-    // CR 509.1b — Silent Arbiter caps the distinct blockers for the whole
-    // combat; an over-sized batch is rejected outright, so keep only the
-    // first `cap` blockers (the heuristic already ordered them best-first).
-    if let Some(cap) = state.combat_participation_cap(true) {
-        let mut kept: Vec<CardId> = state.block_map.keys().copied().collect();
-        blocks.retain(|(blocker, _)| {
-            if kept.contains(blocker) {
-                return true;
-            }
-            if kept.len() >= cap as usize {
-                return false;
-            }
-            kept.push(*blocker);
-            true
-        });
+    // layer-aware check — share one gather across the whole scan, the cap
+    // and the tax trim. A second scope would gather a second time.
+    state.with_frozen_layers(|state| {
+        let mut blocks = pick_blocks_inner(state, seat);
+        // CR 509.1b — Silent Arbiter caps the distinct blockers for the whole
+        // combat; an over-sized batch is rejected outright, so keep only the
+        // first `cap` blockers (the heuristic already ordered them best-first).
+        if let Some(cap) = state.combat_participation_cap(true) {
+            let mut kept: Vec<CardId> = state.block_map.keys().copied().collect();
+            blocks.retain(|(blocker, _)| {
+                if kept.contains(blocker) {
+                    return true;
+                }
+                if kept.len() >= cap as usize {
+                    return false;
+                }
+                kept.push(*blocker);
+                true
+            });
+        }
+        trim_blocks_to_payable_tax(state, seat, &mut blocks);
+        blocks
+    })
+}
+
+/// CR 509.1d / 509.1b — drop blockers until the declaration's cost is
+/// payable.
+///
+/// The block twin of [`trim_attacks_to_payable_tax`], and the same
+/// consequence: the engine charges the tax after every legality check has
+/// passed and rejects the declaration **whole** when a player cannot cover
+/// it, so an unaffordable batch costs the bot its entire block step rather
+/// than one blocker. Two families, both per blocker and additive —
+/// `GameState::block_tax_for` (Archangel of Tithes, Heat Wave, and the
+/// turn-scoped tax; charges life as well as mana) and the blocker's own
+/// "can't block unless you pay {N}" keyword, which is the same
+/// `attack_block_keyword_tax` the engine reads.
+///
+/// Keeps the blocks that stop the most damage: sorted by the attacker's
+/// damage value descending, kept while the running cost fits. `available_mana`
+/// is deliberately optimistic, so this drops the batches that are clearly
+/// unaffordable and leaves the engine to reject the rest.
+fn trim_blocks_to_payable_tax(
+    state: &GameState,
+    seat: usize,
+    blocks: &mut Vec<(CardId, CardId)>,
+) {
+    if blocks.is_empty() {
+        return;
     }
-    blocks
+    let keyword_tax = |id: CardId| {
+        state
+            .computed_permanent(id)
+            .map(|cp| state.attack_block_keyword_tax(id, &cp.keywords, false))
+            .unwrap_or(0)
+    };
+    let taxed_board = state.block_tax_present();
+    let cost = |blocker: CardId| -> (u32, u32) {
+        let (mana, life) = if taxed_board { state.block_tax_for(blocker) } else { (0, 0) };
+        (mana + keyword_tax(blocker), life)
+    };
+    // A blocker declared twice (Guardian of the Gateless) is charged once,
+    // the way the engine charges it: the tax is per declared blocker.
+    let mut distinct: Vec<CardId> = Vec::new();
+    for (b, _) in blocks.iter() {
+        if !distinct.contains(b) {
+            distinct.push(*b);
+        }
+    }
+    let mut owed = (0u32, 0u32);
+    for b in &distinct {
+        let (m, l) = cost(*b);
+        owed = (owed.0 + m, owed.1 + l);
+    }
+    if owed == (0, 0) {
+        return;
+    }
+    let budget = available_mana(state, seat).total;
+    let life = state.players[seat].life.max(0) as u32;
+    if owed.0 <= budget && owed.1 <= life {
+        return;
+    }
+    // Best damage stopped first. A blocker's value is the largest attacker it
+    // is assigned to, which is the damage the block actually prevents.
+    let mut order: Vec<(CardId, i32)> = distinct
+        .iter()
+        .map(|b| {
+            let v = blocks
+                .iter()
+                .filter(|(bid, _)| bid == b)
+                .map(|(_, a)| attacker_damage_value(state, *a))
+                .max()
+                .unwrap_or(0);
+            (*b, v)
+        })
+        .collect();
+    order.sort_by_key(|(_, v)| -*v);
+    let (mut spent_mana, mut spent_life) = (0u32, 0u32);
+    let mut keep: Vec<CardId> = Vec::new();
+    for (b, _) in order {
+        let (m, l) = cost(b);
+        if spent_mana + m <= budget && spent_life + l <= life {
+            spent_mana += m;
+            spent_life += l;
+            keep.push(b);
+        }
+    }
+    blocks.retain(|(b, _)| keep.contains(b));
 }
 
 /// A creature the bot may legally declare as a blocker — `declare_blockers`'
@@ -13757,6 +13863,74 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert!(blocks.len() != 1, "menace takes 0 or 2+ blockers, got {blocks:?}");
         g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 509.1d — the block tax is charged per declared blocker and the
+    /// engine rejects the declaration *whole*, so a planner that ignores it
+    /// loses its block step, not a blocker. The block twin of the attack
+    /// tax; PERF (-55), `combat.rs:2418`.
+    #[test]
+    fn bot_block_plan_trims_to_the_payable_block_tax() {
+        use crate::card::{CardType, StaticAbility};
+        use crate::effect::{StaticEffect, Value};
+        let toll = || CardDefinition {
+            name: "Blockade Toll",
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility {
+                effect: StaticEffect::BlockTaxToController {
+                    amount: Value::Const(2),
+                    only_while_attacking: false,
+                    filter: None,
+                    life: false,
+                },
+                description: "Creatures can't block unless their controller pays {2} for each.",
+            }],
+            ..Default::default()
+        };
+        let setup = |lands: usize| {
+            let mut g = two_player_game();
+            g.add_card_to_battlefield(0, toll());
+            let attackers: Vec<_> = (0..2)
+                .map(|_| {
+                    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+                    g.clear_sickness(a);
+                    a
+                })
+                .collect();
+            for _ in 0..2 {
+                g.add_card_to_battlefield(1, catalog::hill_giant());
+            }
+            for _ in 0..lands {
+                g.add_card_to_battlefield(1, catalog::plains());
+            }
+            g.step = TurnStep::DeclareAttackers;
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g.declare_attackers(
+                attackers
+                    .iter()
+                    .map(|a| crate::game::Attack {
+                        attacker: *a,
+                        target: crate::game::AttackTarget::Player(1),
+                    })
+                    .collect(),
+            )
+            .expect("attack");
+            g.step = TurnStep::DeclareBlockers;
+            g.priority.player_with_priority = 1;
+            g
+        };
+        // {2} a blocker, so the plan is the budget / 2.
+        for (lands, want) in [(0usize, 0usize), (2, 1), (4, 2)] {
+            let g = setup(lands);
+            let blocks = pick_blocks_for_test(&g, 1);
+            assert_eq!(
+                blocks.len(),
+                want,
+                "{lands} untapped lands fund {want} blockers: {blocks:?}",
+            );
+            g.clone().declare_blockers(blocks).expect("the plan the planner made is payable");
+        }
     }
 
     /// CR 702.39 — a provoked creature must be assigned to block its
