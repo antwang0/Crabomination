@@ -28,7 +28,9 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 
 1. **Perf queue** — PERF "Perf candidates", ranked: **(-75)**, (-70) (quiet
    window only), (-69)'s two unclaimed rows, (-51)(b), (-60), (-61), (-51)(a),
-   (-59). Pass 86 closed (-71)+its first sweep and (-73), refuted (-72), (-74).
+   (-59). Pass 86 closed (-71)+its first sweep and (-73); refuted with
+   numbers (-72), (-74), and three more sites of (-71)'s sweep — read its
+   growth-count-vs-call-count table before taking a fourth.
 2. **Perf method** — PERF "How to measure" and "Which pool a change moves",
    then the standing rules below. **Read all three pools**: pass 86 had one
    change that split by pool and one that did not.
