@@ -33,13 +33,13 @@ because every pass restated what PERF already held. Everything below has a
 home in PERF's "Perf candidates", "How to measure" or Log, or in the standing
 rules under this section; add a pointer here, put the detail there.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-68)**
-   (`fire_combat_damage_triggers`, six battlefield walks a damage event,
-   1.51 % of `cube`, priced by reading), **(-69)** (the two `Vec::from_iter`
-   monos, 3.45 % of `cube`, `check_state_based_actions` unclaimed in its
-   by-count table), then **(-51)(b)**, (-60), (-61), (-51)(a), (-59), plus
-   (-63)'s residues at the foot of its entry. Closed at the eighty-fifth
-   pass: **(-65)**, **(-63)** (both halves), **(-66)**, **(-67)**.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-69)** (the two
+   `Vec::from_iter` monos, 3.45 % of `cube`, with
+   `check_state_based_actions` — 36,150 collects — and `compute_permanents`
+   unclaimed in its by-count caller table), then **(-51)(b)**, (-60), (-61),
+   (-51)(a), (-59), plus (-63)'s residues at the foot of its entry. Closed at
+   the eighty-fifth pass: **(-65)**, **(-63)** (both halves), **(-66)**,
+   **(-67)**, **(-68)**.
    **Read the instruments before the profile**
    (`CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`, `server::bot_rejection_count`,
    `--bench`'s stall split), and see "Standing rules for a perf pass" below
@@ -74,6 +74,13 @@ one-sentence claim plus the pass that measured it; do not delete one, because
 the point of the section is that a rule refuted on a *mechanism* stays
 refuted.
 
+- **A gate that rides on an existing *early-exiting* scan is not free**
+  (pass 85, the concurrent half, `(-68)`; estimated 0.5-0.8 % of `cube` and
+  measured 0.317 %). Three of `fire_combat_damage_triggers`' six battlefield
+  walks were gated on facts the dealer lookup could compute on the way past —
+  but that lookup was a short-circuiting `find`, so widening it to a full walk
+  gave back part of the saving, and the arithmetic that priced the entry had
+  not counted what the `find` was skipping.
 - **When a pass deletes the work an abstraction existed to amortise, the
   abstraction is the next thing to read — and its doc comment will not tell
   you** (pass 85, the concurrent half, item 1; `fixed` -0.901 %, `cube`

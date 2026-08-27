@@ -945,6 +945,15 @@ configuration.
       fixed  1,126,344,191 -> 1,116,191,782   -0.901 %
       cube   3,425,701,888 -> 3,398,074,516   -0.806 %
       GameState::clone   cube 29,652 -> 22,688 calls, fixed 13,640 -> 10,822
+
+(5) (-68): `fire_combat_damage_triggers` gathers its six sources in two walks
+    of the battlefield rather than six.  Base 1f5274f1, i.e. re-measured
+    after the other half's last two commits — not carried from (4).
+      fixed  1,115,491,648 -> 1,113,096,892   -0.215 %
+      cube   3,397,164,462 -> 3,386,393,977   -0.317 %
+      the function's own self row
+        fixed 14,378,582 -> 11,838,840  -17.7 %
+        cube  52,659,356 -> 41,428,664  -21.3 %
 ```
 
 **A build is 1,394,414 Ir at the eighty-fourth tip and 594,245 after both
@@ -954,8 +963,36 @@ at 1,404,242 Ir a build, so the two halves together are worth roughly
 **2.3 % of the actor**, of which this half is ~0.5 %, plus ~0.1 % for
 `sealed_pool`. Quote it that way or re-measure the actor.
 
-**⚠ These rows' bases are the row above, and the `Base <hash>` lines inside
-the four commit messages name pre-rebase objects.** The commits landed on top
+**STATE AT `e9a509e6`, the pass's eleventh commit and the tip of this half.**
+
+```text
+suite  cargo test --workspace --exclude crabomination_client
+       19,056 passed / 0 failed / 5 ignored   (no `cargo-nextest` in this
+       container; `cargo test` runs the same binaries)
+clippy --workspace --exclude crabomination_client --all-targets   clean
+golden traces  unmoved (they run inside the suite above)
+--bench  195,528 decisions / 27.44 turns / 611.0 decisions a game /
+         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok /
+         thread_determinism ok (3 vs 1 threads identical)
+         — **byte-identical to the committed invariant**, now across all
+         eleven commits of the pass
+         games_per_s 152-162 at host_calib_ms 53-71, peak_rss_mib 27.5-29.7
+         (`release-fast`, mimalloc, 2.80 GHz Xeon, 3 threads)
+whole-program Ir at `e9a509e6`, `--a gang --b gang --games 6 --threads 1
+--seed 1`, callgrind, profiling-fast --no-default-features
+  fixed  1,113,096,892        cube  3,386,393,977
+```
+
+**⚠ The games/s row is not comparable to the 304.5-314.6 recorded above.**
+That one is a 2.10 GHz box at `host_calib_ms` 67-74; this is a 2.80 GHz box
+at 53-71 reading half the rate. Third pair of wall-clock rows in this file
+that cross containers and cannot be differenced — the *invariant* (decisions,
+turns, stalls, both determinism checks) is what carries across, and it is
+identical.
+
+**⚠ These rows' bases are the row above (except (5), which says its own), and
+the `Base <hash>` lines inside the four earlier commit messages name
+pre-rebase objects.** The commits landed on top
 of the six below and were rebased before pushing. Sixth time this file has
 recorded the hash-in-a-doc hazard; the durable form is in "Standing rules" —
 **cite a hash only for a commit already on `origin`**, which for a Baseline
@@ -8281,8 +8318,20 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-68) `fire_combat_damage_triggers` WALKS THE BATTLEFIELD SIX TIMES PER
-DAMAGE EVENT — 51,274,236 Ir OF SELF / 1.51 % OF `cube` / 19,830 TOP-LEVEL
+**(-68) TAKEN at `e9a509e6` — `fixed` -0.215 %, `cube` -0.317 %, and the
+function's own row -17.7 % / -21.3 %.** Two walks instead of six: the dealer
+lookup stops short-circuiting and answers the equipment / aura / soulbond
+gates on the way past, and the `YourControl` and `AnyPlayer` listener walks
+fuse behind a buffer that is `Vec::new()` on every board without an
+`AnyPlayer` listener. **The entry's estimate was 0.5-0.8 % and it was high
+for a reason worth keeping: a gate that rides on an existing *early-exiting*
+scan is not free.** Widening the dealer `find` into a full walk gave back
+part of what the three gates saved, and nothing in the arithmetic below
+priced that. Count what a scan was skipping before you widen it. The entry
+as found:
+
+**(-68, as found) `fire_combat_damage_triggers` WALKS THE BATTLEFIELD SIX
+TIMES PER DAMAGE EVENT — 51,274,236 Ir OF SELF / 1.51 % OF `cube` / 19,830 TOP-LEVEL
 CALLS / 2,586 Ir OF SELF EACH, AND NO ENTRY HAS EVER NAMED IT.** Read at
 `a63b1934`, `--decks cube`, `cg_edges.py` self table. Its callee list is
 almost empty (20,022 `__rust_alloc` for 1.1 M — the one
