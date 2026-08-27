@@ -235,6 +235,29 @@ CRAB_SIM_REJECTS=names …  --threads 1  2>&1 | grep sim_reject | sort | uniq -c
 ```
 
 The census that closed (-54) and opened (-55) is in the candidates section.
+**(-55) is closed and it stays the guard**: `CRAB_SIM_REJECTS=1` reads 0 in
+all 69 configurations swept, so run it either side of anything touching a
+picker or a combat check, and **sweep seeds rather than sampling three** —
+`cube` deck content is seed-dependent and two passes called a half closed off
+three seeds and were wrong both times.
+
+**AND WHAT THE SIMULATION'S OWN PAYMENTS COST WHEN THEY FAIL.** A rolled-back
+payment has already built its `mana_source_table` and tapped whatever it could
+reach, so the causes cost the same and want different fixes; `CRAB_PAY_FAILS`
+splits them by the `ManaError` the payment actually failed with. Same device
+and the same off-cost as above.
+
+```text
+CRAB_PAY_FAILS=1     target/release-fast/bot_ladder --a gang --b gang \
+    --games 12 --threads 1 --seed 1 --decks cube       # prints the split
+CRAB_PAY_FAILS=names …  2>&1 | grep '^pay_fail ' | sort | uniq -c   # + cost, site
+```
+
+**generic** is the bot's `total` over-estimating — the (-51)(b) perf bug, and
+the same asymmetry the CR 508.1g trim hit. **coloured / colorless / snow** is
+the assignment problem, or auto-tap stranding a colour it could have covered,
+which is a *correctness* bug: a payable line becomes invisible. **hybrid** is
+neither half payable. The table is in (-51)(b).
 
 **And a green trace suite is not evidence that a bot change is
 behaviour-preserving until you check the trace pool executes the code.** The
@@ -8047,9 +8070,43 @@ mana *amount*, which `ManaSourceInfo` does not carry.
 `cube` -1.225 %.** Cast attempts 7,110 -> 6,038, payment rollbacks
 3,696 -> 2,716, probes 11,986 -> 10,910, completed casts byte-identical. See
 **Baseline**. What is left of this entry is **(a)**, the 7,555-Ir land tap,
-and the *engine-side* bail below — the remaining 2,716 rollbacks are the ones
+and the *engine-side* bail below.
+
+**AND THE INSTRUMENT THIS ENTRY ASKED FOR IS BUILT, WHICH REFUTES THE LINE
+THAT USED TO SIT HERE.** It read *"the remaining 2,716 rollbacks are the ones
 whose shortfall is generic rather than coloured, which no per-colour budget
-can see.
+can see"* — an inference, never measured. `CRAB_PAY_FAILS` (see "How to
+measure") classifies each failure by the `ManaError` it actually failed with:
+
+```text
+--games 12 --threads 1       fails/attempts        generic  coloured  hybrid
+cube   s1                 5,478/21,174  25.87 %      2,570     2,658     250
+cube   s11                3,494/20,502  17.04 %      1,478     1,988      28
+all    s11                7,514/43,404  17.31 %      3,066     4,384      64
+all    s1                 5,084/36,068  14.10 %      2,970     1,888     226
+sealed s11                3,220/23,346  13.79 %        654     1,928     638
+sealed s1                 2,304/23,502   9.80 %        762     1,432     110
+sos    s11                  956/9,114   10.49 %        288       604      64
+sos    s1                   754/8,324    9.06 %        374       368      12
+fixed  s11                  764/12,018   6.36 %          4       760       0
+fixed  s1                   704/12,002   5.87 %          0       704       0
+```
+
+**Coloured is the larger class on four of the five pools, and on `fixed` it is
+100 %** — 704 of 704, zero generic. The per-colour budget has not run out of
+room; the residue is the *assignment* problem behind it, which is the half
+refuted below for multi-colour subsets and still open for singletons. A
+generic bail sized off the old sentence would have been aimed at a third of
+`fixed`'s zero.
+
+**The pool split is the usable part.** `fixed` is pure colour, `cube` is about
+half and half, `sealed` carries the only real hybrid population (638 on s11).
+Anything aimed at this row says which pool it moves before it claims a win.
+
+**Cross-validated:** at this entry's own workload (`cube --games 6 --threads
+1`) the census reads 2,814/11,470 = **24.53 %** against callgrind's
+2,416/10,134 = 23.8 % at the seventy-fifth tip — two independent instruments
+on one population, nine passes of code apart.
 
 **THE MULTI-COLOUR HALF OF HALL'S CONDITION IS REFUTED — built, measured,
 reverted (seventy-fourth pass).** The singleton case is the one that pays;

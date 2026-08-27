@@ -60,6 +60,14 @@ its numbers live; put new numbers *there* and a pointer here.
    freezes the tick). `incremental` on `release-fast` (+2.2 % of code).
    **The attack search is still the largest number in the pipeline (46.3 % of
    the actor) and nothing has aimed at it.**
+2a. **Two censuses, both env-gated and both free when off** (PERF, "How to
+   measure"). `CRAB_SIM_REJECTS` — picker/engine disagreements, **0 in all 69
+   configurations swept**, and it stays the guard for anything touching a
+   picker or a combat check. `CRAB_PAY_FAILS` — payment rollbacks split by the
+   `ManaError` they failed with, which is the instrument (-51)(b) asked for
+   and **refutes that entry's own reading**: coloured is the larger class on
+   four of five pools and 100 % of `fixed`, not generic. Table in PERF
+   (-51)(b). **Sweep seeds, don't sample three.**
 3. **Rules for a commit that moves play.** Gate it with `bot_ladder --vs
    PATH` — null first, a byte-identical copy must read 50.0 % with every pair
    split, 1.9x wall. **Sweep `CRAB_SIM_REJECTS=1` over `cube` seeds 1-24
