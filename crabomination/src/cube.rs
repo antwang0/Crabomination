@@ -296,26 +296,43 @@ const CARDS_PER_COLOR: usize = 17;
 /// `wants_ui` so all decisions surface as `pending_decision` for UI/bot
 /// handling.
 pub fn build_cube_state() -> GameState {
-    let mut rng = rand::rng();
+    build_cube_state_with(&mut rand::rng())
+}
+
+/// [`build_cube_state`] from a fixed seed — the same two decks and the same
+/// shuffle every time, and the game's own stream (`GameState::rng`) pinned to
+/// match, so a match played on it replays exactly.
+///
+/// A bot-vs-bot smoke test that draws its decks from entropy is a coin flip:
+/// when it hangs, the pairing that hung is gone. The one caller left that
+/// wants entropy is a real server match, which is [`build_cube_state`].
+pub fn build_cube_state_seeded(seed: u64) -> GameState {
+    use rand::SeedableRng;
+    let state = build_cube_state_with(&mut rand::rngs::StdRng::seed_from_u64(seed));
+    state.rng.reseed(seed);
+    state
+}
+
+fn build_cube_state_with<R: Rng>(rng: &mut R) -> GameState {
     let mut state = GameState::new(vec![Player::new(0, "P0"), Player::new(1, "P1")]);
 
-    let p0_colors = random_color_pair(&mut rng);
-    let p1_colors = random_color_pair(&mut rng);
+    let p0_colors = random_color_pair(rng);
+    let p1_colors = random_color_pair(rng);
 
     state.players[0].name = format!("P0 ({})", color_pair_name(p0_colors));
     state.players[1].name = format!("P1 ({})", color_pair_name(p1_colors));
 
-    let p0_deck = cube_deck(p0_colors, &mut rng);
-    let p1_deck = cube_deck(p1_colors, &mut rng);
+    let p0_deck = cube_deck(p0_colors, rng);
+    let p1_deck = cube_deck(p1_colors, rng);
 
     for &f in &p0_deck {
         state.add_card_to_library(0, card_arc(f));
     }
-    state.players[0].library.shuffle(&mut rng);
+    state.players[0].library.shuffle(&mut *rng);
     for &f in &p1_deck {
         state.add_card_to_library(1, card_arc(f));
     }
-    state.players[1].library.shuffle(&mut rng);
+    state.players[1].library.shuffle(&mut *rng);
 
     // Every seat carries the standard Lessons sideboard so Learn abilities
     // (Eyetwitch, Field Trip, Igneous Inspiration, …) can fetch a Lesson

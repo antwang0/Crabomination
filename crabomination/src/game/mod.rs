@@ -18881,22 +18881,50 @@ impl GameState {
                             self.battlefield.iter().any(|c| c.id == *id)
                         }
                     });
-                // Modal when the effect genuinely targets an off-board zone
-                // ("… card from a graveyard") or nothing on the board is
-                // clickable; otherwise cursor over the clickable set only
-                // (dropping spurious off-board matches of board-shaped
-                // filters like "target permanent").
+                // Modal only when the effect genuinely targets an off-board
+                // zone ("… card from a graveyard"); otherwise cursor over the
+                // clickable set. `legal_targets_for_filter` walks every
+                // graveyard and exile with the *same* filter it applies to the
+                // battlefield, and that filter has no zone predicate — so an
+                // exiled creature card matches "target creature". Those
+                // matches are spurious for a board-shaped filter and the
+                // resolver rejects them.
+                //
+                // This used to read `zone_filter || clickable.is_empty()`, so
+                // a board-shaped trigger with nothing legal on the board posed
+                // a modal over the spurious set: the bot answers it with no
+                // cards (nothing there is a real candidate), `min: 1` rejects
+                // that, and the match ends with the trigger unanswered. Found
+                // at the eighty-fifth pass on `build_cube_state_seeded` seeds
+                // 2113 / 2719 / 3789 — Nekrataal, Kor Sanctifiers and Tester
+                // of the Tangential, each offered a card in exile.
                 let zone_filter = pending
                     .effect
                     .primary_target_filter()
-                    .is_some_and(|f| f.mentions_offboard_zone());
+                    .is_some_and(|f| f.mentions_offboard_zone())
+                    || pending.effect.prefers_graveyard_target();
+                let offboard = if zone_filter { offboard } else { Vec::new() };
+                // Nothing legal after the drop: this trigger has no target, so
+                // take the same route the empty-enumeration case above does
+                // rather than posing an unanswerable picker.
+                if clickable.is_empty() && offboard.is_empty() {
+                    let auto = self.auto_target_for_effect_avoiding_set_xc(
+                        &pending.effect,
+                        pending.controller,
+                        &[pending.source],
+                        pending.x_value,
+                        pending.converged_value,
+                    );
+                    self.push_pending_trigger(pending, auto);
+                    continue;
+                }
                 let remaining: Vec<PendingTriggerPush> = iter.collect();
                 let source_name = self
                     .find_card_anywhere(pending.source)
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
                 let description = pending.effect.effect_short_text();
-                let decision = if !offboard.is_empty() && (zone_filter || clickable.is_empty()) {
+                let decision = if !offboard.is_empty() {
                     let candidates: Vec<(CardId, String)> = offboard
                         .iter()
                         .filter_map(|t| match t {

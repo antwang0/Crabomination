@@ -1340,8 +1340,29 @@ fn report_error(seat: usize, err: &str, seat_tx: &[Option<mpsc::Sender<ServerMsg
     } else {
         // Bot seat — no channel. Surface for debugging; bots shouldn't be
         // submitting illegal actions in normal play.
+        BOT_REJECTIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         eprintln!("server: bot seat {seat} action rejected: {err}");
     }
+}
+
+/// Illegal actions submitted by *bot* seats since the process started.
+///
+/// The live-match twin of `CRAB_SIM_REJECTS` (which counts what the bot's own
+/// simulations propose and its engine rejects — PERF's "How to measure"). A
+/// bot rejection is always a bug: `drive_bots` counts only accepted actions as
+/// progress, so a seat that can only propose illegal actions ends the match
+/// where it stands. It went uncounted because `bot_ladder` and the training
+/// actors do not run `run_match` at all — this path is the client's
+/// bot-vs-bot mode and this crate's own smoke test, and nothing read the
+/// `eprintln!` above.
+///
+/// One relaxed increment on an error path; no cost when nothing is rejected.
+static BOT_REJECTIONS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Read [`BOT_REJECTIONS`]. Process-wide and monotonic — take a difference
+/// around the matches you care about.
+pub fn bot_rejection_count() -> u64 {
+    BOT_REJECTIONS.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 /// Which seat the engine will attribute the next action to. Used by the
@@ -2284,23 +2305,39 @@ mod tests {
         assert!(outcome.winner.is_some(), "winner field populated post-game-over");
     }
 
-    /// Bot-vs-bot smoke test on the random Cube format. Each seat gets a
-    /// fresh random two-color deck; the match must reach game over within
-    /// the timeout. Repeated five times to shake out target-selection
-    /// freezes (Vandalblast → lone artifact, Counterspell → lone creature,
-    /// etc.) that only show up under specific runtime card combinations.
+    /// Bot-vs-bot smoke test on the Cube format: five fixed two-colour
+    /// pairings, each of which must reach game over within the timeout. It
+    /// exists to catch target-selection freezes (Vandalblast → lone artifact,
+    /// Counterspell → lone creature, …) that only show up under specific
+    /// runtime card combinations.
+    ///
+    /// **Seeded, and that is the point.** It drew its decks, its shuffles,
+    /// its game stream and its bot tie-breaks from entropy until the
+    /// eighty-fifth pass, when it timed out once inside a full-suite run and
+    /// then passed forty consecutive solo runs — 200 more random pairings —
+    /// with the pairing that hung unrecoverable. A gate whose failure cannot
+    /// be reproduced cannot be acted on. Random exploration of the card space
+    /// belongs to the `overflow` ladder sweep (tens of thousands of games,
+    /// five pools), not to a unit test that has five draws to spend.
     ///
     /// The budget guards against a *freeze*, which never finishes at any
-    /// deadline, so it is deliberately far above a healthy trial (~2s solo).
-    /// A tight bound turned this into a wall-clock flake whenever the full
-    /// suite ran the other test binaries alongside it.
+    /// deadline, so it is deliberately far above a healthy trial (~1s for all
+    /// five solo) — the full suite runs the other test binaries alongside it.
     #[test]
     fn bot_vs_bot_random_cube_decks_terminate() {
-        use crate::cube::build_cube_state;
-        for trial in 0..5 {
-            let state = build_cube_state();
+        let rejections_before = bot_rejection_count();
+        // 0..5 are the smoke trials; the three named seeds are regressions —
+        // each posed a `ChooseCards` target modal over cards in *exile* for a
+        // board-shaped filter (Nekrataal, Kor Sanctifiers, Tester of the
+        // Tangential), which the bot could only answer with no cards and the
+        // engine then rejected, ending the match.
+        for seed in [0u64, 1, 2, 3, 4, 2113, 2719, 3789] {
+            let state = crate::cube::build_cube_state_seeded(seed);
             let (done_tx, done_rx) = mpsc::channel();
             let handle = thread::spawn(move || {
+                // Per-thread, so it has to be installed inside the match
+                // thread; with it the whole trial replays exactly.
+                crate::server::bot::set_jitter_seed(Some(seed));
                 run_match(
                     state,
                     vec![
@@ -2312,9 +2349,17 @@ mod tests {
             });
             done_rx
                 .recv_timeout(Duration::from_secs(180))
-                .unwrap_or_else(|_| panic!("cube bot-vs-bot trial {trial} did not terminate"));
+                .unwrap_or_else(|_| panic!("cube bot-vs-bot seed {seed} did not terminate"));
             handle.join().unwrap();
         }
+        // A bot seat submitting an illegal action is always a bug:
+        // `drive_bots` counts only accepted actions as progress, so a seat
+        // that can only propose illegal ones ends the match where it stands.
+        assert_eq!(
+            bot_rejection_count(),
+            rejections_before,
+            "a bot seat submitted an illegal action (the `server:` line above names it)",
+        );
     }
 
     /// A spectator channel attached to a 2-bot match must receive
