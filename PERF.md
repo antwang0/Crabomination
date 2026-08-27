@@ -569,8 +569,13 @@ not takeable, and the ratio alone could not tell them apart.
 
 **The rule.** A change to statics, grants, layers or the requirement walker
 gets a `--decks cube` reading as well as a `fixed` one. A change anywhere in
-`draft.rs` / `recommend.rs` / `selfplay.rs` gets `--decks sealed --games 1`,
-which isolates deck construction exactly. `fixed` stays the committed bench
+`draft.rs` / `recommend.rs` / `selfplay.rs` gets a **four-game actor run**
+(`CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 4 --steps 1 --seed 7`,
+~1 minute under callgrind), which isolates deck construction exactly.
+**⚠ `--decks sealed --games 1` no longer does and the old text here said it
+did**: it ran 2.9 G Ir when this section was written and runs **21.9 M**
+now, because it plays no games *and* builds no decks. See (-63).
+`fixed` stays the committed bench
 because it is reproducible, cheap and *is* representative of the game loop
 — it is the pool the Log's absolutes are comparable across — but it is not
 the whole simulator.
@@ -7594,10 +7599,51 @@ not a memoized *answer*"), because the shape it names — re-deriving per
 (pick x candidate x colour shape) what a memo already holds — is exactly
 what a 56-shapes-per-build row looks like.
 
-**Measure it with `--decks sealed --games 1`**, which plays no games and so
-isolates deck construction exactly (PERF's "Which pool a change moves"), and
-confirm on the actor, because the ladder builds its decks once and this
-entry lives entirely in the difference.
+**THE INSTRUMENT IS `selfplay_train --actors 1 --games 4`, NOT
+`--decks sealed --games 1`, AND THAT RECIPE IS STALE.** `bot_ladder --decks
+sealed --games 1` ran 2.9 G Ir when "Which pool a change moves" was written
+and runs **21,864,400** now: it plays no games *and* no longer builds any
+decks, so it isolates nothing. The four-game actor run does — **1 minute
+under callgrind**, and it reports the subtree exactly:
+
+```text
+CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 4 --steps 1 --seed 7
+callgrind, profiling-fast --no-default-features.  324,740,275 Ir total.
+  8   11,339,499  heuristic_sealed_build      (1.42 M a build)
+  8    3,348,647  sealed_pool
+  8    1,924,030  encode_deck
+  inside one build:  enumerate_candidates_with 10,418,468 (92 %)
+                       build_shape  448 calls = 56 a build, 9,053,055
+                         assemble_lands       455  1,823,327
+                         static_build_score   455  1,336,082
+                         __rust_alloc       2,980    505,687   (6.65 a shape)
+```
+
+**AND IT HAS NO HOT LINE EITHER — line-profiled at the eighty-third pass, do
+not re-run it.** `profiling-lines` + `--dump-instr=yes` + `cg_lines.py --in
+build_shape`: the inline group is 3,465,136 Ir and **its largest line is
+0.11 % of the run** (`Filter::next` inside `suggest_main_deck_shape`, which
+inlines wholly into `build_shape`); `recommend.rs:534`, the `allow` bitmask
+write in the pool walk, is 0.10 %. `assemble_lands` and
+`static_build_score` group at 0.1 % each.
+
+**So this is a *count* entry, and the count is 56.** The lattice is 10 pairs
++ 30 pair-plus-splash + 16 wide, each one a whole-pool walk; the fifty-fourth
+pass already took the per-walk cost (`PoolScores`, the `allow` bitmask, the
+pre-sized vectors), so what is left is the 56. **Two levers and only one is
+free:**
+
+* **Fewer shapes** — changes which deck the softmax lands on, i.e. the
+  *training data distribution*. That is the encoding caution's territory even
+  though it touches no encoding: a field of differently-shaped decks is a
+  different dataset. **Not to be taken unilaterally**, and if taken it needs
+  a strength gate, not a byte-identity one.
+* **A cheaper 56** — the per-shape allocations are the only thing here that
+  is free to be wrong about: 6.65 `__rust_alloc` a shape, of which
+  `assemble_lands`' `duals`/`taken` are two and both have a bound. Read
+  (-56) first: an *exact* size ships and headroom does not, and `duals` is
+  usually 0-3 against a `total` of ~17, so reserving `total` is the trap.
+
 **(-64) THE STATE CLONE ALLOCATES 3.5 TIMES, AND ONE OF THEM IS A
 TWO-ELEMENT `Vec<bool>`.** `<GameState as Clone>::clone` is **29,692 calls /
 ~70.2 M Ir / 2.01 % of `cube`** at `3509ec81` (11,976 from `accept_on`'s
