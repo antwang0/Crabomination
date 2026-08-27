@@ -33,6 +33,13 @@ before discarding a lost race.
 lines at the eighty-second pass and 145 at the eighty-third by restating what
 PERF and ENGINE_BACKLOG already hold. Keep it near this length.
 
+**And when this file crosses ~1k lines, "Standing rules for a perf pass" is
+the compaction** — it is 380 of them and every rule is a refutation written up
+with its numbers in PERF's Log, which is where the detail belongs. Collapse
+each to its one-sentence claim plus the pass that measured it; do not delete
+one, because the point of the section is that a rule refuted on a *mechanism*
+stays refuted.
+
 1. **Perf queue** — PERF "Perf candidates", ranked: **(-63)** deck
    construction, **5.37 % of the training actor and invisible on `--bench`**,
    fresh from the eighty-third pass's actor profile; **(-51)(b)** (open, and

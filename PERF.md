@@ -1008,9 +1008,11 @@ golden traces  unmoved
 overflow + -C debug-assertions=yes   65 cells, five pools x thirteen seeds
           x 120 games/archetype: 71,758 decided, 0 panic / 0 assertion /
           0 overflow, 2 draws (`all` s37) and nothing capped or stuck.
-          Run at `cfc684fc`, `3509ec81`, the `(-64)` tip and the
-          `PrintedList` tip — byte-identical all four times, and the last
-          three also audit the `Graveyard` memo's `debug_assert!`.
+          Run at `cfc684fc`, `3509ec81`, the `(-64)` tip, the `PrintedList`
+          tip and the `ColorMemo` tip — byte-identical all five times. The
+          last three audit the `Graveyard` memo's `debug_assert!` and the
+          last one the colour memo's, which is the whole reason those two
+          invalidations are claims rather than hopes.
 ```
 
 **Whole-program Ir at `41ff9d00`, so the next run has a base it did not have
@@ -1019,8 +1021,10 @@ to measure** (the same configuration as every row above — `--a gang --b gang
 --no-default-features`):
 
 ```text
-  fixed  1,126,243,196        cube  3,431,711,282
-  --bench 195,528 / 27.44 / 0 stalls at the same tip
+  at 41ff9d00   fixed  1,126,243,196        cube  3,431,711,282
+  at d752fc58   fixed  1,124,378,192        cube  3,419,656,317
+  --bench 195,528 / 27.44 / 0 stalls / determinism ok at both, and
+  thread_determinism ok (3 vs 1 threads identical) at the second
 ```
 
 **Read your own base anyway if a commit landed after that one** — this branch
