@@ -37,19 +37,36 @@ pub struct Graveyard {
     anthem: AtomicU8,
 }
 
+/// Does this card carry a `GraveyardAnthem` static? The per-card half of
+/// [`Graveyard::has_anthem`].
+fn card_has_anthem(c: &CardInstance) -> bool {
+    c.definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::GraveyardAnthem { .. }))
+}
+
 impl Graveyard {
     /// True when some card in this graveyard carries a `GraveyardAnthem`
     /// static. Memoized; a miss walks the zone once.
+    ///
+    /// The memo is sound by construction, and the `debug_assert!` is the
+    /// audit anyway: it costs nothing in any release profile and turns the
+    /// whole suite — and any `-C debug-assertions=yes` ladder run, which deals
+    /// far more interesting graveyards than 18,793 tests do — into a check
+    /// that no write path ever reached the cards without clearing it.
     pub fn has_anthem(&self) -> bool {
+        debug_assert!(
+            self.anthem.load(Ordering::Relaxed) == UNKNOWN
+                || (self.anthem.load(Ordering::Relaxed) == PRESENT)
+                    == self.cards.iter().any(card_has_anthem),
+            "graveyard anthem memo is stale: a write reached the cards without clearing it",
+        );
         match self.anthem.load(Ordering::Relaxed) {
             ABSENT => false,
             PRESENT => true,
             _ => {
-                let found = self.cards.iter().any(|c| {
-                    c.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, crate::effect::StaticEffect::GraveyardAnthem { .. })
-                    })
-                });
+                let found = self.cards.iter().any(card_has_anthem);
                 self.anthem.store(if found { PRESENT } else { ABSENT }, Ordering::Relaxed);
                 found
             }
