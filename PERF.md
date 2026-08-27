@@ -8362,6 +8362,49 @@ listener and is drained after; 1b / aura / soulbond gate on "anything
 attached to the dealer" and "a soulbond pair involving the dealer", both of
 which the dealer lookup can compute for free by not short-circuiting.
 
+**(-70) `ComputedPermanent` CARRIES **FOUR** `Arc<CardDefinition>` HANDLES
+TO THE SAME DEFINITION, AND THE THREE REDUNDANT ONES ARE `fixed` **0.532 %** /
+`cube` **0.580 %**. PRICED BY PROBE, NOT BY ARGUMENT; NOT TAKEN, AND THE
+REASON IS THE BLAST RADIUS.**
+
+`Printed<T>` and `PrintedList<T>` each hold their own
+`src: Arc<CardDefinition>` so their `Deref` can project into it, and
+`ComputedPermanent` has four of them — `card_types`, `supertypes`, `subtypes`,
+`keywords` — every one pointing at the same definition. The struct is built
+**302,018 times** and `Arc`-allocated 227,430 times a six-game `cube` run, so
+that is three extra atomic increments, three extra decrements (each with the
+zero-check that `Arc::drop_slow` hangs off) and 24 extra bytes, per computed
+permanent.
+
+```text
+measured by adding a `[Arc<CardDefinition>; 3]` field and cloning `def` into
+it — the proposed change with the sign flipped, two lines, no refactor.
+profiling-fast --no-default-features, base 2bb47a02
+  fixed  1,113,117,966 -> 1,119,039,885   +0.532 %
+  cube   3,386,397,338 -> 3,406,055,793   +0.580 %
+```
+
+Split by half, using the eighty-fourth pass's padding probe (+8 bytes =
+`fixed` +0.040 % / `cube` +0.058 %): the 24 bytes are ~0.12 % / ~0.17 % and
+**the clone-and-drop pairs are the other ~0.41 % on both pools.** For scale,
+`LayerFreezeState::end_of_scope` alone reaches `Arc::drop_slow` 218,782 times
+for 51.6 M Ir, 1.52 % of `cube`, tearing these down.
+
+**The shape that would fix it is one `Arc` on `ComputedPermanent` and an
+`Overlay { proj, over }` per field**, with the definition passed in at the
+read — and that is why it is not taken here: `Deref` on the field is what
+keeps `cp.keywords.has_kw(..)` working, and turning one field into a method
+is **205 call sites** (280 errors) by rustc's own count, so four fields is
+600-800. That is a whole session's mechanical diff on files two concurrent
+sessions rebase every twenty minutes. **Take it in a quiet window, one field
+per commit, driven by the compiler's error list.**
+
+**And the device is the reusable half: a redundancy you cannot remove without
+a refactor can still be priced by *adding another copy of it*.** Three extra
+`Arc` handles cost exactly what three redundant ones cost, and the probe is
+two lines. Same trick as the +8-byte padding probe one entry up; between them
+they price a struct's size and its handle count without touching a call site.
+
 **(-69) `Vec::from_iter`'s TWO MONOS ARE 3.45 % OF `cube` AND THE CALLER TABLE
 BY COUNT HAS TWO ROWS NOBODY HAS COSTED.** Read at `a63b1934`, 778,489 calls:
 

@@ -33,7 +33,10 @@ because every pass restated what PERF already held. Everything below has a
 home in PERF's "Perf candidates", "How to measure" or Log, or in the standing
 rules under this section; add a pointer here, put the detail there.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-69)** (the two
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-70)** (four
+   `Arc<CardDefinition>` handles per `ComputedPermanent` where one would do —
+   **priced by probe** at `fixed` 0.532 % / `cube` 0.580 %, and wanting a
+   quiet window because it is 600-800 call sites), **(-69)** (the two
    `Vec::from_iter` monos, 3.45 % of `cube`, with
    `check_state_based_actions` — 36,150 collects — and `compute_permanents`
    unclaimed in its by-count caller table), then **(-51)(b)**, (-60), (-61),
@@ -154,6 +157,13 @@ refuted.
   Bend's override, which `Arc::make_mut` performs **in place** on a uniquely
   owned definition; `CardInstance::DerefMut` is the one point both must pass.
   It is also hot enough that the clear eats about half of what the hits save.
+- **A redundancy you cannot remove without a refactor can still be priced by
+  *adding another copy of it*** (pass 85, `(-70)`). `ComputedPermanent` holds
+  four `Arc<CardDefinition>` handles to one definition; removing three is
+  600-800 call sites, but *adding* three is a two-line field, and it reads
+  `fixed` +0.532 % / `cube` +0.580 % — the change with the sign flipped. Pair
+  it with the padding probe below and a struct's size and its handle count are
+  both priced without touching a call site.
 - **When a change trades a known saving against an unknown cost, build the
   cost alone first** (pass 83's seventh commit). Unboxing `layers::Printed`
   read +1.755 % and the narrower keyword-only version needed the *struct-size*
