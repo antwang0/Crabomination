@@ -2335,7 +2335,9 @@ impl GameState {
         // compose. Single-requirement model; full CR maximization across
         // multiple simultaneous requirements is approximated.
         for atk in &self.attacking {
-            if !kws_of(atk.attacker).has_kw(&Keyword::MustBeBlocked) {
+            if !kws_of(atk.attacker).has_kw(&Keyword::MustBeBlocked)
+                || !self.block_requirement_binds(atk.attacker)
+            {
                 continue;
             }
             let already = self.blocker_count_of(atk.attacker) > 0;
@@ -2344,24 +2346,14 @@ impl GameState {
                 continue;
             }
             let Some(defender_idx) = self.defender_for(atk.target) else { continue };
-            let attacker = match self.battlefield_find(atk.attacker) {
-                Some(a) => a,
-                None => continue,
-            };
-            let atk_colors = cp_of(atk.attacker).map(|c| c.colors).unwrap_or_default();
-            let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
+            if self.battlefield_find(atk.attacker).is_none() {
+                continue;
+            }
             let idle_able_blocker = self.battlefield.iter().any(|b| {
-                cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
-                    && self.same_team(b.controller, defender_idx)
-                    && !b.tapped
-                    && !kws_of(b.id).has_kw(&Keyword::CantBlock)
+                self.same_team(b.controller, defender_idx)
                     && !self.is_blocking(b.id)
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
-                    && cp_of(b.id).is_some_and(|bcp| {
-                        super::can_block_attacker_computed(
-                            b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
-                        )
-                    })
+                    && self.block_requirement_able(b, atk.attacker)
             });
             if idle_able_blocker {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(atk.attacker)));
@@ -2372,26 +2364,18 @@ impl GameState {
         // Every idle defender creature that *can* legally block such an
         // attacker must be assigned to it in the merged block set.
         for atk in &self.attacking {
-            if !kws_of(atk.attacker).has_kw(&Keyword::AllMustBlock) {
+            if !kws_of(atk.attacker).has_kw(&Keyword::AllMustBlock)
+                || !self.block_requirement_binds(atk.attacker)
+            {
                 continue;
             }
             let Some(defender_idx) = self.defender_for(atk.target) else { continue };
-            let attacker = match self.battlefield_find(atk.attacker) {
-                Some(a) => a,
-                None => continue,
-            };
-            let atk_colors = cp_of(atk.attacker).map(|c| c.colors).unwrap_or_default();
-            let atk_power = cp_of(atk.attacker).map(|c| c.power).unwrap_or_else(|| attacker.power());
+            if self.battlefield_find(atk.attacker).is_none() {
+                continue;
+            }
             let unmet = self.battlefield.iter().any(|b| {
-                cp_of(b.id).is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
-                    && self.same_team(b.controller, defender_idx)
-                    && !b.tapped
-                    && !kws_of(b.id).has_kw(&Keyword::CantBlock)
-                    && cp_of(b.id).is_some_and(|bcp| {
-                        super::can_block_attacker_computed(
-                            b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
-                        )
-                    })
+                self.same_team(b.controller, defender_idx)
+                    && self.block_requirement_able(b, atk.attacker)
                     // Able to block it but not assigned to it (here or earlier).
                     && !self.blocks(b.id, atk.attacker)
                     && !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
@@ -2407,9 +2391,14 @@ impl GameState {
         // resolution, so "able" reduces to the normal can-block checks.
         for b in &self.battlefield {
             let Some(required) = b.must_block else { continue };
-            // The provoker must still be attacking for the requirement to bind.
-            if !self.attacking.iter().any(|a| a.attacker == required) { continue; }
-            if !self.provoked_block_is_able(b, required) {
+            // The provoker must still be attacking for the requirement to
+            // bind, and a CR 509.1b count it cannot reach un-binds it too.
+            if !self.attacking.iter().any(|a| a.attacker == required)
+                || !self.block_requirement_binds(required)
+            {
+                continue;
+            }
+            if !self.block_requirement_able(b, required) {
                 continue;
             }
             let assigned = self.blocks(b.id, required)
@@ -2463,13 +2452,8 @@ impl GameState {
         let must_block_scan: &[crate::card::CardInstance] =
             if block_requirement { &self.battlefield } else { &[] };
         for b in must_block_scan {
-            let b_is_creature = cp_of(b.id)
-                .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature));
             if !(kws_of(b.id).has_kw(&Keyword::MustBlock)
                 || kws_of(b.id).has_kw(&Keyword::MustAttackOrBlock))
-                || !b_is_creature
-                || b.tapped
-                || kws_of(b.id).has_kw(&Keyword::CantBlock)
             {
                 continue;
             }
@@ -2478,23 +2462,10 @@ impl GameState {
             if already { continue; }
             // Could it have blocked any declared attacker?
             let could_block = self.attacking.iter().any(|atk| {
-                let same_team = self
-                    .defender_for(atk.target)
-                    .is_some_and(|d| self.same_team(b.controller, d));
-                same_team
-                    && self
-                        .battlefield_find(atk.attacker)
-                        .zip(cp_of(b.id))
-                        .is_some_and(|(attacker, bcp)| {
-                            let atk_colors =
-                                cp_of(atk.attacker).map(|c| c.colors).unwrap_or_default();
-                            let atk_power = cp_of(atk.attacker)
-                                .map(|c| c.power)
-                                .unwrap_or_else(|| attacker.power());
-                            super::can_block_attacker_computed(
-                                b, bcp, kws_of(atk.attacker), atk_colors, atk_power,
-                            )
-                        })
+                self.defender_for(atk.target)
+                    .is_some_and(|d| self.same_team(b.controller, d))
+                    && self.block_requirement_able(b, atk.attacker)
+                    && self.block_requirement_binds(atk.attacker)
             });
             if could_block {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(b.id)));
@@ -4765,19 +4736,31 @@ impl GameState {
             })
     }
 
-    /// CR 702.39 — can `b` block the creature that provoked it?
+    /// Is `b` **able** to block `required`, for the purpose of a CR 509.1
+    /// requirement that says it must?
     ///
     /// [`declare_blockers`](Self::declare_blockers) rejects the **whole**
-    /// declaration when a provoked creature able to block its provoker is
-    /// not assigned to it, so the bot's block planner has to answer this
-    /// identically or it loses its entire block step. One method, called
-    /// from both.
+    /// declaration when a creature a requirement obliges is able and not
+    /// assigned, so the bot's block planner has to answer this identically or
+    /// it loses its entire block step. One method, called from both.
     ///
-    /// Reads `computed_permanent` rather than the declaration's gated
-    /// subset: the loop that calls it exits on `must_block` being `None`
-    /// before touching anything, so on a board with no Provoke it costs a
-    /// field read per permanent and nothing else.
-    pub(crate) fn provoked_block_is_able(
+    /// **Four requirements ask this question and each used to answer it
+    /// itself:** CR 702.39 Provoke (`must_block`), CR 509.1c "must be blocked
+    /// if able" (`MustBeBlocked`), CR 509.1c true Lure (`AllMustBlock`), and
+    /// CR 509.1c "blocks each combat if able" (`MustBlock`, asked of the
+    /// blocker against every attacker). Four hand-written copies of one
+    /// conjunction is the shape that generated most of ENGINE_BACKLOG P3, and
+    /// three of them had already drifted from this one on the tapped term —
+    /// they refused a tapped blocker outright where this respects
+    /// `tapped_creatures_can_block`. The escape is the correct reading (a
+    /// creature that *can* block is able to), so unifying takes this one's
+    /// version; it binds requirements slightly more often, on the one static
+    /// that grants it.
+    ///
+    /// Reads `computed_permanent` rather than the declaration's gated subset:
+    /// every caller is behind a keyword or field test that is false on a
+    /// board without the mechanic, so on an ordinary board it costs nothing.
+    pub(crate) fn block_requirement_able(
         &self,
         b: &crate::card::CardInstance,
         required: CardId,
@@ -4795,6 +4778,48 @@ impl GameState {
         let atk_power = acp.as_ref().map(|c| c.power).unwrap_or_else(|| attacker.power());
         let atk_kws: &[Keyword] = acp.as_ref().map(|c| c.keywords.as_slice()).unwrap_or(&[]);
         super::can_block_attacker_computed(b, &bcp, atk_kws, atk_colors, atk_power)
+    }
+
+    /// CR 509.1c — does a "must block" requirement on `attacker` **bind** at
+    /// all? A restriction outranks a requirement: the defending player picks
+    /// the legal declaration that satisfies the most requirements, and a
+    /// declaration that breaks CR 509.1b is not one of the candidates.
+    ///
+    /// **Without this the engine can demand a declaration it also forbids.**
+    /// An attacker with Lure *and* Menace facing one able blocker has no
+    /// legal block at all: declare nobody and CR 509.1c rejects it, declare
+    /// the one body and the Menace count rejects it. That contradiction is
+    /// reachable in the routine pools — an aura granting `AllMustBlock`
+    /// landing on a Menace creature, `cube` seed 15 — and no planner can
+    /// plan around it, because there is nothing to plan.
+    ///
+    /// The able set is counted, not the assigned one: the question is whether
+    /// a legal block *exists*, not whether this declaration made it.
+    pub(crate) fn block_requirement_binds(&self, attacker: CardId) -> bool {
+        let Some(acp) = self.computed_permanent(attacker) else { return true };
+        let mut min_b = if acp.keywords.has_kw(&Keyword::Menace) { 2usize } else { 1 };
+        for kw in acp.keywords.iter() {
+            if let Keyword::CantBeBlockedExceptByN(n) = kw {
+                min_b = min_b.max(*n as usize);
+            }
+        }
+        if min_b <= 1 {
+            return true;
+        }
+        let Some(defender_idx) = self.attacking.iter().find(|a| a.attacker == attacker).and_then(
+            |a| self.defender_for(a.target),
+        ) else {
+            return true;
+        };
+        let able = self
+            .battlefield
+            .iter()
+            .filter(|b| {
+                self.same_team(b.controller, defender_idx)
+                    && self.block_requirement_able(b, attacker)
+            })
+            .count();
+        able.max(self.blocker_count_of(attacker)) >= min_b
     }
 
     /// CR 508.1g — the generic mana a declaration of `attacks` costs its

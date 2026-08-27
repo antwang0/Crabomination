@@ -8496,11 +8496,33 @@ pub(crate) fn block_candidates_for_mcts(
     candidates
 }
 
-/// Is any attacker on this board subject to a requirement a *subset* of a
+/// Is any permanent on this board subject to a requirement a *subset* of a
 /// legal block assignment can violate? One walk, so the repair below is only
 /// paid on the boards that need it.
+///
+/// **A gate written as an enumeration of what it gates is a second copy of
+/// that list, and this one was already a stale copy.** It named Provoke and
+/// the Menace minimum and stopped there, so on a Lure board the repair never
+/// ran at all and every subset went out unrepaired — 14 of `cube` seed 15's
+/// block rejections, still there after `enforce_block_requirements` was
+/// written, because nothing called it. The keyword leg is now
+/// `board_keyword_in_scope` over the same five keywords
+/// [`GameState::declare_blockers`] gates its own requirement loops on, so
+/// adding a sixth requirement there is what widens this.
 fn block_requirement_present(state: &GameState) -> bool {
+    use crate::card::Keyword;
     state.battlefield.iter().any(|c| c.must_block.is_some())
+        || state.board_keyword_in_scope(&[
+            Keyword::MustBlock,
+            Keyword::MustAttackOrBlock,
+            Keyword::MustBeBlocked,
+            Keyword::AllMustBlock,
+            Keyword::CantBeBlockedUnlessAllBlock,
+            // CR 509.1g's ceiling: a *superset* candidate (the gang and
+            // spare-capacity passes both build one) violates it the way a
+            // subset violates the floor.
+            Keyword::CantBeBlockedByMoreThanOne,
+        ])
         || state.attacking().iter().any(|a| {
             state
                 .computed_permanent(a.attacker)
@@ -8523,22 +8545,164 @@ fn block_requirement_present(state: &GameState) -> bool {
 /// two cannot oscillate. A board where a provoked creature is the only
 /// blocker a Menace attacker can have is unsatisfiable either way, and this
 /// leaves it to the engine to say so.
-fn repair_block_candidate(state: &GameState, seat: usize, blocks: &mut Vec<(CardId, CardId)>) {
-    let mut provoked: Vec<(CardId, CardId)> = Vec::new();
+/// The CR 509.1 block **requirements**, forced into a plan whose value passes
+/// were built without them. Shared by the greedy planner and the search
+/// menu's repair, because a rule written twice is a rule that drifts once.
+///
+/// Four requirements, and every one of them makes the *whole* declaration
+/// illegal rather than the one pair:
+///
+/// * CR 702.39 Provoke — the provoked creature blocks its provoker.
+/// * CR 509.1c true Lure (`AllMustBlock`) — **every** able defender blocks it,
+///   and nothing else: the engine asks the question per creature without
+///   caring what else that creature was assigned to, so the only satisfiable
+///   declaration puts the whole able set on the Lure attacker.
+/// * CR 509.1c `MustBlock` / `MustAttackOrBlock` — the creature blocks
+///   *something* it is able to block.
+/// * CR 509.1c `MustBeBlocked` is handled by the caller, which has the value
+///   information to pick which body to spend.
+///
+/// Ability is [`GameState::block_requirement_able`] throughout — the engine's
+/// own predicate, so the two cannot disagree about who is obliged. Returns the
+/// pairs a requirement pinned: the CR 509.1b minimum-count repair must not
+/// release them.
+///
+/// Order matters and it is Provoke first. A creature two requirements both
+/// claim is an unsatisfiable board either way, so the pins are first-come and
+/// nothing here overwrites one; the engine says so rather than this looping.
+fn enforce_block_requirements(
+    state: &GameState,
+    seat: usize,
+    blocks: &mut Vec<(CardId, CardId)>,
+) -> Vec<(CardId, CardId)> {
+    use crate::card::Keyword;
+    let mut forced: Vec<(CardId, CardId)> = Vec::new();
+    let mut pin = |blocks: &mut Vec<(CardId, CardId)>, b: CardId, a: CardId| {
+        if forced.iter().any(|(bid, _)| *bid == b) {
+            return;
+        }
+        blocks.retain(|(bid, aid)| *bid != b || *aid == a);
+        if !blocks.iter().any(|(bid, aid)| *bid == b && *aid == a) {
+            blocks.push((b, a));
+        }
+        forced.push((b, a));
+    };
+
+    // CR 702.39 — Provoke.
     for b in state.battlefield.iter() {
         let Some(required) = b.must_block else { continue };
         if b.controller != seat
             || !state.attacking().iter().any(|a| a.attacker == required)
-            || !state.provoked_block_is_able(b, required)
+            || !state.block_requirement_binds(required)
+            || !state.block_requirement_able(b, required)
         {
             continue;
         }
-        blocks.retain(|(bid, aid)| *bid != b.id || *aid == required);
-        if !blocks.iter().any(|(bid, aid)| *bid == b.id && *aid == required) {
-            blocks.push((b.id, required));
-        }
-        provoked.push((b.id, required));
+        pin(blocks, b.id, required);
     }
+
+    // The two keyword requirements below walk the board, so gate them on
+    // whether the board can carry the keyword at all. `board_keyword_in_scope`
+    // is authoritative on `false` and it is `false` on an ordinary board, so
+    // this costs a keyword scan and no computed reads.
+    if !state.board_keyword_in_scope(&[
+        Keyword::AllMustBlock,
+        Keyword::MustBlock,
+        Keyword::MustAttackOrBlock,
+    ]) {
+        return forced;
+    }
+
+    // CR 509.1c — true Lure. Every able defender, displacing whatever else it
+    // was doing; see the note above on why that is the only legal shape.
+    let lured: Vec<CardId> = state
+        .attacking()
+        .iter()
+        .filter(|a| state.defender_for(a.target) == Some(seat))
+        .map(|a| a.attacker)
+        .filter(|a| {
+            state
+                .computed_permanent(*a)
+                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::AllMustBlock))
+                && state.block_requirement_binds(*a)
+        })
+        .collect();
+    for a_id in lured {
+        for b in state.battlefield.iter() {
+            if b.controller != seat
+                || state.blocks(b.id, a_id)
+                || !state.block_requirement_able(b, a_id)
+            {
+                continue;
+            }
+            pin(blocks, b.id, a_id);
+        }
+    }
+
+    // CR 509.1c — "blocks each combat if able". Into the attacker that hits
+    // softest: the body is being spent either way, so spend it where it is
+    // likeliest to come back.
+    for b in state.battlefield.iter() {
+        if b.controller != seat
+            || state.is_blocking(b.id)
+            || blocks.iter().any(|(bid, _)| *bid == b.id)
+        {
+            continue;
+        }
+        let obliged = state.computed_permanent(b.id).is_some_and(|cp| {
+            cp.keywords.has_kw(&Keyword::MustBlock)
+                || cp.keywords.has_kw(&Keyword::MustAttackOrBlock)
+        });
+        if !obliged {
+            continue;
+        }
+        let into = state
+            .attacking()
+            .iter()
+            .filter(|a| state.defender_for(a.target) == Some(seat))
+            .map(|a| a.attacker)
+            // Both gates on purpose. `block_requirement_able` is what obliges
+            // the creature; `blocker_can_block_attacker` is what makes the
+            // pair legal to declare. Where they disagree the requirement has
+            // no legal form and no choice here helps — that is an engine
+            // defect, filed in ENGINE_BACKLOG P3, not one to paper over.
+            .filter(|a| {
+                state.block_requirement_binds(*a)
+                    && state.block_requirement_able(b, *a)
+                    && state.blocker_can_block_attacker(b.id, *a)
+            })
+            // **CR 509.1b is a hard filter here, not a preference.** A lone
+            // body on a Menace attacker is an under-filled multi-block, so
+            // satisfying this requirement there does not save the
+            // declaration — it moves the rejection from the requirement to
+            // the count rule, and the count rule cannot repair it either
+            // because releasing the block would put the requirement back.
+            // The first cut of this pass preferred a legal attacker and took
+            // an illegal one when that was all there was; it turned 92 of
+            // `cube` seed 15's rejections into 20 of a different kind. When
+            // no attacker can take this body legally, leave it idle: the
+            // requirement fires either way, and this keeps the residual
+            // attributable to the rule that actually cannot be satisfied.
+            .filter(|a| {
+                let min_b = state
+                    .computed_permanent(*a)
+                    .map_or(1, |cp| min_blockers_required_kws(&cp.keywords));
+                min_b <= 1
+                    || blocks.iter().filter(|(_, aid)| aid == a).count()
+                        + state.blocker_count_of(*a)
+                        + 1
+                        >= min_b
+            })
+            .min_by_key(|a| state.computed_permanent(*a).map_or(0, |cp| cp.power));
+        if let Some(a_id) = into {
+            pin(blocks, b.id, a_id);
+        }
+    }
+    forced
+}
+
+fn repair_block_candidate(state: &GameState, seat: usize, blocks: &mut Vec<(CardId, CardId)>) {
+    let provoked = enforce_block_requirements(state, seat, blocks);
     let attackers: Vec<CardId> = state.attacking().iter().map(|a| a.attacker).collect();
     for a_id in attackers {
         let min_b = state
@@ -8555,6 +8719,7 @@ fn repair_block_candidate(state: &GameState, seat: usize, blocks: &mut Vec<(Card
         }
         blocks.retain(|(bid, aid)| *aid != a_id || provoked.contains(&(*bid, *aid)));
     }
+    enforce_block_caps(state, blocks, &provoked);
 }
 
 fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
@@ -9178,7 +9343,15 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     || a.has_keyword(&Keyword::DoubleStrike),
                 trample: a.has_keyword(&Keyword::Trample),
                 indestructible: a.is_indestructible(),
-                must_be_blocked: a.has_keyword(&Keyword::MustBeBlocked),
+                // CR 509.1c — the *computed* set, for the same reason as
+                // `min_blockers` below: `declare_blockers` reads the computed
+                // keyword and a granted `MustBeBlocked` (Nemesis Mask and the
+                // Lure family are auras and equipment, so the keyword is
+                // almost always a grant) is invisible to the instance walk.
+                must_be_blocked: match &cp {
+                    Some(c) => c.keywords.has_kw(&Keyword::MustBeBlocked),
+                    None => a.has_keyword(&Keyword::MustBeBlocked),
+                },
                 rampage: a
                     .definition
                     .keywords
@@ -9503,7 +9676,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // must-be-blocked attacker still missing a blocker.
     for atk in &attacker_info {
         let (a_id, a_flying) = (&atk.id, atk.flying);
-        if !atk.must_be_blocked || assignments.iter().any(|(_, aid)| aid == a_id) {
+        if !atk.must_be_blocked
+            || !state.block_requirement_binds(*a_id)
+            || assignments.iter().any(|(_, aid)| aid == a_id)
+        {
             continue;
         }
         // Pick the cheapest (lowest-power) legal idle blocker so a forced block
@@ -9515,6 +9691,10 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     && (!a_flying
                         || c.has_keyword(&Keyword::Flying)
                         || c.has_keyword(&Keyword::Reach))
+                    // Both gates, as in `enforce_block_requirements`: one says
+                    // the engine counts this body as able and so would demand
+                    // it, the other says the pair is legal to declare.
+                    && state.block_requirement_able(c, *a_id)
                     && state.blocker_can_block_attacker(c.id, *a_id)
             })
             .min_by_key(|c| c.power())
@@ -9523,26 +9703,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         }
     }
 
-    // CR 702.39 — Provoke. A creature the attacker provoked must be assigned
-    // to block it if able, and the engine rejects the whole declaration when
-    // it is not: 82 of the block rejections on `cube --seed 11` and the
-    // largest one left (PERF (-55), `combat.rs:2324`). Force it in ahead of
-    // the minimum-count repair, displacing whatever the scoring loop gave it,
-    // and read ability off `provoked_block_is_able` — the engine's own
-    // predicate, so the two cannot disagree about who is obliged.
-    for b in state.battlefield.iter() {
-        let Some(required) = b.must_block else { continue };
-        if b.controller != seat
-            || !state.attacking().iter().any(|a| a.attacker == required)
-            || !state.provoked_block_is_able(b, required)
-        {
-            continue;
-        }
-        assignments.retain(|(bid, aid)| *bid != b.id || *aid == required);
-        if !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required) {
-            assignments.push((b.id, required));
-        }
-    }
+    // CR 702.39 / CR 509.1c — the block requirements, forced in ahead of the
+    // minimum-count repair and displacing whatever the scoring loops gave
+    // those bodies. One function, shared with `repair_block_candidate`, so
+    // the greedy plan and the search menu cannot answer differently.
+    let forced = enforce_block_requirements(state, seat, &mut assignments);
 
     // CR 509.1b / 702.110b — Menace (≥2 blockers) and "can't be blocked
     // except by N or more creatures" (CantBeBlockedExceptByN — Pathrazer of
@@ -9579,9 +9744,14 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     assignments.push((c.id, *a_id));
                     count += 1;
                 }
-                // Can't reach the minimum — drop all blocks on this attacker.
+                // Can't reach the minimum — drop all blocks on this attacker,
+                // except the ones a CR 509.1 requirement pinned there. Those
+                // are not the planner's to release: dropping one trades a
+                // rejection at the count rule for a rejection at the
+                // requirement, and the requirement is the harder one to see.
                 None => {
-                    assignments.retain(|(_, aid)| aid != a_id);
+                    assignments
+                        .retain(|(bid, aid)| aid != a_id || forced.contains(&(*bid, *aid)));
                     break;
                 }
             }
@@ -9655,7 +9825,60 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             spare = spare.saturating_sub(1);
         }
     }
+
+    enforce_block_caps(state, &mut assignments, &forced);
     assignments
+}
+
+/// CR 509.1g — "can't be blocked by more than one creature" (Charging Rhino).
+/// The inverse of Menace, and the half of the count rule nothing modelled:
+/// `min_blockers` gives the planner a floor and there was no ceiling, so the
+/// gang pass and the spare-capacity pass both piled a second body onto an
+/// attacker that permits exactly one and the engine threw the batch out.
+/// **48 of `cube` seed 23's 48 block rejections.**
+///
+/// A trim rather than a filter, because it has to run after every pass that
+/// can add: the gang pass, the minimum-count top-up, and the spare-capacity
+/// pass each append independently. Keeps a requirement pin if one is on the
+/// attacker, else the biggest body, which is the one the value passes chose
+/// first.
+fn enforce_block_caps(
+    state: &GameState,
+    blocks: &mut Vec<(CardId, CardId)>,
+    forced: &[(CardId, CardId)],
+) {
+    use crate::card::Keyword;
+    if !state.board_keyword_in_scope(&[Keyword::CantBeBlockedByMoreThanOne]) {
+        return;
+    }
+    let capped: Vec<CardId> = state
+        .attacking()
+        .iter()
+        .map(|a| a.attacker)
+        .filter(|a| {
+            state
+                .computed_permanent(*a)
+                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantBeBlockedByMoreThanOne))
+        })
+        .collect();
+    for a_id in capped {
+        // The engine counts blocks already declared too, so an attacker that
+        // is already spoken for outside this batch takes nothing from it.
+        if state.blocker_count_of(a_id) > 0 {
+            blocks.retain(|(_, aid)| *aid != a_id);
+            continue;
+        }
+        let keep = blocks
+            .iter()
+            .filter(|(_, aid)| *aid == a_id)
+            .max_by_key(|(bid, aid)| {
+                let pinned = forced.contains(&(*bid, *aid));
+                let power = state.battlefield_find(*bid).map(|c| c.power()).unwrap_or(0);
+                (pinned, power)
+            })
+            .map(|(bid, _)| *bid);
+        blocks.retain(|(bid, aid)| *aid != a_id || Some(*bid) == keep);
+    }
 }
 
 /// Minimum number of creatures legally required to block `attacker` (CR
@@ -13883,6 +14106,168 @@ mod tests {
             blocks.contains(&(provoked, provoker)),
             "the provoked creature has to block its provoker: {blocks:?}",
         );
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// A vanilla creature definition, for the boards below where the rule is
+    /// a keyword the catalog only ever grants.
+    fn vanilla_creature(name: &'static str, power: i32, toughness: i32) -> CardDefinition {
+        CardDefinition {
+            name,
+            card_types: vec![crate::card::CardType::Creature],
+            power,
+            toughness,
+            ..Default::default()
+        }
+    }
+
+    /// CR 509.1c, true Lure (`AllMustBlock`) — *every* defender able to block
+    /// such an attacker must be assigned to it, and `declare_blockers` asks
+    /// the question per creature without caring what else that creature was
+    /// doing. So the only satisfiable declaration puts the whole able set on
+    /// the Lure attacker and nothing anywhere else. 30 of `cube` seed 5's and
+    /// 34 of seed 15's block rejections.
+    #[test]
+    fn bot_block_plan_honours_true_lure() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        let mut lure = vanilla_creature("Lure Beast", 1, 6);
+        lure.keywords.push(Keyword::AllMustBlock);
+        let lured = g.add_card_to_battlefield(0, lure);
+        g.clear_sickness(lured);
+        // A second attacker the value pass would much rather block: a 4/4 at
+        // a defender on 5 life is the block the planner wants to make, and
+        // making it is exactly what the Lure forbids.
+        let decoy = g.add_card_to_battlefield(0, vanilla_creature("Decoy", 4, 4));
+        g.clear_sickness(decoy);
+        let a = g.add_card_to_battlefield(1, vanilla_creature("Guard A", 2, 2));
+        let b = g.add_card_to_battlefield(1, vanilla_creature("Guard B", 3, 3));
+        g.players[1].life = 5;
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![
+            crate::game::Attack { attacker: lured, target: crate::game::AttackTarget::Player(1) },
+            crate::game::Attack { attacker: decoy, target: crate::game::AttackTarget::Player(1) },
+        ])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(
+            blocks.contains(&(a, lured)) && blocks.contains(&(b, lured)),
+            "every able defender blocks the Lure attacker: {blocks:?}",
+        );
+        assert!(
+            !blocks.iter().any(|(_, aid)| *aid == decoy),
+            "and none of them is anywhere else: {blocks:?}",
+        );
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 509.1b outranks CR 509.1c: a restriction the defender cannot
+    /// satisfy un-binds the requirement rather than making the combat
+    /// undeclarable. A Lure attacker that also has Menace, facing exactly one
+    /// able blocker, had **no legal declaration at all** — block with nobody
+    /// and the Lure rule rejects it, block with the one body and the count
+    /// rule does. Reachable in the routine pools (an aura granting
+    /// `AllMustBlock` onto a Menace creature, `cube` seed 15), and it is the
+    /// engine that has to give: no planner can plan around a contradiction.
+    #[test]
+    fn a_count_restriction_unbinds_a_block_requirement() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        let mut both = vanilla_creature("Lure Menace", 3, 3);
+        both.keywords.push(Keyword::AllMustBlock);
+        both.keywords.push(Keyword::Menace);
+        let atk = g.add_card_to_battlefield(0, both);
+        g.clear_sickness(atk);
+        let only = g.add_card_to_battlefield(1, vanilla_creature("Only", 2, 2));
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        // Blocking with nobody is now legal: the Lure requirement does not
+        // bind, because no legal declaration could have satisfied it.
+        g.clone().declare_blockers(vec![]).expect("no block is legal");
+        // And the one-body block is still illegal, on the count rule.
+        assert!(
+            g.clone().declare_blockers(vec![(only, atk)]).is_err(),
+            "one blocker on a Menace attacker stays illegal",
+        );
+        let picked = pick_blocks_for_test(&g, 1);
+        g.declare_blockers(picked).expect("and the planner picks a legal one");
+    }
+
+    /// CR 509.1c, `MustBlock` — "blocks each combat if able", asked of the
+    /// *blocker*. The planner had no pass for it at all: 8 of `cube` seed
+    /// 42's block rejections, and the only site the census reached on a seed
+    /// outside 1-24.
+    #[test]
+    fn bot_block_plan_honours_blocks_each_combat_if_able() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        // A 4/4 attacker into a 1/1 that must block: the trade is pure loss,
+        // so nothing but the requirement puts the body in front of it.
+        let atk = g.add_card_to_battlefield(0, vanilla_creature("Big", 4, 4));
+        g.clear_sickness(atk);
+        let mut obliged = vanilla_creature("Obliged", 1, 1);
+        obliged.keywords.push(Keyword::MustBlock);
+        let blocker = g.add_card_to_battlefield(1, obliged);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(
+            blocks.contains(&(blocker, atk)),
+            "a creature that blocks each combat if able has to be somewhere: {blocks:?}",
+        );
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 509.1g — `CantBeBlockedByMoreThanOne` is the *ceiling* the count
+    /// rule never had. The gang pass builds exactly the superset that breaks
+    /// it: 48 of `cube` seed 23's 48 block rejections.
+    #[test]
+    fn bot_block_plan_honours_the_single_blocker_cap() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        // A 5/5 two 3/3s would gang down happily, and may not: the greedy
+        // pass wants the gang, so only the cap can stop it.
+        let mut rhino = vanilla_creature("Charging Rhino", 6, 6);
+        rhino.keywords.push(Keyword::CantBeBlockedByMoreThanOne);
+        let atk = g.add_card_to_battlefield(0, rhino);
+        g.clear_sickness(atk);
+        let a = g.add_card_to_battlefield(1, vanilla_creature("Guard A", 4, 4));
+        let b = g.add_card_to_battlefield(1, vanilla_creature("Guard B", 4, 4));
+        g.players[1].life = 6;
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        let on_rhino = blocks.iter().filter(|(_, aid)| *aid == atk).count();
+        assert!(on_rhino <= 1, "at most one blocker on it: {blocks:?}");
+        let _ = (a, b);
         g.declare_blockers(blocks).expect("the plan is legal");
     }
 
