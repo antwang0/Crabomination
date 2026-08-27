@@ -8419,12 +8419,26 @@ BY COUNT HAS TWO ROWS NOBODY HAS COSTED.** Read at `a63b1934`, 778,489 calls:
 ```
 
 The inclusive columns are subtrees, not the collect, so they rank the *call
-site* rather than the allocation. `check_state_based_actions` at 36,150
-collects is the one to read first — the sweep runs after every action, and
-(-44)'s question is the one to ask of it: **how often is the collected `Vec`
-empty?** Read (-56b) before proposing a replacement: `collect` is internal
-iteration and a hand-written loop is not, and that cost ~0.15 % of `fixed`
-the last time somebody swapped one.
+site* rather than the allocation. Read (-56b) before proposing a replacement:
+`collect` is internal iteration and a hand-written loop is not, and that cost
+~0.15 % of `fixed` the last time somebody swapped one.
+
+**`check_state_based_actions` narrowed at `e9a509e6`, by reading rather than
+by a second profile.** 20,152 SBA calls on `cube`; the `from_iter` edge under
+it is **33,694 calls / 91,688,893 Ir inclusive, 2.71 % of the run**, i.e. 1.67
+collects an SBA call at 2,721 Ir of subtree each. **Every collect in the
+function's first ~350 lines is already behind an `sba_board_scan` flag or an
+`any()` presence test and is `Vec::new()` on an ordinary board** —
+`flip_keyword`, `flip_predicate`, `sacrifice_when`, `state_trigger`,
+`steal_penalty`, `no_other`, the three continuous-effect lapse sweeps and the
+legend rule, nine of them, all checked. So the 33,694 live in the **second
+half** (the death sweep, the Aura/Equipment sweeps, the loss conditions —
+`stack.rs` 5100-6015), and that is where to start rather than re-deriving
+this. Two rows from the same callee table recorded as *non*-leads so nobody
+re-reads them: `CardDefinition::is_creature` at 352,032 calls (17.5 an SBA
+call, 5,358,714 Ir) is the standing rules' named profile artifact —
+`release`'s thin LTO inlines it — and `card_type_change_unscoped` at 19,508
+calls / 10,844,182 is one an SBA call, a gate doing its job.
 
 **(-67) TAKEN at `a63b1934` — `fixed` -0.901 %, `cube` -0.806 %.** The bot's
 affordance sweep cached a `GameState` clone as a "probe template" and every
