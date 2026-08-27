@@ -133,7 +133,8 @@ commit that a fetch would have shown.
    was at 96 %). `--bench` on `release-fast`: **195,616 decisions / 27.44
    turns / 0 stalls**, `determinism ok`, peak RSS 28.7 MiB, 262.2 games/s at
    3 threads. `overflow` profile, seeds 11 and 12 over `all`/`cube`/`sealed`,
-   600 games/archetype: **44,400 games, no panic, no arithmetic overflow.**
+   600 games/archetype: **44,400 games, 0 capped and 0 stuck, no panic, no
+   arithmetic overflow** (20 draws, see 7z).
    The play-dependent rows were measured twice, side by side, at `21c0c97f`
    and at `8450ba81` (the attack-tax walker), and are **bit-identical** —
    195,616 decisions, 27.44 turns, the same 20 undecided in the same six
@@ -142,16 +143,20 @@ commit that a fetch would have shown.
    on the board, and these pools do not put one there. **Which means the
    ladder cannot gate that fix** — if it needs a win rate, it needs a pool
    that contains the card.
-7z. **⚠ The one number that moved and nobody is chasing it: 20 undecided in
-   44,400 (0.045 %).** All twenty are on `all` (14, seed 11) and `cube` (4 +
-   2); `sealed` is 0 on both seeds and `--bench` reports `cap 0 / stuck 0 /
-   draw 0`, so **whatever this is, the bench does not see it** — that is the
-   gap, not the rate. The previous run's "11,600 games, 0 undecided" row was a
-   *smaller* sweep (this one is 3.8x the games), so treat this as the first
-   reading at this size, **not** as a regression against it. Cheapest next
-   step: `--decks cube --seed 11` reproduces 4 in 17 s; find whether
-   undecided means the turn cap, a draw, or a stuck game before deciding
-   whether it is worth a fix.
+7z. **CLOSED, and the answer is "no stalls at all": all 20 undecided in
+   44,400 are DRAWS — `cap 0 / stuck 0 / draw 20`.** A draw is CR 104.4, a
+   rules outcome, so the sweep's real reading is **zero capped and zero stuck
+   games in 44,400**, which is a stronger robustness result than the bare
+   "20 undecided" looked like. They concentrate in two slow *cube* decks in
+   a mirror (one WU 10, one GR 4, one WU 2) and are 0 on every aggro deck,
+   on `sealed`, and on `fixed` — consistent with both seats decking out on
+   the same turn, which is what a mirror of a control deck does. Deterministic:
+   the same six cells reproduced across two builds and four runs.
+   **The tally existed the whole time and only `--bench` printed it**, so a
+   `--decks` sweep reported a bare count and the obvious next question cost a
+   rebuild. The ladder now prints `undecided_by cap/stuck/draw` whenever the
+   count is non-zero. **Rule: a number a sweep reports needs its breakdown at
+   the same call site, or the sweep just generates a follow-up question.**
 7a. **⚠ The box changed mid-run and the wall-clock rows in this file did
    not.** This run's `--bench` reads **249.8 games/s at 3 threads on an Intel
    Xeon @ 2.10 GHz**, against 208-218 on the 2.80 GHz Xeon the seventy-fifth

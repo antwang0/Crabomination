@@ -1409,6 +1409,19 @@ fn main() {
     println!();
     let wall = started.elapsed().as_secs_f64();
     println!("{decided} decided, {tu} undecided, in {wall:.1}s");
+    // Say *why* whenever there is a why to say. The tally is kept on every
+    // run — `SimCost::record` splits the three the moment a game ends — but
+    // until now only `--bench` printed it, so a robustness sweep on
+    // `--decks` reported a bare undecided count and the next question ("is
+    // that a draw or a stuck game?") cost a rebuild to answer. A draw is a
+    // rules outcome and needs no fix; a capped game was doing work; a stuck
+    // one had no bot able to move at all.
+    if tu > 0 {
+        println!(
+            "  undecided_by   cap {} / stuck {} / draw {}",
+            cost.action_capped, cost.no_legal_move, cost.draws,
+        );
+    }
 
     if args.bench {
         // Wall-clock throughput of the simulator itself. Reported as
