@@ -107,9 +107,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    PERF's "Test-suite cleanup". One commit per file batch, suite green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's two newest Baseline blocks.
-   Whole program at `96ec5071`: `fixed` 1,012,617,375 / `cube` 3,026,000,396 /
-   `sealed` 3,022,989,126, i.e. **-1.44 / -2.92 / -1.60 % across the pass**,
-   `--bench` invariant byte-identical throughout. Then PERF's "Build time"
+   **Anchor, MEASURED at `2a59a81c` rather than accumulated from claimed
+   deltas: `fixed` 1,003,202,820 / `cube` 3,005,261,303 / `sealed`
+   2,995,293,565.** (At `96ec5071` it was 1,012,617,375 / 3,026,000,396 /
+   3,022,989,126, so **-0.93 / -0.69 / -0.92 %** since.) Re-read the anchor,
+   don't sum the rows — PERF's cauldron-bit entry is why: one row was filed
+   ~7x high because its A/B ran in a worktree whose base predated the change
+   it widened. `--bench` invariant byte-identical throughout.
+   Then PERF's "Build time"
    — **the critical-path question it left open is answered**: the target was
    `crabomination_catalog`'s own test harness, 110.7 s of a 213.5 s workspace
    makespan for zero tests, now `test = false` (**-11.3 %** on a base-crate
