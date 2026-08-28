@@ -106,6 +106,12 @@ python3 scripts/cg_edges.py cg.sym.out                        # self costs
 python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc # the alloc table
 python3 scripts/cg_edges.py cg.sym.out --callees finalize_cast
 python3 scripts/cg_edges.py cg.sym.out --callers __rust_alloc --rows 0  # all
+# the whole dump ranked by CALL COUNT, with self Ir/call beside it — the
+# standing rules' "rank the dump by call count and read the Ir/call column",
+# which had no script for eight passes and is the device that found
+# `Option::or_else`. Divides a whole-board walk's row into card visits, which
+# is what says whether the row is body or iteration (pass 89's refutation).
+python3 scripts/cg_calls.py cg.sym.out 45
 # **A listing that caps its rows says what it dropped, and `--rows N` (`0` =
 # no cap) lifts the cap.** Until the fiftieth pass neither was true, under a
 # docstring that promised a *complete* table — the `--tree` truncation above
@@ -192,6 +198,13 @@ pass because they are measurement rules, not handoff.**
 * ⚠ **Two cargo builds at once take ~1.5x each on four cores**, and a cold
   `release` of this workspace is ~25 min on its own. Start the one whose
   result gates the next step first.
+* ⚠ **…and on this container two cold builds at once do not finish at all:
+  the OOM killer takes them** (eighty-ninth pass, `release` + `profiling-fast`
+  started together, both dead with `signal: 9, SIGKILL` on
+  `crabomination_catalog`). One `rustc` on that crate at `opt-level = 3` peaks
+  at ~3.8 GB and the engine crate's at ~2.5 GB, so two of each does not fit in
+  15 GB. **Build sequentially**; the "~1.5x each" above is what you get when
+  they survive.
 
 **MEASURING A CHANGE TO THE BOT: PIN THE JITTER, OR THE COLUMN IS GAME
 LENGTH.** The scored pickers draw one `jitter_below(4)` per *candidate*, so
@@ -674,6 +687,19 @@ here if it ever needs compacting.
   siblings costs the program `cube` **+0.171 %** / `sealed` +0.143 % — the
   memo a gate warms is read again by the next consumer, so the cost lands on
   the gate's row and the saving lands on someone else's.
+- **Price the *walk*, not the function's row: a whole-board presence row can
+  be 98 % iteration** (pass 89, `(-77)`, built and reverted: `fixed`
+  +0.031 % / `cube` -0.040 % / `sealed` +0.015 %). `card_can_change_creature_
+  types` and `card_can_change_land_types` on a `change_bits` family with
+  **its own valid flag** — the prescription the rule below writes — moved
+  their two rows (1.05 % of `cube`) by 1.0 % and 1.9 %, because the per-card
+  body was never where they spend: the closures run 27,794 and 45,394 times
+  at 642 and 353 Ir, i.e. ~20 cards at ~22 Ir, and those 22 Ir are the `Arc`
+  deref, the iterator and the `any` closure — not the `Option` check and two
+  length checks the bit replaced. **The shared slot explained pass 87's loss;
+  it was not hiding a win.** The rule above counts the work items a bit
+  elides; this one says to count them *per card visit*, which
+  `scripts/cg_calls.py` does by division.
 - **A memo slot's miss path is the sum of every family on it, and it is paid
   by whichever consumer touches the card first** (pass 87, same entry, built
   and reverted: `fixed` +0.135 %, `cube` +0.145 %, `sealed` +0.097 %). Adding
@@ -5528,6 +5554,48 @@ the table above is safe to compress:
 
 ## Log
 
+### Eighty-ninth pass — a gate that reads its evidence before asking whether it has a question
+
+**1. `ward_gate_ok` read the cast's cost before finding out whether anything
+was warded. `fixed` -0.257 %, `cube` -0.219 %, `sealed` -0.224 %.**
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base dc478735.
+  fixed   1,059,426,578 -> 1,056,703,395   -0.257 %
+  cube    3,217,542,883 -> 3,210,481,372   -0.219 %
+  sealed  3,163,675,366 -> 3,156,580,692   -0.224 %
+  ward_gate_ok's callee table at the base, `cube`:
+    10,834   2,812,516  find_card_anywhere
+    10,736     593,113  __rust_alloc      (a `ManaCost` clone per candidate)
+    11,900   1,133,626  __rust_dealloc
+    10,736     123,938  __memcpy
+--bench  195,528 decisions / 27.44 turns / 0 stalls / determinism ok
+         — byte-identical to the committed invariant
+```
+
+The function is the bot's ward pre-filter: `cast_candidates`' `retain` and
+eight other sites ask it per candidate. It opened by resolving the action's
+**mana cost** — a `find_card_anywhere` walk (battlefield, stack, then every
+player's graveyard, hand and ante) plus a `ManaCost` clone, i.e. one
+allocation — and only then walked the chosen targets to see whether any of
+them carried a ward tax. **Most candidates carry no target at all**, so both
+were work nothing read: `__rust_alloc` shows `ward_gate_ok` as a 10,736-call
+row in the allocation table, which is where it was first seen.
+
+The cost is *named* now (`WardedCost`, five variants over the twenty-odd cast
+shapes) and resolved after the tax walk, which returns early when nothing is
+taxed; `Vec::new()` does not allocate until a tax is pushed, so the common
+path allocates nothing at all. `ward_tax` is pure, so asking it about every
+target instead of stopping at the first unpayable one is a reordering rather
+than a behaviour change — the `all` over payability is unchanged, and
+`--bench` is byte-identical.
+
+**The device is the entry: an allocation table row on a *predicate* is a
+question asked before it was known to be needed.** Rank
+`cg_edges.py --callers __rust_alloc` by call count and read every row that
+names a function whose job is to answer `bool`.
+
 ### Eighty-sixth pass, the concurrent half — `Vec::clone` hands back `capacity == len`, and that one sentence is a class
 
 **0. The class.** Every `Vec` that lives inside a copy-on-write structure
@@ -10075,6 +10143,35 @@ valid flag, or measure the slot's miss again after widening it.** The first
 half is the rule below, twice confirmed: the walks removed here are
 `static_abilities.iter().any()` and `station.iter().any()` on definitions
 that have neither — two length checks.
+
+**AND THE EIGHTY-NINTH PASS BUILT THE PRESCRIPTION ABOVE — A `change_bits`
+FAMILY WITH ITS OWN VALID FLAG (bit 58, payload 59-62) — AND IT IS FLAT.**
+`fixed` **+0.031 %**, `cube` **-0.040 %**, `sealed` **+0.015 %**; built,
+measured, reverted. So the shared slot explained the *loss* and there was
+never a *win* underneath it:
+
+```text
+base dc478735, profiling-fast --no-default-features, --games 6 --seed 1
+  fixed   1,059,426,578 -> 1,059,751,948   +0.031 %
+  cube    3,217,542,883 -> 3,216,244,748   -0.040 %
+  sealed  3,163,675,366 -> 3,164,163,014   +0.015 %
+  creature_type_change_in_scope's walk  17,847,758 -> 17,672,056   (-1.0 %)
+  land_type_change_in_scope's walk      16,008,238 -> 15,707,964   (-1.9 %)
+  CardDefinition::change_scan_bits (the new miss path)  1,946,496
+```
+
+**The two rows are 1.05 % of `cube` between them and the memo moves 1.5 % of
+them, because the per-card body was never where they spend.** The closures
+run **27,794** and **45,394** times at **642** and **353 Ir**, i.e. ~20 cards
+at ~22 Ir apiece, and those 22 Ir are the walk's own machinery — an `Arc`
+deref per `CardInstance`, the iterator, the `any` closure — not the
+`Option` check and two length checks the bit replaced. The miss path costs
+**more** than the whole saving on its own. **This is the eighty-eighth
+pass's distinction read from the losing side one more time, and it now has
+its sharpest statement: price the *walk*, not the *function's row* — a row
+that is 0.55 % of the program can be 98 % iteration.** The lever on these
+two is fewer walks (they are already gated per freeze scope, at a 13 % miss
+rate over ~207 k scopes), and there is nothing left in the body.
 
 **`dispatch_board_scan` WAS REFUTED AT THE EIGHTY-SEVENTH PASS AND TAKEN AT
 THE EIGHTY-EIGHTH — the refutation below is kept verbatim because its
