@@ -101,28 +101,18 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `encode.rs`, `crabomination_ml` or `crabomination_nn`.
 5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg, the
    seeded 4,000-pairing cube sweep (arm it in
-   `bot_vs_bot_random_cube_decks_terminate`), the two census env vars. **The
-   `-C debug-assertions=yes` leg is re-run at `40334110`** — 5 pools x 8 seeds
-   x 120 games/archetype, **38,400 games, no panic, no assertion, no
-   overflow**, which is what audits the two new presence gates' soundness
-   asserts. `cap 0 / stuck 0` throughout; 4 games of `--decks all` ended
-   `draw`, which is a game outcome, not a stall. **Re-run again at the
-   ninety-second pass with its gate in** — the script's own 30-cell grid,
-   33,120 games, 0 undecided, 0 failures, with that pass's `debug_assert!`
-   verified present in the audited binary. **And re-run once more at
-   `e1659cd3`, with every behaviour change of the pass in** — the CR 613.8
-   fix, both `OptionalTrigger` policies, the event-buffer recycle, the
-   freeze-scope gates, the CR 602.5 frame reuse and the grants-nothing gate:
-   30 cells, 33,120 games, 0 undecided, 0 failures, with `--bench`
-   byte-identical at that tip (195,528 / 27.44 / 611.0 / 0 stalls /
-   `determinism ok` / `thread_determinism ok 3 vs 1`). **And once more at
-   `b635037f`** with the ninety-third pass's two targeter commits in — 30
-   cells, 33,120 games, 0 undecided, 0 failures, with that pass's new
-   `first_opponent_of drifted from opponents_of` assertion **verified present
-   in the audited binary by `strings`**, which is the check the script's own
-   header asks for. No pass re-armed the
-   4,000-pairing cube sweep: all are behaviour-preserving by construction and
-   `--bench` is byte-identical through them.
+   `bot_vs_bot_random_cube_decks_terminate`), the two census env vars.
+   **Green at `10a794a8`: 30 cells, 33,120 games, 0 undecided, 0 failures**,
+   with the audit binary's assertion strings verified present (the script's
+   own header check — `strings | grep -c "memo is stale"` must be > 0, and a
+   0 means `RUSTFLAGS` did not reach the crate). Run it after any pass that
+   lands a `debug_assert!` or a presence gate: the 19 k-test suite is not
+   their audit, because an assertion needs a *board* to fire on. Five earlier
+   runs (through `b635037f`) were also clean and are in git; do not add a
+   line per run here. No pass has re-armed the 4,000-pairing cube sweep: the
+   passes since have been behaviour-preserving by construction and `--bench`
+   is byte-identical through them (195,528 / 27.44 / 611.0 / 0 stalls /
+   `determinism ok` / `thread_determinism ok 3 vs 1`).
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
    Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed

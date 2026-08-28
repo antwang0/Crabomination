@@ -2075,6 +2075,46 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fourth pass (2) — `same_team` asked about two seats when one settles it
+
+**`same_team` reads one team row instead of two, base `10a794a8`.** NEXT
+named this function as unswept `#[inline]` territory alongside
+`CardInstance::has_keyword`; it is not an inlining question at all.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     989,687,455 ->   988,355,501   -0.135 %
+  cube    2,965,899,283 -> 2,962,783,236   -0.105 %
+  sealed  2,947,619,164 -> 2,944,311,137   -0.112 %
+
+same_team, identical call counts either side:
+                 calls        before        after     Ir/call
+  fixed        143,564     3,803,836    2,449,496    26.5 -> 17.1
+  cube         322,890     8,848,120    5,679,240    27.4 -> 17.6   (-35.8 %)
+  sealed       346,874     9,425,362    6,054,644    27.2 -> 17.5
+```
+
+**The body was `a == b || team_of(a) == team_of(b)`, and `team_of` already
+carries a fast path for the singleton layout every non-team format keeps —
+so the function took that path twice and then compared two `TeamId`s.** A
+seat that is its own whole team shares a team with nobody else, so **one
+seat's row settles the pair**: if `teams[a]` is exactly `{a}` and `a != b`,
+the answer is `false` and `b` is never looked up. `assign_teams` numbers
+teams by partition index and rejects a seat in two partitions, so the
+singleton at index `a` has id `TeamId(a)` and cannot be `b`'s team — the
+`debug_assert_ne!` is the audit, the same shape `team_of`'s own fast path
+uses, and it is what the robustness grid exercises.
+
+**The rule: before reaching for `#[inline]` on a hot small function, check
+whether its body asks the same question twice.** This one is 143 k-347 k
+calls a run across three pools and the caller table is diffuse
+(`adjust_life` 94,974, `opponent_has_static` 56,312, `eval_material_inner`
+55,664, `effective_max_hand_size` 52,978, `declare_attackers_banded`
+35,718 on `cube`), so nothing above it would ever have shown the doubled
+lookup.
+
+Suite 19,033 / 0 / 5, golden traces unmoved; clippy clean.
+
 ### Ninety-fourth pass — the board question the whole planner asks becomes one load, and the gate array is the counter-row
 
 **Void Winnower's block half is a presence gate now, base `efebd811`** —

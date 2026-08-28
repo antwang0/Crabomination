@@ -4177,8 +4177,29 @@ impl GameState {
 
     /// True when `a` and `b` are on the same team. A seat is always its
     /// own teammate (returns true for `a == b`).
+    ///
+    /// **One seat's membership, not two.** A seat that is its own whole team
+    /// shares a team with nobody else, so on the singleton layout every
+    /// non-team format keeps, `a`'s row settles the pair and `b`'s lookup
+    /// never runs — [`team_of`](Self::team_of)'s own fast path, hoisted up one
+    /// frame so it is taken once instead of twice. The `debug_assert` is the
+    /// audit, exactly as it is there.
     pub fn same_team(&self, a: usize, b: usize) -> bool {
-        a == b || self.team_of(a) == self.team_of(b)
+        if a == b {
+            return true;
+        }
+        if let Some(t) = self.teams.get(a)
+            && t.members.len() == 1
+            && t.members[0] == a
+        {
+            debug_assert_ne!(
+                self.team_of_scan(a),
+                self.team_of_scan(b),
+                "same_team singleton fast path drifted",
+            );
+            return false;
+        }
+        self.team_of(a) == self.team_of(b)
     }
 
     /// CR 809 — set the game up as an Emperor game of `teams` teams of
