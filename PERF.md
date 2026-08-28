@@ -902,6 +902,52 @@ build.
 
 ## Baseline
 
+### Eighty-seventh pass, the concurrent half — an iterator adapter chain is a per-element branch, and on a whole-board walk that is half the row
+
+Two commits, both the same reading at two scales, and the device is the
+reusable half: **an adapter chain (`Chain`, `FlatMap`, `Filter`) costs per
+element of the collection it wraps, whether or not the legs it is chaining
+have anything in them.** On a whole-board walk that is more than the loop body.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.
+
+(1) `all_static_sources()` is a visitor with the command half gated. Base
+    1413f07e.
+      fixed   1,081,256,853 -> 1,072,184,345   -0.839 %
+      cube    3,290,762,784 -> 3,272,601,023   -0.552 %
+      sealed  3,217,989,709 -> 3,200,012,745   -0.559 %
+      trigger_grant_sources  fixed 13,043,782 -> 6,405,566   -50.9 %
+                             cube  26,573,648 -> 14,365,404  -45.9 %
+      grant_scan             fixed  9,091,212 -> 6,654,834   -26.8 %
+                             cube  22,482,670 -> 16,523,484  -26.5 %
+
+(2) `compute_permanent_pass`' sorted view is two `extend`s. Base 65357c25.
+      fixed   1,068,706,202 -> 1,068,166,641   -0.050 %
+      cube    3,259,259,680 -> 3,253,012,848   -0.192 %
+      SpecFromIterNested::from_iter  cube 90,555,135 -> 85,635,653;
+      allocations byte-identical (1,650,920), so only the branch moved
+```
+
+**(1) was priced by deleting the command half outright**, a deliberately wrong
+probe — battlefield only — which read `fixed` -0.675 % / `cube` -0.406 %
+before a line of the real fix existed. The shipped shape keeps CR 315.5's
+command-zone sources behind a presence gate (every game without a conspiracy
+or a commander has an empty command zone) and hands the body in as a closure,
+so the battlefield half inlines exactly as the `for` loop it replaces. **The
+probe is the entry**: `all_static_sources()` is
+`Chain<slice::Iter, FlatMap<_, Filter<_>>>` and it was costing **~20 Ir a
+permanent** in a loop whose body does nothing on `--decks fixed`, because the
+bench archetypes carry no `static_abilities` entry at all.
+
+**The two scales are the point.** (1) is `Chain` + `FlatMap` + `Filter` over
+~23 permanents per call, 27,724 calls: 0.84 % of `fixed`. (2) is a bare
+`Chain` over a dozen continuous effects, and it is 0.19 % of `cube` and
+nothing on `fixed` — **a per-element cost splits by pool according to how long
+the collection is**, which is why the same device reads four times differently
+on the two pools.
+
 ### Eighty-seventh pass — a refutation written against a *mechanism* that a later pass built, and the SBA board scan halves
 
 **(-11) said a per-definition presence bitmask "cannot be a lazily-cached
@@ -8830,6 +8876,64 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-78) AN ITERATOR ADAPTER CHAIN IS A PER-ELEMENT BRANCH, AND THE ENGINE HAS
+119 `chain`s AND 129 `flat_map`s. TWO TAKEN AT THE EIGHTY-SEVENTH PASS'S
+CONCURRENT HALF (`fixed` -0.89 % / `cube` -0.74 % between them); HERE IS THE
+SELECTION RULE AND WHAT IS LEFT.**
+
+The finding: `all_static_sources()` —
+`battlefield.iter().chain(players.iter().flat_map(|p| p.command.iter()
+.filter(...)))` — cost **~20 Ir a permanent** in a loop whose body does
+*nothing* on `--decks fixed`, because the bench archetypes carry no
+`static_abilities` entry. Half of `trigger_grant_sources`' entire row was the
+iterator, not the work. See the Baseline for both commits and for the
+two-line probe that priced it before the fix existed (**delete the rare leg
+and measure**; it costs one build and answers the question outright).
+
+**The selection rule, and it has three tests, all cheap:**
+
+1. **Is the wrapped collection walked per element, or is the adapter set up
+   per *call*?** `Chain` over 23 permanents 27,724 times is 0.84 % of `fixed`;
+   `Chain` over a dozen continuous effects is 0.19 % of `cube` and 0.05 % of
+   `fixed`. **A per-element cost splits by pool according to how long the
+   collection is** — read both pools or you will read one of these as the
+   other.
+2. **Is the chained leg usually empty?** That is what makes the branch pure
+   overhead rather than a fair share. Command zones, `granted_triggers_eot`,
+   `eot_grants`, `removed_keywords` — all empty on almost every card.
+3. **What replaces it?** A closure visitor when the body is long (the
+   monomorphized closure inlines, so the hot leg becomes the plain slice loop
+   it was), two `extend`s when the target is a `Vec`, a presence-gated second
+   loop when the leg is rare. **A `continue` in the body becomes a `return`
+   when it moves into a closure** — check for one before quoting a line count.
+
+**What is left, ranked by the row the chain sits in** (`--decks cube` at
+`5d2f1acf`, and every one of these is a chain onto a usually-empty tail):
+
+```text
+  2.38 %  check_state_based_actions_into  stack.rs:5412 — the death sweep's
+          `triggered_abilities.iter().chain(granted).filter(..)`, per card
+          per sweep; stack.rs:5762 is the stale-Role `flat_map`
+  1.47 %  activate_ability_inner          eleven sites, actions.rs
+  1.29 %  fire_combat_damage_triggers     combat.rs:5320-5321, a *double*
+          chain over the printed list per card per damage event
+  1.17 %  evaluate_requirement_static_hinted  eval.rs:3770-3836, five
+          `target.iter().chain(additional_targets.iter())`
+  0.81 %  declare_blockers                combat.rs:2058
+  0.66 %  declare_attackers_banded        eight sites
+  0.50 %  finalize_cast                   actions.rs:8632
+  0.48 %  bot::available_mana             bot.rs:10160
+```
+
+**Two the same pass left deliberately.** `dispatch_triggers_for_events`
+(5.93 %) carries a *triple* chain at mod.rs:17792 over a body long enough that
+moving it into a closure is a refactor of the hottest function in the
+simulator, and its four legs are already behind an all-empty `continue` gate,
+so the elements it pays for are few. `cost_reduction_for_spell_full_over`
+takes the iterator as a **parameter** (`CostStaticSources`), so the fix is a
+signature change; `chosen_type_etb_counter_specs` (0.12 % / 0.10 %) `continue`s
+the *outer* loop and wants test 3's `return`.
 
 **(-77) THE MEMO DEVICE THE EIGHTY-SEVENTH PASS PROVED HAS FOUR MORE
 CALLERS, AND THEY ARE 4.75 % OF `cube` BETWEEN THEM.** `sba_board_scan` was

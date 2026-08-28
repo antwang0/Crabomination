@@ -26,14 +26,11 @@ sixty-seventh pass, so don't re-take that.
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-75)**'s unattributed
-   rows (split each before threading it), (-70) (quiet window only), (-69)'s
-   two unclaimed rows, (-51)(b), (-60), (-61), (-51)(a), (-59). Closed:
-   (-71) and its sweep, (-73), the `CowBox<Vec<T>>` half of (-76) and six of
-   its fields. Refuted **with numbers**: (-72), (-74), the ability-count
-   reserve, three more (-71) sites, and **(-76)'s
-   `affected_from_requirement` row, both halves** — it passed the byte test
-   and failed the read-count test on its *consumer*.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-78)**'s remaining
+   chain sites (`check_state_based_actions_into` and
+   `fire_combat_damage_triggers` first), **(-77)**'s four memo callers,
+   **(-75)**'s unattributed rows, (-70) (quiet window only), (-69)'s two
+   unclaimed rows, (-51)(b), (-60), (-61), (-51)(a), (-59).
 2. **Perf method** — PERF "How to measure" and "Which pool a change moves",
    then the standing rules below. **Read all three pools**: pass 86 had one
    change that split by pool and one that did not. And **size an inline
@@ -73,6 +70,15 @@ one-sentence claim plus the pass that measured it; do not delete one, because
 the point of the section is that a rule refuted on a *mechanism* stays
 refuted.
 
+- **An iterator adapter chain is a *per-element* branch, and on a whole-board
+  walk it can be more than the loop body** (pass 87, the concurrent half,
+  (-78); `fixed` -0.839 % / `cube` -0.552 % for one site).
+  `all_static_sources()`'s `Chain` + `FlatMap` + `Filter` cost ~20 Ir a
+  permanent in a loop whose body does nothing on `--decks fixed`. **Price it
+  by deleting the rare leg** — one build, and it read -0.675 % before the real
+  fix existed. Three tests: is the collection walked per element, is the
+  chained leg usually empty, and does the body have a `continue` that has to
+  become a `return` when it moves into a closure.
 - **`Vec::clone` hands back `capacity == len`, so every `Vec` inside a
   copy-on-write structure reallocates on its first push after the copy**
   (pass 86, the concurrent half, (-76); `cube` -0.44 % over six sites). The
