@@ -1902,6 +1902,62 @@ a box whose state moves.
 
 ## Baseline
 
+### The cauldron bit re-measured in isolation, and the rule about a worktree base
+
+**`3a975a9e` ("A presence gate in front of `granted_abilities_of`") is a real
+improvement and its commit message sizes it about 7x high, because its A/B ran
+against a base that predated the gate it widens.** Recorded here with the
+isolation numbers so the ledger sums, and because the *mechanism* is a hazard
+this file's own advice creates.
+
+The commit swaps one conjunct of the ninety-second pass's grants-nothing gate:
+`me.counters.is_empty()` (a card test, and ~35 % of the permanents these sweeps
+visit carry a counter) becomes `!scan.cauldron` (a board test, off a walk
+`grant_scan` already makes). The reasoning is right and the shipped diff is 28
+lines on top of the gate. What it is worth, measured by restoring that one
+conjunct at the tip (`2a59a81c`) and leaving the bit's computation in place on
+both sides:
+
+```text
+                    tip            conjunct restored      the widening is worth
+  fixed     1,003,202,820          1,003,226,038          -23,218   -0.002 %
+  cube      3,005,261,303          3,006,866,232       -1,604,929   -0.053 %
+  granted_abilities_of_inner, cube
+            14,629,720             15,319,136            -689,416
+```
+
+Net of the bit's own cost — its table puts that at **+470,572** on `cube` — the
+commit is about **-0.038 % of `cube` and nothing on `fixed`**, against the
+**-0.323 % / -0.165 % / -0.329 %** the message reports. (`sealed` was not
+re-measured here.)
+
+**Two tells, both readable without a build.** The message's "before" row for
+`granted_abilities_of` is **25,466,834** on `cube`, which is that function's
+value *before* the ninety-second pass's gate — after it the row is named
+`granted_abilities_of_inner` and reads 15,319,136, which is exactly what the
+conjunct-restored build above reads. And the suite count it quotes, 19,073, is
+two data-test slices out of date. **A "before" figure that does not appear in
+the tip's own dump under the tip's own row name is a base mismatch, not a
+rounding difference.**
+
+**THE RULE, AND IT IS THE COST OF THE ADVICE THIS FILE GIVES.** "How to
+measure" says to take the baseline in a *detached worktree* rather than a
+stash, because a concurrent session lands commits every few minutes. That is
+right, and it has a failure mode: **the worktree's base freezes while the
+branch moves, so a patch written there can measure a change the branch has
+since made, and `git rebase` will then shrink the patch without shrinking the
+measurement.** A 28-line diff filed with a 300-line diff's number looks
+exactly like this. The check is cheap and mechanical:
+
+* **before filing, re-read the moved row at the *tip*, not in the worktree** —
+  one `cg_edges.py --rows 0 | grep` on a dump you already have;
+* **if the row's *name* changed between base and tip, the base is wrong** — a
+  split, an inline or a rename is the loudest possible signal;
+* **and check the gate line: a suite count that no longer matches the tip's
+  dates the whole measurement.**
+
+The code stands. Only the number moves.
+
 ### Ninety-second pass (2) — a probe's caller is a gate until you have counted it
 
 **`pick_land_to_play` asks the engine's land-drop question once instead of once
