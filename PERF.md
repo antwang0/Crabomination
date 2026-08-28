@@ -1515,6 +1515,27 @@ nothing on `fixed` — **a per-element cost splits by pool according to how long
 the collection is**, which is why the same device reads four times differently
 on the two pools.
 
+**Three more commits finished the `flat_map` half of the sweep**, found by
+reading `FlatMap::next`'s own self row (0.60 % of `cube`) and ranking its
+sites with `cg_contexts.py` on a `--separate-callers=3` dump — two minutes,
+no rebuild. Each is the same mechanical rewrite to nested `for` loops:
+
+```text
+(3) declare_attackers_banded's three whole-board flat_maps  -0.278 / -0.230 %
+      FlatMap::next  19,602,312 (0.60 %) -> 8,769,162 (0.27 %)
+(4) bot::cast_candidates' hand sweep (five filters, two
+    nested flat_maps; candidate order preserved exactly)    -0.271 / -0.179 %
+      FlatMap::next  8,769,162 -> 5,737,084 (0.18 %)
+      `--bench` byte-identical, which is the gate for a bot-path change
+(5) the last two combat flat_maps                           -0.049 / -0.038 %
+      FlatMap::next off the profile as a named row
+```
+
+**(5) is the size of the finding at the tail and it is worth reading**: the
+same mechanical change is 0.28 % on the attack declaration and 0.05 % here,
+because these two walks run on few boards. Across all six commits the pass's
+adapter sweep is `fixed` **-1.44 %** / `cube` **-1.13 %**.
+
 ### Eighty-seventh pass — a refutation written against a *mechanism* that a later pass built, and the SBA board scan halves
 
 **(-11) said a per-definition presence bitmask "cannot be a lazily-cached
@@ -9585,10 +9606,20 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-78) AN ITERATOR ADAPTER CHAIN IS A PER-ELEMENT BRANCH, AND THE ENGINE HAS
-119 `chain`s AND 129 `flat_map`s. TWO TAKEN AT THE EIGHTY-SEVENTH PASS'S
-CONCURRENT HALF (`fixed` -0.89 % / `cube` -0.74 % between them); HERE IS THE
-SELECTION RULE AND WHAT IS LEFT.**
+**(-78) AN ITERATOR ADAPTER CHAIN IS A PER-ELEMENT BRANCH. THE `flat_map`
+HALF IS **SWEPT** AT THE EIGHTY-SEVENTH PASS'S CONCURRENT HALF — SIX COMMITS,
+`fixed` **-1.44 %** / `cube` **-1.13 %** BETWEEN THEM, AND `FlatMap::next` IS
+OFF THE PROFILE AS A NAMED ROW (0.60 % OF `cube` -> NOTHING, 57,600 CALLING
+CONTEXTS -> 0). WHAT IS LEFT IS `Chain`, AND IT IS A THIRD OF THAT.**
+
+```text
+  all_static_sources() is a visitor, command half gated   -0.839 / -0.552 %
+  compute_permanent_pass' sorted view is two extends      -0.050 / -0.192 %
+  declare_attackers_banded's three whole-board flat_maps  -0.278 / -0.230 %
+  bot::cast_candidates' hand sweep is a loop              -0.271 / -0.179 %
+  the last two combat flat_maps                           -0.049 / -0.038 %
+                                            (fixed / cube, each on the one below)
+```
 
 The finding: `all_static_sources()` —
 `battlefield.iter().chain(players.iter().flat_map(|p| p.command.iter()
@@ -9647,13 +9678,38 @@ a board walk.
 ```
 
 **So the entry's own test 1 is the whole selection rule, and it is cheaper to
-apply than to skip**: the two sites that shipped are the two where the adapter
-wrapped a **whole-board walk executed per call**, and every candidate that
-failed failed on that question alone. `dispatch_triggers_for_events` (5.93 %)
-carries a *triple* chain at mod.rs:17792 and is left for the same reason plus
-one more: its four legs are already behind an all-empty `continue` gate, and
-its body is long enough that moving it into a closure is a refactor of the
-hottest function in the simulator.
+apply than to skip**: every site that shipped wrapped a **whole-board walk
+executed per call**, and every candidate that failed failed on that question
+alone. `dispatch_triggers_for_events` (5.93 %) carries a *triple* chain at
+mod.rs:17792 and is left for the same reason plus one more: its four legs are
+already behind an all-empty `continue` gate, and its body is long enough that
+moving it into a closure is a refactor of the hottest function in the
+simulator.
+
+**THE INSTRUMENT IS THE REUSABLE HALF, AND IT COSTS A CALLGRIND RUN WITH NO
+REBUILD.** `FlatMap::next` and `Chain`'s monos are **named rows in the self
+table**, so a program's adapter cost can be read off directly rather than
+inferred; `--separate-callers=3` plus `cg_contexts.py <dump> FlatMap` then
+ranks the *sites*. That is two minutes, and it is what found the four that
+shipped after this entry's first list ranked function rows and got three of
+five wrong. Re-run it before proposing another one.
+
+**WHAT IS LEFT — `Chain`, 25,480 contexts against the `flat_map`s' 57,600, at
+`3c0042db` on `--decks cube`:**
+
+```text
+  11,762  bot::ward_gate_ok <- Vec::retain <- bot::cast_candidates
+   4,456  do_untap <- advance_step <- pass_priority   (five whole-board sites)
+   3,774  bot::pick_prepare_response <- sim_spell_action_inner
+   2,576  dispatch_triggers_for_events <- perform_action_inner
+     994  bot::pick_prepare_response <- next_action_inner
+     718  bot::ward_gate_ok <- main_phase_action_with
+```
+
+None of them is a whole-board walk of the kind that paid: `ward_gate_ok`'s is
+a `find_card_anywhere` chain per candidate (0.09 % of `cube` at its largest
+context), `do_untap`'s five run once a turn. Expect a tenth of what the
+`flat_map` sweep read, and read the self rows first.
 
 **(-77) THE MEMO DEVICE THE EIGHTY-SEVENTH PASS PROVED HAS FOUR MORE
 CALLERS, AND THEY ARE 4.75 % OF `cube` BETWEEN THEM.** `sba_board_scan` was
