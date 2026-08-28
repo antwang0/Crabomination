@@ -13393,8 +13393,8 @@ impl GameState {
     pub(crate) fn grant_scan(&self) -> GrantScan<'_> {
         use crate::effect::{Selector, StaticEffect};
         let mut scan = GrantScan::default();
-        // CR 315.5 — a face-up conspiracy grants from the command zone too.
         let mut cauldron = false;
+        // CR 315.5 — a face-up conspiracy grants from the command zone too.
         self.for_each_static_source(|src| {
             for sa in &src.definition.static_abilities {
                 // Agatha's Soul Cauldron, read off this walk rather than off
