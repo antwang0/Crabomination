@@ -513,7 +513,7 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
     let mut counts: smallvec::SmallVec<[(u16, &CardInstance, u32); 32]> =
         smallvec::SmallVec::new();
     for c in lib.iter() {
-        let idx = vocab.index_of(c.definition.name);
+        let idx = c.vocab_index(|d| vocab.index_of(d.name));
         match counts.iter_mut().find(|e| e.0 == idx) {
             // First card of a name wins, exactly as `or_insert` did.
             Some(e) => e.2 += 1,
@@ -870,7 +870,10 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
             feats[43] = 1.0;
         }
     }
-    EncodedObject { card: vocab.index_of(def.name), feats }
+    // Memoized on the card object — `index_of` is a hash lookup and the
+    // actor asks it once per encoded object plus once per library card,
+    // 438,318 times a sixty-game run at ~49 Ir. See `CardData::vocab_index`.
+    EncodedObject { card: c.vocab_index(|d| vocab.index_of(d.name)), feats }
 }
 
 /// Any printed or EOT-granted keyword matching `pred`, minus removals.

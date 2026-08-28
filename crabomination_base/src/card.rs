@@ -6246,6 +6246,11 @@ impl CardMemo {
     const SBA_VALID: u64 = 1 << 6;
     const GRANT_VALID: u64 = 1 << 7;
     const TYPE_VALID: u64 = 1 << 30;
+    /// Bit 57 is the flag and bits 41-56 the value; see
+    /// [`CardData::vocab_index`].
+    const VOCAB_VALID: u64 = 1 << 57;
+    const VOCAB_SHIFT: u32 = 41;
+    const VOCAB_MASK: u64 = 0xffff << Self::VOCAB_SHIFT;
     const DISPATCH_VALID: u64 = 1 << 31;
 
     #[inline]
@@ -6320,6 +6325,22 @@ impl CardMemo {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
         self.0.store(
             (v & !dispatch_bits::ALL) | bits | Self::DISPATCH_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    #[inline]
+    fn get_vocab(&self) -> Option<u16> {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::VOCAB_VALID != 0)
+            .then_some(((v & Self::VOCAB_MASK) >> Self::VOCAB_SHIFT) as u16)
+    }
+
+    #[inline]
+    fn set_vocab(&self, idx: u16) {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        self.0.store(
+            (v & !Self::VOCAB_MASK) | (u64::from(idx) << Self::VOCAB_SHIFT) | Self::VOCAB_VALID,
             std::sync::atomic::Ordering::Relaxed,
         );
     }
@@ -6968,6 +6989,33 @@ impl CardData {
         let bits = self.definition.type_scan_bits();
         self.memo.set_type(bits);
         bits
+    }
+
+    /// The encoder's vocabulary index for this object, memoized on the same
+    /// word — the one slot on it whose *meaning* lives outside this crate.
+    ///
+    /// `server::encode::Vocab::index_of` is a hash lookup on the definition's
+    /// name and the ML actor asks it 438,318 times a sixty-game run at ~49 Ir
+    /// apiece (0.57 % of the actor), once per encoded object and once per
+    /// library card. The answer is a pure function of the definition's name,
+    /// and the vocabulary is frozen (`VOCAB_SNAPSHOT`, one constructor), so
+    /// it memoizes exactly like the bit families above. `compute` is the
+    /// caller's lookup; the `debug_assert!` re-runs it on every hit, so the
+    /// suite audits both the invalidation and the "one vocabulary" claim.
+    #[inline]
+    pub fn vocab_index(&self, compute: impl Fn(&CardDefinition) -> u16) -> u16 {
+        if let Some(i) = self.memo.get_vocab() {
+            debug_assert_eq!(
+                i,
+                compute(&self.definition),
+                "vocab-index memo is stale: a definition rewrite did not clear it, \
+                 or a second vocabulary is in play",
+            );
+            return i;
+        }
+        let i = compute(&self.definition);
+        self.memo.set_vocab(i);
+        i
     }
 
     /// [`CardDefinition::dispatch_scan_bits`] for this object, memoized on the

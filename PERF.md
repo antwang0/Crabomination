@@ -1917,8 +1917,27 @@ wins. `the_library_encodes_as_a_deduplicated_multiset` is the regression test
 and it asserts exactly that contract. Both runs produced 5,915 rows over 60
 games with 0 stalls.
 
-**The finding to carry: the actor has rows the ladder cannot see, and this
-one was 0.63 % of it sitting in plain sight.** `encode_state` +
+**(7) The second actor-only commit, same instrument.** `Vocab::index_of` is
+a hash lookup on the definition's name, asked **438,318 times a sixty-game
+run at ~49 Ir** — once per encoded object and once per library card, 0.57 %
+of the actor. It is a pure function of the definition's name and the
+vocabulary is frozen (`VOCAB_SNAPSHOT`, and `Vocab::sos_sealed` is its only
+constructor), so it is a `CardMemo` slot like the bit families: bits 41-56
+hold the `u16`, bit 57 is its flag, and the read carries the same
+`debug_assert!` — which here audits the "one vocabulary" claim as well as the
+invalidation. Base 80140c81:
+
+```text
+  actor   3,818,869,401 -> 3,799,505,669   -0.507 %
+  `index_of` was inlined into its callers before and is a 2,219,318 row
+  after — the miss path alone
+```
+
+**Both actor commits produced 5,915 rows over 60 games with 0 stalls**, i.e.
+identical play, and neither can move `--bench`.
+
+**The finding to carry: the actor has rows the ladder cannot see, and the
+first of these was 0.63 % of it sitting in plain sight.** `encode_state` +
 `encode_card_object` are 2.4 % of the actor and 0 % of every `--bench` pool;
 so is the whole deck builder. Re-read the actor block in "Profile of record"
 before assuming a candidate list built from `--decks cube` is complete.
