@@ -11,17 +11,6 @@ use crate::Factory;
 
 // ── Vengevine ───────────────────────────────────────────────────────────────
 
-#[test]
-fn vengevine_is_4_3_haste_elemental() {
-    use crabomination::card::Keyword;
-    let card = catalog::vengevine();
-    assert_eq!(card.name, "Vengevine");
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 3);
-    assert!(card.keywords.contains(&Keyword::Haste));
-    assert_eq!(card.triggered_abilities.len(), 1, "graveyard return trigger");
-}
-
 // ── Portal to Phyrexia ──────────────────────────────────────────────────────
 
 #[test]
@@ -194,17 +183,6 @@ fn blazemire_verge_red_gated_on_swamp_or_mountain() {
 
 // ── Koma, Cosmos Serpent ────────────────────────────────────────────────────
 
-#[test]
-fn koma_cosmos_serpent_is_6_6_uncounterable_serpent() {
-    use crabomination::card::Keyword;
-    let card = catalog::koma_cosmos_serpent();
-    assert_eq!(card.name, "Koma, Cosmos Serpent");
-    assert_eq!(card.power, 6);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&Keyword::CantBeCountered));
-    assert_eq!(card.triggered_abilities.len(), 1, "upkeep token trigger");
-}
-
 // ── Mesmeric Orb ────────────────────────────────────────────────────────────
 
 // ── Chalice of the Void ─────────────────────────────────────────────────────
@@ -309,54 +287,11 @@ fn master_of_death_returns_from_graveyard_on_upkeep() {
 
 // ── Ursine Monstrosity ──────────────────────────────────────────────────────
 
-#[test]
-fn ursine_monstrosity_enters_with_five_counters_and_draws() {
-    use crabomination::card::Keyword;
-    let card = catalog::ursine_monstrosity();
-    assert_eq!(card.name, "Ursine Monstrosity");
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(card.enters_with_counters.is_some());
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB draw");
-}
-
 // ── Moonshadow ──────────────────────────────────────────────────────────────
-
-#[test]
-fn moonshadow_is_2_1_flying_faerie_with_discard_trigger() {
-    use crabomination::card::Keyword;
-    let card = catalog::moonshadow();
-    assert_eq!(card.name, "Moonshadow");
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 7);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert_eq!(card.triggered_abilities.len(), 1, "combat damage discard");
-}
 
 // ── Golos, Tireless Pilgrim ─────────────────────────────────────────────────
 
-#[test]
-fn golos_tireless_pilgrim_is_legendary_3_5_with_etb() {
-    use crabomination::card::Supertype;
-    let card = catalog::golos_tireless_pilgrim();
-    assert_eq!(card.name, "Golos, Tireless Pilgrim");
-    assert!(card.supertypes.contains(&Supertype::Legendary));
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 5);
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB land search");
-}
-
 // ── Maelstrom Archangel ─────────────────────────────────────────────────────
-
-#[test]
-fn maelstrom_archangel_is_5_5_flying_five_color() {
-    use crabomination::card::Keyword;
-    let card = catalog::maelstrom_archangel();
-    assert_eq!(card.name, "Maelstrom Archangel");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert_eq!(card.cost.cmc(), 5, "WUBRG = 5 CMC");
-}
 
 /// Combat damage to a player → free-cast a spell from hand.
 #[test]
@@ -400,18 +335,6 @@ fn duplicant_imprints_and_copies_pt() {
 }
 
 // ── Ramos, Dragon Engine ────────────────────────────────────────────────────
-
-#[test]
-fn ramos_dragon_engine_is_4_4_flying_dragon_with_counter_trigger() {
-    use crabomination::card::Keyword;
-    let card = catalog::ramos_dragon_engine();
-    assert_eq!(card.name, "Ramos, Dragon Engine");
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert_eq!(card.triggered_abilities.len(), 1, "spell-cast counter trigger");
-    assert_eq!(card.activated_abilities.len(), 1, "mana burst activation");
-}
 
 // ── Omnath, Locus of Creation ───────────────────────────────────────────────
 
@@ -553,3 +476,79 @@ fn trenchpost_taps_for_one_colorless() {
     assert_eq!(g.players[0].mana_pool.total(), 1, "Should add 1 colorless mana");
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// One definition audit for the printed shapes this file used to check with a
+// six-line test each. Every row is exactly what the seven deleted tests
+// asserted — printed name, mana value, P/T, keywords, supertypes,
+// enters-with-counters, and the triggered / activated ability counts — so the
+// coverage is unchanged and a failure names the card. Same shape as
+// `stx/part_23.rs`'s table; see CLAUDE.md's "one table-driven definition
+// audit per set".
+// ─────────────────────────────────────────────────────────────────────────
+
+struct PrintedShape {
+    def: fn() -> crabomination::card::CardDefinition,
+    name: &'static str,
+    cmc: Option<u32>,
+    pt: Option<(i32, i32)>,
+    kws: &'static [crabomination::card::Keyword],
+    supers: &'static [crabomination::card::Supertype],
+    enters_with_counters: bool,
+    trigs: Option<usize>,
+    acts: Option<usize>,
+}
+
+#[test]
+fn singles_and_legends_printed_shapes() {
+    use crabomination::card::{Keyword, Supertype};
+    const ROWS: &[PrintedShape] = &[
+        PrintedShape { def: catalog::vengevine, name: "Vengevine",
+            cmc: None, pt: Some((4, 3)), kws: &[Keyword::Haste], supers: &[],
+            enters_with_counters: false, trigs: Some(1), acts: None },
+        PrintedShape { def: catalog::koma_cosmos_serpent, name: "Koma, Cosmos Serpent",
+            cmc: None, pt: Some((6, 6)), kws: &[Keyword::CantBeCountered], supers: &[],
+            enters_with_counters: false, trigs: Some(1), acts: None },
+        PrintedShape { def: catalog::ursine_monstrosity, name: "Ursine Monstrosity",
+            cmc: None, pt: None, kws: &[Keyword::Trample], supers: &[],
+            enters_with_counters: true, trigs: Some(1), acts: None },
+        // 7/7, not the 2/1 the deleted test's *name* claimed; its asserts said 7/7.
+        PrintedShape { def: catalog::moonshadow, name: "Moonshadow",
+            cmc: None, pt: Some((7, 7)), kws: &[Keyword::Flying], supers: &[],
+            enters_with_counters: false, trigs: Some(1), acts: None },
+        PrintedShape { def: catalog::golos_tireless_pilgrim, name: "Golos, Tireless Pilgrim",
+            cmc: None, pt: Some((3, 5)), kws: &[], supers: &[Supertype::Legendary],
+            enters_with_counters: false, trigs: Some(1), acts: None },
+        PrintedShape { def: catalog::maelstrom_archangel, name: "Maelstrom Archangel",
+            cmc: Some(5), pt: Some((5, 5)), kws: &[Keyword::Flying], supers: &[],
+            enters_with_counters: false, trigs: None, acts: None },
+        PrintedShape { def: catalog::ramos_dragon_engine, name: "Ramos, Dragon Engine",
+            cmc: None, pt: Some((4, 4)), kws: &[Keyword::Flying], supers: &[],
+            enters_with_counters: false, trigs: Some(1), acts: Some(1) },
+    ];
+    for row in ROWS {
+        let def = (row.def)();
+        assert_eq!(def.name, row.name, "printed name");
+        if let Some(cmc) = row.cmc {
+            assert_eq!(def.cost.cmc(), cmc, "{} mana value", row.name);
+        }
+        if let Some((p, t)) = row.pt {
+            assert_eq!((def.power, def.toughness), (p, t), "{} printed P/T", row.name);
+        }
+        for kw in row.kws {
+            assert!(def.keywords.contains(kw), "{} has {:?}", row.name, kw);
+        }
+        for st in row.supers {
+            assert!(def.supertypes.contains(st), "{} is {:?}", row.name, st);
+        }
+        if row.enters_with_counters {
+            assert!(def.enters_with_counters.is_some(), "{} enters with counters", row.name);
+        }
+        if let Some(n) = row.trigs {
+            assert_eq!(def.triggered_abilities.len(), n, "{} triggered abilities", row.name);
+        }
+        if let Some(n) = row.acts {
+            assert_eq!(def.activated_abilities.len(), n, "{} activated abilities", row.name);
+        }
+    }
+}
