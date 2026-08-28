@@ -22859,31 +22859,6 @@ fn card_can_strip_abilities(card: &CardInstance) -> bool {
             .any(|band| band.statics.iter().any(static_effect_strips_abilities))
 }
 
-/// True when `effect` can emit a layer-4 card-type modification. Twin of
-/// [`static_effect_strips_abilities`] for the card-type family; the two share
-/// the gate-wrapper peel because `static_effect_to_effects` recurses through
-/// the same wrappers.
-fn static_effect_changes_card_types(effect: &crate::effect::StaticEffect) -> bool {
-    use crate::effect::StaticEffect as SE;
-    match effect {
-        // `static_effect_to_effects` arms.
-        SE::MatchingLandsAreCreatures { .. } | SE::AddCardTypeToMatching { .. } => true,
-        // Stateful gather passes — each reads live GameState (devotion, a
-        // counter count, a predicate), so it can't route through
-        // `static_effect_to_effects`, but the printed static is the same tell.
-        SE::NotCreatureWhileDevotionBelow { .. }
-        | SE::NonAuraEnchantmentsAreCreatures { .. }
-        | SE::NoncreatureArtifactsAreCreatures
-        | SE::SelfIsCreatureWhileCountersAtLeast { .. }
-        | SE::SelfIsCreatureIf { .. } => true,
-        SE::WhileClassLevelAtLeast { inner, .. }
-        | SE::WhileYourTurn { inner }
-        | SE::WhileNotYourTurn { inner }
-        | SE::WhileCountersAtLeast { inner, .. }
-        | SE::WhileCondition { inner, .. } => static_effect_changes_card_types(inner),
-        _ => false,
-    }
-}
 
 /// True when `card`, on the battlefield, can contribute a layer-4 card-type
 /// modification to the gathered set. The printed-shape half of
@@ -22893,25 +22868,14 @@ fn static_effect_changes_card_types(effect: &crate::effect::StaticEffect) -> boo
 /// metal), a CR 721.2a Station band with printed P/T, and every static route
 /// including Station-band statics.
 fn card_can_change_card_types(card: &CardInstance) -> bool {
-    let def = &card.definition;
-    if card.attached_to.is_some()
-        && (def.has_reconfigure().is_some()
-            || def.equipped_bonus.as_ref().is_some_and(|b| {
-                b.set_card_types.is_some() || !b.add_card_types.is_empty()
-            }))
-    {
-        return true;
-    }
-    if def
-        .keywords
-        .iter()
-        .any(|k| matches!(k, Keyword::Impending(_) | Keyword::LivingMetal))
-    {
-        return true;
-    }
-    def.station.iter().any(|band| {
-        band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
-    }) || def.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
+    // Both halves are functions of the definition alone, so both come off the
+    // per-object memo — see `card::type_bits`. This is a whole-battlefield
+    // `any` under `card_type_change_unscoped`, i.e. once per permanent per
+    // question, and the walks it replaces are the keyword list, the station
+    // bands and every printed static.
+    let bits = card.type_scan_bits();
+    (card.attached_to.is_some() && bits & crate::card::type_bits::ATTACHED != 0)
+        || bits & crate::card::type_bits::ALWAYS != 0
 }
 
 /// True when `m` can put a permanent's computed toughness *below* its
@@ -22932,7 +22896,8 @@ pub(crate) fn modification_reduces_toughness(m: &Modification) -> bool {
 }
 
 /// True when `effect` can emit a layer-7 modification that lowers toughness.
-/// Twin of [`static_effect_changes_card_types`] for the P/T family; shares the
+/// Twin of [`crate::effect::static_effect_changes_card_types`] for the P/T
+/// family; shares the
 /// gate-wrapper peel for the same reason.
 ///
 /// Three groups, and the split is what makes the gate worth having. A printed
@@ -23078,7 +23043,8 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
 }
 
 /// True when `effect` can emit a layer-4 land-type modification. Twin of
-/// [`static_effect_changes_card_types`] for the land-type family; shares the
+/// [`crate::effect::static_effect_changes_card_types`] for the land-type
+/// family; shares the
 /// gate-wrapper peel for the same reason.
 ///
 /// Six variants, and the list is exhaustive against the emitters in

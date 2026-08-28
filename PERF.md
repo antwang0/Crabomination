@@ -935,7 +935,22 @@ profiling-fast --no-default-features.  Base d9093fb5.
       sealed  3,224,178,492 -> 3,217,988,369   -0.192 %
       cube `card_can_grant_keyword` (10 monos) 62,871,580 -> 50,778,404,
       plus `grant_scan_bits` 2,075,052: the pair 1.91 % -> 1.60 %
+
+(4) (-77)'s second row: `card_can_change_card_types` is two bits.  Base
+    3aaad2b8.
+      fixed   1,081,257,382 -> 1,077,783,071   -0.321 %
+      cube    3,290,763,109 -> 3,277,427,006   -0.405 %
+      sealed  3,217,988,572 -> 3,209,661,183   -0.259 %
+      cube `card_type_change_unscoped` self 42,798,018 (1.30 %) leaves the
+      table; `card_type_change_in_scope` 13,754,758 + `type_scan_bits`
+      2,639,718 is what is there instead, 0.50 %
 ```
+
+**Row (4)'s row *moved* rather than shrank, and that is worth one line:** the
+gated body got small enough that the local inliner folded
+`card_type_change_unscoped` into `card_type_change_in_scope`, so the two
+dumps do not have a row in common. **The run total is the number; a self row
+whose function stopped existing is not a delta.** -13.3 M on `cube`.
 
 **Row (3) is (-11)'s own shape (i) — "a per-*definition* 'can this printing
 grant any keyword at all' bit" — and it lands within a rounding error of the
@@ -8825,9 +8840,22 @@ repeats in the self table, at `--decks cube`, post-(2):
 ```text
   1.87 %  card_can_grant_keyword     <- TAKEN, row (3); -0.283 % of `cube`
   1.33 %  dispatch_board_scan        <- the trigger dispatcher's own presence walk
+  1.30 %  card_type_change_unscoped  <- TAKEN, row (4); -0.405 % of `cube`
   0.79 %  trigger_grant_sources      <- (-60); 0.25 grants found per call
   0.76 %  granted_abilities_of       <- walks `static_abilities` (twice, per (-10))
 ```
+
+**`card_type_change_unscoped` was not on the list when it was written, and
+the reason it belongs is a refutation this file already carried.** The
+fifty-ninth pass measured folding its battlefield leg **into
+`sba_board_scan`** at `sos` +0.255 % / `fixed` +0.295 %, because "the
+standalone `any` short-circuits per card, while a scan bit runs
+`static_effect_changes_card_types` for every static ability of every
+permanent". **That is an argument about *eager* computation and the memo is
+lazy**: the bits are computed once per printing, not once per sweep, so the
+per-card cost the refutation priced never happens. **Re-read every "a bit
+costs more than the walk" refutation in this file against that distinction** —
+it is the same dating as (-11)'s.
 
 **The first row is TAKEN and its residue is the entry's own caution (c) in
 practice.** Two bits (`grant_bits::SYNTH_KEYWORD`, `CONTAINER`) took

@@ -9651,3 +9651,31 @@ impl Default for LookPick {
         }
     }
 }
+
+/// Moved here from the engine so `CardDefinition::type_scan_bits` can use
+/// it: the answer is a property of the printed static and nothing else.
+/// True when `effect` can emit a layer-4 card-type modification. Twin of
+/// the engine's `static_effect_strips_abilities` for the card-type family; the two share
+/// the gate-wrapper peel because `static_effect_to_effects` recurses through
+/// the same wrappers.
+pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    match effect {
+        // `static_effect_to_effects` arms.
+        SE::MatchingLandsAreCreatures { .. } | SE::AddCardTypeToMatching { .. } => true,
+        // Stateful gather passes — each reads live GameState (devotion, a
+        // counter count, a predicate), so it can't route through
+        // `static_effect_to_effects`, but the printed static is the same tell.
+        SE::NotCreatureWhileDevotionBelow { .. }
+        | SE::NonAuraEnchantmentsAreCreatures { .. }
+        | SE::NoncreatureArtifactsAreCreatures
+        | SE::SelfIsCreatureWhileCountersAtLeast { .. }
+        | SE::SelfIsCreatureIf { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_card_types(inner),
+        _ => false,
+    }
+}

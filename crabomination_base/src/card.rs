@@ -5360,6 +5360,32 @@ impl CardDefinition {
         m
     }
 
+    /// `card_can_change_card_types` for this printing — see [`type_bits`].
+    /// Pure function of the definition; `CardData` memoizes it
+    /// (`CardData::type_scan_bits`).
+    pub fn type_scan_bits(&self) -> u64 {
+        use crate::effect::static_effect_changes_card_types;
+        use type_bits as b;
+        let mut m = 0u64;
+        if self.has_reconfigure().is_some()
+            || self
+                .equipped_bonus
+                .as_ref()
+                .is_some_and(|e| e.set_card_types.is_some() || !e.add_card_types.is_empty())
+        {
+            m |= b::ATTACHED;
+        }
+        if self.keywords.iter().any(|k| matches!(k, Keyword::Impending(_) | Keyword::LivingMetal))
+            || self.station.iter().any(|band| {
+                band.pt.is_some() || band.statics.iter().any(static_effect_changes_card_types)
+            })
+            || self.static_abilities.iter().any(|sa| static_effect_changes_card_types(&sa.effect))
+        {
+            m |= b::ALWAYS;
+        }
+        m
+    }
+
     /// [`Self::printed_color_set`] in WUBRG order as a `Vec`.
     pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
         self.printed_color_set().to_vec()
@@ -6100,6 +6126,20 @@ pub mod grant_bits {
     pub const ALL: u64 = SYNTH_KEYWORD | CONTAINER;
 }
 
+/// `card_can_change_card_types`, split into its attachment-gated half and
+/// its unconditional half — see [`sba_bits`] for the device.
+pub mod type_bits {
+    /// The definition can change card types **while attached**: Reconfigure,
+    /// or an `equipped_bonus` that sets or adds one.
+    pub const ATTACHED: u64 = 1 << 34;
+    /// The definition can change card types on its own: `Impending` /
+    /// `LivingMetal`, a station band with a P/T or a type-changing static, or
+    /// a type-changing printed static.
+    pub const ALWAYS: u64 = 1 << 35;
+    /// The memo's payload.
+    pub const ALL: u64 = ATTACHED | ALWAYS;
+}
+
 /// Two answers about a card's *definition*, memoized on the object: its
 /// printed colour set and the SBA sweep's board-scan bits.
 ///
@@ -6129,6 +6169,7 @@ impl CardMemo {
     const COLOR_VALID: u64 = 1 << 5;
     const SBA_VALID: u64 = 1 << 6;
     const GRANT_VALID: u64 = 1 << 7;
+    const TYPE_VALID: u64 = 1 << 30;
 
     #[inline]
     fn get(&self) -> Option<crate::mana::ColorSet> {
@@ -6172,6 +6213,21 @@ impl CardMemo {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
         self.0.store(
             (v & !grant_bits::ALL) | bits | Self::GRANT_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    #[inline]
+    fn get_type(&self) -> Option<u64> {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::TYPE_VALID != 0).then_some(v & type_bits::ALL)
+    }
+
+    #[inline]
+    fn set_type(&self, bits: u64) {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        self.0.store(
+            (v & !type_bits::ALL) | bits | Self::TYPE_VALID,
             std::sync::atomic::Ordering::Relaxed,
         );
     }
@@ -6802,6 +6858,23 @@ impl CardData {
         }
         let bits = self.definition.grant_scan_bits();
         self.memo.set_grant(bits);
+        bits
+    }
+
+    /// [`CardDefinition::type_scan_bits`] for this object, memoized on the
+    /// same word and audited by the same `debug_assert!`.
+    #[inline]
+    pub fn type_scan_bits(&self) -> u64 {
+        if let Some(bits) = self.memo.get_type() {
+            debug_assert_eq!(
+                bits,
+                self.definition.type_scan_bits(),
+                "card-type-change memo is stale: a definition rewrite did not clear it",
+            );
+            return bits;
+        }
+        let bits = self.definition.type_scan_bits();
+        self.memo.set_type(bits);
         bits
     }
 }
