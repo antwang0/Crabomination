@@ -4343,113 +4343,121 @@ fn cast_candidates<'a>(
             &owned_mana
         }
     };
-    let mut unvalidated: Vec<GameAction> = state.players[seat]
-        .hand
-        .iter()
-        .filter(|c| !c.definition.is_land())
+    // Plain loops rather than five `filter`s and two nested `flat_map`s: the
+    // bot's hand sweep was the largest single source of `FlatMap::next` in the
+    // program (30,578 of its 57,600 calling contexts on a `cube` run — see
+    // PERF (-78)), and the adapter machinery is paid per hand card per tick
+    // whether or not a candidate comes out.
+    let mut unvalidated: Vec<GameAction> = Vec::new();
+    for c in state.players[seat].hand.iter() {
+        if c.definition.is_land() {
+            continue;
+        }
         // Pure temp-pump instants are combat tricks: held for the fight
         // window (`pick_combat_trick`), not main-phased where the buff
         // telegraphs and fizzles at cleanup.
-        .filter(|c| !is_combat_trick(&c.definition))
+        if is_combat_trick(&c.definition) {
+            continue;
+        }
         // Spree spells need `CastSpellSpree` with chosen modes — a plain
         // `CastSpell` resolves them as a no-op. They get their own candidate
         // block below.
-        .filter(|c| !matches!(c.definition.effect, Effect::Spree { .. }))
+        if matches!(c.definition.effect, Effect::Spree { .. }) {
+            continue;
+        }
         // A gift card whose base effect is empty (a permanent gift — the payoff
         // is a `SourceGiftPromised`-gated ETB) is wasted by a plain cast; it
         // gets a `CastGift` candidate in the gift block below instead.
-        .filter(|c| !(c.definition.gift.is_some() && matches!(c.definition.effect, Effect::Noop)))
-        .filter(|c| can_afford_in_state_with(state, seat, c, w, have_mana))
-        .flat_map(|c| {
-            // For modal effects (ChooseMode), enumerate each mode so the
-            // bot can pick (e.g.) Drown in the Loch's mode 1 (destroy
-            // creature) when no opp spell is on the stack to counter.
-            // Falls back to `mode: None` (engine defaults to mode 0) for
-            // non-modal spells.
-            //
-            // A range and an `Option` per slot, not two `Vec`s: the old form
-            // collected `vec![None]` — a heap allocation — for every
-            // non-modal card in hand on every tick, and built a one-element
-            // `Vec` per candidate on top of it.
-            let modes = modal_mode_count(&c.definition.effect);
-            let x_value = if x_relevant(&c.definition) {
-                Some(max_affordable_x(state, seat, c, w))
+        if c.definition.gift.is_some() && matches!(c.definition.effect, Effect::Noop) {
+            continue;
+        }
+        if !can_afford_in_state_with(state, seat, c, w, have_mana) {
+            continue;
+        }
+        // For modal effects (ChooseMode), enumerate each mode so the bot can
+        // pick (e.g.) Drown in the Loch's mode 1 (destroy creature) when no
+        // opp spell is on the stack to counter. Falls back to `mode: None`
+        // (engine defaults to mode 0) for non-modal spells.
+        let modes = modal_mode_count(&c.definition.effect);
+        let x_value = if x_relevant(&c.definition) {
+            Some(max_affordable_x(state, seat, c, w))
+        } else {
+            None
+        };
+        for i in 0..modes.unwrap_or(1) {
+            let mode = modes.map(|_| i);
+            // Pick a target appropriate to the chosen mode (ChooseMode
+            // mode-aware filter check happens in the cast paths).
+            // Multi-target shapes (Snow Day, Homesickness, Cost of
+            // Brilliance, Render Speechless, Vibrant Outburst, …) ask
+            // the picker for every slot index used by the effect tree;
+            // slots that find no legal target are skipped, matching
+            // "up to N target" semantics.
+            let mode_effect = mode_branch(&c.definition.effect, mode);
+            // Beneficial Auras pick their host explicitly: `Effect::Attach`
+            // isn't classified friendly by the generic auto-targeter, so
+            // without this a Rancor walks the OPPONENT's creatures first.
+            // No friendly host at all → skip the candidate rather than
+            // let the fallback pump an opposing creature.
+            let (target, additional_targets) = if is_beneficial_aura(&c.definition) {
+                match beneficial_aura_host(state, seat, c, w) {
+                    Some(t) => (Some(t), Vec::new()),
+                    None => continue,
+                }
+            } else if mode_effect.requires_target() {
+                let (t, extras) =
+                    state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, Vec::new())
+            };
+            // SOS Repartee: with a controlled payoff that wants an
+            // instant/sorcery to target a CREATURE, an "any target"
+            // spell the auto-targeter aimed at a player also gets a
+            // creature-aimed sibling candidate. The outcome eval sees
+            // the extra triggers fire when it resolves the sibling, so
+            // the swap is judged, not assumed. Decided before the
+            // primary is built so `additional_targets` is cloned only
+            // when there really are two candidates to hand it to.
+            let swap = if has_repartee
+                && matches!(target, Some(Target::Player(_)))
+                && {
+                    use crate::card::CardType;
+                    c.definition.card_types.contains(&CardType::Instant)
+                        || c.definition.card_types.contains(&CardType::Sorcery)
+                } {
+                best_hostile_creature_target(state, seat, mode_effect, w)
             } else {
                 None
             };
-            (0..modes.unwrap_or(1)).flat_map(move |i| {
-                let mode = modes.map(|_| i);
-                // Pick a target appropriate to the chosen mode (ChooseMode
-                // mode-aware filter check happens in the cast paths).
-                // Multi-target shapes (Snow Day, Homesickness, Cost of
-                // Brilliance, Render Speechless, Vibrant Outburst, …) ask
-                // the picker for every slot index used by the effect tree;
-                // slots that find no legal target are skipped, matching
-                // "up to N target" semantics.
-                let mode_effect = mode_branch(&c.definition.effect, mode);
-                // Beneficial Auras pick their host explicitly: `Effect::Attach`
-                // isn't classified friendly by the generic auto-targeter, so
-                // without this a Rancor walks the OPPONENT's creatures first.
-                // No friendly host at all → skip the candidate rather than
-                // let the fallback pump an opposing creature.
-                let skip: [Option<GameAction>; 2] = [None, None];
-                let (target, additional_targets) = if is_beneficial_aura(&c.definition) {
-                    match beneficial_aura_host(state, seat, c, w) {
-                        Some(t) => (Some(t), Vec::new()),
-                        None => return skip.into_iter().flatten(),
-                    }
-                } else if mode_effect.requires_target() {
-                    let (t, extras) =
-                        state.auto_targets_for_effect_all_slots(mode_effect, seat, mode);
-                    if t.is_none() {
-                        return skip.into_iter().flatten();
-                    }
-                    (t, extras)
-                } else {
-                    (None, Vec::new())
-                };
-                // SOS Repartee: with a controlled payoff that wants an
-                // instant/sorcery to target a CREATURE, an "any target"
-                // spell the auto-targeter aimed at a player also gets a
-                // creature-aimed sibling candidate. The outcome eval sees
-                // the extra triggers fire when it resolves the sibling, so
-                // the swap is judged, not assumed. Decided before the
-                // primary is built so `additional_targets` is cloned only
-                // when there really are two candidates to hand it to.
-                let swap = if has_repartee
-                    && matches!(target, Some(Target::Player(_)))
-                    && {
-                        use crate::card::CardType;
-                        c.definition.card_types.contains(&CardType::Instant)
-                            || c.definition.card_types.contains(&CardType::Sorcery)
-                    } {
-                    best_hostile_creature_target(state, seat, mode_effect, w)
-                } else {
-                    None
-                };
-                let sibling = swap.map(|t| GameAction::CastSpell {
-                    card_id: c.id,
-                    target: Some(t),
-                    additional_targets: additional_targets.clone(),
-                    mode,
-                    x_value,
-                });
-                let primary = GameAction::CastSpell {
-                    card_id: c.id,
-                    target,
-                    additional_targets,
-                    mode,
-                    // For X-cost spells (Banefire, Earthquake, Wrath of the
-                    // Skies, Mind Twist, Repeal, …), pump as much generic
-                    // mana as the pool can spare into X. Casting at X=0
-                    // was a known dead end — Banefire dealt 0 damage, Mind
-                    // Twist discarded nothing, Earthquake was a no-op.
-                    x_value,
-                };
-                [Some(primary), sibling].into_iter().flatten()
-            })
-        })
-        .collect();
+            let sibling = swap.map(|t| GameAction::CastSpell {
+                card_id: c.id,
+                target: Some(t),
+                additional_targets: additional_targets.clone(),
+                mode,
+                x_value,
+            });
+            let primary = GameAction::CastSpell {
+                card_id: c.id,
+                target,
+                additional_targets,
+                mode,
+                // For X-cost spells (Banefire, Earthquake, Wrath of the
+                // Skies, Mind Twist, Repeal, …), pump as much generic
+                // mana as the pool can spare into X. Casting at X=0
+                // was a known dead end — Banefire dealt 0 damage, Mind
+                // Twist discarded nothing, Earthquake was a no-op.
+                x_value,
+            };
+            unvalidated.push(primary);
+            if let Some(sibling) = sibling {
+                unvalidated.push(sibling);
+            }
+        }
+    }
 
     // Specialty candidates below are probed eagerly (their construction
     // loops need the accept/reject signal — max delve size, biggest
