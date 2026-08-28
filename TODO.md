@@ -53,24 +53,27 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 5. **Robustness gate** — `scripts/robustness_grid.sh` plus the actor leg, the
    seeded 4,000-pairing cube sweep, and the two census env vars. Run in full
    at the eighty-ninth pass under a behaviour change; clean.
-6. **Bugs** — ENGINE_BACKLOG's live-match section has **no open entry** (CR
-   613.8 shipped). Two 🟡 *class* entries were re-read and both shrank: the
-   block pair gate is already one body (the "still open" text was eight
-   passes stale), and the planner's printed flying/reach pre-filters in front
-   of it are fixed — a granted Reach could not block a flier in any plan.
-   What is left is the *batch*-level readings, which no pair function can
-   hold, and the attack side's hold-back **heuristic**, which is a strength
-   change with no gate rather than a legality bug. Card audits clean — see
-   INCOMPLETE_CARDS.
+6. **Bugs** — ENGINE_BACKLOG's live-match section: **one open entry**,
+   `ColorIsMostCommonAmongPermanents` reading printed colours (the residue of
+   the CR 613.8 fix, after `MetalcraftActive` was made computed); it wants a
+   `card_color_change_unscoped()` gate built first. Two 🟡 *class* entries
+   were re-read and both shrank — the block pair gate is already one body and
+   the planner's flying/reach pre-filters are fixed; what is left is
+   *batch*-level readings and an attack **heuristic**, not a legality bug.
+   Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
 8. **Tip state** — PERF "Baseline"'s two newest blocks: the ninetieth's
    `ANY_GRANT` row, and under it the eighty-ninth's end-to-end, the `--bench`
    invariant and both clocks. The two blocks' baselines were measured
    independently and agree to ~600 Ir on all three pools.
-9. **Filters** — six now, all reading zero:
-   `scripts/audit_variant_coverage.py`, `audit_decision_plumbing.py`, the
-   four syntax ones. Bare `decide` sites are a triage population, not a gate.
+9. **Filters** — six, all reading zero. `audit_decision_plumbing.py`'s 98
+   bare sites are a triage population, and the eighty-ninth pass found the
+   greppable sub-population that *is* a bug: **a site whose comment states the
+   headless policy while relying on `AutoDecider`'s blanket
+   `OptionalTrigger => false`, which contradicts it.** Three of sixteen; two
+   were bugs, and the third's blanket `no` is what bounds the CR 706 chain
+   (built, spun at 100 % CPU, reverted — the reason is at the site).
 
 ## Standing rules for a perf pass — moved to `PERF.md`
 
