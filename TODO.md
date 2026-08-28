@@ -27,38 +27,25 @@ sixty-seventh pass, so don't re-take that.
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-78)**'s remaining
-   chain sites (`check_state_based_actions_into` and
-   `fire_combat_damage_triggers` first), **(-77)**'s four memo callers,
-   **(-75)**'s unattributed rows, (-70) (quiet window only), (-69)'s two
-   unclaimed rows, (-51)(b), (-60), (-61), (-51)(a), (-59).
-2. **Perf method** — PERF "How to measure" and "Which pool a change moves",
-   then PERF's **standing rules** (moved there this pass; see below).
-   **Read all three pools**: pass 86 had one
-   change that split by pool and one that did not. And **size an inline
-   buffer before rejecting it**: the same three-field change is +0.137 % at
-   one capacity and -0.463 % at another (the rule is under (-76)).
+1. **Perf queue** — PERF "Perf candidates". `(-77)`'s memo device is **mined
+   and bounded** (three rows shipped, two refuted); `(-51)(a)` is **re-sized
+   in the actor block and its named blocker shipped**, so take it next.
+   Then (-70) (quiet window only), (-69)'s two unclaimed rows, (-78)'s
+   remaining adapter-chain sites, (-60), (-61), (-59).
+2. **Perf method** — PERF's "How to measure", **"Standing rules for a perf
+   pass"** (moved there from this file this pass) and "Which pool a change
+   moves". Read all three pools; a pool split is a revert.
 3. **Instruments before profiles** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
    `server::bot_rejection_count`, `--bench`'s stall split.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
-   encodings: a change **invalidates the trained nets**. Say so here. Pass
-   86's `SmallVec` fields did **not** move it: the wire shape is a sequence
-   either way, so no retrain.
-5. **Bugs** — ENGINE_BACKLOG's live-match section; its sweep is a `0..4000u64`
-   loop in the cube smoke test read through `bot_rejection_count()`, run
-   **before and after**. Robustness gate: `-C debug-assertions=yes` on
-   `[profile.overflow]`. Closed at pass 87: both block selectors resolve for
-   a *watcher* trigger, so `EntityMatches` answers `false` on an empty
-   selector now. Newly open under it: **a layer-7 `PumpSelfIf` condition
-   cannot see a layer-4 type change** (CR 613.8; `CardMatchPowerGated` is the
-   precedent device). The seeded sweep is **re-run and clean at the tip** —
-   4,000 pairings, 0 rejections, every one terminated, 883 s.
+   encodings invalidate the trained nets. **Nothing this pass touched them.**
+5. **Bugs** — ENGINE_BACKLOG's live-match section. Open under it: a layer-7
+   `PumpSelfIf` condition cannot see a layer-4 type change (CR 613.8). The
+   seeded 4,000-pairing sweep is clean at the eighty-seventh tip.
 6. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
-7. **Filters** — five read zero; `bot_rejection_count()` over the seeded cube
-   sweep is the one that does not, because it watches the live-server path.
-8. **Tip state** — PERF "Baseline"'s newest "STATE AT …".
-
+7. **Tip state** — PERF "Baseline"'s newest "STATE AT …", and the actor
+   re-read in "Profile of record" (**-8.02 %** since pass 83, play identical).
 
 ## Standing rules for a perf pass — moved to `PERF.md`
 

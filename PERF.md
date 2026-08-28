@@ -1102,14 +1102,25 @@ here if it ever needs compacting.
   Baseline (7)),
   the board-presence epoch, the `GameState` husk
   pool, gating `do_untap`, narrowing `GameState`, splitting the big engine
-  files for build time, the per-definition keyword-grant bit, fusing
-  `card_type_change_in_scope`, the `LayerFreeze` depth shadow, the
-  `sba_board_scan` definition bitmask, the trigger-carrier bitmask, the APNAP
+  files for build time, the `LayerFreeze` depth shadow,
+  the trigger-carrier bitmask, the APNAP
   rank table, the headroom-reserving `Vec`, `board_keyword_matching`'s
   presence gate, presence gates for `has_atype` / `has_stype` (pass 56,
   +0.123 % cube), and (-31)'s `improves_this_turn` reuse. And **never** skip
   `push_ordered_trigger_candidates` on an empty batch (+7.3 % *and* a
   correctness bug — it owns the per-batch `died_card_snapshots.clear()`).
+  **Three entries came OFF this list at the eighty-seventh pass because they
+  shipped**: the `sba_board_scan` definition bitmask (`cube` **-0.700 %**),
+  the per-definition keyword-grant bit (**-0.283 %**) and
+  `card_type_change_unscoped`'s (**-0.405 %**). All three were listed against
+  an argument — "a cached bit goes stale because ~20 sites rewrite a
+  definition", "a scan bit cannot short-circuit where the standalone `any`
+  can" — and both arguments were about mechanisms that changed: pass 83 built
+  `CardInstance::DerefMut`'s memo chokepoint, and a *lazy per-printing* memo
+  is not the *eager per-sweep* scan bit those entries measured. **What stays
+  refuted, with numbers, is the fusion into `sba_board_scan` itself and the
+  memo on `dispatch_board_scan`** — see the Baseline's eighty-seventh block.
+  A line on this list is only as good as the mechanism it names.
 - **Env.** `cargo-nextest` **is** installable in this image and this bullet
   said the opposite for twenty passes:
   `curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`
@@ -1720,6 +1731,39 @@ robustness  --games 120 --threads 3 --seed 7 --decks all (five pools,
 whole-program Ir  fixed 1,094,185,204  cube 3,324,283,340
                   sealed 3,256,373,073
 ```
+**STATE AT the eighty-seventh pass's last perf commit (`3730f9d0`)** — the
+gate was run in full at each of the five, not once at the end.
+
+```text
+suite  cargo nextest run --workspace --exclude crabomination_client
+       19,062 / 0 / 5   (~80 s after the build)
+clippy --workspace --exclude crabomination_client --all-targets   clean
+golden traces  unmoved (they run inside the suite above)
+--bench  195,528 decisions / 27.44 turns / 611.0 decisions a game /
+         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok /
+         thread_determinism ok (3 vs 1 threads identical, CRAB_THREAD_CHECK=1)
+         — **byte-identical to the committed invariant at every commit**
+actor  3,851,460,377 (--actors 1 --games 60 --steps 1 --seed 7), play
+       byte-identical to the eighty-first and eighty-third readings
+```
+
+**This session's five perf commits, each against its own named base**
+(a concurrent session landed work between every pair of them, so these do not
+sum to a tip-to-tip delta):
+
+```text
+                                     fixed      cube      sealed
+  SBA sweep threads its buffer     -0.035 %  -0.045 %  -0.073 %
+  sba_board_scan memo              -0.862 %  -0.700 %  -0.940 %
+  keyword-grant gate memo          -0.308 %  -0.283 %  -0.192 %
+  card-type-change gate memo       -0.321 %  -0.405 %  -0.259 %
+  combat prevention fusion         -0.277 %  -0.463 %  -0.292 %
+```
+
+Two changes were built, measured and reverted in the same pass: the memo on
+`dispatch_board_scan` and its extension to the creature/land type siblings.
+Both are written up above with their numbers.
+
 ### Eighty-sixth pass — the local accumulator that allocates, and a dependency feature that was worth 0.12 % of `fixed`
 
 ```text
@@ -8602,6 +8646,90 @@ profile to look for a hot line in either function.** What it does not show is
 inlined into a 3,581-line function and its cost lands in `iter/macros.rs`.
 **A line profile finds hot lines; it does not find cheap lines repeated over
 a collection nobody gated.** That one was found by reading the function.
+
+### THE ACTOR RE-READ at the eighty-seventh pass — **-8.02 % since the eighty-third tip, with play byte-identical**
+
+Same workload as every block below it, which is what makes the totals a
+comparison: `CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60 --steps 1
+--seed 7`, `profiling-fast --no-default-features` (**`-p crabomination_ml
+--no-default-features`** — that crate has its own `mimalloc` default and its
+own `#[global_allocator]`; the dump was checked for `libmimalloc` frames and
+has none). Play is **byte-identical to the eighty-first and eighty-third
+readings**: 32,402 `next_action`, 1,102 `pick_attacks_scored`, 6,386
+`encode_state`, 6,895 `main_phase_action_with`.
+
+```text
+  a828b393 (eighty-first)   4,235,372,210
+  651a98f2 (eighty-third)   4,187,375,624     -1.13 %
+  cfc55ae4 (eighty-seventh) 3,851,460,377     -8.02 % from the eighty-third
+```
+
+**Four passes of two concurrent sessions, so it is a base and not an
+attribution.** What is in it: passes 84-86's inline-storage and CoW work, and
+this pass's memo device, prevention fusion and static-source visitor.
+
+**One `actor_loop` iteration, top-down — and deck construction has halved
+again.**
+
+```text
+  3,650,913,601  94.8 %  play_recorded_game_mcts       60 games
+     70,883,884   1.84 % heuristic_sealed_build       120  (was 168,509,048)
+     27,889,380   0.72 % encode_deck                  120  (was  28,058,541)
+      9,319,428   0.24 % sealed_game_template          60  (was  10,279,007)
+      7,428,383   0.19 % sealed_pool                  120  (was  17,852,492)
+```
+
+**Deck construction is 2.99 % of the actor, from 5.37 %** — `heuristic_sealed_
+build` alone is **-57.9 %**, which is where pass 85's five deck-builder
+commits and the concurrent half's `rank_shape` work landed. (-63)'s framing
+holds: what is left is `rank_shape`'s own body and the number of shapes.
+
+```text
+  self, top twelve
+   204,159,083  5.30 %  dispatch_triggers_for_events
+   183,869,341  4.77 %  __memcpy_avx_unaligned_erms
+   132,829,827  3.45 %  _int_free
+   132,204,751  3.43 %  gather_continuous_effects_inner
+   115,326,415  2.99 %  Arc::clone_from_ref_in
+   109,615,890  2.85 %  _int_malloc
+   102,231,746  2.65 %  malloc
+    92,478,695  2.40 %  check_state_based_actions_into
+    87,270,802  2.27 %  Vec::spec_from_iter_nested
+    82,795,088  2.15 %  free
+    81,800,586  2.12 %  computed_permanent
+    64,712,678  1.68 %  activate_ability_inner
+```
+
+**The allocator family is 11.1 % over four symbols and `memcpy` is 4.77 % —
+and `memcpy`'s caller table is READ and it is diffuse.** 2,727,324 calls at
+**67 Ir apiece**; the largest rows are `play_recorded_game_mcts` (273,902),
+`encode_state` (235,586), `encode_card_object` (229,198),
+`computed_permanent` (205,261) and `GameState::clone` (166,120), and the
+dearest per call in the top sixteen is 91 Ir. (-60)'s device — rank a
+`memcpy` table by Ir/call to find the kilobyte copies — finds **nothing** at
+this tip: there is no `CardInstance::new`-shaped row left. Do not re-run it.
+
+**(-51)(a) RE-SIZED HERE, AND ITS NAMED BLOCKER IS GONE.**
+`auto_tap_for_cost_inner -> activate_ability` is **33,431 calls /
+227,870,478 Ir / 5.92 % of the actor**, i.e. **6,816 Ir a tap** (7,555 at the
+seventy-fifth tip). Inside `activate_ability_inner`, by callee:
+
+```text
+   76,051   41,861,836  Arc::make_mut          1.09 % of the actor, 2.2 a call
+   34,446   30,182,959  card_keyword_possible  0.78 %, 876 Ir a question
+   67,407    5,833,889  Vec::push_mut
+   34,634    5,454,719  FlattenCompat::iter_fold
+```
+
+**The entry said the fix for the second row was "a cheaper
+`keyword_grant_in_scope`, and the per-definition keyword-grant bit that would
+do the latter is in TODO's do-not-rebuild list". That bit shipped this pass**
+(Baseline row (3)) and `card_can_grant_keyword` is **31 Ir a card** inside it,
+from 43.6. What is left is the *number of cards*: 562,156 visits over 34,446
+questions, **16.3 a question**, which is the board walk itself and is (-61)'s
+"fewer walks, not a cheaper one" unchanged. `make_mut` is now the larger half
+and it is (-74)'s "fewer deep copies", on genuine writes (the tapped card and
+the seat's mana pool).
 
 ### THE ACTOR at the eighty-third tip (`651a98f2`) — and deck construction is on the table again
 
