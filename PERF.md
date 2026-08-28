@@ -899,6 +899,25 @@ here if it ever needs compacting.
   `fixed` +0.532 % / `cube` +0.580 % — the change with the sign flipped. Pair
   it with the padding probe below and a struct's size and its handle count are
   both priced without touching a call site.
+  **…and a sign-flipped probe is a FLOOR, not the answer** (pass 91, the same
+  entry taken: `fixed` -0.626 % / `cube` -0.706 % / `sealed` -0.741 %, i.e.
+  18-28 % over). Adding three handles leaves the struct's drop glue and its
+  allocation size class alone; removing three takes a whole
+  `drop_in_place<PrintedList<_>>` row (7.9 M of `cube`) and moves the
+  `Arc<ComputedPermanent>` into a smaller size class. **Price the *margin*
+  with the probe, then expect the removal to beat it.**
+- **A private field is a compiler-driven rename** (pass 91). Turning four
+  `pub` fields into private overlays behind same-named accessors is 2,991
+  lines over 282 files, and none of them were found by grep: E0616 carries a
+  machine-applicable "call it with parentheses" span, so
+  `cargo check --message-format=json` plus a byte-exact patcher converges in
+  four rounds. **A method and a field may share a name**, which is what keeps
+  the diff to inserting `()`. Watch for the four shapes the parenthesis pass
+  cannot fix: an inherent method the new return type does not have
+  (`as_slice`), a `.clone()` that used to clone the wrapper and now reborrows
+  (`to_vec()`), `assert_eq!` against the owned type, and
+  `let x = &cp.field().sub` — temporary lifetime extension applies to a place
+  expression, not to a call.
 - **When a change trades a known saving against an unknown cost, build the
   cost alone first** (pass 83's seventh commit). Unboxing `layers::Printed`
   read +1.755 % and the narrower keyword-only version needed the *struct-size*
@@ -1600,6 +1619,92 @@ matches `crabomination_base` and `crabomination_catalog` too and so forces the
 build.
 
 ## Baseline
+
+### Ninety-first pass — four handles to one definition, and the probe under-priced it
+
+**`ComputedPermanent` holds one `Arc<CardDefinition>` instead of four, base
+`a2bfb104`.** `Printed<T>` / `PrintedList<T>` each carried their own
+`src: Arc<CardDefinition>` so their `Deref` could project into it, and the
+struct has four of them — `card_types`, `supertypes`, `subtypes`, `keywords`
+— every one pointing at the same definition. The two working types now
+**borrow** the definition (they live only inside `compute_permanent_pass`, so
+that function's body is untouched) and `into_overlay()` hands the projection
+and any override to `Overlay` / `OverlayList`, which carry no handle. The four
+characteristics become private overlays behind same-named accessors, so the
+read sites gain `()` and nothing else.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.
+  fixed   1,027,455,296 -> 1,021,019,898   -0.626 %
+  cube    3,117,128,791 -> 3,095,128,492   -0.706 %
+  sealed  3,072,096,617 -> 3,049,332,123   -0.741 %
+```
+
+**`(-70)` priced this by *adding* three more handles — `fixed` +0.532 % /
+`cube` +0.580 % — and the real change is 18-28 % larger than that on all three
+pools.** The probe is exact about what it measures and it does not measure
+everything: it added three `Arc<CardDefinition>` to a struct that already had
+four, so it priced the clone/drop pairs and 24 bytes *at the margin*, while
+removing three also takes the `PrintedList` drop glue and moves the whole
+struct into a smaller allocation size class. **Read a sign-flipped probe as a
+floor, not as the answer.**
+
+```text
+cube self rows, base -> candidate
+  drop_in_place<PrintedList<Keyword>>   7,875,940 ->          0   -7,875,940
+  __memcpy_avx_unaligned_erms          78,132,536 -> 72,540,380   -5,592,156
+  _int_free_merge_chunk                15,658,954 -> 11,486,682   -4,172,272
+  compute_permanent_pass               80,341,008 -> 77,230,214   -3,110,794
+  call_mut                             45,043,134 -> 42,848,400   -2,194,734
+  can_block_attacker_computed          15,391,718 -> 13,400,800   -1,990,918
+  _int_free_maybe_consolidate           5,847,315 ->  4,283,669   -1,563,646
+  _int_malloc                          73,378,814 -> 72,035,568   -1,343,246
+  malloc_consolidate                   10,314,175 -> 12,571,845   +2,257,670
+  computed_permanent                   88,667,488 -> 90,526,388   +1,858,900
+  _int_free                            98,982,181 -> 100,365,710  +1,383,529
+  drop_in_place<ComputedPermanent>      3,135,456 ->  4,269,750   +1,134,294
+```
+
+**Only two of those rows are the change as designed** —
+`compute_permanent_pass` (the three `Arc::clone`s) and the `PrintedList` drop
+glue, which does not vanish so much as fold into
+`drop_in_place<ComputedPermanent>` for a third of its cost. **The two biggest
+rows are the struct's *bytes*:** 24 off a struct built 302,018 times is
+`__memcpy` -5.6 M, and it drops the `Arc<ComputedPermanent>` into a smaller
+size class, which is the whole `_int_free_merge_chunk` /
+`malloc_consolidate` / `_int_free` shuffle (net -3.1 M between the five
+allocator rows). `computed_permanent`'s own +1.86 M is the accessor's extra
+`Arc` deref showing up at the reads it inlines.
+
+**Behaviour-preserving by construction: the accessors return exactly what
+`Deref` returned** (`&Vec<CardType>`, `&Vec<Supertype>`, `&Subtypes`,
+`&[Keyword]`), so no read site changed meaning; the compiler found every one
+of them, because the fields went private in the same commit and a private
+field is an error, not a silent fallback. 2,991 lines over 282 files, all of
+it inserting `()`.
+
+**Closing state.**
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,073 / 0 / 5 (92.8 s); the seven golden traces inside it, unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) / determinism ok / thread_determinism ok
+        — byte-identical to the committed invariant
+        games_per_s base 234.07 / 251.22 / 247.60 / 234.12 (mean 241.8)
+                    cand 261.13 / 246.50 / 236.75 / 250.00 (mean 248.6)
+        peak_rss_mib base 23.9-26.3, cand 24.2-24.4
+        host Intel Xeon @ 2.80 GHz, host_calib_ms 46-52,
+        `release` + mimalloc, 3 threads, box otherwise idle
+```
+
+**The wall clock agrees in sign and is not the evidence** — 2.8 % between two
+four-run means whose own spreads are 7 % and 10 %, against a deterministic
+-0.63 % on the same workload. `--bench` at 320 games is 1.2-1.4 s here; it is
+the *invariant* (the decision counts) that earns its place in this block, not
+the rate.
 
 ### Ninetieth pass — a presence bit that asked the cheap question, and the dear one costs the same load
 
@@ -11362,10 +11467,29 @@ listener and is drained after; 1b / aura / soulbond gate on "anything
 attached to the dealer" and "a soulbond pair involving the dealer", both of
 which the dealer lookup can compute for free by not short-circuiting.
 
-**(-70) `ComputedPermanent` CARRIES **FOUR** `Arc<CardDefinition>` HANDLES
-TO THE SAME DEFINITION, AND THE THREE REDUNDANT ONES ARE `fixed` **0.532 %** /
-`cube` **0.580 %**. PRICED BY PROBE, NOT BY ARGUMENT; NOT TAKEN, AND THE
-REASON IS THE BLAST RADIUS.**
+**(-70) TAKEN at the ninety-first pass — `fixed` -0.626 % / `cube` -0.706 % /
+`sealed` -0.741 %, i.e. 18-28 % MORE than the probe below, and the reason is
+in the Baseline block.** The quiet window this entry waited for came; the
+refactor is the one it describes (one `Arc` on the struct, an `Overlay` per
+field) with one change of plan that is why it fitted in a pass: `Printed` /
+`PrintedList` were kept as the layer pass's **borrowing** working types, so
+`compute_permanent_pass`'s body is untouched and only `into_overlay()` at the
+struct literal is new. **The 600-800 call sites were 2,991 lines over 282
+files and every one of them was found by the compiler**, because the fields
+went private in the same commit — a private field is an error with a
+`call it with parentheses` suggestion, not a silent fallback, so the whole
+sweep is `rustc --message-format=json` plus a byte-exact patcher. What was
+left after the E0616 pass: ten `keywords().as_slice()`, seventeen
+`keywords().clone()` (a `PrintedList` clone that is now a slice reborrow —
+`to_vec()`), four `assert_eq!` against a `Vec`, three temporaries that
+`let x = &cp.subtypes().field` no longer lifetime-extends, and 23
+`needless_borrow`. **The blast radius was the entry's whole objection and it
+was an afternoon.**
+
+**(-70, as found) `ComputedPermanent` CARRIES **FOUR** `Arc<CardDefinition>`
+HANDLES TO THE SAME DEFINITION, AND THE THREE REDUNDANT ONES ARE `fixed`
+**0.532 %** / `cube` **0.580 %**. PRICED BY PROBE, NOT BY ARGUMENT; NOT TAKEN,
+AND THE REASON IS THE BLAST RADIUS.**
 
 `Printed<T>` and `PrintedList<T>` each hold their own
 `src: Arc<CardDefinition>` so their `Deref` can project into it, and
@@ -11404,6 +11528,10 @@ a refactor can still be priced by *adding another copy of it*.** Three extra
 `Arc` handles cost exactly what three redundant ones cost, and the probe is
 two lines. Same trick as the +8-byte padding probe one entry up; between them
 they price a struct's size and its handle count without touching a call site.
+**Amended by the take: "cost exactly what three redundant ones cost" is the
+half that was wrong.** The probe adds handles to a struct that keeps all its
+drop glue and its allocation size class; removing them changes both, and the
+real number came in 18-28 % over. A sign-flipped probe is a **floor**.
 
 **(-69) `Vec::from_iter`'s TWO MONOS ARE 3.45 % OF `cube` AND THE CALLER TABLE
 BY COUNT HAS TWO ROWS NOBODY HAS COSTED.** Read at `a63b1934`, 778,489 calls:
