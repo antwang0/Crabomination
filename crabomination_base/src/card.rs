@@ -5151,14 +5151,22 @@ pub struct AlternativeCost {
 }
 
 impl CardDefinition {
-    pub fn is_land(&self) -> bool { self.card_types.contains(&CardType::Land) }
-    pub fn is_creature(&self) -> bool { self.card_types.contains(&CardType::Creature) }
-    pub fn is_instant(&self) -> bool { self.card_types.contains(&CardType::Instant) }
-    pub fn is_sorcery(&self) -> bool { self.card_types.contains(&CardType::Sorcery) }
-    pub fn is_artifact(&self) -> bool { self.card_types.contains(&CardType::Artifact) }
-    pub fn is_enchantment(&self) -> bool { self.card_types.contains(&CardType::Enchantment) }
-    pub fn is_planeswalker(&self) -> bool { self.card_types.contains(&CardType::Planeswalker) }
-    pub fn is_battle(&self) -> bool { self.card_types.contains(&CardType::Battle) }
+    // `#[inline]` on the card-type predicates, measured at `c58f8407`:
+    // `release-fast` (cgu 16, no LTO) `fixed` -0.907 % / `cube` -0.741 % /
+    // `sealed` -0.831 %, and `profiling-lto` (the same with thin LTO)
+    // -0.175 / -0.124 / -0.162 %. `is_creature` alone is 392,826 calls a
+    // six-game run, `is_land` 152,706; the body is one heap load and a scan
+    // of one or two elements, so nearly all of the no-LTO figure is the call.
+    // Thin LTO recovers ~80 % of it and not the rest — see PERF's Baseline,
+    // ninety-third pass (2), and the standing rule it corrects.
+    #[inline] pub fn is_land(&self) -> bool { self.card_types.contains(&CardType::Land) }
+    #[inline] pub fn is_creature(&self) -> bool { self.card_types.contains(&CardType::Creature) }
+    #[inline] pub fn is_instant(&self) -> bool { self.card_types.contains(&CardType::Instant) }
+    #[inline] pub fn is_sorcery(&self) -> bool { self.card_types.contains(&CardType::Sorcery) }
+    #[inline] pub fn is_artifact(&self) -> bool { self.card_types.contains(&CardType::Artifact) }
+    #[inline] pub fn is_enchantment(&self) -> bool { self.card_types.contains(&CardType::Enchantment) }
+    #[inline] pub fn is_planeswalker(&self) -> bool { self.card_types.contains(&CardType::Planeswalker) }
+    #[inline] pub fn is_battle(&self) -> bool { self.card_types.contains(&CardType::Battle) }
     pub fn is_vanguard(&self) -> bool { self.card_types.contains(&CardType::Vanguard) }
     pub fn is_conspiracy(&self) -> bool { self.card_types.contains(&CardType::Conspiracy) }
     /// CR 314.1 — a scheme card.
@@ -5602,9 +5610,11 @@ impl CardDefinition {
     // AddCardType(Creature), the printed power/toughness is what the new
     // creature uses. A non-crewed Vehicle is still not a creature, so the
     // base P/T is inert for combat / "creatures you control" purposes.
+    #[inline]
     pub fn base_power(&self) -> i32 {
         if self.is_creature() || self.is_vehicle() { self.power } else { 0 }
     }
+    #[inline]
     pub fn base_toughness(&self) -> i32 {
         if self.is_creature() || self.is_vehicle() { self.toughness } else { 0 }
     }
@@ -5636,6 +5646,7 @@ impl CardDefinition {
             if let Keyword::Casualty(n) = kw { Some(*n) } else { None }
         })
     }
+    #[inline]
     pub fn is_aura(&self) -> bool {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
     }

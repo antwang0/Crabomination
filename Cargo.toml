@@ -75,6 +75,22 @@ inherits = "release-fast"
 debug = true
 split-debuginfo = "unpacked"
 
+# `profiling-fast` plus thin LTO: the instrument that isolates **cross-crate
+# inlining** from `release`'s other change (codegen-units 1). Needed because
+# `profiling` cannot be built here — rustc peaks at ~5.9 GB of RSS on the
+# engine's single codegen unit and the container's memcg kills it (signal 9,
+# and an `#[inline]` on a hot base-crate function makes it *worse*, so the two
+# sides of such an A/B are not both buildable). This one is cgu 16, peaks
+# around a third of that, and answers the only question `release` adds that
+# `release-fast` does not: does LTO already inline the callee, so that an
+# `#[inline]` on it is a `release-fast`-only artifact?
+#
+#   cargo build --profile profiling-lto -p crabomination --bin bot_ladder \
+#     --no-default-features
+[profile.profiling-lto]
+inherits = "profiling-fast"
+lto = "thin"
+
 # The same binary with the DWARF *packed into the executable*, for the one
 # thing `profiling-fast` cannot do here: per-source-line attribution.
 # `unpacked` puts the debug info in `.dwo` files, which neither valgrind nor
