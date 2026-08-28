@@ -136,6 +136,16 @@ already does the update, but its failures are silenced, so check
 `cargo test --workspace` including the client can fill the disk — `rm -rf
 target/debug/incremental` reclaims several GB without a full rebuild.
 
+**A full disk arrives as `rustc` exit 101, which reads exactly like a compiler
+error** (ninety-first pass): `cargo test --no-run` failed on `classic_sets`
+with a bare "process didn't exit successfully ... (exit status: 101)" and no
+diagnostic, because the writes that would have printed one also failed. Check
+`df` before debugging the crate. What filled it that run was `target` at 28 GB
+— `deps` 19 GB and `incremental` back to 5.3 GB — plus five full `release-fast`
+rebuilds under different `RUSTFLAGS`, which cargo never garbage-collects.
+`rm -rf target/debug/incremental target/debug/examples` freed 5.8 GB and
+`rm -rf target/release-fast` another 7.7 GB, both without a workspace rebuild.
+
 **Two cold builds concurrently did NOT OOM at the ninetieth pass** — a `release`
 bot_ladder and a `profiling-fast` one in a second worktree ran together to
 completion-ish on 15 GB, peaking ~10 GB used with 4 GB free. So the "sequential
