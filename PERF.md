@@ -1826,6 +1826,80 @@ matches `crabomination_base` and `crabomination_catalog` too and so forces the
 -p crabomination` is 2m01s cold and seconds warm; run it before every probe
 build.
 
+**THE CRITICAL-PATH QUESTION THIS SECTION LEFT OPEN IS ANSWERED, AND THE
+TARGET ON IT WAS THE CATALOG'S OWN TEST HARNESS — 110.7 s OF A 213.5 s
+MAKESPAN (ninety-second pass).** The amendment above says *"before proposing a
+binary-count change, ask which target is on the critical path"* and nobody had
+run the timings that answer it, because the recipe that found the seven bins
+(`cargo test -p crabomination -p crabomination_tests --no-run`) **does not
+rebuild the catalog at all**, so the unit never appeared in its `--timings`.
+A whole-workspace one shows it immediately:
+
+```text
+CARGO_INCREMENTAL=0 cargo test --workspace --exclude crabomination_client
+  --no-run --timings, cold-ish, four cores. 230 units, makespan 213.5 s,
+  658 s of CPU -> 3.08x parallelism.
+
+  start   dur   unit
+   29.6  110.7  crabomination_catalog  "lib" (test)   <- the largest unit
+  113.0   97.7  crabomination          "lib" (test)
+   28.3   84.7  crabomination_catalog  (normal)
+   57.9   67.9  crabomination          (normal)
+  164.4   49.1  crabomination_tests    classic_sets
+  171.2   34.0  crabomination_tests    core_rules
+  167.9   32.8  crabomination_tests    recent_b
+  130.2   32.4  crabomination_tests    recent_a
+  140.3   30.9  crabomination_tests    modern
+    0.6   29.0  crabomination_base     (normal)
+    0.6   27.6  crabomination_base     "lib" (test)
+  138.6   25.8  crabomination_tests    stx
+```
+
+**Read the shape before the row.** The build has two regimes: **0-58 s is
+dependency-bound** — only `crabomination_base`, then the catalog, so two of
+four cores idle and nothing removed there can help — and **58-213 s is
+core-saturated**, eight integration binaries plus two lib-test compilations
+queueing (`classic_sets` waits from 125.8 to 164.4 s for a core, not for a
+dependency). **In the second regime the lever is total work, not the chain**,
+which is the other half of the eighty-ninth pass's amendment and the reason
+its own change read flat: `crabomination_ml`'s bin and the stub lib are
+small *and* early.
+
+**`crabomination_catalog` has no `#[test]` and no `#[cfg(test)]` anywhere**, so
+that 110.7 s compiled 190 k lines a second time to run zero tests, straddling
+the whole saturated window. `test = false` on its `[lib]`:
+
+```text
+ABBA, 3 runs a side, interleaved on one settled box, base `eb42c05f`
+touch crabomination_base/src/card.rs; CARGO_INCREMENTAL=0
+cargo test --workspace --exclude crabomination_client --no-run
+  before  234.0 / 234.4 / 241.3 s   mean 236.6
+  after   208.2 / 209.1 / 212.1 s   mean 209.8    -11.3 %
+  6 of 6 ordered right, the sides do not overlap
+
+the same A/B under this section's usual recipe (touch game/effects/mod.rs)
+  before  126.7 s      after  126.9 s              flat
+```
+
+**Both halves are the finding.** The win is real on a base-crate edit, a
+manifest edit and every *cold* build — CI, a fresh container, the 15m43s
+`cargo nextest run --workspace` this session paid twice — and it is exactly
+zero on the engine-file loop, because touching `game/effects/mod.rs` does not
+invalidate the catalog. **So the amendment stands and gains a second clause:
+ask which target is on the critical path, and ask which edit the loop you care
+about actually makes.** A build-time number without its *touched file* is the
+same half-a-figure as a stall rate without its invocation.
+
+**And the first attempt at this measurement was wrong in a way worth
+recording: it read the two sides across a container restart.** Baseline
+(before the restart, warm) 126.7 s; candidate (after, cold page cache, and the
+series still descending run over run) 301.4 / 272.5 / 237.7 s. Taken at face
+value that says the change *costs* 90 %. `scripts/ab_wall.py` exists for
+wall-clock A/B on the simulator for exactly this reason and the build loop had
+no equivalent — **interleave the sides (ABBA) and discard a warm-up, or do not
+quote a build-time delta at all.** A one-sided series is not a measurement on
+a box whose state moves.
+
 ## Baseline
 
 ### Ninety-second pass — the answer was "nothing", and the function was finding that out the long way
@@ -15629,6 +15703,21 @@ is a diffuse walk with no hot line.** Do not gate the battlefield loop on an
 `EventKind` presence mask: building the mask is the same
 `battlefield x triggered_abilities` walk the loop's fast path already does,
 which is the forty-third pass's `do_untap` null result exactly.
+
+**AND THE MEMO DEVICE DOES NOT RESCUE THAT MASK, checked at the ninety-second
+pass because it is the obvious thing to try now that the device exists.** The
+eighty-seventh pass's `CardMemo` families would make a *per-definition* mask
+free at dispatch time — no per-board build, so the refutation above does not
+apply to it — but the mask still buys nothing, and one line of source says
+why: `event_matches_spec`'s **first statement** is
+`if !event_kind_matches(state, event, spec, ..) { return false }`. The kind
+test is already the first thing the call does, so a bit tested one frame
+earlier replaces a discriminant compare with a load, a shift and a test. That
+is the `is_event_hardcoded` result in this entry, restated at a different
+frame. The row is real — `event_matches_spec` is **1,174,968 calls / 35.16 M /
+1.16 % of `sealed`** at the ninety-second tip, 30 Ir a call and 6.0 calls a
+dispatch — and it is 30 Ir of *matching*, near the floor. Fewer dispatches,
+as (-59) says; not a cheaper match.
 
 **(-17) `check_state_based_actions`' `.collect()`s — 55,720 calls to
 `SpecFromIterNested::from_iter` for 35,174,999 Ir / 1.84 %, over 10,670

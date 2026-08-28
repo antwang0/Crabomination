@@ -106,7 +106,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    Whole program at `96ec5071`: `fixed` 1,012,617,375 / `cube` 3,026,000,396 /
    `sealed` 3,022,989,126, i.e. **-1.44 / -2.92 / -1.60 % across the pass**,
    `--bench` invariant byte-identical throughout. Then PERF's "Build time"
-   (the rule is "keep the *critical path* flat") and ENGINE_BACKLOG for the
+   — **the critical-path question it left open is answered**: the target was
+   `crabomination_catalog`'s own test harness, 110.7 s of a 213.5 s workspace
+   makespan for zero tests, now `test = false` (**-11.3 %** on a base-crate
+   edit, **flat** on the engine-file loop; quote a build number with the file
+   it touched). The section also now carries the ABBA rule for build-time A/B
+   and why a one-sided series across a restart read the sign backwards. Then
+   ENGINE_BACKLOG for the
    seven filters. **`--bench` is a 1.2-s run on a shared box: check
    `host_calib_ms` (idle 46-49) before believing a `games_per_s`.**
 
