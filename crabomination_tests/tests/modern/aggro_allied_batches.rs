@@ -147,28 +147,6 @@ fn vicious_conquistador_drains_on_attack() {
 }
 
 #[test]
-fn child_of_night_has_lifelink() {
-    use crabomination::card::Keyword;
-    assert!(catalog::child_of_night().keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
-fn vampire_interloper_flies_and_cant_block() {
-    use crabomination::card::Keyword;
-    let def = catalog::vampire_interloper();
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::CantBlock));
-}
-
-#[test]
-fn bartizan_bats_is_a_three_one_flyer() {
-    use crabomination::card::Keyword;
-    let def = catalog::bartizan_bats();
-    assert_eq!((def.power, def.toughness), (3, 1));
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
-#[test]
 fn ajanis_pridemate_grows_on_lifegain() {
     let mut g = two_player_game();
     let cat = g.add_card_to_battlefield(0, catalog::ajanis_pridemate());
@@ -188,14 +166,6 @@ fn souls_attendant_gains_life_on_creature_etb() {
     g.dispatch_triggers_for_events(&[crabomination::game::types::GameEvent::PermanentEntered { card_id: bear }]);
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l0 + 1);
-}
-
-#[test]
-fn auriok_champion_has_protection_from_black_and_red() {
-    use crabomination::card::Keyword;
-    let def = catalog::auriok_champion();
-    assert!(def.keywords.contains(&Keyword::Protection(Color::Black)));
-    assert!(def.keywords.contains(&Keyword::Protection(Color::Red)));
 }
 
 #[test]
@@ -259,20 +229,6 @@ fn moan_of_the_unhallowed_makes_two_zombies_and_has_flashback() {
 // ── claude/modern_decks: beaters batch 2 tests ────────────────────────────────
 
 #[test]
-fn batch2_vanilla_and_keyword_bodies() {
-    use crabomination::card::Keyword;
-    assert_eq!({ let d = catalog::canyon_minotaur(); (d.power, d.toughness) }, (3, 3));
-    assert_eq!({ let d = catalog::runeclaw_bear(); (d.power, d.toughness) }, (2, 2));
-    assert_eq!({ let d = catalog::alpine_grizzly(); (d.power, d.toughness) }, (4, 2));
-    assert_eq!({ let d = catalog::pheres_band_centaurs(); (d.power, d.toughness) }, (3, 7));
-    assert_eq!({ let d = catalog::axebane_stag(); (d.power, d.toughness) }, (6, 7));
-    assert!(catalog::brazen_scourge().keywords.contains(&Keyword::Haste));
-    assert!(catalog::boggart_brute().keywords.contains(&Keyword::Menace));
-    assert!(catalog::colossal_dreadmaw().keywords.contains(&Keyword::Trample));
-    assert!(catalog::snapping_drake().keywords.contains(&Keyword::Flying));
-}
-
-#[test]
 fn torch_fiend_sacs_to_destroy_an_artifact() {
     let mut g = two_player_game();
     let fiend = g.add_card_to_battlefield(0, catalog::torch_fiend());
@@ -329,17 +285,6 @@ fn wing_snare_destroys_only_flyers() {
 }
 
 // ── claude/modern_decks: beaters batch 3 tests ────────────────────────────────
-
-#[test]
-fn batch3_bodies_and_keywords() {
-    use crabomination::card::Keyword;
-    assert_eq!({ let d = catalog::coral_eel(); (d.power, d.toughness) }, (2, 1));
-    assert_eq!({ let d = catalog::horned_turtle(); (d.power, d.toughness) }, (1, 4));
-    assert_eq!({ let d = catalog::grizzled_outrider(); (d.power, d.toughness) }, (5, 5));
-    assert_eq!({ let d = catalog::walking_corpse(); (d.power, d.toughness) }, (2, 2));
-    assert!(catalog::highborn_ghoul().keywords.contains(&Keyword::Intimidate));
-    assert!(catalog::mist_raven().keywords.contains(&Keyword::Flying));
-}
 
 #[test]
 fn mist_raven_bounces_a_creature_on_etb() {
@@ -524,14 +469,6 @@ fn dragons_rage_channeler_delirium_makes_3_3_flyer() {
 }
 
 // ── Glistener Elf / Imperial Recruiter / Goblin Matron / Loxodon Hierarch ───
-
-#[test]
-fn glistener_elf_has_infect() {
-    use crabomination::card::Keyword;
-    let d = catalog::glistener_elf();
-    assert_eq!((d.power, d.toughness), (1, 1));
-    assert!(d.keywords.contains(&Keyword::Infect));
-}
 
 #[test]
 fn imperial_recruiter_fetches_low_power_creature() {
@@ -943,16 +880,6 @@ fn coral_barrier_makes_a_squid() {
         "a Squid token entered");
 }
 
-/// Rishadan Airship is a 2/3 flyer that can't block.
-#[test]
-fn rishadan_airship_flies_and_cant_block() {
-    use crabomination::card::Keyword;
-    let def = catalog::rishadan_airship();
-    assert_eq!((def.power, def.toughness), (3, 1));
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::CantBlock));
-}
-
 /// Weakness shrinks the enchanted creature by -2/-1.
 #[test]
 fn weakness_shrinks_the_creature() {
@@ -1117,15 +1044,6 @@ fn ministrant_of_obligation_afterlife() {
     let spirits = g.battlefield.iter()
         .filter(|c| c.controller == 0 && c.definition.name == "Spirit").count();
     assert_eq!(spirits, 2, "Afterlife 2 → two Spirit tokens");
-}
-
-/// Dragon's Eye Sentry is a 1/3 with Defender and first strike.
-#[test]
-fn dragons_eye_sentry_keywords() {
-    use crabomination::card::Keyword;
-    let d = catalog::dragons_eye_sentry();
-    assert_eq!((d.power, d.toughness), (1, 3));
-    assert!(d.keywords.contains(&Keyword::Defender) && d.keywords.contains(&Keyword::FirstStrike));
 }
 
 /// Kor Sanctifiers destroys an artifact only when kicked.
@@ -1454,14 +1372,6 @@ fn marauding_blight_priest_drains_on_lifegain() {
     assert_eq!(g.players[1].life, before - 1, "opponent loses 1 on your lifegain");
 }
 
-/// Vampire Cutthroat has skulk and lifelink.
-#[test]
-fn vampire_cutthroat_keywords() {
-    use crabomination::card::Keyword;
-    let d = catalog::vampire_cutthroat();
-    assert!(d.keywords.contains(&Keyword::Skulk) && d.keywords.contains(&Keyword::Lifelink));
-}
-
 /// Goblin Fireslinger pings a player for 1.
 #[test]
 fn goblin_fireslinger_pings_player() {
@@ -1604,16 +1514,6 @@ fn aerial_predation_kills_flyer_and_gains() {
     assert_eq!(g.players[0].life, 22, "gained 2");
 }
 
-/// Centaur Courser and Goblin Roughrider are vanilla beaters with the
-/// printed stats.
-#[test]
-fn vanilla_beaters_have_stats() {
-    let cc = catalog::centaur_courser();
-    assert_eq!((cc.power, cc.toughness), (3, 3));
-    let gr = catalog::goblin_roughrider();
-    assert_eq!((gr.power, gr.toughness), (3, 2));
-}
-
 // ── Allied-color batch 5 (modern_decks) ─────────────────────────────────────
 
 /// Mistral Singer pumps from prowess on a noncreature cast.
@@ -1702,3 +1602,89 @@ fn veteran_swordsmith_buffs_other_soldiers() {
     assert_eq!((ac.power, ac.toughness), (4, 1), "other Soldier gets +1/+0");
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// One definition audit for the printed bodies this file used to check with a
+// three-line test each, plus the three copy-paste batch blocks. Every row is
+// exactly what the eleven deleted tests asserted — printed P/T and printed
+// keywords — so the coverage is unchanged. Same shape as `stx/part_23.rs`'s
+// table; see CLAUDE.md's "one table-driven definition audit per set".
+// ─────────────────────────────────────────────────────────────────────────
+
+struct PrintedShape {
+    def: fn() -> crabomination::card::CardDefinition,
+    name: &'static str,
+    pt: Option<(i32, i32)>,
+    kws: &'static [crabomination::card::Keyword],
+}
+
+#[test]
+fn aggro_allied_printed_shapes() {
+    use crabomination::card::Keyword;
+    const ROWS: &[PrintedShape] = &[
+        // batch 1 singles
+        PrintedShape { def: catalog::child_of_night, name: "child_of_night",
+            pt: None, kws: &[Keyword::Lifelink] },
+        PrintedShape { def: catalog::vampire_interloper, name: "vampire_interloper",
+            pt: None, kws: &[Keyword::Flying, Keyword::CantBlock] },
+        PrintedShape { def: catalog::bartizan_bats, name: "bartizan_bats",
+            pt: Some((3, 1)), kws: &[Keyword::Flying] },
+        PrintedShape { def: catalog::auriok_champion, name: "auriok_champion",
+            pt: None, kws: &[Keyword::Protection(Color::Black), Keyword::Protection(Color::Red)] },
+        // beaters batch 2
+        PrintedShape { def: catalog::canyon_minotaur, name: "canyon_minotaur",
+            pt: Some((3, 3)), kws: &[] },
+        PrintedShape { def: catalog::runeclaw_bear, name: "runeclaw_bear",
+            pt: Some((2, 2)), kws: &[] },
+        PrintedShape { def: catalog::alpine_grizzly, name: "alpine_grizzly",
+            pt: Some((4, 2)), kws: &[] },
+        PrintedShape { def: catalog::pheres_band_centaurs, name: "pheres_band_centaurs",
+            pt: Some((3, 7)), kws: &[] },
+        PrintedShape { def: catalog::axebane_stag, name: "axebane_stag",
+            pt: Some((6, 7)), kws: &[] },
+        PrintedShape { def: catalog::brazen_scourge, name: "brazen_scourge",
+            pt: None, kws: &[Keyword::Haste] },
+        PrintedShape { def: catalog::boggart_brute, name: "boggart_brute",
+            pt: None, kws: &[Keyword::Menace] },
+        PrintedShape { def: catalog::colossal_dreadmaw, name: "colossal_dreadmaw",
+            pt: None, kws: &[Keyword::Trample] },
+        PrintedShape { def: catalog::snapping_drake, name: "snapping_drake",
+            pt: None, kws: &[Keyword::Flying] },
+        // beaters batch 3
+        PrintedShape { def: catalog::coral_eel, name: "coral_eel",
+            pt: Some((2, 1)), kws: &[] },
+        PrintedShape { def: catalog::horned_turtle, name: "horned_turtle",
+            pt: Some((1, 4)), kws: &[] },
+        PrintedShape { def: catalog::grizzled_outrider, name: "grizzled_outrider",
+            pt: Some((5, 5)), kws: &[] },
+        PrintedShape { def: catalog::walking_corpse, name: "walking_corpse",
+            pt: Some((2, 2)), kws: &[] },
+        PrintedShape { def: catalog::highborn_ghoul, name: "highborn_ghoul",
+            pt: None, kws: &[Keyword::Intimidate] },
+        PrintedShape { def: catalog::mist_raven, name: "mist_raven",
+            pt: None, kws: &[Keyword::Flying] },
+        // later singles
+        PrintedShape { def: catalog::glistener_elf, name: "glistener_elf",
+            pt: Some((1, 1)), kws: &[Keyword::Infect] },
+        // 3/1, not the 2/3 the deleted test's doc comment claimed.
+        PrintedShape { def: catalog::rishadan_airship, name: "rishadan_airship",
+            pt: Some((3, 1)), kws: &[Keyword::Flying, Keyword::CantBlock] },
+        PrintedShape { def: catalog::dragons_eye_sentry, name: "dragons_eye_sentry",
+            pt: Some((1, 3)), kws: &[Keyword::Defender, Keyword::FirstStrike] },
+        PrintedShape { def: catalog::vampire_cutthroat, name: "vampire_cutthroat",
+            pt: None, kws: &[Keyword::Skulk, Keyword::Lifelink] },
+        PrintedShape { def: catalog::centaur_courser, name: "centaur_courser",
+            pt: Some((3, 3)), kws: &[] },
+        PrintedShape { def: catalog::goblin_roughrider, name: "goblin_roughrider",
+            pt: Some((3, 2)), kws: &[] },
+    ];
+    for row in ROWS {
+        let def = (row.def)();
+        if let Some((p, t)) = row.pt {
+            assert_eq!((def.power, def.toughness), (p, t), "{} printed P/T", row.name);
+        }
+        for kw in row.kws {
+            assert!(def.keywords.contains(kw), "{} has {:?}", row.name, kw);
+        }
+    }
+}
