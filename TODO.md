@@ -101,6 +101,28 @@ already does the update, but its failures are silenced, so check
 `cargo test --workspace` including the client can fill the disk — `rm -rf
 target/debug/incremental` reclaims several GB without a full rebuild.
 
+**Two cold builds concurrently did NOT OOM at the ninetieth pass** — a `release`
+bot_ladder and a `profiling-fast` one in a second worktree ran together to
+completion-ish on 15 GB, peaking ~10 GB used with 4 GB free. So the "sequential
+builds only" line above holds for a *throughput* reason, not a memory one: load
+average hit 8 on 4 cores and each build took roughly twice its solo wall time,
+which is worse than running them in series. Size the rule by cores, not by RAM.
+
+**Killing `cargo` does not kill its `rustc` children.** `pkill -f "cargo build
+…"` leaves the running `rustc` processes alive, each still holding a core — one
+orphan from a cancelled `release` build burned 8 CPU-minutes competing with the
+build that replaced it before it was noticed. After cancelling a build, check
+`pgrep rustc` and read `/proc/<pid>/cwd` plus `--crate-name` off the cmdline to
+tell whose it is; a worktree build and a main-tree build look identical
+otherwise.
+
+**A build started before a `git rebase` compiles the pre-rebase source.**
+Concurrent sessions land engine commits every few minutes here, so a long
+`release` build straddling a rebase silently produces a binary that is not the
+tip — and `--bench` run on it is measuring the wrong commit. Rebase first, then
+build; if a rebase lands mid-build and touched any crate in the graph, restart
+it rather than trusting the artifact.
+
 ## Engine — Robustness / defects
 
 **No open entries.** The determinism class, the panic/unwrap census and the
