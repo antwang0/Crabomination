@@ -29,14 +29,20 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 **Sequential builds only** — two cold ones are OOM-killed here (PERF hazards).
 
-1. **Perf queue** — PERF "Perf candidates", top-down. **`(-79)`'s one untried
-   shape is TAKEN** (`ANY_GRANT`, -0.97/-1.33/-0.94 %); its residue is the
-   *number of questions*, which that entry says is not reachable — so take
-   `(-51)(a)` next, then `(-70)` (quiet window only), `(-69)`'s two unclaimed
-   rows, `(-61)`, `(-59)`. Closed: `(-60)`, `(-77)`, the `Box` class, `(-39)`.
-   **New rule from `(-79)`: count the walks a bit removes, not the cards it
-   tests** — and read the memo's fill count (`grant_scan_bits`' own row)
-   against the question count before building one. 23:1 paid here.
+1. **Perf queue** — PERF "Perf candidates", top-down. **`(-80)` is new and is
+   the allocator census this file asked for since the eightieth pass** — read
+   its first row before proposing anything there: the program's single biggest
+   allocation context is already minimal. Its two unclaimed rows are the
+   per-step-advance event buffer (22,820 allocations, ~0.40 % of `fixed`,
+   costs an ownership change) and (-74) with a name (33,286 of 60,524 deep
+   copies are the cast/activate pipelines unsharing after the checkpoint).
+   `(-79)`'s untried shape is TAKEN (`ANY_GRANT`, -0.97/-1.33/-0.94 %) and
+   its residue is not reachable; then `(-51)(a)`, `(-70)` (quiet window
+   only), `(-69)`'s two unclaimed rows, `(-61)`, `(-59)`. Closed: `(-60)`,
+   `(-77)`, the `Box` class, `(-39)`. **Rules earned: count the walks a bit
+   removes, not the cards it tests; a zone memo is worth the zone's *write*
+   rate, not its read rate; and hoisting a short list once beats hoisting a
+   scalar often.**
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass" and "Which pool a change moves". Read all three pools; a pool split
    is a revert. The two devices that paid last: the allocation table ranked
@@ -70,7 +76,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `ANY_GRANT` row, and under it the eighty-ninth's end-to-end, the `--bench`
    invariant and both clocks. The two blocks' baselines were measured
    independently and agree to ~600 Ir on all three pools.
-9. **Filters** — six, all reading zero. `audit_decision_plumbing.py`'s 98
+9. **Build time** — PERF's "Build time" section, **amended**: the standing
+   rule is now "keep the *critical path* flat", not the binary count. Two
+   zero-test harnesses were switched off (19 -> 17 executables) and the
+   relink measured **flat** — `--no-run` builds in parallel and neither was
+   on the long chain, which is the eight integration binaries. Name the
+   target on that path before proposing a count change.
+10. **Filters** — six, all reading zero. `audit_decision_plumbing.py`'s 98
    bare sites are a triage population, and the eighty-ninth pass found the
    greppable sub-population that *is* a bug: **a site whose comment states the
    headless policy while relying on `AutoDecider`'s blanket
