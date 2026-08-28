@@ -6795,6 +6795,23 @@ impl GameState {
         if self.damage_cant_be_prevented_this_turn {
             return false;
         }
+        // The combat resolver's per-pair freeze scope reaches this second,
+        // right behind `creature_redirects_damage_to_controller`, and an
+        // ungated `computed_permanent` here gathers the whole effect set to
+        // ask about one keyword almost no permanent has. Presence-gate it —
+        // `false` is authoritative — and skip the gate once the gather has
+        // already happened. See `damage_prevented_by_protection_inner` for
+        // the same pairing.
+        let possible = |k: &Keyword| matches!(k, Keyword::PreventDamageFromMatching(_));
+        if !self.layers_memoized() && !self.card_keyword_possible(tgt, possible) {
+            debug_assert!(
+                !self
+                    .computed_permanent(tgt)
+                    .is_some_and(|cp| cp.keywords().iter().any(possible)),
+                "card_keyword_possible missed a granted PreventDamageFromMatching",
+            );
+            return false;
+        }
         let controller = self.battlefield_find(tgt).map_or(0, |c| c.controller);
         let cp = self.computed_permanent(tgt);
         cp.iter()

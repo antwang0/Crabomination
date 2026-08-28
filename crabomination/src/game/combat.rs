@@ -4049,10 +4049,25 @@ impl GameState {
     /// its controller? Returns that controller when it does.
     pub(crate) fn creature_redirects_damage_to_controller(&self, id: CardId) -> Option<usize> {
         let c = self.battlefield_find(id)?;
-        self.computed_permanent(id)?
-            .keywords()
-            .has_kw(&crate::card::Keyword::DamageToThisGoesToItsController)
-            .then_some(c.controller)
+        // This is the **first** read in `resolve_combat_damage_with_filter`'s
+        // per-pair freeze scope, so an ungated `computed_permanent` here is
+        // what makes that scope gather — 12,786 gathers a six-game `cube` run
+        // between this and its sibling below (PERF `(-81)`'s context census).
+        // Same shape as `damage_prevented_by_protection_inner`: the presence
+        // gate answers "no" authoritatively without gathering, and it is
+        // skipped once the gather has already happened, where the memo read is
+        // cheaper than the gate's own board walk.
+        const KW: crate::card::Keyword = crate::card::Keyword::DamageToThisGoesToItsController;
+        if !self.layers_memoized() && !self.card_keyword_possible(id, |k| *k == KW) {
+            debug_assert!(
+                !self
+                    .computed_permanent(id)
+                    .is_some_and(|cp| cp.keywords().has_kw(&KW)),
+                "card_keyword_possible missed a granted DamageToThisGoesToItsController",
+            );
+            return None;
+        }
+        self.computed_permanent(id)?.keywords().has_kw(&KW).then_some(c.controller)
     }
 
     /// Sekki, Seasons' Guide (CR 615) — prevent `dealt` damage to `recipient`,
