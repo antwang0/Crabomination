@@ -651,16 +651,21 @@ here if it ever needs compacting.
   three rows that shipped removed five list walks, five pointer-chased loads
   and three list walks respectively. Bits were correct (the function's own
   `debug_assert!` against the four walks it fuses passed); the trade was not.
-- **…and the rule that qualifies it: ask whether the bit *is* the answer or
-  merely *gates* a walk** (pass 88, same function TAKEN at `fixed` -0.095 % /
-  `cube` -0.317 % / `sealed` -0.330 %). Three of the four facts
-  `dispatch_board_scan` gathers are booleans, so `if bits == 0 { continue }`
-  skips the **whole loop body** rather than buying one length check. The
-  rule above stands wherever the bit only gates. And the same commit's narrow
-  probe says a gate's own row lies: `trigger_grant_sources` gets **worse**
-  under the change (`cube` 14,365,404 -> 14,898,698) while removing that gate
-  and three siblings costs `cube` **+0.171 %** — a warmed memo is read again
-  by the next consumer.
+- **…and the rule that qualifies it: count the work items the bit elides,
+  not their kind** (pass 88; the same function TAKEN at `fixed` -0.095 % /
+  `cube` -0.317 % / `sealed` -0.330 %, and `granted_abilities_of` REFUTED at
+  `fixed` +0.024 % in the same pass). `dispatch_board_scan`'s per-card body
+  is four things — an `equipped_bonus` load, a `static_abilities` walk, a
+  `station` walk, an `active_static` loop — and `if bits == 0 { continue }`
+  skips all four; `granted_abilities_of`'s prologue is one walk over an empty
+  list, and six exact bits cannot beat one length check. "The bit *is* the
+  answer rather than a gate" is necessary and **not** sufficient.
+- **A gate's own row lies about whether the gate pays** (pass 88's narrow
+  probe). `trigger_grant_sources` gets **worse** under the shipped change
+  (`cube` 14,365,404 -> 14,898,698), and removing that gate and three
+  siblings costs the program `cube` **+0.171 %** / `sealed` +0.143 % — the
+  memo a gate warms is read again by the next consumer, so the cost lands on
+  the gate's row and the saving lands on someone else's.
 - **A memo slot's miss path is the sum of every family on it, and it is paid
   by whichever consumer touches the card first** (pass 87, same entry, built
   and reverted: `fixed` +0.135 %, `cube` +0.145 %, `sealed` +0.097 %). Adding
@@ -1543,6 +1548,36 @@ alongside `static_effect_changes_card_types` and for the same reason — the
 answer is a property of the printed static — and `static_grants_triggered_
 ability` is new there, peeling exactly `active_static`'s five gate wrappers.
 The two must be edited together; the doc comment says so.
+
+**(-77)'S LAST ROW WAS BUILT AND REVERTED IN THE SAME PASS, WHICH IS WHAT
+CLOSES THE ENTRY.** `granted_abilities_of`'s six-boolean prologue, six exact
+bits with their own valid flag: `fixed` **+0.024 %** / `cube` +0.005 % /
+`sealed` +0.011 % against base `e398874c`. The bits *are* the answers and it
+still loses, because the walk they replace is **one** `for sa in
+&me.definition.static_abilities {}` on a definition with no statics. Read
+that against the shipped row above: the difference is that
+`dispatch_board_scan`'s body is four things and this one is one. The full
+write-up is under (-77).
+
+**STATE AT `e398874c`, the tip of this half.**
+
+```text
+suite  cargo nextest run --workspace --exclude crabomination_client
+       19,062 / 0 / 5   (~82 s after the build)
+clippy --workspace --exclude crabomination_client --all-targets   clean
+golden traces  unmoved (they run inside the suite above)
+--bench  195,528 decisions / 27.44 turns / 611.0 decisions a game /
+         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok /
+         thread_determinism ok (3 vs 1 threads identical)
+         — **byte-identical to the committed invariant**
+         214.3-233.3 games/s over three runs, peak_rss_mib 27.3-27.8,
+         host_calib_ms 48-58 (`release-fast`, mimalloc, 2.10 GHz Xeon, 3
+         threads). ⚠ NOT comparable to the concurrent half's 245.3-245.6 at
+         calib 46: different container, and calib says so.
+whole-program Ir, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1
+  fixed  1,057,644,796   cube  3,212,823,684   sealed  3,157,096,383
+```
 
 ### Eighty-seventh pass, the concurrent half — an iterator adapter chain is a per-element branch, and on a whole-board walk that is half the row
 
@@ -9910,19 +9945,35 @@ repeats in the self table, at `--decks cube`, post-(2):
   0.49 %  land_type_change_in_scope      <- REFUTED with the row below
   0.79 %  trigger_grant_sources      <- (-60); CLOSED by the visitor rewrite
                                         (87th concurrent) plus the 88th's gate
-  0.76 %  granted_abilities_of       <- walks `static_abilities` (twice, per (-10))
+  0.76 %  granted_abilities_of       <- REFUTED at the 88th; `fixed` +0.024 %
 ```
 
-**THE LAST ROW IS WHAT IS LEFT OF THIS ENTRY.** `granted_abilities_of`'s
-prologue computes six booleans — Myr Welder, Necrotic Ooze, Marvin, Kraj,
-Safehouse, Conspicuous Snoop — in one `static_abilities` walk, every one an
-exact function of the definition (they match printed variants, no wrapper
-peel), over ~272 k calls a `cube` run. **Six bits and their own valid flag**,
-per `f264ba27`; the bodies they gate are already behind them, so the walk
-goes away and nothing else moves. Price it against the eighty-eighth pass's
-distinction first: are the bits the *answer* (whole body skipped) or only a
-*gate* on a walk (one length check bought)? Here they are the answer for the
-prologue and a gate for the six bodies, which is the winning side of it.
+**THE LAST ROW IS REFUTED TOO, AND THE ENTRY IS CLOSED.**
+`granted_abilities_of`'s prologue computes six booleans — Myr Welder,
+Necrotic Ooze, Marvin, Kraj, Safehouse, Conspicuous Snoop — in one
+`static_abilities` walk, every one an exact function of the definition (they
+match printed variants, no wrapper peel), over ~272 k calls a `cube` run.
+Six bits with their own valid flag (bit 41, per `f264ba27`): **built,
+measured and reverted at the eighty-eighth pass.**
+
+```text
+Base e398874c, same instrument.
+  fixed   1,057,644,796 -> 1,057,894,717   +0.024 %
+  cube    3,212,823,684 -> 3,212,970,309   +0.005 %
+  sealed  3,157,096,383 -> 3,157,450,866   +0.011 %
+```
+
+**And it is the eighty-eighth pass's own distinction failing its second
+test.** The bits *are* the answers — nothing iterates afterwards — but the
+walk they replace is **one** `for sa in &me.definition.static_abilities {}`
+on a definition with no statics, i.e. one length check, and a new family's
+miss path plus a load does not beat that. What made `dispatch_board_scan` win
+is not "the bit is the answer": it is that its per-card body does **four**
+things (an `equipped_bonus` load, a `static_abilities` walk, a `station`
+walk, an `active_static` loop) and `bits == 0` skips all four. **The real
+rule is the count of work items the bit elides, not their kind.** Six of the
+device's rows have now been priced and the two that paid are the two whose
+bodies were multi-part.
 
 **AND SO IS THE OBVIOUS EXTENSION OF THE ROW THAT WON — `card_can_change_
 creature_types` AND `card_can_change_land_types` ON THE SAME SLOT READ

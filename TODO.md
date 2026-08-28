@@ -27,13 +27,20 @@ sixty-seventh pass, so don't re-take that.
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 
-1. **Perf queue** — PERF "Perf candidates". `(-77)`'s memo device is **mined
-   and bounded** (three rows shipped, two refuted); `(-51)(a)` is **re-sized
-   in the actor block and its named blocker shipped**, so take it next.
+1. **Perf queue** — PERF "Perf candidates". `(-77)`'s memo device is
+   **CLOSED**: four rows shipped, three refuted, and one refutation
+   *reversed* — `dispatch_board_scan` came back off the refuted list at the
+   eighty-eighth pass at `cube` -0.317 %, and its last row
+   (`granted_abilities_of`, six exact bits) was built and reverted in the
+   same pass at `fixed` +0.024 %. The rule that separates the two is in that
+   Baseline block: **count the work items the bit elides, not their kind** —
+   four per card wins, one length check does not. `(-51)(a)` is **re-sized in
+   the actor block and its named blocker shipped**, so take it next.
    `(-78)`'s `flat_map` half is **swept** — six commits, `FlatMap::next` off
    the profile as a named row; what is left of it is `Chain` at a third the
    traffic and none of it a whole-board walk, so expect a tenth. Then (-70)
-   (quiet window only), (-69)'s two unclaimed rows, (-60), (-61), (-59).
+   (quiet window only), (-69)'s two unclaimed rows, (-61), (-59). **(-60) is
+   closed** — the visitor rewrite plus the eighty-eighth's gate.
 2. **Perf method** — PERF's "How to measure", **"Standing rules for a perf
    pass"** (moved there from this file this pass) and "Which pool a change
    moves". Read all three pools; a pool split is a revert.
