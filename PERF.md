@@ -858,6 +858,15 @@ that measured it — is **not** what happened, deliberately: the detail is the
 refutation, and a rule refuted on a *mechanism* stays refuted. Compact it
 here if it ever needs compacting.
 
+- **Before hoisting a per-item board walk out of a loop, divide the loop's
+  total item count by its call count** (pass 93's second concurrent half,
+  `(-84)(b)`, built twice and reverted; `fixed` **+0.090 %**). A "once per
+  pass" scan is only cheap if a pass has many items — `legal_blockers` and
+  `pick_blocks_inner` run over **one to three** candidate blockers while
+  being called thousands of times, so an *unconditional* board scan hoisted
+  out of them runs about as often as the *conditional* per-blocker walk it
+  replaced, at roughly twice the cost. The deletion ceiling for that walk is
+  a real -0.333 % of `cube`; a hoist is simply not the way to it.
 - **Price a `find` site at its expected stopping point, not at the
   collection's length** (pass 92's concurrent third, and it cost a build).
   A `battlefield.iter().find(|c| c.id == id)` for a permanent that *is* there
@@ -11868,7 +11877,51 @@ against `(-78)`'s test 1 before building**: these are short *per-call*
 slices, not a board walk, so what is on offer is the 20 loop set-ups and not
 the elements.
 
-**(b) `blocker_self_block`'s Void Winnower leg is a whole-board
+**(b) BUILT, MEASURED TWICE AND REFUTED at the ninety-third pass (2) — the
+hoist costs `fixed` **+0.090 %**. The deletion ceiling is real and it is not
+reachable this way; read this before proposing a block-side scan again.**
+The probe the entry asked for was run first and the leg *is* worth taking:
+deleting it outright (`if false && …`) at `c1e4363c` reads
+
+```text
+  fixed   998,970,064 ->   997,845,100   -0.113 %
+  cube  2,993,004,323 -> 2,983,037,131   -0.333 %
+  sealed 2,976,502,367 -> 2,969,904,182  -0.222 %
+```
+
+**and then the obvious fix loses.** A `block_static_scan` twin of
+`attack_static_scan`, hoisted out of `declare_blockers`' assignment loop,
+`legal_blockers`' filter and `pick_blocks_inner`' blocker loop, with the
+single-pair convenience APIs passing `None` to keep their old per-card gate
+(the `GrantScan::land_types_rewritten` shape):
+
+```text
+  u32 everywhere      fixed +0.079 %   cube -0.150 %   sealed -0.041 %
+  Option<u32>         fixed +0.090 %   cube -0.131 %   sealed -0.023 %
+```
+
+**The arithmetic the entry did not do: count the blockers per pass.** The
+leg is *conditional* (`cmc` even) and its walk is a whole-board `any` that
+exits on the first `static_abilities` entry — on `fixed` there are none at
+all, so it is ~23 derefs and 23 length loads. The scan is **unconditional**
+and walks the same board. A hoist out of a loop of N blockers is a win only
+when N is large, and `legal_blockers` / `pick_blocks_inner` run over **one to
+three** candidates a pass while being called thousands of times: the scan
+therefore runs about as often as the leg did, at roughly twice the cost.
+**Before hoisting a per-item board walk out of a loop, divide the loop's
+total item count by its call count** — a "once per pass" walk is only cheap
+if a pass has many items.
+
+What is left of the ceiling is not the number of walks but the walk itself,
+and the two devices that could remove it are both spoken for: a
+per-definition presence bit (`CardMemo`'s `dispatch_bits` family) keeps all
+23 derefs and 23 atomic loads — `dispatch_board_scan` measures that shape at
+226 Ir, against the ~267 Ir this leg costs when it runs — and a battlefield
+zone memo is `(-62)`'s refuted class (worth the zone's *write* rate, and the
+battlefield's `DerefMut` fires on every tap).
+
+The original sizing, kept because the shape reading is still right:
+`blocker_self_block`'s Void Winnower leg is a whole-board
 `static_abilities` walk taken on half of all blockers.** Its only gate is
 `blocker.definition.cost.cmc().is_multiple_of(2)`, and **zero is even**, so
 every colourless and every even-cost blocker pays it;
