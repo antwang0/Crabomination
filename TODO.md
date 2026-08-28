@@ -61,8 +61,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    the *distribution* a net sees, not the encoding of it — a self-play net
    re-learns that; a net being compared across the fix does not.
 5. **Robustness gate** — `scripts/robustness_grid.sh` plus the actor leg, the
-   seeded 4,000-pairing cube sweep, and the two census env vars. Run in full
-   at the eighty-ninth pass under a behaviour change; clean.
+   seeded 4,000-pairing cube sweep, and the two census env vars. **All clean
+   at `673f50ff`**, i.e. with every behaviour change of the pass in: CR 613.8,
+   Metalcraft's computed count, the two headless `OptionalTrigger` policies
+   and the event-buffer recycle. The cube sweep is 900.8 s under nextest —
+   arm it by setting `bot_vs_bot_random_cube_decks_terminate`'s loop to
+   `0..4000u64` and restoring the ten named seeds after.
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
    `ColorIsMostCommonAmongPermanents` is fixed at the ninetieth pass —
    `card_color_change_unscoped()` is built (layer-5 twin of the type gate, no
