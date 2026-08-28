@@ -10531,6 +10531,64 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-80) THE ALLOCATOR IS 10.4 % OF `fixed` OVER 575,795 ALLOCATIONS, AND
+HERE IS WHERE THEY COME FROM.** PERF has said for ten passes that the
+allocator family "is the one thing no pass has aimed at directly" and never
+carried the census that would let one. This is it, at `9f993c48`, and the
+headline is that **the biggest single context is already minimal** — read that
+before proposing anything here.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1 --decks fixed,
+callgrind, profiling-fast --no-default-features.  Total Ir 1,030,094,767.
+
+  _int_free  3.43 %   malloc 2.60 %   free 2.18 %   _int_malloc 1.83 %
+  _int_free_merge_chunk 0.40 %   realloc 0.35 %          = 10.79 %
+  __memcpy_avx_unaligned_erms                             = 2.04 %
+  575,795 `__rust_alloc` calls  ->  ~180 Ir an allocation, freed included
+
+top contexts (--separate-callers=5, cg_contexts.py __rust_alloc):
+  30,396  computed_permanent <- call_mut <- from_iter <- bot::pick_blocks_inner
+                                                      <- with_frozen_layers
+  22,820  finish_grow <- grow_one <- advance_step <- pass_priority
+  18,144  clone_from_ref_in <- make_mut <- cast_spell_with_convoke <- cast_spell
+  15,142  clone_from_ref_in <- make_mut <- activate_ability_inner
+                            <- activate_ability <- auto_tap_for_cost_inner
+   9,194  finish_grow <- grow_one <- push_mut <- run_effect <- resolve_effect
+   9,076  from_iter <- cast_spell_with_convoke <- cast_spell
+   8,506  finish_grow <- grow_one <- push_mut <- activate_ability_inner
+   7,904  finalize_cast <- cast_spell_with_convoke <- cast_spell
+   7,596  finish_grow <- grow_one <- dispatch_board_scan
+                      <- dispatch_triggers_for_events
+   6,660  CowBox::push <- finalize_cast <- cast_spell_with_convoke
+```
+
+**Row 1 is a refutation, not a candidate.** 30,396 allocations is one
+`Arc<ComputedPermanent>` per computed read — `Printed`/`PrintedList` (the
+eighty-fourth pass) already keep the struct's five list fields at *zero*
+allocations unless a layer actually overrides one, and the freeze scope's
+`perms` memo already serves the repeats. ~4 distinct permanents a
+`pick_blocks_inner` collect, one `Arc` each. There is nothing left in it short
+of not allocating the `Arc`, which the memo's shape requires.
+
+**Row 2 is the cleanest unclaimed one and it is *not* a `with_capacity` fix.**
+`pass_priority` hands `advance_step` a `vec![]` and `advance_step` pushes
+`GameEvent::StepChanged` unconditionally — so the growth count (22,820) is
+**exactly** the call count (22,820), one first-push allocation per step
+advance and no second growth. Reserving capacity moves that allocation
+earlier; it does not remove it. What removes it is **recycling the buffer** —
+a scratch `Vec<GameEvent>` on `GameState` that `pass_priority` `mem::take`s
+and the drain point hands back, which is (-75)'s device one level out. Worth
+~0.40 % of `fixed` and it costs a change to the event plumbing's ownership,
+which is why it is written down rather than taken.
+
+**Rows 3 and 4 are (-74) with a name: 33,286 of the run's 60,524 `Arc`
+deep copies are the cast and activate pipelines** unsharing after the
+`perform_action` checkpoint clone. A deep copy is 593 Ir and carries 1.3
+allocations, 1.8 `Vec::clone`s, 1.4 `SmallVec::extend`s and 0.5
+`RawTable::clone`s. The lever is fewer *shared* handles at the moment of the
+first write, not a cheaper copy.
+
 **(-79) `keyword_grant_in_scope`'S BATTLEFIELD LEG IS `fixed` -1.75 % /
 `cube` -2.25 %, MEASURED BY DELETION, AND THE MEMO ROUTE TO IT IS CLOSED.**
 Eight callers reach `card_can_grant_keyword` **515,328 times over six `fixed`
