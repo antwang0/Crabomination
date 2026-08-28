@@ -55,10 +55,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 5. **Robustness gate** — `scripts/robustness_grid.sh` plus the actor leg, the
    seeded 4,000-pairing cube sweep, and the two census env vars. Run in full
    at the eighty-ninth pass under a behaviour change; clean.
-6. **Bugs** — ENGINE_BACKLOG's live-match section: **one open entry**,
-   `ColorIsMostCommonAmongPermanents` reading printed colours (the residue of
-   the CR 613.8 fix, after `MetalcraftActive` was made computed); it wants a
-   `card_color_change_unscoped()` gate built first. Two 🟡 *class* entries
+6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
+   `ColorIsMostCommonAmongPermanents` is fixed at the ninetieth pass —
+   `card_color_change_unscoped()` is built (layer-5 twin of the type gate, no
+   memo family and the entry says why) and the tally reads computed colours
+   behind it. The whole CR 613.8 residue is closed. Two 🟡 *class* entries
    were re-read and both shrank — the block pair gate is already one body and
    the planner's flying/reach pre-filters are fixed; what is left is
    *batch*-level readings and an attack **heuristic**, not a legality bug.

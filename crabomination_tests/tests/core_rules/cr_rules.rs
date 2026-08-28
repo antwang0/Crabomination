@@ -10600,3 +10600,37 @@ fn cr_613_metalcraft_counts_computed_artifacts() {
         "and off again when the layer-4 source leaves",
     );
 }
+
+/// CR 105.2 / 613 — "the most common color among all permanents" tallies the
+/// *computed* colours, so a layer-5 source moves it. The Djinn cycle is the
+/// only catalog user of `ColorIsMostCommonAmongPermanents`; Goham Djinn is
+/// 5/5 and shrinks to 3/3 while black is (tied for) most common.
+///
+/// This is the residue of the eighty-ninth pass's CR 613.8 fix: the tally read
+/// `definition.printed_colors()` because the predicate is evaluated inside the
+/// gather, which used to pin every characteristic read to the printed one. The
+/// two-phase gather removed that, and Mycosynth Lattice — which makes every
+/// permanent colourless — is the board that shows it.
+#[test]
+fn cr_613_most_common_color_counts_computed_colors() {
+    let mut g = two_player_game();
+    let djinn = g.add_card_to_battlefield(0, catalog::goham_djinn());
+    assert_eq!(
+        g.computed_permanent(djinn).unwrap().power,
+        3,
+        "alone, the black Djinn is itself the most common colour, so it shrinks",
+    );
+    let lattice = g.add_card_to_battlefield(1, catalog::mycosynth_lattice());
+    assert_eq!(
+        g.computed_permanent(djinn).unwrap().power,
+        5,
+        "CR 613: layer 5 makes every permanent colourless, so no colour is most \
+         common and the shrink switches off",
+    );
+    g.battlefield.retain(|c| c.id != lattice);
+    assert_eq!(
+        g.computed_permanent(djinn).unwrap().power,
+        3,
+        "and back on when the layer-5 source leaves",
+    );
+}

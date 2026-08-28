@@ -190,13 +190,31 @@ on almost every board) and a stop at three.
 directions. `FerociousActive` and `FormidableActive` next to it already read
 `computed_permanent`; they are the pattern.
 
-**Still open, one predicate and one use:**
-`Predicate::ColorIsMostCommonAmongPermanents` tallies
+**~~Still open, one predicate and one use~~ — FIXED at the ninetieth pass, and
+the section has no open entry left.**
+`Predicate::ColorIsMostCommonAmongPermanents` tallied
 `definition.printed_colors()` through `most_common_permanent_colors()`, so a
 layer-5 colour change (Mycosynth Lattice's own `GrantColorless`, Painter's
-Servant) is invisible to it. Same one-line shape as Metalcraft, but there is
-no `card_color_change_unscoped()` gate to hang it on yet and the tally is a
-whole-board walk with a `HashMap`, so it wants that gate built first.
+Servant) was invisible to it. The gate it wanted —
+`GameState::card_color_change_unscoped()` — is built, the layer-5 twin of
+`card_type_change_unscoped()`: `AddColor` / `SetColors` / `LoseAllColors` on a
+resolved effect, or a printed static folded into `card_can_change_colors`.
+The tally reads the computed colours behind it and the printed ones otherwise.
+
+**The gate is deliberately not memoized, unlike its type twin.** `type_bits`
+earns its `CardMemo` slot because `card_type_change_unscoped` is on hot paths;
+this one is reached from `most_common_permanent_colors` alone, which the whole
+catalog touches from one predicate (the four-card Djinn cycle) and two
+effects — on a board with none of them the function is never called and the
+gate costs exactly zero. A new memo family widens the miss path for *every*
+consumer of that word (the eighty-seventh pass measured that at `fixed`
++0.135 %) and there is no call rate here to pay for it.
+
+`cr_rules::cr_613_most_common_color_counts_computed_colors` is the regression
+test, in both directions and **verified to fail on the pre-fix tally** (Goham
+Djinn reads power 3 alone, 5 under a Lattice that makes every permanent
+colourless, 3 again when it leaves). Suite 19,073 / 0 / 5, clippy clean,
+`--bench` byte-identical — no bench archetype carries a colour changer.
 
 The entry as filed, kept for its census:
 

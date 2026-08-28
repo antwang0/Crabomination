@@ -8981,6 +8981,35 @@ impl GameState {
         }) || self.battlefield.iter().any(card_can_change_card_types)
     }
 
+    /// The layer-5 twin of
+    /// [`card_type_change_unscoped`](Self::card_type_change_unscoped): can
+    /// anything on this board change a permanent's *colours*? `false` is
+    /// authoritative and is the answer on almost every board.
+    ///
+    /// Three modifications reach layer 5 — `AddColor`, `SetColors` and
+    /// `LoseAllColors` — and the two routes are the same as the type gate's: a
+    /// resolved `continuous_effects` entry, and a battlefield permanent's
+    /// printed shape folded into [`card_can_change_colors`].
+    ///
+    /// **Deliberately not memoized, unlike its type twin.** `type_bits` earns
+    /// its slot because `card_type_change_unscoped` runs on hot paths; this one
+    /// is asked by `most_common_permanent_colors` alone, which the catalog
+    /// reaches from one predicate and two effects. A new `CardMemo` family
+    /// widens the miss path for *every* consumer of that word (the
+    /// eighty-seventh pass measured that at `fixed` +0.135 %), and there is no
+    /// call rate here to pay for it. If a hot caller ever appears, give it its
+    /// own valid flag rather than folding it into `type_bits`.
+    pub(crate) fn card_color_change_unscoped(&self) -> bool {
+        self.continuous_effects.iter().any(|e| {
+            matches!(
+                e.modification,
+                Modification::AddColor(_)
+                    | Modification::SetColors(_)
+                    | Modification::LoseAllColors
+            )
+        }) || self.battlefield.iter().any(card_can_change_colors)
+    }
+
     /// CR 602.5g/h — is `card_id`'s `{T}`/`{Q}` ability barred right now
     /// because the permanent is a summoning-sick creature?
     ///
@@ -22601,12 +22630,29 @@ impl GameState {
     /// The colour(s) tied for most common among all battlefield permanents —
     /// each permanent counts once per colour it is (Barrin's Unmaking, the
     /// Djinn cycle, Tsabo's Assassin). Empty when nothing coloured is out.
-    /// Reads printed colours: the callers sit inside the layer walk, so asking
-    /// for computed colours here would recurse.
+    ///
+    /// **CR 105.2 / 613 — this counts the *computed* colours**, so Mycosynth
+    /// Lattice's `GrantColorless` and a Painter's Servant naming a colour move
+    /// the tally. It used to read printed colours with the reason "the callers
+    /// sit inside the layer walk, so asking for computed colours here would
+    /// recurse"; the eighty-ninth pass's two-phase gather removed that, exactly
+    /// as it did for `MetalcraftActive`, because `computed_permanent`'s
+    /// reentrancy branch now answers from the partial gather rather than from
+    /// printed.
+    ///
+    /// The layer read is second and gated on
+    /// [`card_color_change_unscoped`](Self::card_color_change_unscoped), which
+    /// is `false` on almost every board — where this is the printed walk it
+    /// replaces plus one gate.
     pub fn most_common_permanent_colors(&self) -> Vec<crate::mana::Color> {
+        let recolored = self.card_color_change_unscoped();
         let mut tally = crate::fxhash::HashMap::<crate::mana::Color, u32>::default();
         for c in &self.battlefield {
-            for k in c.definition.printed_colors() {
+            let colors = match recolored.then(|| self.computed_permanent(c.id)).flatten() {
+                Some(cp) => cp.colors.to_vec(),
+                None => c.definition.printed_colors(),
+            };
+            for k in colors {
                 *tally.entry(k).or_default() += 1;
             }
         }
@@ -23069,6 +23115,41 @@ fn card_can_change_card_types(card: &CardInstance) -> bool {
     let bits = card.type_scan_bits();
     (card.attached_to.is_some() && bits & crate::card::type_bits::ATTACHED != 0)
         || bits & crate::card::type_bits::ALWAYS != 0
+}
+
+/// True when `card`'s printed shape can contribute a layer-5 colour change to
+/// the gathered set — the definition half of
+/// [`GameState::card_color_change_unscoped`].
+///
+/// The variant list is `static_effect_to_effects`' L5Color arms, plus the
+/// gate wrappers it recurses through. `SetColorOfMatchingToChosen` is
+/// over-approximated: it only emits once the source has a `chosen_color`, and
+/// this answers `true` either way, which is the sound direction for a gate.
+fn card_can_change_colors(card: &CardInstance) -> bool {
+    // The equipped bonus' `set_colors` is attachment-gated, exactly as the
+    // type twin's `type_bits::ATTACHED` half is.
+    if card.attached_to.is_some()
+        && card.definition.equipped_bonus.as_ref().is_some_and(|b| b.set_colors.is_some())
+    {
+        return true;
+    }
+    fn static_changes_colors(effect: &crate::effect::StaticEffect) -> bool {
+        use crate::effect::StaticEffect as SE;
+        match effect {
+            SE::GrantColorless { .. }
+            | SE::SetColorOfMatching { .. }
+            | SE::SetColorOfMatchingToChosen { .. }
+            | SE::GrantAllColors { .. } => true,
+            SE::MatchingLandsAreCreatures { colors, .. } => !colors.is_empty(),
+            SE::WhileClassLevelAtLeast { inner, .. }
+            | SE::WhileYourTurn { inner }
+            | SE::WhileNotYourTurn { inner }
+            | SE::WhileCountersAtLeast { inner, .. }
+            | SE::WhileCondition { inner, .. } => static_changes_colors(inner),
+            _ => false,
+        }
+    }
+    card.definition.static_abilities.iter().any(|sa| static_changes_colors(&sa.effect))
 }
 
 /// True when `m` can put a permanent's computed toughness *below* its
