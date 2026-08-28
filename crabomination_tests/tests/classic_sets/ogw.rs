@@ -328,16 +328,6 @@ fn mindmelter_discards_deepfathom_grants_unblockable() {
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable));
 }
 
-/// Benthic Infiltrator can't be blocked and ingests; Culling Drone ingests.
-#[test]
-fn benthic_infiltrator_is_unblockable_and_ingests() {
-    let b = catalog::benthic_infiltrator();
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Unblockable));
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Devoid));
-    // Both carry the Ingest combat trigger.
-    assert_eq!(catalog::culling_drone().triggered_abilities.len(), 1);
-}
-
 /// Murderous Compulsion destroys a tapped creature but not an untapped one.
 #[test]
 fn murderous_compulsion_only_hits_tapped() {
@@ -712,16 +702,6 @@ fn pawn_of_ulamog_mints_on_own_death() {
     assert_eq!(spawn_after, spawn_before + 1, "Pawn's own death mints an Eldrazi Spawn");
 }
 
-/// Vestige of Emrakul is a Devoid 3/4 trampler.
-#[test]
-fn vestige_of_emrakul_is_devoid_trampler() {
-    use crabomination::card::Keyword;
-    let def = catalog::vestige_of_emrakul();
-    assert_eq!((def.power, def.toughness), (3, 4));
-    assert!(def.keywords.contains(&Keyword::Devoid));
-    assert!(def.keywords.contains(&Keyword::Trample));
-}
-
 /// Stalking Drone pumps +1/+2 once each turn.
 #[test]
 fn stalking_drone_pumps_once_per_turn() {
@@ -912,14 +892,6 @@ fn matter_reshaper_expensive_top_goes_to_hand() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == big), "MV-8 permanent goes to hand");
     assert!(!g.battlefield.iter().any(|c| c.id == big));
-}
-
-/// Hand of Emrakul is a 7/7 with Annihilator 1.
-#[test]
-fn hand_of_emrakul_is_annihilator_one() {
-    let def = catalog::hand_of_emrakul();
-    assert_eq!((def.power, def.toughness), (7, 7));
-    assert!(def.keywords.contains(&crabomination::card::Keyword::Annihilator(1)));
 }
 
 /// Reality Hemorrhage is a Devoid burn instant dealing 2.
@@ -1155,15 +1127,6 @@ fn eldrazi_mimic_copies_base_pt_of_entering_colorless() {
     assert_eq!((cp.power, cp.toughness), (8, 9), "Mimic becomes 8/9 to match");
 }
 
-/// Stormrider Spirit is a 3/3 with Flash and Flying.
-#[test]
-fn stormrider_spirit_has_flash_and_flying() {
-    use crabomination::card::Keyword;
-    let def = catalog::stormrider_spirit();
-    assert_eq!((def.power, def.toughness), (3, 3));
-    assert!(def.keywords.contains(&Keyword::Flash) && def.keywords.contains(&Keyword::Flying));
-}
-
 /// Make a Stand pumps your team +1/+0 and grants indestructible.
 #[test]
 fn make_a_stand_pumps_and_protects() {
@@ -1193,17 +1156,6 @@ fn flaying_tendrils_sweeps_and_exiles() {
     assert!(!g.battlefield.iter().any(|c| c.id == victim), "2/2 died to -2/-2");
     assert!(g.exile.iter().any(|c| c.id == victim), "exiled instead of graveyard");
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == victim), "not in graveyard");
-}
-
-/// Affa Protector and Ghostly Sentinel are vanilla-ish keyword bodies.
-#[test]
-fn affa_and_ghostly_have_their_keywords() {
-    use crabomination::card::Keyword;
-    let affa = catalog::affa_protector();
-    assert_eq!((affa.power, affa.toughness), (1, 4));
-    assert!(affa.keywords.contains(&Keyword::Vigilance));
-    let ghost = catalog::ghostly_sentinel();
-    assert!(ghost.keywords.contains(&Keyword::Flying) && ghost.keywords.contains(&Keyword::Vigilance));
 }
 
 /// Mighty Leap pumps a creature +2/+2 and grants flying.
@@ -1430,16 +1382,6 @@ fn cliffside_lookout_pumps_team() {
     assert_eq!(g.computed_permanent(other).unwrap().power, 3, "Grizzly 2/2 → 3/3");
 }
 
-/// Mountain Yeti has mountainwalk and protection from white.
-#[test]
-fn mountain_yeti_keywords() {
-    use crabomination::card::{Keyword, LandType};
-    use crabomination::mana::Color;
-    let def = catalog::mountain_yeti();
-    assert!(def.keywords.contains(&Keyword::Landwalk(LandType::Mountain)));
-    assert!(def.keywords.contains(&Keyword::Protection(Color::White)));
-}
-
 /// Lavastep Raider pumps itself +2/+0.
 #[test]
 fn lavastep_raider_pumps() {
@@ -1452,16 +1394,6 @@ fn lavastep_raider_pumps() {
     }).expect("pump");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(id).unwrap().power, 3, "1/2 → 3/2");
-}
-
-/// Canopy Gorger (6/5) and Mammoth Spider (3/5 reach) are vanilla bodies.
-#[test]
-fn canopy_gorger_and_mammoth_spider_bodies() {
-    use crabomination::card::Keyword;
-    assert_eq!((catalog::canopy_gorger().power, catalog::canopy_gorger().toughness), (6, 5));
-    let spider = catalog::mammoth_spider();
-    assert_eq!((spider.power, spider.toughness), (3, 5));
-    assert!(spider.keywords.contains(&Keyword::Reach));
 }
 
 /// Murasa Ranger grows with two +1/+1 counters when its landfall cost is paid.
@@ -1965,15 +1897,6 @@ fn akoum_firebird_returns_on_landfall() {
     g.perform_action(GameAction::PlayLand(land)).expect("play land");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bird), "Firebird returns to battlefield");
-}
-
-/// Expedition Envoy is a 2/1 vanilla Ally.
-#[test]
-fn expedition_envoy_body() {
-    use crabomination::card::CreatureType;
-    let d = catalog::expedition_envoy();
-    assert_eq!((d.power, d.toughness), (2, 1));
-    assert!(d.subtypes.creature_types.contains(&CreatureType::Ally));
 }
 
 /// Isolation Zone exiles an opponent's creature until it leaves; it returns when removed.
@@ -3003,4 +2926,68 @@ fn cr_701_32_support_trigger_fills_both_target_slots() {
     let counters = |id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
     assert_eq!((counters(a), counters(b)), (1, 1), "both other creatures got a counter");
     assert_eq!(counters(cap), 0, "support skips the source");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// One definition audit for the printed bodies this file used to check with a
+// three-line test each. Every row is exactly what the eight deleted tests
+// asserted — printed P/T, printed keywords, printed creature types, and the
+// triggered-ability count where one was pinned — so the coverage is
+// unchanged. Same shape as `stx/part_23.rs`'s table; see CLAUDE.md's
+// "one table-driven definition audit per set".
+// ─────────────────────────────────────────────────────────────────────────
+
+struct PrintedShape {
+    def: fn() -> crabomination::card::CardDefinition,
+    name: &'static str,
+    pt: Option<(i32, i32)>,
+    kws: &'static [crabomination::card::Keyword],
+    types: &'static [crabomination::card::CreatureType],
+    trigs: Option<usize>,
+}
+
+#[test]
+fn ogw_printed_shapes() {
+    use crabomination::card::{CreatureType, Keyword, LandType};
+    const ROWS: &[PrintedShape] = &[
+        PrintedShape { def: catalog::benthic_infiltrator, name: "benthic_infiltrator",
+            pt: None, kws: &[Keyword::Unblockable, Keyword::Devoid], types: &[], trigs: None },
+        // Both Benthic Infiltrator and Culling Drone carry the Ingest combat trigger.
+        PrintedShape { def: catalog::culling_drone, name: "culling_drone",
+            pt: None, kws: &[], types: &[], trigs: Some(1) },
+        PrintedShape { def: catalog::vestige_of_emrakul, name: "vestige_of_emrakul",
+            pt: Some((3, 4)), kws: &[Keyword::Devoid, Keyword::Trample], types: &[], trigs: None },
+        PrintedShape { def: catalog::hand_of_emrakul, name: "hand_of_emrakul",
+            pt: Some((7, 7)), kws: &[Keyword::Annihilator(1)], types: &[], trigs: None },
+        PrintedShape { def: catalog::stormrider_spirit, name: "stormrider_spirit",
+            pt: Some((3, 3)), kws: &[Keyword::Flash, Keyword::Flying], types: &[], trigs: None },
+        PrintedShape { def: catalog::affa_protector, name: "affa_protector",
+            pt: Some((1, 4)), kws: &[Keyword::Vigilance], types: &[], trigs: None },
+        PrintedShape { def: catalog::ghostly_sentinel, name: "ghostly_sentinel",
+            pt: None, kws: &[Keyword::Flying, Keyword::Vigilance], types: &[], trigs: None },
+        PrintedShape { def: catalog::mountain_yeti, name: "mountain_yeti",
+            pt: None, kws: &[Keyword::Landwalk(LandType::Mountain), Keyword::Protection(Color::White)],
+            types: &[], trigs: None },
+        PrintedShape { def: catalog::canopy_gorger, name: "canopy_gorger",
+            pt: Some((6, 5)), kws: &[], types: &[], trigs: None },
+        PrintedShape { def: catalog::mammoth_spider, name: "mammoth_spider",
+            pt: Some((3, 5)), kws: &[Keyword::Reach], types: &[], trigs: None },
+        PrintedShape { def: catalog::expedition_envoy, name: "expedition_envoy",
+            pt: Some((2, 1)), kws: &[], types: &[CreatureType::Ally], trigs: None },
+    ];
+    for row in ROWS {
+        let def = (row.def)();
+        if let Some((p, t)) = row.pt {
+            assert_eq!((def.power, def.toughness), (p, t), "{} printed P/T", row.name);
+        }
+        for kw in row.kws {
+            assert!(def.keywords.contains(kw), "{} has {:?}", row.name, kw);
+        }
+        for ct in row.types {
+            assert!(def.subtypes.creature_types.contains(ct), "{} is a {:?}", row.name, ct);
+        }
+        if let Some(n) = row.trigs {
+            assert_eq!(def.triggered_abilities.len(), n, "{} triggered abilities", row.name);
+        }
+    }
 }
