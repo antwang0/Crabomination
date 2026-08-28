@@ -44,7 +44,19 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    the more useful half: print `t_step_ms` against `elapsed_s` before quoting
    any `selfplay_train` throughput number. **BOLT is blocked here** — no
    `llvm-bolt` in the toolchain and no `perf` in the image.
-1. **Perf queue** — PERF "Perf candidates", top-down. **`(-84)` is the
+1. **Perf queue** — PERF "Perf candidates", top-down. **The largest single row
+   this pass moved was not on the queue at all: eleven `#[inline]`s on
+   `CardDefinition`'s card-type predicates, `release-fast` -0.907 / -0.741 /
+   -0.831 %, and -0.175 / -0.124 / -0.162 % with thin LTO.** The standing rule
+   said not to measure them; it is right in direction and 5x wrong in size,
+   and the correction is in the rules and the Baseline. **Two things to carry
+   off it: halve a no-LTO `#[inline]` reading and halve it again before
+   believing it, and `[profile.profiling-lto]` is now the instrument that asks
+   the question** (`profiling` itself OOMs here on the candidate side only —
+   Cargo.toml says why). **The rest of that family is unswept**:
+   `CardInstance::has_keyword` is 98,082 calls at 48 Ir and `same_team`
+   143,564 at 26.5 on `fixed`; both are bigger bodies, so they are a
+   measurement, not a copy of this one. **`(-84)` is the
    block-legality trio — 1.46 % of `cube`, off the top thirty on `fixed`.
    Its (a) is TAKEN (-0.125 / -0.262 / -0.176 %, the row fell 58 %) and
    **(b) is TAKEN too, one pass after the hoist that was supposed to take it
@@ -154,28 +166,48 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed
    `jitter_below` from `--seed`?
-7b. **Test suite** — `find_data_tests.sh` was wrong **four ways** and is
+7b. **Test suite** — `find_data_tests.sh` was wrong **five ways** and is
    fixed; its output is a DELETE list and every bug put live engine tests on
-   it. The fourth is the ninety-third pass's and it is bug 1 one function
-   down: **a helper's body ended on the line after its signature unless the
-   opening brace was on that line**, so every multi-line-signature helper
-   spliced its own signature into each caller —
-   `modern/lands_equipment_vehicles.rs`'s fourteen fetchland / dual-land tests
-   and two in `core_rules/xtra.rs`, sixteen live engine tests offered up for
-   deletion. **Population 250 (235 + 15 sacred)**, and the fix only ever
-   removes rows, which is the check to run on the next one. **Two slices
-   taken**: `stx/part_23.rs`'s nineteen and `classic_sets/ogw.rs`'s eight are
-   `PrintedShape` tables, the pattern is in the tree to copy, and the rule
-   found doing it is **a test that pins a card-specific *effect shape* — a
-   modal `min`/`max`, a `Search` filter, a `CantBeBlockedBy(_)` variant — is
-   not an echo and does not fold**; `rna.rs` is mostly those. One commit per
-   file batch, binary green either side; it is a convention change, not a
-   build-time one.
+   it. Bugs 4 and 5 are the ninety-third pass's. **(4)** is bug 1 one function
+   down: a helper's body ended on the line after its signature unless the
+   opening brace was on that line, so every multi-line-signature helper
+   spliced its own signature into each caller — sixteen live engine tests
+   (`modern/lands_equipment_vehicles.rs`'s fourteen, two in
+   `core_rules/xtra.rs`). **(5)** the marker list asked "does it touch a
+   `GameState`", and the deck-format engine does not need one — nineteen
+   legality tests (all of `core_rules/format.rs`, `multiplayer.rs`'s two
+   commander validators, CR 100.2a/100.4a, CR 407.3, cns's Proclamation).
+   **A pure-data test is one with no LOGIC under it, not one with no
+   `GameState` in it.** **Population 224 (209 + 15 sacred)**; neither fix
+   ADDED a row, which is the check to run on the next one, and both were found
+   by **reading three tests in the file at the top of the by-file count — a
+   filter's false positives cluster, because they share a helper or an API.**
+   **Five slices taken**: `stx/part_23` (19), `classic_sets/ogw` (8),
+   `modern/aggro_allied_batches` (11, including three copy-paste batch blocks
+   — the convention's other half), `modern/singles_and_legends` (7) and
+   `modern/cube_rounds` (4). The pattern is in the tree five times over. Two
+   rules found doing it: **a test that pins a card-specific *effect shape* — a
+   modal `min`/`max`, a `Search` filter, a `CantBeBlockedBy(_)` /
+   `Madness(_)` variant — is not an echo and does not fold** (`rna.rs` and
+   most of `cube_expansion_singles.rs` are those), and **a per-cycle table
+   that already names its card in the failure message is the folded form** —
+   leave `ths.rs` / `rtr.rs`'s `*_stat_lines` and `cube_rounds`'s two
+   `*_cycle_definitions` alone. One commit per file batch, binary green either
+   side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `c1e4363c` (the last engine commit): `fixed`
-   998,970,064 / `cube` 2,993,004,323 / `sealed` 2,976,502,367.** `--bench`
-   at `af0b2546`: 195,528 decisions / 27.44 turns / 0 stalls, determinism
-   **and** thread_determinism ok (3 vs 1 threads identical).
+   **Anchor, MEASURED at `fa979b3a` (on `origin`): `fixed` 989,689,177 /
+   `cube` 2,965,899,097 / `sealed` 2,947,614,907.** `--bench` there: 195,528
+   decisions / 27.44 turns / 611.0 a game / 0 stalls / determinism ok,
+   `host_calib_ms` 46. One anchor back was filed at `c1e4363c` — **998,970,064
+   / 2,993,004,323 / 2,976,502,367, and that hash no longer resolves**, which
+   is this file's own "a hash in a doc is a liability" rule catching a doc
+   written between two rebases. Taking it at its word ("the last engine
+   commit") the interval is the `#[inline]` commit alone and reads **-0.93 /
+   -0.91 / -0.97 %**, against that commit's own A/B of -0.907 / -0.741 /
+   -0.831 at a base seven engine commits older — so **cite the anchor by a
+   hash that is already on `origin`, or the next session cannot check it.**
+   `--bench` at `af0b2546`: 195,528 decisions / 27.44 turns / 0 stalls,
+   determinism **and** thread_determinism ok (3 vs 1 threads identical).
    One anchor back, **MEASURED at `ea2cb263`: `fixed` 1,000,218,574 / `cube`
    3,000,861,798 / `sealed` 2,981,763,332** — re-read independently at
    `b613c26f` (two doc/test commits later) as 1,000,218,658 / 3,000,861,934 /

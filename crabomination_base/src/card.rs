@@ -5158,7 +5158,7 @@ impl CardDefinition {
     // six-game run, `is_land` 152,706; the body is one heap load and a scan
     // of one or two elements, so nearly all of the no-LTO figure is the call.
     // Thin LTO recovers ~80 % of it and not the rest — see PERF's Baseline,
-    // ninety-third pass (2), and the standing rule it corrects.
+    // ninety-third pass (3), and the standing rule it corrects.
     #[inline] pub fn is_land(&self) -> bool { self.card_types.contains(&CardType::Land) }
     #[inline] pub fn is_creature(&self) -> bool { self.card_types.contains(&CardType::Creature) }
     #[inline] pub fn is_instant(&self) -> bool { self.card_types.contains(&CardType::Instant) }

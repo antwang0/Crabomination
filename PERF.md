@@ -1326,13 +1326,32 @@ here if it ever needs compacting.
   is **+0.30 %**. `layers_memoized()` answers "is the gather already built".
   Fusing a cheap per-card question into a walk that already happens has lost
   four times; removing a walk outright still pays.
-- **The `Keyword::eq` device is not exhausted, and it has a trap.** No LTO
-  here, so any small non-generic `crabomination_base` function is an
-  out-of-line call in every profile this file quotes — but a bare `#[inline]`
-  would be unmeasurable in the shipped `release` (thin LTO) build, so **do not
-  take one on an Ir number**. What works is making the callee smaller than any
-  inliner threshold, which is what `has_kw` does.
-  `CardDefinition::is_creature` is the same family and the same trap.
+- **The `Keyword::eq` device is not exhausted, and its trap is now MEASURED
+  rather than argued — the rule was right in direction and 5x wrong in size**
+  (pass 93; see the Baseline). The argument was: no LTO in the profiles this
+  file quotes, so any small non-generic `crabomination_base` function is an
+  out-of-line call here and a bare `#[inline]` on it is unmeasurable in the
+  shipped thin-LTO build — **"do not take one on an Ir number"**. Eleven
+  `#[inline]`s on `CardDefinition`'s card-type predicates, read on both sides:
+
+  ```text
+                    release-fast (no LTO)      + thin LTO
+    fixed              -0.907 %                  -0.175 %
+    cube               -0.741 %                  -0.124 %
+    sealed             -0.831 %                  -0.162 %
+  ```
+
+  **Thin LTO recovers ~80 % of it and not the rest**, consistently on three
+  pools, so the residual is real and the attribute ships. Two durable halves:
+  **an Ir number from a no-LTO profile over-states a cross-crate `#[inline]`
+  by about five times** — halve-and-halve-again before believing one — and
+  **the way to settle it costs one profile**, `[profile.profiling-lto]`
+  (`profiling-fast` + `lto = "thin"`), because `profiling` itself is
+  unbuildable here: rustc peaks at ~5.9 GB on the engine's single codegen unit
+  and the container's memcg kills it, **and the `#[inline]` side reproducibly
+  needs more than the base**, so the two halves of that A/B are not both
+  buildable. What *also* works is making the callee smaller than any inliner
+  threshold, which is what `has_kw` does.
 - **A presence gate in front of a loop is only free if the loop was not
   already empty** (pass 57, and it is the one thing the second session
   measured that the first did not). The gather's thirty-eight `sa_cards`
@@ -2165,6 +2184,76 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 The pass also built and reverted two changes; both are written up where the
 next taker will look — the Cauldron bit under the ninety-second pass (3)'s
 block, `(-84)(b)`'s block-side scan in its own entry.
+### Ninety-third pass (3) — eleven `#[inline]`s, and the rule that said not to measure them
+
+**`CardDefinition::is_creature` is the second-most-called function in the
+program and the standing rules name it as a trap.** They are right about the
+mechanism and 5x wrong about the size, and the difference is a shipped commit.
+
+The family is `card_types: Vec<CardType>` behind eleven one-line predicates.
+Ranked by call count on `fixed` at `c58f8407`, with the caller that owns each:
+
+```text
+  392,826  is_creature       152,294 of them check_state_based_actions_into's
+                             `compute_battlefield_creatures` filter — one per
+                             battlefield permanent per SBA sweep, 16.7 a sweep
+  152,706  is_land           53,514 eval_material_inner, 22,058 the mana sweep
+  122,788  base_toughness    92,012 compute_permanent_pass (once per permanent
+   92,012  base_power        per layer pass), 30,776 the SBA sweep
+   92,870  is_planeswalker
+   83,030  is_aura
+                             = 13.2 M Ir of self, 1.32 % of `fixed`
+```
+
+**Every one is `self.card_types.contains(&X)` — a heap load, a length load
+and a scan of one or two elements — reached by an out-of-line call, because
+`release-fast` is codegen-units 16 with no LTO and these live in
+`crabomination_base`.** Eleven `#[inline]`s:
+
+```text
+                    release-fast (no LTO)                  + thin LTO
+  fixed   1,000,218,658 ->  991,147,442  -0.907 %   969,027,871 -> 967,334,727  -0.175 %
+  cube    3,000,861,934 -> 2,978,634,671 -0.741 %  2,919,728,246 -> 2,916,109,013 -0.124 %
+  sealed  2,981,763,240 -> 2,956,983,980 -0.831 %  2,890,624,652 -> 2,885,937,246 -0.162 %
+```
+
+**The rule said this would be "unmeasurable" under the shipped thin-LTO build.
+It is 80 % gone and 20 % left, and the 20 % is consistent across three
+pools** — so the attribute ships, and the number to quote is the LTO one
+unless the binary is a plain `release-fast` (which item 0's matrix says is a
+live shipping configuration, `release-fast`+PGO 0.762 against `release`+PGO
+0.724). **Halve a no-LTO `#[inline]` reading and halve it again before
+believing it.**
+
+**Settling it cost one profile, and the reason is worth the four lines it
+takes.** The obvious instrument is `[profile.profiling]` — `release` plus
+debuginfo, i.e. codegen-units 1 *and* thin LTO. Its base built (`fixed`
+964,003,827 / `cube` 2,950,858,512 / `sealed` 2,886,790,966) and **its
+candidate was OOM-killed twice**: rustc peaks at 5.9 GB of anon RSS on the
+engine's single codegen unit, the container's memcg is under that, and
+inlining a hot base-crate function into hundreds of sites makes the peak
+*worse*. **An A/B whose two halves have different memory footprints can fail
+on one side only, and that reads exactly like a broken build.**
+`[profile.profiling-lto]` (`profiling-fast` + `lto = "thin"`) isolates the one
+variable that matters — cross-crate inlining — at codegen-units 16 and about a
+third of the memory. It is committed, with the reason on it.
+
+**Re-read at the tip (`fa979b3a`, on `origin`): 989,689,177 / 2,965,899,097 /
+2,947,614,907.** The anchor one back was filed at `c1e4363c`, a hash that no
+longer resolves — the branch was rebased under the doc that named it. Taking
+its author at their word ("the last engine commit"), the interval is this
+commit alone and reads **-0.93 / -0.91 / -0.97 %**, against the A/B's -0.907 /
+-0.741 / -0.831 at a base seven engine commits older; `fixed` agrees to 0.02
+points and the two grant-heavy pools read *larger* at the tip. **The lesson is
+the file's own rule biting: cite an anchor by a hash that is already on
+`origin`, or the next session cannot check the interval at all.**
+
+**Two things the caller tables settle in passing.** LTO alone, at cgu 16, is
+worth **-3.12 / -2.70 / -3.06 %** of Ir here (`profiling-fast` -> `profiling-lto`
+base), and cgu 1 on top of it is *not* uniformly better: `fixed` -0.52 % and
+`sealed` -0.13 % against `cube` **+1.06 %**. And `compute_battlefield_creatures`'s
+`is_creature` filter is one question per permanent per sweep, so it is not a
+redundancy to remove — the only lever on it is the price of the question.
 
 ### Ninety-third pass — the multi-slot targeter, read from the inside, and the freeze that looked missing
 
