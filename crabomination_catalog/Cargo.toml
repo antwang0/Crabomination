@@ -10,3 +10,28 @@ serde = { version = "1.0.228", features = ["derive"] }
 [lib]
 # The catalog is ~190k lines of static card-factory data with no proc-macro
 # heavy lifting; the default many-codegen-units build parallelizes well.
+#
+# **No `#[test]` and no `#[cfg(test)]` anywhere in this crate**, and `cargo
+# test` was building a second, `--test`-configured copy of all 190k lines to
+# run zero of them. `cargo test --workspace --timings` put that unit at
+# **110.7 s of a 213.5 s makespan** — the largest single unit in the whole
+# workspace test build, larger than the engine's own harness — running from
+# 29.6 s to 140.3 s, i.e. across exactly the window where the eight
+# integration binaries are queueing for cores.
+#
+# **Worth -11.3 % when the catalog rebuilds and exactly nothing when it does
+# not**, which is the whole of what to know before quoting it. ABBA, 3 runs a
+# side, `touch crabomination_base/src/card.rs; CARGO_INCREMENTAL=0 cargo test
+# --workspace --exclude crabomination_client --no-run`:
+#   before  234.0 / 234.4 / 241.3 s      after  208.2 / 209.1 / 212.1 s
+# — 6 of 6 ordered right, no overlap. The same A/B under PERF's usual recipe
+# (touch `game/effects/mod.rs`) reads **126.7 -> 126.9 s, flat**, because that
+# edit does not invalidate this crate at all. So the win is on a base-crate
+# edit, a manifest edit and every cold build (CI, a fresh container); the
+# engine-file loop is untouched.
+#
+# This is CLAUDE.md's "a target with no `#[cfg(test)]` block gets
+# `test = false`" rule, applied to seven bins and both stub libs but never to
+# the crate where it was worth the most. If a unit test is ever added here,
+# delete this line — it will silently not run otherwise.
+test = false
