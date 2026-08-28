@@ -350,6 +350,26 @@ impl GameState {
         // apply to graveyard/exile targets, but we still funnel through
         // `is_legal` so any future zone-aware legality rules pick up
         // these zones too.
+        //
+        // **Gated on the effect being able to reach off the board.** The
+        // filter language has no zone predicate, so a board-shaped
+        // requirement ("target creature", a bare `Not(Player)`) is satisfied
+        // by a creature *card* in a graveyard or in exile. Ungated, a
+        // "destroy target creature" trigger with no legal battlefield
+        // creature aimed at an exiled card and then silently fizzled at
+        // resolution — in the training path only, where `wants_ui` is false
+        // and no modal is ever posed, so no instrument watched it. Resolving
+        // targetless is the right answer there.
+        //
+        // `may_target_offboard_card` is the effect-shape half (every zone
+        // change, not just the reanimation-shaped ones — walk *order* stays
+        // `prefers_graveyard_target`'s narrower question) and
+        // `mentions_offboard_zone` the filter half, which is the gate the
+        // `ChooseCards` modal path already takes. See ENGINE_BACKLOG's "the
+        // target enumerator is zone-blind".
+        if !eff.may_target_offboard_card() && !req.mentions_offboard_zone() {
+            return None;
+        }
         for player in &self.players {
             if let Some(c) = player
                 .graveyard

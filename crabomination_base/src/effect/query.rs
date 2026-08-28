@@ -2245,6 +2245,68 @@ impl Effect {
         }
     }
 
+    /// May this effect's target legitimately be a *card* in a graveyard or in
+    /// exile rather than a battlefield permanent?
+    ///
+    /// The gate on the auto-picker's last-resort off-board walk, and
+    /// deliberately **not** [`prefers_graveyard_target`], which decides walk
+    /// *order* and must stay narrow: making Condemn ("put target attacking
+    /// creature on the bottom of its owner's library") prefer a graveyard
+    /// would aim it at one. This is the superset — every destination of a
+    /// zone change, not just the reanimation ones — because the filter
+    /// language has no zone predicate, so a `Move`'s destination is all the
+    /// engine has to tell Mortuary Mire's "return target creature card from
+    /// your graveyard to the top of your library" from Condemn.
+    ///
+    /// Everything that is *not* a zone change — destroy, damage, pump, tap,
+    /// counters, control — can only ever apply to a permanent, and answering
+    /// one of those with an exiled card is a silent fizzle. That is the
+    /// defect this closes; see ENGINE_BACKLOG, "the target enumerator is
+    /// zone-blind".
+    ///
+    /// [`prefers_graveyard_target`]: Self::prefers_graveyard_target
+    pub fn may_target_offboard_card(&self) -> bool {
+        if self.prefers_graveyard_target() {
+            return true;
+        }
+        match self {
+            Effect::Move { .. } => true,
+            Effect::Seq(v) => v.iter().any(|e| e.may_target_offboard_card()),
+            // The modal bodies, the same `any` shape `requires_target`,
+            // `primary_target_filter` and `accepts_player_target` use.
+            Effect::ChooseMode(modes)
+            | Effect::ChooseN { modes, .. }
+            | Effect::ChooseModesCast { modes, .. }
+            | Effect::ChooseModesByPoints { modes, .. } => {
+                modes.iter().any(|e| e.may_target_offboard_card())
+            }
+            Effect::If { then, else_, .. } => {
+                then.may_target_offboard_card() || else_.may_target_offboard_card()
+            }
+            Effect::ApplyToTargets { effect, .. } => effect.may_target_offboard_card(),
+            Effect::DelayUntilWithCapture { body, .. }
+            | Effect::DelayUntil { body, .. }
+            | Effect::Repeat { body, .. }
+            | Effect::ForEach { body, .. }
+            | Effect::MayDo { body, .. }
+            | Effect::MayDoBy { body, .. }
+            | Effect::CapTargetsAtX { body }
+            | Effect::TargetsExactlyX { body }
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::MayPayX { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayPayBy { body, .. }
+            | Effect::MaySacrifice { then: body, .. }
+            | Effect::MaySacrificeSource { then: body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::MayDiscardMatching { then: body, .. }
+            | Effect::MayPayLife { body, .. } => body.may_target_offboard_card(),
+            Effect::Process { then, .. } => then.may_target_offboard_card(),
+            _ => false,
+        }
+    }
+
     /// The slot-0 target phrase for label text — "target creature",
     /// "any target", or a plain "target" when the slot-0 filter has no clean
     /// noun (complex `Or`/`Not`/stat gates) or there is no slot-0 target.

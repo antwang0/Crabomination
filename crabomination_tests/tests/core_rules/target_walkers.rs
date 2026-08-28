@@ -232,3 +232,89 @@ fn feedback_bolt_and_reins_of_power_offer_players_not_permanents() {
         );
     }
 }
+
+/// The auto-picker's off-board fallback is gated the same way the
+/// `ChooseCards` modal path is.
+///
+/// The filter language has no zone predicate, so `legal_targets_for_filter`
+/// applies a board-shaped requirement to every graveyard and to exile as well
+/// as to the battlefield. The modal path separates the two with
+/// `SelectionRequirement::mentions_offboard_zone`; the picker's last-resort
+/// walk had no gate at all, so a "destroy target creature" with no legal
+/// battlefield creature aimed at a creature *card* in a graveyard or in exile
+/// and then fizzled at resolution — in the training path, where no modal is
+/// posed and nothing watched it. See ENGINE_BACKLOG, "the target enumerator
+/// is zone-blind".
+mod offboard_gate {
+    use crabomination::card::{CardDefinition, CardType, SelectionRequirement as R};
+    use crabomination::effect::{Effect, Selector};
+    use crabomination::game::*;
+
+    fn bear(name: &'static str) -> CardDefinition {
+        CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }
+    }
+
+    /// A board-shaped filter never reaches a graveyard or exile, even when
+    /// the board offers nothing and those zones do.
+    #[test]
+    fn board_shaped_filter_resolves_targetless_over_an_offboard_card() {
+        let mut g = two_player_game();
+        g.add_card_to_graveyard(0, bear("Graveyard Bear"));
+        g.add_card_to_exile(1, bear("Exiled Bear"));
+        let destroy = Effect::Destroy {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+        };
+        assert!(
+            g.auto_target_for_effect(&destroy, 0).is_none(),
+            "no battlefield creature means no target, not a graveyard cursor"
+        );
+        // The board is authoritative once it does offer one.
+        let live = g.add_card_to_battlefield(0, bear("Live Bear"));
+        assert_eq!(
+            g.auto_target_for_effect(&destroy, 0),
+            Some(Target::Permanent(live)),
+            "the battlefield creature is picked"
+        );
+    }
+
+    /// A filter that names the zone still reaches it.
+    #[test]
+    fn a_zone_naming_filter_still_reaches_the_graveyard() {
+        let mut g = two_player_game();
+        let gy = g.add_card_to_graveyard(0, bear("Graveyard Bear"));
+        let exile_it = Effect::Exile {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::And(Box::new(R::Creature), Box::new(R::InGraveyard)),
+            },
+        };
+        assert_eq!(
+            g.auto_target_for_effect(&exile_it, 0),
+            Some(Target::Permanent(gy)),
+            "`InGraveyard` is the gate the modal path uses, and it opens this one"
+        );
+    }
+
+    /// Reanimation keeps the walk without naming a zone: the classifier
+    /// (`prefers_graveyard_target`) is the other half of the gate.
+    #[test]
+    fn reanimation_still_reaches_the_graveyard_without_a_zone_predicate() {
+        let mut g = two_player_game();
+        let gy = g.add_card_to_graveyard(1, bear("Their Bear"));
+        let raise = Effect::Move {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: crabomination::effect::ZoneDest::Hand(crabomination::effect::PlayerRef::You),
+        };
+        assert_eq!(
+            g.auto_target_for_effect(&raise, 0),
+            Some(Target::Permanent(gy)),
+            "a Move-to-your-hand is reanimation-shaped and keeps the walk"
+        );
+    }
+}
