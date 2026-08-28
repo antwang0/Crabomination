@@ -38,9 +38,15 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    the actor block and its named blocker shipped**, so take it next.
    `(-78)`'s `flat_map` half is **swept** — six commits, `FlatMap::next` off
    the profile as a named row; what is left of it is `Chain` at a third the
-   traffic and none of it a whole-board walk, so expect a tenth. Then (-70)
-   (quiet window only), (-69)'s two unclaimed rows, (-61), (-59). **(-60) is
-   closed** — the visitor rewrite plus the eighty-eighth's gate.
+   traffic and none of it a whole-board walk, so expect a tenth. **New and
+   half-swept: the write-once `Box` field.** `resolving_spell_snapshot` is
+   `Arc` now (`fixed` -0.287 % / `cube` -0.203 % / `sealed` -0.222 %, 21,896
+   allocations); `GameState`'s other `Box` is the decider and it is checked
+   and already free (ZST). `PlayerData` / `CardData` / `ColdState` are the
+   unswept half — the test is "does anything write it after it is set", and
+   the entry is in PERF's newest Baseline block. Then (-70) (quiet window
+   only), (-69)'s two unclaimed rows, (-61), (-59). **(-60) is closed** — the
+   visitor rewrite plus the eighty-eighth's gate.
 2. **Perf method** — PERF's "How to measure", **"Standing rules for a perf
    pass"** (moved there from this file this pass) and "Which pool a change
    moves". Read all three pools; a pool split is a revert.

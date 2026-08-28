@@ -1551,11 +1551,25 @@ the largest of the three**, which is the opposite of most rows here — the
 bench archetypes cast the same spells with fewer permanents around them, so
 the clone is a bigger share of a smaller program.
 
-**The sweep this suggests, for the next run:** grep `GameState` and
-`PlayerData` for `Box<` and ask of each whether anything writes it after it
-is set. `Arc` is free on a field nothing mutates and wrong on one that is,
+**The sweep this suggests, and half of it is already done.** Grep `GameState`
+and `PlayerData` for `Box<` and ask of each whether anything writes it after
+it is set. `Arc` is free on a field nothing mutates and wrong on one that is,
 and `Box` is the default only because it was written before the struct
-started being cloned twenty thousand times a run.
+started being cloned twenty thousand times a run. **The other `Box` field on
+`GameState` is `decider: Box<dyn Decider + Send + Sync>` and it is already
+free**: `Decider::decide` takes `&mut self`, so `Arc` is out, but the clone
+is `self.decider.kind().into_boxed()` and `AutoDecider` is a unit struct —
+`Box::new` of a ZST does not allocate. Checked, not assumed; do not re-open
+it. What is left of the sweep is `PlayerData`, `CardData` and `ColdState`.
+
+**Gate at the tip** (`e7793c7c`, which also carries the concurrent half's
+`3cfa0435` and `539c67eb`): suite 19,063 / 0 / 5, clippy clean, golden
+traces unmoved, `--bench` **byte-identical to the committed invariant** —
+195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls (cap 0 / stuck 0 /
+draw 0) / determinism ok / thread_determinism ok (3 vs 1 threads identical),
+206.5-226.1 games/s and peak_rss_mib 27.7-30.4 over three runs at
+host_calib_ms 49-54. ⚠ That games/s column is this container's, not the
+concurrent half's box — compare calib before comparing rates.
 
 ### Eighty-eighth pass — `dispatch_board_scan` IS the memo's row after all, and the refutation one entry up was measuring the wrong shape of it
 
