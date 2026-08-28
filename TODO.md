@@ -35,9 +35,17 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `scripts/pgo_build.sh`, **opt-in and staying opt-in** so committed readings
    stay plain `release-fast` ones (CLAUDE.md carries the hazard). Untried
    after it: PGO on `selfplay_train`, then BOLT.
-1. **Perf queue** — PERF "Perf candidates", top-down: `(-9)`'s open half,
-   `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)` is new,
-   is the gather's context census, and its last paragraph is the pass's best
+1. **Perf queue** — PERF "Perf candidates", top-down. **`(-82)` and `(-83)`
+   are new and are the first sizing this file has of the bot's hand sweep
+   (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
+   requirement walker (2.2-3.4 %, the third-largest engine function on
+   `cube`).** `(-82)`'s one open shape needs a *count* before a build — how
+   many targeted candidates a tick ever probes — and it names three things
+   already right that must not be re-taken, plus one refutation. `(-83)` is a
+   pool-split entry: read which of its three caller stories a change is aimed
+   at before proposing one. Then `(-9)`'s open half,
+   `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)`
+   is the gather's context census, and its last paragraph is a standing best
    rule** — a scope only gathers if a read inside it asks for a computed view,
    so read a scope's first `&self` calls in source order before deciding the
    scope is irreducible; that is where `cube` -2.226 % came from. Its named

@@ -11014,6 +11014,121 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-82) THE BOT'S HAND SWEEP IS 5.8-6.9 % OF EVERY POOL AND IT IS TWO
+QUESTIONS: "CAN I PAY FOR IT" AND "WHAT WOULD I AIM IT AT".** Read at the
+ninety-second tip, all three pools, one binary. Nothing in this file has ever
+sized `cast_candidates`, and its two big callees are 75-84 % of it.
+
+```text
+                        fixed 1,015,163,661   cube 3,086,949,158   sealed 3,037,627,253
+  bot::cast_candidates    70,042,439  6.90 %   178,143,586 5.77 %   209,475,243  6.90 %
+    <- sim_spell_action_inner  3,704            7,004                8,638   calls
+    <- main_phase_action_with  3,506            5,474                8,018   calls
+  can_afford_in_state_with 24,055,267 2.37 %    87,166,167 2.82 %    80,122,729  2.64 %
+                          12,422 calls          32,360               47,146
+  auto_targets_for_effect_ 32,124,278 3.16 %    47,053,286 1.52 %    96,175,091  3.17 %
+    all_slots               2,878 calls          3,492               11,098
+                            ------              ------               ------
+  the two, as a share of the sweep    80 %        75 %                 84 %
+```
+
+**The affordability filter is not a per-card cost; it is a per-tick board
+walk that a `OnceCell` amortises over two cards.** Of
+`can_afford_in_state_with`'s subtree, `OnceCell::try_init -> bot::available_mana`
+is **16,827,383 / 57,308,860 / 38,460,654 Ir (1.66 / 1.86 / 1.27 % of the
+pool)** over **5,900 / 12,110 / 15,442 builds** — and on `fixed` that is
+5,900 builds against 12,422 checks, i.e. **2.1 checks an amortisation**. The
+per-check body is cheap (`extra_cost_for_spell_over`,
+`cost_reduction_for_spell_full_over`, `colored_spell_tax_for_spell_over`,
+`relax_cost_colors_known`, `can_afford_from` — 13,648 calls each on `fixed`,
+5.65 M between them). **Anything aimed here has to remove *builds*, not
+checks**, and the two callers that share a `SweepMana` inside one tick already
+do: 7,210 sweeps produce 5,900 builds. The 3,704 that come from
+`sim_spell_action_inner` are on simulation clones that tap their own mana, so
+they cannot share the real board's build. Read (-41) before proposing a filter
+*inside* `available_mana`: that was built by two sessions and rejected nothing.
+
+**`auto_targets_for_effect_all_slots` is 11,162 / 13,475 / 8,666 Ir a call and
+the shape is one requirement question per battlefield permanent per slot.** On
+`fixed`, 2,878 calls make 57,314 `evaluate_requirement_static_hinted` calls —
+**19.9 a call, i.e. the board**. Three things about it are already right and
+should not be re-taken:
+
+* **the affordability filter runs first.** `cast_candidates` does
+  `can_afford_in_state_with` before it targets, so this is not (-51)'s
+  "reject earlier in the bot" a second time.
+* **the legality check is correctly second.** `is_legal_bf` is
+  `evaluate_requirement_static_on(..) && check_target_legality(..)`, and the
+  `&&` means only 4,806 of `fixed`'s 57,314 candidates reach
+  `check_target_legality_with_source` (245 Ir). The requirement rejects 92 %
+  first, which is the cheap-question-first ordering already applied.
+* **`computed_permanent` is behind both filters.** 292 calls on `fixed` from
+  the whole targeter — the `.map(|c| … power …)` runs only on survivors.
+
+**What is left is the *number* of targeting calls, and the one shape that
+would remove them has a named blocker.** The dry run at the pick site is
+already lazy — the comment in `cast_candidates` says a typical tick probes one
+or two candidates in descending score order — but **target selection is not**:
+the target is a field of the `GameAction` the scorer ranks, so it is built for
+every affordable candidate whether or not that candidate is ever probed.
+Deferring it the way the dry run was deferred needs the scoring path to rank a
+candidate without its target, and today it cannot. Price *that* question
+first: count how many of the 2,878 targeted candidates on `fixed` are ever
+probed. If the answer is one or two per tick, this is a ~2.5 % row on two
+pools; if the scorer genuinely reads the target, the entry is closed.
+
+**Refuted here rather than left open: a shared `grant_scan`.** Three bot-side
+callers build one per call — `available_mana` 5,900, `mana_source_table`
+3,330, `main_phase_action_with` 2,442 on `fixed` (6.89 M / 0.68 % between
+them; cube 26,546 calls / 0.58 %, sealed 30,552 / 0.48 %). Only the first and
+third are inside one `SweepMana`'s tick, so the reachable share is 2,442 scans
+= **~0.15 % of `fixed`, ~0.08 % of the other two** — and `mana_source_table`'s
+cannot join them because it runs *during* payment, after taps have moved the
+board. The standing rule applies as written: a board memo is worth the board's
+write rate, and tapping is the write.
+
+**(-83) THE REQUIREMENT WALKER IS THE THIRD-LARGEST ENGINE FUNCTION IN THE
+PROGRAM AND ITS CALLERS ARE THREE DIFFERENT STORIES.** `evaluate_requirement_
+static_hinted`, folded across its recursion level and its closure (see the
+ninety-second pass's Baseline note on `'N` rows), is **2.17 % of `fixed`,
+3.36 % of `cube`, 2.42 % of `sealed`** — behind only
+`dispatch_triggers_for_events` and the gather on `cube`. Read at `636ddb17`.
+
+```text
+callers, by calls                     fixed 180,372   cube 1,468,226   sealed 982,538
+  itself (recursion)                     28,550         957,198          529,590
+  statics_granted_triggers_inner              -         142,094                -
+  granted_abilities_of                        -         105,436                -
+  auto_targets_for_effect_all_slots      57,314          41,064          147,846
+  legal_targets_for_filter                    -           4,748           51,166
+  auto_target_for_effect_avoiding           442          13,900           34,788
+  call_mut / Map::try_fold / Map::fold   91,648          94,218          201,208
+  gather_continuous_effects_inner             -          33,494                -
+(a "-" is a caller below the table's tail: 330 Ir over 2 rows on `fixed`,
+ 7,036 over 9 on `sealed`, so it is "not this pool", not "not measured".)
+```
+
+**The pool split is the whole entry.** On `fixed` and `sealed` the grant
+machinery does not reach the walker at all — the bench archetypes carry no
+`GrantTriggeredAbility` static, and this was already true *before* the
+ninety-second pass's gate, which is why that gate's `fixed` win came out of
+the body and not out of this row — so on those two pools the walker is
+**targeting**; on `cube` two thirds of it is
+recursion and the external half is the grant machinery; on `sealed` it is
+targeting again, at five times `fixed`'s volume. **A change aimed at this row
+must say which of the three it is aimed at**, and a `cube`-only reading will
+name the grant machinery for a cost that is targeting on the pool the training
+loop plays.
+
+**There is no prologue to gate.** The function is a bare `match req` with no
+shared preamble — 71 Ir of self a call on `cube` is the jump table plus one
+arm — so the (-79)/(-82) device does not apply. The lever is fewer calls, and
+65 % of `cube`'s are the composite-requirement recursion, which is the
+semantics. Its non-recursive callees are small and already memo-backed:
+`has_keyword` 136,530 / 6.13 M, `creature_type_change_in_scope`'s closure
+18,900 / 12.88 M, `type_scan_bits` 10,700 / 0.40 M.
+
+
 **(-81) THE GATHER IS 71,930 CALLS AND 8.5 % OF `cube` INCLUSIVE, AND THE
 CONTEXT CENSUS SAYS EVERY ONE OF THEM IS A SCOPE THAT HAD TO GATHER. READ
 THIS ENTRY AS A CLOSED DOOR WITH THE ONE KEY NAMED, NOT AS A LEAD.** Whole

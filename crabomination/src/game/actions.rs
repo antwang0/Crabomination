@@ -13547,7 +13547,8 @@ impl GameState {
         // Worth gating because the three callers are whole-battlefield
         // sweeps (`available_mana`, `effective_mana_abilities_into`,
         // `main_phase_action_with`), so the question is asked per permanent
-        // per sweep. See PERF `(-82)` for the counts this was sized on.
+        // per sweep. The counts this was sized on are in PERF's Baseline,
+        // under the ninety-second pass.
         if scan.statics.is_empty()
             && scan.equipment.is_empty()
             && scan.soulbond.is_empty()
