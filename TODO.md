@@ -74,11 +74,20 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    it** — eight against the twenty-two that paid, i.e. ~0.08 %. **`(-86)` is
    a closed door**: the `fmt::Write` row in every profile is
    `wants_converge`'s once-per-card-name `{:?}`, already twice cached, and
-   its `format!` is the robust half of that function. **`(-87)` is new**: the
-   two layer-4 type gates *miss* 45 k / 27 k times a `cube` run at 262-642 Ir
-   a walk (1.13 % of the pool), and half of the land gate's misses come from
-   `activate_ability_inner`, which holds `&mut self` and so can never
-   memoize. `(-82)` and
+   its `format!` is the robust half of that function. **`(-87)` is new, is
+   1.13 % of `cube`, and both of its own proposals are already built and
+   refuted** — the two layer-4 type gates miss 45 k / 27 k times a `cube` run,
+   the `continuous_effects` operand is **1 %** of that (probed), and a
+   `type_bits` per-definition bit reads **+0.138 %** with the memo hitting
+   98.3 %. Rule: **a per-definition presence bit pays only when the walk it
+   replaces is over a list that is usually non-empty**; `static_abilities` is
+   empty on nearly every permanent, so that `any` was already a length test.
+   What is left is calling the walk less — 72,876 calls a `cube` run, 19,320
+   of them from `activate_ability_inner` under `&mut self`. The one unpriced
+   thing is the **write rate of zone membership + `continuous_effects`**,
+   which is the invalidation a `GameState`-level memo would actually need
+   (not `DerefMut`, which is the tap rate `(-62)` was refuted on). Price that
+   first. `(-82)` and
    `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the

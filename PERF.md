@@ -877,6 +877,16 @@ here if it ever needs compacting.
   battlefield. A slot costs ~113 k Ir a `cube` run in `clear_gates` and
   nothing anywhere else; `(-85)` tried to remove even that and is a
   refutation.
+- **A per-definition presence bit pays only when the walk it replaces is over
+  a list that is usually non-empty** (pass 94, `(-87)`, built and reverted;
+  `cube` **+0.138 %**). `def.static_abilities.iter().any(..)` on a board of
+  ordinary permanents is a pointer load, a length load and a not-taken
+  branch — the `CardMemo` read that replaces it is a word load, a valid test
+  and a mask against the *same* `CardData` deref, i.e. the same instructions
+  plus a recompute. The memo was hitting **98.3 %** of the time and it still
+  lost. `sba_scan_bits` (five inner loops) and `dispatch_scan_bits` (every
+  static plus every Station band) won because their walks are real; count the
+  elements the walk actually touches before adding a bit for it.
 - **A presence gate is read ~3.5x more often than a scope exits** (pass 94,
   `(-85)`, built and reverted; `cube` **+0.011 %**). ~400 k gate reads a
   `cube` run against ~113 k outermost pops, so **any per-read cost added to
@@ -12072,7 +12082,9 @@ trade in the same direction.
 
 **(-87) THE LAYER-4 TYPE GATES MISS 45 k / 27 k TIMES A `cube` RUN AND EACH
 MISS IS A 262-642 Ir BOARD WALK — 1.13 % OF `cube`, AND HALF OF IT IS ASKED
-FROM `&mut self`, WHERE NO SCOPE CAN EVER MEMOIZE IT.** Read at `efebd811`
+FROM `&mut self`, WHERE NO SCOPE CAN EVER MEMOIZE IT. Both of the entry's own
+proposals are now built and refuted; the two blocks at the end are the
+result, and the second is a rule.** Read at `efebd811`
 off the same dumps as `(-84)(b)`. The rows are the gates' *closures*, which
 run only on a miss:
 
@@ -12102,14 +12114,67 @@ builds (5,900 on `fixed`, 12,110 on `cube`), which says those asks are each in
 a scope of their own — worth confirming before theorising, because if they are
 *not*, the memo is being reset by something and that is a bug, not a cost.
 
-The walk is `continuous_effects.iter().any(..) || battlefield.iter().any(
-card_can_change_land_types)`. Two devices, both already priced elsewhere: a
-per-definition presence bit keeps all 23 derefs (`dispatch_board_scan` is that
-shape at 226 Ir, against this walk's 262-352), and a battlefield memo is
-`(-62)`'s refuted class — the zone's write rate is the tap rate. **What is
-NOT yet priced is the split**: the `continuous_effects` half and the printed
-half have different write rates, and only the second one is what a tap
-touches. Size them separately before proposing anything.
+**THE SPLIT IS NOW PRICED AND IT IS ALL ONE SIDE.** Probe at `90c0e850`,
+`(-78)`'s device: drop the `continuous_effects.iter().any(..)` operand from
+*both* gates and the program reads `cube` -360,464 (**-0.012 %**) / `fixed`
+-176,163 (**-0.018 %**). That operand is **1 %** of a 33.7 M-Ir row. The gate
+IS `battlefield.iter().any(card_can_change_*_types)`: 72,876 calls a `cube`
+run x 23 permanents = **1.68 M card visits at ~20 Ir apiece**. (Not a
+committable change — dropping it loses Spreading Seas and Magical Hack.)
+
+**THE PER-DEFINITION BIT IS BUILT AND REFUTED — it costs `cube` +0.138 %, and
+the reason generalises.** `type_bits` extended from two bits to six (a
+`LAND_ATTACHED` / `LAND_ALWAYS` / `CREATURE_ATTACHED` / `CREATURE_ALWAYS`
+quartet on the same `CardMemo` word and the same valid flag), the two
+`static_effect_changes_*_types` predicates moved to `crabomination_base` next
+to their card-type twin, and both `card_can_change_*_types` reduced to the
+memo read that `card_can_change_card_types` already used:
+
+```text
+base 90c0e850, callgrind, profiling-fast --no-default-features
+  fixed    989,693,709 ->   990,876,369   +0.119 %
+  cube   2,965,902,369 -> 2,969,989,765   +0.138 %
+  sealed 2,947,622,521 -> 2,949,902,159   +0.077 %
+
+cube, the two gates and the callers that inlined their prologues:
+  land_type_change_in_scope::{{closure}}      15,882,434 ->          0
+  creature_type_change_in_scope::{{closure}}  17,847,758 ->          0
+  land_type_change_in_scope (now out of line)          0 -> 17,755,668
+  creature_type_change_in_scope                        0 -> 20,511,332
+  CardDefinition::type_scan_bits               2,639,718 ->  4,725,394
+  evaluate_requirement_static_hinted          28,217,494 -> 26,212,316
+  scan_land_type_rewrites                        654,686 ->    484,146
+  activate_ability_inner                      48,438,564 -> 48,320,802
+  bot::available_mana                         16,397,083 -> 16,281,971
+  check_state_based_actions_into              71,440,496 -> 71,367,824
+                                       program            +4,087,396
+```
+
+**It is not a memo-miss story — the memo works.** `type_scan_bits` recomputes
+28,832 times a `cube` run against 1.68 M card visits, a **98.3 % hit rate**,
+and the recompute is only 1.84 M of the 4.09 M regression.
+
+**The rule is about what the walk was, not about the memo.** The two
+predicates walked `def.static_abilities` and `def.station` with
+`iter().any(..)` — and both lists are **empty on nearly every permanent**, so
+that "walk" was already a pointer load, a length load and a not-taken branch.
+The memo read is a word load, a valid-bit test and two mask tests against the
+*same* `CardData` deref: the same handful of instructions, plus a recompute
+that now covers three families where the card-type gate's covered one.
+**A per-definition presence bit pays only when the walk it replaces is over a
+list that is usually non-empty** — which is why `sba_scan_bits` (five inner
+loops) and `dispatch_scan_bits` (every static, plus every Station band) both
+won and this one cannot.
+
+**What is left, and it is the whole entry now:** the walk is irreducible at
+~20 Ir a permanent, so the only lever is **calling it less**. 72,876 calls a
+`cube` run, of which `activate_ability_inner`'s 19,320 are `&mut self` and can
+never reach a freeze scope. A `GameState`-level memo with real invalidation is
+the only shape left; it is `(-62)`'s class and the reason that class is refuted
+is the battlefield's *write* rate — but note this question does not read tap
+state, so the invalidation it actually needs is **zone membership plus
+`continuous_effects`**, not `DerefMut`. Nobody has priced *that* write rate.
+Price it before building anything.
 
 **(-86) `String as fmt::Write` IS 158,146 CALLS IN THE SIMULATOR AND IT IS
 NOT A LEAD — READ THIS BEFORE CHASING IT.** A `{:?}` Debug format of a whole
