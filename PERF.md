@@ -1974,6 +1974,23 @@ audit   -C debug-assertions=yes, `overflow` profile, 5 pools x 8 seeds x
         the pass-open 241.8, peak_rss_mib 24.3-24.5, host_calib_ms 46-53
 ```
 
+**PASS CLOSE, at `96ec5071` (one more commit: the empty-subset return, Log).**
+
+```text
+whole program  fixed 1,012,617,375  cube 3,026,000,396  sealed 3,022,989,126
+against the pass base a2bfb104's 1,027,455,296 / 3,117,128,791 / 3,072,096,617
+                              =  -1.444 %      / -2.923 %     / -1.599 %
+--bench  195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+         (cap 0 / stuck 0 / draw 0), determinism ok, thread_determinism ok
+         games_per_s 263.06 / 261.93 / 255.12 / 266.62 (mean 261.7) at
+         host_calib_ms 45-46, against the pass-open 241.8 at 47-52
+suite    19,073 / 0 / 5, clippy clean, golden traces unmoved throughout
+```
+
+**The clock agrees in sign and overstates the size** — +8.2 % against a
+deterministic -1.44 % on the pool `--bench` runs — and the box was measurably
+quieter at the close (`host_calib_ms` 45-46 against 47-52). Read the Ir.
+
 **Two `--bench` runs in that set read 189 and were discarded, and the reason
 is the reading itself: `host_calib_ms` said 50-51 on a box whose idle value
 is 46-49.** A 1.2-second benchmark on a shared four-core VM picks up anything

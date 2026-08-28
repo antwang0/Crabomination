@@ -92,8 +92,8 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    Sized in PERF's "Test-suite cleanup" section, with the reason it is not
    taken yet. Quiet branch, one commit, suite green either side.
 8. **Tip state / build time / filters** — PERF's two newest Baseline blocks.
-   Whole program at `40334110`: `fixed` 1,013,307,016 / `cube` 3,026,236,892 /
-   `sealed` 3,023,217,402, i.e. **-1.38 / -2.92 / -1.59 % across the pass**,
+   Whole program at `96ec5071`: `fixed` 1,012,617,375 / `cube` 3,026,000,396 /
+   `sealed` 3,022,989,126, i.e. **-1.44 / -2.92 / -1.60 % across the pass**,
    `--bench` invariant byte-identical throughout. Then PERF's "Build time"
    (the rule is "keep the *critical path* flat") and ENGINE_BACKLOG for the
    seven filters. **`--bench` is a 1.2-s run on a shared box: check
