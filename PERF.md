@@ -1009,6 +1009,13 @@ here if it ever needs compacting.
   to gather.** Expect (-14)'s "guarding one promotes the next": the gate that
   was already there gets 27 % dearer because it now runs in an unwarmed scope,
   and the trade is still 44 M against 17.5 M.
+  **…and the necessary second half, from the same pass's refutation: check
+  what the scope does *after* its first read** (`board_keyword_in_scope` in
+  `declare_attackers_banded` / `declare_blockers`, built and reverted: `fixed`
+  -0.026 / `cube` -0.044 / `sealed` **+0.005** %). Gating the first read only
+  *moves* the gather when the scope goes on to compute permanents anyway, and
+  then the gate is paid for nothing. The pair-scope fix paid because every
+  other read in that scope was already gated.
 - **A private field is a compiler-driven rename** (pass 91). Turning four
   `pub` fields into private overlays behind same-named accessors is 2,991
   lines over 282 files, and none of them were found by grep: E0616 carries a
@@ -6521,6 +6528,41 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-first pass — `compute_permanents(&[])`, and the reorder that only moves a gather
+
+**Taken.** `compute_permanents` returns early on an empty id list instead of
+taking `frozen_effects()`' lock — and, when it is the scope's first computed
+question, its **gather** — and then walking the whole continuous-effect list
+in `SecondPass::of` to derive CR 613.8 gates for zero permanents. Both combat
+declarations reach it with an empty subset whenever nothing is being declared
+and no CR 508.1 / 509.1 requirement is live.
+
+```text
+base 40334110.  fixed -0.068 %   cube -0.008 %   sealed -0.008 %
+(spread thin: _int_malloc -260,113, compute_permanents -71,396,
+ frozen_effects -69,004 on `fixed`, over 10,122 calls)
+```
+
+**Refuted alongside it, and it is the half worth reading.** `(-81)`'s census
+says `declare_attackers_banded` and `declare_blockers` each pay one gather
+through `board_keyword_in_scope`, and **inside a scope `frozen_effects` *is*
+the gather** — so asking `keyword_grant_in_scope` before it looks exactly like
+the fix that had just paid `cube` -2.226 % on the combat pair scope.
+
+```text
+board_keyword_matching asks the presence gate before frozen_effects
+  fixed  -0.026 %   cube  -0.044 %   sealed  +0.005 %
+  gathers 59,010 -> 56,728
+```
+
+**It removes 2,274 gathers and splits by pool, so it is reverted.** Both
+callers go straight on to `compute_permanents` in the *same* scope, so the
+gather is moved rather than removed, and on the boards where the gate says
+"possible" — most of them, for the CR 508.1/509.1 keyword sets — it is paid
+for nothing. **The pair-scope fix worked because the scope's remaining reads
+were all gated; a gate in front of a scope that computes permanents anyway
+buys the gate's own cost.** The reason is at the site.
+
 ### Eighty-ninth pass — the `reserve_rehash` row is not a lead, and removing allocations made the program slower
 
 **Built twice, measured twice, reverted.** `RawTable::reserve_rehash` is
@@ -11227,9 +11269,18 @@ epoch, `(-18)`, built and refuted) or an incremental gather.
 
 **Do not re-run this census**; it cost one `--separate-callers=4` run and this
 table is its whole result. Its remaining rows in first-read order:
-`declare_attackers_banded` / `declare_blockers` (`board_keyword_in_scope`, a
-gate already), the bot's two candidate collects, `permanent_value_with`,
+`declare_attackers_banded` / `declare_blockers` (`board_keyword_in_scope`),
+the bot's two candidate collects, `permanent_value_with`,
 `check_state_based_actions_into`.
+
+**The first of those is BUILT AND REFUTED — `fixed` -0.026 / `cube` -0.044 /
+`sealed` **+0.005** %, a pool split, see the Log.** `board_keyword_in_scope`
+asks `frozen_effects` before its presence gate, and inside a scope that *is*
+the gather, so the shape looks identical to the pair-scope fix. It is not:
+both callers go straight on to `compute_permanents` in the same scope, so the
+gather is moved and the gate is paid for nothing. **The pair-scope fix worked
+because every other read in that scope was already gated. Before gating a
+scope's first read, check what the scope does *after* it.**
 
 **`combat_damage_computed` is (-9)'s remaining half re-sized and it has
 doubled since that entry** — 3,274 calls / 0.71 % there, 6,842 / **2.23 %**
