@@ -1671,7 +1671,15 @@ started being cloned twenty thousand times a run. **The other `Box` field on
 free**: `Decider::decide` takes `&mut self`, so `Arc` is out, but the clone
 is `self.decider.kind().into_boxed()` and `AutoDecider` is a unit struct —
 `Box::new` of a ZST does not allocate. Checked, not assumed; do not re-open
-it. What is left of the sweep is `PlayerData`, `CardData` and `ColdState`.
+it. **And the rest of the sweep is done and empty**: `PlayerData`,
+`PlayerCold`, `ColdState`, `CardData` and `CardCold` carry **no** `Box`
+field between them — the zones are `CowBox`, and the ~fourteen `Box` fields
+on `CardDefinition` (`back_face`, `adventure`, `split`, `room`, …) sit
+behind the `Arc<CardDefinition>` every clone shares, so they are copied only
+by an `Arc::make_mut` and not by a `GameState::clone`. **The class is
+closed** — one field, one commit, and the grep that closes it is
+`grep -n ': *Box<' crabomination/src/player.rs crabomination/src/game/mod.rs
+crabomination_base/src/card.rs`.
 
 **Gate at the tip** (`e7793c7c`, which also carries the concurrent half's
 `3cfa0435` and `539c67eb`): suite 19,063 / 0 / 5, clippy clean, golden
