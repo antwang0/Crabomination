@@ -43,6 +43,23 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 # candidate build while the current one runs under callgrind — callgrind is
 # single-threaded and contention-immune, so the overlap is free. Two cargo
 # builds at once is not: on 4 cores they take ~1.5x each.
+#
+# **Take the BASELINE in a detached worktree, not by stashing** (ninetieth
+# pass). `git worktree add <dir> <base-sha>` gives the A side its own tree and
+# its own target dir; apply the patch *in that worktree* for the B side, so
+# both halves are built by one warm cache and the main tree stays free for the
+# suite and the release build. Stash/unstash cannot do this here: a concurrent
+# session lands engine commits every few minutes, so the tree you unstash into
+# is no longer the tree you measured against. Cost is one extra cold build of
+# the worktree's target dir; `git worktree remove --force <dir>` reclaims it.
+#   git worktree add /tmp/basetree <base-sha>
+#   (cd /tmp/basetree && cargo build --profile profiling-fast \
+#      -p crabomination --bin bot_ladder --no-default-features)
+#   … callgrind the three pools …
+#   (cd /tmp/basetree && git apply /tmp/candidate.patch && cargo build …)
+#   … callgrind the three pools again …
+# Ir is contention-immune, so the *release* build for the `--bench` gate can
+# run in the main tree at the same time as the candidate's callgrind runs.
 # **For the ACTOR the flag has to name `crabomination_ml`**, not the engine:
 # that crate has its own `mimalloc` default *and* its own `#[global_allocator]`,
 # so `-p crabomination --no-default-features` leaves `selfplay_train` on
