@@ -2043,10 +2043,13 @@ not the finding. **Use `ab_wall.py` on a ladder pool for a clock verdict and
 keep the actor for Ir**, where it is deterministic and where its 94.8 %
 `play_recorded_game_mcts` share makes it the right ranking instrument.
 
-Two mechanics worth one line each. `--games 200` was tried first and is
-strictly worse: the run prints elapsed as an **integer second**, so a
-one-second workload quantises every rate to the same 199.8. And the
-fingerprint check did pass — both binaries produced **288,106 rows over 3,000
+Two mechanics worth one line each. **`--games 200` was tried first and its
+rates cluster on 199 because the *learner* polls on a 200 ms sleep**
+(`selfplay_train.rs`, the `timing.sleep` leg) — a one-second workload's wall
+time is that quantum, not the actors' work, and three identical runs read
+124.6 / 199.3 / 199.1 games/s. It is not the print: the rate comes off an
+`f64`, only the trailing `{:.0}s` is rounded. **Size an actor throughput run
+so the poll quantum is noise.** And the fingerprint check did pass — both binaries produced **288,106 rows over 3,000
 games with 0 stalls** — which is what says the two tips play the same games
 and that only the clock was in doubt.
 
