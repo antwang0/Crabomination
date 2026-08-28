@@ -32,10 +32,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 1. **Perf queue** — PERF "Perf candidates", top-down. **`(-80)` is new and is
    the allocator census this file asked for since the eightieth pass** — read
    its first row before proposing anything there: the program's single biggest
-   allocation context is already minimal. Its two unclaimed rows are the
-   per-step-advance event buffer (22,820 allocations, ~0.40 % of `fixed`,
-   costs an ownership change) and (-74) with a name (33,286 of 60,524 deep
-   copies are the cast/activate pipelines unsharing after the checkpoint).
+   allocation context is already minimal. **Its event-buffer row is TAKEN**
+   (a `GameState` scratch slot the discarding callers hand back:
+   -0.256/-0.105/-0.200 %, 575,795 -> 555,641 allocations, 88 % of what the
+   context predicted); what is left is (-74) with a name — 33,286 of 60,524
+   deep copies are the cast/activate pipelines unsharing after the probe
+   clone, which is the probe architecture rather than a local fix.
    `(-79)`'s untried shape is TAKEN (`ANY_GRANT`, -0.97/-1.33/-0.94 %) and
    its residue is not reachable; then `(-51)(a)`, `(-70)` (quiet window
    only), `(-69)`'s two unclaimed rows, `(-61)`, `(-59)`. Closed: `(-60)`,
