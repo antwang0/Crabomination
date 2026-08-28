@@ -253,6 +253,42 @@ not assumed. It also changes golden traces (legitimately) and sits in the
 hottest function in the program, so it needs a `--decks cube` reading and the
 `-C debug-assertions=yes` ladder gate, not just the suite.
 
+### ~~Two headless `OptionalTrigger` sites answered `no` where their own comments said `yes`~~ — fixed, and the third is load-bearing
+
+The decision-plumbing audit's own docstring says a **bare** site is not
+automatically a bug. This is the sub-population that is: a site whose
+*comment already states the intended headless policy* while the code relies on
+`AutoDecider`'s blanket `Decision::OptionalTrigger => Bool(false)`, which
+contradicts it. That pair is greppable and it found three of the sixteen bare
+`OptionalTrigger` sites. Two were bugs:
+
+* `apply_etb_trigger_tax` — Strict Proctor. `catalog::strict_proctor`'s doc
+  said "AutoDecider opts in to paying when the controller has enough mana
+  floated"; it never paid, so a bot under a Proctor lost **every ETB trigger
+  it controlled**, whatever it had floated. Now: the tax is pure generic, so
+  headless pays when `mana_pool.total()` covers it.
+  `stx::part_12::strict_proctor_headless_pays_the_tax_when_it_can_afford_it`.
+* `Effect::LookTopEachPayLifeOrBin` — Moonlight Bargain. The comment said "the
+  auto decider says yes, so bots keep the cards they can pay for"; it said no,
+  so a bot spent five mana to bin all five cards. Now: affordability is the
+  whole decision headless.
+  `classic_sets::rav::moonlight_bargain_headless_buys_every_card_it_can_afford`.
+
+**And the third is why the audit is a triage list and not a gate.**
+`Effect::MayCopyThisSpell` (the CR 706 Chain cycle) reads the same way and the
+blanket `no` is **what makes the chain terminate**: a copy carries its own
+`MayCopyThisSpell`, nothing in the loop shrinks a resource that bounds it, and
+a `ChainCopyCost::Free` link stays payable even when the copy finds no legal
+target. Built, and it spun `ons::chain_of_acid_offers_the_copy_onward` at
+100 % CPU until killed. Reverted with the reason written at the site, so the
+next sweep does not re-take it.
+
+**The remaining thirteen were read and are deliberate**: repeat loops
+(`MayRepeat`, Kindle the Carnage, Trade Secrets) where `no` bounds the loop the
+same way; guesses with no basis (`Is a card named X in their hand?`); and four
+whose comments already document `no` as the chosen policy (Tainted Pact takes
+the card on `false`, Wandering Archaic lets the copy happen).
+
 ### ~~The bot answers a mandatory off-board modal with nothing~~ — fixed
 
 `bot::decide_choose_cards`'s five exits each filled `min` from the pile that

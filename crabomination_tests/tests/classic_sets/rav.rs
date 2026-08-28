@@ -2417,6 +2417,38 @@ fn moonlight_bargain_pays_life_for_the_top_five() {
     assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.is_land()).count(), 3);
 }
 
+/// The headless half, and the reason it is a test: `AutoDecider` answers
+/// `Bool(false)` to every `OptionalTrigger`, so before the eighty-ninth pass a
+/// bot cast this for five mana and binned all five cards — the code asked a
+/// question whose blanket answer contradicted the policy its own comment
+/// described. Affordability is the whole decision headless.
+#[test]
+fn moonlight_bargain_headless_buys_every_card_it_can_afford() {
+    use crabomination::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let bargain = g.add_card_to_hand(0, catalog::moonlight_bargain());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bargain, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 10, "2 life per card, five cards");
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 5, "all five bought");
+    assert_eq!(
+        g.players[0].graveyard.iter().filter(|c| c.definition.is_land()).count(),
+        0,
+        "nothing binned",
+    );
+}
+
 /// Tunnel Vision mills a player down to a named card.
 #[test]
 fn tunnel_vision_mills_down_to_the_named_card() {

@@ -1466,7 +1466,8 @@ fn strict_proctor_taxes_an_etb_trigger_unless_paid() {
     let id = g.add_card_to_hand(0, catalog::pest_beekeeper());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
-    // Auto-decider declines the tax payment. Per the real oracle the
+    // The cast eats two of the three floated mana, so the headless policy
+    // cannot afford the {2} tax and declines. Per the real oracle the
     // ABILITY is countered (CR 701.5a) — the entering permanent itself
     // is untouched; only the Pest-mint trigger is suppressed.
     g.perform_action(GameAction::CastSpell {
@@ -1668,4 +1669,33 @@ fn prismari_artificer_etb_mints_treasure_and_scrys() {
         c.controller == 0 && c.is_token && c.definition.name == "Treasure"
     }).collect();
     assert_eq!(treasures.len(), 1);
+}
+
+/// The headless half of the tax, and the reason it is a test: `AutoDecider`
+/// answers `Bool(false)` to **every** `OptionalTrigger`, so before the
+/// eighty-ninth pass a bot under a Strict Proctor declined every tax and lost
+/// every ETB trigger it controlled — whatever mana it had floated. The tax is
+/// pure generic, so the headless policy is now "pay if the pool covers it",
+/// which is what `catalog::strict_proctor`'s doc comment already claimed.
+#[test]
+fn strict_proctor_headless_pays_the_tax_when_it_can_afford_it() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::strict_proctor());
+    let id = g.add_card_to_hand(0, catalog::pest_beekeeper());
+    // The Beekeeper's {2}{G} plus two more for the tax, and no scripted
+    // decider — the headless policy is the thing under test.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Beekeeper castable");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Pest)
+            && c.id != id),
+        "the headless controller paid the {{2}} and kept its own ETB trigger",
+    );
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the cast and the {{2}} tax spent all five");
 }

@@ -1993,12 +1993,25 @@ pub(crate) fn apply_etb_trigger_tax(
     if total_tax == 0 {
         return true;
     }
-    // Build a "Pay {total_tax}" decision aimed at the trigger's controller.
-    let answer = state.decider.decide(&Decision::OptionalTrigger {
-        source: trigger_source,
-        description: format!("Pay {{{}}} to keep this trigger?", total_tax),
-    });
-    if matches!(answer, DecisionAnswer::Bool(true)) {
+    // `AutoDecider` answers `Bool(false)` to **every** `OptionalTrigger`, so a
+    // bare `decide` here declined every tax and a headless controller under a
+    // Strict Proctor lost every ETB trigger it owned — the decision-plumbing
+    // audit's "Ad Nauseam pattern", and the opposite of the policy
+    // `catalog::strict_proctor`'s own doc comment describes. The tax is pure
+    // generic, so "can pay" is the floated total; keeping your own trigger is
+    // strictly better than losing it when you can afford the mana.
+    let pay = if matches!(state.decider.kind(), crate::decision::DeciderKind::Auto) {
+        state.players[trigger_controller].mana_pool.total() >= total_tax
+    } else {
+        matches!(
+            state.decider.decide(&Decision::OptionalTrigger {
+                source: trigger_source,
+                description: format!("Pay {{{}}} to keep this trigger?", total_tax),
+            }),
+            DecisionAnswer::Bool(true)
+        )
+    };
+    if pay {
         let cost = ManaCost::new(vec![crate::mana::generic(total_tax)]);
         if state.players[trigger_controller].mana_pool.pay(&cost).is_ok() {
             return true;

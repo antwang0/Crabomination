@@ -8168,17 +8168,23 @@ impl GameState {
                         .find(|c| c.id == cid)
                         .map(|c| c.definition.name.to_string())
                         .unwrap_or_default();
-                    // Buy the card whenever the life is affordable; the auto
-                    // decider says yes, so bots keep the cards they can pay for.
+                    // Buy the card whenever the life is affordable — which is
+                    // what this comment claimed before and what the code did
+                    // not do: `AutoDecider` answers `Bool(false)` to every
+                    // `OptionalTrigger`, so a headless Moonlight Bargain binned
+                    // all five cards and paid five mana for nothing. The
+                    // affordability test is the whole decision headless; a real
+                    // decider is still asked.
                     let can_pay = self.players[p].life > *life as i32;
                     let pay = can_pay
-                        && matches!(
-                            self.decider.decide(&Decision::OptionalTrigger {
-                                source,
-                                description: format!("Pay {life} life to keep {name}?"),
-                            }),
-                            DecisionAnswer::Bool(true)
-                        );
+                        && (matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
+                            || matches!(
+                                self.decider.decide(&Decision::OptionalTrigger {
+                                    source,
+                                    description: format!("Pay {life} life to keep {name}?"),
+                                }),
+                                DecisionAnswer::Bool(true)
+                            ));
                     if pay {
                         self.pay_life_cost(p, *life);
                     } else if let Some(card) =
@@ -28196,6 +28202,18 @@ impl GameState {
                 if !payable {
                     return Ok(());
                 }
+                // CR 706 — the chain. `AutoDecider`'s blanket `Bool(false)` for
+                // `OptionalTrigger` looks like an unexamined default here and
+                // is not: **it is what makes the chain terminate.** A copy of
+                // this spell carries its own `MayCopyThisSpell`, so an
+                // always-accept policy hands the copy back and forth forever —
+                // nothing here shrinks a resource that bounds it, and a
+                // `ChainCopyCost::Free` link (Chain of Acid, Chain of Smog)
+                // stays payable even when the copy finds no legal target.
+                // Built and reverted at the eighty-ninth pass: it spun
+                // `classic_sets::ons::chain_of_acid_offers_the_copy_onward`
+                // at 100 % CPU. A real decider ends it; the headless one has
+                // to, and does.
                 let yes = matches!(
                     self.decider.decide(&Decision::OptionalTrigger {
                         source,
