@@ -55,9 +55,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `encode.rs`, `crabomination_ml` or `crabomination_nn`.
 5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg, the
    seeded 4,000-pairing cube sweep (arm it in
-   `bot_vs_bot_random_cube_decks_terminate`), the two census env vars. Last
-   full run clean at `673f50ff`; the ninety-first pass is behaviour-preserving
-   by construction and did not re-arm it.
+   `bot_vs_bot_random_cube_decks_terminate`), the two census env vars. **The
+   `-C debug-assertions=yes` leg is re-run at `40334110`** — 5 pools x 8 seeds
+   x 120 games/archetype, **38,400 games, no panic, no assertion, no
+   overflow**, which is what audits the two new presence gates' soundness
+   asserts. `cap 0 / stuck 0` throughout; 4 games of `--decks all` ended
+   `draw`, which is a game outcome, not a stall.
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
    Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed

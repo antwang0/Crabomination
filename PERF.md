@@ -1790,6 +1790,13 @@ answer, which is (-58)'s device: 19,073 tests and any
 ```text
 suite   19,073 / 0 / 5; the seven golden traces unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
+audit   -C debug-assertions=yes, `overflow` profile, 5 pools x 8 seeds x
+        120 games/archetype = 38,400 games: no panic, no assertion, no
+        overflow. cap 0 / stuck 0 everywhere; 4 games of `--decks all` ended
+        `draw`. **This is the leg that audits the two new gates' soundness
+        asserts** — the suite has 19,073 boards and this has 38,400 games,
+        and (-58) is the entry that says which one finds the counterexample.
+        A cell is 960 games in 5-16 s, so the whole grid is ~7 minutes.
 --bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
         (cap 0 / stuck 0 / draw 0), determinism ok, thread_determinism ok
         — byte-identical to the committed invariant
