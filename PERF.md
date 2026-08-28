@@ -8839,11 +8839,32 @@ repeats in the self table, at `--decks cube`, post-(2):
 
 ```text
   1.87 %  card_can_grant_keyword     <- TAKEN, row (3); -0.283 % of `cube`
-  1.33 %  dispatch_board_scan        <- the trigger dispatcher's own presence walk
+  1.33 %  dispatch_board_scan        <- REFUTED, below; `fixed` +0.106 %
   1.30 %  card_type_change_unscoped  <- TAKEN, row (4); -0.405 % of `cube`
   0.79 %  trigger_grant_sources      <- (-60); 0.25 grants found per call
   0.76 %  granted_abilities_of       <- walks `static_abilities` (twice, per (-10))
 ```
+
+**`dispatch_board_scan` IS REFUTED — BUILT, MEASURED AND REVERTED at the
+eighty-seventh pass: `fixed` **+0.106 %**, `cube` -0.067 %, `sealed`
+-0.078 %.** Three bits (`SUPPRESS_DIES`, `STRIPS`, `GRANT_TRIGGER`) replaced
+the per-card `static_abilities` walk, the `station` walk and the ungated
+`active_static` loop; the suite's own `debug_assert!` against the four walks
+it fuses passed, so the bits were right and the trade was not.
+
+**And it is the entry's selection rule, arrived at from the losing side: the
+memo pays for the walk it replaces, and this walk is over ONE list that is
+empty on most cards.** Compare what the three winning rows removed per
+permanent — `sba_board_scan` five list walks and ~25 field reads (~113 Ir),
+`card_can_grant_keyword` five pointer-chased loads into a large
+`CardDefinition`, `card_can_change_card_types` the keyword list plus the
+station bands plus every printed static — against
+`dispatch_board_scan`'s `for sa in &def.static_abilities {}` on a definition
+with no statics, which is **one length check**. A memo load, a mask and three
+tests do not beat that, and on `--decks fixed` (which carries no
+`GrantTriggeredAbility` at all, per CLAUDE.md) there is nothing else for them
+to win back. **Before pointing the device at a row, price the walk on the
+card that answers "no", not on the card that answers "yes".**
 
 **`card_type_change_unscoped` was not on the list when it was written, and
 the reason it belongs is a refutation this file already carried.** The

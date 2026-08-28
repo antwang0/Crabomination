@@ -115,6 +115,15 @@ refuted.
   the chokepoint.** A refutation written against an *argument* dates; one
   written against a *measurement* does not. PERF's `(-77)` has the device
   and the three tests a candidate has to pass.
+- **The memo pays for the walk it replaces, so price that walk on the card
+  that answers "no"** (pass 87, `(-77)`'s fourth row, built and reverted:
+  `fixed` **+0.106 %**, `cube` -0.067 %, `sealed` -0.078 %).
+  `dispatch_board_scan`'s per-card body is `for sa in
+  &def.static_abilities {}`, i.e. **one length check** on a definition with
+  no statics — a memo load, a mask and three tests do not beat that. The
+  three rows that shipped removed five list walks, five pointer-chased loads
+  and three list walks respectively. Bits were correct (the function's own
+  `debug_assert!` against the four walks it fuses passed); the trade was not.
 
 - **A "more exact" reserve is still a reserve, and `ContinuousEffect` is a
   large struct** (pass 86; `fixed` +0.461 %, `cube` +0.401 %, `sealed`
