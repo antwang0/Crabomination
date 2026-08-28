@@ -766,11 +766,13 @@ fn compute_permanent_pass(
     // a hand-built list cost more than the `Vec` it avoided. See PERF's Log.
     let mut sorted: Vec<&ContinuousEffect> = Vec::new();
     if !effects.is_empty() || !eot_grants.is_empty() {
-        sorted = effects
-            .iter()
-            .filter(|e| affects(e, card, gate_power, gate_types))
-            .chain(eot_grants.iter())
-            .collect();
+        // Two `extend`s rather than one `collect` over a `chain`: `eot_grants`
+        // is empty on almost every card, and `Chain::next` pays its "which
+        // side" branch on **every element of the first side** whether or not
+        // the second has any. Both halves stay internal iteration, which is
+        // what (-56b) says the `collect` is worth keeping.
+        sorted.extend(effects.iter().filter(|e| affects(e, card, gate_power, gate_types)));
+        sorted.extend(eot_grants.iter());
         sorted.sort_by(|a, b| {
             a.layer.cmp(&b.layer)
                 .then(a.sublayer.cmp(&b.sublayer))
