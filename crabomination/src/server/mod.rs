@@ -2337,8 +2337,13 @@ mod tests {
         // `prefers_graveyard_target` poses that modal over every card in every
         // graveyard and in exile, which the bot answers with none.
         //
-        // The whole seed range is a sweep, not just these ten: 4,000 pairings
-        // run in ~870 s in a debug build and are clean at the tip.
+        // The whole seed range is a sweep, not just these ten: set the loop to
+        // `0..4000u64`, add an `eprintln!` of the seed and run it
+        // `--no-capture`. 883 s under nextest in a debug build, and **clean at
+        // the eighty-seventh pass** — every pairing terminated and
+        // `bot_rejection_count()` did not move, with the picker's off-board
+        // gate, `EntityMatches`' empty-selector answer and the two block
+        // selectors' watcher fallback all in it.
         for seed in [0u64, 1, 2, 3, 4, 62, 2113, 2719, 3637, 3789] {
             let state = crate::cube::build_cube_state_seeded(seed);
             let (done_tx, done_rx) = mpsc::channel();

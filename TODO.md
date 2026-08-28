@@ -52,8 +52,8 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    a *watcher* trigger, so `EntityMatches` answers `false` on an empty
    selector now. Newly open under it: **a layer-7 `PumpSelfIf` condition
    cannot see a layer-4 type change** (CR 613.8; `CardMatchPowerGated` is the
-   precedent device). The seeded sweep has not been re-run since the
-   picker's off-board gate landed.
+   precedent device). The seeded sweep is **re-run and clean at the tip** —
+   4,000 pairings, 0 rejections, every one terminated, 883 s.
 6. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
 7. **Filters** — five read zero; `bot_rejection_count()` over the seeded cube

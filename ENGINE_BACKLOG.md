@@ -43,8 +43,12 @@ in ~870 s in a debug build**: set the loop to `0..4000u64`, add an
 `eprintln!` of the seed, and run it `--no-capture`.
 
 `server::bot_rejection_count()` — the live-match twin of `CRAB_SIM_REJECTS` —
-counted **four** illegal bot actions across those 4,000 games before this
-pass and **zero** after it. Both bugs are fixed (the exile-target modal and
+counted **four** illegal bot actions across those 4,000 games before the
+eighty-fifth pass and **zero** after it. **Re-run at the eighty-seventh pass
+and still zero** (883 s under nextest), with that pass's three behaviour
+changes in it: the picker's off-board gate, `EntityMatches`' empty-selector
+answer, and the two block selectors' watcher fallback. Every pairing
+terminated. Both bugs are fixed (the exile-target modal and
 CR 508.1d vs the attack tax). What is open is the pair of defects underneath
 them, neither of which the sweep can currently see because the thing that
 would surface them is gated off.
