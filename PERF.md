@@ -43,8 +43,18 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 # candidate build while the current one runs under callgrind — callgrind is
 # single-threaded and contention-immune, so the overlap is free. Two cargo
 # builds at once is not: on 4 cores they take ~1.5x each.
-# `-p crabomination` is load-bearing. Drop it and `--no-default-features`
-# does not reach the engine crate: the binary keeps mimalloc, callgrind
+# **For the ACTOR the flag has to name `crabomination_ml`**, not the engine:
+# that crate has its own `mimalloc` default *and* its own `#[global_allocator]`,
+# so `-p crabomination --no-default-features` leaves `selfplay_train` on
+# mimalloc and callgrind measures the interception. The recipe is
+#   cargo build --profile profiling-fast -p crabomination_ml \
+#     --bin selfplay_train --no-default-features
+#   CRAB_NO_JITTER=1 RUST_MIN_STACK=33554432 valgrind --tool=callgrind \
+#     --callgrind-out-file=cg.actor.out target/profiling-fast/selfplay_train \
+#     --actors 1 --games 60 --steps 1 --seed 7 --out /tmp/actorprof
+# and the same `grep -c libmimalloc` check on the dump applies.
+# `-p crabomination` is load-bearing for `bot_ladder`. Drop it and
+# `--no-default-features` does not reach the engine crate: the binary keeps mimalloc, callgrind
 # measures mimalloc-under-valgrind instead of the system allocator, and the
 # total lands ~11 % low (4.41 G vs 4.96 G on the same tip, 2026-08-10) while
 # looking like a win. Check the profile for `libmimalloc-sys` frames before
