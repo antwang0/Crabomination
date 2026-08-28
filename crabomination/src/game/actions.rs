@@ -64,14 +64,6 @@ pub(crate) struct GrantScan<'a> {
     /// it lives, so the gather it was built against is the gather every
     /// reader of it sees.
     land_types_rewritten: Option<bool>,
-    /// Is a `CounteredCreaturesHaveAbilitiesOfExiledWithSource` (Agatha's
-    /// Soul Cauldron) in play at all? Read off the same static-source walk
-    /// the grant scan already makes, and board-wide rather than per-seat —
-    /// it exists only to let [`granted_abilities_of`]'s presence gate skip
-    /// the counter test, and an over-approximation is what a gate wants.
-    ///
-    /// [`granted_abilities_of`]: GameState::granted_abilities_of
-    cauldron: bool,
 }
 
 /// Skip-Ward check. Ward variants whose payment is trivially affordable
@@ -13393,19 +13385,9 @@ impl GameState {
     pub(crate) fn grant_scan(&self) -> GrantScan<'_> {
         use crate::effect::{Selector, StaticEffect};
         let mut scan = GrantScan::default();
-        let mut cauldron = false;
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
         self.for_each_static_source(|src| {
             for sa in &src.definition.static_abilities {
-                // Agatha's Soul Cauldron, read off this walk rather than off
-                // one of its own — see `GrantScan::cauldron`. Before the
-                // wrapper unwrap below, which only passes grants through.
-                if matches!(
-                    sa.effect,
-                    StaticEffect::CounteredCreaturesHaveAbilitiesOfExiledWithSource
-                ) {
-                    cauldron = true;
-                }
                 // CR 611.2 — a grant may sit under a duration/predicate
                 // wrapper ("Threshold — this creature has '…'"); unwrap it
                 // and honour the gate.
@@ -13462,7 +13444,6 @@ impl GameState {
                 scan.equipment.push(src);
             }
         }
-        scan.cauldron = cauldron;
         scan
     }
 
@@ -13557,18 +13538,20 @@ impl GameState {
         // is nine length loads away.** Every `out.push`/`out.extend` in the
         // body draws from one of nine sources — the instance's two grant
         // lists, the four `GrantScan` vectors, the deploy-creatures flag, the
-        // Cauldron bit (Agatha's Soul Cauldron) and the definition's Station
+        // counter bag (Agatha's Soul Cauldron) and the definition's Station
         // bands — plus `static_abilities`, which is where all six
         // `HasActivatedAbilitiesOf*` markers *and* the Conspicuous Snoop
         // re-read come from, so an empty one rules out that whole half at
         // once. With all ten empty the body can only return `Vec::new()`.
         //
-        // **The Cauldron conjunct is the *board*'s, not the card's.** Its leg
-        // is gated on `!me.counters.is_empty()`, and 35 % of the permanents
-        // these sweeps visit carry a counter — so testing the counter bag
-        // here cost the gate a third of its population. `GrantScan::cauldron`
-        // asks whether the static is in play at all, off a walk `grant_scan`
-        // was already making.
+        // **`me.counters.is_empty()` costs this gate a third of its
+        // population and moving it to the board does not pay** — a
+        // `GrantScan::cauldron` bit read off `grant_scan`'s existing walk was
+        // built and measured at the ninety-third pass: `sealed` -0.124 % /
+        // `cube` -0.038 % / `fixed` **+0.006 %**, and the `fixed` sign is the
+        // wider `GrantScan` (built per sweep), not the walk — those
+        // archetypes carry no `static_abilities` at all, so the extra
+        // `matches!` never runs there. See PERF's Baseline. Do not rebuild it.
         //
         // Worth gating because the three callers are whole-battlefield
         // sweeps (`available_mana`, `effective_mana_abilities_into`,
@@ -13582,7 +13565,7 @@ impl GameState {
             && me.definition.static_abilities.is_empty()
             && me.granted_activated_abilities.is_empty()
             && me.granted_activated_eot.is_empty()
-            && !scan.cauldron
+            && me.counters.is_empty()
             && me.definition.station.is_empty()
             && !self.deploy_creatures
         {
