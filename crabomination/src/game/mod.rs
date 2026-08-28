@@ -23330,55 +23330,7 @@ fn card_can_change_creature_types(card: &CardInstance) -> bool {
             .any(|band| band.statics.iter().any(static_effect_changes_creature_types))
 }
 
-/// True when `effect` can emit a layer-6 `AddKeyword` matching `pred`. Twin of
-/// [`static_effect_strips_abilities`] for the keyword-grant family.
-///
-/// The variant list is mechanical, not judged: 23 of `StaticEffect`'s variants
-/// carry a `Keyword` field, three of those only *remove* one (`LoseKeyword`,
-/// `CantHaveKeyword`) or name a supertype, and four more grant a keyword they
-/// don't carry as a field — so the scan for `Keyword` in the enum is necessary
-/// and not sufficient, and those four are spelled out below.
-fn static_effect_grants_keyword(
-    effect: &crate::effect::StaticEffect,
-    pred: &impl Fn(&Keyword) -> bool,
-) -> bool {
-    use crate::effect::StaticEffect as SE;
-    let any = |kws: &[Keyword]| kws.iter().any(pred);
-    match effect {
-        SE::PumpSelfIf { keywords, .. }
-        | SE::PumpTeamIf { keywords, .. }
-        | SE::GrantPumpSelfIf { keywords, .. }
-        | SE::MatchingLandsAreCreatures { keywords, .. }
-        | SE::AnthemForFilter { keywords, .. }
-        | SE::AnthemForFilterIf { keywords, .. } => any(keywords),
-        SE::GrantKeyword { keyword, .. }
-        | SE::GrantKeywordWhileControllerControlsAtMost { keyword, .. }
-        | SE::GrantKeywordToChosenType { keyword, .. }
-        | SE::GrantKeywordToAttackers { keyword }
-        | SE::GraveyardAnthem { keyword, .. }
-        | SE::SelfHasKeywordWhile { keyword, .. }
-        | SE::SelfHasKeywordWhilePredicate { keyword, .. }
-        | SE::SelfHasKeywordWhileCountersAtLeast { keyword, .. }
-        | SE::SelfHasKeywordIf { keyword, .. } => pred(keyword),
-        // Unbounded — the granted keyword carries a payload the static does
-        // not fix (an exiled card's keywords or card types, a draft note, an
-        // ETB-chosen colour, a counter count), so the only sound answer while
-        // the static is present is "maybe". All five are rare enough that the
-        // gate still reads `false` on essentially every board.
-        SE::GainKeywordsFromExiledWith { .. }
-        | SE::SelfHasDraftNotedKeywords
-        | SE::AnnihilatorPerPlusOneCounter
-        | SE::GrantProtectionFromChosenColor { .. }
-        | SE::ProtectionFromExiledWithCardTypes
-        | SE::YouAndCreaturesProtectionFromChosenCardType => true,
-        SE::WhileClassLevelAtLeast { inner, .. }
-        | SE::WhileYourTurn { inner }
-        | SE::WhileNotYourTurn { inner }
-        | SE::WhileCountersAtLeast { inner, .. }
-        | SE::WhileCondition { inner, .. } => static_effect_grants_keyword(inner, pred),
-        _ => false,
-    }
-}
+use crate::effect::static_effect_grants_keyword;
 
 pub(crate) use crate::card::KeywordSlice;
 
@@ -23394,12 +23346,10 @@ fn card_can_grant_keyword(
     pred: &impl Fn(&Keyword) -> bool,
     synth: bool,
 ) -> bool {
-    let def = &card.definition;
-    let any = |kws: &[Keyword]| kws.iter().any(pred);
     // Both prologue questions are functions of the definition alone, and both
     // come off the per-object memo — see `card::grant_bits`. That turns the
     // `keywords` scan (a payload-carrying enum whose `PartialEq` is not free)
-    // and the five container loads off a large `CardDefinition` into one word
+    // and the whole container walk off a large `CardDefinition` into one word
     // load on the `CardData` the caller already holds.
     let bits = card.grant_scan_bits();
     // `synth` is the caller's one-shot answer for the three keywords the
@@ -23409,26 +23359,13 @@ fn card_can_grant_keyword(
     if synth && (card.suspected || bits & crate::card::grant_bits::SYNTH_KEYWORD != 0) {
         return true;
     }
-    // Nothing below can fire with all five containers empty.
-    if bits & crate::card::grant_bits::CONTAINER == 0 {
+    // `ANY_GRANT` is `can_grant_keyword` at `|_| true`, and that function is
+    // monotone in its predicate — so a clear bit is authoritative for every
+    // predicate, not just for the empty-container cards the bit used to name.
+    if bits & crate::card::grant_bits::ANY_GRANT == 0 {
         return false;
     }
-    if let Some(b) = &def.equipped_bonus
-        && (any(&b.keywords)
-            || any(&b.during_your_turn_keywords)
-            || b.conditional.iter().any(|c| any(&c.keywords)))
-    {
-        return true;
-    }
-    if def.soulbond_bonus.as_ref().is_some_and(|b| any(&b.keywords)) {
-        return true;
-    }
-    if def.level_bands.iter().any(|b| any(&b.keywords)) {
-        return true;
-    }
-    def.station.iter().any(|b| {
-        any(&b.keywords) || b.statics.iter().any(|sa| static_effect_grants_keyword(sa, pred))
-    }) || def.static_abilities.iter().any(|sa| static_effect_grants_keyword(&sa.effect, pred))
+    card.definition.can_grant_keyword(pred)
 }
 
 /// CR 702.16 — the protection keywords, and the one place the list lives.

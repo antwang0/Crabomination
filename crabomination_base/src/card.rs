@@ -5336,6 +5336,40 @@ impl CardDefinition {
         m
     }
 
+    /// True when this printing can contribute a layer-6 `AddKeyword` matching
+    /// `pred` out of one of its five grant containers — the printed-shape half
+    /// of `GameState::keyword_grant_in_scope`, minus the two instance-level
+    /// self-grants the gather synthesizes (those are `grant_bits::
+    /// SYNTH_KEYWORD` and the `suspected` flag, which are not definition
+    /// facts).
+    ///
+    /// Monotone in `pred`: every leg is an `any` / `||` / a recursion, with no
+    /// negation anywhere, so `pred` implying `q` implies this implying its `q`
+    /// form. That is what makes `grant_scan_bits`' `ANY_GRANT` — this function
+    /// at `|_| true` — a sound gate on it, and it is why the two share one
+    /// body rather than being kept in step by hand.
+    pub fn can_grant_keyword(&self, pred: &impl Fn(&Keyword) -> bool) -> bool {
+        use crate::effect::static_effect_grants_keyword as grants;
+        let any = |kws: &[Keyword]| kws.iter().any(pred);
+        if let Some(b) = &self.equipped_bonus
+            && (any(&b.keywords)
+                || any(&b.during_your_turn_keywords)
+                || b.conditional.iter().any(|c| any(&c.keywords)))
+        {
+            return true;
+        }
+        if self.soulbond_bonus.as_ref().is_some_and(|b| any(&b.keywords)) {
+            return true;
+        }
+        if self.level_bands.iter().any(|b| any(&b.keywords)) {
+            return true;
+        }
+        self.station
+            .iter()
+            .any(|b| any(&b.keywords) || b.statics.iter().any(|sa| grants(sa, pred)))
+            || self.static_abilities.iter().any(|sa| grants(&sa.effect, pred))
+    }
+
     /// `card_can_grant_keyword`'s two prologue questions for this printing —
     /// see [`grant_bits`]. Pure function of the definition; `CardData`
     /// memoizes it (`CardData::grant_scan_bits`).
@@ -5349,13 +5383,8 @@ impl CardDefinition {
         {
             m |= b::SYNTH_KEYWORD;
         }
-        if self.equipped_bonus.is_some()
-            || self.soulbond_bonus.is_some()
-            || !self.level_bands.is_empty()
-            || !self.station.is_empty()
-            || !self.static_abilities.is_empty()
-        {
-            m |= b::CONTAINER;
+        if self.can_grant_keyword(&|_: &Keyword| true) {
+            m |= b::ANY_GRANT;
         }
         m
     }
@@ -6159,13 +6188,21 @@ pub mod grant_bits {
     /// gather *synthesizes* a grant from rather than reading out of a field
     /// (`HexproofUnlessAttackingOrBlocking`, `Unleash`).
     pub const SYNTH_KEYWORD: u64 = 1 << 32;
-    /// At least one of the five containers a keyword grant can come out of is
-    /// non-empty: `equipped_bonus`, `soulbond_bonus`, `level_bands`,
-    /// `station`, `static_abilities`. Clear means the card cannot grant any
-    /// keyword to anything, whatever the predicate asks.
-    pub const CONTAINER: u64 = 1 << 33;
+    /// One of the five containers a keyword grant can come out of
+    /// (`equipped_bonus`, `soulbond_bonus`, `level_bands`, `station`,
+    /// `static_abilities`) actually holds one —
+    /// [`CardDefinition::can_grant_keyword`] at `|_| true`. Clear means the
+    /// card cannot grant any keyword to anything, whatever the predicate asks.
+    ///
+    /// The bit was "one of the five is non-empty" until the ninetieth pass;
+    /// the tighter question costs the same load and the same test, and the
+    /// cards it now excludes are the ones with a printed static that grants no
+    /// keyword — a large population.
+    ///
+    /// [`CardDefinition::can_grant_keyword`]: super::CardDefinition::can_grant_keyword
+    pub const ANY_GRANT: u64 = 1 << 33;
     /// The memo's payload.
-    pub const ALL: u64 = SYNTH_KEYWORD | CONTAINER;
+    pub const ALL: u64 = SYNTH_KEYWORD | ANY_GRANT;
 }
 
 /// `card_can_change_card_types`, split into its attachment-gated half and

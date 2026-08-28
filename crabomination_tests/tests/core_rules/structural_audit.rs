@@ -141,3 +141,62 @@ fn tapped_etb_lands_without_an_etb_effect_have_no_trigger() {
     assert!(crabomination::catalog::magosi_the_waterveil().triggered_abilities.is_empty());
     assert!(crabomination::catalog::oran_rief_the_vastwood().triggered_abilities.is_empty());
 }
+
+/// `grant_bits::ANY_GRANT` is `CardDefinition::can_grant_keyword` at
+/// `|_| true`, and `card_can_grant_keyword` returns `false` outright when it
+/// is clear. That is sound only because the function is **monotone in its
+/// predicate** — every leg is an `any` / `||` / a recursion, with no negation
+/// — so this walks the whole catalog against a battery of the keywords real
+/// callers ask about and pins the implication.
+///
+/// The battery is a sample; the argument is the proof. What the test catches
+/// is a later edit that puts a negation in one of the legs, which would make
+/// the bit stop being an over-approximation of the predicate form and start
+/// hiding grants.
+#[test]
+fn a_clear_any_grant_bit_is_authoritative_for_every_predicate() {
+    use crabomination::card::{Keyword, grant_bits};
+    use crabomination::mana::Color;
+
+    let battery: Vec<(&str, Box<dyn Fn(&Keyword) -> bool>)> = vec![
+        ("flying", Box::new(|k: &Keyword| matches!(k, Keyword::Flying))),
+        ("haste", Box::new(|k: &Keyword| matches!(k, Keyword::Haste))),
+        ("hexproof", Box::new(|k: &Keyword| matches!(k, Keyword::Hexproof))),
+        ("menace", Box::new(|k: &Keyword| matches!(k, Keyword::Menace))),
+        ("cant_block", Box::new(|k: &Keyword| matches!(k, Keyword::CantBlock))),
+        ("trample", Box::new(|k: &Keyword| matches!(k, Keyword::Trample))),
+        ("absorb", Box::new(|k: &Keyword| matches!(k, Keyword::Absorb(_)))),
+        ("protection", Box::new(|k: &Keyword| matches!(k, Keyword::Protection(_)))),
+        ("protection_white", Box::new(|k: &Keyword| matches!(k, Keyword::Protection(Color::White)))),
+        ("cumulative_upkeep", Box::new(|k: &Keyword| matches!(k, Keyword::CumulativeUpkeep(_)))),
+        ("must_attack", Box::new(|k: &Keyword| matches!(k, Keyword::MustAttack))),
+        ("phasing", Box::new(|k: &Keyword| matches!(k, Keyword::Phasing))),
+        ("any", Box::new(|_: &Keyword| true)),
+    ];
+
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    let (mut with_bit, mut total) = (0usize, 0usize);
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        total += 1;
+        let set = def.grant_scan_bits() & grant_bits::ANY_GRANT != 0;
+        if set {
+            with_bit += 1;
+            continue;
+        }
+        for (name, pred) in &battery {
+            if def.can_grant_keyword(pred) {
+                bad.push(format!("{}: ANY_GRANT clear but grants {name}", def.name));
+            }
+        }
+    }
+    assert!(bad.is_empty(), "the gate is not an over-approximation:\n{}", bad.join("\n"));
+    // Not vacuous in either direction: the bit is set on a real population and
+    // clear on a much larger one, which is the whole reason it is a gate.
+    assert!(with_bit > 100, "only {with_bit} of {total} definitions can grant a keyword");
+    assert!(total - with_bit > 1_000, "the gate excludes almost nothing");
+}

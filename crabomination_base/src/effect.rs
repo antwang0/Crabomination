@@ -9731,3 +9731,58 @@ pub fn static_grants_triggered_ability(effect: &StaticEffect) -> bool {
         _ => false,
     }
 }
+
+/// True when `effect` can emit a layer-6 `AddKeyword` matching `pred`. Twin of
+/// [`static_effect_strips_abilities`] for the keyword-grant family.
+///
+/// The variant list is mechanical, not judged: 23 of `StaticEffect`'s variants
+/// carry a `Keyword` field, three of those only *remove* one (`LoseKeyword`,
+/// `CantHaveKeyword`) or name a supertype, and four more grant a keyword they
+/// don't carry as a field — so the scan for `Keyword` in the enum is necessary
+/// and not sufficient, and those four are spelled out below.
+///
+/// Moved here from the engine so [`CardDefinition::can_grant_keyword`] can use
+/// it, for the same reason [`static_effect_changes_card_types`] lives here.
+///
+/// [`CardDefinition::can_grant_keyword`]: crate::card::CardDefinition::can_grant_keyword
+pub fn static_effect_grants_keyword(
+    effect: &StaticEffect,
+    pred: &impl Fn(&Keyword) -> bool,
+) -> bool {
+    use StaticEffect as SE;
+    let any = |kws: &[Keyword]| kws.iter().any(pred);
+    match effect {
+        SE::PumpSelfIf { keywords, .. }
+        | SE::PumpTeamIf { keywords, .. }
+        | SE::GrantPumpSelfIf { keywords, .. }
+        | SE::MatchingLandsAreCreatures { keywords, .. }
+        | SE::AnthemForFilter { keywords, .. }
+        | SE::AnthemForFilterIf { keywords, .. } => any(keywords),
+        SE::GrantKeyword { keyword, .. }
+        | SE::GrantKeywordWhileControllerControlsAtMost { keyword, .. }
+        | SE::GrantKeywordToChosenType { keyword, .. }
+        | SE::GrantKeywordToAttackers { keyword }
+        | SE::GraveyardAnthem { keyword, .. }
+        | SE::SelfHasKeywordWhile { keyword, .. }
+        | SE::SelfHasKeywordWhilePredicate { keyword, .. }
+        | SE::SelfHasKeywordWhileCountersAtLeast { keyword, .. }
+        | SE::SelfHasKeywordIf { keyword, .. } => pred(keyword),
+        // Unbounded — the granted keyword carries a payload the static does
+        // not fix (an exiled card's keywords or card types, a draft note, an
+        // ETB-chosen colour, a counter count), so the only sound answer while
+        // the static is present is "maybe". All five are rare enough that the
+        // gate still reads `false` on essentially every board.
+        SE::GainKeywordsFromExiledWith { .. }
+        | SE::SelfHasDraftNotedKeywords
+        | SE::AnnihilatorPerPlusOneCounter
+        | SE::GrantProtectionFromChosenColor { .. }
+        | SE::ProtectionFromExiledWithCardTypes
+        | SE::YouAndCreaturesProtectionFromChosenCardType => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_grants_keyword(inner, pred),
+        _ => false,
+    }
+}
