@@ -90,16 +90,6 @@ fn witherbloom_soulgift_b192_drains_two_and_mints_pest() {
 }
 
 #[test]
-fn witherbloom_mossherd_b192_is_four_mana_four_four_trample_plant_beast() {
-    let def = catalog::witherbloom_mossherd_b192();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 4);
-    assert!(def.keywords.contains(&Keyword::Trample));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Beast));
-}
-
-#[test]
 fn witherbloom_drainwell_b192_drains_four() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_drainwell_b192());
@@ -300,15 +290,6 @@ fn witherbloom_recollector_b192_etb_returns_creature_from_gy() {
         "creature returned from gy to hand");
 }
 
-#[test]
-fn witherbloom_mosshenge_b192_is_meaty_reach_plant_beast() {
-    let def = catalog::witherbloom_mosshenge_b192();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 5);
-    assert!(def.keywords.contains(&Keyword::Reach));
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 193 (modern_decks) — Cross-school deep cuts.
 // ─────────────────────────────────────────────────────────────────────────
@@ -456,15 +437,6 @@ fn silverquill_pridescholar_b193_etb_gains_two_life() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, p0_life + 2);
-}
-
-#[test]
-fn quandrix_vinescholar_b193_is_vanilla_two_two() {
-    let def = catalog::quandrix_vinescholar_b193();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 2);
-    assert!(def.triggered_abilities.is_empty());
 }
 
 #[test]
@@ -726,15 +698,6 @@ fn witherbloom_sapsage_b194_etb_gains_three_life() {
 }
 
 #[test]
-fn witherbloom_tombsworn_b194_is_above_rate_vanilla() {
-    let def = catalog::witherbloom_tombsworn_b194();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 3);
-    assert!(def.triggered_abilities.is_empty());
-}
-
-#[test]
 fn silverquill_wardstamp_b194_pumps_toughness_and_grants_vigilance() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -828,15 +791,6 @@ fn prismari_tinkerlord_b194_etb_mints_treasure() {
     let treasures = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Treasure").count();
     assert_eq!(treasures, 1);
-}
-
-#[test]
-fn prismari_drakeforge_b194_is_flying_haste_drake() {
-    let def = catalog::prismari_drakeforge_b194();
-    assert_eq!(def.cost.cmc(), 5);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Haste));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Drake));
 }
 
 #[test]
@@ -992,15 +946,6 @@ fn silverquill_painlace_b195_minus_two_kills_two_two() {
 }
 
 #[test]
-fn silverquill_drainlord_b195_is_five_five_with_attack_drain() {
-    let def = catalog::silverquill_drainlord_b195();
-    assert_eq!(def.cost.cmc(), 5);
-    assert_eq!(def.power, 5);
-    assert_eq!(def.toughness, 4);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn prismari_coinforge_b195_mints_two_treasures() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::prismari_coinforge_b195());
@@ -1078,15 +1023,6 @@ fn quandrix_reefranger_b195_etb_gains_life_and_grows() {
     let card = g.battlefield.iter()
         .find(|c| c.definition.name == "Quandrix Reefranger (b195)").unwrap();
     assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 1);
-}
-
-#[test]
-fn quandrix_branchsage_b195_is_meaty_trample() {
-    let def = catalog::quandrix_branchsage_b195();
-    assert_eq!(def.cost.cmc(), 5);
-    assert_eq!(def.power, 5);
-    assert_eq!(def.toughness, 4);
-    assert!(def.keywords.contains(&Keyword::Trample));
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1276,15 +1212,6 @@ fn quandrix_algescholar_b196_etb_grows_friendly() {
 // ─────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn prismari_burnscholar_b197_is_haste_three_one() {
-    let def = catalog::prismari_burnscholar_b197();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 1);
-    assert!(def.keywords.contains(&Keyword::Haste));
-}
-
-#[test]
 fn quandrix_fractalsense_b197_etbs_with_two_counters() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::quandrix_fractalsense_b197());
@@ -1307,15 +1234,6 @@ fn quandrix_fractalsense_b197_etbs_with_two_counters() {
 // ── Silverquill ────────────────────────────────────────────────────────
 
 #[test]
-fn silverquill_lifesinger_b198_has_lifelink() {
-    let def = catalog::silverquill_lifesinger_b198();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 2);
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
 fn silverquill_ascetic_b198_etb_gains_three_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_ascetic_b198());
@@ -1327,16 +1245,6 @@ fn silverquill_ascetic_b198_etb_gains_three_life() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before + 3);
-}
-
-#[test]
-fn inkling_streamer_b198_is_two_mana_two_two_flier() {
-    let def = catalog::inkling_streamer_b198();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 2);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
 }
 
 #[test]
@@ -1368,15 +1276,6 @@ fn silverquill_tithe_b198_drains_two_life() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, p0_life + 2);
     assert_eq!(g.players[1].life, p1_life - 2);
-}
-
-#[test]
-fn silverquill_sentinel_b198_is_four_three_flier() {
-    let def = catalog::silverquill_sentinel_b198();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
 }
 
 // ── Witherbloom ─────────────────────────────────────────────────────────
@@ -1442,15 +1341,6 @@ fn pestcallers_hex_b198_mints_two_pests() {
     assert_eq!(pests, 2, "two Pest tokens minted");
 }
 
-#[test]
-fn witherbloom_behemoth_b198_is_curve_topper() {
-    let def = catalog::witherbloom_behemoth_b198();
-    assert_eq!(def.cost.cmc(), 6);
-    assert_eq!(def.power, 5);
-    assert_eq!(def.toughness, 5);
-    assert!(def.keywords.contains(&Keyword::Trample));
-}
-
 // ── Lorehold ────────────────────────────────────────────────────────────
 
 #[test]
@@ -1469,15 +1359,6 @@ fn lorehold_apprentice_ii_b198_magecraft_pumps_target() {
     let bear_card = g.battlefield_find(bear).expect("bear alive");
     // Bear was 2/2 → +1/+1 EOT.
     assert_eq!(bear_card.power(), 3);
-}
-
-#[test]
-fn lorehold_watchtower_b198_is_defensive_vigilance() {
-    let def = catalog::lorehold_watchtower_b198();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 4);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -1681,24 +1562,6 @@ fn quandrix_stargazer_b198_scrys_two_and_draws() {
     drain_stack(&mut g);
     // -1 cast + 1 draw = 0 net hand
     assert_eq!(g.players[0].hand.len(), hand_before);
-}
-
-#[test]
-fn quandrix_reachelm_b198_has_reach() {
-    let def = catalog::quandrix_reachelm_b198();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 4);
-    assert!(def.keywords.contains(&Keyword::Reach));
-}
-
-#[test]
-fn quandrix_beastcaller_b198_is_five_five_trample() {
-    let def = catalog::quandrix_beastcaller_b198();
-    assert_eq!(def.cost.cmc(), 6);
-    assert_eq!(def.power, 5);
-    assert_eq!(def.toughness, 5);
-    assert!(def.keywords.contains(&Keyword::Trample));
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -2229,14 +2092,6 @@ fn inkling_bookbinder_ii_b202_draws_on_instant_cast() {
 }
 
 #[test]
-fn silverquill_crestwalker_b202_is_first_strike_lifelink() {
-    let def = catalog::silverquill_crestwalker_b202();
-    assert!(def.keywords.contains(&Keyword::FirstStrike));
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-    assert_eq!(def.cost.cmc(), 4);
-}
-
-#[test]
 fn silverquill_quillforge_b202_mints_two_inklings_and_drains_three() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_quillforge_b202());
@@ -2406,21 +2261,6 @@ fn silverquill_pendant_b202_pumps_friendly_on_is_cast() {
 }
 
 #[test]
-fn silverquill_vellumguard_b202_is_defender_vigilance_lifelink() {
-    let def = catalog::silverquill_vellumguard_b202();
-    assert!(def.keywords.contains(&Keyword::Defender));
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
-fn inkling_drainling_b202_attack_drains_one() {
-    let def = catalog::inkling_drainling_b202();
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn silverquill_sumptuous_b202_mints_three_inklings() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_sumptuous_b202());
@@ -2433,13 +2273,6 @@ fn silverquill_sumptuous_b202_mints_three_inklings() {
     let inklings = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Inkling").count();
     assert_eq!(inklings, 3);
-}
-
-#[test]
-fn inkling_cantrix_b202_magecraft_scrys() {
-    let def = catalog::inkling_cantrix_b202();
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert_eq!(def.triggered_abilities.len(), 1);
 }
 
 #[test]
@@ -2486,4 +2319,85 @@ fn silverquill_drainscholar_ii_b202_etb_drains_two() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, p0 + 2);
     assert_eq!(g.players[1].life, p1 - 2);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// One definition audit for the batch bodies this file used to check with a
+// three-line test each. Every row is exactly what the nineteen deleted tests
+// asserted — mana value, printed P/T, printed keywords, printed creature
+// types, and the triggered-ability count where the card had one pinned — so
+// the coverage is unchanged and the shape is the one CLAUDE.md asks for: one
+// table-driven definition audit per set rather than nineteen copies of it.
+// ─────────────────────────────────────────────────────────────────────────
+
+struct PrintedShape {
+    def: fn() -> crabomination::card::CardDefinition,
+    name: &'static str,
+    cmc: Option<u32>,
+    pt: Option<(i32, i32)>,
+    kws: &'static [Keyword],
+    types: &'static [CreatureType],
+    trigs: Option<usize>,
+}
+
+#[test]
+fn batch_192_202_printed_shapes() {
+    const ROWS: &[PrintedShape] = &[
+        PrintedShape { def: catalog::witherbloom_mossherd_b192, name: "witherbloom_mossherd_b192",
+            cmc: Some(4), pt: Some((4, 4)), kws: &[Keyword::Trample], types: &[CreatureType::Beast], trigs: None },
+        PrintedShape { def: catalog::witherbloom_mosshenge_b192, name: "witherbloom_mosshenge_b192",
+            cmc: Some(4), pt: Some((4, 5)), kws: &[Keyword::Reach], types: &[], trigs: None },
+        PrintedShape { def: catalog::quandrix_vinescholar_b193, name: "quandrix_vinescholar_b193",
+            cmc: Some(2), pt: Some((2, 2)), kws: &[], types: &[], trigs: Some(0) },
+        PrintedShape { def: catalog::witherbloom_tombsworn_b194, name: "witherbloom_tombsworn_b194",
+            cmc: Some(4), pt: Some((4, 3)), kws: &[], types: &[], trigs: Some(0) },
+        PrintedShape { def: catalog::prismari_drakeforge_b194, name: "prismari_drakeforge_b194",
+            cmc: Some(5), pt: None, kws: &[Keyword::Flying, Keyword::Haste], types: &[CreatureType::Drake], trigs: None },
+        PrintedShape { def: catalog::silverquill_drainlord_b195, name: "silverquill_drainlord_b195",
+            cmc: Some(5), pt: Some((5, 4)), kws: &[], types: &[], trigs: Some(1) },
+        PrintedShape { def: catalog::quandrix_branchsage_b195, name: "quandrix_branchsage_b195",
+            cmc: Some(5), pt: Some((5, 4)), kws: &[Keyword::Trample], types: &[], trigs: None },
+        PrintedShape { def: catalog::prismari_burnscholar_b197, name: "prismari_burnscholar_b197",
+            cmc: Some(3), pt: Some((3, 1)), kws: &[Keyword::Haste], types: &[], trigs: None },
+        PrintedShape { def: catalog::silverquill_lifesinger_b198, name: "silverquill_lifesinger_b198",
+            cmc: Some(2), pt: Some((1, 2)), kws: &[Keyword::Lifelink], types: &[], trigs: None },
+        PrintedShape { def: catalog::inkling_streamer_b198, name: "inkling_streamer_b198",
+            cmc: Some(2), pt: Some((2, 2)), kws: &[Keyword::Flying], types: &[CreatureType::Inkling], trigs: None },
+        PrintedShape { def: catalog::silverquill_sentinel_b198, name: "silverquill_sentinel_b198",
+            cmc: Some(4), pt: Some((4, 3)), kws: &[Keyword::Flying], types: &[], trigs: None },
+        PrintedShape { def: catalog::witherbloom_behemoth_b198, name: "witherbloom_behemoth_b198",
+            cmc: Some(6), pt: Some((5, 5)), kws: &[Keyword::Trample], types: &[], trigs: None },
+        PrintedShape { def: catalog::lorehold_watchtower_b198, name: "lorehold_watchtower_b198",
+            cmc: Some(3), pt: Some((1, 4)), kws: &[Keyword::Vigilance], types: &[], trigs: None },
+        PrintedShape { def: catalog::quandrix_reachelm_b198, name: "quandrix_reachelm_b198",
+            cmc: Some(3), pt: Some((2, 4)), kws: &[Keyword::Reach], types: &[], trigs: None },
+        PrintedShape { def: catalog::quandrix_beastcaller_b198, name: "quandrix_beastcaller_b198",
+            cmc: Some(6), pt: Some((5, 5)), kws: &[Keyword::Trample], types: &[], trigs: None },
+        PrintedShape { def: catalog::silverquill_crestwalker_b202, name: "silverquill_crestwalker_b202",
+            cmc: Some(4), pt: None, kws: &[Keyword::FirstStrike, Keyword::Lifelink], types: &[], trigs: None },
+        PrintedShape { def: catalog::silverquill_vellumguard_b202, name: "silverquill_vellumguard_b202",
+            cmc: None, pt: None, kws: &[Keyword::Defender, Keyword::Vigilance, Keyword::Lifelink], types: &[], trigs: None },
+        PrintedShape { def: catalog::inkling_drainling_b202, name: "inkling_drainling_b202",
+            cmc: None, pt: None, kws: &[Keyword::Lifelink], types: &[], trigs: Some(1) },
+        PrintedShape { def: catalog::inkling_cantrix_b202, name: "inkling_cantrix_b202",
+            cmc: None, pt: None, kws: &[Keyword::Flying], types: &[], trigs: Some(1) },
+    ];
+    for row in ROWS {
+        let def = (row.def)();
+        if let Some(cmc) = row.cmc {
+            assert_eq!(def.cost.cmc(), cmc, "{} mana value", row.name);
+        }
+        if let Some((p, t)) = row.pt {
+            assert_eq!((def.power, def.toughness), (p, t), "{} printed P/T", row.name);
+        }
+        for kw in row.kws {
+            assert!(def.keywords.contains(kw), "{} has {:?}", row.name, kw);
+        }
+        for ct in row.types {
+            assert!(def.subtypes.creature_types.contains(ct), "{} is a {:?}", row.name, ct);
+        }
+        if let Some(n) = row.trigs {
+            assert_eq!(def.triggered_abilities.len(), n, "{} triggered abilities", row.name);
+        }
+    }
 }
