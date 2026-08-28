@@ -16902,8 +16902,7 @@ impl GameState {
             c.remove_counters(kind, 1);
         }
         events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: 1 });
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(events);
         true
     }
 }

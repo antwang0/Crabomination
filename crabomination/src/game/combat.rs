@@ -2566,8 +2566,7 @@ impl GameState {
         if self.pending_decision.is_some() {
             return Ok(events);
         }
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(&mut events);
         events.push(GameEvent::FirstStrikeDamageResolved);
         Ok(events)
     }
@@ -2590,8 +2589,7 @@ impl GameState {
             return Ok(events);
         }
 
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(&mut events);
 
         self.attacking.clear();
         // Dropped, not cleared — a cleared `HashMap` keeps its table and

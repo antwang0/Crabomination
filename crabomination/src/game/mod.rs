@@ -13786,7 +13786,7 @@ impl GameState {
                 AttackingTokenCleanup::None => {}
             }
         }
-        events.append(&mut self.check_state_based_actions());
+        self.check_state_based_actions_into(&mut events);
         events
     }
 
@@ -15193,7 +15193,7 @@ impl GameState {
         // skip already-eliminated seats, so this won't fire for them there.
         self.objects_leave_with_player(seat);
         // Resolve the game-over / surviving-team determination.
-        events.extend(self.check_state_based_actions());
+        self.check_state_based_actions_into(&mut events);
         events
     }
 
@@ -19651,8 +19651,7 @@ impl GameState {
         }
         self.give_priority_to_active();
 
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(&mut events);
         Ok(events)
     }
 
@@ -20311,8 +20310,7 @@ impl GameState {
                 );
             }
         };
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(&mut events);
         self.dispatch_triggers_for_events(&events);
         Ok(events)
     }

@@ -902,6 +902,52 @@ build.
 
 ## Baseline
 
+### Eighty-seventh pass — the `grow_one` row named for a function that returns a `Vec<GameEvent>` was 10 % that buffer
+
+**The box reproduces the eighty-sixth tip to 515 Ir** (`fixed`
+1,106,711,919 here against the committed 1,106,711,404), so the rows below
+are comparable with everything above them.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base aefae7bb (fixed 1,106,711,919 /
+cube 3,355,241,293 / sealed 3,291,518,912 on this box).
+
+(1) (-75)'s first instalment: `check_state_based_actions_into(&mut events)`
+    — the sweep appends to the caller's buffer instead of returning its own.
+    73 engine call sites, 71 of them the literal
+    `let mut sba = …; events.append(&mut sba);` pair.
+      fixed   1,106,711,919 -> 1,106,322,059   -0.035 %
+      cube    3,355,241,293 -> 3,353,741,195   -0.045 %
+      sealed  3,291,518,912 -> 3,289,113,042   -0.073 %
+      cube allocations 1,759,090 -> 1,756,116  (-2,974)
+      cube grow_one      428,190 ->   425,410  (-2,780)
+```
+
+**-0.045 % for a 0.14 % row, and the gap is the entry's whole finding:
+`check_state_based_actions`' 26,942 `grow_one` calls were 24,320 *internal
+collects* and 2,622 the `events` buffer.** The sweep produces no events on
+most of its 20,152 calls, so the `vec![]` that (-75) priced never allocated
+there in the first place; the row it was read off is the gated `Vec<CardId>`
+collects (-69) already audited. **This is (-71)'s own caution one level up —
+"a `grow_one` row named for a function is not necessarily the buffer you
+think" — and the return type is not evidence either.** The change is kept:
+the sign is the same on all three pools, the mechanism is counted to the
+unit (2,974 allocations at ~500 Ir of whole lifecycle each), and it deletes
+62 lines.
+
+**What it says about the rest of the family, before anyone spends the
+refactor.** (-75) sized `advance_step` / `declare_blockers` / `resolve_combat`
+/ `resolve_top_of_stack_inner` off the same table. Two of those are already
+answered in this file and neither is takeable by threading:
+`declare_blockers`' row is the `ids` lists (the sixty-seventh pass's
+reserve refutation, and pass 86 inlined nine of them), and `advance_step`'s
+is `events.push(StepChanged)` on a buffer its caller hands in **empty** —
+the allocation holds an event that is *returned*, so threading moves it
+rather than removing it. Removing that one needs the buffer to outlive the
+action, i.e. a `perform_action_into` whose caller reuses one across actions,
+which is a public-API change and not what (-75) describes.
+
 ### Eighty-sixth pass — the local accumulator that allocates, and a dependency feature that was worth 0.12 % of `fixed`
 
 ```text
@@ -8633,7 +8679,20 @@ whose first `push` is the allocation — at half the size each, ~1.2 % of
   every return; the entry above is specifically about a local that dies in
   its own frame.
 
-**(-75) THE `events: Vec<GameEvent>` ACCUMULATOR FAMILY IS ~0.8 % OF `cube`
+**(-75) FIRST INSTALMENT TAKEN AT THE EIGHTY-SEVENTH PASS — `fixed`
+-0.035 %, `cube` -0.045 %, `sealed` -0.073 % — AND THE ENTRY'S SIZING IS
+REFUTED BY IT.** `check_state_based_actions_into` was the family's second-
+largest row (26,942 growths) and **2,622 of those were the `events` buffer**;
+the other 24,320 are the sweep's own gated `Vec<CardId>` collects. The sweep
+fires no event on most of its 20,152 calls, so the `vec![]` this entry
+priced was never allocating. See the Baseline's eighty-seventh block for the
+counts and for why two more of the entry's rows (`declare_blockers`,
+`advance_step`) are not takeable by threading at all. **What is left of the
+entry is `resolve_combat` (15,856) and `resolve_top_of_stack_inner` (8,900),
+unattributed — read each row's split before taking it, because the one row
+that was split came out 10 % events.** The entry as filed:
+
+**(-75, as found) THE `events: Vec<GameEvent>` ACCUMULATOR FAMILY IS ~0.8 % OF `cube`
 IN `grow_one` ALONE, AND IT IS WHAT IS LEFT AFTER (-71)'s SWEEP.** Read at
 the eighty-sixth tip, `--decks cube`, from the `grow_one` caller table:
 

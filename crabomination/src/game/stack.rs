@@ -492,8 +492,7 @@ impl GameState {
                             // CR 104.3c (or the Lab-Man win override). Game-over
                             // check happens inside SBA.
                             self.lose_to_empty_draw(p);
-                            let mut sba = self.check_state_based_actions();
-                            events.append(&mut sba);
+                            self.check_state_based_actions_into(&mut events);
                             if self.is_game_over() {
                                 return Ok(events);
                             }
@@ -1719,8 +1718,7 @@ impl GameState {
                                     .build(),
                             );
                         }
-                        let mut sba = self.check_state_based_actions();
-                        events.append(&mut sba);
+                        self.check_state_based_actions_into(&mut events);
                         return Ok(events);
                     }
                 }
@@ -2480,8 +2478,7 @@ impl GameState {
                     ctx.x_value = x_value;
                     if !self.evaluate_predicate(pred, &ctx) {
                         // Trigger fizzles — no effect, no events.
-                        let mut sba = self.check_state_based_actions();
-                        events.append(&mut sba);
+                        self.check_state_based_actions_into(&mut events);
                         return Ok(events);
                     }
                 }
@@ -2542,8 +2539,7 @@ impl GameState {
             return self.do_end_the_turn(events);
         }
 
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(&mut events);
 
         Ok(events)
     }
@@ -2683,8 +2679,7 @@ impl GameState {
                 }
             }
         }
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(&mut events);
         events
     }
 
@@ -3871,8 +3866,7 @@ impl GameState {
         // CR 514.3a — check state-based actions and triggered abilities. If
         // anything is waiting, players receive priority in the cleanup step;
         // once they all pass with an empty stack, another cleanup happens.
-        let mut sba = self.check_state_based_actions();
-        events.append(&mut sba);
+        self.check_state_based_actions_into(events);
         if !self.stack.is_empty() || self.pending_decision.is_some() {
             if self.pending_decision.is_none() {
                 self.give_priority_to_active();
@@ -4597,8 +4591,19 @@ impl GameState {
                     || self.damaged_creatures_die_this_turn))
     }
 
+    /// Owning wrapper for callers with no accumulator of their own (tests,
+    /// the server's read paths). Engine callers that already hold an events
+    /// buffer call [`Self::check_state_based_actions_into`] and skip the
+    /// per-sweep `Vec` — see PERF's `(-75)`.
     pub fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
+        self.check_state_based_actions_into(&mut events);
+        events
+    }
+
+    /// The sweep proper. Appends to `events`; never reads it, so a caller may
+    /// pass a buffer that already holds this action's earlier events.
+    pub fn check_state_based_actions_into(&mut self, events: &mut Vec<GameEvent>) {
 
         // CR 904.10 — a face-up non-ongoing scheme is abandoned once no scheme
         // trigger is left on the stack.
@@ -4650,7 +4655,7 @@ impl GameState {
                 })
                 .collect();
             for id in to_flip {
-                self.flip_permanent(id, &mut events);
+                self.flip_permanent(id, events);
                 flipped = true;
             }
         }
@@ -4673,7 +4678,7 @@ impl GameState {
                 };
                 let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
                 if self.evaluate_predicate(&pred, &ctx) {
-                    self.flip_permanent(id, &mut events);
+                    self.flip_permanent(id, events);
                     flipped = true;
                 }
             }
@@ -4702,7 +4707,7 @@ impl GameState {
                 };
                 let ctx = crate::game::effects::EffectContext::for_ability(id, ctrl, None);
                 if self.evaluate_predicate(&pred, &ctx) {
-                    self.sacrifice_one(id, ctrl, &mut events);
+                    self.sacrifice_one(id, ctrl, events);
                 }
             }
         }
@@ -5354,12 +5359,12 @@ impl GameState {
                 .map(|c| c.regeneration_shields > 0 && !c.cant_regenerate_this_turn)
                 .unwrap_or(false);
             if has_regen && !dies_by_lethal_toughness {
-                self.apply_regeneration(id, &mut events);
+                self.apply_regeneration(id, events);
                 continue;
             }
             // CR 702.89 — umbra armor replaces destruction (not the
             // toughness-≤-0 SBA, which isn't destruction).
-            if !dies_by_lethal_toughness && self.apply_umbra_armor(id, &mut events) {
+            if !dies_by_lethal_toughness && self.apply_umbra_armor(id, events) {
                 continue;
             }
 
@@ -5554,7 +5559,7 @@ impl GameState {
             // Persist / Undying return (CR 702.79 / 702.92), shared with the
             // destroy / sacrifice funnels via `return_persist_undying`.
             self.return_persist_undying(
-                id, owner, (has_persist, has_undying, minus_count, plus_count), &mut events,
+                id, owner, (has_persist, has_undying, minus_count, plus_count), events,
             );
             if (has_persist || has_undying) && self.battlefield.iter().any(|c| c.id == id) {
                 board_grew = true;
@@ -5601,7 +5606,7 @@ impl GameState {
         };
         let any_defeated = !defeated_battles.is_empty();
         for id in defeated_battles {
-            self.defeat_battle(id, &mut events);
+            self.defeat_battle(id, events);
         }
         // A defeated battle's back face re-enters the battlefield.
         let scan = if any_defeated { self.sba_board_scan() } else { scan };
@@ -6010,8 +6015,6 @@ impl GameState {
                 }
             }
         }
-
-        events
     }
 
     /// CR 506.4 — A permanent is removed from combat if it leaves the
