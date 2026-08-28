@@ -5386,6 +5386,48 @@ impl CardDefinition {
         m
     }
 
+    /// The trigger dispatcher's board-scan bits for this printing — see
+    /// [`dispatch_bits`]. Pure function of the definition; `CardData`
+    /// memoizes it (`CardData::dispatch_scan_bits`), which is what keeps the
+    /// per-permanent `static_abilities` walk off the dispatch path.
+    pub fn dispatch_scan_bits(&self) -> u64 {
+        use crate::effect::{
+            StaticEffect, static_effect_strips_abilities, static_grants_triggered_ability,
+        };
+        use dispatch_bits as b;
+        let mut m = 0u64;
+        if let Some(bonus) = self.equipped_bonus.as_ref() {
+            if !bonus.triggers_on_equipment {
+                m |= b::EQUIP_TRIGGER_GRANT;
+            }
+            if bonus.remove_abilities {
+                m |= b::STRIP_ATTACHED;
+            }
+        }
+        for sa in &self.static_abilities {
+            if matches!(
+                sa.effect,
+                StaticEffect::SuppressCreatureEtbTriggers { also_dies: true, .. }
+            ) {
+                m |= b::DIES_SUPPRESS;
+            }
+            if static_effect_strips_abilities(&sa.effect) {
+                m |= b::STRIP;
+            }
+            if static_grants_triggered_ability(&sa.effect) {
+                m |= b::GRANT_TRIGGER;
+            }
+        }
+        if self
+            .station
+            .iter()
+            .any(|band| band.statics.iter().any(static_effect_strips_abilities))
+        {
+            m |= b::STRIP;
+        }
+        m
+    }
+
     /// [`Self::printed_color_set`] in WUBRG order as a `Vec`.
     pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
         self.printed_color_set().to_vec()
@@ -6140,6 +6182,37 @@ pub mod type_bits {
     pub const ALL: u64 = ATTACHED | ALWAYS;
 }
 
+/// The four presence questions the trigger dispatcher's board scan asks of a
+/// definition — see [`sba_bits`] for the device.
+///
+/// Three of the four *are* the answer (the scan ORs them straight in); only
+/// [`GRANT_TRIGGER`] still needs the walk, because it builds a list. The two
+/// attachment-gated bits carry the definition half and the caller ANDs
+/// `attached_to`.
+///
+/// [`GRANT_TRIGGER`]: self::GRANT_TRIGGER
+pub mod dispatch_bits {
+    /// `equipped_bonus` exists and hands its triggered abilities to the host
+    /// (i.e. is not the Jitte-style `triggers_on_equipment` shape).
+    /// Attachment-gated.
+    pub const EQUIP_TRIGGER_GRANT: u64 = 1 << 36;
+    /// `equipped_bonus.remove_abilities`. Attachment-gated; the other half of
+    /// `card_can_strip_abilities`.
+    pub const STRIP_ATTACHED: u64 = 1 << 37;
+    /// A printed static suppresses creature death triggers
+    /// (`SuppressCreatureEtbTriggers { also_dies: true }`).
+    pub const DIES_SUPPRESS: u64 = 1 << 38;
+    /// A printed static or a CR 721.2a Station band static strips abilities.
+    pub const STRIP: u64 = 1 << 39;
+    /// A printed static can be a `GrantTriggeredAbility` once the gate
+    /// wrappers `active_static` peels are peeled. Over-approximates the
+    /// gates, exactly as the walk it replaces does before evaluating them.
+    pub const GRANT_TRIGGER: u64 = 1 << 40;
+    /// The memo's payload.
+    pub const ALL: u64 =
+        EQUIP_TRIGGER_GRANT | STRIP_ATTACHED | DIES_SUPPRESS | STRIP | GRANT_TRIGGER;
+}
+
 /// Two answers about a card's *definition*, memoized on the object: its
 /// printed colour set and the SBA sweep's board-scan bits.
 ///
@@ -6154,7 +6227,10 @@ pub mod type_bits {
 /// state-based-action sweep.
 ///
 /// Layout: bits 0-4 the [`ColorSet`], bit 5 its valid flag, bit 6 the SBA
-/// valid flag, bits 8-29 the [`sba_bits`] mask. Zero is "nothing known".
+/// valid flag, bit 7 the keyword-grant one, bits 8-29 the [`sba_bits`] mask,
+/// bit 30 the card-type valid flag, bit 31 the dispatch one, bits 32-33
+/// [`grant_bits`], 34-35 [`type_bits`], 36-40 [`dispatch_bits`]. Zero is
+/// "nothing known".
 /// Atomic rather than a `Cell` because `CardData` sits behind an `Arc` that
 /// has to stay `Send`; the halves are written with a plain load-modify-store
 /// because [`Self::clear`] only ever runs on a *uniquely owned* `CardData`
@@ -6170,6 +6246,7 @@ impl CardMemo {
     const SBA_VALID: u64 = 1 << 6;
     const GRANT_VALID: u64 = 1 << 7;
     const TYPE_VALID: u64 = 1 << 30;
+    const DISPATCH_VALID: u64 = 1 << 31;
 
     #[inline]
     fn get(&self) -> Option<crate::mana::ColorSet> {
@@ -6228,6 +6305,21 @@ impl CardMemo {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
         self.0.store(
             (v & !type_bits::ALL) | bits | Self::TYPE_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    #[inline]
+    fn get_dispatch(&self) -> Option<u64> {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::DISPATCH_VALID != 0).then_some(v & dispatch_bits::ALL)
+    }
+
+    #[inline]
+    fn set_dispatch(&self, bits: u64) {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        self.0.store(
+            (v & !dispatch_bits::ALL) | bits | Self::DISPATCH_VALID,
             std::sync::atomic::Ordering::Relaxed,
         );
     }
@@ -6875,6 +6967,23 @@ impl CardData {
         }
         let bits = self.definition.type_scan_bits();
         self.memo.set_type(bits);
+        bits
+    }
+
+    /// [`CardDefinition::dispatch_scan_bits`] for this object, memoized on the
+    /// same word and audited by the same `debug_assert!`.
+    #[inline]
+    pub fn dispatch_scan_bits(&self) -> u64 {
+        if let Some(bits) = self.memo.get_dispatch() {
+            debug_assert_eq!(
+                bits,
+                self.definition.dispatch_scan_bits(),
+                "dispatch scan memo is stale: a definition rewrite did not clear it",
+            );
+            return bits;
+        }
+        let bits = self.definition.dispatch_scan_bits();
+        self.memo.set_dispatch(bits);
         bits
     }
 }

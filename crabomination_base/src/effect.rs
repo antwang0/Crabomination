@@ -9655,7 +9655,7 @@ impl Default for LookPick {
 /// Moved here from the engine so `CardDefinition::type_scan_bits` can use
 /// it: the answer is a property of the printed static and nothing else.
 /// True when `effect` can emit a layer-4 card-type modification. Twin of
-/// the engine's `static_effect_strips_abilities` for the card-type family; the two share
+/// [`static_effect_strips_abilities`] for the card-type family; the two share
 /// the gate-wrapper peel because `static_effect_to_effects` recurses through
 /// the same wrappers.
 pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
@@ -9676,6 +9676,58 @@ pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
         | SE::WhileNotYourTurn { inner }
         | SE::WhileCountersAtLeast { inner, .. }
         | SE::WhileCondition { inner, .. } => static_effect_changes_card_types(inner),
+        _ => false,
+    }
+}
+
+/// True when `effect` can put a layer-6 `Modification::RemoveAllAbilities`
+/// into the gathered set — the static-ability half of the presence gate on
+/// `GameState::permanents_with_abilities_removed`. Over-approximates: the
+/// state gates (counters, turn, class level, predicate) are ignored, so a
+/// `true` here only means "gather and check". Every gather site that emits
+/// the modification `debug_assert!`s against this or `card_can_strip_abilities`,
+/// so a seventh source can't quietly appear without the gate learning about it.
+///
+/// Moved here from the engine so `CardDefinition::dispatch_scan_bits` can use
+/// it, for the same reason [`static_effect_changes_card_types`] lives here.
+pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    match effect {
+        // Dress Down; Titania's Song; Alpine Moon; Ultima.
+        SE::CreaturesLoseAllAbilities
+        | SE::NoncreatureArtifactsLoseAbilities
+        | SE::NamedLandsNeutralized
+        | SE::BlightedLandsNeutralized => true,
+        // Blood Moon replaces; Urborg only adds.
+        SE::LandTypeChanger { replace, .. } | SE::LandTypeChangerWhileCounters { replace, .. } => {
+            *replace
+        }
+        // Gate wrappers — `static_effect_to_effects` recurses through these
+        // (and the stateful pass does for `WhileCondition`), so the predicate
+        // must too.
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_strips_abilities(inner),
+        _ => false,
+    }
+}
+
+/// True when `effect` can be a `GrantTriggeredAbility` once the gate wrappers
+/// are peeled — i.e. when the engine's `active_static` could hand one back.
+/// The wrapper set is `active_static`'s, so the two must be edited together;
+/// this over-approximates only the gates, exactly as the walk it gates does
+/// before evaluating them.
+pub fn static_grants_triggered_ability(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    match effect {
+        SE::GrantTriggeredAbility { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_grants_triggered_ability(inner),
         _ => false,
     }
 }

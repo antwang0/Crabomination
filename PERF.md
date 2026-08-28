@@ -651,6 +651,16 @@ here if it ever needs compacting.
   three rows that shipped removed five list walks, five pointer-chased loads
   and three list walks respectively. Bits were correct (the function's own
   `debug_assert!` against the four walks it fuses passed); the trade was not.
+- **…and the rule that qualifies it: ask whether the bit *is* the answer or
+  merely *gates* a walk** (pass 88, same function TAKEN at `fixed` -0.095 % /
+  `cube` -0.317 % / `sealed` -0.330 %). Three of the four facts
+  `dispatch_board_scan` gathers are booleans, so `if bits == 0 { continue }`
+  skips the **whole loop body** rather than buying one length check. The
+  rule above stands wherever the bit only gates. And the same commit's narrow
+  probe says a gate's own row lies: `trigger_grant_sources` gets **worse**
+  under the change (`cube` 14,365,404 -> 14,898,698) while removing that gate
+  and three siblings costs `cube` **+0.171 %** — a warmed memo is read again
+  by the next consumer.
 - **A memo slot's miss path is the sum of every family on it, and it is paid
   by whichever consumer touches the card first** (pass 87, same entry, built
   and reverted: `fixed` +0.135 %, `cube` +0.145 %, `sealed` +0.097 %). Adding
@@ -1118,9 +1128,12 @@ here if it ever needs compacting.
   can" — and both arguments were about mechanisms that changed: pass 83 built
   `CardInstance::DerefMut`'s memo chokepoint, and a *lazy per-printing* memo
   is not the *eager per-sweep* scan bit those entries measured. **What stays
-  refuted, with numbers, is the fusion into `sba_board_scan` itself and the
-  memo on `dispatch_board_scan`** — see the Baseline's eighty-seventh block.
-  A line on this list is only as good as the mechanism it names.
+  refuted, with numbers, is the fusion into `sba_board_scan` itself** — see
+  the Baseline's eighty-seventh block. The memo on `dispatch_board_scan` was
+  on this list for one pass and came off it at the eighty-eighth, taken at
+  `cube` -0.317 %: the refuted shape gated a walk, the shipped one replaces
+  the loop body. A line on this list is only as good as the mechanism it
+  names.
 - **Env.** `cargo-nextest` **is** installable in this image and this bullet
   said the opposite for twenty passes:
   `curl -sSLf https://get.nexte.st/latest/linux | tar xzf - -C ~/.cargo/bin`
@@ -1468,6 +1481,68 @@ matches `crabomination_base` and `crabomination_catalog` too and so forces the
 build.
 
 ## Baseline
+
+### Eighty-eighth pass — `dispatch_board_scan` IS the memo's row after all, and the refutation one entry up was measuring the wrong shape of it
+
+**The eighty-seventh pass's concurrent half built three bits into
+`dispatch_board_scan`, measured `fixed` +0.106 % and reverted it; this is the
+same function, five bits, and it reads `fixed` -0.095 % / `cube` -0.317 % /
+`sealed` -0.330 %.** Two differences, and both are in the entry below.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base 8d1eae8c (landed on 2f5e4927;
+the intervening commits are combat/bot flat_map sweeps in other functions).
+
+(1) `card::dispatch_bits` — five definition bits, own valid flag (bit 31).
+      fixed   1,068,008,315 -> 1,066,992,973   -0.095 %
+      cube    3,253,015,531 -> 3,242,709,329   -0.317 %
+      sealed  3,193,695,024 -> 3,183,146,742   -0.330 %
+      dispatch_board_scan  fixed 20,438,442 (1.91 %) -> 16,869,624 (1.58 %)
+                           cube  43,932,966 (1.35 %) -> 31,384,094 (0.97 %)
+      dispatch_scan_bits (the miss path)  fixed 772,752 / cube 2,604,176
+                           over 90,792 calls on `cube`
+
+(2) THE NARROW PROBE — the same commit with every gate *outside*
+    `dispatch_board_scan` removed (`trigger_grant_sources`,
+    `statics_granted_dying_triggers`, `creature_dies_triggers_suppressed`,
+    `card_can_strip_abilities` back to their hand walks). Built and thrown
+    away; it is the attribution, not a candidate.
+      fixed   1,067,348,681   +0.033 % against (1)
+      cube    3,248,271,486   +0.171 %
+      sealed  3,187,710,124   +0.143 %
+```
+
+**The first difference is the scan's own shape: `if bits == 0 { continue }`
+before anything else.** Three of the four facts the scan gathers are
+booleans, so the bit *is* the answer and the loop body for a permanent that
+answers "no" to all four — most of the board — is one atomic load and one
+branch, not a walk with three tests inside it. Bits that only *gate* a walk
+buy the walk's length check; bits that *are* the answer buy the whole body.
+
+**The second is (2), and it is a warning about reading a function's own
+row.** `trigger_grant_sources` gets **worse** under (1) — `fixed` 6,405,566
+-> 7,550,714, `cube` 14,365,404 -> 14,898,698 — which is exactly the
+refutation one entry up predicts, a memo load in front of a walk that is one
+length check. And removing that gate *and the other three* costs the program
+0.171 % of `cube`. **The row moved one way and the program moved the other**,
+so the four gates are paying somewhere their own rows do not show: the memo
+they warm is read again by `dispatch_board_scan` on the same permanents, and
+a miss deferred is a miss the next consumer does not pay. Same lesson as
+(-76)'s "the field's own function is not where its reads are", from the other
+direction.
+
+**The family has its own valid flag, per `f264ba27`'s rule.** That commit
+measured widening `type_scan_bits` from two bits to six at `cube` +0.145 %
+because a slot's miss path is the sum of every family on it; `dispatch_bits`
+is bit 31 and bits 36-40, so `sba_scan_bits`, `grant_scan_bits` and
+`type_scan_bits` keep their own misses.
+
+**`static_effect_strips_abilities` moved to `crabomination_base::effect`**
+alongside `static_effect_changes_card_types` and for the same reason — the
+answer is a property of the printed static — and `static_grants_triggered_
+ability` is new there, peeling exactly `active_static`'s five gate wrappers.
+The two must be edited together; the doc comment says so.
 
 ### Eighty-seventh pass, the concurrent half — an iterator adapter chain is a per-element branch, and on a whole-board walk that is half the row
 
@@ -9719,13 +9794,27 @@ repeats in the self table, at `--decks cube`, post-(2):
 
 ```text
   1.87 %  card_can_grant_keyword     <- TAKEN, row (3); -0.283 % of `cube`
-  1.33 %  dispatch_board_scan        <- REFUTED, below; `fixed` +0.106 %
+  1.33 %  dispatch_board_scan        <- TAKEN at the 88th, `cube` -0.317 %;
+                                        the 87th's refutation of it is below
+                                        and is superseded, not deleted
   1.30 %  card_type_change_unscoped  <- TAKEN, row (4); -0.405 % of `cube`
   0.54 %  creature_type_change_in_scope  <- REFUTED with the row below
   0.49 %  land_type_change_in_scope      <- REFUTED with the row below
-  0.79 %  trigger_grant_sources      <- (-60); 0.25 grants found per call
+  0.79 %  trigger_grant_sources      <- (-60); CLOSED by the visitor rewrite
+                                        (87th concurrent) plus the 88th's gate
   0.76 %  granted_abilities_of       <- walks `static_abilities` (twice, per (-10))
 ```
+
+**THE LAST ROW IS WHAT IS LEFT OF THIS ENTRY.** `granted_abilities_of`'s
+prologue computes six booleans — Myr Welder, Necrotic Ooze, Marvin, Kraj,
+Safehouse, Conspicuous Snoop — in one `static_abilities` walk, every one an
+exact function of the definition (they match printed variants, no wrapper
+peel), over ~272 k calls a `cube` run. **Six bits and their own valid flag**,
+per `f264ba27`; the bodies they gate are already behind them, so the walk
+goes away and nothing else moves. Price it against the eighty-eighth pass's
+distinction first: are the bits the *answer* (whole body skipped) or only a
+*gate* on a walk (one length check bought)? Here they are the answer for the
+prologue and a gate for the six bodies, which is the winning side of it.
 
 **AND SO IS THE OBVIOUS EXTENSION OF THE ROW THAT WON — `card_can_change_
 creature_types` AND `card_can_change_land_types` ON THE SAME SLOT READ
@@ -9746,8 +9835,17 @@ half is the rule below, twice confirmed: the walks removed here are
 `static_abilities.iter().any()` and `station.iter().any()` on definitions
 that have neither — two length checks.
 
-**`dispatch_board_scan` IS REFUTED — BUILT, MEASURED AND REVERTED at the
-eighty-seventh pass: `fixed` **+0.106 %**, `cube` -0.067 %, `sealed`
+**`dispatch_board_scan` WAS REFUTED AT THE EIGHTY-SEVENTH PASS AND TAKEN AT
+THE EIGHTY-EIGHTH — the refutation below is kept verbatim because its
+*measurement* stands and only its conclusion moved.** The eighty-eighth
+pass's Baseline block has the two differences: bits that *are* the answer
+(three of the four facts are booleans, so the whole loop body is skipped, not
+just a walk gated) and four sibling gates whose own rows get worse while the
+program gets better. Read the two entries together before pointing the device
+anywhere else — the selection rule below is right about a bit that only gates
+a walk, and wrong about one that replaces the body.
+
+**As found: `fixed` **+0.106 %**, `cube` -0.067 %, `sealed`
 -0.078 %.** Three bits (`SUPPRESS_DIES`, `STRIPS`, `GRANT_TRIGGER`) replaced
 the per-card `static_abilities` walk, the `station` walk and the ungated
 `active_static` loop; the suite's own `debug_assert!` against the four walks

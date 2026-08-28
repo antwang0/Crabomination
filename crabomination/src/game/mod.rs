@@ -165,6 +165,7 @@ use crate::game::layers::{
     PtSublayer,
 };
 use crate::cow::CowBox;
+use crate::effect::static_effect_strips_abilities;
 use crate::player::Player;
 use crate::fxhash::HashMap;
 use smallvec::SmallVec;
@@ -3299,6 +3300,9 @@ impl GameState {
         let mut out = Vec::new();
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
         self.for_each_static_source(|src| {
+            if src.dispatch_scan_bits() & crate::card::dispatch_bits::GRANT_TRIGGER == 0 {
+                return;
+            }
             for sa in &src.definition.static_abilities {
                 if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
                     filter,
@@ -3418,7 +3422,8 @@ impl GameState {
         let sources = self
             .battlefield
             .iter()
-            .chain(std::iter::once(snap).filter(|s| self.battlefield_find(s.id).is_none()));
+            .chain(std::iter::once(snap).filter(|s| self.battlefield_find(s.id).is_none()))
+            .filter(|c| c.dispatch_scan_bits() & crate::card::dispatch_bits::GRANT_TRIGGER != 0);
         for src in sources {
             for sa in &src.definition.static_abilities {
                 if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
@@ -3496,41 +3501,50 @@ impl GameState {
             trigger_grants: Vec::new(),
             equip_grants: Vec::new(),
         };
+        // Three of the four facts are bits on the per-object memo (see
+        // `card::dispatch_bits`), so a permanent that answers "no" to all
+        // four — most of the board — costs one atomic load and a branch.
+        // Only the grant list still needs the `static_abilities` walk.
+        use crate::card::dispatch_bits as db;
         for card in self.battlefield.iter() {
-            let def = &card.definition;
+            let bits = card.dispatch_scan_bits();
+            if bits == 0 {
+                continue;
+            }
+            scan.dies_suppressed |= bits & db::DIES_SUPPRESS != 0;
+            scan.strip_on_battlefield |= bits & db::STRIP != 0;
             if let Some(host) = card.attached_to
-                && let Some(bonus) = def.equipped_bonus.as_ref()
+                && bits & (db::EQUIP_TRIGGER_GRANT | db::STRIP_ATTACHED) != 0
+                && let Some(bonus) = card.definition.equipped_bonus.as_ref()
             {
                 if !bonus.triggers_on_equipment {
                     scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
                 }
                 scan.strip_on_battlefield |= bonus.remove_abilities;
             }
-            for sa in &def.static_abilities {
-                scan.dies_suppressed |= matches!(
-                    sa.effect,
-                    StaticEffect::SuppressCreatureEtbTriggers { also_dies: true, .. }
-                );
-                scan.strip_on_battlefield |= static_effect_strips_abilities(&sa.effect);
-                if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
-                    self.active_static(&sa.effect, card)
-                {
-                    scan.trigger_grants.push(TriggerGrant {
-                        filter: filter.resolve_named_by_source(card.named_card.as_deref()),
-                        ability,
-                        controller: card.controller,
-                        source: card.id,
-                    });
+            if bits & db::GRANT_TRIGGER != 0 {
+                for sa in &card.definition.static_abilities {
+                    if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                        self.active_static(&sa.effect, card)
+                    {
+                        scan.trigger_grants.push(TriggerGrant {
+                            filter: filter.resolve_named_by_source(card.named_card.as_deref()),
+                            ability,
+                            controller: card.controller,
+                            source: card.id,
+                        });
+                    }
                 }
             }
-            scan.strip_on_battlefield |= def
-                .station
-                .iter()
-                .any(|band| band.statics.iter().any(static_effect_strips_abilities));
         }
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
         for p in &self.players {
-            for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
+            for src in p
+                .command
+                .iter()
+                .filter(|c| c.command_zone_abilities_active())
+                .filter(|c| c.dispatch_scan_bits() & db::GRANT_TRIGGER != 0)
+            {
                 for sa in &src.definition.static_abilities {
                     if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
                         self.active_static(&sa.effect, src)
@@ -22859,53 +22873,17 @@ pub(crate) fn effective_loyalty_abilities(
     abilities
 }
 
-/// True when `effect` can put a layer-6 `Modification::RemoveAllAbilities`
-/// into the gathered set — the static-ability half of the presence gate on
-/// [`GameState::permanents_with_abilities_removed`]. Over-approximates: the state gates
-/// (counters, turn, class level, predicate) are ignored, so a `true` here only
-/// means "gather and check". Every gather site that emits the modification
-/// `debug_assert!`s against this or [`card_can_strip_abilities`], so a
-/// seventh source can't quietly appear without the gate learning about it.
-fn static_effect_strips_abilities(effect: &crate::effect::StaticEffect) -> bool {
-    use crate::effect::StaticEffect as SE;
-    match effect {
-        // Dress Down; Titania's Song; Alpine Moon; Ultima.
-        SE::CreaturesLoseAllAbilities
-        | SE::NoncreatureArtifactsLoseAbilities
-        | SE::NamedLandsNeutralized
-        | SE::BlightedLandsNeutralized => true,
-        // Blood Moon replaces; Urborg only adds.
-        SE::LandTypeChanger { replace, .. } | SE::LandTypeChangerWhileCounters { replace, .. } => {
-            *replace
-        }
-        // Gate wrappers — `static_effect_to_effects` recurses through these
-        // (and the stateful pass does for `WhileCondition`), so the predicate
-        // must too.
-        SE::WhileClassLevelAtLeast { inner, .. }
-        | SE::WhileYourTurn { inner }
-        | SE::WhileNotYourTurn { inner }
-        | SE::WhileCountersAtLeast { inner, .. }
-        | SE::WhileCondition { inner, .. } => static_effect_strips_abilities(inner),
-        _ => false,
-    }
-}
-
 /// True when `card` — on the battlefield, in the command zone, or synthesized
 /// for an emblem — can contribute a `RemoveAllAbilities` to the gathered set.
 /// Covers the attachment half (Heliod's Punishment's `remove_abilities`) plus
 /// every static-ability route, including CR 721.2a Station bands.
 fn card_can_strip_abilities(card: &CardInstance) -> bool {
-    let def = &card.definition;
-    if card.attached_to.is_some()
-        && def.equipped_bonus.as_ref().is_some_and(|b| b.remove_abilities)
-    {
-        return true;
-    }
-    def.static_abilities.iter().any(|sa| static_effect_strips_abilities(&sa.effect))
-        || def
-            .station
-            .iter()
-            .any(|band| band.statics.iter().any(static_effect_strips_abilities))
+    // Both halves come off the per-object memo — see `card::dispatch_bits`.
+    // This is a whole-battlefield `any`, and the walks it replaces are every
+    // printed static plus every Station band's.
+    let bits = card.dispatch_scan_bits();
+    (card.attached_to.is_some() && bits & crate::card::dispatch_bits::STRIP_ATTACHED != 0)
+        || bits & crate::card::dispatch_bits::STRIP != 0
 }
 
 

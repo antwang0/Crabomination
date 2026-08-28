@@ -1943,12 +1943,11 @@ pub(crate) fn ally_trigger_extra_fires(
 /// `SuppressCreatureEtbTriggers { also_dies: true }` static (Hushbringer).
 /// Suppresses creature-death triggers globally (CR 614).
 pub(crate) fn creature_dies_triggers_suppressed(state: &crate::game::GameState) -> bool {
-    use crate::effect::StaticEffect;
-    state.battlefield.iter().any(|c| {
-        c.definition.static_abilities.iter().any(|sa| {
-            matches!(sa.effect, StaticEffect::SuppressCreatureEtbTriggers { also_dies: true, .. })
-        })
-    })
+    // The per-object memo answers this outright — see `card::dispatch_bits`.
+    state
+        .battlefield
+        .iter()
+        .any(|c| c.dispatch_scan_bits() & crate::card::dispatch_bits::DIES_SUPPRESS != 0)
 }
 
 /// Strict Proctor ETB-trigger tax — CR 614 replacement effect.
