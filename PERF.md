@@ -2354,9 +2354,15 @@ and the same flags on -p crabomination_ml --bin selfplay_train
 ```
 
 **Check the binary, not the flags** — `strings target-audit/overflow/bot_ladder
-| grep "memo is stale"` prints all seven messages and the `profiling-fast`
+| grep "memo is stale"` prints the assertion messages and the `profiling-fast`
 binary prints none, which is the two-second proof that `RUSTFLAGS` reached
 the crate that carries the assertion.
+
+**`scripts/robustness_grid.sh` is the whole thing, committed** (build, the
+`strings` check, the grid, a non-zero exit on any failure). `POOLS`, `SEEDS`
+and `GAMES` are environment overrides and `--no-build` reuses `target-audit/`.
+The actor leg stays a hand-run because it needs the `crabomination_ml` build;
+its command is in the script's header.
 
 **The finding to carry: the actor has rows the ladder cannot see, and the
 first of these was 0.63 % of it sitting in plain sight.** `encode_state` +

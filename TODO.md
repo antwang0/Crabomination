@@ -67,8 +67,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 5. **Robustness gate** — RUN and clean at the eighty-seventh pass for all
    seven memo families: `-C debug-assertions=yes` on `[profile.overflow]`,
    **33,120 games over 5 pools x 6 seeds**, plus **360 actor games** for the
-   vocab-index memo the ladder cannot reach. Recipe and the
-   `strings … | grep "memo is stale"` proof are in PERF's Profile of record.
+   vocab-index memo the ladder cannot reach. **`scripts/robustness_grid.sh`**
+   is the committed recipe — build, the `strings … | grep "memo is stale"`
+   proof that `RUSTFLAGS` reached the right crate, the grid, non-zero exit on
+   any failure; `POOLS` / `SEEDS` / `GAMES` override and `--no-build` reuses
+   `target-audit/`.
 6. **Bugs** — ENGINE_BACKLOG's live-match section, and the one open entry is
    now **scoped and ready to take**: a layer-7 `PumpSelfIf` condition cannot
    see a layer-4 type change (CR 613.8). It is a *class* — **~60 of the 194
