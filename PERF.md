@@ -992,6 +992,30 @@ profiling-fast --no-default-features.  Base d9093fb5.
       2,639,718 is what is there instead, 0.50 %
 ```
 
+```text
+(5) The combat prevention family: six battlefield passes become one
+    `battlefield_find` and one walk on the target side, four become the same
+    on the dealer side.  Base f264ba27.
+      fixed   1,068,706,182 -> 1,065,745,431   -0.277 %
+      cube    3,259,260,090 -> 3,244,176,500   -0.463 %
+      sealed  3,191,360,312 -> 3,182,046,993   -0.292 %
+```
+
+**Row (5) is (-68)'s device on a second function, and the reason it pays is
+the reason (-68) *under*-paid.** `combat_damage_prevented_to_self` asked five
+questions, each its own `battlefield.iter().any()` and each filtering on the
+same two things (`attached_to == Some(tgt)`, or the target's controller).
+None of them is an early-exiting scan doing work someone else wanted — on the
+ordinary board every one of them walks to the end to answer "no", so merging
+them is a straight N-to-1 and nothing is given back. (-68)'s widened `find`
+was the opposite case. **Ask whether the walks being fused terminate early on
+the common board before pricing the fusion.**
+
+Three single-caller helpers were folded away with it
+(`permanent_prevents_all_combat_damage_to_self`, `combat_damage_sealed_by_aura`,
+`combat_damage_sealed_for_your_creatures`); `damage_sealed_by_aura` stays,
+because the noncombat funnel still asks it.
+
 **Row (4)'s row *moved* rather than shrank, and that is worth one line:** the
 gated body got small enough that the local inliner folded
 `card_type_change_unscoped` into `card_type_change_in_scope`, so the two

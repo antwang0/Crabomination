@@ -6518,25 +6518,6 @@ impl GameState {
             .sum()
     }
 
-    /// CR 615 — true when `tgt` has a `PreventAllCombatDamageToThis` self-static
-    /// (Fog Bank, Guard Gomazoa), so the combat-damage resolver blanks damage
-    /// marked on it.
-    pub fn permanent_prevents_all_combat_damage_to_self(&self, tgt: crate::card::CardId) -> bool {
-        use crate::effect::StaticEffect;
-        self.battlefield_find(tgt).is_some_and(|c| {
-            c.definition.static_abilities.iter().any(|sa| {
-                matches!(sa.effect, StaticEffect::PreventAllCombatDamageToThis)
-                    || self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
-            })
-        }) || self.battlefield.iter().any(|eq| {
-            // General's Kabuto — the Equipment carries the prevention for its host.
-            eq.attached_to == Some(tgt)
-                && eq.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::PreventAllCombatDamageToAttached)
-                })
-        })
-    }
-
     /// True when a self-static (possibly `WhileYourTurn`-wrapped and thus
     /// gated on the active player) prevents *all* damage to its source
     /// (`StaticEffect::PreventAllDamageToThis`). Consulted on both funnels so
@@ -6570,22 +6551,6 @@ impl GameState {
                     self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
                 })
         }) || self.damage_sealed_by_aura(tgt, true)
-    }
-
-    /// CR 615 — `who` is enchanted by an Aura that blanks damage in the
-    /// `incoming` direction: Heart of Light seals both, Inviolability only
-    /// damage dealt *to* the host, Muzzle only damage dealt *by* it.
-    /// CR 615 — the combat-only sibling of [`damage_sealed_by_aura`]: an Aura
-    /// on `who` that seals only its *combat* damage (Sandskin).
-    pub(crate) fn combat_damage_sealed_by_aura(&self, who: crate::card::CardId) -> bool {
-        use crate::effect::StaticEffect;
-        !self.damage_cant_be_prevented_this_turn
-            && self.battlefield.iter().any(|src| {
-                src.attached_to == Some(who)
-                    && src.definition.static_abilities.iter().any(|sa| {
-                        matches!(sa.effect, StaticEffect::PreventAllCombatDamageToAndFromEnchanted)
-                    })
-            })
     }
 
     pub(crate) fn damage_sealed_by_aura(&self, who: crate::card::CardId, incoming: bool) -> bool {
@@ -6670,13 +6635,55 @@ impl GameState {
     /// CR 615 — true when `tgt` prevents all combat damage to itself and
     /// prevention isn't switched off this turn. Consulted by the combat-damage
     /// resolver to zero damage marked on Fog Bank / Guard Gomazoa.
+    /// One `battlefield_find` and one walk. It was **six** battlefield passes:
+    /// the target's own statics, an Equipment walk, two aura walks
+    /// (`damage_sealed_by_aura`, `combat_damage_sealed_by_aura`) and a
+    /// controller-scoped walk behind a second find. Every one of them filters
+    /// the same battlefield and on the ordinary board none of them hits, so
+    /// each paid a full pass to answer "no". Three single-caller helpers are
+    /// folded in here; `damage_sealed_by_aura` stays, because the noncombat
+    /// funnel still asks it.
     pub fn combat_damage_prevented_to_self(&self, tgt: crate::card::CardId) -> bool {
-        !self.damage_cant_be_prevented_this_turn
-            && (self.permanent_prevents_all_combat_damage_to_self(tgt)
-                || self.combat_damage_prevented_to_this_turn.contains(&tgt)
-                || self.damage_sealed_by_aura(tgt, true)
-                || self.combat_damage_sealed_by_aura(tgt)
-                || self.combat_damage_sealed_for_your_creatures(tgt))
+        use crate::effect::StaticEffect as SE;
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        if self.combat_damage_prevented_to_this_turn.contains(&tgt) {
+            return true;
+        }
+        let me = self.battlefield_find(tgt);
+        if let Some(c) = me
+            && c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, SE::PreventAllCombatDamageToThis)
+                    || self.self_static_prevents_all_damage_active(&sa.effect, c.controller)
+            })
+        {
+            return true;
+        }
+        // CR 615 — the Light of Sanction family is controller-scoped and only
+        // reaches creatures, so it needs the seat the find already read.
+        let seat = me.filter(|c| c.definition.is_creature()).map(|c| c.controller);
+        self.battlefield.iter().any(|s| {
+            if s.attached_to == Some(tgt)
+                && s.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        // General's Kabuto, and the three aura seals that
+                        // cover *incoming* damage.
+                        SE::PreventAllCombatDamageToAttached
+                            | SE::PreventAllDamageToAndFromEnchanted
+                            | SE::PreventAllDamageToEnchanted
+                            | SE::PreventAllCombatDamageToAndFromEnchanted
+                    )
+                })
+            {
+                return true;
+            }
+            Some(s.controller) == seat
+                && s.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, SE::PreventAllCombatDamageToAndFromYourCreatures)
+                })
+        })
     }
 
     /// CR 615 — "prevent all damage that would be dealt to this by [filter]
@@ -6709,13 +6716,41 @@ impl GameState {
     /// CR 615 — true when all combat damage `dealer` would *deal* is prevented
     /// this turn (Azorius Ploy's first clause). Mirror of
     /// `combat_damage_prevented_to_self`.
+    /// The dealer-side twin of [`Self::combat_damage_prevented_to_self`], and
+    /// the same fusion: four battlefield passes become one find and one walk.
     pub fn combat_damage_prevented_from(&self, dealer: crate::card::CardId) -> bool {
-        !self.damage_cant_be_prevented_this_turn
-            && (self.combat_damage_prevented_by_this_turn.contains(&dealer)
-                || self.all_damage_prevented_by_this_turn.contains(&dealer)
-                || self.damage_sealed_by_aura(dealer, false)
-                || self.combat_damage_sealed_by_aura(dealer)
-                || self.combat_damage_sealed_for_your_creatures(dealer))
+        use crate::effect::StaticEffect as SE;
+        if self.damage_cant_be_prevented_this_turn {
+            return false;
+        }
+        if self.combat_damage_prevented_by_this_turn.contains(&dealer)
+            || self.all_damage_prevented_by_this_turn.contains(&dealer)
+        {
+            return true;
+        }
+        let seat = self
+            .battlefield_find(dealer)
+            .filter(|c| c.definition.is_creature())
+            .map(|c| c.controller);
+        self.battlefield.iter().any(|s| {
+            if s.attached_to == Some(dealer)
+                && s.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        sa.effect,
+                        // The three aura seals that cover *outgoing* damage.
+                        SE::PreventAllDamageToAndFromEnchanted
+                            | SE::PreventAllDamageByEnchanted
+                            | SE::PreventAllCombatDamageToAndFromEnchanted
+                    )
+                })
+            {
+                return true;
+            }
+            Some(s.controller) == seat
+                && s.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, SE::PreventAllCombatDamageToAndFromYourCreatures)
+                })
+        })
     }
 
     /// Scale a pending damage event by the global doubling/halving
@@ -13396,23 +13431,6 @@ impl GameState {
                     )
                 })
         }) && self.battlefield.iter().any(|c| !c.is_token && c.definition.name == name)
-    }
-
-    /// CR 615 — Statecraft: "prevent all combat damage that would be dealt to
-    /// and dealt by creatures you control." True when `who` is a creature whose
-    /// controller has the static; both combat funnels consult it.
-    pub(crate) fn combat_damage_sealed_for_your_creatures(&self, who: CardId) -> bool {
-        let Some(c) = self.battlefield_find(who) else { return false };
-        c.definition.is_creature()
-            && self.battlefield.iter().any(|s| {
-                s.controller == c.controller
-                    && s.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::PreventAllCombatDamageToAndFromYourCreatures
-                        )
-                    })
-            })
     }
 
     /// CR 615 — Light of Sanction: "prevent all damage to creatures you

@@ -310,7 +310,7 @@ fn generals_kabuto_prevents_combat_damage_to_the_host() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Equip { equipment: hat, target: host }).expect("equip");
     assert!(
-        g.permanent_prevents_all_combat_damage_to_self(host),
+        g.combat_damage_prevented_to_self(host),
         "host is fogged"
     );
     assert!(

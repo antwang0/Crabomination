@@ -1893,7 +1893,7 @@ fn diamond_weapon_affinity_and_immune() {
     }).expect("Diamond Weapon castable for {4}{G}{G} with 3 permanent cards in graveyard");
     drain_stack(&mut g);
     let dw = g.battlefield.iter().find(|c| c.definition.name == "Diamond Weapon").unwrap().id;
-    assert!(g.permanent_prevents_all_combat_damage_to_self(dw), "Immune to combat damage");
+    assert!(g.combat_damage_prevented_to_self(dw), "Immune to combat damage");
 }
 
 /// Light of Judgment deals 6 to a creature and destroys the Equipment on it.
