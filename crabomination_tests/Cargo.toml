@@ -17,3 +17,10 @@ crabomination_catalog = { path = "../crabomination_catalog" }
 # Seeded deck construction for the cube golden trace; already in the tree.
 rand = "0.10.2"
 serde_json = "1.0.150"
+
+# The lib is a three-line stub that exists only so the crate has a target;
+# nothing depends on it and it holds no tests, but `cargo test` still built
+# and linked a harness for it. The eight integration binaries under `tests/`
+# are separate targets and are unaffected.
+[lib]
+test = false

@@ -1417,6 +1417,32 @@ GameState` block is not free of risk. The lever that *does* bear on the
 flat or lower, and never add a new top-level `tests/*.rs`.** Twenty binaries
 is what the relink costs.
 
+**AMENDED at the eighty-ninth pass, and the amendment is the useful half: the
+count is not what it costs — the *critical path* is.** Two targets still built
+a harness for zero tests (`crabomination_ml`'s `selfplay_train` bin, and
+`crabomination_tests`' three-line stub lib; the sweep that added `test = false`
+to seven engine bins never reached those two manifests). Turning them off took
+the executable count **19 -> 17** and the relink read:
+
+```text
+touch crabomination/src/game/effects/mod.rs, then
+cargo test --workspace --exclude crabomination_client --no-run
+CARGO_INCREMENTAL=0 throughout (so these are not comparable with the 33-41 s
+above, which ran with incremental on)
+
+  before   150.7 / 121.2 / 120.4 s      (the first is still warming)
+  after    121.4 / 119.6 / 123.7 s
+```
+
+**Flat.** `cargo test --no-run` builds targets in parallel, so the wall clock
+is the makespan of the longest chain, not the sum of the links — and the two
+removed harnesses were never on it. The standing rule survives *for the eight
+integration binaries*, because those are the long chain; it does not extend to
+"any target removed is time saved". **Before proposing a binary-count change,
+ask which target is on the critical path.** The change was kept anyway, as
+rule-compliance and dead work removed (CLAUDE.md already requires
+`test = false` on a `[[bin]]` with no `#[cfg(test)]` block), not as a win.
+
 **Test-suite cleanup delta, 2026-08-23**, recorded because the rule asks for
 it and because the answer is "nothing", which is the useful part:
 

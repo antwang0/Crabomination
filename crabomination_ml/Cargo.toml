@@ -29,3 +29,13 @@ cuda = ["candle-core/cuda", "candle-nn/cuda"]
 # `--no-default-features` restores the system allocator for an A/B.
 default = ["mimalloc"]
 mimalloc = ["dep:mimalloc"]
+
+# `cargo test` builds a *test harness* per `[[bin]]` on top of the normal
+# binary, and this one carries no `#[cfg(test)]` block at all — so it linked
+# the engine, the 619 k-line catalog, candle and the trainer to run zero
+# tests. Same switch the engine crate's seven bins already carry; the
+# workspace sweep that added those did not reach this crate's manifest.
+# `crabomination_ml`'s own unit tests live in `src/lib.rs` and are unaffected.
+[[bin]]
+name = "selfplay_train"
+test = false
