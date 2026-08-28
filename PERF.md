@@ -1860,6 +1860,35 @@ Two changes were built, measured and reverted in the same pass: the memo on
 `dispatch_board_scan` and its extension to the creature/land type siblings.
 Both are written up above with their numbers.
 
+**(6) A sixth commit is measured on the ACTOR, because `--bench` cannot see
+it at all** — `encode_state` is never called on the ladder path.
+`encode_library`'s `BTreeMap<u16, _>` becomes an inline buffer plus one sort.
+Base a17ac6b0, `CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60
+--steps 1 --seed 7`:
+
+```text
+  actor   3,843,232,693 -> 3,824,255,309   -0.494 %
+  the whole btree family leaves the table:
+    btree::node::Handle   6,855,659 -> 0
+    btree IntoIter        5,670,369 -> 54
+    btree Entry::or_insert 5,631,830 -> 0
+  `encode_state`'s own row 44,922,940 -> 44,011,788, i.e. the linear scan and
+  the sort are *cheaper* than the `entry()` calls that were inlined into it
+```
+
+**The emitted sequence is byte-identical and no net needs retraining**: the
+keys are vocabulary indices and unique by construction, so sorting them is
+the same total order the map iterated in, and the first card of a name still
+wins. `the_library_encodes_as_a_deduplicated_multiset` is the regression test
+and it asserts exactly that contract. Both runs produced 5,915 rows over 60
+games with 0 stalls.
+
+**The finding to carry: the actor has rows the ladder cannot see, and this
+one was 0.63 % of it sitting in plain sight.** `encode_state` +
+`encode_card_object` are 2.4 % of the actor and 0 % of every `--bench` pool;
+so is the whole deck builder. Re-read the actor block in "Profile of record"
+before assuming a candidate list built from `--decks cube` is complete.
+
 ### Eighty-sixth pass — the local accumulator that allocates, and a dependency feature that was worth 0.12 % of `fixed`
 
 ```text

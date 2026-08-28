@@ -502,14 +502,27 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
     if ablated(ABLATE_LIBRARY) {
         return;
     }
-    let mut counts: std::collections::BTreeMap<u16, (&CardInstance, u32)> =
-        std::collections::BTreeMap::new();
-    for c in g.players[seat].library.iter() {
+    // A `BTreeMap<u16, _>` here was 179,404 `Entry::or_insert` calls and
+    // 119,224 `IntoIter::dying_next` a sixty-game actor run — 0.63 % of it —
+    // to group ~28 library cards into ~19 distinct names. A linear scan over
+    // an inline buffer plus one sort answers the same question: the keys are
+    // unique, so the sort is a total order and the emitted sequence is
+    // byte-identical to the map's. Only the actor pays this at all; `--bench`
+    // never encodes a state.
+    let lib = &g.players[seat].library;
+    let mut counts: smallvec::SmallVec<[(u16, &CardInstance, u32); 32]> =
+        smallvec::SmallVec::new();
+    for c in lib.iter() {
         let idx = vocab.index_of(c.definition.name);
-        counts.entry(idx).and_modify(|e| e.1 += 1).or_insert((c, 1));
+        match counts.iter_mut().find(|e| e.0 == idx) {
+            // First card of a name wins, exactly as `or_insert` did.
+            Some(e) => e.2 += 1,
+            None => counts.push((idx, c, 1)),
+        }
     }
+    counts.sort_unstable_by_key(|e| e.0);
     s.groups[G_LIB_SELF].reserve(counts.len());
-    for (_, (c, n)) in counts {
+    for (_, c, n) in counts {
         let mut o = encode_card_object(c, vocab);
         o.feats[27] = n as f32 / 4.0;
         s.groups[G_LIB_SELF].push(o);
