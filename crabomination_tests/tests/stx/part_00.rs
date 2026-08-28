@@ -400,17 +400,6 @@ fn prismari_flameseer_b187_pings_on_is_cast() {
 }
 
 #[test]
-fn prismari_stormcoach_b187_is_a_five_mana_flying_haste_dragon() {
-    let def = catalog::prismari_stormcoach_b187();
-    assert_eq!(def.cost.cmc(), 5);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 4);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Haste));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Dragon));
-}
-
-#[test]
 fn prismari_echohammer_b187_copies_target_is_spell() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
@@ -516,16 +505,6 @@ fn quandrix_vinescaler_b187_etb_grows_and_pumps_friend_fractal() {
     let vinescaler = g.battlefield.iter()
         .find(|c| c.definition.name == "Quandrix Vinescaler (b187)").expect("vinescaler");
     assert_eq!(vinescaler.counter_count(CounterType::PlusOnePlusOne), 1, "ETB +1/+1 counter");
-}
-
-#[test]
-fn quandrix_treestrider_b187_is_a_three_mana_reach_trampler() {
-    let def = catalog::quandrix_treestrider_b187();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 3);
-    assert!(def.keywords.contains(&Keyword::Reach));
-    assert!(def.keywords.contains(&Keyword::Trample));
 }
 
 #[test]
@@ -687,16 +666,6 @@ fn plumb_the_forbidden_at_x_two_sacs_two_draws_three_loses_three() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
     // Life: -3.
     assert_eq!(g.players[0].life, life_before - 3);
-}
-
-#[test]
-fn owlin_shieldmage_is_a_warding_flyer() {
-    use crabomination::card::WardCost;
-    let c = catalog::owlin_shieldmage();
-    assert_eq!(c.cost.cmc(), 5);
-    assert_eq!((c.power, c.toughness), (3, 3));
-    assert!(c.keywords.contains(&Keyword::Flying));
-    assert!(c.keywords.contains(&Keyword::Ward(WardCost::Life(3))), "Ward—Pay 3 life");
 }
 
 #[test]
@@ -3083,14 +3052,6 @@ fn mascot_interception_costs_three_less_against_token() {
 }
 
 #[test]
-fn twinscroll_shaman_is_a_double_striking_one_two() {
-    let g = catalog::twinscroll_shaman();
-    assert_eq!(g.cost.cmc(), 3);
-    assert_eq!((g.power, g.toughness), (1, 2));
-    assert!(g.keywords.contains(&Keyword::DoubleStrike));
-}
-
-#[test]
 fn practical_research_draws_four_then_discards_two() {
     let mut g = two_player_game();
     g.players[0].hand.clear();
@@ -3242,14 +3203,6 @@ fn star_pupil_death_puts_its_counters_on_target_creature() {
     let bear = g.battlefield.iter().find(|c| c.id == recipient).unwrap();
     assert_eq!(bear.counter_count(CounterType::PlusOnePlusOne), 2,
         "death moves all of Star Pupil's +1/+1 counters to the target");
-}
-
-#[test]
-fn ageless_guardian_is_a_vanilla_one_four() {
-    let c = catalog::ageless_guardian();
-    assert_eq!(c.cost.cmc(), 2);
-    assert_eq!((c.power, c.toughness), (1, 4));
-    assert!(c.triggered_abilities.is_empty() && c.activated_abilities.is_empty());
 }
 
 #[test]
@@ -3984,4 +3937,61 @@ fn test_of_talents_strips_same_named_copies_and_compensates_hand() {
     // Hand: -1 (exiled Bolt) +1 (compensation draw) = unchanged.
     assert_eq!(g.players[1].hand.len(), hand_before,
         "one draw per card exiled from hand");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// One definition audit for the printed shapes this file used to check with a
+// five-line test each. Every row is exactly what the five deleted tests
+// asserted — mana value, printed P/T, printed keywords, printed creature
+// types, and Ageless Guardian's "no abilities at all" — so the coverage is
+// unchanged. Same shape as `part_23.rs`'s table.
+// ─────────────────────────────────────────────────────────────────────────
+
+struct PrintedShape {
+    def: fn() -> crabomination::card::CardDefinition,
+    name: &'static str,
+    cmc: u32,
+    pt: (i32, i32),
+    kws: &'static [Keyword],
+    types: &'static [CreatureType],
+    /// Ageless Guardian: no triggered and no activated abilities.
+    no_abilities: bool,
+}
+
+#[test]
+fn part_00_printed_shapes() {
+    use crabomination::card::WardCost;
+    const ROWS: &[PrintedShape] = &[
+        PrintedShape { def: catalog::prismari_stormcoach_b187, name: "prismari_stormcoach_b187",
+            cmc: 5, pt: (4, 4), kws: &[Keyword::Flying, Keyword::Haste],
+            types: &[CreatureType::Dragon], no_abilities: false },
+        PrintedShape { def: catalog::quandrix_treestrider_b187, name: "quandrix_treestrider_b187",
+            cmc: 3, pt: (3, 3), kws: &[Keyword::Reach, Keyword::Trample],
+            types: &[], no_abilities: false },
+        PrintedShape { def: catalog::owlin_shieldmage, name: "owlin_shieldmage",
+            cmc: 5, pt: (3, 3), kws: &[Keyword::Flying, Keyword::Ward(WardCost::Life(3))],
+            types: &[], no_abilities: false },
+        PrintedShape { def: catalog::twinscroll_shaman, name: "twinscroll_shaman",
+            cmc: 3, pt: (1, 2), kws: &[Keyword::DoubleStrike], types: &[], no_abilities: false },
+        PrintedShape { def: catalog::ageless_guardian, name: "ageless_guardian",
+            cmc: 2, pt: (1, 4), kws: &[], types: &[], no_abilities: true },
+    ];
+    for row in ROWS {
+        let def = (row.def)();
+        assert_eq!(def.cost.cmc(), row.cmc, "{} mana value", row.name);
+        assert_eq!((def.power, def.toughness), row.pt, "{} printed P/T", row.name);
+        for kw in row.kws {
+            assert!(def.keywords.contains(kw), "{} has {:?}", row.name, kw);
+        }
+        for ct in row.types {
+            assert!(def.subtypes.creature_types.contains(ct), "{} is a {:?}", row.name, ct);
+        }
+        if row.no_abilities {
+            assert!(
+                def.triggered_abilities.is_empty() && def.activated_abilities.is_empty(),
+                "{} has no abilities",
+                row.name,
+            );
+        }
+    }
 }
