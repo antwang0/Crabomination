@@ -7434,28 +7434,33 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     // cannot drift. Batch-level rules (attacks-alone, the participation cap,
     // the attack tax) stay below, where the batch exists.
     let attack_power_caps = state.attack_power_caps(statics);
-    let raw_attackers: Vec<&crate::card::CardInstance> = state
-        .battlefield
-        .iter()
-        .filter(|c| {
-            // Two instance reads before the layer view: `computed_permanent`
-            // is ~1.5 k Ir on a first read and asking it about every land and
-            // enchantment the seat controls read `fixed` +0.62 %. Both gates
-            // are the ones this filter already made, so the candidate set is
-            // unchanged — including its one limitation, that a permanent
-            // *animated* into a creature is never considered.
-            c.controller == seat
-                && !c.tapped
-                && c.definition.is_creature()
-                && state.may_declare_attacker(
-                    seat,
-                    c,
-                    state.computed_permanent(c.id).as_deref(),
-                    &attack_power_caps,
-                    Some(target_player),
-                )
-        })
-        .collect();
+    // A plain loop, not `filter().collect()`: the battlefield is walked per
+    // element on every call, and `Vec::from_iter` forwards the predicate
+    // through `&mut F::call_mut` once per permanent — PERF (-78)'s test 1,
+    // and this function was 41 % of the program's whole adapter-forwarding
+    // tax between this site and `opp_blockers` below.
+    let mut raw_attackers: Vec<&crate::card::CardInstance> = Vec::new();
+    for c in state.battlefield.iter() {
+        // Two instance reads before the layer view: `computed_permanent`
+        // is ~1.5 k Ir on a first read and asking it about every land and
+        // enchantment the seat controls read `fixed` +0.62 %. Both gates
+        // are the ones this filter already made, so the candidate set is
+        // unchanged — including its one limitation, that a permanent
+        // *animated* into a creature is never considered.
+        if c.controller == seat
+            && !c.tapped
+            && c.definition.is_creature()
+            && state.may_declare_attacker(
+                seat,
+                c,
+                state.computed_permanent(c.id).as_deref(),
+                &attack_power_caps,
+                Some(target_player),
+            )
+        {
+            raw_attackers.push(c);
+        }
+    }
     // Use the damage-aware value so toughness-attackers (Doran,
     // High Alert) are weighed by what they actually deal.
     let total_raw_power: i32 =
@@ -7485,21 +7490,23 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         our_turns < their_turns && our_turns <= 5
     };
     let lethal_swing = lethal_swing || racing;
-    let opp_blockers: Vec<&crate::card::CardInstance> = state
-        .battlefield
-        .iter()
-        .filter(|c| {
-            // A creature that's tapped, not a creature, or has a
-            // computed `CantBlock` (Sandstorm Verge, pacifism-
-            // style effects) can't block — don't let the bot hold
-            // attackers back for a blocker that can't legally block.
-            c.controller == opp_seat
-                && c.can_block()
-                && !state
-                    .computed_permanent(c.id)
-                    .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBlock))
-        })
-        .collect();
+    // The second whole-board walk, and a plain loop for the same reason as
+    // `raw_attackers` above.
+    let mut opp_blockers: Vec<&crate::card::CardInstance> = Vec::new();
+    for c in state.battlefield.iter() {
+        // A creature that's tapped, not a creature, or has a
+        // computed `CantBlock` (Sandstorm Verge, pacifism-
+        // style effects) can't block — don't let the bot hold
+        // attackers back for a blocker that can't legally block.
+        if c.controller == opp_seat
+            && c.can_block()
+            && !state
+                .computed_permanent(c.id)
+                .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBlock))
+        {
+            opp_blockers.push(c);
+        }
+    }
     let has_ground_deathtouch = opp_blockers
         .iter()
         .any(|b| b.has_keyword(&Keyword::Deathtouch) && !b.has_keyword(&Keyword::Flying));
