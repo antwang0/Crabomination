@@ -649,7 +649,28 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   arms that were already there. The allowlist was evidence of a defect, just
   not the one it looked like.
 
-  Also remaining: the printed-vs-computed combat checks still lack guards.
+  **The printed-vs-computed combat checks — HALF CLOSED at the eighty-ninth
+  pass, and the half that was open was live.** The eighty-first pass unified
+  the *pair gate*; the planner's **pre-filters in front of it** were still
+  four hand-written copies reading the printed keyword list. A granted Flying
+  was pre-filtered as blockable and then rejected by the authoritative gate,
+  so `CRAB_SIM_REJECTS` never saw it — but a granted **Reach** went the other
+  way and dropped the pair before the gate ran, so a legal, wanted block was
+  invisible in every plan the bot made. That is the direction no rejection
+  counter can report, and it is why "the counter reads zero" is not a proof.
+
+  `legal_blockers` now returns the computed view it had to build anyway,
+  `evasion_bars_block` is the one pre-filter, the two passes that call
+  `blocker_can_block_attacker` immediately after lost theirs outright, and
+  `bot_block_plan_sees_a_granted_reach` / `..._honours_a_granted_flying` pin
+  both directions. It read `fixed` -0.276 % / `cube` -0.229 % as well: the
+  computed view was being resolved twice.
+
+  **Still without guards: the attack side's equivalents** — `pick_attacks`'
+  `raw_attackers` and the candidate generators read instance keywords in
+  places, and only the CR 508.1d haste case has a regression test. The device
+  is the pair above: build the board with the keyword *granted*, assert the
+  plan, hand it to `declare_attackers`.
 
 ## Engine — Robustness / defects: the closed audits and the twenty-three filters
 

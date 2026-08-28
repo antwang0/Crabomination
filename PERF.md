@@ -5927,6 +5927,36 @@ the table above is safe to compress:
 
 ## Log
 
+### Eighty-ninth pass — a correctness fix that is also faster: the block planner stops resolving the computed view twice
+
+**`fixed` -0.276 %, `cube` -0.229 %, `sealed` -0.257 %.** The change is a bug
+fix (see ENGINE_BACKLOG: four hand-written flying/reach pre-filters read the
+*printed* keyword list where `declare_blockers` reads the computed one, and a
+granted Reach could not block a flier in any plan the bot made). It measured
+as a win, and the reason is the shape:
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.
+  fixed   1,043,038,225 -> 1,040,157,961   -0.276 %
+  cube    3,169,628,393 -> 3,162,360,892   -0.229 %
+  sealed  3,115,488,706 -> 3,107,492,718   -0.257 %
+--bench  195,528 decisions / 27.44 turns / 0 stalls / determinism ok
+         — byte-identical; no bench archetype carries a granted evasion keyword
+```
+
+`legal_blockers` called `computed_permanent` per candidate inside
+`bot_can_block` and **threw the view away**; the caller then resolved it again
+per blocker, and read flying / reach / deathtouch off the *instance* with three
+`has_keyword` walks in between. Returning the view it already had removes one
+resolution and three keyword walks a blocker, and the two redundant pre-filters
+in front of `blocker_can_block_attacker` go with them.
+
+**The device: a correctness question and a perf question can have the same
+answer, and it is usually "the right view was already in hand".** The printed
+read was not a shortcut anybody took for speed — it was slower than the
+computed one, because the computed one was already built.
+
 ### Eighty-ninth pass — a gate that reads its evidence before asking whether it has a question
 
 **1. `ward_gate_ok` read the cast's cost before finding out whether anything
