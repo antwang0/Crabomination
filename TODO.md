@@ -59,9 +59,21 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    **33,120 games over 5 pools x 6 seeds**, plus **360 actor games** for the
    vocab-index memo the ladder cannot reach. Recipe and the
    `strings … | grep "memo is stale"` proof are in PERF's Profile of record.
-6. **Bugs** — ENGINE_BACKLOG's live-match section. Open under it: a layer-7
-   `PumpSelfIf` condition cannot see a layer-4 type change (CR 613.8). The
-   seeded 4,000-pairing sweep is clean at the eighty-seventh tip.
+6. **Bugs** — ENGINE_BACKLOG's live-match section, and the one open entry is
+   now **scoped and ready to take**: a layer-7 `PumpSelfIf` condition cannot
+   see a layer-4 type change (CR 613.8). It is a *class* — **~60 of the 194
+   catalog `PumpSelfIf` conditions read a characteristic a layer can
+   change**, the other ~134 read player/zone facts and are correct as they
+   stand. Two designs are written out there with which cards each covers; the
+   `CardMatchPowerGated` sibling covers only the per-card ones, so the
+   two-phase gather is the one that pays. It moves golden traces
+   (legitimately) and lives in the hottest function, so it needs a `--decks
+   cube` reading and the debug-assertions ladder gate, not just the suite.
+   Both card audits are **re-run and clean at this tip**: `audit_incomplete
+   --structural-only` 21,795 scanned / 0 need review, `audit_stubs` 21,795 /
+   0 flagged, `audit_variant_coverage` 0 dead capabilities over 1,695
+   variants. The seeded 4,000-pairing sweep is clean at the eighty-seventh
+   tip.
 7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
 8. **Tip state** — PERF "Baseline"'s newest "STATE AT …", and the actor

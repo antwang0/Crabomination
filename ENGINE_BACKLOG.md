@@ -157,9 +157,44 @@ CardMatchPowerGated`, the second per-card pass that runs once the gate-free
 power is known (Temur Ascendancy) — and a type-gated sibling would be the same
 device. **Not a one-liner, and the guard it has to get past is the reentrancy
 one**: the condition reads a computed characteristic of a *different*
-permanent than the source, so it cannot simply drop `in_layer_gather`. Scope
-it before taking it: `sa_open(sa_mask, gs::PUMP_SELF_IF)` says how many boards
-even reach the pass.
+permanent than the source, so it cannot simply drop `in_layer_gather`.
+
+**SCOPED at the eighty-eighth pass, by counting the catalog rather than the
+boards — and it is a *class*, not Tide Shaper.** Three statics evaluate a
+`Predicate` inside the gather: `PumpSelfIf` (**194** catalog uses),
+`SetBasePtIf` (5), `GrantPumpSelfIf` (2). Their conditions split into two
+populations, and only one of them can be wrong:
+
+```text
+reads a characteristic a layer can change (types, subtypes, colours, P/T,
+keywords) — AFFECTED, ~60 of the 194:
+   34  SelectorCountAtLeast      "you control N Islands / artifacts"
+   11  EntityMatches
+   10  SelectorExists            "an opponent controls an Island" (Tide Shaper)
+    4  MetalcraftActive          three artifacts — a computed card-type read
+    1  ColorIsMostCommonAmongPermanents
+reads a player- or zone-level fact no layer touches — CORRECT AS IS:
+   17  ValueAtLeast     9 ThresholdActive   8 IsTurnOf   7 SpeedAtLeast
+    5  HellbentActive   4 SourceIsMonstrous 4 SourceIsEquipped
+    4  DescendActive    4 DeliriumActive    4 CelebrationActive
+    …life totals, spells cast, crime, city's blessing, extra turn
+```
+
+**So a fix has to serve ~60 cards, and the two designs are these.** (a) The
+`CardMatchPowerGated` sibling: a second per-card pass with the *computed*
+answer, which works only when the condition reads the affected card and not
+the board — `SelectorExists`/`SelectorCountAtLeast` read the board, so this
+covers `EntityMatches` and little else. (b) A genuine two-phase gather: move
+the three condition-gated blocks to the **end** of
+`gather_continuous_effects_inner`, install `all_effects`-so-far as the frozen
+set, and evaluate the predicates against it. (b) is CR 613.8's dependency
+ordering for this case and covers all ~60 — **but do not build it against
+source order**: `all_effects` is sorted by layer in `apply_layers`, not as it
+is pushed, so "everything below layer 7 is already in the buffer" is only
+true once the three blocks are genuinely last, and that has to be asserted,
+not assumed. It also changes golden traces (legitimately) and sits in the
+hottest function in the program, so it needs a `--decks cube` reading and the
+`-C debug-assertions=yes` ladder gate, not just the suite.
 
 ### ~~The bot answers a mandatory off-board modal with nothing~~ — fixed
 
