@@ -44,107 +44,49 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    the more useful half: print `t_step_ms` against `elapsed_s` before quoting
    any `selfplay_train` throughput number. **BOLT is blocked here** — no
    `llvm-bolt` in the toolchain and no `perf` in the image.
-1. **Perf queue** — PERF "Perf candidates", top-down. **The largest single row
-   this pass moved was not on the queue at all: eleven `#[inline]`s on
-   `CardDefinition`'s card-type predicates, `release-fast` -0.907 / -0.741 /
-   -0.831 %, and -0.175 / -0.124 / -0.162 % with thin LTO.** The standing rule
-   said not to measure them; it is right in direction and 5x wrong in size,
-   and the correction is in the rules and the Baseline. **Two things to carry
-   off it: halve a no-LTO `#[inline]` reading and halve it again before
-   believing it, and `[profile.profiling-lto]` is now the instrument that asks
-   the question** (`profiling` itself OOMs here on the candidate side only —
-   Cargo.toml says why). **The rest of that family is unswept**:
-   `CardInstance::has_keyword` is 98,082 calls at 48 Ir and `same_team`
-   143,564 at 26.5 on `fixed`; both are bigger bodies, so they are a
-   measurement, not a copy of this one.
-   **And the adapter tax has a census now: every `&mut F::call_mut` in the
-   program (1.39 % of `fixed`, 253,752 calls) comes from a `collect()`, and
-   `pick_attacks_inner` owned 41 % of it** — taken, -0.266 / -0.155 / -0.166 %,
-   the whole delta in that one row. **The second-ranked row was built and
-   reverted at a fortieth of its predicted size**, so the rule is: **rank a
-   `call_mut` census by the closure's CAPTURES, not by its call count** — 27 Ir
-   a forward for a predicate capturing four things, 5 Ir for one capturing
-   nothing. Four rows are still open (`do_untap` 33,840, `pick_blocks_inner`
-   28,274, `mana_source_table` 26,430, `process_echo` 16,166); read each one's
-   closure before spending a build. **`(-84)` is the
-   block-legality trio — 1.46 % of `cube`, off the top thirty on `fixed`.
-   Its (a) is TAKEN (-0.125 / -0.262 / -0.176 %, the row fell 58 %) and
-   **(b) is TAKEN too, one pass after the hoist that was supposed to take it
-   was built twice and refuted** (-0.032 / -0.179 / -0.093 %, 28/54/42 % of
-   the deletion ceiling, all three pools). The hoist lost because a block
-   pass has one to three candidates; the `PresenceGate` slot wins because a
-   *freeze scope* spans the whole tick. **Two rules, and the second is the
-   one to carry: divide a loop's item count by its call count before
-   hoisting a per-item board walk out of it — and when the hoist fails
-   because the loop is short, ask whether the scope is long.** `(-85)` asked
-   what a slot costs, built the packing that would remove it, and **reverted
-   it**: `cube` +0.011 %, because a gate is READ 3.5x for every scope that
-   EXITS. A slot costs ~113 k Ir a `cube` run and nothing else — add gates
-   freely. **(c) counts the passes in `blocker_pair_block` and says leave
-   it** — eight against the twenty-two that paid, i.e. ~0.08 %. **`(-86)` is
-   a closed door**: the `fmt::Write` row in every profile is
-   `wants_converge`'s once-per-card-name `{:?}`, already twice cached, and
-   its `format!` is the robust half of that function. **`(-87)` is new, is
-   1.13 % of `cube`, and both of its own proposals are already built and
-   refuted** — the two layer-4 type gates miss 45 k / 27 k times a `cube` run,
-   the `continuous_effects` operand is **1 %** of that (probed), and a
-   `type_bits` per-definition bit reads **+0.138 %** with the memo hitting
-   98.3 %. Rule: **a per-definition presence bit pays only when the walk it
-   replaces is over a list that is usually non-empty**; `static_abilities` is
-   empty on nearly every permanent, so that `any` was already a length test.
-   What is left is calling the walk less — 72,876 calls a `cube` run, 19,320
-   of them from `activate_ability_inner` under `&mut self`. The one unpriced
-   thing is the **write rate of zone membership + `continuous_effects`**,
-   which is the invalidation a `GameState`-level memo would actually need
-   (not `DerefMut`, which is the tap rate `(-62)` was refuted on). Price that
-   first. `(-82)` and
-   `(-83)`
-   are new and are the first sizing this file has of the bot's hand sweep
-   (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
-   requirement walker (2.2-3.4 %, the third-largest engine function on
-   `cube`).** `(-82)`'s weight is on `available_mana`'s 5,900 per-tick
-   builds, **not** on the bigger targeting row: the probe census in the same
-   dumps says a sweep builds 0.40 targeted candidates and runs 0.47 probes,
-   so there is almost nothing to defer there. It also names three things
-   already right that must not be re-taken, plus one refutation.
-   **Its targeting half is part-taken at the ninety-third pass and the entry
-   had ranked it wrong** — three quarters of that row was adapters, a per-slot
-   `Vec`, a cloned filter and a doubled lookup, none of which the outside-in
-   sizing could see. The rule that fell out is the queue's cheapest habit:
-   **run `cg_edges.py --callees` on a 3 % row before theorising about it.**
-   `(-83)` is a
-   pool-split entry: read which of its three caller stories a change is aimed
-   at before proposing one. **The probe census by caller is now in the
-   Baseline** — `accept_on` is 20.71 % of `fixed` and every one of its five
-   callers is accounted for, with **no unfiltered probe site left in the bot**,
-   so further work on that 20 % has to make a probe cheaper, not rarer. Then
-   `(-9)`'s open half,
-   `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)`
-   is the gather's context census, and its last paragraph is a standing best
-   rule** — a scope only gathers if a read inside it asks for a computed view,
-   so read a scope's first `&self` calls in source order before deciding the
-   scope is irreducible; that is where `cube` -2.226 % came from. Its named
-   remaining first-reads are the queue's cheapest leads. Taken/closed:
-   `(-70)`, `(-79)`, `(-77)`, `(-60)`, `(-39)`, the `Box` class, `(-80)` rows
-   1 and 2 — **row 1 is now a built refutation with a ledger, not an
-   argument.** The ninety-second pass adds two things the queue can use
-   directly: **fold a `'N` row into its parent before ranking a self table**
-   (it is callgrind's recursion level, not a monomorphization — the walker
-   reads 1.10 % as a row and 3.36 % folded on `cube`, and no table here has
-   ever named it), and **Ir/call on a function a gate is about to split is
-   the average of two populations, not the price of the calls the gate
-   removes**. Its concurrent third adds a third: **a rebase shrinks a patch
-   without shrinking its measurement** (see PERF's standing rules and the
-   cauldron entry), and **the Cauldron bit is now reverted** — *having the
-   bit* reads `sealed` -0.129 % / `cube` -0.043 % / `fixed` **+0.005 %**
-   (measured twice, and confirmed a third time at the ninety-third pass by two
-   whole-program anchors that bracket the revert commit alone: `fixed` -0.006
-   / `cube` +0.038 / `sealed` +0.125 % for removing it). The `fixed` sign is
-   the wider `GrantScan`, not the walk. Do not rebuild it —
-   **but the split is 20x asymmetric and it is the one open question here**:
-   the rule reverted a change that costs 0.006 % of the bench pool to save
-   0.125 % of `sealed`, and `sealed`/`cube` are the pools the training loop
-   plays. Not re-landed unilaterally; decide it deliberately or leave it.
+1. **Perf queue** — PERF "Perf candidates" and its Baseline carry every
+   number; this is the state and the rules only.
+   **Open, in order:** `(-87)` (1.13 % of `cube`; both of its own proposals
+   are built and refuted, what is left is calling the walk less, and the one
+   unpriced thing is the *write rate of zone membership + `continuous_effects`*
+   — price that before proposing a `GameState`-level memo), `(-82)`'s
+   `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
+   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **The `call_mut` census has four
+   rows left** (`do_untap`, `pick_blocks_inner`, `mana_source_table`,
+   `process_echo`) and **the `#[inline]` family is unswept** past the card-type
+   predicates (`CardInstance::has_keyword`, `same_team` — bigger bodies, so a
+   measurement rather than a copy).
+   **Taken/closed:** `(-84)`(a) and (b), `(-70)`, `(-79)`, `(-77)`, `(-60)`,
+   `(-39)`, the `Box` class, `(-80)` rows 1-2, `(-82)`'s targeting half.
+   **Refuted with a ledger, do not rebuild:** `(-85)` (a gate is read 3.5x per
+   scope exit, so a slot costs ~113 k Ir and nothing else — add gates freely),
+   `(-86)`, `(-84)`(c), the Cauldron bit, `(-80)` row 1.
+   **The rules this queue runs on, none of which restate a number:**
+   * **Run `cg_edges.py --callees` on a 3 % row before theorising about it.**
+     `(-82)` sized a function from outside and got the conclusion backwards.
+   * **Rank a `call_mut` census by the closure's CAPTURES, not its call
+     count** — 5x between the top two rows of one table.
+   * **Halve a no-LTO `#[inline]` reading and halve it again**;
+     `[profile.profiling-lto]` is the instrument that checks it (`profiling`
+     OOMs on the candidate side only — Cargo.toml says why).
+   * **Divide a loop's item count by its call count before hoisting a
+     per-item board walk out of it — and when the hoist fails because the loop
+     is short, ask whether the scope is long.**
+   * **A per-definition presence bit pays only when the walk it replaces is
+     over a list that is usually non-empty.**
+   * **A scope only gathers if a read inside it asks for a computed view** —
+     read its first `&self` calls in source order; `(-81)`'s named remaining
+     first-reads are the cheapest leads.
+   * **Fold a `'N` row into its parent before ranking a self table**, and
+     **Ir/call on a function a gate is about to split is the average of two
+     populations.**
+   * **A rebase shrinks a patch without shrinking its measurement**, and
+     **cite an anchor by a hash already on `origin`** — the last one was
+     filed at a hash that no longer resolves.
+   **One open question, not re-landed unilaterally:** the Cauldron revert is a
+   20x asymmetric pool split — 0.006 % of the bench pool against 0.125 % of
+   `sealed`, and `sealed`/`cube` are the pools the training loop plays.
+   Decide it deliberately or leave it.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
