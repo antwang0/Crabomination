@@ -5262,10 +5262,10 @@ impl CardDefinition {
     /// see [`sba_bits`]. Pure function of the definition; `CardData`
     /// memoizes it (`CardData::sba_scan_bits`), which is what keeps the five
     /// list walks below off the sweep's per-card path.
-    pub fn sba_scan_bits(&self) -> u32 {
+    pub fn sba_scan_bits(&self) -> u64 {
         use crate::effect::StaticEffect;
         use sba_bits as b;
-        let mut m = 0u32;
+        let mut m = 0u64;
         if self.flip_when_has_keyword.is_some() {
             m |= b::FLIP_KEYWORD;
         }
@@ -5332,6 +5332,30 @@ impl CardDefinition {
                 StaticEffect::LethalDamageByPower { .. } => m |= b::LETHAL_BY_POWER,
                 _ => {}
             }
+        }
+        m
+    }
+
+    /// `card_can_grant_keyword`'s two prologue questions for this printing —
+    /// see [`grant_bits`]. Pure function of the definition; `CardData`
+    /// memoizes it (`CardData::grant_scan_bits`).
+    pub fn grant_scan_bits(&self) -> u64 {
+        use grant_bits as b;
+        let mut m = 0u64;
+        if self
+            .keywords
+            .iter()
+            .any(|k| matches!(k, Keyword::HexproofUnlessAttackingOrBlocking | Keyword::Unleash))
+        {
+            m |= b::SYNTH_KEYWORD;
+        }
+        if self.equipped_bonus.is_some()
+            || self.soulbond_bonus.is_some()
+            || !self.level_bands.is_empty()
+            || !self.station.is_empty()
+            || !self.static_abilities.is_empty()
+        {
+            m |= b::CONTAINER;
         }
         m
     }
@@ -6012,31 +6036,31 @@ impl KeywordSlice for [Keyword] {
 /// an instance condition as well ([`UNFLIPPED`]'s two, [`STEAL_PENALTY`],
 /// [`EQUIPMENT`]) carry only the definition half; the scan ANDs them.
 pub mod sba_bits {
-    pub const FLIP_KEYWORD: u32 = 1 << 8;
-    pub const FLIP_PREDICATE: u32 = 1 << 9;
-    pub const SACRIFICE_WHEN: u32 = 1 << 10;
-    pub const STATE_TRIGGER: u32 = 1 << 11;
-    pub const STEAL_PENALTY: u32 = 1 << 12;
-    pub const NO_OTHER: u32 = 1 << 13;
-    pub const MAX_COUNTERS: u32 = 1 << 14;
-    pub const SAGA: u32 = 1 << 15;
-    pub const PERSIST_UNDYING: u32 = 1 << 16;
-    pub const START_ENGINES: u32 = 1 << 17;
-    pub const SCULPTOR: u32 = 1 << 18;
-    pub const LEGENDARY: u32 = 1 << 19;
-    pub const WORLD: u32 = 1 << 20;
-    pub const PLANESWALKER: u32 = 1 << 21;
-    pub const BATTLE: u32 = 1 << 22;
-    pub const AURA: u32 = 1 << 23;
-    pub const ROLE: u32 = 1 << 24;
-    pub const EQUIPMENT: u32 = 1 << 25;
-    pub const SHAPESHIFTER: u32 = 1 << 26;
-    pub const SUPERTYPE_GRANT: u32 = 1 << 27;
-    pub const LEGEND_RULE_OFF: u32 = 1 << 28;
-    pub const LETHAL_BY_POWER: u32 = 1 << 29;
+    pub const FLIP_KEYWORD: u64 = 1 << 8;
+    pub const FLIP_PREDICATE: u64 = 1 << 9;
+    pub const SACRIFICE_WHEN: u64 = 1 << 10;
+    pub const STATE_TRIGGER: u64 = 1 << 11;
+    pub const STEAL_PENALTY: u64 = 1 << 12;
+    pub const NO_OTHER: u64 = 1 << 13;
+    pub const MAX_COUNTERS: u64 = 1 << 14;
+    pub const SAGA: u64 = 1 << 15;
+    pub const PERSIST_UNDYING: u64 = 1 << 16;
+    pub const START_ENGINES: u64 = 1 << 17;
+    pub const SCULPTOR: u64 = 1 << 18;
+    pub const LEGENDARY: u64 = 1 << 19;
+    pub const WORLD: u64 = 1 << 20;
+    pub const PLANESWALKER: u64 = 1 << 21;
+    pub const BATTLE: u64 = 1 << 22;
+    pub const AURA: u64 = 1 << 23;
+    pub const ROLE: u64 = 1 << 24;
+    pub const EQUIPMENT: u64 = 1 << 25;
+    pub const SHAPESHIFTER: u64 = 1 << 26;
+    pub const SUPERTYPE_GRANT: u64 = 1 << 27;
+    pub const LEGEND_RULE_OFF: u64 = 1 << 28;
+    pub const LETHAL_BY_POWER: u64 = 1 << 29;
 
     /// Set by the definition alone.
-    pub const UNCONDITIONAL: u32 = SACRIFICE_WHEN
+    pub const UNCONDITIONAL: u64 = SACRIFICE_WHEN
         | STATE_TRIGGER
         | NO_OTHER
         | MAX_COUNTERS
@@ -6055,9 +6079,25 @@ pub mod sba_bits {
         | LEGEND_RULE_OFF
         | LETHAL_BY_POWER;
     /// Set only on an unflipped permanent.
-    pub const UNFLIPPED: u32 = FLIP_KEYWORD | FLIP_PREDICATE;
+    pub const UNFLIPPED: u64 = FLIP_KEYWORD | FLIP_PREDICATE;
     /// The memo's payload — every definition bit.
-    pub const ALL: u32 = UNCONDITIONAL | UNFLIPPED | STEAL_PENALTY | EQUIPMENT;
+    pub const ALL: u64 = UNCONDITIONAL | UNFLIPPED | STEAL_PENALTY | EQUIPMENT;
+}
+
+/// The two presence questions `card_can_grant_keyword`'s prologue asks of a
+/// definition before it can answer "no" — see [`sba_bits`] for the device.
+pub mod grant_bits {
+    /// The definition carries one of the two printed keywords the layer
+    /// gather *synthesizes* a grant from rather than reading out of a field
+    /// (`HexproofUnlessAttackingOrBlocking`, `Unleash`).
+    pub const SYNTH_KEYWORD: u64 = 1 << 32;
+    /// At least one of the five containers a keyword grant can come out of is
+    /// non-empty: `equipped_bonus`, `soulbond_bonus`, `level_bands`,
+    /// `station`, `static_abilities`. Clear means the card cannot grant any
+    /// keyword to anything, whatever the predicate asks.
+    pub const CONTAINER: u64 = 1 << 33;
+    /// The memo's payload.
+    pub const ALL: u64 = SYNTH_KEYWORD | CONTAINER;
 }
 
 /// Two answers about a card's *definition*, memoized on the object: its
@@ -6082,12 +6122,13 @@ pub mod sba_bits {
 /// writers are two setters storing pure functions of the same definition and
 /// a lost update costs a recompute.
 #[derive(Debug, Default)]
-pub struct CardMemo(std::sync::atomic::AtomicU32);
+pub struct CardMemo(std::sync::atomic::AtomicU64);
 
 impl CardMemo {
-    const COLOR_MASK: u32 = 0x1f;
-    const COLOR_VALID: u32 = 1 << 5;
-    const SBA_VALID: u32 = 1 << 6;
+    const COLOR_MASK: u64 = 0x1f;
+    const COLOR_VALID: u64 = 1 << 5;
+    const SBA_VALID: u64 = 1 << 6;
+    const GRANT_VALID: u64 = 1 << 7;
 
     #[inline]
     fn get(&self) -> Option<crate::mana::ColorSet> {
@@ -6100,22 +6141,37 @@ impl CardMemo {
     fn set(&self, cs: crate::mana::ColorSet) {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
         self.0.store(
-            (v & !Self::COLOR_MASK) | u32::from(cs.0) | Self::COLOR_VALID,
+            (v & !Self::COLOR_MASK) | u64::from(cs.0) | Self::COLOR_VALID,
             std::sync::atomic::Ordering::Relaxed,
         );
     }
 
     #[inline]
-    fn get_sba(&self) -> Option<u32> {
+    fn get_sba(&self) -> Option<u64> {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
         (v & Self::SBA_VALID != 0).then_some(v & sba_bits::ALL)
     }
 
     #[inline]
-    fn set_sba(&self, bits: u32) {
+    fn set_sba(&self, bits: u64) {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
         self.0.store(
             (v & !sba_bits::ALL) | bits | Self::SBA_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    #[inline]
+    fn get_grant(&self) -> Option<u64> {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::GRANT_VALID != 0).then_some(v & grant_bits::ALL)
+    }
+
+    #[inline]
+    fn set_grant(&self, bits: u64) {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        self.0.store(
+            (v & !grant_bits::ALL) | bits | Self::GRANT_VALID,
             std::sync::atomic::Ordering::Relaxed,
         );
     }
@@ -6130,7 +6186,7 @@ impl CardMemo {
 impl Clone for CardMemo {
     /// The clone describes the same definition, so it keeps the answers.
     fn clone(&self) -> Self {
-        Self(std::sync::atomic::AtomicU32::new(
+        Self(std::sync::atomic::AtomicU64::new(
             self.0.load(std::sync::atomic::Ordering::Relaxed),
         ))
     }
@@ -6718,7 +6774,7 @@ impl CardData {
     /// [`CardDefinition::sba_scan_bits`] for this object, memoized on the
     /// same word and audited by the same `debug_assert!`.
     #[inline]
-    pub fn sba_scan_bits(&self) -> u32 {
+    pub fn sba_scan_bits(&self) -> u64 {
         if let Some(bits) = self.memo.get_sba() {
             debug_assert_eq!(
                 bits,
@@ -6729,6 +6785,23 @@ impl CardData {
         }
         let bits = self.definition.sba_scan_bits();
         self.memo.set_sba(bits);
+        bits
+    }
+
+    /// [`CardDefinition::grant_scan_bits`] for this object, memoized on the
+    /// same word and audited by the same `debug_assert!`.
+    #[inline]
+    pub fn grant_scan_bits(&self) -> u64 {
+        if let Some(bits) = self.memo.get_grant() {
+            debug_assert_eq!(
+                bits,
+                self.definition.grant_scan_bits(),
+                "keyword-grant memo is stale: a definition rewrite did not clear it",
+            );
+            return bits;
+        }
+        let bits = self.definition.grant_scan_bits();
+        self.memo.set_grant(bits);
         bits
     }
 }

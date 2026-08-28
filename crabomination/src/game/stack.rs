@@ -4461,7 +4461,7 @@ impl GameState {
     fn sba_board_scan(&self) -> SbaBoardScan {
         use crate::card::{sba_bits as b, CounterType};
         let mut s = SbaBoardScan::default();
-        let mut m = 0u32;
+        let mut m = 0u64;
         for c in self.battlefield.iter() {
             let d = c.sba_scan_bits();
             m |= d & b::UNCONDITIONAL;

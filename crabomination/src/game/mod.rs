@@ -23237,20 +23237,22 @@ fn card_can_grant_keyword(
 ) -> bool {
     let def = &card.definition;
     let any = |kws: &[Keyword]| kws.iter().any(pred);
+    // Both prologue questions are functions of the definition alone, and both
+    // come off the per-object memo — see `card::grant_bits`. That turns the
+    // `keywords` scan (a payload-carrying enum whose `PartialEq` is not free)
+    // and the five container loads off a large `CardDefinition` into one word
+    // load on the `CardData` the caller already holds.
+    let bits = card.grant_scan_bits();
     // `synth` is the caller's one-shot answer for the three keywords the
     // gather makes up rather than reads out of a field (see
     // `keyword_grant_in_scope`); when it is clear, none of the three can be
-    // what `pred` is asking about and the `keywords` scan is dead weight.
-    if synth
-        && (card.suspected
-            || def.keywords.iter().any(|k| {
-                matches!(
-                    k,
-                    Keyword::HexproofUnlessAttackingOrBlocking | Keyword::Unleash
-                )
-            }))
-    {
+    // what `pred` is asking about and the keyword bit is dead weight.
+    if synth && (card.suspected || bits & crate::card::grant_bits::SYNTH_KEYWORD != 0) {
         return true;
+    }
+    // Nothing below can fire with all five containers empty.
+    if bits & crate::card::grant_bits::CONTAINER == 0 {
+        return false;
     }
     if let Some(b) = &def.equipped_bonus
         && (any(&b.keywords)

@@ -925,7 +925,30 @@ profiling-fast --no-default-features.  Base d9093fb5.
       cube `sba_board_scan` self 52,822,246 -> 24,823,002  (-53.0 %)
            `CardDefinition::sba_scan_bits` (the miss path)  +5,807,662
            net on the pair -22.2 M of the run's -23.3 M
+
+(3) (-77)'s first row: `card_can_grant_keyword`'s prologue reads the same
+    memo — `grant_bits::SYNTH_KEYWORD` (the printed-keyword scan) and
+    `CONTAINER` (the five container loads). `CardMemo` widens to an
+    `AtomicU64` for it; `clear()` is still one store.  Base 77608b37.
+      fixed   1,084,605,509 -> 1,081,260,056   -0.308 %
+      cube    3,300,104,632 -> 3,290,764,033   -0.283 %
+      sealed  3,224,178,492 -> 3,217,988,369   -0.192 %
+      cube `card_can_grant_keyword` (10 monos) 62,871,580 -> 50,778,404,
+      plus `grant_scan_bits` 2,075,052: the pair 1.91 % -> 1.60 %
 ```
+
+**Row (3) is (-11)'s own shape (i) — "a per-*definition* 'can this printing
+grant any keyword at all' bit" — and it lands within a rounding error of the
+~0.3 % that entry sized it at**, twelve passes after the entry declared it
+unbuildable. **The sizing was right and the impossibility was wrong**, which
+is the more useful half: a refutation that carries an arithmetic estimate
+stays worth something after its argument dies.
+
+**What is left of the row is the cards that *do* carry a container.**
+`card_can_grant_keyword` is still 1.54 % of `cube`: the gate now answers
+"no" in one load for a vanilla body, and everything with a `static_abilities`
+entry still walks it per predicate. That half is (-61)'s "fewer walks, not a
+cheaper one", unchanged.
 
 **The scan's per-card body was five list walks and ~25 field reads at
 ~113 Ir a permanent, 20,260 times a `cube` run; it is now one memo load, one
@@ -8800,11 +8823,20 @@ question that is a pure function of each permanent's `CardDefinition`* —
 repeats in the self table, at `--decks cube`, post-(2):
 
 ```text
-  1.87 %  card_can_grant_keyword     <- (-61)/(-11); five container loads a card
+  1.87 %  card_can_grant_keyword     <- TAKEN, row (3); -0.283 % of `cube`
   1.33 %  dispatch_board_scan        <- the trigger dispatcher's own presence walk
   0.79 %  trigger_grant_sources      <- (-60); 0.25 grants found per call
   0.76 %  granted_abilities_of       <- walks `static_abilities` (twice, per (-10))
 ```
+
+**The first row is TAKEN and its residue is the entry's own caution (c) in
+practice.** Two bits (`grant_bits::SYNTH_KEYWORD`, `CONTAINER`) took
+`card_can_grant_keyword` from 1.91 % to 1.60 % including the miss path —
+i.e. **the memo answers the vanilla body, and the cards that carry a
+container still walk it**. Rank the remaining three by *how many of their
+per-card visits end in "no"*, not by their share: this row was worth taking
+because 1.7 M calls a run mostly answer no, and `dispatch_board_scan` is the
+next one where that is plausibly true.
 
 **The device, in full, so nobody re-derives it:** put the answer's bits in
 `CardMemo` (`crabomination_base/src/card.rs`), one atomic word on `CardData`,
