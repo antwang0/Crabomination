@@ -8875,15 +8875,8 @@ cube`, 336,530 growths):**
                                            carries an owned filter, so this
                                            one really does move bytes
   26,852   4,604,936  check_state_based_actions   <- (-75)
-  16,066   2,289,388  affected_from_requirement   <- `types: Vec<CardType>`,
-                                           one byte an element, and it goes
-                                           into `AffectedPermanents::All`,
-                                           i.e. into `ContinuousEffect`. A
-                                           `SmallVec<[CardType; 8]>` is
-                                           **16 bytes, smaller than the
-                                           `Vec`** — the only entry here that
-                                           shrinks the struct it is on.
-                                           Serde and ~40 read sites.
+  16,066   2,289,388  affected_from_requirement   <- BUILT AND REFUTED,
+                                           both halves; see below
   15,856   3,960,971  resolve_combat              <- (-75)
   13,104   2,468,718  deal_combat_damage_to_target
   11,410   1,433,420  grant_scan           <- returns a `GrantScan`
@@ -8894,8 +8887,37 @@ cube`, 336,530 growths):**
                                            work, not a defect
 ```
 
-`affected_from_requirement` is the one shaped like a next commit. Everything
-under (-75) wants that entry's signature change instead.
+**`affected_from_requirement` LOOKED like the next commit and it is REFUTED,
+in two halves, at the eighty-seventh pass — and the reason is (-72)'s read
+count, on a field that *passed* the byte test.** `AffectedPermanents` lives
+inside every `ContinuousEffect`; its `card_types` is a `Vec<CardType>` of a
+**one-byte unit enum**, so `SmallVec<[CardType; 8]>` is still exactly the 24
+bytes the `Vec` was, and `Specific(Vec<CardId>)` at `[CardId; 4]` likewise.
+Both were built. Base `af5327d5`:
+
+```text
+                                       fixed        cube       sealed
+  card_types only                    +0.035 %    -0.049 %    +0.009 %
+  card_types + Specific + the
+    three `Vec<CardId>` producers    -0.212 %    +0.158 %    +0.174 %
+  (so the Specific half alone)       -0.247 %    +0.207 %    +0.165 %
+```
+
+**Both builds remove exactly the growths they promised** — `grow_one` 333,750
+-> 317,684 in *both* — and the `Specific` half removes 30,534 allocations
+more, **and `affected_includes_gated` pays 2,757,492 Ir for them, +9.7 % of
+its own row.** That function is the whole-board matcher: it reads
+`AffectedPermanents` once per (effect x permanent) pair, and on a grant-heavy
+board the `Specific` list is routinely longer than four ids — so the
+allocation is *still made* and every read pays the `spilled()` compare on top.
+On `--decks fixed`, where the lists are short and the pool carries no
+`GrantTriggeredAbility`, the same change is a 0.25 % **win**. A textbook pool
+split, and the lesson is that **the byte test is necessary and not
+sufficient: run the read-count test on the field's *consumer*, not on the
+function that fills it.** The `card_types` half on its own is a wash on all
+three pools and does not ship either.
+
+Everything under (-75) wants that entry's signature change instead.
 
 **(-75) THE `events: Vec<GameEvent>` ACCUMULATOR FAMILY IS ~0.8 % OF `cube`
 **(-75) FIRST INSTALMENT TAKEN AT THE EIGHTY-SEVENTH PASS — `fixed`

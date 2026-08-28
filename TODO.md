@@ -26,13 +26,14 @@ sixty-seventh pass, so don't re-take that.
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-76)**'s
-   `affected_from_requirement` row (the one field whose `SmallVec` is
-   *smaller* than its `Vec`), **(-75)**, (-70) (quiet window only), (-69)'s
-   two unclaimed rows, (-51)(b), (-60), (-61), (-51)(a), (-59). Pass 86
-   closed (-71) and its sweep, (-73), and the `CowBox<Vec<T>>` half of (-76);
-   refuted with numbers (-72), (-74), the ability-count reserve, and three
-   more sites of (-71)'s sweep.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-75)**'s unattributed
+   rows (split each before threading it), (-70) (quiet window only), (-69)'s
+   two unclaimed rows, (-51)(b), (-60), (-61), (-51)(a), (-59). Closed:
+   (-71) and its sweep, (-73), the `CowBox<Vec<T>>` half of (-76) and six of
+   its fields. Refuted **with numbers**: (-72), (-74), the ability-count
+   reserve, three more (-71) sites, and **(-76)'s
+   `affected_from_requirement` row, both halves** — it passed the byte test
+   and failed the read-count test on its *consumer*.
 2. **Perf method** — PERF "How to measure" and "Which pool a change moves",
    then the standing rules below. **Read all three pools**: pass 86 had one
    change that split by pool and one that did not. And **size an inline
@@ -78,6 +79,15 @@ refuted.
   `CowBox<Vec<T>>` half is closed centrally by an inherent `push` that
   materializes at `len + 1`; the plain-field half is per field. **Ask what
   else copies a `Vec` and then writes to the copy.**
+- **The byte test is necessary and not sufficient — run the read-count test
+  on the field's *consumer*** (pass 87; `affected_from_requirement`, both
+  halves refuted). `AffectedPermanents::Specific` at `[CardId; 4]` is the
+  same 24 bytes the `Vec` was and removes 30,534 allocations, and
+  `affected_includes_gated` — the whole-board matcher that reads it once per
+  (effect x permanent) pair — pays **+9.7 % of its own row** for them,
+  because on a grant-heavy board the list spills anyway. `fixed` -0.212 % /
+  `cube` +0.158 % / `sealed` +0.174 %: a pool split, and the field's own
+  function is not where its reads are.
 - **Size an inline buffer before rejecting it: `SmallVec<[T; N]>` is
   `8 + max(N * size_of::<T>(), 16)` bytes, so below 16 bytes of payload it is
   exactly the 24 bytes the `Vec` was** (same entry). The same three-field
