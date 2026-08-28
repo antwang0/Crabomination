@@ -2001,7 +2001,16 @@ fn play_one_game_traced(
                 g = *settled;
                 true
             } else {
-                g.perform_action(action).is_ok()
+                // The comment above says self-play discards the events; hand
+                // the buffer back for its capacity rather than dropping the
+                // allocation (`GameState::recycle_events`, PERF `(-80)`).
+                match g.perform_action(action) {
+                    Ok(events) => {
+                        g.recycle_events(events);
+                        true
+                    }
+                    Err(_) => false,
+                }
             };
             if ok {
                 // `find_card_anywhere` visits the zones cheapest-first, which

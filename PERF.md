@@ -600,6 +600,11 @@ on both sides; the absolute number then describes mimalloc's interception,
 but the *ratio* is sound. Wall-clock is still the arbiter for anything
 allocator- or cache-shaped, where Ir undercounts.
 
+**`ab_wall.py` prints a load line and warns on a contended box** (eighty-ninth
+pass). A verdict taken while the other session was linking is not a verdict —
+the same null reads `+/-1.91 %` quiet and `+/-9.73 %` under six spinners, and
+returns FLAT both times. Read the load line before the verdict.
+
 **But "sub-5 %" is about `--bench`, not about the clock.** A *paired* ABBA
 run (`scripts/ab_wall.py`, 8 blocks) resolved **+/-0.34 %** on `--decks fixed
 --games 2000` at the eighty-eighth pass, and measured a pass worth -4.33 % in
@@ -10588,7 +10593,25 @@ allocations unless a layer actually overrides one, and the freeze scope's
 `pick_blocks_inner` collect, one `Arc` each. There is nothing left in it short
 of not allocating the `Arc`, which the memo's shape requires.
 
-**Row 2 is the cleanest unclaimed one and it is *not* a `with_capacity` fix.**
+**ROW 2 IS TAKEN — `fixed` -0.256 % / `cube` -0.105 % / `sealed` -0.200 %,
+and 575,795 allocations -> 555,641.** The fix is a `Vec<GameEvent>` scratch
+slot on `GameState`: `pass_priority` `mem::take`s it instead of allocating,
+and the callers that *discard* the events hand the buffer back through
+`recycle_events`. Four sites do (`bot::sim_step`'s PassPriority arm — 34,298
+of the run's 66,612 `perform_action_inner` calls — `simulate_through_combat`,
+the `recommend` self-play driver, and `bot`'s policy loop); a caller that does
+not is unaffected, because `take` on an empty slot yields `Vec::new()` and the
+first push allocates exactly as before. **-20,154 allocations against the
+22,820 this entry predicted: 88 % captured**, the rest being `accept_on`,
+which clones per probe and so never reuses.
+
+**And the removed allocations cost 131 Ir each, not the 179 the family
+average implies** — 2,639,952 Ir over 20,154 of them. The average is over
+every size class; a short `Vec<GameEvent>` is at the cheap end. Divide the
+family total by the call count for a *ranking*, not for a price.
+
+**What row 2 said before it was taken, kept because the reasoning is the
+reusable half — it is *not* a `with_capacity` fix.**
 `pass_priority` hands `advance_step` a `vec![]` and `advance_step` pushes
 `GameEvent::StepChanged` unconditionally — so the growth count (22,820) is
 **exactly** the call count (22,820), one first-push allocation per step

@@ -1895,6 +1895,11 @@ pub struct GameState {
     /// scope; clones and serde restores start unfrozen.
     #[serde(skip)]
     pub(crate) layer_freeze: LayerFreeze,
+    /// A retired `Vec<GameEvent>`, kept for its capacity — see
+    /// [`recycle_events`](GameState::recycle_events). Always empty between
+    /// actions; clones and serde restores start without one.
+    #[serde(skip)]
+    pub(crate) event_scratch: Vec<GameEvent>,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -2795,6 +2800,7 @@ impl Clone for GameState {
             resolving_source: self.resolving_source.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
+            event_scratch: Vec::new(),
             additional_combat_phases: self.additional_combat_phases,
             combat_chooser: self.combat_chooser,
             additional_post_main_combats: self.additional_post_main_combats,
@@ -3039,6 +3045,7 @@ impl GameState {
             resolving_source: None,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
+            event_scratch: Vec::new(),
             additional_combat_phases: 0,
             combat_chooser: None,
             additional_post_main_combats: 0,
@@ -9252,6 +9259,27 @@ impl GameState {
     /// scope that never needs the layer system costs nothing. Nested freezes
     /// reuse the outer memo. Use this around any read-only loop that filters
     /// or inspects many permanents.
+    /// Hand a finished event list back for its capacity.
+    ///
+    /// The one allocation `pass_priority` cannot avoid is the buffer it fills
+    /// — `advance_step` always pushes at least `StepChanged` — so the buffer
+    /// is *reused* instead. Every caller that drops the events rather than
+    /// reading them past the call should hand them here: the four that do so
+    /// on the hot path (`bot::sim_step`, `bot::simulate_through_combat`,
+    /// `bot::evaluate_action_sequence`, and the self-play driver in
+    /// `recommend`) are 22,820 allocations a six-game `fixed` run between
+    /// them. Optional by construction — a caller that forgets simply drops
+    /// the allocation as before, so this can never be a correctness bug.
+    ///
+    /// Keeps the larger of the two buffers, so the slot settles at the
+    /// biggest batch the state has seen rather than the most recent one.
+    pub(crate) fn recycle_events(&mut self, mut events: Vec<GameEvent>) {
+        if events.capacity() > self.event_scratch.capacity() {
+            events.clear();
+            self.event_scratch = events;
+        }
+    }
+
     pub fn with_frozen_layers<R>(&self, f: impl FnOnce(&Self) -> R) -> R {
         self.layer_freeze.push();
         // Decrement on drop (not after `f`) so a panicking assertion inside

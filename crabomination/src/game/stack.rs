@@ -188,7 +188,18 @@ impl GameState {
         self.empty_mana_pools();
 
         // Auto-declare empty blockers if no one blocked.
-        let mut events = vec![];
+        //
+        // Taken from the scratch slot rather than allocated: `advance_step`
+        // pushes `StepChanged` unconditionally, so this buffer's *first push*
+        // allocated once per step advance — **22,820 of the run's 575,795
+        // allocations on six `--decks fixed` games**, the second-biggest
+        // context in the program (PERF `(-80)`). Reserving capacity would
+        // only move that allocation earlier; what removes it is a caller that
+        // hands the buffer back (`recycle_events`). A caller that does not is
+        // unaffected: the slot is empty, `take` yields `Vec::new()`, and the
+        // first push allocates exactly as before.
+        let mut events = std::mem::take(&mut self.event_scratch);
+        debug_assert!(events.is_empty(), "the event scratch is stored cleared");
         if self.step == TurnStep::DeclareBlockers
             && !self.attacking.is_empty()
             && !self.blockers_declared
