@@ -40,17 +40,28 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 3. **Instruments before profiles** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
    `server::bot_rejection_count`, `--bench`'s stall split.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
-   encodings invalidate the trained nets. **Nothing this pass touched them.**
-5. **Bugs** — ENGINE_BACKLOG's live-match section. Open under it: a layer-7
+   encodings invalidate the trained nets. **Two commits this pass are inside
+   `encode.rs` and neither moves a byte of output**: the library grouping
+   dropped its `BTreeMap` for a sorted inline buffer (unique keys, same total
+   order), and `Vocab::index_of` became a memo slot. Identical rows over
+   identical play, both audited by
+   `the_library_encodes_as_a_deduplicated_multiset` and by the actor's
+   `debug_assert!`. **No net needs retraining as of `dc478735`.**
+5. **Robustness gate** — RUN and clean at the eighty-seventh pass for all
+   seven memo families: `-C debug-assertions=yes` on `[profile.overflow]`,
+   **33,120 games over 5 pools x 6 seeds**, plus **360 actor games** for the
+   vocab-index memo the ladder cannot reach. Recipe and the
+   `strings … | grep "memo is stale"` proof are in PERF's Profile of record.
+6. **Bugs** — ENGINE_BACKLOG's live-match section. Open under it: a layer-7
    `PumpSelfIf` condition cannot see a layer-4 type change (CR 613.8). The
    seeded 4,000-pairing sweep is clean at the eighty-seventh tip.
-6. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
+7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
-7. **Tip state** — PERF "Baseline"'s newest "STATE AT …", and the actor
+8. **Tip state** — PERF "Baseline"'s newest "STATE AT …", and the actor
    re-read in "Profile of record" (**-8.02 %** since pass 83, play identical).
    The eighty-seventh pass is **-4.33 % `fixed` / -3.93 % `cube` / -3.76 %
    `sealed`** across both halves, `--bench` byte-identical throughout.
-8. **Filters** — all five syntax filters read zero; `audit_variant_coverage`
+9. **Filters** — all five syntax filters read zero; `audit_variant_coverage`
    needed a **bit bridge** this pass (a definition bitmask crossing the crate
    boundary made a live capability look dead) and reads zero again. **A sixth:
    `scripts/audit_decision_plumbing.py`** — 195 `decider.decide` sites, 97

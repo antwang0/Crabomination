@@ -1936,6 +1936,32 @@ invalidation. Base 80140c81:
 **Both actor commits produced 5,915 rows over 60 games with 0 stalls**, i.e.
 identical play, and neither can move `--bench`.
 
+**THE ROBUSTNESS GATE WAS RUN FOR ALL SEVEN MEMO FAMILIES, ON GAMES RATHER
+THAN TESTS, AND IT IS CLEAN.** Every memo this pass added rests on a
+`debug_assert!` that re-runs the computation on a hit, and (-58)'s rule is
+that 19,062 tests are not the audit — 60 games of `cube` found what the suite
+missed in four seconds. So:
+
+```text
+RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit \
+  cargo build --profile overflow -p crabomination --bin bot_ladder
+  ... --a gang --b gang --games 120 --threads 3 --seed <s> --decks <pool>
+
+5 pools (fixed cube sos sealed all) x 6 seeds (1 3 7 11 23 97)
+  30 cells, 33,120 games, 0 undecided, no assertion, no overflow, no panic
+  (3.2 s a fixed cell to 15.5 s an `all` cell — the whole grid is ~4 min)
+
+and the same flags on -p crabomination_ml --bin selfplay_train
+  --actors 3 --games 120 --steps 2 --seed 7 / 19 / 41
+  360 games, 34,619 rows, 0 stalls — this is the leg that audits the
+  vocab-index memo, which no `bot_ladder` pool reaches
+```
+
+**Check the binary, not the flags** — `strings target-audit/overflow/bot_ladder
+| grep "memo is stale"` prints all seven messages and the `profiling-fast`
+binary prints none, which is the two-second proof that `RUSTFLAGS` reached
+the crate that carries the assertion.
+
 **The finding to carry: the actor has rows the ladder cannot see, and the
 first of these was 0.63 % of it sitting in plain sight.** `encode_state` +
 `encode_card_object` are 2.4 % of the actor and 0 % of every `--bench` pool;
