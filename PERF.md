@@ -1521,6 +1521,107 @@ build.
 
 ## Baseline
 
+### Eighty-ninth pass — the zone memo does not generalise from the graveyard to the battlefield, and the reason is the zone's *write* rate
+
+**`zone::Graveyard`'s device — a presence answer memoized on the zone and
+invalidated by `DerefMut` — was built one zone over, for the largest single
+presence gate left in the simulator, and it loses on `cube` in both policies
+it can have.** The ceiling is real and the candidate stays open ((-79)); the
+*memo* route is closed with a number.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base 90e6161c.
+
+THE CEILING — `keyword_grant_in_scope`'s battlefield leg deleted outright
+(`false &&`), a deliberately wrong probe, one build:
+  fixed   1,059,427,130 -> 1,040,913,506   -1.748 %
+  cube    3,217,542,509 -> 3,145,267,534   -2.246 %
+
+(1) `zone::Battlefield` — the CoW list plus a `u64` board summary (the OR
+    over every permanent of `grant_bits::CONTAINER`, `SYNTH_KEYWORD` and the
+    instance `suspected` flag), filled lazily on a miss, cleared by
+    `DerefMut` / `&mut IntoIterator` / `cow_mut`:
+      fixed   -0.477 %      cube   +0.489 %
+      `card_can_grant_keyword` calls  fixed 515,328 -> 158,776   (-69 %)
+                                      cube 1,802,138 -> 1,601,332 (-11 %)
+      the memo's own miss path        fixed 11,918 out-of-line calls, 3.4 M Ir
+
+(2) The same type with the miss made *free* — `cached_summary()` never walks,
+    and the walk the caller was going to make fills it on the way past
+    (`any_filling_summary`, short circuit dropped so the fill is complete):
+      fixed   +0.235 %      cube   +0.608 %
+```
+
+**The rule, and `zone.rs`' own header is one word short of it: a zone memo is
+worth the zone's *write* rate, not its read rate.** `Graveyard`'s answer
+survives because a graveyard is written a few times a turn. The battlefield is
+written on every tap, every damage mark and every counter — and `DerefMut`
+cannot tell those from the entries and exits the summary actually depends on,
+which is exactly what makes it sound. So the memo misses **28 %** of the
+questions on `--decks fixed`, and a miss costs about what the walk it stands in
+for costs. Count the writes before building the memo.
+
+**And (2) is the second half of the lesson, because it is the obvious repair
+and it is worse than (1) on both pools.** Filling from a pass the caller was
+making anyway is only free if the fill does not change that pass: here it
+removes the `any()` short circuit, and it turns every gate into "hit, or no
+gate at all", so the gate's value gets multiplied by the hit rate the
+invalidation had already ruined. **A memo you refuse to fill is not a cheaper
+memo.**
+
+**The whole switch cost zero call-site edits**, which is the one reusable
+half of the construction: `Deref`/`DerefMut`/`IntoIterator`/`From` on the
+newtype carried 43 `for` loops, 556 `battlefield_find` sites, six
+`take_card(&mut self.battlefield, ..)` calls and `effective_loyalty_abilities
+(card, &state.battlefield)` unchanged — `cargo check` came back clean on the
+first build with only the field declaration and one `Default::default()`
+edited. If a later pass finds a battlefield question whose *writes* are rare,
+the type is four hours of git history away.
+
+### Eighty-ninth pass — two operand-order wins: a tag list hoisted, and a board walk moved behind the test it is `&&`ed with
+
+```text
+Same workload and profile as above.
+
+(1) `board_keyword_in_scope`'s `kws.contains(k)` -> a `SmallVec` of `kws`'
+    discriminants, hoisted once a call.  Base 90e6161c.
+      fixed   1,059,427,130 -> 1,053,235,770   -0.584 %
+      cube    3,217,542,509 -> 3,205,483,587   -0.375 %
+      sealed  3,163,676,295 -> 3,148,556,194   -0.478 %
+
+(2) `check_state_based_actions_into`'s `player_unlife_active` behind its
+    `effective_life(i) <= 0 &&`.  Base (1).
+      fixed   -> 1,049,889,584   -0.318 %
+      cube    -> 3,196,731,011   -0.273 %
+      sealed  -> 3,137,755,593   -0.343 %
+
+    Together: fixed -0.901 % / cube -0.647 % / sealed -0.820 %.
+```
+
+**(1)'s lesson is which hoist.** Three forms were built and measured against
+the same base:
+
+```text
+  precomputed tag list, tag compare only      fixed -0.584 %  (shipped)
+  precomputed tag list + exact `&& *w == k`   fixed -0.212 %
+  `KeywordSlice::has_kw` (wanted tag only)    fixed -0.105 %
+```
+
+`has_kw` was already in the tree and looks like the same idea — it hoists
+`discriminant(k)` out of the inner loop — but the loop it hoists out of is the
+*wrong* one: it reloads every `kws` entry's tag once per board keyword.
+**Hoisting the short list once beats hoisting a scalar often**, 5.6x here. And
+the exact fallback costs 2.7x the win for an answer that is identical at every
+call site, because every list any caller passes is unit variants; the gate is
+documented as an over-approximation with `false` authoritative, so tag-only is
+inside its contract rather than a widening of it.
+
+**(2) is a one-site finding, and the sweep that says so is the value.** Three
+other `let x = self.<board walk>()` bindings exist in the engine and all three
+are hoists *out of loops*, not eager operands — so the class is closed, not
+open.
+
 ### Eighty-eighth pass — a `Box` field that is written once and cloned 22,684 times
 
 **The (-76) class has a third shape and nobody had swept for it: a `Box<T>`
@@ -10125,6 +10226,32 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-79) `keyword_grant_in_scope`'S BATTLEFIELD LEG IS `fixed` -1.75 % /
+`cube` -2.25 %, MEASURED BY DELETION, AND THE MEMO ROUTE TO IT IS CLOSED.**
+Eight callers reach `card_can_grant_keyword` **515,328 times over six `fixed`
+games** and 1,802,138 over six `cube` ones — `card_keyword_possible`,
+`damage_prevented_by_protection`, `apply_prevention_shields_with`,
+`advance_step`, `process_cumulative_upkeep`, `board_keyword_in_scope`,
+`do_untap`, `tap_ability_summoning_sick`. The per-card body is already two
+memo-backed loads (eighty-seventh pass row (3), 31 Ir a card from 43.6), so
+what is left is the *number of cards*, one whole board per question.
+
+**A board-level OR of the per-card gates was built twice and reverted twice**
+— see the eighty-ninth pass's Baseline entry for both numbers and for the
+rule (**a zone memo is worth the zone's write rate, not its read rate**; the
+battlefield's `DerefMut` fires on every tap). Do not rebuild it. What is left
+is the **number of questions**, and it is not obviously reachable: the three
+biggest callers each ask *once per event*, not in a hoistable loop —
+`apply_prevention_shields_with` once per damage event (Absorb),
+`damage_prevented_by_protection` once per damage event (protection),
+`activate_ability_inner` once per activation (`CantActivateTapAbilities`).
+A finer *per-definition* bit than `grant_bits::CONTAINER` — "this definition
+can grant **some** keyword", i.e. `card_can_grant_keyword(c, |_| true, false)`
+— would tighten the per-card gate and is the one untried shape; price it
+against the eighty-eighth pass's rule (count the work items the bit elides:
+here it is five container walks, so it clears that bar where
+`granted_abilities_of`'s prologue did not).
 
 **(-78) AN ITERATOR ADAPTER CHAIN IS A PER-ELEMENT BRANCH. THE `flat_map`
 HALF IS **SWEPT** AT THE EIGHTY-SEVENTH PASS'S CONCURRENT HALF — SIX COMMITS,
