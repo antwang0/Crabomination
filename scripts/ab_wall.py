@@ -113,18 +113,21 @@ def loadavg():
 
 
 def threads_in(workload):
-    """`--threads N` out of the workload, so the run's *own* load is known.
+    """The run's own worker count, so the load line can subtract it.
 
     A verdict is only in doubt when the box carries load this run did not
-    put there, and `--threads 4` accounts for about four of it.
+    put there, and `--threads 4` accounts for about four of it. The knob is
+    named `--actors` on `selfplay_train`, which is the same quantity — without
+    both names an actor A/B reports itself as foreign load and warns on every
+    block.
     """
     for i, a in enumerate(workload):
-        if a == "--threads" and i + 1 < len(workload):
+        if a in ("--threads", "--actors") and i + 1 < len(workload):
             try:
                 return int(workload[i + 1])
             except ValueError:
                 return None
-        if a.startswith("--threads="):
+        if a.startswith("--threads=") or a.startswith("--actors="):
             try:
                 return int(a.split("=", 1)[1])
             except ValueError:
@@ -270,7 +273,14 @@ def main():
             f"{min(loads):.2f}-{max(loads):.2f} across the blocks "
             f"(this run is ~{self_threads if self_threads else '?'} of it)"
         )
-        if max(loads) > budget or (idle_load is not None and idle_load > 1.0):
+        # The *start* value is a one-minute average, so after a warmup — or
+        # after the `--bench` fingerprint run that usually precedes an A/B —
+        # it is mostly this session's own decay and says nothing about the
+        # box. Judging it against a bare 1.0 fired on three consecutive clean
+        # runs at the ninety-first pass. Only a start load above what this run
+        # itself produces is evidence of someone else.
+        noisy_start = idle_load is not None and idle_load > budget
+        if max(loads) > budget or noisy_start:
             print(
                 "WARNING         the box carried load this run did not put "
                 "there. A verdict from a contended box is not a verdict — "
