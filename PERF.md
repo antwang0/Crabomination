@@ -2135,14 +2135,14 @@ robustness  --games 120 --threads 3 --seed 7 --decks all (five pools,
 whole-program Ir  fixed 1,094,185,204  cube 3,324,283,340
                   sealed 3,256,373,073
 ```
-**CLOSING STATE — the eighty-seventh pass's tip, all gates re-run together.**
-Base `aefae7bb` (the pass's start) to tip, callgrind, `profiling-fast
+**CLOSING STATE — this session's last code commit (`3cfa0435`), all gates
+re-run together.** Base `aefae7bb` (the pass's start), callgrind, `profiling-fast
 --no-default-features`, `--a gang --b gang --games 6 --threads 1 --seed 1`,
 **rustc 1.95.0 (59807616e 2026-04-14)** on an Intel Xeon @ 2.10 GHz
 (`host_calib_ms` 52):
 
 ```text
-              aefae7bb            tip                 pass
+              aefae7bb          3cfa0435              pass
   fixed    1,106,711,919 -> 1,052,410,526        -4.906 %
   cube     3,355,241,293 -> 3,187,946,489        -4.986 %
   sealed   3,291,518,912 -> 3,141,044,210        -4.571 %
