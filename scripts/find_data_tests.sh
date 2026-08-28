@@ -47,13 +47,15 @@
 #     **A pure-data test is one with no LOGIC under it, not one with no
 #     `GameState` in it** — that is the durable form of this bug.
 #
-# 185 candidates at first, 284 after fixes 1-3, 250 after fix 4, **224 after
-# fix 5** (209 + 15 sacred; the count also carries -8+1 for the `ogw.rs` fold).
-# Fixes 4 and 5 only ever *remove* rows — no test entered the list because of
-# either, which is the check to run on the next one. Of the 209, the
-# single-factory definition echoes over ~60 files are the sweep the convention
-# is about; the rest read several factories and are mostly the per-set
-# definition tables the convention asks things to be folded *into*.
+# 185 candidates at first, 284 after fixes 1-3, 250 after fix 4, 224 after
+# fix 5, and **200 at the ninety-third pass's close** (189 + 11 sacred) once
+# six files had been folded. Fixes 4 and 5 only ever *remove* rows — no test
+# entered the list because of either, which is the check to run on the next
+# one, and the sacred list is byte-identical across every fold, which is the
+# check to run after one. Of the 189, the single-factory definition echoes are
+# the sweep the convention is about; the rest read several factories and are
+# mostly the per-set definition tables the convention asks things to be folded
+# *into*.
 #
 # **Read the file with the most hits first.** A filter's false positives
 # cluster, because they share a helper or an API: fixes 4 and 5 were each

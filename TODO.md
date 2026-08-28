@@ -139,14 +139,16 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    legality tests (all of `core_rules/format.rs`, `multiplayer.rs`'s two
    commander validators, CR 100.2a/100.4a, CR 407.3, cns's Proclamation).
    **A pure-data test is one with no LOGIC under it, not one with no
-   `GameState` in it.** **Population 224 (209 + 15 sacred)**; neither fix
+   `GameState` in it.** **Population 200 (189 + 11 sacred)**; neither fix
    ADDED a row, which is the check to run on the next one, and both were found
    by **reading three tests in the file at the top of the by-file count — a
    filter's false positives cluster, because they share a helper or an API.**
-   **Five slices taken**: `stx/part_23` (19), `classic_sets/ogw` (8),
+   **Six slices taken**: `stx/part_23` (19), `classic_sets/ogw` (8),
    `modern/aggro_allied_batches` (11, including three copy-paste batch blocks
-   — the convention's other half), `modern/singles_and_legends` (7) and
-   `modern/cube_rounds` (4). The pattern is in the tree five times over. Two
+   — the convention's other half), `modern/singles_and_legends` (7),
+   `modern/cube_rounds` (4) and `stx/part_00` (5). The pattern is in the tree
+   six times over, and **the sacred list is byte-identical across all of them
+   — run that diff after a fold.** Two
    rules found doing it: **a test that pins a card-specific *effect shape* — a
    modal `min`/`max`, a `Search` filter, a `CantBeBlockedBy(_)` /
    `Madness(_)` variant — is not an echo and does not fold** (`rna.rs` and
