@@ -33,8 +33,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    pools and `-C target-cpu=native` is flat — width buys nothing here, layout
    buys everything; numbers and cautions in PERF's Baseline.
    `scripts/pgo_build.sh`, **opt-in and staying opt-in** so committed readings
-   stay plain `release-fast` ones (CLAUDE.md carries the hazard). Untried
-   after it: PGO on `selfplay_train`, then BOLT.
+   stay plain `release-fast` ones (CLAUDE.md carries the hazard). Measured on
+   the actor too, and **the same binaries read -23.1 % or -4.9 % depending on
+   the learner/actor balance** — PERF says why, and the rule that fell out is
+   the more useful half: print `t_step_ms` against `elapsed_s` before quoting
+   any `selfplay_train` throughput number. Untried after it: BOLT.
 1. **Perf queue** — PERF "Perf candidates", top-down. **`(-82)` and `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
