@@ -1902,6 +1902,79 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-second pass (2) — a probe's caller is a gate until you have counted it
+
+**`pick_land_to_play` asks the engine's land-drop question once instead of once
+per hand land.** Both of its scoring loops filter with
+`would_accept(GameAction::PlayLand(id))` — a full engine dry-run on a
+`GameState` clone, ~11,600 Ir apiece and **82 % of the function's 1.31 % of
+`fixed`** — while `play_land_with_face` opens with two *card-independent*
+checks, `can_cast_sorcery_speed(p)` and `can_player_play_land(p)`, before it
+looks at the card at all. Hoisting them above the hand walk is **equivalent,
+not conservative**: it is the engine's own first two gates read off the same
+priority holder, so unlike (-51)'s tightened affordance filter it cannot make a
+legal line invisible.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --seed 1,
+base = the same HEAD with the patch reverted, both halves back to back.
+  fixed   1,006,760,980 -> 1,006,734,135   -0.003 %
+  cube    3,017,826,535 -> 3,016,901,143   -0.031 %
+  sealed  3,011,285,516 -> 3,009,298,208   -0.066 %
+
+probes removed (pay_census::in_probe <- pick_land_to_play)
+  fixed    934 ->   856    -8.4 %      function 13,293,408 -> 13,268,756
+  sealed 2,496 -> 2,080   -16.7 %      function 31,954,277 -> 30,507,208
+```
+
+**AND THE REFUTATION IS THE DURABLE HALF, BECAUSE IT IS AN 8x ERROR IN THE
+CHANGE'S OWN FAVOUR.** The model that motivated the patch was "the bot keeps
+taking main-phase actions after it has spent its land drop, so most of those
+934 probes are foregone rejections" — which predicts ~78 % of them gone and
+~0.8 % of `fixed`. It is wrong, and the reason is one frame up:
+`main_phase_action_with` **already** reaches this function only when a drop is
+plausible, so the hoisted gate catches the residue, not the population. **A
+probe's caller is a gate until you have counted it**, and the count is one
+`--separate-callers=2` table on `pay_census::in_probe` — an instrument this
+file already builds for (-51) — which costs seconds beside the build it would
+have justified.
+
+**Kept rather than reverted, and the accounting says why:** the sign is the
+same on all three pools, the figures are callgrind Ir and therefore exact
+rather than noisy, the mechanism is a *counted* 78 and 416 probes rather than
+an inferred total, and each firing also removes a `GameState` clone. The
+standing rule ("no measured win -> revert") is satisfied by a small measured
+win; what would have violated it is quoting the 82 % as the size of the row.
+
+**THE PROBE CENSUS BY CALLER, WHICH NOTHING HERE HAD RECORDED.** `accept_on`
+is **20.71 % of `fixed`** and **19.44 % of `sealed`** — the largest single
+thing in the simulator, as this file has said since (-13) — and this is where
+its calls come from. `--separate-callers` is not even needed: every probe goes
+through `pay_census::in_probe`, so one caller table on that symbol splits it.
+
+```text
+pay_census::in_probe callers            fixed                    sealed
+  main_phase_action_with     1,932  80,894,211  7.97 %   6,572  247,048,861  8.14 %
+  sim_spell_action_inner     1,452  89,846,652  8.85 %   4,630  315,894,482 10.40 %
+  pick_land_to_play            934  10,856,900  1.07 %   2,496   25,760,257  0.85 %
+  pick_combat_trick            290  13,398,281  1.32 %       -            -
+  pick_stack_response          236  15,385,724  1.51 %      14    1,010,651  0.03 %
+  pick_defensive_removal         -           -                4       75,224
+                             -----                       ------
+                             4,844                       13,796
+```
+
+**The top two are the bot's search and are not waste** — the lazy pick site
+probing candidates in score order, and the same sweep one level inside a
+simulation. **`pick_combat_trick`'s 290 are the dearest probes in the program
+at 46,201 Ir each**, and it already runs `can_afford_in_state_with` *and* a
+`saves || now_kills` fight-outcome gate before every one, so that row is a
+decision cost with its filter already on. `pick_stack_response` is (-51)'s,
+filtered at the eighty-eighth pass and down to 14 probes on `sealed`. **The
+census leaves no unfiltered probe site in the bot**, which is the result to
+carry: further work on `accept_on`'s 20 % has to make the probe *cheaper*, not
+rarer.
+
 ### Ninety-second pass — the answer was "nothing", and the function was finding that out the long way
 
 **`granted_abilities_of` gets a grants-nothing gate.** Every one of the body's

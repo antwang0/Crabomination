@@ -48,7 +48,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    so there is almost nothing to defer there. It also names three things
    already right that must not be re-taken, plus one refutation. `(-83)` is a
    pool-split entry: read which of its three caller stories a change is aimed
-   at before proposing one. Then `(-9)`'s open half,
+   at before proposing one. **The probe census by caller is now in the
+   Baseline** — `accept_on` is 20.71 % of `fixed` and every one of its five
+   callers is accounted for, with **no unfiltered probe site left in the bot**,
+   so further work on that 20 % has to make a probe cheaper, not rarer. Then
+   `(-9)`'s open half,
    `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)`
    is the gather's context census, and its last paragraph is a standing best
    rule** — a scope only gathers if a read inside it asks for a computed view,
