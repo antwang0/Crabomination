@@ -10710,9 +10710,10 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-81) THE GATHER IS 71,930 CALLS AND 8.5 % OF `cube` INCLUSIVE, AND ITS
-CALLER TABLE — RE-READ AT THE NINETY-FIRST TIP — SAYS THE LEVER IS STILL THE
-NUMBER OF GATHERS.** Whole program 3,095,128,492 (`fixed` 1,021,019,898,
+**(-81) THE GATHER IS 71,930 CALLS AND 8.5 % OF `cube` INCLUSIVE, AND THE
+CONTEXT CENSUS SAYS EVERY ONE OF THEM IS A SCOPE THAT HAD TO GATHER. READ
+THIS ENTRY AS A CLOSED DOOR WITH THE ONE KEY NAMED, NOT AS A LEAD.** Whole
+program 3,095,128,492 (`fixed` 1,021,019,898,
 `sealed` 3,049,332,123), `--decks cube`, at `9c501f42`.
 
 ```text
@@ -10729,16 +10730,50 @@ callers of compute_permanents               18,258 calls
    6,546    11,231,980   0.36 %  declare_attackers_banded
 ```
 
-**`computed_permanent`'s 48,856 is the row to read first, and it is a *scope*
-count, not a call count.** The function is called 387,848 times; the freeze
-memo answers all but 48,856 of them without a gather, and 207,446
-`with_frozen_layers` scopes plus 33,304 `freeze_layers_pop`s exist — so **most
-scopes never take a gather at all** and the 48,856 splits between "the first
-computed read of a scope that has one" and "a computed read with no scope
-around it at all", which nothing here separates. **Separate them before
-proposing anything**: an unscoped read pays a whole gather for one permanent
-and is a caller-side fix (wrap it), a scope's first read is the memo working.
-One counter answers it.
+**`computed_permanent`'s 48,856 is a *scope* count, not a call count.** The
+function is called 387,848 times; the freeze memo answers all but 48,856
+without a gather, and 207,446 `with_frozen_layers` scopes plus 33,304
+`freeze_layers_pop`s exist — so **most scopes never take a gather at all.**
+
+**AND THE CONTEXT CENSUS IS RUN, WHICH IS THE ANSWER RATHER THAN THE
+QUESTION** (`--separate-callers=4`, `cg_contexts.py`, same tip; 62,432 of the
+71,930 in the 25 contexts below, 9,498 in 79 further ones):
+
+```text
+  6,956  computed_permanent <- resolve_combat <- advance_step <- pass_priority
+  6,546  frozen_effects <- board_keyword_in_scope <- declare_attackers_banded
+  5,830  computed_permanent <- resolve_combat <- submit_decision
+  4,870  frozen_effects <- board_keyword_in_scope <- declare_blockers
+  4,848  compute_permanents <- combat_damage_computed <- resolve_combat
+  4,380  computed_permanent <- call_mut <- from_iter <- bot::pick_blocks_inner
+  4,290  computed_permanent <- with_frozen_layers <- declare_blockers
+  4,232  computed_permanent <- call_mut <- from_iter <- bot::pick_attacks_inner
+  4,040  computed_permanent <- permanent_value_with <- eval_material_inner
+  2,724  computed_permanent <- Map::next <- SmallVec::extend <- with_frozen_layers
+  2,184  check_state_based_actions_into <- resolve_combat <- advance_step
+  1,318  computed_permanent <- permanent_is_creature <- from_iter <- check_sba_into
+  1,278  computed_permanent <- permanent_value_with <- eval_material_inner
+  1,188  compute_permanents <- combat_damage_computed <- resolve_combat <- submit
+    998  computed_permanent <- check_target_legality_with_source <- cast_spell
+    974  check_state_based_actions_into <- resolve_top_of_stack_inner
+```
+
+**Every row is one gather per scope, and every scope is one per read of a
+distinct game state.** The two biggest — `resolve_combat`'s 12,786 — are
+`(-58)`, whose per-pair scopes were merged three-into-one and whose
+across-the-batch sharing is *unsound* (a lifelink blocker's damage flips an
+"as long as you've gained life this turn" static mid-batch; the counterexample
+is in the entry). The next two are `declare_attackers_banded` and
+`declare_blockers`, and their `board_keyword_in_scope` gather is **already
+shared with the `compute_permanents` in the same `with_frozen_layers`** —
+which is why neither shows a second context. The bot's two collects are one
+scope per call of `pick_blocks_inner` / `pick_attacks_inner`.
+
+**So there is no unscoped-read population to wrap, and this row is not a
+caller-side fix.** What is left of the gather is what `(-58)` says is left:
+either an invalidation *at* the mutation (the board epoch, `(-18)`, built and
+refuted) or an incremental gather. **Do not re-run this census**; it cost one
+`--separate-callers=4` run and this table is its whole result.
 
 **`combat_damage_computed` is (-9)'s remaining half re-sized and it has
 doubled since that entry** — 3,274 calls / 0.71 % there, 6,842 / **2.23 %**

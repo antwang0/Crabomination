@@ -29,12 +29,13 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 **Sequential builds only** (throughput, not RAM — see the environment note).
 
-1. **Perf queue** — PERF "Perf candidates", top-down: `(-81)` (new, the
-   gather's caller table; its top row is a *scope* count nobody has split),
-   then `(-9)`'s open half, `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`,
-   `(-59)`. Taken/closed: `(-70)`, `(-79)`, `(-77)`, `(-60)`, `(-39)`, the
-   `Box` class, `(-80)` rows 1 and 2 — **row 1 is now a built refutation with
-   a ledger, not an argument.**
+1. **Perf queue** — PERF "Perf candidates", top-down: `(-9)`'s open half,
+   `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)` is new
+   and is a closed door**: the gather's context census is run and all 71,930
+   are one-per-scope, so read it before proposing a caller-side wrap.
+   Taken/closed: `(-70)`, `(-79)`, `(-77)`, `(-60)`, `(-39)`, the `Box` class,
+   `(-80)` rows 1 and 2 — **row 1 is now a built refutation with a ledger, not
+   an argument.**
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
