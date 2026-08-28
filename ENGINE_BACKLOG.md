@@ -666,11 +666,26 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   both directions. It read `fixed` -0.276 % / `cube` -0.229 % as well: the
   computed view was being resolved twice.
 
-  **Still without guards: the attack side's equivalents** — `pick_attacks`'
-  `raw_attackers` and the candidate generators read instance keywords in
-  places, and only the CR 508.1d haste case has a regression test. The device
-  is the pair above: build the board with the keyword *granted*, assert the
-  plan, hand it to `declare_attackers`.
+  **The attack side was read at the same pass and it is NOT the same
+  finding.** Every *legality* decision there is already the engine's:
+  `raw_attackers` filters on `may_declare_attacker` with the computed view,
+  the participation cap and both CR 508.0 alone-rules read
+  `computed_permanent(..).keywords`, and CR 508.1d goes through
+  `restore_forced_attackers`. What still reads `has_keyword` is the
+  **hold-back heuristic** — deathtouch/menace/first-strike/flying parity
+  against the opponent's bodies — and a printed read there is a wrong
+  *estimate*, not an illegal or invisible declaration.
+  
+  It is not nothing: a creature the greedy pass holds back is in no candidate
+  the search can recover, so a granted-Flying attacker can be held home
+  against ground blockers that could never block it. But that is a **strength
+  change**, and `bot_ladder` compares two profiles inside one binary rather
+  than two binaries — there is no gate for it (the seventy-fifth pass's
+  `primary_target_filter` note has the same problem and the same conclusion).
+  Take it with a strength harness, not as a bug fix. The one documented
+  legality approximation that remains is `raw_attackers`' printed
+  `is_creature`: a permanent *animated* into a creature is never considered,
+  and reading the layer view there measured `fixed` **+0.62 %**.
 
 ## Engine — Robustness / defects: the closed audits and the twenty-three filters
 
