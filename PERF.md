@@ -1531,6 +1531,74 @@ build.
 
 ## Baseline
 
+### Ninetieth pass — a presence bit that asked the cheap question, and the dear one costs the same load
+
+**`grant_bits::CONTAINER` -> `grant_bits::ANY_GRANT`, at `65ab4cd6`.** The bit
+was "one of the five grant containers is non-empty"; it is now "one of them
+actually holds a keyword grant", i.e. `CardDefinition::can_grant_keyword` at
+`|_| true`. One word load and one test either way — the *question* changed, not
+the gate's cost — and the cards it now excludes are every card with a printed
+static that grants no keyword.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base 65ab4cd6.
+  fixed   1,043,038,896 -> 1,032,964,377   -0.966 %
+  cube    3,169,628,445 -> 3,127,628,244   -1.325 %
+  sealed  3,115,504,077 -> 3,086,233,682   -0.939 %
+```
+
+**The attribution needed no caller table, because every other row is
+byte-identical.** `dispatch_triggers_for_events` 195,524,060, the gather
+167,057,236, `computed_permanent` 88,666,682, `compute_permanent_pass`
+80,341,008, `call_mut` 46,222,846 — the *same integers* on both sides of
+`cube`. The whole 42,000,201 Ir is one function:
+
+```text
+                            base cube            cand cube
+  card_can_grant_keyword    50,709,448  1.60 %   no row — inlined away
+  grant_scan_bits            2,075,052  26.7/c   4,074,242  52.5/c
+  can_grant_keyword          --                  2,640,134
+```
+
+**THE RULE, AND IT IS THE ONE (-77)'s FAMILY HAD NOT YET STATED: count the
+walks the bit removes, not the cards it tests.** The eighty-eighth pass's
+rule — *count the work items the bit elides* — ranks a gate by its per-card
+body. This row is the other axis: the per-card body is unchanged, and what
+moved is **how often the walk behind it runs at all**. It went from once per
+card visit (1,802,138 on `cube`, 515,328 on `fixed`) to **49,974**, because
+the tighter question rejects ~97 % of visits before the walk. The walk did not
+get cheaper and the gate did not get cheaper; the walk got *rarer*.
+
+**The trade is 23:1 and the memo's `Clone` is what makes it so.** The fill got
+dearer — 26.7 -> 52.5 Ir, since it now walks the statics instead of five
+`is_empty` loads — but a fill is paid **77,642 times against 1,802,138
+questions**. `CardMemo` is invalidated by `CardInstance`'s `DerefMut` (every
+tap, every damage mark), which is what made the fill rate the thing to check
+first; it is also `Clone`d rather than reset, so the answer survives the CoW
+deep copies. Read the fill count off `grant_scan_bits`' own row before
+building one of these: **if fills approach questions the trade is a wash.**
+
+**And the row vanishing is a consequence, not a second change.** Gating on
+`ANY_GRANT` shrank `card_can_grant_keyword` to a memo test plus one call, and
+rustc then inlines it — so what is left of the old 50.7 M row is the load and
+two bit tests, ~4.07 M Ir over 1.8 M visits (**~2.3 Ir a card**), charged to
+`keyword_grant_in_scope`'s loop. Both halves are in the -1.325 %; they were not
+separated, and there is no reason to separate them because neither exists
+without the other.
+
+**Behaviour-preserving by construction rather than by test.**
+`can_grant_keyword` is monotone in its predicate — every leg an `any` / `||` /
+a recursion, no negation anywhere — so a clear bit is authoritative for *every*
+predicate and the gate can only skip walks that would have answered `false`.
+The bit and `card_can_grant_keyword` share that one body instead of being kept
+in step by hand, which is the half that cannot rot; `static_effect_grants_
+keyword` moved to `crabomination_base::effect` to allow it, beside the two
+siblings already there for the same reason. Golden traces unmoved.
+`core_rules::structural_audit::a_clear_any_grant_bit_is_authoritative_for_
+every_predicate` walks the whole catalog against a keyword battery and pins the
+implication, so a later negation in one of the legs fails loudly.
+
 ### Eighty-ninth pass, the concurrent half — the actor's own clock, read at last, and the whole robustness gate run under a behaviour change
 
 **STATE AT `863d80cb`+ (the ward gate, the CR 613.8 two-phase gather, and the
@@ -10396,12 +10464,22 @@ biggest callers each ask *once per event*, not in a hoistable loop —
 `apply_prevention_shields_with` once per damage event (Absorb),
 `damage_prevented_by_protection` once per damage event (protection),
 `activate_ability_inner` once per activation (`CantActivateTapAbilities`).
-A finer *per-definition* bit than `grant_bits::CONTAINER` — "this definition
-can grant **some** keyword", i.e. `card_can_grant_keyword(c, |_| true, false)`
-— would tighten the per-card gate and is the one untried shape; price it
-against the eighty-eighth pass's rule (count the work items the bit elides:
-here it is five container walks, so it clears that bar where
-`granted_abilities_of`'s prologue did not).
+**THE ONE UNTRIED SHAPE IS TAKEN AT THE NINETIETH PASS — `fixed` -0.966 % /
+`cube` -1.325 % / `sealed` -0.939 %, and it is 55 % of the ceiling above.**
+The finer per-definition bit this entry proposed (`grant_bits::ANY_GRANT`,
+"this definition can grant **some** keyword") shipped; see the Baseline block.
+The entry priced it against the eighty-eighth rule — *count the work items the
+bit elides*, here five container walks — and that framing **understated it**,
+because the win is not the per-card body at all: it is that the walk behind the
+gate went from 1,802,138 runs to 49,974. `card_can_grant_keyword`'s 1.60 %
+row is gone from the profile and every other row on `cube` is byte-identical.
+
+**What is left of this entry is the residue and it is small.** The deletion
+ceiling (`fixed` -1.75 % / `cube` -2.25 %) is the whole battlefield leg,
+including the ~2.3 Ir a card the gate still costs over 1.8 M visits and the
+49,974 walks that survive. Both of those are the *number of questions* again,
+which the paragraph above says is not obviously reachable, and the two
+board-level OR memos stay in the do-not-rebuild list.
 
 **(-78) AN ITERATOR ADAPTER CHAIN IS A PER-ELEMENT BRANCH. THE `flat_map`
 HALF IS **SWEPT** AT THE EIGHTY-SEVENTH PASS'S CONCURRENT HALF — SIX COMMITS,

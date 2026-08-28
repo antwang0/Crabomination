@@ -29,9 +29,14 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 **Sequential builds only** — two cold ones are OOM-killed here (PERF hazards).
 
-1. **Perf queue** — PERF "Perf candidates", top-down: `(-51)(a)`, then
-   `(-70)` (quiet window only), `(-69)`'s two unclaimed rows, `(-61)`,
-   `(-59)`. Closed: `(-60)`, `(-77)`, the write-once `Box` class, `(-39)`.
+1. **Perf queue** — PERF "Perf candidates", top-down. **`(-79)`'s one untried
+   shape is TAKEN** (`ANY_GRANT`, -0.97/-1.33/-0.94 %); its residue is the
+   *number of questions*, which that entry says is not reachable — so take
+   `(-51)(a)` next, then `(-70)` (quiet window only), `(-69)`'s two unclaimed
+   rows, `(-61)`, `(-59)`. Closed: `(-60)`, `(-77)`, the `Box` class, `(-39)`.
+   **New rule from `(-79)`: count the walks a bit removes, not the cards it
+   tests** — and read the memo's fill count (`grant_scan_bits`' own row)
+   against the question count before building one. 23:1 paid here.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass" and "Which pool a change moves". Read all three pools; a pool split
    is a revert. The two devices that paid last: the allocation table ranked
@@ -54,9 +59,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    checks' missing guards. Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
-8. **Tip state** — PERF "Baseline"'s newest block: the pass end to end, the
-   `--bench` invariant, the ladder clock and, for the first time since pass
-   58, the **actor's own clock**. Read the two recipe corrections beside it.
+8. **Tip state** — PERF "Baseline"'s two newest blocks: the ninetieth's
+   `ANY_GRANT` row, and under it the eighty-ninth's end-to-end, the `--bench`
+   invariant and both clocks. The two blocks' baselines were measured
+   independently and agree to ~600 Ir on all three pools.
 9. **Filters** — six now, all reading zero:
    `scripts/audit_variant_coverage.py`, `audit_decision_plumbing.py`, the
    four syntax ones. Bare `decide` sites are a triage population, not a gate.
