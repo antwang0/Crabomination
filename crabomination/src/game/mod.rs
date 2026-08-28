@@ -13189,39 +13189,54 @@ impl GameState {
             return Some(std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &[])));
         }
         // Unfrozen — the common case off a scoped loop — takes no lock at
-        // all: `depth` is an atomic beside the mutex. Inside a scope one lock
-        // covers both memos, so a hit costs exactly one acquisition, a miss
-        // two, and only the scope's first computed read pays three.
-        let mut frozen_fx = None;
+        // all: `depth` is an atomic beside the mutex. Inside a scope **one**
+        // acquisition serves the whole read: the `perms` scan, the `memo`
+        // read, the layer pass and the store all happen under the guard the
+        // scan already holds. Only the scope's *first* computed read pays a
+        // second one, because the gather needs `&self` and is the one callee
+        // here that can reach back into this function.
+        //
+        // Holding the guard across the pass cannot deadlock:
+        // `apply_layers_one_gated` is a free function over `&CardInstance`
+        // and `&[ContinuousEffect]` with no `&GameState` to re-enter through.
+        // Borrowing `memo` in place rather than cloning it out also drops the
+        // `Arc<Vec<ContinuousEffect>>` refcount pair every miss used to pay.
+        let mut needs_gather = false;
         if self.layer_freeze.depth() > 0 {
-            let st = self.layer_freeze.lock();
+            let mut guard = self.layer_freeze.lock();
+            // Through the guard's `Deref` every field read borrows the whole
+            // guard; through one reborrow they borrow a field each, which is
+            // what lets the pass read `memo` and the store write `perms`
+            // without a second acquisition.
+            let st = &mut *guard;
             if let Some((_, cp)) = st.perms.iter().find(|(k, _)| *k == id) {
                 return Some(cp.clone());
             }
-            frozen_fx = Some(st.memo.clone());
+            if let Some((fx, gates)) = &st.memo {
+                let card = self.battlefield.iter().find(|c| c.id == id)?;
+                let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(
+                    card, fx, *gates,
+                ));
+                st.perms.push((id, cp.clone()));
+                return Some(cp);
+            }
+            needs_gather = true;
         }
         let card = self.battlefield.iter().find(|c| c.id == id)?;
-        if let Some(memo) = frozen_fx {
-            // Inside a scope; `memo` is `None` only on its first computed
-            // read, which fills it exactly as `frozen_effects` would.
-            let (fx, gates) = match memo {
-                Some(pair) => pair,
-                None => {
-                    let fx = std::sync::Arc::new(self.gather_continuous_effects());
-                    let gates = crate::game::layers::SecondPass::of(&fx);
-                    if self.layer_freeze.depth() > 0 {
-                        self.layer_freeze.lock().memo = Some((fx.clone(), gates));
-                    }
-                    (fx, gates)
-                }
-            };
+        if needs_gather {
+            // The scope's first computed read: fill `memo` exactly as
+            // `frozen_effects` would, then store both memos under one guard.
+            let fx = std::sync::Arc::new(self.gather_continuous_effects());
+            let gates = crate::game::layers::SecondPass::of(&fx);
             let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(
                 card, &fx, gates,
             ));
             // Re-check: an entry stored after the scope closed would outlive
             // the state it describes, and nothing would clear it.
             if self.layer_freeze.depth() > 0 {
-                self.layer_freeze.lock().perms.push((id, cp.clone()));
+                let mut st = self.layer_freeze.lock();
+                st.memo = Some((fx, gates));
+                st.perms.push((id, cp.clone()));
             }
             return Some(cp);
         }
