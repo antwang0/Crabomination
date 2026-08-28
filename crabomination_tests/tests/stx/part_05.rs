@@ -651,7 +651,7 @@ fn lone_rider_pumps_when_attacking_alone() {
     drain_stack(&mut g);
     let view = g.computed_permanent(rider).expect("Rider on bf");
     assert_eq!(view.power, 3, "Rider 1 + 2 from alone-attack trigger");
-    assert!(view.keywords.contains(&Keyword::Trample), "Trample EOT granted");
+    assert!(view.keywords().contains(&Keyword::Trample), "Trample EOT granted");
 }
 
 #[test]
@@ -670,7 +670,7 @@ fn lone_rider_does_not_pump_with_other_attackers() {
     drain_stack(&mut g);
     let view = g.computed_permanent(rider).expect("Rider on bf");
     assert_eq!(view.power, 1, "Rider not pumped (multiple attackers — not 'alone')");
-    assert!(!view.keywords.contains(&Keyword::Trample), "No Trample (not alone)");
+    assert!(!view.keywords().contains(&Keyword::Trample), "No Trample (not alone)");
 }
 
 #[test]
@@ -687,8 +687,8 @@ fn solo_striker_pumps_when_attacking_alone() {
     let view = g.computed_permanent(striker).expect("Striker on bf");
     assert_eq!(view.power, 4, "Striker 3 + 1");
     assert_eq!(view.toughness, 4, "Striker 2 + 2");
-    assert!(view.keywords.contains(&Keyword::Lifelink), "Lifelink granted");
-    assert!(view.keywords.contains(&Keyword::Vigilance), "Vigilance intrinsic");
+    assert!(view.keywords().contains(&Keyword::Lifelink), "Lifelink granted");
+    assert!(view.keywords().contains(&Keyword::Vigilance), "Vigilance intrinsic");
 }
 
 #[test]
@@ -742,8 +742,8 @@ fn silverquill_penman_and_anthemwriter_stats() {
     let view = g.computed_permanent(id).expect("Anthemwriter on bf");
     assert_eq!(view.power, 4);
     assert_eq!(view.toughness, 4);
-    assert!(view.keywords.contains(&Keyword::Flying));
-    assert!(view.keywords.contains(&Keyword::Lifelink));
+    assert!(view.keywords().contains(&Keyword::Flying));
+    assert!(view.keywords().contains(&Keyword::Lifelink));
 }
 
 #[test]
@@ -953,7 +953,7 @@ fn lorehold_skirmish_mints_a_spirit_with_haste_eot() {
         c.controller == 0 && c.is_token && c.definition.name == "Spirit"
     }).expect("Spirit token minted");
     let view = g.computed_permanent(spirit.id).expect("Spirit on bf");
-    assert!(view.keywords.contains(&Keyword::Haste),
+    assert!(view.keywords().contains(&Keyword::Haste),
         "Skirmish-minted Spirit has haste EOT");
 }
 
@@ -987,7 +987,7 @@ fn quandrix_ecologist_etb_self_pumps_with_counter() {
     let view = g.computed_permanent(id).expect("Ecologist on bf");
     assert_eq!(view.power, 5, "Ecologist 4 + 1 counter = 5 power");
     assert_eq!(view.toughness, 5, "Ecologist 4 + 1 counter = 5 toughness");
-    assert!(view.keywords.contains(&Keyword::Trample));
+    assert!(view.keywords().contains(&Keyword::Trample));
 }
 
 #[test]
@@ -1208,9 +1208,9 @@ fn lorehold_reclamation_returns_creature_to_battlefield() {
     // additive grant, so read the computed (post-layers) types.
     let bear_id = bf_after[0].id;
     let computed = g.computed_permanent(bear_id).expect("computed bear");
-    assert!(computed.subtypes.creature_types.contains(&crabomination::card::CreatureType::Spirit),
+    assert!(computed.subtypes().creature_types.contains(&crabomination::card::CreatureType::Spirit),
         "reanimated creature is a Spirit in addition to its other types");
-    assert!(computed.subtypes.creature_types.contains(&crabomination::card::CreatureType::Bear),
+    assert!(computed.subtypes().creature_types.contains(&crabomination::card::CreatureType::Bear),
         "printed creature type is kept (Spirit is additive)");
 }
 

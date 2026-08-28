@@ -115,7 +115,7 @@ mod recent133 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(courtier).unwrap();
         assert_eq!((cp.power, cp.toughness), (1, 1), "Cursed Role makes it 1/1");
-        assert!(cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Dutiful Griffin returns itself from the graveyard for two enchantments.
@@ -152,12 +152,12 @@ mod recent133 {
         let guide = g.add_card_to_battlefield(0, catalog::tuinvale_guide());
         // No celebration yet → bare 2/3, no lifelink.
         let cp = g.computed_permanent(guide).unwrap();
-        assert!(!cp.keywords.contains(&Keyword::Lifelink));
+        assert!(!cp.keywords().contains(&Keyword::Lifelink));
         // Two nonland permanents entered this turn → celebration active.
         g.players[0].nonland_permanents_entered_this_turn = 2;
         let cp = g.computed_permanent(guide).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+0");
-        assert!(cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Candy Trail scrys on entry and cashes in for life + a card.
@@ -295,7 +295,7 @@ mod recent134 {
         g.players[0].mana_pool.add(Color::Red, 1);
         g.players[0].mana_pool.add_colorless(2);
         cast_adventure(&mut g, card, Some(Target::Permanent(enemy)));
-        assert!(g.computed_permanent(enemy).unwrap().keywords.contains(&Keyword::CantBlock));
+        assert!(g.computed_permanent(enemy).unwrap().keywords().contains(&Keyword::CantBlock));
     }
 
     /// Gallant Pie-Wielder gains double strike under Celebration.
@@ -303,9 +303,9 @@ mod recent134 {
     fn gallant_pie_wielder_celebration() {
         let mut g = two_player_game();
         let g_id = g.add_card_to_battlefield(0, catalog::gallant_pie_wielder());
-        assert!(!g.computed_permanent(g_id).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(!g.computed_permanent(g_id).unwrap().keywords().contains(&Keyword::DoubleStrike));
         g.players[0].nonland_permanents_entered_this_turn = 2;
-        assert!(g.computed_permanent(g_id).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(g.computed_permanent(g_id).unwrap().keywords().contains(&Keyword::DoubleStrike));
     }
 
     /// Woodland Acolyte draws on entry; Mend the Wilds recurs a graveyard permanent.
@@ -609,7 +609,7 @@ mod recent135 {
         g.players[0].mana_pool.add_colorless(1);
         cast(&mut g, aura, Some(Target::Permanent(bear)));
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantAttack),
+            g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantAttack),
             "enchanted creature can't attack",
         );
         let aura_id = g.battlefield.iter().find(|c| c.definition.name == "Cooped Up").unwrap().id;
@@ -705,7 +705,7 @@ mod recent135 {
         g.players[0].mana_pool.add_colorless(4);
         cast(&mut g, apple, Some(Target::Permanent(bear)));
         assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "gained control of the bear");
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "and it has haste");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "and it has haste");
     }
 }
 
@@ -753,7 +753,7 @@ mod recent136 {
         g.players[0].mana_pool.add(Color::Green, 1);
         cast(&mut g, spell, Some(Target::Permanent(bear)));
         let cp = g.computed_permanent(bear).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Hexproof), "gained hexproof");
+        assert!(cp.keywords().contains(&Keyword::Hexproof), "gained hexproof");
         assert_eq!(cp.power, 3, "Royal Role gives +1/+1");
         assert!(
             g.battlefield.iter().any(|c| c.attached_to == Some(bear) && c.definition.name == "Royal"),
@@ -1145,14 +1145,14 @@ mod recent138 {
         let mut g = two_player_game();
         let gale = g.add_card_to_battlefield(0, catalog::howling_galefang());
         assert!(
-            !g.computed_permanent(gale).unwrap().keywords.contains(&Keyword::Haste),
+            !g.computed_permanent(gale).unwrap().keywords().contains(&Keyword::Haste),
             "no haste without an exiled Adventure",
         );
         let mut ex = CardInstance::new(g.next_id(), catalog::minecart_daredevil(), 0);
         ex.on_adventure = true;
         g.exile.push(ex);
         assert!(
-            g.computed_permanent(gale).unwrap().keywords.contains(&Keyword::Haste),
+            g.computed_permanent(gale).unwrap().keywords().contains(&Keyword::Haste),
             "haste while an owned Adventure waits in exile",
         );
     }
@@ -1741,7 +1741,7 @@ mod recent141 {
         drain_stack(&mut g);
         let f = g.computed_permanent(food).unwrap();
         assert_eq!((f.power, f.toughness), (4, 4), "Food animated to 4/4");
-        assert!(f.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+        assert!(f.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
     }
 }
 
@@ -1983,7 +1983,7 @@ mod recent143 {
         cast_adventure(&mut g, id, Some(Target::Permanent(bear)));
         let b = g.computed_permanent(bear).unwrap();
         assert_eq!(b.power, 3, "2/2 + Monster Role +1/+1");
-        assert!(b.keywords.contains(&crabomination::card::Keyword::Trample), "Role grants trample");
+        assert!(b.keywords().contains(&crabomination::card::Keyword::Trample), "Role grants trample");
     }
 
     /// Hare Raising pumps a creature by the number of creatures you control.
@@ -2000,7 +2000,7 @@ mod recent143 {
         cast_adventure(&mut g, id, Some(Target::Permanent(a)));
         let c = g.computed_permanent(a).unwrap();
         assert_eq!(c.power, 5, "2 + 3 creatures");
-        assert!(c.keywords.contains(&crabomination::card::Keyword::Vigilance), "gains vigilance");
+        assert!(c.keywords().contains(&crabomination::card::Keyword::Vigilance), "gains vigilance");
     }
 
     /// Frolicking Familiar grows when you cast an instant.
@@ -2297,11 +2297,11 @@ mod recent146 {
         let mut g = two_player_game();
         let ginger = g.add_card_to_battlefield(0, catalog::syr_ginger_the_meal_ender());
         assert!(
-            !g.computed_permanent(ginger).unwrap().keywords.contains(&Keyword::Trample),
+            !g.computed_permanent(ginger).unwrap().keywords().contains(&Keyword::Trample),
             "no keywords without an opposing planeswalker",
         );
         g.add_card_to_battlefield(1, catalog::karn_scion_of_urza());
-        let kws = g.computed_permanent(ginger).unwrap().keywords.clone();
+        let kws = g.computed_permanent(ginger).unwrap().keywords().to_vec();
         assert!(kws.contains(&Keyword::Trample), "trample once opponent has a planeswalker");
         assert!(kws.contains(&Keyword::Hexproof), "hexproof too");
         assert!(kws.contains(&Keyword::Haste), "haste too");
@@ -2341,7 +2341,7 @@ mod recent146 {
         g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
         let buffed = g.computed_permanent(bear).unwrap();
         assert_eq!((buffed.power, buffed.toughness), (4, 4), "enchanted creature is base 4/4");
-        assert!(buffed.keywords.contains(&Keyword::Flying), "and has flying");
+        assert!(buffed.keywords().contains(&Keyword::Flying), "and has flying");
         let plain_c = g.computed_permanent(plain).unwrap();
         assert_eq!((plain_c.power, plain_c.toughness), (2, 2), "unenchanted creature unchanged");
     }
@@ -2472,7 +2472,7 @@ mod recent147 {
         drain_stack(&mut g);
         let c = g.computed_permanent(bear).unwrap();
         assert_eq!(c.power, 3, "+1/+0 to the team");
-        assert!(c.keywords.contains(&crabomination::card::Keyword::Haste), "granted haste");
+        assert!(c.keywords().contains(&crabomination::card::Keyword::Haste), "granted haste");
     }
 
     /// Elvish Vanguard grows whenever another Elf enters.

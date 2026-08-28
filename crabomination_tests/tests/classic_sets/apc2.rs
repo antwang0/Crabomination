@@ -120,7 +120,7 @@ fn manacles_of_decay_pins_and_shrinks() {
     let bears = find(&g, "Grizzly Bears");
     let manacles = g.add_card_to_hand(0, catalog::manacles_of_decay());
     cast(&mut g, 0, manacles, Some(Target::Permanent(bears)));
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::CantAttack));
     let manacles = find(&g, "Manacles of Decay");
     activate(&mut g, 0, manacles, 0, None);
     assert_eq!(power_of(&g, bears), 1);
@@ -322,7 +322,7 @@ fn coalition_flag_makes_a_flagbearer() {
     assert!(
         g.computed_permanent(bears)
             .unwrap()
-            .subtypes
+            .subtypes()
             .creature_types
             .contains(&crabomination::card::CreatureType::Flagbearer)
     );
@@ -374,7 +374,7 @@ fn life_death_split_halves() {
     let life = g.add_card_to_hand(0, catalog::life_death());
     cast(&mut g, 0, life, None);
     assert_eq!(power_of(&g, forest), 1, "the land is a 1/1");
-    assert!(g.computed_permanent(forest).unwrap().card_types.contains(&CardType::Land));
+    assert!(g.computed_permanent(forest).unwrap().card_types().contains(&CardType::Land));
 }
 
 /// Cromat picks off whatever it's tangling with.
@@ -544,7 +544,7 @@ fn anavolver_kicked_with_one_half_only() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(power_of(&g, volver), 4, "3/3 plus one counter");
-    let kws = g.computed_permanent(volver).unwrap().keywords.clone();
+    let kws = g.computed_permanent(volver).unwrap().keywords().to_vec();
     assert!(!kws.contains(&Keyword::Flying), "the blue half wasn't paid");
 }
 
@@ -566,7 +566,7 @@ fn cetavolver_kicked_with_both_halves() {
     .expect("cast");
     drain_stack(&mut g);
     assert_eq!(power_of(&g, volver), 4, "1/1 plus three counters");
-    let kws = g.computed_permanent(volver).unwrap().keywords.clone();
+    let kws = g.computed_permanent(volver).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::FirstStrike) && kws.contains(&Keyword::Trample));
 }
 

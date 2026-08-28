@@ -190,8 +190,8 @@ fn wave_of_indifference_benches_x_creatures() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::CantBlock));
-    assert!(!g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(b).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Gustcloak Runner ducks out of the block it walked into.
@@ -229,7 +229,7 @@ fn mobilization_arms_the_soldiers() {
     let mut g = main_phase();
     let mob = g.add_card_to_battlefield(0, catalog::mobilization());
     let soldier = g.add_card_to_battlefield(0, catalog::gustcloak_runner());
-    assert!(g.computed_permanent(soldier).unwrap().keywords.contains(&Keyword::Vigilance));
+    assert!(g.computed_permanent(soldier).unwrap().keywords().contains(&Keyword::Vigilance));
     activate(&mut g, 0, mob, 0, None);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count(), 1);
 }
@@ -366,7 +366,7 @@ fn mythic_proportions_is_a_monster() {
     cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (10, 10));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Reminisce puts a graveyard back into its library.
@@ -468,8 +468,8 @@ fn grand_melee_forces_attacks_and_blocks() {
     g.add_card_to_battlefield(0, catalog::grand_melee());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::MustAttack));
-    assert!(cp.keywords.contains(&Keyword::MustBlock));
+    assert!(cp.keywords().contains(&Keyword::MustAttack));
+    assert!(cp.keywords().contains(&Keyword::MustBlock));
 }
 
 /// Krosan Groundshaker hands trample to any Beast.
@@ -479,7 +479,7 @@ fn krosan_groundshaker_grants_trample() {
     let shaker = g.add_card_to_battlefield(0, catalog::krosan_groundshaker());
     let beast = g.add_card_to_battlefield(0, catalog::barkhide_mauler());
     activate(&mut g, 0, shaker, 0, Some(Target::Permanent(beast)));
-    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Daru Encampment pumps a Soldier off a colorless land.
@@ -533,7 +533,7 @@ fn crafty_pathmage_sneaks_the_small() {
     g.clear_sickness(mage);
     let runner = g.add_card_to_battlefield(0, catalog::gustcloak_runner());
     activate(&mut g, 0, mage, 0, Some(Target::Permanent(runner)));
-    assert!(g.computed_permanent(runner).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(runner).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Righteous Cause pays a life for every attack on the table.
@@ -651,7 +651,7 @@ fn rorix_bladewing_is_hasty() {
     cast(&mut g, 0, rorix, None);
     let id = g.battlefield.iter().find(|c| c.definition.name == "Rorix Bladewing").unwrap().id;
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Haste) && cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Disciple of Malice can't be touched by white.
@@ -662,7 +662,7 @@ fn disciple_of_malice_dodges_white() {
     assert!(
         g.computed_permanent(disciple)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Protection(Color::White))
     );
 }
@@ -775,7 +775,7 @@ fn ons_tribal_protection_bodies() {
         assert!(
             g.computed_permanent(id)
                 .unwrap()
-                .keywords
+                .keywords()
                 .contains(&Keyword::ProtectionFromCreatureType(tribe)),
             "protection from {tribe:?}"
         );
@@ -1386,13 +1386,13 @@ fn ons_wave2_keyword_bodies() {
     assert!(
         g.computed_permanent(murkdiver)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Swamp))
     );
     let zombie = g.add_card_to_battlefield(0, catalog::gluttonous_zombie());
-    assert!(g.computed_permanent(zombie).unwrap().keywords.contains(&Keyword::Fear));
+    assert!(g.computed_permanent(zombie).unwrap().keywords().contains(&Keyword::Fear));
     let bomber = g.add_card_to_battlefield(0, catalog::dive_bomber());
-    assert!(g.computed_permanent(bomber).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bomber).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Dive Bomber sacrifices itself to shoot a blocker.
@@ -1432,7 +1432,7 @@ fn ons_tribal_pumpers() {
     assert!(
         g.computed_permanent(elf)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest))
     );
 
@@ -1451,7 +1451,7 @@ fn spurred_wolverine_grants_first_strike() {
     g.clear_sickness(wolverine);
     g.clear_sickness(beast);
     activate(&mut g, 0, wolverine, 0, Some(Target::Permanent(beast)));
-    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Catapult Squad taps two Soldiers to shoot a combatant.
@@ -1491,7 +1491,7 @@ fn crown_of_fury_spreads_to_the_tribe() {
     activate(&mut g, 0, crown, 0, None);
     assert_eq!(g.computed_permanent(kin).unwrap().power, 2, "the tribe got +1/+0");
     assert!(
-        g.computed_permanent(kin).unwrap().keywords.contains(&Keyword::FirstStrike),
+        g.computed_permanent(kin).unwrap().keywords().contains(&Keyword::FirstStrike),
         "and first strike"
     );
     assert_eq!(g.computed_permanent(outsider).unwrap().power, 2, "off-tribe untouched");
@@ -1518,7 +1518,7 @@ fn ons_crown_cycle_host_bonuses() {
         let cp = g.computed_permanent(host).unwrap();
         assert_eq!((cp.power, cp.toughness), pt, "{name} bonus");
         if let Some(k) = kw {
-            assert!(cp.keywords.contains(&k), "{name} keyword");
+            assert!(cp.keywords().contains(&k), "{name} keyword");
         }
     }
 }
@@ -1533,7 +1533,7 @@ fn everglove_courier_lends_while_tapped() {
     activate(&mut g, 0, courier, 0, Some(Target::Permanent(elf)));
     let cp = g.computed_permanent(elf).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 4), "+2/+2 while the Courier stays tapped");
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     g.battlefield_find_mut(courier).unwrap().tapped = false;
     g.check_state_based_actions();
     assert_eq!(g.computed_permanent(elf).unwrap().power, 1, "the bonus ends when it untaps");
@@ -1566,7 +1566,7 @@ fn mistform_dreamer_becomes_a_chosen_type() {
     assert!(
         g.computed_permanent(dreamer)
             .unwrap()
-            .subtypes
+            .subtypes()
             .creature_types
             .contains(&CreatureType::Goblin)
     );
@@ -1577,11 +1577,11 @@ fn mistform_dreamer_becomes_a_chosen_type() {
 fn mistform_wall_loses_defender_when_retyped() {
     let mut g = main_phase();
     let wall = g.add_card_to_battlefield(0, catalog::mistform_wall());
-    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender));
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Bird)]));
     activate(&mut g, 0, wall, 0, None);
     assert!(
-        !g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender),
+        !g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender),
         "no longer a Wall, no longer a defender"
     );
 }
@@ -1597,7 +1597,7 @@ fn ons_retypers_hit_other_creatures() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Elf)]));
     activate(&mut g, 0, crafter, 0, Some(Target::Permanent(bear)));
     assert!(
-        g.computed_permanent(bear).unwrap().subtypes.creature_types.contains(&CreatureType::Elf)
+        g.computed_permanent(bear).unwrap().subtypes().creature_types.contains(&CreatureType::Elf)
     );
 
     let mut g = main_phase();
@@ -1611,7 +1611,7 @@ fn ons_retypers_hit_other_creatures() {
         assert!(
             g.computed_permanent(id)
                 .unwrap()
-                .subtypes
+                .subtypes()
                 .creature_types
                 .contains(&CreatureType::Zombie)
         );
@@ -1631,7 +1631,7 @@ fn mistform_mask_retypes_its_host() {
     assert!(
         g.computed_permanent(host)
             .unwrap()
-            .subtypes
+            .subtypes()
             .creature_types
             .contains(&CreatureType::Wizard)
     );
@@ -1736,7 +1736,7 @@ fn dirge_of_dread_grants_fear() {
     let spell = g.add_card_to_hand(0, catalog::dirge_of_dread());
     cast(&mut g, 0, spell, None);
     for id in [mine, theirs] {
-        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Fear));
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Fear));
     }
 }
 
@@ -1761,7 +1761,7 @@ fn akromas_blessing_protects_the_team() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
     cast(&mut g, 0, spell, None);
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Protection(Color::Red))
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Protection(Color::Red))
     );
 }
 
@@ -1792,7 +1792,7 @@ fn mages_guile_grants_shroud() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::mages_guile());
     cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Essence Fracture bounces two creatures.
@@ -2077,7 +2077,7 @@ fn cr_205_3m_imagecrafter_cant_name_wall() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Wall)]));
     activate(&mut g, 0, crafter, 0, Some(Target::Permanent(bear)));
     assert!(
-        !g.computed_permanent(bear).unwrap().subtypes.creature_types.contains(&CreatureType::Wall),
+        !g.computed_permanent(bear).unwrap().subtypes().creature_types.contains(&CreatureType::Wall),
         "the forbidden type is overruled"
     );
 }
@@ -2088,10 +2088,10 @@ fn cr_205_3m_imagecrafter_cant_name_wall() {
 fn cr_613_8_type_gated_grant_sees_a_retype() {
     let mut g = main_phase();
     let wall = g.add_card_to_battlefield(0, catalog::mistform_wall());
-    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender));
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::CreatureType(CreatureType::Bird)]));
     activate(&mut g, 0, wall, 0, None);
-    assert!(!g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(!g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender));
 }
 
 // ── Wave 5 ───────────────────────────────────────────────────────────────────
@@ -2368,7 +2368,7 @@ fn ons_utility_auras() {
     assert!(
         g.computed_permanent(land)
             .unwrap()
-            .subtypes
+            .subtypes()
             .land_types
             .contains(&crabomination::card::LandType::Island)
     );
@@ -2423,7 +2423,7 @@ fn insurrection_takes_everything() {
     let stolen = g.battlefield_find(theirs).unwrap();
     assert_eq!(stolen.controller, 0, "gained control");
     assert!(!stolen.tapped, "untapped");
-    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Tribal Golem picks up a keyword per tribe you field.
@@ -2431,10 +2431,10 @@ fn insurrection_takes_everything() {
 fn tribal_golem_borrows_keywords() {
     let mut g = main_phase();
     let golem = g.add_card_to_battlefield(0, catalog::tribal_golem());
-    assert!(g.computed_permanent(golem).unwrap().keywords.is_empty(), "bare board, bare Golem");
+    assert!(g.computed_permanent(golem).unwrap().keywords().is_empty(), "bare board, bare Golem");
     g.add_card_to_battlefield(0, catalog::snapping_thragg()); // Beast
     g.add_card_to_battlefield(0, catalog::reckless_one()); // Goblin
-    let kws = g.computed_permanent(golem).unwrap().keywords.clone();
+    let kws = g.computed_permanent(golem).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
     assert!(!kws.contains(&Keyword::Flying), "no Wizard, no flying");
 }
@@ -2446,7 +2446,7 @@ fn run_wild_grants_trample_and_regen() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::run_wild());
     cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
-    let kws = g.computed_permanent(bear).unwrap().keywords.clone();
+    let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Trample));
     assert!(kws.iter().any(|k| matches!(k, Keyword::Regenerate(_))));
 }
@@ -2503,7 +2503,7 @@ fn ons_charms() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance));
 
     // Vitality Charm mode 0 — an Insect.
     let mut g = main_phase();

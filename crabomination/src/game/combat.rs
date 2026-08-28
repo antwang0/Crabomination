@@ -142,7 +142,7 @@ impl GameState {
                 .filter(|c| ids.contains(&c.id))
                 .filter_map(|c| g.computed_permanent(c.id))
                 .flat_map(|c| {
-                    c.keywords
+                    c.keywords()
                         .iter()
                         .filter_map(|k| match k {
                             Keyword::BandsWithOther(q) => Some((**q).clone()),
@@ -171,7 +171,7 @@ impl GameState {
                 continue;
             }
             let Some(cp) = computed.iter().find(|p| p.id == c.id) else { continue };
-            for k in cp.keywords.iter() {
+            for k in cp.keywords().iter() {
                 if let Keyword::BandsWithOther(q) = k {
                     out.push((**q).clone());
                 }
@@ -350,7 +350,7 @@ impl GameState {
         power_caps: &[usize],
     ) -> Option<(u32, GameError)> {
         let id = card.id;
-        let kws: &[Keyword] = cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        let kws: &[Keyword] = cp.map(|c| c.keywords()).unwrap_or(&[]);
         // The instance reads first — they need no keyword walk at all, and the
         // cascade's order is the one `declare_attackers_banded` reported
         // before the two walkers were merged.
@@ -358,7 +358,7 @@ impl GameState {
             return Some((line!(), GameError::CardIsTapped(id)));
         }
         let is_creature_now = cp
-            .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+            .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
             .unwrap_or_else(|| card.definition.is_creature());
         // CR 701.35 — detain; CR 508.1a — Wall of Dust's one-turn ban. Both
         // report `CannotAttack`, as does a permanent that is not a creature
@@ -646,7 +646,7 @@ impl GameState {
                 .attacker_target_block(
                     p,
                     card.id,
-                    cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]),
+                    cp.map(|c| c.keywords()).unwrap_or(&[]),
                     defender,
                 )
                 .is_none()
@@ -670,7 +670,7 @@ impl GameState {
         if self.attacker_self_block(p, card, cp, power_caps).is_some() {
             return false;
         }
-        let kws: &[Keyword] = cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        let kws: &[Keyword] = cp.map(|c| c.keywords()).unwrap_or(&[]);
         let taxed = self.attack_tax_possible(statics);
         if !Self::has_defender_dependent_restriction(kws) && !taxed {
             return true;
@@ -914,7 +914,7 @@ impl GameState {
         // so a granted banding counts.
         {
             let has_banding = |id: CardId| {
-                computed.iter().any(|c| c.id == id && c.keywords.has_kw(&Keyword::Banding))
+                computed.iter().any(|c| c.id == id && c.keywords().has_kw(&Keyword::Banding))
             };
             for members in &bands {
                 let Some(&first) = members.first() else { continue };
@@ -1031,7 +1031,7 @@ impl GameState {
                 computed
                     .iter()
                     .find(|c| c.id == atk.attacker)
-                    .is_some_and(|c| c.keywords.has_kw(&Keyword::AttacksAlone))
+                    .is_some_and(|c| c.keywords().has_kw(&Keyword::AttacksAlone))
             })
         {
             return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
@@ -1041,8 +1041,8 @@ impl GameState {
         // carrying CantAttackAlone makes the batch illegal.
         if attacks.len() == 1
             && computed.iter().find(|c| c.id == attacks[0].attacker).is_some_and(|c| {
-                c.keywords.has_kw(&Keyword::CantAttackAlone)
-                    || c.keywords.has_kw(&Keyword::CantAttackOrBlockAlone)
+                c.keywords().has_kw(&Keyword::CantAttackAlone)
+                    || c.keywords().has_kw(&Keyword::CantAttackOrBlockAlone)
             })
         {
             return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
@@ -1078,7 +1078,7 @@ impl GameState {
             computed
                 .iter()
                 .find(|c| c.id == id)
-                .map(|c| c.keywords.as_slice())
+                .map(|c| c.keywords())
                 .unwrap_or(&[])
         };
 
@@ -1874,7 +1874,7 @@ impl GameState {
             computed
                 .iter()
                 .find(|c| c.id == id)
-                .map(|c| c.keywords.as_slice())
+                .map(|c| c.keywords())
                 .unwrap_or(&[])
         };
 
@@ -2307,7 +2307,7 @@ impl GameState {
             ids.iter()
                 .map(|&id| {
                     let kws =
-                        g.computed_permanent(id).map(|c| c.keywords.to_vec()).unwrap_or_default();
+                        g.computed_permanent(id).map(|c| c.keywords().to_vec()).unwrap_or_default();
                     (id, kws)
                 })
                 .collect()
@@ -2424,7 +2424,7 @@ impl GameState {
                     // (Frenzy Sliver) counts too.
                     if let Some(cp) = g.computed_permanent(atk.attacker) {
                         let fn_: i32 = cp
-                            .keywords
+                            .keywords()
                             .iter()
                             .filter_map(
                                 |k| if let Keyword::Frenzy(x) = k { Some(*x as i32) } else { None },
@@ -2460,8 +2460,8 @@ impl GameState {
         self.with_frozen_layers(|g| {
             let strikes_first = |id: CardId| {
                 g.computed_permanent(id).is_some_and(|c| {
-                    c.keywords.has_kw(&Keyword::FirstStrike)
-                        || c.keywords.has_kw(&Keyword::DoubleStrike)
+                    c.keywords().has_kw(&Keyword::FirstStrike)
+                        || c.keywords().has_kw(&Keyword::DoubleStrike)
                 })
             };
             g.attacking.iter().any(|atk| strikes_first(atk.attacker))
@@ -2504,7 +2504,7 @@ impl GameState {
             let computed_hit = self.with_frozen_layers(|g| {
                 let strikes_first = |id: CardId| {
                     g.computed_permanent(id)
-                        .is_some_and(|c| c.keywords.iter().any(strikes))
+                        .is_some_and(|c| c.keywords().iter().any(strikes))
                 };
                 g.attacking.iter().any(|atk| strikes_first(atk.attacker))
                     || g.block_map.keys().any(|&id| strikes_first(id))
@@ -2549,7 +2549,7 @@ impl GameState {
             }
         }
         let subset = self.compute_permanents(&ids);
-        if subset.iter().any(|c| c.keywords.has_kw(&Keyword::DividesCombatDamageAmongDefenders)) {
+        if subset.iter().any(|c| c.keywords().has_kw(&Keyword::DividesCombatDamageAmongDefenders)) {
             return self.compute_battlefield();
         }
         subset
@@ -2942,7 +2942,7 @@ impl GameState {
                 .find_map(|bid| {
                     computed
                         .iter()
-                        .find(|c| c.id == *bid && c.keywords.has_kw(&Keyword::Banding))
+                        .find(|c| c.id == *bid && c.keywords().has_kw(&Keyword::Banding))
                         .map(|c| c.controller)
                 })
                 // CR 702.22j — the "bands with other [quality]" arm.
@@ -3051,8 +3051,8 @@ impl GameState {
         };
         for bid in multi_blockers {
             let Some(bcp) = computed.iter().find(|c| c.id == bid) else { continue };
-            if !blocker_filter(&bcp.keywords)
-                || bcp.keywords.has_kw(&Keyword::DealsNoCombatDamage)
+            if !blocker_filter(bcp.keywords())
+                || bcp.keywords().has_kw(&Keyword::DealsNoCombatDamage)
                 || self.combat_damage_prevented_creatures.contains(&bid)
                 || self.assigns_no_combat_damage_this_turn.contains(&bid)
                 || self.combat_damage_prevented_for_dealer(bid)
@@ -3067,11 +3067,11 @@ impl GameState {
             let banded = blocked.iter().any(|aid| {
                 computed
                     .iter()
-                    .any(|c| c.id == *aid && c.keywords.has_kw(&Keyword::Banding))
+                    .any(|c| c.id == *aid && c.keywords().has_kw(&Keyword::Banding))
             }) || self.quality_band_assigner(&blocked, computed).is_some();
             let assigner = if banded { self.active_player_idx } else { bcp.controller };
             let assigner_ui = self.players[assigner].wants_ui;
-            let deathtouch = bcp.keywords.has_kw(&Keyword::Deathtouch);
+            let deathtouch = bcp.keywords().has_kw(&Keyword::Deathtouch);
             let total_power = combat_damage_value(bcp).max(0) as u32;
 
             if !self.combat_damage_order.contains_key(&bid) {
@@ -3158,7 +3158,7 @@ impl GameState {
     ) -> Vec<CardId> {
         let free = computed.iter().any(|c| {
             c.id == attacker
-                && c.keywords.has_kw(&Keyword::DividesCombatDamageAmongDefenders)
+                && c.keywords().has_kw(&Keyword::DividesCombatDamageAmongDefenders)
         });
         if !free {
             return vec![];
@@ -3174,7 +3174,7 @@ impl GameState {
         let mut ids: Vec<CardId> = computed
             .iter()
             .filter(|c| {
-                c.controller == defender && c.card_types.contains(&crate::card::CardType::Creature)
+                c.controller == defender && c.card_types().contains(&crate::card::CardType::Creature)
             })
             .map(|c| c.id)
             .collect();
@@ -3267,7 +3267,7 @@ impl GameState {
                 let computed = self.combat_damage_computed();
                 let atk_cp = computed.iter().find(|c| c.id == attacker);
                 let deathtouch = atk_cp
-                    .is_some_and(|c| c.keywords.has_kw(&Keyword::Deathtouch));
+                    .is_some_and(|c| c.keywords().has_kw(&Keyword::Deathtouch));
                 let power = atk_cp.map(combat_damage_value).unwrap_or(0);
                 let total_power = if self.combat_damage_prevented_for_dealer(attacker) {
                     0
@@ -3276,7 +3276,7 @@ impl GameState {
                 };
                 // A multi-block blocker (CR 510.1e) has no trample outlet.
                 let trample = self.attackers_blocked_by(attacker).len() <= 1
-                    && atk_cp.is_some_and(|c| c.keywords.has_kw(&Keyword::Trample));
+                    && atk_cp.is_some_and(|c| c.keywords().has_kw(&Keyword::Trample));
                 let (lethals, trample) =
                     self.combat_assignment_plan(attacker, deathtouch, trample, &order, &computed);
                 let split = self.resolve_damage_assignment(total_power, &lethals, trample, answer);
@@ -3316,7 +3316,7 @@ impl GameState {
             .filter_map(|atk| {
                 let cp = computed_of(atk.attacker)?;
                 let defender_player = self.defender_for(atk.target)?;
-                let kws = &cp.keywords;
+                let kws = &cp.keywords();
                 Some(AttackerInfo {
                     id: cp.id,
                     controller: cp.controller,
@@ -3706,7 +3706,7 @@ impl GameState {
                             .iter()
                             .copied()
                             .filter(|&bid| computed_of(bid)
-                                .is_some_and(|bc| blocker_filter(&bc.keywords)))
+                                .is_some_and(|bc| blocker_filter(bc.keywords())))
                             // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
                             .filter(|bid| !g.combat_damage_prevented_creatures.contains(bid))
                             // CR 615.1 — "prevent all combat damage it would deal" (Azorius Ploy).
@@ -3792,8 +3792,8 @@ impl GameState {
                         if dmg == 0 {
                             continue;
                         }
-                        let infect = bc.keywords.has_kw(&Keyword::Infect)
-                            || bc.keywords.has_kw(&Keyword::Wither);
+                        let infect = bc.keywords().has_kw(&Keyword::Infect)
+                            || bc.keywords().has_kw(&Keyword::Wither);
                         let hit = self.turn_damage_redirect_for(atk.id).unwrap_or(atk.id);
                         if let Some(attacker) = self.battlefield_find_mut(hit) {
                             attacker.dealt_damage_this_turn = true;
@@ -3810,7 +3810,7 @@ impl GameState {
                             } else {
                                 attacker.damage += dmg;
                                 attacker.record_damage_from(bid, dmg);
-                                if bc.keywords.has_kw(&Keyword::Deathtouch) {
+                                if bc.keywords().has_kw(&Keyword::Deathtouch) {
                                     attacker.dealt_deathtouch_damage = true;
                                 }
                                 events.push(GameEvent::DamageDealt {
@@ -3828,7 +3828,7 @@ impl GameState {
                         creature_damage.push((bid, atk.id, dmg));
                         // CR 702.15a — lifelink scales off damage actually
                         // dealt; credited to the blocker's controller.
-                        if bc.keywords.has_kw(&Keyword::Lifelink) {
+                        if bc.keywords().has_kw(&Keyword::Lifelink) {
                             let controller = self
                                 .battlefield
                                 .iter()
@@ -3922,7 +3922,7 @@ impl GameState {
     /// so it can't be declared as an attack target (The Aetherspark).
     pub(crate) fn permanent_cant_be_attacked(&self, id: CardId) -> bool {
         self.computed_permanent(id)
-            .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantBeAttacked))
+            .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBeAttacked))
     }
 
     /// Apply `amount` damage from `atk` to its declared attack target. For
@@ -4050,7 +4050,7 @@ impl GameState {
     pub(crate) fn creature_redirects_damage_to_controller(&self, id: CardId) -> Option<usize> {
         let c = self.battlefield_find(id)?;
         self.computed_permanent(id)?
-            .keywords
+            .keywords()
             .has_kw(&crate::card::Keyword::DamageToThisGoesToItsController)
             .then_some(c.controller)
     }
@@ -4158,7 +4158,7 @@ impl GameState {
                     if !types.is_empty()
                         && self
                             .computed_permanent(src)
-                            .is_some_and(|c| types.iter().any(|t| c.card_types.contains(t)))
+                            .is_some_and(|c| types.iter().any(|t| c.card_types().contains(t)))
                     {
                         return 0;
                     }
@@ -4563,7 +4563,7 @@ impl GameState {
         // CR 509.1a — creature-ness from the computed view, so an animated
         // land or crewed Vehicle can block and an uncrewed Vehicle can't.
         let Some(cp) = cp else { return no(line!()) };
-        if !cp.card_types.contains(&crate::card::CardType::Creature) {
+        if !cp.card_types().contains(&crate::card::CardType::Creature) {
             return no(line!());
         }
         if blocker.tapped && !self.tapped_creatures_can_block(blocker.controller) {
@@ -4594,7 +4594,7 @@ impl GameState {
         // keywords and the board, never the attacker.
         let mut control_count: Option<(crate::card::SelectionRequirement, u32, bool)> = None;
         let mut tap_another: Option<crate::card::SelectionRequirement> = None;
-        for k in cp.keywords.iter() {
+        for k in cp.keywords().iter() {
             let barred = match k {
                 Keyword::CantBlock | Keyword::Decayed => true,
                 Keyword::CantAttackOrBlockUnlessEvenCounters => {
@@ -4674,7 +4674,7 @@ impl GameState {
         // declaration charges the *sum* over blockers later; one blocker's
         // own tax being unpayable makes that sum unpayable too, so asking
         // here is sound and names the blocker instead of `assignments[0]`.
-        let tax = self.attack_block_keyword_tax(blocker.id, &cp.keywords, false);
+        let tax = self.attack_block_keyword_tax(blocker.id, cp.keywords(), false);
         if tax > 0 && !self.could_pay_generic(owner, tax) {
             return no(line!());
         }
@@ -4760,8 +4760,8 @@ impl GameState {
                 return true;
             }
             let Some(acp) = self.computed_permanent(other) else { return false };
-            (acp.keywords.has_kw(&Keyword::AllMustBlock)
-                || acp.keywords.has_kw(&Keyword::MustBeBlocked))
+            (acp.keywords().has_kw(&Keyword::AllMustBlock)
+                || acp.keywords().has_kw(&Keyword::MustBeBlocked))
                 && self.block_requirement_able(b, other)
         };
         assignments.iter().any(|(bid, aid)| *bid == b.id && claims(*aid))
@@ -4785,8 +4785,8 @@ impl GameState {
     /// a legal block *exists*, not whether this declaration made it.
     pub(crate) fn block_requirement_binds(&self, attacker: CardId) -> bool {
         let Some(acp) = self.computed_permanent(attacker) else { return true };
-        let mut min_b = if acp.keywords.has_kw(&Keyword::Menace) { 2usize } else { 1 };
-        for kw in acp.keywords.iter() {
+        let mut min_b = if acp.keywords().has_kw(&Keyword::Menace) { 2usize } else { 1 };
+        for kw in acp.keywords().iter() {
             if let Keyword::CantBeBlockedExceptByN(n) = kw {
                 min_b = min_b.max(*n as usize);
             }
@@ -5670,7 +5670,7 @@ impl GameState {
 /// Pony), otherwise its power (CR 510.1c). The substitution is unconditional —
 /// a 5/1 Doran-creature assigns 1.
 fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
-    if cp.keywords.has_kw(&Keyword::AssignsCombatDamageByToughness) {
+    if cp.keywords().has_kw(&Keyword::AssignsCombatDamageByToughness) {
         cp.toughness
     } else {
         cp.power

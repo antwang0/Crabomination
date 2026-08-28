@@ -137,7 +137,7 @@ fn cr_613_4_cda_reads_granted_land_types() {
     let waste = g.add_card_to_battlefield(0, catalog::wastes());
     g.battlefield_find_mut(waste).unwrap().add_counters(CounterType::Flood, 1);
     assert!(
-        g.computed_permanent(waste).unwrap().subtypes.land_types.contains(&LandType::Island),
+        g.computed_permanent(waste).unwrap().subtypes().land_types.contains(&LandType::Island),
         "layer 4 granted the type"
     );
     assert_eq!(g.computed_permanent(eluge).unwrap().power, 2, "layer 7a counts it");

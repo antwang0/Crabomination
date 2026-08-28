@@ -95,9 +95,9 @@ fn guardian_zendikon_animates_the_land() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).expect("the land is still there");
     assert_eq!((cp.power, cp.toughness), (2, 6));
-    assert!(cp.keywords.contains(&Keyword::Defender), "and it has defender");
+    assert!(cp.keywords().contains(&Keyword::Defender), "and it has defender");
     assert!(
-        cp.card_types.contains(&crabomination::card::CardType::Land),
+        cp.card_types().contains(&crabomination::card::CardType::Land),
         "it's still a land"
     );
 }
@@ -149,7 +149,7 @@ fn dread_statuary_animates_itself() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(statuary).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 2));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land));
 }
 
 /// Sejiri Merfolk gains first strike and lifelink only while you control a
@@ -158,9 +158,9 @@ fn dread_statuary_animates_itself() {
 fn sejiri_merfolk_needs_a_plains() {
     let mut g = two_player_game();
     let merfolk = g.add_card_to_battlefield(0, catalog::sejiri_merfolk());
-    assert!(!g.computed_permanent(merfolk).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(!g.computed_permanent(merfolk).unwrap().keywords().contains(&Keyword::Lifelink));
     g.add_card_to_battlefield(0, catalog::plains());
-    let kws = g.computed_permanent(merfolk).unwrap().keywords.clone();
+    let kws = g.computed_permanent(merfolk).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Lifelink) && kws.contains(&Keyword::FirstStrike));
 }
 

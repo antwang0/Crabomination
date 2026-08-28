@@ -698,7 +698,7 @@ fn heliod_sun_crowned_grants_lifelink_until_end_of_turn() {
     drain_stack(&mut g);
 
     let cp = g.computed_permanent(bear).expect("Bear still in play");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Lifelink),
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Lifelink),
         "Bear should now have Lifelink");
 }
 
@@ -1478,7 +1478,7 @@ fn vines_of_vastwood_kicked_pumps_target_creature_plus_four() {
     let cp = g.computed_permanent(bear).expect("bear still alive");
     assert_eq!(cp.power, 6, "Grizzly Bears 2/2 + 4 = 6 power");
     assert_eq!(cp.toughness, 6, "Grizzly Bears 2/2 + 4 = 6 toughness");
-    assert!(cp.keywords.contains(&Keyword::Hexproof), "kicked still grants hexproof");
+    assert!(cp.keywords().contains(&Keyword::Hexproof), "kicked still grants hexproof");
 }
 
 #[test]
@@ -1497,7 +1497,7 @@ fn vines_of_vastwood_unkicked_only_grants_hexproof() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).expect("bear still alive");
     assert_eq!(cp.power, 2, "unkicked Vines doesn't pump");
-    assert!(cp.keywords.contains(&Keyword::Hexproof), "unkicked grants hexproof");
+    assert!(cp.keywords().contains(&Keyword::Hexproof), "unkicked grants hexproof");
 }
 
 /// Reckless Charge: pumps +3/+0 and grants haste until end of turn.
@@ -1518,7 +1518,7 @@ fn reckless_charge_grants_three_power_and_haste() {
     assert_eq!(cp.power, 5, "+3 power from Reckless Charge");
     assert_eq!(cp.toughness, 2, "toughness unchanged");
     assert!(
-        cp.keywords.contains(&crabomination::card::Keyword::Haste),
+        cp.keywords().contains(&crabomination::card::Keyword::Haste),
         "should have haste"
     );
 }
@@ -1940,13 +1940,13 @@ fn bloodghast_conditional_haste_and_cant_block() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let bg = g.add_card_to_battlefield(0, catalog::bloodghast());
-    assert!(g.computed_permanent(bg).unwrap().keywords.contains(&Keyword::CantBlock),
+    assert!(g.computed_permanent(bg).unwrap().keywords().contains(&Keyword::CantBlock),
         "Bloodghast can't block");
     // Opponent at full life → no haste.
-    assert!(!g.computed_permanent(bg).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(!g.computed_permanent(bg).unwrap().keywords().contains(&Keyword::Haste),
         "no haste while opponent is above 10 life");
     g.players[1].life = 9;
-    assert!(g.computed_permanent(bg).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(bg).unwrap().keywords().contains(&Keyword::Haste),
         "gains haste once an opponent is at 10 or less life");
 }
 

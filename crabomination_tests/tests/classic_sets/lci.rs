@@ -91,7 +91,7 @@ fn poison_dart_frog_grants_deathtouch() {
         card_id: frog, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(frog).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(frog).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Bitter Triumph destroys a creature after its discard additional cost.
@@ -128,7 +128,7 @@ fn cavern_stomper_grants_evasion() {
     }).expect("activate");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(stomper).unwrap().keywords.contains(&Keyword::CantBeBlockedByPowerAtMost(2)),
+        g.computed_permanent(stomper).unwrap().keywords().contains(&Keyword::CantBeBlockedByPowerAtMost(2)),
     );
 }
 
@@ -196,7 +196,7 @@ fn echo_of_dusk_descend_4_lifelink() {
     }
     let cp = g.computed_permanent(echo).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "descend 4 → +1/+1");
-    assert!(cp.keywords.contains(&Keyword::Lifelink), "descend 4 → lifelink");
+    assert!(cp.keywords().contains(&Keyword::Lifelink), "descend 4 → lifelink");
 }
 
 /// CR 700.11 — a permanent card hitting the graveyard sets descended_this_turn;
@@ -265,7 +265,7 @@ fn dinotomaton_etb_grants_menace() {
         card_id: dino, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Menace));
 }
 
 /// Market Gnome draws a card and gains life when it dies.
@@ -421,12 +421,12 @@ fn bedrock_tortoise_turn_hexproof_and_toughness_damage() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     // Your turn → hexproof on your creatures.
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof), "hexproof on your turn");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof), "hexproof on your turn");
     // Opponent's turn → no hexproof.
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof), "no hexproof off-turn");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof), "no hexproof off-turn");
     // The 0/6 tortoise (T>P) assigns combat damage by toughness.
-    assert!(g.computed_permanent(tortoise).unwrap().keywords.contains(&Keyword::AssignsCombatDamageByToughness));
+    assert!(g.computed_permanent(tortoise).unwrap().keywords().contains(&Keyword::AssignsCombatDamageByToughness));
 }
 
 /// Amalia explores on lifegain; at exactly 20 power she wraths the board.
@@ -493,7 +493,7 @@ fn staggering_size_pumps_and_tramples() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "+3/+3");
-    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "gained trample");
 }
 
 /// Compass Gnome searches a Cave onto the top of the library on ETB.
@@ -664,7 +664,7 @@ fn acrobatic_leap_pumps_and_untaps() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 5), "+1/+3");
-    assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gains flying");
     assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
 }
 
@@ -684,7 +684,7 @@ fn petrify_locks_down_creature() {
     }).expect("cast");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::CantAttack) && cp.keywords.contains(&Keyword::CantBlock), "locked");
+    assert!(cp.keywords().contains(&Keyword::CantAttack) && cp.keywords().contains(&Keyword::CantBlock), "locked");
 }
 
 /// Ray of Ruin exiles the target creature.
@@ -774,7 +774,7 @@ fn rampaging_spiketail_pumps_and_shields() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4, "+2/+0");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "indestructible");
 }
 
 /// Tinker's Tote makes two Gnomes and can sacrifice for 3 life.
@@ -851,7 +851,7 @@ fn malamet_brawler_grants_trample() {
         Attack { attacker: ally, target: AttackTarget::Player(1) },
     ])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Trample), "ally gained trample");
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Trample), "ally gained trample");
 }
 
 /// Malamet Veteran adds a counter when attacking with descend 4 active.
@@ -1050,7 +1050,7 @@ fn hotfoot_gnome_grants_haste() {
         card_id: gnome, ability_index: 0, target: Some(Target::Permanent(fresh)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(fresh).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(g.computed_permanent(fresh).unwrap().keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 /// Fungal Fortitude gives +2/+0 and returns the creature tapped when it dies.
@@ -1130,7 +1130,7 @@ fn diamond_pick_axe_treasure_on_attack() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let axe = g.add_card_to_battlefield(0, catalog::diamond_pick_axe());
-    assert!(g.computed_permanent(axe).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(axe).unwrap().keywords().contains(&Keyword::Indestructible));
     g.clear_sickness(bear);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
@@ -1260,7 +1260,7 @@ fn ancestors_aid_pumps_and_treasure() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4, "+2/+0");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "first strike");
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "Treasure");
 }
 
@@ -1286,7 +1286,7 @@ fn might_of_the_ancestors_combat_pump() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4, "+2/+0");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "vigilance");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "vigilance");
 }
 
 /// Walk with the Ancestors returns a permanent card from the graveyard.
@@ -1322,7 +1322,7 @@ fn vanguard_of_the_rose_sac_for_indestructible() {
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
-    assert!(g.computed_permanent(vanguard).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(vanguard).unwrap().keywords().contains(&Keyword::Indestructible));
     assert!(g.battlefield_find(vanguard).unwrap().tapped, "tapped itself");
 }
 
@@ -1343,7 +1343,7 @@ fn daring_discovery_locks_blockers() {
         card_id: spell, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock), "can't block");
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantBlock), "can't block");
 }
 
 /// Attentive Sunscribe scries when it becomes tapped.
@@ -1603,7 +1603,7 @@ fn huatlis_snubhorn_is_vigilant_dino() {
     let s = g.add_card_to_battlefield(0, catalog::huatlis_snubhorn());
     let cp = g.computed_permanent(s).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
 }
 
 /// Pantlaza discovers off a Dinosaur entering (X = its toughness).
@@ -1749,7 +1749,7 @@ fn hulking_bugbear_has_haste() {
     let b = g.add_card_to_battlefield(0, catalog::hulking_bugbear());
     let cp = g.computed_permanent(b).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Etali's Favor attaches, discovers, and pumps the enchanted creature +1/+1.
@@ -1770,7 +1770,7 @@ fn etalis_favor_attaches_and_pumps() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 from the Aura");
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Volcanic Geyser deals X to any target.
@@ -1924,7 +1924,7 @@ fn kindled_heroism_pumps_and_scries() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "+1/+0");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Cosmium Blast deals 4 to an attacking creature.
@@ -2001,7 +2001,7 @@ fn akawalli_descend_4_buff() {
     for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); } // descend 4
     let cp = g.computed_permanent(aka).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "descend 4 → +2/+2");
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Envoy of Okinec Ahau mints a 1/1 Gnome for {4}{W}.
@@ -2177,9 +2177,9 @@ fn didact_echo_draw_and_descend_flying() {
     drain_stack(&mut g);
     // -1 spell + 1 drawn = net unchanged.
     assert_eq!(g.players[0].hand.len(), before);
-    assert!(!g.computed_permanent(echo).unwrap().keywords.contains(&Keyword::Flying), "no flying yet");
+    assert!(!g.computed_permanent(echo).unwrap().keywords().contains(&Keyword::Flying), "no flying yet");
     for _ in 0..4 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
-    assert!(g.computed_permanent(echo).unwrap().keywords.contains(&Keyword::Flying), "descend 4 → flying");
+    assert!(g.computed_permanent(echo).unwrap().keywords().contains(&Keyword::Flying), "descend 4 → flying");
 }
 
 /// Broodrage Mycoid makes a Fungus at end step after descending.
@@ -2298,7 +2298,7 @@ fn corpses_of_the_lost_lords_and_makes_token() {
     // Lord buff: the 2/2 Skeleton Pirate becomes 3/2 with haste.
     let cp = g.computed_permanent(pirate).unwrap();
     assert_eq!(cp.power, 3, "+1/+0 lord");
-    assert!(cp.keywords.contains(&Keyword::Haste), "haste from lord");
+    assert!(cp.keywords().contains(&Keyword::Haste), "haste from lord");
 }
 
 /// Malamet War Scribe pumps your team +2/+1 on ETB.
@@ -2484,9 +2484,9 @@ fn disturbed_slumber_animates_land() {
     cast_at(&mut g, ds, Target::Permanent(land));
     let cp = g.computed_permanent(land).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Reach));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.keywords().contains(&Keyword::Haste) && cp.keywords().contains(&Keyword::Reach));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
 }
 
 /// Dauntless Dismantler: opponents' artifacts enter tapped.
@@ -2575,7 +2575,7 @@ fn eaten_by_piranhas_shrinks_creature() {
     cast_at(&mut g, aura, Target::Permanent(foe));
     let cp = g.computed_permanent(foe).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "now 1/1");
-    assert!(cp.keywords.is_empty(), "lost all abilities (flying)");
+    assert!(cp.keywords().is_empty(), "lost all abilities (flying)");
     assert!(cp.colors.contains(Color::Black), "is black");
 }
 
@@ -2598,7 +2598,7 @@ fn tendril_animates_land_seven_seven() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 7), "0/0 base + seven +1/+1 counters");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
 }
 
 /// Explorer's Cache enters with two +1/+1 counters and grows on counter-creature death.
@@ -2729,8 +2729,8 @@ fn relics_roar_animates_artifact() {
     cast_at(&mut g, rr, Target::Permanent(art));
     let cp = g.computed_permanent(art).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3), "now a 4/3");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Dinosaur), "Dinosaur");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Dinosaur), "Dinosaur");
 }
 
 /// Hurl into History counters an artifact/creature spell and discovers its MV.
@@ -2884,7 +2884,7 @@ fn cavernous_maw_needs_three_caves() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(maw).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "3/3 Elemental");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
 }
 
 /// Zoetic Glyph turns an artifact into a 5/4 Golem (still an artifact).
@@ -2901,9 +2901,9 @@ fn zoetic_glyph_animates_artifact() {
     cast_at(&mut g, aura, Target::Permanent(art));
     let cp = g.computed_permanent(art).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 4), "now a 5/4");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Artifact), "still an artifact");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Golem), "Golem");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact), "still an artifact");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Golem), "Golem");
 }
 
 /// Queen's Bay Paladin reanimates a Vampire with a finality counter and pays life.
@@ -3024,7 +3024,7 @@ fn deepfathom_echo_explores_and_copies() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(echo).unwrap();
     // Became a copy of Serra Angel (4/4 flyer); the +1/+1 explore counter rides on top.
-    assert!(cp.keywords.contains(&Keyword::Flying), "copied Serra Angel's flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "copied Serra Angel's flying");
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 copy + explore +1/+1 counter");
 }
 
@@ -3271,7 +3271,7 @@ fn palanis_hatcher_eggs_and_combat_token() {
     let eggs = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Dinosaur Egg").count();
     assert_eq!(eggs, 2, "ETB made two Egg tokens");
     let egg_id = g.battlefield.iter().find(|c| c.definition.name == "Dinosaur Egg").unwrap().id;
-    assert!(g.computed_permanent(egg_id).unwrap().keywords.contains(&Keyword::Haste), "Eggs gain haste");
+    assert!(g.computed_permanent(egg_id).unwrap().keywords().contains(&Keyword::Haste), "Eggs gain haste");
     g.active_player_idx = 0;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);

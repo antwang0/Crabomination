@@ -656,7 +656,7 @@ fn pump_spells_buff_friendly_bear() {
             assert_eq!(b.toughness, t, "{}: toughness", name);
         }
         if let Some(kw) = keyword {
-            assert!(b.keywords.contains(&kw), "{}: bear gains {:?}", name, kw);
+            assert!(b.keywords().contains(&kw), "{}: bear gains {:?}", name, kw);
         }
     }
 }

@@ -117,7 +117,7 @@ fn fight_or_flight_locks_the_unchosen_pile_out_of_attacking() {
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
     let has_lock = |g: &GameState, id| {
-        g.computed_permanent(id).unwrap().keywords.contains(&Keyword::CantAttack)
+        g.computed_permanent(id).unwrap().keywords().contains(&Keyword::CantAttack)
     };
     assert!(has_lock(&g, barred), "unchosen pile can't attack");
     assert!(!has_lock(&g, free), "chosen pile still attacks");
@@ -405,7 +405,7 @@ fn travelers_cloak_grants_the_chosen_landwalk() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::Landwalk(_))),
         "the enchanted creature has landwalk"

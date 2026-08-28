@@ -52,9 +52,9 @@ fn nylea_is_not_a_creature_below_five_devotion() {
     // Nylea alone contributes 1 green pip ({3}{G}); devotion 1 < 5.
     let nylea = g.add_card_to_battlefield(0, catalog::nylea_god_of_the_hunt());
     let cp = g.computed_permanent(nylea).unwrap();
-    assert!(!cp.card_types.contains(&CardType::Creature),
+    assert!(!cp.card_types().contains(&CardType::Creature),
         "Nylea isn't a creature at devotion 1");
-    assert!(cp.card_types.contains(&CardType::Enchantment));
+    assert!(cp.card_types().contains(&CardType::Enchantment));
 }
 
 #[test]
@@ -66,7 +66,7 @@ fn nylea_becomes_a_creature_at_five_devotion_and_anthems_others() {
         g.add_card_to_battlefield(0, catalog::elvish_mystic());
     }
     let cp = g.computed_permanent(nylea).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature),
+    assert!(cp.card_types().contains(&CardType::Creature),
         "Nylea is a creature once devotion ≥ 5");
     // Anthem: another creature you control gets +2/+0.
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -227,7 +227,7 @@ fn whip_of_erebos_grants_lifelink_to_your_creatures() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(0, catalog::whip_of_erebos());
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Lifelink));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Lifelink));
 }
 
 #[test]
@@ -236,7 +236,7 @@ fn hammer_of_purphoros_grants_haste() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(0, catalog::hammer_of_purphoros());
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Haste));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste));
 }
 
 #[test]
@@ -252,7 +252,7 @@ fn thassa_grants_unblockable_to_your_creature() {
     }).expect("Thassa's unblockable ability");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Unblockable));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Unblockable));
 }
 
 // ── Theros filler commons (devotion-shell bodies) ─────────────────────────────

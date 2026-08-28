@@ -349,7 +349,7 @@ fn dream_trawler_discard_grants_hexproof() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand - 1, "card discarded as the cost");
     assert!(
-        g.computed_permanent(dt).unwrap().keywords.contains(&crabomination::card::Keyword::Hexproof),
+        g.computed_permanent(dt).unwrap().keywords().contains(&crabomination::card::Keyword::Hexproof),
         "hexproof until end of turn"
     );
 }
@@ -508,7 +508,7 @@ fn alseid_grants_protection_from_chosen_color() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&crabomination::card::Keyword::Protection(Color::Red)),
         "bear protected from red"
     );
@@ -693,7 +693,7 @@ fn taranika_attack_trigger_untaps_and_buffs() {
     let c = g.computed_permanent(goat).unwrap();
     assert!(!g.battlefield_find(goat).unwrap().tapped, "untapped");
     assert_eq!((c.power, c.toughness), (4, 4), "base 4/4 until end of turn");
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Indestructible));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Indestructible));
 }
 
 /// Sweet Oblivion mills four and escapes from the graveyard.
@@ -1177,7 +1177,7 @@ fn favored_of_iroas_constellation_double_strike() {
     let ench = g.add_card_to_battlefield(0, catalog::escape_protocol());
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: ench }]);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(fav).unwrap().keywords.contains(&crabomination::card::Keyword::DoubleStrike));
+    assert!(g.computed_permanent(fav).unwrap().keywords().contains(&crabomination::card::Keyword::DoubleStrike));
 }
 
 /// Pheres-Band Brawler fights an opposing creature on ETB.
@@ -1234,7 +1234,7 @@ fn rage_scarred_berserker_grants_indestructible() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.power, 3, "+1/+0");
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Indestructible), "granted indestructible");
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Indestructible), "granted indestructible");
 }
 
 /// Leonin of the Lost Pride exiles an opposing graveyard card on death.
@@ -1271,7 +1271,7 @@ fn eutropia_constellation_counter_and_flying() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "+1/+1 counter");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
         "gains flying");
 }
 
@@ -1599,7 +1599,7 @@ fn skophos_warleader_sac_pumps_and_grants_menace() {
     assert!(g.battlefield_find(fodder).is_none(), "creature sacrificed");
     let c = g.compute_battlefield().into_iter().find(|c| c.id == leader).unwrap();
     assert_eq!(c.power, 5, "+1/+0");
-    assert!(c.keywords.contains(&Keyword::Menace), "gained menace");
+    assert!(c.keywords().contains(&Keyword::Menace), "gained menace");
 }
 
 /// Blight-Breath Catoblepas shrinks an opposing creature by your devotion to
@@ -1628,7 +1628,7 @@ fn nyleas_forerunner_grants_trample() {
     g.add_card_to_battlefield(0, catalog::nyleas_forerunner());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
-    assert!(c.keywords.contains(&Keyword::Trample), "other creature has trample");
+    assert!(c.keywords().contains(&Keyword::Trample), "other creature has trample");
 }
 
 // ── THB batch 7 ──────────────────────────────────────────────────────────────
@@ -1759,7 +1759,7 @@ fn sentinels_eyes_pumps_and_grants_vigilance() {
     drain_stack(&mut g);
     let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
-    assert!(c.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+    assert!(c.keywords().contains(&Keyword::Vigilance), "granted vigilance");
 }
 
 /// Triumphant Surge destroys a power-4+ creature and gains 3 life.
@@ -1916,7 +1916,7 @@ fn wrap_in_flames_pings_and_locks_blocking() {
     let dmg = g.battlefield_find(c1).expect("bear survives").damage;
     assert_eq!(dmg, 1, "took 1 damage");
     let cp = g.computed_permanent(c1).expect("computed");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::CantBlock), "can't block this turn");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::CantBlock), "can't block this turn");
 }
 
 // ── THB extra batch (modern_decks rebase) ───────────────────────────────────
@@ -1954,7 +1954,7 @@ fn gift_of_strength_pumps_and_grants_reach() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5), "+3/+3");
-    assert!(c.keywords.contains(&Keyword::Reach));
+    assert!(c.keywords().contains(&Keyword::Reach));
 }
 
 #[test]
@@ -1977,7 +1977,7 @@ fn karametras_blessing_protects_an_enchanted_creature() {
     }).expect("blessing");
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
-    assert!(c.keywords.contains(&Keyword::Indestructible) && c.keywords.contains(&Keyword::Hexproof),
+    assert!(c.keywords().contains(&Keyword::Indestructible) && c.keywords().contains(&Keyword::Hexproof),
         "enchanted creature gains hexproof + indestructible");
 }
 
@@ -2041,7 +2041,7 @@ fn escape_velocity_grants_haste() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.power, 3, "+1/+0");
-    assert!(c.keywords.contains(&Keyword::Haste));
+    assert!(c.keywords().contains(&Keyword::Haste));
 }
 
 #[test]
@@ -2060,7 +2060,7 @@ fn setessan_training_draws_on_etb_and_grants_trample() {
     }).expect("setessan training");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand, "aura left hand (-1), ETB drew (+1)");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 #[test]
@@ -2078,7 +2078,7 @@ fn staggering_insight_grants_lifelink() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
-    assert!(c.keywords.contains(&Keyword::Lifelink));
+    assert!(c.keywords().contains(&Keyword::Lifelink));
 }
 
 // ── THB fill batch tests ──────────────────────────────────────────────────────
@@ -2317,7 +2317,7 @@ fn aspect_of_manticore_grants_first_strike() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.power, 4, "+2/+0");
-    assert!(c.keywords.contains(&Keyword::FirstStrike), "first strike until EOT");
+    assert!(c.keywords().contains(&Keyword::FirstStrike), "first strike until EOT");
 }
 
 /// Commanding Presence is a +2/+2 first-strike aura.
@@ -2336,7 +2336,7 @@ fn commanding_presence_pumps_and_first_strike() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
-    assert!(c.keywords.contains(&Keyword::FirstStrike));
+    assert!(c.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Hydra's Growth adds a +1/+1 counter on enter, then doubles it at upkeep.
@@ -2404,7 +2404,7 @@ fn wings_of_hubris_grants_flying() {
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::Equip { equipment: wings, target: bear }).expect("equip");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Nexus Wardens gains 2 life on constellation.
@@ -2454,7 +2454,7 @@ fn sunmane_pegasus_gains_vigilance_lifelink() {
     .expect("activate pump");
     drain_stack(&mut g);
     let c = g.computed_permanent(peg).unwrap();
-    assert!(c.keywords.contains(&Keyword::Vigilance) && c.keywords.contains(&Keyword::Lifelink));
+    assert!(c.keywords().contains(&Keyword::Vigilance) && c.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Skola Grovedancer's activated mill puts a card in your graveyard.
@@ -2765,7 +2765,7 @@ fn terror_of_mount_velus_grants_team_double_strike() {
     let ctx = crabomination::game::effects::EffectContext::for_trigger(terror, 0, None, 0);
     g.resolve_effect(&trig, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::DoubleStrike), "bear gains double strike");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::DoubleStrike), "bear gains double strike");
 }
 
 /// Thundering Chariot becomes a creature once crewed.
@@ -2774,10 +2774,10 @@ fn thundering_chariot_crews_into_a_creature() {
     let mut g = two_player_game();
     let chariot = g.add_card_to_battlefield(0, catalog::thundering_chariot());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(chariot).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "vehicle is not a creature uncrewed");
+    assert!(!g.computed_permanent(chariot).unwrap().card_types().contains(&crabomination::card::CardType::Creature), "vehicle is not a creature uncrewed");
     g.perform_action(GameAction::Crew { vehicle: chariot, crew_creatures: vec![bear] })
         .expect("crew 1 with a 2-power bear");
-    assert!(g.computed_permanent(chariot).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "crewed vehicle is a creature");
+    assert!(g.computed_permanent(chariot).unwrap().card_types().contains(&crabomination::card::CardType::Creature), "crewed vehicle is a creature");
 }
 
 /// Wolfwillow Haven's enchanted land taps for an extra {G}.
@@ -2806,7 +2806,7 @@ fn mirror_shield_grants_toughness_and_hexproof() {
     g.perform_action(GameAction::Equip { equipment: shield, target: bear }).expect("equip {2}");
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.toughness, 4, "2/2 + 0/2");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Hexproof), "gains hexproof");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Hexproof), "gains hexproof");
 }
 
 /// Shimmerwing Chimera bounces another enchantment you control at upkeep.
@@ -2881,7 +2881,7 @@ fn impending_doom_burns_on_death() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
     let cp = g.computed_permanent(victim).unwrap();
     assert_eq!(cp.power, 5, "2/2 + 3/3");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::MustAttack));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::MustAttack));
     let life_before = g.players[1].life;
     let dies = catalog::impending_doom().equipped_bonus.unwrap().triggered_abilities[0].effect.clone();
     let ctx = crabomination::game::effects::EffectContext::for_trigger(victim, 1, None, 0);
@@ -2932,10 +2932,10 @@ fn sunlit_hoplite_first_strike_on_your_turn() {
     let mut g = two_player_game();
     let hoplite = g.add_card_to_battlefield(0, catalog::sunlit_hoplite());
     assert!(g.active_player_idx == 0);
-    assert!(g.computed_permanent(hoplite).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike),
+    assert!(g.computed_permanent(hoplite).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike),
         "first strike during your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(hoplite).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike),
+    assert!(!g.computed_permanent(hoplite).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike),
         "no first strike on opponent's turn");
 }
 
@@ -2951,9 +2951,9 @@ fn swimmer_in_nightmares_scales_and_evades() {
         g.players[1].graveyard.push(crabomination::card::CardInstance::new(id, catalog::grizzly_bears(), 1));
     }
     assert_eq!(g.computed_permanent(swimmer).unwrap().power, 4, "+3 with a ten-card graveyard");
-    assert!(!g.computed_permanent(swimmer).unwrap().keywords.contains(&crabomination::card::Keyword::Unblockable));
+    assert!(!g.computed_permanent(swimmer).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable));
     g.add_card_to_battlefield(0, catalog::ashiok_nightmare_weaver());
-    assert!(g.computed_permanent(swimmer).unwrap().keywords.contains(&crabomination::card::Keyword::Unblockable),
+    assert!(g.computed_permanent(swimmer).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable),
         "unblockable under Ashiok");
 }
 
@@ -3062,7 +3062,7 @@ fn commanding_presence_pumps() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::FirstStrike));
 }
 
 /// Furious Rise exiles a card to play while you control a big creature.
@@ -3159,8 +3159,8 @@ fn dalakos_equips_grant_flying_haste() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::Equip { equipment: boots, target: bear }).expect("equip");
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Flying), "equipped creature flies");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Haste), "equipped creature has haste");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying), "equipped creature flies");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste), "equipped creature has haste");
 }
 
 /// The Triumph of Anax IV makes your creature fight an opponent's.
@@ -3190,7 +3190,7 @@ fn triumph_of_anax_pumps_by_lore() {
     g.resolve_effect(&eff, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "2 + 1 lore counter");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Trample));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample));
 }
 
 /// Warden of the Chained can't attack without another big creature.
@@ -3198,10 +3198,10 @@ fn triumph_of_anax_pumps_by_lore() {
 fn warden_of_the_chained_needs_a_big_friend() {
     let mut g = two_player_game();
     let warden = g.add_card_to_battlefield(0, catalog::warden_of_the_chained());
-    assert!(g.computed_permanent(warden).unwrap().keywords.contains(&crabomination::card::Keyword::CantAttack),
+    assert!(g.computed_permanent(warden).unwrap().keywords().contains(&crabomination::card::Keyword::CantAttack),
         "can't attack alone");
     g.add_card_to_battlefield(0, catalog::terror_of_mount_velus()); // 5/5
-    assert!(!g.computed_permanent(warden).unwrap().keywords.contains(&crabomination::card::Keyword::CantAttack),
+    assert!(!g.computed_permanent(warden).unwrap().keywords().contains(&crabomination::card::Keyword::CantAttack),
         "can attack with a power-4+ ally");
 }
 
@@ -3410,7 +3410,7 @@ fn elspeth_undaunted_hero_ultimate_devotion_pump() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "2/2 + devotion-to-white 3");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Flying), "gains flying");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying), "gains flying");
 }
 
 /// Elspeth's Devotee tutors Elspeth, Undaunted Hero to hand on ETB.
@@ -3503,8 +3503,8 @@ fn ichthyomorphosis_makes_a_fish() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (0, 1), "base 0/1");
-    assert!(cp.keywords.is_empty(), "lost flying and vigilance");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Fish), "is a Fish");
+    assert!(cp.keywords().is_empty(), "lost flying and vigilance");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Fish), "is a Fish");
 }
 
 /// One with the Stars turns a creature into a noncreature enchantment.
@@ -3521,8 +3521,8 @@ fn one_with_the_stars_makes_an_enchantment() {
     }).expect("cast One with the Stars");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.card_types.contains(&CardType::Enchantment), "now an enchantment");
-    assert!(!cp.card_types.contains(&CardType::Creature), "no longer a creature");
+    assert!(cp.card_types().contains(&CardType::Enchantment), "now an enchantment");
+    assert!(!cp.card_types().contains(&CardType::Creature), "no longer a creature");
 }
 
 /// Heliod's Punishment strips the creature's abilities and stops it attacking
@@ -3540,9 +3540,9 @@ fn heliods_punishment_neutralizes() {
     }).expect("cast Heliod's Punishment");
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(!cp.keywords.contains(&crabomination::card::Keyword::Flying), "lost flying");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::CantAttack), "can't attack");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::CantBlock), "can't block");
+    assert!(!cp.keywords().contains(&crabomination::card::Keyword::Flying), "lost flying");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::CantAttack), "can't attack");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::CantBlock), "can't block");
 }
 
 /// Deathbellow War Cry tutors up to four Minotaurs straight onto the
@@ -3697,7 +3697,7 @@ fn flummoxed_cyclops_cant_block_a_swarm() {
             atk.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(0) }).collect(),
         )).expect("attack");
         drain_stack(&mut g);
-        g.computed_permanent(cyclops).unwrap().keywords.contains(&crabomination::card::Keyword::CantBlock)
+        g.computed_permanent(cyclops).unwrap().keywords().contains(&crabomination::card::Keyword::CantBlock)
     };
     assert!(!cant_block(1), "one attacker: can block");
     assert!(cant_block(2), "two attackers: can't block");
@@ -3981,7 +3981,7 @@ fn haktos_protection_from_each_mv_except_chosen() {
     let ctx = crabomination::game::effects::EffectContext::for_trigger(haktos, 0, None, 0);
     g.resolve_effect(&eff, &ctx).unwrap();
     assert!(
-        g.computed_permanent(haktos).unwrap().keywords.iter().any(|k|
+        g.computed_permanent(haktos).unwrap().keywords().iter().any(|k|
             matches!(k, crabomination::card::Keyword::ProtectionFromManaValueExcept(2))),
         "gained protection from each mana value other than 2");
     let mv2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // {1}{G} = MV 2
@@ -4095,14 +4095,14 @@ fn thassa_creature_only_at_devotion_five() {
     let mut g = two_player_game();
     let thassa = g.add_card_to_battlefield(0, catalog::thassa_deep_dwelling());
     let cp = g.computed_permanent(thassa).unwrap();
-    assert!(!cp.card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(!cp.card_types().contains(&crabomination::card::CardType::Creature),
         "devotion 1 (its own pip) — not a creature");
     // Two more Thassas' worth of blue pips… use Master of Waves-free route:
     // three more single-U permanents. Nadir Kraken has {1}{U}{U} (2 pips).
     g.add_card_to_battlefield(0, catalog::nadir_kraken());
     g.add_card_to_battlefield(0, catalog::nadir_kraken());
     let cp = g.computed_permanent(thassa).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature),
         "devotion 5 — creature (1 + 2 + 2 pips)");
 }
 
@@ -4152,8 +4152,8 @@ fn purphoros_sneaks_a_red_creature_in() {
     let mut g = two_player_game();
     let god = g.add_card_to_battlefield(0, catalog::purphoros_bronze_blooded());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
-    assert!(!g.computed_permanent(god).unwrap().keywords.contains(&Keyword::Haste), "not itself");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(god).unwrap().keywords().contains(&Keyword::Haste), "not itself");
     let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
@@ -4238,5 +4238,5 @@ fn bronzehide_lion_returns_as_aura() {
         card_id: lion, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate the Aura");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
 }

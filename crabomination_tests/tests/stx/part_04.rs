@@ -1566,7 +1566,7 @@ fn lorehold_vanquisher_attacks_gains_life() {
         "+1 life from attack trigger"
     );
     let view = g.computed_permanent(id).expect("Vanquisher on bf");
-    assert!(view.keywords.contains(&Keyword::FirstStrike));
+    assert!(view.keywords().contains(&Keyword::FirstStrike));
 }
 
 #[test]
@@ -1586,7 +1586,7 @@ fn prismari_skywatcher_pumps_self_on_instant_cast() {
     drain_stack(&mut g);
     let view = g.computed_permanent(id).expect("Skywatcher on bf");
     assert_eq!(view.power, 2, "1 → 2 power EOT");
-    assert!(view.keywords.contains(&Keyword::Flying));
+    assert!(view.keywords().contains(&Keyword::Flying));
 }
 
 #[test]

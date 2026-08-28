@@ -1531,7 +1531,7 @@ fn cr_613_7_later_removal_beats_earlier_static_grant() {
         }],
         ..Default::default()
     });
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
     let ctx = EffectContext::for_ability(bear, 0, None);
     g.resolve_effect(
         &Effect::LoseAllAbilities { what: Selector::This, duration: Duration::EndOfTurn },
@@ -1539,7 +1539,7 @@ fn cr_613_7_later_removal_beats_earlier_static_grant() {
     )
     .unwrap();
     assert!(
-        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        !g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "later RemoveAllAbilities applies after the earlier static grant"
     );
 }
@@ -1580,7 +1580,7 @@ fn cr_613_7e_attach_restamps_equipment_grant() {
         .unwrap();
     g.dispatch_triggers_for_events(&events);
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "post-attach grant beats the earlier removal (CR 613.7e)"
     );
 }
@@ -2398,8 +2398,8 @@ fn concordant_crossroads_grants_haste_to_all() {
     g.add_card_to_battlefield(0, catalog::concordant_crossroads());
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&crabomination::card::Keyword::Haste));
-    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&crabomination::card::Keyword::Haste));
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&crabomination::card::Keyword::Haste));
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&crabomination::card::Keyword::Haste));
 }
 
 // ── CR 121.5 / multi-pick reveals ────────────────────────────────────────────
@@ -2618,7 +2618,7 @@ fn cr_702_177_pacesetter_paragon_exhaust_grants_double_strike() {
     drain_stack(&mut g);
     let c = g.computed_permanent(p).unwrap();
     assert_eq!((c.power, c.toughness), (3, 4), "got a +1/+1 counter");
-    assert!(c.keywords.contains(&Keyword::DoubleStrike), "gained double strike EOT");
+    assert!(c.keywords().contains(&Keyword::DoubleStrike), "gained double strike EOT");
 }
 
 /// Greenbelt Guardian's non-exhaust {G} ability grants trample repeatedly;
@@ -2638,7 +2638,7 @@ fn cr_702_177_greenbelt_guardian_repeatable_and_exhaust_abilities() {
         }).expect("repeatable trample grant");
         drain_stack(&mut g);
     }
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
     // Exhaust ability (index 1): +3/+3 once.
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
@@ -2732,7 +2732,7 @@ fn cr_702_177_mai_jaded_edge_double_strike_counter() {
         card_id: m, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("exhaust");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(m).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(m).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "gained a double strike counter");
 }
 
@@ -3318,7 +3318,7 @@ fn cr_613_aura_set_base_pt_then_counter() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(host).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 2), "base 0/1 (7b) + counter (7c)");
-    assert!(cp.keywords.is_empty(), "abilities removed (layer 6)");
+    assert!(cp.keywords().is_empty(), "abilities removed (layer 6)");
 }
 
 // ── CR 605.1a — board-conditional mana ability stays a mana ability ───────────
@@ -3415,12 +3415,12 @@ fn cr_700_5_altar_devotion_bonus_flips_god_to_creature() {
     g.add_card_to_battlefield(0, catalog::soul_warden());
     g.add_card_to_battlefield(0, catalog::soul_warden()); // 3 + Heliod's W = 4 devotion
     assert!(
-        !g.computed_permanent(heliod).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+        !g.computed_permanent(heliod).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "devotion 4 < 5 — Heliod isn't a creature"
     );
     g.add_card_to_battlefield(0, catalog::altar_of_the_pantheon()); // +1 → 5
     assert!(
-        g.computed_permanent(heliod).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+        g.computed_permanent(heliod).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "Altar's +1 devotion (CR 700.5) reaches 5 — Heliod is now a creature"
     );
 }
@@ -3560,7 +3560,7 @@ fn cr_702_160_prototype_sets_cost_color_and_size_keeping_abilities() {
     let cp = g.computed_permanent(proto).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size (CR 702.160c)");
     assert_eq!(cp.colors.to_vec(), vec![Color::Black], "prototype color follows its cost");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Deathtouch), "abilities/types kept");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Deathtouch), "abilities/types kept");
 }
 
 // ── CR 702.21 — Ward (cost = source's power) ─────────────────────────────────
@@ -3644,7 +3644,7 @@ fn cr_702_31_horsemanship_only_blocked_by_horsemanship() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, &acomp.keywords, acomp.colors, acomp.power),
+        binst, &bcomp, acomp.keywords(), acomp.colors, acomp.power),
         "a non-horsemanship creature can't block a horsemanship attacker");
 }
 
@@ -3661,7 +3661,7 @@ fn cr_702_28b_shadow_creature_cant_block_nonshadow() {
     let binst = g.battlefield_find(blk).unwrap();
     let bcomp = g.computed_permanent(blk).unwrap();
     assert!(!crabomination::game::can_block_attacker_computed(
-        binst, &bcomp, &acomp.keywords, acomp.colors, acomp.power),
+        binst, &bcomp, acomp.keywords(), acomp.colors, acomp.power),
         "a shadow creature can't block a non-shadow attacker");
 }
 
@@ -4731,7 +4731,7 @@ fn cr_702_147_decayed_creature_cant_block() {
     let ctx = crabomination::game::effects::EffectContext::for_trigger(proc, 1, None, 0);
     g.resolve_effect(&trig, &ctx).unwrap();
     let zombie = g.battlefield.iter().find(|c| c.is_token).map(|c| c.id).unwrap();
-    assert!(g.computed_permanent(zombie).unwrap().keywords.contains(&Keyword::Decayed),
+    assert!(g.computed_permanent(zombie).unwrap().keywords().contains(&Keyword::Decayed),
         "token carries Decayed");
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(attacker);
@@ -4864,7 +4864,7 @@ fn cr_706_4_die_result_trigger_grants_trample() {
         let evs = g.resolve_effect(&effect, &ctx).unwrap();
         g.dispatch_triggers_for_events(&evs);
         drain_stack(&mut g);
-        g.computed_permanent(gp).unwrap().keywords.contains(&Keyword::Trample)
+        g.computed_permanent(gp).unwrap().keywords().contains(&Keyword::Trample)
     };
     assert!(roll(5), "rolling a 5 grants trample");
     assert!(!roll(3), "rolling a 3 does not");
@@ -5322,7 +5322,7 @@ fn cr_701_54c_ring_bearer_is_legendary() {
     g.ring_tempts(0, &mut vec![]);
     assert_eq!(g.effective_ring_bearer(0), Some(bear));
     let cp = g.compute_battlefield();
-    assert!(cp.iter().find(|c| c.id == bear).unwrap().supertypes.contains(&Supertype::Legendary),
+    assert!(cp.iter().find(|c| c.id == bear).unwrap().supertypes().contains(&Supertype::Legendary),
         "Ring-bearer gains the Legendary supertype");
 }
 
@@ -5430,13 +5430,13 @@ fn descend_8_grants_unblockable_only_at_eight_permanent_cards() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(hulk).unwrap().definition.name, "Watertight Gondola");
     assert!(
-        !g.computed_permanent(hulk).unwrap().keywords.contains(&Keyword::Unblockable),
+        !g.computed_permanent(hulk).unwrap().keywords().contains(&Keyword::Unblockable),
         "descend 7 (instant doesn't count) → still blockable",
     );
     // Add an eighth permanent card → descend 8 flips the static on.
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     assert!(
-        g.computed_permanent(hulk).unwrap().keywords.contains(&Keyword::Unblockable),
+        g.computed_permanent(hulk).unwrap().keywords().contains(&Keyword::Unblockable),
         "descend 8 → unblockable",
     );
 }
@@ -5674,11 +5674,11 @@ fn cr_702_122_crew_animates_vehicle() {
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
-    assert!(!g.computed_permanent(veh).unwrap().card_types.contains(&CardType::Creature),
+    assert!(!g.computed_permanent(veh).unwrap().card_types().contains(&CardType::Creature),
         "uncrewed Vehicle is not a creature");
     g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![crewer] })
         .expect("crew");
-    assert!(g.computed_permanent(veh).unwrap().card_types.contains(&CardType::Creature),
+    assert!(g.computed_permanent(veh).unwrap().card_types().contains(&CardType::Creature),
         "crewed Vehicle becomes an artifact creature");
 }
 
@@ -5916,7 +5916,7 @@ fn cr_305_7_type_change_swaps_lord_applicability() {
     }).expect("Turn to Frog castable");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bears).unwrap();
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Frog], "now a Frog");
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Frog], "now a Frog");
     // Base 1/1 (Turn to Frog) + the Frog lord's +1/+1 → 2/2.
     assert_eq!((cp.power, cp.toughness), (2, 2), "the Frog lord now buffs the new Frog");
 }
@@ -6095,7 +6095,7 @@ fn cr_509_1b_cant_block_grant_rejects_the_blocker() {
         card_id: blast, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Hazardous Blast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::CantBlock));
     // Attack with a creature; the CantBlock wall can't be declared as a blocker.
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(attacker);
@@ -6180,7 +6180,7 @@ fn cr_115_spell_targets_a_creature_and_a_player() {
         x_value: None,
     }).expect("two-kind targeting accepted");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&crabomination::card::Keyword::Menace));
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&crabomination::card::Keyword::Menace));
     assert_eq!(g.computed_permanent(theirs).unwrap().power, 4, "the player slot resolved");
 }
 
@@ -6259,9 +6259,9 @@ fn cr_701_66a_earthbend_lifecycle_and_return_on_death() {
     g.fire_self_etb_triggers(ekg, 0);
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature), "land became a creature");
-    assert!(cp.card_types.contains(&CardType::Land), "stays a land");
-    assert!(cp.keywords.contains(&Keyword::Haste), "gains haste");
+    assert!(cp.card_types().contains(&CardType::Creature), "land became a creature");
+    assert!(cp.card_types().contains(&CardType::Land), "stays a land");
+    assert!(cp.keywords().contains(&Keyword::Haste), "gains haste");
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "earthbend 2 counters");
     // Kill it → returns to the battlefield tapped.
@@ -6291,7 +6291,7 @@ fn cr_704_5f_zero_toughness_animated_land_dies() {
     // The earthbend return brings it back tapped (it "died"), so it's a land
     // again — the key assertion is that the 0/0 creature didn't linger.
     assert!(!g.computed_permanent(land)
-        .map(|c| c.card_types.contains(&crabomination::card::CardType::Creature) && c.toughness == 0)
+        .map(|c| c.card_types().contains(&crabomination::card::CardType::Creature) && c.toughness == 0)
         .unwrap_or(false), "no 0/0 creature lingers on the battlefield");
 }
 
@@ -6318,7 +6318,7 @@ fn cr_613_counter_gated_creature_type_composes_with_pt() {
     c.add_counters(CounterType::Fire, 3);
     c.add_counters(CounterType::PlusOnePlusOne, 1);
     let cp = g.computed_permanent(wb).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature), "layer-4 AddCardType from 3 fire counters");
+    assert!(cp.card_types().contains(&CardType::Creature), "layer-4 AddCardType from 3 fire counters");
     assert_eq!((cp.power, cp.toughness), (5, 4), "printed 4/3 + a +1/+1 counter");
 }
 
@@ -6719,7 +6719,7 @@ fn cr_702_49_ninjutsu_entrant_gets_its_enter_counter() {
         .expect("Ninjutsu on an unblocked attacker");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(kappa).unwrap().keywords.contains(&Keyword::Deathtouch),
+        g.computed_permanent(kappa).unwrap().keywords().contains(&Keyword::Deathtouch),
         "the Ninjutsu'd Kappa entered with its deathtouch counter"
     );
 }
@@ -6736,7 +6736,7 @@ fn cr_509_1b_menace_rejects_a_lone_blocker() {
     let nezumi = g.add_card_to_battlefield(0, catalog::nezumi_bladeblesser());
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(nezumi);
-    assert!(g.computed_permanent(nezumi).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(nezumi).unwrap().keywords().contains(&Keyword::Menace));
     g.attacking = vec![Attack { attacker: nezumi, target: AttackTarget::Player(1) }];
     g.step = TurnStep::DeclareBlockers;
     g.priority.player_with_priority = 1;
@@ -7173,18 +7173,18 @@ fn cr_702_166_corrupted_gates_static_keywords() {
     let mut g = two_player_game();
     let skirge = g.add_card_to_battlefield(0, catalog::bonepicker_skirge());
     // No poison yet → neither keyword is live.
-    let kw = g.computed_permanent(skirge).unwrap().keywords.clone();
+    let kw = g.computed_permanent(skirge).unwrap().keywords().to_vec();
     assert!(!kw.contains(&Keyword::Deathtouch), "no deathtouch below 3 poison");
     assert!(!kw.contains(&Keyword::Lifelink), "no lifelink below 3 poison");
     // Opponent reaches 3 poison → Corrupted turns on.
     g.players[1].poison_counters = 3;
-    let kw = g.computed_permanent(skirge).unwrap().keywords.clone();
+    let kw = g.computed_permanent(skirge).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::Deathtouch), "deathtouch live at 3 poison");
     assert!(kw.contains(&Keyword::Lifelink), "lifelink live at 3 poison");
     // Two poison is below the threshold.
     g.players[1].poison_counters = 2;
     assert!(
-        !g.computed_permanent(skirge).unwrap().keywords.contains(&Keyword::Deathtouch),
+        !g.computed_permanent(skirge).unwrap().keywords().contains(&Keyword::Deathtouch),
         "threshold is strictly three",
     );
 }
@@ -7556,7 +7556,7 @@ fn cr_613_opalescence_animated_enchantment_dies_to_lethal() {
     g.add_card_to_battlefield(0, catalog::opalescence());
     let nm = g.add_card_to_battlefield(0, catalog::nevermore());
     let cp = g.computed_permanent(nm).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature) && cp.toughness == 3);
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.toughness == 3);
     g.battlefield_find_mut(nm).unwrap().damage = 3; // lethal for the 3/3
     g.check_state_based_actions();
     assert!(g.battlefield_find(nm).is_none(), "the 3/3 animated enchantment dies");
@@ -7775,7 +7775,7 @@ fn cr_122_1b_keyword_counter_grants_keyword() {
     assert_eq!(g.battlefield_find(ally).unwrap().keyword_counters
         .get(&crabomination::card::Keyword::Vigilance).copied().unwrap_or(0), 1,
         "a vigilance counter is on the creature");
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&crabomination::card::Keyword::Vigilance),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&crabomination::card::Keyword::Vigilance),
         "the keyword counter grants vigilance");
 }
 
@@ -8893,8 +8893,8 @@ fn cr_613_4_animated_vehicle_keeps_artifact_type() {
     .expect("exhaust animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(sub).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Artifact), "still an artifact (additive)");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact), "still an artifact (additive)");
 }
 
 // ── CR 701.42 — Surveil ──────────────────────────────────────────────────────
@@ -9002,10 +9002,10 @@ fn cr_301_7_conditional_vehicle_is_creature_only_off_turn() {
     let mut g = two_player_game();
     let mangler = g.add_card_to_battlefield(0, catalog::midnight_mangler());
     g.active_player_idx = 0;
-    assert!(!g.computed_permanent(mangler).unwrap().card_types.contains(&CardType::Creature),
+    assert!(!g.computed_permanent(mangler).unwrap().card_types().contains(&CardType::Creature),
         "not a creature on its controller's turn");
     g.active_player_idx = 1;
-    assert!(g.computed_permanent(mangler).unwrap().card_types.contains(&CardType::Creature),
+    assert!(g.computed_permanent(mangler).unwrap().card_types().contains(&CardType::Creature),
         "an artifact creature during other players' turns");
 }
 
@@ -9939,8 +9939,8 @@ fn cr_701_60_suspected_creature_has_menace_and_cant_block() {
         &crabomination::game::effects::EffectContext { targets: vec![crabomination::game::types::Target::Permanent(bear)], ..crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0) },
     ).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Menace), "suspected → menace");
-    assert!(cp.keywords.contains(&Keyword::CantBlock), "suspected → can't block");
+    assert!(cp.keywords().contains(&Keyword::Menace), "suspected → menace");
+    assert!(cp.keywords().contains(&Keyword::CantBlock), "suspected → can't block");
 }
 
 /// CR 614 — Doorkeeper Thrull suppresses ETB triggers of entering *artifacts*
@@ -10035,11 +10035,11 @@ fn cr_122_5_move_all_counters_relocates_keyword_counters() {
         &ctx_a,
     )
     .unwrap();
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Flying));
     let ctx_move = EffectContext { targets: vec![Target::Permanent(b)], ..EffectContext::for_ability(a, 0, None) };
     g.resolve_effect(&Effect::MoveAllCounters { from: Selector::This, to: Selector::Target(0) }, &ctx_move).unwrap();
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Flying), "keyword counter relocated");
-    assert!(!g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Flying), "source lost it");
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Flying), "keyword counter relocated");
+    assert!(!g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Flying), "source lost it");
 }
 
 // ── CR 702.166 — manifest dread N times, then counters on those creatures ──
@@ -10534,7 +10534,7 @@ fn cr_613_8_pump_condition_sees_a_layer_four_type_change() {
     g.add_card_to_battlefield(0, catalog::forest());
     let cp = g.computed_permanent(mongrel).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "no artifact yet, no pump");
-    assert!(!cp.keywords.contains(&crabomination::card::Keyword::Trample));
+    assert!(!cp.keywords().contains(&crabomination::card::Keyword::Trample));
 
     g.add_card_to_battlefield(1, catalog::mycosynth_lattice());
     let cp = g.computed_permanent(mongrel).unwrap();
@@ -10544,7 +10544,7 @@ fn cr_613_8_pump_condition_sees_a_layer_four_type_change() {
         "CR 613.8: layer 4 makes the Forest an artifact, so the layer-7 condition holds",
     );
     assert!(
-        cp.keywords.contains(&crabomination::card::Keyword::Trample),
+        cp.keywords().contains(&crabomination::card::Keyword::Trample),
         "the same condition gates the keyword half of the grant",
     );
 }

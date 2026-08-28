@@ -319,7 +319,7 @@ fn voyager_drake_grants_flying_per_kick() {
     .expect("cast kicked twice");
     drain_stack(&mut g);
     for id in [a, b] {
-        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying));
     }
 }
 
@@ -464,7 +464,7 @@ fn horizon_drake_has_protection_from_lands() {
     let mut g = two_player_game();
     let drake = g.add_card_to_battlefield(0, catalog::horizon_drake());
     let cp = g.computed_permanent(drake).unwrap();
-    assert!(cp.keywords.contains(&Keyword::ProtectionFromCardType(CardType::Land)));
+    assert!(cp.keywords().contains(&Keyword::ProtectionFromCardType(CardType::Land)));
 }
 
 /// Summit Apes has menace only while you control a Mountain.
@@ -472,9 +472,9 @@ fn horizon_drake_has_protection_from_lands() {
 fn summit_apes_needs_a_mountain() {
     let mut g = two_player_game();
     let apes = g.add_card_to_battlefield(0, catalog::summit_apes());
-    assert!(!g.computed_permanent(apes).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(!g.computed_permanent(apes).unwrap().keywords().contains(&Keyword::Menace));
     g.add_card_to_battlefield(0, catalog::mountain());
-    assert!(g.computed_permanent(apes).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(apes).unwrap().keywords().contains(&Keyword::Menace));
 }
 
 /// Terra Eternal makes every land indestructible, both players'.
@@ -484,7 +484,7 @@ fn terra_eternal_protects_all_lands() {
     g.add_card_to_battlefield(0, catalog::terra_eternal());
     let theirs = g.add_card_to_battlefield(1, catalog::mountain());
     assert!(
-        g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Indestructible),
+        g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Indestructible),
         "their land is indestructible too"
     );
 }
@@ -499,7 +499,7 @@ fn wind_zendikon_returns_the_land() {
     cast(&mut g, aura, Some(Target::Permanent(land)));
     let cp = g.computed_permanent(land).expect("still there");
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     let mut ev = vec![];
     g.destroy_permanent(land, false, &mut ev);
     ev.append(&mut g.check_state_based_actions());
@@ -588,7 +588,7 @@ fn vastwood_animist_scales_with_allies() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2), "two Allies");
-    assert!(cp.card_types.contains(&CardType::Land), "it's still a land");
+    assert!(cp.card_types().contains(&CardType::Land), "it's still a land");
 }
 
 /// Razor Boomerang pings and bounces itself back to hand.
@@ -646,7 +646,7 @@ fn wwk_utility_lands_enter_tapped_with_riders() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(steppe).unwrap().tapped, "enters tapped");
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.iter().any(|k| matches!(
+        g.computed_permanent(bear).unwrap().keywords().iter().any(|k| matches!(
             k,
             Keyword::Protection(Color::Red)
         )),
@@ -658,7 +658,7 @@ fn wwk_utility_lands_enter_tapped_with_riders() {
     g.players[0].lands_played_this_turn = 0;
     g.perform_action(GameAction::PlayLand(spires)).expect("play");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// The landfall untappers (Scrib Nibblers, Tideforce Elemental) untap on a land

@@ -253,7 +253,7 @@ fn cloudreach_cavalry_needs_a_bird() {
     assert_eq!(power_of(&g, cavalry), 1);
     let bird = g.add_card_to_battlefield(0, catalog::aven_envoy());
     assert_eq!(power_of(&g, cavalry), 3);
-    assert!(g.computed_permanent(cavalry).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(cavalry).unwrap().keywords().contains(&Keyword::Flying));
     g.remove_from_battlefield_to_graveyard_raw(bird);
     assert_eq!(power_of(&g, cavalry), 1, "the bonus is conditional");
 }
@@ -463,7 +463,7 @@ fn clickslither_eats_a_goblin() {
     activate(&mut g, 0, click, 0, None);
     assert!(g.battlefield_find(goblin).is_none(), "the Goblin was the cost");
     assert_eq!(power_of(&g, click), 5);
-    assert!(g.computed_permanent(click).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(click).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Goblin Firebug takes a land with it when it leaves.

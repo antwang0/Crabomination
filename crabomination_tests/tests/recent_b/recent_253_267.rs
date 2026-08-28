@@ -28,7 +28,7 @@ mod recent253 {
         .expect("activate the deathtouch ability");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch),
+            g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch),
             "bear gained deathtouch",
         );
     }
@@ -53,7 +53,7 @@ mod recent253 {
         g.resolve_effect(&ability.effect, &ctx).unwrap();
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(ezrim).unwrap().keywords.contains(&Keyword::Lifelink),
+            g.computed_permanent(ezrim).unwrap().keywords().contains(&Keyword::Lifelink),
             "Ezrim gained the chosen keyword (lifelink)",
         );
     }
@@ -527,14 +527,14 @@ mod recent259 {
         g.add_card_to_library(0, catalog::island());
         let base = g.computed_permanent(id).unwrap();
         assert_eq!((base.power, base.toughness), (2, 5), "2/5 while the library has cards");
-        assert!(!base.keywords.contains(&Keyword::Flying), "no flying yet");
+        assert!(!base.keywords().contains(&Keyword::Flying), "no flying yet");
 
         g.players[0].library.clear();
         let big = g.computed_permanent(id).unwrap();
         assert_eq!((big.power, big.toughness), (10, 10), "10/10 with an empty library");
-        assert!(big.keywords.contains(&Keyword::Flying), "gained flying");
-        assert!(big.keywords.contains(&Keyword::Vigilance), "gained vigilance");
-        assert!(big.keywords.contains(&Keyword::Hexproof), "still hexproof");
+        assert!(big.keywords().contains(&Keyword::Flying), "gained flying");
+        assert!(big.keywords().contains(&Keyword::Vigilance), "gained vigilance");
+        assert!(big.keywords().contains(&Keyword::Hexproof), "still hexproof");
     }
 }
 
@@ -583,7 +583,7 @@ mod recent260 {
         .expect("activate the must-be-blocked ability");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(anzrag).unwrap().keywords.contains(&Keyword::MustBeBlocked),
+            g.computed_permanent(anzrag).unwrap().keywords().contains(&Keyword::MustBeBlocked),
             "Anzrag must be blocked this turn",
         );
     }
@@ -694,7 +694,7 @@ mod recent264 {
     use crabomination::game::{drain_stack, two_player_game};
 
     fn kw(g: &crabomination::game::GameState, id: crabomination::card::CardId, k: Keyword) -> bool {
-        g.computed_permanent(id).is_some_and(|cp| cp.keywords.contains(&k))
+        g.computed_permanent(id).is_some_and(|cp| cp.keywords().contains(&k))
     }
 
     /// Alabaster Host Sanctifier is a 2/2 with lifelink.
@@ -901,7 +901,7 @@ mod recent264 {
         g.resolve_effect(&effect, &ctx).unwrap();
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "+1/+0");
-        assert!(cp.keywords.contains(&Keyword::FirstStrike));
+        assert!(cp.keywords().contains(&Keyword::FirstStrike));
     }
 
     /// Cosmic Hunger makes your creature deal its power to another creature.
@@ -977,7 +977,7 @@ mod recent265 {
     use crabomination::game::{drain_stack, two_player_game};
 
     fn kw(g: &crabomination::game::GameState, id: crabomination::card::CardId, k: Keyword) -> bool {
-        g.computed_permanent(id).is_some_and(|cp| cp.keywords.contains(&k))
+        g.computed_permanent(id).is_some_and(|cp| cp.keywords().contains(&k))
     }
 
     /// A resolution context whose source (and kicked flag) is `id`.
@@ -1155,7 +1155,7 @@ mod recent265 {
         g.resolve_effect(&effect, &ctx).unwrap();
         let cp = g.computed_permanent(id).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 3), "+1/+1 when kicked");
-        assert!(cp.keywords.contains(&Keyword::Haste));
+        assert!(cp.keywords().contains(&Keyword::Haste));
     }
 
     /// Vineshaper Prodigy digs three when kicked.
@@ -1230,7 +1230,7 @@ mod recent266 {
     use crabomination::game::{drain_stack, two_player_game};
 
     fn kw(g: &crabomination::game::GameState, id: crabomination::card::CardId, k: Keyword) -> bool {
-        g.computed_permanent(id).is_some_and(|cp| cp.keywords.contains(&k))
+        g.computed_permanent(id).is_some_and(|cp| cp.keywords().contains(&k))
     }
 
     /// Fungal Infection shrinks a creature and makes a Saproling.
@@ -1287,7 +1287,7 @@ mod recent266 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(boar).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "boar pumped to 3/3");
-        assert!(cp.keywords.contains(&Keyword::Vigilance), "gained vigilance");
+        assert!(cp.keywords().contains(&Keyword::Vigilance), "gained vigilance");
     }
 
     /// Might of Murasa gives +3/+3, or +5/+5 when kicked.

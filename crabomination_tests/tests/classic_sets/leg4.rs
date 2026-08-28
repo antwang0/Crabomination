@@ -168,7 +168,7 @@ fn glyph_of_delusion_locks_the_blocked_creature() {
     assert!(
         g.computed_permanent(attacker)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::DoesntUntapWhileCounter(CounterType::Glyph))
     );
 }

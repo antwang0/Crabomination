@@ -29,8 +29,8 @@ fn woodwraith_corrupter_animates_a_forest() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(forest).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "Forest is a 4/4");
-    assert!(cp.card_types.contains(&CardType::Creature), "now a creature");
-    assert!(cp.subtypes.land_types.contains(&LandType::Forest), "still a Forest land");
+    assert!(cp.card_types().contains(&CardType::Creature), "now a creature");
+    assert!(cp.subtypes().land_types.contains(&LandType::Forest), "still a Forest land");
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn enemy_of_the_guildpact_has_protection_from_multicolored() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let e = g.add_card_to_battlefield(0, catalog::enemy_of_the_guildpact());
-    assert!(g.computed_permanent(e).unwrap().keywords.contains(&Keyword::ProtectionFromMulticolored));
+    assert!(g.computed_permanent(e).unwrap().keywords().contains(&Keyword::ProtectionFromMulticolored));
 }
 
 #[test]

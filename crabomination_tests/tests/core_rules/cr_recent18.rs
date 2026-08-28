@@ -28,8 +28,8 @@ fn cr_305_6_realmwright_land_taps_for_chosen_color() {
     g.move_card_to_battlefield_for_test(0, catalog::realmwright());
     drain_stack(&mut g);
     let cp = g.computed_permanent(plains).unwrap();
-    assert!(cp.subtypes.land_types.contains(&LandType::Island), "gained Island");
-    assert!(cp.subtypes.land_types.contains(&LandType::Plains), "kept Plains");
+    assert!(cp.subtypes().land_types.contains(&LandType::Island), "gained Island");
+    assert!(cp.subtypes().land_types.contains(&LandType::Plains), "kept Plains");
     g.auto_tap_for_cost(0, &mana::cost(&[mana::u()]));
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "taps for blue");
 }

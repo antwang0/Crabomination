@@ -1455,7 +1455,7 @@ fn prismari_stormcaller_b169_pumps_and_grants_haste_on_cast() {
     let bf = g.compute_battlefield();
     let sc = bf.iter().find(|p| p.id == id).expect("stormcaller alive");
     assert_eq!(sc.power, 4); // 3 + 1
-    assert!(sc.keywords.contains(&Keyword::Haste));
+    assert!(sc.keywords().contains(&Keyword::Haste));
 }
 
 #[test]

@@ -24,7 +24,7 @@ fn cr_509_1c_granted_menace_requires_two_blockers() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::angrath_captain_of_chaos());
     let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // gains menace from Angrath
-    assert!(g.computed_permanent(atk).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(atk).unwrap().keywords().contains(&Keyword::Menace));
     let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(atk);

@@ -73,7 +73,7 @@ fn keyword_bodies_are_printed_correctly() {
         let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         assert!(
-            g.computed_permanent(id).expect(name).keywords.contains(&kw),
+            g.computed_permanent(id).expect(name).keywords().contains(&kw),
             "{name} is missing {kw:?}",
         );
     }
@@ -262,7 +262,7 @@ fn wormwood_treefolk_buys_forestwalk_with_life() {
     assert!(
         g.computed_permanent(tree)
             .expect("treefolk")
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest)),
     );
     assert_eq!(g.players[0].life, 18);
@@ -353,7 +353,7 @@ fn hidden_path_walks_every_green_creature() {
     assert!(
         g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest)),
     );
 }
@@ -437,7 +437,7 @@ fn tower_of_coireall_walks_past_walls() {
     assert!(
         g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::CantBeBlockedByCreatureType(
                 crabomination::card::CreatureType::Wall,
             )),
@@ -589,7 +589,7 @@ fn scarwood_hag_grants_then_strips_forestwalk() {
     assert!(
         g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(LandType::Forest))
     );
     g.battlefield_find_mut(hag).expect("hag").tapped = false;
@@ -597,7 +597,7 @@ fn scarwood_hag_grants_then_strips_forestwalk() {
     assert!(
         !g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(LandType::Forest))
     );
 }
@@ -843,7 +843,7 @@ fn tangle_kelp_taps_on_entry() {
     assert!(
         g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::DoesntUntapIfAttackedLastTurn)
     );
 }
@@ -1027,7 +1027,7 @@ fn spitting_slug_hands_out_first_strike_when_the_toll_is_declined() {
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     // Seat 1 can't pay {1}{G}, so the attacker gets first strike too.
-    assert!(g.computed_permanent(bear).expect("bear").keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(bear).expect("bear").keywords().contains(&Keyword::FirstStrike));
 }
 
 #[test]

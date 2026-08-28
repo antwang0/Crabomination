@@ -140,7 +140,7 @@ fn winter_grants_ward_to_artifacts() {
     let mut g = main_phase();
     etb(&mut g, catalog::winter_cursed_rider());
     let lotus = g.add_card_to_battlefield(0, catalog::radiant_lotus());
-    let kws = g.computed_permanent(lotus).unwrap().keywords.clone();
+    let kws = g.computed_permanent(lotus).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Ward(WardCost::Life(2))));
 }
 
@@ -268,8 +268,8 @@ fn push_the_limit_reanimates_the_vehicles() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == chariot), "the Vehicle came back");
     let view = g.computed_permanent(chariot).unwrap();
-    assert!(view.card_types.contains(&CardType::Creature), "animated");
-    assert!(view.keywords.contains(&Keyword::Haste));
+    assert!(view.card_types().contains(&CardType::Creature), "animated");
+    assert!(view.keywords().contains(&Keyword::Haste));
 }
 
 /// Rise from the Wreck's four graveyard slots are all declinable.
@@ -301,7 +301,7 @@ fn oviya_grants_trample_to_attackers() {
     g.step = TurnStep::DeclareAttackers;
     g.declare_attackers(vec![Attack { attacker: bears, target: AttackTarget::Player(1) }])
         .expect("attack");
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Lifecraft Engine makes your Vehicles the chosen type and pumps that type.
@@ -318,7 +318,7 @@ fn lifecraft_engine_types_and_pumps_the_chosen_type() {
     assert!(
         g.computed_permanent(chariot)
             .unwrap()
-            .subtypes
+            .subtypes()
             .creature_types
             .contains(&crabomination::card::CreatureType::Bear),
         "the Vehicle joined the chosen type"
@@ -445,7 +445,7 @@ fn chandra_spark_hunter_builds_and_animates_a_vehicle() {
     };
     g.resolve_effect(&animate, &ctx).unwrap();
     let view = g.computed_permanent(token).unwrap();
-    assert!(view.card_types.contains(&CardType::Creature) && view.keywords.contains(&Keyword::Haste));
+    assert!(view.card_types().contains(&CardType::Creature) && view.keywords().contains(&Keyword::Haste));
 }
 
 /// Ketramose is combat-locked until exile is seven deep, and draws off exiles

@@ -229,8 +229,8 @@ fn amphibian_downpour_makes_a_vanilla_frog() {
     cast(&mut g, aura, Some(Target::Permanent(angel)));
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "base 1/1");
-    assert!(cp.keywords.is_empty(), "lost all abilities");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Frog), "is a Frog");
+    assert!(cp.keywords().is_empty(), "lost all abilities");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Frog), "is a Frog");
 }
 
 /// Herigast's cast trigger wheels your hand into three fresh cards.
@@ -411,7 +411,7 @@ fn collective_resistance_grants_protection() {
     }).expect("cast protection mode");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Hexproof) && cp.keywords.contains(&Keyword::Indestructible),
+    assert!(cp.keywords().contains(&Keyword::Hexproof) && cp.keywords().contains(&Keyword::Indestructible),
         "gained hexproof + indestructible");
 }
 

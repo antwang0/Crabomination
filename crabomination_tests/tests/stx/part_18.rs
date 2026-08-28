@@ -731,7 +731,7 @@ fn pump_auras_grant_lifelink_and_stats() {
         let b = computed.iter().find(|c| c.id == bear).unwrap();
         assert_eq!(b.power, p);
         assert_eq!(b.toughness, t);
-        assert!(b.keywords.contains(&Keyword::Lifelink));
+        assert!(b.keywords().contains(&Keyword::Lifelink));
     }
 }
 
@@ -966,7 +966,7 @@ fn lorehold_battlemage_b151_etb_grants_vigilance() {
     }).expect("Battlemage castable");
     drain_stack(&mut g);
     let computed = g.computed_permanent(target).expect("target computed");
-    assert!(computed.keywords.contains(&Keyword::Vigilance));
+    assert!(computed.keywords().contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -1483,7 +1483,7 @@ fn lorehold_smiterite_b154_has_haste_and_self_pumps() {
     drain_stack(&mut g);
     let pt = g.computed_permanent(id).map(|cp| (cp.power, cp.toughness));
     assert_eq!(pt, Some((4, 2)), "Smiterite (3/2 + magecraft +1/+0) = 4/2");
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 #[test]

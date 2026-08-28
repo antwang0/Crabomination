@@ -478,7 +478,7 @@ fn urza_chief_artificer_grants_menace_and_makes_scaling_construct() {
     // An artifact creature you control gains menace.
     let memnite = g.add_card_to_battlefield(0, catalog::memnite()); // 1/1 artifact creature
     let cp = g.compute_battlefield();
-    assert!(cp.iter().find(|c| c.id == memnite).unwrap().keywords.contains(&Keyword::Menace),
+    assert!(cp.iter().find(|c| c.id == memnite).unwrap().keywords().contains(&Keyword::Menace),
         "artifact creatures you control have menace");
     // End step → a Construct sized by artifacts you control (Urza is not an
     // artifact; Memnite + the Construct itself + ... count artifacts).
@@ -579,7 +579,7 @@ fn backup_conclave_sledge_captain_counters_and_grants_trample() {
     let b = g.battlefield_find(bear).expect("bear on bf");
     assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 3, "three Backup-1 counters");
     let cp = g.compute_battlefield();
-    assert!(cp.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(cp.iter().find(|c| c.id == bear).unwrap().keywords().contains(&Keyword::Trample),
         "backed-up creature gains Trample until end of turn");
 }
 
@@ -899,9 +899,9 @@ fn lion_sash_exiles_permanent_card_grows_and_scales_equipped() {
     assert_eq!((b.power, b.toughness), (3, 3), "equipped scales by Lion Sash's counter");
     // CR 702.151c — Lion Sash isn't a creature while attached.
     let s = cp.iter().find(|c| c.id == sash).unwrap();
-    assert!(!s.card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(!s.card_types().contains(&crabomination::card::CardType::Creature),
         "Reconfigure Equipment isn't a creature while attached");
-    assert!(s.card_types.contains(&crabomination::card::CardType::Artifact), "still an artifact");
+    assert!(s.card_types().contains(&crabomination::card::CardType::Artifact), "still an artifact");
 }
 
 /// CR 702.151 — Reconfigure unattach detaches the Equipment and restores its
@@ -924,7 +924,7 @@ fn reconfigure_unattach_restores_creatureness() {
         .expect("reconfigure unattach");
     assert_eq!(g.battlefield_find(sash).unwrap().attached_to, None);
     let s = g.computed_permanent(sash).unwrap();
-    assert!(s.card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(s.card_types().contains(&crabomination::card::CardType::Creature),
         "unattached Reconfigure Equipment is a creature again");
 }
 
@@ -937,7 +937,7 @@ fn leyline_of_the_guildpact_makes_your_lands_all_basic_types() {
     let cp = g.compute_battlefield();
     let f = cp.iter().find(|c| c.id == forest).unwrap();
     for lt in [LandType::Plains, LandType::Island, LandType::Swamp, LandType::Mountain, LandType::Forest] {
-        assert!(f.subtypes.land_types.contains(&lt), "Forest gains {lt:?}");
+        assert!(f.subtypes().land_types.contains(&lt), "Forest gains {lt:?}");
     }
     // It now taps for any color via intrinsic basic-land mana abilities.
     let abilities = g.effective_mana_abilities(forest);
@@ -1117,8 +1117,8 @@ fn sword_of_body_and_mind_buffs_and_grants_double_protection() {
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (4, 4), "+2/+2 from Sword");
-    assert!(b.keywords.contains(&Keyword::Protection(Color::Green)));
-    assert!(b.keywords.contains(&Keyword::Protection(Color::Blue)));
+    assert!(b.keywords().contains(&Keyword::Protection(Color::Green)));
+    assert!(b.keywords().contains(&Keyword::Protection(Color::Blue)));
 }
 
 #[test]
@@ -1273,8 +1273,8 @@ fn soulbond_wingcrafter_grants_flying_to_both() {
     let wing = g.add_card_to_hand(0, catalog::wingcrafter());
     g.players[0].mana_pool.add(Color::Blue, 1);
     cast(&mut g, wing);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
-    assert!(g.computed_permanent(wing).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
+    assert!(g.computed_permanent(wing).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Nightshade Peddler grants deathtouch to both members of its pair.
@@ -1287,7 +1287,7 @@ fn soulbond_nightshade_peddler_grants_deathtouch() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, peddler);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Hanweir Lancer grants first strike to both members of its pair.
@@ -1300,8 +1300,8 @@ fn soulbond_hanweir_lancer_grants_first_strike() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     cast(&mut g, lancer);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
-    assert!(g.computed_permanent(lancer).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(lancer).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// A Soulbond pair breaks when one member leaves: the bonus and link both clear.
@@ -1503,7 +1503,7 @@ fn knight_exemplar_buffs_and_protects_other_knights() {
     let pal = g.add_card_to_battlefield(0, catalog::silverblade_paladin()); // 2/2 Human Knight
     let c = g.computed_permanent(pal).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "other Knight gets +1/+1");
-    assert!(g.computed_permanent(pal).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(pal).unwrap().keywords().contains(&Keyword::Indestructible),
         "other Knight gains indestructible");
 }
 
@@ -1741,7 +1741,7 @@ fn pelt_collector_grows_and_gains_trample() {
         "bigger creature entering grows Pelt Collector");
     // Force it to 3 counters → trample.
     g.battlefield_find_mut(pelt).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
-    assert!(g.computed_permanent(pelt).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(pelt).unwrap().keywords().contains(&Keyword::Trample),
         "trample at 3+ counters");
 }
 
@@ -2088,8 +2088,8 @@ fn soulbond_silverblade_paladin_grants_double_strike() {
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, pal);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
-    assert!(g.computed_permanent(pal).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(pal).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Nearheath Pilgrim's Soulbond grants lifelink to both members.
@@ -2102,7 +2102,7 @@ fn soulbond_nearheath_pilgrim_grants_lifelink() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, pilgrim);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 /// Weaponcraft Enthusiast's Fabricate 2 takes the counter mode by default
@@ -2156,7 +2156,7 @@ fn mardu_hateblade_grants_deathtouch() {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant deathtouch");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// War Falcon can't attack with no Knight/Soldier, but can once one is present.

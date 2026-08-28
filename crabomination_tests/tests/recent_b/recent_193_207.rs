@@ -203,7 +203,7 @@ mod recent195 {
         let c = g.compute_battlefield();
         let c = c.iter().find(|c| c.id == bear).unwrap();
         assert_eq!((c.power, c.toughness), (5, 4), "+3/+2");
-        assert!(c.keywords.contains(&Keyword::Reach), "granted reach");
+        assert!(c.keywords().contains(&Keyword::Reach), "granted reach");
         // Destroy the host → Aura goes to graveyard → draw.
         let ctx = crabomination::game::effects::EffectContext::for_ability(bear, 0, None);
         let evs = g.resolve_effect(&crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::This }, &ctx).unwrap();
@@ -388,7 +388,7 @@ mod recent197 {
         assert_eq!(v.controller, 0, "gained control");
         assert!(!v.tapped, "untapped");
         assert!(g.compute_battlefield().iter().find(|c| c.id == victim).unwrap()
-            .keywords.contains(&crabomination::card::Keyword::Haste), "granted haste");
+            .keywords().contains(&crabomination::card::Keyword::Haste), "granted haste");
     }
 
     /// Silver Deputy digs a basic to the top of your library on ETB.
@@ -498,7 +498,7 @@ mod recent200 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bearer).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 from the Blade");
-        assert!(cp.keywords.contains(&Keyword::HexproofFromMonocolored), "granted hexproof from monocolored");
+        assert!(cp.keywords().contains(&Keyword::HexproofFromMonocolored), "granted hexproof from monocolored");
     }
 }
 
@@ -529,7 +529,7 @@ mod recent201 {
         let cp = g.computed_permanent(victim).unwrap();
         assert_eq!(cp.controller, 0, "you control the enchanted creature");
         assert_eq!(cp.power, 1, "-3/-0 leaves 1 power");
-        assert!(!cp.keywords.contains(&crabomination::card::Keyword::Flying), "lost its abilities");
+        assert!(!cp.keywords().contains(&crabomination::card::Keyword::Flying), "lost its abilities");
     }
 }
 
@@ -698,10 +698,10 @@ mod recent202 {
         .expect("animate Soulstone Sanctuary");
         drain_stack(&mut g);
         let c = g.computed_permanent(land).expect("soulstone");
-        assert!(c.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-        assert!(c.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+        assert!(c.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+        assert!(c.card_types().contains(&crabomination::card::CardType::Land), "still a land");
         assert_eq!((c.power, c.toughness), (3, 3));
-        assert!(c.keywords.contains(&crabomination::card::Keyword::Changeling), "all creature types via Changeling");
+        assert!(c.keywords().contains(&crabomination::card::Keyword::Changeling), "all creature types via Changeling");
     }
 }
 
@@ -731,8 +731,8 @@ mod recent203 {
             .expect("bears returned");
         assert!(returned.counter_count(CounterType::PlusOnePlusOne) >= 1, "+1/+1 counter");
         let c = g.computed_permanent(returned.id).unwrap();
-        assert!(c.keywords.contains(&Keyword::Flying), "gained flying");
-        assert!(c.subtypes.creature_types.contains(&CreatureType::Angel), "became an Angel");
+        assert!(c.keywords().contains(&Keyword::Flying), "gained flying");
+        assert!(c.subtypes().creature_types.contains(&CreatureType::Angel), "became an Angel");
     }
 
     /// Infernal Vessel returns once with two counters as a Demon, then stays dead.
@@ -752,7 +752,7 @@ mod recent203 {
         assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 2, "two +1/+1 counters");
         let back_id = back.id;
         assert!(
-            g.computed_permanent(back_id).unwrap().subtypes.creature_types.contains(&CreatureType::Demon),
+            g.computed_permanent(back_id).unwrap().subtypes().creature_types.contains(&CreatureType::Demon),
             "now a Demon"
         );
         // Kill the Demon copy — it must not loop back.
@@ -809,8 +809,8 @@ mod recent203 {
         drain_stack(&mut g);
         let c = g.computed_permanent(bear).unwrap();
         assert_eq!(c.power, 3, "+1/+0");
-        assert!(c.keywords.contains(&Keyword::FirstStrike), "first strike");
-        assert!(c.keywords.contains(&Keyword::DoubleStrike), "delirium double strike");
+        assert!(c.keywords().contains(&Keyword::FirstStrike), "first strike");
+        assert!(c.keywords().contains(&Keyword::DoubleStrike), "delirium double strike");
     }
 
     /// Elenda scales with life above her controller's starting total.
@@ -822,12 +822,12 @@ mod recent203 {
         // At starting life: base 4/4, no menace.
         let c = g.computed_permanent(elenda).unwrap();
         assert_eq!((c.power, c.toughness), (4, 4));
-        assert!(!c.keywords.contains(&Keyword::Menace));
+        assert!(!c.keywords().contains(&Keyword::Menace));
         // One above: 5/5 with menace.
         g.players[0].life = start + 1;
         let c = g.computed_permanent(elenda).unwrap();
         assert_eq!((c.power, c.toughness), (5, 5));
-        assert!(c.keywords.contains(&Keyword::Menace));
+        assert!(c.keywords().contains(&Keyword::Menace));
         // Ten above: additional +5/+5 → 10/10.
         g.players[0].life = start + 10;
         let c = g.computed_permanent(elenda).unwrap();
@@ -891,9 +891,9 @@ mod recent204 {
         drain_stack(&mut g);
         let c = g.computed_permanent(victim).unwrap();
         assert_eq!((c.power, c.toughness), (0, 2), "base 0/2");
-        assert!(!c.keywords.contains(&Keyword::Flying), "lost flying");
-        assert!(c.card_types.contains(&CardType::Artifact), "now an artifact");
-        assert!(c.subtypes.creature_types.contains(&CreatureType::Toy), "a Toy");
+        assert!(!c.keywords().contains(&Keyword::Flying), "lost flying");
+        assert!(c.card_types().contains(&CardType::Artifact), "now an artifact");
+        assert!(c.subtypes().creature_types.contains(&CreatureType::Toy), "a Toy");
     }
 
     /// Sporogenic Infection edicts on enter and destroys the host when it's damaged.
@@ -1044,7 +1044,7 @@ mod recent206 {
         let v = g.add_card_to_battlefield(0, catalog::swiftblade_vindicator());
         let cp = g.computed_permanent(v).unwrap();
         for kw in [Keyword::DoubleStrike, Keyword::Vigilance, Keyword::Trample] {
-            assert!(cp.keywords.contains(&kw), "has {kw:?}");
+            assert!(cp.keywords().contains(&kw), "has {kw:?}");
         }
     }
 
@@ -1053,7 +1053,7 @@ mod recent206 {
     fn progenitus_shuffles_in_instead_of_dying() {
         let mut g = two_player_game();
         let p = g.add_card_to_battlefield(0, catalog::progenitus());
-        assert!(g.computed_permanent(p).unwrap().keywords.contains(&Keyword::ProtectionFromEverything));
+        assert!(g.computed_permanent(p).unwrap().keywords().contains(&Keyword::ProtectionFromEverything));
         // Drop ten -1/-1 counters so the 10/10 dies to SBA.
         g.battlefield_find_mut(p).unwrap().counters.insert(CounterType::MinusOneMinusOne, 10);
         g.check_state_based_actions();
@@ -1147,7 +1147,7 @@ mod recent206 {
         let c = g.battlefield_find(bear).unwrap();
         assert_eq!(c.controller, 0, "gained control");
         assert!(!c.tapped, "untapped");
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "has haste");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "has haste");
         assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"), "made a Treasure");
     }
 
@@ -1408,7 +1408,7 @@ mod recent207 {
         // Each token is a base 1/1 lifelink; the lord makes them 2/2.
         let cp = g.computed_permanent(cats[0]).unwrap();
         assert_eq!((cp.power, cp.toughness), (2, 2), "lord buffs other Cats");
-        assert!(cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Harmless Offering donates a permanent to an opponent.
@@ -1460,7 +1460,7 @@ mod recent207 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (2, 5), "+0/+3");
-        assert!(cp.keywords.contains(&Keyword::Hexproof));
+        assert!(cp.keywords().contains(&Keyword::Hexproof));
     }
 
     /// Hidetsugu's Second Rite only burns a player who is at exactly 10 life.
@@ -1527,7 +1527,7 @@ mod recent207 {
         let mut g = two_player_game();
         let sentry = g.add_card_to_battlefield(0, catalog::magnigoth_sentry());
         let redcap = g.add_card_to_battlefield(0, catalog::raging_redcap());
-        assert!(g.computed_permanent(sentry).unwrap().keywords.contains(&Keyword::Reach));
-        assert!(g.computed_permanent(redcap).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(g.computed_permanent(sentry).unwrap().keywords().contains(&Keyword::Reach));
+        assert!(g.computed_permanent(redcap).unwrap().keywords().contains(&Keyword::DoubleStrike));
     }
 }

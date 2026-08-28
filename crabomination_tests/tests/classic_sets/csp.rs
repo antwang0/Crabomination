@@ -90,7 +90,7 @@ fn frost_raptor_buys_shroud() {
     g.players[0].mana_pool.add_snow(Color::Blue, 2);
     activate(&mut g, raptor, 0, None).expect("shroud");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(raptor).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(raptor).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Chill to the Bone can't touch a snow creature.
@@ -213,8 +213,8 @@ fn gelid_shackles_locks_the_host() {
     cast(&mut g, aura, Some(Target::Permanent(host))).expect("cast");
     drain_stack(&mut g);
     let cp = g.computed_permanent(host).unwrap();
-    assert!(cp.keywords.contains(&Keyword::CantBlock));
-    assert!(cp.keywords.contains(&Keyword::CantActivateTapAbilities));
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantActivateTapAbilities));
 }
 
 /// Freyalise's Radiance keeps snow permanents tapped.
@@ -264,7 +264,7 @@ fn adarkar_windform_grounds_a_flier() {
     g.players[0].mana_pool.add_colorless(1);
     activate(&mut g, wind, 0, Some(Target::Permanent(flier))).expect("ground it");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(flier).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Karplusan Strider can't be targeted by blue or black.

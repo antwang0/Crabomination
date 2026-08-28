@@ -71,7 +71,7 @@ fn cr_315_5_weight_advantage_works_from_the_command_zone() {
     assert!(
         g.computed_permanent(wall)
             .expect("wall")
-            .keywords
+            .keywords()
             .contains(&Keyword::AssignsCombatDamageByToughness)
     );
 }
@@ -83,9 +83,9 @@ fn cr_315_5b_a_face_down_agenda_grants_nothing_until_revealed() {
     let mut g = main_phase();
     let agenda = g.seat_conspiracy(0, catalog::immediate_action(), Some("Grizzly Bears"));
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).expect("bear").keywords.contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(bear).expect("bear").keywords().contains(&Keyword::Haste));
     assert!(g.reveal_hidden_agenda(0, agenda));
-    assert!(g.computed_permanent(bear).expect("bear").keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).expect("bear").keywords().contains(&Keyword::Haste));
 }
 
 /// CR 702.106 — the revealed name gates the grant; other creatures miss out.
@@ -95,7 +95,7 @@ fn hidden_agenda_only_names_one_card() {
     let agenda = g.seat_conspiracy(0, catalog::immediate_action(), Some("Grizzly Bears"));
     g.reveal_hidden_agenda(0, agenda);
     let other = g.add_card_to_battlefield(0, catalog::hill_giant());
-    assert!(!g.computed_permanent(other).expect("giant").keywords.contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(other).expect("giant").keywords().contains(&Keyword::Haste));
 }
 
 #[test]
@@ -590,7 +590,7 @@ fn council_guardian_gains_every_winning_protection() {
     let id = g.add_card_to_hand(0, catalog::council_guardian());
     ballot(&mut g, [0, 2]); // blue, red — one vote each
     cast(&mut g, 0, id, None);
-    let kw = g.computed_permanent(id).expect("guardian").keywords.clone();
+    let kw = g.computed_permanent(id).expect("guardian").keywords().to_vec();
     assert!(kw.contains(&Keyword::Protection(Color::Blue)));
     assert!(kw.contains(&Keyword::Protection(Color::Red)));
     assert!(!kw.contains(&Keyword::Protection(Color::Green)));
@@ -629,7 +629,7 @@ fn dacks_duplicate_copies_with_haste_and_dethrone() {
     cast(&mut g, 0, id, None);
     let cp = g.computed_permanent(id).expect("duplicate");
     assert_eq!((cp.power, cp.toughness), (4, 4), "copied the Vampire");
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
     let card = g.battlefield_find(id).expect("duplicate").clone();
     assert_eq!(card.definition.triggered_abilities.len(), 1, "dethrone bolted on");
 }
@@ -699,7 +699,7 @@ fn ignition_team_counts_tapped_lands() {
     activate_n(&mut g, 0, id, 0, Some(Target::Permanent(target)));
     let cp = g.computed_permanent(target).expect("land");
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
 }
 
 /// Magister of Worth's condemnation spares only itself.
@@ -741,8 +741,8 @@ fn marchesas_smuggler_grants_haste_and_evasion() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     activate_n(&mut g, 0, smuggler, 0, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).expect("bear");
-    assert!(cp.keywords.contains(&Keyword::Haste));
-    assert!(cp.keywords.contains(&Keyword::Unblockable));
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Unblockable));
 }
 
 /// Muzzio digs as deep as your biggest artifact.

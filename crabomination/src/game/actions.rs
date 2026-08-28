@@ -996,7 +996,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 {
                     let mine = state
                         .computed_permanent(src.id)
-                        .map(|cp| cp.subtypes.creature_types.clone())
+                        .map(|cp| cp.subtypes().creature_types.clone())
                         .unwrap_or_else(|| src.definition.subtypes.creature_types.clone());
                     if card
                         .definition
@@ -1905,10 +1905,10 @@ pub(crate) fn ally_trigger_extra_fires(
     if state.battlefield_find(source).is_none_or(|c| c.controller != controller) {
         return 0;
     }
-    let source_types = cp.subtypes.creature_types.clone();
+    let source_types = cp.subtypes().creature_types.clone();
     let is_ally = source_types.contains(&crate::card::CreatureType::Ally);
-    let legendary_creature = cp.card_types.contains(&crate::card::CardType::Creature)
-        && cp.supertypes.contains(&crate::card::Supertype::Legendary);
+    let legendary_creature = cp.card_types().contains(&crate::card::CardType::Creature)
+        && cp.supertypes().contains(&crate::card::Supertype::Legendary);
     state
         .battlefield
         .iter()
@@ -6883,7 +6883,7 @@ impl GameState {
             // Gods Willing) is honored, not just printed protection.
             let cp = self.computed_permanent(cid);
             let kws: &[Keyword] = match &cp {
-                Some(cp) => &cp.keywords,
+                Some(cp) => cp.keywords(),
                 None => &target_card.definition.keywords,
             };
             for kw in kws {
@@ -7028,7 +7028,7 @@ impl GameState {
                     let controller = tc.controller;
                     let cp = self.computed_permanent(cid);
                     let kws: &[Keyword] = match &cp {
-                        Some(cp) => &cp.keywords,
+                        Some(cp) => cp.keywords(),
                         None => &tc.definition.keywords,
                     };
                     let printed = kws
@@ -8815,7 +8815,7 @@ impl GameState {
                     let computed = self.computed_permanent(perm_id);
                     let cost: Option<WardCost> = computed
                         .as_ref()
-                        .map(|cp| cp.keywords.as_slice())
+                        .map(|cp| cp.keywords())
                         .unwrap_or(&c.definition.keywords)
                         .iter()
                         .find_map(|k| match k {
@@ -8859,7 +8859,7 @@ impl GameState {
         };
         let cp = self.computed_permanent(perm_id);
         let has = match &cp {
-            Some(cp) => cp.keywords.has_kw(&Keyword::CounterFirstTargetingEachTurn),
+            Some(cp) => cp.keywords().has_kw(&Keyword::CounterFirstTargetingEachTurn),
             None => self.battlefield_find(perm_id).is_some_and(|c| {
                 c.definition.keywords.has_kw(&Keyword::CounterFirstTargetingEachTurn)
             }),
@@ -10946,7 +10946,7 @@ impl GameState {
         // card at the same game state. `None` (not a battlefield permanent)
         // is the `false` the per-keyword helper returned.
         let cp = self.computed_permanent(*cid);
-        let has_kw = |k: &Keyword| cp.as_ref().is_some_and(|c| c.keywords.contains(k));
+        let has_kw = |k: &Keyword| cp.as_ref().is_some_and(|c| c.keywords().contains(k));
         if has_kw(&Keyword::Shroud) && !self.shroud_waivers.contains(&(*cid, caster)) {
             return Err(GameError::TargetHasShroud(*cid));
         }
@@ -10969,7 +10969,7 @@ impl GameState {
         // the battlefield; a spell's own cast gate is upstream.
         if let Some(src) = source_card_id
             && cp.as_ref().is_some_and(|c| {
-                c.keywords.iter().any(|k| match k {
+                c.keywords().iter().any(|k| match k {
                     Keyword::CantBeTargetedByAbilitiesFromMatching(f) => self
                         .evaluate_requirement_static(f, &Target::Permanent(src), controller, Some(src)),
                     _ => false,
@@ -11041,7 +11041,7 @@ impl GameState {
             .iter()
             .filter(|c| {
                 self.computed_permanent(c.id)
-                    .is_some_and(|cp| cp.subtypes.creature_types.contains(&crate::card::CreatureType::Flagbearer))
+                    .is_some_and(|cp| cp.subtypes().creature_types.contains(&crate::card::CreatureType::Flagbearer))
                     && self.check_target_legality(&Target::Permanent(c.id), actor).is_ok()
             })
             .map(|c| c.id)
@@ -11237,11 +11237,11 @@ impl GameState {
         // CR 702.11d — "hexproof from activated and triggered abilities":
         // an opponent's ability simply can't target it (Volatile Stormdrake).
         if src_is_opponent
-            && tgt.keywords.iter().any(|kw| matches!(kw, Keyword::HexproofFromAbilities))
+            && tgt.keywords().iter().any(|kw| matches!(kw, Keyword::HexproofFromAbilities))
         {
             return true;
         }
-        let printed_hexproof_color = tgt.keywords.iter().any(|kw| {
+        let printed_hexproof_color = tgt.keywords().iter().any(|kw| {
             matches!(
                 kw,
                 Keyword::HexproofFromColor(_)
@@ -11252,7 +11252,7 @@ impl GameState {
         let turn_hexproof_color = !self.players[tgt_controller]
             .hexproof_from_colors_this_turn
             .is_empty();
-        if !tgt.keywords.iter().any(|kw| {
+        if !tgt.keywords().iter().any(|kw| {
             matches!(
                 kw,
                 Keyword::Protection(_)
@@ -11273,7 +11273,7 @@ impl GameState {
             return false;
         }
         let Some(src) = self.computed_permanent(source) else { return false };
-        let src_is_creature = src.card_types.contains(&CardType::Creature);
+        let src_is_creature = src.card_types().contains(&CardType::Creature);
         let src_mv = self
             .battlefield_find(source)
             .map(|c| c.definition.cost.cmc())
@@ -11290,7 +11290,7 @@ impl GameState {
             {
                 return true;
             }
-            if tgt.keywords.iter().any(|kw| match kw {
+            if tgt.keywords().iter().any(|kw| match kw {
                 Keyword::HexproofFromColor(c) => src.colors.contains(c),
                 // CR 702.11f — an exactly-one-color source.
                 Keyword::HexproofFromMonocolored => src.colors.len() == 1,
@@ -11300,14 +11300,14 @@ impl GameState {
                 return true;
             }
         }
-        tgt.keywords.iter().any(|kw| match kw {
+        tgt.keywords().iter().any(|kw| match kw {
             Keyword::Protection(color) => src.colors.contains(color),
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).
             Keyword::ProtectionFromOwnColors => {
                 tgt.colors.iter().any(|c| src.colors.contains(c))
             }
             Keyword::ProtectionFromCreatures => src_is_creature,
-            Keyword::ProtectionFromCreatureType(ty) => src.subtypes.creature_types.contains(ty),
+            Keyword::ProtectionFromCreatureType(ty) => src.subtypes().creature_types.contains(ty),
             Keyword::ProtectionFromMatching(f) => {
                 self.evaluate_requirement_static(f, &Target::Permanent(source), tgt_controller, None)
             }
@@ -11315,7 +11315,7 @@ impl GameState {
             Keyword::ProtectionFromManaValueParity { odd } => (src_mv % 2 == 1) == *odd,
             Keyword::ProtectionFromMulticolored => src.colors.len() >= 2,
             Keyword::ProtectionFromMonocolored => src.colors.len() == 1,
-            Keyword::ProtectionFromCardType(t) => src.card_types.contains(t),
+            Keyword::ProtectionFromCardType(t) => src.card_types().contains(t),
             Keyword::ProtectionFromEverything => true,
             // "Abilities from nongreen sources opponents control can't target
             // this" (Thrun) — opponent's source sharing none of the colors.
@@ -13087,7 +13087,7 @@ impl GameState {
         let Some(computed) = self.computed_permanent(card_id) else {
             return vec![];
         };
-        Self::intrinsic_land_mana_abilities_with(card, &computed.subtypes.land_types)
+        Self::intrinsic_land_mana_abilities_with(card, &computed.subtypes().land_types)
     }
 
     /// [`intrinsic_land_mana_abilities`](Self::intrinsic_land_mana_abilities)
@@ -13274,7 +13274,7 @@ impl GameState {
                     let printed: &[crate::card::LandType] =
                         &card.definition.subtypes.land_types;
                     self.computed_permanent(card_id)
-                        .is_none_or(|cp| &cp.subtypes.land_types[..] == printed)
+                        .is_none_or(|cp| &cp.subtypes().land_types[..] == printed)
                 },
                 "rewrites_land_types missed a modification that writes land_types"
             );
@@ -13285,7 +13285,7 @@ impl GameState {
         let computed_land_types: &[crate::card::LandType] = match &computed {
             // `card` came out of `battlefield_find`, so `computed_permanent`
             // found it too — a `None` here is the gate above, not a miss.
-            Some(cp) => &cp.subtypes.land_types,
+            Some(cp) => &cp.subtypes().land_types,
             None => &card.definition.subtypes.land_types,
         };
         // The printed abilities are borrowed from `card.definition`, which
@@ -14144,7 +14144,7 @@ impl GameState {
                 if card.bestowed || self.card_type_change_unscoped() {
                     bf_cp!()
                         .as_ref()
-                        .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                        .is_some_and(|c| c.card_types().contains(&crate::card::CardType::Creature))
                 } else {
                     card.definition.is_creature()
                 }
@@ -14161,7 +14161,7 @@ impl GameState {
             ) {
                 Some(basic) if self.land_type_change_in_scope() => bf_cp!()
                     .as_ref()
-                    .is_some_and(|c| !c.subtypes.land_types.contains(&basic)),
+                    .is_some_and(|c| !c.subtypes().land_types.contains(&basic)),
                 _ => false,
             };
             if is_creature {
@@ -14458,7 +14458,7 @@ impl GameState {
             })
             && bf_cp!()
                 .as_ref()
-                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantActivateTapAbilities))
+                .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantActivateTapAbilities))
         {
             return Err(GameError::AbilityAlreadyUsedThisTurn);
         }
@@ -14485,7 +14485,7 @@ impl GameState {
             && self.card_keyword_possible(card_id, |k| *k == Keyword::CantActivateAbilities)
             && bf_cp!()
                 .as_ref()
-                .is_some_and(|c| c.keywords.has_kw(&Keyword::CantActivateAbilities))
+                .is_some_and(|c| c.keywords().has_kw(&Keyword::CantActivateAbilities))
         {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }

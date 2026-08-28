@@ -124,9 +124,9 @@ fn spire_serpent_attacks_under_metalcraft() {
 fn spiraling_duelist_gains_double_strike() {
     let mut g = main_phase();
     let duelist = g.add_card_to_battlefield(0, catalog::spiraling_duelist());
-    assert!(!g.computed_permanent(duelist).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(!g.computed_permanent(duelist).unwrap().keywords().contains(&Keyword::DoubleStrike));
     metalcraft_on(&mut g, 0);
-    assert!(g.computed_permanent(duelist).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(duelist).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Concussive Bolt's metalcraft half turns off their blocks.
@@ -158,7 +158,7 @@ fn phyresis_grants_infect() {
     let beater = g.add_card_to_battlefield(0, catalog::quilled_slagwurm());
     let aura = g.add_card_to_hand(0, catalog::phyresis());
     cast(&mut g, 0, aura, Some(Target::Permanent(beater)));
-    assert!(g.computed_permanent(beater).unwrap().keywords.contains(&Keyword::Infect));
+    assert!(g.computed_permanent(beater).unwrap().keywords().contains(&Keyword::Infect));
 }
 
 /// Phyrexian Vatmother poisons its own controller every upkeep.
@@ -330,7 +330,7 @@ fn skinwing_germ_flies() {
         .expect("the Germ");
     let cp = g.computed_permanent(germ).expect("computed");
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Piston Sledge attaches on entry and its equip cost eats an artifact.
@@ -365,7 +365,7 @@ fn copper_carapace_pumps_but_blocks_nothing() {
     g.perform_action(GameAction::Equip { equipment: id, target: host }).expect("equip");
     let cp = g.computed_permanent(host).expect("computed");
     assert_eq!((cp.power, cp.toughness), (6, 5));
-    assert!(cp.keywords.contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
 }
 
 /// Training Drone sits out combat until it's carrying something.
@@ -430,8 +430,8 @@ fn victorys_herald_lifts_the_team() {
     .expect("attack");
     drain_stack(&mut g);
     let cp = g.computed_permanent(ground).expect("computed");
-    assert!(cp.keywords.contains(&Keyword::Flying));
-    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Spin Engine pushes a blocker out of the way for a red mana.

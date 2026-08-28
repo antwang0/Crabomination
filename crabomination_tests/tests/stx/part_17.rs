@@ -421,7 +421,7 @@ fn pump_friendly_bear_table() {
         assert_eq!(b.power as i64, power, "{name} power");
         assert_eq!(b.toughness as i64, toughness, "{name} toughness");
         if let Some(kw) = keyword {
-            assert!(b.keywords.contains(&kw), "{name} grants {kw:?}");
+            assert!(b.keywords().contains(&kw), "{name} grants {kw:?}");
         }
         assert_eq!(g.players[0].life, l0_before + l0_delta as i32, "{name} own life");
         assert_eq!(g.players[1].life, l1_before + l1_delta as i32, "{name} opp life");

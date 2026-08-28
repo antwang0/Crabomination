@@ -227,7 +227,7 @@ mod recent81 {
         g.players[0].mana_pool.add_colorless(3);
         g.perform_action(GameAction::Equip { equipment: mask, target: bear }).expect("equip");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink),
             "equipped creature has lifelink");
         let hand = g.players[0].hand.len();
         g.remove_to_graveyard_with_triggers(bear);
@@ -444,7 +444,7 @@ mod recent82 {
         let mut g = two_player_game();
         let fires = g.add_card_to_battlefield(0, catalog::fires_of_yavimaya());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste),
             "creatures you control have haste");
         g.perform_action(GameAction::ActivateAbility {
             card_id: fires, ability_index: 0, target: Some(Target::Permanent(bear)),
@@ -478,7 +478,7 @@ mod recent83 {
         let rampart = g.add_card_to_battlefield(0, catalog::fortified_rampart());
         assert_eq!(g.computed_permanent(kraken).unwrap().toughness, 4);
         let aw = g.computed_permanent(angelic).unwrap();
-        assert!(aw.keywords.contains(&Keyword::Defender) && aw.keywords.contains(&Keyword::Flying));
+        assert!(aw.keywords().contains(&Keyword::Defender) && aw.keywords().contains(&Keyword::Flying));
         assert!(g.battlefield_find(steel).unwrap().definition.card_types.contains(&CardType::Artifact));
         assert_eq!(g.computed_permanent(rampart).unwrap().toughness, 6);
     }
@@ -692,7 +692,7 @@ mod recent85 {
         let sr = g.add_card_to_battlefield(0, catalog::steely_resolve());
         enter_choosing(&mut g, sr, CreatureType::Bear);
         let cp = g.compute_battlefield();
-        assert!(cp.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Shroud),
+        assert!(cp.iter().find(|c| c.id == bear).unwrap().keywords().contains(&Keyword::Shroud),
             "chosen-type Bear has shroud");
     }
 
@@ -703,7 +703,7 @@ mod recent85 {
         let kb = g.add_card_to_battlefield(0, catalog::kindred_boon());
         enter_choosing(&mut g, kb, CreatureType::Bear);
         assert!(g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
-            .keywords.contains(&Keyword::Indestructible), "chosen-type Bear is indestructible");
+            .keywords().contains(&Keyword::Indestructible), "chosen-type Bear is indestructible");
     }
 
     #[test]
@@ -713,7 +713,7 @@ mod recent85 {
         let cd = g.add_card_to_battlefield(0, catalog::cover_of_darkness());
         enter_choosing(&mut g, cd, CreatureType::Bear);
         assert!(g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
-            .keywords.contains(&Keyword::Fear), "chosen-type Bear has fear");
+            .keywords().contains(&Keyword::Fear), "chosen-type Bear has fear");
     }
 
     /// CR 702.36 — Fear granted by Cover of Darkness restricts blockers through the
@@ -724,7 +724,7 @@ mod recent85 {
         let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green Bear
         let cd = g.add_card_to_battlefield(0, catalog::cover_of_darkness());
         enter_choosing(&mut g, cd, CreatureType::Bear);
-        let atk_kws = g.computed_permanent(attacker).unwrap().keywords.clone();
+        let atk_kws = g.computed_permanent(attacker).unwrap().keywords().to_vec();
         assert!(atk_kws.contains(&Keyword::Fear), "the Bear was granted Fear");
         let check = |g: &mut GameState, def: crabomination::card::CardDefinition| -> bool {
             let blk = g.add_card_to_battlefield(1, def);
@@ -869,7 +869,7 @@ mod recent87 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.add_card_to_battlefield(0, catalog::akromas_memorial());
         let cp = g.compute_battlefield();
-        let kws = &cp.iter().find(|c| c.id == bear).unwrap().keywords;
+        let kws = &cp.iter().find(|c| c.id == bear).unwrap().keywords();
         for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Vigilance, Keyword::Trample,
                    Keyword::Haste, Keyword::Protection(Color::Black), Keyword::Protection(Color::Red)] {
             assert!(kws.contains(&kw), "granted {kw:?}");
@@ -949,11 +949,11 @@ mod recent88 {
         let cp = g.compute_battlefield();
         let b = cp.iter().find(|c| c.id == bear).unwrap();
         assert_eq!((b.power, b.toughness), (4, 4), "other creature +2/+2");
-        assert!(b.keywords.contains(&Keyword::Trample), "other creature has trample");
+        assert!(b.keywords().contains(&Keyword::Trample), "other creature has trample");
         // The Baloth doesn't buff itself.
         let self_ = cp.iter().find(|c| c.id == baloth).unwrap();
         assert_eq!((self_.power, self_.toughness), (5, 5));
-        assert!(!self_.keywords.contains(&Keyword::Trample), "source excluded");
+        assert!(!self_.keywords().contains(&Keyword::Trample), "source excluded");
     }
 }
 
@@ -1053,7 +1053,7 @@ mod recent90 {
         p0_bolt_face(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "team gets +1/+0");
-        assert!(cp.keywords.contains(&Keyword::Trample), "team gains trample");
+        assert!(cp.keywords().contains(&Keyword::Trample), "team gains trample");
     }
 
     #[test]
@@ -1251,7 +1251,7 @@ mod recent90 {
     fn cloud_sprite_can_block_only_flyers() {
         let mut g = two_player_game();
         let cs = g.add_card_to_battlefield(0, catalog::cloud_sprite());
-        let kw = &g.computed_permanent(cs).unwrap().keywords;
+        let kw = g.computed_permanent(cs).unwrap().keywords().to_vec();
         assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::CanBlockOnlyFlying));
     }
 
@@ -1576,11 +1576,11 @@ mod recent90 {
         let mut g = two_player_game();
         let d = g.add_card_to_battlefield(0, catalog::skywinder_drake());
         let r = g.add_card_to_battlefield(0, catalog::ridgetop_raptor());
-        let dk = &g.computed_permanent(d).unwrap().keywords;
+        let dk = g.computed_permanent(d).unwrap().keywords().to_vec();
         assert!(dk.contains(&Keyword::Flying) && dk.contains(&Keyword::CanBlockOnlyFlying));
-        assert!(g.computed_permanent(r).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(g.computed_permanent(r).unwrap().keywords().contains(&Keyword::DoubleStrike));
         let p = g.add_card_to_battlefield(0, catalog::cloud_pirates());
-        let pk = &g.computed_permanent(p).unwrap().keywords;
+        let pk = g.computed_permanent(p).unwrap().keywords().to_vec();
         assert!(pk.contains(&Keyword::Flying) && pk.contains(&Keyword::CanBlockOnlyFlying));
     }
 

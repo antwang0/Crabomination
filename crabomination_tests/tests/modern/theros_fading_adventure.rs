@@ -94,7 +94,7 @@ fn whip_of_erebos_reanimates_with_haste_then_exiles() {
     drain_stack(&mut g);
     let c = g.battlefield_find(bear).expect("bear reanimated");
     assert_eq!(c.controller, 0);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste),
         "reanimated creature has haste");
 
     // At the next end step it's exiled (not returned to the graveyard).

@@ -83,7 +83,7 @@ fn myojin_enters_with_divinity_only_when_cast_from_hand() {
     assert!(
         g.computed_permanent(m)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Indestructible),
         "indestructible while the counter is there"
     );
@@ -109,7 +109,7 @@ fn myojin_removes_its_counter_to_wrath() {
     assert!(g.battlefield_find(bear).is_none(), "all other creatures destroyed");
     assert!(g.battlefield_find(m).is_some(), "Myojin spared itself");
     assert!(
-        !g.computed_permanent(m).unwrap().keywords.contains(&Keyword::Indestructible),
+        !g.computed_permanent(m).unwrap().keywords().contains(&Keyword::Indestructible),
         "counter spent → no more indestructible"
     );
 }
@@ -314,7 +314,7 @@ fn generals_kabuto_prevents_combat_damage_to_the_host() {
         "host is fogged"
     );
     assert!(
-        g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Shroud),
+        g.computed_permanent(host).unwrap().keywords().contains(&Keyword::Shroud),
         "and has shroud"
     );
 }

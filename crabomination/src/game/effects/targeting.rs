@@ -597,7 +597,7 @@ impl GameState {
         }
         let cp = self.computed_permanent(cid);
         let kws: &[Keyword] = match &cp {
-            Some(cp) => &cp.keywords,
+            Some(cp) => cp.keywords(),
             None => &c.definition.keywords,
         };
         kws.iter().any(|k| matches!(k, Keyword::Ward(w)

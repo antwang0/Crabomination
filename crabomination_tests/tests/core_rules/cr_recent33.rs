@@ -70,5 +70,5 @@ fn cr_508_1a_defender_bypass_gated_on_counter() {
         "a +1/+1 counter enables the defender-bypass"
     );
     // Sanity: the keyword is still Defender (the bypass is a static, not a loss).
-    assert!(g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(s).unwrap().keywords().contains(&Keyword::Defender));
 }

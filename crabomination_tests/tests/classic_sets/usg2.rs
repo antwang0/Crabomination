@@ -155,8 +155,8 @@ fn falter_covers_creatures_that_arrive_later() {
     cast(&mut g, spell, None);
     let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let flier = g.add_card_to_battlefield(1, catalog::pegasus_charger());
-    assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::CantBlock));
-    assert!(!g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(ground).unwrap().keywords().contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(flier).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Curfew makes every player bounce one of their own creatures.
@@ -225,12 +225,12 @@ fn torch_song_burns_for_its_verse_counters() {
 fn wirecat_is_gated_on_a_live_enchantment() {
     let mut g = two_player_game();
     let cat = g.add_card_to_battlefield(0, catalog::wirecat());
-    assert!(!g.computed_permanent(cat).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(!g.computed_permanent(cat).unwrap().keywords().contains(&Keyword::CantAttack));
     let ench = g.add_card_to_battlefield(1, catalog::bedlam());
-    let kws = g.computed_permanent(cat).unwrap().keywords.clone();
+    let kws = g.computed_permanent(cat).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
     g.destroy_permanent(ench, false, &mut vec![]);
-    assert!(!g.computed_permanent(cat).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(!g.computed_permanent(cat).unwrap().keywords().contains(&Keyword::CantAttack));
 }
 
 /// The Opal-style enchantments' cousin: Bedlam stops every blocker.
@@ -239,7 +239,7 @@ fn bedlam_stops_every_blocker() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::bedlam());
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Absolute Grace hands protection from black to everything, both sides.
@@ -251,7 +251,7 @@ fn absolute_grace_protects_everyone_from_black() {
     assert!(
         g.computed_permanent(theirs)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Protection(Color::Black))
     );
 }
@@ -339,7 +339,7 @@ fn chimeric_staff_animates_at_x() {
     .expect("activate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(staff).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
 
@@ -406,7 +406,7 @@ fn karn_animates_an_artifact_at_its_mana_value() {
     mana(&mut g, 0);
     activate(&mut g, karn, 0, Some(Target::Permanent(target)));
     let cp = g.computed_permanent(target).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
 

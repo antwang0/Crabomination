@@ -426,7 +426,7 @@ fn intangible_virtue_buffs_only_tokens() {
     let nontok = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 nontoken
     let ctok = g.computed_permanent(tok).unwrap();
     assert_eq!((ctok.power, ctok.toughness), (3, 3), "token gets +1/+1");
-    assert!(ctok.keywords.contains(&Keyword::Vigilance), "token has vigilance");
+    assert!(ctok.keywords().contains(&Keyword::Vigilance), "token has vigilance");
     assert_eq!(g.computed_permanent(nontok).unwrap().power, 2, "nontoken unaffected");
 }
 
@@ -440,7 +440,7 @@ fn always_watching_buffs_only_nontokens() {
     let tok = g.add_token_to_battlefield(0, &spirit_token());
     let cnt = g.computed_permanent(nontok).unwrap();
     assert_eq!((cnt.power, cnt.toughness), (3, 3), "nontoken gets +1/+1");
-    assert!(cnt.keywords.contains(&Keyword::Vigilance), "nontoken has vigilance");
+    assert!(cnt.keywords().contains(&Keyword::Vigilance), "nontoken has vigilance");
     assert_eq!(g.computed_permanent(tok).unwrap().power, 2, "token unaffected");
 }
 
@@ -456,7 +456,7 @@ fn unleash_creature_may_enter_with_counter_then_cant_block() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(cackler).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "unleash accepted: enters with a +1/+1 counter");
-    assert!(g.computed_permanent(cackler).unwrap().keywords.contains(&Keyword::CantBlock),
+    assert!(g.computed_permanent(cackler).unwrap().keywords().contains(&Keyword::CantBlock),
         "a 2/2 with a +1/+1 counter from unleash can't block");
 }
 
@@ -470,7 +470,7 @@ fn unleash_creature_can_decline_counter_and_block() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(cackler).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
         "unleash declined: no counter");
-    assert!(!g.computed_permanent(cackler).unwrap().keywords.contains(&Keyword::CantBlock),
+    assert!(!g.computed_permanent(cackler).unwrap().keywords().contains(&Keyword::CantBlock),
         "without a +1/+1 counter the unleash creature can still block");
 }
 
@@ -549,7 +549,7 @@ fn mirran_crusader_has_double_strike_and_two_protections() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let mc = g.add_card_to_battlefield(0, catalog::mirran_crusader());
-    let kws = g.computed_permanent(mc).unwrap().keywords.clone();
+    let kws = g.computed_permanent(mc).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::DoubleStrike), "double strike");
     assert!(kws.contains(&Keyword::Protection(Color::Black)), "protection from black");
     assert!(kws.contains(&Keyword::Protection(Color::Green)), "protection from green");
@@ -579,11 +579,11 @@ fn french_vanilla_filler_stats_and_keywords() {
     let wraith = g.add_card_to_battlefield(0, catalog::bog_wraith());
     let cd = g.computed_permanent(drake).unwrap();
     assert_eq!((cd.power, cd.toughness), (3, 2));
-    assert!(cd.keywords.contains(&Keyword::Flying));
+    assert!(cd.keywords().contains(&Keyword::Flying));
     let cg = g.computed_permanent(griffin).unwrap();
-    assert!(cg.keywords.contains(&Keyword::Flying) && cg.keywords.contains(&Keyword::FirstStrike));
-    assert!(g.computed_permanent(spider).unwrap().keywords.contains(&Keyword::Reach));
-    assert!(g.computed_permanent(wraith).unwrap().keywords.contains(&Keyword::Landwalk(LandType::Swamp)));
+    assert!(cg.keywords().contains(&Keyword::Flying) && cg.keywords().contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(spider).unwrap().keywords().contains(&Keyword::Reach));
+    assert!(g.computed_permanent(wraith).unwrap().keywords().contains(&Keyword::Landwalk(LandType::Swamp)));
 }
 
 #[test]
@@ -650,10 +650,10 @@ fn green_beaters_have_expected_stats_and_keywords() {
     assert_eq!((ct.power, ct.toughness), (3, 3));
     let cb = g.computed_permanent(baloth).unwrap();
     assert_eq!((cb.power, cb.toughness), (4, 5));
-    assert!(g.computed_permanent(comp).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(comp).unwrap().keywords().contains(&Keyword::Trample));
     let cboa = g.computed_permanent(boa).unwrap();
-    assert!(cboa.keywords.contains(&Keyword::Landwalk(crabomination::card::LandType::Island)));
-    assert!(cboa.keywords.iter().any(|k| matches!(k, Keyword::Regenerate(_))));
+    assert!(cboa.keywords().contains(&Keyword::Landwalk(crabomination::card::LandType::Island)));
+    assert!(cboa.keywords().iter().any(|k| matches!(k, Keyword::Regenerate(_))));
 }
 
 #[test]
@@ -665,7 +665,7 @@ fn faerie_seer_flies_and_scries_on_entry() {
     let fs = g.add_card_to_battlefield(0, catalog::faerie_seer());
     g.fire_self_etb_triggers(fs, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(fs).unwrap().keywords.contains(&Keyword::Flying), "has flying");
+    assert!(g.computed_permanent(fs).unwrap().keywords().contains(&Keyword::Flying), "has flying");
 }
 
 #[test]

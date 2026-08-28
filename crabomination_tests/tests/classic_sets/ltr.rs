@@ -305,7 +305,7 @@ fn wose_pathfinder_pumps_another() {
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (5, 5), "bear got +3/+3");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Trample), "and trample");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Trample), "and trample");
 }
 
 /// Battle-Scarred Goblin pings its blocker when blocked.
@@ -431,7 +431,7 @@ fn rally_at_the_hornburg_tokens_and_haste() {
     assert_eq!(soldiers.len(), 2, "two Soldier tokens");
     let cp = g.compute_battlefield();
     let s = cp.iter().find(|c| c.id == soldiers[0]).unwrap();
-    assert!(s.keywords.contains(&crabomination::card::Keyword::Haste), "Humans gain haste");
+    assert!(s.keywords().contains(&crabomination::card::Keyword::Haste), "Humans gain haste");
 }
 
 /// Haradrim Spearmaster pumps another creature at the beginning of your combat.
@@ -463,7 +463,7 @@ fn fog_on_the_barrow_downs_locks_down() {
     drain_stack(&mut g);
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == foe).unwrap();
-    assert!(b.keywords.contains(&crabomination::card::Keyword::CantAttack), "enchanted creature can't attack");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::CantAttack), "enchanted creature can't attack");
 }
 
 /// Soldier of the Grey Host pumps a creature on ETB.
@@ -515,7 +515,7 @@ fn bombadils_song_pumps_hexproof_and_tempts() {
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (3, 3), "bear got +1/+1");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Hexproof), "and hexproof");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Hexproof), "and hexproof");
     assert_eq!(g.players[0].ring_temptations, 1, "and tempted");
 }
 
@@ -818,7 +818,7 @@ fn quickbeam_pumps_on_treefolk_enter() {
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (4, 4), "bear got +2/+2");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Trample), "and trample");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Trample), "and trample");
 }
 
 /// Now for Wrath puts a counter on each creature, grants vigilance, and tempts.
@@ -833,7 +833,7 @@ fn now_for_wrath_counters_and_tempts() {
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (3, 3), "+1/+1 counter");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Vigilance), "vigilance granted");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Vigilance), "vigilance granted");
     assert_eq!(g.players[0].ring_temptations, 1, "tempted");
 }
 
@@ -857,7 +857,7 @@ fn rising_of_the_day_haste_and_legendary_anthem() {
     let legend = g.add_card_to_battlefield(0, catalog::bilbo_retired_burglar()); // 1/3 legendary
     let cp = g.compute_battlefield();
     let l = cp.iter().find(|c| c.id == legend).unwrap();
-    assert!(l.keywords.contains(&crabomination::card::Keyword::Haste), "haste granted");
+    assert!(l.keywords().contains(&crabomination::card::Keyword::Haste), "haste granted");
     assert_eq!((l.power, l.toughness), (2, 3), "legendary +1/+0");
 }
 
@@ -910,7 +910,7 @@ fn ring_bearer_becomes_legendary() {
     assert_eq!(g.effective_ring_bearer(0), Some(bear));
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
-    assert!(b.supertypes.contains(&Supertype::Legendary), "Ring-bearer is legendary");
+    assert!(b.supertypes().contains(&Supertype::Legendary), "Ring-bearer is legendary");
 }
 
 /// Olog-hai Crusher can't block without a Goblin/Orc, but can always attack.
@@ -1016,7 +1016,7 @@ fn dunland_crebain_amasses() {
     g.players[0].mana_pool.add_colorless(2);
     cast(&mut g, id);
     let army = g.compute_battlefield().into_iter()
-        .find(|c| c.controller == 0 && c.subtypes.creature_types.contains(&CreatureType::Army));
+        .find(|c| c.controller == 0 && c.subtypes().creature_types.contains(&CreatureType::Army));
     assert_eq!(army.map(|a| (a.power, a.toughness)), Some((2, 2)), "0/0 Army with two +1/+1");
 }
 
@@ -1038,7 +1038,7 @@ fn sarumans_trickery_counters_and_amasses() {
     cast_at(&mut g, id, Target::Permanent(bolt));
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"), "bolt countered");
     assert!(g.compute_battlefield().iter().any(|c| c.controller == 0
-        && c.subtypes.creature_types.contains(&CreatureType::Army)), "Army amassed");
+        && c.subtypes().creature_types.contains(&CreatureType::Army)), "Army amassed");
 }
 
 /// Voracious Fell Beast edicts each opponent and makes a Food.
@@ -1157,7 +1157,7 @@ fn shelobs_ambush_pumps_and_food() {
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (3, 4), "+1/+2");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Deathtouch), "deathtouch granted");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Deathtouch), "deathtouch granted");
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"), "Food made");
 }
 
@@ -1189,7 +1189,7 @@ fn mushroom_watchdogs_sac_food_grows() {
     let cp = g.compute_battlefield();
     let d = cp.iter().find(|c| c.id == dog).unwrap();
     assert_eq!((d.power, d.toughness), (3, 3), "+1/+1 counter");
-    assert!(d.keywords.contains(&crabomination::card::Keyword::Vigilance), "vigilance granted");
+    assert!(d.keywords().contains(&crabomination::card::Keyword::Vigilance), "vigilance granted");
 }
 
 /// Gollum's Bite shrinks a creature, and its graveyard ability tempts.

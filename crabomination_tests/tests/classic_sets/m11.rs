@@ -148,12 +148,12 @@ fn water_servant_shifts_both_ways() {
 fn gargoyle_sentinel_takes_off() {
     let mut g = two_player_game();
     let gargoyle = g.add_card_to_battlefield(0, catalog::gargoyle_sentinel());
-    assert!(g.computed_permanent(gargoyle).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(gargoyle).unwrap().keywords().contains(&Keyword::Defender));
     g.players[0].mana_pool.add_colorless(3);
     assert!(activate(&mut g, gargoyle, 0, None));
     let cp = g.computed_permanent(gargoyle).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::Defender));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(!cp.keywords().contains(&Keyword::Defender));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Arc Runner burns out at the end step.
@@ -312,13 +312,13 @@ fn stormtide_leviathan_floods_the_board() {
     assert!(
         g.computed_permanent(forest)
             .unwrap()
-            .subtypes
+            .subtypes()
             .land_types
             .contains(&crabomination::card::LandType::Island),
         "every land is an Island too"
     );
-    assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::CantAttack));
-    assert!(!g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(g.computed_permanent(ground).unwrap().keywords().contains(&Keyword::CantAttack));
+    assert!(!g.computed_permanent(flier).unwrap().keywords().contains(&Keyword::CantAttack));
 }
 
 // ── Enchantments ────────────────────────────────────────────────────────────
@@ -417,7 +417,7 @@ fn m11_auras() {
     g.battlefield_find_mut(strength).unwrap().attached_to = Some(bear);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Landwalk(crabomination::card::LandType::Mountain)));
+    assert!(cp.keywords().contains(&Keyword::Landwalk(crabomination::card::LandType::Mountain)));
 
     let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let sickness = g.add_card_to_battlefield(0, catalog::quag_sickness());
@@ -553,7 +553,7 @@ fn thunder_strike_pumps_and_strikes_first() {
     cast(&mut g, id, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4);
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Incite recolors a creature and forces it into the red zone.
@@ -566,7 +566,7 @@ fn incite_recolors_and_compels() {
     cast(&mut g, id, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.colors.to_vec(), vec![Color::Red]);
-    assert!(cp.keywords.contains(&Keyword::MustAttack));
+    assert!(cp.keywords().contains(&Keyword::MustAttack));
 }
 
 /// Combust burns a white or blue creature through a shield.
@@ -725,7 +725,7 @@ fn nightwing_shade_pumps() {
     assert!(activate(&mut g, shade, 0, None));
     let cp = g.computed_permanent(shade).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Dryad's Favor grants forestwalk.
@@ -738,7 +738,7 @@ fn dryads_favor_grants_forestwalk() {
     assert!(g
         .computed_permanent(bear)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest)));
 }
 

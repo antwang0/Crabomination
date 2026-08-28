@@ -24,7 +24,7 @@ fn mana(g: &mut GameState, seat: usize) {
 
 fn bands(g: &GameState, id: crabomination::card::CardId) -> bool {
     g.computed_permanent(id)
-        .map(|c| c.keywords.iter().any(|k| matches!(k, Keyword::BandsWithOther(_))))
+        .map(|c| c.keywords().iter().any(|k| matches!(k, Keyword::BandsWithOther(_))))
         .unwrap_or(false)
 }
 
@@ -139,8 +139,8 @@ fn the_kobold_lords_pump_each_other_but_not_themselves() {
     g.add_card_to_battlefield(0, catalog::kobold_overlord());
     let c = g.computed_permanent(kobold).unwrap();
     assert_eq!((c.power, c.toughness), (1, 2), "0/1 plus +1/+0 and +0/+1");
-    assert!(c.keywords.contains(&Keyword::Trample));
-    assert!(c.keywords.contains(&Keyword::FirstStrike));
+    assert!(c.keywords().contains(&Keyword::Trample));
+    assert!(c.keywords().contains(&Keyword::FirstStrike));
     assert_eq!(
         g.computed_permanent(taskmaster).unwrap().power,
         1,

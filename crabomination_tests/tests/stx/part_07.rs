@@ -676,7 +676,7 @@ fn lecture_in_strategy_pumps_team_with_vigilance() {
     let computed = g.compute_battlefield();
     let bear = computed.iter().find(|c| c.id == b).unwrap();
     assert_eq!(bear.power, 3, "Bear pumped");
-    assert!(bear.keywords.contains(&Keyword::Vigilance));
+    assert!(bear.keywords().contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -832,7 +832,7 @@ fn lorehold_bookbinder_etb_recurs_and_grants_haste() {
     // Body has haste this turn.
     let computed = g.compute_battlefield();
     let body = computed.iter().find(|c| c.id == id).unwrap();
-    assert!(body.keywords.contains(&Keyword::Haste));
+    assert!(body.keywords().contains(&Keyword::Haste));
 }
 
 #[test]
@@ -981,10 +981,10 @@ fn lorehold_spirit_champion_anthems_other_spirits() {
     drain_stack(&mut g);
     let computed = g.compute_battlefield();
     let other = computed.iter().find(|c| c.id == other_spirit).unwrap();
-    assert!(other.keywords.contains(&Keyword::FirstStrike),
+    assert!(other.keywords().contains(&Keyword::FirstStrike),
         "Other Spirit got first strike");
     let champ_card = computed.iter().find(|c| c.id == champ).unwrap();
-    assert!(champ_card.keywords.contains(&Keyword::FirstStrike),
+    assert!(champ_card.keywords().contains(&Keyword::FirstStrike),
         "Champion has its own innate first strike");
 }
 

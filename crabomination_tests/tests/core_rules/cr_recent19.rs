@@ -68,7 +68,7 @@ fn cr_702_2_deathtouch_kills_big_creature() {
     let mut g = two_player_game();
     let dryad = g.add_card_to_battlefield(0, catalog::gnarlwood_dryad()); // 1/1 deathtouch
     let wurm = g.add_card_to_battlefield(1, catalog::ruination_wurm()); // 7/6
-    assert!(g.computed_permanent(dryad).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(dryad).unwrap().keywords().contains(&Keyword::Deathtouch));
     g.clear_sickness(dryad);
     g.active_player_idx = 0;
     g.step = TurnStep::DeclareAttackers;

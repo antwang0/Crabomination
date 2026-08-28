@@ -67,7 +67,7 @@ mod recent178 {
         g.active_player_idx = 0;
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 4, "+2/+0 from the katana");
-        assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike on your turn");
+        assert!(cp.keywords().contains(&Keyword::FirstStrike), "first strike on your turn");
     }
 
     /// Salvation Swan blinks a nonflying creature you control when a Bird enters.
@@ -121,7 +121,7 @@ mod recent179 {
         .expect("cast Twinblade Blessing");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike),
+            g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "enchanted creature has double strike"
         );
     }
@@ -396,7 +396,7 @@ mod recent179 {
             .map(|c| c.id)
             .expect("token copy exists");
         assert!(
-            g.computed_permanent(token_id).unwrap().keywords.contains(&Keyword::Haste),
+            g.computed_permanent(token_id).unwrap().keywords().contains(&Keyword::Haste),
             "copy has haste"
         );
     }
@@ -419,7 +419,7 @@ mod recent179 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(foe).unwrap();
         assert_eq!(cp.power, 0, "-2/-0 applied");
-        assert!(!cp.keywords.contains(&Keyword::Flying), "lost flying");
+        assert!(!cp.keywords().contains(&Keyword::Flying), "lost flying");
     }
 }
 
@@ -458,7 +458,7 @@ mod recent180 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(goat).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "three +1/+1 counters → 4/4");
-        assert!(cp.subtypes.creature_types.contains(&CreatureType::Demon), "became a Demon");
+        assert!(cp.subtypes().creature_types.contains(&CreatureType::Demon), "became a Demon");
         assert!(cp.colors.contains(Color::Black), "became black");
         assert!(cp.colors.contains(Color::White), "kept its white color");
         // "Activate only once" — the second try is rejected.
@@ -563,7 +563,7 @@ mod recent181 {
         .expect("attack");
         drain_stack(&mut g);
         let cp = g.computed_permanent(foe).unwrap();
-        assert!(!cp.keywords.contains(&Keyword::Flying), "lost its abilities");
+        assert!(!cp.keywords().contains(&Keyword::Flying), "lost its abilities");
         assert_eq!((cp.power, cp.toughness), (2, 2), "became a 2/2");
     }
 
@@ -699,7 +699,7 @@ mod recent183 {
         advance_to(&mut g, TurnStep::BeginCombat);
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
-        let buffed = cp.power > 2 || cp.keywords.contains(&Keyword::Menace) || cp.keywords.contains(&Keyword::Haste);
+        let buffed = cp.power > 2 || cp.keywords().contains(&Keyword::Menace) || cp.keywords().contains(&Keyword::Haste);
         assert!(buffed, "a mode resolved (+2/+0 or menace+haste)");
     }
 
@@ -742,7 +742,7 @@ mod recent183 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(mine).unwrap();
         assert!(!g.battlefield_find(mine).unwrap().tapped, "untapped its target");
-        assert!(cp.keywords.contains(&Keyword::Hexproof), "gained hexproof");
+        assert!(cp.keywords().contains(&Keyword::Hexproof), "gained hexproof");
         assert_eq!((cp.power, cp.toughness), (3, 3), "became a copy of the 3/3");
     }
 }
@@ -774,8 +774,8 @@ mod recent184 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
-        assert!(cp.keywords.contains(&Keyword::CantBeBlockedByMoreThanOne), "block-limited");
+        assert!(cp.keywords().contains(&Keyword::Trample), "gained trample");
+        assert!(cp.keywords().contains(&Keyword::CantBeBlockedByMoreThanOne), "block-limited");
     }
 
     /// Hellspur Posse Boss makes two Mercenaries and gives other outlaws haste.
@@ -795,7 +795,7 @@ mod recent184 {
             .count();
         assert_eq!(mercs, 2, "made two Mercenary tokens");
         assert!(
-            g.computed_permanent(outlaw).unwrap().keywords.contains(&Keyword::Haste),
+            g.computed_permanent(outlaw).unwrap().keywords().contains(&Keyword::Haste),
             "other outlaw gained haste",
         );
     }
@@ -845,7 +845,7 @@ mod recent184 {
         rogue.subtypes.creature_types = vec![CreatureType::Rogue];
         let outlaw = g.add_card_to_battlefield(0, rogue);
         assert!(
-            g.computed_permanent(outlaw).unwrap().keywords.contains(&Keyword::FirstStrike),
+            g.computed_permanent(outlaw).unwrap().keywords().contains(&Keyword::FirstStrike),
             "outlaw has first strike",
         );
         g.dispatch_triggers_for_events(&[GameEvent::CommittedCrime { player: 0 }]);
@@ -1328,11 +1328,11 @@ mod recent188 {
         let mut g = two_player_game();
         g.active_player_idx = 0;
         let muscle = g.add_card_to_battlefield(0, catalog::overzealous_muscle());
-        assert!(!g.computed_permanent(muscle).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible));
+        assert!(!g.computed_permanent(muscle).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
         g.dispatch_triggers_for_events(&[GameEvent::CommittedCrime { player: 0 }]);
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(muscle).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible),
+            g.computed_permanent(muscle).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible),
             "crime on your turn grants indestructible",
         );
     }
@@ -1558,7 +1558,7 @@ mod recent190 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(land).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "land animated to 3/3");
-        assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+        assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
         assert!(g.players[0].hand.iter().any(|c| c.id == basic), "tutored a basic to hand");
     }
 
@@ -1631,7 +1631,7 @@ mod recent191 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (5, 4), "+3/+2 from the plot trigger");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Trample), "gained trample");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample), "gained trample");
     }
 }
 

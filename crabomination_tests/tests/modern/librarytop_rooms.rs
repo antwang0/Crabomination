@@ -334,7 +334,7 @@ fn rediscover_the_way_chapter_three_grants_double_strike_per_noncreature_spell()
     drain_stack(&mut g);
 
     let computed = g.computed_permanent(bear).unwrap();
-    assert!(computed.keywords.contains(&crabomination::card::Keyword::DoubleStrike),
+    assert!(computed.keywords().contains(&crabomination::card::Keyword::DoubleStrike),
         "noncreature cast after chapter III grants double strike");
 }
 
@@ -377,7 +377,7 @@ fn zirda_discounts_nonmana_activations_with_a_floor() {
     .expect("{1} after floor");
     drain_stack(&mut g);
     let computed = g.computed_permanent(bear).unwrap();
-    assert!(computed.keywords.contains(&crabomination::card::Keyword::CantBlock));
+    assert!(computed.keywords().contains(&crabomination::card::Keyword::CantBlock));
 }
 
 // ── draw-ordinal / first-spell-on-opp-turn triggers + exile-cast batch ──────
@@ -549,8 +549,8 @@ fn restless_anchorage_animates_and_maps_on_attack() {
     }).expect("animate");
     drain_stack(&mut g);
     let computed = g.computed_permanent(land).unwrap();
-    assert!(computed.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(computed.keywords.contains(&crabomination::card::Keyword::Flying));
+    assert!(computed.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(computed.keywords().contains(&crabomination::card::Keyword::Flying));
 
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
@@ -888,7 +888,7 @@ fn reflection_of_kiki_jiki_copies_then_sacs_at_end_step() {
         .expect("token copy created");
     assert!(copy.granted_keywords_eot.contains(&Keyword::Haste) || {
         let cp = g.computed_permanent(copy.id).unwrap();
-        cp.keywords.contains(&Keyword::Haste)
+        cp.keywords().contains(&Keyword::Haste)
     }, "copy has haste");
     let copy_id = copy.id;
     // Advance to the end step — the delayed trigger sacrifices the copy.
@@ -948,7 +948,7 @@ fn dryad_makes_lands_all_basic_types() {
     g.add_card_to_battlefield(0, catalog::dryad_of_the_ilysian_grove());
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     let cp = g.computed_permanent(forest).unwrap();
-    assert!(cp.subtypes.land_types.contains(&crabomination::card::LandType::Island), "Island type added");
+    assert!(cp.subtypes().land_types.contains(&crabomination::card::LandType::Island), "Island type added");
     let cost = crabomination::mana::cost(&[crabomination::mana::u()]);
     g.auto_tap_for_cost(0, &cost);
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "Forest taps for blue under Dryad");
@@ -1284,7 +1284,7 @@ fn lumbering_falls_animates_hexproof() {
     }).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature) && cp.keywords.contains(&Keyword::Hexproof));
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.keywords().contains(&Keyword::Hexproof));
 }
 
 /// Slayers' Stronghold pumps and grants vigilance + haste.
@@ -1302,7 +1302,7 @@ fn slayers_stronghold_pumps_attacker() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4, "+2/+0");
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Grove of the Burnwillows' colored taps feed each opponent 1 life.
@@ -1398,9 +1398,9 @@ fn harbinger_of_the_seas_floods_nonbasics() {
     let valakut = g.add_card_to_battlefield(1, catalog::valakut_the_molten_pinnacle());
     let basic = g.add_card_to_battlefield(1, catalog::mountain());
     let cp = g.computed_permanent(valakut).unwrap();
-    assert_eq!(cp.subtypes.land_types, vec![LandType::Island], "nonbasic → Island only");
+    assert_eq!(cp.subtypes().land_types, vec![LandType::Island], "nonbasic → Island only");
     let cb = g.computed_permanent(basic).unwrap();
-    assert!(cb.subtypes.land_types.contains(&LandType::Mountain), "basics untouched");
+    assert!(cb.subtypes().land_types.contains(&LandType::Mountain), "basics untouched");
 }
 
 /// Flare of Denial counters a spell by sacrificing a nontoken blue creature.
@@ -1491,7 +1491,7 @@ fn guide_of_souls_energy_engine() {
     assert_eq!(g.players[0].energy, 0, "paid three energy");
     let cp = g.computed_permanent(attacker).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "two +1/+1 counters");
-    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gained flying");
 }
 
 // ── CR 613.7d — SwitchPT + animated-state abilities ─────────────────────────
@@ -1775,7 +1775,7 @@ fn rude_awakening_entwined_untaps_and_animates() {
         let c = g.battlefield_find(*l).unwrap();
         assert!(!c.tapped, "land untapped");
         let cp = g.computed_permanent(*l).unwrap();
-        assert!(cp.card_types.contains(&CardType::Creature), "land animated");
+        assert!(cp.card_types().contains(&CardType::Creature), "land animated");
         assert_eq!((cp.power, cp.toughness), (2, 2));
     }
 }
@@ -1815,7 +1815,7 @@ fn promise_of_power_demon_scales_with_hand() {
     let id = demon.id;
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "X = 4 cards in hand");
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Inside Out switches with the hybrid {U/R} pip payable in red.

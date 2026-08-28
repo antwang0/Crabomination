@@ -1214,18 +1214,18 @@ fn temur_ascendancy_grants_haste_only_to_power_4_plus() {
     g.add_card_to_battlefield(0, catalog::temur_ascendancy());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let c = g.compute_battlefield();
-    assert!(!c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(!c.iter().find(|c| c.id == bear).unwrap().keywords().contains(&Keyword::Haste),
         "a 2/2 is below the power-4 gate");
     // Pump the bear past the gate (CR 613.8 — the gate reads computed power).
     g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().power_bonus += 2;
     let c = g.compute_battlefield();
-    assert!(c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(c.iter().find(|c| c.id == bear).unwrap().keywords().contains(&Keyword::Haste),
         "a pumped 4/2 gains haste");
     // Opponent's big creature gets no haste.
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.battlefield.iter_mut().find(|c| c.id == opp).unwrap().power_bonus += 5;
     let c = g.compute_battlefield();
-    assert!(!c.iter().find(|c| c.id == opp).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(!c.iter().find(|c| c.id == opp).unwrap().keywords().contains(&Keyword::Haste),
         "opponent's creatures are unaffected");
 }
 
@@ -2146,7 +2146,7 @@ fn sylvan_safekeeper_sacs_forest_to_grant_shroud() {
     // The bear has Shroud until end of turn (computed via the layer view).
     let computed = g.compute_battlefield();
     let view = computed.iter().find(|c| c.id == bear).unwrap();
-    assert!(view.keywords.contains(&Keyword::Shroud),
+    assert!(view.keywords().contains(&Keyword::Shroud),
         "Bear should gain shroud until end of turn");
 }
 

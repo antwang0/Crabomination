@@ -375,7 +375,7 @@ fn giant_slug_gains_landwalk_next_upkeep() {
     assert!(
         !g.computed_permanent(slug)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::Landwalk(_))),
         "not yet"
@@ -386,7 +386,7 @@ fn giant_slug_gains_landwalk_next_upkeep() {
     assert!(
         g.computed_permanent(slug)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::Landwalk(_))),
         "chosen on the upkeep"
@@ -437,7 +437,7 @@ fn cocoon_locks_then_upgrades_its_host() {
     }
     assert!(!g.battlefield_find(bear).unwrap().tapped, "the last counter came off");
     let pt = g.computed_permanent(bear).unwrap();
-    assert!(pt.keywords.contains(&Keyword::Flying));
+    assert!(pt.keywords().contains(&Keyword::Flying));
     assert!(g.battlefield_find(aura).is_none(), "the Cocoon is spent");
 }
 
@@ -518,7 +518,7 @@ fn gabriel_angelfire_gains_a_chosen_ability() {
     let gabriel = g.add_card_to_battlefield(0, catalog::gabriel_angelfire());
     start_turn_of(&mut g, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(gabriel).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(gabriel).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Nova Pentacle hands the next hit to a creature the opponent controls.

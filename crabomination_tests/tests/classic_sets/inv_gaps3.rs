@@ -141,7 +141,7 @@ fn inv_weavers_respect_their_color_gate() {
         "a blue creature isn't a legal target"
     );
     activate(&mut g, 0, weaver, 0, Some(Target::Permanent(red)));
-    assert!(g.computed_permanent(red).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(red).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 // ── Statics gated on the opposing board ─────────────────────────────────────
@@ -155,12 +155,12 @@ fn inv_kavu_shrink_when_the_opponent_goes_white_or_blue() {
     let runner = g.add_card_to_battlefield(0, catalog::kavu_runner());
     let cp = g.computed_permanent(skittish).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(g.computed_permanent(runner).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(runner).unwrap().keywords().contains(&Keyword::Haste));
 
     g.add_card_to_battlefield(1, catalog::sapphire_leech());
     let cp = g.computed_permanent(skittish).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(!g.computed_permanent(runner).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(runner).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 // ── Auras ───────────────────────────────────────────────────────────────────
@@ -174,7 +174,7 @@ fn wings_of_hope_grants_flight_and_toughness() {
     cast(&mut g, 0, aura, Some(Target::Permanent(host)));
     let cp = g.computed_permanent(host).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 6));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Whip Silk grants reach and rebuys itself for {G}.
@@ -184,10 +184,10 @@ fn whip_silk_grants_reach_and_returns_itself() {
     let host = ready(&mut g, 0, catalog::noble_panther);
     let aura = g.add_card_to_hand(0, catalog::whip_silk());
     cast(&mut g, 0, aura, Some(Target::Permanent(host)));
-    assert!(g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(g.computed_permanent(host).unwrap().keywords().contains(&Keyword::Reach));
     activate(&mut g, 0, aura, 0, None);
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "the Aura went home");
-    assert!(!g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(!g.computed_permanent(host).unwrap().keywords().contains(&Keyword::Reach));
 }
 
 /// Tainted Well cantrips and turns its host land into a Swamp.
@@ -200,8 +200,8 @@ fn tainted_well_makes_a_swamp_and_cantrips() {
     let before = g.players[0].hand.len();
     cast(&mut g, 0, aura, Some(Target::Permanent(land)));
     let cp = g.computed_permanent(land).unwrap();
-    assert!(cp.subtypes.land_types.contains(&LandType::Swamp));
-    assert!(!cp.subtypes.land_types.contains(&LandType::Mountain), "the type is replaced");
+    assert!(cp.subtypes().land_types.contains(&LandType::Swamp));
+    assert!(!cp.subtypes().land_types.contains(&LandType::Mountain), "the type is replaced");
     assert_eq!(g.players[0].hand.len(), before, "aura left hand, ETB drew one back");
 }
 

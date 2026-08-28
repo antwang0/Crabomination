@@ -25,7 +25,7 @@ fn gift_crumb_base_pumps_only() {
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!((b.power, b.toughness), (4, 4), "pumped to 4/4");
-    assert!(!b.keywords.contains(&crabomination::card::Keyword::Indestructible), "no gift, no indestructible");
+    assert!(!b.keywords().contains(&crabomination::card::Keyword::Indestructible), "no gift, no indestructible");
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"), "no Food without the gift");
 }
 
@@ -44,7 +44,7 @@ fn gift_crumb_promised_grants_indestructible_and_food() {
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!((b.power, b.toughness), (4, 4), "pumped to 4/4");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Indestructible), "gift granted indestructible");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Indestructible), "gift granted indestructible");
     assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Food"),
         "opponent received a Food");
 }
@@ -207,7 +207,7 @@ fn gift_valley_rally_promised_grants_first_strike() {
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!((b.power, b.toughness), (4, 2), "pumped +2/+0");
-    assert!(b.keywords.contains(&Keyword::FirstStrike), "gift granted first strike");
+    assert!(b.keywords().contains(&Keyword::FirstStrike), "gift granted first strike");
 }
 
 /// Dawn's Truce's gift grants your permanents indestructible too.
@@ -224,8 +224,8 @@ fn gift_dawns_truce_promised_grants_indestructible() {
     }).expect("cast Dawn's Truce (gift)");
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
-    assert!(b.keywords.contains(&Keyword::Hexproof), "granted hexproof");
-    assert!(b.keywords.contains(&Keyword::Indestructible), "gift added indestructible");
+    assert!(b.keywords().contains(&Keyword::Hexproof), "granted hexproof");
+    assert!(b.keywords().contains(&Keyword::Indestructible), "gift added indestructible");
 }
 
 /// Wildfire Howl's gift adds a 1-damage ping to any target.
@@ -696,7 +696,7 @@ fn bone_cairn_butcher_grants_attacking_tokens_deathtouch() {
     let golem = g.add_token_to_battlefield(0, &crabomination_base::tokens::golem_3_3_token());
     g.clear_sickness(golem);
     // Not attacking yet → no granted deathtouch.
-    assert!(!g.computed_permanent(golem).unwrap().keywords.contains(&Keyword::Deathtouch),
+    assert!(!g.computed_permanent(golem).unwrap().keywords().contains(&Keyword::Deathtouch),
         "token has no deathtouch before attacking");
     g.step = TurnStep::DeclareAttackers;
     g.active_player_idx = 0;
@@ -704,7 +704,7 @@ fn bone_cairn_butcher_grants_attacking_tokens_deathtouch() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: golem, target: AttackTarget::Player(1),
     }])).expect("token attacks");
-    assert!(g.computed_permanent(golem).unwrap().keywords.contains(&Keyword::Deathtouch),
+    assert!(g.computed_permanent(golem).unwrap().keywords().contains(&Keyword::Deathtouch),
         "attacking token has deathtouch from Bone-Cairn Butcher");
 }
 
@@ -726,7 +726,7 @@ fn cunning_coyote_etb_pumps_and_hastes_another() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "bear pumped +1/+1");
-    assert!(cp.keywords.contains(&Keyword::Haste), "bear gains haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "bear gains haste");
 }
 
 /// Monastery Messenger's ETB puts a noncreature/nonland graveyard card on top
@@ -766,12 +766,12 @@ fn equilibrium_adept_flurry_grants_double_strike() {
     let s1 = g.add_card_to_hand(0, catalog::lava_spike());
     g.players[0].mana_pool.add(Color::Red, 1);
     cast_at(&mut g, s1, Target::Player(1));
-    assert!(!g.computed_permanent(adept).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(!g.computed_permanent(adept).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "no double strike after one spell");
     let s2 = g.add_card_to_hand(0, catalog::lava_spike());
     g.players[0].mana_pool.add(Color::Red, 1);
     cast_at(&mut g, s2, Target::Player(1));
-    assert!(g.computed_permanent(adept).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(adept).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "Flurry grants double strike on the second spell");
 }
 
@@ -913,11 +913,11 @@ fn sky_skiff_crews_to_a_creature() {
     let skiff = g.add_card_to_battlefield(0, catalog::sky_skiff());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 ≥ crew 1
     g.clear_sickness(bear);
-    assert!(!g.computed_permanent(skiff).unwrap().card_types.contains(&CardType::Creature),
+    assert!(!g.computed_permanent(skiff).unwrap().card_types().contains(&CardType::Creature),
         "uncrewed Vehicle isn't a creature");
     g.perform_action(GameAction::Crew { vehicle: skiff, crew_creatures: vec![bear] })
         .expect("crew Sky Skiff");
-    assert!(g.computed_permanent(skiff).unwrap().card_types.contains(&CardType::Creature),
+    assert!(g.computed_permanent(skiff).unwrap().card_types().contains(&CardType::Creature),
         "crewed Sky Skiff is a creature");
 }
 
@@ -1148,7 +1148,7 @@ fn wild_ride_pumps_and_grants_haste() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!(cp.power, 5, "2 + 3 = 5 power");
-    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 /// Mammoth Bellow ({2}{G}{U}{R}) makes a 5/5 green Elephant token.
@@ -1178,8 +1178,8 @@ fn amazing_spider_girl_has_flying_vigilance() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::amazing_spider_girl());
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "has flying");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "has vigilance");
+    assert!(cp.keywords().contains(&Keyword::Flying), "has flying");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "has vigilance");
     assert_eq!((cp.power, cp.toughness), (5, 4), "5/4");
 }
 
@@ -1219,7 +1219,7 @@ fn spider_man_india_counters_on_creature_cast() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(buddy).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "buddy got a +1/+1 counter");
-    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&Keyword::Flying), "and flying");
+    assert!(g.computed_permanent(buddy).unwrap().keywords().contains(&Keyword::Flying), "and flying");
 }
 
 // ── TDM batch 7 tests ─────────────────────────────────────────────────────
@@ -1230,7 +1230,7 @@ fn nightblade_brigade_mobilizes_and_has_deathtouch() {
     use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
     let b = g.add_card_to_battlefield(0, catalog::nightblade_brigade());
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Deathtouch));
     g.clear_sickness(b);
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
@@ -1247,7 +1247,7 @@ fn shock_brigade_mobilizes_on_attack() {
     use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
     let b = g.add_card_to_battlefield(0, catalog::shock_brigade());
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Menace));
     g.clear_sickness(b);
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
@@ -1312,7 +1312,7 @@ fn champion_of_dusan_renew_grants_trample() {
     }).expect("Renew from graveyard");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(target).unwrap().keywords().contains(&Keyword::Trample),
         "trample counter granted trample");
     assert!(g.exile.iter().any(|c| c.id == champ), "Champion exiled by Renew");
 }
@@ -1334,7 +1334,7 @@ fn sagu_pummeler_renew_grants_reach() {
     }).expect("Renew from graveyard");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
-    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(g.computed_permanent(target).unwrap().keywords().contains(&Keyword::Reach));
 }
 
 /// Adorned Crocodile dies into a 2/2 Zombie Druid, and its Renew adds a counter.
@@ -1538,7 +1538,7 @@ fn reigning_victor_etb_buffs_and_protects() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "2 + 1 = 3 power");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "gained indestructible");
 }
 
 /// Agent of Kotis' Renew puts two +1/+1 counters on a creature.
@@ -1575,7 +1575,7 @@ fn alchemists_assistant_renew_grants_lifelink() {
         additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(target).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 /// Qarsi Revenant's Renew grants flying, deathtouch, and lifelink.
@@ -1593,7 +1593,7 @@ fn qarsi_revenant_renew_grants_three_keywords() {
         additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Renew");
     drain_stack(&mut g);
-    let kw = g.computed_permanent(target).unwrap().keywords.clone();
+    let kw = g.computed_permanent(target).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::Deathtouch) && kw.contains(&Keyword::Lifelink));
 }
 
@@ -1691,7 +1691,7 @@ fn webspinner_cuff_reconfigures_and_buffs() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 6), "2/2 + 1/4 = 3/6");
-    assert!(cp.keywords.contains(&Keyword::Reach), "granted reach");
+    assert!(cp.keywords().contains(&Keyword::Reach), "granted reach");
 }
 
 /// Sarkhan's Triumph tutors a Dragon to hand.
@@ -1729,7 +1729,7 @@ fn lotus_eye_mystics_etb_returns_enchantment() {
     }).expect("cast Lotus-Eye Mystics");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "enchantment returned to hand");
-    assert!(g.computed_permanent(m).unwrap().keywords.contains(&Keyword::Prowess), "has prowess");
+    assert!(g.computed_permanent(m).unwrap().keywords().contains(&Keyword::Prowess), "has prowess");
 }
 
 /// Winternight Stories nets cards: draw three, discard two.
@@ -1864,9 +1864,9 @@ fn bearer_of_glory_first_strike_on_your_turn() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::bearer_of_glory());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike), "first strike on your turn");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike), "first strike on your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike), "no first strike on opp turn");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike), "no first strike on opp turn");
 }
 
 /// Undergrowth Leopard sacrifices itself to destroy an artifact.
@@ -1902,7 +1902,7 @@ fn summit_intimidator_grants_cant_block() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Summit Intimidator");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&crabomination::card::Keyword::CantBlock), "target can't block");
+    assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&crabomination::card::Keyword::CantBlock), "target can't block");
 }
 
 /// Underfoot Underdogs mints a Goblin token on ETB.
@@ -2003,9 +2003,9 @@ fn dragonologist_grants_dragon_hexproof() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::dragonologist());
     let dragon = g.add_card_to_battlefield(0, catalog::pearl_lake_warden()); // a Dragon
-    assert!(g.computed_permanent(dragon).unwrap().keywords.contains(&crabomination::card::Keyword::Hexproof), "untapped Dragon hexproof");
+    assert!(g.computed_permanent(dragon).unwrap().keywords().contains(&crabomination::card::Keyword::Hexproof), "untapped Dragon hexproof");
     g.battlefield_find_mut(dragon).unwrap().tapped = true;
-    assert!(!g.computed_permanent(dragon).unwrap().keywords.contains(&crabomination::card::Keyword::Hexproof), "tapped Dragon loses it");
+    assert!(!g.computed_permanent(dragon).unwrap().keywords().contains(&crabomination::card::Keyword::Hexproof), "tapped Dragon loses it");
 }
 
 /// Trade Route Envoy draws when you control a counter-bearing creature.
@@ -2213,7 +2213,7 @@ fn starry_eyed_skyrider_grants_flying_on_attack() {
         attacker: rider, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+    assert!(g.computed_permanent(buddy).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
         "buddy gained flying");
 }
 
@@ -2439,7 +2439,7 @@ fn duty_beyond_death_sac_then_team_buff() {
     }).expect("cast Duty Beyond Death");
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(keep).unwrap().power, 5, "survivor grew");
-    assert!(g.computed_permanent(keep).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible));
+    assert!(g.computed_permanent(keep).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
 }
 
 /// Lightfoot Technique adds a counter and grants flying + indestructible.
@@ -2459,8 +2459,8 @@ fn lightfoot_technique_buffs_and_protects() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "+1/+1 counter");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Flying));
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Indestructible));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible));
 }
 
 /// Wail of War mode 0 shrinks the opponent's whole team.
@@ -2635,9 +2635,9 @@ fn turn_to_frog_makes_target_a_1_1_blue_frog_with_no_abilities() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).expect("angel still on bf");
     assert_eq!((cp.power, cp.toughness), (1, 1), "becomes 1/1");
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Frog], "becomes a Frog");
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Frog], "becomes a Frog");
     assert!(cp.colors.contains(Color::Blue) && cp.colors.len() == 1, "becomes mono-blue");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "loses flying");
     assert!(cp.lost_all_abilities, "loses all abilities");
 }
 
@@ -2665,8 +2665,8 @@ fn kenriths_transformation_draws_and_makes_a_3_3_green_elk() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draw replaced the cast card");
     let cp = g.computed_permanent(angel).expect("angel still on bf");
     assert_eq!((cp.power, cp.toughness), (3, 3), "becomes 3/3");
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Elk], "becomes an Elk");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Elk], "becomes an Elk");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "loses flying");
     assert!(cp.lost_all_abilities, "loses all abilities");
 }
 
@@ -2685,8 +2685,8 @@ fn lignify_makes_a_0_4_treefolk_with_no_abilities() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).expect("angel still on bf");
     assert_eq!((cp.power, cp.toughness), (0, 4), "becomes 0/4");
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Treefolk], "becomes a Treefolk");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying");
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Treefolk], "becomes a Treefolk");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "loses flying");
     assert!(cp.lost_all_abilities, "loses all abilities");
 }
 
@@ -2746,7 +2746,7 @@ fn ovinize_makes_target_a_0_1_with_no_abilities() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (0, 1), "becomes 0/1");
-    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities, "loses abilities");
+    assert!(!cp.keywords().contains(&Keyword::Flying) && cp.lost_all_abilities, "loses abilities");
 }
 
 #[test]
@@ -2766,8 +2766,8 @@ fn snakeform_makes_a_1_1_green_snake_and_draws() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Snake], "is a Snake");
-    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Snake], "is a Snake");
+    assert!(!cp.keywords().contains(&Keyword::Flying) && cp.lost_all_abilities);
     // cast (-1) + draw (+1) = net unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
 }
@@ -2790,12 +2790,12 @@ fn polymorphists_jest_frogifies_target_players_creatures() {
     for victim in [a1, a2] {
         let cp = g.computed_permanent(victim).unwrap();
         assert_eq!((cp.power, cp.toughness), (1, 1), "their creature is 1/1");
-        assert!(cp.subtypes.creature_types == vec![CreatureType::Frog]);
+        assert!(cp.subtypes().creature_types == vec![CreatureType::Frog]);
         assert!(cp.lost_all_abilities);
     }
     // My own creature is untouched.
     let cp = g.computed_permanent(mine).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "my creature keeps flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "my creature keeps flying");
 }
 
 #[test]
@@ -2813,8 +2813,8 @@ fn frogify_aura_makes_a_1_1_blue_frog() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Frog]);
-    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Frog]);
+    assert!(!cp.keywords().contains(&Keyword::Flying) && cp.lost_all_abilities);
 }
 
 #[test]
@@ -2832,9 +2832,9 @@ fn darksteel_mutation_makes_an_indestructible_0_1_insect() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (0, 1));
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Insect]);
-    assert!(cp.card_types.contains(&CardType::Artifact), "becomes an artifact");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "gains indestructible");
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Insect]);
+    assert!(cp.card_types().contains(&CardType::Artifact), "becomes an artifact");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "gains indestructible");
     assert!(cp.lost_all_abilities, "loses its printed abilities");
 }
 
@@ -2873,10 +2873,10 @@ fn witness_protection_makes_a_1_1_gw_citizen() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.subtypes.creature_types == vec![CreatureType::Citizen]);
-    assert!(cp.card_types.contains(&CardType::Creature) && !cp.card_types.contains(&CardType::Land));
+    assert!(cp.subtypes().creature_types == vec![CreatureType::Citizen]);
+    assert!(cp.card_types().contains(&CardType::Creature) && !cp.card_types().contains(&CardType::Land));
     assert!(cp.colors.contains(Color::Green) && cp.colors.contains(Color::White));
-    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+    assert!(!cp.keywords().contains(&Keyword::Flying) && cp.lost_all_abilities);
 }
 
 #[test]
@@ -2893,9 +2893,9 @@ fn song_of_the_dryads_turns_a_permanent_into_a_forest() {
     }).expect("Song of the Dryads castable");
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(cp.card_types.contains(&CardType::Land), "becomes a land");
-    assert!(!cp.card_types.contains(&CardType::Creature), "no longer a creature");
-    assert!(cp.subtypes.land_types.contains(&LandType::Forest), "is a Forest");
+    assert!(cp.card_types().contains(&CardType::Land), "becomes a land");
+    assert!(!cp.card_types().contains(&CardType::Creature), "no longer a creature");
+    assert!(cp.subtypes().land_types.contains(&LandType::Forest), "is a Forest");
     assert!(cp.colors.is_empty(), "colorless");
 }
 
@@ -2913,7 +2913,7 @@ fn imprisoned_in_the_moon_neutralizes_to_a_colorless_land() {
     }).expect("Imprisoned in the Moon castable");
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(cp.card_types.contains(&CardType::Land) && !cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Land) && !cp.card_types().contains(&CardType::Creature));
     assert!(cp.lost_all_abilities, "abilities removed");
     assert!(cp.colors.is_empty(), "colorless");
 }
@@ -2965,7 +2965,7 @@ fn undying_evil_grants_undying_eot() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Undying Evil castable");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Undying),
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Undying),
         "creature gained undying");
 }
 
@@ -3167,7 +3167,7 @@ fn reprobation_makes_a_0_1_with_no_abilities() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (0, 1));
-    assert!(!cp.keywords.contains(&Keyword::Flying) && cp.lost_all_abilities);
+    assert!(!cp.keywords().contains(&Keyword::Flying) && cp.lost_all_abilities);
 }
 
 #[test]
@@ -3184,7 +3184,7 @@ fn bound_in_gold_locks_down_a_permanent() {
     }).expect("Bound in Gold castable");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bears).unwrap();
-    assert!(cp.keywords.contains(&Keyword::CantAttack) && cp.keywords.contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantAttack) && cp.keywords().contains(&Keyword::CantBlock));
 }
 
 #[test]
@@ -3281,8 +3281,8 @@ fn sensor_splicer_makes_a_golem_with_vigilance_anthem() {
     let golem = g.battlefield.iter().find(|c| c.definition.name == "Golem").expect("Golem minted");
     let cp = g.computed_permanent(golem.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Golem));
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "Golem anthem grants vigilance");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Golem));
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "Golem anthem grants vigilance");
 }
 
 #[test]
@@ -3295,7 +3295,7 @@ fn maul_splicer_makes_two_golems_with_trample() {
     let golems: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Golem").collect();
     assert_eq!(golems.len(), 2, "minted two Golems");
     let cp = g.computed_permanent(golems[0].id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Trample), "Golem anthem grants trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "Golem anthem grants trample");
 }
 
 #[test]
@@ -3337,7 +3337,7 @@ fn wing_splicer_grants_golems_flying() {
     g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);
     let golem = g.battlefield.iter().find(|c| c.definition.name == "Golem").expect("Golem minted");
-    assert!(g.computed_permanent(golem.id).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(golem.id).unwrap().keywords().contains(&Keyword::Flying),
         "Golem anthem grants flying");
 }
 
@@ -3371,7 +3371,7 @@ fn angelic_gift_draws_and_grants_flying() {
     }).expect("Angelic Gift castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "ETB draw replaced the cast aura");
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Flying), "grants flying");
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Flying), "grants flying");
 }
 
 /// The bot's removal ping accounts for damage already marked (CR 120.6): a
@@ -3763,7 +3763,7 @@ fn short_bow_grants_keywords() {
     g.battlefield_find_mut(bow).unwrap().attached_to = Some(hero);
     let cp = g.computed_permanent(hero).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach));
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Reach));
 }
 
 /// Neurok Hoversail grants flying.
@@ -3774,7 +3774,7 @@ fn neurok_hoversail_grants_flying() {
     let hero = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let sail = g.add_card_to_battlefield(0, catalog::neurok_hoversail());
     g.battlefield_find_mut(sail).unwrap().attached_to = Some(hero);
-    assert!(g.computed_permanent(hero).unwrap().keywords.contains(&Keyword::Flying), "flying granted");
+    assert!(g.computed_permanent(hero).unwrap().keywords().contains(&Keyword::Flying), "flying granted");
 }
 
 /// Leather Armor grants +0/+1 and ward.
@@ -3787,7 +3787,7 @@ fn leather_armor_grants_toughness_and_ward() {
     g.battlefield_find_mut(armor).unwrap().attached_to = Some(hero);
     let cp = g.computed_permanent(hero).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 3), "+0/+1");
-    assert!(cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))), "ward granted");
+    assert!(cp.keywords().iter().any(|k| matches!(k, Keyword::Ward(_))), "ward granted");
 }
 
 /// Flame Jab pings any target for 1 and carries Retrace.

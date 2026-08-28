@@ -196,8 +196,8 @@ fn spreading_seas_turns_enchanted_land_into_an_island() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draw");
     let cp = g.compute_battlefield();
     let v = cp.iter().find(|c| c.id == mountain).unwrap();
-    assert!(v.subtypes.land_types.contains(&LandType::Island), "now an Island");
-    assert!(!v.subtypes.land_types.contains(&LandType::Mountain), "Mountain type replaced");
+    assert!(v.subtypes().land_types.contains(&LandType::Island), "now an Island");
+    assert!(!v.subtypes().land_types.contains(&LandType::Mountain), "Mountain type replaced");
 }
 
 // ── Praetor cycle + utility lands ────────────────────────────────────────────
@@ -224,7 +224,7 @@ fn urabrask_grants_haste_and_taps_opponent_creatures() {
     let _ura = g.add_card_to_battlefield(0, catalog::urabrask_the_hidden());
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let cp = g.compute_battlefield();
-    assert!(cp.iter().find(|c| c.id == mine).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(cp.iter().find(|c| c.id == mine).unwrap().keywords().contains(&Keyword::Haste));
     // An opponent's creature enters tapped (CR 614.13 replacement).
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
@@ -830,13 +830,13 @@ fn heliod_devotion_gate_toggles_creatureness() {
     let mut g = two_player_game();
     let heliod = g.add_card_to_battlefield(0, catalog::heliod_sun_crowned()); // {2}{W} = 1 devotion
     let cp = g.compute_battlefield();
-    assert!(!cp.iter().find(|c| c.id == heliod).unwrap().card_types.contains(&CardType::Creature),
+    assert!(!cp.iter().find(|c| c.id == heliod).unwrap().card_types().contains(&CardType::Creature),
         "1 white pip < 5 → not a creature");
     // Add four more white pips of devotion (two Serra Angels = {3}{W}{W} each).
     g.add_card_to_battlefield(0, catalog::serra_angel());
     g.add_card_to_battlefield(0, catalog::serra_angel());
     let cp = g.compute_battlefield();
-    assert!(cp.iter().find(|c| c.id == heliod).unwrap().card_types.contains(&CardType::Creature),
+    assert!(cp.iter().find(|c| c.id == heliod).unwrap().card_types().contains(&CardType::Creature),
         "5 white pips → creature");
 }
 
@@ -853,8 +853,8 @@ fn kodama_grants_trample_to_modified_creatures_only() {
     let bare = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(modded).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     let cp = g.compute_battlefield();
-    assert!(cp.iter().find(|c| c.id == modded).unwrap().keywords.contains(&Keyword::Trample));
-    assert!(!cp.iter().find(|c| c.id == bare).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(cp.iter().find(|c| c.id == modded).unwrap().keywords().contains(&Keyword::Trample));
+    assert!(!cp.iter().find(|c| c.id == bare).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// A modified creature connecting fetches a tapped basic.
@@ -1058,7 +1058,7 @@ fn phyrexian_scriptures_chapters() {
     let cp = g.compute_battlefield();
     let bear = cp.iter().find(|c| c.id == mine).unwrap();
     assert_eq!((bear.power, bear.toughness), (3, 3), "+1/+1 counter applied");
-    assert!(bear.card_types.contains(&CardType::Artifact), "became an artifact");
+    assert!(bear.card_types().contains(&CardType::Artifact), "became an artifact");
     // Chapter II — destroy all nonartifact creatures (Angel dies, bear lives).
     g.saga_advance(saga);
     drain_stack(&mut g);
@@ -1578,16 +1578,16 @@ fn svyelun_indestructible_gate_and_ward() {
     let svy = g.add_card_to_battlefield(0, catalog::svyelun_of_sea_and_sky());
     let m1 = g.add_card_to_battlefield(0, catalog::tideshaper_mystic());
     assert!(
-        !g.computed_permanent(svy).unwrap().keywords.contains(&Keyword::Indestructible),
+        !g.computed_permanent(svy).unwrap().keywords().contains(&Keyword::Indestructible),
         "one other Merfolk is not enough"
     );
     let _m2 = g.add_card_to_battlefield(0, catalog::silvergill_adept());
     assert!(
-        g.computed_permanent(svy).unwrap().keywords.contains(&Keyword::Indestructible),
+        g.computed_permanent(svy).unwrap().keywords().contains(&Keyword::Indestructible),
         "two other Merfolk → indestructible"
     );
     assert!(
-        g.computed_permanent(m1).unwrap().keywords.iter().any(|k| matches!(k, Keyword::Ward(_))),
+        g.computed_permanent(m1).unwrap().keywords().iter().any(|k| matches!(k, Keyword::Ward(_))),
         "other Merfolk have ward {{1}}"
     );
 }
@@ -1619,7 +1619,7 @@ fn tideshaper_mystic_changes_land_type_your_turn_only() {
     .expect("activates on your turn");
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
-    assert!(cp.subtypes.land_types.contains(&LandType::Island), "now an Island");
+    assert!(cp.subtypes().land_types.contains(&LandType::Island), "now an Island");
 }
 
 /// Devoted Druid untaps itself for a -1/-1 counter; Vizier of Remedies

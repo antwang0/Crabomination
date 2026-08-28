@@ -79,7 +79,7 @@ fn plaxmanta_shrouds_your_team_and_needs_green() {
         card_id: plax, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud),
         "your creatures gained shroud");
     assert!(g.battlefield_find(plax).is_none(), "sacrificed — no green was spent");
 
@@ -214,9 +214,9 @@ fn steeple_roc_and_snapping_drake_fly() {
     let roc = g.add_card_to_battlefield(0, catalog::steeple_roc());
     let drake = g.add_card_to_battlefield(0, catalog::snapping_drake());
     let rc = g.computed_permanent(roc).unwrap();
-    assert!(rc.keywords.contains(&Keyword::Flying) && rc.keywords.contains(&Keyword::FirstStrike));
+    assert!(rc.keywords().contains(&Keyword::Flying) && rc.keywords().contains(&Keyword::FirstStrike));
     assert_eq!((rc.power, rc.toughness), (3, 1));
     let dc = g.computed_permanent(drake).unwrap();
-    assert!(dc.keywords.contains(&Keyword::Flying));
+    assert!(dc.keywords().contains(&Keyword::Flying));
     assert_eq!((dc.power, dc.toughness), (3, 2));
 }

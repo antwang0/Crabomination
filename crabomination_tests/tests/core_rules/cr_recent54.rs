@@ -42,14 +42,14 @@ fn all_mana(g: &mut GameState, seat: usize) {
 fn cr_205_1b_animation_replaces_the_type_line() {
     let mut g = two_player_game();
     let opal = g.add_card_to_battlefield(0, catalog::opal_caryatid());
-    assert!(g.computed_permanent(opal).unwrap().card_types.contains(&CardType::Enchantment));
+    assert!(g.computed_permanent(opal).unwrap().card_types().contains(&CardType::Enchantment));
     let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
     all_mana(&mut g, 1);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     cast(&mut g, bear, None);
     let cp = g.computed_permanent(opal).unwrap();
-    assert_eq!(cp.card_types, vec![CardType::Creature]);
+    assert_eq!(*cp.card_types(), vec![CardType::Creature]);
     assert_eq!((cp.power, cp.toughness), (2, 2));
 }
 
@@ -64,7 +64,7 @@ fn cr_205_1b_a_later_type_change_wins_on_timestamp() {
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     cast(&mut g, bear, None);
-    assert!(g.computed_permanent(opal).unwrap().card_types.contains(&CardType::Creature));
+    assert!(g.computed_permanent(opal).unwrap().card_types().contains(&CardType::Creature));
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
@@ -77,7 +77,7 @@ fn cr_205_1b_a_later_type_change_wins_on_timestamp() {
     })
     .expect("activate");
     drain_stack(&mut g);
-    assert_eq!(g.computed_permanent(opal).unwrap().card_types, vec![CardType::Enchantment]);
+    assert_eq!(*g.computed_permanent(opal).unwrap().card_types(), vec![CardType::Enchantment]);
 }
 
 // ── CR 300 — Card types ─────────────────────────────────────────────────────
@@ -102,8 +102,8 @@ fn cr_300_2a_an_artifact_land_can_only_be_played() {
     );
     g.perform_action(GameAction::PlayLand(seat)).expect("play");
     let cp = g.computed_permanent(seat).unwrap();
-    assert!(cp.card_types.contains(&CardType::Land));
-    assert!(cp.card_types.contains(&CardType::Artifact));
+    assert!(cp.card_types().contains(&CardType::Land));
+    assert!(cp.card_types().contains(&CardType::Artifact));
 }
 
 // ── CR 309 — Dungeons ───────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ fn cr_118_4_half_life_activation_cost_rounds_up() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 3, "7 → pay 4");
     let cp = g.computed_permanent(evil).unwrap();
-    assert_eq!(cp.card_types, vec![CardType::Creature]);
+    assert_eq!(*cp.card_types(), vec![CardType::Creature]);
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
 

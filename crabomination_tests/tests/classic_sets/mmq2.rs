@@ -289,8 +289,8 @@ fn fountain_watch_shrouds_your_noncreature_permanents() {
     g.add_card_to_battlefield(0, catalog::fountain_watch());
     let lens = g.add_card_to_battlefield(0, catalog::distorting_lens());
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(lens).unwrap().keywords.contains(&Keyword::Shroud));
-    assert!(!g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(lens).unwrap().keywords().contains(&Keyword::Shroud));
+    assert!(!g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Embargo keeps nonland permanents down through the untap step.
@@ -468,7 +468,7 @@ fn natural_affinity_animates_all_lands() {
     for id in [mine, theirs] {
         let cp = g.computed_permanent(id).unwrap();
         assert_eq!((cp.power, cp.toughness), (2, 2));
-        assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+        assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     }
 }
 

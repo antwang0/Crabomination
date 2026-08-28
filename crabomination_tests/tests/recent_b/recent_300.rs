@@ -17,7 +17,7 @@ fn thundersong_trumpeter_locks_a_creature_down() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap it down");
     drain_stack(&mut g);
-    let kw = g.computed_permanent(foe).unwrap().keywords.clone();
+    let kw = g.computed_permanent(foe).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::CantAttack) && kw.contains(&Keyword::CantBlock),
         "target can't attack or block this turn");
 }
@@ -47,12 +47,12 @@ fn grozoth_can_shed_defender_to_attack() {
     let mut g = two_player_game();
     let grz = g.add_card_to_battlefield(0, catalog::grozoth());
     g.clear_sickness(grz);
-    assert!(g.computed_permanent(grz).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(grz).unwrap().keywords().contains(&Keyword::Defender));
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: grz, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("shed defender");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(grz).unwrap().keywords.contains(&Keyword::Defender),
+    assert!(!g.computed_permanent(grz).unwrap().keywords().contains(&Keyword::Defender),
         "defender dropped until end of turn");
 }

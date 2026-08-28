@@ -52,7 +52,7 @@ fn call_the_spirit_dragons_grows_and_shields_dragons() {
     let mut g = main_phase();
     etb(&mut g, catalog::call_the_spirit_dragons());
     let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
-    assert!(g.computed_permanent(dragon).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(dragon).unwrap().keywords().contains(&Keyword::Indestructible));
 
     g.step = TurnStep::Untap;
     let _ = g.advance_step(Vec::new());

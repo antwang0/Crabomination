@@ -63,7 +63,7 @@ fn putrid_imp_discard_grants_menace_eot() {
         "Discarded card should hit graveyard");
     let computed = g.compute_battlefield();
     let imp_view = computed.iter().find(|c| c.id == imp).unwrap();
-    assert!(imp_view.keywords.contains(&Keyword::Menace),
+    assert!(imp_view.keywords().contains(&Keyword::Menace),
         "Putrid Imp should have menace until end of turn");
 }
 
@@ -859,7 +859,7 @@ fn blossoming_defense_pumps_and_grants_hexproof() {
     let computed = g.computed_permanent(bear).unwrap();
     assert_eq!(computed.power, 4);
     assert_eq!(computed.toughness, 4);
-    assert!(computed.keywords.contains(&crabomination::card::Keyword::Hexproof));
+    assert!(computed.keywords().contains(&crabomination::card::Keyword::Hexproof));
 }
 
 #[test]
@@ -1747,7 +1747,7 @@ fn bria_riptide_rogue_grants_prowess_to_other_creatures() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let computed = g.compute_battlefield();
     let b = computed.iter().find(|c| c.id == bear).unwrap();
-    assert!(b.keywords.contains(&Keyword::Prowess), "Bria grants prowess to other creatures");
+    assert!(b.keywords().contains(&Keyword::Prowess), "Bria grants prowess to other creatures");
 }
 
 #[test]

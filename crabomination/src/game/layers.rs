@@ -299,31 +299,96 @@ pub enum AffectedPermanents {
 
 // ── Computed permanent ────────────────────────────────────────────────────────
 
-/// A layer-computed characteristic that is usually exactly the printed one.
+/// A layer-computed characteristic that is usually exactly the printed one —
+/// the **layer pass's working form**, which borrows the definition.
 ///
-/// Holds the permanent's (immutable, `Arc`-shared) `CardDefinition` and a
-/// projection into it; the printed value is cloned only when a layer
-/// actually writes through `DerefMut`. `compute_permanent_pass` runs ~1.5 M
-/// times per six games and was **40 % of every allocation the simulator
-/// makes**, nearly all of it cloning collections nothing then modified.
+/// Projects into the permanent's `CardDefinition`; the printed value is
+/// cloned only when a layer actually writes through `DerefMut`.
+/// `compute_permanent_pass` runs ~1.5 M times per six games and was **40 % of
+/// every allocation the simulator makes**, nearly all of it cloning
+/// collections nothing then modified.
 ///
-/// `Deref`/`DerefMut` to `T` keep the field reading like the plain type, so
-/// `cp.keywords.contains(&kw)` and `cp.subtypes.creature_types` are
-/// unchanged at ~4.5 k call sites. The override is boxed so the struct stays
-/// 24 bytes whatever `T` is — `Subtypes` alone is seven `Vec`s.
-pub struct Printed<T: Clone + 'static> {
-    src: std::sync::Arc<crate::card::CardDefinition>,
+/// `Deref`/`DerefMut` to `T` keep the value reading like the plain type, so
+/// the pass body writes `card_types.push(..)` and `subtypes.creature_types`
+/// unchanged. The override is boxed so the struct stays 24 bytes whatever
+/// `T` is — `Subtypes` alone is seven `Vec`s.
+///
+/// **The borrow is why this is not the stored form.** Four of these on one
+/// `ComputedPermanent` held four `Arc<CardDefinition>` handles to the *same*
+/// definition — three redundant reference-count pairs and 24 bytes per
+/// computed permanent, priced by probe at the eighty-fifth pass (PERF
+/// `(-70)`) as `fixed` 0.532 % / `cube` 0.580 %.
+/// [`into_overlay`](Self::into_overlay) drops the handle at the one
+/// construction site and [`ComputedPermanent`] keeps exactly one.
+pub(crate) struct Printed<'a, T: Clone + 'static> {
+    src: &'a crate::card::CardDefinition,
     proj: fn(&crate::card::CardDefinition) -> &T,
     over: Option<Box<T>>,
 }
 
-impl<T: Clone> Printed<T> {
+impl<'a, T: Clone> Printed<'a, T> {
     #[inline]
     pub(crate) fn new(
-        src: std::sync::Arc<crate::card::CardDefinition>,
+        src: &'a crate::card::CardDefinition,
         proj: fn(&crate::card::CardDefinition) -> &T,
     ) -> Self {
         Self { src, proj, over: None }
+    }
+
+    /// Hand the projection and any override to the stored form, dropping the
+    /// borrow. The definition comes back from [`ComputedPermanent::def`].
+    #[inline]
+    pub(crate) fn into_overlay(self) -> Overlay<T> {
+        Overlay { proj: self.proj, over: self.over }
+    }
+}
+
+/// [`Printed`] with the definition handle removed: the **stored** half of a
+/// computed characteristic. A read takes the definition from the one
+/// `Arc<CardDefinition>` [`ComputedPermanent`] holds, so the four
+/// characteristics cost one reference bump to build and one to drop.
+pub struct Overlay<T: Clone + 'static> {
+    proj: fn(&crate::card::CardDefinition) -> &T,
+    over: Option<Box<T>>,
+}
+
+impl<T: Clone> Overlay<T> {
+    /// The override once a layer wrote one, else the printed value.
+    #[inline]
+    fn get<'a>(&'a self, def: &'a crate::card::CardDefinition) -> &'a T {
+        match &self.over {
+            Some(v) => v,
+            None => (self.proj)(def),
+        }
+    }
+}
+
+impl<T: Clone> Clone for Overlay<T> {
+    fn clone(&self) -> Self {
+        Self { proj: self.proj, over: self.over.clone() }
+    }
+}
+
+/// [`Overlay`] for a list — see [`PrintedList`] for why the override is a
+/// `Box<[T]>`.
+pub struct OverlayList<T: Clone + 'static> {
+    proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
+    over: Option<Box<[T]>>,
+}
+
+impl<T: Clone> OverlayList<T> {
+    #[inline]
+    fn get<'a>(&'a self, def: &'a crate::card::CardDefinition) -> &'a [T] {
+        match &self.over {
+            Some(v) => v,
+            None => (self.proj)(def),
+        }
+    }
+}
+
+impl<T: Clone> Clone for OverlayList<T> {
+    fn clone(&self) -> Self {
+        Self { proj: self.proj, over: self.over.clone() }
     }
 }
 
@@ -345,19 +410,25 @@ impl<T: Clone> Printed<T> {
 /// `Deref<Target = [T]>` rather than `&Vec<T>`: every read site uses slice
 /// API (`contains`, `iter`, `has_kw`, `is_empty`), and the four writers are
 /// the inherent methods below.
-pub struct PrintedList<T: Clone + 'static> {
-    src: std::sync::Arc<crate::card::CardDefinition>,
+pub(crate) struct PrintedList<'a, T: Clone + 'static> {
+    src: &'a crate::card::CardDefinition,
     proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
     over: Option<Box<[T]>>,
 }
 
-impl<T: Clone> PrintedList<T> {
+impl<'a, T: Clone> PrintedList<'a, T> {
     #[inline]
     pub(crate) fn new(
-        src: std::sync::Arc<crate::card::CardDefinition>,
+        src: &'a crate::card::CardDefinition,
         proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
     ) -> Self {
         Self { src, proj, over: None }
+    }
+
+    /// [`Printed::into_overlay`] for a list.
+    #[inline]
+    pub(crate) fn into_overlay(self) -> OverlayList<T> {
+        OverlayList { proj: self.proj, over: self.over }
     }
 
     /// The printed list, or the override once one exists.
@@ -365,15 +436,8 @@ impl<T: Clone> PrintedList<T> {
     fn current(&self) -> &[T] {
         match &self.over {
             Some(v) => v,
-            None => (self.proj)(&self.src),
+            None => (self.proj)(self.src),
         }
-    }
-
-    /// The elements as a slice. Inherent because `[T]`'s own `as_slice` is
-    /// unstable, and ten call sites already read the field that way.
-    #[inline]
-    pub(crate) fn as_slice(&self) -> &[T] {
-        self.current()
     }
 
     /// Append, materializing with room for the element in one allocation.
@@ -409,29 +473,11 @@ impl<T: Clone> PrintedList<T> {
     }
 }
 
-impl<T: Clone> std::ops::Deref for PrintedList<T> {
+impl<T: Clone> std::ops::Deref for PrintedList<'_, T> {
     type Target = [T];
     #[inline]
     fn deref(&self) -> &[T] {
         self.current()
-    }
-}
-
-impl<T: Clone> Clone for PrintedList<T> {
-    fn clone(&self) -> Self {
-        Self { src: self.src.clone(), proj: self.proj, over: self.over.clone() }
-    }
-}
-
-impl<T: Clone + std::fmt::Debug> std::fmt::Debug for PrintedList<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&**self, f)
-    }
-}
-
-impl<T: Clone + PartialEq> PartialEq for PrintedList<T> {
-    fn eq(&self, other: &Self) -> bool {
-        **self == **other
     }
 }
 
@@ -445,13 +491,13 @@ impl<T: Clone + PartialEq> PartialEq for PrintedList<T> {
 /// one appended keyword. Materializing with room for the element removes the
 /// third. Inherent, so it shadows the `Deref`'d `Vec::push` at every existing
 /// call site without touching one.
-impl<T: Clone> Printed<Vec<T>> {
+impl<T: Clone> Printed<'_, Vec<T>> {
     #[inline]
     pub(crate) fn push(&mut self, value: T) {
         match &mut self.over {
             Some(v) => v.push(value),
             None => {
-                let printed = (self.proj)(&self.src);
+                let printed = (self.proj)(self.src);
                 let mut v = Vec::with_capacity(printed.len() + 1);
                 v.extend_from_slice(printed);
                 v.push(value);
@@ -461,63 +507,46 @@ impl<T: Clone> Printed<Vec<T>> {
     }
 }
 
-impl<T: Clone> std::ops::Deref for Printed<T> {
+impl<T: Clone> std::ops::Deref for Printed<'_, T> {
     type Target = T;
     #[inline]
     fn deref(&self) -> &T {
         match &self.over {
             Some(v) => v,
-            None => (self.proj)(&self.src),
+            None => (self.proj)(self.src),
         }
     }
 }
 
 /// The clone point: the first layer write materializes the printed value.
-impl<T: Clone> std::ops::DerefMut for Printed<T> {
+impl<T: Clone> std::ops::DerefMut for Printed<'_, T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut T {
         let proj = self.proj;
-        let src = &self.src;
+        let src = self.src;
         self.over.get_or_insert_with(|| Box::new(proj(src).clone()))
-    }
-}
-
-impl<T: Clone> Clone for Printed<T> {
-    fn clone(&self) -> Self {
-        Self { src: self.src.clone(), proj: self.proj, over: self.over.clone() }
-    }
-}
-
-impl<T: Clone + std::fmt::Debug> std::fmt::Debug for Printed<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&**self, f)
-    }
-}
-
-/// Equality is on the effective value, never on where it came from.
-impl<T: Clone + PartialEq> PartialEq for Printed<T> {
-    fn eq(&self, other: &Self) -> bool {
-        **self == **other
-    }
-}
-
-impl<T: Clone + PartialEq> PartialEq<T> for Printed<T> {
-    fn eq(&self, other: &T) -> bool {
-        **self == *other
     }
 }
 
 /// The fully resolved state of a permanent after all layers are applied.
 /// Use this instead of reading `CardInstance` fields directly when layers matter.
-#[derive(Debug, Clone)]
+///
+/// The four characteristics are private [`Overlay`]s read through the
+/// same-named accessors ([`card_types`](Self::card_types) …): each is a
+/// projection into `def`, which is the **one** `Arc<CardDefinition>` handle
+/// this struct holds. It held four — one per characteristic — until PERF
+/// `(-70)`.
+#[derive(Clone)]
 pub struct ComputedPermanent {
     pub id: CardId,
     pub controller: usize,
-    pub card_types: Printed<Vec<CardType>>,
-    pub supertypes: Printed<Vec<Supertype>>,
-    pub subtypes: Printed<Subtypes>,
+    /// The printed definition every overlay above projects into.
+    pub def: std::sync::Arc<crate::card::CardDefinition>,
+    card_types: Overlay<Vec<CardType>>,
+    supertypes: Overlay<Vec<Supertype>>,
+    subtypes: Overlay<Subtypes>,
     pub colors: ColorSet,
-    pub keywords: PrintedList<Keyword>,
+    keywords: OverlayList<Keyword>,
     pub power: i32,
     pub toughness: i32,
     /// True when at least one `Modification::RemoveAllAbilities` continuous
@@ -529,6 +558,51 @@ pub struct ComputedPermanent {
     /// abilities, not just keywords. Defaults to false so pre-push snapshots
     /// keep their existing behavior.
     pub lost_all_abilities: bool,
+}
+
+impl ComputedPermanent {
+    /// CR 613 layer 4 — the computed card types.
+    #[inline]
+    pub fn card_types(&self) -> &Vec<CardType> {
+        self.card_types.get(&self.def)
+    }
+
+    /// CR 613 layer 4 — the computed supertypes.
+    #[inline]
+    pub fn supertypes(&self) -> &Vec<Supertype> {
+        self.supertypes.get(&self.def)
+    }
+
+    /// CR 613 layer 4 — the computed subtypes.
+    #[inline]
+    pub fn subtypes(&self) -> &Subtypes {
+        self.subtypes.get(&self.def)
+    }
+
+    /// CR 613 layer 6 — the computed keywords.
+    #[inline]
+    pub fn keywords(&self) -> &[Keyword] {
+        self.keywords.get(&self.def)
+    }
+}
+
+/// Prints the *effective* characteristics, which is what the four `Printed`
+/// fields' own `Debug` used to do before they became projections.
+impl std::fmt::Debug for ComputedPermanent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ComputedPermanent")
+            .field("id", &self.id)
+            .field("controller", &self.controller)
+            .field("card_types", self.card_types())
+            .field("supertypes", self.supertypes())
+            .field("subtypes", self.subtypes())
+            .field("colors", &self.colors)
+            .field("keywords", &self.keywords())
+            .field("power", &self.power)
+            .field("toughness", &self.toughness)
+            .field("lost_all_abilities", &self.lost_all_abilities)
+            .finish()
+    }
 }
 
 // ── Layer application ─────────────────────────────────────────────────────────
@@ -632,7 +706,7 @@ fn compute_permanent_gated(
         return compute_permanent_pass(card, effects, None, None);
     }
     let pass1 = compute_permanent_pass(card, effects, None, None);
-    let gate_types = has_type_gated.then(|| pass1.subtypes.creature_types.clone());
+    let gate_types = has_type_gated.then(|| pass1.subtypes().creature_types.clone());
     compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref())
 }
 
@@ -646,9 +720,9 @@ fn compute_permanent_pass(
     // these materializes only if a layer below actually writes to it.
     let mut controller = card.controller;
     let def = &card.definition;
-    let mut card_types = Printed::new(def.clone(), |d| &d.card_types);
-    let mut supertypes = Printed::new(def.clone(), |d| &d.supertypes);
-    let mut subtypes = Printed::new(def.clone(), |d| &d.subtypes);
+    let mut card_types = Printed::new(def, |d| &d.card_types);
+    let mut supertypes = Printed::new(def, |d| &d.supertypes);
+    let mut subtypes = Printed::new(def, |d| &d.subtypes);
     // CR 702.103d — while bestowed, the permanent is an Aura enchantment,
     // not a creature. Strip the Creature type and add the Aura subtype so
     // it isn't a valid blocker/attacker/removal target and the orphan-Aura
@@ -668,7 +742,7 @@ fn compute_permanent_pass(
         }
     }
     let mut colors = colors_from_card(card);
-    let mut keywords = PrintedList::new(def.clone(), |d| &d.keywords);
+    let mut keywords = PrintedList::new(def, |d| &d.keywords);
     // EOT-granted keywords join the layer walk as synthetic L6 effects at
     // their grant timestamps (CR 613.7), so a grant resolved *after* a
     // RemoveAllAbilities / RemoveKeyword effect survives it while an
@@ -943,11 +1017,13 @@ fn compute_permanent_pass(
     ComputedPermanent {
         id: card.id,
         controller,
-        card_types,
-        supertypes,
-        subtypes,
+        // The one handle: the four overlays above dropped theirs.
+        def: card.definition.clone(),
+        card_types: card_types.into_overlay(),
+        supertypes: supertypes.into_overlay(),
+        subtypes: subtypes.into_overlay(),
         colors,
-        keywords,
+        keywords: keywords.into_overlay(),
         power,
         toughness,
         lost_all_abilities,

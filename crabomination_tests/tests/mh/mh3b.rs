@@ -116,7 +116,7 @@ fn dreamdrinker_adapt_grants_menace() {
     }).expect("adapt");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Menace), "menace granted");
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Menace), "menace granted");
 }
 
 /// Evolution Witness returns a permanent card from the graveyard on adapt.
@@ -141,10 +141,10 @@ fn envoy_grants_modified_lifelink() {
     g.add_card_to_battlefield(0, catalog::envoy_of_the_ancestors());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     // Unmodified: no lifelink.
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink));
     // Add a counter → modified → lifelink.
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink), "modified gets lifelink");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink), "modified gets lifelink");
 }
 
 /// Guardian of the Forgotten manifests when a modified creature you control dies.
@@ -229,7 +229,7 @@ fn colossal_dreadmask_living_weapon() {
     let germ = g.battlefield.iter().find(|c| c.definition.name == "Phyrexian Germ").expect("germ");
     let cp = g.computed_permanent(germ.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 6), "0/0 germ + 6/6 equip");
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Horrific Assault: a creature you control deals its power to an enemy, and
@@ -362,9 +362,9 @@ fn metastatic_evangel_proliferates() {
 fn obstinate_gargoyle_flies_while_modified() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::obstinate_gargoyle());
-    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "no flying unmodified");
+    assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying), "no flying unmodified");
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "flies while modified");
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying), "flies while modified");
 }
 
 /// Arcbound Condor enters as a 3/3 (modular 3) and shrinks an enemy when an
@@ -471,7 +471,7 @@ fn electrozoa_etb_energy() {
     cast(&mut g, id, None);
     assert_eq!(g.players[0].energy, 2);
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Dreamtide Whale proliferates when a player casts their second spell.
@@ -498,7 +498,7 @@ fn dreamtide_whale_second_spell_proliferates() {
 fn etherium_pteramander_blocks_only_fliers() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::etherium_pteramander());
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::CanBlockOnlyFlying));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::CanBlockOnlyFlying));
 }
 
 /// Not Forgotten leaves a graveyard card on the library and mints a Spirit.
@@ -522,7 +522,7 @@ fn corrupted_conscience_steals_and_grants_infect() {
     let aura = g.add_card_to_hand(0, catalog::corrupted_conscience());
     cast(&mut g, aura, Some(Target::Permanent(victim)));
     assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "gained control of the enchanted creature");
-    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Infect), "granted infect");
+    assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::Infect), "granted infect");
 }
 
 /// Sage of the Unknowable taps for {C} usable on colorless spells or abilities
@@ -562,7 +562,7 @@ fn riddle_gate_gargoyle_attack_energy_lifelink() {
         .expect("declare attack");
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 0, "paid {{E}}{{E}} on attack");
-    assert!(g.computed_permanent(gargoyle).unwrap().keywords.contains(&Keyword::Lifelink),
+    assert!(g.computed_permanent(gargoyle).unwrap().keywords().contains(&Keyword::Lifelink),
         "the attacking gargoyle got lifelink");
 }
 
@@ -595,8 +595,8 @@ fn voidpouncer_kicked_enters_pumped() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 3), "3/1 + two +1/+1 counters");
-    assert!(cp.keywords.contains(&Keyword::Trample), "trample counter granted trample");
-    assert!(cp.keywords.contains(&Keyword::Haste), "entered with haste");
+    assert!(cp.keywords().contains(&Keyword::Trample), "trample counter granted trample");
+    assert!(cp.keywords().contains(&Keyword::Haste), "entered with haste");
 }
 
 /// Voidpouncer cast unkicked is a plain 3/1.
@@ -611,7 +611,7 @@ fn voidpouncer_unkicked_is_vanilla() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 1), "no counters unkicked");
-    assert!(!cp.keywords.contains(&Keyword::Trample));
+    assert!(!cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Scurry of Gremlins makes two Gremlins and banks energy = your creatures,
@@ -639,7 +639,7 @@ fn scurry_of_gremlins_tokens_energy_and_pump() {
     assert_eq!(g.players[0].energy, 0, "spent {{E}}{{E}}{{E}}{{E}}");
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "+1/+0");
-    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 /// Warped Tusker mints an Eldrazi Spawn when cast.
@@ -668,7 +668,7 @@ fn triton_wavebreaker_bestow_grants_prowess() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(host).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "host got +1/+1");
-    assert!(cp.keywords.contains(&Keyword::Prowess), "host gained prowess");
+    assert!(cp.keywords().contains(&Keyword::Prowess), "host gained prowess");
 }
 
 /// Voltstorm Angel, at combat, pays {E}{E} for its modal payoff (bots take the
@@ -684,7 +684,7 @@ fn voltstorm_angel_combat_energy_mode() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].energy, 1, "paid {{E}}{{E}}");
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Lifelink),
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Lifelink),
         "mode 0 granted vigilance + lifelink");
 }
 
@@ -705,7 +705,7 @@ fn voltstorm_angel_nested_modal_picks_second_mode() {
     // Mode 1: the *other* creature gets +1/+1; the Angel itself does not.
     assert_eq!(g.computed_permanent(bear).map(|c| (c.power, c.toughness)), Some((3, 3)),
         "mode 1 pumped the other creature");
-    assert!(!g.computed_permanent(angel).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(!g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::Vigilance),
         "mode 1 did not grant the Angel vigilance");
 }
 
@@ -759,10 +759,10 @@ fn temperamental_oozewagg_grants_modified_trample() {
     g.add_card_to_battlefield(0, catalog::temperamental_oozewagg());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     // Unmodified bear: no trample.
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
     // A +1/+1 counter modifies it → gains trample.
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
         "modified creature gained trample");
 }
 
@@ -820,7 +820,7 @@ fn utter_insignificance_shrinks_and_strips() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(victim).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "base P/T set to 1/1");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "lost all abilities (flying gone)");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "lost all abilities (flying gone)");
 }
 
 /// Trickster's Elk bestowed turns the host into a green 3/3 Elk with no abilities.
@@ -836,8 +836,8 @@ fn tricksters_elk_bestow_rewrites_host() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(host).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "base 3/3");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "lost abilities");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Elk), "is an Elk");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "lost abilities");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Elk), "is an Elk");
 }
 
 /// Siege Smash mode 1 pumps a creature +3/+2 and grants it trample (same slot).
@@ -853,7 +853,7 @@ fn siege_smash_mode1_pump_and_trample() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 4), "+3/+2");
-    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample on the same target");
+    assert!(cp.keywords().contains(&Keyword::Trample), "gained trample on the same target");
 }
 
 /// Siege Smash mode 0 destroys a target artifact.
@@ -882,7 +882,7 @@ fn nyxborn_hydra_enters_with_x_counters() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 4), "0/1 base + three +1/+1 counters");
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Glyph Elemental grows a +1/+1 counter on landfall and, bestowed, hands its
@@ -922,7 +922,7 @@ fn kithkin_billyrider_double_strikes() {
     let id = g.add_card_to_battlefield(0, catalog::kithkin_billyrider());
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 3));
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Eviscerator's Insight sacrifices a permanent as an additional cost, then
@@ -1017,7 +1017,7 @@ fn corrupted_shapeshifter_enters_as_chosen_mode() {
     cast(&mut g, id, None);
     let cp = g.computed_permanent(id).expect("shapeshifter survived ETB");
     assert_eq!((cp.power, cp.toughness), (2, 5), "chose the 2/5 mode");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "gained the mode's keyword");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "gained the mode's keyword");
 }
 
 /// The default decider picks the first mode (3/3 flyer); the printed */* body
@@ -1029,7 +1029,7 @@ fn corrupted_shapeshifter_default_mode_survives() {
     cast(&mut g, id, None);
     let cp = g.computed_permanent(id).expect("shapeshifter survived ETB");
     assert_eq!((cp.power, cp.toughness), (3, 3), "default picked mode 0");
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 // ── Batch 4 (Flare cycle) ────────────────────────────────────────────────────
@@ -1067,7 +1067,7 @@ fn flare_of_fortitude_alt_cost_and_protection() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed the white creature as the cost");
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Hexproof) && cp.keywords.contains(&Keyword::Indestructible),
+    assert!(cp.keywords().contains(&Keyword::Hexproof) && cp.keywords().contains(&Keyword::Indestructible),
         "your creatures gained hexproof + indestructible");
     // Life total can't change this turn — neither gain nor loss lands.
     let life = g.players[0].life;

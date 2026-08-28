@@ -110,11 +110,11 @@ fn mystic_zealot_grows_and_flies_past_threshold() {
     let zealot = g.add_card_to_battlefield(0, catalog::mystic_zealot());
     let cp = g.computed_permanent(zealot).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 4));
-    assert!(!cp.keywords.contains(&Keyword::Flying));
+    assert!(!cp.keywords().contains(&Keyword::Flying));
     fill_graveyard(&mut g, 0);
     let cp = g.computed_permanent(zealot).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 5));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Frightcrawler swells but loses the ability to block past Threshold.
@@ -122,11 +122,11 @@ fn mystic_zealot_grows_and_flies_past_threshold() {
 fn frightcrawler_cant_block_past_threshold() {
     let mut g = main_phase();
     let crawler = g.add_card_to_battlefield(0, catalog::frightcrawler());
-    assert!(!g.computed_permanent(crawler).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(crawler).unwrap().keywords().contains(&Keyword::CantBlock));
     fill_graveyard(&mut g, 0);
     let cp = g.computed_permanent(crawler).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
 }
 
 /// Krosan Avenger's regeneration is Threshold-gated.
@@ -350,7 +350,7 @@ fn kamahls_desire_scales_with_threshold() {
     cast(&mut g, 0, aura, Some(Target::Permanent(host)));
     let cp = g.computed_permanent(host).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
     fill_graveyard(&mut g, 0);
     assert_eq!(g.computed_permanent(host).unwrap().power, 5);
 }
@@ -692,7 +692,7 @@ fn need_for_speed_sacrifices_a_land_for_haste() {
     let body = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     activate(&mut g, 0, engine, 0, Some(Target::Permanent(body)));
     assert!(g.battlefield_find(land).is_none(), "the land paid the cost");
-    assert!(g.computed_permanent(body).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(body).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 // ── Wave 5 ──────────────────────────────────────────────────────────────────
@@ -1080,14 +1080,14 @@ fn demoralize_scales_with_threshold() {
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::demoralize());
     cast(&mut g, 0, spell, None);
-    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::Menace));
 
     let mut g = main_phase();
     fill_graveyard(&mut g, 0);
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let spell = g.add_card_to_hand(0, catalog::demoralize());
     cast(&mut g, 0, spell, None);
-    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Testament of Faith stands up as an X/X Wall.
@@ -1108,7 +1108,7 @@ fn testament_of_faith_animates_for_x() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(test).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Defender));
+    assert!(cp.keywords().contains(&Keyword::Defender));
 }
 
 // ── Wave 9 ──────────────────────────────────────────────────────────────────
@@ -1249,7 +1249,7 @@ fn wayward_angel_falls_past_threshold() {
     fill_graveyard(&mut g, 0);
     let cp = g.computed_permanent(angel).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 7));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     assert!(cp.colors.contains(Color::Black));
 }
 
@@ -1258,9 +1258,9 @@ fn wayward_angel_falls_past_threshold() {
 fn stone_tongue_basilisk_lures_past_threshold() {
     let mut g = main_phase();
     let basilisk = g.add_card_to_battlefield(0, catalog::stone_tongue_basilisk());
-    assert!(!g.computed_permanent(basilisk).unwrap().keywords.contains(&Keyword::AllMustBlock));
+    assert!(!g.computed_permanent(basilisk).unwrap().keywords().contains(&Keyword::AllMustBlock));
     fill_graveyard(&mut g, 0);
-    assert!(g.computed_permanent(basilisk).unwrap().keywords.contains(&Keyword::AllMustBlock));
+    assert!(g.computed_permanent(basilisk).unwrap().keywords().contains(&Keyword::AllMustBlock));
 }
 
 /// Seton's Desire pumps, and lures past Threshold.
@@ -1272,9 +1272,9 @@ fn setons_desire_lures_past_threshold() {
     cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(!cp.keywords.contains(&Keyword::AllMustBlock));
+    assert!(!cp.keywords().contains(&Keyword::AllMustBlock));
     fill_graveyard(&mut g, 0);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::AllMustBlock));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::AllMustBlock));
 }
 
 /// Verdant Succession refills from the library when a green creature dies.
@@ -1462,7 +1462,7 @@ fn earnest_fellowship_grants_protection_from_own_colors() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::ProtectionFromOwnColors)
     );
 }
@@ -1569,7 +1569,7 @@ fn spiritualize_grants_lifelink_and_draws() {
     let spell = g.add_card_to_hand(0, catalog::spiritualize());
     let before = g.players[0].hand.len();
     cast(&mut g, 0, spell, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink));
     assert_eq!(g.players[0].hand.len(), before - 1 + 1);
 }
 
@@ -1581,7 +1581,7 @@ fn graceful_antelope_has_plainswalk() {
     assert!(
         g.computed_permanent(antelope)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Plains))
     );
 }
@@ -1771,6 +1771,6 @@ fn shifty_doppelganger_cheats_a_creature_in() {
     let big = g.add_card_to_hand(0, catalog::grizzly_bears());
     activate(&mut g, 0, dop, 0, None);
     assert!(g.battlefield_find(big).is_some(), "it came down");
-    assert!(g.computed_permanent(big).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(big).unwrap().keywords().contains(&Keyword::Haste));
     assert!(g.battlefield_find(dop).is_none(), "the Doppelganger exiled itself");
 }

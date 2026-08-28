@@ -177,9 +177,9 @@ fn elder_land_wurm_loses_defender_when_it_blocks() {
     let mut g = main_phase();
     let wurm = g.add_card_to_battlefield(1, catalog::elder_land_wurm());
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(wurm).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::Defender));
     combat(&mut g, attacker, Some(wurm));
-    assert!(!g.computed_permanent(wurm).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(!g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::Defender));
 }
 
 /// Ivory Guardians' anthem only switches on against a red opponent.
@@ -386,8 +386,8 @@ fn living_plane_animates_all_lands() {
     let land = g.add_card_to_battlefield(1, catalog::island());
     g.add_card_to_battlefield(0, catalog::living_plane());
     let cp = g.computed_permanent(land).expect("animated");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land));
     assert_eq!((cp.power, cp.toughness), (1, 1));
 }
 
@@ -443,9 +443,9 @@ fn spectral_cloak_shroud_switches_off_when_tapped() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let aura = g.add_card_to_hand(0, catalog::spectral_cloak());
     cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud));
     g.battlefield_find_mut(bear).unwrap().tapped = true;
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Demonic Torment benches the host in both directions.

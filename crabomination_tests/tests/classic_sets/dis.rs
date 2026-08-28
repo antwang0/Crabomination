@@ -157,7 +157,7 @@ fn writ_of_passage_forecast_grants_unblockable() {
         target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Forecast activatable in upkeep");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable),
         "power-2 creature became unblockable");
     assert!(g.players[0].hand.iter().any(|c| c.id == writ), "card stays in hand");
 }
@@ -170,7 +170,7 @@ fn flaring_flame_kin_pumps_while_enchanted() {
     // Bare: 2/2, no trample.
     let base = g.computed_permanent(kin).unwrap();
     assert_eq!((base.power, base.toughness), (2, 2));
-    assert!(!base.keywords.contains(&Keyword::Trample));
+    assert!(!base.keywords().contains(&Keyword::Trample));
     // Enchant it with any aura.
     let aura = g.add_card_to_hand(0, catalog::riot_spikes()); // +2/-1 aura
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -182,7 +182,7 @@ fn flaring_flame_kin_pumps_while_enchanted() {
     let buffed = g.computed_permanent(kin).unwrap();
     // 2/2 base +2/+2 (enchanted) +2/-1 (Riot Spikes) = 6/3, with trample.
     assert_eq!((buffed.power, buffed.toughness), (6, 3), "enchanted pump + aura");
-    assert!(buffed.keywords.contains(&Keyword::Trample), "gains trample while enchanted");
+    assert!(buffed.keywords().contains(&Keyword::Trample), "gains trample while enchanted");
 }
 
 /// Haazda Shield Mate sacrifices itself at upkeep if {W}{W} isn't paid.
@@ -821,7 +821,7 @@ fn nightcreep_recolors_creatures_and_lands() {
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().colors.contains(Color::Black), "creature is black");
     assert!(
-        g.computed_permanent(forest).unwrap().subtypes.land_types.contains(&LandType::Swamp),
+        g.computed_permanent(forest).unwrap().subtypes().land_types.contains(&LandType::Swamp),
         "land became a Swamp",
     );
 }
@@ -1149,7 +1149,7 @@ fn omnibian_makes_a_3_3_frog() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(target).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "became a 3/3");
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Frog), "is a Frog");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Frog), "is a Frog");
 }
 
 /// Unliving Psychopath pumps +1/-1 and destroys weaker creatures.
@@ -1980,7 +1980,7 @@ fn simic_basilisk_graft_and_grant_deathtouch() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate grant");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(basilisk).unwrap().keywords.contains(&Keyword::Deathtouch),
+    assert!(g.computed_permanent(basilisk).unwrap().keywords().contains(&Keyword::Deathtouch),
         "gained deathtouch");
 }
 
@@ -2094,7 +2094,7 @@ fn wars_toll_taps_the_rest_of_their_lands() {
     }
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::MustAttack),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttack),
         "their creatures must attack",
     );
 }

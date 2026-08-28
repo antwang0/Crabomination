@@ -246,7 +246,7 @@ fn goblin_king_anthems_goblins() {
     let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // 1/1 Goblin
     let cp = g.computed_permanent(raider).expect("raider alive");
     assert_eq!((cp.power, cp.toughness), (2, 2), "Goblin King anthems other Goblins +1/+1");
-    assert!(cp.keywords.contains(&Keyword::Landwalk(LandType::Mountain)),
+    assert!(cp.keywords().contains(&Keyword::Landwalk(LandType::Mountain)),
         "other Goblins gain mountainwalk");
     // "Other" — the King doesn't buff itself.
     let kcp = g.computed_permanent(king).expect("king alive");
@@ -261,7 +261,7 @@ fn goblin_chieftain_anthems_and_grants_haste() {
     let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // 1/1 Goblin
     let cp = g.computed_permanent(raider).expect("raider alive");
     assert_eq!((cp.power, cp.toughness), (2, 2), "+1/+1 to other Goblins");
-    assert!(cp.keywords.contains(&Keyword::Haste), "other Goblins gain haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "other Goblins gain haste");
 }
 
 #[test]
@@ -331,7 +331,7 @@ fn goblin_warchief_reduces_goblin_costs_and_grants_haste() {
     g.add_card_to_battlefield(0, catalog::goblin_warchief());
     let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders());
     // Haste anthem reaches other Goblins.
-    assert!(g.computed_permanent(raider).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(raider).unwrap().keywords().contains(&Keyword::Haste),
         "Goblins gain haste");
     // {2}{R} Krenko (a Goblin spell) is discounted by {1} → costs {1}{R}{R}.
     let krenko = g.add_card_to_hand(0, catalog::krenko_mob_boss());
@@ -403,7 +403,7 @@ fn captain_of_the_watch_anthems_soldiers_and_makes_three() {
     // Anthem + vigilance reach the tokens.
     let cp = g.computed_permanent(soldiers[0].id).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2), "+1/+1 to other Soldiers");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "Soldiers gain vigilance");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "Soldiers gain vigilance");
 }
 
 #[test]
@@ -459,7 +459,7 @@ fn bloodlust_inciter_grants_haste() {
         card_id: inciter, ability_index: 0, target: Some(Target::Permanent(target)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant haste");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(target).unwrap().keywords().contains(&Keyword::Haste),
         "target gained haste");
 }
 
@@ -576,7 +576,7 @@ fn selfless_spirit_sac_grants_team_indestructible() {
     }).expect("sac ability activates");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).expect("bear alive");
-    assert!(cp.keywords.contains(&Keyword::Indestructible),
+    assert!(cp.keywords().contains(&Keyword::Indestructible),
         "ally gains indestructible until end of turn");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spirit), "Spirit sacrificed");
 }
@@ -2085,7 +2085,7 @@ fn tezzeret_minus_seven_emblem_buffs_and_animates_artifact() {
     assert_eq!(s.counter_count(CounterType::PlusOnePlusOne), 3, "three +1/+1 counters");
     let cp = g.compute_battlefield();
     let view = cp.iter().find(|c| c.id == stone).unwrap();
-    assert!(view.card_types.contains(&CardType::Creature), "noncreature artifact became a creature");
+    assert!(view.card_types().contains(&CardType::Creature), "noncreature artifact became a creature");
     assert_eq!((view.power, view.toughness), (3, 3), "0/0 Robot + three +1/+1 = 3/3");
 }
 
@@ -2112,9 +2112,9 @@ fn vivien_reid_minus_eight_emblem_anthems_your_creatures() {
     let cp = g.compute_battlefield();
     let mine = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((mine.power, mine.toughness), (4, 4), "your creature gets +2/+2");
-    assert!(mine.keywords.contains(&Keyword::Vigilance));
-    assert!(mine.keywords.contains(&Keyword::Trample));
-    assert!(mine.keywords.contains(&Keyword::Indestructible));
+    assert!(mine.keywords().contains(&Keyword::Vigilance));
+    assert!(mine.keywords().contains(&Keyword::Trample));
+    assert!(mine.keywords().contains(&Keyword::Indestructible));
     // Opponent's creature is unaffected.
     let theirs = cp.iter().find(|c| c.id == foe).unwrap();
     assert_eq!((theirs.power, theirs.toughness), (2, 2), "opponent unbuffed");

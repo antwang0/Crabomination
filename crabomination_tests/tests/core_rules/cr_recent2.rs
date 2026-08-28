@@ -43,12 +43,12 @@ fn cr_716_2_level_gated_static_applies_only_at_level() {
     let class = g.add_card_to_battlefield(0, class_def);
     g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 1;
     assert!(
-        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        !g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "no flying at level 1",
     );
     g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "flying at level 2",
     );
 }
@@ -92,12 +92,12 @@ fn cr_716_2_level_gate_wraps_live_grant() {
     let class = g.add_card_to_battlefield(0, class_def);
     g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 1;
     assert!(
-        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        !g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
         "no trample at level 1",
     );
     g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
         "trample at level 2 (live-recomputed grant)",
     );
 }
@@ -112,8 +112,8 @@ fn cr_613_self_animated_enchantment_keeps_enchantment_type() {
     let effect = catalog::emergent_haunting().triggered_abilities[0].effect.clone();
     g.resolve_effect(&effect, &EffectContext::for_ability(e, 0, None)).unwrap();
     let p = g.computed_permanent(e).unwrap();
-    assert!(p.card_types.contains(&CardType::Creature), "gained Creature");
-    assert!(p.card_types.contains(&CardType::Enchantment), "still an Enchantment (CR 711.2)");
+    assert!(p.card_types().contains(&CardType::Creature), "gained Creature");
+    assert!(p.card_types().contains(&CardType::Enchantment), "still an Enchantment (CR 711.2)");
 }
 
 /// CR 702.112c — Renown triggers only while the creature "isn't renowned": the

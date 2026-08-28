@@ -1072,7 +1072,7 @@ fn diviners_wand_equips_for_three_and_buffs() {
         .expect("Diviner's Wand equips for {3}");
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 over a 2/2 bear");
-    assert!(cp.keywords.contains(&Keyword::Flying), "grants flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "grants flying");
 }
 
 #[test]

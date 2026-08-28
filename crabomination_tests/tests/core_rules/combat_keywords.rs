@@ -475,7 +475,7 @@ fn cr_702_137_riot_default_grants_haste() {
     drain_stack(&mut g);
     // AutoDecider picks mode 0 → permanent haste.
     let cp = g.computed_permanent(id).expect("Goblin in play");
-    assert!(cp.keywords.contains(&Keyword::Haste), "Riot default mode grants haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "Riot default mode grants haste");
     assert_eq!((cp.power, cp.toughness), (2, 2), "no counter in haste mode");
 }
 

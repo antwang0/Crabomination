@@ -46,21 +46,21 @@ fn hisokas_guard_shroud_lasts_while_it_stays_tapped() {
     })
     .expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud));
 
     // Declining the untap keeps the grant alive; untapping ends it.
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.do_untap();
     g.check_state_based_actions();
     assert!(g.battlefield_find(guard).unwrap().tapped, "chose not to untap");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud));
 
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
     g.do_untap();
     g.check_state_based_actions();
     assert!(!g.battlefield_find(guard).unwrap().tapped);
     assert!(
-        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud),
+        !g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud),
         "grant ends with the untap"
     );
 }
@@ -157,7 +157,7 @@ fn swirl_the_mists_rewrites_protection_color_words() {
     let knight = g.add_card_to_battlefield(1, catalog::stillmoon_cavalier());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     cast(&mut g, 0, catalog::swirl_the_mists(), None);
-    let kws = g.computed_permanent(knight).unwrap().keywords.clone();
+    let kws = g.computed_permanent(knight).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Protection(Color::Blue)), "white and black → blue");
     assert!(!kws.contains(&Keyword::Protection(Color::White)));
     assert!(!kws.contains(&Keyword::Protection(Color::Black)));

@@ -143,7 +143,7 @@ fn chieftain_en_dal_gives_the_attack_first_strike() {
     .expect("attack");
     drain_stack(&mut g);
     let cp = g.computed_permanent(buddy).expect("computed");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "the other attacker got it too");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "the other attacker got it too");
 }
 
 /// Avenger en-Dal exiles an attacker and pays its controller in life.
@@ -196,7 +196,7 @@ fn lashknife_taps_a_creature_instead_of_paying() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(helper).unwrap().tapped || g.battlefield_find(host).unwrap().tapped);
     let cp = g.computed_permanent(host).expect("computed");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Noble Stand pays two life for every block.
@@ -227,8 +227,8 @@ fn off_balance_stops_attacks_and_blocks() {
     let spell = g.add_card_to_hand(0, catalog::off_balance());
     cast(&mut g, 0, spell, Some(Target::Permanent(victim)));
     let cp = g.computed_permanent(victim).expect("computed");
-    assert!(cp.keywords.contains(&Keyword::CantAttack));
-    assert!(cp.keywords.contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantAttack));
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
 }
 
 /// Silkenfist Fighter untaps when it gets blocked.
@@ -687,7 +687,7 @@ fn stampede_driver_pumps_and_tramples() {
     activate(&mut g, 0, driver, 0, None);
     let cp = g.computed_permanent(bear).expect("computed");
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Treetop Bracers pumps and grounds the blockers.

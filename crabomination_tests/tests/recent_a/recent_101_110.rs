@@ -324,7 +324,7 @@ mod recent103 {
         let copy = g.battlefield.iter()
             .find(|c| c.is_token && c.definition.name == "Impulsive Pilferer")
             .expect("one token copy (one opponent)");
-        assert!(g.computed_permanent(copy.id).unwrap().keywords.contains(&Keyword::Haste));
+        assert!(g.computed_permanent(copy.id).unwrap().keywords().contains(&Keyword::Haste));
         assert_eq!(copy.goaded_by, vec![0], "attacks-if-able requirement");
         let copy_id = copy.id;
         // The copy is sacrificed at the beginning of the next end step; its
@@ -807,7 +807,7 @@ mod recent106 {
             let def = std::sync::Arc::make_mut(&mut c.definition);
             def.keywords.push(Keyword::Infect);
         }
-        assert!(!g.computed_permanent(carrier).unwrap().keywords.contains(&Keyword::Infect),
+        assert!(!g.computed_permanent(carrier).unwrap().keywords().contains(&Keyword::Infect),
             "opponent's creature loses infect");
     }
 }
@@ -934,7 +934,7 @@ mod recent107 {
         }).expect("unearth");
         drain_stack(&mut g);
         let c = g.computed_permanent(stitcher).expect("unearthed");
-        assert!(c.keywords.contains(&Keyword::Haste));
+        assert!(c.keywords().contains(&Keyword::Haste));
         // {T}: tap another permanent (mode 0).
         g.perform_action(GameAction::ActivateAbility {
             card_id: stitcher, ability_index: 0, target: Some(Target::Permanent(land)),
@@ -978,7 +978,7 @@ mod recent107 {
         }).expect("-1");
         drain_stack(&mut g);
         let cp = g.computed_permanent(ring).unwrap();
-        assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "animated");
+        assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "animated");
         assert_eq!((cp.power, cp.toughness), (5, 5));
     }
 
@@ -1227,11 +1227,11 @@ mod recent109 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+            g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
             "your creatures gain flying"
         );
         assert!(
-            !g.computed_permanent(angel).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+            !g.computed_permanent(angel).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
             "opponent's printed flying is stripped"
         );
         // A grant with a later timestamp still loses to the can't-have.
@@ -1247,7 +1247,7 @@ mod recent109 {
         )
         .unwrap();
         assert!(
-            !g.computed_permanent(angel).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+            !g.computed_permanent(angel).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
             "a later EOT grant can't restore the keyword"
         );
     }
@@ -1349,7 +1349,7 @@ mod recent110 {
         g.perform_action(GameAction::Equip { equipment: garrison, target: forest }).expect("fortify");
         assert_eq!(g.battlefield_find(garrison).unwrap().attached_to, Some(forest));
         let cp = g.computed_permanent(forest).unwrap();
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Indestructible));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible));
     }
 
     /// CR 702.71c — fortify only targets lands; a creature is rejected.
@@ -1618,7 +1618,7 @@ mod recent110 {
             crabomination::card::LandType::Mountain,
             crabomination::card::LandType::Forest,
         ] {
-            assert!(cp.subtypes.land_types.contains(&lt), "missing {lt:?}");
+            assert!(cp.subtypes().land_types.contains(&lt), "missing {lt:?}");
         }
     }
 
@@ -1725,11 +1725,11 @@ mod recent110 {
         let mut g = two_player_game();
         let rogue = g.add_card_to_battlefield(0, catalog::slippery_scoundrel());
         let cp = g.computed_permanent(rogue).unwrap();
-        assert!(!cp.keywords.contains(&crabomination::card::Keyword::Hexproof), "no blessing yet");
+        assert!(!cp.keywords().contains(&crabomination::card::Keyword::Hexproof), "no blessing yet");
         g.players[0].city_blessing = true;
         let cp = g.computed_permanent(rogue).unwrap();
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Hexproof));
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Unblockable));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Hexproof));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Unblockable));
     }
 
     /// Tempest Djinn grows +1/+0 per Island you control.

@@ -147,10 +147,10 @@ fn drix_fatemaker_grants_trample_to_countered_creatures() {
     g.add_card_to_battlefield(0, catalog::drix_fatemaker());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     // No counter yet → no trample.
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
     g.battlefield_find_mut(bear).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
         "a +1/+1 counter turns on the trample static"
     );
 }
@@ -352,7 +352,7 @@ fn dual_sun_technique_draws_with_a_counter() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Dual-Sun Technique");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
     assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew because the target had a counter");
 }
 
@@ -389,7 +389,7 @@ fn station_charges_from_tapped_power_then_band_makes_creature() {
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
     // Before stationing it's a noncreature artifact.
-    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(ship).unwrap().card_types().contains(&CardType::Creature));
     g.perform_action(GameAction::ActivateAbility {
         card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("station the 4/4");
@@ -398,9 +398,9 @@ fn station_charges_from_tapped_power_then_band_makes_creature() {
     assert_eq!(s.counter_count(CounterType::Charge), 4, "charges = tapped creature's power");
     assert!(g.battlefield_find(beast).unwrap().tapped, "the stationed creature is tapped");
     let post = g.computed_permanent(ship).unwrap();
-    assert!(post.card_types.contains(&CardType::Creature), "{{4+}} makes it a creature");
+    assert!(post.card_types().contains(&CardType::Creature), "{{4+}} makes it a creature");
     assert_eq!((post.power, post.toughness), (2, 2));
-    assert!(post.keywords.contains(&Keyword::Flying));
+    assert!(post.keywords().contains(&Keyword::Flying));
 }
 
 /// Charge counters accumulate across multiple stationings; a higher `{N+}`
@@ -420,14 +420,14 @@ fn station_accumulates_to_higher_band() {
         drain_stack(g);
     };
     act(&mut g); // 4 charges — below {8+}
-    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(ship).unwrap().card_types().contains(&CardType::Creature));
     let _ = (a, b);
     act(&mut g); // 8 charges — {8+} applies
     let post = g.computed_permanent(ship).unwrap();
     assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge), 8);
-    assert!(post.card_types.contains(&CardType::Creature));
+    assert!(post.card_types().contains(&CardType::Creature));
     assert_eq!((post.power, post.toughness), (5, 4));
-    assert!(post.keywords.contains(&Keyword::Flying) && post.keywords.contains(&Keyword::Trample));
+    assert!(post.keywords().contains(&Keyword::Flying) && post.keywords().contains(&Keyword::Trample));
 }
 
 /// Station is sorcery-speed only (CR 702.184a) — it can't be activated with the
@@ -458,9 +458,9 @@ fn galvanizing_sawship_band_grants_flying_haste() {
     }).expect("station");
     drain_stack(&mut g);
     let post = g.computed_permanent(ship).unwrap();
-    assert!(post.card_types.contains(&CardType::Creature));
+    assert!(post.card_types().contains(&CardType::Creature));
     assert_eq!((post.power, post.toughness), (6, 5));
-    assert!(post.keywords.contains(&Keyword::Flying) && post.keywords.contains(&Keyword::Haste));
+    assert!(post.keywords().contains(&Keyword::Flying) && post.keywords().contains(&Keyword::Haste));
 }
 
 /// Susurian Dirgecraft's ETB makes each opponent sacrifice a nontoken creature.
@@ -511,14 +511,14 @@ fn lumen_frigate_charge_gated_anthem_band() {
     // bear is now tapped; drop 2 charges directly to isolate the band layer.
     g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 2);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "{{2+}} anthem grants +1/+1");
-    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature),
+    assert!(!g.computed_permanent(ship).unwrap().card_types().contains(&CardType::Creature),
         "still a noncreature below the {{12+}} band");
     // Reach the {12+} band.
     g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 12);
     let post = g.computed_permanent(ship).unwrap();
-    assert!(post.card_types.contains(&CardType::Creature));
+    assert!(post.card_types().contains(&CardType::Creature));
     assert_eq!((post.power, post.toughness), (3, 5));
-    assert!(post.keywords.contains(&Keyword::Lifelink));
+    assert!(post.keywords().contains(&Keyword::Lifelink));
 }
 
 /// The server view surfaces a Station card's next `{N+}` charge threshold so
@@ -704,7 +704,7 @@ fn kavaron_turbodrone_pumps_and_hastes() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Plasma Bolt deals 2, or 3 with Void active.
@@ -778,9 +778,9 @@ fn synthesizer_labship_charge_gated_animate_band() {
     advance_to(&mut g, TurnStep::BeginCombat);
     drain_stack(&mut g);
     let cp = g.computed_permanent(relic).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature), "artifact animated");
+    assert!(cp.card_types().contains(&CardType::Creature), "artifact animated");
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Nutrient Block draws a card when it's sacrificed (left for the graveyard).
@@ -839,11 +839,11 @@ fn gravblade_heavy_artifact_conditional_buff() {
     let gh = g.add_card_to_battlefield(0, catalog::gravblade_heavy());
     let cp = g.computed_permanent(gh).unwrap();
     assert_eq!(cp.power, 3, "no artifact → base 3/4");
-    assert!(!cp.keywords.contains(&Keyword::Deathtouch));
+    assert!(!cp.keywords().contains(&Keyword::Deathtouch));
     g.add_card_to_battlefield(0, catalog::wurmwall_sweeper()); // an artifact
     let cp2 = g.computed_permanent(gh).unwrap();
     assert_eq!(cp2.power, 4, "artifact → +1/+0");
-    assert!(cp2.keywords.contains(&Keyword::Deathtouch));
+    assert!(cp2.keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Skystinger gets +5/+0 when it blocks a creature with flying.
@@ -923,7 +923,7 @@ fn diplomatic_relations_pump_and_zap() {
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/2
     let theirs = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 3
     resolve_targeted(&mut g, 0, catalog::diplomatic_relations().effect, &[mine, theirs]);
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Vigilance));
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Vigilance));
     assert_eq!(g.battlefield_find(theirs).unwrap().damage, 3, "took damage = pumped power");
 }
 
@@ -1131,7 +1131,7 @@ fn mouth_of_the_storm_shrinks_opponents() {
     let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
     let mouth = g.move_card_to_battlefield_for_test(0, catalog::mouth_of_the_storm());
     drain_stack(&mut g);
-    assert!(g.computed_permanent(mouth).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(mouth).unwrap().keywords().contains(&Keyword::Flying));
     assert_eq!(g.computed_permanent(foe).unwrap().power, 1, "-3/-0 on opponents");
 }
 
@@ -1243,10 +1243,10 @@ fn full_bore_warp_rider() {
     let warped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(warped).unwrap().warped = true;
     resolve_targeted(&mut g, 0, catalog::full_bore().effect, &[normal]);
-    assert!(!g.computed_permanent(normal).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(!g.computed_permanent(normal).unwrap().keywords().contains(&Keyword::Trample),
         "non-warped: no trample");
     resolve_targeted(&mut g, 0, catalog::full_bore().effect, &[warped]);
-    assert!(g.computed_permanent(warped).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(warped).unwrap().keywords().contains(&Keyword::Haste),
         "warped: gains haste");
 }
 
@@ -1307,7 +1307,7 @@ fn dark_endurance_blocking_discount_and_pump() {
     resolve_targeted(&mut g, 0, catalog::dark_endurance().effect, &[blocker]);
     let cp = g.computed_permanent(blocker).unwrap();
     assert_eq!(cp.power, 4, "2/2 +2/+0");
-    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
 }
 
 /// Genemorph Imago's landfall sets a creature to base 3/3, or 5/5 once you
@@ -1731,7 +1731,7 @@ fn meltstriders_gear_etb_attaches_and_buffs() {
     g.resolve_effect(&catalog::meltstriders_gear().triggered_abilities[0].effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1");
-    assert!(cp.keywords.contains(&Keyword::Reach), "gains reach");
+    assert!(cp.keywords().contains(&Keyword::Reach), "gains reach");
 }
 
 /// Illvoi Light Jammer attaches and grants hexproof until end of turn.
@@ -1745,7 +1745,7 @@ fn illvoi_light_jammer_attach_and_hexproof() {
     g.resolve_effect(&catalog::illvoi_light_jammer().triggered_abilities[0].effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+2");
-    assert!(cp.keywords.contains(&Keyword::Hexproof), "gains hexproof EOT");
+    assert!(cp.keywords().contains(&Keyword::Hexproof), "gains hexproof EOT");
 }
 
 /// Hylderblade grants +3/+1 to the creature it's attached to.
@@ -1800,7 +1800,7 @@ fn starbreach_whale_etb_surveils_two() {
     // is unchanged but the ETB resolved.
     assert_eq!(g.players[0].library.len(), lib);
     assert!(g.computed_permanent(g.battlefield.iter().find(|c| c.definition.name == "Starbreach Whale").unwrap().id)
-        .unwrap().keywords.contains(&Keyword::Flying));
+        .unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Haliya puts a +1/+1 counter on a creature when she enters and when she
@@ -2031,7 +2031,7 @@ fn systems_override_steals_creature() {
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     resolve_targeted(&mut g, 0, catalog::systems_override().effect.clone(), &[theirs]);
     assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "gained control");
-    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Mutinous Massacre destroys creatures of the chosen mana-value parity.
@@ -2072,7 +2072,7 @@ fn terminal_velocity_cheats_creature_from_hand() {
     }).expect("cast Terminal Velocity");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "creature put onto battlefield");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Melded Moxite sacrifices itself for a tapped Robot.
@@ -2098,7 +2098,7 @@ fn squires_lightblade_attaches_and_grants_first_strike() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     resolve_targeted(&mut g, 0, catalog::squires_lightblade().triggered_abilities[0].effect.clone(), &[bear]);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Auxiliary Boosters mints a Robot and equips it, granting flying.
@@ -2116,7 +2116,7 @@ fn auxiliary_boosters_makes_and_equips_robot() {
     drain_stack(&mut g);
     let robot = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Robot").map(|c| c.id);
     assert!(robot.is_some(), "Robot token created");
-    assert!(g.computed_permanent(robot.unwrap()).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(robot.unwrap()).unwrap().keywords().contains(&Keyword::Flying),
         "equipped Robot has flying");
 }
 
@@ -2201,7 +2201,7 @@ fn syr_vondam_lucent_buffs_team() {
     resolve_targeted(&mut g, 0, catalog::syr_vondam_the_lucent().triggered_abilities[0].effect.clone(), &[]);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "+1/+0 to other creatures");
-    assert!(cp.keywords.contains(&Keyword::Deathtouch), "granted deathtouch");
+    assert!(cp.keywords().contains(&Keyword::Deathtouch), "granted deathtouch");
 }
 
 /// Starwinder draws cards equal to combat damage one of your creatures deals.
@@ -2724,12 +2724,12 @@ fn tractor_beam_steals_control_and_locks_untap() {
 fn dawnsire_20plus_band_is_2020_flier() {
     let mut g = two_player_game();
     let ship = g.add_card_to_battlefield(0, catalog::dawnsire_sunstar_dreadnought());
-    assert!(!g.computed_permanent(ship).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(ship).unwrap().card_types().contains(&CardType::Creature));
     g.battlefield_find_mut(ship).unwrap().counters.insert(CounterType::Charge, 20);
     let post = g.computed_permanent(ship).unwrap();
-    assert!(post.card_types.contains(&CardType::Creature));
+    assert!(post.card_types().contains(&CardType::Creature));
     assert_eq!((post.power, post.toughness), (20, 20));
-    assert!(post.keywords.contains(&Keyword::Flying));
+    assert!(post.keywords().contains(&Keyword::Flying));
 }
 
 /// Infinite Guideline Station ETB mints a tapped Robot per multicolored permanent.
@@ -2798,9 +2798,9 @@ fn haliya_lifegain_then_endstep_draw() {
 fn alpharael_dreaming_deathtouch_only_on_your_turn() {
     let mut g = two_player_game();
     let a = g.add_card_to_battlefield(0, catalog::alpharael_dreaming_acolyte());
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Deathtouch));
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(!g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Alpharael, Stonechosen: with Void active, attacking halves the defender's life.
@@ -2866,7 +2866,7 @@ fn tannuk_grants_other_creatures_haste() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::tannuk_steadfast_second());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Secluded Starforge's {5},{T} ability mints a 2/2 Robot.
@@ -2933,7 +2933,7 @@ fn atomic_microsizer_shrinks_and_unblocks_target() {
     drain_stack(&mut g);
     let o = g.computed_permanent(ogre).unwrap();
     assert_eq!((o.power, o.toughness), (1, 1), "target shrunk to 1/1");
-    assert!(o.keywords.contains(&Keyword::Unblockable), "target can't be blocked");
+    assert!(o.keywords().contains(&Keyword::Unblockable), "target can't be blocked");
 }
 
 /// Dyadrine enters with +1/+1 counters equal to the mana spent to cast it.
@@ -3054,7 +3054,7 @@ fn devastating_onslaught_makes_hasty_copies_sacrificed_at_end() {
         .filter(|c| c.is_token && c.definition.name == "Grizzly Bears").collect();
     assert_eq!(tokens.len(), 2, "X=2 token copies");
     let tid = tokens[0].id;
-    assert!(g.computed_permanent(tid).unwrap().keywords.contains(&Keyword::Haste), "tokens have haste");
+    assert!(g.computed_permanent(tid).unwrap().keywords().contains(&Keyword::Haste), "tokens have haste");
     g.step = TurnStep::PostCombatMain;
     g.priority.player_with_priority = 0;
     advance_to(&mut g, TurnStep::End);
@@ -3139,7 +3139,7 @@ fn kavaron_band_robot_and_team_haste() {
     );
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "team +1/+0 → 3 power");
-    assert!(cp.keywords.contains(&Keyword::Haste), "team gained haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "team gained haste");
 }
 
 /// Tidal Terror's attack trigger: "you may tap two other untapped creatures
@@ -3166,7 +3166,7 @@ fn tidal_terror_taps_two_to_become_unblockable() {
     assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped,
         "both other creatures tapped for the cost");
     assert!(
-        g.computed_permanent(terror).unwrap().keywords.contains(&Keyword::Unblockable),
+        g.computed_permanent(terror).unwrap().keywords().contains(&Keyword::Unblockable),
         "and Tidal Terror is unblockable this turn"
     );
 }
@@ -3192,7 +3192,7 @@ fn tidal_terror_tap_cost_is_optional() {
     drain_stack(&mut g);
     assert!(!g.battlefield_find(a).unwrap().tapped, "declined, so nothing tapped");
     assert!(
-        !g.computed_permanent(terror).unwrap().keywords.contains(&Keyword::Unblockable),
+        !g.computed_permanent(terror).unwrap().keywords().contains(&Keyword::Unblockable),
         "and no unblockable grant"
     );
 }

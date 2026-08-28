@@ -2731,9 +2731,9 @@ impl GameState {
                     .iter()
                     .filter(|c| {
                         c.controller == p
-                            && c.keywords.has_kw(&crate::card::Keyword::Phasing)
+                            && c.keywords().has_kw(&crate::card::Keyword::Phasing)
                             // CR 702.26 — Spatial Binding pins a permanent in phase.
-                            && !c.keywords.has_kw(&crate::card::Keyword::CantPhaseOut)
+                            && !c.keywords().has_kw(&crate::card::Keyword::CantPhaseOut)
                     })
                     .map(|c| c.id)
                     .collect()
@@ -2816,7 +2816,7 @@ impl GameState {
     pub fn assigns_no_combat_damage(&self, card_id: crate::card::CardId) -> bool {
         self.assigns_no_combat_damage_this_turn.contains(&card_id)
             || self.computed_permanent(card_id).is_some_and(|cp| {
-                cp.keywords.has_kw(&crate::card::Keyword::DealsNoCombatDamage)
+                cp.keywords().has_kw(&crate::card::Keyword::DealsNoCombatDamage)
             })
     }
 
@@ -2831,7 +2831,7 @@ impl GameState {
         // "won't untap" badge tells the same story the untap step will.
         if card.skip_next_untap
             || self.computed_permanent(card.id).is_some_and(|cp| {
-                cp.keywords.iter().any(|k| {
+                cp.keywords().iter().any(|k| {
                     matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
                         if card.counter_count(*kind) > 0)
                         || (matches!(
@@ -3317,13 +3317,13 @@ impl GameState {
             let mut counter_locked: Vec<crate::card::CardId> = Vec::new();
             let mut attack_locked: Vec<crate::card::CardId> = Vec::new();
             for (c, cp) in g.battlefield.iter().zip(&g.compute_battlefield()) {
-                if cp.keywords.iter().any(|k| {
+                if cp.keywords().iter().any(|k| {
                     matches!(k, crate::card::Keyword::DoesntUntapWhileCounter(kind)
                         if c.counter_count(*kind) > 0)
                 }) {
                     counter_locked.push(c.id);
                 }
-                if cp.keywords.has_kw(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn) {
+                if cp.keywords().has_kw(&crate::card::Keyword::DoesntUntapIfAttackedLastTurn) {
                     attack_locked.push(c.id);
                 }
             }
@@ -4653,7 +4653,7 @@ impl GameState {
                 .iter()
                 .filter_map(|c| {
                     let kw = c.definition.flip_when_has_keyword.as_ref()?;
-                    let has = computed.iter().find(|p| p.id == c.id)?.keywords.contains(kw);
+                    let has = computed.iter().find(|p| p.id == c.id)?.keywords().contains(kw);
                     (has && !c.flipped).then_some(c.id)
                 })
                 .collect();
@@ -5041,7 +5041,7 @@ impl GameState {
                     || (supertype_grant_active
                         && self
                             .computed_permanent(c.id)
-                            .is_some_and(|cp| cp.supertypes.contains(&Supertype::Legendary)))
+                            .is_some_and(|cp| cp.supertypes().contains(&Supertype::Legendary)))
             };
             // CR 704.5j — Mirror Gallery turns the legend rule off entirely.
             // Only *this* SBA is switched off; the rest of the sweep (deaths,
@@ -5246,7 +5246,7 @@ impl GameState {
                 // just cards printed as creatures.
                 let cp = computed.iter().find(|cp| cp.id == c.id);
                 let is_creature = cp
-                    .map(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+                    .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
                     .unwrap_or_else(|| c.definition.is_creature());
                 if !is_creature {
                     return false;
@@ -5264,7 +5264,7 @@ impl GameState {
                 // anthem — Shielded by Faith) counts, not just the printed
                 // keyword + indestructible counter on the instance.
                 let indestructible = cp
-                    .map(|cp| cp.keywords.has_kw(&crate::card::Keyword::Indestructible))
+                    .map(|cp| cp.keywords().has_kw(&crate::card::Keyword::Indestructible))
                     .unwrap_or(false)
                     || c.is_indestructible();
                 if indestructible {
@@ -5288,7 +5288,7 @@ impl GameState {
                 // single source's tally reaching the threshold does.
                 let needs_single_source = cp
                     .map(|cp| {
-                        cp.keywords.has_kw(&crate::card::Keyword::SurvivesSplitLethalDamage)
+                        cp.keywords().has_kw(&crate::card::Keyword::SurvivesSplitLethalDamage)
                     })
                     .unwrap_or(false);
                 let single_source_lethal = !needs_single_source
@@ -5637,7 +5637,7 @@ impl GameState {
                     self.is_protected_from(c.id, host)
                         || !self
                             .computed_permanent(host)
-                            .map(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+                            .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
                             .unwrap_or_else(|| h.definition.is_creature())
                         || c.definition.aura_enchant_filter().is_some_and(|f| {
                             !self.evaluate_requirement(f, &Target::Permanent(host), c.controller)

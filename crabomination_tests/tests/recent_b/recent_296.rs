@@ -140,7 +140,7 @@ fn shadow_lance_grants_first_strike() {
     let ctx = EffectContext::for_ability(aura, 0, Some(Target::Permanent(bear)));
     g.resolve_effect(&catalog::shadow_lance().effect, &ctx).unwrap();
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 #[test]
@@ -153,7 +153,7 @@ fn shielding_plax_draws_and_grants_hexproof() {
     let ctx = EffectContext::for_ability(aura, 0, Some(Target::Permanent(bear)));
     g.resolve_effect(&catalog::shielding_plax().effect, &ctx).unwrap();
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof));
     assert_eq!(g.players[0].hand.len(), hand + 1, "ETB drew a card");
 }
 
@@ -197,7 +197,7 @@ fn peregrine_mask_grants_evasion_keywords() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Equip { equipment: mask, target: bear }).expect("equip");
     drain_stack(&mut g);
-    let kw = g.computed_permanent(bear).unwrap().keywords.clone();
+    let kw = g.computed_permanent(bear).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::FirstStrike)
         && kw.contains(&Keyword::Defender), "mask grants flying + first strike + defender");
 }

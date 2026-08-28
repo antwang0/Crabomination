@@ -138,7 +138,7 @@ mod recent12 {
         assert_eq!(g.battlefield_find(maul).unwrap().attached_to, Some(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&Keyword::Flying));
+        assert!(cp.keywords().contains(&Keyword::Flying));
     }
 
     /// Embercleave attaches on ETB and grants double strike + trample.
@@ -150,7 +150,7 @@ mod recent12 {
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(cleave).unwrap().attached_to, Some(bear));
         let cp = g.computed_permanent(bear).unwrap();
-        assert!(cp.keywords.contains(&Keyword::DoubleStrike) && cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::DoubleStrike) && cp.keywords().contains(&Keyword::Trample));
     }
 
     /// Armory of Iroas puts a +1/+1 counter on the equipped creature when it attacks.
@@ -191,7 +191,7 @@ mod recent12 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let blades = g.add_card_to_battlefield(0, catalog::lizard_blades());
         attach(&mut g, blades, bear);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
     }
 
     /// Magnetic Theft attaches a target Equipment to a target creature (two-slot
@@ -300,8 +300,8 @@ mod recent12 {
         let balan = g.add_card_to_battlefield(0, catalog::balan_wandering_knight());
         let e1 = g.add_card_to_battlefield(0, catalog::bonesplitter());
         let e2 = g.add_card_to_battlefield(0, catalog::bonesplitter());
-        assert!(g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::FirstStrike));
-        assert!(!g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        assert!(g.computed_permanent(balan).unwrap().keywords().contains(&Keyword::FirstStrike));
+        assert!(!g.computed_permanent(balan).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "no double strike unequipped");
         // Activate "attach all Equipment you control" — both pile onto Balan.
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
@@ -313,7 +313,7 @@ mod recent12 {
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(e1).unwrap().attached_to, Some(balan));
         assert_eq!(g.battlefield_find(e2).unwrap().attached_to, Some(balan));
-        assert!(g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        assert!(g.computed_permanent(balan).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "double strike with two Equipment");
     }
 
@@ -462,7 +462,7 @@ mod recent13 {
         }).expect("animate");
         drain_stack(&mut g);
         let cp = g.computed_permanent(land).unwrap();
-        assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Land));
+        assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Land));
         assert_eq!((cp.power, cp.toughness), (2, 2));
     }
 }
@@ -828,7 +828,7 @@ mod recent17 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let collar = g.add_card_to_battlefield(0, catalog::basilisk_collar());
         g.battlefield_find_mut(collar).unwrap().attached_to = Some(bear);
-        let kws = &g.computed_permanent(bear).unwrap().keywords;
+        let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
         assert!(kws.contains(&Keyword::Deathtouch) && kws.contains(&Keyword::Lifelink));
     }
 
@@ -880,7 +880,7 @@ mod recent17 {
             card_id: blade, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Hallowblade");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(blade).unwrap().keywords.contains(&Keyword::Indestructible));
+        assert!(g.computed_permanent(blade).unwrap().keywords().contains(&Keyword::Indestructible));
         assert!(g.battlefield_find(blade).unwrap().tapped, "it taps itself");
     }
 
@@ -906,7 +906,7 @@ mod recent17 {
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, catalog::aggressive_mammoth());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
     }
 
     /// Scrabbling Claws sacrifices to exile a graveyard card and draw.
@@ -971,10 +971,10 @@ mod recent17 {
         let e2 = g.add_card_to_battlefield(0, catalog::bonesplitter());
         g.battlefield_find_mut(e1).unwrap().attached_to = Some(balan);
         g.battlefield_find_mut(e2).unwrap().attached_to = Some(balan);
-        assert!(g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(g.computed_permanent(balan).unwrap().keywords().contains(&Keyword::DoubleStrike));
         // Detach one → only one Equipment left → no double strike.
         g.battlefield_find_mut(e2).unwrap().attached_to = None;
-        assert!(!g.computed_permanent(balan).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(!g.computed_permanent(balan).unwrap().keywords().contains(&Keyword::DoubleStrike));
     }
 
     /// CR 119 — a life-total threshold static (Angel of Vitality's +2/+2 at 25+
@@ -1035,7 +1035,7 @@ mod recent18 {
         drain_stack(&mut g);
         let dragon = g.battlefield.iter().find(|c| c.definition.name == "Dragon").expect("a Dragon");
         assert_eq!((dragon.definition.power, dragon.definition.toughness), (4, 4));
-        assert!(g.computed_permanent(dragon.id).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(dragon.id).unwrap().keywords().contains(&Keyword::Flying));
     }
 
     /// Goblin Tomb Raider gets +1/+0 and haste only while you control an artifact.
@@ -1044,10 +1044,10 @@ mod recent18 {
         let mut g = two_player_game();
         let gob = g.add_card_to_battlefield(0, catalog::goblin_tomb_raider());
         assert_eq!(g.computed_permanent(gob).unwrap().power, 1, "base 1/2 without an artifact");
-        assert!(!g.computed_permanent(gob).unwrap().keywords.contains(&Keyword::Haste));
+        assert!(!g.computed_permanent(gob).unwrap().keywords().contains(&Keyword::Haste));
         g.add_card_to_battlefield(0, catalog::bonesplitter()); // an artifact
         assert_eq!(g.computed_permanent(gob).unwrap().power, 2, "+1/+0 with an artifact");
-        assert!(g.computed_permanent(gob).unwrap().keywords.contains(&Keyword::Haste));
+        assert!(g.computed_permanent(gob).unwrap().keywords().contains(&Keyword::Haste));
     }
 
     /// Sanguine Syphoner drains 1 when it attacks.
@@ -1145,7 +1145,7 @@ mod recent18 {
         g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
         g.fire_self_etb_triggers(aura, 0);
         drain_stack(&mut g);
-        let kws = g.computed_permanent(victim).unwrap().keywords.clone();
+        let kws = g.computed_permanent(victim).unwrap().keywords().to_vec();
         assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
         // Support 2 landed a +1/+1 counter somewhere friendly (the other bear).
         assert!(g.computed_permanent(other).unwrap().power >= 2, "support buffed a creature");
@@ -1290,7 +1290,7 @@ mod recent19 {
     fn marble_gargoyle_pumps_toughness() {
         let mut g = two_player_game();
         let gar = g.add_card_to_battlefield(0, catalog::marble_gargoyle());
-        assert!(g.computed_permanent(gar).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(gar).unwrap().keywords().contains(&Keyword::Flying));
         g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::ActivateAbility {
@@ -1398,7 +1398,7 @@ mod recent20 {
         let zombie = g.add_card_to_battlefield(0, catalog::gravecrawler());
         let cp = g.computed_permanent(zombie).unwrap();
         assert!(cp.power >= 3, "Gravecrawler 2/1 → 3/2 under Gisa");
-        assert!(cp.keywords.contains(&Keyword::Menace), "gains menace");
+        assert!(cp.keywords().contains(&Keyword::Menace), "gains menace");
     }
 
     /// Magda makes a tapped Treasure when you commit a crime.
@@ -1482,10 +1482,10 @@ mod recent20 {
     fn nimble_brigand_unblockable_after_crime() {
         let mut g = two_player_game();
         let nb = g.add_card_to_battlefield(0, catalog::nimble_brigand());
-        assert!(!g.computed_permanent(nb).unwrap().keywords.contains(&Keyword::Unblockable));
+        assert!(!g.computed_permanent(nb).unwrap().keywords().contains(&Keyword::Unblockable));
         commit_crime(&mut g);
         assert!(
-            g.computed_permanent(nb).unwrap().keywords.contains(&Keyword::Unblockable),
+            g.computed_permanent(nb).unwrap().keywords().contains(&Keyword::Unblockable),
             "unblockable once a crime is committed"
         );
     }
@@ -1619,7 +1619,7 @@ mod recent20 {
         cast_at(&mut g, bolt, Target::Player(1));
         let cp = g.computed_permanent(rd).unwrap();
         assert_eq!(cp.power, 2, "got a +1/+1 counter");
-        assert!(cp.keywords.contains(&Keyword::Unblockable), "can't be blocked this turn");
+        assert!(cp.keywords().contains(&Keyword::Unblockable), "can't be blocked this turn");
     }
 
     /// Quilled Charger pumps and gains menace when it attacks while saddled.
@@ -1642,7 +1642,7 @@ mod recent20 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(qc).unwrap();
         assert_eq!((cp.power, cp.toughness), (5, 5), "+1/+2 while saddled");
-        assert!(cp.keywords.contains(&Keyword::Menace));
+        assert!(cp.keywords().contains(&Keyword::Menace));
     }
 
     /// Lassoed by the Law exiles an opponent's permanent and makes a Mercenary.
@@ -1690,10 +1690,10 @@ mod recent20 {
     fn stoic_sphinx_hexproof_until_spell() {
         let mut g = two_player_game();
         let sphinx = g.add_card_to_battlefield(0, catalog::stoic_sphinx());
-        assert!(g.computed_permanent(sphinx).unwrap().keywords.contains(&Keyword::Hexproof));
+        assert!(g.computed_permanent(sphinx).unwrap().keywords().contains(&Keyword::Hexproof));
         g.players[0].spells_cast_this_turn = 1;
         assert!(
-            !g.computed_permanent(sphinx).unwrap().keywords.contains(&Keyword::Hexproof),
+            !g.computed_permanent(sphinx).unwrap().keywords().contains(&Keyword::Hexproof),
             "loses hexproof once you've cast a spell"
         );
     }

@@ -107,11 +107,11 @@ fn zen3_landfall_riders() {
     let eel = g.add_card_to_battlefield(0, catalog::windrider_eel());
     let serpent = g.add_card_to_battlefield(0, catalog::shoal_serpent());
     let marauder = g.add_card_to_battlefield(0, catalog::surrakar_marauder());
-    assert!(g.computed_permanent(serpent).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(serpent).unwrap().keywords().contains(&Keyword::Defender));
     landfall(&mut g);
     assert_eq!(g.computed_permanent(eel).unwrap().power, 4, "2/2 plus 2/2");
-    assert!(!g.computed_permanent(serpent).unwrap().keywords.contains(&Keyword::Defender));
-    assert!(g.computed_permanent(marauder).unwrap().keywords.contains(&Keyword::Intimidate));
+    assert!(!g.computed_permanent(serpent).unwrap().keywords().contains(&Keyword::Defender));
+    assert!(g.computed_permanent(marauder).unwrap().keywords().contains(&Keyword::Intimidate));
 }
 
 /// Turntimber Basilisk's landfall forces a blocker in front of it.
@@ -293,7 +293,7 @@ fn vampires_bite_kicker_adds_lifelink() {
         g.perform_action(action).expect("cast");
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
-        (cp.power, cp.keywords.contains(&Keyword::Lifelink))
+        (cp.power, cp.keywords().contains(&Keyword::Lifelink))
     };
     assert_eq!(run(false), (5, false));
     assert_eq!(run(true), (5, true));
@@ -389,7 +389,7 @@ fn gigantiform_sets_base_pt_and_fetches_a_copy() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 8));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     assert!(g.battlefield_find(copy).is_some(), "the second copy was fetched");
 }
 
@@ -476,7 +476,7 @@ fn windborne_charge_pumps_two() {
     for id in [a, b] {
         let cp = g.computed_permanent(id).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4));
-        assert!(cp.keywords.contains(&Keyword::Flying));
+        assert!(cp.keywords().contains(&Keyword::Flying));
     }
 }
 
@@ -621,7 +621,7 @@ fn zen3_equipment() {
     g.battlefield_find_mut(net).unwrap().attached_to = Some(bear);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 4));
-    assert!(cp.keywords.contains(&Keyword::Reach));
+    assert!(cp.keywords().contains(&Keyword::Reach));
 
     let boots = g.add_card_to_battlefield(0, catalog::trailblazers_boots());
     let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -629,7 +629,7 @@ fn zen3_equipment() {
     assert!(
         g.computed_permanent(other)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::LandwalkFiltered(_)))
     );
@@ -855,7 +855,7 @@ fn zen3_utility_lands() {
     let cliff = g.add_card_to_hand(0, catalog::soaring_seacliff());
     g.perform_action(GameAction::PlayLand(cliff)).expect("play");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Oran-Rief counters up the green creatures that entered this turn.

@@ -79,7 +79,7 @@ fn shinen_of_flights_wings_channels_flying() {
     .expect("channel");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == shinen), "discarded as a cost");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Kiyomaro is hand-sized, gains vigilance at four cards, and drains at seven.
@@ -92,7 +92,7 @@ fn kiyomaro_tracks_your_hand() {
     }
     let cp = g.computed_permanent(kiyo).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
     for _ in 0..3 {
         g.add_card_to_hand(0, catalog::forest());
     }
@@ -124,7 +124,7 @@ fn secretkeeper_flies_while_ahead() {
     g.add_card_to_hand(0, catalog::forest());
     let cp = g.computed_permanent(keeper).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Trusted Advisor widens your maximum hand size by two.
@@ -362,8 +362,8 @@ fn razorjaw_oni_stops_black_blockers() {
     g.add_card_to_battlefield(0, catalog::razorjaw_oni());
     let black = g.add_card_to_battlefield(1, catalog::gravedigger());
     let green = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    assert!(g.computed_permanent(black).unwrap().keywords.contains(&Keyword::CantBlock));
-    assert!(!g.computed_permanent(green).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(black).unwrap().keywords().contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(green).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Kashi-Tribe Elite hands your legendary Snakes shroud.
@@ -372,7 +372,7 @@ fn kashi_tribe_elite_shrouds_legendary_snakes() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::kashi_tribe_elite());
     let sasuke = g.add_card_to_battlefield(0, catalog::seshiro_the_anointed());
-    assert!(g.computed_permanent(sasuke).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(sasuke).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Maga drains for the X it entered with.
@@ -558,7 +558,7 @@ fn homura_returns_flipped_and_anthems() {
     assert!(back.flipped);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Kuon flips at end step once three creatures have died.

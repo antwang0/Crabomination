@@ -51,7 +51,7 @@ fn starforged_sword_attaches_when_gifted() {
     assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.is_token), "the Fish was gifted");
     let cp = g.computed_permanent(bird).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 8), "+3/+3 from the Sword");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "and it lost flying");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "and it lost flying");
 }
 
 /// Cruelclaw's Heist exiles a card; only the gifted mode lets you cast it.
@@ -131,7 +131,7 @@ fn jolly_balloon_man_makes_a_temporary_balloon_copy() {
         .expect("balloon copy");
     let cp = g.computed_permanent(token).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 
     while g.step != TurnStep::End {
         let _ = g.advance_step(Vec::new());

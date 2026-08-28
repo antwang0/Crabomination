@@ -74,7 +74,7 @@ fn bng_heroic_payoffs() {
     let sky = g.add_card_to_battlefield(0, catalog::akroan_skyguard());
     cast(&mut g, catalog::mortals_ardor(), Some(Target::Permanent(sky)), 0, &[(Color::White, 1)]);
     assert_eq!(g.battlefield_find(sky).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-    assert!(g.computed_permanent(sky).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(sky).unwrap().keywords().contains(&Keyword::Lifelink));
 
     let chorus = g.add_card_to_battlefield(0, catalog::chorus_of_the_tides());
     g.add_card_to_library(0, catalog::great_hart());
@@ -85,7 +85,7 @@ fn bng_heroic_payoffs() {
         1,
         &[(Color::Green, 1)],
     );
-    assert!(g.computed_permanent(chorus).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(chorus).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Inspired fires when the creature untaps: the Butcher pumps itself, the
@@ -372,7 +372,7 @@ fn gorgons_head_grants_deathtouch() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Equip { equipment: head, target: bear }).expect("equip");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Graverobber Spider scales with the creature cards in your graveyard.
@@ -564,7 +564,7 @@ fn tromokratis_hexproof_and_gang_block() {
     let kraken = g.add_card_to_battlefield(0, catalog::tromokratis());
     g.battlefield_find_mut(kraken).unwrap().summoning_sick = false;
     assert!(
-        g.computed_permanent(kraken).unwrap().keywords.contains(&Keyword::Hexproof),
+        g.computed_permanent(kraken).unwrap().keywords().contains(&Keyword::Hexproof),
         "hexproof while not in combat"
     );
     let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -576,7 +576,7 @@ fn tromokratis_hexproof_and_gang_block() {
     }]))
     .expect("attack");
     assert!(
-        !g.computed_permanent(kraken).unwrap().keywords.contains(&Keyword::Hexproof),
+        !g.computed_permanent(kraken).unwrap().keywords().contains(&Keyword::Hexproof),
         "no hexproof while attacking"
     );
     g.step = TurnStep::DeclareBlockers;
@@ -705,7 +705,7 @@ fn stratus_walk_grants_flight_and_restricts_blocks() {
     g.add_card_to_library(0, catalog::great_hart());
     cast(&mut g, catalog::stratus_walk(), Some(Target::Permanent(bear)), 1, &[(Color::Blue, 1)]);
     assert_eq!(g.players[0].hand.len(), hand + 1, "ETB draw");
-    let kws = g.computed_permanent(bear).unwrap().keywords.clone();
+    let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Flying));
     assert!(kws.contains(&Keyword::CanBlockOnlyFlying));
 }
@@ -835,7 +835,7 @@ fn fated_return_reanimates_indestructible() {
     cast(&mut g, catalog::fated_return(), Some(Target::Permanent(dead)), 4, &[(Color::Black, 3)]);
     let c = g.battlefield_find(dead).expect("reanimated");
     assert_eq!(c.controller, 0, "under your control");
-    assert!(g.computed_permanent(dead).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(dead).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Tribute declined (the AutoDecider's default) fires the "if tribute wasn't
@@ -882,7 +882,7 @@ fn ghostblade_eidolon_bestows_double_strike() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Everflame Eidolon pumps itself as a creature and the host as an Aura.
@@ -1031,7 +1031,7 @@ fn arbiter_of_the_ideal_cheats_in_an_enchantment() {
     assert!(
         g.computed_permanent(top)
             .unwrap()
-            .card_types
+            .card_types()
             .contains(&crabomination::card::CardType::Enchantment),
         "an enchantment in addition to its other types"
     );

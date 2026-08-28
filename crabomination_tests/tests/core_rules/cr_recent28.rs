@@ -69,7 +69,7 @@ fn cr_615_prevent_all_damage_to_this_covers_both_paths() {
     let mut g = two_player_game();
     let gid = g.add_card_to_battlefield(0, catalog::gideon_blackblade());
     g.active_player_idx = 0; // its controller's turn → the prevention is live
-    assert!(g.computed_permanent(gid).unwrap().card_types.contains(&CardType::Creature));
+    assert!(g.computed_permanent(gid).unwrap().card_types().contains(&CardType::Creature));
     let before = g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty);
     // Noncombat (burn) damage: prevented, no loyalty lost.
     let mut evs = vec![];
@@ -77,5 +77,5 @@ fn cr_615_prevent_all_damage_to_this_covers_both_paths() {
     assert_eq!(g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty), before, "noncombat damage prevented");
     assert!(g.combat_damage_prevented_to_self(gid), "combat damage to it is also prevented");
     // Indestructible too — it survives a lethal marking on its own turn.
-    assert!(g.computed_permanent(gid).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(gid).unwrap().keywords().contains(&Keyword::Indestructible));
 }

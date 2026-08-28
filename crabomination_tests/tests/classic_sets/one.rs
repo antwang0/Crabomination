@@ -29,7 +29,7 @@ fn incubate_then_transform_to_n_over_n() {
     let inc_id = inc.id;
     assert_eq!(inc.counter_count(CounterType::PlusOnePlusOne), 3, "three +1/+1 counters");
     let cp = g.computed_permanent(inc_id).unwrap();
-    assert!(cp.card_types.contains(&CardType::Artifact) && !cp.card_types.contains(&CardType::Creature),
+    assert!(cp.card_types().contains(&CardType::Artifact) && !cp.card_types().contains(&CardType::Creature),
         "front is a noncreature artifact");
     // {2}: Transform.
     g.players[0].mana_pool.add_colorless(2);
@@ -40,7 +40,7 @@ fn incubate_then_transform_to_n_over_n() {
     }).expect("transform the Incubator");
     drain_stack(&mut g);
     let back = g.computed_permanent(inc_id).unwrap();
-    assert!(back.card_types.contains(&CardType::Creature), "back is a creature");
+    assert!(back.card_types().contains(&CardType::Creature), "back is a creature");
     assert_eq!((back.power, back.toughness), (3, 3), "0/0 base + three +1/+1 = 3/3");
 }
 
@@ -90,7 +90,7 @@ fn phyrexian_awakening_anthem_grants_vigilance() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::phyrexian_awakening());
     let croc = g.add_card_to_battlefield(0, catalog::injector_crocodile()); // a Phyrexian
-    assert!(g.computed_permanent(croc).unwrap().keywords.contains(&Keyword::Vigilance));
+    assert!(g.computed_permanent(croc).unwrap().keywords().contains(&Keyword::Vigilance));
 }
 
 /// Essence of Orthodoxy incubates 2 when a Phyrexian you control enters.
@@ -133,12 +133,12 @@ fn apostle_of_invasion_corrupted_double_strike() {
     let mut g = two_player_game();
     let apostle = g.add_card_to_battlefield(0, catalog::apostle_of_invasion());
     assert!(
-        !g.computed_permanent(apostle).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        !g.computed_permanent(apostle).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "no double strike below 3 poison",
     );
     g.players[1].poison_counters = 3;
     assert!(
-        g.computed_permanent(apostle).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        g.computed_permanent(apostle).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "double strike live once Corrupted",
     );
 }
@@ -345,7 +345,7 @@ fn chimney_rabble_mints_goblin_token() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Chimney Rabble");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&crabomination::card::Keyword::Haste));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&crabomination::card::Keyword::Haste));
     assert_eq!(
         g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Goblin" && c.controller == 0).count(),
         1, "one Goblin token minted",
@@ -439,7 +439,7 @@ fn add_oil(g: &mut GameState, id: crabomination::card::CardId, n: u32) {
 fn tyrranax_rex_keywords() {
     let mut g = two_player_game();
     let rex = g.add_card_to_battlefield(0, catalog::tyrranax_rex());
-    let kws = g.computed_permanent(rex).unwrap().keywords.clone();
+    let kws = g.computed_permanent(rex).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Toxic(4)) && kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
     assert!(catalog::tyrranax_rex().keywords.iter().any(|k| matches!(k, Keyword::CantBeCountered)));
 }
@@ -450,9 +450,9 @@ fn thrun_indestructible_only_your_turn() {
     let mut g = two_player_game();
     let thrun = g.add_card_to_battlefield(0, catalog::thrun_breaker_of_silence());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(thrun).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(thrun).unwrap().keywords().contains(&Keyword::Indestructible));
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(thrun).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(!g.computed_permanent(thrun).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Thrun can't be targeted by an opponent's nongreen source, but a green one is
@@ -542,10 +542,10 @@ fn skrelvs_hive_corrupted_lifelink() {
     let toxic = g.add_card_to_battlefield(0, catalog::crawling_chorus()); // toxic 1
     let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     // Not corrupted yet.
-    assert!(!g.computed_permanent(toxic).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(!g.computed_permanent(toxic).unwrap().keywords().contains(&Keyword::Lifelink));
     g.players[1].poison_counters = 3;
-    assert!(g.computed_permanent(toxic).unwrap().keywords.contains(&Keyword::Lifelink), "toxic gains lifelink");
-    assert!(!g.computed_permanent(plain).unwrap().keywords.contains(&Keyword::Lifelink), "non-toxic doesn't");
+    assert!(g.computed_permanent(toxic).unwrap().keywords().contains(&Keyword::Lifelink), "toxic gains lifelink");
+    assert!(!g.computed_permanent(plain).unwrap().keywords().contains(&Keyword::Lifelink), "non-toxic doesn't");
 }
 
 /// Prologue to Phyresis poisons each opponent and draws.
@@ -612,7 +612,7 @@ fn mandibular_kite_living_weapon() {
     // Equipped: 0/0 + 1/1 = 1/1 with flying.
     let cp = g.computed_permanent(germ.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     let _ = kite;
 }
 
@@ -656,7 +656,7 @@ fn karumonix_rat_lord() {
     // A plain Rat: give it via a token-ish stand-in — use another Karumonix body? Instead
     // verify the static targets Rats: a Rat creature gains toxic 1.
     let rat = g.add_card_to_battlefield(0, catalog::ravenous_rats());
-    assert!(g.computed_permanent(rat).unwrap().keywords.iter().any(|k| matches!(k, Keyword::Toxic(_))));
+    assert!(g.computed_permanent(rat).unwrap().keywords().iter().any(|k| matches!(k, Keyword::Toxic(_))));
 }
 
 /// Slaughter Singer pumps another attacking toxic creature.
@@ -846,7 +846,7 @@ fn kill_zone_acrobat_sac_for_flying() {
         attacker: acro, target: crabomination::game::types::AttackTarget::Player(1),
     }])).unwrap();
     drain_stack(&mut g);
-    assert!(g.computed_permanent(acro).unwrap().keywords.contains(&Keyword::Flying), "gained flying via sacrifice");
+    assert!(g.computed_permanent(acro).unwrap().keywords().contains(&Keyword::Flying), "gained flying via sacrifice");
 }
 
 /// Blightbelly Rat proliferates when it dies.
@@ -983,7 +983,7 @@ fn necrogen_communion_grants_toxic_and_reanimates() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast aura");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.iter()
+    assert!(g.computed_permanent(bear).unwrap().keywords().iter()
         .any(|k| matches!(k, crabomination::card::Keyword::Toxic(2))), "host has toxic 2");
     g.battlefield_find_mut(bear).unwrap().damage = 99;
     let events = g.check_state_based_actions();
@@ -1127,7 +1127,7 @@ fn bladed_ambassador_goes_indestructible() {
         card_id: amb, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(amb).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(amb).unwrap().keywords().contains(&Keyword::Indestructible));
     assert_eq!(g.battlefield_find(amb).unwrap().counter_count(CounterType::Oil), 0);
 }
 
@@ -1173,7 +1173,7 @@ fn atmosphere_surgeon_banks_and_spends_oil() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("spend oil");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(surgeon).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(surgeon).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Adaptive Sporesinger mode 2 proliferates.
@@ -1650,7 +1650,7 @@ fn dragonwing_glider_for_mirrodin() {
     assert_eq!(g.battlefield_find(glider).unwrap().attached_to, Some(rebel.id));
     let cp = g.computed_permanent(rebel.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Hexgold Halberd grants first strike + trample only during your turn.
@@ -1660,10 +1660,10 @@ fn hexgold_halberd_turn_gated_keywords() {
     g.move_card_to_battlefield_for_test(0, catalog::hexgold_halberd());
     drain_stack(&mut g);
     let rebel = g.battlefield.iter().find(|c| c.definition.name == "Rebel").unwrap().id;
-    assert!(g.computed_permanent(rebel).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(g.computed_permanent(rebel).unwrap().keywords().contains(&Keyword::FirstStrike),
         "your turn: first strike");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(rebel).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(!g.computed_permanent(rebel).unwrap().keywords().contains(&Keyword::FirstStrike),
         "opponent's turn: no first strike");
 }
 
@@ -1677,7 +1677,7 @@ fn hexgold_hoverwings_equipped_anthem() {
     // Rebel is 2/2, +0/+0 from Hoverwings bonus (flying only), +1/+0 anthem.
     let cp = g.computed_permanent(rebel).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 2));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     // An unequipped bear stays 2/2.
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert_eq!(g.computed_permanent(bear).unwrap().power, 2);
@@ -1988,9 +1988,9 @@ fn cephalopod_sentry_cda_power() {
 fn duelist_of_deep_faith_turn_gate() {
     let mut g = two_player_game();
     let d = g.add_card_to_battlefield(0, catalog::duelist_of_deep_faith());
-    assert!(g.computed_permanent(d).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(d).unwrap().keywords().contains(&Keyword::FirstStrike));
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(d).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(!g.computed_permanent(d).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Orthodoxy Enforcer gets +2/+0 with two artifacts out.
@@ -2019,8 +2019,8 @@ fn offer_immortality_grants() {
     }).unwrap();
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Deathtouch));
-    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert!(cp.keywords().contains(&Keyword::Deathtouch));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
 }
 
 /// Quicksilver Fisher loots on entry.
@@ -2123,7 +2123,7 @@ fn ichor_synthesizer_threshold() {
     if let Some(c) = g.battlefield_find_mut(ics) { c.add_counters(CounterType::Oil, 4); }
     let cp = g.computed_permanent(ics).unwrap();
     assert_eq!(cp.power, 3, "+2/+0 at 4 oil");
-    assert!(cp.keywords.contains(&Keyword::Unblockable));
+    assert!(cp.keywords().contains(&Keyword::Unblockable));
 }
 
 /// Tablet of Compleation's gated abilities respect the oil thresholds.
@@ -2212,10 +2212,10 @@ fn evolved_spinoderm_oil_curve() {
     let sp = g.move_card_to_battlefield_for_test(0, catalog::evolved_spinoderm());
     drain_stack(&mut g);
     let cp = g.computed_permanent(sp).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Hexproof) && !cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Hexproof) && !cp.keywords().contains(&Keyword::Trample));
     if let Some(c) = g.battlefield_find_mut(sp) { c.remove_counters(CounterType::Oil, 3); } // 1 left
     let cp = g.computed_permanent(sp).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Trample) && !cp.keywords.contains(&Keyword::Hexproof));
+    assert!(cp.keywords().contains(&Keyword::Trample) && !cp.keywords().contains(&Keyword::Hexproof));
     // Upkeep: shed the last oil → sacrificed.
     g.step = TurnStep::Upkeep;
     g.fire_step_triggers(TurnStep::Upkeep);
@@ -2228,12 +2228,12 @@ fn evolved_spinoderm_oil_curve() {
 fn eye_of_malcator_animates() {
     let mut g = two_player_game();
     let eye = g.add_card_to_battlefield(0, catalog::eye_of_malcator());
-    assert!(g.computed_permanent(eye).unwrap().card_types.iter().all(|t| *t != crabomination::card::CardType::Creature));
+    assert!(g.computed_permanent(eye).unwrap().card_types().iter().all(|t| *t != crabomination::card::CardType::Creature));
     let stone = g.add_card_to_battlefield(0, catalog::mind_stone());
     g.dispatch_triggers_for_events(&[crabomination::game::GameEvent::PermanentEntered { card_id: stone }]);
     drain_stack(&mut g);
     let cp = g.computed_permanent(eye).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "animated");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "animated");
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
 
@@ -2429,7 +2429,7 @@ fn hazardous_blast_ping_and_lock() {
     let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
     resolve_for(&mut g, 0, catalog::hazardous_blast().effect);
     assert_eq!(g.computed_permanent(mine).unwrap().toughness, 2, "yours untouched");
-    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Ruthless Predation pumps then bites.
@@ -2469,7 +2469,7 @@ fn mazes_mantle_toxic_hexproof() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(toxic).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "1/1 + 2/2");
-    assert!(cp.keywords.contains(&Keyword::Hexproof), "toxic host got hexproof");
+    assert!(cp.keywords().contains(&Keyword::Hexproof), "toxic host got hexproof");
 }
 
 /// Drown in Ichor shrinks and proliferates.
@@ -2566,7 +2566,7 @@ fn tyvars_stand_x_pump() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 5, "+3/+3");
-    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
 }
 
 /// Mite Overseer's token anthem is on only during your turn.
@@ -2647,8 +2647,8 @@ fn planar_disruption_locks() {
     }).unwrap();
     drain_stack(&mut g);
     let cp = g.computed_permanent(foe).unwrap();
-    assert!(cp.keywords.contains(&Keyword::CantAttack));
-    assert!(cp.keywords.contains(&Keyword::CantActivateAbilities));
+    assert!(cp.keywords().contains(&Keyword::CantAttack));
+    assert!(cp.keywords().contains(&Keyword::CantActivateAbilities));
 }
 
 /// Porcelain Zealot pumps +2/+2 for a toxic target at combat.
@@ -2969,11 +2969,11 @@ fn zealots_conviction_corrupted_rider() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bears);
     let cp = g.computed_permanent(bears).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 base");
-    assert!(!cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(!cp.keywords().contains(&Keyword::FirstStrike));
     g.players[1].poison_counters = 3;
     let cp = g.computed_permanent(bears).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3), "additional +1/+0");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "corrupted first strike");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "corrupted first strike");
 }
 
 /// Transplant Theorist loots on artifact entries and bottoms graveyard cards.
@@ -3262,10 +3262,10 @@ fn vraska_minus_two_treasureifies() {
     }).expect("-2");
     drain_stack(&mut g);
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(cp.card_types.contains(&CardType::Artifact) && !cp.card_types.contains(&CardType::Creature),
+    assert!(cp.card_types().contains(&CardType::Artifact) && !cp.card_types().contains(&CardType::Creature),
         "now a noncreature artifact");
-    assert!(cp.subtypes.artifact_subtypes.contains(&crabomination::card::ArtifactSubtype::Treasure));
-    assert!(!cp.keywords.contains(&crabomination::card::Keyword::Flying), "abilities wiped");
+    assert!(cp.subtypes().artifact_subtypes.contains(&crabomination::card::ArtifactSubtype::Treasure));
+    assert!(!cp.keywords().contains(&crabomination::card::Keyword::Flying), "abilities wiped");
 }
 
 /// Kaito's trigger bounces the dealer and unlocks a second loyalty activation.
@@ -3318,8 +3318,8 @@ fn kaya_minus_three_spirit_copy() {
         .expect("token copy minted");
     let cp = g.computed_permanent(copy.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.card_types.contains(&CardType::Creature));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.card_types().contains(&CardType::Creature));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// The Eternal Wanderer −4: each player keeps one creature.
@@ -3359,7 +3359,7 @@ fn nahiri_zero_copies_from_graveyard() {
     drain_stack(&mut g);
     let copy = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears")
         .expect("token copy");
-    assert!(g.computed_permanent(copy.id).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(copy.id).unwrap().keywords().contains(&Keyword::Haste));
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == dead), "original exiled");
 }
 
@@ -3464,7 +3464,7 @@ fn kinzu_exiles_for_toxic_copy() {
         .expect("copy minted");
     let cp = g.computed_permanent(copy.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.keywords.iter().any(|k| matches!(k, crabomination::card::Keyword::Toxic(1))));
+    assert!(cp.keywords().iter().any(|k| matches!(k, crabomination::card::Keyword::Toxic(1))));
 }
 
 /// Kethek sacrifices a spare creature and deploys a lesser-MV creature.
@@ -3817,9 +3817,9 @@ fn graaz_makes_five_three_juggernauts() {
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let cp = g.computed_permanent(bears).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 3));
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Juggernaut));
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Bear), "in addition");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::MustAttack), "must attack");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Juggernaut));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Bear), "in addition");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::MustAttack), "must attack");
 }
 
 /// Encroaching Mycosynth turns your nonland permanents into artifacts.
@@ -3830,9 +3830,9 @@ fn encroaching_mycosynth_artifacts_everything() {
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let land = g.add_card_to_battlefield(0, catalog::forest());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bears).unwrap().card_types.contains(&CardType::Artifact));
-    assert!(!g.computed_permanent(land).unwrap().card_types.contains(&CardType::Artifact));
-    assert!(!g.computed_permanent(theirs).unwrap().card_types.contains(&CardType::Artifact));
+    assert!(g.computed_permanent(bears).unwrap().card_types().contains(&CardType::Artifact));
+    assert!(!g.computed_permanent(land).unwrap().card_types().contains(&CardType::Artifact));
+    assert!(!g.computed_permanent(theirs).unwrap().card_types().contains(&CardType::Artifact));
 }
 
 /// Venser mints The Hollow Sentinel on your first proliferate.
@@ -3863,7 +3863,7 @@ fn mycosynth_gardens_copies_artifact() {
     }).expect("become a copy");
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
-    assert!(cp.card_types.contains(&CardType::Artifact), "now a Sol Ring copy");
+    assert!(cp.card_types().contains(&CardType::Artifact), "now a Sol Ring copy");
 }
 
 /// Mirran Safehouse taps like the lands in the graveyards.
@@ -3901,7 +3901,7 @@ fn monument_to_perfection_transformation() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(mon).unwrap();
     assert_eq!((cp.power, cp.toughness), (9, 9));
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Indestructible));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible));
 }
 
 // ── ONE wave 8: the set closes out ───────────────────────────────────────────

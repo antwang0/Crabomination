@@ -204,8 +204,8 @@ fn blanket_of_night_swamps_the_table() {
     ready(&mut g, 0, catalog::blanket_of_night());
     let forest = ready(&mut g, 1, catalog::forest());
     let cp = g.computed_permanent(forest).unwrap();
-    assert!(cp.subtypes.land_types.contains(&crabomination::card::LandType::Swamp));
-    assert!(cp.subtypes.land_types.contains(&crabomination::card::LandType::Forest), "still a Forest");
+    assert!(cp.subtypes().land_types.contains(&crabomination::card::LandType::Swamp));
+    assert!(cp.subtypes().land_types.contains(&crabomination::card::LandType::Forest), "still a Forest");
 }
 
 /// Tremor spares the fliers.
@@ -447,7 +447,7 @@ fn shroud_auras_protect_their_hosts() {
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, veil, Some(Target::Permanent(bear))).expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Shroud));
     assert_eq!(
         catalog::relic_ward().aura_enchant_filter(),
         Some(&crabomination::card::SelectionRequirement::Artifact),
@@ -537,7 +537,7 @@ fn phyrexian_marauder_enters_with_x_counters() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(marauder).expect("resolved");
     assert_eq!((cp.power, cp.toughness), (3, 3), "three +1/+1 counters");
-    assert!(cp.keywords.contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
 }
 
 /// Miraculous Recovery reanimates with a +1/+1 counter.
@@ -635,11 +635,11 @@ fn righteous_war_protects_both_halves() {
     let white = g.add_card_to_battlefield(0, catalog::savannah_lions());
     let black = g.add_card_to_battlefield(0, catalog::python());
     assert!(
-        g.computed_permanent(white).unwrap().keywords.contains(&K::Protection(Color::Black)),
+        g.computed_permanent(white).unwrap().keywords().contains(&K::Protection(Color::Black)),
         "white creature gets pro-black"
     );
     assert!(
-        g.computed_permanent(black).unwrap().keywords.contains(&K::Protection(Color::White)),
+        g.computed_permanent(black).unwrap().keywords().contains(&K::Protection(Color::White)),
         "black creature gets pro-white"
     );
 }
@@ -751,7 +751,7 @@ fn quirion_druid_animates_a_land() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).expect("still there");
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Land));
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Land));
 }
 
 /// Rainbow Efreet phases itself out for {U}{U}.
@@ -1133,7 +1133,7 @@ fn righteous_war_grants_paired_protection() {
     let white = ready(&mut g, 0, catalog::savannah_lions());
     g.add_card_to_battlefield(0, catalog::righteous_war());
     let cp = g.computed_permanent(white).expect("there");
-    assert!(cp.keywords.contains(&Keyword::Protection(Color::Black)));
+    assert!(cp.keywords().contains(&Keyword::Protection(Color::Black)));
 }
 
 /// Knight of Valor shrinks its non-flanking blockers.
@@ -1216,7 +1216,7 @@ fn chimeras_pass_their_keyword_along() {
         drain_stack(&mut g);
         let c = g.battlefield_find(to).expect("recipient");
         assert_eq!(c.counter_count(CounterType::PlusTwoPlusTwo), 1, "{}", donor().name);
-        assert!(g.computed_permanent(to).unwrap().keywords.contains(&keyword));
+        assert!(g.computed_permanent(to).unwrap().keywords().contains(&keyword));
     }
 }
 
@@ -1265,9 +1265,9 @@ fn katabatic_winds_grounds_fliers() {
     g.add_card_to_battlefield(0, catalog::katabatic_winds());
     let flier = ready(&mut g, 1, catalog::rainbow_efreet());
     let cp = g.computed_permanent(flier).expect("there");
-    assert!(cp.keywords.contains(&Keyword::CantAttack));
-    assert!(cp.keywords.contains(&Keyword::CantBlock));
-    assert!(cp.keywords.contains(&Keyword::CantActivateTapAbilities));
+    assert!(cp.keywords().contains(&Keyword::CantAttack));
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantActivateTapAbilities));
 }
 
 /// Time and Tide swaps both sides of the phasing ledger at once.

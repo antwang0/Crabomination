@@ -128,7 +128,7 @@ mod recent61 {
         ])).unwrap();
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock),
+            g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantBlock),
             "battalion granted the target creature can't-block",
         );
     }
@@ -241,7 +241,7 @@ mod recent62 {
         let cp = g.compute_battlefield();
         let v = cp.iter().find(|c| c.id == veh).unwrap();
         assert_eq!((v.power, v.toughness), (5, 4), "4/3 → 5/4 on attack");
-        assert!(v.keywords.contains(&Keyword::Trample), "gains trample");
+        assert!(v.keywords().contains(&Keyword::Trample), "gains trample");
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod recent62 {
         g.perform_action(GameAction::Crew { vehicle: veh, crew_creatures: vec![ace] }).expect("crew");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(veh).unwrap().keywords.contains(&Keyword::FirstStrike),
+            g.computed_permanent(veh).unwrap().keywords().contains(&Keyword::FirstStrike),
             "the crewed Vehicle gains first strike",
         );
     }
@@ -410,7 +410,7 @@ mod recent63 {
         let c = g.compute_battlefield();
         let b = c.iter().find(|c| c.id == baloth).unwrap();
         assert_eq!((b.power, b.toughness), (8, 8), "4/4 → 8/8 on landfall");
-        assert!(b.keywords.contains(&Keyword::Trample));
+        assert!(b.keywords().contains(&Keyword::Trample));
     }
 
     #[test]
@@ -450,7 +450,7 @@ mod recent63 {
         let c = g.compute_battlefield();
         let t = c.iter().find(|c| c.id == target).unwrap();
         assert_eq!((t.power, t.toughness), (4, 4), "2/2 + 2/2");
-        assert!(t.keywords.contains(&Keyword::Trample));
+        assert!(t.keywords().contains(&Keyword::Trample));
         // -1 cast + 1 draw = net unchanged vs pre-cast hand.
         assert_eq!(g.players[0].hand.len(), hand);
     }
@@ -513,7 +513,7 @@ mod recent64 {
     fn cloud_elemental_can_block_only_flying() {
         let mut g = two_player_game();
         let ce = g.add_card_to_battlefield(0, catalog::cloud_elemental());
-        assert!(g.computed_permanent(ce).unwrap().keywords.contains(&Keyword::CanBlockOnlyFlying));
+        assert!(g.computed_permanent(ce).unwrap().keywords().contains(&Keyword::CanBlockOnlyFlying));
     }
 
     #[test]
@@ -617,10 +617,10 @@ mod recent65 {
     fn guul_draz_vampire_gains_intimidate_on_low_life() {
         let mut g = two_player_game();
         let gd = g.add_card_to_battlefield(0, catalog::guul_draz_vampire());
-        assert!(!g.computed_permanent(gd).unwrap().keywords.contains(&Keyword::Intimidate));
+        assert!(!g.computed_permanent(gd).unwrap().keywords().contains(&Keyword::Intimidate));
         g.players[1].life = 8;
         assert_eq!(pt(&g, gd), (3, 2));
-        assert!(g.computed_permanent(gd).unwrap().keywords.contains(&Keyword::Intimidate));
+        assert!(g.computed_permanent(gd).unwrap().keywords().contains(&Keyword::Intimidate));
     }
 
     #[test]
@@ -764,7 +764,7 @@ mod recent66 {
         assert!(g
             .computed_permanent(bear)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Menace));
     }
 
@@ -811,9 +811,9 @@ mod recent66 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(mine).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-        assert!(cp.keywords.contains(&Keyword::FirstStrike));
+        assert!(cp.keywords().contains(&Keyword::FirstStrike));
         assert!(
-            !g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::DoubleStrike),
+            !g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "opponent's double strike stripped"
         );
     }
@@ -843,7 +843,7 @@ mod recent66 {
         let mut g = two_player_game();
         let arynx = g.add_card_to_battlefield(0, catalog::trained_arynx());
         attack_saddled(&mut g, arynx);
-        assert!(g.computed_permanent(arynx).unwrap().keywords.contains(&Keyword::FirstStrike));
+        assert!(g.computed_permanent(arynx).unwrap().keywords().contains(&Keyword::FirstStrike));
     }
 
     fn cast_weatherseed(g: &mut GameState) -> CardId {
@@ -982,7 +982,7 @@ mod recent67 {
         drain_stack(&mut g);
         assert_eq!(count_named(&g, 0, "Mercenary"), 0, "the token was sacrificed");
         assert!(
-            g.computed_permanent(pt).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible)
+            g.computed_permanent(pt).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible)
         );
     }
 
@@ -1122,7 +1122,7 @@ mod recent68 {
         resolve_spell(&mut g, catalog::sylvan_might(), vec![Target::Permanent(mine)]);
         let cp = g.computed_permanent(mine).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
         assert!(catalog::sylvan_might().keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))));
     }
 
@@ -1233,11 +1233,11 @@ mod recent69 {
     fn snapping_creeper_gains_vigilance_on_landfall() {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, catalog::snapping_creeper());
-        assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Vigilance));
+        assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance));
         let land = g.add_card_to_battlefield(0, catalog::forest());
         g.dispatch_triggers_for_events(&[GameEvent::LandPlayed { player: 0, card_id: land, played: true }]);
         drain_stack(&mut g);
-        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Vigilance),
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance),
             "landfall grants vigilance until end of turn");
     }
 
@@ -1281,10 +1281,10 @@ mod recent70 {
     fn vengeful_firebrand_haste_gated_on_warrior_in_graveyard() {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, catalog::vengeful_firebrand());
-        assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Haste),
+        assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste),
             "no Warrior in graveyard → no haste");
         g.add_card_to_graveyard(0, catalog::sabertooth_outrider()); // a Human Warrior card
-        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Haste),
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste),
             "Warrior card in graveyard → haste");
     }
 

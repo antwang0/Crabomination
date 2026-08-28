@@ -298,7 +298,7 @@ fn rise_and_shine_animates() {
     g.dispatch_triggers_for_events(&events);
     // Parcel Myr is already a creature — untouched; the Mox animates 0/0+4.
     let mox_cp = g.computed_permanent(mox).unwrap();
-    assert!(mox_cp.card_types.contains(&CardType::Creature));
+    assert!(mox_cp.card_types().contains(&CardType::Creature));
     assert_eq!((mox_cp.power, mox_cp.toughness), (4, 4), "0/0 with four counters");
     assert_eq!(g.battlefield_find(mox).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
     let myr_cp = g.computed_permanent(myr).unwrap();
@@ -318,5 +318,5 @@ fn zabaz_flying_pump() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("flying");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(zabaz).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(zabaz).unwrap().keywords().contains(&Keyword::Flying));
 }

@@ -21,7 +21,7 @@ fn cr_508_510_high_alert_wall_attacks_for_toughness() {
     let wall = g.add_card_to_battlefield(0, catalog::wall_of_lost_thoughts()); // 0/4 Defender
     g.clear_sickness(wall);
     assert!(
-        g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::AssignsCombatDamageByToughness),
+        g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::AssignsCombatDamageByToughness),
         "High Alert grants toughness-damage to your creatures"
     );
     g.active_player_idx = 0;

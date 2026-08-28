@@ -204,7 +204,7 @@ fn chainer_reanimates_as_a_nightmare() {
     activate(&mut g, 0, chainer, 0, Some(Target::Permanent(corpse)));
     let cp = g.computed_permanent(corpse).expect("reanimated");
     assert_eq!(cp.controller, 0);
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Nightmare));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Nightmare));
 }
 
 /// Coral Net taxes its host a card every upkeep.
@@ -377,7 +377,7 @@ fn flash_of_defiance_stops_green_blockers() {
     let spell = g.add_card_to_hand(0, catalog::flash_of_defiance());
     cast(&mut g, 0, spell, None);
     assert!(
-        g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock),
+        g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::CantBlock),
         "the green bear can't block"
     );
 }
@@ -546,7 +546,7 @@ fn mystic_familiar_grows_past_threshold() {
     fill_graveyard(&mut g, 0);
     let cp = g.computed_permanent(bird).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 3));
-    assert!(cp.keywords.contains(&Keyword::Protection(Color::Black)));
+    assert!(cp.keywords().contains(&Keyword::Protection(Color::Black)));
 }
 
 /// Organ Grinder cashes three graveyard cards for three life.
@@ -650,7 +650,7 @@ fn strength_of_lunacy_grants_protection() {
     cast(&mut g, 0, aura, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3));
-    assert!(cp.keywords.contains(&Keyword::Protection(Color::White)));
+    assert!(cp.keywords().contains(&Keyword::Protection(Color::White)));
 }
 
 /// Sickening Dreams sweeps for the number of cards discarded.
@@ -728,5 +728,5 @@ fn enslaved_dwarf_pumps_a_black_creature() {
     activate(&mut g, 0, dwarf, 0, Some(Target::Permanent(shade)));
     let cp = g.computed_permanent(shade).unwrap();
     assert_eq!(cp.power, 3);
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }

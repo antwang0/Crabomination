@@ -33,7 +33,7 @@ fn disciple_grants_first_strike() {
         card_id: d, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant first strike");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(d).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(d).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Metropolis Sprite pumps itself +1/-1.
@@ -161,7 +161,7 @@ fn madcap_skills_buffs_host() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (5, 2));
-    assert!(c.keywords.contains(&Keyword::Menace));
+    assert!(c.keywords().contains(&Keyword::Menace));
 }
 
 /// Illness in the Ranks shrinks every creature token by 1/1.
@@ -365,7 +365,7 @@ fn keymaster_rogue_unblockable_and_bounces() {
 }
 
 fn rogue_is_unblockable(g: &GameState, id: crabomination::card::CardId) -> bool {
-    g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Unblockable)
+    g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Unblockable)
 }
 
 /// Death's Approach shrinks the host by the number of creature cards in its
@@ -405,7 +405,7 @@ fn gtc3_keyrunes_animate() {
     drain_stack(&mut g);
     let c = g.computed_permanent(gruul).unwrap();
     assert_eq!((c.power, c.toughness), (3, 2));
-    assert!(c.card_types.contains(&CardType::Creature) && c.keywords.contains(&Keyword::Trample));
+    assert!(c.card_types().contains(&CardType::Creature) && c.keywords().contains(&Keyword::Trample));
 
     let boros = g.add_card_to_battlefield(0, catalog::boros_keyrune());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -414,7 +414,7 @@ fn gtc3_keyrunes_animate() {
         card_id: boros, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("animate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(boros).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(boros).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// The three extort creatures carry Extort plus their printed keyword lines.
@@ -448,7 +448,7 @@ fn gtc3_urbis_protector_makes_angel() {
     let angel = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Angel").expect("angel token").id;
     let c = g.computed_permanent(angel).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4));
-    assert!(c.keywords.contains(&Keyword::Flying));
+    assert!(c.keywords().contains(&Keyword::Flying));
 }
 
 /// Forced Adaptation adds a +1/+1 counter at its controller's upkeep.
@@ -473,7 +473,7 @@ fn gtc3_holy_mantle_pumps_and_protects() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4));
-    assert!(c.keywords.contains(&Keyword::ProtectionFromCreatures));
+    assert!(c.keywords().contains(&Keyword::ProtectionFromCreatures));
 }
 
 /// Mugging deals 2 damage and stops the creature from blocking.
@@ -487,7 +487,7 @@ fn gtc3_mugging_damages_and_stops_block() {
     g.cast_spell(m, Some(Target::Permanent(wurm)), vec![], None, None).expect("mugging");
     drain_stack(&mut g);
     let c = g.computed_permanent(wurm).unwrap();
-    assert!(c.keywords.contains(&Keyword::CantBlock));
+    assert!(c.keywords().contains(&Keyword::CantBlock));
 }
 
 /// Homing Lightning deals 4 to the target and each same-named creature.
@@ -544,10 +544,10 @@ fn gtc4_counter_lords_grant_evasion() {
     g.add_card_to_battlefield(0, catalog::sapphire_drake());
     g.add_card_to_battlefield(0, catalog::crowned_ceratok());
     let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2, no counter yet
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "no counter → no grant");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying), "no counter → no grant");
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     let c = g.computed_permanent(bear).unwrap();
-    assert!(c.keywords.contains(&Keyword::Flying) && c.keywords.contains(&Keyword::Trample));
+    assert!(c.keywords().contains(&Keyword::Flying) && c.keywords().contains(&Keyword::Trample));
 }
 
 /// Hellraiser Goblin gives your creatures haste and "attacks each combat".
@@ -557,7 +557,7 @@ fn gtc4_hellraiser_grants_haste_mustattack() {
     g.add_card_to_battlefield(0, catalog::hellraiser_goblin());
     let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk());
     let c = g.computed_permanent(bear).unwrap();
-    assert!(c.keywords.contains(&Keyword::Haste) && c.keywords.contains(&Keyword::MustAttack));
+    assert!(c.keywords().contains(&Keyword::Haste) && c.keywords().contains(&Keyword::MustAttack));
 }
 
 /// Ogre Slumlord mints a Rat when a nontoken creature dies; Rats have deathtouch.
@@ -572,7 +572,7 @@ fn gtc4_ogre_slumlord_rats_have_deathtouch() {
     g.dispatch_triggers_for_events(&[GameEvent::CreatureDied { card_id: victim }]);
     drain_stack(&mut g);
     let rat = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Rat").expect("rat token").id;
-    assert!(g.computed_permanent(rat).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(rat).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Court Street Denizen taps an opponent's creature when another white creature enters.
@@ -812,7 +812,7 @@ fn gtc6_alpha_authority_grants() {
     let aura = g.add_card_to_battlefield(0, catalog::alpha_authority());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
     let c = g.computed_permanent(bear).unwrap();
-    assert!(c.keywords.contains(&Keyword::Hexproof) && c.keywords.contains(&Keyword::CantBeBlockedByMoreThanOne));
+    assert!(c.keywords().contains(&Keyword::Hexproof) && c.keywords().contains(&Keyword::CantBeBlockedByMoreThanOne));
 }
 
 /// Agoraphobia shrinks the host by 5 power and can return itself to hand.
@@ -966,7 +966,8 @@ fn gtc7_realmwright_adds_chosen_land_type() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
     g.move_card_to_battlefield_for_test(0, catalog::realmwright());
     drain_stack(&mut g);
-    let types = &g.computed_permanent(forest).unwrap().subtypes.land_types;
+    let cp = g.computed_permanent(forest).unwrap();
+    let types = &cp.subtypes().land_types;
     assert!(types.contains(&LandType::Island), "gained the chosen Island type");
     assert!(types.contains(&LandType::Forest), "kept its Forest type");
 }
@@ -1014,7 +1015,7 @@ fn gtc7_skarrg_animates_land() {
     }).expect("animate land");
     drain_stack(&mut g);
     let c = g.computed_permanent(land).unwrap();
-    assert!(c.card_types.contains(&CardType::Creature) && c.card_types.contains(&CardType::Land));
+    assert!(c.card_types().contains(&CardType::Creature) && c.card_types().contains(&CardType::Land));
     assert_eq!((c.power, c.toughness), (4, 4));
 }
 
@@ -1117,7 +1118,7 @@ fn gtc8_shadow_alley_denizen_grants_intimidate() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast black creature");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Intimidate));
+    assert!(g.computed_permanent(target).unwrap().keywords().contains(&Keyword::Intimidate));
     let _ = denizen;
 }
 
@@ -1195,7 +1196,7 @@ fn gtc9_skyblinder_staff_buffs_and_evades() {
     g.battlefield_find_mut(staff).unwrap().attached_to = Some(bear);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.power, 3, "2 + 1");
-    assert!(c.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))));
+    assert!(c.keywords().iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))));
 }
 
 /// Razortip Whip pings for 1.
@@ -1300,7 +1301,7 @@ fn gtc10_wrecking_ogre_bloodrush() {
     drain_stack(&mut g);
     let c = g.computed_permanent(attacker).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5), "2/2 + 3/3");
-    assert!(c.keywords.contains(&Keyword::DoubleStrike), "gained double strike");
+    assert!(c.keywords().contains(&Keyword::DoubleStrike), "gained double strike");
 }
 
 /// Incursion Specialist pumps +2/+0 and turns unblockable on the second spell.
@@ -1324,7 +1325,7 @@ fn gtc10_incursion_specialist_second_spell() {
     }
     let c = g.computed_permanent(spec).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "1/3 + 2/0");
-    assert!(c.keywords.contains(&Keyword::Unblockable), "can't be blocked this turn");
+    assert!(c.keywords().contains(&Keyword::Unblockable), "can't be blocked this turn");
 }
 
 /// Molten Primordial's ETB steals an opponent's creature with haste.
@@ -1337,7 +1338,7 @@ fn gtc10_molten_primordial_steals() {
     drain_stack(&mut g);
     let c = g.computed_permanent(foe).unwrap();
     assert_eq!(c.controller, 0, "gained control of the opponent's creature");
-    assert!(c.keywords.contains(&Keyword::Haste), "it has haste");
+    assert!(c.keywords().contains(&Keyword::Haste), "it has haste");
 }
 
 /// Sepulchral Primordial reanimates from an opponent's graveyard under your control.
@@ -1611,7 +1612,7 @@ fn gtc12_domri_rade_emblem() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     for kw in [Keyword::DoubleStrike, Keyword::Trample, Keyword::Hexproof, Keyword::Haste] {
-        assert!(c.keywords.contains(&kw), "emblem grants {kw:?}");
+        assert!(c.keywords().contains(&kw), "emblem grants {kw:?}");
     }
 }
 
@@ -1692,7 +1693,7 @@ fn gtc14_one_thousand_lashes() {
     g.cast_spell(aura, Some(Target::Permanent(foe)), vec![], None, None).expect("cast aura");
     drain_stack(&mut g);
     let c = g.computed_permanent(foe).unwrap();
-    assert!(c.keywords.contains(&Keyword::CantAttack) && c.keywords.contains(&Keyword::CantBlock),
+    assert!(c.keywords().contains(&Keyword::CantAttack) && c.keywords().contains(&Keyword::CantBlock),
         "enchanted creature can't attack or block");
     // The enchanted creature's controller (P1) loses 1 at their upkeep.
     g.active_player_idx = 1;
@@ -1719,7 +1720,7 @@ fn gtc14_frontline_medic_battalion() {
         Attack { attacker: b, target: AttackTarget::Player(1) },
     ]).expect("attack with three");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Indestructible),
         "battalion granted indestructible");
 }
 
@@ -1765,7 +1766,7 @@ fn gtc15_alms_beast_grants_lifelink_in_combat() {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
     g.perform_action(GameAction::DeclareBlockers(vec![(blocker, beast)])).expect("block");
-    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::Lifelink),
+    assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::Lifelink),
         "the blocker gains lifelink while in combat with Alms Beast");
 }
 
@@ -1779,7 +1780,7 @@ fn gtc15_hold_the_gates_scales_with_gates() {
     g.add_card_to_battlefield(0, catalog::hold_the_gates());
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.toughness, 4, "+0/+1 per Gate (two Gates)");
-    assert!(c.keywords.contains(&Keyword::Vigilance), "has vigilance");
+    assert!(c.keywords().contains(&Keyword::Vigilance), "has vigilance");
 }
 
 /// Way of the Thief makes its host unblockable only while you control a Gate.
@@ -1791,9 +1792,9 @@ fn gtc15_way_of_the_thief_conditional_unblockable() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
-    assert!(!c.keywords.contains(&Keyword::Unblockable), "not unblockable without a Gate");
+    assert!(!c.keywords().contains(&Keyword::Unblockable), "not unblockable without a Gate");
     g.add_card_to_battlefield(0, catalog::azorius_guildgate());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable),
         "unblockable once you control a Gate");
 }
 
@@ -2052,7 +2053,7 @@ fn gtc15_obzedat_drains_and_blinks() {
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     let back = g.battlefield_find(obz).expect("returned at upkeep");
-    assert!(g.computed_permanent(back.id).unwrap().keywords.contains(&Keyword::Haste), "returns with haste");
+    assert!(g.computed_permanent(back.id).unwrap().keywords().contains(&Keyword::Haste), "returns with haste");
 }
 
 /// Ooze Flux removes +1/+1 counters to mint an Ooze sized to the number removed.
@@ -2095,9 +2096,9 @@ fn gtc15_mark_for_death_forces_and_locks() {
     g.cast_spell(spell, Some(Target::Permanent(marked)), vec![], None, None).expect("cast");
     drain_stack(&mut g);
     assert!(!g.battlefield_find(marked).unwrap().tapped, "the marked creature was untapped");
-    assert!(g.computed_permanent(marked).unwrap().keywords.contains(&Keyword::MustBlock),
+    assert!(g.computed_permanent(marked).unwrap().keywords().contains(&Keyword::MustBlock),
         "marked creature must block");
-    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::CantBlock),
+    assert!(g.computed_permanent(other).unwrap().keywords().contains(&Keyword::CantBlock),
         "other creatures that player controls can't block");
 }
 
@@ -2191,7 +2192,7 @@ fn gtc16_glaring_spotlight_ignores_and_shields() {
     }).expect("activate spotlight sac");
     drain_stack(&mut g);
     assert!(g.battlefield_find(spotlight).is_none(), "Spotlight was sacrificed");
-    let kws = g.computed_permanent(mine).unwrap().keywords.clone();
+    let kws = g.computed_permanent(mine).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Hexproof) && kws.contains(&Keyword::Unblockable),
         "own creatures gained hexproof + unblockable");
     // With the Spotlight gone, the opponent's hexproof creature is untargetable again.
@@ -2394,7 +2395,7 @@ fn contaminated_ground_swamp_and_drain() {
     }).expect("cast Contaminated Ground");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(land).unwrap().subtypes.land_types.contains(&crabomination::card::LandType::Swamp),
+        g.computed_permanent(land).unwrap().subtypes().land_types.contains(&crabomination::card::LandType::Swamp),
         "enchanted land is a Swamp",
     );
     let life = g.players[1].life;

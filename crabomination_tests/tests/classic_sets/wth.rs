@@ -156,13 +156,13 @@ fn familiar_ground_only_helps_your_creatures() {
     assert!(
         g.computed_permanent(mine)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::CantBeBlockedByMoreThanOne)
     );
     assert!(
         !g.computed_permanent(theirs)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::CantBeBlockedByMoreThanOne)
     );
 }
@@ -244,7 +244,7 @@ fn downdraft_grounds_then_sweeps() {
     g.players[0].mana_pool.add(Color::Green, 1);
     activate(&mut g, downdraft, 0, Some(Target::Permanent(flier))).expect("ground it");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(flier).unwrap().keywords().contains(&Keyword::Flying));
 
     activate(&mut g, downdraft, 1, None).expect("sweep");
     drain_stack(&mut g);
@@ -457,7 +457,7 @@ fn roc_hatchling_hatches_after_four_upkeeps() {
     to_upkeep(&mut g, 0);
     let cp = g.computed_permanent(roc).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Pendrell Mists taxes every creature on the table, not just yours.
@@ -578,8 +578,8 @@ fn xanthic_statue_animates() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(statue).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 8));
-    assert!(cp.keywords.contains(&Keyword::Trample));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.keywords().contains(&Keyword::Trample));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
 }
 
 /// Nature's Resurgence pays each player for their own graveyard.

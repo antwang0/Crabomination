@@ -683,7 +683,7 @@ fn tribute_declined_fires_the_trigger_half() {
     assert_eq!((c.power(), c.toughness()), (4, 4), "+1/+1 until EOT");
     let computed = g.compute_battlefield();
     assert!(computed.iter().find(|c| c.id == id).unwrap()
-        .keywords.contains(&crabomination::card::Keyword::Haste));
+        .keywords().contains(&crabomination::card::Keyword::Haste));
 }
 
 /// Oracle of Bones (tribute declined) free-casts an instant from hand; a
@@ -1488,10 +1488,10 @@ fn part_the_waterveil_awaken_animates_a_land_and_banks_extra_turn() {
     assert_eq!(g.players[0].extra_turns, 1, "extra turn banked");
     let cp = g.compute_battlefield();
     let v = cp.iter().find(|c| c.id == land).unwrap();
-    assert!(v.card_types.contains(&CardType::Creature), "land animated");
-    assert!(v.card_types.contains(&CardType::Land), "still a land");
+    assert!(v.card_types().contains(&CardType::Creature), "land animated");
+    assert!(v.card_types().contains(&CardType::Land), "still a land");
     assert_eq!((v.power, v.toughness), (6, 6), "0/0 + six +1/+1 counters");
-    assert!(v.keywords.contains(&crabomination::card::Keyword::Haste));
+    assert!(v.keywords().contains(&crabomination::card::Keyword::Haste));
 }
 
 /// CR 702.113a — the regular cast must not animate anything.
@@ -1512,6 +1512,6 @@ fn part_the_waterveil_regular_cast_skips_awaken() {
     assert_eq!(g.players[0].extra_turns, 1);
     let cp = g.compute_battlefield();
     let v = cp.iter().find(|c| c.id == land).unwrap();
-    assert!(!v.card_types.contains(&CardType::Creature), "land untouched");
+    assert!(!v.card_types().contains(&CardType::Creature), "land untouched");
 }
 

@@ -343,8 +343,8 @@ fn maze_behemoth_grants_trample_to_multicolored() {
     // A gold creature gets trample; a mono creature doesn't.
     let gold = g.add_card_to_battlefield(0, catalog::spike_jester()); // {B}{R}
     let mono = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // {1}{G}
-    assert!(g.computed_permanent(gold).unwrap().keywords.contains(&Keyword::Trample), "gold gains trample");
-    assert!(!g.computed_permanent(mono).unwrap().keywords.contains(&Keyword::Trample), "mono unaffected");
+    assert!(g.computed_permanent(gold).unwrap().keywords().contains(&Keyword::Trample), "gold gains trample");
+    assert!(!g.computed_permanent(mono).unwrap().keywords().contains(&Keyword::Trample), "mono unaffected");
 }
 
 /// Advent of the Wurm makes a 5/5 trampling Wurm.
@@ -424,9 +424,9 @@ fn exava_grants_haste_to_counter_bearers() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::exava_rakdos_blood_witch());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "no haste without a counter");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "no haste without a counter");
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "counter-bearer gains haste");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "counter-bearer gains haste");
 }
 
 /// Ruric Thar deals 6 to a player who casts a noncreature spell.
@@ -466,7 +466,7 @@ fn blood_baron_conditional_buff() {
     g.players[1].life = 10;
     let cp = g.computed_permanent(baron).unwrap();
     assert_eq!((cp.power, cp.toughness), (10, 10), "buffed to 10/10");
-    assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gains flying");
     g.players[1].life = 11; // condition fails
     let cp = g.computed_permanent(baron).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "back to 4/4");
@@ -554,7 +554,7 @@ fn smelt_ward_gatekeepers_steal() {
     g.move_card_to_battlefield_for_test(0, catalog::smelt_ward_gatekeepers());
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "stole the creature");
-    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Haste), "granted haste");
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Haste), "granted haste");
 }
 
 /// Scion of Vitu-Ghazi makes a Bird then populates it when cast.
@@ -727,7 +727,7 @@ fn dragonshift_animates_dragon() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "becomes 4/4");
-    assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gains flying");
 }
 
 /// Krasis Incubation locks the creature down, then bounces itself for two
@@ -744,7 +744,7 @@ fn krasis_incubation_lock_and_bounce() {
     g.players[0].mana_pool.add_colorless(2);
     g.cast_spell(aura, Some(Target::Permanent(bear)), vec![], None, None).expect("cast Krasis");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantAttack), "creature locked");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantAttack), "creature locked");
     // Activate the release ability.
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -771,7 +771,7 @@ fn armed_left_half() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "gains double strike");
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike), "gains double strike");
 }
 
 /// Serve (right half) gives -6/-0.
@@ -927,7 +927,7 @@ fn breaking_entering_halves() {
     drain_stack(&mut g);
     let reanimated = g.battlefield_find(corpse).expect("creature on battlefield");
     assert_eq!(reanimated.controller, 0, "under my control");
-    assert!(g.computed_permanent(corpse).unwrap().keywords.contains(&Keyword::Haste), "has haste");
+    assert!(g.computed_permanent(corpse).unwrap().keywords().contains(&Keyword::Haste), "has haste");
 }
 
 /// Council of the Absolute's chosen-name cost reduction shaves {2} off matching
@@ -1116,20 +1116,20 @@ fn boros_battleshaper_forces_and_forbids() {
     drain_stack(&mut g);
     // One creature is forced to attack/block, a distinct one is forbidden.
     let forced: Vec<_> = g.battlefield.iter()
-        .filter(|c| g.computed_permanent(c.id).unwrap().keywords.contains(&Keyword::MustAttack))
+        .filter(|c| g.computed_permanent(c.id).unwrap().keywords().contains(&Keyword::MustAttack))
         .map(|c| c.id).collect();
     let forbidden: Vec<_> = g.battlefield.iter()
-        .filter(|c| g.computed_permanent(c.id).unwrap().keywords.contains(&Keyword::CantAttack))
+        .filter(|c| g.computed_permanent(c.id).unwrap().keywords().contains(&Keyword::CantAttack))
         .map(|c| c.id).collect();
     assert_eq!(forced.len(), 1, "exactly one creature must attack/block");
     assert_eq!(forbidden.len(), 1, "exactly one creature can't attack/block");
     assert_ne!(forced[0], forbidden[0], "the two slots pick distinct creatures");
     assert!(
-        g.computed_permanent(forced[0]).unwrap().keywords.contains(&Keyword::MustBlock),
+        g.computed_permanent(forced[0]).unwrap().keywords().contains(&Keyword::MustBlock),
         "forced creature also gains MustBlock",
     );
     assert!(
-        g.computed_permanent(forbidden[0]).unwrap().keywords.contains(&Keyword::CantBlock),
+        g.computed_permanent(forbidden[0]).unwrap().keywords().contains(&Keyword::CantBlock),
         "forbidden creature also gains CantBlock",
     );
 }
@@ -1395,7 +1395,7 @@ fn legions_initiative_anthems_and_blinks() {
         }
     }
     assert!(g.battlefield_find(bear).is_some(), "returned at the next combat");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Reap Intellect exiles X cards from a hand plus every same-named copy.

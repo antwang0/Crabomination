@@ -86,8 +86,8 @@ fn ageless_sentinels_becomes_a_bird_giant_when_it_blocks() {
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
     let cp = g.computed_permanent(sentinels).expect("computed");
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Bird));
-    assert!(!cp.keywords.contains(&Keyword::Defender), "defender is gone for good");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Bird));
+    assert!(!cp.keywords().contains(&Keyword::Defender), "defender is gone for good");
 }
 
 /// Force Bubble eats damage as depletion counters and pops at four.
@@ -280,7 +280,7 @@ fn pemmins_aura_untaps_and_pumps_its_host() {
     activate(&mut g, 0, aura_id, 0, None);
     assert!(!g.battlefield_find(host).unwrap().tapped);
     activate(&mut g, 0, aura_id, 1, None);
-    assert!(g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(host).unwrap().keywords().contains(&Keyword::Flying));
     activate(&mut g, 0, aura_id, 3, None);
     assert_eq!(g.computed_permanent(host).unwrap().power, 3, "+1/-1");
 }
@@ -297,7 +297,7 @@ fn proteus_machine_names_its_type_on_the_flip() {
     assert!(
         g.computed_permanent(machine)
             .unwrap()
-            .subtypes
+            .subtypes()
             .creature_types
             .contains(&CreatureType::Sliver)
     );
@@ -453,7 +453,7 @@ fn ambush_commander_animates_forests_and_eats_one() {
     let forest = g.add_card_to_battlefield(0, catalog::forest());
     let cp = g.computed_permanent(forest).expect("computed");
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Elf));
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Elf));
     assert!(cp.colors.contains(Color::Green));
     activate(&mut g, 0, commander, 0, Some(Target::Permanent(commander)));
     assert!(g.battlefield_find(forest).is_none(), "the Forest was the Elf sacrificed");

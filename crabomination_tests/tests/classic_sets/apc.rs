@@ -84,7 +84,7 @@ fn ana_disciple_grants_flying() {
     g.clear_sickness(disciple);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     activate(&mut g, 0, disciple, 0, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Ceta Disciple's second mode is a mana ability.
@@ -540,7 +540,7 @@ fn shield_of_duty_and_reason_grants_two_protections() {
     let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let aura = g.add_card_to_hand(0, catalog::shield_of_duty_and_reason());
     cast(&mut g, 0, aura, Some(Target::Permanent(host)));
-    let kws = g.computed_permanent(host).unwrap().keywords.clone();
+    let kws = g.computed_permanent(host).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Protection(Color::Green)));
     assert!(kws.contains(&Keyword::Protection(Color::Blue)));
 }
@@ -684,7 +684,7 @@ fn unnatural_selection_rewrites_a_type() {
     let sel = g.battlefield.iter().find(|c| c.definition.name == "Unnatural Selection").unwrap().id;
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     activate(&mut g, 0, sel, 0, Some(Target::Permanent(bear)));
-    let types = g.computed_permanent(bear).unwrap().subtypes.creature_types.clone();
+    let types = g.computed_permanent(bear).unwrap().subtypes().creature_types.clone();
     assert_eq!(types.len(), 1, "the printed Bear type was replaced");
     assert!(!types.contains(&crabomination::card::CreatureType::Bear));
 }

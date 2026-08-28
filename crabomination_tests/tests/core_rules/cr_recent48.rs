@@ -188,12 +188,12 @@ fn cr_721_2b_station_band_animates_at_its_threshold() {
     let mut g = two_player_game();
     let ship = g.add_card_to_battlefield(0, catalog::sledge_class_seedship());
     let cp = g.computed_permanent(ship).expect("on battlefield");
-    assert!(!cp.card_types.contains(&CardType::Creature), "no charges, no creature");
+    assert!(!cp.card_types().contains(&CardType::Creature), "no charges, no creature");
     g.battlefield_find_mut(ship).unwrap().add_counters(CounterType::Charge, 7);
     let cp = g.computed_permanent(ship).expect("still there");
-    assert!(cp.card_types.contains(&CardType::Creature), "{{7+}} animates it");
+    assert!(cp.card_types().contains(&CardType::Creature), "{{7+}} animates it");
     assert_eq!((cp.power, cp.toughness), (4, 5));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// CR 721.2c — a station card has no power or toughness outside the

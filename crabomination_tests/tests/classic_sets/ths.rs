@@ -157,7 +157,7 @@ fn two_target_pump_spells_hit_both() {
     .expect("cast");
     drain_stack(&mut g);
     for id in [a, b] {
-        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::FirstStrike));
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::FirstStrike));
     }
 }
 
@@ -183,7 +183,7 @@ fn theros_auras_attach_and_grant() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast_at(&mut g, speed, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Trample) && cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Fate Foretold replaces itself and draws again when the host dies.
@@ -245,9 +245,9 @@ fn nyleas_emissary_bestows_as_an_aura() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     assert!(
-        !g.computed_permanent(cat).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+        !g.computed_permanent(cat).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "a bestowed permanent isn't a creature",
     );
 }
@@ -677,7 +677,7 @@ fn ths_batch3_monstrosity_riders() {
 
     let mut g = main_phase();
     let giant = g.add_card_to_battlefield(0, catalog::hundred_handed_one());
-    assert!(!g.computed_permanent(giant).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(!g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Reach));
     g.players[0].mana_pool.add_colorless(3);
     g.players[0].mana_pool.add(Color::White, 3);
     g.perform_action(GameAction::ActivateAbility {
@@ -689,7 +689,7 @@ fn ths_batch3_monstrosity_riders() {
     })
     .expect("monstrosity");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(giant).unwrap().keywords.clone();
+    let kws = g.computed_permanent(giant).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Reach) && kws.contains(&Keyword::CanBlockAdditional(99)));
 }
 
@@ -714,7 +714,7 @@ fn sealock_monster_makes_an_island() {
     assert!(
         g.computed_permanent(land)
             .unwrap()
-            .subtypes
+            .subtypes()
             .land_types
             .contains(&crabomination::card::LandType::Island)
     );
@@ -811,7 +811,7 @@ fn flamespeaker_adept_grows_on_scry() {
     cast_at(&mut g, jolt, Some(Target::Player(1)));
     let cp = g.computed_permanent(adept).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3));
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
     assert_eq!(g.players[1].life, 19, "the Jolt still burned");
 }
 
@@ -839,7 +839,7 @@ fn kragma_warcaller_hastes_and_pumps_minotaurs() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::kragma_warcaller());
     let minotaur = g.add_card_to_battlefield(0, catalog::minotaur_skullcleaver());
-    assert!(g.computed_permanent(minotaur).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(minotaur).unwrap().keywords().contains(&Keyword::Haste));
     g.step = TurnStep::DeclareAttackers;
     let evs = g
         .declare_attackers(vec![Attack { attacker: minotaur, target: AttackTarget::Player(1) }])
@@ -896,8 +896,8 @@ fn stoneshock_giant_stops_ground_blockers() {
     })
     .expect("monstrosity");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::CantBlock));
-    assert!(!g.computed_permanent(flyer).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(ground).unwrap().keywords().contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(flyer).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Titan of Eternal Fire arms every Human you control.
@@ -1068,8 +1068,8 @@ fn mogiss_marauder_caps_targets_at_devotion() {
     .expect("cast");
     drain_stack(&mut g);
     // Devotion is 1 ({B} on the Marauder itself), so only the first slot lands.
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Haste));
-    assert!(!g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Spells that ride a scry: Artisan's Sorrow and Sea God's Revenge.
@@ -1156,7 +1156,7 @@ fn colossus_of_akros_attacks_when_monstrous() {
     })
     .expect("monstrosity 10");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(colossus).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(colossus).unwrap().keywords().contains(&Keyword::Trample));
     g.step = TurnStep::DeclareAttackers;
     g.declare_attackers(vec![Attack { attacker: colossus, target: AttackTarget::Player(1) }])
         .expect("attacks now");
@@ -1194,7 +1194,7 @@ fn rageblood_shaman_pumps_other_minotaurs() {
     let other = g.add_card_to_battlefield(0, catalog::minotaur_skullcleaver());
     let cp = g.computed_permanent(other).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     assert_eq!(g.computed_permanent(shaman).unwrap().power, 2, "not itself");
 }
 
@@ -1219,7 +1219,7 @@ fn reaper_of_the_wilds_scries_and_grants() {
     })
     .expect("deathtouch");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(reaper).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(reaper).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Tymaret flings a body, then buys himself back out of the graveyard.
@@ -1293,7 +1293,7 @@ fn bow_of_nylea_arms_the_team() {
     g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
         .expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
 
     g.step = TurnStep::PostCombatMain;
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -1578,10 +1578,10 @@ fn medomai_cant_attack_during_extra_turns() {
     let mut g = main_phase();
     let medomai = g.add_card_to_battlefield(0, catalog::medomai_the_ageless());
     g.battlefield_find_mut(medomai).unwrap().summoning_sick = false;
-    assert!(!g.computed_permanent(medomai).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(!g.computed_permanent(medomai).unwrap().keywords().contains(&Keyword::CantAttack));
     g.current_turn_is_extra = true;
     assert!(
-        g.computed_permanent(medomai).unwrap().keywords.contains(&Keyword::CantAttack),
+        g.computed_permanent(medomai).unwrap().keywords().contains(&Keyword::CantAttack),
         "the extra-turn rider applies"
     );
 }

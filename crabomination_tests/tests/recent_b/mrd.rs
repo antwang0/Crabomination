@@ -96,7 +96,7 @@ fn cobalt_golem_buys_flying() {
     })
     .expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(golem).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(golem).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Grid Monitor locks its controller out of creature spells but not others.
@@ -129,7 +129,7 @@ fn leonin_abunas_grants_artifact_hexproof() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::leonin_abunas());
     let rock = g.add_card_to_battlefield(0, catalog::tanglebloom());
-    assert!(g.computed_permanent(rock).unwrap().keywords.contains(&Keyword::Hexproof));
+    assert!(g.computed_permanent(rock).unwrap().keywords().contains(&Keyword::Hexproof));
     let naturalize = g.add_card_to_hand(1, catalog::goblin_replica());
     let _ = naturalize;
     assert!(g.check_target_legality(&Target::Permanent(rock), 1).is_err(), "hexproof holds");
@@ -176,13 +176,13 @@ fn leonin_den_guard_needs_equipment() {
     let guard = g.add_card_to_battlefield(0, catalog::leonin_den_guard());
     let cp = g.computed_permanent(guard).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 3));
-    assert!(!cp.keywords.contains(&Keyword::Vigilance));
+    assert!(!cp.keywords().contains(&Keyword::Vigilance));
     let gear = g.add_card_to_battlefield(0, catalog::vulshok_battlegear());
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::Equip { equipment: gear, target: guard }).expect("equip");
     let cp = g.computed_permanent(guard).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 7), "+1/+1 self, +3/+3 gear");
-    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
 }
 
 /// Empyrial Plate reads the equipped creature's controller's hand.
@@ -436,7 +436,7 @@ fn tel_jilad_chosen_has_protection_from_artifacts() {
     assert!(
         g.computed_permanent(elf)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::ProtectionFromCardType(CardType::Artifact))
     );
     let tower = g.add_card_to_battlefield(0, catalog::tower_of_champions());
@@ -624,7 +624,7 @@ fn mass_hysteria_grants_haste_globally() {
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.add_card_to_battlefield(0, catalog::mass_hysteria());
     for id in [mine, theirs] {
-        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Haste));
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste));
     }
 }
 
@@ -670,7 +670,7 @@ fn megatog_eats_an_artifact_for_a_pump() {
     assert!(g.battlefield_find(rock).is_none());
     let cp = g.computed_permanent(tog).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 7));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Krark-Clan Shaman sweeps the ground but spares fliers.
@@ -790,7 +790,7 @@ fn bloodscent_forces_every_block() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(lure).unwrap().keywords.contains(&Keyword::AllMustBlock));
+    assert!(g.computed_permanent(lure).unwrap().keywords().contains(&Keyword::AllMustBlock));
 }
 
 /// Goblin War Wagon needs an upkeep toll to untap.
@@ -1663,7 +1663,7 @@ fn march_of_the_machines_animates_artifacts() {
     let rock = g.add_card_to_battlefield(0, catalog::tanglebloom());
     g.add_card_to_battlefield(0, catalog::march_of_the_machines());
     let cp = g.computed_permanent(rock).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (1, 1), "MV/MV");
 }
 
@@ -1780,7 +1780,7 @@ fn mirror_golem_copies_the_imprints_types() {
     assert!(
         g.computed_permanent(golem)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::ProtectionFromCardType(CardType::Creature))
     );
 }
@@ -1954,7 +1954,7 @@ fn quicksilver_fountain_floods_a_land_into_an_island() {
     assert!(
         g.computed_permanent(mountain)
             .unwrap()
-            .subtypes
+            .subtypes()
             .land_types
             .contains(&crabomination::card::LandType::Island)
     );

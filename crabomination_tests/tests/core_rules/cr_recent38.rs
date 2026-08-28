@@ -47,7 +47,7 @@ fn cr_508_1g_pay_to_attack_consumes_the_mana() {
     assert!(g
         .computed_permanent(bear)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::CantAttackOrBlockUnlessPay(3)));
 
     g.step = TurnStep::DeclareAttackers;

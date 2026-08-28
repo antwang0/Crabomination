@@ -178,7 +178,7 @@ fn fervent_strike_castable_with_green() {
 
     let view = g.computed_permanent(bear).expect("bear on bf");
     assert_eq!(view.power, 4, "Fervent Strike pumps +2/+0");
-    assert!(view.keywords.contains(&Keyword::Trample));
+    assert!(view.keywords().contains(&Keyword::Trample));
 }
 
 // ── Monocolored hybrid pips ({n/C}) ───────────────────────────────────────────
@@ -541,13 +541,13 @@ fn strixhaven_skycoach_crews_into_a_flier() {
     let mut g = two_player_game();
     let coach = g.add_card_to_battlefield(0, catalog::strixhaven_skycoach());
     // Not a creature until crewed.
-    assert!(!g.computed_permanent(coach).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(coach).unwrap().card_types().contains(&CardType::Creature));
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::Crew { vehicle: coach, crew_creatures: vec![bear] })
         .expect("crew 2 satisfied by a 2/2");
     let cp = g.computed_permanent(coach).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.card_types().contains(&CardType::Creature));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     assert_eq!(cp.power, 3);
     assert_eq!(cp.toughness, 2);
 }
@@ -1885,8 +1885,8 @@ fn great_hall_animates_permanently_with_magecraft_pump() {
     .expect("{5} animation");
     drain_stack(&mut g);
     let cp = g.computed_permanent(hall).expect("on battlefield");
-    assert!(cp.card_types.contains(&CardType::Creature), "now a creature");
-    assert!(cp.card_types.contains(&CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&CardType::Land), "still a land");
     assert_eq!((cp.power, cp.toughness), (2, 4), "2/4 Wizard");
     // Second activation is gated off ("if this land isn't a creature").
     g.players[0].mana_pool.add_colorless(5);

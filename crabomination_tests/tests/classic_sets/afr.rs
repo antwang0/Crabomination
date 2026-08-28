@@ -105,7 +105,7 @@ fn cloister_gargoyle_pumps_after_a_completed_dungeon() {
     g.players[0].dungeons_completed = 1;
     let after = g.computed_permanent(garg).unwrap();
     assert_eq!((after.power, after.toughness), (3, 4), "+3/+0 once completed");
-    assert!(after.keywords.contains(&crabomination::card::Keyword::Flying), "gains flying");
+    assert!(after.keywords().contains(&crabomination::card::Keyword::Flying), "gains flying");
 }
 
 /// Dungeon Crawler returns from the graveyard when you complete a dungeon.
@@ -220,9 +220,9 @@ fn nadaar_ventures_and_anthems_after_completion() {
 fn gloom_stalker_double_strike_gate() {
     let mut g = two_player_game();
     let gs = g.add_card_to_battlefield(0, catalog::gloom_stalker());
-    assert!(!g.computed_permanent(gs).unwrap().keywords.contains(&crabomination::card::Keyword::DoubleStrike));
+    assert!(!g.computed_permanent(gs).unwrap().keywords().contains(&crabomination::card::Keyword::DoubleStrike));
     g.players[0].dungeons_completed = 1;
-    assert!(g.computed_permanent(gs).unwrap().keywords.contains(&crabomination::card::Keyword::DoubleStrike));
+    assert!(g.computed_permanent(gs).unwrap().keywords().contains(&crabomination::card::Keyword::DoubleStrike));
 }
 
 /// Dungeon Map's second ability ventures at sorcery speed for {3}, {T}.
@@ -244,10 +244,10 @@ fn dungeon_map_ventures() {
 fn triumphant_adventurer_first_strike_on_your_turn() {
     let mut g = two_player_game();
     let ta = g.add_card_to_battlefield(0, catalog::triumphant_adventurer());
-    assert!(g.computed_permanent(ta).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike),
+    assert!(g.computed_permanent(ta).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike),
         "active player 0 owns it - first strike on");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(ta).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike),
+    assert!(!g.computed_permanent(ta).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike),
         "off-turn - first strike off");
 }
 
@@ -430,7 +430,7 @@ fn ellywick_ventures_and_emblem_anthems() {
     g.players[0].dungeons_completed = 1;
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!((b.power, b.toughness), (4, 4), "+2/+2 from the emblem");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Trample), "trample granted");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Trample), "trample granted");
 }
 
 // ── AFR wave 3 ──────────────────────────────────────────────────────────────

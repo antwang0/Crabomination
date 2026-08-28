@@ -172,12 +172,12 @@ fn natural_emergence_animates_your_lands() {
     g.add_card_to_battlefield(0, catalog::natural_emergence());
     let cp = g.computed_permanent(forest).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     assert!(
         !g.computed_permanent(theirs)
             .unwrap()
-            .card_types
+            .card_types()
             .contains(&crabomination::card::CardType::Creature),
         "only yours"
     );
@@ -318,7 +318,7 @@ fn voice_of_all_has_protection_from_the_chosen_color() {
     assert!(
         g.computed_permanent(voice)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Protection(color))
     );
 }
@@ -430,7 +430,7 @@ fn samite_elder_grants_protection_from_a_permanents_colors() {
     assert!(
         g.computed_permanent(bears)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Protection(Color::Green))
     );
 }

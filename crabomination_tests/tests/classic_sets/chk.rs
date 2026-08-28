@@ -173,7 +173,7 @@ fn simple_activated_abilities() {
             vec![(Black, 2)], 2,
             |g, _, t| assert!(g.battlefield_find(t).is_none(), "2/2 dealt itself 2 and died")),
         ("Akki Drillmaster", catalog::akki_drillmaster(), Some((0, catalog::grizzly_bears())), vec![], 0,
-            |g, _, t| assert!(g.computed_permanent(t).unwrap().keywords.contains(&Keyword::Haste))),
+            |g, _, t| assert!(g.computed_permanent(t).unwrap().keywords().contains(&Keyword::Haste))),
         ("Matsu-Tribe Sniper", catalog::matsu_tribe_sniper(), Some((1, catalog::mahamoti_djinn())),
             vec![], 0,
             |g, _, t| {
@@ -319,7 +319,7 @@ fn sacrifice_activated_abilities() {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         act!(g, strider, 0, Some(Target::Permanent(bear)));
         assert!(g.battlefield_find(strider).is_none());
-        assert!(g.computed_permanent(bear).unwrap().keywords.iter()
+        assert!(g.computed_permanent(bear).unwrap().keywords().iter()
             .any(|k| matches!(k, Keyword::Protection(_))), "bear gained protection from a color");
     }
     // Pus Kami: sac to destroy a nonblack creature.
@@ -514,7 +514,7 @@ mod gaps1 {
         drain_stack(&mut g);
         assert_eq!(g.battlefield_find(myojin).unwrap().counter_count(CounterType::Divinity), 1);
         assert!(
-            g.computed_permanent(myojin).unwrap().keywords.contains(&Keyword::Indestructible)
+            g.computed_permanent(myojin).unwrap().keywords().contains(&Keyword::Indestructible)
         );
         g.perform_action(GameAction::ActivateAbility {
             card_id: myojin, ability_index: 0, target: None, additional_targets: vec![],
@@ -533,7 +533,7 @@ mod gaps1 {
         let myojin = g.add_card_to_battlefield(0, catalog::myojin_of_seeing_winds());
         assert_eq!(g.battlefield_find(myojin).unwrap().counter_count(CounterType::Divinity), 0);
         assert!(
-            !g.computed_permanent(myojin).unwrap().keywords.contains(&Keyword::Indestructible)
+            !g.computed_permanent(myojin).unwrap().keywords().contains(&Keyword::Indestructible)
         );
     }
 

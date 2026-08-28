@@ -210,9 +210,9 @@ fn fen_stalker_has_fear_only_while_you_are_tapped_out() {
     let mut g = two_player_game();
     let stalker = g.add_card_to_battlefield(0, catalog::fen_stalker());
     let land = g.add_card_to_battlefield(0, catalog::swamp());
-    assert!(!g.computed_permanent(stalker).unwrap().keywords.contains(&Keyword::Fear));
+    assert!(!g.computed_permanent(stalker).unwrap().keywords().contains(&Keyword::Fear));
     g.battlefield_find_mut(land).unwrap().tapped = true;
-    assert!(g.computed_permanent(stalker).unwrap().keywords.contains(&Keyword::Fear));
+    assert!(g.computed_permanent(stalker).unwrap().keywords().contains(&Keyword::Fear));
 }
 
 /// Chimeric Idol trades your whole mana base for a 3/3 body.
@@ -225,7 +225,7 @@ fn chimeric_idol_taps_your_lands_to_animate() {
     assert!(g.battlefield_find(land).unwrap().tapped, "all your lands tap");
     let cp = g.computed_permanent(idol).expect("computed");
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
 }
 
 /// Excise exiles an attacker unless its controller matches the X.
@@ -418,7 +418,7 @@ fn fault_riders_pumps_once_per_turn_for_a_land() {
     activate(&mut g, 0, riders, 0, None);
     let cp = g.computed_permanent(riders).expect("computed");
     assert_eq!(cp.power, 4);
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
     g.priority.player_with_priority = 0;
     assert!(
         g.perform_action(GameAction::ActivateAbility {

@@ -227,7 +227,7 @@ fn overtaker_steals_a_creature_for_the_turn() {
     let c = g.battlefield_find(victim).unwrap();
     assert_eq!(c.controller, 0);
     assert!(!c.tapped);
-    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 // ── "Becomes blocked" ───────────────────────────────────────────────────────
@@ -381,7 +381,7 @@ fn lumbering_satyr_gives_everyone_forestwalk() {
     assert!(
         g.computed_permanent(theirs)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::Landwalk(crabomination::card::LandType::Forest)))
     );

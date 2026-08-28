@@ -26,7 +26,7 @@ fn sneak_attack_cheats_creature_in_with_haste_then_sacrifices() {
     }).expect("activate Sneak Attack");
     drain_stack(&mut g);
     let c = g.computed_permanent(dragon).expect("dragon on battlefield");
-    assert!(c.keywords.contains(&Keyword::Haste), "entrant gains haste");
+    assert!(c.keywords().contains(&Keyword::Haste), "entrant gains haste");
     // End-step sacrifice fires.
     g.step = TurnStep::End;
     g.fire_step_triggers(TurnStep::End);
@@ -89,7 +89,7 @@ fn through_the_breach_cheats_creature_with_haste() {
     }).expect("cast Through the Breach");
     drain_stack(&mut g);
     let c = g.computed_permanent(dragon).expect("dragon in play");
-    assert!(c.keywords.contains(&Keyword::Haste), "entrant has haste");
+    assert!(c.keywords().contains(&Keyword::Haste), "entrant has haste");
     assert!(g.delayed_triggers.iter().any(|t|
         t.kind == crabomination::game::types::DelayedKind::NextEndStep),
         "end-step sacrifice registered");
@@ -138,7 +138,7 @@ fn warren_instigator_has_double_strike() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::warren_instigator());
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Goblin Piledriver gets +2/+0 per other attacking Goblin.
@@ -172,7 +172,7 @@ fn master_of_pearl_trident_buffs_other_merfolk() {
     let other = g.add_card_to_battlefield(0, catalog::cursecatcher());
     let oc = g.computed_permanent(other).unwrap();
     assert_eq!((oc.power, oc.toughness), (2, 2), "Cursecatcher 1/1 → 2/2");
-    assert!(oc.keywords.contains(&Keyword::Landwalk(crabomination::card::LandType::Island)), "islandwalk");
+    assert!(oc.keywords().contains(&Keyword::Landwalk(crabomination::card::LandType::Island)), "islandwalk");
     // The lord doesn't pump itself.
     assert_eq!(g.computed_permanent(lord).unwrap().power, 2);
 }
@@ -217,7 +217,7 @@ fn galerider_sliver_grants_flying_to_all_slivers() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::galerider_sliver());
     let opp_sliver = g.add_card_to_battlefield(1, catalog::heart_sliver());
-    assert!(g.computed_permanent(opp_sliver).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(opp_sliver).unwrap().keywords().contains(&Keyword::Flying),
         "opponent's Sliver also gains flying");
 }
 
@@ -227,7 +227,7 @@ fn heart_sliver_grants_haste() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let hs = g.add_card_to_battlefield(0, catalog::heart_sliver());
-    assert!(g.computed_permanent(hs).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(hs).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Crystalline Sliver gives all Slivers shroud (untargetable).
@@ -236,7 +236,7 @@ fn crystalline_sliver_grants_shroud() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let cs = g.add_card_to_battlefield(0, catalog::crystalline_sliver());
-    assert!(g.computed_permanent(cs).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(cs).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Muscle Sliver's +1/+1 anthem stacks onto another Sliver and itself.
@@ -265,8 +265,8 @@ fn striking_sliver_grants_first_strike() {
     let mut g = two_player_game();
     let ss = g.add_card_to_battlefield(0, catalog::striking_sliver());
     let opp = g.add_card_to_battlefield(1, catalog::venom_sliver());
-    assert!(g.computed_permanent(ss).unwrap().keywords.contains(&Keyword::FirstStrike));
-    assert!(!g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(g.computed_permanent(ss).unwrap().keywords().contains(&Keyword::FirstStrike));
+    assert!(!g.computed_permanent(opp).unwrap().keywords().contains(&Keyword::FirstStrike),
         "opponent's Sliver doesn't get first strike");
 }
 
@@ -277,8 +277,8 @@ fn sliver_hivelord_grants_indestructible() {
     let mut g = two_player_game();
     let hl = g.add_card_to_battlefield(0, catalog::sliver_hivelord());
     let other = g.add_card_to_battlefield(0, catalog::muscle_sliver());
-    assert!(g.computed_permanent(hl).unwrap().keywords.contains(&Keyword::Indestructible));
-    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(hl).unwrap().keywords().contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(other).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Manaweft Sliver grants every Sliver you control a "{T}: Add any color" ability.
@@ -450,7 +450,7 @@ fn lord_of_the_accursed_pumps_and_grants_menace() {
         card_id: lord, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant menace");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(other).unwrap().keywords().contains(&Keyword::Menace));
 }
 
 /// Liliana's Mastery enters making two Zombie tokens it then anthems.
@@ -537,8 +537,8 @@ fn horned_sliver_grants_trample() {
     let mut g = two_player_game();
     let hs = g.add_card_to_battlefield(0, catalog::horned_sliver());
     let opp = g.add_card_to_battlefield(1, catalog::talon_sliver());
-    assert!(g.computed_permanent(hs).unwrap().keywords.contains(&Keyword::Trample));
-    assert!(g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(hs).unwrap().keywords().contains(&Keyword::Trample));
+    assert!(g.computed_permanent(opp).unwrap().keywords().contains(&Keyword::Trample),
         "all-Sliver grant reaches opponent's Sliver too");
 }
 
@@ -643,7 +643,7 @@ fn elvish_champion_buffs_elves() {
     let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
     let ec = g.computed_permanent(elf).unwrap();
     assert_eq!(ec.power, 2, "Llanowar Elves 1/1 → 2/2");
-    assert!(ec.keywords.contains(&Keyword::Landwalk(crabomination::card::LandType::Forest)), "forestwalk");
+    assert!(ec.keywords().contains(&Keyword::Landwalk(crabomination::card::LandType::Forest)), "forestwalk");
 }
 
 /// Dwynen gains life per attacking Elf when she attacks.
@@ -680,7 +680,7 @@ fn stromkirk_captain_grants_first_strike() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::stromkirk_captain());
     let vamp = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
-    assert!(g.computed_permanent(vamp).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(vamp).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Lord of the Undead returns a Zombie from your graveyard to hand.
@@ -791,7 +791,7 @@ fn field_marshal_buffs_soldiers() {
     g.add_card_to_battlefield(0, catalog::field_marshal());
     let sol = g.add_card_to_battlefield(0, catalog::daru_warchief());
     let c = g.computed_permanent(sol).unwrap();
-    assert!(c.keywords.contains(&Keyword::FirstStrike), "first strike");
+    assert!(c.keywords().contains(&Keyword::FirstStrike), "first strike");
     // Daru Warchief base 1/1, +1/+1 from Field Marshal, +1/+2 from its own anthem.
     assert_eq!((c.power, c.toughness), (3, 4));
 }
@@ -864,10 +864,10 @@ fn kinsbaile_cavalier_grants_double_strike() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::kinsbaile_cavalier());
     let knight = g.add_card_to_battlefield(0, catalog::field_marshal()); // not a Knight
-    assert!(!g.computed_permanent(knight).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(!g.computed_permanent(knight).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "non-Knight unaffected");
     let real_knight = g.add_card_to_battlefield(0, catalog::kinsbaile_cavalier());
-    assert!(g.computed_permanent(real_knight).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(real_knight).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "other Knight gets double strike");
 }
 
@@ -889,7 +889,7 @@ fn ethereal_armor_scales_with_enchantments() {
     let c = g.computed_permanent(bear).unwrap();
     // One enchantment (the Armor itself) → +1/+1; 2/2 → 3/3.
     assert_eq!((c.power, c.toughness), (3, 3), "+1/+1 per enchantment");
-    assert!(c.keywords.contains(&Keyword::FirstStrike), "first strike");
+    assert!(c.keywords().contains(&Keyword::FirstStrike), "first strike");
 }
 
 /// Curiosity draws when the enchanted creature deals combat damage to a player.
@@ -948,7 +948,7 @@ fn aqueous_form_grants_unblockable() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Aqueous Form");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Keen Sense draws when the enchanted creature deals combat damage.
@@ -1005,10 +1005,10 @@ fn skymarcher_aspirant_menace_with_blessing() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let asp = g.add_card_to_battlefield(0, catalog::skymarcher_aspirant());
-    assert!(!g.computed_permanent(asp).unwrap().keywords.contains(&Keyword::Menace),
+    assert!(!g.computed_permanent(asp).unwrap().keywords().contains(&Keyword::Menace),
         "no menace without the blessing");
     g.players[0].city_blessing = true;
-    assert!(g.computed_permanent(asp).unwrap().keywords.contains(&Keyword::Menace),
+    assert!(g.computed_permanent(asp).unwrap().keywords().contains(&Keyword::Menace),
         "menace with the city's blessing");
 }
 
@@ -1370,7 +1370,7 @@ fn kessig_wolf_run_pumps_and_grants_trample() {
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!(b.power, 4, "+2/+0 (base 2 + X=2)");
-    assert!(b.keywords.contains(&Keyword::Trample));
+    assert!(b.keywords().contains(&Keyword::Trample));
 }
 
 /// Welcome to Sweettooth: I mints a Human, II a Food; III adds X +1/+1 counters
@@ -1474,6 +1474,6 @@ fn built_to_smash_pumps_and_grants_trample_to_artifact() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(thopter).expect("alive");
     assert_eq!((cp.power, cp.toughness), (2, 4), "+2/+2");
-    assert!(cp.keywords.contains(&Keyword::Trample), "artifact creature gains trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "artifact creature gains trample");
 }
 

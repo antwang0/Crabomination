@@ -71,7 +71,7 @@ fn cr_702_6e_aura_granted_upkeep_trigger_keys_on_host_controller() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(creature);
     g.battlefield_find_mut(aura).unwrap().controller = 0;
     let comp = g.computed_permanent(creature).unwrap();
-    assert!(comp.keywords.contains(&Keyword::CantAttack) && comp.keywords.contains(&Keyword::CantBlock));
+    assert!(comp.keywords().contains(&Keyword::CantAttack) && comp.keywords().contains(&Keyword::CantBlock));
     // On the Aura controller's (P0's) upkeep, nothing happens.
     g.active_player_idx = 0;
     let (p0, p1) = (g.players[0].life, g.players[1].life);

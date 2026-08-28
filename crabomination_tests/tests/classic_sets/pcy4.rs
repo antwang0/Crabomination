@@ -123,9 +123,9 @@ fn vintara_snapper_gains_shroud_while_tapped_out() {
     let mut g = two_player_game();
     let turtle = g.add_card_to_battlefield(0, catalog::vintara_snapper());
     let land = g.add_card_to_battlefield(0, catalog::forest());
-    assert!(!g.computed_permanent(turtle).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(!g.computed_permanent(turtle).unwrap().keywords().contains(&Keyword::Shroud));
     g.battlefield_find_mut(land).unwrap().tapped = true;
-    assert!(g.computed_permanent(turtle).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(turtle).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Well of Life pays out only on an end step with no untapped lands.
@@ -158,7 +158,7 @@ fn vintara_elephant_loses_trample_to_any_player() {
     let mut g = main_phase();
     let elephant = g.add_card_to_battlefield(0, catalog::vintara_elephant());
     activate(&mut g, 1, elephant, 0, None);
-    assert!(!g.computed_permanent(elephant).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(!g.computed_permanent(elephant).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Zerapa Minotaur's first strike is likewise for sale.
@@ -167,7 +167,7 @@ fn zerapa_minotaur_loses_first_strike_to_any_player() {
     let mut g = main_phase();
     let minotaur = g.add_card_to_battlefield(0, catalog::zerapa_minotaur());
     activate(&mut g, 1, minotaur, 0, None);
-    assert!(!g.computed_permanent(minotaur).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(!g.computed_permanent(minotaur).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Wall of Vipers trades itself for the creature it's blocking.
@@ -209,7 +209,7 @@ fn whip_sergeant_grants_haste() {
     let sergeant = g.add_card_to_battlefield(0, catalog::whip_sergeant());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     activate(&mut g, 0, sergeant, 0, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Vitalizing Wind is a team-wide +7/+7.
@@ -753,9 +753,9 @@ fn sheltering_prayers_shrouds_only_the_land_light() {
     let mine = g.add_card_to_battlefield(0, catalog::plains());
     let theirs: Vec<_> =
         (0..4).map(|_| g.add_card_to_battlefield(1, catalog::island())).collect();
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Shroud));
     assert!(
-        !g.computed_permanent(theirs[0]).unwrap().keywords.contains(&Keyword::Shroud),
+        !g.computed_permanent(theirs[0]).unwrap().keywords().contains(&Keyword::Shroud),
         "four lands is too many"
     );
 }

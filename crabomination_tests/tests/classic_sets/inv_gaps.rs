@@ -134,7 +134,7 @@ fn benalish_lancer_kicked_is_a_first_striker() {
     cast_kicked(&mut g, 0, lancer, None);
     let cp = g.computed_permanent(lancer).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Ardent Soldier stays a 1/2 when it isn't kicked.
@@ -200,7 +200,7 @@ fn armadillo_cloak_drains_on_damage() {
     cast(&mut g, 0, cloak, Some(Target::Permanent(bears)));
     let cp = g.computed_permanent(bears).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     let before = g.players[0].life;
     let mut evs = Vec::new();
     g.deal_damage_to_from(

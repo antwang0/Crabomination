@@ -77,7 +77,7 @@ fn eluge_makes_flooded_lands_islands() {
     let waste = g.add_card_to_battlefield(0, catalog::wastes());
     g.battlefield_find_mut(waste).unwrap().add_counters(CounterType::Flood, 1);
     let cp = g.computed_permanent(waste).unwrap();
-    assert!(cp.subtypes.land_types.contains(&LandType::Island), "the flooded land is an Island");
+    assert!(cp.subtypes().land_types.contains(&LandType::Island), "the flooded land is an Island");
     let cp = g.computed_permanent(eluge).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2), "two Islands → 2/2");
 }
@@ -144,7 +144,7 @@ fn ygra_makes_food_and_eats_it() {
     let ygra = g.add_card_to_battlefield(0, catalog::ygra_eater_of_all());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Artifact), "the bear is Food");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact), "the bear is Food");
     assert!(!g.granted_abilities_for(bear).is_empty(), "with the sac-for-life ability");
     let mut evs = Vec::new();
     g.destroy_permanent(bear, false, &mut evs);

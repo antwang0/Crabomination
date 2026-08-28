@@ -26,8 +26,8 @@ fn barbed_servitor_etb_suspects_itself() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).unwrap().suspected, "ETB suspected itself");
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Menace), "suspected → menace");
-    assert!(cp.keywords.contains(&Keyword::CantBlock), "suspected → can't block");
+    assert!(cp.keywords().contains(&Keyword::Menace), "suspected → menace");
+    assert!(cp.keywords().contains(&Keyword::CantBlock), "suspected → can't block");
 }
 
 /// Repeat Offender suspects itself, then on a second activation (while
@@ -399,7 +399,7 @@ fn get_a_leg_up_pumps_per_creature_and_grants_reach() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(a).unwrap();
     assert_eq!(cp.power, 4, "2/2 base + (2 creatures) = 4 power");
-    assert!(cp.keywords.contains(&Keyword::Reach), "gained reach");
+    assert!(cp.keywords().contains(&Keyword::Reach), "gained reach");
 }
 
 /// Inside Source makes a Detective token on enter.
@@ -449,7 +449,7 @@ fn goldvein_hydra_enters_with_x_counters() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!(cp.power, 3, "0/0 + 3 counters = 3 power");
-    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Trample) && cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Goldvein Hydra's dies-trigger reads its *last-known* (counter-boosted)
@@ -489,7 +489,7 @@ fn slimy_dualleech_buffs_small_creature_at_combat() {
     // The trigger buffs one of the two eligible (power ≤ 2) creatures.
     let buffed = [slimy, bears].into_iter().any(|id| {
         let cp = g.computed_permanent(id).unwrap();
-        cp.keywords.contains(&Keyword::Deathtouch)
+        cp.keywords().contains(&Keyword::Deathtouch)
     });
     assert!(buffed, "a small creature gained deathtouch from Slimy Dualleech");
 }
@@ -524,7 +524,7 @@ fn delney_walls_off_big_blockers() {
     assert!(
         g.computed_permanent(lions)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::CantBeBlockedByPowerAtLeast(3)),
         "power-2 creatures dodge power-3 blockers"
     );
@@ -553,7 +553,7 @@ fn lost_in_the_maze_stuns_and_hides() {
     assert!(g.battlefield_find(theirs).unwrap().tapped, "X=2 taps both creatures");
     assert!(g.battlefield_find(mine).unwrap().tapped);
     assert!(
-        g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Hexproof),
+        g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Hexproof),
         "your tapped creature has hexproof"
     );
 }
@@ -581,7 +581,7 @@ fn relive_the_past_reanimates_as_an_elemental() {
     let cp = g.computed_permanent(ring).expect("back on the battlefield");
     assert_eq!((cp.power, cp.toughness), (5, 5));
     assert!(
-        cp.card_types.contains(&crabomination::card::CardType::Artifact),
+        cp.card_types().contains(&crabomination::card::CardType::Artifact),
         "still an artifact"
     );
 }

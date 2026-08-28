@@ -227,7 +227,7 @@ fn zuberi_anthems_other_griffins() {
 fn spirit_of_the_night_first_strikes_only_on_offense() {
     let mut g = two_player_game();
     let spirit = ready(&mut g, 0, catalog::spirit_of_the_night());
-    assert!(!g.computed_permanent(spirit).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(!g.computed_permanent(spirit).unwrap().keywords().contains(&Keyword::FirstStrike));
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -235,7 +235,7 @@ fn spirit_of_the_night_first_strikes_only_on_offense() {
         target: AttackTarget::Player(1),
     }]))
     .expect("attack");
-    assert!(g.computed_permanent(spirit).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(spirit).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Maro's body is the size of your hand.
@@ -592,7 +592,7 @@ fn chaos_charm_grants_haste() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast_mode(&mut g, charm, 2, Some(Target::Permanent(body))).expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(body).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(body).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Jungle Wurm shrinks per extra blocker (reverse rampage).
@@ -1066,9 +1066,9 @@ fn spectral_guardian_shields_while_untapped() {
     let mut g = two_player_game();
     let guardian = ready(&mut g, 0, catalog::spectral_guardian());
     let prism = ready(&mut g, 1, catalog::mana_prism());
-    assert!(g.computed_permanent(prism).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(prism).unwrap().keywords().contains(&Keyword::Shroud));
     g.battlefield_find_mut(guardian).unwrap().tapped = true;
-    assert!(!g.computed_permanent(prism).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(!g.computed_permanent(prism).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Chaosphere grounds the fliers and arms everyone else with reach.
@@ -1078,8 +1078,8 @@ fn chaosphere_inverts_the_sky() {
     g.add_card_to_battlefield(0, catalog::chaosphere());
     let flier = ready(&mut g, 1, catalog::bay_falcon());
     let ground = ready(&mut g, 1, catalog::femeref_scouts());
-    assert!(g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::CanBlockOnlyFlying));
-    assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(g.computed_permanent(flier).unwrap().keywords().contains(&Keyword::CanBlockOnlyFlying));
+    assert!(g.computed_permanent(ground).unwrap().keywords().contains(&Keyword::Reach));
 }
 
 /// Abyssal Hunter taps a creature and stabs it for its own power.
@@ -1188,7 +1188,7 @@ fn decomposition_grants_cumulative_upkeep() {
     assert!(
         g.computed_permanent(host)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::CumulativeUpkeep(_))),
         "the host picked up the upkeep"
@@ -1290,7 +1290,7 @@ fn yare_lets_one_blocker_eat_the_attack() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(defender).unwrap();
     assert_eq!(cp.power, 4);
-    assert!(cp.keywords.contains(&Keyword::CanBlockAdditional(2)));
+    assert!(cp.keywords().contains(&Keyword::CanBlockAdditional(2)));
 }
 
 /// Political Trickery swaps a land for good.
@@ -1359,7 +1359,7 @@ fn zirilan_borrows_a_dragon() {
         .find(|c| c.definition.name == "Volcanic Dragon")
         .expect("fetched")
         .id;
-    assert!(g.computed_permanent(dragon).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(dragon).unwrap().keywords().contains(&Keyword::Haste));
     while g.step != TurnStep::End {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
@@ -1723,7 +1723,7 @@ fn shallow_grave_lends_a_corpse_for_one_turn() {
         .find(|c| c.definition.name == "Grizzly Bears")
         .expect("reanimated")
         .id;
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
     while g.step != TurnStep::End {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
@@ -2015,7 +2015,7 @@ fn shimmer_phases_the_chosen_land_type() {
     let land = g.add_card_to_battlefield(0, catalog::island());
     let phases = g.battlefield_find(land).unwrap().definition.subtypes.land_types.contains(&chosen);
     assert_eq!(
-        g.computed_permanent(land).unwrap().keywords.contains(&Keyword::Phasing),
+        g.computed_permanent(land).unwrap().keywords().contains(&Keyword::Phasing),
         phases,
         "chosen={chosen:?}"
     );
@@ -2030,7 +2030,7 @@ fn spatial_binding_pins_a_permanent() {
     activate(&mut g, binding, 0, Some(Target::Permanent(ghost))).expect("bind");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 19, "one life");
-    assert!(g.computed_permanent(ghost).unwrap().keywords.contains(&Keyword::CantPhaseOut));
+    assert!(g.computed_permanent(ghost).unwrap().keywords().contains(&Keyword::CantPhaseOut));
 }
 
 /// Ward of Lights grants protection from the colour it named.
@@ -2046,7 +2046,7 @@ fn ward_of_lights_grants_chosen_protection() {
     assert!(
         g.computed_permanent(host)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Protection(chosen)),
         "protection from {chosen:?}"
     );
@@ -2243,7 +2243,7 @@ fn blind_fury_doubles_creature_blows_and_strips_trample() {
     g.players[0].mana_pool.add_colorless(2);
     cast(&mut g, spell, None).expect("cast");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(!g.computed_permanent(attacker).unwrap().keywords().contains(&Keyword::Trample));
     try_block(&mut g, attacker, blocker).expect("block");
     while g.step != TurnStep::End {
         g.perform_action(GameAction::PassPriority).expect("pass");

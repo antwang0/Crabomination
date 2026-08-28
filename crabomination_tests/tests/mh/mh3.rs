@@ -58,7 +58,7 @@ fn nightshade_dryad_taps_for_mana() {
     let id = g.add_card_to_battlefield(0, catalog::nightshade_dryad());
     g.clear_sickness(id);
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Deathtouch));
+    assert!(cp.keywords().contains(&Keyword::Deathtouch));
     // Ability 0: add {C}.
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
@@ -95,7 +95,7 @@ fn gift_of_the_viper_counters_and_untap() {
     let inst = g.battlefield_find(bear).unwrap();
     assert!(!inst.tapped, "untapped");
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Deathtouch) && cp.keywords.contains(&Keyword::Reach));
+    assert!(cp.keywords().contains(&Keyword::Deathtouch) && cp.keywords().contains(&Keyword::Reach));
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 counter");
 }
 
@@ -231,7 +231,7 @@ fn horrid_shadowspinner_has_lifelink() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::horrid_shadowspinner());
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Unfathomable Truths draws three and mints an Eldrazi Spawn.
@@ -374,7 +374,7 @@ fn cr_122_1_keyword_counter_grants_keyword() {
     assert_eq!(inst.keyword_counters.get(&Keyword::Deathtouch).copied().unwrap_or(0), 1,
         "one deathtouch counter");
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Deathtouch), "counter grants the keyword");
+    assert!(cp.keywords().contains(&Keyword::Deathtouch), "counter grants the keyword");
 }
 /// Titans' Vanguard grows colorless creatures on cast (and is itself devoid).
 #[test]
@@ -516,5 +516,5 @@ fn smelted_chargebug_etb_energy_and_menace() {
     let id = g.add_card_to_hand(0, catalog::smelted_chargebug());
     cast_creature(&mut g, id);
     assert_eq!(g.players[0].energy, 2, "ETB gives two energy");
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Menace));
 }

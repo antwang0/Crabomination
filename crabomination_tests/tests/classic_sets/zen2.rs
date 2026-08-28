@@ -237,7 +237,7 @@ fn highland_berserker_grants_first_strike() {
     let zerk = g.add_card_to_battlefield(0, catalog::highland_berserker());
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: zerk }]);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(other).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 // ── Landfall / kicker ───────────────────────────────────────────────────────
@@ -347,7 +347,7 @@ fn bold_defense_scales_with_the_kicker() {
         .expect("cast");
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
-        (cp.power, cp.keywords.contains(&Keyword::FirstStrike))
+        (cp.power, cp.keywords().contains(&Keyword::FirstStrike))
     };
     assert_eq!(run(false), (3, false));
     assert_eq!(run(true), (4, true));
@@ -410,9 +410,9 @@ fn armament_master_scales_with_its_own_equipment() {
 fn mindless_null_needs_a_vampire() {
     let mut g = two_player_game();
     let null = g.add_card_to_battlefield(0, catalog::mindless_null());
-    assert!(g.computed_permanent(null).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(null).unwrap().keywords().contains(&Keyword::CantBlock));
     g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
-    assert!(!g.computed_permanent(null).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(!g.computed_permanent(null).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Nissa's Chosen goes to the bottom of its owner's library instead of dying.
@@ -664,8 +664,8 @@ fn eldrazi_monument_flies_and_feeds() {
     let mon = g.add_card_to_battlefield(0, catalog::eldrazi_monument());
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3);
-    assert!(cp.keywords.contains(&Keyword::Flying));
-    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "the bear feeds it");
@@ -742,7 +742,7 @@ fn grappling_hook_picks_the_blocker() {
     let hook = g.add_card_to_battlefield(0, catalog::grappling_hook());
     g.battlefield_find_mut(hook).unwrap().attached_to = Some(bear);
     let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
     g.clear_sickness(bear);
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;

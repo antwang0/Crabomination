@@ -970,7 +970,7 @@ fn mercurial_transformation_strips_keywords_from_target() {
     cast!(g, id, crabomination::game::types::Target::Permanent(dragon));
     drain_stack(&mut g);
     let computed = g.computed_permanent(dragon).expect("Dragon on bf");
-    assert!(!computed.keywords.contains(&Keyword::Flying),
+    assert!(!computed.keywords().contains(&Keyword::Flying),
         "Flying stripped by 'loses all abilities'");
     assert!(computed.lost_all_abilities, "lost_all_abilities flag set");
 }

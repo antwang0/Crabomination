@@ -172,7 +172,7 @@ fn woodcloaker_grants_trample_on_the_flip() {
     g.decider =
         Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(knight))]));
     unmorph(&mut g, cloaker);
-    assert!(g.computed_permanent(knight).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(knight).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 // ── Storm (CR 702.40) ───────────────────────────────────────────────────────
@@ -248,7 +248,7 @@ fn dragon_fangs_returns_on_a_six_drop() {
     let tyrant = g.add_card_to_hand(0, catalog::dragon_tyrant());
     cast(&mut g, 0, tyrant, None);
     assert_eq!(g.battlefield_find(fangs).map(|c| c.attached_to), Some(Some(tyrant)));
-    assert!(g.computed_permanent(tyrant).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(tyrant).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 // ── The Decree cycle ────────────────────────────────────────────────────────

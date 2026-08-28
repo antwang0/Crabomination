@@ -23,17 +23,17 @@ fn cr_708_4_face_down_permanent_is_a_vanilla_two_two() {
 
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2), "2/2 while face down");
-    assert!(cp.keywords.is_empty(), "no abilities while face down");
+    assert!(cp.keywords().is_empty(), "no abilities while face down");
     assert!(cp.colors.is_empty(), "colorless while face down");
-    assert_eq!(cp.card_types, vec![CardType::Creature], "creature and nothing else");
+    assert_eq!(*cp.card_types(), vec![CardType::Creature], "creature and nothing else");
     assert_eq!(g.battlefield_find(id).unwrap().definition.cost.cmc(), 0, "no mana cost");
-    assert!(cp.subtypes.creature_types.is_empty(), "no creature types");
+    assert!(cp.subtypes().creature_types.is_empty(), "no creature types");
 
     g.battlefield_find_mut(id).unwrap().turn_face_up();
     let back = g.battlefield_find(id).unwrap();
     assert_eq!(back.definition.name, "Exalted Angel", "the real card is back");
     assert!(
-        g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying),
+        g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying),
         "and so are its abilities"
     );
 }

@@ -107,7 +107,7 @@ fn dissection_tools_arms_the_creature_it_manifests() {
     cast(&mut g, tools, None);
     let host = g.battlefield_find(tools).unwrap().attached_to.expect("attached to the manifest");
     let view = g.computed_permanent(host).unwrap();
-    assert!(view.keywords.contains(&Keyword::Deathtouch) && view.keywords.contains(&Keyword::Lifelink));
+    assert!(view.keywords().contains(&Keyword::Deathtouch) && view.keywords().contains(&Keyword::Lifelink));
     assert_eq!(view.power, 4, "a 2/2 manifest with +2/+2");
 }
 
@@ -197,7 +197,7 @@ fn camellia_menaces_squirrels_and_eats_food() {
         .find(|c| c.definition.name == "Squirrel")
         .expect("a Squirrel joined the board")
         .id;
-    assert!(g.computed_permanent(squirrel).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(squirrel).unwrap().keywords().contains(&Keyword::Menace));
     assert!(g.battlefield_find(camellia).is_some());
 }
 
@@ -210,14 +210,14 @@ fn reverberating_summons_needs_two_spells() {
     g.active_player_idx = 0;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(enchant).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "one spell isn't enough");
+    assert!(!g.computed_permanent(enchant).unwrap().card_types().contains(&crabomination::card::CardType::Creature), "one spell isn't enough");
     let second = g.add_card_to_hand(0, catalog::grizzly_bears());
     cast(&mut g, second, None);
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
     let view = g.computed_permanent(enchant).unwrap();
-    assert!(view.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(view.power == 3 && view.keywords.contains(&Keyword::Haste));
+    assert!(view.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(view.power == 3 && view.keywords().contains(&Keyword::Haste));
 }
 
 /// Stillness in Motion mills you and, on an empty library, rebuilds the top.

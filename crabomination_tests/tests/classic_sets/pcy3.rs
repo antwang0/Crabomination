@@ -227,9 +227,9 @@ fn silt_crawler_taps_your_lands_on_entry() {
 fn ribbon_snake_can_be_grounded_by_any_player() {
     let mut g = main_phase();
     let snake = g.add_card_to_battlefield(0, catalog::ribbon_snake());
-    assert!(g.computed_permanent(snake).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(snake).unwrap().keywords().contains(&Keyword::Flying));
     activate(&mut g, 1, snake, 0, None);
-    assert!(!g.computed_permanent(snake).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(snake).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Shrouded Serpent goes unblockable when the defender won't pay.
@@ -245,7 +245,7 @@ fn shrouded_serpent_is_unblockable_when_unpaid() {
         .expect("attack");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(serpent).unwrap().keywords.contains(&Keyword::Unblockable),
+        g.computed_permanent(serpent).unwrap().keywords().contains(&Keyword::Unblockable),
         "they declined the toll"
     );
 }

@@ -78,7 +78,7 @@ fn batterbone_living_weapon() {
         .expect("germ minted");
     let cp = g.computed_permanent(germ.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "0/0 + equip bonus");
-    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Blacksmith's Skill: artifact creatures get the +2/+2 rider, others don't.
@@ -88,13 +88,13 @@ fn blacksmiths_skill_rider() {
     let golem = g.add_card_to_battlefield(0, catalog::bottle_golems());
     resolve_spell(&mut g, catalog::blacksmiths_skill(), vec![Target::Permanent(golem)]);
     let cp = g.computed_permanent(golem).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
     assert_eq!(cp.power, 5, "3/3 artifact creature got +2/+2");
 
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     resolve_spell(&mut g, catalog::blacksmiths_skill(), vec![Target::Permanent(bear)]);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Hexproof));
+    assert!(cp.keywords().contains(&Keyword::Hexproof));
     assert_eq!(cp.power, 2, "non-artifact skips the pump");
 }
 
@@ -467,7 +467,7 @@ fn viashino_lashclaw_haste() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_hand(0, catalog::grizzly_bears());
     activate(&mut g, lash, 0, None);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// World-Weary's -4/-4 kills a 4-toughness body; landcycling is registered.

@@ -194,7 +194,7 @@ impl GameState {
     /// (CR 702.2c). `None` when the permanent isn't a creature.
     pub(crate) fn lethal_damage_needed(&self, cid: CardId, deathtouch: bool) -> Option<u32> {
         let cp = self.computed_permanent(cid)?;
-        if !cp.card_types.contains(&crate::card::CardType::Creature) {
+        if !cp.card_types().contains(&crate::card::CardType::Creature) {
             return None;
         }
         if deathtouch {
@@ -500,7 +500,7 @@ impl GameState {
             let absorbed: u32 = self
                 .computed_permanent(cid)
                 .map(|cp| {
-                    cp.keywords
+                    cp.keywords()
                         .iter()
                         .filter_map(|k| match k {
                             crate::card::Keyword::Absorb(n) => Some(*n),
@@ -976,7 +976,7 @@ impl GameState {
             && let cp = self.computed_permanent(tgt)
             && cp
                 .iter()
-                .flat_map(|cp| cp.keywords.iter())
+                .flat_map(|cp| cp.keywords().iter())
                 .any(|k| match k {
                     crate::card::Keyword::PreventDamageFromMatching(f) => self
                         .evaluate_requirement_static(f, &crate::game::types::Target::Permanent(src), self.battlefield_find(tgt).map_or(0, |c| c.controller), Some(src)),
@@ -1091,7 +1091,7 @@ impl GameState {
             if !types.is_empty() {
                 let src_types = self
                     .computed_permanent(src)
-                    .map(|c| c.card_types.to_vec())
+                    .map(|c| c.card_types().to_vec())
                     .or_else(|| {
                         self.find_card_anywhere(src)
                             .map(|c| c.definition.card_types.clone())
@@ -1277,7 +1277,7 @@ impl GameState {
         // Triumph of the Hordes-style anthems) are honored.
         let src_cp = source.and_then(|s| self.computed_permanent(s));
         let src_kws: &[crate::card::Keyword] =
-            src_cp.as_ref().map_or(&[], |cp| &cp.keywords);
+            src_cp.as_ref().map_or(&[], |cp| cp.keywords());
         let source_has_infect = src_kws.has_kw(&crate::card::Keyword::Infect);
         // CR 702.80a / 702.90e — wither/infect damage to a creature lands as
         // -1/-1 counters instead of marked damage; CR 702.2c — nonzero
@@ -1345,7 +1345,7 @@ impl GameState {
                 if let Some(src) = source {
                     let is_creature = self
                         .computed_permanent(src)
-                        .map(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+                        .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
                         .unwrap_or(false);
                     if is_creature && !self.players[p].creatures_that_damaged_me_this_turn.contains(&src) {
                         self.players[p].creatures_that_damaged_me_this_turn.push(src);
@@ -1607,7 +1607,7 @@ impl GameState {
                     // Lichenthrope — the victim itself converts damage to
                     // -1/-1 counters, whatever the source is.
                     let victim_converts = self.computed_permanent(cid).is_some_and(|cp| {
-                        cp.keywords.has_kw(&crate::card::Keyword::DamageBecomesMinusCounters)
+                        cp.keywords().has_kw(&crate::card::Keyword::DamageBecomesMinusCounters)
                     });
                     if let Some(c) = self.battlefield_find_mut(cid) {
                     if c.definition.is_creature() {
@@ -1824,7 +1824,7 @@ impl GameState {
         // A lifelink permanent (e.g. a ping ability from a lifelink creature).
         if let Some(src) = source
             && let Some(cp) = self.computed_permanent(src)
-            && cp.keywords.has_kw(&Keyword::Lifelink)
+            && cp.keywords().has_kw(&Keyword::Lifelink)
         {
             return Some(cp.controller);
         }

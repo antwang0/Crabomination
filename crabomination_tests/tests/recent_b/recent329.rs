@@ -457,13 +457,13 @@ fn kaito_is_a_ninja_on_your_turn() {
     let kaito = g.add_card_to_battlefield(0, catalog::kaito_bane_of_nightmares());
     g.battlefield_find_mut(kaito).unwrap().add_counters(CounterType::Loyalty, 4);
     let cp = g.computed_permanent(kaito).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature), "animated");
+    assert!(cp.card_types().contains(&CardType::Creature), "animated");
     assert_eq!((cp.power, cp.toughness), (3, 4));
-    assert!(cp.keywords.contains(&Keyword::Hexproof));
+    assert!(cp.keywords().contains(&Keyword::Hexproof));
 
     g.active_player_idx = 1;
     let cp = g.computed_permanent(kaito).unwrap();
-    assert!(!cp.card_types.contains(&CardType::Creature), "inert on the opponent's turn");
+    assert!(!cp.card_types().contains(&CardType::Creature), "inert on the opponent's turn");
 }
 
 /// Ninjutsu puts Kaito in tapped and attacking off an unblocked attacker.

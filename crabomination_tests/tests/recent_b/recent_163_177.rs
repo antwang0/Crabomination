@@ -104,7 +104,7 @@ mod recent163 {
         })
         .expect("grant flying");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(goblin).unwrap().keywords.contains(&Keyword::Flying), "granted flying");
+        assert!(g.computed_permanent(goblin).unwrap().keywords().contains(&Keyword::Flying), "granted flying");
     }
 
     /// Seeker's Folly (mode 1) shrinks the opponent's board.
@@ -171,7 +171,7 @@ mod recent164 {
         })
         .expect("cast Fleeting Flight");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::Flying), "gained flying");
+        assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::Flying), "gained flying");
         // Now resolve combat: attacker (4/4) is blocked by the 3/3 blocker.
         g.active_player_idx = 0;
         g.step = TurnStep::DeclareAttackers;
@@ -279,9 +279,9 @@ mod recent165 {
         let mut g = two_player_game();
         let pal = g.add_card_to_battlefield(0, catalog::inspiring_paladin());
         g.active_player_idx = 0;
-        assert!(g.computed_permanent(pal).unwrap().keywords.contains(&Keyword::FirstStrike), "first strike on your turn");
+        assert!(g.computed_permanent(pal).unwrap().keywords().contains(&Keyword::FirstStrike), "first strike on your turn");
         g.active_player_idx = 1;
-        assert!(!g.computed_permanent(pal).unwrap().keywords.contains(&Keyword::FirstStrike), "no first strike on the opponent's turn");
+        assert!(!g.computed_permanent(pal).unwrap().keywords().contains(&Keyword::FirstStrike), "no first strike on the opponent's turn");
     }
 
     /// Dreadwing Scavenger loots on entry and gains deathtouch at Threshold.
@@ -292,7 +292,7 @@ mod recent165 {
         let hand = g.players[0].hand.len();
         let dread = g.add_card_to_battlefield(0, catalog::dreadwing_scavenger());
         // No Threshold yet → no deathtouch.
-        assert!(!g.computed_permanent(dread).unwrap().keywords.contains(&Keyword::Deathtouch));
+        assert!(!g.computed_permanent(dread).unwrap().keywords().contains(&Keyword::Deathtouch));
         g.fire_self_etb_triggers(dread, 0);
         drain_stack(&mut g);
         // Loot: drew then discarded → net hand unchanged (drew 1, discarded 1).
@@ -301,7 +301,7 @@ mod recent165 {
         for _ in 0..7 {
             g.add_card_to_graveyard(0, catalog::island());
         }
-        assert!(g.computed_permanent(dread).unwrap().keywords.contains(&Keyword::Deathtouch), "Threshold grants deathtouch");
+        assert!(g.computed_permanent(dread).unwrap().keywords().contains(&Keyword::Deathtouch), "Threshold grants deathtouch");
     }
 }
 
@@ -502,7 +502,7 @@ mod recent166 {
         .expect("exhaust {3}: animate");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(sub).unwrap().card_types.contains(&CardType::Creature),
+            g.computed_permanent(sub).unwrap().card_types().contains(&CardType::Creature),
             "became an artifact creature",
         );
         assert_eq!(
@@ -589,7 +589,7 @@ mod recent166 {
         g.players[0].speed = 4;
         let cp = g.computed_permanent(raider).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 2), "max speed → 3/2");
-        assert!(cp.keywords.contains(&Keyword::Menace), "gains menace at max speed");
+        assert!(cp.keywords().contains(&Keyword::Menace), "gains menace at max speed");
     }
 
     /// Basri makes a lifelinking Cat token with its activated ability.
@@ -756,7 +756,7 @@ mod recent166 {
         g.add_card_to_battlefield(0, catalog::fearless_swashbuckler());
         let sub = g.add_card_to_battlefield(0, catalog::invasion_submersible());
         assert!(
-            g.computed_permanent(sub).unwrap().keywords.contains(&Keyword::Haste),
+            g.computed_permanent(sub).unwrap().keywords().contains(&Keyword::Haste),
             "Vehicle has haste from the Swashbuckler",
         );
     }
@@ -768,7 +768,7 @@ mod recent166 {
         let v = g.move_card_to_battlefield_for_test(0, catalog::gastal_thrillroller());
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(v).unwrap().card_types.contains(&CardType::Creature),
+            g.computed_permanent(v).unwrap().card_types().contains(&CardType::Creature),
             "Vehicle is a creature on entry",
         );
     }
@@ -849,7 +849,7 @@ mod recent166 {
         .expect("tap 3: animate");
         drain_stack(&mut g);
         let cp = g.computed_permanent(v).unwrap();
-        assert!(cp.card_types.contains(&CardType::Creature) && cp.keywords.contains(&Keyword::Flying), "animated flyer");
+        assert!(cp.card_types().contains(&CardType::Creature) && cp.keywords().contains(&Keyword::Flying), "animated flyer");
         assert_eq!(g.battlefield_find(v).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "one +1/+1 counter");
     }
 
@@ -913,10 +913,10 @@ mod recent167 {
         let mut g = two_player_game();
         let leonin = g.add_card_to_battlefield(0, catalog::leonin_surveyor());
         g.active_player_idx = 0;
-        assert!(g.computed_permanent(leonin).unwrap().keywords.contains(&Keyword::FirstStrike),
+        assert!(g.computed_permanent(leonin).unwrap().keywords().contains(&Keyword::FirstStrike),
             "first strike on your turn");
         g.active_player_idx = 1;
-        assert!(!g.computed_permanent(leonin).unwrap().keywords.contains(&Keyword::FirstStrike),
+        assert!(!g.computed_permanent(leonin).unwrap().keywords().contains(&Keyword::FirstStrike),
             "no first strike on opponent's turn");
     }
 
@@ -1107,7 +1107,7 @@ mod recent167 {
         .expect("exhaust: become creature + 2 counters");
         drain_stack(&mut g);
         let v = g.battlefield_find(vehicle).unwrap();
-        assert!(g.computed_permanent(vehicle).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "became an artifact creature");
+        assert!(g.computed_permanent(vehicle).unwrap().card_types().contains(&crabomination::card::CardType::Creature), "became an artifact creature");
         assert_eq!(v.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 2, "two +1/+1 counters");
     }
 
@@ -1136,7 +1136,7 @@ mod recent167 {
         let mut g = two_player_game();
         g.add_card_to_battlefield(0, catalog::howlsquad_heavy());
         let goblin = g.add_card_to_battlefield(0, catalog::mogg_fanatic()); // a Goblin
-        assert!(g.computed_permanent(goblin).unwrap().keywords.contains(&Keyword::Haste),
+        assert!(g.computed_permanent(goblin).unwrap().keywords().contains(&Keyword::Haste),
             "other Goblins gain haste");
     }
 
@@ -1191,7 +1191,7 @@ mod recent167 {
         ]));
         let wf = g.move_card_to_battlefield_for_test(0, catalog::wreckage_wickerfolk());
         drain_stack(&mut g);
-        assert!(g.computed_permanent(wf).unwrap().keywords.contains(&Keyword::Flying), "has flying");
+        assert!(g.computed_permanent(wf).unwrap().keywords().contains(&Keyword::Flying), "has flying");
         assert!(g.players[0].graveyard.iter().any(|c| c.id == top), "surveiled a card to the graveyard");
     }
 
@@ -1297,12 +1297,12 @@ mod recent168 {
         let mangler = g.add_card_to_battlefield(0, catalog::midnight_mangler());
         g.active_player_idx = 0;
         assert!(
-            !g.computed_permanent(mangler).unwrap().card_types.contains(&CardType::Creature),
+            !g.computed_permanent(mangler).unwrap().card_types().contains(&CardType::Creature),
             "not a creature on your own turn"
         );
         g.active_player_idx = 1;
         assert!(
-            g.computed_permanent(mangler).unwrap().card_types.contains(&CardType::Creature),
+            g.computed_permanent(mangler).unwrap().card_types().contains(&CardType::Creature),
             "an artifact creature during other players' turns"
         );
     }
@@ -1460,7 +1460,7 @@ mod recent169 {
         advance_to(&mut g, TurnStep::BeginCombat);
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(pride).unwrap().keywords.contains(&Keyword::DoubleStrike),
+            g.computed_permanent(pride).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "max-speed begin-combat granted double strike"
         );
     }
@@ -1485,7 +1485,7 @@ mod recent169 {
         drain_stack(&mut g);
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew off the exhaust trigger");
         let cp = g.computed_permanent(veh).unwrap();
-        assert!(cp.card_types.contains(&CardType::Creature), "animated");
+        assert!(cp.card_types().contains(&CardType::Creature), "animated");
         assert_eq!(g.battlefield_find(veh).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     }
 
@@ -1506,7 +1506,7 @@ mod recent169 {
         })
         .expect("exhaust animate");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(veh).unwrap().card_types.contains(&CardType::Creature));
+        assert!(g.computed_permanent(veh).unwrap().card_types().contains(&CardType::Creature));
         advance_to(&mut g, TurnStep::DeclareAttackers);
         g.perform_action(GameAction::DeclareAttackers(vec![Attack {
             attacker: veh, target: AttackTarget::Player(1),
@@ -1713,7 +1713,7 @@ mod recent171 {
         g.perform_action(GameAction::Equip { equipment: blades, target: bear })
             .expect("equip the bear");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "equipped creature has double strike");
     }
 
@@ -1867,7 +1867,7 @@ mod recent172 {
         let s = g.battlefield_find(bear).unwrap();
         assert!(!s.tapped, "the bear was untapped");
         assert_eq!(s.power(), 3, "+1/+0");
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
     }
 
     /// Unswerving Sloth untaps your team and gains indestructible on a saddled
@@ -1890,7 +1890,7 @@ mod recent172 {
         }])).expect("attack");
         drain_stack(&mut g);
         assert!(!g.battlefield_find(other).unwrap().tapped, "team untapped");
-        assert!(g.computed_permanent(sloth).unwrap().keywords.contains(&Keyword::Indestructible));
+        assert!(g.computed_permanent(sloth).unwrap().keywords().contains(&Keyword::Indestructible));
     }
 
     /// Thundering Broodwagon destroys a low-MV opposing permanent on ETB.
@@ -1942,7 +1942,7 @@ mod recent173 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-        assert!(cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::Lifelink));
         let pilot = g.battlefield.iter().find(|c| c.definition.name == "Pilot").expect("Pilot minted");
         assert_eq!(g.crew_saddle_power_bonus(pilot.id), 2, "boosted Pilot");
     }
@@ -2055,7 +2055,7 @@ mod recent174 {
         })
         .expect("exhaust");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
             "team gained trample");
         assert_eq!(g.battlefield_find(scholar).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     }
@@ -2078,7 +2078,7 @@ mod recent174 {
         })
         .expect("exhaust taps another Vehicle");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(cycle).unwrap().card_types.contains(&CardType::Creature), "animated");
+        assert!(g.computed_permanent(cycle).unwrap().card_types().contains(&CardType::Creature), "animated");
         // Two other Mounts/Vehicles → two counters.
         assert_eq!(g.battlefield_find(cycle).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
         // One of the helpers was tapped to pay the cost.
@@ -2274,7 +2274,7 @@ mod recent175 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-        assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+        assert!(cp.keywords().contains(&Keyword::Vigilance), "granted vigilance");
         assert_eq!(g.players[0].speed, 1, "Start your engines! seeded speed 1");
     }
 
@@ -2310,7 +2310,7 @@ mod recent175 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(dead).expect("reanimated onto the battlefield");
         assert_eq!(cp.controller, 0, "under my control");
-        assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+        assert!(cp.keywords().contains(&Keyword::Haste), "gained haste");
         assert_eq!(g.battlefield_find(dead).unwrap().counter_count(CounterType::Finality), 1);
         // At my next end step it's exiled.
         g.step = TurnStep::End;
@@ -2331,7 +2331,7 @@ mod recent175 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (6, 6), "base 6/6");
-        assert!(cp.subtypes.creature_types.contains(&CreatureType::Ooze), "now an Ooze");
+        assert!(cp.subtypes().creature_types.contains(&CreatureType::Ooze), "now an Ooze");
         // Opponent casts on your turn → Elephant.
         let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
         g.players[1].mana_pool.add(crabomination::mana::Color::Red, 1);
@@ -2469,7 +2469,7 @@ mod recent175 {
         drain_stack(&mut g);
         assert!(g.battlefield_find(veh).unwrap().tapped, "ETB tapped it");
         // Abilities stripped (no keywords in the computed view).
-        assert!(g.computed_permanent(veh).unwrap().keywords.is_empty(), "lost all abilities");
+        assert!(g.computed_permanent(veh).unwrap().keywords().is_empty(), "lost all abilities");
         // It stays tapped through its controller's untap step.
         g.active_player_idx = 1;
         g.do_untap();
@@ -2679,7 +2679,7 @@ mod recent177 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(ally).unwrap();
         assert_eq!(cp.power, 6, "2 base + 4 from Ashroot's power");
-        assert!(cp.keywords.contains(&Keyword::Trample), "ally gained trample");
+        assert!(cp.keywords().contains(&Keyword::Trample), "ally gained trample");
     }
 
     /// Arahbo makes a Cat token when a nontoken Cat enters, and its anthem pumps
@@ -2745,9 +2745,9 @@ mod recent177 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 4, "+2/+0 from the Equipment");
-        assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
-        assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible EOT");
-        assert!(cp.keywords.contains(&Keyword::Hexproof), "gained hexproof EOT");
+        assert!(cp.keywords().contains(&Keyword::Flying), "gained flying");
+        assert!(cp.keywords().contains(&Keyword::Indestructible), "gained indestructible EOT");
+        assert!(cp.keywords().contains(&Keyword::Hexproof), "gained hexproof EOT");
     }
 
     /// Strix Lookout loots: {1}{U},{T} draws then discards.

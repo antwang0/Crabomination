@@ -2923,7 +2923,7 @@ fn honor_troll_gets_plus_two_one_at_25_life() {
     g.players[0].life = 25;
     let hi = g.computed_permanent(id).unwrap();
     assert_eq!((hi.power, hi.toughness), (4, 4), "+2/+1 at 25+ life");
-    assert!(hi.keywords.contains(&Keyword::Vigilance));
+    assert!(hi.keywords().contains(&Keyword::Vigilance));
 }
 
 // ── Quandrix Cultivator ────────────────────────────────────────────────────

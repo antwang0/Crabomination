@@ -92,8 +92,8 @@ fn cr_613_1c_animated_land_keeps_its_land_types() {
     .expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(forest).expect("still on the battlefield");
-    assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Land));
-    assert!(cp.subtypes.land_types.contains(&LandType::Forest));
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Land));
+    assert!(cp.subtypes().land_types.contains(&LandType::Forest));
     g.clear_sickness(forest);
     g.perform_action(GameAction::ActivateAbility {
         card_id: forest,

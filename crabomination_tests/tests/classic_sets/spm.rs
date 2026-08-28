@@ -163,7 +163,7 @@ fn thwip_buffs_spider_and_gains_life() {
     g.cast_spell(cast, Some(Target::Permanent(spider)), vec![], None, None).expect("cast");
     drain_stack(&mut g);
     let cp = g.computed_permanent(spider).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gained flying");
     assert_eq!(cp.power, 3, "1/1 +2/+2 -> 3/3");
     assert_eq!(g.players[0].life, before + 2, "gained 2 life (Spider)");
 }
@@ -244,7 +244,7 @@ fn spider_suit_equips_and_types() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4, "2/2 +2/+2 -> 4/4");
     assert!(
-        cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Spider),
+        cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Spider),
         "gained Spider type",
     );
 }
@@ -275,9 +275,9 @@ fn spider_girl_flies_on_your_turn() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::spider_girl_legacy_hero());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "flies on your turn");
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying), "flies on your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "grounded off-turn");
+    assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying), "grounded off-turn");
 }
 
 /// Vibrant Cityscape fetches a basic onto the battlefield tapped.
@@ -354,9 +354,9 @@ fn hobgoblin_pumps_on_discard() {
 fn skyward_spider_flies_while_modified() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::skyward_spider());
-    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "grounded unmodified");
+    assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying), "grounded unmodified");
     g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying), "flies while modified");
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying), "flies while modified");
 }
 
 /// Costume Closet enters with two counters and hands one to a creature.
@@ -419,10 +419,10 @@ fn spectacular_spider_man_shields_team() {
     .expect("sac for team shield");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "bear gained indestructible");
-    assert!(cp.keywords.contains(&Keyword::Hexproof), "bear gained hexproof");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "bear gained indestructible");
+    assert!(cp.keywords().contains(&Keyword::Hexproof), "bear gained hexproof");
     // Opponents' creatures are not shielded.
-    assert!(!g.computed_permanent(enemy).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(!g.computed_permanent(enemy).unwrap().keywords().contains(&Keyword::Indestructible),
         "enemy creature unaffected");
 }
 
@@ -479,7 +479,7 @@ fn taxi_driver_grants_haste() {
     })
     .expect("grant haste");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "bear has haste");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "bear has haste");
 }
 
 /// Web-Warriors buffs each other creature you control.

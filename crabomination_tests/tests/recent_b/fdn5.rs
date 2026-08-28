@@ -764,7 +764,7 @@ fn mephidross_vampire_types_and_grows_the_team() {
     assert!(g
         .computed_permanent(bear)
         .unwrap()
-        .subtypes
+        .subtypes()
         .creature_types
         .contains(&crabomination::card::CreatureType::Vampire));
     g.clear_sickness(bear);
@@ -790,7 +790,7 @@ fn raksha_golden_cub_needs_equipment() {
     g.perform_action(GameAction::Equip { equipment: blade, target: raksha }).expect("equip");
     let cp = g.computed_permanent(raksha).unwrap();
     assert_eq!(cp.power, 5, "+2/+2 from its own static");
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Battered Golem untaps whenever any artifact enters.
@@ -885,7 +885,7 @@ fn sparring_collar_attaches_for_its_colored_cost() {
     .expect("attach");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(collar).unwrap().attached_to, Some(bear));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Chimeric Coils animates itself at whatever X you paid.
@@ -901,7 +901,7 @@ fn chimeric_coils_becomes_an_x_x() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(coils).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
 }
 
 /// Skullcage spares an opponent holding exactly three or four cards.
@@ -986,7 +986,7 @@ fn stasis_cocoon_locks_the_artifact() {
     assert!(g
         .computed_permanent(station)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::CantActivateAbilities));
     assert!(
         g.perform_action(GameAction::ActivateAbility {
@@ -1280,7 +1280,7 @@ fn spectral_shift_rewrites_a_land_type() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    let types = g.computed_permanent(forest).unwrap().subtypes.land_types.clone();
+    let types = g.computed_permanent(forest).unwrap().subtypes().land_types.clone();
     assert!(!types.contains(&crabomination::card::LandType::Forest), "the type was replaced");
 }
 

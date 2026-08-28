@@ -23,7 +23,7 @@ mod recent283 {
         g.add_card_to_graveyard(0, catalog::eagle_of_deliverance()); // {4}{W}{W} → MV 6
         assert_eq!(g.computed_permanent(aven).unwrap().power, 3, "+2/+2 at 5+ distinct values");
         assert!(
-            g.computed_permanent(aven).unwrap().keywords.contains(&crabomination::card::Keyword::Deathtouch),
+            g.computed_permanent(aven).unwrap().keywords().contains(&crabomination::card::Keyword::Deathtouch),
             "gains deathtouch",
         );
     }
@@ -564,7 +564,7 @@ mod recent286 {
         let attach = crabomination::catalog::blacksmiths_talent().triggered_abilities[1].effect.clone();
         g.resolve_effect(&attach, &ctx).unwrap();
         let has = |g: &crabomination::game::GameState, kw| {
-            g.computed_permanent(bear).unwrap().keywords.contains(kw)
+            g.computed_permanent(bear).unwrap().keywords().contains(kw)
         };
         // Level 1: no grant.
         g.active_player_idx = 0;
@@ -634,7 +634,7 @@ mod recent286 {
         // L2: a countered permanent you control gains ward {1}.
         g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 2;
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Ward(WardCost::generic(1))),
+            g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Ward(WardCost::generic(1))),
             "countered creature has ward at level 2",
         );
 
@@ -665,7 +665,7 @@ mod recent286 {
         let mut g = two_player_game();
         let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::barbarian_class());
         let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
-        assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+        assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
         g.decider = Box::new(ScriptedDecider::new(vec![
             DecisionAnswer::DieRoll(2),
             DecisionAnswer::DieRoll(6),
@@ -688,7 +688,7 @@ mod recent286 {
         .unwrap();
         assert_eq!(g.players[0].life, start + 4, "the 2 was ignored, the 6 hit its arm");
         g.battlefield.iter_mut().find(|c| c.id == class).unwrap().class_level = 3;
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
     }
 }
 
@@ -717,7 +717,7 @@ mod recent287 {
         let _miriam = g.add_card_to_battlefield(0, crabomination::catalog::miriam_herd_whisperer());
         let mount = g.add_card_to_battlefield(0, mount_2_2());
         let has_hexproof =
-            |g: &GameState| g.computed_permanent(mount).unwrap().keywords.contains(&Keyword::Hexproof);
+            |g: &GameState| g.computed_permanent(mount).unwrap().keywords().contains(&Keyword::Hexproof);
         g.active_player_idx = 0;
         assert!(has_hexproof(&g), "Mount has hexproof on your turn");
         g.active_player_idx = 1;
@@ -756,12 +756,12 @@ mod recent287 {
             "crime counter triggers only once each turn"
         );
         // Below threshold: no menace yet.
-        assert!(!g.computed_permanent(vadmir).unwrap().keywords.contains(&Keyword::Menace));
+        assert!(!g.computed_permanent(vadmir).unwrap().keywords().contains(&Keyword::Menace));
         // Bump to four counters → menace + lifelink.
         g.battlefield_find_mut(vadmir).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
         let c = g.computed_permanent(vadmir).unwrap();
-        assert!(c.keywords.contains(&Keyword::Menace), "menace at 4+ counters");
-        assert!(c.keywords.contains(&Keyword::Lifelink), "lifelink at 4+ counters");
+        assert!(c.keywords().contains(&Keyword::Menace), "menace at 4+ counters");
+        assert!(c.keywords().contains(&Keyword::Lifelink), "lifelink at 4+ counters");
     }
 
     /// Skyserpent Seeker's exhaust ability reveals until two lands, puts them onto
@@ -930,7 +930,7 @@ mod recent289 {
         let mut g = two_player_game();
         let home = g.add_card_to_battlefield(0, catalog::mobile_homestead());
         let has_haste = |g: &GameState| {
-            g.computed_permanent(home).unwrap().keywords.contains(&crabomination::card::Keyword::Haste)
+            g.computed_permanent(home).unwrap().keywords().contains(&crabomination::card::Keyword::Haste)
         };
         assert!(!has_haste(&g), "no Mount → no haste");
         // Add a Mount → haste.
@@ -979,7 +979,7 @@ mod recent289 {
         drain_stack(&mut g);
         let ox = g.battlefield.iter().find(|c| c.definition.name == "Ox").expect("Ox token created");
         assert!(
-            g.computed_permanent(ox.id).unwrap().keywords.contains(&crabomination::card::Keyword::DoubleStrike),
+            g.computed_permanent(ox.id).unwrap().keywords().contains(&crabomination::card::Keyword::DoubleStrike),
             "the Ox has double strike from Bruse Tarl's anthem",
         );
         assert!(g.exile.iter().any(|c| c.definition.name == "Forest"), "the land stays exiled");
@@ -1070,9 +1070,9 @@ mod recent290 {
         assert_eq!(stolen.controller, 0, "under your control");
         assert!(stolen.tapped, "enters tapped");
         let cp = g.computed_permanent(fodder).unwrap();
-        assert!(cp.card_types.contains(&CardType::Artifact), "it's an artifact");
-        assert!(cp.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Treasure), "…a Treasure");
-        assert!(!cp.card_types.contains(&CardType::Creature), "loses its creature type");
+        assert!(cp.card_types().contains(&CardType::Artifact), "it's an artifact");
+        assert!(cp.subtypes().artifact_subtypes.contains(&ArtifactSubtype::Treasure), "…a Treasure");
+        assert!(!cp.card_types().contains(&CardType::Creature), "loses its creature type");
     }
 
     /// Ego Drain's downside: with no Faerie, its caster exiles a card from hand.
@@ -1252,7 +1252,7 @@ mod recent290 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 → 4/4");
-        assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+        assert!(cp.keywords().contains(&Keyword::Flying), "gains flying");
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB drew a card");
     }
 
@@ -1284,7 +1284,7 @@ mod recent290 {
         g.clear_sickness(attacker);
         // Not attacking yet → no menace.
         assert!(
-            !g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::Menace),
+            !g.computed_permanent(attacker).unwrap().keywords().contains(&Keyword::Menace),
             "no menace before combat",
         );
         g.step = TurnStep::DeclareAttackers;
@@ -1294,7 +1294,7 @@ mod recent290 {
         }]))
         .expect("attack");
         assert!(
-            g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::Menace),
+            g.computed_permanent(attacker).unwrap().keywords().contains(&Keyword::Menace),
             "attacking creature gains menace",
         );
     }

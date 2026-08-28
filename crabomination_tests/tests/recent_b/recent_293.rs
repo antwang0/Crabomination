@@ -159,7 +159,7 @@ fn brainspoil_only_hits_unenchanted_creatures() {
 fn dimir_infiltrator_is_unblockable() {
     let mut g = two_player_game();
     let inf = g.add_card_to_battlefield(0, catalog::dimir_infiltrator());
-    assert!(g.computed_permanent(inf).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(inf).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 #[test]
@@ -248,7 +248,7 @@ fn simic_sky_swallower_has_shroud() {
         mode: None, x_value: None,
     }).is_err(), "shroud blocks targeting");
     let c = g.computed_permanent(swallower).unwrap();
-    assert!(c.keywords.contains(&Keyword::Flying) && c.keywords.contains(&Keyword::Trample));
+    assert!(c.keywords().contains(&Keyword::Flying) && c.keywords().contains(&Keyword::Trample));
 }
 
 #[test]
@@ -280,8 +280,8 @@ fn pillory_locks_down_and_bleeds() {
     let aura = g.add_card_to_battlefield(1, catalog::pillory_of_the_sleepless());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(creature);
     let comp = g.computed_permanent(creature).unwrap();
-    assert!(comp.keywords.contains(&Keyword::CantAttack));
-    assert!(comp.keywords.contains(&Keyword::CantBlock));
+    assert!(comp.keywords().contains(&Keyword::CantAttack));
+    assert!(comp.keywords().contains(&Keyword::CantBlock));
     // Its controller (player 1) loses 1 at the beginning of their upkeep.
     g.active_player_idx = 1;
     let life = g.players[1].life;

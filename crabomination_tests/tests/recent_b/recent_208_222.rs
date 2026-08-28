@@ -17,7 +17,7 @@ mod recent208 {
         let gb = g.add_card_to_battlefield(0, catalog::gleaming_barrier());
         assert_eq!((g.computed_permanent(hb).unwrap().power, g.computed_permanent(hb).unwrap().toughness), (4, 3));
         assert_eq!((g.computed_permanent(sg).unwrap().power, g.computed_permanent(sg).unwrap().toughness), (2, 2));
-        assert!(g.computed_permanent(gb).unwrap().keywords.contains(&Keyword::Defender));
+        assert!(g.computed_permanent(gb).unwrap().keywords().contains(&Keyword::Defender));
     }
 
     /// Gleaming Barrier leaves a Treasure when it dies.
@@ -86,7 +86,7 @@ mod recent208 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (7, 7));
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
     }
 
     /// Devout Decree exiles a red creature and scries.
@@ -213,12 +213,12 @@ mod recent209 {
         let ghitu = g.add_card_to_battlefield(0, catalog::ghitu_lavarunner());
         let base = g.computed_permanent(ghitu).unwrap();
         assert_eq!((base.power, base.toughness), (1, 2));
-        assert!(!base.keywords.contains(&Keyword::Haste), "no haste with empty gy");
+        assert!(!base.keywords().contains(&Keyword::Haste), "no haste with empty gy");
         g.add_card_to_graveyard(0, catalog::lightning_bolt());
         g.add_card_to_graveyard(0, catalog::lightning_bolt());
         let boosted = g.computed_permanent(ghitu).unwrap();
         assert_eq!((boosted.power, boosted.toughness), (2, 2), "+1/+0 with 2 spells");
-        assert!(boosted.keywords.contains(&Keyword::Haste), "has haste");
+        assert!(boosted.keywords().contains(&Keyword::Haste), "has haste");
     }
 
     /// Mystical Teachings tutors an instant to hand.
@@ -602,7 +602,7 @@ mod recent212 {
             additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("grant unblockable");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
     }
 
     /// Joraga Invocation pumps your team and forces blocks.
@@ -620,7 +620,7 @@ mod recent212 {
         drain_stack(&mut g);
         let v = g.computed_permanent(bear).unwrap();
         assert_eq!((v.power, v.toughness), (5, 5), "+3/+3");
-        assert!(v.keywords.contains(&Keyword::MustBeBlocked), "must be blocked");
+        assert!(v.keywords().contains(&Keyword::MustBeBlocked), "must be blocked");
     }
 
     /// Aurelia untaps your team and grants an extra combat on her first attack.
@@ -682,7 +682,7 @@ mod recent212 {
         drain_stack(&mut g);
         let v = g.computed_permanent(cat).unwrap();
         assert_eq!(*g.battlefield_find(cat).unwrap().counters.get(&CounterType::PlusOnePlusOne).unwrap_or(&0), 1);
-        assert!(v.keywords.contains(&Keyword::FirstStrike), "Cat gained first strike");
+        assert!(v.keywords().contains(&Keyword::FirstStrike), "Cat gained first strike");
     }
 
     /// Crossway Troublemakers gives attacking Vampires deathtouch + lifelink.
@@ -694,13 +694,13 @@ mod recent212 {
         g.clear_sickness(vamp);
         // Not attacking yet → no grant.
         let idle = g.computed_permanent(vamp).unwrap();
-        assert!(!idle.keywords.contains(&Keyword::Deathtouch), "idle Vampire has no bonus");
+        assert!(!idle.keywords().contains(&Keyword::Deathtouch), "idle Vampire has no bonus");
         g.step = TurnStep::DeclareAttackers;
         g.priority.player_with_priority = 0;
         g.declare_attackers(vec![Attack { attacker: vamp, target: AttackTarget::Player(1) }]).expect("attack");
         let atk = g.computed_permanent(vamp).unwrap();
-        assert!(atk.keywords.contains(&Keyword::Deathtouch), "attacking Vampire gains deathtouch");
-        assert!(atk.keywords.contains(&Keyword::Lifelink), "and lifelink");
+        assert!(atk.keywords().contains(&Keyword::Deathtouch), "attacking Vampire gains deathtouch");
+        assert!(atk.keywords().contains(&Keyword::Lifelink), "and lifelink");
     }
 }
 
@@ -866,7 +866,7 @@ mod recent214 {
     fn herald_of_faith_flies_and_gains_life() {
         let mut g = two_player_game();
         let herald = g.add_card_to_battlefield(0, catalog::herald_of_faith());
-        assert!(g.computed_permanent(herald).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(herald).unwrap().keywords().contains(&Keyword::Flying));
         g.clear_sickness(herald);
         g.step = TurnStep::DeclareAttackers;
         g.priority.player_with_priority = 0;
@@ -933,7 +933,7 @@ mod recent214 {
         drain_stack(&mut g);
         let v = g.computed_permanent(bear).unwrap();
         assert_eq!((v.power, v.toughness), (4, 4), "+2/+2");
-        assert!(v.keywords.contains(&Keyword::Trample) && v.keywords.contains(&Keyword::Lifelink));
+        assert!(v.keywords().contains(&Keyword::Trample) && v.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Suspicious Shambler exiles itself from the graveyard to make two Zombies.
@@ -981,9 +981,9 @@ mod recent214 {
     fn kargan_flies_with_a_dragon() {
         let mut g = two_player_game();
         let kargan = g.add_card_to_battlefield(0, catalog::kargan_dragonrider());
-        assert!(!g.computed_permanent(kargan).unwrap().keywords.contains(&Keyword::Flying), "no Dragon → no flying");
+        assert!(!g.computed_permanent(kargan).unwrap().keywords().contains(&Keyword::Flying), "no Dragon → no flying");
         g.add_card_to_battlefield(0, catalog::sprite_dragon());
-        assert!(g.computed_permanent(kargan).unwrap().keywords.contains(&Keyword::Flying), "Dragon → flying");
+        assert!(g.computed_permanent(kargan).unwrap().keywords().contains(&Keyword::Flying), "Dragon → flying");
     }
 
     /// Kitesail Corsair gains flying only while attacking.
@@ -991,12 +991,12 @@ mod recent214 {
     fn kitesail_flies_while_attacking() {
         let mut g = two_player_game();
         let corsair = g.add_card_to_battlefield(0, catalog::kitesail_corsair());
-        assert!(!g.computed_permanent(corsair).unwrap().keywords.contains(&Keyword::Flying), "idle → no flying");
+        assert!(!g.computed_permanent(corsair).unwrap().keywords().contains(&Keyword::Flying), "idle → no flying");
         g.clear_sickness(corsair);
         g.step = TurnStep::DeclareAttackers;
         g.priority.player_with_priority = 0;
         g.declare_attackers(vec![Attack { attacker: corsair, target: AttackTarget::Player(1) }]).expect("attack");
-        assert!(g.computed_permanent(corsair).unwrap().keywords.contains(&Keyword::Flying), "attacking → flying");
+        assert!(g.computed_permanent(corsair).unwrap().keywords().contains(&Keyword::Flying), "attacking → flying");
     }
 
     /// Sphinx of the Final Word makes its controller's instants/sorceries
@@ -1071,7 +1071,7 @@ mod recent214 {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(vamp))]));
         advance_to(&mut g, TurnStep::BeginCombat);
         drain_stack(&mut g);
-        assert!(g.computed_permanent(vamp).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+        assert!(g.computed_permanent(vamp).unwrap().keywords().contains(&Keyword::Haste), "gained haste");
     }
 
     /// Gateway Sneak becomes unblockable when a Gate you control enters.
@@ -1085,7 +1085,7 @@ mod recent214 {
         g.priority.player_with_priority = 0;
         g.perform_action(GameAction::PlayLand(gate)).expect("play a Gate");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(sneak).unwrap().keywords.contains(&Keyword::Unblockable),
+        assert!(g.computed_permanent(sneak).unwrap().keywords().contains(&Keyword::Unblockable),
             "Gate entering made Gateway Sneak unblockable");
     }
 
@@ -1156,7 +1156,7 @@ mod recent214 {
         }).expect("sac another creature");
         drain_stack(&mut g);
         let cp = g.computed_permanent(pred).expect("predator alive");
-        assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible");
+        assert!(cp.keywords().contains(&Keyword::Indestructible), "gained indestructible");
         assert!(g.battlefield_find(pred).unwrap().tapped, "tapped by its own ability");
         assert_eq!(g.battlefield_find(pred).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
             "becomes-tapped grew it");
@@ -1214,7 +1214,7 @@ mod recent215 {
         drain_stack(&mut g);
         let v = g.computed_permanent(lib).unwrap();
         assert_eq!((v.power, v.toughness), (3, 3), "1/1 + two counters");
-        assert!(v.subtypes.creature_types.contains(&CreatureType::Werewolf), "became a Werewolf");
+        assert!(v.subtypes().creature_types.contains(&CreatureType::Werewolf), "became a Werewolf");
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
         g.players[0].mana_pool.add(Color::Green, 1);
         g.players[0].mana_pool.add_colorless(3);
@@ -1729,7 +1729,7 @@ mod recent219 {
         g.resolve_effect(&effect, &ctx).unwrap();
         assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Divinity), 1, "divinity counter");
         let v = g.computed_permanent(id).unwrap();
-        assert!(v.keywords.contains(&crabomination::card::Keyword::Indestructible), "indestructible while divinity present");
+        assert!(v.keywords().contains(&crabomination::card::Keyword::Indestructible), "indestructible while divinity present");
     }
 
     /// Myojin's activated ability empties each opponent's hand.
@@ -1800,7 +1800,7 @@ mod recent220 {
         let effect = catalog::war_squeak().triggered_abilities[0].effect.clone();
         let ctx = EffectContext { targets: vec![Target::Permanent(blocker)], ..EffectContext::for_trigger(squeak, 0, None, 0) };
         g.resolve_effect(&effect, &ctx).unwrap();
-        assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock), "opponent's creature can't block");
+        assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::CantBlock), "opponent's creature can't block");
     }
 
     /// Tangle Tumbler animates itself by tapping two tokens.
@@ -1813,12 +1813,12 @@ mod recent220 {
         g.clear_sickness(tumbler);
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
-        assert!(!g.computed_permanent(tumbler).unwrap().card_types.contains(&CardType::Creature), "starts as a non-creature Vehicle");
+        assert!(!g.computed_permanent(tumbler).unwrap().card_types().contains(&CardType::Creature), "starts as a non-creature Vehicle");
         g.perform_action(GameAction::ActivateAbility {
             card_id: tumbler, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("tap two tokens to animate");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(tumbler).unwrap().card_types.contains(&CardType::Creature), "now an artifact creature");
+        assert!(g.computed_permanent(tumbler).unwrap().card_types().contains(&CardType::Creature), "now an artifact creature");
         assert_eq!(tokens.iter().filter(|&&t| g.battlefield_find(t).unwrap().tapped).count(), 2, "two tokens tapped");
     }
 

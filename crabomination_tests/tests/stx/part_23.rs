@@ -639,7 +639,7 @@ fn cr_122_1b_keyword_counter_grant_order_is_insertion_order() {
         .iter()
         .find(|c| c.id == bear)
         .unwrap()
-        .keywords
+        .keywords()
         .iter()
         .filter(|k| matches!(k, Keyword::Trample | Keyword::Flying | Keyword::Lifelink))
         .cloned()

@@ -303,7 +303,7 @@ fn saprazzan_breaker_is_unblockable_after_milling_a_land() {
     mana(&mut g, 0);
     activate(&mut g, breaker, 0, None);
     assert!(
-        g.computed_permanent(breaker).unwrap().keywords.contains(&Keyword::Unblockable),
+        g.computed_permanent(breaker).unwrap().keywords().contains(&Keyword::Unblockable),
         "a land was milled"
     );
 }

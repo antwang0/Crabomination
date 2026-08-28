@@ -89,7 +89,7 @@ fn furnace_whelp_firebreathes_and_flies() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let whelp = g.add_card_to_battlefield(0, catalog::furnace_whelp());
-    assert!(g.computed_permanent(whelp).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(whelp).unwrap().keywords().contains(&Keyword::Flying));
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: whelp, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
@@ -203,10 +203,10 @@ fn voice_of_the_blessed_flies_at_four_counters() {
     use crabomination::card::{CounterType, Keyword};
     let mut g = two_player_game();
     let voice = g.add_card_to_battlefield(0, catalog::voice_of_the_blessed());
-    assert!(!g.computed_permanent(voice).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(voice).unwrap().keywords().contains(&Keyword::Flying));
     g.battlefield.iter_mut().find(|c| c.id == voice).unwrap()
         .add_counters(CounterType::PlusOnePlusOne, 4);
-    let kws = g.computed_permanent(voice).unwrap().keywords.clone();
+    let kws = g.computed_permanent(voice).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Flying) && kws.contains(&Keyword::Vigilance),
         "4+ counters grant flying and vigilance");
 }
@@ -445,7 +445,7 @@ fn ohran_frostfang_attackers_have_deathtouch_and_draw_on_damage() {
         attacker, target: AttackTarget::Player(1),
     }])).expect("declare attack");
     let comp = g.computed_permanent(attacker).expect("computed");
-    assert!(comp.keywords.contains(&Keyword::Deathtouch),
+    assert!(comp.keywords().contains(&Keyword::Deathtouch),
         "attacking creature gains deathtouch from Ohran's static");
     let hand_before = g.players[0].hand.len();
     for _ in 0..12 {
@@ -510,7 +510,7 @@ fn dragons_rage_channeler_delirium_makes_3_3_flyer() {
     // No delirium yet: base 1/1, no flying.
     let c0 = g.computed_permanent(drc).expect("computed");
     assert_eq!((c0.power, c0.toughness), (1, 1));
-    assert!(!c0.keywords.contains(&Keyword::Flying));
+    assert!(!c0.keywords().contains(&Keyword::Flying));
     // Seed 4 distinct card types into P0's graveyard (creature/instant/
     // sorcery/land) to switch on delirium.
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
@@ -519,8 +519,8 @@ fn dragons_rage_channeler_delirium_makes_3_3_flyer() {
     g.add_card_to_graveyard(0, catalog::forest());
     let c1 = g.computed_permanent(drc).expect("computed");
     assert_eq!((c1.power, c1.toughness), (3, 3), "delirium grows it to 3/3");
-    assert!(c1.keywords.contains(&Keyword::Flying), "delirium grants flying");
-    assert!(c1.keywords.contains(&Keyword::MustAttack), "delirium adds attacks-each-combat");
+    assert!(c1.keywords().contains(&Keyword::Flying), "delirium grants flying");
+    assert!(c1.keywords().contains(&Keyword::MustAttack), "delirium adds attacks-each-combat");
 }
 
 // ── Glistener Elf / Imperial Recruiter / Goblin Matron / Loxodon Hierarch ───
@@ -593,7 +593,7 @@ fn fleecemane_lion_monstrous_grants_hexproof_indestructible() {
     let lion = g.add_card_to_battlefield(0, catalog::fleecemane_lion());
     g.clear_sickness(lion);
     let c0 = g.computed_permanent(lion).expect("computed");
-    assert!(!c0.keywords.contains(&Keyword::Hexproof), "not monstrous yet");
+    assert!(!c0.keywords().contains(&Keyword::Hexproof), "not monstrous yet");
     // Pay {3}{G}{W} for Monstrosity 1.
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::White, 1);
@@ -604,8 +604,8 @@ fn fleecemane_lion_monstrous_grants_hexproof_indestructible() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(lion).unwrap().monstrous, "became monstrous");
     let c1 = g.computed_permanent(lion).expect("computed");
-    assert!(c1.keywords.contains(&Keyword::Hexproof), "monstrous → hexproof");
-    assert!(c1.keywords.contains(&Keyword::Indestructible), "monstrous → indestructible");
+    assert!(c1.keywords().contains(&Keyword::Hexproof), "monstrous → hexproof");
+    assert!(c1.keywords().contains(&Keyword::Indestructible), "monstrous → indestructible");
 }
 
 // ── Mana dorks (this branch) ────────────────────────────────────────────────
@@ -709,7 +709,7 @@ fn crimson_wisps_grants_haste_and_red_and_draws() {
     g.players[0].mana_pool.add(Color::Red, 1);
     cast_at(&mut g, id, Target::Permanent(bear));
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "gained haste");
     assert!(cp.colors.contains(C::Red), "became red");
     // Wisps left hand (−1), draw refilled (+1): net hand size unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before, "cantripped");
@@ -754,7 +754,7 @@ fn stat_keyword_auras_grant_their_bonus() {
         let c = view.iter().find(|c| c.id == bears).unwrap();
         assert_eq!((c.power, c.toughness), (p, t), "{} P/T", c.id.0);
         for kw in kws {
-            assert!(c.keywords.contains(kw), "aura grants {kw:?}");
+            assert!(c.keywords().contains(kw), "aura grants {kw:?}");
         }
     }
 }
@@ -1294,7 +1294,7 @@ fn goblin_motivator_grants_haste() {
         card_id: mot, ability_index: 0, target: Some(Target::Permanent(fresh)), additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("grant haste");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(fresh).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(fresh).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Goblin Gang Leader makes two Goblins on ETB.
@@ -1330,7 +1330,7 @@ fn frenzied_goblin_attack_locks_blocker() {
         attacker: gob, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock),
+    assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::CantBlock),
         "blocker can't block this turn");
 }
 
@@ -1577,7 +1577,7 @@ fn crippling_blight_weakens_creature() {
     cast_at(&mut g, aura, Target::Permanent(bear));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "-1/-1");
-    assert!(cp.keywords.contains(&Keyword::CantBlock));
+    assert!(cp.keywords().contains(&Keyword::CantBlock));
 }
 
 /// Nimble Mongoose grows with threshold (7+ cards in graveyard).
@@ -1686,7 +1686,7 @@ fn akromas_devoted_grants_cleric_vigilance() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::akromas_devoted());
     let pilgrim = g.add_card_to_battlefield(0, catalog::ministrant_of_obligation()); // Human Cleric
-    assert!(g.computed_permanent(pilgrim).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(g.computed_permanent(pilgrim).unwrap().keywords().contains(&Keyword::Vigilance),
         "other Cleric gains vigilance");
 }
 

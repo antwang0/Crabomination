@@ -99,7 +99,7 @@ fn battlewise_aven_hardens_at_threshold() {
     fill_graveyard(&mut g, 0);
     let cp = g.computed_permanent(aven).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Benevolent Bodyguard trades itself for a colour of protection.
@@ -111,7 +111,7 @@ fn benevolent_bodyguard_buys_protection() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
     activate(&mut g, 0, guard, 0, Some(Target::Permanent(friend)));
     assert!(
-        g.computed_permanent(friend).unwrap().keywords.contains(&Keyword::Protection(Color::Red))
+        g.computed_permanent(friend).unwrap().keywords().contains(&Keyword::Protection(Color::Red))
     );
 }
 
@@ -436,9 +436,9 @@ fn miraris_wake_anthems_and_doubles_mana() {
 fn mirror_wall_can_be_let_off_the_leash() {
     let mut g = main_phase();
     let wall = g.add_card_to_battlefield(0, catalog::mirror_wall());
-    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender));
     activate(&mut g, 0, wall, 0, None);
-    assert!(!g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(!g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender));
 }
 
 /// Nantuko Monastery only animates past Threshold.
@@ -463,7 +463,7 @@ fn nantuko_monastery_animates_at_threshold() {
     activate(&mut g, 0, land, 1, None);
     let cp = g.computed_permanent(land).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "it's still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "it's still a land");
 }
 
 /// Quiet Speculation stocks a graveyard with flashback cards.
@@ -504,7 +504,7 @@ fn masked_gorgon_walls_off_green_and_white() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::ProtectionFromMatching(_)))
     );
@@ -749,7 +749,7 @@ fn lost_in_thought_locks_the_host_down() {
     let shade = g.add_card_to_battlefield(1, catalog::nantuko_shade());
     let aura = g.add_card_to_hand(0, catalog::lost_in_thought());
     cast(&mut g, 0, aura, Some(Target::Permanent(shade)));
-    let kws = g.computed_permanent(shade).unwrap().keywords.clone();
+    let kws = g.computed_permanent(shade).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::CantAttack) && kws.contains(&Keyword::CantBlock));
     assert!(kws.contains(&Keyword::CantActivateAbilities));
 }

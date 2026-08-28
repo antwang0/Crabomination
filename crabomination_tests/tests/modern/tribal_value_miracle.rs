@@ -517,7 +517,7 @@ fn shalai_grants_team_hexproof() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::shalai_voice_of_plenty());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof),
         "other creature gains hexproof");
 }
 
@@ -539,7 +539,7 @@ fn lyra_buffs_other_angels() {
     let other = g.add_card_to_battlefield(0, catalog::serra_angel()); // an Angel
     let p = g.computed_permanent(other).unwrap();
     assert_eq!(p.power, 5, "other Angel +1/+1 (4→5)");
-    assert!(p.keywords.contains(&Keyword::Lifelink), "other Angel gains lifelink");
+    assert!(p.keywords().contains(&Keyword::Lifelink), "other Angel gains lifelink");
 }
 
 /// Resplendent Angel makes a 4/4 at end step if you gained 5+ life.
@@ -1099,7 +1099,7 @@ fn sphinx_of_the_steel_wind_has_its_keyword_suite() {
     let s = cp.iter().find(|c| c.id == id).unwrap();
     for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink,
                Keyword::Protection(Color::Red), Keyword::Protection(Color::Green)] {
-        assert!(s.keywords.contains(&kw), "missing {kw:?}");
+        assert!(s.keywords().contains(&kw), "missing {kw:?}");
     }
 }
 
@@ -1167,7 +1167,7 @@ fn ghor_clan_rampager_bloodrush_pumps_an_attacker() {
     let cp = g.compute_battlefield();
     let a = cp.iter().find(|c| c.id == attacker).unwrap();
     assert_eq!((a.power, a.toughness), (6, 6), "+4/+4 from bloodrush");
-    assert!(a.keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(a.keywords().contains(&Keyword::Trample), "gained trample");
 }
 
 #[test]
@@ -1227,7 +1227,7 @@ fn phyrexian_crusader_has_protection_and_infect() {
     let c = cp.iter().find(|c| c.id == id).unwrap();
     for kw in [Keyword::FirstStrike, Keyword::Infect,
                Keyword::Protection(Color::Red), Keyword::Protection(Color::White)] {
-        assert!(c.keywords.contains(&kw), "missing {kw:?}");
+        assert!(c.keywords().contains(&kw), "missing {kw:?}");
     }
 }
 
@@ -1274,7 +1274,7 @@ fn impending_overlord_enters_as_noncreature_with_time_counters() {
     assert!(r.definition.keywords.contains(&Keyword::Impending(4)));
     // Layer-4 RemoveCardType: it isn't a creature while a time counter remains.
     let computed = g.computed_permanent(id).expect("computed");
-    assert!(!computed.card_types.contains(&CardType::Creature),
+    assert!(!computed.card_types().contains(&CardType::Creature),
         "Overlord isn't a creature while it has a time counter");
     // The enters-or-attacks trigger still fired: two Insect tokens minted.
     let insects = g.battlefield.iter()
@@ -1307,7 +1307,7 @@ fn impending_time_counters_tick_off_and_it_becomes_a_creature() {
     }
     // With no time counters it's a creature again.
     let computed = g.computed_permanent(id).expect("computed");
-    assert!(computed.card_types.contains(&CardType::Creature),
+    assert!(computed.card_types().contains(&CardType::Creature),
         "becomes a creature once the last time counter is gone");
 }
 
@@ -1332,7 +1332,7 @@ fn impending_overlord_cast_normally_is_a_creature() {
     let r = g.battlefield_find(id).expect("on battlefield");
     assert_eq!(r.counter_count(CounterType::Time), 0, "no time counters on a normal cast");
     let computed = g.computed_permanent(id).expect("computed");
-    assert!(computed.card_types.contains(&CardType::Creature), "a normal cast is a creature");
+    assert!(computed.card_types().contains(&CardType::Creature), "a normal cast is a creature");
 }
 
 /// Overlord of the Hauntwoods' enters-or-attacks trigger mints a tapped
@@ -1698,7 +1698,7 @@ fn llanowar_loamspeaker_animates_land() {
     }).expect("animate the Forest");
     drain_stack(&mut g);
     let cp = g.computed_permanent(forest).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature), "Forest is now a creature");
+    assert!(cp.card_types().contains(&CardType::Creature), "Forest is now a creature");
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
 
@@ -2054,13 +2054,13 @@ fn nowhere_to_run_strips_opponent_hexproof() {
     let mut g = two_player_game();
     let caryatid = g.add_card_to_battlefield(1, catalog::sylvan_caryatid()); // hexproof
     assert!(g.computed_permanent(caryatid).unwrap()
-        .keywords.contains(&crabomination::card::Keyword::Hexproof), "hexproof before");
+        .keywords().contains(&crabomination::card::Keyword::Hexproof), "hexproof before");
     // Hexproof blocks an opponent's targeting before Nowhere to Run.
     assert!(g.check_target_legality(&Target::Permanent(caryatid), 0).is_err(),
         "hexproof blocks targeting before");
     g.add_card_to_battlefield(0, catalog::nowhere_to_run());
     assert!(!g.computed_permanent(caryatid).unwrap()
-        .keywords.contains(&crabomination::card::Keyword::Hexproof),
+        .keywords().contains(&crabomination::card::Keyword::Hexproof),
         "opponent's creature loses hexproof while Nowhere to Run is out");
     // …and is now a legal target for its controller's opponent.
     assert!(g.check_target_legality(&Target::Permanent(caryatid), 0).is_ok(),
@@ -2497,8 +2497,8 @@ fn replicate_leap_of_flame_pumps_and_grants_keywords() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.power, 3, "+1/+0");
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Flying), "flying");
-    assert!(c.keywords.contains(&crabomination::card::Keyword::FirstStrike), "first strike");
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Flying), "flying");
+    assert!(c.keywords().contains(&crabomination::card::Keyword::FirstStrike), "first strike");
 }
 
 /// Sicarian Infiltrator's Squad copies each draw a card on ETB (original +

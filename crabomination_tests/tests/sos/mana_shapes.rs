@@ -591,7 +591,7 @@ fn strixhaven_skycoach_etb_searches_for_basic_land() {
     assert!(g.battlefield.iter().any(|c| c.id == id),
         "Skycoach should be on battlefield");
     let view = g.computed_permanent(id).unwrap();
-    assert!(view.keywords.contains(&Keyword::Flying),
+    assert!(view.keywords().contains(&Keyword::Flying),
         "Skycoach should have flying");
 
     // Forest should be in hand (searched from library).
@@ -619,7 +619,7 @@ fn the_dawning_archaic_enters_as_7_7_reach() {
     let view = g.computed_permanent(id).unwrap();
     assert_eq!(view.power, 7);
     assert_eq!(view.toughness, 7);
-    assert!(view.keywords.contains(&Keyword::Reach),
+    assert!(view.keywords().contains(&Keyword::Reach),
         "The Dawning Archaic should have reach");
 }
 
@@ -647,7 +647,7 @@ fn prismari_the_inspiration_enters_as_7_7_flying() {
     let view = g.computed_permanent(id).unwrap();
     assert_eq!(view.power, 7);
     assert_eq!(view.toughness, 7);
-    assert!(view.keywords.contains(&Keyword::Flying),
+    assert!(view.keywords().contains(&Keyword::Flying),
         "Prismari should have flying");
 }
 
@@ -701,9 +701,9 @@ fn silverquill_the_disputant_enters_as_4_4_flying_vigilance() {
     let view = g.computed_permanent(id).unwrap();
     assert_eq!(view.power, 4);
     assert_eq!(view.toughness, 4);
-    assert!(view.keywords.contains(&Keyword::Flying),
+    assert!(view.keywords().contains(&Keyword::Flying),
         "Silverquill should have flying");
-    assert!(view.keywords.contains(&Keyword::Vigilance),
+    assert!(view.keywords().contains(&Keyword::Vigilance),
         "Silverquill should have vigilance");
 }
 
@@ -731,9 +731,9 @@ fn quandrix_the_proof_enters_as_6_6_flying_trample() {
     let view = g.computed_permanent(id).unwrap();
     assert_eq!(view.power, 6);
     assert_eq!(view.toughness, 6);
-    assert!(view.keywords.contains(&Keyword::Flying),
+    assert!(view.keywords().contains(&Keyword::Flying),
         "Quandrix should have flying");
-    assert!(view.keywords.contains(&Keyword::Trample),
+    assert!(view.keywords().contains(&Keyword::Trample),
         "Quandrix should have trample");
 }
 

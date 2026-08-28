@@ -106,7 +106,7 @@ fn humble_leaves_a_vanilla_zero_one() {
     cast(&mut g, spell, Some(Target::Permanent(victim)));
     let cp = g.computed_permanent(victim).unwrap();
     assert_eq!((cp.power, cp.toughness), (0, 1));
-    assert!(!cp.keywords.contains(&Keyword::Flying));
+    assert!(!cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Rewind counters and refunds four lands.

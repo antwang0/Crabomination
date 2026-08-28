@@ -1995,7 +1995,7 @@ fn universal_automaton_is_every_creature_type() {
     let id = g.add_card_to_battlefield(0, catalog::universal_automaton());
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Changeling), "Changeling");
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Changeling), "Changeling");
 }
 
 #[test]

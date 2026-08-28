@@ -131,7 +131,7 @@ fn cr_611_2b_indefinite_effect_outlives_its_source() {
     assert!(
         g.computed_permanent(corpse)
             .unwrap()
-            .subtypes
+            .subtypes()
             .creature_types
             .contains(&CreatureType::Nightmare),
         "reanimated as a Nightmare"

@@ -168,10 +168,10 @@ fn cr_613_7_indefinite_keyword_removal_survives_cleanup() {
         &ctx,
     )
     .expect("resolve");
-    assert!(!g.computed_permanent(sentinels).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(!g.computed_permanent(sentinels).unwrap().keywords().contains(&Keyword::Defender));
     g.do_cleanup(&mut vec![]);
     assert!(
-        !g.computed_permanent(sentinels).unwrap().keywords.contains(&Keyword::Defender),
+        !g.computed_permanent(sentinels).unwrap().keywords().contains(&Keyword::Defender),
         "the indefinite removal outlives cleanup"
     );
 }
@@ -191,8 +191,8 @@ fn cr_613_7_end_of_turn_keyword_removal_is_cleared_at_cleanup() {
         &ctx,
     )
     .expect("resolve");
-    assert!(!g.computed_permanent(sentinels).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(sentinels).unwrap().keywords().contains(&Keyword::Flying));
     g.do_cleanup(&mut vec![]);
-    assert!(g.computed_permanent(sentinels).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(sentinels).unwrap().keywords().contains(&Keyword::Flying));
 }
 

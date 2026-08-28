@@ -161,7 +161,7 @@ fn custodi_soulcaller_reanimates_up_to_the_players_attacked() {
 fn sinuous_vermin_gains_menace_when_monstrous() {
     let mut g = two_player_game();
     let rat = g.add_card_to_battlefield(0, catalog::sinuous_vermin());
-    assert!(!g.computed_permanent(rat).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(!g.computed_permanent(rat).unwrap().keywords().contains(&Keyword::Menace));
 
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
@@ -179,7 +179,7 @@ fn sinuous_vermin_gains_menace_when_monstrous() {
     drain_stack(&mut g);
     let vermin = g.computed_permanent(rat).unwrap();
     assert_eq!((vermin.power, vermin.toughness), (5, 5));
-    assert!(vermin.keywords.contains(&Keyword::Menace));
+    assert!(vermin.keywords().contains(&Keyword::Menace));
 }
 
 /// Splitting Slime clones itself the moment it becomes monstrous.
@@ -455,7 +455,7 @@ fn noble_banneret_anthems_its_noted_names() {
     assert_eq!(g.computed_permanent(banneret).unwrap().power, 4, "anthems itself");
     let pumped = g.computed_permanent(bears).unwrap();
     assert_eq!((pumped.power, pumped.toughness), (3, 3));
-    assert!(pumped.keywords.contains(&Keyword::Lifelink));
+    assert!(pumped.keywords().contains(&Keyword::Lifelink));
     assert_eq!(g.computed_permanent(wurm).unwrap().power, 6, "an unnoted name is untouched");
 }
 
@@ -548,7 +548,7 @@ fn animus_of_predation_wears_its_noted_keywords() {
     g.players[0].draft_notes = notes;
     let animus = g.move_card_to_battlefield_for_test(0, catalog::animus_of_predation());
     drain_stack(&mut g);
-    let kws = g.computed_permanent(animus).expect("on battlefield").keywords.clone();
+    let kws = g.computed_permanent(animus).expect("on battlefield").keywords().to_vec();
     assert!(kws.contains(&Keyword::Flying), "noted flying is granted");
     assert!(!kws.contains(&Keyword::Trample), "trample isn't on the printed list");
 }

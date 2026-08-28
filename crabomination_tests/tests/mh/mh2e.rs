@@ -194,7 +194,7 @@ fn liquimetal_torque_artifactizes() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .card_types
+            .card_types()
             .contains(&crabomination::card::CardType::Artifact),
         "bear is now an artifact creature"
     );
@@ -270,7 +270,7 @@ fn tide_shaper_kicked() {
     assert!(g.battlefield_find(shaper).unwrap().kicked, "kicked flag persisted");
     let cp = g.computed_permanent(land).unwrap();
     assert!(
-        cp.subtypes.land_types.contains(&crabomination::card::LandType::Island),
+        cp.subtypes().land_types.contains(&crabomination::card::LandType::Island),
         "land is now an Island"
     );
     // **CR 613.8 — +1/+1 off the land it just retyped.** The layer-4

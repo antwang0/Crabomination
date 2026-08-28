@@ -130,7 +130,7 @@ fn akh_etb_and_pump_batch() {
         g.fire_self_etb_triggers(khenra, 0);
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
-        assert!(cp.keywords.contains(&Keyword::CantBlock), "bear can't block this turn");
+        assert!(cp.keywords().contains(&Keyword::CantBlock), "bear can't block this turn");
     }
     // Sinuous Striker's {U}: +1/-1 pump resolves.
     {
@@ -178,7 +178,7 @@ fn akh_exert_batch() {
         drain_stack(&mut g);
         let cp = g.computed_permanent(gbi).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "3/1 +1/+3 = 4/4");
-        assert!(cp.keywords.contains(&Keyword::Lifelink), "gains lifelink");
+        assert!(cp.keywords().contains(&Keyword::Lifelink), "gains lifelink");
     }
 }
 

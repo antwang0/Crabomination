@@ -294,7 +294,7 @@ fn urborg_strips_swampwalk() {
     assert!(
         !g.computed_permanent(walker)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::Landwalk(_)))
     );

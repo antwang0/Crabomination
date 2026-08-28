@@ -164,7 +164,7 @@ fn animate_land_makes_a_three_three() {
     cast(&mut g, 0, spell, Some(Target::Permanent(forest)));
     let cp = g.computed_permanent(forest).expect("computed");
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
 }
 
 /// Arc Mage splits two damage across two targets.
@@ -292,7 +292,7 @@ fn predator_flagship_grants_then_kills_flying() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     activate(&mut g, 0, ship, 0, Some(Target::Permanent(victim)));
     let cp = g.computed_permanent(victim).expect("computed");
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     activate(&mut g, 0, ship, 1, Some(Target::Permanent(victim)));
     assert!(g.battlefield_find(victim).is_none());
 }
@@ -331,7 +331,7 @@ fn spiritual_asylum_shrouds_until_you_swing() {
     let asylum = g.add_card_to_battlefield(0, catalog::spiritual_asylum());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let cp = g.computed_permanent(bear).expect("computed");
-    assert!(cp.keywords.contains(&Keyword::Shroud));
+    assert!(cp.keywords().contains(&Keyword::Shroud));
 
     g.clear_sickness(bear);
     g.step = TurnStep::DeclareAttackers;

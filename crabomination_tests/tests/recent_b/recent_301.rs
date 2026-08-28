@@ -90,7 +90,7 @@ fn terraformer_turns_your_lands_into_a_chosen_basic() {
     drain_stack(&mut g);
     for land in [f1, f2] {
         let cp = g.computed_permanent(land).unwrap();
-        assert!(cp.subtypes.land_types == vec![LandType::Island], "land became an Island");
+        assert!(cp.subtypes().land_types == vec![LandType::Island], "land became an Island");
     }
 }
 

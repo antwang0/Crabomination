@@ -151,7 +151,7 @@ fn skarrgan_pit_skulk_bloodthirst_and_evasion() {
     let id = g.battlefield.iter().find(|c| c.definition.name == "Skarrgan Pit-Skulk").unwrap().id;
     let comp = g.computed_permanent(id).unwrap();
     assert_eq!((comp.power, comp.toughness), (2, 2), "entered with a bloodthirst counter");
-    assert!(comp.keywords.contains(&Keyword::CantBeBlockedByPowerLess));
+    assert!(comp.keywords().contains(&Keyword::CantBeBlockedByPowerLess));
 }
 
 #[test]
@@ -163,7 +163,7 @@ fn gruul_nodorog_grants_itself_menace() {
         card_id: n, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("menace");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(n).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(n).unwrap().keywords().contains(&Keyword::Menace));
 }
 
 #[test]
@@ -211,7 +211,7 @@ fn galvanic_arc_burns_on_enter_and_grants_first_strike() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast aura");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::FirstStrike),
         "enchanted creature has first strike");
     assert_eq!(g.players[1].life, foe_life - 3, "ETB dealt 3 to the opponent");
 }
@@ -220,7 +220,7 @@ fn galvanic_arc_burns_on_enter_and_grants_first_strike() {
 fn ghor_clan_bloodscale_pumps_once_per_turn() {
     let mut g = two_player_game();
     let b = g.add_card_to_battlefield(0, catalog::ghor_clan_bloodscale());
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::FirstStrike));
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
         card_id: b, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
@@ -263,7 +263,7 @@ fn gruul_scrapper_gains_haste_only_when_red_was_spent() {
         card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Haste), "red spent → haste");
+    assert!(g.computed_permanent(s).unwrap().keywords().contains(&Keyword::Haste), "red spent → haste");
 
     // No red spent ({G} + colorless {3}) → no haste.
     let mut g = two_player_game();
@@ -274,7 +274,7 @@ fn gruul_scrapper_gains_haste_only_when_red_was_spent() {
         card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Haste), "no red → no haste");
+    assert!(!g.computed_permanent(s).unwrap().keywords().contains(&Keyword::Haste), "no red → no haste");
 }
 
 #[test]
@@ -308,7 +308,7 @@ fn steamcore_weird_burns_only_when_red_was_spent() {
 fn torch_drake_flies_and_firebreathes() {
     let mut g = two_player_game();
     let drake = g.add_card_to_battlefield(0, catalog::torch_drake());
-    assert!(g.computed_permanent(drake).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(drake).unwrap().keywords().contains(&Keyword::Flying));
     flood(&mut g);
     g.perform_action(GameAction::ActivateAbility {
         card_id: drake, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,

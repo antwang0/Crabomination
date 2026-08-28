@@ -125,7 +125,7 @@ fn cr_208_3a_pump_on_a_noncreature_applies_once_it_animates() {
         &ctx,
     )
     .expect("pump");
-    assert!(!g.computed_permanent(jar).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(jar).unwrap().card_types().contains(&CardType::Creature));
     g.resolve_effect(
         &Effect::BecomeCreature {
             what: Selector::Target(0),
@@ -200,7 +200,7 @@ fn cr_308_2_kindred_permanents_carry_creature_types_without_being_creatures() {
     let mut g = two_player_game();
     let altar = g.add_card_to_battlefield(0, catalog::altar_of_the_goyf());
     let cp = g.computed_permanent(altar).unwrap();
-    assert!(cp.card_types.contains(&CardType::Artifact));
-    assert!(!cp.card_types.contains(&CardType::Creature), "a kindred artifact isn't a creature");
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Lhurgoyf), "but it has the type");
+    assert!(cp.card_types().contains(&CardType::Artifact));
+    assert!(!cp.card_types().contains(&CardType::Creature), "a kindred artifact isn't a creature");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Lhurgoyf), "but it has the type");
 }

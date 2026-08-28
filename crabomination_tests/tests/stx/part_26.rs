@@ -506,7 +506,7 @@ fn equipment_grants_stats_and_keywords() {
             assert_eq!((cp.power, cp.toughness), (p, t), "{name} stat boost");
         }
         for kw in kws {
-            assert!(cp.keywords.contains(&kw), "{name} grants {kw:?}");
+            assert!(cp.keywords().contains(&kw), "{name} grants {kw:?}");
         }
     }
 }
@@ -516,10 +516,10 @@ fn leech_fanatic_has_lifelink_only_on_your_turn() {
     let mut g = two_player_game();
     let lf = g.add_card_to_battlefield(0, catalog::leech_fanatic());
     // Player 0's turn (default active player) → lifelink.
-    assert!(g.computed_permanent(lf).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(lf).unwrap().keywords().contains(&Keyword::Lifelink));
     // Opponent's turn → no lifelink.
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(lf).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(!g.computed_permanent(lf).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 #[test]

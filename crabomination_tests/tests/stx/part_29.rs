@@ -31,8 +31,8 @@ fn emergent_sequence_animates_searched_land_with_counter() {
     assert!(raw.tapped, "entered tapped");
     assert_eq!(raw.counter_count(CounterType::PlusOnePlusOne), 1, "one land entered this turn");
     let view = g.compute_battlefield().into_iter().find(|c| c.id == land_id).unwrap();
-    assert!(view.card_types.contains(&crabomination::card::CardType::Land), "still a land");
-    assert!(view.card_types.contains(&crabomination::card::CardType::Creature), "animated into a creature");
+    assert!(view.card_types().contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(view.card_types().contains(&crabomination::card::CardType::Creature), "animated into a creature");
     assert_eq!((view.power, view.toughness), (1, 1), "0/0 base + one counter");
 }
 

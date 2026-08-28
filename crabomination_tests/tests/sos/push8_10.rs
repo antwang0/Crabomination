@@ -1398,7 +1398,7 @@ fn inkshape_demonstrator_repartee_pumps_and_grants_lifelink() {
 
     let v = g.computed_permanent(demo).expect("Demo should still be on battlefield");
     assert_eq!(v.power, 4, "Inkshape Demonstrator should be +1/+0 → 4 power");
-    assert!(v.keywords.contains(&Keyword::Lifelink),
+    assert!(v.keywords().contains(&Keyword::Lifelink),
         "Repartee should grant Lifelink EOT");
 }
 
@@ -1733,18 +1733,18 @@ fn thornfist_striker_infusion_pumps_friendly_creatures_when_life_gained() {
     // Without lifegain: bear is a vanilla 2/2 with no trample.
     let bear_base = g.computed_permanent(bear).unwrap();
     assert_eq!(bear_base.power, 2, "bear is 2/2 without lifegain");
-    assert!(!bear_base.keywords.contains(&Keyword::Trample),
+    assert!(!bear_base.keywords().contains(&Keyword::Trample),
         "bear has no trample without lifegain");
 
     // After lifegain: bear is 3/2 with trample.
     g.players[0].life_gained_this_turn = 1;
     let bear_pumped = g.computed_permanent(bear).unwrap();
     assert_eq!(bear_pumped.power, 3, "bear is 3/2 with lifegain");
-    assert!(bear_pumped.keywords.contains(&Keyword::Trample),
+    assert!(bear_pumped.keywords().contains(&Keyword::Trample),
         "bear gains trample with lifegain");
     let striker_pumped = g.computed_permanent(striker).unwrap();
     assert_eq!(striker_pumped.power, 4, "striker is 4/3 with lifegain (3+1)");
-    assert!(striker_pumped.keywords.contains(&Keyword::Trample),
+    assert!(striker_pumped.keywords().contains(&Keyword::Trample),
         "striker also gets trample (inclusive 'creatures you control')");
 }
 
@@ -1759,7 +1759,7 @@ fn thornfist_striker_infusion_does_not_buff_opponent_creatures() {
 
     let opp_pt = g.computed_permanent(opp_bear).unwrap();
     assert_eq!(opp_pt.power, 2, "opp bear unaffected by friendly anthem");
-    assert!(!opp_pt.keywords.contains(&Keyword::Trample),
+    assert!(!opp_pt.keywords().contains(&Keyword::Trample),
         "opp bear does not gain trample");
 }
 
@@ -2052,7 +2052,7 @@ fn honorbound_page_prepare_spell_pumps_and_grants_flying() {
     let v = g.computed_permanent(bear).expect("Bear should still be alive");
     assert_eq!(v.power, 2 + 1, "Bear should be +1 power");
     assert_eq!(v.toughness, 2, "Forum's Favor grants +1/+0 — toughness unchanged");
-    assert!(v.keywords.contains(&Keyword::Flying), "Bear gains flying EOT");
+    assert!(v.keywords().contains(&Keyword::Flying), "Bear gains flying EOT");
 }
 
 // Joined Researchers // Secret Rendezvous — each player draws 3.
@@ -2442,7 +2442,7 @@ fn quill_blade_laureate_prepare_spell_pumps_and_grants_double_strike() {
     let v = g.computed_permanent(bear).expect("Bear pumped");
     assert_eq!(v.power, 3, "Twofold Intent grants +1/+0");
     assert_eq!(v.toughness, 2, "toughness unchanged");
-    assert!(v.keywords.contains(&Keyword::DoubleStrike), "Bear gains double strike EOT");
+    assert!(v.keywords().contains(&Keyword::DoubleStrike), "Bear gains double strike EOT");
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Inkling"),
         "Twofold Intent makes no token");
 }
@@ -2493,7 +2493,7 @@ fn encouraging_aviator_prepare_spell_grants_flying() {
     drain_stack(&mut g);
 
     let v = g.computed_permanent(bear).expect("Bear alive");
-    assert!(v.keywords.contains(&Keyword::Flying), "Bear gains Flying EOT");
+    assert!(v.keywords().contains(&Keyword::Flying), "Bear gains Flying EOT");
 }
 
 // Harmonized Trio // Brainstorm — draw 3 + put 2 back on top.
@@ -3004,7 +3004,7 @@ fn scathing_shadelock_prepare_spell_pumps_and_grants_deathtouch() {
     let v = g.computed_permanent(bear).expect("Bear alive");
     assert_eq!(v.power, 2 + 2, "Venomous Words grants +2/+0");
     assert_eq!(v.toughness, 2, "toughness unchanged");
-    assert!(v.keywords.contains(&Keyword::Deathtouch), "Bear gains deathtouch EOT");
+    assert!(v.keywords().contains(&Keyword::Deathtouch), "Bear gains deathtouch EOT");
 }
 
 // Infirmary Healer // Stream of Life — target player gains X life.
@@ -3126,7 +3126,7 @@ fn kirol_prepare_spell_mills_one_and_packs_a_punch() {
     assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 2,
         "two +1/+1 counters on target creature");
     let v = g.computed_permanent(bear).unwrap();
-    assert!(v.keywords.contains(&Keyword::Trample), "Bear gains trample EOT");
+    assert!(v.keywords().contains(&Keyword::Trample), "Bear gains trample EOT");
 }
 
 // Abigale // Heroic Stanza — put a +1/+1 counter on target creature.

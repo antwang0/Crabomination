@@ -38,7 +38,7 @@ fn cr_711_5_below_the_first_band_keeps_the_printed_body() {
     let s = g.add_card_to_battlefield(0, catalog::student_of_warfare());
     let c = g.computed_permanent(s).expect("computed");
     assert_eq!((c.power, c.toughness), (1, 1));
-    assert!(!c.keywords.contains(&Keyword::FirstStrike));
+    assert!(!c.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// 711.2a — "{LEVEL N1-N2}" sets base P/T and grants its abilities inside the
@@ -50,10 +50,10 @@ fn cr_711_2a_closed_band_applies_only_inside_its_range() {
     level_up(&mut g, s, 2);
     let c = g.computed_permanent(s).expect("computed");
     assert_eq!((c.power, c.toughness), (3, 3));
-    assert!(c.keywords.contains(&Keyword::FirstStrike));
+    assert!(c.keywords().contains(&Keyword::FirstStrike));
     level_up(&mut g, s, 5);
     let c = g.computed_permanent(s).expect("computed");
-    assert!(!c.keywords.contains(&Keyword::FirstStrike), "level 7 left the 2-6 band");
+    assert!(!c.keywords().contains(&Keyword::FirstStrike), "level 7 left the 2-6 band");
 }
 
 /// 711.2b — "{LEVEL N3+}" is open-ended: it keeps applying above N3.
@@ -64,7 +64,7 @@ fn cr_711_2b_open_band_keeps_applying() {
     level_up(&mut g, s, 9);
     let c = g.computed_permanent(s).expect("computed");
     assert_eq!((c.power, c.toughness), (4, 4));
-    assert!(c.keywords.contains(&Keyword::DoubleStrike));
+    assert!(c.keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// 711.4 — the level-up ability is live at every level, including inside a

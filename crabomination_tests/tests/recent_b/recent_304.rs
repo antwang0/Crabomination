@@ -10,7 +10,7 @@ use crabomination::mana::Color;
 fn rakdos_ragemutt_has_lifelink_and_haste() {
     let mut g = two_player_game();
     let rr = g.add_card_to_battlefield(0, catalog::rakdos_ragemutt());
-    let kw = g.computed_permanent(rr).unwrap().keywords.clone();
+    let kw = g.computed_permanent(rr).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::Lifelink) && kw.contains(&Keyword::Haste));
 }
 
@@ -64,7 +64,7 @@ fn psychotic_fury_only_pumps_multicolored() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast on the gold creature");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(gold).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(gold).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 #[test]

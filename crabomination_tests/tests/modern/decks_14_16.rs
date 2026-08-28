@@ -1512,7 +1512,7 @@ fn bond_of_discipline_taps_each_opponent_creature_and_grants_lifelink() {
     // Your bear gains lifelink EOT — check the temporary keyword grant.
     let computed = g.computed_permanent(your_bear)
         .expect("your bear still on battlefield");
-    assert!(computed.keywords.iter().any(|k| matches!(k, Keyword::Lifelink)),
+    assert!(computed.keywords().iter().any(|k| matches!(k, Keyword::Lifelink)),
         "Your creature has lifelink granted EOT");
 }
 

@@ -50,7 +50,7 @@ mod recent41 {
         g.resolve_effect(&catalog::scale_up().effect, &ctx).unwrap();
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (6, 4), "becomes a 6/4");
-        assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Wurm), "and a Wurm");
+        assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Wurm), "and a Wurm");
     }
 
     #[test]
@@ -67,7 +67,7 @@ mod recent41 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(pool).unwrap();
         assert_eq!((cp.power, cp.toughness), (1, 1), "1/1 Skeleton");
-        assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+        assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     }
 }
 
@@ -538,7 +538,7 @@ mod recent46 {
         // Greatest power is 3 (the Ibex), so the bear becomes 5/5 with trample.
         let b = g.computed_permanent(bear).unwrap();
         assert_eq!(b.power, 5, "bear pumped +3/+3");
-        assert!(b.keywords.contains(&crabomination::card::Keyword::Trample), "bear gained trample");
+        assert!(b.keywords().contains(&crabomination::card::Keyword::Trample), "bear gained trample");
     }
 
     #[test]
@@ -818,7 +818,7 @@ mod recent48 {
         drain_stack(&mut g);
         assert_eq!(counters(&g, gn), 2, "kicked → two +1/+1 counters");
         let cp = g.computed_permanent(gn).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Trample), "counter-bearing creature has trample");
+        assert!(cp.keywords().contains(&Keyword::Trample), "counter-bearing creature has trample");
     }
 }
 

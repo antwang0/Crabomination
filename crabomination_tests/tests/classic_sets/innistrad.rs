@@ -53,7 +53,7 @@ fn homestead_courage_counter_and_vigilance() {
     g.resolve_effect(&catalog::homestead_courage().effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
 }
 
 /// Flare of Faith pumps +3/+3 and grants indestructible to a Human.
@@ -66,7 +66,7 @@ fn flare_of_faith_human_bonus() {
     g.resolve_effect(&catalog::flare_of_faith().effect, &ctx).unwrap();
     let cp = g.computed_permanent(human).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 6));
-    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
 }
 
 /// Flare of Faith on a non-Human is only +2/+2 with no indestructible.
@@ -79,7 +79,7 @@ fn flare_of_faith_nonhuman() {
     g.resolve_effect(&catalog::flare_of_faith().effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(!cp.keywords.contains(&Keyword::Indestructible));
+    assert!(!cp.keywords().contains(&Keyword::Indestructible));
 }
 
 /// Ritual of Hope pumps +2/+1 with coven active.
@@ -439,7 +439,7 @@ fn pestilent_wolf_deathtouch() {
     let wolf = g.add_card_to_battlefield(0, catalog::pestilent_wolf());
     let ctx = EffectContext::for_ability(wolf, 0, None);
     g.resolve_effect(&catalog::pestilent_wolf().activated_abilities[0].effect, &ctx).unwrap();
-    assert!(g.computed_permanent(wolf).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Brood Weaver leaves a Spider behind.
@@ -524,7 +524,7 @@ fn voldaren_stinger_conditional_first_strike() {
     let s = g.add_card_to_battlefield(0, catalog::voldaren_stinger());
     g.clear_sickness(s);
     assert!(
-        !g.computed_permanent(s).unwrap().keywords.contains(&Keyword::FirstStrike),
+        !g.computed_permanent(s).unwrap().keywords().contains(&Keyword::FirstStrike),
         "no first strike at rest"
     );
     g.active_player_idx = 0;
@@ -538,7 +538,7 @@ fn voldaren_stinger_conditional_first_strike() {
     }]))
     .expect("attack");
     assert!(
-        g.computed_permanent(s).unwrap().keywords.contains(&Keyword::FirstStrike),
+        g.computed_permanent(s).unwrap().keywords().contains(&Keyword::FirstStrike),
         "first strike while attacking"
     );
 }
@@ -709,7 +709,7 @@ fn bloody_betrayal_steals_and_hastes() {
     let c = g.battlefield_find(foe).unwrap();
     assert_eq!(c.controller, 0, "control stolen");
     assert!(!c.tapped, "untapped");
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::Haste));
     assert_eq!(count_named(&g, 0, "Blood"), 1);
 }
 
@@ -775,8 +775,8 @@ fn abandon_the_post_cant_block() {
     let mut ctx = ctx0(&g);
     ctx.targets = vec![Target::Permanent(a), Target::Permanent(b)];
     g.resolve_effect(&catalog::abandon_the_post().effect, &ctx).unwrap();
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::CantBlock));
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Blood Fountain mints a Blood token on entry and returns creatures from the
@@ -805,7 +805,7 @@ fn lightning_wolf_first_strike() {
     let w = g.add_card_to_battlefield(0, catalog::lightning_wolf());
     let ctx = EffectContext::for_ability(w, 0, None);
     g.resolve_effect(&catalog::lightning_wolf().activated_abilities[0].effect, &ctx).unwrap();
-    assert!(g.computed_permanent(w).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(w).unwrap().keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Ritual Guardian gains lifelink at combat when coven is active.
@@ -815,7 +815,7 @@ fn ritual_guardian_coven_lifelink() {
     let rg = g.add_card_to_battlefield(0, catalog::ritual_guardian()); // power 3
     let ctx = EffectContext::for_ability(rg, 0, None);
     g.resolve_effect(&catalog::ritual_guardian().triggered_abilities[0].effect, &ctx).unwrap();
-    assert!(g.computed_permanent(rg).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(rg).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 /// Defend the Celestus distributes three +1/+1 counters across your creatures.
@@ -1007,7 +1007,7 @@ fn kindly_ancestor_disturb_aura_grants_lifelink() {
     drain_stack(&mut g);
     let aura = g.battlefield_find(id).expect("Aura on battlefield");
     assert_eq!(aura.attached_to, Some(bear), "attached to the chosen creature");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 /// Twinblade Geist's disturb Aura grants double strike.
@@ -1022,7 +1022,7 @@ fn twinblade_geist_disturb_aura_double_strike() {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
     }).expect("disturb");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Mischievous Catgeist's disturb Aura attaches to the chosen creature.
@@ -1149,7 +1149,7 @@ fn gryffwing_cavalry_attack_pay_cant_block() {
     ctx.targets = vec![Target::Permanent(foe)];
     // Ability 0 is Training; ability 1 is the attack "may pay" rider.
     g.resolve_effect(&cav.triggered_abilities[1].effect, &ctx).unwrap();
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Ground Pounder's die-roll ability pumps itself by the rolled amount.
@@ -1303,7 +1303,7 @@ fn duelcraft_trainer_grants_double_strike() {
     let mut ctx = EffectContext::for_ability(trainer, 0, Some(Target::Permanent(ally)));
     ctx.targets = vec![Target::Permanent(ally)];
     g.resolve_effect(&catalog::duelcraft_trainer().triggered_abilities[0].effect, &ctx).unwrap();
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Harvesttide Sentry gains a power-based evasion grant under Coven.
@@ -1318,7 +1318,7 @@ fn harvesttide_sentry_evasion_under_coven() {
     assert!(g
         .computed_permanent(sentry)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::CantBeBlockedByPowerAtMost(2)));
 }
 
@@ -1390,7 +1390,7 @@ fn candlegrove_witch_flies_with_coven() {
     g.step = TurnStep::BeginCombat;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(witch).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(witch).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Rite of Oblivion exiles a nonland permanent (after its sacrifice cost).
@@ -1426,7 +1426,7 @@ fn blood_hypnotist_locks_a_blocker() {
     let mut ctx = EffectContext::for_ability(h, 0, Some(Target::Permanent(foe)));
     ctx.targets = vec![Target::Permanent(foe)];
     g.resolve_effect(&catalog::blood_hypnotist().triggered_abilities[0].effect, &ctx).unwrap();
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantBlock));
 }
 
 /// Grisly Ritual destroys a creature and makes two Blood.
@@ -1455,7 +1455,7 @@ fn dominating_vampire_steals_small_creature() {
     ctx.targets = vec![Target::Permanent(bear)];
     g.resolve_effect(&catalog::dominating_vampire().triggered_abilities[0].effect, &ctx).unwrap();
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stole the bear (2 Vampires)");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Graf Reaver pings its controller at upkeep.
@@ -1608,7 +1608,7 @@ fn stuffed_bear_becomes_a_bear() {
     ).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
 }
 
 /// Circle of Confinement exiles a small opposing creature until it leaves.
@@ -1634,7 +1634,7 @@ fn stolen_vitality_pumps_and_tramples_on_your_turn() {
     g.resolve_effect(&catalog::stolen_vitality().effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 3), "+3/+1");
-    assert!(cp.keywords.contains(&Keyword::Trample), "your turn → trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "your turn → trample");
 }
 
 /// Gift of Fangs is a +2/+2 boon on a Vampire but a -2/-2 bane otherwise.
@@ -1730,7 +1730,7 @@ fn packs_betrayal_steals_with_haste() {
     g.resolve_effect(&catalog::packs_betrayal().effect, &ctx).unwrap();
     let stolen = g.battlefield_find(bear).unwrap();
     assert_eq!(stolen.controller, 0, "gained control");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Dryad's Revival returns a graveyard card to hand and carries Flashback.
@@ -2044,7 +2044,7 @@ fn dreadlight_monstrosity_unblockable() {
         &catalog::dreadlight_monstrosity().activated_abilities[0].effect,
         &EffectContext::for_ability(mon, 0, None),
     ).unwrap();
-    assert!(g.computed_permanent(mon).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(mon).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Skulking Killer gives -2/-2 only when the opponent has no other creatures.
@@ -2095,7 +2095,7 @@ fn sanguine_statuette_etb_and_animate() {
     ).unwrap();
     let cp = g.computed_permanent(stat).unwrap();
     assert_eq!(cp.power, 3, "animated to 3/3");
-    assert!(g.battlefield_find(stat).unwrap().definition.is_creature() || cp.card_types.contains(&CardType::Creature));
+    assert!(g.battlefield_find(stat).unwrap().definition.is_creature() || cp.card_types().contains(&CardType::Creature));
 }
 
 /// Runebound Wolf deals damage equal to the Wolves/Werewolves you control.
@@ -2160,7 +2160,7 @@ fn witchs_web_pump_reach_untap() {
     g.resolve_effect(&catalog::witchs_web().effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 5, "+3/+3");
-    assert!(cp.keywords.contains(&Keyword::Reach), "gains reach");
+    assert!(cp.keywords().contains(&Keyword::Reach), "gains reach");
     assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
 }
 
@@ -2225,7 +2225,7 @@ fn candlelit_cavalry_coven_trample() {
     g.step = TurnStep::BeginCombat;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(cav).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(cav).unwrap().keywords().contains(&Keyword::Trample),
         "Coven grants trample");
 }
 
@@ -2334,7 +2334,7 @@ fn serpentine_ambush_makes_serpent() {
     g.resolve_effect(&catalog::serpentine_ambush().effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "becomes 5/5");
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Serpent), "is a Serpent");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Serpent), "is a Serpent");
 }
 
 /// Turn the Earth shuffles graveyard cards back and gains 2 life.
@@ -2431,7 +2431,7 @@ fn spiked_ripsaw_sac_forest_for_trample() {
     let trig = catalog::spiked_ripsaw().equipped_bonus.unwrap().triggered_abilities[0].effect.clone();
     g.resolve_effect(&trig, &EffectContext::for_trigger(bear, 0, None, 0)).unwrap();
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample), "gained trample");
     assert!(g.battlefield_find(forest).is_none(), "Forest sacrificed");
 }
 
@@ -2444,7 +2444,7 @@ fn fleeting_spirit_abilities() {
         &catalog::fleeting_spirit().activated_abilities[0].effect,
         &EffectContext::for_ability(spirit, 0, None),
     ).unwrap();
-    assert!(g.computed_permanent(spirit).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(spirit).unwrap().keywords().contains(&Keyword::FirstStrike));
     // Second ability exiles it (returns at the next end step).
     g.resolve_effect(
         &catalog::fleeting_spirit().activated_abilities[1].effect,

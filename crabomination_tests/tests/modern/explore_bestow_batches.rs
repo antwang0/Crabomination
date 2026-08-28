@@ -334,7 +334,7 @@ fn regisaur_alpha_makes_a_token_and_grants_haste() {
     // The token (another Dinosaur) has haste from Regisaur's static.
     let view = g.compute_battlefield();
     let tok = view.iter().find(|c| c.id == tok_id).unwrap();
-    assert!(tok.keywords.contains(&crabomination::card::Keyword::Haste), "other Dinosaurs gain haste");
+    assert!(tok.keywords().contains(&crabomination::card::Keyword::Haste), "other Dinosaurs gain haste");
 }
 
 #[test]
@@ -394,8 +394,8 @@ fn charging_monstrosaur_has_trample_and_haste() {
     let id = g.add_card_to_battlefield(0, catalog::charging_monstrosaur());
     let view = g.compute_battlefield();
     let c = view.iter().find(|c| c.id == id).unwrap();
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Trample));
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Haste));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Trample));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Haste));
     assert_eq!((c.power, c.toughness), (5, 5));
 }
 
@@ -405,7 +405,7 @@ fn grazing_whiptail_has_reach() {
     let id = g.add_card_to_battlefield(0, catalog::grazing_whiptail());
     let view = g.compute_battlefield();
     let c = view.iter().find(|c| c.id == id).unwrap();
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Reach));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Reach));
 }
 
 #[test]
@@ -908,7 +908,7 @@ fn goblin_balloon_brigade_grants_itself_flying() {
     }).expect("flying-grant activatable");
     drain_stack(&mut g);
     let cp = g.computed_permanent(gob).expect("Goblin in play");
-    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying until end of turn");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gained flying until end of turn");
 }
 
 #[test]
@@ -1025,13 +1025,13 @@ fn baleful_eidolon_bestowed_buffs_host_and_is_not_a_creature() {
 
     // The bestowed Eidolon is an Aura enchantment, not a creature.
     let ecp = g.computed_permanent(eid).expect("Eidolon on battlefield");
-    assert!(!ecp.card_types.contains(&CardType::Creature),
+    assert!(!ecp.card_types().contains(&CardType::Creature),
         "a bestowed permanent is not a creature");
-    assert!(ecp.card_types.contains(&CardType::Enchantment));
+    assert!(ecp.card_types().contains(&CardType::Enchantment));
     // The host gains +1/+1 and deathtouch.
     let bcp = g.computed_permanent(bear).unwrap();
     assert_eq!((bcp.power, bcp.toughness), (3, 3), "host gets +1/+1 from bestow");
-    assert!(bcp.keywords.contains(&crabomination::card::Keyword::Deathtouch),
+    assert!(bcp.keywords().contains(&crabomination::card::Keyword::Deathtouch),
         "host gains deathtouch from bestow");
 }
 
@@ -1055,7 +1055,7 @@ fn baleful_eidolon_reverts_to_creature_when_host_leaves() {
     g.check_state_based_actions();
 
     let ecp = g.computed_permanent(eid).expect("Eidolon stays on battlefield");
-    assert!(ecp.card_types.contains(&CardType::Creature),
+    assert!(ecp.card_types().contains(&CardType::Creature),
         "Eidolon reverts to a creature when its host leaves");
     assert_eq!((ecp.power, ecp.toughness), (1, 1), "it's a 1/1 creature again");
 }
@@ -1076,9 +1076,9 @@ fn hopeful_eidolon_bestow_grants_lifelink_to_host() {
 
     let bcp = g.computed_permanent(bear).unwrap();
     assert_eq!((bcp.power, bcp.toughness), (3, 3), "host gets +1/+1");
-    assert!(bcp.keywords.contains(&crabomination::card::Keyword::Lifelink),
+    assert!(bcp.keywords().contains(&crabomination::card::Keyword::Lifelink),
         "host gains lifelink from bestow");
-    assert!(!g.computed_permanent(eid).unwrap().card_types.contains(&CardType::Creature),
+    assert!(!g.computed_permanent(eid).unwrap().card_types().contains(&CardType::Creature),
         "bestowed Hopeful Eidolon is not a creature");
 }
 

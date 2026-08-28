@@ -141,8 +141,8 @@ fn restless_spire_animates_first_strike() {
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
     assert_eq!((post.power, post.toughness), (2, 1));
-    assert!(post.card_types.contains(&CardType::Land), "still a land");
-    assert!(post.keywords.contains(&Keyword::FirstStrike));
+    assert!(post.card_types().contains(&CardType::Land), "still a land");
+    assert!(post.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Morph: Ainok Survivalist is cast face down for {3} as a 2/2, then turned up
@@ -437,7 +437,7 @@ fn disguise_culvert_ambusher_etb_forces_block() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Culvert Ambusher");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::MustBlock),
+    assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::MustBlock),
         "target must block this turn");
 }
 
@@ -585,7 +585,7 @@ fn disguise_rakish_scoundrel_turn_up_grants_indestructible() {
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(buddy).unwrap().keywords().contains(&Keyword::Indestructible),
         "target gains indestructible until EOT");
 }
 
@@ -709,7 +709,7 @@ fn disguise_greenbelt_radical_turn_up_pumps_team() {
     drain_stack(&mut g);
     let other = g.battlefield_find(buddy).expect("buddy here");
     assert_eq!((other.power(), other.toughness()), (3, 3), "team gets a +1/+1 counter");
-    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(buddy).unwrap().keywords().contains(&Keyword::Trample),
         "team gains trample until EOT");
 }
 
@@ -761,7 +761,7 @@ fn restless_reef_animates_and_mills_on_attack() {
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
     assert_eq!((post.power, post.toughness), (4, 4));
-    assert!(post.keywords.contains(&crabomination::card::Keyword::Deathtouch));
+    assert!(post.keywords().contains(&crabomination::card::Keyword::Deathtouch));
     for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
     let lib_before = g.players[1].library.len();
     g.step = TurnStep::DeclareAttackers;
@@ -786,7 +786,7 @@ fn restless_vinestalk_animates_5_5_trample() {
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
     assert_eq!((post.power, post.toughness), (5, 5));
-    assert!(post.keywords.contains(&Keyword::Trample));
+    assert!(post.keywords().contains(&Keyword::Trample));
 }
 
 /// Trygon Predator's combat-damage trigger destroys an opponent's artifact.
@@ -1122,7 +1122,7 @@ fn lightning_mauler_soulbond_grants_haste() {
     let mauler = g.add_card_to_battlefield(0, catalog::lightning_mauler());
     g.apply_soulbond_pairing(mauler);
     // The pair is linked; the partner gains haste from the bonus.
-    assert!(g.computed_permanent(partner).unwrap().keywords.contains(&Keyword::Haste)
+    assert!(g.computed_permanent(partner).unwrap().keywords().contains(&Keyword::Haste)
         || g.battlefield_find(mauler).unwrap().soulbond_partner == Some(partner),
         "soulbond pair formed (partner gains haste)");
 }
@@ -1431,8 +1431,8 @@ fn trait_doctoring_swaps_protection_color_word() {
     }).expect("Trait Doctoring castable");
     drain_stack(&mut g);
     let computed = g.computed_permanent(knight).unwrap();
-    assert!(computed.keywords.contains(&Keyword::Protection(Color::Blue)), "word swapped");
-    assert!(!computed.keywords.contains(&Keyword::Protection(Color::Red)));
+    assert!(computed.keywords().contains(&Keyword::Protection(Color::Blue)), "word swapped");
+    assert!(!computed.keywords().contains(&Keyword::Protection(Color::Red)));
 }
 
 /// CR 612 / 305.7 — the basic-land-type mode turns a Forest into an Island
@@ -1455,7 +1455,7 @@ fn trait_doctoring_swaps_basic_land_type() {
     }).expect("Trait Doctoring castable");
     drain_stack(&mut g);
     let computed = g.computed_permanent(forest).unwrap();
-    assert_eq!(computed.subtypes.land_types, vec![LandType::Island], "type line swapped");
+    assert_eq!(computed.subtypes().land_types, vec![LandType::Island], "type line swapped");
 }
 
 // ── Bloodrush ─────────────────────────────────────────────────────────────────
@@ -1481,7 +1481,7 @@ fn ghor_clan_rampager_bloodrush_pumps_and_grants_trample() {
     drain_stack(&mut g);
     let a = g.computed_permanent(attacker).unwrap();
     assert_eq!((a.power, a.toughness), (6, 6), "2/2 +4/+4");
-    assert!(a.keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(a.keywords().contains(&Keyword::Trample), "gained trample");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == rampager),
         "the Bloodrush card was discarded as a cost");
 }
@@ -1570,7 +1570,7 @@ fn distortion_strike_pumps_and_unblockable() {
     crabomination::game::cast_at(&mut g, spell, Target::Permanent(c));
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 2), "2/2 +1/+0");
-    assert!(cp.keywords.contains(&Keyword::Unblockable), "can't be blocked");
+    assert!(cp.keywords().contains(&Keyword::Unblockable), "can't be blocked");
 }
 
 #[test]
@@ -1586,7 +1586,7 @@ fn tainted_strike_grants_infect() {
     crabomination::game::cast_at(&mut g, spell, Target::Permanent(c));
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!(cp.power, 3, "2 +1");
-    assert!(cp.keywords.contains(&Keyword::Infect), "gained infect");
+    assert!(cp.keywords().contains(&Keyword::Infect), "gained infect");
 }
 
 #[test]
@@ -1620,7 +1620,7 @@ fn artful_dodge_makes_target_unblockable() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     crabomination::game::cast_at(&mut g, spell, Target::Permanent(c));
-    assert!(g.computed_permanent(c).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(c).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 #[test]
@@ -1672,7 +1672,7 @@ fn act_of_treason_steals_until_end_of_turn() {
     let v = g.battlefield_find(victim).unwrap();
     assert_eq!(v.controller, 0, "control stolen");
     assert!(!v.tapped, "untapped");
-    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 #[test]
@@ -1687,7 +1687,7 @@ fn traitorous_blood_grants_trample() {
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     crabomination::game::cast_at(&mut g, spell, Target::Permanent(victim));
-    let kws = g.computed_permanent(victim).unwrap().keywords.clone();
+    let kws = g.computed_permanent(victim).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
 }
 
@@ -2077,7 +2077,7 @@ fn shifting_ceratops_uncounterable_and_modal_grant() {
         card_id: dino, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("modal grant");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(dino).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(dino).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Thrun regenerates out of a destroy.
@@ -2140,7 +2140,7 @@ fn heart_of_kiran_crews_and_attacks() {
     g.perform_action(GameAction::Crew { vehicle: heart, crew_creatures: vec![crew] })
         .expect("crew 3 paid by a 6-power body");
     let v = g.computed_permanent(heart).unwrap();
-    assert!(v.card_types.contains(&CardType::Creature), "animated by crewing");
+    assert!(v.card_types().contains(&CardType::Creature), "animated by crewing");
     assert_eq!((v.power, v.toughness), (4, 4));
 }
 

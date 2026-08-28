@@ -19,7 +19,7 @@ fn sidewinder_and_fury_grant_combat_keywords() {
     g.add_card_to_battlefield(0, catalog::sidewinder_sliver());
     g.add_card_to_battlefield(0, catalog::fury_sliver());
     let opp = g.add_card_to_battlefield(1, catalog::striking_sliver());
-    let kws = &g.computed_permanent(opp).unwrap().keywords;
+    let kws = g.computed_permanent(opp).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Flanking), "all-Sliver flanking reaches the opponent");
     assert!(kws.contains(&Keyword::DoubleStrike));
 }
@@ -69,11 +69,11 @@ fn groundshaker_and_cloudshredder_grants() {
     g.add_card_to_battlefield(0, catalog::groundshaker_sliver());
     let cs = g.add_card_to_battlefield(0, catalog::cloudshredder_sliver());
     let opp = g.add_card_to_battlefield(1, catalog::plated_sliver());
-    let kws = &g.computed_permanent(cs).unwrap().keywords;
+    let kws = g.computed_permanent(cs).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Trample));
     assert!(kws.contains(&Keyword::Flying));
     assert!(kws.contains(&Keyword::Haste));
-    assert!(!g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(!g.computed_permanent(opp).unwrap().keywords().contains(&Keyword::Trample),
         "yours-only trample");
 }
 
@@ -277,7 +277,7 @@ fn thunder_brute_paid_tribute_gets_counters() {
     cast(&mut g, t);
     let c = g.battlefield_find(t).unwrap();
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3, "tribute 3 paid");
-    assert!(!g.computed_permanent(t).unwrap().keywords.contains(&crabomination::card::Keyword::Haste));
+    assert!(!g.computed_permanent(t).unwrap().keywords().contains(&crabomination::card::Keyword::Haste));
 }
 
 /// Snake of the Golden Grove: tribute declined → gain 4.
@@ -506,7 +506,7 @@ fn dormant_sliver_defender_and_cantrip() {
     let s = g.add_card_to_hand(0, catalog::plated_sliver());
     g.players[0].mana_pool.add(Color::White, 1);
     cast(&mut g, s);
-    assert!(g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(s).unwrap().keywords().contains(&Keyword::Defender));
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "hand count: -cast +draw, net +1 over the pre-add baseline");
 }
 
@@ -608,7 +608,7 @@ fn ward_sliver_grants_chosen_protection() {
     assert!(
         g.computed_permanent(other)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Protection(Color::Red)),
         "protection from the chosen color reaches every Sliver"
     );
@@ -971,9 +971,9 @@ fn syphon_sliver_and_nirkana_basics() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::syphon_sliver());
     let s = g.add_card_to_battlefield(0, catalog::plated_sliver());
-    assert!(g.computed_permanent(s).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(s).unwrap().keywords().contains(&Keyword::Lifelink));
     let theirs = g.add_card_to_battlefield(1, catalog::plated_sliver());
-    assert!(!g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Lifelink),
+    assert!(!g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Lifelink),
         "opponent's Slivers don't get lifelink");
 
     let nirkana = g.add_card_to_battlefield(0, catalog::nirkana_revenant());
@@ -1041,10 +1041,10 @@ fn scion_of_oona_buffs_other_faeries() {
     let sprite = g.add_card_to_battlefield(0, catalog::spellstutter_sprite());
     let c = g.computed_permanent(sprite).unwrap();
     assert_eq!((c.power, c.toughness), (2, 2));
-    assert!(c.keywords.contains(&Keyword::Shroud));
+    assert!(c.keywords().contains(&Keyword::Shroud));
     let c = g.computed_permanent(scion).unwrap();
     assert_eq!((c.power, c.toughness), (1, 1), "Scion doesn't buff itself");
-    assert!(!c.keywords.contains(&Keyword::Shroud));
+    assert!(!c.keywords().contains(&Keyword::Shroud));
 }
 
 /// Sower of Temptation steals a creature until it leaves the battlefield.
@@ -1322,7 +1322,7 @@ fn faerie_conclave_animates() {
     }).expect("animate");
     drain_stack(&mut g);
     let c = g.computed_permanent(fc).unwrap();
-    assert!(c.card_types.contains(&CardType::Creature));
+    assert!(c.card_types().contains(&CardType::Creature));
     assert_eq!((c.power, c.toughness), (2, 1));
 }
 
@@ -1780,7 +1780,7 @@ fn whirler_rogue_thopters_and_unblockable() {
         card_id: id, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("tap two artifacts for unblockable");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
     assert!(thopters.iter().all(|t| g.battlefield_find(*t).unwrap().tapped),
         "the Thopters paid the tap cost");
 }
@@ -1806,9 +1806,9 @@ fn militia_bugler_digs_for_small_creature() {
 fn ice_fang_coatl_conditional_deathtouch() {
     let mut g = two_player_game();
     let coatl = g.add_card_to_battlefield(0, catalog::ice_fang_coatl());
-    assert!(!g.computed_permanent(coatl).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(!g.computed_permanent(coatl).unwrap().keywords().contains(&Keyword::Deathtouch));
     for _ in 0..3 { g.add_card_to_battlefield(0, catalog::snow_covered_island()); }
-    assert!(g.computed_permanent(coatl).unwrap().keywords.contains(&Keyword::Deathtouch),
+    assert!(g.computed_permanent(coatl).unwrap().keywords().contains(&Keyword::Deathtouch),
         "three other snow permanents turn deathtouch on");
 }
 

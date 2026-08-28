@@ -81,7 +81,7 @@ fn cr_702_43b_modular_filter_is_value_agnostic() {
     let one = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_worker());
     let six = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_overseer());
     for id in [one, six] {
-        assert!(g.computed_permanent(id).unwrap().keywords.iter().any(|k| matches!(k, Keyword::Modular(_))));
+        assert!(g.computed_permanent(id).unwrap().keywords().iter().any(|k| matches!(k, Keyword::Modular(_))));
     }
     g.step = TurnStep::Upkeep;
     g.fire_step_triggers(TurnStep::Upkeep);

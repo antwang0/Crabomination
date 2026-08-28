@@ -71,12 +71,12 @@ fn boros_guildmage_grants_haste_and_first_strike() {
         card_id: gm, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("haste");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Haste));
     g.perform_action(GameAction::ActivateAbility {
         card_id: gm, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
     }).expect("first strike");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::FirstStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::FirstStrike));
 }
 
 #[test]
@@ -168,7 +168,7 @@ fn fists_of_ironwood_mints_two_saprolings_and_grants_trample() {
     }).expect("cast aura");
     drain_stack(&mut g);
     assert_eq!(count_tokens(&g, "Saproling"), 2, "two Saprolings on ETB");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Trample),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Trample),
         "enchanted creature has trample");
 }
 
@@ -246,7 +246,7 @@ fn streetbreaker_wurm_is_a_vanilla_six_four() {
     let wurm = g.add_card_to_battlefield(0, catalog::streetbreaker_wurm());
     let p = g.computed_permanent(wurm).unwrap();
     assert_eq!((p.power, p.toughness), (6, 4));
-    assert!(p.keywords.is_empty(), "vanilla");
+    assert!(p.keywords().is_empty(), "vanilla");
 }
 
 #[test]
@@ -273,7 +273,7 @@ fn frontier_warmonger_menace_needs_two_blockers() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker, target: AttackTarget::Player(1),
     }])).expect("attack");
-    assert!(g.computed_permanent(attacker).unwrap().keywords.contains(&crabomination::card::Keyword::Menace));
+    assert!(g.computed_permanent(attacker).unwrap().keywords().contains(&crabomination::card::Keyword::Menace));
 }
 
 #[test]

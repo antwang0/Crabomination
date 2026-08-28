@@ -47,7 +47,7 @@ mod recent148 {
         drain_stack(&mut g);
         assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
         assert!(
-            g.computed_permanent(egotist).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible),
+            g.computed_permanent(egotist).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible),
             "gained indestructible",
         );
         assert_eq!(g.players[1].life, opp_life - 1, "opponent drained for 1");
@@ -101,7 +101,7 @@ mod recent148 {
         // A 2/2 manifested creature exists and the Equipment is attached to it.
         let host = g.battlefield_find(eq).unwrap().attached_to.expect("equipped to the manifest");
         assert!(
-            g.computed_permanent(host).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+            g.computed_permanent(host).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
             "equipped creature has flying",
         );
     }
@@ -174,7 +174,7 @@ mod recent149 {
         drain_stack(&mut g);
         let c = g.computed_permanent(bear).unwrap();
         assert_eq!((c.power, c.toughness), (3, 5), "+1/+3");
-        assert!(c.keywords.contains(&Keyword::Reach), "gained reach");
+        assert!(c.keywords().contains(&Keyword::Reach), "gained reach");
         assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
     }
 
@@ -224,7 +224,7 @@ mod recent149 {
         let c = g.battlefield_find(victim).unwrap();
         assert_eq!(c.controller, 0, "gained control of the power-2 creature");
         assert!(!c.tapped, "untapped it");
-        assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Haste), "hasty");
+        assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::Haste), "hasty");
     }
 
     /// Raccoon Rallier's sorcery-speed tap grants a creature haste.
@@ -240,7 +240,7 @@ mod recent149 {
             card_id: rallier, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate Raccoon Rallier");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "granted haste");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "granted haste");
     }
 }
 
@@ -330,7 +330,7 @@ mod recent150 {
         assert!(manifest.is_some(), "manifested a face-down creature");
         let attached_to = g.battlefield_find(mask).unwrap().attached_to;
         assert_eq!(attached_to, manifest, "Equipment attached to the manifest");
-        assert!(g.computed_permanent(manifest.unwrap()).unwrap().keywords.contains(&Keyword::Menace),
+        assert!(g.computed_permanent(manifest.unwrap()).unwrap().keywords().contains(&Keyword::Menace),
             "equipped creature has menace");
     }
 
@@ -347,7 +347,7 @@ mod recent150 {
         drain_stack(&mut g);
         let c = g.computed_permanent(bear).unwrap();
         assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
-        assert!(c.keywords.contains(&Keyword::Flying), "gained flying");
+        assert!(c.keywords().contains(&Keyword::Flying), "gained flying");
     }
 
     /// Expel the Interlopers destroys creatures with power ≥ the chosen number.
@@ -485,7 +485,7 @@ mod recent151 {
         drain_stack(&mut g);
         let c = g.computed_permanent(bat).unwrap();
         assert_eq!(c.power, 2, "Bat got +1/+0 on lifegain");
-        assert!(c.keywords.contains(&Keyword::Deathtouch), "still deathtouch");
+        assert!(c.keywords().contains(&Keyword::Deathtouch), "still deathtouch");
     }
 }
 
@@ -679,7 +679,7 @@ mod recent153 {
         drain_stack(&mut g);
         let c = g.computed_permanent(crab).unwrap();
         assert_eq!((c.power, c.toughness), (2, 3), "0/5 → 2/3 after +2/-2");
-        assert!(!c.keywords.contains(&Keyword::Flying), "no flying (sanity)");
+        assert!(!c.keywords().contains(&Keyword::Flying), "no flying (sanity)");
     }
 }
 
@@ -839,7 +839,7 @@ mod recent155 {
         }).expect("cast Call a Surprise Witness");
         drain_stack(&mut g);
         assert!(g.battlefield_find(dead).is_some(), "reanimated to the battlefield");
-        assert!(g.computed_permanent(dead).unwrap().keywords.contains(&Keyword::Flying),
+        assert!(g.computed_permanent(dead).unwrap().keywords().contains(&Keyword::Flying),
             "the flying counter grants flying");
     }
 }
@@ -999,7 +999,7 @@ mod recent157 {
         assert!(g
             .computed_permanent(r)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::CantBeBlockedByPowerAtMost(2)));
     }
 
@@ -1063,7 +1063,7 @@ mod recent157 {
         g.players[0].creatures_entered_this_turn.push(ally);
         attack_with(&mut g, warden);
         assert!(
-            g.computed_permanent(warden).unwrap().keywords.contains(&Keyword::Flying),
+            g.computed_permanent(warden).unwrap().keywords().contains(&Keyword::Flying),
             "gained flying after another creature entered this turn"
         );
     }
@@ -1111,9 +1111,9 @@ mod recent158 {
     fn omenport_vigilante_double_strike_on_crime() {
         let mut g = two_player_game();
         let v = g.add_card_to_battlefield(0, catalog::omenport_vigilante());
-        assert!(!g.computed_permanent(v).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(!g.computed_permanent(v).unwrap().keywords().contains(&Keyword::DoubleStrike));
         g.players[0].committed_crime_this_turn = true;
-        assert!(g.computed_permanent(v).unwrap().keywords.contains(&Keyword::DoubleStrike), "crime → double strike");
+        assert!(g.computed_permanent(v).unwrap().keywords().contains(&Keyword::DoubleStrike), "crime → double strike");
     }
 
     /// Essence Channeler flies after you lose life, and grows on lifegain.
@@ -1121,10 +1121,10 @@ mod recent158 {
     fn essence_channeler_lost_life_flying_and_grows() {
         let mut g = two_player_game();
         let ec = g.add_card_to_battlefield(0, catalog::essence_channeler());
-        assert!(!g.computed_permanent(ec).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(!g.computed_permanent(ec).unwrap().keywords().contains(&Keyword::Flying));
         g.players[0].lost_life_this_turn = true;
         let c = g.computed_permanent(ec).unwrap();
-        assert!(c.keywords.contains(&Keyword::Flying) && c.keywords.contains(&Keyword::Vigilance), "lost life → flying + vigilance");
+        assert!(c.keywords().contains(&Keyword::Flying) && c.keywords().contains(&Keyword::Vigilance), "lost life → flying + vigilance");
         // Gaining life adds a +1/+1 counter.
         g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 3 }]);
         drain_stack(&mut g);
@@ -1154,7 +1154,7 @@ mod recent158 {
         g.priority.player_with_priority = 0;
         g.fire_step_triggers(TurnStep::End);
         drain_stack(&mut g);
-        assert!(g.computed_permanent(smith).unwrap().keywords.contains(&Keyword::Flying), "gained a flying counter");
+        assert!(g.computed_permanent(smith).unwrap().keywords().contains(&Keyword::Flying), "gained a flying counter");
     }
 
     /// Mourner's Surprise returns a creature card and mints a Mercenary.
@@ -1203,7 +1203,7 @@ mod recent159 {
         drain_stack(&mut g);
         let c = g.computed_permanent(bear).unwrap();
         assert_eq!((c.power, c.toughness), (5, 5), "+3/+3");
-        assert!(c.keywords.contains(&Keyword::Trample), "gained trample");
+        assert!(c.keywords().contains(&Keyword::Trample), "gained trample");
     }
 
     /// Festerleech's activated pump only fires once each turn.
@@ -1596,7 +1596,7 @@ mod recent162 {
         })
         .expect("activate can't-block");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock));
+        assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantBlock));
     }
 
     /// Searslicer Goblin's Raid mints a Goblin at end step after you attacked.
@@ -1624,9 +1624,9 @@ mod recent162 {
         let cp = g.computed_permanent(c).unwrap();
         assert_eq!((cp.power, cp.toughness), (7, 7));
         for k in [Keyword::FirstStrike, Keyword::Vigilance, Keyword::Menace, Keyword::Trample, Keyword::Reach, Keyword::Lifelink] {
-            assert!(cp.keywords.contains(&k), "missing {k:?}");
+            assert!(cp.keywords().contains(&k), "missing {k:?}");
         }
-        assert!(cp.keywords.contains(&Keyword::Ward(WardCost::Life(7))), "Ward—pay 7 life");
+        assert!(cp.keywords().contains(&Keyword::Ward(WardCost::Life(7))), "Ward—pay 7 life");
     }
 
     /// Preposterous Proportions gives your team +10/+10 and vigilance.
@@ -1646,7 +1646,7 @@ mod recent162 {
         for id in [a, b] {
             let cp = g.computed_permanent(id).unwrap();
             assert_eq!((cp.power, cp.toughness), (12, 12), "+10/+10");
-            assert!(cp.keywords.contains(&Keyword::Vigilance), "gained vigilance");
+            assert!(cp.keywords().contains(&Keyword::Vigilance), "gained vigilance");
         }
     }
 
@@ -1740,7 +1740,7 @@ mod recent162 {
             drain_stack(&mut g);
         }
         assert_eq!(g.battlefield_find(squire).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
-        assert!(g.computed_permanent(squire).unwrap().keywords.contains(&Keyword::Flying), "3 counters → flying");
+        assert!(g.computed_permanent(squire).unwrap().keywords().contains(&Keyword::Flying), "3 counters → flying");
     }
 
     /// Luminous Rebuke destroys a creature, and is cheaper against a tapped one.

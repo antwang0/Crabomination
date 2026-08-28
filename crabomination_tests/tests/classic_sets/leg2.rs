@@ -117,7 +117,7 @@ fn hammerheim_strips_landwalk() {
     assert!(
         !g.computed_permanent(cat)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::Landwalk(_)))
     );
@@ -239,9 +239,9 @@ fn moat_stops_nonfliers_attacking() {
 fn gravity_sphere_strips_flying() {
     let mut g = main_phase();
     let bees = g.add_card_to_battlefield(0, catalog::killer_bees());
-    assert!(g.computed_permanent(bees).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bees).unwrap().keywords().contains(&Keyword::Flying));
     g.add_card_to_battlefield(1, catalog::gravity_sphere());
-    assert!(!g.computed_permanent(bees).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(bees).unwrap().keywords().contains(&Keyword::Flying));
     assert!(catalog::gravity_sphere().supertypes.contains(&Supertype::World));
 }
 
@@ -493,7 +493,7 @@ fn the_filtered_anthems_only_hit_their_filter() {
     let wall = g.add_card_to_battlefield(0, catalog::wall_of_earth());
     let cp = g.computed_permanent(wall).unwrap();
     assert_eq!(cp.power, 1);
-    assert!(cp.keywords.contains(&Keyword::Banding));
+    assert!(cp.keywords().contains(&Keyword::Banding));
 }
 
 /// Kei Takahashi's shield eats the first 2 damage.
@@ -522,7 +522,7 @@ fn pradesh_gypsies_and_pixie_queen() {
     let queen = g.add_card_to_battlefield(0, catalog::pixie_queen());
     g.clear_sickness(queen);
     activate(&mut g, 0, queen, 0, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Ragnar regenerates; Killer Bees grows.

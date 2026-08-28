@@ -10,7 +10,7 @@ use crabomination::mana::Color;
 fn battering_wurm_blocks_only_by_equal_or_greater_power() {
     let mut g = two_player_game();
     let bw = g.add_card_to_battlefield(0, catalog::battering_wurm());
-    let kw = g.computed_permanent(bw).unwrap().keywords.clone();
+    let kw = g.computed_permanent(bw).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::CantBeBlockedByPowerLess));
 }
 
@@ -34,7 +34,7 @@ fn caustic_rain_exiles_a_land() {
 fn daggerclaw_imp_flies_and_cant_block() {
     let mut g = two_player_game();
     let di = g.add_card_to_battlefield(0, catalog::daggerclaw_imp());
-    let kw = g.computed_permanent(di).unwrap().keywords.clone();
+    let kw = g.computed_permanent(di).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::CantBlock));
 }
 
@@ -42,7 +42,7 @@ fn daggerclaw_imp_flies_and_cant_block() {
 fn dryad_sophisticate_has_nonbasic_landwalk() {
     let mut g = two_player_game();
     let ds = g.add_card_to_battlefield(0, catalog::dryad_sophisticate());
-    assert!(g.computed_permanent(ds).unwrap().keywords.iter().any(|k| matches!(
+    assert!(g.computed_permanent(ds).unwrap().keywords().iter().any(|k| matches!(
         k,
         Keyword::LandwalkFiltered(_)
     )));
@@ -107,5 +107,5 @@ fn abyssal_nocturnus_grows_when_an_opponent_discards() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(an).unwrap();
     assert_eq!(cp.power, 4, "+2/+2 on the opponent's discard");
-    assert!(cp.keywords.contains(&Keyword::Fear), "and gains fear");
+    assert!(cp.keywords().contains(&Keyword::Fear), "and gains fear");
 }

@@ -44,7 +44,7 @@ fn corpse_blockade_gains_deathtouch_by_sacrifice() {
         card_id: blockade, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("sac for deathtouch");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(blockade).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(blockade).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 #[test]

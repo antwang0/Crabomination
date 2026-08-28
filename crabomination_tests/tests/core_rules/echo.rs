@@ -218,8 +218,8 @@ fn treetop_village_animates() {
     }).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(village).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Trample));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample));
 }

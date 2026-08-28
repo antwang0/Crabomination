@@ -171,8 +171,8 @@ fn walking_desecration_forces_the_named_tribe() {
     let b = g.add_card_to_battlefield(1, bear());
     let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
     activate(&mut g, 0, desecration, 0, None);
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::MustAttack));
-    assert!(!g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::MustAttack));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::MustAttack));
+    assert!(!g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::MustAttack));
 }
 
 /// Endemic Plague sweeps everything sharing a type with the sacrificed creature.
@@ -359,8 +359,8 @@ fn aurification_walls_off_its_attackers() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(attacker).unwrap().counter_count(CounterType::Gold), 1);
     let computed = g.computed_permanent(attacker).unwrap();
-    assert!(computed.keywords.contains(&Keyword::Defender));
-    assert!(computed.subtypes.creature_types.contains(&CreatureType::Wall));
+    assert!(computed.keywords().contains(&Keyword::Defender));
+    assert!(computed.subtypes().creature_types.contains(&CreatureType::Wall));
 
     let mut ev2 = vec![];
     g.destroy_permanent(gold, false, &mut ev2);

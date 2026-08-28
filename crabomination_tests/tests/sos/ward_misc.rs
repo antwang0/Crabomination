@@ -463,7 +463,7 @@ fn applied_geometry_copy_of_a_land_is_a_land_creature() {
     );
     let computed = g.computed_permanent(id).expect("token is on the battlefield");
     assert!(
-        computed.card_types.contains(&CardType::Creature),
+        computed.card_types().contains(&CardType::Creature),
         "'in addition to its other types' makes it a creature, not just a Fractal land",
     );
     assert_eq!(computed.power, 6, "0/0 base + six +1/+1 counters");

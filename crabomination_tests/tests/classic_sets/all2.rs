@@ -141,7 +141,7 @@ fn enslaved_scout_buys_mountainwalk() {
     assert!(
         g.computed_permanent(scout)
             .expect("scout")
-            .keywords
+            .keywords()
             .contains(&crabomination::card::Keyword::Landwalk(
                 crabomination::card::LandType::Mountain
             ))

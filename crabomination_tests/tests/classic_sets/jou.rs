@@ -78,7 +78,7 @@ fn akroan_line_breaker_heroic_pumps_and_sneaks() {
     );
     let cp = g.computed_permanent(breaker).unwrap();
     assert_eq!(cp.power, 2 + 2 - 6, "heroic +2/+0 on top of the Aura's -6/-0");
-    assert!(cp.keywords.contains(&Keyword::Intimidate));
+    assert!(cp.keywords().contains(&Keyword::Intimidate));
 }
 
 /// The Centaur lord pumps and keywords its band, not itself twice.
@@ -89,7 +89,7 @@ fn pheres_band_warchief_leads_the_centaurs() {
     let other = g.add_card_to_battlefield(0, catalog::pheres_band_thunderhoof());
     assert_eq!(g.computed_permanent(chief).map(|c| (c.power, c.toughness)), Some((3, 3)));
     assert_eq!(g.computed_permanent(other).map(|c| (c.power, c.toughness)), Some((4, 5)));
-    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(other).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Felhide Petrifier hands deathtouch to your other Minotaurs.
@@ -99,8 +99,8 @@ fn felhide_petrifier_arms_the_minotaurs() {
     g.add_card_to_battlefield(0, catalog::felhide_petrifier());
     let mino = g.add_card_to_battlefield(0, catalog::pensive_minotaur());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(mino).unwrap().keywords.contains(&Keyword::Deathtouch));
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(mino).unwrap().keywords().contains(&Keyword::Deathtouch));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Cyclops of Eternal Fury hastes the team.
@@ -109,7 +109,7 @@ fn cyclops_of_eternal_fury_hastes_the_team() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::cyclops_of_eternal_fury());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Extinguish All Hope spares enchantment creatures.
@@ -310,7 +310,7 @@ fn strive_charges_a_colored_rider_per_extra_target() {
     .expect("strive for two");
     for id in [a, b] {
         let cp = g.computed_permanent(id).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Indestructible), "both got the grant");
+        assert!(cp.keywords().contains(&Keyword::Indestructible), "both got the grant");
     }
     assert_eq!(g.computed_permanent(a).unwrap().power, 3);
 }
@@ -329,7 +329,7 @@ fn strive_single_target_costs_the_printed_price() {
     );
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 2));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Fireball's generic per-target rider still works after the Strive rewrite.
@@ -388,7 +388,7 @@ fn harness_by_force_steals_and_hastes() {
     let c = g.battlefield_find(bear).unwrap();
     assert_eq!(c.controller, 0);
     assert!(!c.tapped);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Hour of Need exiles and hands the owner a 4/4 Sphinx.
@@ -415,7 +415,7 @@ fn twinflame_mints_a_transient_copy() {
         .filter(|c| c.definition.name == "Grizzly Bears" && c.is_token)
         .collect();
     assert_eq!(copies.len(), 1);
-    assert!(g.computed_permanent(copies[0].id).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(copies[0].id).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Solidarity of Heroes doubles the +1/+1 counters on its targets.
@@ -677,7 +677,7 @@ fn swarmborn_giant_reaches_when_monstrous() {
     let mut g = main_phase();
     let giant = g.add_card_to_battlefield(0, catalog::swarmborn_giant());
     g.clear_sickness(giant);
-    assert!(!g.computed_permanent(giant).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(!g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Reach));
     g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Green, 2);
     g.perform_action(GameAction::ActivateAbility {
@@ -689,7 +689,7 @@ fn swarmborn_giant_reaches_when_monstrous() {
     })
     .expect("monstrosity 2");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(giant).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(g.computed_permanent(giant).unwrap().keywords().contains(&Keyword::Reach));
 }
 
 /// Starfall's rider only bites an enchantment creature's controller.
@@ -881,7 +881,7 @@ fn hypnotic_siren_bestow_steals_the_host() {
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen");
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Armament of Nyx only arms an enchantment creature.
@@ -904,9 +904,9 @@ fn armament_of_nyx_reads_the_host_types() {
         .expect("enchant");
         drain_stack(&mut g);
     }
-    assert!(g.computed_permanent(nyx).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(nyx).unwrap().keywords().contains(&Keyword::DoubleStrike));
     assert!(
-        g.computed_permanent(plain).unwrap().keywords.contains(&Keyword::DealsNoCombatDamage),
+        g.computed_permanent(plain).unwrap().keywords().contains(&Keyword::DealsNoCombatDamage),
         "a nonenchantment host deals no damage instead"
     );
 }

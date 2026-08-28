@@ -153,7 +153,7 @@ mod recent268 {
         g.resolve_effect(&effect, &ctx).unwrap();
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "+1/+0");
-        assert!(cp.keywords.contains(&Keyword::Indestructible));
+        assert!(cp.keywords().contains(&Keyword::Indestructible));
     }
 
     /// Arms of Hadar shrinks all of a player's creatures.
@@ -434,7 +434,7 @@ mod recent271 {
         .expect("activate sac-menace");
         drain_stack(&mut g);
         let cp = g.computed_permanent(dropper).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Menace), "gained menace");
+        assert!(cp.keywords().contains(&Keyword::Menace), "gained menace");
         assert_eq!(
             g.battlefield_find(dropper).unwrap().counter_count(CounterType::PlusOnePlusOne),
             1,
@@ -505,8 +505,8 @@ mod recent271 {
         let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
         g.resolve_effect(&effect, &ctx).unwrap();
         let cp = g.computed_permanent(bear).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Deathtouch));
-        assert!(cp.keywords.contains(&Keyword::Indestructible));
+        assert!(cp.keywords().contains(&Keyword::Deathtouch));
+        assert!(cp.keywords().contains(&Keyword::Indestructible));
     }
 
     /// Benalish Sleeper's kicked ETB forces an edict on each player.
@@ -544,7 +544,7 @@ mod recent271 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(av).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "-1/-1");
-        assert!(cp.keywords.contains(&Keyword::Flying), "gained the chosen keyword");
+        assert!(cp.keywords().contains(&Keyword::Flying), "gained the chosen keyword");
     }
 }
 
@@ -685,9 +685,9 @@ mod recent274 {
         let ctx = EffectContext::for_ability(e, 0, None);
         g.resolve_effect(&effect, &ctx).unwrap();
         let p = g.computed_permanent(e).unwrap();
-        assert!(p.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+        assert!(p.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
         assert_eq!((p.power, p.toughness), (3, 3), "3/3 body");
-        assert!(p.keywords.contains(&crabomination::card::Keyword::Flying), "gains flying");
+        assert!(p.keywords().contains(&crabomination::card::Keyword::Flying), "gains flying");
     }
 
     /// Jolene's attack trigger only fires when a power-4+ attacker is declared, and
@@ -842,7 +842,7 @@ mod recent276 {
         g.resolve_effect(&catalog::burning_suns_fury().effect.clone(), &ctx).unwrap();
         let p = g.computed_permanent(a).unwrap();
         assert_eq!(p.power, 4, "+2/+0");
-        assert!(p.keywords.contains(&crabomination::card::Keyword::Haste), "gains haste");
+        assert!(p.keywords().contains(&crabomination::card::Keyword::Haste), "gains haste");
         assert!(catalog::burning_suns_fury().keywords.contains(&crabomination::card::Keyword::Convoke));
     }
 }
@@ -926,7 +926,7 @@ mod recent278 {
         ctx.kicked = true;
         g.resolve_effect(&effect, &ctx).unwrap();
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Menace),
+            g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Menace),
             "team gained menace when kicked",
         );
     }
@@ -947,7 +947,7 @@ mod recent278 {
         g2.resolve_effect(&catalog::colossal_growth().effect.clone(), &kctx).unwrap();
         let p = g2.computed_permanent(bear2).unwrap();
         assert_eq!(p.power, 6, "kicked +4/+4");
-        assert!(p.keywords.contains(&crabomination::card::Keyword::Trample), "kicked grants trample");
+        assert!(p.keywords().contains(&crabomination::card::Keyword::Trample), "kicked grants trample");
     }
 
     /// Civic Gardener untaps a target on attack.
@@ -1224,7 +1224,7 @@ mod recent281 {
         g.resolve_effect(&catalog::escape_from_orthanc().effect.clone(), &ctx).unwrap();
         let p = g.computed_permanent(bear).unwrap();
         assert_eq!((p.power, p.toughness), (3, 5), "+1/+3");
-        assert!(p.keywords.contains(&crabomination::card::Keyword::Flying), "gains flying");
+        assert!(p.keywords().contains(&crabomination::card::Keyword::Flying), "gains flying");
         assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
     }
 
@@ -1238,7 +1238,7 @@ mod recent281 {
         g.resolve_effect(&catalog::gimlis_fury().effect.clone(), &ctx).unwrap();
         let p = g.computed_permanent(bear).unwrap();
         assert_eq!(p.power, 5, "+3/+2");
-        assert!(!p.keywords.contains(&crabomination::card::Keyword::Trample), "no trample for a nonlegend");
+        assert!(!p.keywords().contains(&crabomination::card::Keyword::Trample), "no trample for a nonlegend");
     }
 
     /// East-Mark Cavalier destroys the Goblin/Orc it damages in combat, and its

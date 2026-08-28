@@ -103,7 +103,7 @@ fn cr_611_2c_a_resolved_pump_locks_its_set_but_a_static_does_not() {
     g.add_card_to_battlefield(0, catalog::glorious_anthem());
     assert_eq!(g.computed_permanent(late).unwrap().power, 3, "the static sees it");
     assert_eq!(g.computed_permanent(early).unwrap().power, 4);
-    assert!(!g.computed_permanent(late).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(late).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Invasion Plans hands the block declaration to the attacker; the bot on

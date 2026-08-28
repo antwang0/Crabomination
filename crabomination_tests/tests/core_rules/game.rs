@@ -2348,7 +2348,7 @@ fn layer_keyword_grants_flying() {
     }];
     let bear_id = g.add_card_to_battlefield(0, bear_def);
     let cp = g.computed_permanent(bear_id).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Flying));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
 }
 
 #[test]
@@ -2633,7 +2633,7 @@ fn psychic_frog_exiles_three_graveyard_cards_for_flying() {
     for _ in 0..4 {
         g.add_card_to_graveyard(0, catalog::island());
     }
-    assert!(!g.computed_permanent(frog).unwrap().keywords.contains(&crabomination::card::Keyword::Flying));
+    assert!(!g.computed_permanent(frog).unwrap().keywords().contains(&crabomination::card::Keyword::Flying));
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: frog, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
@@ -2642,7 +2642,7 @@ fn psychic_frog_exiles_three_graveyard_cards_for_flying() {
 
     assert_eq!(g.exile.len(), 3, "three graveyard cards are exiled as the cost");
     assert_eq!(g.players[0].graveyard.len(), 1, "one card remains in the graveyard");
-    assert!(g.computed_permanent(frog).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+    assert!(g.computed_permanent(frog).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
         "Psychic Frog gains flying until end of turn");
 }
 
@@ -5651,7 +5651,7 @@ fn infect_spell_damage_to_player_grants_poison_per_cr_702_90b() {
         .keywords
         .push(Keyword::Infect);
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Infect),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Infect),
         "bear should now have Infect"
     );
 
@@ -7339,7 +7339,7 @@ fn cr_702_122_crew_requires_total_power_at_least_n() {
         vehicle: coach, crew_creatures: vec![one_power],
     }).expect("2 power satisfies crew 2");
     assert!(g.computed_permanent(coach).unwrap()
-        .card_types.contains(&crabomination::card::CardType::Creature));
+        .card_types().contains(&crabomination::card::CardType::Creature));
 }
 
 /// CR 301.7 — a Vehicle is not a creature until an effect (Crew) turns it
@@ -7349,7 +7349,7 @@ fn cr_301_7_vehicle_is_not_a_creature_until_crewed() {
     let mut g = two_player_game();
     let coach = g.add_card_to_battlefield(0, catalog::strixhaven_skycoach());
     assert!(!g.computed_permanent(coach).unwrap()
-        .card_types.contains(&crabomination::card::CardType::Creature),
+        .card_types().contains(&crabomination::card::CardType::Creature),
         "uncrewed Vehicle is a noncreature artifact");
     // It still carries printed P/T characteristics (CR 301.7) even uncrewed.
     assert_eq!(coach_printed_power(&g, coach), 3);
@@ -8088,7 +8088,7 @@ fn frozen_layers_match_unfrozen_computation() {
     });
     for (a, b) in unfrozen.iter().zip(frozen.iter()) {
         assert_eq!((a.id, a.power, a.toughness), (b.id, b.power, b.toughness));
-        assert_eq!(a.keywords, b.keywords);
+        assert_eq!(a.keywords(), b.keywords());
     }
     assert_eq!(unfrozen.iter().find(|c| c.id == bear).unwrap().power, 3, "anthem applied");
     // Post-scope mutations are seen again (memo cleared).
@@ -8129,11 +8129,11 @@ fn cr_613_7_eot_grant_after_lose_all_abilities_survives() {
     let a = g.add_card_to_hand(0, lose_all());
     cast_at(&mut g, a, Target::Permanent(bird));
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(bird).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(bird).unwrap().keywords().contains(&Keyword::Flying));
     let b = g.add_card_to_hand(0, grant_flying());
     cast_at(&mut g, b, Target::Permanent(bird));
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bird).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(bird).unwrap().keywords().contains(&Keyword::Flying),
         "later grant survives earlier ability loss");
 
     // Grant before losing abilities → stripped.
@@ -8145,7 +8145,7 @@ fn cr_613_7_eot_grant_after_lose_all_abilities_survives() {
     let b = g.add_card_to_hand(0, lose_all());
     cast_at(&mut g, b, Target::Permanent(bear));
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "earlier grant is stripped by later ability loss");
 }
 

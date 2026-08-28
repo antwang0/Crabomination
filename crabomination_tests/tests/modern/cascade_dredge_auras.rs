@@ -280,8 +280,8 @@ fn gift_of_orzhova_attaches_and_buffs_the_creature() {
     let view = g.compute_battlefield();
     let buffed = view.iter().find(|c| c.id == bears).expect("bears present");
     assert_eq!((buffed.power, buffed.toughness), (3, 3), "enchanted creature is +1/+1");
-    assert!(buffed.keywords.contains(&crabomination::card::Keyword::Flying), "gains flying");
-    assert!(buffed.keywords.contains(&crabomination::card::Keyword::Lifelink), "gains lifelink");
+    assert!(buffed.keywords().contains(&crabomination::card::Keyword::Flying), "gains flying");
+    assert!(buffed.keywords().contains(&crabomination::card::Keyword::Lifelink), "gains lifelink");
 }
 
 /// When the enchanted creature leaves, the orphaned Aura is put into the
@@ -361,7 +361,7 @@ fn maelstrom_wanderer_double_cascades_and_grants_haste() {
     // The Wanderer's static grants haste to your creatures.
     let view = g.compute_battlefield();
     let bear_view = view.iter().find(|c| c.id == b1).expect("bear present");
-    assert!(bear_view.keywords.contains(&crabomination::card::Keyword::Haste),
+    assert!(bear_view.keywords().contains(&crabomination::card::Keyword::Haste),
         "creatures you control have haste");
 }
 
@@ -437,7 +437,7 @@ fn rancor_buffs_plus_two_zero_and_grants_trample() {
     let view = g.compute_battlefield();
     let buffed = view.iter().find(|c| c.id == bears).expect("bears present");
     assert_eq!((buffed.power, buffed.toughness), (4, 2), "Rancor is +2/+0");
-    assert!(buffed.keywords.contains(&crabomination::card::Keyword::Trample), "Rancor grants trample");
+    assert!(buffed.keywords().contains(&crabomination::card::Keyword::Trample), "Rancor grants trample");
 }
 
 #[test]
@@ -627,7 +627,7 @@ fn kruin_outlaw_gains_double_strike_and_werewolf_menace_anthem() {
     // The anthem grants menace to other Werewolves (computed via layers).
     let view = g.compute_battlefield();
     let waif = view.iter().find(|c| c.id == pack).unwrap();
-    assert!(waif.keywords.contains(&Keyword::Menace), "werewolf gains menace from Terror");
+    assert!(waif.keywords().contains(&Keyword::Menace), "werewolf gains menace from Terror");
 }
 
 #[test]
@@ -1019,7 +1019,7 @@ fn spectral_flight_grants_plus_two_two_and_flying() {
     let view = g.compute_battlefield();
     let c = view.iter().find(|c| c.id == bears).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4));
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Flying));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Flying));
 }
 
 /// Pacifism stops the enchanted creature from attacking (CR — granted
@@ -1039,7 +1039,7 @@ fn pacifism_stops_the_creature_attacking() {
     drain_stack(&mut g);
     let view = g.compute_battlefield();
     let c = view.iter().find(|c| c.id == bears).unwrap();
-    assert!(c.keywords.contains(&crabomination::card::Keyword::CantAttack));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::CantAttack));
     // Declaring it as an attacker is now rejected.
     g.step = TurnStep::DeclareAttackers;
     let err = g.perform_action(GameAction::DeclareAttackers(vec![Attack {

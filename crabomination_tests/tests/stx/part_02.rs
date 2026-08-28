@@ -241,12 +241,12 @@ fn vortex_runner_grows_and_unblockable_with_eight_lands() {
     // Under 8 lands → base 2/3, blockable.
     let lo = g.computed_permanent(id).unwrap();
     assert_eq!((lo.power, lo.toughness), (2, 3));
-    assert!(!lo.keywords.contains(&Keyword::Unblockable));
+    assert!(!lo.keywords().contains(&Keyword::Unblockable));
     // Reach 8 lands → +1/+0 and can't be blocked.
     for _ in 0..8 { g.add_card_to_battlefield(0, catalog::forest()); }
     let hi = g.computed_permanent(id).unwrap();
     assert_eq!((hi.power, hi.toughness), (3, 3));
-    assert!(hi.keywords.contains(&Keyword::Unblockable), "8+ lands → unblockable");
+    assert!(hi.keywords().contains(&Keyword::Unblockable), "8+ lands → unblockable");
 }
 
 // ── Inspiring Veteran ───────────────────────────────────────────────────
@@ -745,7 +745,7 @@ fn show_of_aggression_pumps_each_friendly_creature_and_grants_haste() {
             bid, bv.power(), bv.toughness()
         );
         assert!(
-            cv.keywords.contains(&Keyword::Haste),
+            cv.keywords().contains(&Keyword::Haste),
             "bear {:?} should have Haste from Show of Aggression",
             bid
         );
@@ -753,7 +753,7 @@ fn show_of_aggression_pumps_each_friendly_creature_and_grants_haste() {
     // Opp bear unchanged.
     let opp = g.computed_permanent(opp_bear).expect("opp bear computed");
     assert_eq!(opp.power, 2, "opp bear stays 2/2");
-    assert!(!opp.keywords.contains(&Keyword::Haste), "no haste for opp");
+    assert!(!opp.keywords().contains(&Keyword::Haste), "no haste for opp");
 }
 
 // ── Past in Flames (STA reprint, Innistrad) ────────────────────────────────
@@ -965,7 +965,7 @@ fn enthusiastic_study_pumps_three_one_and_grants_trample() {
     assert_eq!(cv.power, 5, "bear pumped to 5/3 (+3/+1)");
     assert_eq!(cv.toughness, 3, "bear pumped to 5/3 (+3/+1)");
     assert!(
-        cv.keywords.contains(&Keyword::Trample),
+        cv.keywords().contains(&Keyword::Trample),
         "trample is granted unconditionally"
     );
 }
@@ -994,7 +994,7 @@ fn enthusiastic_study_learns_on_resolution() {
 
     let cv = g.computed_permanent(bear).expect("bear computed");
     assert_eq!(cv.power, 5, "+3/+1 lands regardless of prior spells");
-    assert!(cv.keywords.contains(&Keyword::Trample), "trample always granted");
+    assert!(cv.keywords().contains(&Keyword::Trample), "trample always granted");
     // -1 (cast) +1 (Learn → draw fallback) = hand size unchanged.
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "Learn drew a card");
 }
@@ -1578,7 +1578,7 @@ fn shore_up_untaps_and_grants_hexproof() {
     assert!(!bear_card.tapped, "Bear should be untapped");
     let cp = g.computed_permanent(bear).unwrap();
     assert!(
-        cp.keywords.contains(&Keyword::Hexproof),
+        cp.keywords().contains(&Keyword::Hexproof),
         "Bear should have Hexproof for the turn"
     );
 }
@@ -1744,11 +1744,11 @@ fn filth_in_graveyard_grants_swampwalk_with_swamp() {
     // Keyword::Landwalk).
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).unwrap().keywords
+    assert!(!g.computed_permanent(bear).unwrap().keywords()
         .contains(&Keyword::Landwalk(LandType::Swamp)), "no swampwalk without Filth");
     g.add_card_to_graveyard(0, catalog::filth());
     g.add_card_to_battlefield(0, catalog::swamp());
-    assert!(g.computed_permanent(bear).unwrap().keywords
+    assert!(g.computed_permanent(bear).unwrap().keywords()
         .contains(&Keyword::Landwalk(LandType::Swamp)),
         "bear gains swampwalk from Filth in gy + Swamp controlled");
 }
@@ -1764,14 +1764,14 @@ fn anger_in_graveyard_grants_haste_with_mountain() {
 
     // No Anger anywhere — bear has no haste.
     let base = g.computed_permanent(bear).unwrap();
-    assert!(!base.keywords.contains(&Keyword::Haste),
+    assert!(!base.keywords().contains(&Keyword::Haste),
         "bear has no haste without Anger in gy");
 
     // Anger in gy + you control a Mountain → haste granted.
     g.add_card_to_graveyard(0, catalog::anger());
     g.add_card_to_battlefield(0, catalog::mountain());
     let with_anger = g.computed_permanent(bear).unwrap();
-    assert!(with_anger.keywords.contains(&Keyword::Haste),
+    assert!(with_anger.keywords().contains(&Keyword::Haste),
         "bear gains haste from Anger in gy + Mountain controlled");
 }
 
@@ -1786,7 +1786,7 @@ fn anger_in_graveyard_requires_mountain_to_grant_haste() {
     g.add_card_to_battlefield(0, catalog::plains());
 
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::Haste),
+    assert!(!cp.keywords().contains(&Keyword::Haste),
         "Anger anthem requires a Mountain — Plains doesn't trigger it");
 }
 
@@ -1802,8 +1802,8 @@ fn anger_only_grants_haste_to_its_owners_creatures() {
 
     let mine = g.computed_permanent(my_bear).unwrap();
     let theirs = g.computed_permanent(opp_bear).unwrap();
-    assert!(mine.keywords.contains(&Keyword::Haste), "my bear gets haste");
-    assert!(!theirs.keywords.contains(&Keyword::Haste),
+    assert!(mine.keywords().contains(&Keyword::Haste), "my bear gets haste");
+    assert!(!theirs.keywords().contains(&Keyword::Haste),
         "opp bear does not get haste (not Anger's owner)");
 }
 
@@ -1817,13 +1817,13 @@ fn wonder_in_graveyard_grants_flying_with_island() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
     let base = g.computed_permanent(bear).unwrap();
-    assert!(!base.keywords.contains(&Keyword::Flying),
+    assert!(!base.keywords().contains(&Keyword::Flying),
         "bear has no flying without Wonder in gy");
 
     g.add_card_to_graveyard(0, catalog::wonder());
     g.add_card_to_battlefield(0, catalog::island());
     let with_wonder = g.computed_permanent(bear).unwrap();
-    assert!(with_wonder.keywords.contains(&Keyword::Flying),
+    assert!(with_wonder.keywords().contains(&Keyword::Flying),
         "bear gains flying from Wonder in gy + Island controlled");
 }
 
@@ -1835,13 +1835,13 @@ fn brawn_in_graveyard_grants_trample_with_forest() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
     let base = g.computed_permanent(bear).unwrap();
-    assert!(!base.keywords.contains(&Keyword::Trample),
+    assert!(!base.keywords().contains(&Keyword::Trample),
         "bear has no trample without Brawn in gy");
 
     g.add_card_to_graveyard(0, catalog::brawn());
     g.add_card_to_battlefield(0, catalog::forest());
     let with_brawn = g.computed_permanent(bear).unwrap();
-    assert!(with_brawn.keywords.contains(&Keyword::Trample),
+    assert!(with_brawn.keywords().contains(&Keyword::Trample),
         "bear gains trample from Brawn in gy + Forest controlled");
 }
 
@@ -1853,13 +1853,13 @@ fn valor_in_graveyard_grants_first_strike_with_plains() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
     let base = g.computed_permanent(bear).unwrap();
-    assert!(!base.keywords.contains(&Keyword::FirstStrike),
+    assert!(!base.keywords().contains(&Keyword::FirstStrike),
         "bear has no first strike without Valor in gy");
 
     g.add_card_to_graveyard(0, catalog::valor());
     g.add_card_to_battlefield(0, catalog::plains());
     let with_valor = g.computed_permanent(bear).unwrap();
-    assert!(with_valor.keywords.contains(&Keyword::FirstStrike),
+    assert!(with_valor.keywords().contains(&Keyword::FirstStrike),
         "bear gains first strike from Valor in gy + Plains controlled");
 }
 
@@ -2161,8 +2161,8 @@ fn kasminas_transmutation_strips_flying_from_target() {
     drain_stack(&mut g);
 
     let cp = g.computed_permanent(angel).expect("Angel still on bf");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "Flying stripped");
-    assert!(!cp.keywords.contains(&Keyword::Vigilance), "Vigilance stripped");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "Flying stripped");
+    assert!(!cp.keywords().contains(&Keyword::Vigilance), "Vigilance stripped");
     assert!(cp.lost_all_abilities, "lost_all_abilities flag set");
 }
 
@@ -3474,7 +3474,7 @@ fn fervent_strike_pumps_target_and_grants_trample() {
 
     let b = g.computed_permanent(bear).expect("bear");
     assert_eq!(b.power, 4, "+2/+0 pump");
-    assert!(b.keywords.contains(&Keyword::Trample), "trample granted");
+    assert!(b.keywords().contains(&Keyword::Trample), "trample granted");
 }
 
 // ── Elemental Summoning (modern_decks push) ─────────────────────────────
@@ -3803,7 +3803,7 @@ fn steady_stance_pumps_three_toughness_and_grants_vigilance() {
 
     let b = g.computed_permanent(bear).expect("bear");
     assert_eq!(b.toughness, 5, "+0/+3 toughness pump");
-    assert!(b.keywords.contains(&Keyword::Vigilance), "vigilance granted");
+    assert!(b.keywords().contains(&Keyword::Vigilance), "vigilance granted");
 }
 
 #[test]
@@ -4052,7 +4052,7 @@ fn slip_through_space_grants_unblockable_and_draws() {
     drain_stack(&mut g);
 
     let b = g.computed_permanent(bear).expect("bear");
-    assert!(b.keywords.contains(&Keyword::Unblockable), "granted unblockable");
+    assert!(b.keywords().contains(&Keyword::Unblockable), "granted unblockable");
     // -1 cast + 1 draw = 0 net
     assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
 }

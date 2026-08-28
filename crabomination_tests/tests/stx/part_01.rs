@@ -425,7 +425,7 @@ fn hall_monitor_makes_a_creature_unable_to_block() {
     }).expect("{1}{R},{T}: can't block");
     drain_stack(&mut g);
     let b = g.compute_battlefield().into_iter().find(|c| c.id == blocker).unwrap();
-    assert!(b.keywords.contains(&Keyword::CantBlock), "target can't block this turn");
+    assert!(b.keywords().contains(&Keyword::CantBlock), "target can't block this turn");
 }
 
 #[test]
@@ -1753,7 +1753,7 @@ fn big_play_pumps_grants_reach_and_a_counter() {
     let b = g.computed_permanent(bear).unwrap();
     // 2/2 base + a +1/+1 counter + the +2/+2 EOT pump = 5/5.
     assert_eq!((b.power, b.toughness), (5, 5));
-    assert!(b.keywords.contains(&Keyword::Reach), "gains reach EOT");
+    assert!(b.keywords().contains(&Keyword::Reach), "gains reach EOT");
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
@@ -1803,7 +1803,7 @@ fn mage_hunters_mark_pumps_target_and_grants_menace() {
 
     let computed = g.computed_permanent(bear).unwrap();
     assert_eq!(computed.power, 5, "bear should be 2+3=5 power");
-    assert!(computed.keywords.contains(&Keyword::Menace),
+    assert!(computed.keywords().contains(&Keyword::Menace),
         "bear should gain menace");
 }
 
@@ -2264,7 +2264,7 @@ fn take_up_the_shield_buffs_toughness_and_grants_indestructible() {
     assert_eq!(comp.power, 2, "bear power unchanged");
     assert_eq!(comp.toughness, 5, "bear at 2+3=5 toughness");
     assert!(
-        comp.keywords.contains(&Keyword::Indestructible),
+        comp.keywords().contains(&Keyword::Indestructible),
         "should grant indestructible EOT"
     );
 }
@@ -2815,7 +2815,7 @@ fn expanded_anatomy_lands_two_counters_and_grants_vigilance() {
     assert_eq!(card.power(), 4, "Bear becomes 4/4");
     assert_eq!(card.toughness(), 4);
     let computed = g.computed_permanent(bear).expect("Bear computed");
-    assert!(computed.keywords.contains(&Keyword::Vigilance),
+    assert!(computed.keywords().contains(&Keyword::Vigilance),
         "Bear gains vigilance until end of turn");
 }
 
@@ -2878,7 +2878,7 @@ fn mercurial_transformation_frog_mode_makes_blue_one_one() {
     drain_stack(&mut g);
     let computed = g.computed_permanent(dragon).expect("Dragon still on bf");
     assert_eq!((computed.power, computed.toughness), (1, 1), "becomes a 1/1 Frog");
-    assert!(!computed.keywords.contains(&Keyword::Flying), "loses all abilities");
+    assert!(!computed.keywords().contains(&Keyword::Flying), "loses all abilities");
     assert!(computed.colors.contains(Color::Blue) && computed.colors.len() == 1,
         "becomes mono-blue");
 }

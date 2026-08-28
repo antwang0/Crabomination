@@ -266,7 +266,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
     type CP = crate::game::layers::ComputedPermanent;
     let computed = state.compute_battlefield();
     let cp = |id: CardId| computed.iter().find(|c| c.id == id);
-    let kw = |c: &CP, k: &Keyword| c.keywords.contains(k);
+    let kw = |c: &CP, k: &Keyword| c.keywords().contains(k);
 
     let lethal_from = |attacker: &CP, defender: &CP| -> bool {
         let p = attacker.power;
@@ -1517,7 +1517,7 @@ fn project_permanent(
         controller: card.controller,
         owner: card.owner,
         card_types: cp
-            .map(|c| c.card_types.to_vec())
+            .map(|c| c.card_types().to_vec())
             .unwrap_or_else(|| card.definition.card_types.clone()),
         tapped: card.tapped,
         damage: card.damage,
@@ -1528,7 +1528,7 @@ fn project_permanent(
         base_power: card.definition.base_power(),
         base_toughness: card.definition.base_toughness(),
         keywords: cp
-            .map(|c| c.keywords.to_vec())
+            .map(|c| c.keywords().to_vec())
             .unwrap_or_else(|| card.definition.keywords.clone()),
         counters: card.counters.iter().map(|(k, v)| (*k, *v)).collect(),
         attached_to: card.attached_to,
@@ -1576,11 +1576,11 @@ fn project_permanent(
                 && state
                     .computed_permanent(card.id)
                     .is_some_and(|cp| {
-                        cp.keywords.contains(&crate::card::Keyword::CantAttackIfAttackedLastTurn)
+                        cp.keywords().contains(&crate::card::Keyword::CantAttackIfAttackedLastTurn)
                     })),
         attack_toll: state
             .computed_permanent(card.id)
-            .map(|cp| state.attack_block_keyword_tax(card.id, &cp.keywords, true))
+            .map(|cp| state.attack_block_keyword_tax(card.id, cp.keywords(), true))
             .unwrap_or(0),
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
         dies_to_exile: card.definition.dies_to_exile,
@@ -1597,8 +1597,8 @@ fn project_permanent(
         pinned_in_phase: state
             .computed_permanent(card.id)
             .is_some_and(|cp| {
-                cp.keywords.contains(&crate::card::Keyword::Phasing)
-                    && cp.keywords.contains(&crate::card::Keyword::CantPhaseOut)
+                cp.keywords().contains(&crate::card::Keyword::Phasing)
+                    && cp.keywords().contains(&crate::card::Keyword::CantPhaseOut)
             }),
         must_block: card.must_block.is_some(),
         attack_mandated: state
@@ -1645,7 +1645,7 @@ fn project_permanent(
             // (Gideon Blackblade during your turn, Awakening of Vitu-Ghazi's
             // land, manlands) shows its P/T box too.
             let live_creature = cp
-                .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
                 .unwrap_or_else(|| card.definition.is_creature());
             let has_pt_box = live_creature
                 || card.definition.subtypes.artifact_subtypes
@@ -1688,7 +1688,7 @@ fn project_permanent(
         // Singularity, the Ring's emblem) surfaces in the client, matching the
         // legend-rule SBA (CR 704.5j / 613.1c).
         is_legendary: cp
-            .map(|c| c.supertypes.contains(&crate::card::Supertype::Legendary))
+            .map(|c| c.supertypes().contains(&crate::card::Supertype::Legendary))
             .unwrap_or_else(|| {
                 card.definition.supertypes.contains(&crate::card::Supertype::Legendary)
             }),
@@ -1711,7 +1711,7 @@ fn project_permanent(
                 })),
         cant_regenerate: card.cant_regenerate_this_turn,
         is_flagbearer: cp
-            .map(|c| c.subtypes.creature_types.as_slice())
+            .map(|c| c.subtypes().creature_types.as_slice())
             .unwrap_or(&card.definition.subtypes.creature_types)
             .contains(&crate::card::CreatureType::Flagbearer),
         equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
@@ -1725,7 +1725,7 @@ fn project_permanent(
         marked_lethal: {
             let tough = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
             let indestructible = cp
-                .map(|c| c.keywords.contains(&crate::card::Keyword::Indestructible))
+                .map(|c| c.keywords().contains(&crate::card::Keyword::Indestructible))
                 .unwrap_or_else(|| card.has_keyword(&crate::card::Keyword::Indestructible));
             card.definition.is_creature()
                 && !indestructible
@@ -1835,7 +1835,7 @@ fn project_permanent(
                 if label.is_empty() { "{0}".to_string() } else { label }
             }),
         creature_subtypes: cp
-            .map(|c| c.subtypes.creature_types.clone())
+            .map(|c| c.subtypes().creature_types.clone())
             .unwrap_or_else(|| card.definition.subtypes.creature_types.clone()),
         lost_all_abilities: cp.is_some_and(|c| c.lost_all_abilities),
         colors: cp.map(|c| c.colors.to_vec()).unwrap_or_else(|| {

@@ -338,7 +338,7 @@ fn wall_of_caltrops_bands_with_another_wall() {
         .expect("block");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(caltrops).expect("wall").keywords.contains(&Keyword::Banding),
+        g.computed_permanent(caltrops).expect("wall").keywords().contains(&Keyword::Banding),
         "two Walls and nothing else blocking grants banding"
     );
 }
@@ -362,6 +362,6 @@ fn wall_of_caltrops_stays_plain_when_a_non_wall_joins_the_block() {
         .expect("block");
     drain_stack(&mut g);
     assert!(
-        !g.computed_permanent(caltrops).expect("wall").keywords.contains(&Keyword::Banding)
+        !g.computed_permanent(caltrops).expect("wall").keywords().contains(&Keyword::Banding)
     );
 }

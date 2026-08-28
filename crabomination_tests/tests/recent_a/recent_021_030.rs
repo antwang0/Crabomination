@@ -46,7 +46,7 @@ mod recent21 {
         cast_at(&mut g, boost, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4));
-        assert!(cp.keywords.contains(&Keyword::Flying));
+        assert!(cp.keywords().contains(&Keyword::Flying));
     }
 
     /// Boots of Speed grants +1/+0 and haste when equipped.
@@ -62,7 +62,7 @@ mod recent21 {
         g.perform_action(GameAction::Equip { equipment: boots, target: bear }).expect("equip");
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "+1/+0");
-        assert!(cp.keywords.contains(&Keyword::Haste));
+        assert!(cp.keywords().contains(&Keyword::Haste));
     }
 
     /// Ankle Biter has deathtouch.
@@ -70,7 +70,7 @@ mod recent21 {
     fn ankle_biter_has_deathtouch() {
         let mut g = two_player_game();
         let snake = g.add_card_to_battlefield(0, catalog::ankle_biter());
-        assert!(g.computed_permanent(snake).unwrap().keywords.contains(&Keyword::Deathtouch));
+        assert!(g.computed_permanent(snake).unwrap().keywords().contains(&Keyword::Deathtouch));
     }
 
     /// Trick Shot deals 6 to a creature.
@@ -547,8 +547,8 @@ mod recent23 {
         let pool = g.add_card_to_battlefield(0, catalog::thrumming_hivepool());
         assert!(
             g.computed_permanent(s1)
-                .is_some_and(|c| c.keywords.contains(&Keyword::DoubleStrike)
-                    && c.keywords.contains(&Keyword::Haste)),
+                .is_some_and(|c| c.keywords().contains(&Keyword::DoubleStrike)
+                    && c.keywords().contains(&Keyword::Haste)),
             "Slivers gain double strike + haste"
         );
         // Affinity: {6} reduced by {1} per Sliver (2 on board) → {4} generic.
@@ -584,7 +584,7 @@ mod recent23 {
         drain_stack(&mut g);
         assert!(
             g.computed_permanent(bill)
-                .is_some_and(|c| c.keywords.contains(&Keyword::AssignsCombatDamageByToughness)),
+                .is_some_and(|c| c.keywords().contains(&Keyword::AssignsCombatDamageByToughness)),
             "Bill now assigns combat damage by toughness"
         );
         let foods_after = g
@@ -688,7 +688,7 @@ mod recent23 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&Keyword::Trample), "granted trample");
+        assert!(cp.keywords().contains(&Keyword::Trample), "granted trample");
     }
 
     /// Most Valuable Slayer's attack trigger gives an attacking creature +1/+0 and
@@ -707,7 +707,7 @@ mod recent23 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(slayer).unwrap();
         assert_eq!(cp.power, 3, "attack trigger pumped +1/+0");
-        assert!(cp.keywords.contains(&Keyword::FirstStrike), "gained first strike");
+        assert!(cp.keywords().contains(&Keyword::FirstStrike), "gained first strike");
     }
 
     /// Twist Reality's first mode counters a spell on the stack.
@@ -761,7 +761,7 @@ mod recent23 {
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.controller, 0, "gained control of the creature");
         assert!(!g.battlefield.iter().find(|c| c.id == bear).unwrap().tapped, "untapped");
-        assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+        assert!(cp.keywords().contains(&Keyword::Haste), "gained haste");
     }
 
     /// Unstoppable Plan untaps your nonland permanents at your end step.
@@ -943,7 +943,7 @@ mod recent23 {
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
             "two +1/+1 counters");
-        assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Indestructible),
+        assert!(cp.keywords().contains(&Keyword::Trample) && cp.keywords().contains(&Keyword::Indestructible),
             "granted trample + indestructible");
     }
 
@@ -956,7 +956,7 @@ mod recent23 {
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
         let phantom = g.add_card_to_battlefield(0, catalog::marketwatch_phantom());
-        assert!(!g.computed_permanent(phantom).unwrap().keywords.contains(&Keyword::Flying),
+        assert!(!g.computed_permanent(phantom).unwrap().keywords().contains(&Keyword::Flying),
             "no flying yet");
         // Cast a 2/1 (power ≤2) through the real ETB funnel so the trigger fires.
         let piker = g.add_card_to_hand(0, catalog::goblin_piker());
@@ -966,7 +966,7 @@ mod recent23 {
             card_id: piker, target: None, additional_targets: vec![], mode: None, x_value: None,
         }).expect("cast a small creature");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(phantom).unwrap().keywords.contains(&Keyword::Flying),
+        assert!(g.computed_permanent(phantom).unwrap().keywords().contains(&Keyword::Flying),
             "gained flying when a small creature entered");
     }
 }
@@ -1027,7 +1027,7 @@ mod recent24 {
         cast_at(&mut g, bg, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (6, 6));
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
     }
 
     /// Cult Healer's Eerie trigger fires when an enchantment (a Room) enters,
@@ -1042,7 +1042,7 @@ mod recent24 {
             .expect("cast Room (enchantment enters)");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(healer).unwrap().keywords.contains(&Keyword::Lifelink),
+            g.computed_permanent(healer).unwrap().keywords().contains(&Keyword::Lifelink),
             "Cult Healer gained lifelink from Eerie",
         );
     }
@@ -1149,7 +1149,7 @@ mod recent24 {
         g.fire_step_triggers(TurnStep::PostCombatMain);
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(ac).unwrap().keywords.contains(&Keyword::Flying),
+            g.computed_permanent(ac).unwrap().keywords().contains(&Keyword::Flying),
             "gained flying from Survival",
         );
     }
@@ -1484,8 +1484,8 @@ mod recent24 {
         cast_at(&mut g, mo, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 counter");
-        assert!(cp.keywords.contains(&Keyword::Indestructible));
-        assert!(cp.keywords.contains(&Keyword::Deathtouch));
+        assert!(cp.keywords().contains(&Keyword::Indestructible));
+        assert!(cp.keywords().contains(&Keyword::Deathtouch));
     }
 
     /// Pedal to the Metal pumps +X/+0 where X is the cast X.
@@ -1506,7 +1506,7 @@ mod recent24 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 5, "+3/+0");
-        assert!(cp.keywords.contains(&Keyword::FirstStrike));
+        assert!(cp.keywords().contains(&Keyword::FirstStrike));
     }
 
     /// Fuel the Flames deals 2 to each creature.
@@ -1760,7 +1760,7 @@ mod recent24 {
         g.perform_action(GameAction::Crew { vehicle: chariot, crew_creatures: vec![pilot] })
             .expect("2-power pilot crews Crew 4 via the +2 rider");
         assert!(
-            g.computed_permanent(chariot).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+            g.computed_permanent(chariot).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
             "Vehicle is crewed (an artifact creature)",
         );
     }
@@ -1903,7 +1903,7 @@ mod recent24 {
             .expect("crew");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(veh).unwrap().keywords.contains(&Keyword::Flying),
+            g.computed_permanent(veh).unwrap().keywords().contains(&Keyword::Flying),
             "crewed Vehicle gained flying from Canyon Vaulter's trigger",
         );
     }
@@ -1923,7 +1923,7 @@ mod recent24 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(veh).unwrap();
         assert_eq!(cp.power, 5, "+2/+0");
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
     }
 
     /// The crew trigger is gated to the controller's main phase: crewing during
@@ -1941,7 +1941,7 @@ mod recent24 {
             .expect("crew");
         drain_stack(&mut g);
         assert!(
-            !g.computed_permanent(veh).unwrap().keywords.contains(&Keyword::Flying),
+            !g.computed_permanent(veh).unwrap().keywords().contains(&Keyword::Flying),
             "no flying — crew happened outside the main phase",
         );
     }
@@ -1969,7 +1969,7 @@ mod recent24 {
         ready(&mut g);
         let hand = g.players[0].hand.len();
         cast_at(&mut g, e, Target::Permanent(bear));
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
         assert_eq!(g.players[0].hand.len(), hand, "spell left hand (-1) and drew (+1)");
     }
 
@@ -2024,7 +2024,7 @@ mod recent24 {
         cast_at(&mut g, giv, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4));
-        assert!(cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Grasping Longneck gains 2 life when it dies; it has reach.
@@ -2032,7 +2032,7 @@ mod recent24 {
     fn grasping_longneck_reach_and_dies_gain() {
         let mut g = two_player_game();
         let gl = g.add_card_to_battlefield(0, catalog::grasping_longneck());
-        assert!(g.computed_permanent(gl).unwrap().keywords.contains(&Keyword::Reach));
+        assert!(g.computed_permanent(gl).unwrap().keywords().contains(&Keyword::Reach));
         g.battlefield_find_mut(gl).unwrap().damage = 2; // lethal vs 2 toughness
         let life = g.players[0].life;
         g.check_state_based_actions();
@@ -2049,8 +2049,8 @@ mod recent24 {
         ready(&mut g);
         cast_at(&mut g, hv, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Deathtouch));
-        assert!(cp.keywords.contains(&Keyword::Indestructible));
+        assert!(cp.keywords().contains(&Keyword::Deathtouch));
+        assert!(cp.keywords().contains(&Keyword::Indestructible));
     }
 
     /// Glimmerburst draws two and makes a Glimmer token.
@@ -2077,7 +2077,7 @@ mod recent24 {
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
         let fg = g.add_card_to_battlefield(0, catalog::friendly_ghost());
-        assert!(g.computed_permanent(fg).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(fg).unwrap().keywords().contains(&Keyword::Flying));
         g.fire_self_etb_triggers(fg, 0);
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
@@ -2173,10 +2173,10 @@ mod recent24 {
         // Three tokens: below the threshold, no flying yet.
         g.add_token_to_battlefield(0, &soldier_1_1());
         g.add_token_to_battlefield(0, &soldier_1_1());
-        assert!(!g.computed_permanent(t1).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(!g.computed_permanent(t1).unwrap().keywords().contains(&Keyword::Flying));
         // Fourth token trips the anthem.
         g.add_token_to_battlefield(0, &soldier_1_1());
-        assert!(g.computed_permanent(t1).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(t1).unwrap().keywords().contains(&Keyword::Flying));
     }
 
     /// A token with CantAttackOrBlockAlone — a soldier fixture for the combat test.
@@ -2278,7 +2278,7 @@ mod recent24 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(mine).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 2), "+1/+0");
-        assert!(cp.keywords.contains(&Keyword::Lifelink), "gains lifelink");
+        assert!(cp.keywords().contains(&Keyword::Lifelink), "gains lifelink");
         assert!(g.battlefield_find(foe).is_none(), "opponent permanent exiled on ETB");
     }
 
@@ -2296,7 +2296,7 @@ mod recent24 {
         })
         .expect("activate Ragged Playmate");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
     }
 
     /// Hand That Feeds gets +2/+0 and menace on attack only with delirium active.
@@ -2323,7 +2323,7 @@ mod recent24 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(hand).unwrap();
         assert_eq!(cp.power, 4, "+2/+0 from delirium");
-        assert!(cp.keywords.contains(&Keyword::Menace), "gains menace");
+        assert!(cp.keywords().contains(&Keyword::Menace), "gains menace");
     }
 
     /// Marauding Dreadship incubates 2 on ETB.
@@ -2406,7 +2406,7 @@ mod recent24 {
         .expect("attack");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Unblockable),
+            g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Unblockable),
             "ally attacker became unblockable",
         );
     }
@@ -2493,7 +2493,7 @@ mod recent24 {
         let gremlins: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Gremlin").map(|c| c.id).collect();
         assert_eq!(gremlins.len(), 3, "three Gremlins");
         let cp = g.computed_permanent(gremlins[0]).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Menace) && cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::Haste) && cp.keywords().contains(&Keyword::Menace) && cp.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Stalked Researcher's Eerie trigger lets it attack despite defender.
@@ -2542,7 +2542,7 @@ mod recent24 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(db).unwrap();
         assert_eq!(cp.power, 4, "+2/+0 → 4/5");
-        assert!(cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Tunnel Surveyor makes a Glimmer token on ETB.
@@ -2659,7 +2659,7 @@ mod recent25 {
         g.clear_sickness(bear);
         attack_unblocked(&mut g, fb);
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch),
+            g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch),
             "ally gained deathtouch"
         );
     }
@@ -2674,7 +2674,7 @@ mod recent25 {
         attack_unblocked(&mut g, he);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "+1/+0 ally");
-        assert!(cp.keywords.contains(&Keyword::Indestructible));
+        assert!(cp.keywords().contains(&Keyword::Indestructible));
     }
 
     /// Infernal Phantom deals damage equal to its power to a player when it dies.
@@ -2828,7 +2828,7 @@ mod recent26 {
             card_id: de, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
         }).expect("activate exhaust");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "ally got haste");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "ally got haste");
         assert_eq!(g.computed_permanent(de).unwrap().power, 3, "self +1/+1 → 3 power");
         // Exhaust: can't activate the same ability twice.
         g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
@@ -2967,7 +2967,7 @@ mod recent27 {
         let s = g.add_card_to_battlefield(0, catalog::brightblade_stoat());
         let cp = g.computed_permanent(s).unwrap();
         assert_eq!((cp.power, cp.toughness), (2, 2));
-        assert!(cp.keywords.contains(&Keyword::FirstStrike) && cp.keywords.contains(&Keyword::Lifelink));
+        assert!(cp.keywords().contains(&Keyword::FirstStrike) && cp.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Pond Prophet draws a card on entry.
@@ -3056,9 +3056,9 @@ mod recent27 {
         let mut g = two_player_game();
         let s = g.add_card_to_battlefield(0, catalog::shrike_force());
         let cp = g.computed_permanent(s).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Flying));
-        assert!(cp.keywords.contains(&Keyword::DoubleStrike));
-        assert!(cp.keywords.contains(&Keyword::Vigilance));
+        assert!(cp.keywords().contains(&Keyword::Flying));
+        assert!(cp.keywords().contains(&Keyword::DoubleStrike));
+        assert!(cp.keywords().contains(&Keyword::Vigilance));
     }
 
     /// Moonrise Cleric gains 1 life when it attacks.
@@ -3318,7 +3318,7 @@ mod recent28 {
         let a = g.add_card_to_battlefield(0, catalog::appendage_amalgam());
         let cp = g.computed_permanent(a).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 2));
-        assert!(cp.keywords.contains(&Keyword::Flash));
+        assert!(cp.keywords().contains(&Keyword::Flash));
     }
 
     /// Gremlin Tamer (recovered orphan) mints a Gremlin when an enchantment you
@@ -3578,7 +3578,7 @@ mod recent29 {
         .expect("activate");
         drain_stack(&mut g);
         let cp = g.computed_permanent(ua).unwrap();
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Indestructible), "gained indestructible");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Indestructible), "gained indestructible");
         assert!(g.battlefield_find(ua).unwrap().tapped, "tapped itself");
     }
 
@@ -3859,7 +3859,7 @@ mod recent30 {
         etb_bf(&mut g, 0, catalog::burner_rocket());
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 2), "+2/+0");
-        assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+        assert!(cp.keywords().contains(&Keyword::Trample), "gained trample");
     }
 
     /// Broadcast Rambler makes a Thopter on entry.
@@ -3891,8 +3891,8 @@ mod recent30 {
         let mut g = two_player_game();
         let ci = g.add_card_to_battlefield(0, catalog::clamorous_ironclad());
         let cp = g.computed_permanent(ci).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Crew(3)));
-        assert!(cp.keywords.contains(&Keyword::Menace));
+        assert!(cp.keywords().contains(&Keyword::Crew(3)));
+        assert!(cp.keywords().contains(&Keyword::Menace));
     }
 
     /// Alacrian Jaguar pumps itself when it attacks while saddled.
@@ -3937,8 +3937,8 @@ mod recent30 {
         .expect("sac ability");
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Indestructible), "counter-creature gained indestructible");
-        assert!(cp.keywords.contains(&Keyword::Hexproof), "and hexproof");
+        assert!(cp.keywords().contains(&Keyword::Indestructible), "counter-creature gained indestructible");
+        assert!(cp.keywords().contains(&Keyword::Hexproof), "and hexproof");
     }
 
     /// Autarch Mammoth makes an Elephant on entry.
@@ -3974,7 +3974,7 @@ mod recent30 {
         let mut g = two_player_game();
         let ec = g.add_card_to_battlefield(0, catalog::endrider_catalyzer());
         g.clear_sickness(ec);
-        assert!(g.computed_permanent(ec).unwrap().keywords.contains(&Keyword::StartYourEngines));
+        assert!(g.computed_permanent(ec).unwrap().keywords().contains(&Keyword::StartYourEngines));
         ready(&mut g);
         let res = g.perform_action(GameAction::ActivateAbility {
             card_id: ec, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
@@ -4060,7 +4060,7 @@ mod recent30 {
         g.add_card_to_battlefield(0, catalog::alacrian_armory());
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (2, 3), "+0/+1");
-        assert!(cp.keywords.contains(&Keyword::Vigilance), "gained vigilance");
+        assert!(cp.keywords().contains(&Keyword::Vigilance), "gained vigilance");
     }
 
     /// Dracosaur Auxiliary pings any target when it attacks while saddled.
@@ -4104,7 +4104,7 @@ mod recent30 {
         let mut g = two_player_game();
         let es = g.add_card_to_battlefield(0, catalog::endrider_spikespitter());
         let cp = g.computed_permanent(es).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Reach));
-        assert!(cp.keywords.contains(&Keyword::StartYourEngines));
+        assert!(cp.keywords().contains(&Keyword::Reach));
+        assert!(cp.keywords().contains(&Keyword::StartYourEngines));
     }
 }

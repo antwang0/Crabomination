@@ -161,7 +161,7 @@ fn xenograft_retypes_your_creatures() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .subtypes
+            .subtypes()
             .creature_types
             .contains(&CreatureType::Sliver)
     );
@@ -348,7 +348,7 @@ fn glistening_oil_grants_infect_and_shrinks() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let oil = g.add_card_to_hand(0, catalog::glistening_oil());
     cast(&mut g, 0, oil, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Infect));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Infect));
     g.step = TurnStep::Untap;
     let _ = g.advance_step(Vec::new());
     drain_stack(&mut g);
@@ -436,9 +436,9 @@ fn mycosynth_fiend_grows_with_opposing_poison() {
 fn viridian_betrayers_needs_a_poisoned_opponent() {
     let mut g = main_phase();
     let elf = g.add_card_to_battlefield(0, catalog::viridian_betrayers());
-    assert!(!g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::Infect));
+    assert!(!g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::Infect));
     g.players[1].poison_counters = 1;
-    assert!(g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::Infect));
+    assert!(g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::Infect));
 }
 
 /// Phyrexian Swarmlord mints an infect Insect per opposing poison counter.
@@ -502,7 +502,7 @@ fn act_of_aggression_steals_a_tapped_creature() {
     let c = g.battlefield_find(bear).unwrap();
     assert_eq!(c.controller, 0);
     assert!(!c.tapped);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Phyrexian Ingester wears the imprinted creature's stats.
@@ -822,7 +822,7 @@ fn bludgeon_brawl_arms_every_artifact() {
     assert!(
         g.computed_permanent(ring)
             .unwrap()
-            .subtypes
+            .subtypes()
             .artifact_subtypes
             .contains(&crabomination::card::ArtifactSubtype::Equipment)
     );

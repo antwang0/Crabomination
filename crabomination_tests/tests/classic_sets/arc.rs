@@ -74,7 +74,7 @@ fn cr_904_11_an_ongoing_scheme_stays_face_up() {
     assert_eq!(g.face_up_schemes(0).len(), 1);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 from the command zone");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Fear));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Fear));
 }
 
 /// CR 904.8 — an ongoing scheme's static functions from the command zone.

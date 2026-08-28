@@ -387,10 +387,10 @@ fn chaos_imps_trample_gated_on_counter() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
     let imps = g.add_card_to_battlefield(0, catalog::chaos_imps());
-    assert!(!g.computed_permanent(imps).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(!g.computed_permanent(imps).unwrap().keywords().contains(&Keyword::Trample),
         "no trample without a counter");
     g.battlefield_find_mut(imps).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(imps).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(imps).unwrap().keywords().contains(&Keyword::Trample),
         "trample once it has a +1/+1 counter");
 }
 
@@ -417,7 +417,7 @@ fn izzet_keyrune_animates() {
     let rune = g.add_card_to_battlefield(0, catalog::izzet_keyrune());
     g.clear_sickness(rune);
     // Not a creature at rest.
-    assert!(!g.computed_permanent(rune).unwrap().card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(!g.computed_permanent(rune).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
     // Animate for {U}{R}.
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -426,7 +426,7 @@ fn izzet_keyrune_animates() {
     }).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(rune).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "became a creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "became a creature");
     assert_eq!((cp.power, cp.toughness), (2, 1), "2/1 Elemental");
 }
 
@@ -435,10 +435,10 @@ fn izzet_keyrune_animates() {
 fn armory_guard_gate_vigilance() {
     let mut g = two_player_game();
     let guard = g.add_card_to_battlefield(0, catalog::armory_guard());
-    assert!(!g.computed_permanent(guard).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(!g.computed_permanent(guard).unwrap().keywords().contains(&Keyword::Vigilance),
         "no vigilance without a Gate");
     g.add_card_to_battlefield(0, catalog::azorius_guildgate());
-    assert!(g.computed_permanent(guard).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(g.computed_permanent(guard).unwrap().keywords().contains(&Keyword::Vigilance),
         "vigilance once you control a Gate");
 }
 
@@ -544,7 +544,7 @@ fn rootborn_defenses_grants_indestructible() {
         card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible),
         "your creature gains indestructible");
 }
 
@@ -706,7 +706,7 @@ fn pursuit_of_flight_pumps_and_grants_flying() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "no flying until activated");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "no flying until activated");
     // Activate the granted {U}: flying ability (index 0 on the enchanted creature).
     g.clear_sickness(bear);
     g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
@@ -714,7 +714,7 @@ fn pursuit_of_flight_pumps_and_grants_flying() {
         card_id: bear, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant flying");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "granted flying until end of turn");
 }
 
@@ -734,7 +734,7 @@ fn knightly_valor_makes_knight_and_buffs() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "granted vigilance");
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Knight"
         && c.definition.keywords.contains(&Keyword::Vigilance)), "made a 2/2 vigilance Knight");
 }
@@ -968,7 +968,7 @@ fn chemisters_trick_overload_hits_each() {
     g.dispatch_triggers_for_events(&evs);
     assert_eq!(g.computed_permanent(a).unwrap().power, 6, "8/8 → 6/8");
     assert_eq!(g.computed_permanent(b).unwrap().power, 0, "2/2 → 0/2");
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::MustAttack), "must attack");
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::MustAttack), "must attack");
 }
 
 // ── Gap wave 8 (guild legends / rares) ───────────────────────────────────────
@@ -1093,7 +1093,7 @@ fn traitorous_instinct_steals() {
     assert_eq!(c.controller, 0, "gained control");
     assert!(!c.tapped, "untapped");
     assert_eq!(g.computed_permanent(foe).unwrap().power, 4, "2/2 → 4/2");
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 /// Wayfaring Temple's P/T equals the number of creatures you control.
@@ -1597,14 +1597,14 @@ fn oak_street_innkeeper_hexproofs_tapped_on_others_turns() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().tapped = true;
     g.active_player_idx = 1; // opponent's turn
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof),
         "tapped creature is hexproof on the opponent's turn");
     g.battlefield_find_mut(bear).unwrap().tapped = false;
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof),
         "untapped creature isn't hexproof");
     g.battlefield_find_mut(bear).unwrap().tapped = true;
     g.active_player_idx = 0; // your own turn
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof),
         "no hexproof during your own turn");
 }
 
@@ -1676,14 +1676,14 @@ fn racecourse_fury_grants_haste() {
     let fury = g.add_card_to_battlefield(0, catalog::racecourse_fury());
     g.battlefield_find_mut(fury).unwrap().attached_to = Some(land);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
     // Index 0 is the land's own mana ability; the granted haste ability is 1.
     g.perform_action(GameAction::ActivateAbility {
         card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant haste");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste),
         "enchanted land granted haste");
 }
 
@@ -1794,10 +1794,10 @@ fn cr_514_2_racecourse_haste_expires_at_cleanup() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant haste");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
     for card in g.battlefield.iter_mut() { card.clear_end_of_turn_effects(); }
     g.expire_end_of_turn_effects();
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste),
         "haste ended at cleanup");
 }
 

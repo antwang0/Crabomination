@@ -89,7 +89,7 @@ fn vigean_hydropon_grafts_but_cant_attack() {
     let h = g.move_card_to_battlefield_for_test(0, catalog::vigean_hydropon());
     let c = g.computed_permanent(h).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5), "Graft 5 → 5/5");
-    assert!(c.keywords.contains(&Keyword::CantAttack) && c.keywords.contains(&Keyword::CantBlock));
+    assert!(c.keywords().contains(&Keyword::CantAttack) && c.keywords().contains(&Keyword::CantBlock));
 }
 
 #[test]
@@ -176,7 +176,7 @@ fn fangren_pathcutter_grants_team_trample() {
         Attack { attacker: ally, target: AttackTarget::Player(1) },
     ])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Trample),
         "the other attacker gained trample");
 }
 

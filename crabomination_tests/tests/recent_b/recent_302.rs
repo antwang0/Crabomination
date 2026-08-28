@@ -45,7 +45,7 @@ fn whiptail_moloch_shoots_your_own_creature() {
 fn utvara_scalper_flies_and_must_attack() {
     let mut g = two_player_game();
     let us = g.add_card_to_battlefield(0, catalog::utvara_scalper());
-    let kw = g.computed_permanent(us).unwrap().keywords.clone();
+    let kw = g.computed_permanent(us).unwrap().keywords().to_vec();
     assert!(kw.contains(&Keyword::Flying) && kw.contains(&Keyword::MustAttack));
 }
 
@@ -53,7 +53,7 @@ fn utvara_scalper_flies_and_must_attack() {
 fn gnat_alley_creeper_dodges_flyers() {
     let mut g = two_player_game();
     let gc = g.add_card_to_battlefield(0, catalog::gnat_alley_creeper());
-    assert!(g.computed_permanent(gc).unwrap().keywords.iter().any(|k| matches!(
+    assert!(g.computed_permanent(gc).unwrap().keywords().iter().any(|k| matches!(
         k,
         Keyword::CantBeBlockedBy(_)
     )));
@@ -157,7 +157,7 @@ fn wakestone_gargoyle_lets_defenders_attack() {
     let wg = g.add_card_to_battlefield(0, catalog::wakestone_gargoyle());
     g.clear_sickness(wg);
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(wg).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(wg).unwrap().keywords().contains(&Keyword::Defender));
     g.step = TurnStep::PreCombatMain;
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);

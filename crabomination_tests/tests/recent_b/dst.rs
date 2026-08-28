@@ -69,13 +69,13 @@ fn darksteel_forge_makes_your_artifacts_indestructible() {
     assert!(!g
         .computed_permanent(plain)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::Indestructible));
     g.add_card_to_battlefield(0, catalog::darksteel_forge());
     assert!(g
         .computed_permanent(plain)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::Indestructible));
 }
 
@@ -92,8 +92,8 @@ fn darksteel_brute_animates_into_a_beast() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(brute).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.card_types.contains(&CardType::Creature));
-    assert!(cp.card_types.contains(&CardType::Artifact));
+    assert!(cp.card_types().contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Artifact));
 }
 
 /// Arcane Spyglass banks a charge per draw, then cashes three in for another.
@@ -147,9 +147,9 @@ fn coretapper_sacrifices_for_two_charges() {
 fn drill_skimmer_gains_shroud_with_a_friend() {
     let mut g = main_phase();
     let skimmer = g.add_card_to_battlefield(0, catalog::drill_skimmer());
-    assert!(!g.computed_permanent(skimmer).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(!g.computed_permanent(skimmer).unwrap().keywords().contains(&Keyword::Shroud));
     g.add_card_to_battlefield(0, catalog::coretapper());
-    assert!(g.computed_permanent(skimmer).unwrap().keywords.contains(&Keyword::Shroud));
+    assert!(g.computed_permanent(skimmer).unwrap().keywords().contains(&Keyword::Shroud));
 }
 
 /// Dross Golem's affinity for Swamps discounts it.
@@ -180,7 +180,7 @@ fn auriok_glaivemaster_grows_when_equipped() {
     let cp = g.computed_permanent(kor).unwrap();
     // 1/1 base + Short Bow's +1/+1 + the Glaivemaster's own equipped bonus.
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Chittering Rats tucks a card off the opponent's hand.
@@ -252,7 +252,7 @@ fn arcbound_overseer_pumps_every_modular_creature() {
     let overseer = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_overseer());
     let worker = g.add_card_to_battlefield_with_counters(0, catalog::arcbound_worker());
     let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(worker).unwrap().keywords.contains(&Keyword::Modular(1)));
+    assert!(g.computed_permanent(worker).unwrap().keywords().contains(&Keyword::Modular(1)));
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(overseer).unwrap().counter_count(CounterType::PlusOnePlusOne), 7);
@@ -401,10 +401,10 @@ fn myr_landshaper_grant_expires_at_end_of_turn() {
     })
     .expect("animate the land's type line");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(land).unwrap().card_types.contains(&CardType::Artifact));
+    assert!(g.computed_permanent(land).unwrap().card_types().contains(&CardType::Artifact));
     let mut events = vec![];
     g.do_cleanup(&mut events);
-    assert!(!g.computed_permanent(land).unwrap().card_types.contains(&CardType::Artifact));
+    assert!(!g.computed_permanent(land).unwrap().card_types().contains(&CardType::Artifact));
 }
 
 /// Vulshok War Boar eats itself when you have no artifact to feed it.
@@ -466,9 +466,9 @@ fn tanglewalker_keys_on_an_opposing_artifact_land() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::tanglewalker());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
     g.add_card_to_battlefield(1, catalog::seat_of_the_synod());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Soulscour leaves artifacts standing.
@@ -548,7 +548,7 @@ fn neurok_transmuter_unmakes_an_artifact_creature() {
     .expect("strip the artifact type");
     drain_stack(&mut g);
     let cp = g.computed_permanent(myr).unwrap();
-    assert!(!cp.card_types.contains(&CardType::Artifact));
+    assert!(!cp.card_types().contains(&CardType::Artifact));
     assert!(cp.colors.contains(Color::Blue));
 }
 
@@ -577,7 +577,7 @@ fn chimeric_egg_charges_then_animates() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(egg).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 6));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Talon of Pain banks a charge per damaging source and fires them back.
@@ -752,14 +752,14 @@ fn pristine_angel_loses_protection_when_tapped() {
     let mut g = main_phase();
     let angel = g.add_card_to_battlefield(0, catalog::pristine_angel());
     let pro_red = Keyword::Protection(Color::Red);
-    assert!(g.computed_permanent(angel).unwrap().keywords.contains(&pro_red));
+    assert!(g.computed_permanent(angel).unwrap().keywords().contains(&pro_red));
     assert!(g
         .computed_permanent(angel)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::ProtectionFromCardType(CardType::Artifact)));
     g.battlefield_find_mut(angel).unwrap().tapped = true;
-    assert!(!g.computed_permanent(angel).unwrap().keywords.contains(&pro_red));
+    assert!(!g.computed_permanent(angel).unwrap().keywords().contains(&pro_red));
 }
 
 /// Screams from Within crawls back out of the graveyard when its host dies.
@@ -856,11 +856,11 @@ fn shield_of_kaldra_protects_its_siblings() {
     assert!(g
         .computed_permanent(shield)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::Indestructible));
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(shield).unwrap().attached_to = Some(bear);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Shunt repoints a single-target spell (CR 115.7).
@@ -916,7 +916,7 @@ fn savage_beating_only_casts_during_your_combat() {
     })
     .expect("combat on your turn is fine");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Scrounge steals an artifact out of an opponent's graveyard.
@@ -947,7 +947,7 @@ fn mycosynth_lattice_relaxes_colors_and_makes_everything_an_artifact() {
     g.add_card_to_battlefield(0, catalog::mycosynth_lattice());
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.colors.is_empty(), "everything is colourless");
-    assert!(cp.card_types.contains(&CardType::Artifact), "everything is an artifact");
+    assert!(cp.card_types().contains(&CardType::Artifact), "everything is an artifact");
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
@@ -1251,7 +1251,7 @@ fn death_mask_duplicant_gains_imprinted_keywords() {
     let mut g = main_phase();
     let dup = g.add_card_to_battlefield(0, catalog::death_mask_duplicant());
     let flier = g.add_card_to_graveyard(0, catalog::serra_angel());
-    assert!(!g.computed_permanent(dup).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(dup).unwrap().keywords().contains(&Keyword::Flying));
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: dup, ability_index: 0, target: Some(Target::Permanent(flier)),
@@ -1259,7 +1259,7 @@ fn death_mask_duplicant_gains_imprinted_keywords() {
     })
     .expect("imprint the Angel");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(dup).unwrap().keywords.clone();
+    let kws = g.computed_permanent(dup).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Flying), "flying bleeds through");
     assert!(!kws.contains(&Keyword::Vigilance), "vigilance isn't on the printed list");
 }

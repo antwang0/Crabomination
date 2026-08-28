@@ -236,7 +236,7 @@ fn daring_leap_grants_flying_and_first_strike() {
     cast(&mut g, 0, leap, Some(Target::Permanent(bears)));
     let cp = g.computed_permanent(bears).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Dark Suspicions bills the difference in hand sizes.
@@ -304,7 +304,7 @@ fn dominarias_judgment_grants_domain_protection() {
     g.add_card_to_battlefield(0, catalog::island());
     let judgment = g.add_card_to_hand(0, catalog::dominarias_judgment());
     cast(&mut g, 0, judgment, None);
-    let kws = g.computed_permanent(bears).unwrap().keywords.clone();
+    let kws = g.computed_permanent(bears).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Protection(Color::Red)));
     assert!(kws.contains(&Keyword::Protection(Color::Blue)));
     assert!(!kws.contains(&Keyword::Protection(Color::Green)), "no Forest, no pro-green");
@@ -472,7 +472,7 @@ fn hobble_pins_and_draws() {
     let before = g.players[0].hand.len();
     cast(&mut g, 0, hobble, Some(Target::Permanent(bears)));
     assert_eq!(g.players[0].hand.len(), before, "aura out, card in");
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::CantAttack));
 }
 
 /// Escape Routes rebuys a white creature.
@@ -534,7 +534,7 @@ fn dralnus_crusade_reshapes_goblins() {
     let cp = g.computed_permanent(goblin).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
     assert_eq!(cp.colors.to_vec(), vec![Color::Black]);
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Zombie));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Zombie));
 }
 
 /// Falling Timber fogs a second creature when kicked.
@@ -624,7 +624,7 @@ fn kavu_recluse_makes_a_forest() {
     assert!(
         g.computed_permanent(island)
             .unwrap()
-            .subtypes
+            .subtypes()
             .land_types
             .contains(&crabomination::card::LandType::Forest)
     );
@@ -639,7 +639,7 @@ fn keldon_mantle_grants_trample() {
     cast(&mut g, 0, mantle, Some(Target::Permanent(bears)));
     let mantle = g.battlefield.iter().find(|c| c.definition.name == "Keldon Mantle").unwrap().id;
     activate(&mut g, 0, mantle, 2, None);
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Maggot Carrier bleeds the whole table.

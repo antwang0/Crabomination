@@ -126,7 +126,7 @@ fn jolrael_animates_their_lands() {
     activate_x(&mut g, 0, jolrael, 0, Some(Target::Player(1)), None);
     let cp = g.computed_permanent(land).expect("computed");
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
 }
 
 /// Mageta wraths everything but itself.
@@ -244,8 +244,8 @@ fn living_terrain_animates_the_enchanted_land() {
     cast(&mut g, 0, aura, Some(Target::Permanent(land)));
     let cp = g.computed_permanent(land).expect("computed");
     assert_eq!((cp.power, cp.toughness), (5, 6));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
 }
 
 /// Mana Vapors costs them their untap step.
@@ -312,7 +312,7 @@ fn panic_attack_stops_three_blockers() {
     drain_stack(&mut g);
     for id in [a, b] {
         assert!(
-            g.computed_permanent(id).unwrap().keywords.contains(&Keyword::CantBlock),
+            g.computed_permanent(id).unwrap().keywords().contains(&Keyword::CantBlock),
             "both are locked out"
         );
     }

@@ -69,7 +69,7 @@ fn cr_602_5e_binding_locks_activation() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell { card_id: aura, target: Some(Target::Permanent(creature)), additional_targets: vec![], mode: None, x_value: None }).expect("cast binding");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(creature).unwrap().keywords.contains(&Keyword::CantActivateAbilities), "binding grants CantActivateAbilities");
+    assert!(g.computed_permanent(creature).unwrap().keywords().contains(&Keyword::CantActivateAbilities), "binding grants CantActivateAbilities");
     g.players[1].mana_pool.add(Color::Green, 1);
     g.players[1].mana_pool.add_colorless(4);
     assert!(g.perform_action(GameAction::ActivateAbility { card_id: creature, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).is_err(),

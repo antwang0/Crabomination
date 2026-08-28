@@ -120,7 +120,7 @@ fn the_static_auras_ride_their_hosts() {
         g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), want_pt);
-        assert!(cp.keywords.contains(&want_kw));
+        assert!(cp.keywords().contains(&want_kw));
     }
 }
 
@@ -752,8 +752,8 @@ fn song_of_serenity_benches_enchanted_creatures() {
     let free = ready(&mut g, 1, catalog::grizzly_bears());
     let aura = g.add_card_to_battlefield(1, catalog::maniacal_rage());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(victim);
-    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::CantAttack));
-    assert!(!g.computed_permanent(free).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::CantAttack));
+    assert!(!g.computed_permanent(free).unwrap().keywords().contains(&Keyword::CantAttack));
 }
 
 /// Spellshock taxes both players two life per spell.

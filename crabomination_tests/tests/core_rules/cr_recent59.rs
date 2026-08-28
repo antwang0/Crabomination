@@ -25,10 +25,10 @@ fn cr_702_161_living_metal_animates_on_your_turn_only() {
     let mut g = two_player_game();
     let slicer = g.add_card_to_battlefield(0, catalog::slicer_high_speed_antagonist());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(slicer).unwrap().card_types.contains(&CardType::Creature));
+    assert!(g.computed_permanent(slicer).unwrap().card_types().contains(&CardType::Creature));
     g.active_player_idx = 1;
     assert!(
-        !g.computed_permanent(slicer).unwrap().card_types.contains(&CardType::Creature),
+        !g.computed_permanent(slicer).unwrap().card_types().contains(&CardType::Creature),
         "it's back to a plain Vehicle on their turn"
     );
 }

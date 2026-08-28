@@ -77,7 +77,7 @@ fn keyword_bodies_are_printed_correctly() {
     ] {
         let id = g.add_card_to_battlefield(0, def);
         let cp = g.computed_permanent(id).expect("permanent");
-        assert!(cp.keywords.contains(&kw), "missing {kw:?}");
+        assert!(cp.keywords().contains(&kw), "missing {kw:?}");
     }
 }
 
@@ -161,7 +161,7 @@ fn root_spider_strikes_first_on_defence() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(spider).expect("spider");
     assert_eq!(cp.power, 3);
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 #[test]
@@ -257,9 +257,9 @@ fn ferozs_ban_taxes_only_creature_spells() {
 fn mystic_decree_grounds_everything() {
     let mut g = main_phase();
     let faerie = g.add_card_to_battlefield(0, catalog::willow_faerie());
-    assert!(g.computed_permanent(faerie).expect("faerie").keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(faerie).expect("faerie").keywords().contains(&Keyword::Flying));
     g.add_card_to_battlefield(1, catalog::mystic_decree());
-    assert!(!g.computed_permanent(faerie).expect("faerie").keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(faerie).expect("faerie").keywords().contains(&Keyword::Flying));
 }
 
 #[test]
@@ -375,7 +375,7 @@ fn veldrane_trades_power_for_forestwalk() {
     activate(&mut g, 0, veldrane, None);
     let cp = g.computed_permanent(veldrane).expect("veldrane");
     assert_eq!(cp.power, 2);
-    assert!(cp.keywords.iter().any(|k| matches!(
+    assert!(cp.keywords().iter().any(|k| matches!(
         k,
         Keyword::Landwalk(crabomination::card::LandType::Forest)
     )));
@@ -415,7 +415,7 @@ fn ambush_gives_every_blocker_first_strike() {
     let ambush = g.add_card_to_hand(0, catalog::ambush());
     cast(&mut g, 0, ambush, None);
     assert!(
-        g.computed_permanent(blocker).expect("blocker").keywords.contains(&Keyword::FirstStrike)
+        g.computed_permanent(blocker).expect("blocker").keywords().contains(&Keyword::FirstStrike)
     );
 }
 
@@ -625,7 +625,7 @@ fn beast_walkers_buy_banding() {
     let mut g = main_phase();
     let walkers = g.add_card_to_battlefield(0, catalog::beast_walkers());
     activate(&mut g, 0, walkers, None);
-    assert!(g.computed_permanent(walkers).expect("walkers").keywords.contains(&Keyword::Banding));
+    assert!(g.computed_permanent(walkers).expect("walkers").keywords().contains(&Keyword::Banding));
 }
 
 #[test]
@@ -651,7 +651,7 @@ fn heart_wolf_goes_down_with_the_dwarf_it_armed() {
     activate(&mut g, 0, wolf, Some(Target::Permanent(real)));
     let cp = g.computed_permanent(real).expect("dwarf");
     assert_eq!(cp.power, 2);
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
     let mut evs = Vec::new();
     g.destroy_permanent(real, false, &mut evs);
     g.dispatch_triggers_for_events(&evs);
@@ -1086,7 +1086,7 @@ fn jinx_retypes_a_land_and_cantrips() {
     let jinx = g.add_card_to_hand(0, catalog::jinx());
     cast(&mut g, 0, jinx, Some(Target::Permanent(mountain)));
     let cp = g.computed_permanent(mountain).expect("land");
-    assert!(cp.subtypes.land_types.contains(&crabomination::card::LandType::Plains));
+    assert!(cp.subtypes().land_types.contains(&crabomination::card::LandType::Plains));
     let hand = g.players[0].hand.len();
     g.active_player_idx = 1;
     g.turn_number += 1;
@@ -1209,7 +1209,7 @@ fn rysorian_badger_eats_the_defenders_graveyard() {
     assert!(
         g.computed_permanent(badger)
             .expect("badger")
-            .keywords
+            .keywords()
             .contains(&Keyword::DealsNoCombatDamage)
     );
 }

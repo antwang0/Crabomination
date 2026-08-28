@@ -86,7 +86,7 @@ fn deathmask_nezumi_scales_with_your_hand() {
     }
     let cp = g.computed_permanent(rat).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3));
-    assert!(cp.keywords.contains(&Keyword::Fear));
+    assert!(cp.keywords().contains(&Keyword::Fear));
 }
 
 /// Gnat Miser shaves a card off each opponent's hand size.
@@ -201,7 +201,7 @@ fn dense_canopy_grounds_flying_blockers() {
     g.add_card_to_battlefield(0, catalog::dense_canopy());
     let flier = g.add_card_to_battlefield(1, catalog::serra_angel());
     assert!(
-        g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::CanBlockOnlyFlying)
+        g.computed_permanent(flier).unwrap().keywords().contains(&Keyword::CanBlockOnlyFlying)
     );
 }
 

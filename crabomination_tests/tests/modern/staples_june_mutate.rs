@@ -284,7 +284,7 @@ fn barkhide_troll_counter_for_hexproof() {
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
     assert_eq!(c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0, "counter paid");
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Hexproof));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Hexproof));
 }
 
 /// Enraged Revolutionary's printed Dethrone grows it when it attacks the
@@ -595,7 +595,7 @@ fn kaheera_anthems_matching_creatures() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 Bear — not a kindred type
     let cp = g.computed_permanent(beast).expect("beast alive");
     assert_eq!((cp.power, cp.toughness), (4, 3), "Beast gets +1/+1 from Kaheera");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "Beast gains vigilance");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "Beast gains vigilance");
     let bp = g.computed_permanent(bear).expect("bear alive");
     assert_eq!((bp.power, bp.toughness), (2, 2), "non-kindred Bear unaffected");
 }
@@ -798,7 +798,7 @@ fn glint_buffs_toughness_and_grants_hexproof() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).expect("bear alive");
     assert_eq!((cp.power, cp.toughness), (2, 5), "+0/+3");
-    assert!(cp.keywords.contains(&Keyword::Hexproof), "gains hexproof");
+    assert!(cp.keywords().contains(&Keyword::Hexproof), "gains hexproof");
 }
 
 #[test]
@@ -901,7 +901,7 @@ fn goring_ceratops_grants_team_double_strike_on_attack() {
         attacker: cera, target: crabomination::game::types::AttackTarget::Player(1),
     }])).expect("declare attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "other creatures gain double strike");
 }
 
@@ -1007,7 +1007,7 @@ fn sonorous_howlbonder_locks_menace_creatures_to_three_blockers() {
     menacer.keywords.push(Keyword::Menace);
     let other = g.add_card_to_battlefield(0, menacer);
     let cp = g.computed_permanent(other).expect("alive");
-    assert!(cp.keywords.contains(&Keyword::CantBeBlockedExceptByN(3)),
+    assert!(cp.keywords().contains(&Keyword::CantBeBlockedExceptByN(3)),
         "menace creature gains the 3-blocker restriction");
 }
 
@@ -1849,7 +1849,7 @@ fn wingfold_pteron_enters_hexproof() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Wingfold Pteron");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Hexproof));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Hexproof));
 }
 
 /// Voracious Greatshark counters a creature spell when it flashes in.
@@ -1893,7 +1893,7 @@ fn heightened_reflexes_pumps_and_first_strikes() {
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!(b.power, 3, "+1/+0");
-    assert!(b.keywords.contains(&Keyword::FirstStrike));
+    assert!(b.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Weaponize the Monsters fires a sacrificed creature at any target.
@@ -1930,7 +1930,7 @@ fn unbreakable_bond_reanimates_with_lifelink() {
     }).expect("cast Unbreakable Bond");
     drain_stack(&mut g);
     assert!(g.battlefield_find(dead_id).is_some(), "creature reanimated");
-    assert!(g.computed_permanent(dead_id).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(dead_id).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 /// Heroes' Reunion gains the target player 7 life.
@@ -2005,7 +2005,7 @@ fn cliffhaven_kitesail_grants_flying() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Cliffhaven Kitesail");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "equipped creature has flying");
 }
 
@@ -2024,7 +2024,7 @@ fn blood_curdle_destroys_and_grants_menace() {
     }).expect("cast Blood Curdle");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "creature destroyed");
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Menace));
 }
 
 /// Helica Glider enters with a chosen flying counter.
@@ -2040,7 +2040,7 @@ fn helica_glider_enters_flying() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Helica Glider");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Maraleaf Pixie taps for green or blue.
@@ -2219,7 +2219,7 @@ fn void_beckoner_cycle_grants_deathtouch() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(mine))]));
     g.perform_action(GameAction::Cycle { card_id: vb, x_value: None }).expect("cycle Void Beckoner");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Almighty Brushwagg pumps itself with its activated ability.
@@ -2370,7 +2370,7 @@ fn boot_nipper_enters_with_chosen_counter() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Boot Nipper");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Deathtouch),
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Deathtouch),
         "chose the deathtouch counter");
 }
 
@@ -2384,7 +2384,7 @@ fn frillscare_mentor_grants_menace_then_pumps_menace_team() {
     g.fire_self_etb_triggers(mentor, 0);
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(beast))]));
     drain_stack(&mut g);
-    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Menace),
+    assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Menace),
         "ETB granted a menace counter");
     // Activate: +1/+1 counter on each menace creature we control.
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -2431,7 +2431,7 @@ fn lavabrink_venturer_parity_protection() {
         g.fire_self_etb_triggers(venturer, 1);
         drain_stack(&mut g);
         let expect_odd = mode == 1;
-        assert!(g.computed_permanent(venturer).unwrap().keywords
+        assert!(g.computed_permanent(venturer).unwrap().keywords()
             .contains(&Keyword::ProtectionFromManaValueParity { odd: expect_odd }));
         let s = g.add_card_to_hand(0, spell);
         g.players[0].mana_pool.add(Color::Black, 2);
@@ -2520,7 +2520,7 @@ fn wingspan_mentor_flying_counter_and_pump() {
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(beast))]));
     g.fire_self_etb_triggers(mentor, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Flying),
         "flying counter granted flying");
     // Activate: +1/+1 counter on each flyer (the now-flying Bears).
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -2717,12 +2717,12 @@ fn spelleater_wolverine_conditional_double_strike() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let wolf = g.add_card_to_battlefield(0, catalog::spelleater_wolverine());
-    assert!(!g.computed_permanent(wolf).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(!g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "no double strike with an empty graveyard");
     g.add_card_to_graveyard(0, catalog::lightning_bolt());
     g.add_card_to_graveyard(0, catalog::ponder());
     g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    assert!(g.computed_permanent(wolf).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(wolf).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "double strike with 3 instants/sorceries");
 }
 
@@ -2736,7 +2736,7 @@ fn pridemalkin_counter_trample() {
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(bear))]));
     g.fire_self_etb_triggers(malkin, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
         "countered creature has trample");
 }
 
@@ -2785,7 +2785,7 @@ fn fully_grown_pump_and_trample_counter() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5), "+3/+3");
-    assert!(c.keywords.contains(&Keyword::Trample), "trample counter");
+    assert!(c.keywords().contains(&Keyword::Trample), "trample counter");
 }
 
 /// Plague Wight shrinks its blockers when it becomes blocked.
@@ -2844,9 +2844,9 @@ fn fight_as_one_buffs_both() {
         additional_targets: vec![Target::Permanent(beast)], mode: None, x_value: None,
     }).expect("cast Fight as One choosing both");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(human).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(human).unwrap().keywords().contains(&Keyword::Indestructible),
         "Human gained indestructible");
-    assert!(g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Indestructible),
         "non-Human gained indestructible");
 }
 
@@ -2925,12 +2925,12 @@ fn gleaming_overseer_zombie_anthem() {
         && c.definition.subtypes.creature_types.contains(&CreatureType::Army))
         .map(|c| c.id).expect("Army token");
     let a = g.computed_permanent(army).unwrap();
-    assert!(a.subtypes.creature_types.contains(&CreatureType::Zombie), "Army is a Zombie");
-    assert!(a.keywords.contains(&Keyword::Hexproof) && a.keywords.contains(&Keyword::Unblockable),
+    assert!(a.subtypes().creature_types.contains(&CreatureType::Zombie), "Army is a Zombie");
+    assert!(a.keywords().contains(&Keyword::Hexproof) && a.keywords().contains(&Keyword::Unblockable),
         "Zombie Army has hexproof + unblockable");
     // The Overseer itself is a Zombie too.
     let o = g.computed_permanent(overseer).unwrap();
-    assert!(o.keywords.contains(&Keyword::Hexproof), "Overseer (a Zombie) has hexproof");
+    assert!(o.keywords().contains(&Keyword::Hexproof), "Overseer (a Zombie) has hexproof");
 }
 
 /// Ferocious Tigorilla enters with a chosen trample or menace counter.
@@ -2944,14 +2944,14 @@ fn ferocious_tigorilla_etb_keyword_counter() {
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
     g.fire_self_etb_triggers(t, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(t).unwrap().keywords.contains(&Keyword::Menace), "chose menace");
+    assert!(g.computed_permanent(t).unwrap().keywords().contains(&Keyword::Menace), "chose menace");
     // Mode 0 = trample.
     let mut g = two_player_game();
     let t = g.add_card_to_battlefield(0, catalog::ferocious_tigorilla());
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(0)]));
     g.fire_self_etb_triggers(t, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(t).unwrap().keywords.contains(&Keyword::Trample), "chose trample");
+    assert!(g.computed_permanent(t).unwrap().keywords().contains(&Keyword::Trample), "chose trample");
 }
 
 /// Glimpse the Cosmos digs three, takes one, bottoms the rest.
@@ -3012,10 +3012,10 @@ fn reptilian_reflection_animates_on_cycle() {
     g.perform_action(GameAction::Cycle { card_id: cyc, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     let c = g.computed_permanent(refl).unwrap();
-    assert!(c.card_types.contains(&CardType::Creature), "became a creature");
+    assert!(c.card_types().contains(&CardType::Creature), "became a creature");
     assert_eq!((c.power, c.toughness), (5, 4));
-    assert!(c.subtypes.creature_types.contains(&CreatureType::Dinosaur));
-    assert!(c.keywords.contains(&Keyword::Trample) && c.keywords.contains(&Keyword::Haste));
+    assert!(c.subtypes().creature_types.contains(&CreatureType::Dinosaur));
+    assert!(c.keywords().contains(&Keyword::Trample) && c.keywords().contains(&Keyword::Haste));
 }
 
 // ── IKO commons/uncommons batch ──────────────────────────────────────────────
@@ -3216,7 +3216,7 @@ fn avian_oddity_cycle_grants_flying() {
     g.perform_action(GameAction::Cycle { card_id: oddity, x_value: None }).expect("cycle");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "flying counter grants flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "flying counter grants flying");
     assert_eq!(
         g.battlefield_find(bear).unwrap().keyword_counters.get(&Keyword::Flying).copied(),
         Some(1));
@@ -3287,7 +3287,7 @@ fn luminous_broodmoth_returns_with_flying() {
     let back = g.battlefield_find(bear).expect("bear returned to battlefield");
     assert_eq!(back.controller, 0);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "returned with a flying counter");
+    assert!(cp.keywords().contains(&Keyword::Flying), "returned with a flying counter");
 }
 
 /// Quartzwood Crasher mints an X/X Dinosaur Beast on combat damage (CR 510.2).
@@ -3371,7 +3371,7 @@ fn unexpected_fangs_adds_counters() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 counter");
-    assert!(cp.keywords.contains(&Keyword::Lifelink), "lifelink counter");
+    assert!(cp.keywords().contains(&Keyword::Lifelink), "lifelink counter");
 }
 
 /// Go for Blood makes your creature fight an opponent's, and has Cycling.
@@ -3783,7 +3783,7 @@ fn sanctuary_smasher_cycle_grants_first_strike() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bears))]));
     g.perform_action(GameAction::Cycle { card_id: smasher, x_value: None }).expect("cycle Sanctuary Smasher");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::FirstStrike),
         "first strike counter granted on cycle");
 }
 
@@ -3841,7 +3841,7 @@ fn howl_of_the_hunt_buffs_and_grants_vigilance() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bears).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4), "+2/+2");
-    assert!(c.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+    assert!(c.keywords().contains(&Keyword::Vigilance), "granted vigilance");
 }
 
 /// Brokkos can be cast for its mutate cost onto a non-Human host (trample 6/6).
@@ -3860,7 +3860,7 @@ fn brokkos_mutates_onto_host() {
     drain_stack(&mut g);
     let pile = g.battlefield_find(host).expect("pile alive");
     assert_eq!(pile.definition.name, "Brokkos, Apex of Forever");
-    assert!(g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(host).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Drowsing Tyrannodon can only attack while you control a 4-power creature.
@@ -3897,7 +3897,7 @@ fn vivien_plus_one_beast_with_keyword_counter() {
     drain_stack(&mut g);
     let beast = g.battlefield.iter().find(|c| c.definition.name == "Beast").expect("Beast token");
     assert_eq!((beast.power(), beast.toughness()), (3, 3));
-    assert!(g.computed_permanent(beast.id).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(g.computed_permanent(beast.id).unwrap().keywords().contains(&Keyword::Vigilance),
         "chose a vigilance counter");
 }
 
@@ -4004,7 +4004,7 @@ fn winota_deploys_human_when_nonhuman_attacks() {
     let h = g.battlefield_find(human).expect("Human deployed from library");
     assert!(h.tapped, "deployed tapped");
     assert!(g.attacking.iter().any(|a| a.attacker == human), "deployed attacking");
-    assert!(g.computed_permanent(human).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(human).unwrap().keywords().contains(&Keyword::Indestructible),
         "gains indestructible EOT");
 }
 
@@ -4176,7 +4176,7 @@ fn rangers_guile_pump_and_hexproof() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
-    assert!(c.keywords.contains(&Keyword::Hexproof), "granted hexproof");
+    assert!(c.keywords().contains(&Keyword::Hexproof), "granted hexproof");
 }
 
 /// Brimstone Volley deals 3, or 5 (morbid) if a creature died this turn.

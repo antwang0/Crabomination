@@ -73,7 +73,7 @@ fn cr_509_1b_can_block_additional_caps_at_two() {
 fn valor_made_real_grants_multi_block() {
     let (mut g, a1, a2, b) = two_attackers(catalog::grizzly_bears);
     grant_any_number_block(&mut g, b);
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CanBlockAnyNumber));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::CanBlockAnyNumber));
     g.declare_blockers(vec![(b, a1), (b, a2)]).expect("granted multi-block");
     assert_eq!(g.attackers_blocked_by(b).len(), 2);
 }
@@ -237,11 +237,11 @@ fn cr_509_3e_blocks_two_or_more_counts_the_batch() {
     let evs = g.declare_blockers(vec![(b, a1)]).expect("single block");
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(b).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(!g.computed_permanent(b).unwrap().keywords().contains(&Keyword::FirstStrike));
 
     let (mut g, a1, a2, b) = two_attackers(catalog::lairwatch_giant);
     let evs = g.declare_blockers(vec![(b, a1), (b, a2)]).expect("blocks both");
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::FirstStrike));
 }

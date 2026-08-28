@@ -249,5 +249,5 @@ fn altar_of_the_goyf() {
     assert_eq!(cp.power, 4, "2 types across graveyards → +2/+2");
     // A Lhurgoyf gets trample from the altar's lord static.
     let goyf = g.add_card_to_battlefield(0, catalog::lhurgoyf());
-    assert!(g.computed_permanent(goyf).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(goyf).unwrap().keywords().contains(&Keyword::Trample));
 }

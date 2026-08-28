@@ -116,13 +116,13 @@ mod recent72 {
         g.add_card_to_battlefield(0, catalog::zombie_master());
         let ally = g.add_card_to_battlefield(0, catalog::scathe_zombies());
         assert!(
-            g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Landwalk(LandType::Swamp)),
+            g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Landwalk(LandType::Swamp)),
             "other Zombie gains swampwalk from the Master",
         );
         // The Master itself does not gain swampwalk ("other").
         let master = g.battlefield.iter().find(|c| c.definition.name == "Zombie Master").unwrap().id;
         assert!(
-            !g.computed_permanent(master).unwrap().keywords.contains(&Keyword::Landwalk(LandType::Swamp)),
+            !g.computed_permanent(master).unwrap().keywords().contains(&Keyword::Landwalk(LandType::Swamp)),
             "the Master is excluded (other Zombies only)",
         );
     }
@@ -151,7 +151,7 @@ mod recent72 {
         let spirit = g.add_card_to_battlefield(0, catalog::radjan_spirit());
         g.clear_sickness(spirit);
         let flyer = g.add_card_to_battlefield(1, catalog::air_elemental());
-        assert!(g.computed_permanent(flyer).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(flyer).unwrap().keywords().contains(&Keyword::Flying));
         g.priority.player_with_priority = 0;
         g.step = TurnStep::PreCombatMain;
         g.perform_action(GameAction::ActivateAbility {
@@ -159,7 +159,7 @@ mod recent72 {
             additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("activate");
         drain_stack(&mut g);
-        assert!(!g.computed_permanent(flyer).unwrap().keywords.contains(&Keyword::Flying),
+        assert!(!g.computed_permanent(flyer).unwrap().keywords().contains(&Keyword::Flying),
             "target lost flying this turn");
     }
 
@@ -480,7 +480,7 @@ mod recent76 {
         cast_aura_on(&mut g, catalog::web(), bear, &[(Color::Green, 1)]);
         let p = g.computed_permanent(bear).unwrap();
         assert_eq!((p.power, p.toughness), (2, 4), "+0/+2");
-        assert!(p.keywords.contains(&Keyword::Reach), "gained reach");
+        assert!(p.keywords().contains(&Keyword::Reach), "gained reach");
     }
 
     #[test]
@@ -562,7 +562,7 @@ mod recent76 {
             additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("grant unblockable");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
     }
 
     #[test]
@@ -903,7 +903,7 @@ mod recent77 {
     fn marsh_goblins_has_swampwalk() {
         let mut g = two_player_game();
         let goblin = g.add_card_to_battlefield(0, catalog::marsh_goblins());
-        assert!(g.computed_permanent(goblin).unwrap().keywords
+        assert!(g.computed_permanent(goblin).unwrap().keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Swamp)));
     }
 
@@ -926,7 +926,7 @@ mod recent77 {
         }
         g.perform_action(GameAction::DeclareBlockers(vec![(hounds, white)])).expect("block white");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(hounds).unwrap().keywords.contains(&Keyword::FirstStrike),
+        assert!(g.computed_permanent(hounds).unwrap().keywords().contains(&Keyword::FirstStrike),
             "gained first strike blocking a white creature");
     }
 
@@ -1067,7 +1067,7 @@ mod recent78 {
             card_id: crab, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("{U}: shroud");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(crab).unwrap().keywords.contains(&Keyword::Shroud));
+        assert!(g.computed_permanent(crab).unwrap().keywords().contains(&Keyword::Shroud));
     }
 
     #[test]
@@ -1102,7 +1102,7 @@ mod recent78 {
             additional_targets: vec![], mode: None, x_value: None,
         }).expect("enchant");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "granted haste");
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "granted haste");
         // Tap the bear, then the {0} untap ability should free it.
         if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) { c.tapped = true; }
         g.perform_action(GameAction::ActivateAbility {
@@ -1230,7 +1230,7 @@ mod recent78 {
             additional_targets: vec![], mode: None, x_value: None,
         }).expect("enchant");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Fear));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Fear));
     }
 
     #[test]
@@ -1390,7 +1390,7 @@ mod recent79 {
             additional_targets: Vec::new(), x_value: None, mode: None,
         }).expect("grant unblockable");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
     }
 
     #[test]

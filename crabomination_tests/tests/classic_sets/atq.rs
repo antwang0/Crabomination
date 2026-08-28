@@ -152,7 +152,7 @@ fn ashnods_transmogrant_makes_the_creature_an_artifact() {
     activate(&mut g, 0, tm, Some(Target::Permanent(bear)));
     let cp = g.computed_permanent(bear).expect("bear");
     assert_eq!(cp.power, 3);
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Artifact));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
 }
 
 #[test]
@@ -714,7 +714,7 @@ fn battering_ram_bands_at_combat_and_knocks_down_its_wall() {
     }
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(ram).expect("ram").keywords.contains(&Keyword::Banding),
+        g.computed_permanent(ram).expect("ram").keywords().contains(&Keyword::Banding),
         "banding at the beginning of combat"
     );
     g.declare_attackers(vec![Attack { attacker: ram, target: AttackTarget::Player(1) }])
@@ -832,7 +832,7 @@ fn tawnoss_wand_only_helps_small_creatures() {
         .is_err()
     );
     activate(&mut g, 0, wand, Some(Target::Permanent(bear)));
-    assert!(g.computed_permanent(bear).expect("bear").keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(bear).expect("bear").keywords().contains(&Keyword::Unblockable));
 }
 
 #[test]
@@ -918,7 +918,7 @@ fn titanias_song_animates_artifacts_and_blanks_them() {
     g.add_card_to_battlefield(0, catalog::titanias_song());
     let cp = g.computed_permanent(tome).expect("tome");
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert!(
         g.computed_permanent(tome).expect("tome").lost_all_abilities,
         "a noncreature artifact loses its abilities"
@@ -1047,7 +1047,7 @@ fn primal_clay_enters_as_the_chosen_body() {
     cast(&mut g, 0, clay, None);
     let cp = g.computed_permanent(clay).expect("clay");
     assert_eq!((cp.power, cp.toughness), (1, 6));
-    assert!(cp.keywords.contains(&Keyword::Defender));
+    assert!(cp.keywords().contains(&Keyword::Defender));
 }
 
 #[test]
@@ -1141,7 +1141,7 @@ fn urzas_avenger_buys_flying_by_shrinking() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(av).expect("avenger");
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 #[test]
@@ -1152,6 +1152,6 @@ fn xenic_poltergeist_animates_an_artifact_at_its_mana_value() {
     let stone = g.add_card_to_battlefield(0, catalog::millstone()); // {2}
     activate(&mut g, 0, ghost, Some(Target::Permanent(stone)));
     let cp = g.computed_permanent(stone).expect("millstone");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (2, 2));
 }

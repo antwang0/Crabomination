@@ -28,7 +28,7 @@ fn goring_warplow_full_cost_is_colorless_5_4() {
     let cp = g.computed_permanent(id).expect("on battlefield");
     assert_eq!((cp.power, cp.toughness), (5, 4));
     assert!(cp.colors.is_empty(), "full-cost prototype is colorless");
-    assert!(cp.keywords.contains(&Keyword::Deathtouch));
+    assert!(cp.keywords().contains(&Keyword::Deathtouch));
 }
 
 /// Cast for the prototype {1}{B} cost: a black 1/1 that keeps its abilities.
@@ -45,7 +45,7 @@ fn goring_warplow_prototype_is_black_1_1_with_deathtouch() {
     let cp = g.computed_permanent(id).expect("on battlefield");
     assert_eq!((cp.power, cp.toughness), (1, 1), "prototype size");
     assert_eq!(cp.colors.to_vec(), vec![Color::Black], "prototype color follows its cost");
-    assert!(cp.keywords.contains(&Keyword::Deathtouch), "keeps abilities");
+    assert!(cp.keywords().contains(&Keyword::Deathtouch), "keeps abilities");
     let r = g.battlefield_find(id).unwrap();
     assert!(r.cast_as_prototype);
     assert_eq!(r.definition.cost.cmc(), 2, "prototype mana value");
@@ -68,7 +68,7 @@ fn prototype_state_survives_snapshot_roundtrip() {
     let cp = g2.computed_permanent(id).expect("on battlefield after restore");
     assert_eq!((cp.power, cp.toughness), (3, 2));
     assert_eq!(cp.colors.to_vec(), vec![Color::Red]);
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Combat Thresher's ETB draws a card regardless of cast mode.
@@ -90,7 +90,7 @@ fn combat_thresher_prototype_draws_and_double_strikes() {
     // The spell left hand (−1) but the ETB drew a card (+1) → net same.
     assert_eq!(g.players[0].hand.len(), before);
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Boulderbranch Golem gains life equal to its power on ETB — the prototype
@@ -133,9 +133,9 @@ fn fleshgorger_ward_costs_life_equal_to_power() {
     let id = g.add_card_to_battlefield(0, catalog::phyrexian_fleshgorger());
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 5));
-    assert!(cp.keywords.contains(&Keyword::Ward(WardCost::LifeSourcePower)));
-    assert!(cp.keywords.contains(&Keyword::Menace));
-    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Ward(WardCost::LifeSourcePower)));
+    assert!(cp.keywords().contains(&Keyword::Menace));
+    assert!(cp.keywords().contains(&Keyword::Lifelink));
     // P1 tries to Shock it: Ward triggers, P1 must pay 7 life.
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.priority.player_with_priority = 1;
@@ -203,7 +203,7 @@ fn spotter_thopter_prototype_flies() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 3));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Fallaji Dragon Engine pumps itself +1/+0 for {2}.
@@ -263,7 +263,7 @@ fn steel_seraph_grants_flying_at_combat() {
     g.active_player_idx = 0;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(ground).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// CR 702.160c — a prototype permanent reverts to its printed (full,
@@ -377,7 +377,7 @@ fn bitter_reunion_sac_grants_haste() {
     }).expect("sac for haste");
     drain_stack(&mut g);
     assert!(g.battlefield_find(reunion).is_none(), "sacrificed");
-    assert!(g.computed_permanent(beater).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(beater).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Tocasia's Welcome draws once for a small creature entering, but only once

@@ -267,12 +267,12 @@ fn kor_duelist_double_strike_while_equipped() {
     let mut g = two_player_game();
     let kor = g.add_card_to_battlefield(0, catalog::kor_duelist());
     let computed = g.computed_permanent(kor).unwrap();
-    assert!(!computed.keywords.contains(&Keyword::DoubleStrike));
+    assert!(!computed.keywords().contains(&Keyword::DoubleStrike));
     let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::Equip { equipment: boner, target: kor }).unwrap();
     let computed = g.computed_permanent(kor).unwrap();
-    assert!(computed.keywords.contains(&Keyword::DoubleStrike));
+    assert!(computed.keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Ancient Ziggurat mana casts creatures but not other spells.
@@ -659,13 +659,13 @@ fn dress_down_strips_abilities() {
     let mut g = two_player_game();
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     let dd = g.add_card_to_battlefield(0, catalog::dress_down());
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::Flying), "abilities stripped");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "abilities stripped");
     g.remove_to_graveyard_with_triggers(dd);
     let cp = g.computed_permanent(angel).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "restored after Dress Down leaves");
+    assert!(cp.keywords().contains(&Keyword::Flying), "restored after Dress Down leaves");
 }
 
 /// CR 113.10b — a *static* ability-strip (Dress Down) suppresses printed
@@ -911,7 +911,7 @@ fn sun_quan_grants_team_horsemanship() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(0, catalog::sun_quan_lord_of_wu());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Horsemanship));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Horsemanship));
 }
 
 /// Liu Bei reads +2/+2 while Guan Yu is on your battlefield.
@@ -1002,8 +1002,8 @@ fn shield_of_the_oversoul_tracks_host_color() {
     cast_at(&mut g, aura, Target::Permanent(bear));
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "green host gets +1/+1");
-    assert!(c.keywords.contains(&Keyword::Indestructible));
-    assert!(!c.keywords.contains(&Keyword::Flying), "white clause off for a green host");
+    assert!(c.keywords().contains(&Keyword::Indestructible));
+    assert!(!c.keywords().contains(&Keyword::Flying), "white clause off for a green host");
 }
 
 /// Steel of the Godhead on a white-and-blue host stacks both clauses
@@ -1019,8 +1019,8 @@ fn steel_of_the_godhead_stacks_both_clauses_on_wu_host() {
     cast_at(&mut g, aura, Target::Permanent(host));
     let c = g.computed_permanent(host).unwrap();
     assert_eq!((c.power, c.toughness), (3 + 2, 3 + 2), "both +1/+1 clauses apply");
-    assert!(c.keywords.contains(&Keyword::Lifelink));
-    assert!(c.keywords.contains(&Keyword::Unblockable));
+    assert!(c.keywords().contains(&Keyword::Lifelink));
+    assert!(c.keywords().contains(&Keyword::Unblockable));
 }
 
 // ── Split batch 2: Dusk//Dawn, Never//Return, Turn//Burn, Hide//Seek ────────
@@ -1093,9 +1093,9 @@ fn turn_resets_creature_to_red_0_1_weird() {
     cast_at(&mut g, id, Target::Permanent(flyer));
     let c = g.computed_permanent(flyer).unwrap();
     assert_eq!((c.power, c.toughness), (0, 1), "base 0/1");
-    assert!(!c.keywords.contains(&Keyword::Flying), "abilities lost");
+    assert!(!c.keywords().contains(&Keyword::Flying), "abilities lost");
     assert_eq!(c.colors.to_vec(), vec![Color::Red], "became red");
-    assert!(c.subtypes.creature_types.contains(&crabomination::card::CreatureType::Weird));
+    assert!(c.subtypes().creature_types.contains(&crabomination::card::CreatureType::Weird));
 }
 
 /// Hide bottoms an artifact; Seek (right half) exiles a card from the
@@ -1347,7 +1347,7 @@ fn alpine_moon_neutralizes_named_land() {
     drain_stack(&mut g);
     let computed = g.computed_permanent(post).unwrap();
     assert!(computed.lost_all_abilities, "printed abilities stripped");
-    assert!(computed.subtypes.land_types.is_empty(), "land types stripped");
+    assert!(computed.subtypes().land_types.is_empty(), "land types stripped");
     // The granted "{T}: any color" ability (index 1) is the real replacement;
     // Cloudpost's own "{C} per Locus" ability (index 0) now counts zero Loci
     // since its Locus type was stripped (CR 613.2, computed subtypes).
@@ -1398,8 +1398,8 @@ fn aven_wind_guide_buffs_tokens_only() {
     drain_stack(&mut g);
     let token = g.battlefield.iter().find(|c| c.is_token).expect("token");
     let computed = g.computed_permanent(token.id).unwrap();
-    assert!(computed.keywords.contains(&Keyword::Vigilance), "token gains vigilance");
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(computed.keywords().contains(&Keyword::Vigilance), "token gains vigilance");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance),
         "nontoken bear untouched");
 }
 
@@ -1633,7 +1633,7 @@ fn eagles_of_the_north_etb_team_pump() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "+1/+0");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 // ── Theros gods batch (CR 700.5 devotion) ────────────────────────────────────
@@ -1645,8 +1645,8 @@ fn heliod_vigilance_anthem_and_cleric_token() {
     let mut g = two_player_game();
     let heliod = g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance));
-    assert!(!g.computed_permanent(heliod).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance));
+    assert!(!g.computed_permanent(heliod).unwrap().keywords().contains(&Keyword::Vigilance),
         "\"other creatures\" excludes Heliod");
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(2);
@@ -1664,10 +1664,10 @@ fn heliod_vigilance_anthem_and_cleric_token() {
 fn heliod_devotion_gate() {
     let mut g = two_player_game();
     let heliod = g.add_card_to_battlefield(0, catalog::heliod_god_of_the_sun());
-    assert!(!g.computed_permanent(heliod).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(heliod).unwrap().card_types().contains(&CardType::Creature));
     // Heliod itself is {3}{W} = 1 white pip; add four more.
     for _ in 0..4 { g.add_card_to_battlefield(0, catalog::yoked_ox()); }
-    assert!(g.computed_permanent(heliod).unwrap().card_types.contains(&CardType::Creature));
+    assert!(g.computed_permanent(heliod).unwrap().card_types().contains(&CardType::Creature));
 }
 
 /// Purphoros pings each opponent for 2 when another creature enters.
@@ -1696,7 +1696,7 @@ fn xenagos_combat_trigger_doubles_power() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4, "+X/+0 where X is its power");
     assert_eq!(cp.toughness, 2);
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Phenax grants creatures a tap-to-mill-by-toughness ability.
@@ -1799,7 +1799,7 @@ fn iroas_menace_and_attacker_shield() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::iroas_god_of_victory());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Menace));
     g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
     // Spell damage to the attacking bear is prevented.
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
@@ -1992,7 +1992,7 @@ fn purphoros_bronze_blooded_sneak() {
     let mut g = two_player_game();
     let pur = g.add_card_to_battlefield(0, catalog::purphoros_bronze_blooded());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
     let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
@@ -2046,10 +2046,10 @@ fn hall_of_storm_giants_animates() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(hall).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 7));
-    assert!(cp.card_types.contains(&CardType::Creature));
-    assert!(cp.card_types.contains(&CardType::Land), "still a land");
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Giant));
-    assert!(cp.keywords.contains(&Keyword::Ward(WardCost::generic(3))));
+    assert!(cp.card_types().contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Land), "still a land");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Giant));
+    assert!(cp.keywords().contains(&Keyword::Ward(WardCost::generic(3))));
 }
 
 /// Lair of the Hydra animates into an X/X.
@@ -2347,6 +2347,6 @@ fn destiny_spinner_uncounterable_and_animate() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(forest).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
 }
 

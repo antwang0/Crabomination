@@ -55,7 +55,7 @@ fn burdened_aerialist_token_sac() {
     let events = g.resolve_effect(&sac, &ctx).unwrap();
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(pirate).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(pirate).unwrap().keywords().contains(&Keyword::Flying));
     // Sacrificing a Treasure token: flying.
     resolve_spell(&mut g, catalog::crack_open(), vec![]); // stray Treasure? no target -> skip
     let treasure = crabomination::effect::shortcut::mint_treasures(1);
@@ -64,7 +64,7 @@ fn burdened_aerialist_token_sac() {
     let events = g.resolve_effect(&sac, &ctx).unwrap();
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(pirate).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(pirate).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Combine Chrysalis grants creature tokens flying and trades one for a Beast.
@@ -80,14 +80,14 @@ fn combine_chrysalis() {
     // A Treasure isn't a creature token — no flying grant on it.
     let squirrel_def = catalog::chatterfang_squirrel_general(); // any creature
     let bear = g.add_card_to_battlefield(0, squirrel_def);
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "nontoken creature unaffected");
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
     activate(&mut g, chrys, 0, None);
     let beast = g.battlefield.iter().find(|c| c.definition.name == "Beast").expect("Beast");
-    assert!(g.computed_permanent(beast.id).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(beast.id).unwrap().keywords().contains(&Keyword::Flying),
         "creature token has flying");
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "token paid");
 }
@@ -185,12 +185,12 @@ fn glorious_enforcer_life_gate() {
     g.active_player_idx = 0;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(angel).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(!g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "tied life: no double strike");
     g.players[1].life = 10;
     g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(angel).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Junk Winder's affinity counts tokens, and a token ETB stuns a permanent.
@@ -298,9 +298,9 @@ fn necromancers_familiar_hellbent() {
     let mut g = two_player_game();
     let bird = g.add_card_to_battlefield(0, catalog::necromancers_familiar());
     g.players[0].hand.clear();
-    assert!(g.computed_permanent(bird).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(bird).unwrap().keywords().contains(&Keyword::Lifelink));
     g.add_card_to_hand(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bird).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(!g.computed_permanent(bird).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 /// Nykthos Paragon converts a life gain into team counters, once a turn.
@@ -457,7 +457,7 @@ fn sanctuary_raptor_token_gate() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(raptor).unwrap();
     assert_eq!(cp.power, 4, "+2/+0 with 3 tokens");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// Scour the Desert converts a graveyard body into toughness-many Birds.

@@ -118,7 +118,7 @@ fn cr_110_4c_a_typeless_permanent_stays_on_the_battlefield() {
     )
     .expect("strip the type");
     let cp = g.computed_permanent(coils).expect("still a permanent");
-    assert!(!cp.card_types.contains(&CardType::Artifact));
+    assert!(!cp.card_types().contains(&CardType::Artifact));
 }
 
 /// 110.5b — permanents enter untapped unless something says otherwise; Door to

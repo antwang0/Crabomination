@@ -55,7 +55,7 @@ mod recent118 {
             card_id: moose, target: None, additional_targets: vec![], mode: None, x_value: None,
         }).expect("cast a 6-mana spell (crosses expend 4)");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(boxer).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible),
+        assert!(g.computed_permanent(boxer).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible),
             "expend 4 grants indestructible");
     }
 
@@ -73,7 +73,7 @@ mod recent118 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(vet).unwrap();
         assert_eq!(cp.power, 4, "Raccoon +1/+1");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Vigilance), "and vigilance");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Vigilance), "and vigilance");
     }
 
     /// Attack-in-the-Box may pump itself +4/+0 when it attacks.
@@ -166,7 +166,7 @@ mod recent119 {
         for _ in 0..7 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
         let cp = g.computed_permanent(hermit).unwrap();
         assert_eq!(cp.power, 2, "threshold → +1/+0");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Unblockable), "and unblockable");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Unblockable), "and unblockable");
     }
 
     /// Finch Formation grants a creature you control flying on entry.
@@ -182,7 +182,7 @@ mod recent119 {
             card_id: spell, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
         }).expect("cast Finch Formation");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Flying),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Flying),
             "the bear gains flying");
     }
 }
@@ -272,7 +272,7 @@ mod recent120 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(goblin).unwrap();
         assert_eq!(cp.power, 3, "4-power ally → +1/+0");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Menace), "and gains menace");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Menace), "and gains menace");
     }
 
     /// Eager Trufflesnout makes a Food when it connects with a player.
@@ -341,8 +341,8 @@ mod recent120 {
         let mut g = two_player_game();
         let adept = g.add_card_to_battlefield(0, catalog::elementalist_adept());
         let cp = g.computed_permanent(adept).unwrap();
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Flash), "has flash");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Prowess), "has prowess");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Flash), "has flash");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Prowess), "has prowess");
     }
 
     /// Divine Resilience unkicked protects one creature; kicked it protects the team.
@@ -360,8 +360,8 @@ mod recent120 {
             additional_targets: vec![], mode: None, x_value: None,
         }).expect("cast Divine Resilience kicked");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(a).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible));
-        assert!(g.computed_permanent(b).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible),
+        assert!(g.computed_permanent(a).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
+        assert!(g.computed_permanent(b).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible),
             "kicked → both creatures protected");
     }
 }
@@ -560,10 +560,10 @@ mod recent122 {
     fn cephalid_inkmage_threshold_unblockable() {
         let mut g = two_player_game();
         let mage = g.add_card_to_battlefield(0, catalog::cephalid_inkmage());
-        assert!(!g.computed_permanent(mage).unwrap().keywords.contains(&crabomination::card::Keyword::Unblockable),
+        assert!(!g.computed_permanent(mage).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable),
             "no threshold → blockable");
         for _ in 0..7 { g.add_card_to_graveyard(0, catalog::grizzly_bears()); }
-        assert!(g.computed_permanent(mage).unwrap().keywords.contains(&crabomination::card::Keyword::Unblockable),
+        assert!(g.computed_permanent(mage).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable),
             "threshold → unblockable");
     }
 
@@ -596,8 +596,8 @@ mod recent122 {
         let lib_before = g.players[0].library.len();
         let curator = g.add_card_to_battlefield(0, catalog::curator_of_destinies());
         let cp = g.computed_permanent(curator).unwrap();
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Flying), "has flying");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::CantBeCountered), "uncounterable");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying), "has flying");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::CantBeCountered), "uncounterable");
         g.fire_self_etb_triggers(curator, 0);
         drain_stack(&mut g);
         assert_eq!(g.players[0].library.len(), lib_before - 5, "five cards left the library");
@@ -682,7 +682,7 @@ mod recent124 {
         for _ in 0..3 { g.add_card_to_library(1, catalog::grizzly_bears()); }
         let gy_before = g.players[1].graveyard.len();
         let seeker = g.add_card_to_battlefield(0, catalog::desperate_bloodseeker());
-        assert!(g.computed_permanent(seeker).unwrap().keywords.contains(&crabomination::card::Keyword::Lifelink));
+        assert!(g.computed_permanent(seeker).unwrap().keywords().contains(&crabomination::card::Keyword::Lifelink));
         g.fire_self_etb_triggers(seeker, 0);
         drain_stack(&mut g);
         assert_eq!(g.players[1].graveyard.len(), gy_before + 2, "target player milled two");
@@ -798,7 +798,7 @@ mod recent125 {
         let grizzly = g.add_card_to_battlefield(0, catalog::drover_grizzly());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         saddled_attack(&mut g, grizzly);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Trample),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Trample),
             "other creatures gain trample");
     }
 
@@ -918,7 +918,7 @@ mod recent126 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "bear 2/2 → 3/3");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Vigilance), "and vigilance");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Vigilance), "and vigilance");
     }
 }
 
@@ -1294,8 +1294,8 @@ mod recent127 {
         }
         drain_stack(&mut g);
         let cp = g.computed_permanent(big).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Trample), "granted trample");
-        assert!(cp.keywords.contains(&Keyword::Haste), "granted haste");
+        assert!(cp.keywords().contains(&Keyword::Trample), "granted trample");
+        assert!(cp.keywords().contains(&Keyword::Haste), "granted haste");
     }
 
     /// Frontier Seeker digs a Mount or Plains into hand.
@@ -1346,7 +1346,7 @@ mod recent128 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bell).unwrap();
         assert_eq!(cp.power, 4, "+1/+0 under celebration");
-        assert!(cp.keywords.contains(&Keyword::Menace), "and menace");
+        assert!(cp.keywords().contains(&Keyword::Menace), "and menace");
     }
 
     /// Archive Dragon scrys 2 on entry.
@@ -1360,7 +1360,7 @@ mod recent128 {
         g.fire_self_etb_triggers(dragon, 0);
         drain_stack(&mut g);
         let cp = g.computed_permanent(dragon).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))));
+        assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().iter().any(|k| matches!(k, Keyword::Ward(_))));
     }
 
     /// Agatha's Champion fights only when bargained.
@@ -1438,7 +1438,7 @@ mod recent128 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "Monster Role gives +1/+1");
-        assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
+        assert!(cp.keywords().contains(&Keyword::Trample) && cp.keywords().contains(&Keyword::Haste));
     }
 
     /// Diminisher Witch bargained shrinks an opponent's creature to 1/1.
@@ -1496,12 +1496,12 @@ mod recent128 {
         let mut g = two_player_game();
         let naughty = g.add_card_to_battlefield(0, catalog::barrow_naughty());
         assert!(
-            !g.computed_permanent(naughty).unwrap().keywords.contains(&Keyword::Lifelink),
+            !g.computed_permanent(naughty).unwrap().keywords().contains(&Keyword::Lifelink),
             "no other Faerie → no lifelink",
         );
         g.add_card_to_battlefield(0, catalog::barrow_naughty()); // another Faerie
         assert!(
-            g.computed_permanent(naughty).unwrap().keywords.contains(&Keyword::Lifelink),
+            g.computed_permanent(naughty).unwrap().keywords().contains(&Keyword::Lifelink),
             "another Faerie → lifelink",
         );
     }
@@ -1587,7 +1587,7 @@ mod recent129 {
         // Two creatures → +2/+2 and flying.
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "bear 2/2 → 4/4");
-        assert!(cp.keywords.contains(&Keyword::Flying), "and flying");
+        assert!(cp.keywords().contains(&Keyword::Flying), "and flying");
     }
 
     /// Water Wings makes your creature a 4/4 flier with hexproof.
@@ -1610,7 +1610,7 @@ mod recent129 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "base 4/4");
-        assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::Hexproof));
+        assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::Hexproof));
     }
 
     /// Werefox Bodyguard exiles a creature until it leaves, and returns it on sac.
@@ -1648,7 +1648,7 @@ mod recent129 {
         g.players[0].nonland_permanents_entered_this_turn = 2;
         let cp = g.computed_permanent(guest).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "celebration → +1/+1");
-        assert!(cp.keywords.contains(&Keyword::Trample), "and trample");
+        assert!(cp.keywords().contains(&Keyword::Trample), "and trample");
     }
 
     /// Ratcatcher Trainee's Pest Problem adventure makes two Rats.
@@ -1830,8 +1830,8 @@ mod recent130 {
         let otter = g.add_card_to_battlefield(0, catalog::elusive_otter());
         let cp = g.computed_permanent(otter).unwrap();
         assert!(
-            cp.keywords.contains(&Keyword::Prowess)
-                && cp.keywords.contains(&Keyword::CantBeBlockedByPowerLess),
+            cp.keywords().contains(&Keyword::Prowess)
+                && cp.keywords().contains(&Keyword::CantBeBlockedByPowerLess),
             "prowess + can't-be-blocked-by-lesser evasion",
         );
     }
@@ -2099,19 +2099,19 @@ mod recent131 {
         let elk = g.add_card_to_battlefield(0, catalog::bellowing_elk());
         // No other creature entered yet → bare 4/2.
         let cp = g.computed_permanent(elk).unwrap();
-        assert!(!cp.keywords.contains(&Keyword::Trample), "no keywords without another arrival");
+        assert!(!cp.keywords().contains(&Keyword::Trample), "no keywords without another arrival");
         // Simulate another creature having entered under your control this turn.
         let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.players[0].creatures_entered_this_turn.push(other);
         let cp = g.computed_permanent(elk).unwrap();
         assert!(
-            cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Indestructible),
+            cp.keywords().contains(&Keyword::Trample) && cp.keywords().contains(&Keyword::Indestructible),
             "gains trample + indestructible",
         );
         // The elk's own arrival must not satisfy the self-excluding predicate.
         g.players[0].creatures_entered_this_turn = vec![elk];
         let cp = g.computed_permanent(elk).unwrap();
-        assert!(!cp.keywords.contains(&Keyword::Trample), "own arrival doesn't count");
+        assert!(!cp.keywords().contains(&Keyword::Trample), "own arrival doesn't count");
     }
 
     /// Windcaller Aven grants flying when cycled.
@@ -2128,7 +2128,7 @@ mod recent131 {
         g.perform_action(GameAction::Cycle { card_id: aven, x_value: None }).expect("cycle Windcaller Aven");
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Flying), "bear gains flying");
+        assert!(cp.keywords().contains(&Keyword::Flying), "bear gains flying");
     }
 }
 
@@ -2197,7 +2197,7 @@ mod recent132 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-        assert!(cp.keywords.contains(&Keyword::CantBeBlockedByPowerAtLeast(3)));
+        assert!(cp.keywords().contains(&Keyword::CantBeBlockedByPowerAtLeast(3)));
         assert!(!g.blocker_can_block_attacker(big, bear), "power-4 can't block");
         assert!(g.blocker_can_block_attacker(weak, bear), "power-2 can block");
     }
@@ -2222,7 +2222,7 @@ mod recent132 {
         assert!(has_role_on(&g, bear), "Royal Role attached");
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "Royal Role gives +1/+1");
-        assert!(cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))), "has ward");
+        assert!(cp.keywords().iter().any(|k| matches!(k, Keyword::Ward(_))), "has ward");
     }
 
     /// Charmed Clothier hangs a Royal Role on another creature.
@@ -2267,7 +2267,7 @@ mod recent132 {
         })
         .expect("cast Twice the Rage");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
     }
 
     /// That's Mine makes a Treasure.
@@ -2363,7 +2363,7 @@ mod recent132 {
         assert!(g
             .computed_permanent(rider)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::CantBeBlockedByPowerAtMost(2)));
     }
 }

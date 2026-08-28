@@ -180,7 +180,7 @@ fn guardian_idol_animates_to_golem() {
     g.perform_action(GameAction::ActivateAbility { card_id: idol, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("animate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(idol).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (2, 2));
 }
 
@@ -198,7 +198,7 @@ fn batterskull_living_weapon_makes_four_four() {
     let id = germ.id;
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "Germ is a 4/4 while equipped");
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Simple stat/keyword Equipment grants its bonus and keywords when attached.
@@ -226,7 +226,7 @@ fn simple_equipment_grants_bonus_and_keywords() {
         assert_eq!((cp.power, cp.toughness), (2 + dp, 2 + dt),
             "{} grants +{}/+{}", g.battlefield_find(eq).unwrap().definition.name, dp, dt);
         for kw in *kws {
-            assert!(cp.keywords.contains(kw), "equipped creature gains {kw:?}");
+            assert!(cp.keywords().contains(kw), "equipped creature gains {kw:?}");
         }
     }
 }
@@ -237,7 +237,7 @@ fn darksteel_plate_is_indestructible() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let plate = g.add_card_to_battlefield(0, catalog::darksteel_plate());
-    assert!(g.computed_permanent(plate).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(plate).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Rogue's Gloves draws a card when its equipped creature connects.

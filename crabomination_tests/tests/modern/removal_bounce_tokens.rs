@@ -1145,7 +1145,7 @@ fn gnarled_scarhide_bestows_plus_two_one_and_cant_block() {
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (4, 3), "enchanted creature gets +2/+1");
-    assert!(b.keywords.contains(&Keyword::CantBlock), "and can't block");
+    assert!(b.keywords().contains(&Keyword::CantBlock), "and can't block");
 }
 
 #[test]

@@ -101,7 +101,7 @@ fn cr_611_2_while_your_turn_gates_anthem() {
     };
     let _ = g.add_card_to_battlefield(0, lord);
     let bear = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
-    let has_trample = |g: &GameState| g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample);
+    let has_trample = |g: &GameState| g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample);
     g.active_player_idx = 0;
     assert!(has_trample(&g), "granted on the controller's turn");
     g.active_player_idx = 1;

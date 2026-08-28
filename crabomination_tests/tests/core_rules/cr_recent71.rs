@@ -41,7 +41,7 @@ fn cr_702_22d_bands_with_other_needs_no_plain_banding() {
     for id in [a, b] {
         g.clear_sickness(id);
     }
-    assert!(g.computed_permanent(a).unwrap().keywords.iter().any(|k| {
+    assert!(g.computed_permanent(a).unwrap().keywords().iter().any(|k| {
         matches!(k, Keyword::BandsWithOther(_))
     }));
     to_declare_attackers(&mut g);
@@ -132,7 +132,7 @@ fn cr_702_22_tolaria_strips_all_band_abilities() {
     assert!(
         !g.computed_permanent(legend)
             .unwrap()
-            .keywords
+            .keywords()
             .iter()
             .any(|k| matches!(k, Keyword::BandsWithOther(_))),
         "the grant is gone for the turn"

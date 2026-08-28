@@ -232,5 +232,5 @@ fn cr_112_4_permanent_spell_pump_survives_resolution() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).expect("resolved");
     assert_eq!((cp.power, cp.toughness), (4, 4), "the pump followed it onto the battlefield");
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
 }

@@ -195,7 +195,7 @@ fn passwall_adept_grants_unblockable() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility { card_id: adept, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable), "bear is unblockable");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable), "bear is unblockable");
 }
 
 /// Burn Bright pumps the whole team +2/+0.
@@ -262,7 +262,7 @@ fn arresters_zeal_addendum_flying() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-    assert!(cp.keywords.contains(&Keyword::Flying), "Addendum grants flying on your main phase");
+    assert!(cp.keywords().contains(&Keyword::Flying), "Addendum grants flying on your main phase");
 
     // On the opponent's turn → +2/+2 only, no flying.
     let mut g = two_player_game();
@@ -276,7 +276,7 @@ fn arresters_zeal_addendum_flying() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "no Addendum off your main phase");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "no Addendum off your main phase");
 }
 
 /// Arrester's Admonition bounces a creature and draws under its Addendum.
@@ -452,11 +452,11 @@ fn gatebreaker_ram_scales_with_gates() {
     g.add_card_to_battlefield(0, catalog::azorius_guildgate());
     let cp = g.computed_permanent(ram).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 for one Gate");
-    assert!(!cp.keywords.contains(&Keyword::Trample), "no trample with one Gate");
+    assert!(!cp.keywords().contains(&Keyword::Trample), "no trample with one Gate");
     g.add_card_to_battlefield(0, catalog::boros_guildgate());
     let cp = g.computed_permanent(ram).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 for two Gates");
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Trample),
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Trample),
         "vigilance + trample at two Gates");
 }
 
@@ -733,9 +733,9 @@ fn trollbred_guardian_trample_anthem() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::trollbred_guardian());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "no counter → no trample");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample), "no counter → no trample");
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "counter → trample");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample), "counter → trample");
 }
 
 /// Loxodon Restorer gains 4 life on entry and has convoke.
@@ -860,7 +860,7 @@ fn storm_strike_pump_first_strike() {
     drain_stack(&mut g);
     let p = g.computed_permanent(bear).unwrap();
     assert_eq!(p.power, 3, "+1/+0");
-    assert!(p.keywords.contains(&Keyword::FirstStrike), "gains first strike");
+    assert!(p.keywords().contains(&Keyword::FirstStrike), "gains first strike");
 }
 
 /// Stony Strength adds a +1/+1 counter and untaps the creature.
@@ -939,9 +939,9 @@ fn skatewing_spy_counter_flying_anthem() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::skatewing_spy());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "no counter → no flying");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying), "no counter → no flying");
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying), "counter → flying");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying), "counter → flying");
 }
 
 /// Dead Revels returns up to two creature cards from your graveyard.
@@ -966,7 +966,7 @@ fn resolute_watchdog_grants_indestructible() {
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility { card_id: dog, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None , mode: None}).expect("sac");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible), "bear indestructible");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible), "bear indestructible");
     assert!(g.battlefield_find(dog).is_none(), "watchdog sacrificed");
 }
 
@@ -1036,8 +1036,8 @@ fn sky_tether_grounds_flyer() {
     g.perform_action(GameAction::CastSpell { card_id: tether, target: Some(Target::Permanent(flyer)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
     drain_stack(&mut g);
     let p = g.computed_permanent(flyer).unwrap();
-    assert!(!p.keywords.contains(&Keyword::Flying), "loses flying");
-    assert!(p.keywords.contains(&Keyword::Defender), "has defender");
+    assert!(!p.keywords().contains(&Keyword::Flying), "loses flying");
+    assert!(p.keywords().contains(&Keyword::Defender), "has defender");
 }
 
 /// Slimebind saps -4/-0.
@@ -1071,8 +1071,8 @@ fn sentinels_mark_addendum_lifelink() {
     drain_stack(&mut g);
     let p = g.computed_permanent(bear).unwrap();
     assert_eq!((p.power, p.toughness), (3, 4), "+1/+2");
-    assert!(p.keywords.contains(&Keyword::Vigilance), "vigilance");
-    assert!(p.keywords.contains(&Keyword::Lifelink), "addendum lifelink on main-phase cast");
+    assert!(p.keywords().contains(&Keyword::Vigilance), "vigilance");
+    assert!(p.keywords().contains(&Keyword::Lifelink), "addendum lifelink on main-phase cast");
 }
 
 /// Lawmage's Binding locks a creature down and has flash.
@@ -1091,7 +1091,7 @@ fn lawmages_binding_locks_down() {
     g.perform_action(GameAction::CastSpell { card_id: aura, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
     drain_stack(&mut g);
     let p = g.computed_permanent(foe).unwrap();
-    assert!(p.keywords.contains(&Keyword::CantAttack) && p.keywords.contains(&Keyword::CantBlock), "can't attack or block");
+    assert!(p.keywords().contains(&Keyword::CantAttack) && p.keywords().contains(&Keyword::CantBlock), "can't attack or block");
 }
 
 /// Syndicate Guildmage taps a big creature.
@@ -1229,7 +1229,7 @@ fn zegana_trample_anthem() {
     g.add_card_to_battlefield(0, catalog::zegana_utopian_speaker());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample), "countered creature has trample");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample), "countered creature has trample");
 }
 
 /// Ill-Gotten Inheritance's upkeep drains each opponent and gains you life.
@@ -1389,7 +1389,7 @@ fn macabre_mockery_steals_from_graveyard() {
     g.resolve_effect(&effect, &ctx).unwrap();
     let reanimated = g.battlefield_find(corpse).expect("on battlefield");
     assert_eq!(reanimated.controller, 0, "under your control");
-    assert!(g.computed_permanent(corpse).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(g.computed_permanent(corpse).unwrap().keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 /// Azorius Skyguard weakens opposing creatures.
@@ -1411,7 +1411,7 @@ fn seraph_grants_deathtouch() {
     g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::ActivateAbility { card_id: seraph, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(seraph).unwrap().keywords.contains(&Keyword::Deathtouch), "gained deathtouch");
+    assert!(g.computed_permanent(seraph).unwrap().keywords().contains(&Keyword::Deathtouch), "gained deathtouch");
 }
 
 /// Gutterbones returns from the graveyard once an opponent has lost life.
@@ -1491,7 +1491,7 @@ fn clan_guildmage_animates_land() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "land is a 4/4");
-    assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Land), "still a land");
 }
 
 /// Tin Street Dodger grants itself "can't be blocked except by defenders."
@@ -1503,7 +1503,7 @@ fn tin_street_dodger_evasion() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility { card_id: dodger, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("evade");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(dodger).unwrap().keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))), "gained can't-be-blocked-except-by-defenders");
+    assert!(g.computed_permanent(dodger).unwrap().keywords().iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))), "gained can't-be-blocked-except-by-defenders");
 }
 
 /// Saruli Caretaker taps another creature as part of its mana cost.
@@ -1682,9 +1682,9 @@ fn gruul_spellbreaker_turn_gated_hexproof() {
     let mut g = two_player_game();
     let gs = g.add_card_to_battlefield(0, catalog::gruul_spellbreaker());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(gs).unwrap().keywords.contains(&Keyword::Hexproof), "hexproof on your turn");
+    assert!(g.computed_permanent(gs).unwrap().keywords().contains(&Keyword::Hexproof), "hexproof on your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(gs).unwrap().keywords.contains(&Keyword::Hexproof), "no hexproof off your turn");
+    assert!(!g.computed_permanent(gs).unwrap().keywords().contains(&Keyword::Hexproof), "no hexproof off your turn");
 }
 
 /// Smelt-Ward Ignus steals a small creature: sacrifice it to gain control of a
@@ -1706,7 +1706,7 @@ fn smelt_ward_ignus_steals() {
     let v = g.battlefield_find(victim).unwrap();
     assert_eq!(v.controller, 0, "gained control");
     assert!(!v.tapped, "untapped");
-    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Haste), "has haste");
+    assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::Haste), "has haste");
 }
 
 /// A spell an opponent casts targeting Sphinx of New Prahv costs {2} more.
@@ -1838,7 +1838,7 @@ fn pitiless_pontiff_payoff() {
     ctx.source = Some(pontiff);
     g.resolve_effect(&catalog::pitiless_pontiff().activated_abilities[0].effect, &ctx).unwrap();
     let cp = g.computed_permanent(pontiff).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Deathtouch) && cp.keywords.contains(&Keyword::Indestructible), "gains deathtouch + indestructible");
+    assert!(cp.keywords().contains(&Keyword::Deathtouch) && cp.keywords().contains(&Keyword::Indestructible), "gains deathtouch + indestructible");
 }
 
 /// Unbreakable Formation's Addendum adds a +1/+1 counter and vigilance on your
@@ -1853,8 +1853,8 @@ fn unbreakable_formation_addendum() {
     ctx.source = Some(bear);
     g.resolve_effect(&catalog::unbreakable_formation().effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "Addendum vigilance");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "indestructible");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "Addendum vigilance");
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "Addendum +1/+1 counter");
 }
 
@@ -1893,13 +1893,13 @@ fn mesmerizing_benthid_tokens_and_hexproof() {
     let mut g = two_player_game();
     let benthid = g.add_card_to_battlefield(0, catalog::mesmerizing_benthid());
     // No Illusions yet (ETB not run) → no hexproof.
-    assert!(!g.computed_permanent(benthid).unwrap().keywords.contains(&Keyword::Hexproof), "no hexproof without an Illusion");
+    assert!(!g.computed_permanent(benthid).unwrap().keywords().contains(&Keyword::Hexproof), "no hexproof without an Illusion");
     let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
     ctx.source = Some(benthid);
     g.resolve_effect(&catalog::mesmerizing_benthid().triggered_abilities[0].effect, &ctx).unwrap();
     let illusions = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&crabomination::card::CreatureType::Illusion)).count();
     assert_eq!(illusions, 2, "two Illusion tokens");
-    assert!(g.computed_permanent(benthid).unwrap().keywords.contains(&Keyword::Hexproof), "hexproof while you control an Illusion");
+    assert!(g.computed_permanent(benthid).unwrap().keywords().contains(&Keyword::Hexproof), "hexproof while you control an Illusion");
 }
 
 /// Immolation Shaman pings a player who activates a creature's non-mana ability.
@@ -2200,8 +2200,8 @@ fn rumbling_ruin_locks_weak_blockers() {
     let strong = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4, power 6 > 2
     g.move_card_to_battlefield_for_test(0, catalog::rumbling_ruin());
     drain_stack(&mut g);
-    assert!(g.computed_permanent(weak).unwrap().keywords.contains(&Keyword::CantBlock), "weak creature can't block");
-    assert!(!g.computed_permanent(strong).unwrap().keywords.contains(&Keyword::CantBlock), "strong creature still blocks");
+    assert!(g.computed_permanent(weak).unwrap().keywords().contains(&Keyword::CantBlock), "weak creature can't block");
+    assert!(!g.computed_permanent(strong).unwrap().keywords().contains(&Keyword::CantBlock), "strong creature still blocks");
 }
 
 /// Font of Agonies banks a blood counter per life paid, and four of them fuel a
@@ -2427,7 +2427,7 @@ fn ravager_wurm_riot_and_fight() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(foe).is_none(), "4/5 fought and killed the 2/2");
     let w = g.computed_permanent(wurm).unwrap();
-    assert!(w.keywords.contains(&Keyword::Haste), "riot granted haste");
+    assert!(w.keywords().contains(&Keyword::Haste), "riot granted haste");
 }
 
 /// Incubation Druid taps for one mana, or three once it carries a +1/+1 counter.
@@ -2535,9 +2535,9 @@ fn gideon_champion_of_justice_plus_one_and_animate() {
     g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: gid, ability_index: 1, target: None, x_value: None }).expect("0");
     drain_stack(&mut g);
     let cp = g.computed_permanent(gid).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature) && cp.card_types.contains(&CardType::Planeswalker));
+    assert!(cp.card_types().contains(&CardType::Creature) && cp.card_types().contains(&CardType::Planeswalker));
     assert_eq!((cp.power, cp.toughness), (8, 8));
-    assert!(cp.keywords.contains(&Keyword::Indestructible));
+    assert!(cp.keywords().contains(&Keyword::Indestructible));
 }
 
 /// Teysa Karlov doubles your permanents' death triggers and gives your tokens
@@ -2559,7 +2559,7 @@ fn teysa_karlov_doubles_deaths_and_buffs_tokens() {
     let tok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(tok).unwrap().is_token = true;
     let cp = g.computed_permanent(tok).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Lavinia stops an oversized noncreature spell and counters a free one.
@@ -2623,7 +2623,7 @@ fn illusionists_bracers_copies_an_activation() {
     g.perform_action(GameAction::ActivateAbility { card_id: adept, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None , mode: None}).expect("activate");
     // The Bracers trigger and the original activation, plus the copy.
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Mirror March flips until a loss and mints that many hasty token copies.
@@ -2647,7 +2647,7 @@ fn mirror_march_copies_per_won_flip() {
         .filter(|c| c.is_token && c.definition.name == "Grizzly Bears")
         .collect();
     assert_eq!(copies.len(), 2, "one copy per won flip");
-    assert!(copies.iter().all(|c| g.computed_permanent(c.id).unwrap().keywords.contains(&Keyword::Haste)));
+    assert!(copies.iter().all(|c| g.computed_permanent(c.id).unwrap().keywords().contains(&Keyword::Haste)));
 }
 
 /// Amplifire's upkeep reveal sets its base P/T to twice the revealed

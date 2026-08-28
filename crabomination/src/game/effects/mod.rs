@@ -2103,7 +2103,7 @@ impl GameState {
         // the printed keyword / Indestructible counter on the raw instance.
         let indestructible = self
             .computed_permanent(cid)
-            .map(|cp| cp.keywords.has_kw(&crate::card::Keyword::Indestructible))
+            .map(|cp| cp.keywords().has_kw(&crate::card::Keyword::Indestructible))
             .unwrap_or(false)
             || self.battlefield_find(cid).map(|c| c.is_indestructible()).unwrap_or(true);
         if indestructible {
@@ -2520,7 +2520,7 @@ impl GameState {
                     .compute_battlefield()
                     .iter()
                     .filter(|c| {
-                        c.keywords.has_kw(&crate::card::Keyword::Phasing)
+                        c.keywords().has_kw(&crate::card::Keyword::Phasing)
                             && self.evaluate_requirement_static(
                                 filter,
                                 &Target::Permanent(c.id),
@@ -3135,7 +3135,7 @@ impl GameState {
                 let live: Vec<Keyword> = self
                     .computed_permanent(loser)
                     .map(|c| {
-                        options.iter().filter(|k| c.keywords.contains(k)).cloned().collect()
+                        options.iter().filter(|k| c.keywords().contains(k)).cloned().collect()
                     })
                     .unwrap_or_default();
                 let Some(first) = live.first().cloned() else { return Ok(()) };
@@ -5972,7 +5972,7 @@ impl GameState {
                 let deathtouch = ctx
                     .source
                     .and_then(|s| self.computed_permanent(s))
-                    .is_some_and(|cp| cp.keywords.has_kw(&crate::card::Keyword::Deathtouch));
+                    .is_some_and(|cp| cp.keywords().has_kw(&crate::card::Keyword::Deathtouch));
                 let mut spill = 0u32;
                 for ent in self.resolve_selector(to, ctx) {
                     let lethal = match ent {
@@ -6085,7 +6085,7 @@ impl GameState {
                 let deathtouch = ctx
                     .source
                     .and_then(|s| self.computed_permanent(s))
-                    .is_some_and(|cp| cp.keywords.has_kw(&crate::card::Keyword::Deathtouch));
+                    .is_some_and(|cp| cp.keywords().has_kw(&crate::card::Keyword::Deathtouch));
                 for ent in self.resolve_selector(to, ctx) {
                     let EntityRef::Permanent(id) = ent else { continue };
                     let Some(lethal) = self.lethal_damage_needed(id, deathtouch) else { continue };
@@ -7057,7 +7057,7 @@ impl GameState {
                 let want = match ent {
                     EntityRef::Permanent(cid) => self
                         .computed_permanent(cid)
-                        .filter(|c| c.card_types.contains(&CardType::Creature))
+                        .filter(|c| c.card_types().contains(&CardType::Creature))
                         .map(|c| {
                             let marked = self.battlefield_find(cid).map_or(0, |i| i.damage);
                             (c.toughness.max(0) as u32).saturating_sub(marked)
@@ -8280,7 +8280,7 @@ impl GameState {
                     .filter(|kw| {
                         mine.iter().any(|id| {
                             self.computed_permanent(*id)
-                                .is_some_and(|cp| cp.keywords.contains(kw))
+                                .is_some_and(|cp| cp.keywords().contains(kw))
                         })
                     })
                     .cloned()
@@ -9115,7 +9115,7 @@ impl GameState {
                         .iter()
                         .filter(|c| {
                             c.controller == p
-                                && c.card_types.contains(&crate::card::CardType::Creature)
+                                && c.card_types().contains(&crate::card::CardType::Creature)
                                 && c.power > hand
                         })
                         .map(|c| c.id)
@@ -14012,7 +14012,7 @@ impl GameState {
                     let cp = self.computed_permanent(cid);
                     let walks: Vec<crate::card::Keyword> = cp
                         .iter()
-                        .flat_map(|cp| cp.keywords.iter())
+                        .flat_map(|cp| cp.keywords().iter())
                         .filter(|k| {
                             matches!(
                                 k,
@@ -14560,7 +14560,7 @@ impl GameState {
                     let present: Vec<Color> = self
                         .computed_permanent(cid)
                         .map(|cp| {
-                            cp.subtypes
+                            cp.subtypes()
                                 .land_types
                                 .iter()
                                 .filter(|l| l.is_basic_type())
@@ -16278,7 +16278,7 @@ impl GameState {
                 };
                 let types = self
                     .computed_permanent(entered)
-                    .map(|cp| cp.card_types.to_vec())
+                    .map(|cp| cp.card_types().to_vec())
                     .unwrap_or_default();
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield
@@ -17105,7 +17105,7 @@ impl GameState {
                 };
                 let types: Vec<CardType> = self
                     .computed_permanent(cid)
-                    .map(|cp| cp.card_types.to_vec())
+                    .map(|cp| cp.card_types().to_vec())
                     .unwrap_or_else(|| {
                         self.battlefield_find(cid)
                             .map(|c| c.definition.card_types.clone())
@@ -17375,7 +17375,7 @@ impl GameState {
                                 && !keep.contains(&c.id)
                                 && self
                                     .computed_permanent(c.id)
-                                    .is_some_and(|cp| cp.subtypes.land_types.contains(&t))
+                                    .is_some_and(|cp| cp.subtypes().land_types.contains(&t))
                         }) {
                             keep.push(c.id);
                         }
@@ -17388,7 +17388,7 @@ impl GameState {
                                 && !keep.contains(&c.id)
                                 && self
                                     .computed_permanent(c.id)
-                                    .is_some_and(|cp| cp.card_types.contains(&CardType::Land))
+                                    .is_some_and(|cp| cp.card_types().contains(&CardType::Land))
                         })
                         .map(|c| c.id)
                         .collect();
@@ -27949,7 +27949,7 @@ impl GameState {
                 if let Some(from) = from {
                     lands.retain(|id| {
                         self.computed_permanent(*id)
-                            .is_some_and(|cp| cp.subtypes.land_types.contains(&from))
+                            .is_some_and(|cp| cp.subtypes().land_types.contains(&from))
                     });
                 }
                 if lands.is_empty() {

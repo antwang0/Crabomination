@@ -31,11 +31,11 @@ fn thrasta_discount_and_entry_hexproof() {
     })
     .expect("discounted Thrasta castable off three mana");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(thrasta).unwrap().keywords.clone();
+    let kws = g.computed_permanent(thrasta).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Hexproof), "hexproof the turn it entered");
     g.turn_number += 1;
     assert!(
-        !g.computed_permanent(thrasta).unwrap().keywords.contains(&Keyword::Hexproof),
+        !g.computed_permanent(thrasta).unwrap().keywords().contains(&Keyword::Hexproof),
         "hexproof gone after the turn"
     );
 }
@@ -207,7 +207,7 @@ fn drey_keeper_tokens_and_anthem() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(squirrels[0]).unwrap();
     assert_eq!(cp.power, 2, "+1/+0");
-    assert!(cp.keywords.contains(&Keyword::Menace));
+    assert!(cp.keywords().contains(&Keyword::Menace));
 }
 
 /// Sylvan Anthem pumps green creatures and scries on their arrival.
@@ -763,7 +763,7 @@ fn knighted_myr_adapt_double_strike() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(myr).unwrap();
     assert_eq!(cp.power, 3);
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Soul of Migration brings Birds and can be evoked.
@@ -785,7 +785,7 @@ fn thraben_watcher_anthem() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3);
-    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
 }
 
 /// Steelfin Whale untaps when an artifact arrives.

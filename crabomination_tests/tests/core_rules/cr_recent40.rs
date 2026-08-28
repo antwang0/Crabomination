@@ -50,7 +50,7 @@ fn cr_612_2_land_type_rewrite_moves_the_mana_ability_not_the_name() {
         Layer::L3Text,
     );
     let cp = g.computed_permanent(forest).expect("computed");
-    assert_eq!(cp.subtypes.land_types, vec![LandType::Island]);
+    assert_eq!(cp.subtypes().land_types, vec![LandType::Island]);
     assert_eq!(
         g.battlefield_find(forest).unwrap().definition.name,
         "Forest",
@@ -125,10 +125,10 @@ fn cr_612_3_color_word_rewrite_skips_a_granted_protection() {
             Layer::L3Text,
         );
     }
-    let pk = g.computed_permanent(printed).expect("computed").keywords.clone();
+    let pk = g.computed_permanent(printed).expect("computed").keywords().to_vec();
     assert!(pk.contains(&Keyword::Protection(Color::Red)), "printed word rewritten");
     assert!(!pk.contains(&Keyword::Protection(Color::Black)));
-    let gk = g.computed_permanent(granted).expect("computed").keywords.clone();
+    let gk = g.computed_permanent(granted).expect("computed").keywords().to_vec();
     assert!(
         gk.contains(&Keyword::Protection(Color::Black)),
         "CR 612.3 — a granted keyword isn't text and survives the rewrite"
@@ -228,7 +228,7 @@ fn cr_708_8_turning_face_up_keeps_effects_applied_while_face_down() {
     g.battlefield_find_mut(gargaroth).unwrap().turn_face_up();
     let cp = g.computed_permanent(gargaroth).expect("computed");
     assert_eq!(cp.power, 7, "6/6 base plus the counter it kept");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "printed abilities are back");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "printed abilities are back");
 }
 
 /// CR 708.2a / 604.3 — Ixidron turns the other nontoken creatures into
@@ -253,7 +253,7 @@ fn cr_708_2a_turned_face_down_creatures_become_vanilla_two_twos() {
     for id in [gargaroth, foe] {
         let cp = g.computed_permanent(id).expect("computed");
         assert_eq!((cp.power, cp.toughness), (2, 2), "vanilla 2/2 body");
-        assert!(cp.keywords.is_empty(), "no abilities while face down");
+        assert!(cp.keywords().is_empty(), "no abilities while face down");
     }
     // Ixidron itself isn't face down, so its CDA reads the two it flipped.
     let cp = g.computed_permanent(ixidron).expect("computed");

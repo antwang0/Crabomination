@@ -53,7 +53,7 @@ fn cr_509_1g_lone_block_rejects_two_blockers() {
     assert!(g
         .computed_permanent(attacker)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&Keyword::CantBeBlockedByMoreThanOne));
     let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -165,7 +165,7 @@ fn cr_702_166_disguise_face_down_body_and_flip() {
     assert_eq!((fd.definition.power, fd.definition.toughness), (2, 2), "face-down 2/2");
     let cp = g.computed_permanent(card).unwrap();
     assert!(
-        cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))),
+        cp.keywords().iter().any(|k| matches!(k, Keyword::Ward(_))),
         "face-down body has ward",
     );
     // Turn face up for the disguise cost {5}{U}; the counters trigger fires.

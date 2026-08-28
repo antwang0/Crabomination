@@ -47,7 +47,7 @@ fn flowstone_mauler_pumps_plus_one_minus_one() {
     }
     let cp = g.computed_permanent(mauler).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 3));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Revenant's power and toughness track the creature cards in your graveyard.
@@ -236,9 +236,9 @@ fn tortured_existence_swaps_creature_cards() {
 fn rolling_stones_lifts_defender_off_walls() {
     let mut g = two_player_game();
     let wall = g.add_card_to_battlefield(0, catalog::wall_of_razors());
-    assert!(g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender));
     g.add_card_to_battlefield(0, catalog::rolling_stones());
-    assert!(!g.computed_permanent(wall).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(!g.computed_permanent(wall).unwrap().keywords().contains(&Keyword::Defender));
 }
 
 /// Mortuary sends your dead creatures back to the top of your library.
@@ -282,7 +282,7 @@ fn dream_prowler_is_unblockable_alone() {
     let mut g = two_player_game();
     let prowler = g.add_card_to_battlefield(0, catalog::dream_prowler());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(prowler).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(!g.computed_permanent(prowler).unwrap().keywords().contains(&Keyword::Unblockable));
 
     g.clear_sickness(prowler);
     g.clear_sickness(bear);
@@ -295,7 +295,7 @@ fn dream_prowler_is_unblockable_alone() {
     }]))
     .expect("attack alone");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(prowler).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(prowler).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Mogg Bombers goes off the moment another creature lands.
@@ -530,7 +530,7 @@ fn gliding_licid_becomes_an_aura_and_back() {
     let aura = g.battlefield_find(licid).unwrap();
     assert!(!aura.definition.is_creature(), "it is an enchantment now");
     assert_eq!(aura.attached_to, Some(bear));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 
     g.players[0].mana_pool.add(Color::Blue, 1);
     activate(&mut g, licid, 0, None).expect("end it");
@@ -538,7 +538,7 @@ fn gliding_licid_becomes_an_aura_and_back() {
     let back = g.battlefield_find(licid).unwrap();
     assert!(back.definition.is_creature(), "a 2/2 again");
     assert_eq!(back.attached_to, None);
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Contempt sends the attacker and itself home at end of combat.
@@ -605,7 +605,7 @@ fn volraths_shapeshifter_wears_the_graveyard_top() {
     g.check_state_based_actions();
     let cp = g.computed_permanent(shifter).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     // Its own "{2}: Discard a card" rides along on the copy.
     assert_eq!(
         g.battlefield_find(shifter)
@@ -776,7 +776,7 @@ fn invasion_plans_moves_the_block_declaration_to_the_attacker() {
     assert!(
         g.computed_permanent(blocker)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::MustBlock)
     );
     advance_to(&mut g, TurnStep::DeclareAttackers);

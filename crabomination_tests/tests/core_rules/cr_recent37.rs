@@ -165,7 +165,7 @@ fn cr_702_103f_bestowed_aura_reverts_when_the_host_leaves() {
     assert!(!c.bestowed, "it stopped being bestowed");
     assert_eq!(c.attached_to, None);
     assert!(
-        g.computed_permanent(eidolon).unwrap().card_types.contains(&CardType::Creature),
+        g.computed_permanent(eidolon).unwrap().card_types().contains(&CardType::Creature),
         "it is a creature again"
     );
 }
@@ -195,12 +195,12 @@ fn cr_509_1b_tromokratis_hexproof_lapses_in_combat() {
     let mut g = main_phase();
     let kraken = g.add_card_to_battlefield(0, catalog::tromokratis());
     g.clear_sickness(kraken);
-    assert!(g.computed_permanent(kraken).unwrap().keywords.contains(&Keyword::Hexproof));
+    assert!(g.computed_permanent(kraken).unwrap().keywords().contains(&Keyword::Hexproof));
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: kraken,
         target: AttackTarget::Player(1),
     }]))
     .expect("attack");
-    assert!(!g.computed_permanent(kraken).unwrap().keywords.contains(&Keyword::Hexproof));
+    assert!(!g.computed_permanent(kraken).unwrap().keywords().contains(&Keyword::Hexproof));
 }

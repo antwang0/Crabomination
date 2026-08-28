@@ -1585,7 +1585,7 @@ fn top_of_the_class_buffs_prepared_and_spares_unprepared() {
         assert_eq!(c.power, base_p, "unprepared: base power");
         assert_eq!(c.toughness, base_t, "unprepared: base toughness");
         assert!(
-            !c.keywords.contains(&Keyword::Flying),
+            !c.keywords().contains(&Keyword::Flying),
             "unprepared creature gets no anthem flying"
         );
     }
@@ -1607,7 +1607,7 @@ fn top_of_the_class_buffs_prepared_and_spares_unprepared() {
         "Top of the Class gives the prepared creature +1 toughness"
     );
     assert!(
-        prepared.keywords.contains(&Keyword::Flying),
+        prepared.keywords().contains(&Keyword::Flying),
         "Top of the Class grants the prepared creature flying"
     );
 
@@ -1616,7 +1616,7 @@ fn top_of_the_class_buffs_prepared_and_spares_unprepared() {
     assert_eq!(bear.power, 2, "unprepared bear keeps base power");
     assert_eq!(bear.toughness, 2, "unprepared bear keeps base toughness");
     assert!(
-        !bear.keywords.contains(&Keyword::Flying),
+        !bear.keywords().contains(&Keyword::Flying),
         "unprepared bear gets no flying"
     );
 }
@@ -1638,7 +1638,7 @@ fn top_of_the_class_spares_opponents_prepared_creature() {
     assert_eq!(opp.power, def.power, "opponent's prepared creature: base power");
     assert_eq!(opp.toughness, def.toughness, "opponent's prepared creature: base toughness");
     assert!(
-        !opp.keywords.contains(&Keyword::Flying),
+        !opp.keywords().contains(&Keyword::Flying),
         "your anthem must not grant flying to an opponent's prepared creature"
     );
 }
@@ -1659,7 +1659,7 @@ fn prepared_counter_is_inert_for_pt_without_payoff() {
     assert_eq!(c.power, def.power, "no payoff → prepared creature keeps base power");
     assert_eq!(c.toughness, def.toughness, "no payoff → base toughness");
     assert!(
-        !c.keywords.contains(&Keyword::Flying),
+        !c.keywords().contains(&Keyword::Flying),
         "no payoff → a bare Prepared counter grants no flying"
     );
 }
@@ -1923,7 +1923,7 @@ fn berserk_doubles_power_and_grants_trample() {
     drain_stack(&mut g);
     let c = g.computed_permanent(angel).unwrap();
     assert_eq!(c.power, 8, "+X/+0 where X = its power");
-    assert!(c.keywords.contains(&Keyword::Trample));
+    assert!(c.keywords().contains(&Keyword::Trample));
 }
 
 /// Glimpse of Nature: creatures entering this turn each draw a card.
@@ -1963,7 +1963,7 @@ fn akromas_will_mode_zero_team_keywords() {
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
     for kw in [Keyword::Flying, Keyword::Vigilance, Keyword::DoubleStrike] {
-        assert!(c.keywords.contains(&kw), "bear gains {kw:?}");
+        assert!(c.keywords().contains(&kw), "bear gains {kw:?}");
     }
 }
 
@@ -2205,6 +2205,6 @@ fn akromas_will_chooses_both_with_commander() {
     }).expect("castable");
     drain_stack(&mut g);
     let c = g.computed_permanent(bear).unwrap();
-    assert!(c.keywords.contains(&Keyword::DoubleStrike), "mode 0 applied");
-    assert!(c.keywords.contains(&Keyword::Lifelink), "mode 1 applied too (commander)");
+    assert!(c.keywords().contains(&Keyword::DoubleStrike), "mode 0 applied");
+    assert!(c.keywords().contains(&Keyword::Lifelink), "mode 1 applied too (commander)");
 }

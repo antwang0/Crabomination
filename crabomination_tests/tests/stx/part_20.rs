@@ -463,7 +463,7 @@ fn pump_and_grant_keyword_instant_table() {
         let buffed = g.computed_permanent(bear).expect("Bear still on bf");
         assert_eq!(buffed.power, pwr);
         assert_eq!(buffed.toughness, tough);
-        assert!(buffed.keywords.contains(&kw));
+        assert!(buffed.keywords().contains(&kw));
     }
 }
 

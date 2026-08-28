@@ -88,7 +88,7 @@ fn cr_704_5m_protection_sheds_the_aura_unless_it_exempts_itself() {
         assert!(
             g.computed_permanent(host)
                 .unwrap()
-                .keywords
+                .keywords()
                 .contains(&Keyword::Protection(Color::White))
                 == keeps_self,
             "the grant only survives while its Aura does"

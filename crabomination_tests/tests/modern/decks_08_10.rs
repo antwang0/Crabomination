@@ -394,8 +394,8 @@ fn thornweald_archer_has_reach_and_deathtouch() {
     let id = g.add_card_to_battlefield(0, catalog::thornweald_archer());
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Reach));
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Deathtouch));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Reach));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Deathtouch));
 }
 
 #[test]

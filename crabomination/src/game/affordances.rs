@@ -364,7 +364,7 @@ impl GameState {
                 // highlight matches what `declare_attackers` will accept.
                 let cp = self.computed_permanent(c.id);
                 let kws: &[Keyword] = match &cp {
-                    Some(cp) => &cp.keywords,
+                    Some(cp) => cp.keywords(),
                     None => &c.definition.keywords,
                 };
                 if (kws.contains(&Keyword::Defender) && !self.ignores_defender_for_attack(c))

@@ -236,7 +236,7 @@ fn crash_landing_grounds_and_burns_by_forests() {
     let s = g.battlefield_find(flyer).unwrap();
     assert_eq!(s.damage, 2, "2 damage = number of Forests");
     assert!(!g.compute_battlefield().iter().find(|c| c.id == flyer).unwrap()
-        .keywords.contains(&Keyword::Flying), "lost flying this turn");
+        .keywords().contains(&Keyword::Flying), "lost flying this turn");
 }
 
 /// Hissing Miasma drains the attacking player when a creature attacks you.
@@ -393,7 +393,7 @@ fn fencers_magemark_pumps_and_grants_first_strike() {
     g.battlefield_find_mut(mark).unwrap().attached_to = Some(bear);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 anthem");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "granted first strike");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "granted first strike");
 }
 
 /// Guardian's Magemark has flash and anthems enchanted creatures +1/+1.
@@ -413,11 +413,11 @@ fn guardians_magemark_has_flash_and_pumps() {
 fn skyrider_trainee_flies_only_while_enchanted() {
     let mut g = two_player_game();
     let sky = g.add_card_to_battlefield(0, catalog::skyrider_trainee());
-    assert!(!g.computed_permanent(sky).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(!g.computed_permanent(sky).unwrap().keywords().contains(&Keyword::Flying),
         "no flying while unenchanted");
     let aura = g.add_card_to_battlefield(0, catalog::guardians_magemark());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(sky);
-    assert!(g.computed_permanent(sky).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(sky).unwrap().keywords().contains(&Keyword::Flying),
         "gains flying while enchanted");
 }
 
@@ -434,7 +434,7 @@ fn lionheart_maverick_pumps_itself() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(lion).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 3), "+1/+2 until end of turn");
-    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
 }
 
 /// Order of the Stars chooses a color as it enters and has defender.
@@ -501,7 +501,7 @@ fn restless_bones_grants_swampwalk() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant swampwalk");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Landwalk(LandType::Swamp)));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Landwalk(LandType::Swamp)));
 }
 
 /// Smogsteed Rider gives every other attacker fear when it attacks.
@@ -519,9 +519,9 @@ fn smogsteed_rider_grants_fear_to_other_attackers() {
         Attack { attacker: ally, target: AttackTarget::Player(1) },
     ])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Fear),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Fear),
         "other attacker gained fear");
-    assert!(!g.computed_permanent(rider).unwrap().keywords.contains(&Keyword::Fear),
+    assert!(!g.computed_permanent(rider).unwrap().keywords().contains(&Keyword::Fear),
         "the rider itself does not");
 }
 
@@ -539,7 +539,7 @@ fn martyred_rusalka_prevents_attack() {
     }).expect("prevent attack");
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed as a cost");
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantAttack));
 }
 
 /// Skarrgan Firebird enters with three +1/+1 counters when an opponent was
@@ -622,7 +622,7 @@ fn gruul_war_plow_trample_anthem_and_animate() {
     let mut g = two_player_game();
     let plow = g.add_card_to_battlefield(0, catalog::gruul_war_plow());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample),
         "creatures you control have trample");
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -1149,7 +1149,7 @@ fn skarrg_pumps_and_grants_trample() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(cre).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Orzhova drains a target player for 1.
@@ -1316,9 +1316,9 @@ fn droning_bureaucrats_locks_matching_mv() {
         card_id: db, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(2), mode: None,
     }).expect("activate for X=2");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(two_drop).unwrap().keywords.contains(&Keyword::CantAttack),
+    assert!(g.computed_permanent(two_drop).unwrap().keywords().contains(&Keyword::CantAttack),
         "MV-2 creature can't attack");
-    assert!(!g.computed_permanent(one_drop).unwrap().keywords.contains(&Keyword::CantAttack),
+    assert!(!g.computed_permanent(one_drop).unwrap().keywords().contains(&Keyword::CantAttack),
         "MV-1 creature is unaffected");
 }
 
@@ -1381,7 +1381,7 @@ fn sabertooth_only_blocked_by_defenders() {
         card_id: cat, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(cat).unwrap().keywords.clone();
+    let kws = g.computed_permanent(cat).unwrap().keywords().to_vec();
     assert!(
         kws.iter().any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))),
         "gained the defender-only evasion",
@@ -1389,7 +1389,7 @@ fn sabertooth_only_blocked_by_defenders() {
 }
 
 fn cat_has_must_attack(g: &crabomination::game::GameState, id: crabomination::card::CardId) -> bool {
-    g.computed_permanent(id).unwrap().keywords.contains(&Keyword::MustAttack)
+    g.computed_permanent(id).unwrap().keywords().contains(&Keyword::MustAttack)
 }
 
 /// Orzhov Pontiff's ETB choose-one debuffs the opponent's creatures.
@@ -1596,7 +1596,7 @@ fn killer_instinct_deploys_and_sacrifices_the_revealed_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(creature).is_some(), "put onto the battlefield");
     assert!(
-        g.computed_permanent(creature).unwrap().keywords.contains(&K::Haste),
+        g.computed_permanent(creature).unwrap().keywords().contains(&K::Haste),
         "gained haste",
     );
     while g.step != TurnStep::End {

@@ -30,7 +30,7 @@ fn overwhelming_stampede_pumps_by_greatest_power_and_grants_trample() {
     // X = 6 (greatest power among your creatures), added to each.
     assert_eq!(g.battlefield_find(small).unwrap().power(), 8, "2 + 6");
     assert_eq!(g.battlefield_find(big).unwrap().power(), 12, "6 + 6");
-    assert!(g.computed_permanent(small).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(small).unwrap().keywords().contains(&Keyword::Trample),
         "the bear gains trample");
 }
 
@@ -50,8 +50,8 @@ fn triumph_of_the_hordes_grants_infect_and_trample() {
     let s = g.battlefield_find(bear).unwrap();
     assert_eq!((s.power(), s.toughness()), (3, 3), "+1/+1");
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Trample), "gains trample");
-    assert!(cp.keywords.contains(&Keyword::Infect), "gains infect");
+    assert!(cp.keywords().contains(&Keyword::Trample), "gains trample");
+    assert!(cp.keywords().contains(&Keyword::Infect), "gains infect");
 }
 
 /// Aura Shards destroys an artifact/enchantment whenever a creature you control
@@ -1344,14 +1344,14 @@ fn wildfire_wickerfolk_delirium_pumps_and_grants_trample() {
     let id = g.add_card_to_battlefield(0, catalog::wildfire_wickerfolk());
     let c0 = g.computed_permanent(id).unwrap();
     assert_eq!((c0.power, c0.toughness), (3, 2));
-    assert!(!c0.keywords.contains(&Keyword::Trample));
+    assert!(!c0.keywords().contains(&Keyword::Trample));
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.add_card_to_graveyard(0, catalog::lightning_bolt());
     g.add_card_to_graveyard(0, catalog::duress());
     g.add_card_to_graveyard(0, catalog::forest());
     let c1 = g.computed_permanent(id).unwrap();
     assert_eq!((c1.power, c1.toughness), (4, 3), "delirium → +1/+1");
-    assert!(c1.keywords.contains(&Keyword::Trample), "delirium grants trample");
+    assert!(c1.keywords().contains(&Keyword::Trample), "delirium grants trample");
 }
 
 /// Kindlespark Duo taps to ping the opponent, and casting a noncreature spell
@@ -1399,7 +1399,7 @@ fn mabel_anthems_mice_and_mints_cragflame() {
     let cp = g.computed_permanent(hero).unwrap();
     // 1/1 base + anthem (+1/+1) + Cragflame (+1/+1) = 3/3 with haste.
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Haste) && cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Daring Waverider's ETB free-casts an instant/sorcery (MV ≤ 4) from your
@@ -1726,7 +1726,7 @@ fn might_of_the_meek_pumps_with_mouse() {
     }).expect("cast Might of the Meek");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "gained trample");
     assert_eq!(cp.power, 3, "+1/+0 because you control a Mouse");
     assert_eq!(g.players[0].hand.len(), hand0, "cast one, drew one (net even)");
 }
@@ -1842,7 +1842,7 @@ fn spineseeker_centipede_delirium_pumps_and_grants_vigilance() {
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
     assert_eq!((c.power, c.toughness), (2, 1), "base 2/1 without delirium");
-    assert!(!c.keywords.contains(&Keyword::Vigilance));
+    assert!(!c.keywords().contains(&Keyword::Vigilance));
     // Four card types in graveyard: Creature, Land, Sorcery, Instant.
     g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.add_card_to_graveyard(0, catalog::forest());
@@ -1851,7 +1851,7 @@ fn spineseeker_centipede_delirium_pumps_and_grants_vigilance() {
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "delirium +1/+2");
-    assert!(c.keywords.contains(&Keyword::Vigilance), "delirium grants vigilance");
+    assert!(c.keywords().contains(&Keyword::Vigilance), "delirium grants vigilance");
 }
 
 /// Mind Drill Assailant gets +3/+0 once seven cards are in your graveyard.
@@ -2200,7 +2200,7 @@ fn drogskol_captain_buffs_other_spirits() {
     let cp = g.compute_battlefield();
     let s = cp.iter().find(|c| c.id == spirit).unwrap();
     assert_eq!((s.power, s.toughness), (2, 2), "other Spirit +1/+1");
-    assert!(s.keywords.contains(&Keyword::Hexproof), "other Spirit gains hexproof");
+    assert!(s.keywords().contains(&Keyword::Hexproof), "other Spirit gains hexproof");
     let c = cp.iter().find(|c| c.id == cap).unwrap();
     assert_eq!((c.power, c.toughness), (2, 2), "captain doesn't buff itself");
 }
@@ -2222,7 +2222,7 @@ fn lord_of_the_unreal_buffs_illusions() {
     let cp = g.compute_battlefield();
     let i = cp.iter().find(|c| c.id == illusion).unwrap();
     assert_eq!((i.power, i.toughness), (3, 3), "Illusion +1/+1");
-    assert!(i.keywords.contains(&Keyword::Hexproof));
+    assert!(i.keywords().contains(&Keyword::Hexproof));
 }
 
 /// Lord of Atlantis grants other Merfolk +1/+1 and islandwalk.
@@ -2242,7 +2242,7 @@ fn lord_of_atlantis_buffs_merfolk_with_islandwalk() {
     let cp = g.compute_battlefield();
     let f = cp.iter().find(|c| c.id == fish).unwrap();
     assert_eq!((f.power, f.toughness), (2, 2), "other Merfolk +1/+1");
-    assert!(f.keywords.contains(&Keyword::Landwalk(LandType::Island)), "gains islandwalk");
+    assert!(f.keywords().contains(&Keyword::Landwalk(LandType::Island)), "gains islandwalk");
 }
 
 /// Death Baron's disjunctive anthem buffs both Zombies and Skeletons + deathtouch.
@@ -2265,7 +2265,7 @@ fn death_baron_buffs_zombies_and_skeletons() {
     for id in [zombie, skeleton] {
         let c = cp.iter().find(|c| c.id == id).unwrap();
         assert_eq!((c.power, c.toughness), (2, 2), "tribe member +1/+1");
-        assert!(c.keywords.contains(&Keyword::Deathtouch), "tribe member gains deathtouch");
+        assert!(c.keywords().contains(&Keyword::Deathtouch), "tribe member gains deathtouch");
     }
 }
 
@@ -2296,12 +2296,12 @@ fn etched_champion_metalcraft_grants_protection() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let champ = g.add_card_to_battlefield(0, catalog::etched_champion()); // 1 artifact (itself)
-    let no_metalcraft = g.computed_permanent(champ).unwrap().keywords.clone();
+    let no_metalcraft = g.computed_permanent(champ).unwrap().keywords().to_vec();
     assert!(!no_metalcraft.contains(&Keyword::Protection(Color::Red)), "no protection below 3 artifacts");
     // Add two more artifacts → metalcraft on.
     g.add_card_to_battlefield(0, catalog::ornithopter());
     g.add_card_to_battlefield(0, catalog::ornithopter());
-    let kws = g.computed_permanent(champ).unwrap().keywords.clone();
+    let kws = g.computed_permanent(champ).unwrap().keywords().to_vec();
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
         assert!(kws.contains(&Keyword::Protection(c)), "metalcraft grants protection from {c:?}");
     }

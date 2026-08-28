@@ -96,7 +96,7 @@ fn cr_713_4_dfc_is_its_front_face_until_it_transforms() {
     let computed = g.computed_permanent(id).expect("computed");
     assert_eq!((computed.power, computed.toughness), (3, 3), "front-face P/T");
     assert!(
-        !computed.keywords.contains(&Keyword::Haste),
+        !computed.keywords().contains(&Keyword::Haste),
         "the back face's text is inert while the front is up"
     );
 }
@@ -133,8 +133,8 @@ fn cr_203_1_illustration_grants_nothing() {
     // either is depicted.
     let flier = g.add_card_to_battlefield(0, catalog::cloud_elemental());
     let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(flier).unwrap().keywords.contains(&Keyword::Flying));
-    assert!(!g.computed_permanent(ground).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(flier).unwrap().keywords().contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(ground).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// CR 200.2 / 109.3 — only some parts of a card are characteristics of the
@@ -146,7 +146,7 @@ fn cr_200_2_only_characteristics_reach_the_object() {
     let id = g.add_card_to_battlefield(0, catalog::serra_angel());
     let c = g.computed_permanent(id).expect("computed");
     assert_eq!((c.power, c.toughness), (4, 4));
-    assert!(c.keywords.contains(&Keyword::Flying) && c.keywords.contains(&Keyword::Vigilance));
+    assert!(c.keywords().contains(&Keyword::Flying) && c.keywords().contains(&Keyword::Vigilance));
     let def = &g.battlefield_find(id).unwrap().definition;
     assert_eq!(def.name, "Serra Angel");
     assert_eq!(def.card_types, vec![crabomination::card::CardType::Creature]);

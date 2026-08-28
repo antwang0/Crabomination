@@ -45,7 +45,7 @@ mod recent223 {
         drain_stack(&mut g);
         assert_eq!(tokens(&g), 3, "two copies join the original token");
         assert_eq!(g.players[0].life, life + 3, "gained 1 life per token");
-        assert!(g.computed_permanent(orig).unwrap().keywords.contains(&Keyword::Indestructible), "tokens shielded");
+        assert!(g.computed_permanent(orig).unwrap().keywords().contains(&Keyword::Indestructible), "tokens shielded");
     }
 }
 
@@ -65,9 +65,9 @@ mod recent224 {
         let effect = catalog::long_river_lurker().triggered_abilities[0].effect.clone();
         let ctx = EffectContext { targets: vec![Target::Permanent(ally)], ..EffectContext::for_trigger(lurker, 0, None, 0) };
         g.resolve_effect(&effect, &ctx).unwrap();
-        assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Unblockable), "ally can't be blocked");
+        assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Unblockable), "ally can't be blocked");
         // The Lurker itself has Ward.
-        assert!(g.computed_permanent(lurker).unwrap().keywords.iter().any(|k| matches!(k, Keyword::Ward(_))), "Lurker has ward");
+        assert!(g.computed_permanent(lurker).unwrap().keywords().iter().any(|k| matches!(k, Keyword::Ward(_))), "Lurker has ward");
     }
 
     /// Kolodin grants haste to Vehicles you control.
@@ -75,9 +75,9 @@ mod recent224 {
     fn kolodin_gives_vehicles_haste() {
         let mut g = two_player_game();
         let vehicle = g.add_card_to_battlefield(0, catalog::tangle_tumbler());
-        assert!(!g.computed_permanent(vehicle).unwrap().keywords.contains(&Keyword::Haste), "no haste on its own");
+        assert!(!g.computed_permanent(vehicle).unwrap().keywords().contains(&Keyword::Haste), "no haste on its own");
         g.add_card_to_battlefield(0, catalog::kolodin_triumph_caster());
-        assert!(g.computed_permanent(vehicle).unwrap().keywords.contains(&Keyword::Haste), "Kolodin grants haste");
+        assert!(g.computed_permanent(vehicle).unwrap().keywords().contains(&Keyword::Haste), "Kolodin grants haste");
     }
 
     /// Mu Yanling makes a Vehicle on entry and that Vehicle flies under her static.
@@ -88,7 +88,7 @@ mod recent224 {
         let etb = catalog::mu_yanling_wind_rider().triggered_abilities[0].effect.clone();
         g.resolve_effect(&etb, &EffectContext::for_trigger(mu, 0, None, 0)).unwrap();
         let vehicle = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Vehicle").map(|c| c.id).expect("a Vehicle token entered");
-        assert!(g.computed_permanent(vehicle).unwrap().keywords.contains(&Keyword::Flying), "the Vehicle flies under Mu Yanling");
+        assert!(g.computed_permanent(vehicle).unwrap().keywords().contains(&Keyword::Flying), "the Vehicle flies under Mu Yanling");
     }
 }
 
@@ -236,7 +236,7 @@ mod recent225 {
         let effect = catalog::seraphic_steed().triggered_abilities[0].effect.clone();
         g.resolve_effect(&effect, &EffectContext::for_trigger(steed, 0, None, 0)).unwrap();
         let angel = g.battlefield.iter().find(|c| c.definition.name == "Angel").expect("angel token");
-        assert!(g.computed_permanent(angel.id).unwrap().keywords.contains(&crabomination::card::Keyword::Flying));
+        assert!(g.computed_permanent(angel.id).unwrap().keywords().contains(&crabomination::card::Keyword::Flying));
     }
 
     /// Sandstorm Salvager's ETB makes a 3/3 Golem.
@@ -275,7 +275,7 @@ mod recent225 {
     fn valgavoths_lair_is_hexproof() {
         let mut g = two_player_game();
         let land = g.add_card_to_battlefield(0, catalog::valgavoths_lair());
-        assert!(g.computed_permanent(land).unwrap().keywords.contains(&crabomination::card::Keyword::Hexproof));
+        assert!(g.computed_permanent(land).unwrap().keywords().contains(&crabomination::card::Keyword::Hexproof));
     }
 
     /// Sandstorm Verge can stop a blocker.
@@ -287,7 +287,7 @@ mod recent225 {
         let effect = catalog::sandstorm_verge().activated_abilities[1].effect.clone();
         let ctx = EffectContext { targets: vec![Target::Permanent(enemy)], ..EffectContext::for_ability(land, 0, None) };
         g.resolve_effect(&effect, &ctx).unwrap();
-        assert!(g.computed_permanent(enemy).unwrap().keywords.contains(&crabomination::card::Keyword::CantBlock));
+        assert!(g.computed_permanent(enemy).unwrap().keywords().contains(&crabomination::card::Keyword::CantBlock));
     }
 
     /// Pitiless Carnage is plottable.
@@ -408,7 +408,7 @@ mod recent226 {
         g.add_card_to_battlefield(0, catalog::all_out_assault());
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "+1/+1");
-        assert!(cp.keywords.contains(&Keyword::Deathtouch));
+        assert!(cp.keywords().contains(&Keyword::Deathtouch));
     }
 
     /// Homicide Investigator investigates when a creature you control dies.
@@ -499,7 +499,7 @@ mod recent227 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(id).expect("copy survived");
         assert_eq!(cp.power, 4, "copied the 4/4");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Flying), "copied Flying");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying), "copied Flying");
     }
 }
 
@@ -558,7 +558,7 @@ mod recent228 {
         g.battlefield_find_mut(mace).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 6, "2 + 4 = 6");
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
     }
 
     /// Reef Worm leaves a 3/3 Fish when it dies.
@@ -626,8 +626,8 @@ mod recent228 {
         g.resolve_effect(&catalog::molten_duplication().effect.clone(), &ctx).unwrap();
         let copy = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Grizzly Bears").expect("token copy");
         let cp = g.computed_permanent(copy.id).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Haste), "gains haste");
-        assert!(cp.card_types.contains(&crabomination::card::CardType::Artifact), "also an artifact");
+        assert!(cp.keywords().contains(&Keyword::Haste), "gains haste");
+        assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact), "also an artifact");
     }
 
     /// Shackle Slinger taps an untapped opposing creature.
@@ -864,14 +864,14 @@ mod recent230 {
         let mut g = two_player_game();
         let rr = g.add_card_to_battlefield(0, catalog::resilient_roadrunner());
         let cp = g.computed_permanent(rr).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Haste));
-        assert!(cp.keywords.contains(&Keyword::ProtectionFromCreatureType(CreatureType::Coyote)));
+        assert!(cp.keywords().contains(&Keyword::Haste));
+        assert!(cp.keywords().contains(&Keyword::ProtectionFromCreatureType(CreatureType::Coyote)));
         let effect = catalog::resilient_roadrunner().activated_abilities[0].effect.clone();
         g.resolve_effect(&effect, &EffectContext::for_ability(rr, 0, None)).unwrap();
         assert!(
             g.computed_permanent(rr)
                 .unwrap()
-                .keywords
+                .keywords()
                 .iter()
                 .any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))),
             "gains can't-be-blocked-except-by-haste"
@@ -1034,7 +1034,7 @@ mod recent233 {
         g.resolve_effect(&modes[0].effect, &ctx).unwrap();
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (0, 1), "becomes a 0/1");
-        assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Rabbit), "a Rabbit");
+        assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Rabbit), "a Rabbit");
     }
 
     /// Return the Favor's copy mode duplicates an instant/sorcery spell on the
@@ -1433,7 +1433,7 @@ mod recent237 {
         };
         g.resolve_effect(&door_effect(&def, true), &ctx).unwrap();
         assert!(
-            g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::DoubleStrike),
+            g.computed_permanent(attacker).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "gained double strike",
         );
     }
@@ -1482,7 +1482,7 @@ mod recent237 {
         g.add_card_to_graveyard(0, catalog::the_swarmweaver()); // artifact
         assert_eq!(g.computed_permanent(insects[0]).unwrap().power, 2, "2/2 with delirium");
         assert!(
-            g.computed_permanent(insects[0]).unwrap().keywords.contains(&Keyword::Deathtouch),
+            g.computed_permanent(insects[0]).unwrap().keywords().contains(&Keyword::Deathtouch),
             "deathtouch with delirium",
         );
     }

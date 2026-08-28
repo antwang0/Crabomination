@@ -30,8 +30,8 @@ fn cr_305_7_terraformer_relands_your_lands() {
     }).expect("activate Terraformer choosing Island");
     drain_stack(&mut g);
     let cp = g.computed_permanent(mtn).unwrap();
-    assert_eq!(cp.subtypes.land_types, vec![LandType::Island], "Mountain fully replaced by Island");
-    assert!(!cp.subtypes.land_types.contains(&LandType::Mountain), "lost its old basic type");
+    assert_eq!(cp.subtypes().land_types, vec![LandType::Island], "Mountain fully replaced by Island");
+    assert!(!cp.subtypes().land_types.contains(&LandType::Mountain), "lost its old basic type");
 }
 
 /// CR 202.2b — a card with hybrid mana symbols is every color those symbols

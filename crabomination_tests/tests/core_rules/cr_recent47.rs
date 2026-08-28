@@ -201,14 +201,14 @@ fn cr_703_4p_cleanup_ends_until_end_of_turn_effects() {
         &ctx,
     )
     .expect("grant");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 
     g.step = TurnStep::End;
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::PassPriority).expect("active passes");
     g.perform_action(GameAction::PassPriority).expect("opponent passes");
     assert!(
-        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying),
+        !g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying),
         "the grant expired in cleanup"
     );
 }

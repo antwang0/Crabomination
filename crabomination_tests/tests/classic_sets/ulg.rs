@@ -146,7 +146,7 @@ fn multani_counts_every_hand() {
     }
     let cp = g.computed_permanent(multani).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
-    assert!(cp.keywords.contains(&Keyword::Shroud));
+    assert!(cp.keywords().contains(&Keyword::Shroud));
 }
 
 /// Radiant counts other flyers on either side, not her own flying.
@@ -185,9 +185,9 @@ fn knighthood_and_levitation_grant_their_keyword() {
     g.add_card_to_battlefield(0, catalog::knighthood());
     g.add_card_to_battlefield(0, catalog::levitation());
     let cp = g.computed_permanent(mine).unwrap();
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
-    assert!(cp.keywords.contains(&Keyword::Flying));
-    assert!(!g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// The Phyrexian Carrier cycle shrinks by its printed amount and eats itself.
@@ -313,7 +313,7 @@ fn cessation_stops_the_host_attacking() {
     g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
     let aura = g.add_card_to_battlefield(0, catalog::cessation());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantAttack));
 }
 
 /// Granite Grip scales with your Mountains.
@@ -792,7 +792,7 @@ fn walking_sponge_strips_flying() {
     })
     .expect("activate");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(faerie).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(faerie).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Weatherseed Elf hands out forestwalk.
@@ -806,7 +806,7 @@ fn weatherseed_elf_grants_forestwalk() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest))
     );
 }
@@ -882,7 +882,7 @@ fn no_mercy_destroys_the_creature_that_hit_you() {
 fn opal_champion_wakes_on_an_opponents_creature_spell() {
     let mut g = two_player_game();
     let champ = g.add_card_to_battlefield(0, catalog::opal_champion());
-    assert!(!g.computed_permanent(champ).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(champ).unwrap().card_types().contains(&CardType::Creature));
     let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
     g.players[1].mana_pool.add(Color::Green, 2);
     g.active_player_idx = 1;
@@ -897,9 +897,9 @@ fn opal_champion_wakes_on_an_opponents_creature_spell() {
     .expect("cast");
     drain_stack(&mut g);
     let cp = g.computed_permanent(champ).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::FirstStrike));
+    assert!(cp.keywords().contains(&Keyword::FirstStrike));
 }
 
 /// An opponent's noncreature spell leaves Opal Champion asleep.
@@ -919,7 +919,7 @@ fn opal_champion_ignores_noncreature_spells() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(champ).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(champ).unwrap().card_types().contains(&CardType::Creature));
 }
 
 /// Hidden Gibbons wakes on an opponent's instant.
@@ -953,7 +953,7 @@ fn opal_avenger_wakes_at_ten_life() {
     g.dispatch_triggers_for_events(&ev);
     drain_stack(&mut g);
     assert!(
-        !g.computed_permanent(avenger).unwrap().card_types.contains(&CardType::Creature),
+        !g.computed_permanent(avenger).unwrap().card_types().contains(&CardType::Creature),
         "still at 15"
     );
     let mut ev = vec![];
@@ -981,7 +981,7 @@ fn lurking_skirge_wakes_on_an_opponents_creature_dying() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(skirge).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 2));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Crawlspace caps attackers against its controller at two.
@@ -1040,7 +1040,7 @@ fn angels_trumpet_taps_idlers_and_bites() {
     let idle = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert!(
-        g.computed_permanent(idle).unwrap().keywords.contains(&Keyword::Vigilance),
+        g.computed_permanent(idle).unwrap().keywords().contains(&Keyword::Vigilance),
         "the anthem reaches every creature"
     );
     let life = g.players[0].life;

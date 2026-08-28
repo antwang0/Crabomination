@@ -44,7 +44,7 @@ mod recent111 {
         })
         .expect("grant");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(speaker).unwrap().keywords.contains(&crabomination::card::Keyword::Unblockable));
+        assert!(g.computed_permanent(speaker).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable));
     }
 
     /// Tidebinder Mage taps a red/green creature and locks its next untap.
@@ -542,7 +542,7 @@ mod recent112 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(monk).unwrap();
         assert_eq!(cp.power, 2, "+1/+0");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Unblockable));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Unblockable));
     }
 }
 
@@ -791,7 +791,7 @@ mod recent113 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bears).unwrap();
         assert_eq!(cp.power, 3, "2 base + one card drawn this turn");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Trample));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample));
     }
 
     /// Changeling Outcast can't block and can't be blocked.
@@ -800,9 +800,9 @@ mod recent113 {
         let mut g = two_player_game();
         let outcast = g.add_card_to_battlefield(0, catalog::changeling_outcast());
         let cp = g.computed_permanent(outcast).unwrap();
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::CantBlock));
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Unblockable));
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Changeling));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::CantBlock));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Unblockable));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Changeling));
     }
 
     /// Irregular Cohort brings a changeling friend.
@@ -934,7 +934,7 @@ mod recent113 {
         }
         let cp = g.computed_permanent(frog).unwrap();
         assert_eq!((cp.power, cp.toughness), (5, 5), "+1/+1 with threshold");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Vigilance));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Vigilance));
     }
 
     /// Goblin War Party's entwine takes both modes: three Goblins and a team pump.
@@ -959,7 +959,7 @@ mod recent113 {
         );
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "team +1/+1");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Haste));
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste));
     }
 
     /// Viashino Sandsprinter returns to hand at the end step.
@@ -1099,12 +1099,12 @@ mod recent114 {
         let presence = g.add_card_to_battlefield(0, catalog::enchantresss_presence());
 
         let cp = g.computed_permanent(presence).unwrap();
-        assert!(cp.card_types.contains(&CardType::Creature), "non-Aura enchantment becomes a creature");
+        assert!(cp.card_types().contains(&CardType::Creature), "non-Aura enchantment becomes a creature");
         assert_eq!((cp.power, cp.toughness), (3, 3), "base P/T = mana value");
 
         // Opalescence itself ("each *other*") is untouched.
         let self_cp = g.computed_permanent(opal).unwrap();
-        assert!(!self_cp.card_types.contains(&CardType::Creature), "Opalescence isn't a creature");
+        assert!(!self_cp.card_types().contains(&CardType::Creature), "Opalescence isn't a creature");
     }
 
     /// Starfield of Nyx only animates while its controller has 5+ enchantments.
@@ -1115,7 +1115,7 @@ mod recent114 {
         let presence = g.add_card_to_battlefield(0, catalog::enchantresss_presence());
         // Two enchantments total → gate unmet.
         assert!(
-            !g.computed_permanent(presence).unwrap().card_types.contains(&CardType::Creature),
+            !g.computed_permanent(presence).unwrap().card_types().contains(&CardType::Creature),
             "under five enchantments, nothing animates"
         );
         // Pad up to five enchantments.
@@ -1123,7 +1123,7 @@ mod recent114 {
         g.add_card_to_battlefield(0, catalog::greater_auramancy());
         g.add_card_to_battlefield(0, catalog::nevermore());
         assert!(
-            g.computed_permanent(presence).unwrap().card_types.contains(&CardType::Creature),
+            g.computed_permanent(presence).unwrap().card_types().contains(&CardType::Creature),
             "at five enchantments Starfield animates the others"
         );
     }
@@ -1191,7 +1191,7 @@ mod recent114 {
         g.add_card_to_battlefield(0, catalog::privileged_position());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.iter().any(|k| matches!(
+            g.computed_permanent(bear).unwrap().keywords().iter().any(|k| matches!(
                 k,
                 crabomination::card::Keyword::Hexproof
             )),
@@ -1207,7 +1207,7 @@ mod recent114 {
         let other_ench = g.add_card_to_battlefield(0, catalog::enchantresss_presence());
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let has_shroud = |cp: &crabomination::game::layers::ComputedPermanent| {
-            cp.keywords.iter().any(|k| matches!(k, crabomination::card::Keyword::Shroud))
+            cp.keywords().iter().any(|k| matches!(k, crabomination::card::Keyword::Shroud))
         };
         assert!(has_shroud(&g.computed_permanent(other_ench).unwrap()), "other enchantment has shroud");
         assert!(!has_shroud(&g.computed_permanent(bear).unwrap()), "non-enchantment is unaffected");
@@ -1358,7 +1358,7 @@ mod recent114 {
         g.players[0].mana_pool.add_colorless(1);
         cast_at(&mut g, aura, Target::Permanent(bear));
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Indestructible),
+            g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible),
             "enchanted creature is indestructible"
         );
         // Lethal damage doesn't kill it.
@@ -1380,7 +1380,7 @@ mod recent114 {
         cast_at(&mut g, aura, Target::Permanent(bear));
         assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew a card on ETB");
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::ProtectionFromCreatures),
+            g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::ProtectionFromCreatures),
             "enchanted creature has protection from creatures"
         );
     }
@@ -1438,7 +1438,7 @@ mod recent114 {
         cast_at(&mut g, aura, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&Keyword::Flying), "granted flying");
+        assert!(cp.keywords().contains(&Keyword::Flying), "granted flying");
         g.battlefield_find_mut(bear).unwrap().damage = 4; // lethal
         let evs = g.check_state_based_actions();
         g.dispatch_triggers_for_events(&evs);
@@ -1462,7 +1462,7 @@ mod recent114 {
         cast_at(&mut g, aura, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (6, 6), "+4/+4");
-        assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike");
+        assert!(cp.keywords().contains(&Keyword::FirstStrike), "first strike");
         g.battlefield_find_mut(bear).unwrap().damage = 6;
         let evs = g.check_state_based_actions();
         g.dispatch_triggers_for_events(&evs);
@@ -1505,9 +1505,9 @@ mod recent114 {
         cast_at(&mut g, aura, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
         assert!(
-            cp.keywords.iter().any(|k| matches!(k, crabomination::card::Keyword::Protection(Color::Red))),
+            cp.keywords().iter().any(|k| matches!(k, crabomination::card::Keyword::Protection(Color::Red))),
             "enchanted creature has protection from red: {:?}",
-            cp.keywords
+            cp.keywords()
         );
     }
 
@@ -1631,7 +1631,8 @@ mod recent114 {
         let hand = g.players[0].hand.len();
         cast_at(&mut g, aura, Target::Permanent(land));
         assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "drew on ETB");
-        let types = &g.computed_permanent(land).unwrap().subtypes.land_types;
+        let cp = g.computed_permanent(land).unwrap();
+        let types = &cp.subtypes().land_types;
         assert!(
             types.contains(&LandType::Island) && types.contains(&LandType::Mountain),
             "enchanted land gained all basic land types: {types:?}"
@@ -1910,7 +1911,7 @@ mod recent117 {
         // The berserker is the only creature; it targets itself.
         let cp = g.computed_permanent(zerk).unwrap();
         assert_eq!(cp.power, 4, "3/4 pumped to 4/4");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Menace), "gains menace");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Menace), "gains menace");
     }
 
     /// Billowing Shriekmass mills three on entry and grows under threshold.

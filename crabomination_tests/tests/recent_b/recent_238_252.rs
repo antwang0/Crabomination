@@ -55,7 +55,7 @@ mod recent238 {
         let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
         let modes = spree_modes(&catalog::smugglers_surprise());
         g.resolve_effect(&modes[2].effect, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
-        let kws = g.computed_permanent(big).unwrap().keywords.clone();
+        let kws = g.computed_permanent(big).unwrap().keywords().to_vec();
         assert!(kws.contains(&Keyword::Hexproof) && kws.contains(&Keyword::Indestructible));
     }
 
@@ -132,7 +132,7 @@ mod recent239 {
         };
         let ctx = EffectContext { targets: vec![Target::Permanent(blocker)], ..EffectContext::for_spell(0, None, 0, 0) };
         g.resolve_effect(&modes[2], &ctx).unwrap();
-        assert!(g.computed_permanent(blocker).unwrap().keywords.contains(&Keyword::CantBlock));
+        assert!(g.computed_permanent(blocker).unwrap().keywords().contains(&Keyword::CantBlock));
     }
 
     /// With delirium, Omnivorous Flytrap's ETB distributes two +1/+1 counters; at
@@ -185,7 +185,7 @@ mod recent239 {
         g.resolve_effect(&def.triggered_abilities[0].effect, &ctx).unwrap();
         let l = g.computed_permanent(land).unwrap();
         assert_eq!((l.power, l.toughness), (3, 3), "0/0 Elemental + three +1/+1");
-        assert!(l.card_types.contains(&crabomination::card::CardType::Creature));
+        assert!(l.card_types().contains(&crabomination::card::CardType::Creature));
     }
 
     /// Reluctant Role Model's Survival grants a flying counter, and its death
@@ -200,14 +200,14 @@ mod recent239 {
             _ => panic!("not modal"),
         };
         g.resolve_effect(&survival, &EffectContext::for_trigger(model, 0, None, 0)).unwrap();
-        assert!(g.computed_permanent(model).unwrap().keywords.contains(&Keyword::Flying));
+        assert!(g.computed_permanent(model).unwrap().keywords().contains(&Keyword::Flying));
         // Death trigger moves the counters onto the heir.
         let death = catalog::reluctant_role_model().triggered_abilities[1].effect.clone();
         let ctx = EffectContext { targets: vec![Target::Permanent(heir)], ..EffectContext::for_trigger(model, 0, None, 0) };
         g.resolve_effect(&death, &ctx).unwrap();
-        assert!(g.computed_permanent(heir).unwrap().keywords.contains(&Keyword::Flying),
+        assert!(g.computed_permanent(heir).unwrap().keywords().contains(&Keyword::Flying),
             "flying keyword counter relocated to the heir");
-        assert!(!g.computed_permanent(model).unwrap().keywords.contains(&Keyword::Flying),
+        assert!(!g.computed_permanent(model).unwrap().keywords().contains(&Keyword::Flying),
             "the model's counter left it");
     }
 
@@ -324,7 +324,7 @@ mod recent239 {
         g.resolve_effect(&catalog::trial_of_agony().effect, &ctx).unwrap();
         drain_stack(&mut g);
         assert!(g.battlefield_find(a).is_none(), "took 5 and died");
-        assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::CantBlock));
+        assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::CantBlock));
     }
 
     /// Getaway Glamer's first mode blinks a creature (exiles it now).
@@ -692,7 +692,7 @@ mod recent239 {
         g.resolve_effect(&ab, &ctx).unwrap();
         let c = g.computed_permanent(lizard).unwrap();
         assert_eq!(c.power, 3, "+1/+0 applied");
-        assert!(c.keywords.contains(&Keyword::Haste), "gained haste");
+        assert!(c.keywords().contains(&Keyword::Haste), "gained haste");
     }
 
     /// Whiskervale Forerunner's Valiant trigger digs five deep for a small creature
@@ -906,7 +906,7 @@ mod recent240 {
         // Baseline: 2/1, no hexproof.
         let c = g.computed_permanent(vet).unwrap();
         assert_eq!((c.power, c.toughness), (2, 1));
-        assert!(!c.keywords.contains(&Keyword::Hexproof));
+        assert!(!c.keywords().contains(&Keyword::Hexproof));
         // Exile three cards stamped with the survivor as their source.
         for _ in 0..3 {
             let card = g.add_card_to_exile(1, catalog::grizzly_bears());
@@ -914,7 +914,7 @@ mod recent240 {
         }
         let c = g.computed_permanent(vet).unwrap();
         assert_eq!((c.power, c.toughness), (5, 4), "+3/+3 at three exiled");
-        assert!(c.keywords.contains(&Keyword::Hexproof), "hexproof at three exiled");
+        assert!(c.keywords().contains(&Keyword::Hexproof), "hexproof at three exiled");
     }
 
     /// Coordinated Clobbering taps both chosen creatures and makes each deal its
@@ -1007,7 +1007,7 @@ mod recent241 {
         drain_stack(&mut g);
         let c = g.computed_permanent(lox).unwrap();
         assert_eq!((c.power, c.toughness), (4, 4), "+1/+1 on the second draw");
-        assert!(c.keywords.contains(&Keyword::Vigilance), "gains vigilance on the second draw");
+        assert!(c.keywords().contains(&Keyword::Vigilance), "gains vigilance on the second draw");
     }
 
     /// Jaded Analyst sheds defender and gains vigilance on the second draw.
@@ -1015,7 +1015,7 @@ mod recent241 {
     fn jaded_analyst_loses_defender_on_second_draw() {
         let mut g = two_player_game();
         let jaded = g.add_card_to_battlefield(0, catalog::jaded_analyst());
-        assert!(g.computed_permanent(jaded).unwrap().keywords.contains(&Keyword::Defender));
+        assert!(g.computed_permanent(jaded).unwrap().keywords().contains(&Keyword::Defender));
         for _ in 0..2 {
             g.add_card_to_library(0, catalog::island());
         }
@@ -1026,8 +1026,8 @@ mod recent241 {
         }
         drain_stack(&mut g);
         let c = g.computed_permanent(jaded).unwrap();
-        assert!(!c.keywords.contains(&Keyword::Defender), "defender removed");
-        assert!(c.keywords.contains(&Keyword::Vigilance), "vigilance gained");
+        assert!(!c.keywords().contains(&Keyword::Defender), "defender removed");
+        assert!(c.keywords().contains(&Keyword::Vigilance), "vigilance gained");
     }
 
     /// Innocent Bystander investigates when dealt three or more damage.
@@ -1054,7 +1054,7 @@ mod recent241 {
         drain_stack(&mut g);
         let c = g.computed_permanent(mort).unwrap();
         assert_eq!(c.power, 4, "+1/+0 until end of turn");
-        assert!(c.keywords.contains(&Keyword::Menace) && c.keywords.contains(&Keyword::Lifelink));
+        assert!(c.keywords().contains(&Keyword::Menace) && c.keywords().contains(&Keyword::Lifelink));
     }
 
     /// Dog Walker mints two tapped Dog tokens when turned face up.
@@ -1104,7 +1104,7 @@ mod recent241 {
         };
         g.resolve_effect(&effect, &ctx).unwrap();
         drain_stack(&mut g);
-        assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Lifelink));
+        assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Lifelink));
     }
 
     /// Sample Collector collects evidence on attack and counters a creature.
@@ -1187,7 +1187,7 @@ mod recent241 {
         g.resolve_effect(&effect, &ctx).unwrap();
         drain_stack(&mut g);
         assert!(!g.battlefield_find(ally).unwrap().tapped, "team untapped");
-        assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Hexproof), "team hexproof");
+        assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Hexproof), "team hexproof");
     }
 
     /// Meddling Youths' investigate trigger is gated on attacking with 3+ creatures.
@@ -1250,8 +1250,8 @@ mod recent241 {
         };
         g.resolve_effect(&Effect::Suspect { what: Selector::Target(0) }, &ctx).unwrap();
         let c = g.computed_permanent(bear).unwrap();
-        assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
-        assert!(c.keywords.contains(&Keyword::CantBlock), "suspected -> can't block");
+        assert!(c.keywords().contains(&Keyword::Menace), "suspected -> menace");
+        assert!(c.keywords().contains(&Keyword::CantBlock), "suspected -> can't block");
     }
 
     /// CR 701.13 — an investigated Clue sacrifices for a card.
@@ -1326,7 +1326,7 @@ mod recent241 {
         assert!(g
             .computed_permanent(exit)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::CantBeBlockedByPowerAtLeast(3)));
         let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         let effect = catalog::exit_specialist().triggered_abilities[0].effect.clone();
@@ -1385,7 +1385,7 @@ mod recent241 {
         drain_stack(&mut g);
         let c = g.computed_permanent(goat).unwrap();
         // Suspected creatures have menace and can't block.
-        assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
+        assert!(c.keywords().contains(&Keyword::Menace), "suspected -> menace");
     }
 
     /// CR 701.60 — the Scapegoat's second ability, and it is the card: while
@@ -1480,8 +1480,8 @@ mod recent241 {
         drain_stack(&mut g);
         let c = g.computed_permanent(creature).unwrap();
         assert_eq!(c.controller, 0, "control gained");
-        assert!(c.keywords.contains(&Keyword::Haste), "gains haste");
-        assert!(c.keywords.contains(&Keyword::Menace), "suspected -> menace");
+        assert!(c.keywords().contains(&Keyword::Haste), "gains haste");
+        assert!(c.keywords().contains(&Keyword::Menace), "suspected -> menace");
     }
 
     /// Snarling Gorehound surveils when a small creature you control enters.
@@ -1811,7 +1811,7 @@ mod recent243 {
         drain_stack(&mut g);
         let c = g.computed_permanent(bear).unwrap();
         assert_eq!((c.power, c.toughness), (5, 2), "+3/+0");
-        assert!(c.keywords.contains(&Keyword::FirstStrike), "gains first strike");
+        assert!(c.keywords().contains(&Keyword::FirstStrike), "gains first strike");
         assert_eq!(clues(&g, 0), 1, "investigated");
     }
 
@@ -1850,7 +1850,7 @@ mod recent243 {
         let rh = g.add_card_to_battlefield(0, catalog::red_herring());
         g.add_card_to_library(0, catalog::forest());
         let c = g.computed_permanent(rh).unwrap();
-        assert!(c.keywords.contains(&Keyword::Haste) && c.keywords.contains(&Keyword::MustAttack));
+        assert!(c.keywords().contains(&Keyword::Haste) && c.keywords().contains(&Keyword::MustAttack));
         let before = g.players[0].hand.len();
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::ActivateAbility {
@@ -1976,7 +1976,7 @@ mod recent244 {
         .expect("activate the deathtouch/lifelink grant");
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(elf).unwrap().keywords.contains(&Keyword::Deathtouch),
+            g.computed_permanent(elf).unwrap().keywords().contains(&Keyword::Deathtouch),
             "small creature gains deathtouch"
         );
     }
@@ -2162,7 +2162,7 @@ mod recent245 {
         g.battlefield_find_mut(wrench).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-        assert!(cp.keywords.contains(&Keyword::Vigilance), "gains vigilance");
+        assert!(cp.keywords().contains(&Keyword::Vigilance), "gains vigilance");
         assert_eq!(g.granted_abilities_for(bear).len(), 1, "granted the tap ability");
     }
 
@@ -2175,8 +2175,8 @@ mod recent245 {
         g.battlefield_find_mut(rope).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+2");
-        assert!(cp.keywords.contains(&Keyword::Reach));
-        assert!(cp.keywords.contains(&Keyword::CantBeBlockedByMoreThanOne));
+        assert!(cp.keywords().contains(&Keyword::Reach));
+        assert!(cp.keywords().contains(&Keyword::CantBeBlockedByMoreThanOne));
     }
 
     /// Knife's +1/+0 and first strike apply only during the controller's turn.
@@ -2190,12 +2190,12 @@ mod recent245 {
         g.active_player_idx = 0;
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 3, "+1/+0 during your turn");
-        assert!(cp.keywords.contains(&Keyword::FirstStrike));
+        assert!(cp.keywords().contains(&Keyword::FirstStrike));
         // Opponent's turn: bonus gone.
         g.active_player_idx = 1;
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 2, "no bonus off your turn");
-        assert!(!cp.keywords.contains(&Keyword::FirstStrike));
+        assert!(!cp.keywords().contains(&Keyword::FirstStrike));
     }
 
     /// The shared "{2}, Sacrifice this Equipment: Draw a card" ability draws and
@@ -2409,7 +2409,7 @@ mod recent246 {
         g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&Keyword::Vigilance));
+        assert!(cp.keywords().contains(&Keyword::Vigilance));
     }
 
     /// Suspected filter: the {3}{B}{R} sac ability rejects when no suspected
@@ -2482,7 +2482,7 @@ mod recent247 {
         drain_stack(&mut g);
         assert!(g.battlefield_find(tunnel).is_none(), "Escape Tunnel sacrificed");
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable),
+            g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable),
             "small creature can't be blocked"
         );
     }
@@ -2520,7 +2520,7 @@ mod recent247 {
         let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let _ = girl;
         assert!(
-            g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Wither),
+            g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Wither),
             "your creatures have wither"
         );
         // An opponent 1/1 reduced to 0 toughness dies → draw.
@@ -2604,12 +2604,12 @@ mod recent248 {
         let mut g = two_player_game();
         let courier = g.add_card_to_battlefield(0, catalog::furtive_courier());
         assert!(
-            !g.computed_permanent(courier).unwrap().keywords.contains(&Keyword::Unblockable),
+            !g.computed_permanent(courier).unwrap().keywords().contains(&Keyword::Unblockable),
             "not unblockable without an artifact sacrifice"
         );
         g.players[0].artifacts_sacrificed_this_turn = 1;
         assert!(
-            g.computed_permanent(courier).unwrap().keywords.contains(&Keyword::Unblockable),
+            g.computed_permanent(courier).unwrap().keywords().contains(&Keyword::Unblockable),
             "unblockable once an artifact was sacrificed"
         );
     }
@@ -2691,12 +2691,12 @@ mod recent249 {
         let gad = g.add_card_to_battlefield(0, catalog::pompous_gadabout());
         g.active_player_idx = 0;
         assert!(
-            g.computed_permanent(gad).unwrap().keywords.contains(&Keyword::Hexproof),
+            g.computed_permanent(gad).unwrap().keywords().contains(&Keyword::Hexproof),
             "hexproof on your turn"
         );
         g.active_player_idx = 1;
         assert!(
-            !g.computed_permanent(gad).unwrap().keywords.contains(&Keyword::Hexproof),
+            !g.computed_permanent(gad).unwrap().keywords().contains(&Keyword::Hexproof),
             "no hexproof on the opponent's turn"
         );
     }
@@ -2720,8 +2720,8 @@ mod recent250 {
         assert_eq!(g.battlefield_find(victim).unwrap().controller, 0, "stole control");
         let cp = g.computed_permanent(victim).unwrap();
         assert_eq!((cp.power, cp.toughness), (1, 1), "base P/T 1/1");
-        assert!(cp.keywords.contains(&Keyword::Deathtouch), "gains deathtouch");
-        assert!(cp.subtypes.creature_types.contains(&CreatureType::Assassin), "is an Assassin");
+        assert!(cp.keywords().contains(&Keyword::Deathtouch), "gains deathtouch");
+        assert!(cp.subtypes().creature_types.contains(&CreatureType::Assassin), "is an Assassin");
         // Removing the Aura reverts control.
         g.remove_to_graveyard_with_triggers(aura);
         g.check_state_based_actions();
@@ -2744,7 +2744,7 @@ mod recent250 {
         assert!(!c.suspected, "no longer suspected");
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&Keyword::Hexproof), "gains hexproof");
+        assert!(cp.keywords().contains(&Keyword::Hexproof), "gains hexproof");
     }
 }
 
@@ -3182,7 +3182,7 @@ mod recent252 {
         let cloaked = g.battlefield_find(coat).unwrap().attached_to.expect("coat attached to the cloaked creature");
         let c = g.computed_permanent(cloaked).unwrap();
         assert_eq!((c.power, c.toughness), (3, 2), "2/2 face-down + the coat's +1/+0");
-        assert!(c.keywords.contains(&Keyword::Unblockable), "equipped creature can't be blocked");
+        assert!(c.keywords().contains(&Keyword::Unblockable), "equipped creature can't be blocked");
     }
 
     /// Outrageous Robbery exiles the top X of the target's library, castable by you.

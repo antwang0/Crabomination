@@ -42,7 +42,7 @@ fn flame_kin_zealot_pumps_and_hastes_the_team() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 → 3/3");
-    assert!(cp.keywords.contains(&Keyword::Haste), "team gained haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "team gained haste");
 }
 
 #[test]

@@ -69,7 +69,7 @@ fn dig_site_inventory_grants_counter_and_vigilance() {
     let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(target.counter_count(CounterType::PlusOnePlusOne), 1);
     let view = g.computed_permanent(bear).unwrap();
-    assert!(view.keywords.contains(&Keyword::Vigilance));
+    assert!(view.keywords().contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -400,9 +400,9 @@ fn efflorescence_pumps_and_grants_trample_indestructible_after_lifegain() {
     let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(target.counter_count(CounterType::PlusOnePlusOne), 2);
     let view = g.computed_permanent(bear).unwrap();
-    assert!(view.keywords.contains(&Keyword::Trample),
+    assert!(view.keywords().contains(&Keyword::Trample),
         "Infusion should grant trample after lifegain");
-    assert!(view.keywords.contains(&Keyword::Indestructible),
+    assert!(view.keywords().contains(&Keyword::Indestructible),
         "Infusion should grant indestructible after lifegain");
 }
 
@@ -422,8 +422,8 @@ fn efflorescence_only_pumps_without_lifegain() {
     let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(target.counter_count(CounterType::PlusOnePlusOne), 2);
     let view = g.computed_permanent(bear).unwrap();
-    assert!(!view.keywords.contains(&Keyword::Trample));
-    assert!(!view.keywords.contains(&Keyword::Indestructible));
+    assert!(!view.keywords().contains(&Keyword::Trample));
+    assert!(!view.keywords().contains(&Keyword::Indestructible));
 }
 
 #[test]
@@ -551,7 +551,7 @@ fn teachers_pest_attacks_gains_one_life() {
     assert_eq!(g.players[0].life, life_before + 1,
         "Teacher's Pest should grant 1 life on attack");
     let view = g.computed_permanent(pest).unwrap();
-    assert!(view.keywords.contains(&Keyword::Menace),
+    assert!(view.keywords().contains(&Keyword::Menace),
         "Teacher's Pest should have menace");
 }
 
@@ -573,7 +573,7 @@ fn owlin_historian_etb_surveils_one_and_has_flying() {
     drain_stack(&mut g);
 
     let view = g.computed_permanent(id).expect("Historian on battlefield");
-    assert!(view.keywords.contains(&Keyword::Flying),
+    assert!(view.keywords().contains(&Keyword::Flying),
         "Owlin Historian should have flying");
     assert!(g.players[0].library.len() <= lib_before,
         "Surveil 1 should not grow the library");
@@ -809,7 +809,7 @@ fn pterafractyl_etb_with_x_counters_and_gains_two_life() {
     drain_stack(&mut g);
 
     let view = g.computed_permanent(id).expect("Pterafractyl on battlefield");
-    assert!(view.keywords.contains(&Keyword::Flying));
+    assert!(view.keywords().contains(&Keyword::Flying));
     let inst = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(inst.counter_count(CounterType::PlusOnePlusOne), 2,
         "Pterafractyl enters with X=2 +1/+1 counters");
@@ -864,7 +864,7 @@ fn fractal_mascot_etb_taps_and_stuns_target() {
     assert_eq!(target.counter_count(CounterType::Stun), 1,
         "Bear should have 1 stun counter");
     let mascot = g.computed_permanent(id).unwrap();
-    assert!(mascot.keywords.contains(&Keyword::Trample));
+    assert!(mascot.keywords().contains(&Keyword::Trample));
 }
 
 // ── Mind into Matter ────────────────────────────────────────────────────────
@@ -1294,8 +1294,8 @@ fn rancorous_archaic_etb_with_converge_counters() {
     drain_stack(&mut g);
 
     let view = g.computed_permanent(id).unwrap();
-    assert!(view.keywords.contains(&Keyword::Trample));
-    assert!(view.keywords.contains(&Keyword::Reach));
+    assert!(view.keywords().contains(&Keyword::Trample));
+    assert!(view.keywords().contains(&Keyword::Reach));
     let inst = g.battlefield.iter().find(|c| c.id == id).unwrap();
     // ConvergedValue=0 → 0 counters → 2/2 base body.
     assert_eq!(inst.counter_count(CounterType::PlusOnePlusOne), 0);
@@ -1523,7 +1523,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
     let mut g = two_player_game();
     let arnyn = g.add_card_to_battlefield(0, catalog::arnyn_deathbloom_botanist());
     let view = g.computed_permanent(arnyn).unwrap();
-    assert!(view.keywords.contains(&Keyword::Deathtouch));
+    assert!(view.keywords().contains(&Keyword::Deathtouch));
 
     // Place a 1/1 creature you control (mana value goes through bears →
     // we simulate a 1/1 by using a token-style creature definition).
@@ -1575,8 +1575,8 @@ fn startled_relic_sloth_combat_step_exiles_graveyard_card() {
 
     let sloth = g.add_card_to_battlefield(0, catalog::startled_relic_sloth());
     let view = g.computed_permanent(sloth).unwrap();
-    assert!(view.keywords.contains(&Keyword::Trample));
-    assert!(view.keywords.contains(&Keyword::Lifelink));
+    assert!(view.keywords().contains(&Keyword::Trample));
+    assert!(view.keywords().contains(&Keyword::Lifelink));
 
     g.step = TurnStep::BeginCombat;
     g.fire_step_triggers(TurnStep::BeginCombat);
@@ -1597,9 +1597,9 @@ fn hardened_academic_discard_grants_lifelink_eot() {
     g.add_card_to_hand(0, catalog::island());
 
     let view = g.computed_permanent(academic).unwrap();
-    assert!(view.keywords.contains(&Keyword::Flying));
-    assert!(view.keywords.contains(&Keyword::Haste));
-    assert!(!view.keywords.contains(&Keyword::Lifelink));
+    assert!(view.keywords().contains(&Keyword::Flying));
+    assert!(view.keywords().contains(&Keyword::Haste));
+    assert!(!view.keywords().contains(&Keyword::Lifelink));
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: academic,
@@ -1609,7 +1609,7 @@ fn hardened_academic_discard_grants_lifelink_eot() {
     drain_stack(&mut g);
 
     let view = g.computed_permanent(academic).unwrap();
-    assert!(view.keywords.contains(&Keyword::Lifelink),
+    assert!(view.keywords().contains(&Keyword::Lifelink),
         "Hardened Academic should have lifelink until EOT after discard activation");
 }
 

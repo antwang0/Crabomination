@@ -152,10 +152,10 @@ fn case_of_the_gorgons_kiss_solves_and_animates() {
     solve_now(&mut g);
     assert!(g.battlefield_find(id).unwrap().case_solved);
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Deathtouch));
-    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Deathtouch));
+    assert!(cp.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Burden of Proof pumps your own Detective and shrinks anything else to 1/1
@@ -168,7 +168,7 @@ fn burden_of_proof_rewards_detectives_and_punishes_the_rest() {
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(theirs);
     let cp = g.computed_permanent(theirs).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "a non-Detective is shrunk");
-    assert!(cp.keywords.contains(&Keyword::CantBlockCreatureType(
+    assert!(cp.keywords().contains(&Keyword::CantBlockCreatureType(
         crabomination::card::CreatureType::Detective
     )));
 
@@ -191,7 +191,7 @@ fn break_out_deploys_a_cheap_creature_with_haste() {
     let ctx = crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None);
     g.resolve_effect(&catalog::break_out().effect, &ctx).expect("Break Out");
     let cp = g.computed_permanent(bears).expect("bears deployed");
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
     assert_eq!(g.players[0].library.len(), 5, "the rest went to the bottom");
 }
 
@@ -224,7 +224,7 @@ fn pull_reanimates_two_with_haste_and_a_fuse() {
     };
     g.resolve_effect(right, &ctx).expect("Pull");
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 2);
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Haste));
     assert_eq!(g.delayed_triggers.len(), 2, "both are on the end-step fuse");
 }
 
@@ -268,7 +268,7 @@ fn bustle_pumps_and_unmasks() {
     g.resolve_effect(&right, &ctx).expect("Bustle");
     let cp = g.computed_permanent(bears).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     assert!(!g.battlefield_find(hidden).unwrap().face_down, "the mask came off");
 }
 
@@ -324,8 +324,8 @@ fn yarus_hastes_the_rest_of_the_team() {
     let mut g = two_player_game();
     let yarus = g.add_card_to_battlefield(0, catalog::yarus_roar_of_the_old_gods());
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bears).unwrap().keywords.contains(&Keyword::Haste));
-    assert!(!g.computed_permanent(yarus).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Haste));
+    assert!(!g.computed_permanent(yarus).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Illicit Masquerade marks your creatures, then trades a marked death for a
@@ -419,7 +419,7 @@ fn niv_mizzet_guildpact_counts_pairs_and_dodges_gold_removal() {
     let mut g = two_player_game();
     let niv = g.add_card_to_battlefield(0, catalog::niv_mizzet_guildpact());
     assert!(
-        g.computed_permanent(niv).unwrap().keywords.contains(&Keyword::HexproofFromMulticolored)
+        g.computed_permanent(niv).unwrap().keywords().contains(&Keyword::HexproofFromMulticolored)
     );
     // Judith is exactly two colors — one distinct pair.
     g.add_card_to_battlefield(0, catalog::judith_carnage_connoisseur());
@@ -508,13 +508,13 @@ fn tenth_district_hero_levels_into_mileva() {
     g.resolve_effect(&def.activated_abilities[0].effect, &ctx).expect("become a Detective");
     let cp = g.computed_permanent(hero).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Detective));
-    assert!(!g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Detective));
+    assert!(!g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Indestructible));
 
     g.resolve_effect(&def.activated_abilities[1].effect, &ctx).expect("become Mileva");
     assert_eq!(g.computed_permanent(hero).unwrap().power, 5);
     assert!(
-        g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Indestructible),
+        g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Indestructible),
         "Mileva shields the rest of the team"
     );
 }
@@ -592,8 +592,8 @@ fn hedge_whisperer_animates_a_land() {
         .expect("animate");
     let cp = g.computed_permanent(land).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
-    assert!(cp.keywords.contains(&Keyword::Haste));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "it's still a land");
+    assert!(cp.keywords().contains(&Keyword::Haste));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "it's still a land");
 }
 
 /// Doppelgang at X=2 makes two copies of each of two permanents.
@@ -641,7 +641,7 @@ fn kyloxs_voltstrider_animates_then_casts_one() {
     assert!(
         g.computed_permanent(vehicle)
             .unwrap()
-            .card_types
+            .card_types()
             .contains(&crabomination::card::CardType::Creature)
     );
     for _ in 0..2 {
@@ -689,7 +689,7 @@ fn anzrags_rampage_digs_per_dead_artifact() {
     g.resolve_effect(&catalog::anzrags_rampage().effect, &ctx).expect("Rampage");
     assert!(g.battlefield_find(theirs).is_none(), "their artifact is destroyed");
     let cp = g.computed_permanent(angel).expect("the Angel was slammed");
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
     assert_eq!(g.delayed_triggers.len(), 1, "and is scheduled back to hand");
 }
 
@@ -896,7 +896,7 @@ fn kaya_spirits_justice_copies_the_exiled_creature_onto_a_token() {
 
     let cp = g.computed_permanent(token).expect("token still there");
     assert_eq!((cp.power, cp.toughness), (4, 4), "it is a Serra Angel");
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// The free-cast affordance surfaces the hand cards Conspiracy Unraveler's

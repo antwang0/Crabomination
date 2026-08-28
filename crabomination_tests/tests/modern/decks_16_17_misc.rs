@@ -339,9 +339,9 @@ fn oko_plus_one_turns_target_into_a_three_three_elk() {
 
     let cp = g.computed_permanent(target).expect("target still on battlefield");
     assert_eq!((cp.power, cp.toughness), (3, 3), "becomes 3/3");
-    assert!(cp.subtypes.creature_types.contains(&CreatureType::Elk), "is an Elk");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Elk), "is an Elk");
     assert!(cp.lost_all_abilities, "loses all abilities (no more flying)");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "flying stripped");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "flying stripped");
 }
 
 #[test]
@@ -365,8 +365,8 @@ fn become_basic_land_taps_for_the_new_color() {
     ).unwrap();
 
     let cp = g.computed_permanent(land).unwrap();
-    assert!(cp.subtypes.land_types.contains(&crabomination::card::LandType::Island));
-    assert!(!cp.subtypes.land_types.contains(&crabomination::card::LandType::Forest));
+    assert!(cp.subtypes().land_types.contains(&crabomination::card::LandType::Island));
+    assert!(!cp.subtypes().land_types.contains(&crabomination::card::LandType::Forest));
 
     // Auto-tap for {U} should tap the now-Island and fill the blue pool.
     let cost = crabomination::mana::cost(&[crabomination::mana::u()]);
@@ -385,10 +385,10 @@ fn blood_moon_turns_nonbasics_into_mountains() {
     let manland = g.add_card_to_battlefield(1, catalog::celestial_colonnade());
     let island = g.add_card_to_battlefield(1, catalog::island());
     let cp = g.computed_permanent(manland).unwrap();
-    assert_eq!(cp.subtypes.land_types, vec![LandType::Mountain], "nonbasic is a Mountain");
+    assert_eq!(cp.subtypes().land_types, vec![LandType::Mountain], "nonbasic is a Mountain");
     assert!(cp.lost_all_abilities, "printed abilities stripped");
     let cp = g.computed_permanent(island).unwrap();
-    assert_eq!(cp.subtypes.land_types, vec![LandType::Island], "basics unaffected");
+    assert_eq!(cp.subtypes().land_types, vec![LandType::Island], "basics unaffected");
     // The moonscaped land taps for {R}.
     g.battlefield_find_mut(manland).unwrap().summoning_sick = false;
     let cost = crabomination::mana::cost(&[crabomination::mana::r()]);
@@ -405,8 +405,8 @@ fn urborg_makes_every_land_a_swamp_in_addition() {
     g.add_card_to_battlefield(0, catalog::urborg_tomb_of_yawgmoth());
     let forest = g.add_card_to_battlefield(1, catalog::forest());
     let cp = g.computed_permanent(forest).unwrap();
-    assert!(cp.subtypes.land_types.contains(&LandType::Swamp), "Swamp in addition");
-    assert!(cp.subtypes.land_types.contains(&LandType::Forest), "keeps Forest");
+    assert!(cp.subtypes().land_types.contains(&LandType::Swamp), "Swamp in addition");
+    assert!(cp.subtypes().land_types.contains(&LandType::Forest), "keeps Forest");
     let cost = crabomination::mana::cost(&[crabomination::mana::b()]);
     g.auto_tap_for_cost(1, &cost);
     assert_eq!(g.players[1].mana_pool.amount(Color::Black), 1, "Forest taps for black");
@@ -438,7 +438,7 @@ fn mind_bend_swaps_color_word_permanently() {
     drain_stack(&mut g);
     g.expire_end_of_turn_effects();
     let computed = g.computed_permanent(knight).unwrap();
-    assert!(computed.keywords.contains(&Keyword::Protection(Color::Green)),
+    assert!(computed.keywords().contains(&Keyword::Protection(Color::Green)),
         "swap survives end of turn");
 }
 
@@ -451,8 +451,8 @@ fn yavimaya_makes_every_land_a_forest_in_addition() {
     g.add_card_to_battlefield(0, catalog::yavimaya_cradle_of_growth());
     let island = g.add_card_to_battlefield(1, catalog::island());
     let cp = g.computed_permanent(island).unwrap();
-    assert!(cp.subtypes.land_types.contains(&LandType::Forest));
-    assert!(cp.subtypes.land_types.contains(&LandType::Island));
+    assert!(cp.subtypes().land_types.contains(&LandType::Forest));
+    assert!(cp.subtypes().land_types.contains(&LandType::Island));
 }
 
 /// Ensnaring Bridge: a creature with power above the bridge controller's
@@ -906,8 +906,8 @@ fn lightning_greaves_grants_haste_and_shroud_when_equipped() {
         .expect("Greaves equips for {0}");
 
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Haste), "haste granted");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Shroud), "shroud granted");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste), "haste granted");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Shroud), "shroud granted");
 }
 
 /// Tasigur, the Golden Fang: 4/5 Legendary creature.
@@ -1584,7 +1584,7 @@ fn sylvan_safekeeper_cannot_activate_without_a_forest() {
     use crabomination::card::Keyword;
     let computed = g.compute_battlefield();
     let view = computed.iter().find(|c| c.id == bear).unwrap();
-    assert!(!view.keywords.contains(&Keyword::Shroud), "no shroud granted");
+    assert!(!view.keywords().contains(&Keyword::Shroud), "no shroud granted");
 }
 
 #[test]
@@ -2297,9 +2297,9 @@ fn stonecoil_serpent_enters_with_x_counters() {
     drain_stack(&mut g);
     let c = g.computed_permanent(id).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "X=3 → three +1/+1 counters");
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Trample));
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Reach));
-    assert!(c.keywords.contains(&crabomination::card::Keyword::ProtectionFromMulticolored));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Trample));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Reach));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::ProtectionFromMulticolored));
 }
 
 /// CR 702.16 — protection from multicolored: a two-color spell can't target

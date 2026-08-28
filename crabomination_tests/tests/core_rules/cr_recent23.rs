@@ -58,8 +58,8 @@ fn cr_702_102_fuse_casts_both_halves() {
     drain_stack(&mut g);
     let m = g.computed_permanent(mine).unwrap();
     assert_eq!((m.power, m.toughness), (3, 3), "Armed pumped +1/+1");
-    assert!(m.keywords.contains(&Keyword::DoubleStrike), "Armed granted double strike");
-    assert!(g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::AllMustBlock),
+    assert!(m.keywords().contains(&Keyword::DoubleStrike), "Armed granted double strike");
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::AllMustBlock),
         "Dangerous Lured the opponent's creature");
 }
 

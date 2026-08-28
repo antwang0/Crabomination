@@ -275,7 +275,7 @@ fn minamo_sightbender_gates_on_x() {
         drain_stack(&mut g);
         ok && g
             .computed_permanent(victim)
-            .is_some_and(|c| c.keywords.contains(&Keyword::Unblockable))
+            .is_some_and(|c| c.keywords().contains(&Keyword::Unblockable))
     };
     assert!(sneak(2, true), "X=2 covers a 2/2");
     assert!(!sneak(2, false), "X=2 doesn't cover an 8/5");
@@ -449,7 +449,7 @@ fn unchecked_growth_tramples_for_spirits_only() {
         g.players[0].mana_pool.add_colorless(2);
         cast(&mut g, spell, Some(Target::Permanent(target)));
         let cp = g.computed_permanent(target).unwrap();
-        (cp.power, cp.keywords.contains(&Keyword::Trample))
+        (cp.power, cp.keywords().contains(&Keyword::Trample))
     };
     assert_eq!(pump(true), (6, true));
     assert_eq!(pump(false), (6, false));
@@ -521,7 +521,7 @@ fn in_the_web_of_war_arms_arrivals() {
     cast(&mut g, bear, None);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4);
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Orb of Dreams taps everything down as it arrives.
@@ -718,7 +718,7 @@ fn genju_of_the_spires_animates_its_mountain() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(mountain).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 1));
-    assert!(cp.card_types.contains(&CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&CardType::Land), "still a land");
 }
 
 /// A Genju climbs back out of the graveyard when its land dies.
@@ -809,7 +809,7 @@ fn that_which_was_taken_grants_indestructible() {
     assert_eq!(g.battlefield_find(bear).map(|c| c.counter_count(CounterType::Divinity)), Some(1));
     assert!(
         g.computed_permanent(bear)
-            .is_some_and(|c| c.keywords.contains(&Keyword::Indestructible))
+            .is_some_and(|c| c.keywords().contains(&Keyword::Indestructible))
     );
 }
 

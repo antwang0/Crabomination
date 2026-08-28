@@ -81,7 +81,7 @@ fn aquastrand_spider_enters_with_two_counters() {
     cast(&mut g, id);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
     assert_eq!((view.power, view.toughness), (2, 2), "Graft 2 → 0/0 + two counters");
-    assert!(view.keywords.contains(&Keyword::Reach));
+    assert!(view.keywords().contains(&Keyword::Reach));
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn outlast_adds_a_counter_at_sorcery_speed() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "Outlast adds a +1/+1 counter");
     // The counter-anthem now grants first strike to this creature.
     let view = g.compute_battlefield().into_iter().find(|v| v.id == id).unwrap();
-    assert!(view.keywords.contains(&Keyword::FirstStrike),
+    assert!(view.keywords().contains(&Keyword::FirstStrike),
         "creatures with a +1/+1 counter gain first strike");
 }
 
@@ -224,8 +224,8 @@ fn outlast_anthem_only_buffs_creatures_with_counters() {
     let computed = g.compute_battlefield();
     let bear_view = computed.iter().find(|v| v.id == plain).unwrap();
     let falc_view = computed.iter().find(|v| v.id == falconer).unwrap();
-    assert!(bear_view.keywords.contains(&Keyword::Flying), "countered creature flies");
-    assert!(!falc_view.keywords.contains(&Keyword::Flying),
+    assert!(bear_view.keywords().contains(&Keyword::Flying), "countered creature flies");
+    assert!(!falc_view.keywords().contains(&Keyword::Flying),
         "the Falconer itself has no counter yet, so it doesn't fly");
 }
 
@@ -239,7 +239,7 @@ fn arcbound_stinger_is_a_flying_modular_one_drop_body() {
     cast(&mut g, id);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
     assert_eq!((view.power, view.toughness), (1, 1), "Modular 1 → 0/0 + one counter");
-    assert!(view.keywords.contains(&Keyword::Flying));
+    assert!(view.keywords().contains(&Keyword::Flying));
 }
 
 #[test]
@@ -264,7 +264,7 @@ fn stalwart_aven_and_skyraker_giant_renown_on_connect() {
         g.clear_sickness(id);
         let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
         assert_eq!((view.power, view.toughness), base);
-        assert!(view.keywords.contains(&kw));
+        assert!(view.keywords().contains(&kw));
         while g.step != TurnStep::DeclareAttackers {
             g.perform_action(GameAction::PassPriority).expect("pass");
         }
@@ -294,9 +294,9 @@ fn tuskguard_and_mer_ek_anthems_buff_countered_creatures() {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
         let computed = g.compute_battlefield();
-        assert!(computed.iter().find(|v| v.id == bear).unwrap().keywords.contains(&kw),
+        assert!(computed.iter().find(|v| v.id == bear).unwrap().keywords().contains(&kw),
             "countered creature gains the anthem keyword");
-        assert!(!computed.iter().find(|v| v.id == lord).unwrap().keywords.contains(&kw),
+        assert!(!computed.iter().find(|v| v.id == lord).unwrap().keywords().contains(&kw),
             "the lord without a counter does not");
     }
 }
@@ -317,7 +317,7 @@ fn arcbound_hybrid_and_bruiser_enter_with_counters() {
         let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
         assert_eq!((view.power, view.toughness), pt, "Modular body enters with its counters");
         if let Some(k) = kw {
-            assert!(view.keywords.contains(&k));
+            assert!(view.keywords().contains(&k));
         }
     }
 }
@@ -362,7 +362,7 @@ fn helium_squirter_grants_flying_to_a_countered_creature() {
     }).expect("Helium Squirter ability activatable");
     drain_stack(&mut g);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == target).unwrap();
-    assert!(view.keywords.contains(&Keyword::Flying), "countered creature gains flying");
+    assert!(view.keywords().contains(&Keyword::Flying), "countered creature gains flying");
 }
 
 #[test]
@@ -376,7 +376,7 @@ fn knight_and_consuls_lieutenant_are_renown_one_drops() {
         g.clear_sickness(id);
         let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
         assert_eq!((view.power, view.toughness), pt);
-        if let Some(k) = kw { assert!(view.keywords.contains(&k)); }
+        if let Some(k) = kw { assert!(view.keywords().contains(&k)); }
         while g.step != TurnStep::DeclareAttackers {
             g.perform_action(GameAction::PassPriority).expect("pass");
         }
@@ -468,8 +468,8 @@ fn abzan_battle_priest_grants_lifelink_to_countered_creatures() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     let computed = g.compute_battlefield();
-    assert!(computed.iter().find(|v| v.id == bear).unwrap().keywords.contains(&Keyword::Lifelink));
-    assert!(!computed.iter().find(|v| v.id == priest).unwrap().keywords.contains(&Keyword::Lifelink),
+    assert!(computed.iter().find(|v| v.id == bear).unwrap().keywords().contains(&Keyword::Lifelink));
+    assert!(!computed.iter().find(|v| v.id == priest).unwrap().keywords().contains(&Keyword::Lifelink),
         "the priest itself has no counter yet");
 }
 

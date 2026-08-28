@@ -1130,7 +1130,7 @@ fn cr_122_1b_flying_counter_grants_flying() {
     let cp = g.compute_battlefield().into_iter()
         .find(|cc| cc.id == bear)
         .expect("bear computed");
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 #[test]

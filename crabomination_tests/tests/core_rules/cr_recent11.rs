@@ -53,7 +53,7 @@ fn cr_702_16b_protection_from_chosen_color() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
     let order = g.move_card_to_battlefield_for_test(0, catalog::order_of_the_stars());
     drain_stack(&mut g);
-    assert!(g.computed_permanent(order).unwrap().keywords.contains(&Keyword::Protection(Color::Red)),
+    assert!(g.computed_permanent(order).unwrap().keywords().contains(&Keyword::Protection(Color::Red)),
         "has protection from the chosen color");
 }
 

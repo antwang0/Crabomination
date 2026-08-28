@@ -219,7 +219,7 @@ fn vraska_joins_up_gives_deathtouch_then_draws() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     etb(&mut g, catalog::vraska_joins_up());
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch),
         "deathtouch counter grants the keyword"
     );
     let legend = g.add_card_to_battlefield(0, catalog::obeka_splitter_of_seconds());
@@ -427,7 +427,7 @@ fn rakdos_the_muscle_impulses_on_a_sacrifice() {
     let r = g.battlefield_find(rakdos).unwrap();
     assert!(r.tapped, "the ability taps it");
     assert!(
-        g.computed_permanent(rakdos).unwrap().keywords.contains(&Keyword::Indestructible)
+        g.computed_permanent(rakdos).unwrap().keywords().contains(&Keyword::Indestructible)
     );
     assert_eq!(g.exile.len(), 2, "two cards impulsed for the bear's mana value");
 }
@@ -439,7 +439,8 @@ fn laughing_jasper_flint_retypes_borrowed_creatures() {
     g.add_card_to_battlefield(0, catalog::laughing_jasper_flint());
     let stolen = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.battlefield_find_mut(stolen).unwrap().controller = 0;
-    let types = &g.computed_permanent(stolen).unwrap().subtypes.creature_types;
+    let cp = g.computed_permanent(stolen).unwrap();
+    let types = &cp.subtypes().creature_types;
     assert!(types.contains(&crabomination::card::CreatureType::Mercenary));
 }
 
@@ -502,7 +503,7 @@ fn stop_cold_taps_and_blanks_the_enchanted_permanent() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(host).unwrap();
     assert!(g.battlefield_find(host).unwrap().tapped, "tapped on arrival");
-    assert!(cp.keywords.is_empty(), "loses all abilities");
+    assert!(cp.keywords().is_empty(), "loses all abilities");
 }
 
 /// Arid Archway enters tapped, bounces a land, and surveils off a Desert.
@@ -699,7 +700,7 @@ fn oko_makes_an_elk_then_copies_a_creature_at_combat() {
     }
     drain_stack(&mut g);
     let cp = g.computed_permanent(oko).expect("Oko is a copy now");
-    assert!(cp.keywords.contains(&Keyword::Hexproof), "the copy keeps hexproof");
+    assert!(cp.keywords().contains(&Keyword::Hexproof), "the copy keeps hexproof");
     assert_eq!((cp.power, cp.toughness), (3, 3), "copied the Elk");
 }
 

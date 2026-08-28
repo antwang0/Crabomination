@@ -484,7 +484,7 @@ mod recent52 {
         let view = g.compute_battlefield();
         let c = view.iter().find(|c| c.id == bear).unwrap();
         assert_eq!((c.power, c.toughness), (3, 3), "+1/+1");
-        assert!(c.keywords.contains(&Keyword::Hexproof), "granted hexproof");
+        assert!(c.keywords().contains(&Keyword::Hexproof), "granted hexproof");
     }
 
     #[test]
@@ -743,7 +743,7 @@ mod recent53 {
         drain_stack(&mut g);
         let cp = g.compute_battlefield();
         assert!(
-            cp.iter().find(|c| c.id == ally).unwrap().keywords.contains(&Keyword::Unblockable),
+            cp.iter().find(|c| c.id == ally).unwrap().keywords().contains(&Keyword::Unblockable),
             "your creatures gained unblockable while you're the monarch",
         );
     }
@@ -794,13 +794,13 @@ mod recent53 {
         let cp = g.compute_battlefield();
         let s = cp.iter().find(|c| c.id == serra).unwrap();
         assert_eq!((s.power, s.toughness), (1, 1));
-        assert!(!s.keywords.contains(&Keyword::Flying));
+        assert!(!s.keywords().contains(&Keyword::Flying));
         // 30+ life: 6/6 flier.
         g.players[0].life = 30;
         let cp = g.compute_battlefield();
         let s = cp.iter().find(|c| c.id == serra).unwrap();
         assert_eq!((s.power, s.toughness), (6, 6));
-        assert!(s.keywords.contains(&Keyword::Flying));
+        assert!(s.keywords().contains(&Keyword::Flying));
     }
 
     #[test]
@@ -850,7 +850,7 @@ mod recent53 {
         ])).expect("battalion attack");
         drain_stack(&mut g);
         assert!(
-            g.compute_battlefield().iter().find(|c| c.id == wojek).unwrap().keywords.contains(&Keyword::FirstStrike),
+            g.compute_battlefield().iter().find(|c| c.id == wojek).unwrap().keywords().contains(&Keyword::FirstStrike),
             "battalion granted first strike",
         );
     }
@@ -1126,7 +1126,7 @@ mod recent53 {
         drain_stack(&mut g);
         let cp = g.compute_battlefield();
         assert!(
-            cp.iter().find(|c| c.id == valiant).unwrap().keywords.contains(&Keyword::DoubleStrike),
+            cp.iter().find(|c| c.id == valiant).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "Knights gained double strike",
         );
     }
@@ -1240,7 +1240,7 @@ mod recent54 {
         .unwrap();
         let cp = g.compute_battlefield();
         let a = cp.iter().find(|c| c.id == ally).unwrap();
-        assert!(a.keywords.contains(&Keyword::Trample), "counter-bearer has trample");
+        assert!(a.keywords().contains(&Keyword::Trample), "counter-bearer has trample");
     }
 
     #[test]
@@ -1256,11 +1256,11 @@ mod recent54 {
         .unwrap();
         let cp = g.compute_battlefield();
         let a = cp.iter().find(|c| c.id == ally).unwrap();
-        assert!(a.keywords.contains(&Keyword::Reach), "counter-bearer has reach");
+        assert!(a.keywords().contains(&Keyword::Reach), "counter-bearer has reach");
         // A creature with no counter is unaffected.
         let bare = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let cp = g.compute_battlefield();
-        assert!(!cp.iter().find(|c| c.id == bare).unwrap().keywords.contains(&Keyword::Reach));
+        assert!(!cp.iter().find(|c| c.id == bare).unwrap().keywords().contains(&Keyword::Reach));
     }
 
     #[test]
@@ -1482,7 +1482,7 @@ mod recent54 {
         drain_stack(&mut g);
         assert_eq!(counters(&g, bear), 1, "got a +1/+1 counter");
         let cp = g.compute_battlefield();
-        assert!(cp.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Protection(Color::Red)));
+        assert!(cp.iter().find(|c| c.id == bear).unwrap().keywords().contains(&Keyword::Protection(Color::Red)));
     }
 
     #[test]
@@ -1598,8 +1598,8 @@ mod recent55 {
             .id;
         let cp = g.compute_battlefield();
         let thopter = cp.iter().find(|c| c.id == thopter_id).unwrap();
-        assert!(thopter.keywords.contains(&Keyword::Flying), "Thopter flies");
-        assert!(thopter.keywords.contains(&Keyword::Haste), "artifact creature granted haste");
+        assert!(thopter.keywords().contains(&Keyword::Flying), "Thopter flies");
+        assert!(thopter.keywords().contains(&Keyword::Haste), "artifact creature granted haste");
     }
 
     #[test]
@@ -1753,7 +1753,7 @@ mod recent56 {
         g.adjust_life(0, 5); // 26 total ≥ 25
         let cp = g.compute_battlefield();
         assert!(
-            cp.iter().find(|c| c.id == pal).unwrap().keywords.contains(&Keyword::DoubleStrike),
+            cp.iter().find(|c| c.id == pal).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "double strike while at 25+ life",
         );
     }
@@ -1838,7 +1838,7 @@ mod recent56 {
         assert!(g.battlefield_find(guard).is_none(), "bodyguard sacrificed");
         let cp = g.compute_battlefield();
         assert!(
-            cp.iter().find(|c| c.id == ward).unwrap().keywords.contains(&Keyword::Indestructible),
+            cp.iter().find(|c| c.id == ward).unwrap().keywords().contains(&Keyword::Indestructible),
             "the chosen creature gained indestructible",
         );
     }
@@ -1868,11 +1868,11 @@ mod recent56 {
         // The token Horse is indestructible (lord); the Sunmare itself is not.
         let cp = g.compute_battlefield();
         assert!(
-            cp.iter().find(|c| c.id == horse.unwrap()).unwrap().keywords.contains(&Keyword::Indestructible),
+            cp.iter().find(|c| c.id == horse.unwrap()).unwrap().keywords().contains(&Keyword::Indestructible),
             "other Horses are indestructible",
         );
         assert!(
-            !cp.iter().find(|c| c.id == mare).unwrap().keywords.contains(&Keyword::Indestructible),
+            !cp.iter().find(|c| c.id == mare).unwrap().keywords().contains(&Keyword::Indestructible),
             "the Sunmare itself is not (only *other* Horses)",
         );
     }
@@ -2020,7 +2020,7 @@ mod recent57 {
         let cp = g.compute_battlefield();
         let b = cp.iter().find(|c| c.id == bear).unwrap();
         assert_eq!((b.power, b.toughness), (3, 3), "+1/+1 to the team");
-        assert!(b.keywords.contains(&crabomination::card::Keyword::Vigilance), "vigilance granted");
+        assert!(b.keywords().contains(&crabomination::card::Keyword::Vigilance), "vigilance granted");
     }
 
     #[test]
@@ -2087,7 +2087,7 @@ mod recent57 {
         let cp = g.compute_battlefield();
         let b = cp.iter().find(|c| c.id == bear).unwrap();
         assert_eq!((b.power, b.toughness), (4, 3), "+2/+1");
-        assert!(b.keywords.contains(&crabomination::card::Keyword::Vigilance), "spell mastery → vigilance");
+        assert!(b.keywords().contains(&crabomination::card::Keyword::Vigilance), "spell mastery → vigilance");
     }
 
     #[test]
@@ -2212,7 +2212,7 @@ mod recent58 {
         let cp = g.compute_battlefield();
         let c = cp.iter().find(|c| c.id == cmd).unwrap();
         assert_eq!(c.power, 4, "+1/+0 from the full-party combat trigger");
-        assert!(c.keywords.contains(&Keyword::Indestructible), "full party → indestructible");
+        assert!(c.keywords().contains(&Keyword::Indestructible), "full party → indestructible");
     }
 
     #[test]
@@ -2255,7 +2255,7 @@ mod recent59 {
         let st = g.add_card_to_battlefield(0, catalog::sky_terror());
         let cp = g.compute_battlefield();
         let c = cp.iter().find(|c| c.id == st).unwrap();
-        assert!(c.keywords.contains(&Keyword::Flying) && c.keywords.contains(&Keyword::Menace));
+        assert!(c.keywords().contains(&Keyword::Flying) && c.keywords().contains(&Keyword::Menace));
     }
 
     #[test]

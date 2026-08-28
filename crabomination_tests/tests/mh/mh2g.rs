@@ -199,7 +199,7 @@ fn ghost_lit_drifter_flying() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant flying");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Steel Dromedary stays tapped while countered, moves counters, then untaps.
@@ -258,7 +258,7 @@ fn cr_702_62e_suspend_grants_suspend() {
     }
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_some(), "cast back for free");
-    let kws = g.computed_permanent(bear).unwrap().keywords.clone();
+    let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Haste), "suspend grants haste");
 }
 

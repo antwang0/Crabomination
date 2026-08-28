@@ -1061,7 +1061,7 @@ fn lorehold_summit_mints_two_spirits_and_grants_haste() {
     // The pre-existing bear should have Haste EOT now.
     let computed = g.compute_battlefield().into_iter()
         .find(|c| c.id == bear).expect("bear alive");
-    assert!(computed.keywords.contains(&Keyword::Haste));
+    assert!(computed.keywords().contains(&Keyword::Haste));
 }
 
 #[test]

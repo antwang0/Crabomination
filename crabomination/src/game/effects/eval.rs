@@ -200,9 +200,9 @@ impl GameState {
                     .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
                     .filter_map(|c| self.computed_permanent(c.id))
                     .map(|cp| {
-                        let changeling = cp.keywords.has_kw(&Keyword::Changeling);
+                        let changeling = cp.keywords().has_kw(&Keyword::Changeling);
                         std::array::from_fn(|i| {
-                            changeling || cp.subtypes.creature_types.contains(&roles[i])
+                            changeling || cp.subtypes().creature_types.contains(&roles[i])
                         })
                     })
                     .collect();
@@ -652,14 +652,14 @@ impl GameState {
                 let mut changelings = 0i32;
                 for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller) {
                     let Some(cp) = self.computed_permanent(c.id) else { continue };
-                    if !cp.card_types.contains(&crate::card::CardType::Creature) {
+                    if !cp.card_types().contains(&crate::card::CardType::Creature) {
                         continue;
                     }
-                    if cp.keywords.has_kw(&crate::card::Keyword::Changeling) {
+                    if cp.keywords().has_kw(&crate::card::Keyword::Changeling) {
                         changelings += 1;
                         continue;
                     }
-                    for t in &cp.subtypes.creature_types {
+                    for t in &cp.subtypes().creature_types {
                         *counts.entry(*t).or_default() += 1;
                     }
                 }
@@ -1312,7 +1312,7 @@ impl GameState {
                     .iter()
                     .filter(|c| c.controller == p)
                     .map(|c| {
-                        c.keywords
+                        c.keywords()
                             .iter()
                             .map(|k| match k {
                                 crate::card::Keyword::Toxic(n) => *n as i32,
@@ -1549,7 +1549,7 @@ impl GameState {
                         c.controller == p
                             && self
                                 .computed_permanent(c.id)
-                                .is_some_and(|cp| cp.subtypes.land_types.contains(t))
+                                .is_some_and(|cp| cp.subtypes().land_types.contains(t))
                     })
                 })
             }
@@ -1559,7 +1559,7 @@ impl GameState {
                     self.battlefield.iter().any(|c| {
                         c.controller == p
                             && self.computed_permanent(c.id).is_some_and(|cp| {
-                                cp.card_types.contains(&crate::card::CardType::Creature)
+                                cp.card_types().contains(&crate::card::CardType::Creature)
                                     && cp.colors.contains(k)
                             })
                     })
@@ -1866,7 +1866,7 @@ impl GameState {
             Predicate::SourceIsCreature => ctx
                 .source
                 .and_then(|cid| self.computed_permanent(cid))
-                .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
                 .unwrap_or(false),
             Predicate::SourceSaddled => ctx
                 .source
@@ -2888,7 +2888,7 @@ impl GameState {
                     let artifact = c.definition.is_artifact()
                         || (typed
                             && self.computed_permanent(c.id).is_some_and(|cp| {
-                                cp.card_types.contains(&crate::card::CardType::Artifact)
+                                cp.card_types().contains(&crate::card::CardType::Artifact)
                             }));
                     if artifact {
                         n += 1;
@@ -3472,7 +3472,7 @@ impl GameState {
                         return card.definition.card_types.contains(&t);
                     }
                     match computed() {
-                        Some(cp) => cp.card_types.contains(&t),
+                        Some(cp) => cp.card_types().contains(&t),
                         None => card.definition.card_types.contains(&t),
                     }
                 };
@@ -3502,7 +3502,7 @@ impl GameState {
                         return card.definition.subtypes.creature_types.contains(ct);
                     }
                     match computed() {
-                        Some(cp) => cp.subtypes.creature_types.contains(ct),
+                        Some(cp) => cp.subtypes().creature_types.contains(ct),
                         None => match self.shallow_creature_types(*cid) {
                             Some(types) => types.contains(ct),
                             None => card.definition.subtypes.creature_types.contains(ct),
@@ -3514,7 +3514,7 @@ impl GameState {
                 // Dryads' Forest, Sugar Coat's Food, the Ring-bearer's Legendary)
                 // read from the *computed* type line on the battlefield.
                 let has_atype = |a: &crate::card::ArtifactSubtype| match computed() {
-                    Some(cp) => cp.subtypes.artifact_subtypes.contains(a),
+                    Some(cp) => cp.subtypes().artifact_subtypes.contains(a),
                     None => card.definition.subtypes.artifact_subtypes.contains(a),
                 };
                 // Same gate, same argument: `AddLandType` / `SetLandTypes` /
@@ -3525,12 +3525,12 @@ impl GameState {
                         return card.definition.subtypes.land_types.contains(lt);
                     }
                     match computed() {
-                        Some(cp) => cp.subtypes.land_types.contains(lt),
+                        Some(cp) => cp.subtypes().land_types.contains(lt),
                         None => card.definition.subtypes.land_types.contains(lt),
                     }
                 };
                 let has_stype = |st: &Supertype| match computed() {
-                    Some(cp) => cp.supertypes.contains(st),
+                    Some(cp) => cp.supertypes().contains(st),
                     None => card.definition.supertypes.contains(st),
                 };
                 use crate::card::CardType as CT;

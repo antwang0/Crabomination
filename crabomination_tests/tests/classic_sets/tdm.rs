@@ -59,10 +59,10 @@ fn targeted_pt_and_keyword_spells() {
         let cp = g.computed_permanent(creature).unwrap();
         assert_eq!((cp.power as i64, cp.toughness as i64), (p, t), "{name}: P/T");
         for kw in kws {
-            assert!(cp.keywords.contains(kw), "{name}: expected {kw:?}");
+            assert!(cp.keywords().contains(kw), "{name}: expected {kw:?}");
         }
         if expect_no_kws {
-            assert!(cp.keywords.is_empty(), "{name}: abilities removed");
+            assert!(cp.keywords().is_empty(), "{name}: abilities removed");
         }
     }
 }
@@ -251,7 +251,7 @@ fn fresh_start_shrinks_and_removes_abilities() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(foe).unwrap();
     assert_eq!(cp.power, -1, "4 − 5 = −1 power");
-    assert!(cp.keywords.is_empty(), "abilities removed");
+    assert!(cp.keywords().is_empty(), "abilities removed");
 }
 
 /// Lie in Wait returns a creature and slings its power at a target.
@@ -330,7 +330,7 @@ fn wingspan_stride_pumps_flying_and_self_bounces() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(creature).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-    assert!(cp.keywords.contains(&Keyword::Flying), "granted flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "granted flying");
     // {2}{U}: bounce the Aura to hand.
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
@@ -846,7 +846,7 @@ fn kheru_goldkeeper_renew_grants_counters() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(target).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "two +1/+1 counters");
-    assert!(cp.keywords.contains(&Keyword::Flying), "flying counter");
+    assert!(cp.keywords().contains(&Keyword::Flying), "flying counter");
     assert!(g.exile.iter().any(|c| c.id == kheru), "Kheru exiled by Renew cost");
 }
 
@@ -990,9 +990,9 @@ fn sarkhan_grows_when_a_dragon_enters() {
     let counters = g.battlefield_find(sarkhan).unwrap().counter_count(CounterType::PlusOnePlusOne);
     assert_eq!(counters, 1, "+1/+1 counter");
     let cp = g.computed_permanent(sarkhan).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gained flying");
     assert!(
-        cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Dragon),
+        cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Dragon),
         "became a Dragon"
     );
 }
@@ -1003,8 +1003,8 @@ fn jeskai_brushmaster_has_double_strike_and_prowess() {
     let mut g = two_player_game();
     let bm = g.add_card_to_battlefield(0, catalog::jeskai_brushmaster());
     let cp = g.computed_permanent(bm).unwrap();
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "double strike");
-    assert!(cp.keywords.contains(&Keyword::Prowess), "prowess");
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike), "double strike");
+    assert!(cp.keywords().contains(&Keyword::Prowess), "prowess");
     assert_eq!((cp.power, cp.toughness), (2, 4), "2/4 body");
 }
 
@@ -1094,8 +1094,8 @@ fn dragonbroods_relic_makes_reliquary_dragon() {
         .expect("minted Reliquary Dragon")
         .id;
     let cp = g.computed_permanent(dragon_id).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Flying), "flying");
-    assert!(cp.keywords.contains(&Keyword::Lifelink), "lifelink");
+    assert!(cp.keywords().contains(&Keyword::Flying), "flying");
+    assert!(cp.keywords().contains(&Keyword::Lifelink), "lifelink");
     assert_eq!(cp.colors.len(), 5, "all five colors");
     assert!(g.battlefield_find(relic).is_none(), "relic sacrificed");
     // The token's ETB deals 3 to an auto-chosen "any target" — the 2/2 dies or
@@ -1179,8 +1179,8 @@ fn frostcliff_siege_temur_anthem() {
     cast_siege(&mut g, catalog::frostcliff_siege(), 1);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "Temur anthem +1/+0");
-    assert!(cp.keywords.contains(&Keyword::Trample), "Temur grants trample");
-    assert!(cp.keywords.contains(&Keyword::Haste), "Temur grants haste");
+    assert!(cp.keywords().contains(&Keyword::Trample), "Temur grants trample");
+    assert!(cp.keywords().contains(&Keyword::Haste), "Temur grants haste");
 }
 
 /// Glacierwood Siege (Temur): casting an instant mills the opponent four.
@@ -1229,7 +1229,7 @@ fn hollowmurk_siege_abzan_pumps_attacker() {
         "attacker got a +1/+1 counter",
     );
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Menace),
         "attacker gained menace",
     );
 }
@@ -1662,7 +1662,7 @@ fn herd_heirloom_grants_trample_and_draw_on_damage() {
     .expect("grant trample + draw trigger");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(beast).unwrap().keywords.contains(&Keyword::Trample),
+        g.computed_permanent(beast).unwrap().keywords().contains(&Keyword::Trample),
         "gained trample",
     );
     let hand = g.players[0].hand.len();

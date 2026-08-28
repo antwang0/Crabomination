@@ -147,7 +147,7 @@ fn vaultborn_tyrant_dies_into_artifact_copy() {
     g.check_state_based_actions();
     let copy = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Vaultborn Tyrant");
     let copy = copy.expect("token copy exists");
-    assert!(g.computed_permanent(copy.id).unwrap().card_types.contains(&crabomination::card::CardType::Artifact),
+    assert!(g.computed_permanent(copy.id).unwrap().card_types().contains(&crabomination::card::CardType::Artifact),
         "the copy is an artifact");
 }
 
@@ -209,11 +209,11 @@ fn ajani_fells_the_godsire_chapters() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Cat Warrior"),
         "chapter II made a Cat Warrior");
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Vigilance),
         "chapter II put a vigilance counter on a creature");
     g.saga_advance(saga); // III — double strike
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "chapter III granted double strike");
 }
 
@@ -280,7 +280,7 @@ fn legion_leadership_doubles_power() {
     cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!(cp.power, 8, "power doubled 4 → 8");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "gains first strike");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "gains first strike");
 }
 
 /// Revitalizing Repast adds a counter and grants indestructible.
@@ -292,7 +292,7 @@ fn revitalizing_repast_counter_and_indestructible() {
     cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!(cp.power, 3, "got a +1/+1 counter");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "gains indestructible");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "gains indestructible");
 }
 
 /// Stump Stomp makes your creature deal its power to an enemy creature.
@@ -335,7 +335,7 @@ fn lion_umbra_buffs_modified_creature() {
     let cp = g.computed_permanent(c).unwrap();
     // 2/2 base + 1/1 counter + 3/3 aura = 6/6.
     assert_eq!((cp.power, cp.toughness), (6, 6), "+3/+3 on top of the counter");
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach));
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Reach));
 }
 
 // ── Batch 5 tests ─────────────────────────────────────────────────────────────
@@ -409,7 +409,7 @@ fn glasswing_grace_buffs_creature() {
     cast(&mut g, id, Some(Target::Permanent(c)), vec![]);
     let cp = g.computed_permanent(c).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-    assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::Lifelink));
 }
 
 /// Strength of the Harvest scales with your creatures and enchantments.
@@ -436,9 +436,9 @@ fn kudo_sets_base_pt_and_bear_type() {
     // Other creatures become base 2/2 (counters/auras still layer on top).
     let a = g.computed_permanent(angel).unwrap();
     assert_eq!((a.power, a.toughness), (2, 2), "Serra Angel's base is now 2/2");
-    assert!(a.subtypes.creature_types.contains(&crabomination::card::CreatureType::Bear), "and it's a Bear");
+    assert!(a.subtypes().creature_types.contains(&crabomination::card::CreatureType::Bear), "and it's a Bear");
     // Applies across the table, not just your creatures.
-    assert!(g.computed_permanent(enemy).unwrap().subtypes.creature_types
+    assert!(g.computed_permanent(enemy).unwrap().subtypes().creature_types
         .contains(&crabomination::card::CreatureType::Bear), "opponent's creature is a Bear too");
     // Kudo itself keeps its printed 2/2 and is unaffected by "other".
     assert_eq!(g.computed_permanent(kudo).unwrap().power, 2);
@@ -585,12 +585,12 @@ fn idol_of_false_gods_animates_at_eight_counters() {
     assert_eq!(g.battlefield_find(idol).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "Eldrazi death grows the idol");
     // Not a creature yet at 1 counter.
-    assert!(!g.computed_permanent(idol).unwrap().card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(!g.computed_permanent(idol).unwrap().card_types().contains(&crabomination::card::CardType::Creature));
     // Jump to eight → 0/0 creature with annihilator 2.
     g.battlefield_find_mut(idol).unwrap().add_counters(CounterType::PlusOnePlusOne, 7);
     let cp = g.computed_permanent(idol).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.keywords.contains(&Keyword::Annihilator(2)), "has annihilator 2");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.keywords().contains(&Keyword::Annihilator(2)), "has annihilator 2");
     assert_eq!((cp.power, cp.toughness), (8, 8), "0/0 base + eight counters");
 }
 
@@ -654,7 +654,7 @@ fn bespoke_battlewagon_energy_and_animate() {
         card_id: wagon, ability_index: 3, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("pay 4 energy to animate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(wagon).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(g.computed_permanent(wagon).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "Vehicle is now an artifact creature");
     assert_eq!(g.players[0].energy, 0, "spent all four energy");
     // A second wagon can tap a creature for {E}{E}.

@@ -69,7 +69,7 @@ fn walls_grant_indestructible() {
     g.add_card_to_battlefield(0, catalog::walls_of_ba_sing_se());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible),
         "other permanent gains indestructible"
     );
 }
@@ -155,7 +155,7 @@ fn pillar_launch_pumps_and_untaps() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Reach));
+    assert!(cp.keywords().contains(&Keyword::Reach));
     assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
 }
 
@@ -246,7 +246,7 @@ fn earth_kingdom_protectors_grants_indestructible() {
     }).expect("sacrifice to grant indestructible");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == prot), "Protectors sacrificed");
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 #[test]
@@ -265,7 +265,7 @@ fn yip_yip_grants_flying_only_to_allies() {
     let v = g.compute_battlefield();
     let a = v.iter().find(|c| c.id == ally).unwrap();
     assert_eq!((a.power, a.toughness), (5, 5), "+2/+2");
-    assert!(a.keywords.contains(&Keyword::Flying), "Ally also gains flying");
+    assert!(a.keywords().contains(&Keyword::Flying), "Ally also gains flying");
 }
 
 #[test]
@@ -651,10 +651,10 @@ fn foggy_swamp_hunters_keywords_after_two_draws() {
     let mut g = two_player_game();
     let f = g.add_card_to_battlefield(0, catalog::foggy_swamp_hunters());
     g.players[0].cards_drawn_this_turn = 1;
-    let kws = g.computed_permanent(f).unwrap().keywords.clone();
+    let kws = g.computed_permanent(f).unwrap().keywords().to_vec();
     assert!(!kws.contains(&Keyword::Lifelink) && !kws.contains(&Keyword::Menace), "off at 1 draw");
     g.players[0].cards_drawn_this_turn = 2;
-    let kws = g.computed_permanent(f).unwrap().keywords.clone();
+    let kws = g.computed_permanent(f).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Lifelink) && kws.contains(&Keyword::Menace), "on at 2 draws");
 }
 
@@ -664,7 +664,7 @@ fn june_unblockable_after_two_draws() {
     let mut g = two_player_game();
     let j = g.add_card_to_battlefield(0, catalog::june_bounty_hunter());
     g.players[0].cards_drawn_this_turn = 2;
-    assert!(g.computed_permanent(j).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(j).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Fire Sages grows with its +1/+1 counter ability.
@@ -731,7 +731,7 @@ fn rabaroo_troop_landfall_flies() {
     let life = g.players[0].life;
     g.perform_action(GameAction::PlayLand(land)).expect("play land");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(rt).unwrap().keywords.contains(&Keyword::Flying), "gained flying");
+    assert!(g.computed_permanent(rt).unwrap().keywords().contains(&Keyword::Flying), "gained flying");
     assert_eq!(g.players[0].life, life + 1, "gained 1 life");
 }
 
@@ -787,7 +787,7 @@ fn lo_and_li_anthem_and_tutor() {
     let noble = g.add_card_to_battlefield(0, catalog::azula_on_the_hunt()); // Human Noble
     let lesson = g.add_card_to_library(0, catalog::combustion_technique()); // a Lesson
     let ll = g.add_card_to_battlefield(0, catalog::lo_and_li_twin_tutors());
-    assert!(g.computed_permanent(noble).unwrap().keywords.contains(&Keyword::Lifelink), "Noble lifelink");
+    assert!(g.computed_permanent(noble).unwrap().keywords().contains(&Keyword::Lifelink), "Noble lifelink");
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
         crabomination::decision::DecisionAnswer::Search(Some(lesson)),
     ]));
@@ -825,7 +825,7 @@ fn hog_monkey_grants_menace_to_counter_creature() {
         g.perform_action(GameAction::PassPriority).unwrap();
     }
     drain_stack(&mut g);
-    assert!(g.computed_permanent(buff).unwrap().keywords.contains(&Keyword::Menace), "got menace at combat");
+    assert!(g.computed_permanent(buff).unwrap().keywords().contains(&Keyword::Menace), "got menace at combat");
 }
 
 /// `legal_attackers` excludes Tiger-Dillo when it's the only power-4 creature
@@ -858,7 +858,7 @@ fn energybending_fixes_lands_and_draws() {
         card_id: eb, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    let lts = g.computed_permanent(forest).unwrap().subtypes.land_types.clone();
+    let lts = g.computed_permanent(forest).unwrap().subtypes().land_types.clone();
     for lt in [LandType::Plains, LandType::Island, LandType::Swamp, LandType::Mountain, LandType::Forest] {
         assert!(lts.contains(&lt), "Forest gained {lt:?}");
     }
@@ -894,11 +894,11 @@ fn flopsie_counters_and_shields_big_creatures() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 counter");
     assert!(
-        g.computed_permanent(dragon).unwrap().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne),
+        g.computed_permanent(dragon).unwrap().keywords().contains(&Keyword::CantBeBlockedByMoreThanOne),
         "power-4+ creature can't be gang-blocked"
     );
     assert!(
-        !g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne),
+        !g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantBeBlockedByMoreThanOne),
         "the 3/3 (counter'd from 2/2) is power 3 — not shielded"
     );
 }
@@ -1106,10 +1106,10 @@ fn boomerang_basics_draws_on_own_permanent() {
 fn fire_nation_cadets_conditional_firebending() {
     let mut g = two_player_game();
     let fc = g.add_card_to_battlefield(0, catalog::fire_nation_cadets());
-    assert!(!g.computed_permanent(fc).unwrap().keywords.contains(&Keyword::Firebending(2)),
+    assert!(!g.computed_permanent(fc).unwrap().keywords().contains(&Keyword::Firebending(2)),
         "no Lesson → no firebending");
     g.add_card_to_graveyard(0, catalog::yip_yip()); // a Lesson
-    assert!(g.computed_permanent(fc).unwrap().keywords.contains(&Keyword::Firebending(2)),
+    assert!(g.computed_permanent(fc).unwrap().keywords().contains(&Keyword::Firebending(2)),
         "Lesson in gy → firebending 2");
 }
 
@@ -1196,7 +1196,7 @@ fn enter_the_avatar_state_grants_keywords() {
         card_id: eas, target: Some(Target::Permanent(mine)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    let kws = g.computed_permanent(mine).unwrap().keywords.clone();
+    let kws = g.computed_permanent(mine).unwrap().keywords().to_vec();
     for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink, Keyword::Hexproof] {
         assert!(kws.contains(&kw), "granted {kw:?}");
     }
@@ -1234,7 +1234,7 @@ fn earth_kingdom_general_earthbends() {
     let ekg = g.add_card_to_battlefield(0, catalog::earth_kingdom_general());
     g.fire_self_etb_triggers(ekg, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(land).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(g.computed_permanent(land).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "land became a creature");
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 2,
         "earthbend 2 counters");
@@ -1393,7 +1393,7 @@ fn mai_exhaust_grants_double_strike() {
         card_id: mai, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(mai).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(mai).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "double strike counter grants the keyword");
 }
 
@@ -1412,7 +1412,7 @@ fn rough_rhino_exhaust_pumps_and_tramples() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(rr).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 7), "5/5 + two counters");
-    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "gained trample");
 }
 
 /// Path to Redemption locks down a creature, then exiles it for an Ally.
@@ -1426,7 +1426,7 @@ fn path_to_redemption_locks_then_exiles() {
         card_id: aura, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast aura");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantAttack),
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantAttack),
         "enchanted creature can't attack");
     // Sacrifice the Aura to exile the creature and make an Ally.
     g.perform_action(GameAction::ActivateAbility {
@@ -1470,12 +1470,12 @@ fn earth_rumble_wrestlers_conditional_pump() {
     let erw = g.add_card_to_battlefield(0, catalog::earth_rumble_wrestlers());
     let base = g.computed_permanent(erw).unwrap();
     assert_eq!(base.power, 3, "base 3 power");
-    assert!(!base.keywords.contains(&Keyword::Trample), "no trample at rest");
+    assert!(!base.keywords().contains(&Keyword::Trample), "no trample at rest");
     // A land entering under your control this turn satisfies the landfall branch.
     g.players[0].lands_played_this_turn += 1;
     let cp = g.computed_permanent(erw).unwrap();
     assert_eq!(cp.power, 4, "+1/+0 after a land this turn");
-    assert!(cp.keywords.contains(&Keyword::Trample), "and trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "and trample");
 }
 
 /// Abandon Attachments loots: discard one, draw two.
@@ -1660,7 +1660,7 @@ fn ty_lee_artful_pays_to_unblock() {
         attacker: ty, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantBlock),
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantBlock),
         "paid {{1}} → target can't block");
 }
 
@@ -1811,7 +1811,7 @@ fn tundra_tank_grants_indestructible() {
     let tank = g.add_card_to_battlefield(0, catalog::tundra_tank());
     g.fire_self_etb_triggers(tank, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Twin Blades attaches on ETB, granting +1/+1 and double strike.
@@ -1824,7 +1824,7 @@ fn twin_blades_attaches_and_grants_double_strike() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "equipped +1/+1");
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "gains double strike");
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike), "gains double strike");
 }
 
 /// Vengeful Villagers taps an opponent's creature when it attacks.
@@ -1880,7 +1880,7 @@ fn sokka_tenacious_lords_allies() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::sokka_tenacious_tactician());
     let ally = g.add_card_to_battlefield(0, catalog::compassionate_healer()); // Ally
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Menace),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Menace),
         "other Ally gains menace");
 }
 
@@ -1908,7 +1908,7 @@ fn appa_loyal_grants_flying() {
     ]));
     g.fire_self_etb_triggers(appa, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Fire Lord Azula copies a spell cast while she's attacking.
@@ -1984,7 +1984,7 @@ fn how_to_start_a_riot_menace_and_pump() {
         x_value: None,
     }).expect("cast riot");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Menace), "menace");
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Menace), "menace");
     assert_eq!(g.computed_permanent(theirs).unwrap().power, 4, "target player's creatures +2/+0");
 }
 
@@ -2436,7 +2436,7 @@ fn fire_nation_palace_grants_firebending() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant firebending");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Firebending(4)),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Firebending(4)),
         "creature gained firebending 4");
 }
 
@@ -2585,7 +2585,7 @@ fn hakoda_sacrifice_buffs_team() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.toughness, 7, "grizzly 2/2 +0/+5 = 2/7");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "gained indestructible");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "gained indestructible");
     assert!(g.battlefield_find(hakoda).is_none(), "Hakoda was sacrificed");
 }
 
@@ -2640,7 +2640,7 @@ fn obsessive_pursuit_attack_counters_and_lifelink() {
     attack_with(&mut g, bear);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 3,
         "3 counters = 3 permanents sacrificed");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink),
         "X≥3 grants lifelink");
 }
 
@@ -2863,7 +2863,7 @@ fn fatal_fissure_earthbends_on_target_death() {
     drain_stack(&mut g);
     let pp = crabomination::card::CounterType::PlusOnePlusOne;
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(pp), 4, "earthbend 4 on the land");
-    assert!(g.computed_permanent(land).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(g.computed_permanent(land).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "land became a creature");
 }
 
@@ -2976,7 +2976,7 @@ fn honest_work_shrinks_and_taps() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(foe).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "becomes 1/1");
-    assert!(!cp.keywords.contains(&Keyword::Flying), "loses flying (abilities stripped)");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "loses flying (abilities stripped)");
     assert!(g.battlefield_find(foe).unwrap().tapped, "tapped on ETB");
     assert_eq!(g.battlefield_find(foe).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0,
         "counters removed");
@@ -3105,7 +3105,7 @@ fn aangs_journey_unkicked_basic_only() {
 fn war_balloon_animates_at_three_fire() {
     let mut g = two_player_game();
     let wb = g.add_card_to_battlefield(0, catalog::war_balloon());
-    assert!(!g.computed_permanent(wb).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(!g.computed_permanent(wb).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "not a creature with no fire counters");
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
@@ -3117,7 +3117,7 @@ fn war_balloon_animates_at_three_fire() {
         drain_stack(&mut g);
     }
     assert_eq!(g.battlefield_find(wb).unwrap().counter_count(crabomination::card::CounterType::Fire), 3);
-    assert!(g.computed_permanent(wb).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(g.computed_permanent(wb).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "3 fire counters → artifact creature");
 }
 
@@ -3160,7 +3160,7 @@ fn ember_island_copies_your_creature_as_hero() {
         && c.definition.name == "Grizzly Bears" && c.is_token).expect("token copy");
     let cp = g.computed_permanent(token.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "4/4 override");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Hero), "is a Hero");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Hero), "is a Hero");
 }
 
 /// Appa airbends your own permanents on ETB, and casting one from exile mints a
@@ -3232,12 +3232,12 @@ fn zhao_taps_nonbasics_and_conquers_to_mountains() {
     assert!(g.battlefield_find(nonbasic).unwrap().tapped, "nonbasic entered tapped");
     // No conqueror counter yet → still its own types, not a Mountain.
     let before = g.computed_permanent(nonbasic).unwrap();
-    assert!(!before.subtypes.land_types.contains(&LandType::Mountain), "not a Mountain yet");
+    assert!(!before.subtypes().land_types.contains(&LandType::Mountain), "not a Mountain yet");
     // Give Zhao a conqueror counter → nonbasics are Mountains (lose other types).
     g.battlefield_find_mut(zhao).unwrap().add_counters(CounterType::Conqueror, 1);
     let after = g.computed_permanent(nonbasic).unwrap();
-    assert!(after.subtypes.land_types.contains(&LandType::Mountain), "now a Mountain");
-    assert!(after.card_types.contains(&CardType::Land), "still a land");
+    assert!(after.subtypes().land_types.contains(&LandType::Mountain), "now a Mountain");
+    assert!(after.card_types().contains(&CardType::Land), "still a land");
 }
 
 /// Toph, Hardheaded Teacher: ETB discards a card to return an instant/sorcery,
@@ -3271,7 +3271,7 @@ fn toph_hardheaded_returns_is_and_earthbends() {
     }).expect("cast the returned bolt");
     drain_stack(&mut g);
     let comp = g.computed_permanent(land).expect("land present");
-    assert!(comp.card_types.contains(&CardType::Creature), "earthbent land is a creature");
+    assert!(comp.card_types().contains(&CardType::Creature), "earthbent land is a creature");
     assert_eq!(
         g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne),
         1,
@@ -3296,7 +3296,7 @@ fn avatar_destiny_scales_and_recurs() {
     cast_at(&mut g, aura, crabomination::game::types::Target::Permanent(bear));
     let comp = g.computed_permanent(bear).expect("host alive");
     assert_eq!((comp.power, comp.toughness), (4, 4), "2/2 + two gy creatures");
-    assert!(comp.subtypes.creature_types.contains(&CreatureType::Avatar), "is an Avatar");
+    assert!(comp.subtypes().creature_types.contains(&CreatureType::Avatar), "is an Avatar");
     // Host dies (SBA records the aura) → aura returns to hand, a gy creature is
     // reanimated.
     g.battlefield_find_mut(bear).unwrap().damage = 99;
@@ -3322,11 +3322,11 @@ fn toph_metalbender_artifacts_are_lands_and_end_step_earthbend() {
     let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
     let land = g.add_card_to_battlefield(0, catalog::forest());
     // Not yet a land — Toph isn't out.
-    assert!(!g.computed_permanent(rock).unwrap().card_types.contains(&CardType::Land));
+    assert!(!g.computed_permanent(rock).unwrap().card_types().contains(&CardType::Land));
     g.add_card_to_battlefield(0, catalog::toph_the_first_metalbender());
     let comp = g.computed_permanent(rock).unwrap();
-    assert!(comp.card_types.contains(&CardType::Land), "artifact is now a land");
-    assert!(comp.card_types.contains(&CardType::Artifact), "still an artifact");
+    assert!(comp.card_types().contains(&CardType::Land), "artifact is now a land");
+    assert!(comp.card_types().contains(&CardType::Artifact), "still an artifact");
     // End step earthbend 2 on a land.
     g.step = TurnStep::End;
     g.fire_step_triggers(TurnStep::End);

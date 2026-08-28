@@ -222,8 +222,8 @@ fn vigorous_charge_kicked_grants_lifelink() {
     .expect("kicked cast");
     drain_stack(&mut g);
     let cp = g.computed_permanent(target).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Trample));
-    assert!(cp.keywords.contains(&Keyword::Lifelink));
+    assert!(cp.keywords().contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Lifelink));
 }
 
 // ── Creatures ───────────────────────────────────────────────────────────────
@@ -260,7 +260,7 @@ fn slimy_kavu_makes_a_swamp() {
     g.clear_sickness(kavu);
     let land = g.add_card_to_battlefield(1, catalog::mountain());
     activate(&mut g, 0, kavu, 0, Some(Target::Permanent(land)));
-    assert!(g.computed_permanent(land).unwrap().subtypes.land_types.contains(&LandType::Swamp));
+    assert!(g.computed_permanent(land).unwrap().subtypes().land_types.contains(&LandType::Swamp));
 }
 
 /// Tek reads the basic land types you control.
@@ -274,7 +274,7 @@ fn tek_scales_with_your_basic_types() {
     g.add_card_to_battlefield(0, catalog::island());
     let cp = g.computed_permanent(tek).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 2), "Swamp is +2/+0");
-    assert!(cp.keywords.contains(&Keyword::Flying), "Island grants flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "Island grants flying");
 }
 
 /// Pyre Zombie goes out shooting for {1}{R}{R}.

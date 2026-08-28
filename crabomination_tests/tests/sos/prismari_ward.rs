@@ -472,10 +472,10 @@ fn choreographed_sparks_mode_one_copies_target_creature_spell() {
         .map(|c| c.id)
         .expect("token copy on battlefield");
     let copy = g.computed_permanent(copy_id).unwrap();
-    assert!(copy.keywords.contains(&Keyword::Haste),
+    assert!(copy.keywords().contains(&Keyword::Haste),
         "the copy gains haste");
     let orig = g.computed_permanent(bears).unwrap();
-    assert!(!orig.keywords.contains(&Keyword::Haste),
+    assert!(!orig.keywords().contains(&Keyword::Haste),
         "the original bears doesn't gain haste");
 
     // ...and the copy is sacrificed at the beginning of the next end step.
@@ -996,7 +996,7 @@ fn ulna_alley_shopkeep_with_lifegain_is_four_three() {
     );
     assert_eq!(computed.toughness, 3, "Toughness unchanged (+0)");
     assert!(
-        computed.keywords.contains(&Keyword::Menace),
+        computed.keywords().contains(&Keyword::Menace),
         "Menace persists"
     );
 }

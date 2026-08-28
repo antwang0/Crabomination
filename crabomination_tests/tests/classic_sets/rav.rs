@@ -44,7 +44,7 @@ fn gate_hound_team_vigilance_while_enchanted() {
     let mut g = two_player_game();
     let hound = g.add_card_to_battlefield(0, catalog::gate_hound());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance),
         "no vigilance while unenchanted");
     // Enchant the hound with an aura (Pacifism), turning on the static.
     let pacifism = g.add_card_to_hand(0, catalog::pacifism());
@@ -55,7 +55,7 @@ fn gate_hound_team_vigilance_while_enchanted() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("attach aura to Gate Hound");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance),
         "your creatures gain vigilance while Gate Hound is enchanted");
 }
 
@@ -428,12 +428,12 @@ fn roofstalker_wight_grants_flying() {
     let w = g.add_card_to_battlefield(0, catalog::roofstalker_wight());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
-    assert!(!g.computed_permanent(w).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(w).unwrap().keywords().contains(&Keyword::Flying));
     g.perform_action(GameAction::ActivateAbility {
         card_id: w, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant flying");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(w).unwrap().keywords.contains(&Keyword::Flying), "has flying now");
+    assert!(g.computed_permanent(w).unwrap().keywords().contains(&Keyword::Flying), "has flying now");
 }
 
 /// Sewerdreg sacrifices itself to exile a card from a graveyard.
@@ -471,7 +471,7 @@ fn oathsworn_giant_team_buff() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 4), "+0/+2 anthem");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "granted vigilance");
 }
 
 /// Moroii's upkeep trigger costs its controller 1 life.
@@ -673,8 +673,8 @@ fn siege_of_towers_animates_a_mountain() {
     g.dispatch_triggers_for_events(&evs);
     let cp = g.computed_permanent(mtn).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 1), "becomes a 3/1");
-    assert!(cp.card_types.contains(&CardType::Creature), "now a creature");
-    assert!(cp.card_types.contains(&CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&CardType::Land), "still a land");
 }
 
 /// Flow of Ideas draws one card per Island you control.
@@ -760,7 +760,7 @@ fn flight_of_fancy_draws_and_grants_flying() {
     // Aura attached to the host grants it flying (equip bonus).
     let aura = g.add_card_to_battlefield(0, catalog::flight_of_fancy());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(host);
-    assert!(g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(host).unwrap().keywords().contains(&Keyword::Flying),
         "host has flying");
     // Its ETB trigger draws two cards.
     let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
@@ -800,7 +800,7 @@ fn ethereal_usher_grants_unblockable() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("grant unblockable");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Viashino Fangtail taps to ping any target for 1.
@@ -1005,13 +1005,13 @@ fn torpid_moloch_sheds_defender() {
     let mut g = two_player_game();
     let moloch = g.add_card_to_battlefield(0, catalog::torpid_moloch());
     let lands: Vec<_> = (0..3).map(|_| g.add_card_to_battlefield(0, catalog::forest())).collect();
-    assert!(g.computed_permanent(moloch).unwrap().keywords.contains(&Keyword::Defender));
+    assert!(g.computed_permanent(moloch).unwrap().keywords().contains(&Keyword::Defender));
     g.perform_action(GameAction::ActivateAbility {
         card_id: moloch, ability_index: 0, target: None,
         additional_targets: lands.iter().map(|&l| Target::Permanent(l)).collect(), x_value: None, mode: None,
     }).expect("sac 3 lands");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(moloch).unwrap().keywords.contains(&Keyword::Defender),
+    assert!(!g.computed_permanent(moloch).unwrap().keywords().contains(&Keyword::Defender),
         "lost defender this turn");
 }
 
@@ -1127,9 +1127,9 @@ fn surge_of_zeal_radiance_grants_haste() {
     let b = g.add_card_to_battlefield(0, catalog::llanowar_elves()); // green
     let w = g.add_card_to_battlefield(0, catalog::savannah_lions()); // white, off-color
     resolve_spell_r(&mut g, catalog::surge_of_zeal(), vec![Target::Permanent(a)]);
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Haste));
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Haste), "shared green");
-    assert!(!g.computed_permanent(w).unwrap().keywords.contains(&Keyword::Haste), "off-color");
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Haste));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Haste), "shared green");
+    assert!(!g.computed_permanent(w).unwrap().keywords().contains(&Keyword::Haste), "off-color");
 }
 
 /// Leave No Trace's Radiance destroys the target enchantment and every
@@ -1290,7 +1290,7 @@ fn sunhome_grants_double_strike() {
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("double strike");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(cre).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(cre).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 /// Glare of Subdual taps a target creature (paying by tapping one of your own).
@@ -1490,8 +1490,8 @@ fn bathe_in_light_radiance_protection() {
     let evs = g.resolve_effect(&catalog::bathe_in_light().effect, &ctx).unwrap();
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Protection(Color::Red)));
-    assert!(g.computed_permanent(b).unwrap().keywords.contains(&Keyword::Protection(Color::Red)), "shared green → protected");
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Protection(Color::Red)));
+    assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::Protection(Color::Red)), "shared green → protected");
 }
 
 /// Overwhelm gives your whole team +3/+3 until end of turn.
@@ -1556,9 +1556,9 @@ fn halcyon_glaze_animates_on_creature_cast() {
     }).expect("cast a creature spell");
     drain_stack(&mut g);
     let cp = g.computed_permanent(glaze).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Light of Sanction prevents your own sources' damage to your creatures, but
@@ -1727,7 +1727,7 @@ fn molten_sentry_coin_flip_stats() {
     g.resolve_effect(&etb, &ctx).unwrap();
     let cp = g.computed_permanent(s).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 2), "heads → 5/2");
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
     // Tails.
     let mut g = two_player_game();
     let s = g.add_card_to_battlefield(0, catalog::molten_sentry());
@@ -1736,7 +1736,7 @@ fn molten_sentry_coin_flip_stats() {
     g.resolve_effect(&etb, &ctx).unwrap();
     let cp = g.computed_permanent(s).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 5), "tails → 2/5");
-    assert!(cp.keywords.contains(&Keyword::Defender));
+    assert!(cp.keywords().contains(&Keyword::Defender));
 }
 
 /// Svogthos animates into a Plant Zombie whose P/T equals your graveyard's
@@ -1756,8 +1756,8 @@ fn svogthos_animates_to_graveyard_creatures() {
     }).expect("animate Svogthos");
     drain_stack(&mut g);
     let cp = g.computed_permanent(tomb).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     assert_eq!((cp.power, cp.toughness), (2, 2), "two creature cards in gy");
 }
 
@@ -2329,7 +2329,7 @@ fn pollenbright_wings_mints_saprolings_on_damage() {
     let wings = g.add_card_to_battlefield(0, catalog::pollenbright_wings());
     g.battlefield_find_mut(wings).unwrap().attached_to = Some(bear);
     g.clear_sickness(bear);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&K::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&K::Flying));
     while g.step != TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
@@ -2491,12 +2491,12 @@ fn concerted_effort_shares_keywords_at_upkeep() {
     g.add_card_to_battlefield(0, catalog::concerted_effort());
     let flyer = g.add_card_to_battlefield(0, catalog::serra_angel());
     let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(ground).unwrap().keywords.contains(&K::Flying));
+    assert!(!g.computed_permanent(ground).unwrap().keywords().contains(&K::Flying));
     while !(g.step == TurnStep::Upkeep && g.turn_number > 1) {
         g.perform_action(GameAction::PassPriority).expect("pass");
     }
     drain_stack(&mut g);
-    let kws = g.computed_permanent(ground).unwrap().keywords.clone();
+    let kws = g.computed_permanent(ground).unwrap().keywords().to_vec();
     assert!(kws.contains(&K::Flying), "shared from Serra Angel");
     assert!(kws.contains(&K::Vigilance), "and vigilance");
     let _ = flyer;

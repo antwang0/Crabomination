@@ -3974,13 +3974,13 @@ impl GameState {
             .iter()
             .filter(|c| c.controller == seat)
             .filter_map(|c| self.computed_permanent(c.id))
-            .filter(|cp| cp.card_types.contains(&CardType::Creature))
+            .filter(|cp| cp.card_types().contains(&CardType::Creature))
         {
-            if cp.keywords.has_kw(&Keyword::Changeling) {
+            if cp.keywords().has_kw(&Keyword::Changeling) {
                 changelings += 1;
                 continue;
             }
-            for t in &cp.subtypes.creature_types {
+            for t in &cp.subtypes().creature_types {
                 *tally.entry(*t).or_insert(0) += 1;
             }
         }
@@ -5143,7 +5143,7 @@ impl GameState {
     /// Falls back to the printed types mid-layer-recompute.
     pub(crate) fn permanent_is_creature(&self, cid: crate::card::CardId) -> bool {
         if let Some(cp) = self.computed_permanent(cid) {
-            return cp.card_types.contains(&crate::card::CardType::Creature);
+            return cp.card_types().contains(&crate::card::CardType::Creature);
         }
         self.battlefield_find(cid).is_some_and(|c| c.definition.is_creature())
     }
@@ -5835,7 +5835,7 @@ impl GameState {
                     // CR 702.24b — multiple instances each trigger separately,
                     // and each counts every age counter on the permanent.
                     .flat_map(|c| {
-                        c.keywords.iter().filter_map(move |k| match k {
+                        c.keywords().iter().filter_map(move |k| match k {
                             Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
                             _ => None,
                         })
@@ -6273,7 +6273,7 @@ impl GameState {
     pub(crate) fn source_is_artifact(&self, src: CardId) -> bool {
         use crate::card::CardType::Artifact;
         if let Some(cp) = self.computed_permanent(src) {
-            return cp.card_types.contains(&Artifact);
+            return cp.card_types().contains(&Artifact);
         }
         if let Some((id, _, _, types)) = self.resolving_source.as_ref()
             && *id == src
@@ -6798,7 +6798,7 @@ impl GameState {
         let controller = self.battlefield_find(tgt).map_or(0, |c| c.controller);
         let cp = self.computed_permanent(tgt);
         cp.iter()
-            .flat_map(|cp| cp.keywords.iter())
+            .flat_map(|cp| cp.keywords().iter())
             .any(|k| match k {
                 crate::card::Keyword::PreventDamageFromMatching(f) => self
                     .evaluate_requirement_static(
@@ -7183,7 +7183,7 @@ impl GameState {
                     if let StaticEffect::ControlledCreatureTypesDealExtraDamage { types, amount: bonus } =
                         &sa.effect
                         && c.controller == cp.controller
-                        && types.iter().any(|t| cp.subtypes.creature_types.contains(t))
+                        && types.iter().any(|t| cp.subtypes().creature_types.contains(t))
                     {
                         amount = amount.saturating_add(*bonus);
                     }
@@ -8797,7 +8797,7 @@ impl GameState {
         #[cfg(debug_assertions)]
         if !hit {
             debug_assert!(
-                !self.compute_battlefield().iter().any(|c| c.keywords.iter().any(&pred)),
+                !self.compute_battlefield().iter().any(|c| c.keywords().iter().any(&pred)),
                 "board_keyword_matching said no, but the computed board has a match"
             );
         }
@@ -9056,7 +9056,7 @@ impl GameState {
         let bestowed = src.bestowed;
         let is_creature = if bestowed || self.card_type_change_unscoped() {
             self.computed_permanent(card_id)
-                .is_some_and(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                .is_some_and(|c| c.card_types().contains(&crate::card::CardType::Creature))
         } else {
             src.definition.is_creature()
         };
@@ -9066,7 +9066,7 @@ impl GameState {
         if self.card_keyword_possible(card_id, |k| *k == Keyword::Haste)
             && self
                 .computed_permanent(card_id)
-                .is_some_and(|c| c.keywords.has_kw(&Keyword::Haste))
+                .is_some_and(|c| c.keywords().has_kw(&Keyword::Haste))
         {
             return false;
         }
@@ -13266,9 +13266,9 @@ impl GameState {
             && let Some(cp) = self.computed_permanent(id)
         {
             let printed = &snap.definition.subtypes.creature_types;
-            if cp.subtypes.creature_types.iter().any(|t| !printed.contains(t)) {
+            if cp.subtypes().creature_types.iter().any(|t| !printed.contains(t)) {
                 std::sync::Arc::make_mut(&mut snap.definition).subtypes.creature_types =
-                    cp.subtypes.creature_types.clone();
+                    cp.subtypes().creature_types.clone();
             }
         }
         Some(snap)
@@ -13585,7 +13585,7 @@ impl GameState {
         }
         let creature_colors = |id: CardId| {
             self.computed_permanent(id).filter(|c| {
-                c.card_types.contains(&crate::card::CardType::Creature)
+                c.card_types().contains(&crate::card::CardType::Creature)
             })
             .map(|c| c.colors)
         };
@@ -13710,7 +13710,7 @@ impl GameState {
             return false;
         }
         let Some(tgt) = self.computed_permanent(target) else { return false };
-        tgt.card_types.contains(&crate::card::CardType::Creature)
+        tgt.card_types().contains(&crate::card::CardType::Creature)
             && colors.iter().any(|c| tgt.colors.contains(c))
     }
 
@@ -13753,7 +13753,7 @@ impl GameState {
         // lookups and two `Vec` clones — and none of it can change the answer
         // unless the target carries a protection keyword. Most permanents
         // never do, so gate on the one thing that is already computed.
-        if !tgt.keywords.iter().any(Self::protection_keyword) {
+        if !tgt.keywords().iter().any(Self::protection_keyword) {
             return false;
         }
         let src_colors: crate::mana::ColorSet = self
@@ -13766,7 +13766,7 @@ impl GameState {
             });
         let src_is_creature = self
             .computed_permanent(source)
-            .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+            .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
                     .map(|c| c.definition.is_creature())
@@ -13776,7 +13776,7 @@ impl GameState {
         // source of that type.
         let src_creature_types = self
             .computed_permanent(source)
-            .map(|c| c.subtypes.creature_types.clone())
+            .map(|c| c.subtypes().creature_types.clone())
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
                     .map(|c| c.definition.subtypes.creature_types.clone())
@@ -13788,13 +13788,13 @@ impl GameState {
             .unwrap_or(0);
         let src_card_types = self
             .computed_permanent(source)
-            .map(|c| c.card_types.to_vec())
+            .map(|c| c.card_types().to_vec())
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
                     .map(|c| c.definition.card_types.clone())
                     .unwrap_or_default()
             });
-        tgt.keywords.iter().filter_map(ProtectionKind::of).any(|kind| match kind {
+        tgt.keywords().iter().filter_map(ProtectionKind::of).any(|kind| match kind {
             ProtectionKind::Color(color) => src_colors.contains(color),
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).
             ProtectionKind::OwnColors => tgt.colors.intersects(src_colors),
@@ -14550,11 +14550,11 @@ impl GameState {
             return false;
         }
         attackers.iter().any(|(atk, atk_cp)| {
-            !self.blocker_matching_restriction_bars(blocker, &blocker_cp.keywords, atk.id)
+            !self.blocker_matching_restriction_bars(blocker, blocker_cp.keywords(), atk.id)
                 && can_block_attacker_computed(
                     blocker,
                     blocker_cp,
-                    atk_cp.keywords.as_slice(),
+                    atk_cp.keywords(),
                     atk_cp.colors,
                     atk_cp.power,
                 )
@@ -14644,12 +14644,12 @@ impl GameState {
         }
         // CR 509.1b — Mogg Toady: strictly more creatures than the attacker's
         // controller. Attacker-dependent, so it stays here.
-        if blocker_cp.keywords.has_kw(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
+        if blocker_cp.keywords().has_kw(&Keyword::CantBlockUnlessMoreCreaturesThanAttacker)
             && self.creature_count(blocker.controller) <= self.creature_count(attacker.controller)
         {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
-        let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        let atk_kws = atk_cp.map(|c| c.keywords()).unwrap_or(&[]);
         let atk_colors = atk_cp.map(|c| c.colors).unwrap_or_default();
         let atk_power = atk_cp.map(|c| c.power).unwrap_or_else(|| attacker.power());
         // CR 509.1b — "can't be blocked as long as defending player controls a
@@ -14682,7 +14682,7 @@ impl GameState {
         if self.block_barred_by_protection_filter(atk_kws, attacker.controller, blocker.id) {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
-        if self.blocker_matching_restriction_bars(blocker, &blocker_cp.keywords, attacker_id) {
+        if self.blocker_matching_restriction_bars(blocker, blocker_cp.keywords(), attacker_id) {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         // The rest of `declare_blockers`' attacker-keyword gates, in one pass
@@ -14759,22 +14759,22 @@ impl GameState {
         }
         // Burden of Proof — "can't block [creature type]s".
         if let Some(a) = atk_cp
-            && blocker_cp.keywords.iter().any(|k| {
+            && blocker_cp.keywords().iter().any(|k| {
                 matches!(k, Keyword::CantBlockCreatureType(t)
-                    if a.subtypes.creature_types.contains(t))
+                    if a.subtypes().creature_types.contains(t))
             })
         {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         // Ironclaw Curse — "can't block creatures with power equal to or
         // greater than this creature's toughness".
-        if blocker_cp.keywords.has_kw(&Keyword::CantBlockPowerAtLeastOwnToughness)
+        if blocker_cp.keywords().has_kw(&Keyword::CantBlockPowerAtLeastOwnToughness)
             && atk_cp.is_some_and(|a| a.power >= blocker_cp.toughness)
         {
             return Some((line!(), GameError::CannotBlock(blocker.id)));
         }
         // Monstrous Hound — more lands than the attacker's controller.
-        if blocker_cp.keywords.has_kw(&Keyword::CantBlockUnlessMoreLandsThanAttacker)
+        if blocker_cp.keywords().has_kw(&Keyword::CantBlockUnlessMoreLandsThanAttacker)
             && self.player_tally(blocker.controller, crate::card::PlayerTally::LandsControlled)
                 <= self.player_tally(attacker.controller, crate::card::PlayerTally::LandsControlled)
         {
@@ -16913,7 +16913,7 @@ impl GameState {
         };
         let target_ok = self
             .computed_permanent(target)
-            .is_some_and(|c| c.controller == p && c.card_types.contains(&wanted));
+            .is_some_and(|c| c.controller == p && c.card_types().contains(&wanted));
         if !target_ok {
             return Err(GameError::InvalidTarget);
         }
@@ -16921,7 +16921,7 @@ impl GameState {
         if fortify.is_none()
             && self
                 .computed_permanent(target)
-                .is_some_and(|c| c.keywords.has_kw(&crate::card::Keyword::CantBeEquipped))
+                .is_some_and(|c| c.keywords().has_kw(&crate::card::Keyword::CantBeEquipped))
         {
             return Err(GameError::InvalidTarget);
         }
@@ -17040,7 +17040,7 @@ impl GameState {
                 let target_ok = t != equipment
                     && self.computed_permanent(t).is_some_and(|c| {
                         c.controller == p
-                            && c.card_types.contains(&crate::card::CardType::Creature)
+                            && c.card_types().contains(&crate::card::CardType::Creature)
                     });
                 if !target_ok {
                     return Err(GameError::InvalidTarget);
@@ -17145,7 +17145,7 @@ impl GameState {
             let Some(cp) = computed.iter().find(|c| c.id == cid) else {
                 return Err(GameError::CardNotOnBattlefield(cid));
             };
-            if cp.controller != p || !cp.card_types.contains(&crate::card::CardType::Creature) {
+            if cp.controller != p || !cp.card_types().contains(&crate::card::CardType::Creature) {
                 return Err(GameError::InvalidTarget);
             }
             let tapped = self
@@ -17231,7 +17231,7 @@ impl GameState {
             let Some(cp) = computed.iter().find(|c| c.id == cid) else {
                 return Err(GameError::CardNotOnBattlefield(cid));
             };
-            if cp.controller != p || !cp.card_types.contains(&crate::card::CardType::Creature) {
+            if cp.controller != p || !cp.card_types().contains(&crate::card::CardType::Creature) {
                 return Err(GameError::InvalidTarget);
             }
             let tapped = self
@@ -22976,7 +22976,7 @@ impl GameState {
     /// Falls back to `false` if the permanent is not on the battlefield.
     pub fn permanent_has_keyword(&self, id: CardId, kw: &Keyword) -> bool {
         self.computed_permanent(id)
-            .is_some_and(|c| c.keywords.contains(kw))
+            .is_some_and(|c| c.keywords().contains(kw))
     }
 }
 
@@ -25322,7 +25322,7 @@ pub fn can_block_attacker_computed(
     attacker_colors: crate::mana::ColorSet,
     attacker_power: i32,
 ) -> bool {
-    let blocker_kws = &blocker_computed.keywords;
+    let blocker_kws = &blocker_computed.keywords();
     // Unblockable: can't be blocked at all.
     if attacker_kws.has_kw(&Keyword::Unblockable) {
         return false;
@@ -25379,7 +25379,7 @@ pub fn can_block_attacker_computed(
     // Juggernaut (CR 509.1b): can't be blocked by a given creature type.
     if attacker_kws.iter().any(|k| {
         matches!(k, Keyword::CantBeBlockedByCreatureType(t)
-            if blocker_computed.subtypes.creature_types.contains(t))
+            if blocker_computed.subtypes().creature_types.contains(t))
     }) {
         return false;
     }
@@ -25455,7 +25455,7 @@ pub fn can_block_attacker_computed(
         // CR 702.16e — protection from a creature type: can't be blocked by a
         // creature of that type.
         if let Keyword::ProtectionFromCreatureType(ty) = kw
-            && blocker_computed.subtypes.creature_types.contains(ty)
+            && blocker_computed.subtypes().creature_types.contains(ty)
         {
             return false;
         }
@@ -25490,7 +25490,7 @@ pub fn can_block_attacker_computed(
         // CR 702.16j — protection from a card type: can't be blocked by a
         // creature of that type (matters for artifact/enchantment creatures).
         if let Keyword::ProtectionFromCardType(t) = kw
-            && blocker_computed.card_types.contains(t)
+            && blocker_computed.card_types().contains(t)
         {
             return false;
         }
@@ -25539,12 +25539,12 @@ fn blocker_matches_block_filter(
         R::NotToken => !blocker.is_token,
         R::HasColor(c) => computed.colors.contains(c),
         R::Colorless => computed.colors.is_empty(),
-        R::HasKeyword(k) => computed.keywords.contains(k),
-        R::HasToxic => computed.keywords.iter().any(|k| matches!(k, Keyword::Toxic(_))),
-        R::HasModular => computed.keywords.iter().any(|k| matches!(k, Keyword::Modular(_))),
+        R::HasKeyword(k) => computed.keywords().contains(k),
+        R::HasToxic => computed.keywords().iter().any(|k| matches!(k, Keyword::Toxic(_))),
+        R::HasModular => computed.keywords().iter().any(|k| matches!(k, Keyword::Modular(_))),
         R::HasMutate => blocker.definition.mutate.is_some(),
         R::HasCreatureType(t) => blocker.definition.subtypes.creature_types.contains(t)
-            || computed.keywords.has_kw(&Keyword::Changeling),
+            || computed.keywords().has_kw(&Keyword::Changeling),
         R::HasArtifactSubtype(a) => blocker.definition.subtypes.artifact_subtypes.contains(a),
         R::PowerAtMost(n) => computed.power <= *n,
         R::PowerAtLeast(n) => computed.power >= *n,

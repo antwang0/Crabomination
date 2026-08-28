@@ -65,7 +65,7 @@ fn achilles_davenport_pumps_other_assassins() {
     let mut g = two_player_game();
     let other = g.add_card_to_battlefield(0, catalog::merciless_harlequin()); // 2/1 Assassin
     let achilles = g.add_card_to_battlefield(0, catalog::achilles_davenport());
-    assert!(g.computed_permanent(achilles).unwrap().keywords.contains(&Keyword::Menace));
+    assert!(g.computed_permanent(achilles).unwrap().keywords().contains(&Keyword::Menace));
     // Achilles doesn't pump itself; the other Assassin gets +1/+1 → 3/2.
     let o = g.computed_permanent(other).unwrap();
     assert_eq!((o.power, o.toughness), (3, 2));

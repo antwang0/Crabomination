@@ -1319,7 +1319,7 @@ fn invisible_stalker_is_hexproof_and_unblockable() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let cp = g.compute_battlefield();
     let scp = cp.iter().find(|c| c.id == stalker).unwrap();
-    assert!(scp.keywords.contains(&Keyword::Hexproof));
+    assert!(scp.keywords().contains(&Keyword::Hexproof));
     assert!(!g.blocker_can_block_attacker(bear, stalker), "can't be blocked");
 }
 
@@ -1600,7 +1600,7 @@ fn renegade_tactics_cant_block_and_draws() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Renegade Tactics castable");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantBlock));
     assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one (net same)");
 }
 
@@ -1610,7 +1610,7 @@ fn fervor_grants_haste() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::fervor());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Sizzle deals 3 to each opponent.
@@ -1669,7 +1669,7 @@ fn spidersilk_armor_grants_toughness_and_reach() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.toughness, 3, "2/2 → 2/3");
-    assert!(c.keywords.contains(&Keyword::Reach), "gained reach");
+    assert!(c.keywords().contains(&Keyword::Reach), "gained reach");
 }
 
 /// Pulse of Murasa returns a creature card from the graveyard and gains 6 life.
@@ -3317,14 +3317,14 @@ fn carnage_interpreter_buffs_self_with_empty_hand() {
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
     assert_eq!((c.power, c.toughness), (5, 5), "+2/+2 while hand ≤ 1");
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Menace), "menace while hand ≤ 1");
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Menace), "menace while hand ≤ 1");
     // Two cards in hand removes the bonus.
     g.add_card_to_hand(0, catalog::island());
     g.add_card_to_hand(0, catalog::island());
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "base stats with a full hand");
-    assert!(!c.keywords.contains(&crabomination::card::Keyword::Menace));
+    assert!(!c.keywords().contains(&crabomination::card::Keyword::Menace));
 }
 
 #[test]

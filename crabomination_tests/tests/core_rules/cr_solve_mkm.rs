@@ -138,8 +138,8 @@ fn cr_730_2a_merged_permanent_takes_the_topmost_characteristics() {
     let cp = g.computed_permanent(host).unwrap();
     // 2/3 from the top card, +2/+2 from its own on-mutate counters.
     assert_eq!((cp.power, cp.toughness), (4, 5));
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Reach), "top card's keyword");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Trample), "component's keyword");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Reach), "top card's keyword");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample), "component's keyword");
 }
 
 /// CR 730.2b — merging isn't entering the battlefield: an "another creature

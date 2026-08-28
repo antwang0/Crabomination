@@ -194,9 +194,9 @@ fn kalonian_twingrove_counts_forests() {
 fn aeronaut_tinkerer_needs_an_artifact() {
     let mut g = main_phase();
     let tinkerer = g.add_card_to_battlefield(0, catalog::aeronaut_tinkerer());
-    assert!(!g.computed_permanent(tinkerer).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(tinkerer).unwrap().keywords().contains(&Keyword::Flying));
     g.add_card_to_battlefield(0, catalog::sacred_armory());
-    assert!(g.computed_permanent(tinkerer).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(tinkerer).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Scrapyard Mongrel's artifact clause pumps and tramples together.
@@ -208,7 +208,7 @@ fn scrapyard_mongrel_reads_your_artifacts() {
     g.add_card_to_battlefield(0, catalog::tyrants_machine());
     let cp = g.computed_permanent(dog).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 3));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Undergrowth Scavenger sizes itself off every graveyard.
@@ -416,8 +416,8 @@ fn ensoul_artifact_makes_a_five_five() {
     );
     let cp = g.computed_permanent(armory).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Artifact));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
 }
 
 /// Burning Anger turns the host into a repeatable cannon.
@@ -481,7 +481,7 @@ fn avarice_amulet_draws_each_upkeep() {
     }
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 2));
-    assert!(cp.keywords.contains(&Keyword::Vigilance));
+    assert!(cp.keywords().contains(&Keyword::Vigilance));
     let hand = g.players[0].hand.len();
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
@@ -692,7 +692,7 @@ fn generator_servant_hastes_its_creature() {
     })
     .expect("cast");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Glacial Crasher stays home without a Mountain.
@@ -836,8 +836,8 @@ fn nissa_worldwaker_animates_a_land() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(land).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
-    assert!(cp.keywords.contains(&Keyword::Trample));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land));
+    assert!(cp.keywords().contains(&Keyword::Trample));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land));
 }
 
 /// Ob Nixilis taxes an opponent's tutor and grows on other deaths.
@@ -888,7 +888,7 @@ fn spectra_ward_grants_five_protections() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4));
     for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
-        assert!(cp.keywords.contains(&Keyword::Protection(c)), "{c:?}");
+        assert!(cp.keywords().contains(&Keyword::Protection(c)), "{c:?}");
     }
 }
 

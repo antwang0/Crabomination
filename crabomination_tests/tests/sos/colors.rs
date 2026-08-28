@@ -125,7 +125,7 @@ fn pump_spells_grant_stats_keywords_draw_and_life() {
         assert_eq!(view.power as i64, *p, "{} power", ctor().name);
         assert_eq!(view.toughness as i64, *t, "{} toughness", ctor().name);
         if let Some(kw) = kw {
-            assert!(view.keywords.contains(kw), "{} keyword {:?}", ctor().name, kw);
+            assert!(view.keywords().contains(kw), "{} keyword {:?}", ctor().name, kw);
         }
         // Cantrips: -1 cast +1 draw = unchanged; otherwise -1.
         let expect_hand = if *draws { hand_before } else { hand_before - 1 };

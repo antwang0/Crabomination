@@ -329,7 +329,7 @@ fn kavu_titan_kicked_is_a_trampling_five_five() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(kicked).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
     assert_eq!(g.battlefield_find(kicked).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
 }
 
@@ -449,7 +449,7 @@ fn kavu_monarch_grows_and_grants_trample() {
     let other = g.add_card_to_hand(0, catalog::kavu_scout());
     cast(&mut g, 0, other, None);
     assert_eq!(g.battlefield_find(monarch).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(other).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Urza's Filter shaves {2} off a multicoloured spell.

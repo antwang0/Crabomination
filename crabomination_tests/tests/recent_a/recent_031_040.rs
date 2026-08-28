@@ -159,7 +159,7 @@ mod recent31 {
         let id = g.add_card_to_battlefield(0, catalog::splinterfright());
         let cp = g.computed_permanent(id).unwrap();
         assert_eq!((cp.power, cp.toughness), (2, 2));
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
     }
 
     #[test]
@@ -212,7 +212,7 @@ mod recent31 {
         // Default decider picks mode 0 (vigilance).
         g.resolve_effect(&catalog::butcher_of_the_horde().activated_abilities[0].effect, &ctx).unwrap();
         drain_stack(&mut g);
-        assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Vigilance));
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Vigilance));
         assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 1,
             "sacrificed another creature");
     }
@@ -224,7 +224,7 @@ mod recent31 {
         let mut ctx = ctx0(&g);
         ctx.targets = vec![Target::Permanent(bear)];
         g.resolve_effect(&catalog::demonic_dread().effect, &ctx).unwrap();
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Fear));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Fear));
         // Cascade rides a printed cast trigger.
         assert!(catalog::demonic_dread().triggered_abilities.iter()
             .any(|t| matches!(t.effect, Effect::Cascade { .. })));
@@ -322,7 +322,7 @@ mod recent32 {
         g.resolve_effect(&ability0_effect(catalog::cartel_aristocrat()), &ctx_for(id)).unwrap();
         drain_stack(&mut g);
         assert!(g.battlefield_find(fodder).is_none(), "another creature was sacrificed");
-        assert!(g.computed_permanent(id).unwrap().keywords.iter()
+        assert!(g.computed_permanent(id).unwrap().keywords().iter()
             .any(|k| matches!(k, Keyword::Protection(_))), "gained protection from a color");
     }
 
@@ -342,7 +342,7 @@ mod recent32 {
     fn bontu_gate_opens_after_a_creature_dies() {
         let mut g = two_player_game();
         let bontu = g.add_card_to_battlefield(0, catalog::bontu_the_glorified());
-        assert!(g.computed_permanent(bontu).unwrap().keywords
+        assert!(g.computed_permanent(bontu).unwrap().keywords()
             .contains(&Keyword::CantAttackOrBlockUnlessCreatureDiedThisTurn));
         // Make Bontu an otherwise-legal attacker.
         g.active_player_idx = 0;
@@ -1218,7 +1218,7 @@ mod recent38 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(mine).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-        assert!(cp.keywords.contains(&crabomination::card::Keyword::Trample), "gained trample");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample), "gained trample");
     }
 
     #[test]
@@ -1361,9 +1361,9 @@ mod recent40 {
         activate(&mut g, haven, 1);
         let cp = g.computed_permanent(haven).unwrap();
         assert_eq!((cp.power, cp.toughness), (4, 3), "becomes a 4/3");
-        assert!(cp.keywords.contains(&Keyword::Vigilance), "with vigilance");
-        assert!(cp.keywords.contains(&Keyword::Changeling), "and all creature types");
-        assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+        assert!(cp.keywords().contains(&Keyword::Vigilance), "with vigilance");
+        assert!(cp.keywords().contains(&Keyword::Changeling), "and all creature types");
+        assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     }
 
     #[test]

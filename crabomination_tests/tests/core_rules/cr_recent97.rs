@@ -109,7 +109,7 @@ fn cr_509_1b_evasion_gained_after_blocks_doesnt_unblock() {
         &ctx,
     )
     .expect("grant flying");
-    assert!(g.computed_permanent(attacker).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(attacker).unwrap().keywords().contains(&Keyword::Flying));
     assert!(g.blocks(blocker, attacker), "the declared block stands");
 }
 

@@ -268,7 +268,7 @@ fn twist_allegiance_swaps_armies_with_haste() {
     assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
     assert!(!g.battlefield_find(theirs).unwrap().tapped, "it untapped");
     assert!(
-        g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Haste),
+        g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Haste),
         "and gained haste"
     );
 }
@@ -312,7 +312,7 @@ fn slumbering_tora_animates_off_the_discarded_mana_value() {
     .expect("activate");
     drain_stack(&mut g);
     let cp = g.computed_permanent(tora).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (9, 9));
 }
 
@@ -486,7 +486,7 @@ fn fumiko_grants_must_attack_and_scaling_bushido() {
     g.add_card_to_battlefield(0, catalog::fumiko_the_lowblood());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     assert!(
-        g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::MustAttack),
+        g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::MustAttack),
         "their creatures have to swing"
     );
     assert_eq!(catalog::fumiko_the_lowblood().triggered_abilities.len(), 2);
@@ -525,7 +525,7 @@ fn budoka_pupil_flips_into_ichiga() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(pupil).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Blinding Powder's unattach shrugs off the equipped creature's combat damage.

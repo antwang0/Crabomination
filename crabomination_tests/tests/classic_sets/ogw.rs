@@ -136,7 +136,7 @@ fn eldrazi_devastator_is_colorless_trampler() {
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 9));
     assert!(cp.colors.is_empty(), "generic-only cost → colorless");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Trample));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample));
 }
 
 /// Incubator Drone and Catacomb Sifter each mint a Scion on ETB.
@@ -325,7 +325,7 @@ fn mindmelter_discards_deepfathom_grants_unblockable() {
         card_id: skulker, ability_index: 0, target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant unblockable");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Unblockable));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Unblockable));
 }
 
 /// Benthic Infiltrator can't be blocked and ingests; Culling Drone ingests.
@@ -421,7 +421,7 @@ fn slaughter_drone_gains_deathtouch() {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("grant deathtouch");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&crabomination::card::Keyword::Deathtouch));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&crabomination::card::Keyword::Deathtouch));
 }
 
 /// Witness the End makes the opponent discard two and lose 2 life.
@@ -681,7 +681,7 @@ fn kozileks_shrieker_pumps_and_gains_menace() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 2));
-    assert!(cp.keywords.contains(&Keyword::Menace));
+    assert!(cp.keywords().contains(&Keyword::Menace));
 }
 
 /// Sifter of Skulls mints a Scion when another nontoken creature dies, but not
@@ -1012,11 +1012,11 @@ fn eldrazi_aggressor_has_haste_only_with_another_colorless() {
     let mut g = two_player_game();
     let agg = g.add_card_to_battlefield(0, catalog::eldrazi_aggressor());
     // Alone: no haste.
-    assert!(!g.computed_permanent(agg).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(!g.computed_permanent(agg).unwrap().keywords().contains(&Keyword::Haste),
         "no haste while it is the only colorless creature");
     // Add another colorless creature → haste turns on.
     g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
-    assert!(g.computed_permanent(agg).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(agg).unwrap().keywords().contains(&Keyword::Haste),
         "haste while controlling another colorless creature");
 }
 
@@ -1050,7 +1050,7 @@ fn void_grafter_grants_hexproof_on_etb() {
     let vg = g.add_card_to_battlefield(0, catalog::void_grafter());
     g.fire_self_etb_triggers(vg, 0);
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Hexproof),
         "the other creature gains hexproof");
 }
 
@@ -1177,7 +1177,7 @@ fn make_a_stand_pumps_and_protects() {
     crabomination::game::cast(&mut g, id);
     let cp = g.computed_permanent(mine).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 2), "your creature is +1/+0");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "and indestructible");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "and indestructible");
 }
 
 /// Flaying Tendrils sweeps for -2/-2 and exiles the dead instead of bin.
@@ -1218,7 +1218,7 @@ fn mighty_leap_pumps_and_grants_flying() {
     crabomination::game::cast_at(&mut g, id, Target::Permanent(bear));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 → 4/4");
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Saddleback Lagac supports two other creatures on ETB.
@@ -1290,13 +1290,13 @@ fn kor_scythemaster_first_strike_while_attacking() {
     let mut g = two_player_game();
     let kor = g.add_card_to_battlefield(0, catalog::kor_scythemaster());
     g.clear_sickness(kor);
-    assert!(!g.computed_permanent(kor).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(!g.computed_permanent(kor).unwrap().keywords().contains(&Keyword::FirstStrike),
         "no first strike at rest");
     advance_to(&mut g, TurnStep::DeclareAttackers);
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: kor, target: AttackTarget::Player(1),
     }])).expect("attack");
-    assert!(g.computed_permanent(kor).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(g.computed_permanent(kor).unwrap().keywords().contains(&Keyword::FirstStrike),
         "first strike while attacking");
 }
 
@@ -1412,7 +1412,7 @@ fn oran_rief_invoker_invokes() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 7), "2/2 → 7/7");
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Cliffside Lookout pumps the whole team +1/+1.
@@ -1739,7 +1739,7 @@ fn gravity_negator_grants_flying_on_attack() {
         attacker: neg, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Flying),
         "ally gains flying");
 }
 
@@ -1779,7 +1779,7 @@ fn visions_of_brutality_cant_block_and_bleeds() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("enchant the bear");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantBlock),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::CantBlock),
         "enchanted creature can't block");
     g.clear_sickness(bear);
     let own_life = g.players[0].life;
@@ -2139,10 +2139,10 @@ fn sheer_drop_awaken_animates_land() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "tapped creature destroyed");
     let cl = g.computed_permanent(land).expect("land still in play");
-    assert!(cl.card_types.contains(&crabomination::card::CardType::Creature), "land is now a creature");
-    assert!(cl.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cl.card_types().contains(&crabomination::card::CardType::Creature), "land is now a creature");
+    assert!(cl.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     assert_eq!((cl.power, cl.toughness), (3, 3), "0/0 + three +1/+1 counters");
-    assert!(cl.keywords.contains(&crabomination::card::Keyword::Haste), "animated land has haste");
+    assert!(cl.keywords().contains(&crabomination::card::Keyword::Haste), "animated land has haste");
 }
 
 /// Coastal Discovery's Awaken draws two AND animates a land (4/4).
@@ -2186,7 +2186,7 @@ fn reckless_bushwhacker_surge_pumps_team() {
     drain_stack(&mut g);
     let b = g.computed_permanent(buddy).unwrap();
     assert_eq!((b.power, b.toughness), (3, 2), "buddy got +1/+0");
-    assert!(b.keywords.contains(&crabomination::card::Keyword::Haste), "buddy gained haste");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Haste), "buddy gained haste");
 }
 
 /// Without a prior spell this turn, the surge alternative cost is illegal.
@@ -2216,7 +2216,7 @@ fn kor_bladewhirl_rally_grants_first_strike() {
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bw }]);
     drain_stack(&mut g);
     let o = g.computed_permanent(other).unwrap();
-    assert!(o.keywords.contains(&crabomination::card::Keyword::FirstStrike),
+    assert!(o.keywords().contains(&crabomination::card::Keyword::FirstStrike),
         "Rally granted first strike to other creatures");
 }
 
@@ -2232,7 +2232,7 @@ fn wall_of_resurgence_animates_land_on_etb() {
     drain_stack(&mut g);
     let cl = g.computed_permanent(land).unwrap();
     assert_eq!((cl.power, cl.toughness), (3, 3), "land animated to 3/3 on ETB");
-    assert!(cl.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cl.card_types().contains(&crabomination::card::CardType::Creature));
 }
 
 /// Tyrant of Valakut's surge rider deals 3 damage to any target.
@@ -2371,8 +2371,8 @@ fn hissing_quagmire_animates_deathtouch() {
     drain_stack(&mut g);
     let cl = g.computed_permanent(land).unwrap();
     assert_eq!((cl.power, cl.toughness), (2, 2));
-    assert!(cl.keywords.contains(&crabomination::card::Keyword::Deathtouch));
-    assert!(cl.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cl.keywords().contains(&crabomination::card::Keyword::Deathtouch));
+    assert!(cl.card_types().contains(&crabomination::card::CardType::Land), "still a land");
 }
 
 /// Needle Spires animates into a 2/1 double-strike Elemental.
@@ -2389,7 +2389,7 @@ fn needle_spires_animates_double_strike() {
     drain_stack(&mut g);
     let cl = g.computed_permanent(land).unwrap();
     assert_eq!((cl.power, cl.toughness), (2, 1));
-    assert!(cl.keywords.contains(&crabomination::card::Keyword::DoubleStrike));
+    assert!(cl.keywords().contains(&crabomination::card::Keyword::DoubleStrike));
 }
 
 /// Relentless Hunter pumps +1/+1 and gains trample for {1}{R}{G}.
@@ -2406,7 +2406,7 @@ fn relentless_hunter_pumps_and_tramples() {
     drain_stack(&mut g);
     let c = g.computed_permanent(id).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4));
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Trample));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Trample));
 }
 
 /// Inverter of Truth's ETB swaps library for graveyard.
@@ -2685,9 +2685,9 @@ fn baloth_pup_needs_a_counter_for_trample() {
     use crabomination::card::{CounterType, Keyword};
     let mut g = two_player_game();
     let pup = g.add_card_to_battlefield(0, catalog::baloth_pup());
-    assert!(!g.computed_permanent(pup).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(!g.computed_permanent(pup).unwrap().keywords().contains(&Keyword::Trample));
     g.battlefield_find_mut(pup).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
-    assert!(g.computed_permanent(pup).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(pup).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Nissa's Judgment supports two, then every counter-bearing creature you

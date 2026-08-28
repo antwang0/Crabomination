@@ -27,11 +27,11 @@ mod blb {
         .expect("cast Sugar Coat");
         drain_stack(&mut g);
         let cp = g.computed_permanent(angel).unwrap();
-        assert!(cp.card_types.contains(&CardType::Artifact), "now an artifact");
-        assert!(!cp.card_types.contains(&CardType::Creature), "no longer a creature");
-        assert!(cp.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Food), "is a Food");
+        assert!(cp.card_types().contains(&CardType::Artifact), "now an artifact");
+        assert!(!cp.card_types().contains(&CardType::Creature), "no longer a creature");
+        assert!(cp.subtypes().artifact_subtypes.contains(&ArtifactSubtype::Food), "is a Food");
         assert!(cp.colors.is_empty(), "colorless");
-        assert!(cp.keywords.is_empty(), "lost flying and vigilance");
+        assert!(cp.keywords().is_empty(), "lost flying and vigilance");
         // Only the granted sac ability remains.
         let abilities = g.granted_abilities_for(angel);
         assert_eq!(abilities.len(), 1, "exactly the sac-for-life ability");

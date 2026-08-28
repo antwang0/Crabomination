@@ -462,7 +462,7 @@ fn scion_of_draco_domain_discount_and_color_grants() {
     drain_stack(&mut g);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&crabomination::card::Keyword::Trample),
+        g.computed_permanent(bear).unwrap().keywords().contains(&crabomination::card::Keyword::Trample),
         "green creature granted trample"
     );
 }
@@ -541,11 +541,11 @@ fn sterling_grove_shroud_and_tutor() {
     let grove = g.add_card_to_battlefield(0, catalog::sterling_grove());
     let other = g.add_card_to_battlefield(0, catalog::necrodominance());
     assert!(
-        g.computed_permanent(other).unwrap().keywords.contains(&crabomination::card::Keyword::Shroud),
+        g.computed_permanent(other).unwrap().keywords().contains(&crabomination::card::Keyword::Shroud),
         "other enchantment shrouded"
     );
     assert!(
-        !g.computed_permanent(grove).unwrap().keywords.contains(&crabomination::card::Keyword::Shroud),
+        !g.computed_permanent(grove).unwrap().keywords().contains(&crabomination::card::Keyword::Shroud),
         "grove itself is not shrouded"
     );
     g.add_card_to_library(0, catalog::leyline_of_the_void());
@@ -983,7 +983,7 @@ fn emerias_call_makes_angels() {
     let angels = g.battlefield.iter()
         .filter(|c| c.controller == 0 && c.definition.name == "Angel Warrior").count();
     assert_eq!(angels, 2);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible),
         "non-Angel gains indestructible");
 }
 
@@ -1086,7 +1086,7 @@ fn fearless_fledgling_landfall_counter_and_flying() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(f).unwrap();
     assert_eq!(cp.power, 2, "+1/+1 counter");
-    assert!(cp.keywords.contains(&Keyword::Flying), "gains flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gains flying");
 }
 
 /// Sporeweb Weaver triggers on taking damage.
@@ -1268,7 +1268,7 @@ fn skyclave_squid_landfall_lets_it_attack() {
     g.step = TurnStep::PreCombatMain;
     g.perform_action(GameAction::PlayLand(land)).unwrap();
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(squid).unwrap().keywords.contains(&Keyword::Defender),
+    assert!(!g.computed_permanent(squid).unwrap().keywords().contains(&Keyword::Defender),
         "defender suppressed this turn");
 }
 
@@ -1329,7 +1329,7 @@ fn sneaking_guide_grants_unblockable() {
         additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Knight of Malice gets +1/+0 only while a white permanent is in play.
@@ -1617,12 +1617,12 @@ fn student_of_warfare_levels_up() {
     }
     let c = g.computed_permanent(student).unwrap();
     assert_eq!((c.power, c.toughness), (3, 3), "level 2 band");
-    assert!(c.keywords.contains(&Keyword::FirstStrike));
+    assert!(c.keywords().contains(&Keyword::FirstStrike));
     // Jump to level 7.
     g.battlefield_find_mut(student).unwrap().add_counters(CounterType::Level, 5);
     let c = g.computed_permanent(student).unwrap();
     assert_eq!((c.power, c.toughness), (4, 4), "level 7+ band");
-    assert!(c.keywords.contains(&Keyword::DoubleStrike));
+    assert!(c.keywords().contains(&Keyword::DoubleStrike));
     // Level up is sorcery-speed only.
     g.step = TurnStep::DeclareBlockers;
     g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
@@ -1779,7 +1779,7 @@ fn ulamog_defiler_counters_and_annihilator() {
     );
     // Force five counters and read annihilator off the computed view.
     g.battlefield_find_mut(ula).unwrap().counters.insert(CounterType::PlusOnePlusOne, 5);
-    let kws = g.computed_permanent(ula).unwrap().keywords.clone();
+    let kws = g.computed_permanent(ula).unwrap().keywords().to_vec();
     assert!(kws.contains(&Keyword::Annihilator(5)), "annihilator scales with counters");
 }
 
@@ -1811,7 +1811,7 @@ fn karn_great_creator_locks_animates_and_wishes() {
     }).unwrap();
     drain_stack(&mut g);
     let c = g.computed_permanent(rock).unwrap();
-    assert!(c.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(c.card_types().contains(&crabomination::card::CardType::Creature));
     assert_eq!((c.power, c.toughness), (2, 2), "MV/MV body");
     // -2: wish an artifact from the sideboard.
     let wish_target = crabomination::card::CardInstance::new(g.next_id(), catalog::mind_stone(), 0);

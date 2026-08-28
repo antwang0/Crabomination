@@ -387,7 +387,7 @@ fn lavaspur_boots_grants_haste_and_plus_one_one() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3);
     assert_eq!(cp.toughness, 3);
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Haste), "boots grant haste");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste), "boots grant haste");
 }
 
 /// Skullclamp's equip-granted "dies → draw two" trigger fires when the
@@ -537,14 +537,14 @@ fn crew_animates_vehicle_until_end_of_turn() {
     let mut g = two_player_game();
     let chariot = g.add_card_to_battlefield(0, catalog::esikas_chariot());
     let pre = g.computed_permanent(chariot).unwrap();
-    assert!(!pre.card_types.contains(&CardType::Creature), "uncrewed = not a creature");
+    assert!(!pre.card_types().contains(&CardType::Creature), "uncrewed = not a creature");
 
     let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::Crew { vehicle: chariot, crew_creatures: vec![b1, b2] })
         .expect("crew 4 satisfied by two 2/2s");
     let post = g.computed_permanent(chariot).unwrap();
-    assert!(post.card_types.contains(&CardType::Creature), "crewed = creature");
+    assert!(post.card_types().contains(&CardType::Creature), "crewed = creature");
     assert_eq!(post.power, 4);
     assert_eq!(post.toughness, 4);
     assert!(g.battlefield_find(b1).unwrap().tapped);
@@ -552,7 +552,7 @@ fn crew_animates_vehicle_until_end_of_turn() {
 
     g.expire_end_of_turn_effects();
     let after = g.computed_permanent(chariot).unwrap();
-    assert!(!after.card_types.contains(&CardType::Creature), "animation wears off EOT");
+    assert!(!after.card_types().contains(&CardType::Creature), "animation wears off EOT");
 }
 
 /// Crew is rejected when the tapped creatures' total power is below the crew
@@ -598,8 +598,8 @@ fn smugglers_copter_crews_and_loots_on_attack() {
     g.perform_action(GameAction::Crew { vehicle: copter, crew_creatures: vec![bear] })
         .expect("crew 1 satisfied by a 2/2");
     let cp = g.computed_permanent(copter).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Flying));
+    assert!(cp.card_types().contains(&CardType::Creature));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Flying));
 
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     g.step = TurnStep::DeclareAttackers;
@@ -643,8 +643,8 @@ fn celestial_colonnade_animates_into_a_4_4_flier() {
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(0, catalog::celestial_colonnade());
     let pre = g.computed_permanent(land).unwrap();
-    assert!(pre.card_types.contains(&CardType::Land));
-    assert!(!pre.card_types.contains(&CardType::Creature));
+    assert!(pre.card_types().contains(&CardType::Land));
+    assert!(!pre.card_types().contains(&CardType::Creature));
 
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -655,17 +655,17 @@ fn celestial_colonnade_animates_into_a_4_4_flier() {
     drain_stack(&mut g);
 
     let post = g.computed_permanent(land).unwrap();
-    assert!(post.card_types.contains(&CardType::Creature), "now a creature");
-    assert!(post.card_types.contains(&CardType::Land), "still a land");
+    assert!(post.card_types().contains(&CardType::Creature), "now a creature");
+    assert!(post.card_types().contains(&CardType::Land), "still a land");
     assert_eq!(post.power, 4);
     assert_eq!(post.toughness, 4);
-    assert!(post.keywords.contains(&Keyword::Flying));
-    assert!(post.keywords.contains(&Keyword::Vigilance));
-    assert!(post.subtypes.creature_types.contains(&CreatureType::Elemental));
+    assert!(post.keywords().contains(&Keyword::Flying));
+    assert!(post.keywords().contains(&Keyword::Vigilance));
+    assert!(post.subtypes().creature_types.contains(&CreatureType::Elemental));
 
     g.expire_end_of_turn_effects();
     let after = g.computed_permanent(land).unwrap();
-    assert!(!after.card_types.contains(&CardType::Creature), "reverts to land EOT");
+    assert!(!after.card_types().contains(&CardType::Creature), "reverts to land EOT");
 }
 
 /// Creeping Tar Pit animates into a 3/2 unblockable Elemental.
@@ -684,7 +684,7 @@ fn creeping_tar_pit_animates_unblockable() {
     let post = g.computed_permanent(land).unwrap();
     assert_eq!(post.power, 3);
     assert_eq!(post.toughness, 2);
-    assert!(post.keywords.contains(&Keyword::Unblockable));
+    assert!(post.keywords().contains(&Keyword::Unblockable));
 }
 
 /// An animated manland can be declared as an attacker (it's a creature).
@@ -730,8 +730,8 @@ fn mutavault_taps_for_c_and_animates_into_changeling() {
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
     assert_eq!((post.power, post.toughness), (2, 2));
-    assert!(post.card_types.contains(&CardType::Land), "still a land");
-    assert!(post.keywords.contains(&Keyword::Changeling));
+    assert!(post.card_types().contains(&CardType::Land), "still a land");
+    assert!(post.keywords().contains(&Keyword::Changeling));
 }
 
 /// Inkmoth Nexus animates into a 1/1 flier with infect.
@@ -747,8 +747,8 @@ fn inkmoth_nexus_animates_into_flying_infect() {
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
     assert_eq!((post.power, post.toughness), (1, 1));
-    assert!(post.keywords.contains(&Keyword::Flying));
-    assert!(post.keywords.contains(&Keyword::Infect));
+    assert!(post.keywords().contains(&Keyword::Flying));
+    assert!(post.keywords().contains(&Keyword::Infect));
 }
 
 /// Mishra's Factory animates into a 2/2 Assembly-Worker.
@@ -764,7 +764,7 @@ fn mishras_factory_animates_into_assembly_worker() {
     drain_stack(&mut g);
     let post = g.computed_permanent(land).unwrap();
     assert_eq!((post.power, post.toughness), (2, 2));
-    assert!(post.subtypes.creature_types.contains(&CreatureType::AssemblyWorker));
+    assert!(post.subtypes().creature_types.contains(&CreatureType::AssemblyWorker));
 }
 
 // ── Coverage backfill: burn / discard / sacrifice spells ────────────────────

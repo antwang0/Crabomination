@@ -354,7 +354,7 @@ fn karns_touch_animates_at_mana_value() {
     let touch = g.add_card_to_hand(0, catalog::karns_touch());
     cast(&mut g, 0, touch, Some(Target::Permanent(ring)));
     let cp = g.computed_permanent(ring).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (1, 1));
 }
 
@@ -441,7 +441,7 @@ fn instigator_makes_them_attack() {
     assert!(
         g.computed_permanent(victim)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&crabomination::card::Keyword::MustAttack)
     );
 }
@@ -724,7 +724,7 @@ fn deepwood_elder_forests_x_lands() {
     assert!(
         g.computed_permanent(island)
             .unwrap()
-            .subtypes
+            .subtypes()
             .land_types
             .contains(&crabomination::card::LandType::Forest)
     );
@@ -878,11 +878,11 @@ fn conspiracy_retypes_your_creatures() {
     g.fire_self_etb_triggers(con, 0);
     drain_stack(&mut g);
     assert_eq!(
-        g.computed_permanent(bear).unwrap().subtypes.creature_types,
+        g.computed_permanent(bear).unwrap().subtypes().creature_types,
         vec![crabomination::card::CreatureType::Zombie]
     );
     assert_eq!(
-        g.computed_permanent(theirs).unwrap().subtypes.creature_types,
+        g.computed_permanent(theirs).unwrap().subtypes().creature_types,
         vec![crabomination::card::CreatureType::Bear]
     );
 }

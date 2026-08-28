@@ -429,7 +429,7 @@ mod recent94 {
         g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
             .expect("bear attacks");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "equipped attacker gained double strike");
     }
 
@@ -479,7 +479,7 @@ mod recent94 {
         attach(&mut g, hammer, bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 4, "2/2 + 2/0");
-        assert!(cp.keywords.contains(&Keyword::Indestructible), "gains indestructible");
+        assert!(cp.keywords().contains(&Keyword::Indestructible), "gains indestructible");
     }
 
     /// Argentum Armor is a +6/+6 anvil.
@@ -500,12 +500,12 @@ mod recent94 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let sword = g.add_card_to_battlefield(0, catalog::vorpal_sword());
         attach(&mut g, sword, bear);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Deathtouch));
 
         let cat = g.add_card_to_battlefield(0, catalog::kembas_skyguard());
         let helm = g.add_card_to_battlefield(0, catalog::prowlers_helm());
         attach(&mut g, helm, cat);
-        assert!(g.computed_permanent(cat).unwrap().keywords.iter()
+        assert!(g.computed_permanent(cat).unwrap().keywords().iter()
             .any(|k| matches!(k, Keyword::CantBeBlockedExceptBy(_))), "gains can't-be-blocked-except-by");
     }
 
@@ -514,9 +514,9 @@ mod recent94 {
     fn sylvia_grants_dragons_double_strike() {
         let mut g = two_player_game();
         let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
-        assert!(!g.computed_permanent(dragon).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(!g.computed_permanent(dragon).unwrap().keywords().contains(&Keyword::DoubleStrike));
         g.add_card_to_battlefield(0, catalog::sylvia_brightspear());
-        assert!(g.computed_permanent(dragon).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        assert!(g.computed_permanent(dragon).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "Dragon gained double strike from Sylvia");
     }
 
@@ -526,9 +526,9 @@ mod recent94 {
         let mut g = two_player_game();
         // Akiri has first strike printed.
         let akiri = g.add_card_to_battlefield(0, catalog::akiri_line_slinger());
-        assert!(!g.computed_permanent(akiri).unwrap().keywords.contains(&Keyword::DoubleStrike));
+        assert!(!g.computed_permanent(akiri).unwrap().keywords().contains(&Keyword::DoubleStrike));
         g.add_card_to_battlefield(0, catalog::kwende_pride_of_femeref());
-        assert!(g.computed_permanent(akiri).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        assert!(g.computed_permanent(akiri).unwrap().keywords().contains(&Keyword::DoubleStrike),
             "first-striker upgraded to double strike");
     }
 
@@ -661,7 +661,7 @@ mod recent95 {
         g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: samurai, target: AttackTarget::Player(1) }]))
             .expect("attack alone");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(samurai).unwrap().keywords.contains(&Keyword::Lifelink),
+        assert!(g.computed_permanent(samurai).unwrap().keywords().contains(&Keyword::Lifelink),
             "lone Samurai gained lifelink");
     }
 
@@ -692,7 +692,7 @@ mod recent95 {
         g.battlefield.iter_mut().find(|c| c.id == boar).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (5, 4), "2/2 + 3/2");
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
     }
 
     /// Automated Artificer taps for one mana.
@@ -756,7 +756,7 @@ mod recent96 {
         g.battlefield.iter_mut().find(|c| c.id == battery).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + 1/1");
-        assert!(cp.keywords.contains(&Keyword::Haste));
+        assert!(cp.keywords().contains(&Keyword::Haste));
     }
 
     /// Nezumi Prowler's ETB grants deathtouch and lifelink to a creature you control.
@@ -770,7 +770,7 @@ mod recent96 {
         g.fire_self_etb_triggers(nezumi, 0);
         drain_stack(&mut g);
         let got = [bear, nezumi].iter().any(|id| {
-            let kw = &g.computed_permanent(*id).unwrap().keywords;
+            let kw = g.computed_permanent(*id).unwrap().keywords().to_vec();
             kw.contains(&Keyword::Deathtouch) && kw.contains(&Keyword::Lifelink)
         });
         assert!(got, "a creature you control gained deathtouch + lifelink");
@@ -789,7 +789,7 @@ mod recent96 {
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let axe = g.add_card_to_battlefield(0, catalog::bonesplitter());
         g.battlefield.iter_mut().find(|c| c.id == axe).unwrap().attached_to = Some(bear);
-        assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+        assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste),
             "modified creature has haste");
     }
 
@@ -811,7 +811,7 @@ mod recent96 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (5, 3), "2/2 + 3/1");
-        assert!(cp.keywords.contains(&Keyword::Trample));
+        assert!(cp.keywords().contains(&Keyword::Trample));
         assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Ironhoof Boar"),
             "the Boar was discarded to pay Channel");
     }
@@ -880,7 +880,7 @@ mod recent97 {
         g.fire_self_etb_triggers(kappa, 0);
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(kappa).unwrap().keywords.contains(&Keyword::Deathtouch),
+            g.computed_permanent(kappa).unwrap().keywords().contains(&Keyword::Deathtouch),
             "deathtouch counter grants the keyword"
         );
     }
@@ -921,7 +921,7 @@ mod recent97 {
         g.fire_self_etb_triggers(ninja, 0);
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(ninja).unwrap().keywords.contains(&Keyword::Menace),
+            g.computed_permanent(ninja).unwrap().keywords().contains(&Keyword::Menace),
             "menace counter grants the keyword"
         );
     }
@@ -978,8 +978,8 @@ mod recent97 {
         g.battlefield.iter_mut().find(|c| c.id == blade).unwrap().attached_to = Some(bear);
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (5, 5), "base P/T set to 5/5");
-        assert!(cp.keywords.contains(&Keyword::Menace), "gains menace");
-        assert!(cp.subtypes.creature_types.contains(&CreatureType::Demon), "is a Demon");
+        assert!(cp.keywords().contains(&Keyword::Menace), "gains menace");
+        assert!(cp.subtypes().creature_types.contains(&CreatureType::Demon), "is a Demon");
     }
 
     /// Towashi Guide-Bot's ETB puts a +1/+1 counter on a creature you control.
@@ -1049,7 +1049,7 @@ mod recent97 {
         drain_stack(&mut g);
         assert!(g.players[0].hand.iter().any(|c| c.id == dead), "grizzly returned to hand");
         assert!(
-            g.computed_permanent(gloom).unwrap().keywords.contains(&Keyword::Menace),
+            g.computed_permanent(gloom).unwrap().keywords().contains(&Keyword::Menace),
             "Gloomshrieker has menace"
         );
     }
@@ -1219,12 +1219,12 @@ mod recent98 {
     fn nezumi_bladeblesser_conditional_keywords() {
         let mut g = two_player_game();
         let nezumi = g.add_card_to_battlefield(0, catalog::nezumi_bladeblesser());
-        assert!(!g.computed_permanent(nezumi).unwrap().keywords.contains(&Keyword::Deathtouch));
+        assert!(!g.computed_permanent(nezumi).unwrap().keywords().contains(&Keyword::Deathtouch));
         g.add_card_to_battlefield(0, catalog::bonesplitter()); // artifact
-        assert!(g.computed_permanent(nezumi).unwrap().keywords.contains(&Keyword::Deathtouch));
-        assert!(!g.computed_permanent(nezumi).unwrap().keywords.contains(&Keyword::Menace));
+        assert!(g.computed_permanent(nezumi).unwrap().keywords().contains(&Keyword::Deathtouch));
+        assert!(!g.computed_permanent(nezumi).unwrap().keywords().contains(&Keyword::Menace));
         g.add_card_to_battlefield(0, catalog::golden_tail_disciple()); // enchantment
-        assert!(g.computed_permanent(nezumi).unwrap().keywords.contains(&Keyword::Menace));
+        assert!(g.computed_permanent(nezumi).unwrap().keywords().contains(&Keyword::Menace));
     }
 
     /// Iron Apprentice enters as a 1/1 and moves its counter on death.
@@ -1331,7 +1331,7 @@ mod recent98 {
         drain_stack(&mut g);
         assert_eq!(g.players[1].hand.len(), 1, "opponent discarded two");
         assert!(
-            g.computed_permanent(ninja).unwrap().keywords.contains(&Keyword::Menace),
+            g.computed_permanent(ninja).unwrap().keywords().contains(&Keyword::Menace),
             "your Ninja gained menace"
         );
     }
@@ -1360,7 +1360,7 @@ mod recent98 {
             1,
             "enchantment creature got a +1/+1 counter"
         );
-        assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Trample));
+        assert!(g.computed_permanent(target).unwrap().keywords().contains(&Keyword::Trample));
     }
 
     /// Dokuchi Shadow-Walker is a 5/5 with Ninjutsu.
@@ -1488,7 +1488,7 @@ mod recent99 {
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 8, "2 + 6 (greatest MV among your permanents)");
         assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped by the boon");
-        assert!(!cp.keywords.contains(&Keyword::Defender));
+        assert!(!cp.keywords().contains(&Keyword::Defender));
     }
 }
 
@@ -1584,9 +1584,9 @@ mod recent100 {
         g.priority.player_with_priority = 0;
         cast(&mut g, tower);
         assert!(g.battlefield_find(tower).is_some(), "cast for seven");
-        assert!(g.computed_permanent(tower).unwrap().keywords.contains(&Keyword::Hexproof), "hexproof untapped");
+        assert!(g.computed_permanent(tower).unwrap().keywords().contains(&Keyword::Hexproof), "hexproof untapped");
         g.battlefield_find_mut(tower).unwrap().tapped = true;
-        assert!(!g.computed_permanent(tower).unwrap().keywords.contains(&Keyword::Hexproof), "no hexproof tapped");
+        assert!(!g.computed_permanent(tower).unwrap().keywords().contains(&Keyword::Hexproof), "no hexproof tapped");
     }
 
     /// Master's Rebuke bites: your creature deals its power to an opponent's creature.
@@ -1802,7 +1802,7 @@ mod recent100 {
         g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
         g.fire_self_etb_triggers(ogre, 0);
         drain_stack(&mut g);
-        assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::CantBlock));
+        assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::CantBlock));
     }
 
     /// You Are Already Dead destroys a damaged creature and draws.

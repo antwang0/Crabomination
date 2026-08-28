@@ -131,7 +131,7 @@ fn rustler_rampage_grants_double_strike() {
     assert!(g
         .computed_permanent(c)
         .unwrap()
-        .keywords
+        .keywords()
         .contains(&crabomination::card::Keyword::DoubleStrike));
 }
 
@@ -286,7 +286,7 @@ fn jailbreak_scheme_counter_and_unblockable() {
     );
     assert!(
         g.compute_battlefield().iter().find(|c| c.id == bear).unwrap()
-            .keywords.contains(&crabomination::card::Keyword::Unblockable),
+            .keywords().contains(&crabomination::card::Keyword::Unblockable),
         "granted unblockable",
     );
 }

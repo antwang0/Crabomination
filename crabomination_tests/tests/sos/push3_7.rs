@@ -226,14 +226,14 @@ fn emil_grants_trample_to_counter_creatures() {
 
     let view = g.computed_permanent(bear).unwrap();
     assert!(
-        view.keywords.contains(&Keyword::Trample),
+        view.keywords().contains(&Keyword::Trample),
         "bear with +1/+1 counter has trample (Emil's static): {:?}",
-        view.keywords
+        view.keywords()
     );
 
     let view2 = g.computed_permanent(plain_bear).unwrap();
     assert!(
-        !view2.keywords.contains(&Keyword::Trample),
+        !view2.keywords().contains(&Keyword::Trample),
         "uncounter'd bear should NOT have trample"
     );
 }
@@ -1015,7 +1015,7 @@ fn practiced_offense_pumps_creatures_and_grants_double_strike() {
     let v2 = g.computed_permanent(bear2).unwrap();
     assert_eq!(v1.power, 3, "bear1 = 2 + 1 counter");
     assert_eq!(v2.power, 3, "bear2 = 2 + 1 counter");
-    assert!(v1.keywords.contains(&Keyword::DoubleStrike));
+    assert!(v1.keywords().contains(&Keyword::DoubleStrike));
 }
 
 #[test]
@@ -1472,7 +1472,7 @@ fn duel_tactics_pings_and_grants_cant_block() {
 
     // Bear takes 1 (bear is 2/2 so it survives). Bear should now have CantBlock.
     let bear_view = g.computed_permanent(bear).unwrap();
-    assert!(bear_view.keywords.contains(&Keyword::CantBlock),
+    assert!(bear_view.keywords().contains(&Keyword::CantBlock),
         "Bear should have CantBlock granted EOT");
 }
 

@@ -84,7 +84,7 @@ fn cr_718_3b_prototyped_permanent_uses_only_the_alternative_characteristics() {
     assert_eq!(card.definition.cost.cmc(), 2, "and so is the printed six-drop cost");
     assert!(card.cast_as_prototype);
     // CR 718.5 — everything else is unchanged.
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Deathtouch));
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Deathtouch));
 }
 
 /// CR 718.3 — casting normally is still available and yields the big body.

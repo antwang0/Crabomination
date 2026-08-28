@@ -100,7 +100,7 @@ fn keen_eyed_curator_exiles_graveyard_cards_and_buffs_at_four_types() {
     let cp = g.compute_battlefield();
     let c = cp.iter().find(|c| c.id == id).unwrap();
     assert_eq!((c.power, c.toughness), (7, 7), "+4/+4 at four card types");
-    assert!(c.keywords.contains(&crabomination::card::Keyword::Trample));
+    assert!(c.keywords().contains(&crabomination::card::Keyword::Trample));
 }
 
 #[test]

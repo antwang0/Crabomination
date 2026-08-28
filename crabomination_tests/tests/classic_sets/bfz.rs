@@ -111,7 +111,7 @@ fn rally_grants_fire_on_an_ally_entering() {
         g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: src }]);
         drain_stack(&mut g);
         assert!(
-            g.computed_permanent(bear).unwrap().keywords.contains(&kw),
+            g.computed_permanent(bear).unwrap().keywords().contains(&kw),
             "{name} granted {kw:?}"
         );
     }
@@ -193,7 +193,7 @@ fn clutch_of_currents_awakens_a_land() {
     let cp = g.computed_permanent(land).expect("the land is still there");
     assert_eq!(counters(&g, land), 3, "three +1/+1 counters");
     assert!(
-        cp.card_types.contains(&crabomination::card::CardType::Creature),
+        cp.card_types().contains(&crabomination::card::CardType::Creature),
         "and it is a creature now"
     );
 }
@@ -347,7 +347,7 @@ fn veteran_warleader_counts_creatures_and_grants_a_keyword() {
     .expect("tap the Ally");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(leader).unwrap().keywords.contains(&Keyword::Trample),
+        g.computed_permanent(leader).unwrap().keywords().contains(&Keyword::Trample),
         "the third ability is trample"
     );
     assert!(g.battlefield_find(ally).unwrap().tapped, "the Ally paid the cost");
@@ -555,7 +555,7 @@ fn ondu_rising_grants_attackers_lifelink() {
     .expect("attack");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink),
+        g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink),
         "the attacker gained lifelink"
     );
 }
@@ -647,7 +647,7 @@ fn hedron_blade_grants_deathtouch_on_a_colorless_blocker() {
         g.perform_action(GameAction::DeclareBlockers(vec![(blocker, bear)])).expect("block");
         drain_stack(&mut g);
         let cp = g.computed_permanent(bear).unwrap();
-        let has = cp.keywords.iter().any(|k| matches!(k, Keyword::Deathtouch));
+        let has = cp.keywords().iter().any(|k| matches!(k, Keyword::Deathtouch));
         assert_eq!(has, want, "{}", blocker_def().name);
     }
 }

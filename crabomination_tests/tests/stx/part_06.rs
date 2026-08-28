@@ -575,7 +575,7 @@ fn team_pump_spells_pump_and_grant_keyword() {
         assert_eq!(bear_c.power(), exp_power, "{}: bear pumped", name);
         let computed = g.compute_battlefield();
         let bear_cp = computed.iter().find(|c| c.id == bear).unwrap();
-        assert!(bear_cp.keywords.contains(&kw), "{}: bear has {:?} EOT", name, kw);
+        assert!(bear_cp.keywords().contains(&kw), "{}: bear has {:?} EOT", name, kw);
     }
 }
 
@@ -1514,7 +1514,7 @@ fn granted_keyword_eot_clears_at_cleanup_per_batch_24() {
     // Computed view also picks it up.
     let computed = g.compute_battlefield();
     let bear_c = computed.iter().find(|c| c.id == bear).unwrap();
-    assert!(bear_c.keywords.contains(&Keyword::Haste),
+    assert!(bear_c.keywords().contains(&Keyword::Haste),
         "Computed view reports granted EOT keyword");
     // Cleanup: keyword should be cleared.
     g.step = crabomination::game::types::TurnStep::Cleanup;
@@ -1613,7 +1613,7 @@ fn prismari_wildform_pumps_grants_haste_and_cantrips() {
     let bear_c = computed.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(bear_c.power, 4, "Bear pumped +2");
     assert_eq!(bear_c.toughness, 3, "Bear pumped +1 toughness");
-    assert!(bear_c.keywords.contains(&Keyword::Haste), "Bear has haste");
+    assert!(bear_c.keywords().contains(&Keyword::Haste), "Bear has haste");
     // Hand: -1 (cast) +1 (cantrip) = same.
     assert_eq!(g.players[0].hand.len(), hand_before);
 }

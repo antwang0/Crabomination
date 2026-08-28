@@ -224,7 +224,7 @@ fn feather_of_flight_draws_and_grants_flying() {
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card on entry");
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "enchanted creature gets +1/+0");
-    assert!(cp.keywords.contains(&Keyword::Flying), "and flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "and flying");
 }
 
 /// Vivi grows and pings each opponent when you cast a noncreature spell.
@@ -284,7 +284,7 @@ fn squall_attacks_alone_and_reanimates() {
     }])).expect("Squall attacks alone");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(squall).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        g.computed_permanent(squall).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "attacks-alone granted double strike"
     );
     advance_to(&mut g, TurnStep::PostCombatMain);
@@ -304,7 +304,7 @@ fn white_mages_staff_job_select() {
     let cp = g.computed_permanent(hid).unwrap();
     assert_eq!(cp.power, 2, "Hero is 1/1 + equip +1/+1");
     assert!(
-        cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Cleric),
+        cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Cleric),
         "equipped creature is a Cleric"
     );
 }
@@ -347,7 +347,7 @@ fn zidane_steals_on_entry() {
     assert_eq!(stolen.controller, 0, "Zidane took control");
     assert!(!stolen.tapped, "and untapped it");
     assert!(
-        g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste),
+        g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::Haste),
         "granted haste"
     );
 }
@@ -449,12 +449,12 @@ fn tonberry_enters_stunned_and_conditional_keywords() {
     // Active player is 0 (your turn) → first strike + deathtouch.
     g.active_player_idx = 0;
     let cp = g.computed_permanent(tonberry).unwrap();
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "first strike on your turn");
-    assert!(cp.keywords.contains(&Keyword::Deathtouch), "deathtouch on your turn");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "first strike on your turn");
+    assert!(cp.keywords().contains(&Keyword::Deathtouch), "deathtouch on your turn");
     // Opponent's turn → neither.
     g.active_player_idx = 1;
     let cp = g.computed_permanent(tonberry).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::FirstStrike), "not on opponent's turn");
+    assert!(!cp.keywords().contains(&Keyword::FirstStrike), "not on opponent's turn");
 }
 
 /// Zell's power tracks lands you control and he gets an extra land drop.
@@ -699,7 +699,7 @@ fn cloud_ex_soldier_attaches_and_draws_on_attack() {
 fn adelbert_steiner_grows_per_equipment() {
     let mut g = two_player_game();
     let steiner = g.add_card_to_battlefield(0, catalog::adelbert_steiner());
-    assert!(g.computed_permanent(steiner).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(steiner).unwrap().keywords().contains(&Keyword::Lifelink));
     assert_eq!(g.computed_permanent(steiner).unwrap().power, 2, "no Equipment → 2/1");
     g.add_card_to_battlefield(0, catalog::bonesplitter());
     g.add_card_to_battlefield(0, catalog::bonesplitter());
@@ -809,7 +809,7 @@ fn coral_sword_attaches_and_pumps() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 3, "equipped +1/+0 → 3/2");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "gained first strike");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "gained first strike");
 }
 
 /// Adventurer's Airship loots when it attacks (crewed).
@@ -933,7 +933,7 @@ fn gladiolus_ramps_and_pumps_on_landfall() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(ally).unwrap();
     assert_eq!(cp.power, 6, "ally pumped +2/+2 per land that entered");
-    assert!(cp.keywords.contains(&Keyword::Trample), "ally gained trample");
+    assert!(cp.keywords().contains(&Keyword::Trample), "ally gained trample");
 }
 
 /// Eject bounces a nonland permanent and cantrips.
@@ -1239,7 +1239,7 @@ fn blitzball_shot_pumps_and_tramples() {
     drain_stack(&mut g);
     let b = g.computed_permanent(bear).unwrap();
     assert_eq!((b.power, b.toughness), (5, 5), "+3/+3");
-    assert!(b.keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(b.keywords().contains(&Keyword::Trample), "gained trample");
 }
 
 /// Fight On! returns two creature cards from the graveyard to hand.
@@ -1360,7 +1360,7 @@ fn magic_damper_untaps_and_protects() {
     drain_stack(&mut g);
     assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
     let b = g.computed_permanent(bear).unwrap();
-    assert!(b.keywords.contains(&Keyword::Hexproof), "gained hexproof");
+    assert!(b.keywords().contains(&Keyword::Hexproof), "gained hexproof");
     assert_eq!((b.power, b.toughness), (3, 3), "+1/+1");
 }
 
@@ -1506,7 +1506,7 @@ fn rosa_pumps_and_grants_lifelink_at_combat() {
     drain_stack(&mut g);
     let b = g.battlefield_find(bear).unwrap();
     assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1, "+1/+1 counter");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink));
 }
 
 /// Slash of Light deals damage equal to your creature + Equipment count.
@@ -2286,7 +2286,7 @@ fn moogles_valor_mass_tokens_and_indestructible() {
     drain_stack(&mut g);
     let moogles = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Moogle").count();
     assert_eq!(moogles, 2, "one Moogle per pre-existing creature");
-    assert!(g.computed_permanent(a).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(a).unwrap().keywords().contains(&Keyword::Indestructible),
         "creatures gained indestructible");
 }
 
@@ -2365,7 +2365,7 @@ fn unexpected_request_steals_creature() {
     let c = g.battlefield_find(foe).unwrap();
     assert_eq!(c.controller, 0, "gained control");
     assert!(!c.tapped, "untapped");
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 /// Resentful Revelation puts one of the top three into hand and the rest in the
@@ -2588,7 +2588,7 @@ fn fire_crystal_grants_haste() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::the_fire_crystal());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "bear has haste");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "bear has haste");
 }
 
 /// Ancient Adamantoise exiles itself and mints ten Treasures when it dies.
@@ -2709,7 +2709,7 @@ fn zack_fair_counter_and_indestructible() {
     }).expect("sacrifice Zack for indestructible");
     drain_stack(&mut g);
     assert!(g.battlefield_find(zack).is_none(), "Zack sacrificed");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// The Final Days makes two Horror tokens on a normal cast.
@@ -2851,7 +2851,7 @@ fn the_prima_vista_animates_on_big_noncreature() {
         card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Chemister's Insight");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ship).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(g.computed_permanent(ship).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "The Prima Vista is a creature this turn");
 }
 
@@ -2908,10 +2908,10 @@ fn freya_crescent_flying_only_on_your_turn() {
     let mut g = two_player_game();
     let freya = g.add_card_to_battlefield(0, catalog::freya_crescent());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(freya).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(freya).unwrap().keywords().contains(&Keyword::Flying),
         "flying during your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(freya).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(!g.computed_permanent(freya).unwrap().keywords().contains(&Keyword::Flying),
         "no flying on opponent's turn");
 }
 
@@ -2923,8 +2923,8 @@ fn balthier_and_fran_buffs_vehicles() {
     g.add_card_to_battlefield(0, catalog::balthier_and_fran());
     let cp = g.computed_permanent(ship).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 4), "Vehicle gets +1/+1");
-    assert!(cp.keywords.contains(&Keyword::Reach), "granted reach");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "granted vigilance");
+    assert!(cp.keywords().contains(&Keyword::Reach), "granted reach");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "granted vigilance");
 }
 
 /// Freya's red mana pays for an Equipment ability/cast but not a creature spell.
@@ -2946,7 +2946,7 @@ fn astrologians_planisphere_counter_on_noncreature_cast() {
     drain_stack(&mut g);
     let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
         .expect("Hero minted").id;
-    assert!(g.computed_permanent(hero).unwrap().subtypes.creature_types
+    assert!(g.computed_permanent(hero).unwrap().subtypes().creature_types
         .contains(&crabomination::card::CreatureType::Wizard), "equipped is a Wizard");
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
@@ -2969,8 +2969,8 @@ fn samurais_katana_job_select() {
         .expect("Hero minted");
     let cp = g.computed_permanent(hero.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "1/1 Hero + 2/2");
-    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Samurai));
+    assert!(cp.keywords().contains(&Keyword::Trample) && cp.keywords().contains(&Keyword::Haste));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Samurai));
 }
 
 /// Black Mage's Rod's equipped creature pings each opponent on a noncreature cast.
@@ -3058,7 +3058,7 @@ fn seifer_almasy_lone_attacker_and_recast() {
     }])).expect("Seifer attacks alone");
     drain_stack(&mut g);
     // Attacks-alone grant.
-    assert!(g.computed_permanent(seifer).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(seifer).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "lone attacker gains double strike");
     advance_to(&mut g, TurnStep::PostCombatMain);
     assert!(g.exile.iter().any(|c| c.id == bolt), "the recast Bolt was exiled after resolving");
@@ -3071,7 +3071,7 @@ fn raubahn_wards_and_attaches_on_attack() {
     use crabomination::card::WardCost;
     let mut g = two_player_game();
     let raubahn = g.add_card_to_battlefield(0, catalog::raubahn_bull_of_ala_mhigo());
-    assert!(g.computed_permanent(raubahn).unwrap().keywords
+    assert!(g.computed_permanent(raubahn).unwrap().keywords()
         .contains(&Keyword::Ward(WardCost::LifeSourcePower)), "Ward—pay life = power");
     let sword = g.add_card_to_battlefield(0, catalog::bonesplitter()); // unattached Equipment
     g.clear_sickness(raubahn);
@@ -3114,16 +3114,16 @@ fn cloud_planets_champion_conditional_keywords() {
     g.active_player_idx = 0;
     // Unequipped: no grant even on your turn.
     let cp = g.computed_permanent(cloud).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::DoubleStrike), "no double strike unequipped");
+    assert!(!cp.keywords().contains(&Keyword::DoubleStrike), "no double strike unequipped");
     // Equip a Bonesplitter.
     let sword = g.add_card_to_battlefield(0, catalog::bonesplitter());
     g.battlefield_find_mut(sword).unwrap().attached_to = Some(cloud);
     let cp = g.computed_permanent(cloud).unwrap();
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "double strike while equipped");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible while equipped");
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike), "double strike while equipped");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "indestructible while equipped");
     // Opponent's turn: no grant even while equipped.
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(cloud).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(!g.computed_permanent(cloud).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "no grant on opponent's turn");
 }
 
@@ -3140,9 +3140,9 @@ fn jenova_buffs_and_grants_mutant() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 3,
         "3 counters = Jenova's power");
-    assert!(g.computed_permanent(bear).unwrap().subtypes.creature_types
+    assert!(g.computed_permanent(bear).unwrap().subtypes().creature_types
         .contains(&crabomination::card::CreatureType::Mutant), "gained Mutant in addition to Bear");
-    assert!(g.computed_permanent(bear).unwrap().subtypes.creature_types
+    assert!(g.computed_permanent(bear).unwrap().subtypes().creature_types
         .contains(&crabomination::card::CreatureType::Bear), "still a Bear");
 }
 
@@ -3179,8 +3179,8 @@ fn summon_choco_mog_saga_creature_pumps_and_sacrifices() {
     let choco = g.add_card_to_battlefield(0, catalog::summon_choco_mog());
     // It's both a creature and a Saga.
     let cp = g.computed_permanent(choco).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature)
-        && cp.subtypes.enchantment_subtypes.contains(&crabomination::card::EnchantmentSubtype::Saga));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature)
+        && cp.subtypes().enchantment_subtypes.contains(&crabomination::card::EnchantmentSubtype::Saga));
     g.saga_advance(choco); // I — Stampede
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "other creature +1/+0");
@@ -3289,7 +3289,7 @@ fn summon_fat_chocobo_bird_and_trample() {
     assert_eq!((bird.definition.power, bird.definition.toughness), (2, 2));
     g.saga_advance(chocobo); // II — Kerplunk
     drain_stack(&mut g);
-    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Trample),
+    assert!(g.computed_permanent(ally).unwrap().keywords().contains(&Keyword::Trample),
         "team gained trample");
 }
 
@@ -3378,7 +3378,7 @@ fn haste_magic_pumps_and_impulses() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 3), "2/2 +3/+1");
-    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "gained haste");
     assert_eq!(g.exile.len(), ex0 + 1, "top card impulse-exiled");
 }
 
@@ -3471,7 +3471,7 @@ fn ardyn_the_usurper_anthem_and_starscourge() {
     let demon = g.add_card_to_battlefield(0, catalog::iron_giant()); // a Demon
     let cp = g.computed_permanent(demon).unwrap();
     for kw in [Keyword::Menace, Keyword::Lifelink, Keyword::Haste] {
-        assert!(cp.keywords.contains(&kw), "Demon has {kw:?}");
+        assert!(cp.keywords().contains(&kw), "Demon has {kw:?}");
     }
     // Starscourge: a creature in the graveyard becomes a 5/5 black Demon copy.
     g.add_card_to_graveyard(1, catalog::grizzly_bears());
@@ -3482,7 +3482,7 @@ fn ardyn_the_usurper_anthem_and_starscourge() {
         .expect("token copy minted");
     let tcp = g.computed_permanent(token.id).unwrap();
     assert_eq!((tcp.power, tcp.toughness), (5, 5), "5/5 override");
-    assert!(tcp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Demon), "is a Demon");
+    assert!(tcp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Demon), "is a Demon");
     assert!(tcp.colors.contains(crabomination::mana::Color::Black) && tcp.colors.len() == 1, "black only");
 }
 
@@ -3544,8 +3544,8 @@ fn magitek_scythe_attaches_and_grants() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(creature).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 from the Scythe");
-    assert!(cp.keywords.contains(&Keyword::FirstStrike), "granted first strike");
-    assert!(cp.keywords.contains(&Keyword::MustBeBlocked), "must be blocked this turn");
+    assert!(cp.keywords().contains(&Keyword::FirstStrike), "granted first strike");
+    assert!(cp.keywords().contains(&Keyword::MustBeBlocked), "must be blocked this turn");
 }
 
 /// Relentless X-ATM092 needs 3+ blockers and self-returns from the graveyard.
@@ -3622,7 +3622,7 @@ fn machinists_arsenal_scales_per_artifact() {
     // Artifacts you control: Sol Ring + Machinist's Arsenal itself = 2 → +4/+4.
     let cp = g.computed_permanent(hero).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "1/1 + 2 artifacts × +2/+2");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Artificer));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Artificer));
 }
 
 /// Sage's Nouliths untaps a target attacking creature when its host attacks.
@@ -3672,12 +3672,12 @@ fn dragoons_lance_flying_only_on_your_turn() {
     let hero = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hero")
         .expect("Hero minted").id;
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(hero).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(g.computed_permanent(hero).unwrap().keywords().contains(&Keyword::Flying),
         "flying during your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(hero).unwrap().keywords.contains(&Keyword::Flying),
+    assert!(!g.computed_permanent(hero).unwrap().keywords().contains(&Keyword::Flying),
         "no flying on opponent's turn");
-    assert!(g.computed_permanent(hero).unwrap().subtypes.creature_types
+    assert!(g.computed_permanent(hero).unwrap().subtypes().creature_types
         .contains(&crabomination::card::CreatureType::Knight), "is a Knight");
 }
 
@@ -3861,7 +3861,7 @@ fn restoration_magic_curaga_shields_and_gains() {
     }).expect("cast Curaga");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life0 + 6, "gained 6 life");
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Indestructible),
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Indestructible),
         "your creature is indestructible");
 }
 
@@ -3891,7 +3891,7 @@ fn warriors_sword_job_select_and_bonus() {
         .expect("Hero minted").id;
     let cp = g.computed_permanent(hero).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3), "1/1 + 3/+2");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Warrior));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Warrior));
 }
 
 /// Thief's Knife draws when the equipped Hero deals combat damage to a player.
@@ -4004,7 +4004,7 @@ fn zodiark_edict_and_grows_on_sacrifice() {
         2,
         "one +1/+1 counter per creature sacrificed",
     );
-    assert!(g.computed_permanent(zodiark).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(zodiark).unwrap().keywords().contains(&Keyword::Indestructible));
 }
 
 /// Phantom Train sacrifices another permanent to grow and animate into a Spirit.
@@ -4013,7 +4013,7 @@ fn phantom_train_animates_on_sacrifice() {
     let mut g = two_player_game();
     let train = g.add_card_to_battlefield(0, catalog::phantom_train());
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(!g.computed_permanent(train).unwrap().card_types.contains(&crabomination::card::CardType::Creature),
+    assert!(!g.computed_permanent(train).unwrap().card_types().contains(&crabomination::card::CardType::Creature),
         "starts as a noncreature Vehicle");
     g.perform_action(GameAction::ActivateAbility {
         card_id: train, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
@@ -4021,8 +4021,8 @@ fn phantom_train_animates_on_sacrifice() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
     let cp = g.computed_permanent(train).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Spirit), "a Spirit");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Spirit), "a Spirit");
     assert_eq!((cp.power, cp.toughness), (5, 5), "4/4 base + one +1/+1 counter");
 }
 
@@ -4035,7 +4035,7 @@ fn stuck_in_summoners_sanctum_locks_permanent() {
     let aura = g.add_card_to_battlefield(0, catalog::stuck_in_summoners_sanctum());
     g.battlefield_find_mut(aura).unwrap().attached_to = Some(foe);
     g.battlefield_find_mut(foe).unwrap().tapped = true;
-    assert!(g.computed_permanent(foe).unwrap().keywords.contains(&Keyword::CantActivateAbilities),
+    assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::CantActivateAbilities),
         "activated abilities locked");
     g.active_player_idx = 1;
     g.do_untap();
@@ -4071,7 +4071,7 @@ fn absolute_virtue_shape_and_controller_hexproof() {
     let av = g.add_card_to_battlefield(0, catalog::absolute_virtue());
     let cp = g.computed_permanent(av).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 8));
-    assert!(cp.keywords.contains(&Keyword::Flying) && cp.keywords.contains(&Keyword::CantBeCountered));
+    assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::CantBeCountered));
     // The controller gains player hexproof from the static (its protection approx).
     assert!(g.player_has_static_hexproof(0), "controller has static hexproof");
 }
@@ -4085,10 +4085,10 @@ fn the_masamune_conditional_combat_keywords() {
     g.battlefield_find_mut(sword).unwrap().attached_to = Some(bearer);
     g.active_player_idx = 0;
     let cp = g.computed_permanent(bearer).unwrap();
-    assert!(cp.keywords.contains(&Keyword::FirstStrike) && cp.keywords.contains(&Keyword::MustBeBlocked),
+    assert!(cp.keywords().contains(&Keyword::FirstStrike) && cp.keywords().contains(&Keyword::MustBeBlocked),
         "first strike + lure on your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(bearer).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(!g.computed_permanent(bearer).unwrap().keywords().contains(&Keyword::FirstStrike),
         "no bonus on the opponent's turn");
 }
 
@@ -4102,7 +4102,7 @@ fn dark_knights_greatsword_job_select() {
         .expect("Hero minted").id;
     let cp = g.computed_permanent(hero).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 1), "1/1 + 3/+0");
-    assert!(cp.subtypes.creature_types.contains(&crabomination::card::CreatureType::Knight));
+    assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Knight));
 }
 
 /// Summoner's Grimoire puts a creature from hand onto the battlefield when the
@@ -4435,9 +4435,9 @@ fn kain_jump_and_traitor_trigger() {
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     // Jump: flying on your turn only.
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(kain).unwrap().keywords.contains(&Keyword::Flying), "Jump on your turn");
+    assert!(g.computed_permanent(kain).unwrap().keywords().contains(&Keyword::Flying), "Jump on your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(kain).unwrap().keywords.contains(&Keyword::Flying), "no flying on their turn");
+    assert!(!g.computed_permanent(kain).unwrap().keywords().contains(&Keyword::Flying), "no flying on their turn");
     g.active_player_idx = 0;
     // Traitor trigger: 2 combat damage to P1 → P1 gains Kain; you draw 2,
     // make 2 tapped Treasures, lose 2 life.
@@ -4695,16 +4695,16 @@ fn yuna_turn_gated_anthem_and_self_keywords() {
     g.active_player_idx = 0;
     for id in [yuna, ench] {
         let cp = g.computed_permanent(id).unwrap();
-        assert!(cp.keywords.contains(&Keyword::Trample), "trample on your turn");
-        assert!(cp.keywords.contains(&Keyword::Lifelink), "lifelink on your turn");
-        assert!(cp.keywords.iter().any(|k| matches!(k, Keyword::Ward(_))), "ward on your turn");
+        assert!(cp.keywords().contains(&Keyword::Trample), "trample on your turn");
+        assert!(cp.keywords().contains(&Keyword::Lifelink), "lifelink on your turn");
+        assert!(cp.keywords().iter().any(|k| matches!(k, Keyword::Ward(_))), "ward on your turn");
     }
     // Opponent's turn — the grants switch off.
     g.active_player_idx = 1;
     let cp = g.computed_permanent(yuna).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::Trample), "no trample off-turn");
+    assert!(!cp.keywords().contains(&Keyword::Trample), "no trample off-turn");
     let ce = g.computed_permanent(ench).unwrap();
-    assert!(!ce.keywords.contains(&Keyword::Lifelink), "no lifelink off-turn");
+    assert!(!ce.keywords().contains(&Keyword::Lifelink), "no lifelink off-turn");
 }
 
 /// Yuna's end step reanimates an enchantment card with a finality counter.
@@ -4873,7 +4873,7 @@ fn summon_brynhildr_gestalt_grants_haste() {
     }).expect("cast Grizzly Bears");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bears).expect("bears on battlefield");
-    assert!(cp.keywords.contains(&Keyword::Haste), "next creature entered with haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "next creature entered with haste");
 }
 
 /// Torgal grows your first Human creature spell each turn by a +1/+1 counter per
@@ -5280,7 +5280,7 @@ fn ultima_blights_lands_and_doubles_colorless() {
     let forest = g.add_card_to_battlefield(1, catalog::forest());
     g.battlefield_find_mut(forest).unwrap().add_counters(CounterType::Blight, 1);
     let cp = g.computed_permanent(forest).expect("blighted forest");
-    assert!(cp.subtypes.land_types.is_empty(), "lost its land types");
+    assert!(cp.subtypes().land_types.is_empty(), "lost its land types");
     // Our own blighted land taps for {C}{C} (granted {T}:Add{C} + mirror).
     let mine = g.add_card_to_battlefield(0, catalog::forest());
     g.battlefield_find_mut(mine).unwrap().add_counters(CounterType::Blight, 1);
@@ -5330,7 +5330,7 @@ fn random_encounter_deploys_then_bounces() {
     let bears: Vec<_> = g.battlefield.iter()
         .filter(|c| c.definition.name == "Grizzly Bears").map(|c| c.id).collect();
     assert_eq!(bears.len(), 4, "all four milled creatures deployed");
-    assert!(g.computed_permanent(bears[0]).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(bears[0]).unwrap().keywords().contains(&Keyword::Haste));
     advance_to(&mut g, TurnStep::End);
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.definition.name != "Grizzly Bears"),

@@ -47,7 +47,7 @@ fn loxodon_sergeant_grants_vigilance() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.move_card_to_battlefield_for_test(0, catalog::loxodon_sergeant());
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance));
 }
 
 /// Kiora's Dambreaker proliferates on entry.
@@ -161,7 +161,7 @@ fn ashioks_skulker_unblockable() {
         card_id: skulker, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("unblockable");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(skulker).unwrap().keywords.contains(&Keyword::Unblockable));
+    assert!(g.computed_permanent(skulker).unwrap().keywords().contains(&Keyword::Unblockable));
 }
 
 /// Grim Initiate amasses Zombies 1 when it dies.
@@ -189,9 +189,9 @@ fn pouncing_lynx_first_strike_your_turn() {
     let mut g = two_player_game();
     let lynx = g.add_card_to_battlefield(0, catalog::pouncing_lynx());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(lynx).unwrap().keywords.contains(&Keyword::FirstStrike), "first strike on your turn");
+    assert!(g.computed_permanent(lynx).unwrap().keywords().contains(&Keyword::FirstStrike), "first strike on your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(lynx).unwrap().keywords.contains(&Keyword::FirstStrike), "not on opponent's turn");
+    assert!(!g.computed_permanent(lynx).unwrap().keywords().contains(&Keyword::FirstStrike), "not on opponent's turn");
 }
 
 // ── Spells ──────────────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ fn battlefield_promotion_pumps_and_gains() {
     let life = g.players[0].life;
     cast_at_target(&mut g, catalog::battlefield_promotion(), Target::Permanent(bear), &[(Color::White, 1)], 1);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike));
     assert_eq!(g.players[0].life, life + 2);
 }
 
@@ -285,7 +285,7 @@ fn unlikely_aid_grants_indestructible() {
     cast_at_target(&mut g, catalog::unlikely_aid(), Target::Permanent(bear), &[(Color::Black, 1)], 1);
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!(c.power, 4, "+2/+0");
-    assert!(c.keywords.contains(&Keyword::Indestructible));
+    assert!(c.keywords().contains(&Keyword::Indestructible));
 }
 
 /// Relentless Advance amasses Zombies 3.
@@ -324,7 +324,7 @@ fn vizier_grants_deathtouch_to_zombie_tokens() {
     g.move_card_to_battlefield_for_test(0, catalog::vizier_of_the_scorpion());
     drain_stack(&mut g);
     let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army").id;
-    assert!(g.computed_permanent(army).unwrap().keywords.contains(&Keyword::Deathtouch), "Army (Zombie token) has deathtouch");
+    assert!(g.computed_permanent(army).unwrap().keywords().contains(&Keyword::Deathtouch), "Army (Zombie token) has deathtouch");
 }
 
 /// Tithebearer Giant draws a card and loses 1 life on entry.
@@ -393,7 +393,7 @@ fn eternal_skylord_amasses_and_grants_flying() {
     drain_stack(&mut g);
     let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Army)).expect("Army").id;
     assert_eq!(g.battlefield_find(army).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
-    assert!(g.computed_permanent(army).unwrap().keywords.contains(&Keyword::Flying), "Zombie token flies");
+    assert!(g.computed_permanent(army).unwrap().keywords().contains(&Keyword::Flying), "Zombie token flies");
 }
 
 /// Spellkeeper Weird returns an instant/sorcery from the graveyard.
@@ -614,7 +614,7 @@ fn challenger_troll_grants_evasion() {
     let wurm = g.add_card_to_battlefield(0, catalog::primordial_wurm()); // 7/6
     g.add_card_to_battlefield(0, catalog::challenger_troll());
     drain_stack(&mut g);
-    assert!(g.computed_permanent(wurm).unwrap().keywords.contains(&Keyword::CantBeBlockedByMoreThanOne));
+    assert!(g.computed_permanent(wurm).unwrap().keywords().contains(&Keyword::CantBeBlockedByMoreThanOne));
 }
 
 /// Evolution Sage proliferates whenever a land you control enters.
@@ -637,7 +637,7 @@ fn thundering_ceratok_grants_trample() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.move_card_to_battlefield_for_test(0, catalog::thundering_ceratok());
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample));
 }
 
 /// Kronch Wrangler grows when a big creature enters.
@@ -661,7 +661,7 @@ fn steady_aim_untaps_and_pumps() {
     let c = g.computed_permanent(bear).unwrap();
     assert!(!g.battlefield_find(bear).unwrap().tapped, "untapped");
     assert_eq!((c.power, c.toughness), (3, 6), "+1/+4");
-    assert!(c.keywords.contains(&Keyword::Reach));
+    assert!(c.keywords().contains(&Keyword::Reach));
 }
 
 /// Forced Landing puts a flyer on the bottom of its owner's library.
@@ -978,7 +978,7 @@ fn bond_of_revival_reanimates_with_haste() {
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     cast_at_target(&mut g, catalog::bond_of_revival(), Target::Permanent(bear), &[(Color::Black, 1)], 4);
     let c = g.computed_permanent(bear).expect("on battlefield");
-    assert!(c.keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(c.keywords().contains(&Keyword::Haste), "gained haste");
 }
 
 /// Deathsprout destroys a creature and ramps a basic land tapped.
@@ -1543,7 +1543,7 @@ fn desperate_lunge_pumps_and_gains() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2");
-    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "gained flying");
     assert_eq!(g.players[0].life, life + 2, "gained 2 life");
 }
 
@@ -1576,7 +1576,7 @@ fn angrath_menace_anthem_and_amass() {
     let mut g = two_player_game();
     let angrath = g.add_card_to_battlefield(0, catalog::angrath_captain_of_chaos());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Menace), "creatures you control have menace");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Menace), "creatures you control have menace");
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
@@ -1593,7 +1593,7 @@ fn huatli_toughness_damage_and_lifegain() {
     let mut g = two_player_game();
     let huatli = g.add_card_to_battlefield(0, catalog::huatli_the_suns_heart());
     let griffin = g.add_card_to_battlefield(0, catalog::enforcer_griffin()); // 3/4
-    assert!(g.computed_permanent(griffin).unwrap().keywords.contains(&Keyword::AssignsCombatDamageByToughness));
+    assert!(g.computed_permanent(griffin).unwrap().keywords().contains(&Keyword::AssignsCombatDamageByToughness));
     let life = g.players[0].life;
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
@@ -1631,7 +1631,7 @@ fn samut_haste_anthem_and_pump() {
     let mut g = two_player_game();
     let samut = g.add_card_to_battlefield(0, catalog::samut_tyrant_smasher());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste), "creatures you control have haste");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste), "creatures you control have haste");
     g.add_card_to_library(0, catalog::forest());
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
@@ -1651,7 +1651,7 @@ fn god_eternal_rhonas_doubles_power() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!(cp.power, 4, "power doubled");
-    assert!(cp.keywords.contains(&Keyword::Vigilance), "gained vigilance");
+    assert!(cp.keywords().contains(&Keyword::Vigilance), "gained vigilance");
     assert!(catalog::god_eternal_rhonas().keywords.contains(&Keyword::Deathtouch));
 }
 
@@ -1803,9 +1803,9 @@ fn mobilized_district_animates() {
     g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("animate");
     drain_stack(&mut g);
     let c = g.computed_permanent(land).expect("district");
-    assert!(c.card_types.contains(&crabomination::card::CardType::Creature) && c.card_types.contains(&crabomination::card::CardType::Land));
+    assert!(c.card_types().contains(&crabomination::card::CardType::Creature) && c.card_types().contains(&crabomination::card::CardType::Land));
     assert_eq!((c.power, c.toughness), (3, 3));
-    assert!(c.keywords.contains(&Keyword::Vigilance));
+    assert!(c.keywords().contains(&Keyword::Vigilance));
 }
 
 /// Emergence Zone's sac ability lets you cast a sorcery-speed spell at instant speed.
@@ -2024,9 +2024,9 @@ fn nahiri_first_strike_and_burn() {
     let nahiri = g.add_card_to_battlefield(0, catalog::nahiri_storm_of_stone());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike), "first strike on your turn");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike), "first strike on your turn");
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike), "not on opponent's turn");
+    assert!(!g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::FirstStrike), "not on opponent's turn");
     // −X burns a tapped creature.
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.battlefield_find_mut(foe).unwrap().tapped = true;
@@ -2043,10 +2043,10 @@ fn nahiri_first_strike_and_burn() {
 fn mizzium_tank_animates_on_noncreature() {
     let mut g = two_player_game();
     let tank = g.add_card_to_battlefield(0, catalog::mizzium_tank());
-    assert!(!g.computed_permanent(tank).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "not a creature at rest");
+    assert!(!g.computed_permanent(tank).unwrap().card_types().contains(&crabomination::card::CardType::Creature), "not a creature at rest");
     cast_at_target(&mut g, catalog::lightning_bolt(), Target::Player(1), &[(Color::Red, 1)], 0);
     let cp = g.computed_permanent(tank).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "animated by the noncreature cast");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "animated by the noncreature cast");
     assert_eq!((cp.power, cp.toughness), (4, 3), "3/2 +1/+1");
 }
 
@@ -2096,9 +2096,9 @@ fn gideon_blackblade_animates_and_is_protected() {
     let gid = g.add_card_to_battlefield(0, catalog::gideon_blackblade());
     g.active_player_idx = 0;
     let cp = g.computed_permanent(gid).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "creature on your turn");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Planeswalker), "still a planeswalker");
-    assert!(cp.keywords.contains(&Keyword::Indestructible), "indestructible on your turn");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "creature on your turn");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Planeswalker), "still a planeswalker");
+    assert!(cp.keywords().contains(&Keyword::Indestructible), "indestructible on your turn");
     assert_eq!((cp.power, cp.toughness), (4, 4), "4/4");
     // Damage during your turn is prevented (no loyalty loss).
     let before = g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty);
@@ -2107,7 +2107,7 @@ fn gideon_blackblade_animates_and_is_protected() {
     assert_eq!(g.battlefield_find(gid).unwrap().counter_count(CounterType::Loyalty), before, "no loyalty removed during your turn");
     // On the opponent's turn it's just a planeswalker again.
     g.active_player_idx = 1;
-    assert!(!g.computed_permanent(gid).unwrap().card_types.contains(&crabomination::card::CardType::Creature), "not a creature on opp turn");
+    assert!(!g.computed_permanent(gid).unwrap().card_types().contains(&crabomination::card::CardType::Creature), "not a creature on opp turn");
 }
 
 /// With a Gideon in play, Gideon's Triumph makes the opponent sacrifice two.
@@ -2229,7 +2229,7 @@ fn ajani_greathearted_anthem_and_minus_two() {
     let ajani = g.add_card_to_battlefield(0, catalog::ajani_the_greathearted());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let other_pw = g.add_card_to_battlefield(0, catalog::jace_arcane_strategist()); // loyalty 4
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Vigilance), "team has vigilance");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Vigilance), "team has vigilance");
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
@@ -2264,10 +2264,10 @@ fn awakening_of_vitu_ghazi_animates_land() {
     let land = g.add_card_to_battlefield(0, catalog::forest());
     cast_at_target(&mut g, catalog::awakening_of_vitu_ghazi(), Target::Permanent(land), &[(Color::Green, 2)], 3);
     let cp = g.computed_permanent(land).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     assert_eq!((cp.power, cp.toughness), (9, 9), "0/0 with nine +1/+1 counters");
-    assert!(cp.keywords.contains(&Keyword::Haste), "has haste");
+    assert!(cp.keywords().contains(&Keyword::Haste), "has haste");
 }
 
 /// Sorin grants lifelink on your turn and his −X reanimates an MV-matching
@@ -2278,7 +2278,7 @@ fn sorin_lifelink_and_reanimate() {
     let sorin = g.add_card_to_battlefield(0, catalog::sorin_vengeful_bloodlord());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.active_player_idx = 0;
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink), "lifelink on your turn");
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink), "lifelink on your turn");
     // Graveyard has a MV-2 (Bear) and a MV-5 (Serra Angel). −X with X=2 only
     // reanimates the mana-value-2 creature (the X gate concretizes the filter).
     g.add_card_to_graveyard(0, catalog::serra_angel());
@@ -2292,7 +2292,7 @@ fn sorin_lifelink_and_reanimate() {
     let reanimated = g.battlefield_find(gy_bear).expect("MV-2 bear reanimated");
     assert!(reanimated.definition.subtypes.creature_types.contains(&CreatureType::Bear), "the bear returned");
     assert!(g.battlefield_find(gy_angel).is_none(), "the MV-5 Angel is off-limits at X=2");
-    assert!(g.computed_permanent(gy_bear).unwrap().subtypes.creature_types.contains(&CreatureType::Vampire), "now also a Vampire");
+    assert!(g.computed_permanent(gy_bear).unwrap().subtypes().creature_types.contains(&CreatureType::Vampire), "now also a Vampire");
 }
 
 /// Jace's Ruse bounces up to two creatures.
@@ -2336,7 +2336,7 @@ fn vivien_champion_flash_and_grant() {
     g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: vivien, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None }).expect("+1");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Reach), "granted vigilance + reach");
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Reach), "granted vigilance + reach");
 }
 
 /// The Elderspell destroys planeswalkers and pumps your own two loyalty each.
@@ -2426,7 +2426,7 @@ fn sarkhan_masterless_animates_and_pings() {
     g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: sarkhan, ability_index: 0, target: None, x_value: None }).expect("+1");
     drain_stack(&mut g);
     let cp = g.computed_permanent(sarkhan).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature) && cp.subtypes.creature_types.contains(&CreatureType::Dragon), "Sarkhan is a Dragon creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature) && cp.subtypes().creature_types.contains(&CreatureType::Dragon), "Sarkhan is a Dragon creature");
     assert_eq!((cp.power, cp.toughness), (4, 4), "4/4");
     // The passive: an opponent's attacker takes 1 per Dragon you control (1 here).
     let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -2965,10 +2965,10 @@ fn nissa_shakes_plus_one_animates_land() {
     assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(CounterType::PlusOnePlusOne), 3, "three +1/+1 counters");
     let cp = g.computed_permanent(land).unwrap();
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature), "now a creature");
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land), "still a land");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature), "now a creature");
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
     assert_eq!((cp.power, cp.toughness), (3, 3), "0/0 with three +1/+1 counters");
-    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Haste), "vigilance + haste");
+    assert!(cp.keywords().contains(&Keyword::Vigilance) && cp.keywords().contains(&Keyword::Haste), "vigilance + haste");
 }
 
 /// Feather exiles an I/S that targets your creature and returns it at the next

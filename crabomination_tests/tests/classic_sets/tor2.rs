@@ -333,7 +333,7 @@ fn zombie_trailblazer_makes_swamps() {
     assert!(
         g.computed_permanent(land)
             .unwrap()
-            .subtypes
+            .subtypes()
             .land_types
             .contains(&crabomination::card::LandType::Swamp)
     );
@@ -430,7 +430,7 @@ fn floating_shield_grants_chosen_protection() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
     cast(&mut g, 0, aura, Some(Target::Permanent(host)));
     assert!(
-        g.computed_permanent(host).unwrap().keywords.contains(&Keyword::Protection(Color::Red))
+        g.computed_permanent(host).unwrap().keywords().contains(&Keyword::Protection(Color::Red))
     );
 }
 
@@ -458,7 +458,7 @@ fn temporary_insanity_steals_a_small_creature() {
     cast(&mut g, 0, spell, Some(Target::Permanent(victim)));
     let cp = g.computed_permanent(victim).unwrap();
     assert_eq!(cp.controller, 0);
-    assert!(cp.keywords.contains(&Keyword::Haste));
+    assert!(cp.keywords().contains(&Keyword::Haste));
 }
 
 /// Spirit Flare taps one of yours to shoot an attacker.

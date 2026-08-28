@@ -44,7 +44,7 @@ fn cr_702_15_noncombat_lifelink_gains_life() {
     let mut g = two_player_game();
     // Vampire Nighthawk has lifelink; simulate a noncombat damage event from it.
     let hawk = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
-    assert!(g.computed_permanent(hawk).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(g.computed_permanent(hawk).unwrap().keywords().contains(&Keyword::Lifelink));
     let life0 = g.players[0].life;
     let mut events = Vec::new();
     g.deal_damage_to_from(EntityRef::Player(1), 2, Some(hawk), &mut events);

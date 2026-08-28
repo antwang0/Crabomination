@@ -52,11 +52,11 @@ fn krosan_beast_threshold_pump() {
 fn mystic_enforcer_threshold_grants_flying() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::mystic_enforcer());
-    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying));
     fill_gy(&mut g, 0, 7);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!(cp.power, 6, "3/3 + threshold +3/+3");
-    assert!(cp.keywords.contains(&Keyword::Flying), "threshold grants flying");
+    assert!(cp.keywords().contains(&Keyword::Flying), "threshold grants flying");
 }
 
 #[test]
@@ -88,12 +88,12 @@ fn ardent_recruit_metalcraft_pump() {
 fn snapsail_glider_metalcraft_flying() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::snapsail_glider());
-    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying));
     // The glider counts as one artifact; add two more.
     for _ in 0..2 {
         g.add_card_to_battlefield(0, catalog::ornithopter());
     }
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn auriok_sunchaser_metalcraft_pump_and_flying() {
     give_three_artifacts(&mut g, 0);
     let cp = g.computed_permanent(id).unwrap();
     assert_eq!(cp.power, 3, "1/1 + metalcraft +2/+2");
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
 #[test]
@@ -173,7 +173,7 @@ fn sabertooth_outrider_first_strike_when_formidable() {
         attacker: id, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::FirstStrike),
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::FirstStrike),
         "formidable attack trigger grants first strike");
 }
 
@@ -183,10 +183,10 @@ fn sabertooth_outrider_first_strike_when_formidable() {
 fn cutthroat_il_dal_shadow_only_while_hellbent() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::cutthroat_il_dal());
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Shadow),
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Shadow),
         "empty hand → hellbent → shadow");
     g.add_card_to_hand(0, catalog::island());
-    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Shadow),
+    assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Shadow),
         "card in hand → not hellbent → no shadow");
 }
 
@@ -194,10 +194,10 @@ fn cutthroat_il_dal_shadow_only_while_hellbent() {
 fn rakdos_pit_dragon_double_strike_while_hellbent() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::rakdos_pit_dragon());
-    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::DoubleStrike),
+    assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::DoubleStrike),
         "empty hand → hellbent → double strike");
     g.add_card_to_hand(0, catalog::island());
-    assert!(!g.computed_permanent(id).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(!g.computed_permanent(id).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 // ── Conditional burn ─────────────────────────────────────────────────────────
@@ -258,14 +258,14 @@ fn temur_battle_rage_double_strike_and_ferocious_trample() {
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     resolve_spell(&mut g, catalog::temur_battle_rage(), vec![Target::Permanent(mine)]);
     let cp = g.computed_permanent(mine).unwrap();
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike), "base grants double strike");
-    assert!(!cp.keywords.contains(&Keyword::Trample), "no ferocious → no trample");
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike), "base grants double strike");
+    assert!(!cp.keywords().contains(&Keyword::Trample), "no ferocious → no trample");
 
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::serra_angel()); // power 4 → ferocious
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     resolve_spell(&mut g, catalog::temur_battle_rage(), vec![Target::Permanent(mine)]);
     let cp = g.computed_permanent(mine).unwrap();
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
-    assert!(cp.keywords.contains(&Keyword::Trample), "ferocious grants trample");
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&Keyword::Trample), "ferocious grants trample");
 }

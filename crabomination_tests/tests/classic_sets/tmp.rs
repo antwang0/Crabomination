@@ -263,7 +263,7 @@ fn humility_makes_everything_a_vanilla_one_one() {
     g.add_card_to_battlefield(1, catalog::humility());
     let cp = g.computed_permanent(flier).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1));
-    assert!(!cp.keywords.contains(&Keyword::Flying));
+    assert!(!cp.keywords().contains(&Keyword::Flying));
 }
 
 /// Marble Titan locks down the big creatures at untap.
@@ -290,8 +290,8 @@ fn natures_revolt_animates_all_lands() {
     g.add_card_to_battlefield(1, catalog::natures_revolt());
     let cp = g.computed_permanent(forest).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Creature));
-    assert!(cp.card_types.contains(&crabomination::card::CardType::Land));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Land));
 }
 
 // ── Triggers ────────────────────────────────────────────────────────────────
@@ -1121,7 +1121,7 @@ fn dracoplasm_sums_its_sacrifices() {
 fn escaped_shapeshifter_mirrors_opposing_keywords() {
     let mut g = two_player_game();
     let shifter = g.add_card_to_battlefield(0, catalog::escaped_shapeshifter());
-    let has = |g: &GameState, kw| g.computed_permanent(shifter).unwrap().keywords.contains(&kw);
+    let has = |g: &GameState, kw| g.computed_permanent(shifter).unwrap().keywords().contains(&kw);
     assert!(!has(&g, Keyword::Flying));
     g.add_card_to_battlefield(0, catalog::serra_angel()); // yours doesn't count
     assert!(!has(&g, Keyword::Flying));
@@ -1151,7 +1151,7 @@ fn flowstone_sculpture_buys_keywords() {
     .expect("activate");
     drain_stack(&mut g);
     assert!(
-        g.computed_permanent(sculpt).unwrap().keywords.contains(&Keyword::FirstStrike),
+        g.computed_permanent(sculpt).unwrap().keywords().contains(&Keyword::FirstStrike),
         "the grant sticks"
     );
     assert!(g.players[0].hand.is_empty(), "the discard was paid");
@@ -1170,7 +1170,7 @@ fn excavator_grants_the_sacrificed_lands_walk() {
     assert!(
         g.computed_permanent(bear)
             .unwrap()
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest))
     );
 }
@@ -1315,7 +1315,7 @@ fn volraths_curse_can_be_shrugged_off() {
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, curse, Some(Target::Permanent(victim))).expect("enchant");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::CantAttack));
+    assert!(g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::CantAttack));
 
     g.add_card_to_battlefield(1, catalog::forest());
     g.step = TurnStep::PreCombatMain;
@@ -1331,7 +1331,7 @@ fn volraths_curse_can_be_shrugged_off() {
     .expect("shrug it off");
     drain_stack(&mut g);
     assert!(
-        !g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::CantAttack),
+        !g.computed_permanent(victim).unwrap().keywords().contains(&Keyword::CantAttack),
         "the pass holds for the turn"
     );
 }
@@ -1373,7 +1373,7 @@ fn maddening_imp_drags_everyone_into_combat() {
     })
     .expect("madden");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::MustAttack));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::MustAttack));
     advance_to(&mut g, TurnStep::DeclareAttackers);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::DeclareAttackers(vec![])).expect_err("must attack");
@@ -1399,8 +1399,8 @@ fn phyrexian_splicer_moves_a_keyword() {
     })
     .expect("splice");
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(angel).unwrap().keywords.contains(&Keyword::Flying));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(!g.computed_permanent(angel).unwrap().keywords().contains(&Keyword::Flying));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
 }
 
 /// Scroll Rack swaps hand cards for the top of the library and stacks the
@@ -1440,7 +1440,7 @@ fn echo_chamber_rents_a_creature() {
         .find(|c| c.is_token && c.controller == 0)
         .expect("a token copy");
     assert_eq!(token.definition.name, "Serra Angel");
-    assert!(g.computed_permanent(token.id).unwrap().keywords.contains(&Keyword::Haste));
+    assert!(g.computed_permanent(token.id).unwrap().keywords().contains(&Keyword::Haste));
 }
 
 /// Whim of Volrath rewrites a colour word for the turn and buys itself back.

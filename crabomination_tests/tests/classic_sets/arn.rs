@@ -82,7 +82,7 @@ fn keyword_bodies_are_printed_correctly() {
         let name = def.name;
         let id = g.add_card_to_battlefield(0, def);
         assert!(
-            g.computed_permanent(id).expect(name).keywords.contains(&kw),
+            g.computed_permanent(id).expect(name).keywords().contains(&kw),
             "{name} is missing {kw:?}",
         );
     }
@@ -246,7 +246,7 @@ fn erhnam_djinn_hands_an_opponent_forestwalk() {
     assert!(
         g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Forest)),
     );
 }
@@ -411,7 +411,7 @@ fn fishliver_oil_grants_islandwalk() {
     assert!(
         g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Island)),
     );
 }
@@ -678,14 +678,14 @@ fn guardian_beast_shields_your_artifacts_while_it_stands() {
     assert!(
         g.computed_permanent(chalice)
             .expect("chalice")
-            .keywords
+            .keywords()
             .contains(&Keyword::Indestructible),
     );
     g.battlefield_find_mut(beast).expect("beast").tapped = true;
     assert!(
         !g.computed_permanent(chalice)
             .expect("chalice")
-            .keywords
+            .keywords()
             .contains(&Keyword::Indestructible),
         "tapping the Beast drops the shield",
     );
@@ -700,7 +700,7 @@ fn sandals_of_abdallah_break_with_their_wearer() {
     assert!(
         g.computed_permanent(bear)
             .expect("bear")
-            .keywords
+            .keywords()
             .contains(&Keyword::Landwalk(crabomination::card::LandType::Island)),
     );
     let mut evs = Vec::new();

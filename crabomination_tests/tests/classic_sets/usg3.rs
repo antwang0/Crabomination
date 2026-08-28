@@ -138,13 +138,13 @@ fn hidden_predators_wakes_on_a_big_opposing_creature() {
     let pred = g.add_card_to_battlefield(0, catalog::hidden_predators());
     g.check_state_based_actions();
     drain_stack(&mut g);
-    assert!(!g.computed_permanent(pred).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(pred).unwrap().card_types().contains(&CardType::Creature));
     g.add_card_to_battlefield(1, catalog::okk()); // 4/4
     g.check_state_based_actions();
     drain_stack(&mut g);
     let cp = g.computed_permanent(pred).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
-    assert!(!cp.card_types.contains(&CardType::Enchantment));
+    assert!(cp.card_types().contains(&CardType::Creature));
+    assert!(!cp.card_types().contains(&CardType::Enchantment));
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
 
@@ -177,7 +177,7 @@ fn veiled_apparition_wakes_with_its_upkeep_tax() {
     cast_as(&mut g, 1, bears, None);
     let cp = g.computed_permanent(app).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
-    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Flying));
     assert_eq!(
         g.battlefield_find(app).unwrap().definition.triggered_abilities.len(),
         2,

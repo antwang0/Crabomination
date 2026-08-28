@@ -2110,7 +2110,7 @@ fn forced_attacks(state: &GameState) -> Vec<Attack> {
         let kws = computed
             .iter()
             .find(|p| p.id == c.id)
-            .map(|p| p.keywords.as_slice())
+            .map(|p| p.keywords())
             .unwrap_or(&[]);
         if !kws.has_kw(&Keyword::MustAttack) && c.goaded_by.is_empty() {
             continue;
@@ -2147,7 +2147,7 @@ fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
     use crate::card::Keyword;
     let computed = state.compute_battlefield();
     let kws = |id: CardId| {
-        computed.iter().find(|p| p.id == id).map(|p| p.keywords.as_slice()).unwrap_or(&[])
+        computed.iter().find(|p| p.id == id).map(|p| p.keywords()).unwrap_or(&[])
     };
     let mut out: Vec<(CardId, CardId)> = Vec::new();
     let mut used: Vec<CardId> = state.block_map.keys().copied().collect();
@@ -2232,7 +2232,7 @@ fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
 fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
     use crate::card::Keyword;
     if let Some(cp) = state.computed_permanent(id) {
-        let mut base = if cp.keywords.has_kw(&Keyword::AssignsCombatDamageByToughness) {
+        let mut base = if cp.keywords().has_kw(&Keyword::AssignsCombatDamageByToughness) {
             cp.toughness
         } else {
             cp.power
@@ -2240,7 +2240,7 @@ fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
         // CR 702.121 — Melee grows the attacker +1/+1 per opponent it attacks
         // this combat. In a duel that's a guaranteed +1 the moment it's
         // declared, so the planner should weigh it in.
-        if cp.keywords.has_kw(&Keyword::Melee) {
+        if cp.keywords().has_kw(&Keyword::Melee) {
             base += 1;
         }
         base
@@ -3102,16 +3102,16 @@ fn permanent_value_with(
     use crate::card::{CardType, CounterType, Supertype};
     let Some(c) = state.computed_permanent(id) else { return 0 };
     let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0) * w.cmc;
-    if c.card_types.contains(&CardType::Creature) {
+    if c.card_types().contains(&CardType::Creature) {
         v += w.creature_base + c.power.max(0) * w.power + c.toughness.max(0) * w.toughness;
         if w.keyword_pct != 0 {
-            v += keyword_value(&c.keywords, c.power, w) * w.keyword_pct / 100;
+            v += keyword_value(c.keywords(), c.power, w) * w.keyword_pct / 100;
         }
     }
-    if c.card_types.contains(&CardType::Planeswalker) {
+    if c.card_types().contains(&CardType::Planeswalker) {
         v += inst.map(|c| c.counter_count(CounterType::Loyalty) as i32).unwrap_or(0) * w.unit;
     }
-    if c.supertypes.contains(&Supertype::Legendary) {
+    if c.supertypes().contains(&Supertype::Legendary) {
         v += 2 * w.unit;
     }
     // A Prepared counter on a prepare-spell body is a castable spell in
@@ -6244,7 +6244,7 @@ fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
         .filter(|c| c.controller == seat && !c.tapped)
         .filter_map(|c| {
             let cp = state.computed_permanent(c.id)?;
-            cp.card_types.contains(&CardType::Creature).then_some((c.id, cp.power.max(0)))
+            cp.card_types().contains(&CardType::Creature).then_some((c.id, cp.power.max(0)))
         })
         .collect();
     crewers.sort_by_key(|&(_, p)| p);
@@ -6253,7 +6253,7 @@ fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
         let Some(cost) = v.definition.crew_cost() else { continue };
         let Some(cp) = state.computed_permanent(v.id) else { continue };
         // Already a creature (crewed/animated this turn) → nothing to do.
-        if cp.card_types.contains(&CardType::Creature) {
+        if cp.card_types().contains(&CardType::Creature) {
             continue;
         }
         let mut chosen = Vec::new();
@@ -7000,7 +7000,7 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
         // Already a creature this turn (crewed / animated)? Don't re-crew.
         if state
             .computed_permanent(vehicle.id)
-            .is_some_and(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+            .is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
         {
             continue;
         }
@@ -7123,9 +7123,9 @@ fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
         state
             .computed_permanent(c.id)
             .map(|cp| {
-                (!cp.keywords.has_kw(&Keyword::Defender)
+                (!cp.keywords().has_kw(&Keyword::Defender)
                     || state.ignores_defender_for_attack(c))
-                    && !cp.keywords.has_kw(&Keyword::CantAttack)
+                    && !cp.keywords().has_kw(&Keyword::CantAttack)
             })
             .unwrap_or(true)
     };
@@ -7472,7 +7472,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                 && c.can_block()
                 && !state
                     .computed_permanent(c.id)
-                    .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantBlock))
+                    .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBlock))
         })
         .collect();
     let has_ground_deathtouch = opp_blockers
@@ -7640,7 +7640,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     if attackers.len() == 1
         && state
             .computed_permanent(attackers[0])
-            .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantAttackAlone))
+            .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantAttackAlone))
     {
         attackers.clear();
     }
@@ -7654,7 +7654,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         attackers.retain(|id| {
             !state
                 .computed_permanent(*id)
-                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::AttacksAlone))
+                .is_some_and(|cp| cp.keywords().has_kw(&Keyword::AttacksAlone))
         });
     }
     // Find opponent planeswalkers in loyalty-ascending
@@ -7827,7 +7827,7 @@ fn restore_forced_attackers_unchecked(
             // exists" is just a non-empty batch; spelled as the engine
             // spells it so the two read alike.
             let others = attackers.iter().any(|id| *id != c.id);
-            if !must_attack(c, &cp.keywords, others)
+            if !must_attack(c, cp.keywords(), others)
                 || !state.attacker_is_able(seat, c, Some(&cp), power_caps, statics)
             {
                 continue;
@@ -7914,7 +7914,7 @@ fn trim_attacks_to_payable_tax(
     let keyword_tax = |id: CardId| {
         state
             .computed_permanent(id)
-            .map(|cp| state.attack_block_keyword_tax(id, &cp.keywords, true))
+            .map(|cp| state.attack_block_keyword_tax(id, cp.keywords(), true))
             .unwrap_or(0)
     };
     let total = state.attack_tax_for(attacks, statics, keyword_tax);
@@ -7944,7 +7944,7 @@ fn trim_attacks_to_payable_tax(
         let forced = state.battlefield_find(a.attacker).is_some_and(|c| {
             state
                 .computed_permanent(a.attacker)
-                .is_some_and(|cp| must_attack(c, &cp.keywords, attacks.len() > 1))
+                .is_some_and(|cp| must_attack(c, cp.keywords(), attacks.len() > 1))
         });
         // CR 508.1a/508.1g — a forced attacker is kept only while its own tax
         // fits the budget, which is exactly the question `attacker_is_able`
@@ -7980,7 +7980,7 @@ fn trim_attacks_to_payable_tax(
     if attacks.len() == 1
         && state
             .computed_permanent(attacks[0].attacker)
-            .is_some_and(|cp| cp.keywords.has_kw(&crate::card::Keyword::CantAttackAlone))
+            .is_some_and(|cp| cp.keywords().has_kw(&crate::card::Keyword::CantAttackAlone))
     {
         attacks.clear();
     }
@@ -8315,7 +8315,7 @@ fn sim_step(g: &mut GameState, action: GameAction) -> bool {
                 card.map(|c| c.definition.name).unwrap_or("?"),
                 card.map(|c| c.summoning_sick),
                 id.and_then(|i| g.computed_permanent(i))
-                    .map(|cp| format!("{:?}", cp.keywords))
+                    .map(|cp| format!("{:?}", cp.keywords()))
                     .unwrap_or_else(|| "-".into()),
             );
         }
@@ -8682,7 +8682,7 @@ fn block_requirement_present(state: &GameState) -> bool {
         || state.attacking().iter().any(|a| {
             state
                 .computed_permanent(a.attacker)
-                .is_some_and(|cp| min_blockers_required_kws(&cp.keywords) > 1)
+                .is_some_and(|cp| min_blockers_required_kws(cp.keywords()) > 1)
         })
 }
 
@@ -8779,7 +8779,7 @@ fn enforce_block_requirements(
         .filter(|a| {
             state
                 .computed_permanent(*a)
-                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::AllMustBlock))
+                .is_some_and(|cp| cp.keywords().has_kw(&Keyword::AllMustBlock))
                 && state.block_requirement_binds(*a)
         })
         .collect();
@@ -8806,8 +8806,8 @@ fn enforce_block_requirements(
             continue;
         }
         let obliged = state.computed_permanent(b.id).is_some_and(|cp| {
-            cp.keywords.has_kw(&Keyword::MustBlock)
-                || cp.keywords.has_kw(&Keyword::MustAttackOrBlock)
+            cp.keywords().has_kw(&Keyword::MustBlock)
+                || cp.keywords().has_kw(&Keyword::MustAttackOrBlock)
         });
         if !obliged {
             continue;
@@ -8842,7 +8842,7 @@ fn enforce_block_requirements(
             .filter(|a| {
                 let min_b = state
                     .computed_permanent(*a)
-                    .map_or(1, |cp| min_blockers_required_kws(&cp.keywords));
+                    .map_or(1, |cp| min_blockers_required_kws(cp.keywords()));
                 min_b <= 1
                     || blocks.iter().filter(|(_, aid)| aid == a).count()
                         + state.blocker_count_of(*a)
@@ -8863,7 +8863,7 @@ fn repair_block_candidate(state: &GameState, seat: usize, blocks: &mut Vec<(Card
     for a_id in attackers {
         let min_b = state
             .computed_permanent(a_id)
-            .map(|cp| min_blockers_required_kws(&cp.keywords))
+            .map(|cp| min_blockers_required_kws(cp.keywords()))
             .unwrap_or(1);
         if min_b <= 1 {
             continue;
@@ -9004,7 +9004,7 @@ fn gang_block_candidates(
         // is the granted Reach that answers it. See `evasion_bars_block`.
         let atk_cp = state.computed_permanent(atk.id);
         let a_flying = match &atk_cp {
-            Some(cp) => cp.keywords.has_kw(&Keyword::Flying),
+            Some(cp) => cp.keywords().has_kw(&Keyword::Flying),
             None => atk.has_keyword(&Keyword::Flying),
         };
         let a_tough = atk.toughness() - atk.damage as i32;
@@ -9013,14 +9013,14 @@ fn gang_block_candidates(
         for (b, bcp) in &idle {
             if evasion_bars_block(
                 a_flying,
-                bcp.keywords.has_kw(&Keyword::Flying),
-                bcp.keywords.has_kw(&Keyword::Reach),
+                bcp.keywords().has_kw(&Keyword::Flying),
+                bcp.keywords().has_kw(&Keyword::Reach),
             ) {
                 continue;
             }
             gang.push(b.id);
             dmg += b.power().max(0);
-            if bcp.keywords.has_kw(&Keyword::Deathtouch) || dmg >= a_tough {
+            if bcp.keywords().has_kw(&Keyword::Deathtouch) || dmg >= a_tough {
                 break;
             }
         }
@@ -9320,7 +9320,7 @@ fn trim_blocks_to_payable_tax(
     let keyword_tax = |id: CardId| {
         state
             .computed_permanent(id)
-            .map(|cp| state.attack_block_keyword_tax(id, &cp.keywords, false))
+            .map(|cp| state.attack_block_keyword_tax(id, cp.keywords(), false))
             .unwrap_or(0)
     };
     let taxed_board = state.block_tax_present();
@@ -9524,7 +9524,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 // Lure family are auras and equipment, so the keyword is
                 // almost always a grant) is invisible to the instance walk.
                 must_be_blocked: match &cp {
-                    Some(c) => c.keywords.has_kw(&Keyword::MustBeBlocked),
+                    Some(c) => c.keywords().has_kw(&Keyword::MustBeBlocked),
                     None => a.has_keyword(&Keyword::MustBeBlocked),
                 },
                 rampage: a
@@ -9544,7 +9544,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 // is invisible to the instance walk. An under-filled
                 // multi-block is rejected as a whole batch.
                 min_blockers: match &cp {
-                    Some(c) => min_blockers_required_kws(&c.keywords),
+                    Some(c) => min_blockers_required_kws(c.keywords()),
                     None => min_blockers_required(a),
                 },
                 poison: {
@@ -9638,9 +9638,9 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 c.id,
                 c.power(),
                 c.toughness(),
-                cp.keywords.has_kw(&Keyword::Flying),
-                cp.keywords.has_kw(&Keyword::Reach),
-                cp.keywords.has_kw(&Keyword::Deathtouch),
+                cp.keywords().has_kw(&Keyword::Flying),
+                cp.keywords().has_kw(&Keyword::Reach),
+                cp.keywords().has_kw(&Keyword::Deathtouch),
             )
         })
         .collect();
@@ -9798,9 +9798,9 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     c.id,
                     c.power(),
                     c.toughness(),
-                    cp.keywords.has_kw(&Keyword::Flying),
-                    cp.keywords.has_kw(&Keyword::Reach),
-                    cp.keywords.has_kw(&Keyword::Deathtouch),
+                    cp.keywords().has_kw(&Keyword::Flying),
+                    cp.keywords().has_kw(&Keyword::Reach),
+                    cp.keywords().has_kw(&Keyword::Deathtouch),
                 )
             })
             .collect();
@@ -9951,7 +9951,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             return usize::MAX;
         }
         state.computed_permanent(id).map_or(0, |cp| {
-            cp.keywords
+            cp.keywords()
                 .iter()
                 .filter_map(|k| match k {
                     Keyword::CanBlockAdditional(n) => Some(*n as usize),
@@ -10041,7 +10041,7 @@ fn enforce_block_caps(
         .filter(|a| {
             state
                 .computed_permanent(*a)
-                .is_some_and(|cp| cp.keywords.has_kw(&Keyword::CantBeBlockedByMoreThanOne))
+                .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBeBlockedByMoreThanOne))
         })
         .collect();
     for a_id in capped {
@@ -10583,7 +10583,7 @@ fn ward_tax(state: &GameState, id: CardId, actor: usize) -> Option<crate::card::
     }
     let cp = state.computed_permanent(id);
     let kws: &[Keyword] = match &cp {
-        Some(cp) => &cp.keywords,
+        Some(cp) => cp.keywords(),
         None => &c.definition.keywords,
     };
     kws.iter().find_map(|k| match k {
@@ -12369,7 +12369,7 @@ fn score_candidate(state: &GameState, seat: usize, action: &GameAction, w: &Eval
                     // pays back the wasted points so Shock-the-2/2 beats
                     // Fireball-for-8-the-2/2.
                     if let (Some(dmg), Some(cp)) = (damage, state.computed_permanent(id))
-                        && cp.card_types.contains(&CardType::Creature)
+                        && cp.card_types().contains(&CardType::Creature)
                     {
                         if dmg < cp.toughness {
                             v /= 4;
@@ -14820,7 +14820,7 @@ mod tests {
         }
         assert!(
             !g.computed_permanent(aura)
-                .is_some_and(|cp| cp.card_types.contains(&crate::card::CardType::Creature)),
+                .is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Creature)),
             "a bestowed permanent is not a creature",
         );
         g.step = TurnStep::DeclareAttackers;

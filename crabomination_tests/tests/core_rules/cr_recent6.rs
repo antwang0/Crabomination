@@ -49,7 +49,7 @@ fn cr_702_2b_granted_deathtouch_is_lethal() {
         },
         &ctx,
     ).unwrap();
-    assert!(g.computed_permanent(blockade).unwrap().keywords.contains(&Keyword::Deathtouch));
+    assert!(g.computed_permanent(blockade).unwrap().keywords().contains(&Keyword::Deathtouch));
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {

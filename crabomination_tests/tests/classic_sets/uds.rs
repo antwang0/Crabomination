@@ -372,13 +372,13 @@ fn emperor_crocodile_needs_company() {
 fn lurking_jackals_wakes_at_ten_life() {
     let mut g = two_player_game();
     let jackals = g.add_card_to_battlefield(0, catalog::lurking_jackals());
-    assert!(!g.computed_permanent(jackals).unwrap().card_types.contains(&CardType::Creature));
+    assert!(!g.computed_permanent(jackals).unwrap().card_types().contains(&CardType::Creature));
     g.players[1].life = 12;
     g.adjust_life(1, -3);
     g.dispatch_triggers_for_events(&[GameEvent::LifeLost { player: 1, amount: 3 }]);
     drain_stack(&mut g);
     let cp = g.computed_permanent(jackals).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.card_types().contains(&CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (3, 2));
 }
 
@@ -505,8 +505,8 @@ fn thran_golem_grows_while_enchanted() {
     cast(&mut g, aura, Some(Target::Permanent(golem)));
     let cp = g.computed_permanent(golem).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 4), "+3/-1 from the Aura, +2/+2 from itself");
-    assert!(cp.keywords.contains(&Keyword::Flying));
-    assert!(cp.keywords.contains(&Keyword::Trample));
+    assert!(cp.keywords().contains(&Keyword::Flying));
+    assert!(cp.keywords().contains(&Keyword::Trample));
 }
 
 /// Treachery steals the enchanted creature and untaps five lands.

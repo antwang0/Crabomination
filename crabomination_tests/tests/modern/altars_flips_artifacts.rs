@@ -322,7 +322,7 @@ fn assault_strobe_grants_double_strike() {
     let id = g.add_card_to_hand(0, catalog::assault_strobe());
     g.players[0].mana_pool.add(Color::Red, 1);
     cast_at(&mut g, id, Target::Permanent(bear));
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::DoubleStrike));
 }
 
 #[test]
@@ -336,7 +336,7 @@ fn uncaged_fury_pumps_and_grants_double_strike() {
     cast_at(&mut g, id, Target::Permanent(bear));
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + 1/1");
-    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+    assert!(cp.keywords().contains(&Keyword::DoubleStrike));
 }
 
 #[test]
@@ -346,8 +346,8 @@ fn goblin_war_drums_grants_menace_to_your_creatures() {
     g.add_card_to_battlefield(0, catalog::goblin_war_drums());
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Menace), "yours get menace");
-    assert!(!g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Menace), "opponent's don't");
+    assert!(g.computed_permanent(mine).unwrap().keywords().contains(&Keyword::Menace), "yours get menace");
+    assert!(!g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Menace), "opponent's don't");
 }
 
 // ── Green bodies + Eldrazi Spawn ramp ──────────────────────────────────────
@@ -577,7 +577,7 @@ fn legion_loyalist_battalion_grants_first_strike_and_trample() {
     let ctx = crabomination::game::effects::EffectContext::for_ability(ll, 0, None);
     g.resolve_effect(&effect, &ctx).unwrap();
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&Keyword::FirstStrike) && cp.keywords.contains(&Keyword::Trample),
+    assert!(cp.keywords().contains(&Keyword::FirstStrike) && cp.keywords().contains(&Keyword::Trample),
         "battalion grants first strike + trample to your creatures");
 }
 
@@ -592,7 +592,7 @@ fn torch_courier_sacrifices_to_grant_haste() {
     }).expect("sacrifice Torch Courier for haste");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| c.id != tc), "Torch Courier was sacrificed");
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Haste),
         "the target creature gained haste");
 }
 
@@ -915,8 +915,8 @@ fn basilisk_collar_grants_deathtouch_and_lifelink() {
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Equip { equipment: collar, target: bear }).expect("equip {2}");
     let cp = g.computed_permanent(bear).unwrap();
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Deathtouch), "deathtouch granted");
-    assert!(cp.keywords.contains(&crabomination::card::Keyword::Lifelink), "lifelink granted");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Deathtouch), "deathtouch granted");
+    assert!(cp.keywords().contains(&crabomination::card::Keyword::Lifelink), "lifelink granted");
 }
 
 #[test]
@@ -948,7 +948,7 @@ fn stalking_stones_animates_into_a_3_3() {
         card_id: id, ability_index: 1, target: None, additional_targets: vec![], x_value: None , mode: None}).expect("animate for {6}");
     drain_stack(&mut g);
     let cp = g.computed_permanent(id).unwrap();
-    assert!(cp.card_types.contains(&CardType::Creature), "becomes a creature");
+    assert!(cp.card_types().contains(&CardType::Creature), "becomes a creature");
     assert_eq!((cp.power, cp.toughness), (3, 3), "a 3/3 Elemental");
 }
 
