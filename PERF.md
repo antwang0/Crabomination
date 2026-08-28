@@ -2074,7 +2074,21 @@ wants each guarded arm as a `match` guard rather than an `if` inside the
 arm — take that, but only where the arm has no other statement: two of this
 function's arms set a flag *and* test one, and a guard would drop the flag.
 
-Suite 19,055 / 0 / 5, golden traces unmoved; clippy clean.
+**Closing state at `af0b2546`.**
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,055 / 0 / 5; the golden traces inside it, unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) — byte-identical to the committed invariant
+        determinism ok / thread_determinism ok (3 vs 1 threads identical)
+        games_per_s 204.11, peak_rss_mib 24.2, host_calib_ms 56
+```
+
+The pass also built and reverted two changes; both are written up where the
+next taker will look — the Cauldron bit under the ninety-second pass (3)'s
+block, `(-84)(b)`'s block-side scan in its own entry.
 
 ### Ninety-third pass — the multi-slot targeter, read from the inside, and the freeze that looked missing
 
