@@ -6044,6 +6044,43 @@ the table above is safe to compress:
 
 ## Log
 
+### Eighty-ninth pass — the `reserve_rehash` row is not a lead, and removing allocations made the program slower
+
+**Built twice, measured twice, reverted.** `RawTable::reserve_rehash` is
+49,107 calls / ~12.4 M Ir / **0.40 % of `cube`**, and its caller table names
+three small maps over a handful of keys —
+`pick_blocks_inner`'s two attacker-keyed counters (7,310) and
+`declare_blockers`' `distinct` / `all_blockers` blocker sets (12,198). Both
+replacements are the obvious ones and both lose:
+
+```text
+base: the eighty-ninth tip.  callgrind, profiling-fast --no-default-features.
+(1) Vec<i32> indexed by position + SmallVec<[CardId; 8]> sets
+      fixed  +0.241 %   cube  +0.116 %   sealed  +0.166 %
+(2) the same, with the counters inline (SmallVec<[i32; 8]>)
+      fixed  +0.084 %   cube  +0.029 %   sealed  +0.056 %
+    reserve_rehash  49,107 -> 40,167      __rust_alloc  1,621,792 -> 1,613,476
+```
+
+**Fewer rehashes and fewer allocations, and slower.** Two reasons, and both
+are rules this file already carries, meeting on one change:
+
+* **A `fxhash::HashMap::default()` that is never written never allocates**,
+  and most block declarations write nothing. `vec![0; n]` always does — which
+  is the whole of (1)'s regression, and (2) recovering three quarters of it
+  by going inline is the proof.
+* **The counters are read on every (blocker x attacker) pair**, i.e. the
+  innermost loop, so a non-`union` `SmallVec`'s discriminant check is paid
+  ~25 k times a run against a hash probe paid 7,310 times. That is
+  `(-72)`/`(-71)`'s "inline storage is a local's device; the *read* count
+  pays for it", one level in.
+
+**The transferable half: an allocation-table or rehash-table row is a lead
+only if the collection is *written*.** The ward gate one entry down was
+10,736 allocations that were *made*; these are 8,940 rehashes that are mostly
+the first insert into a map the caller then reads a few times. Count the
+writes before ranking the row.
+
 ### Eighty-ninth pass — a correctness fix that is also faster: the block planner stops resolving the computed view twice
 
 **`fixed` -0.276 %, `cube` -0.229 %, `sealed` -0.257 %.** The change is a bug
