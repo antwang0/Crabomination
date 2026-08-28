@@ -26,22 +26,33 @@ sixty-seventh pass, so don't re-take that.
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 
-1. **Perf queue** — PERF "Perf candidates", ranked: **(-75)**, (-70) (quiet
-   window only), (-69)'s two unclaimed rows, (-51)(b), (-60), (-61), (-51)(a),
-   (-59). Pass 86 closed (-71)+its first sweep and (-73); refuted with
-   numbers (-72), (-74), and three more sites of (-71)'s sweep — read its
-   growth-count-vs-call-count table before taking a fourth.
+1. **Perf queue** — PERF "Perf candidates", ranked: **(-76)**'s
+   `affected_from_requirement` row (the one field whose `SmallVec` is
+   *smaller* than its `Vec`), **(-75)**, (-70) (quiet window only), (-69)'s
+   two unclaimed rows, (-51)(b), (-60), (-61), (-51)(a), (-59). Pass 86
+   closed (-71) and its sweep, (-73), and the `CowBox<Vec<T>>` half of (-76);
+   refuted with numbers (-72), (-74), the ability-count reserve, and three
+   more sites of (-71)'s sweep.
 2. **Perf method** — PERF "How to measure" and "Which pool a change moves",
    then the standing rules below. **Read all three pools**: pass 86 had one
-   change that split by pool and one that did not.
+   change that split by pool and one that did not. And **size an inline
+   buffer before rejecting it**: the same three-field change is +0.137 % at
+   one capacity and -0.463 % at another (the rule is under (-76)).
 3. **Instruments before profiles** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
    `server::bot_rejection_count`, `--bench`'s stall split.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
-   encodings: a change **invalidates the trained nets**. Say so here.
+   encodings: a change **invalidates the trained nets**. Say so here. Pass
+   86's `SmallVec` fields did **not** move it: the wire shape is a sequence
+   either way, so no retrain.
 5. **Bugs** — ENGINE_BACKLOG's live-match section; its sweep is a `0..4000u64`
    loop in the cube smoke test read through `bot_rejection_count()`, run
    **before and after**. Robustness gate: `-C debug-assertions=yes` on
-   `[profile.overflow]`.
+   `[profile.overflow]`. Newly open there and both one-liners *given a
+   resolving selector*: `Selector::BlockedAttacker` never resolves in an
+   event filter (Righteous Indignation's colour clause is dead) and
+   `EntityMatches` over `EachPermanent(…)` is an existence test whose empty
+   case reads true (Tide Shaper's pump is unconditional). The sweep has not
+   been re-run since the picker's off-board gate landed.
 6. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
 7. **Filters** — five read zero; `bot_rejection_count()` over the seeded cube
@@ -61,6 +72,27 @@ one-sentence claim plus the pass that measured it; do not delete one, because
 the point of the section is that a rule refuted on a *mechanism* stays
 refuted.
 
+- **`Vec::clone` hands back `capacity == len`, so every `Vec` inside a
+  copy-on-write structure reallocates on its first push after the copy**
+  (pass 86, the concurrent half, (-76); `cube` -0.44 % over six sites). The
+  `CowBox<Vec<T>>` half is closed centrally by an inherent `push` that
+  materializes at `len + 1`; the plain-field half is per field. **Ask what
+  else copies a `Vec` and then writes to the copy.**
+- **Size an inline buffer before rejecting it: `SmallVec<[T; N]>` is
+  `8 + max(N * size_of::<T>(), 16)` bytes, so below 16 bytes of payload it is
+  exactly the 24 bytes the `Vec` was** (same entry). The same three-field
+  change reads `fixed` **+0.137 %** at `[_; 4]/[_; 8]/[_; 4]` and **-0.463 %**
+  at `[_; 1]/[_; 4]/[_; 1]` **on an identical allocation saving** — the tax is
+  the struct's bytes, priced at ~0.0009 % of `cube` a byte by (-74)'s padding
+  probe. This **narrows (-72)**, which is the *read* count on `.players`
+  (35,000 sites) and not a refutation of struct fields as such. Two tests, not
+  one: read count first, byte count second.
+- **A *returned* buffer is not disqualified from inline storage — the
+  disqualifier is bytes moved** (same entry; `cube` -0.211 %).
+  `statics_granted_triggers_inner` returns a `Vec` of *references*, so
+  `SmallVec<[&T; 2]>` moves the same 24 bytes it always moved and the 0-2 case
+  stops allocating. Read (-71)'s warning as arithmetic, not as a rule about
+  ownership.
 - **A "more exact" reserve is still a reserve, and `ContinuousEffect` is a
   large struct** (pass 86; `fixed` +0.461 %, `cube` +0.401 %, `sealed`
   +0.373 %). The gather sizes `all_effects` by a *card* count while

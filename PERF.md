@@ -948,6 +948,65 @@ rather than removing it. Removing that one needs the buffer to outlive the
 action, i.e. a `perform_action_into` whose caller reuses one across actions,
 which is a public-API change and not what (-75) describes.
 
+### Eighty-sixth pass, the concurrent half — the CoW `Vec` class, and the sizing rule that reopens it
+
+Eight commits on top of `aefae7bb` (the other half's tip): six perf, two
+bugs. Whole-stack reading, callgrind, `profiling-fast --no-default-features`,
+`--a gang --b gang --games 6 --threads 1 --seed 1`:
+
+```text
+                 base aefae7bb        tip a2e6ea33
+  fixed        1,106,711,404 ->     1,094,185,204     -1.132 %
+  cube         3,355,240,795 ->     3,324,283,340     -0.923 %
+  sealed       3,291,519,150 ->     3,256,373,073     -1.068 %
+  cube grow_one      428,190 ->           336,530    -91,660
+  cube allocations 1,759,090 ->         1,653,894   -105,196
+```
+
+**The finding is one sentence: `Vec::clone` hands back `capacity == len`, so
+every `Vec` inside a copy-on-write structure reallocates on its first push
+after the copy.** See the Log for the two fixes it takes and for the sizing
+rule that decides the second, which is the reusable half:
+**`SmallVec<[T; N]>` is `8 + max(N * size_of::<T>(), 16)` bytes, so at
+`N * size_of::<T>() <= 16` it is exactly the 24 bytes the `Vec` was** — and
+the same change that reads `+0.137 %` at `[_; 4]/[_; 8]/[_; 4]` reads
+`-0.463 %` at `[_; 1]/[_; 4]/[_; 1]` on an identical allocation saving.
+
+Per-commit rows (each against the commit below it; the four middle ones were
+measured on the pre-rebase chain, whose base is the same tip minus the other
+half's `combat.rs` sweep, and they touch disjoint code):
+
+```text
+                                              fixed        cube
+  CowBox<Vec<T>>::push materializes at len+1  -0.382 %   -0.239 %
+  the per-turn cast accumulators, sized       -0.463 %   -0.294 %
+  five combat bookkeeping lists, size-neutral -0.221 %   -0.230 %
+  the granted-trigger list (a Vec of refs)    -0.074 %   -0.211 %
+  the block side's Hollow Warrior gate        -0.134 %   -0.058 %
+```
+
+**STATE AT `a2e6ea33`, the pass's eighth commit and the tip of this half.**
+The branch tip is `d9093fb5` on top of it (the other half's SBA buffer, whose
+own block is above); this reading does not carry its -0.045 %.
+
+```text
+suite  cargo nextest run --workspace --exclude crabomination_client
+       19,060 / 0 / 5   (~73 s after the build; +4 tests, all new regressions)
+clippy --workspace --exclude crabomination_client --all-targets   clean
+golden traces  unmoved (they run inside the suite above)
+--bench  195,528 decisions / 27.44 turns / 611.0 decisions a game /
+         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok /
+         thread_determinism ok (3 vs 1 threads identical, CRAB_THREAD_CHECK=1)
+         — **byte-identical to the committed invariant**, and the two bug
+         fixes are in it: neither defect fires on `--decks fixed`
+         238.2-242.8 games/s, peak_rss_mib 27.5-30.1, host_calib_ms 46-48
+         over three runs (`release-fast`, mimalloc, 2.10 GHz Xeon, 3 threads)
+         against the other half's 224.4-228.9 at calib 45-48
+robustness  --games 120 --threads 3 --seed 7 --decks all (five pools,
+         2,040 games): 0 undecided, no panic
+whole-program Ir  fixed 1,094,185,204  cube 3,324,283,340
+                  sealed 3,256,373,073
+```
 ### Eighty-sixth pass — the local accumulator that allocates, and a dependency feature that was worth 0.12 % of `fixed`
 
 ```text
@@ -4390,6 +4449,96 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Eighty-sixth pass, the concurrent half — `Vec::clone` hands back `capacity == len`, and that one sentence is a class
+
+**0. The class.** Every `Vec` that lives inside a copy-on-write structure
+**reallocates on its first push after the copy**, because `Vec::clone` gives
+`capacity == len` and the push that follows has nowhere to put the element.
+The engine clones `GameState` 22,684 times and unshares a CoW zone 244,032
+times on a six-game `cube` run, so this is not a corner. It has two fixes and
+they are different shapes.
+
+**(a) On a `CowBox<Vec<T>>`, materialize the unshare with room.** An inherent
+`push` that builds the copy at `Vec::with_capacity(len + 1)` instead of
+letting `Arc::make_mut`'s `Vec::clone` hand back an exact-capacity buffer.
+Inherent, so it shadows the `Deref`'d `Vec::push` at **every** existing call
+site and nothing else changed. `Graveyard` needs the same one-line forward
+because its `Deref` target is the `Vec`, not the box.
+
+```text
+fixed 1,107,388,314 -> 1,103,156,086  -0.382 %
+cube  3,356,745,008 -> 3,348,723,597  -0.239 %
+cube grow_one 436,768 -> 421,772;  Arc::clone_from_ref_in 244,032 -> 215,360
+finalize_cast's grow_one row 22,930 / 7,276,145 -> 17,520 / 3,665,846
+```
+
+Same device as `layers::Printed<Vec<_>>::push` one level out: there the copy
+is the layer override, here it is the CoW unshare. **Ask what else in this
+engine copies a `Vec` and then writes to the copy.**
+
+**(b) On a plain `Vec` *field*, inline storage — AND THE CAPACITY IS THE
+WHOLE ENTRY.** `finalize_cast` pushes three times into `PlayerData`'s
+per-turn cast lists and all three grew, 3.2 growths a cast over 5,432 casts.
+Both sizings were built:
+
+```text
+base 45d96550                          fixed        cube      allocations
+  SmallVec<[_;4]> / [_;8] / [_;4]    +0.137 %    +0.068 %    -34,732
+  SmallVec<[_;1]> / [_;4] / [_;1]    -0.463 %    -0.294 %    -30,190
+```
+
+**Identical growth removal, opposite sign, and the difference is 176 bytes of
+`PlayerData`.** The wide build is +176 bytes on a struct every CoW unshare
+memcpys; the narrow one is +16, because `SmallVec<[T; N]>` is
+`8 + max(N * size_of::<T>(), 16)` bytes and **two of the three are exactly the
+24 bytes the `Vec` was**. The narrow build even *spills* 4,542 more times and
+still wins by 0.36 % of `cube`.
+
+**This is a different mechanism from (-72) and it reopens the class (-72)
+looked like it had closed.** (-72) is the *read* count — `.players` has
+~35,000 read sites and every one pays `spilled()`. This is the struct's
+*bytes*, and it is zero whenever `N * size_of::<T>() <= 16`. **The rule:
+before rejecting inline storage on a struct field, check whether the
+`SmallVec` is actually bigger than the `Vec`. Below 16 bytes of payload it is
+not, and then only the read count can lose.**
+
+**1. The rule applied, and it is free by construction.** Five combat
+bookkeeping lists — `GameState::blocked_attackers` and
+`blocks_declared_this_turn`, `block_map`'s per-blocker attacker list, and
+`CardData`'s `blocked_attackers_this_turn` and `damage_by_source_this_turn` —
+are `SmallVec` at `[CardId; 4]` / `[(CardId, _); 2]`, i.e. 24 bytes each, i.e.
+no size change at all. **`fixed` -0.221 %, `cube` -0.230 %**, grow_one
+405,518 -> 371,910, allocations 1,720,558 -> 1,680,268. `declare_blockers`,
+`add_block` and `record_damage_from` all leave the grow_one table.
+
+**2. A *returned* buffer is not disqualified — the disqualifier is bytes
+moved.** (-71) warns that "a buffer that is returned is not this shape"
+because an inline buffer moves its bytes at every return.
+`statics_granted_triggers_inner` returns a `Vec` of **references**: eight
+bytes an element, so `SmallVec<[&TriggeredAbility; 2]>` moves exactly the 24
+bytes the `Vec` moved, and the 0-2 case — nearly all of them on a grant-heavy
+board — stops allocating. **`fixed` -0.074 %, `cube` -0.211 %**, grow_one
+-31,562. Read the warning as arithmetic, not as a rule about ownership.
+
+**3. And one presence gate that the sibling function already had.**
+`declare_attackers_banded` builds its Hollow Warrior helper list only when
+some declared attacker carries `AttackBlockCostTapAnother`; `declare_blockers`
+built the same list on every declaration in every game. **`fixed` -0.134 %,
+`cube` -0.058 %.** Two hand-written halves of one rule, one of them gated —
+grep the *other* side whenever a gate is added to one.
+
+**The pass's two bug fixes came out of the same reading.** ENGINE_BACKLOG's
+"the target enumerator is zone-blind" is closed on the picker side (the
+last-resort graveyard/exile walk is gated on `Effect::may_target_offboard_
+card`, a new classifier that is deliberately *not* `prefers_graveyard_target`
+— that one decides walk order and has to stay narrow or Condemn aims at a
+graveyard), and closing it surfaced a second one underneath:
+`Predicate::EntityMatches` answers with `all` over the resolved selector, and
+`all` over an empty selector is vacuously **true**, so an ability whose target
+was never chosen ran the `then` branch of a clause with nothing to be true of.
+**And the vacuous `true` is masking two more, both recorded rather than
+fixed** — see ENGINE_BACKLOG.
 
 ### Eighty-fifth pass, the concurrent half — three of four wins were a stale abstraction, and one of them was a cache of a value equal to what it cached
 
@@ -8679,6 +8828,76 @@ whose first `push` is the allocation — at half the size each, ~1.2 % of
   every return; the entry above is specifically about a local that dies in
   its own frame.
 
+**(-76) THE COPY-ON-WRITE `Vec` CLASS — SIZE-NEUTRAL INLINE STORAGE, AND WHAT
+IS LEFT OF IT. FIVE FIELDS AND ONE RETURN TAKEN AT THE EIGHTY-SIXTH PASS'S
+CONCURRENT HALF (`cube` -0.44 % between them); THE SWEEP IS NOT FINISHED.**
+
+The class: `Vec::clone` hands back `capacity == len`, so **every `Vec` inside
+a copy-on-write structure reallocates on its first push after the copy** —
+22,684 `GameState` clones and 244,032 CoW unshares a `cube` run. The
+`CowBox<Vec<T>>` half is closed centrally (an inherent `push` that
+materializes at `len + 1`, zero call sites). The plain-`Vec`-field half is
+per field, and the sizing rule is the entry:
+
+```text
+SmallVec<[T; N]> is 8 + max(N * size_of::<T>(), 16) bytes.
+Vec<T> is 24. So N * size_of::<T>() <= 16 is FREE, and above it the
+struct's bytes are the tax — measured at ~0.0009 % of `cube` a byte
+((-74)'s padding probe), i.e. 176 bytes is 0.16 %.
+```
+
+Taken: `blocked_attackers` `[CardId; 4]`, `blocks_declared_this_turn`
+`[(CardId, CardId); 2]`, `block_map`'s value `[CardId; 4]`,
+`CardData::blocked_attackers_this_turn` `[CardId; 4]`,
+`damage_by_source_this_turn` `[(CardId, u32); 2]` — all 24 bytes, all
+size-neutral — plus `PlayerData`'s three per-turn cast lists at the narrow
+sizing and `statics_granted_triggers_inner`'s **returned** `Vec` of
+references (eight-byte elements, so the return moves the same 24 bytes).
+
+**Two tests before taking one, and they are not the same test.** (a) the read
+count — (-72) is 35,000 sites on `.players` and that is what killed it; (b)
+the byte count above. A field that fails (a) is dead whatever its size; a
+field that passes (a) is free below 16 bytes of payload and priced above it.
+
+**What is left, from the `grow_one` caller table at `a2e6ea33` (`--decks
+cube`, 336,530 growths):**
+
+```text
+  61,044  10,865,703  Vec::push_mut        <- out-of-line push; its callers are
+                                           `static_effect_to_effects`
+                                           (`all_effects`, REFUTED — see the
+                                           standing rules), `activate_ability_
+                                           inner` 44,776 and `run_effect`
+                                           24,970 calls, both unread
+  37,670   4,522,488  advance_step         <- (-75), the events family
+  29,474   3,537,038  dispatch_board_scan  <- returns its two `Vec`s in a
+                                           `DispatchScan`; `TriggerGrant`
+                                           carries an owned filter, so this
+                                           one really does move bytes
+  26,852   4,604,936  check_state_based_actions   <- (-75)
+  16,066   2,289,388  affected_from_requirement   <- `types: Vec<CardType>`,
+                                           one byte an element, and it goes
+                                           into `AffectedPermanents::All`,
+                                           i.e. into `ContinuousEffect`. A
+                                           `SmallVec<[CardType; 8]>` is
+                                           **16 bytes, smaller than the
+                                           `Vec`** — the only entry here that
+                                           shrinks the struct it is on.
+                                           Serde and ~40 read sites.
+  15,856   3,960,971  resolve_combat              <- (-75)
+  13,104   2,468,718  deal_combat_damage_to_target
+  11,410   1,433,420  grant_scan           <- returns a `GrantScan`
+   9,146   1,099,494  effective_mana_abilities_into
+   8,286   1,082,988  granted_abilities_of
+   8,262   4,573,173  CowBox<Vec<T>>::push <- the amortised growth that is
+                                           left after the unshare fix; real
+                                           work, not a defect
+```
+
+`affected_from_requirement` is the one shaped like a next commit. Everything
+under (-75) wants that entry's signature change instead.
+
+**(-75) THE `events: Vec<GameEvent>` ACCUMULATOR FAMILY IS ~0.8 % OF `cube`
 **(-75) FIRST INSTALMENT TAKEN AT THE EIGHTY-SEVENTH PASS — `fixed`
 -0.035 %, `cube` -0.045 %, `sealed` -0.073 % — AND THE ENTRY'S SIZING IS
 REFUTED BY IT.** `check_state_based_actions_into` was the family's second-
@@ -8803,6 +9022,17 @@ saving was exactly what the entry predicted.** `players: SmallVec<[Player;
 4]>` removed **22,684 allocations on `cube`, one per `GameState` clone, to
 the unit** — and the run got 16.5 M Ir *slower*, because the saving is ~6.6 M
 and the read tax is ~23 M.
+
+**⚠ NARROWED at the same pass's concurrent half: this refutation is about
+`players`, not about struct fields.** `SmallVec<[T; N]>` is
+`8 + max(N * size_of::<T>(), 16)` bytes, so at `N * size_of::<T>() <= 16` it
+is **exactly the 24 bytes `Vec<T>` is** and the only cost left is the read
+count — which is what kills `players` (35,000 sites) and not, say,
+`blocked_attackers` (30). The same three-field change on `PlayerData`'s
+per-turn cast lists reads `+0.137 %` at `[_; 4]/[_; 8]/[_; 4]` (+176 bytes)
+and **`-0.463 %` at `[_; 1]/[_; 4]/[_; 1]`** (+16) on an identical allocation
+saving. See (-76) and the Log. **Check the byte count before quoting this
+entry as a refusal.**
 
 **(-71)'s device does not generalise from a local to a struct field, and the
 reason is the read count, not the size.** `sa_cards` has ~forty read sites

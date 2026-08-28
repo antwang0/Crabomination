@@ -78,13 +78,67 @@ would work is a zone in the filter (a `Not(Player)` that means "a card in a
 graveyard" should say so) or a zone argument to the enumerator; both are
 catalog-wide.
 
-**And the auto-picker has the same blindness with no gate at all.**
-`auto_target_for_effect_avoiding_set_xc_inner`'s final fallback walks every
+### ~~And the auto-picker has the same blindness with no gate at all~~ — fixed at the eighty-sixth pass
+
+`auto_target_for_effect_avoiding_set_xc_inner`'s final fallback walked every
 graveyard and then exile for *any* filter, so a "destroy target creature"
-trigger with no legal battlefield creature auto-targets an exiled card in the
-**training** path (`wants_ui` false), where it silently fizzles instead of
-resolving targetless. Not observed as a wrong outcome; recorded because it is
-the same defect on the side no instrument watches.
+trigger with no legal battlefield creature auto-targeted an exiled card in the
+**training** path (`wants_ui` false), where it silently fizzled instead of
+resolving targetless — the same defect as the modal one above, on the side no
+instrument watches.
+
+It is gated now, on `Effect::may_target_offboard_card()` or the filter naming
+the zone. **The gate is deliberately not `prefers_graveyard_target`**, which
+decides walk *order* and has to stay narrow: making Condemn ("put target
+attacking creature on the bottom of its owner's library") prefer a graveyard
+would aim it at one. The new classifier is the superset — *any* zone change of
+the target, because a `Move`'s destination is all the engine has to tell
+Mortuary Mire's "return target creature card from your graveyard to the top of
+your library" from Condemn — plus the modal and wrapper recursion its siblings
+(`requires_target`, `primary_target_filter`, `accepts_player_target`) already
+carried and it did not. Three tests in `core_rules::target_walkers::
+offboard_gate`; the `--bench` invariant and the golden traces are unmoved, so
+the defect does not fire on `--decks fixed`.
+
+**What it does not fix is the enumerator itself.** The zone predicate the
+filter language is missing is still missing, so `legal_targets_for_filter`
+still applies a board-shaped requirement to every graveyard and to exile and
+the callers still separate the results by hand. This closes the *picker*'s
+half; the catalog-wide fix above is still the fix.
+
+### Vacuous `true` in `Predicate::EntityMatches` — one closed, two open
+
+`EntityMatches` answers with `all` over the resolved selector, and `all` over
+an **empty** selector is vacuously true. Closing the gate above surfaced it:
+an ability whose target was never chosen ran the `then` branch of a clause
+that had nothing to be true *of* (Eagle of Deliverance drew a card off an
+indestructible counter it had put on nothing).
+
+**Fixed:** `Selector::Target(n)` with nothing bound in `ctx.targets` answers
+`false`. Scoped to the slot on purpose, because the same predicate is written
+in two other shapes where the empty set is a *live* defect rather than a
+missing binding, and both were built and measured (the full
+`!ents.is_empty() &&` guard) before being backed out:
+
+* **`Selector::BlockedAttacker` as an event filter never resolves.** Righteous
+  Indignation is `EventKind::Blocks` `.with_filter(EntityMatches {
+  BlockedAttacker, Black|Red })` — "whenever a creature blocks a black or red
+  creature". Under the full guard
+  `classic_sets::mmq4::righteous_indignation_pumps_the_blocker` fails **with a
+  black attacker on the board**, which says the selector resolves to nothing
+  at filter-evaluation time and the colour clause has never been read. The
+  card pumps a blocker of anything.
+* **`Selector::EachPermanent(…)` is written as a plain existence test and the
+  empty set is the answer it wants.** Tide Shaper's "gets +1/+1 as long as an
+  opponent controls an Island" is `EntityMatches { EachPermanent(Island &
+  ControlledByOpponent), filter: Any }`, so with no opponent Island the `all`
+  is vacuously true and the pump is unconditional. `mh::mh2e::tide_shaper_
+  kicked` asserts the current (wrong) stat line, so the fix is a test change
+  as well as an engine one.
+
+Both are one-line fixes *given* a resolving selector, and neither is one line
+without it. `EntityMatchesAny` is `any` and is correct on the empty set, which
+is the shape to prefer in new cards.
 
 ### ~~The bot answers a mandatory off-board modal with nothing~~ — fixed
 

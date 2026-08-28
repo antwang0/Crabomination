@@ -1625,22 +1625,25 @@ impl GameState {
             // Scoped to the slot: this predicate is also written over
             // `EachPermanent(…)` as a plain existence test, where the empty
             // set is a *separate* open defect (see ENGINE_BACKLOG).
-            Predicate::EntityMatches { what, filter }
-                if matches!(what, crate::effect::Selector::Target(n)
-                    if ctx.targets.get(*n as usize).is_none()) =>
-            {
-                let _ = filter;
-                false
-            }
-            Predicate::EntityMatches { what, filter } => self
-                .resolve_selector(what, ctx)
-                .into_iter()
-                .all(|e| match e {
-                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
-                        self.evaluate_requirement_static(filter, &Target::Permanent(cid), ctx.controller, ctx.source)
+            Predicate::EntityMatches { what, filter } => {
+                let unbound_slot = match what {
+                    crate::effect::Selector::Target(n) => {
+                        ctx.targets.get(*n as usize).is_none()
                     }
-                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
-                }),
+                    _ => false,
+                };
+                !unbound_slot
+                    && self.resolve_selector(what, ctx).into_iter().all(|e| match e {
+                        EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
+                            .evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(cid),
+                                ctx.controller,
+                                ctx.source,
+                            ),
+                        EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                    })
+            }
             Predicate::EntityMatchesAny { what, filter } => self
                 .resolve_selector(what, ctx)
                 .into_iter()
