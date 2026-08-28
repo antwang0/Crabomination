@@ -21,96 +21,45 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT (handoff — an INDEX. Every number lives in PERF; nothing here restates one.)
+## NEXT (handoff — an INDEX, ≤15 lines. Every number lives in PERF,
+ENGINE_BACKLOG or INCOMPLETE_CARDS; nothing here restates one.)
 
 **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
+**Sequential builds only** — two cold ones are OOM-killed here (PERF hazards).
 
-1. **Perf queue** — PERF "Perf candidates". `(-77)`'s memo device is
-   **CLOSED**: four rows shipped, three refuted, and one refutation
-   *reversed* — `dispatch_board_scan` came back off the refuted list at the
-   eighty-eighth pass at `cube` -0.317 %, and its last row
-   (`granted_abilities_of`, six exact bits) was built and reverted in the
-   same pass at `fixed` +0.024 %. The rule that separates the two is in that
-   Baseline block: **count the work items the bit elides, not their kind** —
-   four per card wins, one length check does not. `(-51)(a)` is **re-sized in
-   the actor block and its named blocker shipped**, so take it next.
-   `(-78)`'s `flat_map` half is **swept** — six commits, `FlatMap::next` off
-   the profile as a named row; what is left of it is `Chain` at a third the
-   traffic and none of it a whole-board walk, so expect a tenth. **New and
-   already closed: the write-once `Box` field.** `resolving_spell_snapshot`
-   is `Arc` now (`fixed` -0.287 % / `cube` -0.203 % / `sealed` -0.222 %,
-   21,896 allocations), and the sweep behind it is done: `GameState`'s other `Box`
-   is the decider and it is free already (ZST), and `PlayerData` /
-   `PlayerCold` / `ColdState` / `CardData` / `CardCold` carry none at all —
-   `CardDefinition`'s fourteen sit behind the shared `Arc`. PERF's newest
-   Baseline block has the one-line grep that closes it. Then (-70) (quiet window
-   only), (-69)'s two unclaimed rows, (-61), (-59). **(-60) is closed** — the
-   visitor rewrite plus the eighty-eighth's gate.
-2. **Perf method** — PERF's "How to measure", **"Standing rules for a perf
-   pass"** (moved there from this file this pass) and "Which pool a change
-   moves". Read all three pools; a pool split is a revert.
-3. **Instruments before profiles** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
-   `server::bot_rejection_count`, `--bench`'s stall split. **All re-read at
-   this tip** (PERF, above the eighty-seventh Baseline block): rejects **0 in
-   25 cells** over 246,000+ simulated declarations, and `CRAB_PAY_FAILS` on
-   `--decks fixed` has gone from ~700 to **zero** while `sos` is
-   byte-identical, which is what makes it a reading rather than drift.
+1. **Perf queue** — PERF "Perf candidates", top-down: `(-51)(a)`, then
+   `(-70)` (quiet window only), `(-69)`'s two unclaimed rows, `(-61)`,
+   `(-59)`. Closed: `(-60)`, `(-77)`, the write-once `Box` class, `(-39)`.
+2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
+   pass" and "Which pool a change moves". Read all three pools; a pool split
+   is a revert. The two devices that paid last: the allocation table ranked
+   by calls, and `scripts/cg_calls.py` (call count + Ir/call).
+3. **Instruments** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
+   `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`.
+   All read at the tip; see PERF's newest Baseline block.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
-   encodings invalidate the trained nets. **Two commits this pass are inside
-   `encode.rs` and neither moves a byte of output**: the library grouping
-   dropped its `BTreeMap` for a sorted inline buffer (unique keys, same total
-   order), and `Vocab::index_of` became a memo slot. Identical rows over
-   identical play, both audited by
-   `the_library_encodes_as_a_deduplicated_multiset` and by the actor's
-   `debug_assert!`. **No net needs retraining as of `dc478735`.**
-5. **Robustness gate** — RUN and clean at the eighty-seventh pass for all
-   seven memo families: `-C debug-assertions=yes` on `[profile.overflow]`,
-   **33,120 games over 5 pools x 6 seeds**, plus **360 actor games** for the
-   vocab-index memo the ladder cannot reach. **`scripts/robustness_grid.sh`**
-   is the committed recipe — build, the `strings … | grep "memo is stale"`
-   proof that `RUSTFLAGS` reached the right crate, the grid, non-zero exit on
-   any failure; `POOLS` / `SEEDS` / `GAMES` override and `--no-build` reuses
-   `target-audit/`.
-6. **Bugs** — ENGINE_BACKLOG's live-match section, and the one open entry is
-   now **scoped and ready to take**: a layer-7 `PumpSelfIf` condition cannot
-   see a layer-4 type change (CR 613.8). It is a *class* — **~60 of the 194
-   catalog `PumpSelfIf` conditions read a characteristic a layer can
-   change**, the other ~134 read player/zone facts and are correct as they
-   stand. Two designs are written out there with which cards each covers; the
-   `CardMatchPowerGated` sibling covers only the per-card ones, so the
-   two-phase gather is the one that pays. It moves golden traces
-   (legitimately) and lives in the hottest function, so it needs a `--decks
-   cube` reading and the debug-assertions ladder gate, not just the suite.
-   Both card audits are **re-run and clean at this tip**: `audit_incomplete
-   --structural-only` 21,795 scanned / 0 need review, `audit_stubs` 21,795 /
-   0 flagged, `audit_variant_coverage` 0 dead capabilities over 1,695
-   variants. The seeded 4,000-pairing sweep is clean at the eighty-seventh
-   tip **and re-run clean at its last code commit** (931.8 s, every match
-   inside its 180 s budget, `bot_rejection_count()` unmoved) — that run
-   carries the whole memo device, which is the one behaviour claim in the
-   pass that only a real board can audit.
+   encodings invalidate the trained nets. **Nothing since `dc478735` touches
+   `encode.rs`, `crabomination_ml` or `crabomination_nn` at all**, so no
+   layout moved. The CR 613.8 fix does change ~60 cards' computed P/T, i.e.
+   the *distribution* a net sees, not the encoding of it — a self-play net
+   re-learns that; a net being compared across the fix does not.
+5. **Robustness gate** — `scripts/robustness_grid.sh` plus the actor leg, the
+   seeded 4,000-pairing cube sweep, and the two census env vars. Run in full
+   at the eighty-ninth pass under a behaviour change; clean.
+6. **Bugs** — ENGINE_BACKLOG's live-match section has **no open entry** (CR
+   613.8 shipped). What is left there is two 🟡 *class* entries: the block
+   pair gate's two hand-written lists, and the printed-vs-computed combat
+   checks' missing guards. Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
-8. **Tip state** — PERF "Baseline"'s **CLOSING STATE** block: the
-   eighty-seventh pass is **-4.906 % `fixed` / -4.986 % `cube` / -4.571 %
-   `sealed`** end to end across both halves, with the rustc version and the
-   box fingerprint beside the numbers. The actor is **-8.02 %** since pass 83
-   with play byte-identical ("Profile of record"). `--bench` byte-identical
-   throughout; suite 19,063 / 0 / 5; clippy clean.
-   **The clock is a ladder-pool instrument, not an actor one**: the pass
-   reads -1.59 % paired on `ab_wall.py --decks fixed` with a flat null, and
-   `selfplay_train --actors 3`'s own null spreads ±26 %.
-9. **Filters** — all five syntax filters read zero; `audit_variant_coverage`
-   needed a **bit bridge** this pass (a definition bitmask crossing the crate
-   boundary made a live capability look dead) and reads zero again. **A sixth:
-   `scripts/audit_decision_plumbing.py`** — 195 `decider.decide` sites, 97
-   plumbed / 98 bare, and it retired ENGINE_BACKLOG's "~45 live bugs" claim
-   (every effect that audit named is plumbed now). Bare is a triage
-   population, not a gate; the calibration is in that section.
-   `bot_rejection_count()` over the seeded cube sweep is the one that watches
-   the live-server path, and it is clean at the tip.
+8. **Tip state** — PERF "Baseline"'s newest block: the pass end to end, the
+   `--bench` invariant, the ladder clock and, for the first time since pass
+   58, the **actor's own clock**. Read the two recipe corrections beside it.
+9. **Filters** — six now, all reading zero:
+   `scripts/audit_variant_coverage.py`, `audit_decision_plumbing.py`, the
+   four syntax ones. Bare `decide` sites are a triage population, not a gate.
 
 ## Standing rules for a perf pass — moved to `PERF.md`
 
