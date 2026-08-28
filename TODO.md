@@ -48,12 +48,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 5. **Bugs** — ENGINE_BACKLOG's live-match section; its sweep is a `0..4000u64`
    loop in the cube smoke test read through `bot_rejection_count()`, run
    **before and after**. Robustness gate: `-C debug-assertions=yes` on
-   `[profile.overflow]`. Newly open there and both one-liners *given a
-   resolving selector*: `Selector::BlockedAttacker` never resolves in an
-   event filter (Righteous Indignation's colour clause is dead) and
-   `EntityMatches` over `EachPermanent(…)` is an existence test whose empty
-   case reads true (Tide Shaper's pump is unconditional). The sweep has not
-   been re-run since the picker's off-board gate landed.
+   `[profile.overflow]`. Closed at pass 87: both block selectors resolve for
+   a *watcher* trigger, so `EntityMatches` answers `false` on an empty
+   selector now. Newly open under it: **a layer-7 `PumpSelfIf` condition
+   cannot see a layer-4 type change** (CR 613.8; `CardMatchPowerGated` is the
+   precedent device). The seeded sweep has not been re-run since the
+   picker's off-board gate landed.
 6. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
 7. **Filters** — five read zero; `bot_rejection_count()` over the seeded cube

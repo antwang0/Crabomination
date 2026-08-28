@@ -106,39 +106,56 @@ still applies a board-shaped requirement to every graveyard and to exile and
 the callers still separate the results by hand. This closes the *picker*'s
 half; the catalog-wide fix above is still the fix.
 
-### Vacuous `true` in `Predicate::EntityMatches` — one closed, two open
+### ~~Vacuous `true` in `Predicate::EntityMatches`~~ — closed at the eighty-seventh pass, and one layer dependency fell out
 
-`EntityMatches` answers with `all` over the resolved selector, and `all` over
-an **empty** selector is vacuously true. Closing the gate above surfaced it:
-an ability whose target was never chosen ran the `then` branch of a clause
-that had nothing to be true *of* (Eagle of Deliverance drew a card off an
-indestructible counter it had put on nothing).
+`EntityMatches` answered with `all` over the resolved selector, and `all` over
+an **empty** selector is vacuously true — so a clause about *the* entity was
+true when there was no entity. Closing the picker's off-board gate surfaced it
+(Eagle of Deliverance drew a card off an indestructible counter it had put on
+nothing), and it is `false` on the empty set now.
 
-**Fixed:** `Selector::Target(n)` with nothing bound in `ctx.targets` answers
-`false`. Scoped to the slot on purpose, because the same predicate is written
-in two other shapes where the empty set is a *live* defect rather than a
-missing binding, and both were built and measured (the full
-`!ents.is_empty() &&` guard) before being backed out:
+**It could not be closed in one step, because two of its own selectors were
+resolving empty.** The eighty-sixth pass scoped the guard to an unbound
+`Selector::Target(n)` and recorded the other two; the eighty-seventh fixed the
+selectors and widened the guard:
 
-* **`Selector::BlockedAttacker` as an event filter never resolves.** Righteous
-  Indignation is `EventKind::Blocks` `.with_filter(EntityMatches {
-  BlockedAttacker, Black|Red })` — "whenever a creature blocks a black or red
-  creature". Under the full guard
-  `classic_sets::mmq4::righteous_indignation_pumps_the_blocker` fails **with a
-  black attacker on the board**, which says the selector resolves to nothing
-  at filter-evaluation time and the colour clause has never been read. The
-  card pumps a blocker of anything.
-* **`Selector::EachPermanent(…)` is written as a plain existence test and the
-  empty set is the answer it wants.** Tide Shaper's "gets +1/+1 as long as an
-  opponent controls an Island" is `EntityMatches { EachPermanent(Island &
-  ControlledByOpponent), filter: Any }`, so with no opponent Island the `all`
-  is vacuously true and the pump is unconditional. `mh::mh2e::tide_shaper_
-  kicked` asserts the current (wrong) stat line, so the fix is a test change
-  as well as an engine one.
+* **`Selector::BlockedAttacker` reads `attackers_blocked_by(ctx.source)`, and
+  for a third-party *watcher* `ctx.source` is the ability's host.** A trigger's
+  event filter is built with the ability's card as `source` and the event's
+  subject as `trigger_source`, so Righteous Indignation ("whenever a creature
+  blocks a black or red creature") asked what the *enchantment* was blocking.
+  Both block selectors fall back to `trigger_source` when `source`'s own
+  answer is empty; `source` is tried first, so no self-trigger moves.
+  Regression: `classic_sets::mmq4::righteous_indignation_ignores_a_green_
+  attacker`.
+* **`EntityMatches` over `EachPermanent(…)` is a plain existence test**, and
+  the empty set now answers it correctly. Tide Shaper's "+1/+1 as long as an
+  opponent controls an Island" was unconditional; it reads a printed opponent
+  Island in both directions now (`mh::mh2e::tide_shaper_pump_reads_a_printed_
+  opponent_island`), and its own Island does not count.
 
-Both are one-line fixes *given* a resolving selector, and neither is one line
-without it. `EntityMatchesAny` is `any` and is correct on the empty set, which
-is the shape to prefer in new cards.
+`EntityMatchesAny` is `any` and was always correct on the empty set. It is the
+shape to prefer for a "some entity matches" clause.
+
+### Open — a layer-7 condition cannot see a layer-4 type change (CR 613.8)
+
+Fixing the above exposed it. `StaticEffect::PumpSelfIf`'s condition is
+evaluated **inside `gather_continuous_effects_inner`**, where the
+`in_layer_gather` reentrancy guard pins every characteristic read to the
+*printed* one. So Tide Shaper's kicked ETB retypes an opponent's land to
+Island (layer 4) and its own "as long as an opponent controls an Island"
+condition (layer 7) cannot see it: `mh::mh2e::tide_shaper_kicked` asserts
+power **1**, with the reason in the test.
+
+CR 613.8's dependency rule would order the type change before the pump. The
+engine models exactly one shape of this — `AffectedPermanents::
+CardMatchPowerGated`, the second per-card pass that runs once the gate-free
+power is known (Temur Ascendancy) — and a type-gated sibling would be the same
+device. **Not a one-liner, and the guard it has to get past is the reentrancy
+one**: the condition reads a computed characteristic of a *different*
+permanent than the source, so it cannot simply drop `in_layer_gather`. Scope
+it before taking it: `sa_open(sa_mask, gs::PUMP_SELF_IF)` says how many boards
+even reach the pass.
 
 ### ~~The bot answers a mandatory off-board modal with nothing~~ — fixed
 
