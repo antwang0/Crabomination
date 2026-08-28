@@ -53,9 +53,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
    `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **The `call_mut` census has four
    rows left** (`do_untap`, `pick_blocks_inner`, `mana_source_table`,
-   `process_echo`) and **the `#[inline]` family is unswept** past the card-type
-   predicates (`CardInstance::has_keyword`, `same_team` — bigger bodies, so a
-   measurement rather than a copy).
+   `process_echo`). **The `#[inline]` family is CLOSED past the card-type
+   predicates** — `has_keyword` + `counter_count` + `same_team` read +0.45 /
+   +0.54 / +0.42 %, and +0.15 / +0.17 / +0.12 % with `has_keyword` dropped, so
+   every combination loses including the 10-Ir one-liner. Do not rebuild it.
+   **`same_team` then won by the other route in the same hours** (one team row
+   instead of two, -0.135 / -0.105 / -0.112 %), which is the two halves of one
+   rule meeting from opposite sides: read a hot small function's body for a
+   repeated question *before* reaching for the attribute.
    **Taken/closed:** `(-84)`(a) and (b), `(-70)`, `(-79)`, `(-77)`, `(-60)`,
    `(-39)`, the `Box` class, `(-80)` rows 1-2, `(-82)`'s targeting half.
    **Refuted with a ledger, do not rebuild:** `(-85)` (a gate is read 3.5x per
@@ -68,7 +73,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
      count** — 5x between the top two rows of one table.
    * **Halve a no-LTO `#[inline]` reading and halve it again**;
      `[profile.profiling-lto]` is the instrument that checks it (`profiling`
-     OOMs on the candidate side only — Cargo.toml says why).
+     OOMs on the candidate side only — Cargo.toml says why). **And pick the
+     candidate by what its body EXPANDS TO at the call site, not by its self
+     Ir** — a 10-Ir row whose one statement is a call to something large is
+     the worst candidate on the table and the one a count ranks first.
    * **Divide a loop's item count by its call count before hoisting a
      per-item board walk out of it — and when the hoist fails because the loop
      is short, ask whether the scope is long.**

@@ -1362,6 +1362,16 @@ here if it ever needs compacting.
   needs more than the base**, so the two halves of that A/B are not both
   buildable. What *also* works is making the callee smaller than any inliner
   threshold, which is what `has_kw` does.
+  **…and the third half, which is what stops this becoming a sweep: the next
+  tier is built and refuted, and the 10-Ir one-liner is in it.**
+  `has_keyword` + `counter_count` + `same_team` read **+0.453 / +0.541 /
+  +0.418 %**, and **+0.154 / +0.169 / +0.120 %** with `has_keyword` dropped —
+  every combination loses. **Pick an `#[inline]` candidate by what its body
+  EXPANDS TO at the call site, not by its self Ir**: `counter_count`'s row is
+  10 Ir and its one statement is a map lookup, expanded at 65,606 sites, while
+  the card-type predicates expand to a `Vec::contains` against a constant
+  discriminant over a one- or two-element list, which the caller folds. A
+  call-count ranking puts the worst candidate first.
 - **A presence gate in front of a loop is only free if the loop was not
   already empty** (pass 57, and it is the one thing the second session
   measured that the first did not). The gather's thirty-eight `sa_cards`
@@ -2340,6 +2350,42 @@ on one side only, and that reads exactly like a broken build.**
 `[profile.profiling-lto]` (`profiling-fast` + `lto = "thin"`) isolates the one
 variable that matters — cross-crate inlining — at codegen-units 16 and about a
 third of the memory. It is committed, with the reason on it.
+
+**AND THE NEXT TIER IS BUILT AND REFUTED IN TWO STEPS, WHICH IS WHERE THE
+RULE ACTUALLY LIVES.** The obvious follow-on is the same attribute on the
+next-most-called small functions — `CardInstance::has_keyword` (98,082 calls,
+48 Ir of self), `CardInstance::counter_count` (65,606, **10 Ir**) and
+`GameState::same_team` (143,564, 26.5). All three at once, then the same
+build with `has_keyword` alone dropped, base `7e637ce7`:
+
+```text
+                     all three            counter_count + same_team
+  fixed              +0.453 %                    +0.154 %
+  cube               +0.541 %                    +0.169 %
+  sealed             +0.418 %                    +0.120 %
+```
+
+**Every combination loses, including the 10-Ir one-liner.** So the card-type
+predicates did not win for being *small*: `counter_count`'s row is 10 Ir of
+self and its single statement is `self.counters.get(&ct)`, which expands to a
+whole map lookup at 65,606 sites; `same_team` (as it stood at `7e637ce7`)
+expanded `team_of`'s fast path *and* its `Vec`-scanning fallback at 143,564.
+**The card-type predicates expand to a `Vec::contains` against a
+compile-time-constant discriminant over a one- or two-element list, which the
+caller folds.**
+
+**And `same_team` got its win the same day by the other route, from a
+concurrent session — see the ninety-fourth pass (2) block, -0.135 / -0.105 /
+-0.112 % for reading one team row instead of two.** Two sessions reached the
+same place from opposite directions: `#[inline]` on it is +0.12 to +0.17 %,
+and asking one question instead of two is -0.11 to -0.14 %. **When a hot small
+function tempts you toward `#[inline]`, read its body for a repeated question
+first** — that is the cheaper half of this entry and it is theirs.
+
+**THE RULE: an `#[inline]` candidate is picked by what its body EXPANDS TO at
+the call site, not by its self Ir.** A ten-instruction self row whose one
+statement is a call to something large is the *worst* candidate on the table,
+and it is the one a call-count ranking puts first. Read the body, not the row.
 
 **Re-read at the tip (`fa979b3a`, on `origin`): 989,689,177 / 2,965,899,097 /
 2,947,614,907.** The anchor one back was filed at `c1e4363c`, a hash that no
@@ -7566,15 +7612,21 @@ of what its place in the census predicted. Numbers, the census and the rule
 that falls out (rank by the closure's captures, not by call count) are in the
 Baseline.
 
-### Ninety-third pass (3) — `#[inline]` on the card-type predicates
+### Ninety-third pass (3) — `#[inline]` on the card-type predicates, and the tier below them
 
 **Taken, `release-fast` -0.907 / -0.741 / -0.831 %, thin LTO -0.175 / -0.124 /
 -0.162 %.** Eleven attributes on `CardDefinition`'s card-type predicates, a
 family worth 1.32 % of `fixed` over 852 k calls. The standing rule said not to
 take one on an Ir number because LTO would already have it; LTO has 80 % of
 it. Rule corrected in place, `[profile.profiling-lto]` added because
-`profiling` OOMs on the candidate side only. Baseline has the caller tables
-and the OOM.
+`profiling` OOMs on the candidate side only.
+
+**Refuted immediately after, in two builds: the next tier.** `has_keyword` +
+`counter_count` + `same_team` read +0.453 / +0.541 / +0.418 %, and +0.154 /
++0.169 / +0.120 % with `has_keyword` dropped — so every combination loses,
+**including a 10-Ir one-liner**. Pick by what the body expands to at the call
+site, not by the self row. Baseline has the caller tables, the OOM and both
+refutations.
 
 ### Ninety-third pass — the targeter's borrowed filter, hoisted seat and hand-written walk
 
