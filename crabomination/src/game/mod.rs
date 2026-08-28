@@ -4148,6 +4148,28 @@ impl GameState {
         out
     }
 
+    /// The first seat [`opponents_of`](Self::opponents_of) would return,
+    /// without building the `Vec` to read it. The auto-targeters ask this per
+    /// slot and threw the allocation away; the `debug_assert!` ties the two
+    /// orders together (`scripts/robustness_grid.sh`'s debug-assertions leg).
+    pub(crate) fn first_opponent_of(&self, seat: usize) -> Option<usize> {
+        let first = if self.teams.is_empty() {
+            (0..self.players.len()).find(|&s| s != seat)
+        } else {
+            let my_team = self.team_of(seat);
+            self.teams
+                .iter()
+                .filter(|t| t.id != my_team)
+                .find_map(|t| t.members.first().copied())
+        };
+        debug_assert_eq!(
+            first,
+            self.opponents_of(seat).first().copied(),
+            "first_opponent_of drifted from opponents_of",
+        );
+        first
+    }
+
     /// True when `a` and `b` are on the same team. A seat is always its
     /// own teammate (returns true for `a == b`).
     pub fn same_team(&self, a: usize, b: usize) -> bool {

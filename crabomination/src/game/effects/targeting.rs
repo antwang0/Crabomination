@@ -135,9 +135,7 @@ impl GameState {
         // seat in singleton-team / unknown-team cases so the legacy 1v1
         // pick (`(controller + 1) % n`) is preserved.
         let opp = self
-            .opponents_of(controller)
-            .first()
-            .copied()
+            .first_opponent_of(controller)
             .unwrap_or((controller + 1) % self.players.len());
         let prefer_friendly = eff.prefers_friendly_target();
         // `prefers_graveyard_target` is the broader classifier — it covers
@@ -643,37 +641,42 @@ impl GameState {
         // inside `Value::PowerOf`), pick it by that filter in the loop
         // below. Otherwise (bare `Target(0)` effects like Lightning Bolt)
         // use the source-aware heuristic picker.
-        let slot0_has_filter = eff.target_filter_for_slot_in_mode_kicked(0, mode, kicked).is_some();
-        let mut slot_0 = if slot0_has_filter {
+        // The slot-0 lookup answers two questions — "is there a filter" and
+        // "which one" — and the loop below asked it a second time for the
+        // value. It is a walk of the whole effect tree, so keep the answer.
+        let slot0_filter = eff.target_filter_for_slot_in_mode_kicked(0, mode, kicked);
+        let mut slot_0 = if slot0_filter.is_some() {
             None
         } else {
             self.auto_target_for_effect_avoiding(eff, controller, None)
         };
         let mut additional = Vec::new();
-        let mut slot: u8 = if slot0_has_filter { 0 } else { 1 };
+        let mut slot: u8 = if slot0_filter.is_some() { 0 } else { 1 };
+        // Loop-invariant: the seat does not change between slots.
+        let opp = self
+            .first_opponent_of(controller)
+            .unwrap_or((controller + 1) % self.players.len());
         // Cap at 16 slots — no real card uses more than 4, but cap defensively.
         while slot < 16 {
-            let req = match eff.target_filter_for_slot_in_mode_kicked(slot, mode, kicked) {
-                Some(r) => r.clone(),
+            // Borrowed, not cloned: the filter lives in `eff`, which outlives
+            // this frame, and a `SelectionRequirement` clone deep-copies the
+            // whole `And`/`Or` tree.
+            let req = match if slot == 0 {
+                slot0_filter
+            } else {
+                eff.target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
+            } {
+                Some(r) => r,
                 None => break,
             };
-            // Use the same hostile/friendly preference heuristics by
-            // constructing a small Effect::PumpPT-style probe and calling
-            // the picker against that filter. Simpler approach: walk
-            // battlefield + players, return first legal.
-            let opp = self
-                .opponents_of(controller)
-                .first()
-                .copied()
-                .unwrap_or((controller + 1) % self.players.len());
             let is_legal = |t: &Target| -> bool {
-                self.evaluate_requirement_static(&req, t, controller, source)
+                self.evaluate_requirement_static(req, t, controller, source)
                     && self.check_target_legality(t, controller).is_ok()
             };
             // The battlefield candidate walk below already holds each
             // permanent; hand it over instead of re-finding it by id.
             let is_legal_bf = |c: &CardInstance| -> bool {
-                self.evaluate_requirement_static_on(&req, c, controller, source)
+                self.evaluate_requirement_static_on(req, c, controller, source)
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
             let pick = {
