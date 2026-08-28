@@ -164,17 +164,20 @@ impl GameState {
         ids: &[CardId],
         computed: &[ComputedPermanent],
     ) -> Vec<crate::card::SelectionRequirement> {
-        self.battlefield
-            .iter()
-            .filter(|c| ids.contains(&c.id))
-            .filter_map(|c| computed.iter().find(|p| p.id == c.id))
-            .flat_map(|c| {
-                c.keywords.iter().filter_map(|k| match k {
-                    Keyword::BandsWithOther(q) => Some((**q).clone()),
-                    _ => None,
-                })
-            })
-            .collect()
+        // Plain loops, same reason as `fire_combat_damage_to_player_triggers`.
+        let mut out = Vec::new();
+        for c in self.battlefield.iter() {
+            if !ids.contains(&c.id) {
+                continue;
+            }
+            let Some(cp) = computed.iter().find(|p| p.id == c.id) else { continue };
+            for k in cp.keywords.iter() {
+                if let Keyword::BandsWithOther(q) = k {
+                    out.push((**q).clone());
+                }
+            }
+        }
+        out
     }
 
     /// CR 702.22j — is this set of blockers a "bands with other [quality]"
@@ -5026,21 +5029,22 @@ impl GameState {
         // CR 510 — "whenever combat damage is dealt to you" listeners fire off
         // the *recipient's* own permanents (SelfSource on a permanent the
         // damaged player controls). Risona sheds an indestructible counter.
-        let listeners: Vec<(CardId, Effect, usize)> = self
-            .battlefield
-            .iter()
-            .filter(|c| c.controller == damaged_player)
-            .flat_map(|c| {
-                c.definition
-                    .triggered_abilities
-                    .iter()
-                    .filter(|ta| {
-                        ta.event.kind == EventKind::ControllerDealtCombatDamage
-                            && ta.event.scope == crate::effect::EventScope::SelfSource
-                    })
-                    .map(move |ta| (c.id, ta.effect.clone(), c.controller))
-            })
-            .collect();
+        // Plain loops: a whole-board walk per damage event, and `FlatMap::next`
+        // costs ~20 Ir a permanent before the filter sees a single ability
+        // (PERF (-78)).
+        let mut listeners: Vec<(CardId, Effect, usize)> = Vec::new();
+        for c in self.battlefield.iter() {
+            if c.controller != damaged_player {
+                continue;
+            }
+            for ta in &c.definition.triggered_abilities {
+                if ta.event.kind == EventKind::ControllerDealtCombatDamage
+                    && ta.event.scope == crate::effect::EventScope::SelfSource
+                {
+                    listeners.push((c.id, ta.effect.clone(), c.controller));
+                }
+            }
+        }
         for (listener, effect, controller) in listeners {
             let auto_target = self.auto_target_for_effect_avoiding(&effect, controller, Some(listener));
             // Bind the creature that dealt the damage as `Selector::TriggerSource`
