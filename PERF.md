@@ -10750,6 +10750,54 @@ allocations unless a layer actually overrides one, and the freeze scope's
 `pick_blocks_inner` collect, one `Arc` each. There is nothing left in it short
 of not allocating the `Arc`, which the memo's shape requires.
 
+**AND THE ONE THING SHORT OF THAT WAS BUILT AND REFUTED AT THE NINETY-FIRST
+PASS — `fixed` +0.511 % / `cube` +0.049 % / `sealed` +0.357 %, ON 84,558
+FEWER ALLOCATIONS.** The shape's requirement is the *handle*, not a fresh
+allocation for it: an entry whose only handle is `perms`' at `end_of_scope`
+is uniquely owned (`Arc::get_mut`), so a `Vec<Arc<ComputedPermanent>>` pool on
+`LayerFreezeState` can hand it to the next scope and `computed_permanent`
+overwrites it in place. It works — cube's `__rust_alloc` count goes
+1,588,542 -> 1,503,984, **5.3 % of every allocation the program makes** — and
+the program is slower on all three pools. The whole ledger, `cube`:
+
+```text
+  removed, the allocator            added, the bookkeeping
+   _int_free            -4.30        end_of_scope             +11.34
+   malloc               -4.21        dispatch_triggers_for_events +4.14
+   Unfreeze::drop       -4.28        drop_in_place<ComputedPermanent> +3.22
+   Arc::drop_slow       -3.83        computed_permanent        +2.00
+   free                 -3.30        drop_in_place<LayerFreeze> +1.51
+   _int_malloc          -2.54        realloc                   +1.22
+   __rdl_alloc          -0.76        _int_realloc              +0.85
+   malloc_consolidate   -0.67        finish_grow               +0.83
+                       ------                                 ------
+                       -23.89 M                               +25.11 M
+```
+
+**The reclaim loop runs on every scope exit and the allocations are not.**
+`end_of_scope` stopped being a `clear()` the compiler folded into the guard's
+drop and became a named 72.2-Ir row over **156,944 calls**, against 84,558
+allocations recovered — 1.86 loops per allocation, 134 Ir of loop for 283 Ir
+of allocator. That is the whole trade on `cube` and it is nearly a wash;
+`fixed`, where scopes are as frequent and boards are smaller (74,926 loops for
+25,894 allocations, 2.89 to one), is where it loses outright. **Count the
+reclaim points against the allocations reclaimed before building a pool.**
+
+**Two of the added rows are the device paying for itself in its own coin.**
+`drop_in_place<LayerFreeze>` +1.51 M, `realloc` +1.22 M and `finish_grow`
++0.83 M are **the pool's own `Vec`** — `Clone for LayerFreeze` is `default()`,
+so every one of the run's 22,684 `GameState` clones allocates and grows a
+fresh pool to avoid allocating. A single-slot `Option<Arc<_>>` pool removes
+all three (~4.4 M) and shrinks `end_of_scope` to one branch and one
+`get_mut` (~3 M rather than 11.3), against a recovery of at most the
+156,944 one-per-scope entries. **That variant is arithmetic away from a
+~0.25 % `cube` win and nothing on `fixed`, which is why it is written down
+rather than taken**: `dispatch_triggers_for_events`' +4.14 M is a codegen
+shift of the same size as the whole remaining margin, and it is not
+predictable from the diff. The third data point for the class the
+eighty-ninth pass opened (`1be9d90a`, "removing 8,940 rehashes and 8,316
+allocations made the program slower"): **an allocation count is not a cost.**
+
 **ROW 2 IS TAKEN — `fixed` -0.256 % / `cube` -0.105 % / `sealed` -0.200 %,
 and 575,795 allocations -> 555,641.** The fix is a `Vec<GameEvent>` scratch
 slot on `GameState`: `pass_priority` `mem::take`s it instead of allocating,
