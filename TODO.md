@@ -89,10 +89,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 7b. **Test suite** — `find_data_tests.sh` was wrong **three ways** and is
    fixed (brace counting, helper bodies, sacredness); its output is a delete
    list and each bug put live engine tests on it. The population is 284 (15
-   sacred), of which **145 single-factory definition echoes over ~60 files**
-   are the sweep the convention asks for. Sized in PERF's "Test-suite
-   cleanup", with the reason it is not taken yet. Quiet branch, one commit,
-   suite green either side.
+   sacred), of which 145 single-factory definition echoes over ~60 files are
+   the sweep the convention asks for. **First slice taken** —
+   `stx/part_23.rs`'s nineteen are one `PrintedShape` table, and the pattern
+   is in the tree to copy. The remaining ~126 and their deltas are sized in
+   PERF's "Test-suite cleanup". One commit per file batch, suite green either
+   side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's two newest Baseline blocks.
    Whole program at `96ec5071`: `fixed` 1,012,617,375 / `cube` 3,026,000,396 /
    `sealed` 3,022,989,126, i.e. **-1.44 / -2.92 / -1.60 % across the pass**,
