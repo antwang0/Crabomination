@@ -806,11 +806,39 @@ mirrored pairs split.
 
 **What is left of it, as a rules question, not a determinism one.** A map
 whose walk order picks a *game outcome* is still arbitrary, just
-reproducibly so. Known site: `actions.rs`'s discard-cost gate does
-`by_name.values().find(|ids| ids.len() >= count)` for "discard N cards with
-the same name" (Kozilek-style), which picks an arbitrary qualifying name
-rather than the cheapest. Sweep the ~110 map/set locals for siblings when
-someone wants a rules pass; none of them can desynchronize a run any more.
+reproducibly so. **The sweep this entry used to invite is done (ninety-second
+pass) and the site it named is already fixed**, which is why the list below
+replaces the invitation rather than extending it.
+
+*The named site, now the pattern to copy.* `actions.rs:15416`'s discard-cost
+gate reads `by_name.iter().filter(..).min_by_key(|(name, _)| (mv_of[name],
+**name))` — the mana value first, **the name as a total-order tie-break
+second**. One extra tuple element and the walk order cannot reach the answer.
+
+*The three siblings the locals sweep found, none of them a bug.* Each is a
+free choice under the rules (any legal pick is legal), so each is recorded
+rather than changed — a fix moves golden traces on tie boards for no
+correctness gain. What they cost is **fragility**: the tie-break is the hash
+layout, so adding a card to a pool can silently move a trace.
+
+| site | what the walk order decides | shape |
+|---|---|---|
+| `effects/mod.rs:28718` | `chosen_number` — the most common mana value among opponents' graveyards | `counts.into_iter().max_by_key(\|(_, n)\| *n)`, ties by walk order |
+| `effects/mod.rs:4183` | which three differently-named creatures survive `truncate(3)` before the random pick | `into_values()` then a **stable** `sort_by_key(Reverse(mv))`, so equal-mv names keep hash order |
+| `bot.rs:3362` | the bot's answer to "choose a creature type" | `tally.into_iter().max_by_key(\|(_, n)\| *n)`, ties by walk order |
+
+*Checked and clean, so nobody re-checks them:* `eval.rs:666` / `838`,
+`effects/mod.rs:770` and every `counters.values()` read are `sum` / `max` /
+`any` / `all` folds; `effects/mod.rs:5091` and `32559` and `stack.rs:3058`
+are looked up by key; `selfplay.rs:341` collects `avail.values()` into a Vec
+and then indexes it with the RNG, which is uniform whatever the order;
+`recommend.rs:2452`'s `strata.values()` pools `f64`s, so the order reaches a
+*metric* and not an outcome. Outside the engine crates the same sweep found
+one `std::collections::HashMap` that is iterated —
+`selfplay_train.rs:2895`'s `by_traj`, into an `f64` sum — and it is the only
+site in the tree whose order can differ *between processes*; it prints at
+`{:.4}` on a probability scale, four orders below where the reassociation
+shows, so it is listed here rather than fixed.
 
 *(No open entries. The audits that closed here are an index; `git log -S` on
 each hash has the prose.)* `df87c2d1` — `CardData.counters` becomes the
