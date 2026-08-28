@@ -1590,6 +1590,26 @@ two bit tests, ~4.07 M Ir over 1.8 M visits (**~2.3 Ir a card**), charged to
 separated, and there is no reason to separate them because neither exists
 without the other.
 
+**CLOSING STATE — this session's last code commit, all gates run at it.**
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,068 / 0 / 5  (111.8 s after the build); golden traces inside it
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) / determinism ok / thread_determinism ok
+        — **byte-identical to the committed invariant**
+        games_per_s 201.48 (320 games, 3 threads), peak_rss_mib 24.4,
+        host_cpu Intel Xeon @ 2.80 GHz, host_calib_ms 56
+```
+
+**The `games_per_s` is a different box from the blocks below and is not
+comparable to them** — `host_calib_ms` 56 on a 2.80 GHz Xeon against the
+2.10 GHz box those were taken on. The decision counts are, and they are the
+same integers, which is what the invariant is for. `peak_rss_mib` 24.4 is the
+documented `release` + mimalloc band (24.0-24.3), not the `profiling-fast`
+system-allocator 17.6.
+
 **Behaviour-preserving by construction rather than by test.**
 `can_grant_keyword` is monotone in its predicate — every leg an `any` / `||` /
 a recursion, no negation anywhere — so a clear bit is authoritative for *every*
