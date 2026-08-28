@@ -600,6 +600,25 @@ on both sides; the absolute number then describes mimalloc's interception,
 but the *ratio* is sound. Wall-clock is still the arbiter for anything
 allocator- or cache-shaped, where Ir undercounts.
 
+**A LOCALITY ARGUMENT CANNOT BE MEASURED BY Ir AT ALL, AND THAT IS SHARPER
+THAN "Ir undercounts".** `same_team` sits at **143,564 calls x 26.5 Ir** in the
+call-count ranking — the sort of row this file's own device says to take. It
+reaches `team_of` twice, and each of those indexes `Team::members`, a heap
+`Vec` one allocation away from the `Team` it hangs off; the exactly-equivalent
+`teams.iter().all(|t| t.members.len() == 1)` reads only the inline `len`.
+Built and measured at the ninety-first pass: **`fixed` -0.009 % / `cube`
+-0.007 %** — 92,583 Ir of an expected 2.3 M. Reverted.
+
+**The change removed two dependent *loads*, not two instructions, and
+callgrind charges 1 Ir for a load whether it hits L1 or misses to DRAM.** So
+the whole predicted win was invisible to the instrument by construction. The
+rule: **before proposing a change, say whether it removes instructions or
+removes stalls.** Only the first is measurable here; the second needs the
+clock, and this box's paired clock resolves +/-0.34 % on `--decks fixed`,
+which will not see a 0.2 % locality win either. A row that is big in
+*call count* and small in *Ir/call* is usually the second kind — `same_team`
+at 26.5 Ir/call is already only ~26 instructions.
+
 **`ab_wall.py` prints a load line and warns on a contended box** (eighty-ninth
 pass). A verdict taken while the other session was linking is not a verdict —
 the same null reads `+/-1.91 %` quiet and `+/-9.73 %` under six spinners, and
