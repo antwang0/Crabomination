@@ -2739,6 +2739,31 @@ fn pick_land_to_play(state: &GameState, seat: usize, w: &EvalWeights) -> Option<
         return None;
     }
 
+    // The two card-independent halves of the engine's own land-drop validator,
+    // asked once instead of once per hand land. Both loops below filter with
+    // `would_accept(PlayLand(id))` — a full engine dry-run on a `GameState`
+    // clone, ~11,600 Ir apiece and 82 % of this function's cost — while
+    // `play_land_with_face` opens with exactly these two checks, against
+    // exactly this player, before it looks at the card at all.
+    //
+    // **The caller already gates most of this, which is the measurement worth
+    // keeping.** The obvious model — "the bot keeps taking main-phase actions
+    // after spending its land drop, so most probes here are foregone" — is
+    // wrong: `main_phase_action_with` reaches this function only when a drop is
+    // plausible, so the gate catches the residue, **934 -> 856 probes on
+    // `fixed` (-8.4 %) and 2,496 -> 2,080 on `sealed` (-16.7 %)**, worth
+    // `sealed` -0.066 % / `cube` -0.031 % / `fixed` -0.003 % of the program.
+    // Do not re-derive the larger figure from the 82 % above.
+    //
+    // Equivalent rather than conservative — not a heuristic pre-filter of the
+    // kind PERF (-51) warns about, where an over-tight test makes a legal line
+    // permanently invisible. It is the engine's first two gates, hoisted, and
+    // it reads the priority holder for the same reason the engine does.
+    let p = state.priority.player_with_priority;
+    if !state.can_cast_sorcery_speed(p) || !state.can_player_play_land(p) {
+        return None;
+    }
+
     // Colors already producible from battlefield lands the bot controls.
     let have = state
         .battlefield
