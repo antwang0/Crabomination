@@ -31,13 +31,17 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 
 0. **THE BUILD IS THE LEVER, NOT THE SOURCE.** PGO is a ~24 % win on both
    pools and `-C target-cpu=native` is flat — width buys nothing here, layout
-   buys everything; numbers and cautions in PERF's Baseline.
+   buys everything. **And the profile this file measures on is 8.3 % slower
+   than `release`, which nobody had priced**: `release-fast + PGO` is the
+   fastest binary *and* the cheaper build, beating LTO by 16 %, while PGO on
+   top of LTO is flat — the two are substitutes. Matrix in PERF's Baseline.
    `scripts/pgo_build.sh`, **opt-in and staying opt-in** so committed readings
    stay plain `release-fast` ones (CLAUDE.md carries the hazard). Measured on
    the actor too, and **the same binaries read -23.1 % or -4.9 % depending on
    the learner/actor balance** — PERF says why, and the rule that fell out is
    the more useful half: print `t_step_ms` against `elapsed_s` before quoting
-   any `selfplay_train` throughput number. Untried after it: BOLT.
+   any `selfplay_train` throughput number. **BOLT is blocked here** — no
+   `llvm-bolt` in the toolchain and no `perf` in the image.
 1. **Perf queue** — PERF "Perf candidates", top-down. **`(-82)` and `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
