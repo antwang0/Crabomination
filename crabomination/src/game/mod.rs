@@ -8660,9 +8660,35 @@ impl GameState {
     /// the disjunction over those four never misses. Debug builds re-run the
     /// whole-board pass whenever this says `false`, so the suite audits it.
     ///
+    /// The membership test is a **precomputed discriminant** compare, and
+    /// that is the whole cost of this function. `Keyword` is a
+    /// 200-odd-variant payload-carrying enum, so its derived `PartialEq` is a
+    /// tag compare *plus a jump into a per-variant payload compare*, and
+    /// `kws.contains(k)` pays one per (board keyword x `kws` entry) — the
+    /// inner loop of a walk eight callers make 16,406 times over six
+    /// `--decks fixed` games.
+    ///
+    /// Comparing tags rather than values is exactly the over-approximation
+    /// this gate is documented to be: it can only answer `true` more often,
+    /// and `false` — the only answer a caller acts on — stays authoritative.
+    /// In practice it is not even that, because **every list every caller
+    /// passes is unit variants** (`MustAttack`, `MustBlock`, `Phasing`,
+    /// `CantBeBlockedByMoreThanOne`, …), where a tag match *is* equality; the
+    /// payload keywords have their own entry point in
+    /// [`board_keyword_matching`](Self::board_keyword_matching).
+    ///
+    /// Two variants measured against this one and not taken:
+    /// keeping the exact `&& *w == k` fallback behind the tag reads `fixed`
+    /// **-0.212 %** against this form's **-0.584 %**, and
+    /// [`KeywordSlice::has_kw`] — the same idea with only the *wanted* tag
+    /// hoisted, so every `kws` entry's tag is reloaded per board keyword —
+    /// reads **-0.105 %**. Hoisting the short list once is the win.
+    ///
     /// [`compute_permanents`]: Self::compute_permanents
     pub(crate) fn board_keyword_in_scope(&self, kws: &[Keyword]) -> bool {
-        self.board_keyword_matching(|k| kws.contains(k))
+        let tags: SmallVec<[std::mem::Discriminant<Keyword>; 8]> =
+            kws.iter().map(std::mem::discriminant).collect();
+        self.board_keyword_matching(|k| tags.contains(&std::mem::discriminant(k)))
     }
 
     /// [`board_keyword_in_scope`] over a predicate, for the keywords that
