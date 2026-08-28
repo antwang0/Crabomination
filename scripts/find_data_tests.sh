@@ -10,7 +10,7 @@
 #  - contains `let _ = catalog::*()` or `catalog::*()` calls
 #  - does NOT contain any GameState-touching identifier
 #
-# **This script was wrong FOUR ways until 2026-08-28** and its output is a
+# **This script was wrong FIVE ways until 2026-08-28** and its output is a
 # DELETE LIST, so read the fixes before trusting an older count.
 #
 #  1. The `fn foo() {` line's opening brace was never counted, so
@@ -36,19 +36,34 @@
 #     `modern/lands_equipment_vehicles.rs` and two extra-turn tests in
 #     `core_rules/xtra.rs` were offered up for deletion. Fixed by not closing
 #     a helper until its opening brace has been seen.
+#  5. The marker list had no deck-legality entry, so the whole *format* engine
+#     read as "no GameState". `validate_deck` / `validate_full_deck` /
+#     `validate_commander_deck` / `companion_restriction_met` take a
+#     `Vec<CardDefinition>` and return errors — no game is built and none is
+#     needed — and the nineteen tests that drive them (all of
+#     `core_rules/format.rs`, two commander-deck validators in
+#     `multiplayer.rs`, the sideboard and ante rules in `cr_recent67`/`72`,
+#     and Advantageous Proclamation in `cns.rs`) were on the list.
+#     **A pure-data test is one with no LOGIC under it, not one with no
+#     `GameState` in it** — that is the durable form of this bug.
 #
-# 185 candidates at first, 284 after fixes 1-3, **250 after fix 4** (235 + 15
-# sacred). Fix 4 only ever *removes* rows — no test entered the list because
-# of it. Of the 235, the single-factory definition echoes over ~60 files are
-# the sweep the convention is about; the rest read several factories and are
-# mostly the per-set definition tables the convention asks things to be folded
-# *into*.
+# 185 candidates at first, 284 after fixes 1-3, 250 after fix 4, **224 after
+# fix 5** (209 + 15 sacred; the count also carries -8+1 for the `ogw.rs` fold).
+# Fixes 4 and 5 only ever *remove* rows — no test entered the list because of
+# either, which is the check to run on the next one. Of the 209, the
+# single-factory definition echoes over ~60 files are the sweep the convention
+# is about; the rest read several factories and are mostly the per-set
+# definition tables the convention asks things to be folded *into*.
+#
+# **Read the file with the most hits first.** A filter's false positives
+# cluster, because they share a helper or an API: fixes 4 and 5 were each
+# found by reading three tests in the file at the top of the by-file count.
 #
 # ⚠ The awk program is in single quotes: an apostrophe in a comment inside it
 # ends the shell string. It has broken this file twice. No contractions.
 #
 # Engine-touching markers (case-sensitive substrings).
-ENGINE_MARKERS='two_player_game|multi_player_game|game_with_format|GameState::|GameAction::|add_card_to_|perform_action|do_cleanup|do_untap|drain_stack|cast\(|cast_at|battlefield|priority|check_state_based|resolve_effect|EffectContext|computed_permanent|fire_step|fire_start|register_replacement|seat_commanders|adjust_life|set_life|battlefield_find|effective_life|StackItem::|GameEvent::|granted_triggers|active_player_idx|CardInstance::new|CardInstance ::|CardInstance{|format::Format|Decklist|legality|color_identity|build_deck|cube|draft|Snapshot|view\.|view::'
+ENGINE_MARKERS='two_player_game|multi_player_game|game_with_format|GameState::|GameAction::|add_card_to_|perform_action|do_cleanup|do_untap|drain_stack|cast\(|cast_at|battlefield|priority|check_state_based|resolve_effect|EffectContext|computed_permanent|fire_step|fire_start|register_replacement|seat_commanders|adjust_life|set_life|battlefield_find|effective_life|StackItem::|GameEvent::|granted_triggers|active_player_idx|CardInstance::new|CardInstance ::|CardInstance{|format::Format|Decklist|legality|color_identity|build_deck|cube|draft|Snapshot|view\.|view::|validate_deck|validate_full_deck|validate_commander_deck|companion_restriction_met|DeckError|Format::'
 
 # The suite moved to its own crate when `crabomination_tests` was split out;
 # this scanned `crabomination/src/tests/*.rs`, which has not existed since,
