@@ -958,7 +958,7 @@ fn colors_from_card(card: &crate::card::CardInstance) -> ColorSet {
     // The memoized form: this is one of `compute_permanent_pass`'s three
     // per-call definition reads and by far the most expensive (~56 Ir against
     // `base_power`'s 13), and the answer cannot change without a write
-    // reaching the card. See `card::ColorMemo`.
+    // reaching the card. See `card::CardMemo`.
     card.printed_color_set()
 }
 

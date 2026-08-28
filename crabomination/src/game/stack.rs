@@ -4451,68 +4451,60 @@ impl GameState {
     /// of ~20 `filter(...).collect()` passes that come back empty. Every flag
     /// is an over-approximation of its block's own filter: false means the
     /// block provably does nothing, true re-runs the original code unchanged.
+    /// Every definition-derived flag comes off the per-object memo
+    /// (`CardData::sba_scan_bits`), so the five list walks this loop used to
+    /// do per permanent per sweep — keywords, supertypes, card types,
+    /// enchantment subtypes, static abilities — happen once per printing
+    /// instead. The four flags that also need an instance condition are
+    /// ANDed out of the same word; the four that are purely per-instance
+    /// stay as field reads.
     fn sba_board_scan(&self) -> SbaBoardScan {
-        use crate::card::{CounterType, Keyword, Supertype};
-        use crate::effect::StaticEffect;
+        use crate::card::{sba_bits as b, CounterType};
         let mut s = SbaBoardScan::default();
+        let mut m = 0u32;
         for c in self.battlefield.iter() {
-            let d = &c.definition;
-            s.flip_keyword |= d.flip_when_has_keyword.is_some() && !c.flipped;
-            s.flip_predicate |= d.flip_when_predicate.is_some() && !c.flipped;
-            s.sacrifice_when |= d.sacrifice_when.is_some();
-            s.state_trigger |= d.state_trigger.is_some();
-            s.steal_penalty |= d.sacrifice_and_burn_when_stolen.is_some() && c.controller != c.owner;
-            s.no_other |= d.sacrifice_when_you_control_no_other.is_some();
-            s.max_counters |= d.max_counters_of_kind.is_some();
-            s.saga |= !d.saga_chapters.is_empty();
+            let d = c.sba_scan_bits();
+            m |= d & b::UNCONDITIONAL;
+            if !c.flipped {
+                m |= d & b::UNFLIPPED;
+            }
+            if c.controller != c.owner {
+                m |= d & b::STEAL_PENALTY;
+            }
+            if c.attached_to.is_some() {
+                m |= d & b::EQUIPMENT;
+            }
             s.bestowed |= c.bestowed;
             s.soulbond |= c.soulbond_partner.is_some();
+            s.sector_set |= c.sector.is_some();
             // One walk per vector rather than one per flag.
             if !c.counters.is_empty() {
                 s.pm_both |= c.counter_count(CounterType::PlusOnePlusOne) > 0
                     && c.counter_count(CounterType::MinusOneMinusOne) > 0;
             }
-            for kw in d.keywords.iter() {
-                match kw {
-                    Keyword::Persist | Keyword::Undying => s.persist_undying = true,
-                    Keyword::StartYourEngines => s.start_engines = true,
-                    Keyword::SpaceSculptor => s.sculptor = true,
-                    _ => {}
-                }
-            }
-            for st in d.supertypes.iter() {
-                match st {
-                    Supertype::Legendary => s.legendary = true,
-                    Supertype::World => s.world = true,
-                    _ => {}
-                }
-            }
-            for t in d.card_types.iter() {
-                match t {
-                    crate::card::CardType::Planeswalker => s.planeswalker = true,
-                    crate::card::CardType::Battle => s.battle |= d.defense > 0,
-                    _ => {}
-                }
-            }
-            for es in d.subtypes.enchantment_subtypes.iter() {
-                match es {
-                    crate::card::EnchantmentSubtype::Aura => s.aura = true,
-                    crate::card::EnchantmentSubtype::Role => s.role = true,
-                    _ => {}
-                }
-            }
-            s.equipment_attached |= c.attached_to.is_some() && d.is_equipment();
-            s.shapeshifter |= d.copies_top_graveyard_creature;
-            s.sector_set |= c.sector.is_some();
-            for sa in &d.static_abilities {
-                match sa.effect {
-                    StaticEffect::AllNonlandPermanentsAreLegendary => s.supertype_grant = true,
-                    StaticEffect::LegendRuleDoesntApply => s.legend_rule_off = true,
-                    StaticEffect::LethalDamageByPower { .. } => s.lethal_by_power = true,
-                    _ => {}
-                }
-            }
         }
+        s.flip_keyword = m & b::FLIP_KEYWORD != 0;
+        s.flip_predicate = m & b::FLIP_PREDICATE != 0;
+        s.sacrifice_when = m & b::SACRIFICE_WHEN != 0;
+        s.state_trigger = m & b::STATE_TRIGGER != 0;
+        s.steal_penalty = m & b::STEAL_PENALTY != 0;
+        s.no_other = m & b::NO_OTHER != 0;
+        s.max_counters = m & b::MAX_COUNTERS != 0;
+        s.saga = m & b::SAGA != 0;
+        s.persist_undying = m & b::PERSIST_UNDYING != 0;
+        s.start_engines = m & b::START_ENGINES != 0;
+        s.sculptor = m & b::SCULPTOR != 0;
+        s.legendary = m & b::LEGENDARY != 0;
+        s.world = m & b::WORLD != 0;
+        s.planeswalker = m & b::PLANESWALKER != 0;
+        s.battle = m & b::BATTLE != 0;
+        s.aura = m & b::AURA != 0;
+        s.role = m & b::ROLE != 0;
+        s.equipment_attached = m & b::EQUIPMENT != 0;
+        s.shapeshifter = m & b::SHAPESHIFTER != 0;
+        s.supertype_grant = m & b::SUPERTYPE_GRANT != 0;
+        s.legend_rule_off = m & b::LEGEND_RULE_OFF != 0;
+        s.lethal_by_power = m & b::LETHAL_BY_POWER != 0;
         // CR 704.5j — the Ring's emblem grants the supertype without a
         // battlefield source.
         s.supertype_grant |= self.players.iter().any(|p| p.ring_temptations >= 1);

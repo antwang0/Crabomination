@@ -5258,6 +5258,84 @@ impl CardDefinition {
         colors
     }
 
+    /// The state-based-action sweep's board-scan bits for this printing —
+    /// see [`sba_bits`]. Pure function of the definition; `CardData`
+    /// memoizes it (`CardData::sba_scan_bits`), which is what keeps the five
+    /// list walks below off the sweep's per-card path.
+    pub fn sba_scan_bits(&self) -> u32 {
+        use crate::effect::StaticEffect;
+        use sba_bits as b;
+        let mut m = 0u32;
+        if self.flip_when_has_keyword.is_some() {
+            m |= b::FLIP_KEYWORD;
+        }
+        if self.flip_when_predicate.is_some() {
+            m |= b::FLIP_PREDICATE;
+        }
+        if self.sacrifice_when.is_some() {
+            m |= b::SACRIFICE_WHEN;
+        }
+        if self.state_trigger.is_some() {
+            m |= b::STATE_TRIGGER;
+        }
+        if self.sacrifice_and_burn_when_stolen.is_some() {
+            m |= b::STEAL_PENALTY;
+        }
+        if self.sacrifice_when_you_control_no_other.is_some() {
+            m |= b::NO_OTHER;
+        }
+        if self.max_counters_of_kind.is_some() {
+            m |= b::MAX_COUNTERS;
+        }
+        if !self.saga_chapters.is_empty() {
+            m |= b::SAGA;
+        }
+        if self.copies_top_graveyard_creature {
+            m |= b::SHAPESHIFTER;
+        }
+        if self.is_equipment() {
+            m |= b::EQUIPMENT;
+        }
+        for kw in self.keywords.iter() {
+            match kw {
+                Keyword::Persist | Keyword::Undying => m |= b::PERSIST_UNDYING,
+                Keyword::StartYourEngines => m |= b::START_ENGINES,
+                Keyword::SpaceSculptor => m |= b::SCULPTOR,
+                _ => {}
+            }
+        }
+        for st in self.supertypes.iter() {
+            match st {
+                Supertype::Legendary => m |= b::LEGENDARY,
+                Supertype::World => m |= b::WORLD,
+                _ => {}
+            }
+        }
+        for t in self.card_types.iter() {
+            match t {
+                CardType::Planeswalker => m |= b::PLANESWALKER,
+                CardType::Battle if self.defense > 0 => m |= b::BATTLE,
+                _ => {}
+            }
+        }
+        for es in self.subtypes.enchantment_subtypes.iter() {
+            match es {
+                EnchantmentSubtype::Aura => m |= b::AURA,
+                EnchantmentSubtype::Role => m |= b::ROLE,
+                _ => {}
+            }
+        }
+        for sa in &self.static_abilities {
+            match sa.effect {
+                StaticEffect::AllNonlandPermanentsAreLegendary => m |= b::SUPERTYPE_GRANT,
+                StaticEffect::LegendRuleDoesntApply => m |= b::LEGEND_RULE_OFF,
+                StaticEffect::LethalDamageByPower { .. } => m |= b::LETHAL_BY_POWER,
+                _ => {}
+            }
+        }
+        m
+    }
+
     /// [`Self::printed_color_set`] in WUBRG order as a `Vec`.
     pub fn printed_colors(&self) -> Vec<crate::mana::Color> {
         self.printed_color_set().to_vec()
@@ -5926,32 +6004,120 @@ impl KeywordSlice for [Keyword] {
     }
 }
 
-/// A card's printed colour set, memoized on the object.
+/// Presence bits the state-based-action sweep's board scan reads off a
+/// definition, at their storage offsets inside [`CardMemo`] so the scan ORs
+/// the memo word straight into its accumulator.
+///
+/// Every bit here is a pure function of the definition. The four that need
+/// an instance condition as well ([`UNFLIPPED`]'s two, [`STEAL_PENALTY`],
+/// [`EQUIPMENT`]) carry only the definition half; the scan ANDs them.
+pub mod sba_bits {
+    pub const FLIP_KEYWORD: u32 = 1 << 8;
+    pub const FLIP_PREDICATE: u32 = 1 << 9;
+    pub const SACRIFICE_WHEN: u32 = 1 << 10;
+    pub const STATE_TRIGGER: u32 = 1 << 11;
+    pub const STEAL_PENALTY: u32 = 1 << 12;
+    pub const NO_OTHER: u32 = 1 << 13;
+    pub const MAX_COUNTERS: u32 = 1 << 14;
+    pub const SAGA: u32 = 1 << 15;
+    pub const PERSIST_UNDYING: u32 = 1 << 16;
+    pub const START_ENGINES: u32 = 1 << 17;
+    pub const SCULPTOR: u32 = 1 << 18;
+    pub const LEGENDARY: u32 = 1 << 19;
+    pub const WORLD: u32 = 1 << 20;
+    pub const PLANESWALKER: u32 = 1 << 21;
+    pub const BATTLE: u32 = 1 << 22;
+    pub const AURA: u32 = 1 << 23;
+    pub const ROLE: u32 = 1 << 24;
+    pub const EQUIPMENT: u32 = 1 << 25;
+    pub const SHAPESHIFTER: u32 = 1 << 26;
+    pub const SUPERTYPE_GRANT: u32 = 1 << 27;
+    pub const LEGEND_RULE_OFF: u32 = 1 << 28;
+    pub const LETHAL_BY_POWER: u32 = 1 << 29;
+
+    /// Set by the definition alone.
+    pub const UNCONDITIONAL: u32 = SACRIFICE_WHEN
+        | STATE_TRIGGER
+        | NO_OTHER
+        | MAX_COUNTERS
+        | SAGA
+        | PERSIST_UNDYING
+        | START_ENGINES
+        | SCULPTOR
+        | LEGENDARY
+        | WORLD
+        | PLANESWALKER
+        | BATTLE
+        | AURA
+        | ROLE
+        | SHAPESHIFTER
+        | SUPERTYPE_GRANT
+        | LEGEND_RULE_OFF
+        | LETHAL_BY_POWER;
+    /// Set only on an unflipped permanent.
+    pub const UNFLIPPED: u32 = FLIP_KEYWORD | FLIP_PREDICATE;
+    /// The memo's payload — every definition bit.
+    pub const ALL: u32 = UNCONDITIONAL | UNFLIPPED | STEAL_PENALTY | EQUIPMENT;
+}
+
+/// Two answers about a card's *definition*, memoized on the object: its
+/// printed colour set and the SBA sweep's board-scan bits.
 ///
 /// [`CardDefinition::printed_color_set`] is a pure function of the
 /// (immutable, `Arc`-shared) definition and `compute_permanent_pass` asks it
 /// **once per permanent per layer pass** — 301,838 times on a six-game `cube`
 /// run at ~56 Ir apiece, 0.52 % of the program, 0.59 % of `fixed`. Nothing
 /// about the answer changes between two passes over an untouched board.
+/// [`CardDefinition::sba_scan_bits`] is the same shape one caller over: five
+/// inner loops over the definition's keyword / supertype / card-type /
+/// enchantment-subtype / static-ability lists, once per permanent per
+/// state-based-action sweep.
 ///
-/// Bit 7 is the "computed" flag and bits 0-4 are the [`ColorSet`]; zero is
-/// "unknown". Atomic rather than a `Cell` because `CardData` sits behind an
-/// `Arc` that has to stay `Send`.
+/// Layout: bits 0-4 the [`ColorSet`], bit 5 its valid flag, bit 6 the SBA
+/// valid flag, bits 8-29 the [`sba_bits`] mask. Zero is "nothing known".
+/// Atomic rather than a `Cell` because `CardData` sits behind an `Arc` that
+/// has to stay `Send`; the halves are written with a plain load-modify-store
+/// because [`Self::clear`] only ever runs on a *uniquely owned* `CardData`
+/// (`Arc::make_mut` clones a shared one first), so the only concurrent
+/// writers are two setters storing pure functions of the same definition and
+/// a lost update costs a recompute.
 #[derive(Debug, Default)]
-pub struct ColorMemo(std::sync::atomic::AtomicU8);
+pub struct CardMemo(std::sync::atomic::AtomicU32);
 
-impl ColorMemo {
-    const VALID: u8 = 0x80;
+impl CardMemo {
+    const COLOR_MASK: u32 = 0x1f;
+    const COLOR_VALID: u32 = 1 << 5;
+    const SBA_VALID: u32 = 1 << 6;
 
     #[inline]
     fn get(&self) -> Option<crate::mana::ColorSet> {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
-        (v & Self::VALID != 0).then_some(crate::mana::ColorSet(v & 0x1f))
+        (v & Self::COLOR_VALID != 0)
+            .then_some(crate::mana::ColorSet((v & Self::COLOR_MASK) as u8))
     }
 
     #[inline]
     fn set(&self, cs: crate::mana::ColorSet) {
-        self.0.store(cs.0 | Self::VALID, std::sync::atomic::Ordering::Relaxed);
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        self.0.store(
+            (v & !Self::COLOR_MASK) | u32::from(cs.0) | Self::COLOR_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    #[inline]
+    fn get_sba(&self) -> Option<u32> {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::SBA_VALID != 0).then_some(v & sba_bits::ALL)
+    }
+
+    #[inline]
+    fn set_sba(&self, bits: u32) {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        self.0.store(
+            (v & !sba_bits::ALL) | bits | Self::SBA_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
     }
 
     /// The invalidation, called from [`CardInstance`]'s `DerefMut`.
@@ -5961,10 +6127,10 @@ impl ColorMemo {
     }
 }
 
-impl Clone for ColorMemo {
-    /// The clone describes the same definition, so it keeps the answer.
+impl Clone for CardMemo {
+    /// The clone describes the same definition, so it keeps the answers.
     fn clone(&self) -> Self {
-        Self(std::sync::atomic::AtomicU8::new(
+        Self(std::sync::atomic::AtomicU32::new(
             self.0.load(std::sync::atomic::Ordering::Relaxed),
         ))
     }
@@ -5975,12 +6141,12 @@ impl Clone for ColorMemo {
 #[derive(Debug, Clone)]
 pub struct CardData {
     pub id: CardId,
-    /// Memo for [`Self::printed_color_set`]; see [`ColorMemo`]. Not `pub`,
-    /// not serialized, and cleared by `CardInstance`'s `DerefMut` — the one
-    /// unshare point every `&mut` reach into a card goes through, so the
-    /// invalidation is provable rather than an enumeration of the paths that
-    /// rewrite a definition.
-    printed_colors: ColorMemo,
+    /// Memo for [`Self::printed_color_set`] and [`Self::sba_scan_bits`]; see
+    /// [`CardMemo`]. Not `pub`, not serialized, and cleared by
+    /// `CardInstance`'s `DerefMut` — the one unshare point every `&mut` reach
+    /// into a card goes through, so the invalidation is provable rather than
+    /// an enumeration of the paths that rewrite a definition.
+    memo: CardMemo,
     /// Static blueprint, shared behind an `Arc` so materializing a
     /// `CardData` (which the CoW handle does only for a card actually being
     /// written) doesn't deep-copy the definition's ~two dozen `Vec` fields.
@@ -6536,7 +6702,7 @@ impl CardData {
     /// clearing the memo.
     #[inline]
     pub fn printed_color_set(&self) -> crate::mana::ColorSet {
-        if let Some(cs) = self.printed_colors.get() {
+        if let Some(cs) = self.memo.get() {
             debug_assert_eq!(
                 cs,
                 self.definition.printed_color_set(),
@@ -6545,8 +6711,25 @@ impl CardData {
             return cs;
         }
         let cs = self.definition.printed_color_set();
-        self.printed_colors.set(cs);
+        self.memo.set(cs);
         cs
+    }
+
+    /// [`CardDefinition::sba_scan_bits`] for this object, memoized on the
+    /// same word and audited by the same `debug_assert!`.
+    #[inline]
+    pub fn sba_scan_bits(&self) -> u32 {
+        if let Some(bits) = self.memo.get_sba() {
+            debug_assert_eq!(
+                bits,
+                self.definition.sba_scan_bits(),
+                "SBA scan memo is stale: a definition rewrite did not clear it",
+            );
+            return bits;
+        }
+        let bits = self.definition.sba_scan_bits();
+        self.memo.set_sba(bits);
+        bits
     }
 }
 
@@ -6606,7 +6789,7 @@ impl std::ops::DerefMut for CardInstance {
         // a *uniquely owned* definition rewrites it in place, so keying the
         // memo on the definition pointer would not see the MDFC face-swap or
         // the Mind Bend colour override.
-        d.printed_colors.clear();
+        d.memo.clear();
         d
     }
 }
@@ -6669,7 +6852,7 @@ impl CardInstance {
         }
         CardData {
             id,
-            printed_colors: ColorMemo::default(),
+            memo: CardMemo::default(),
             definition,
             owner,
             controller: owner,

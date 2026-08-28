@@ -103,6 +103,19 @@ refuted.
   `SmallVec<[&T; 2]>` moves the same 24 bytes it always moved and the 0-2 case
   stops allocating. Read (-71)'s warning as arithmetic, not as a rule about
   ownership.
+- **A definition-derived answer can be memoized on the object, and
+  `CardInstance::DerefMut` is the invalidation** (pass 87; `fixed`
+  -0.862 %, `cube` -0.700 %, `sealed` -0.940 %). `sba_board_scan`'s five
+  per-card list walks are twenty-two bits in `CardMemo`, the atomic word
+  that already carries the printed colours — one `clear()` store however
+  many answers ride on it, and the read's `debug_assert!` is the audit.
+  **This is also the counter-example the rule above needs: (-11) said such
+  a cache "cannot be a lazily-cached field" because ~20 sites rewrite a
+  definition through `Arc::make_mut`, and that was true until pass 83 built
+  the chokepoint.** A refutation written against an *argument* dates; one
+  written against a *measurement* does not. PERF's `(-76)` has the device
+  and the three tests a candidate has to pass.
+
 - **A "more exact" reserve is still a reserve, and `ContinuousEffect` is a
   large struct** (pass 86; `fixed` +0.461 %, `cube` +0.401 %, `sealed`
   +0.373 %). The gather sizes `all_effects` by a *card* count while

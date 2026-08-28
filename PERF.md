@@ -902,6 +902,55 @@ build.
 
 ## Baseline
 
+### Eighty-seventh pass — a refutation written against a *mechanism* that a later pass built, and the SBA board scan halves
+
+**(-11) said a per-definition presence bitmask "cannot be a lazily-cached
+field" because ~20 sites rewrite a definition in place through
+`Arc::make_mut(&mut c.definition)`. The eighty-third pass built the
+invalidation that answers it and nothing came back here to say so.**
+`CardInstance::DerefMut` is the one point every `&mut` reach into a card
+passes — `&mut c.definition` needs `&mut c` — so a memo cleared there is
+provably fresh, which is exactly the argument `ColorMemo` already ships
+with. The SBA sweep's board scan is the second answer off that device.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base d9093fb5.
+
+(2) `sba_board_scan` reads `CardData::sba_scan_bits` — 22 definition-derived
+    presence bits memoized on the same atomic word as the printed colours.
+      fixed   1,094,037,385 -> 1,084,604,977   -0.862 %
+      cube    3,323,357,593 -> 3,300,104,855   -0.700 %
+      sealed  3,254,761,426 -> 3,224,180,345   -0.940 %
+      cube `sba_board_scan` self 52,822,246 -> 24,823,002  (-53.0 %)
+           `CardDefinition::sba_scan_bits` (the miss path)  +5,807,662
+           net on the pair -22.2 M of the run's -23.3 M
+```
+
+**The scan's per-card body was five list walks and ~25 field reads at
+~113 Ir a permanent, 20,260 times a `cube` run; it is now one memo load, one
+`&` and four instance conditions.** Eighteen of the twenty-two flags are set
+by the definition alone (`UNCONDITIONAL`); four need an instance condition as
+well and carry only their definition half, so the scan ANDs them
+(`!c.flipped`, `controller != owner`, `attached_to.is_some()`); the four that
+are purely per-instance (`bestowed`, `soulbond`, `sector_set`, `pm_both`)
+stay field reads. **`sba_scan_bits`'s 5.8 M is the miss path** — ~97.5 % of
+the ~466,000 lookups hit, because a permanent's memo is only cleared when
+that permanent is written.
+
+**Two things this device does *not* need, and they are why (-11) was wrong
+about it.** It is not keyed on the definition pointer, so `Arc::make_mut`
+rewriting a uniquely-owned definition in place cannot leave it stale; and it
+costs nothing extra on the invalidation, because widening `ColorMemo`'s
+`AtomicU8` to a `CardMemo` `AtomicU32` keeps `clear()` a **single store**.
+The `debug_assert!` that audits the colour half now audits this one too, over
+19,060 tests.
+
+**The standing-rules line this is the second instance of: a "do not re-open"
+written against an *argument* dates the moment the evidence moves.** (-11)'s
+argument was about the mutation sites; the mutation sites did not change, the
+*chokepoint through them* got built.
+
 ### Eighty-seventh pass — the `grow_one` row named for a function that returns a `Vec<GameEvent>` was 10 % that buffer
 
 **The box reproduces the eighty-sixth tip to 515 Ir** (`fixed`
@@ -8744,6 +8793,40 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-76) THE MEMO DEVICE THE EIGHTY-SEVENTH PASS PROVED HAS FOUR MORE
+CALLERS, AND THEY ARE 4.75 % OF `cube` BETWEEN THEM.** `sba_board_scan` was
+1.59 % and is 0.75 %; the shape it used — *a whole-board walk asking a
+question that is a pure function of each permanent's `CardDefinition`* —
+repeats in the self table, at `--decks cube`, post-(2):
+
+```text
+  1.87 %  card_can_grant_keyword     <- (-61)/(-11); five container loads a card
+  1.33 %  dispatch_board_scan        <- the trigger dispatcher's own presence walk
+  0.79 %  trigger_grant_sources      <- (-60); 0.25 grants found per call
+  0.76 %  granted_abilities_of       <- walks `static_abilities` (twice, per (-10))
+```
+
+**The device, in full, so nobody re-derives it:** put the answer's bits in
+`CardMemo` (`crabomination_base/src/card.rs`), one atomic word on `CardData`,
+cleared in `CardInstance::DerefMut`. There are spare bits — the SBA mask uses
+8-29 and the colours 0-6 — and `clear()` stays one store however many
+answers ride on it. The `debug_assert!` on the read is the audit and the
+functional suite is the sweep.
+
+**Three things to check before pointing it at one of these rows.** (a) The
+question must be a function of the **definition only**; the instance half
+gets ANDed at the call site (the SBA scan has four such flags and they are
+the whole reason its mask is 22 bits rather than 18). (b) The caller must ask
+it **more often than the permanent is written**, because a write clears the
+whole word — `sba_scan_bits` hit ~97.5 % of ~466,000 lookups, and a caller
+inside a mutation loop would not. (c) Its **miss path is now a function call
+where it used to be inlined arithmetic**; `sba_scan_bits` cost 5.8 M of the
+28 M it saved, so a row under ~0.4 % will not clear its own overhead.
+
+**And (-61)'s own note says its per-card disqualifier is "five `is_empty`
+loads", i.e. exactly one bit** — that is the largest of the four and the one
+to price first.
+
 **(-71) TAKEN at the eighty-sixth pass — `cube` -0.513 %, `sealed` -0.406 %,
 `fixed` -0.012 %; 50,178 fewer allocations and 64,372 fewer `grow_one` calls
 a `cube` run.** `gather_continuous_effects_inner`'s `sa_cards` is
@@ -12556,6 +12639,17 @@ shape has changed:
   sweep each tap drags behind it.
 * Where to start next: `--tree=calling` on `activate_ability_inner` again — the
   table is different now.
+
+**⚠ THIS ENTRY'S SOUNDNESS ARGUMENT IS DEAD — read the eighty-seventh
+pass's Baseline before reusing it anywhere.** "It cannot be a lazily-cached
+field because ~20 sites rewrite a definition through `Arc::make_mut`" was
+true when written and stopped being true at the eighty-third pass, which
+built `ColorMemo` — a memo cleared in `CardInstance::DerefMut`, the one point
+every `&mut` reach into a card (including `&mut c.definition`) has to pass.
+The eighty-seventh pass used the same device to memoize `sba_board_scan`'s
+twenty-two definition bits for `fixed` **-0.862 %** / `cube` **-0.700 %** /
+`sealed` **-0.940 %**. What survives below is the *sizing* (~0.3 % for this
+particular caller's presence bit), not the impossibility.
 
 **(-11) `card_can_grant_keyword` — re-costed at the forty-fourth pass's tip
 and DEMOTED: 28.3 M / 1.52 % over 648,698 calls (43.6 Ir each), plus
