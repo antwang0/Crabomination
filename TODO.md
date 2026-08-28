@@ -40,7 +40,9 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass" and "Which pool a change moves". Read all three pools; a pool split
    is a revert. The two devices that paid last: the allocation table ranked
-   by calls, and `scripts/cg_calls.py` (call count + Ir/call).
+   by calls, and `scripts/cg_calls.py` (call count + Ir/call). **Count the
+   collection's *writes* before ranking an alloc/rehash row** — the same table
+   yielded one win and one refutation this pass.
 3. **Instruments** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
    `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`.
    All read at the tip; see PERF's newest Baseline block.
