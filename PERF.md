@@ -30,6 +30,15 @@ cargo build --release -p crabomination --bin bot_ladder
 CARGO_TARGET_DIR=target-mi cargo build --release -p crabomination \
   --bin bot_ladder --no-default-features
 
+# profile-guided build — OPT-IN, and worth -23.8 % on `fixed` / -23.4 % on
+# `cube` (ninety-first pass; see the Baseline). Nothing turns it on by
+# default, so every committed number in this file stays a plain `release-fast`
+# number: quote a PGO reading only against another PGO reading. Needs
+# `rustup component add llvm-tools` — the system llvm-profdata is 18.1.3
+# against rustc's 22.1.2 and fails on the format.
+scripts/pgo_build.sh                 # bot_ladder, release-fast
+scripts/pgo_build.sh selfplay_train  # any other bin, with PGO_TRAIN set
+
 # instruction-level profile (deterministic; no `perf` in the routine image).
 # Profile the system allocator: valgrind replaces malloc, so a mimalloc build
 # measures the interception, not the program. `profiling-fast` is
@@ -642,6 +651,55 @@ this file reaches for cannot see the difference either — a wider register is
 put on the clock directly. **What is left on the build side is layout, not
 width**: branch ordering, block placement and icache, i.e. PGO, and that is
 the half a branchy pointer-chaser can actually use.
+
+**AND PGO IS `-23.8 %` ON `fixed` AND `-23.4 %` ON `cube`, WHICH IS LARGER
+THAN EVERY CODE CHANGE IN THIS FILE PUT TOGETHER.** `scripts/pgo_build.sh`
+at the ninety-first pass: instrument, play 470 games across the three pools,
+merge, rebuild. Ninety passes of this file went to micro-architecture in the
+source and the build's own layout was never once tried.
+
+```text
+release-fast, base 15734b6f. Both sides built from the same tree; both read
+the committed invariant (195,528 decisions / 27.44 turns / 0 stalls /
+determinism ok), so they play the same games.
+
+  null  base2 vs base2  fixed  -1.42 %  6/8   CI  -2.49 .. -0.35 %
+  A/B   base2 vs pgo2   fixed -23.79 %  8/8   CI -24.42 .. -23.16 %
+  A/B   base2 vs pgo2   cube  -23.37 %  6/6   CI -24.23 .. -22.52 %
+  and an independent build pair one commit earlier, fixed -24.13 %, 8/8
+
+  binary  142,125,472 -> 118,117,656 bytes  (-16.9 %, both pairs)
+```
+
+**Read the null against the verdict, because the null is NOT clean here** —
+−1.42 % with a CI that excludes zero, i.e. the box drifted during the run and
+this workload's resolution today is about ±2.5 %, not the ±0.34 % the
+eighty-eighth pass got. That is an order of magnitude under the effect, so it
+does not touch this verdict; it would have swallowed any of the last twenty
+commits whole. **A null that comes back significant does not invalidate a
+verdict — it sets the size of verdict the run can carry.**
+
+**The 16.9 % smaller binary is the mechanism, not a side effect.** LLVM knows
+which blocks are cold and stops inlining and unrolling into them; a
+142 MB binary walking `Arc` graphs is an icache-miss machine, and the pool
+split confirms it — `fixed` and `cube` move *together* despite having almost
+disjoint hot sets (`fixed` carries no statics at all). A layout win is
+uniform across pools in a way no algorithmic change in this file has been.
+
+**Three cautions before anyone leans on it.** (a) It is **opt-in and stays
+opt-in**: no profile in `Cargo.toml` or `.cargo/config.toml` turns it on, so
+every committed number in this file remains a plain `release-fast` number and
+stays comparable. Quote a PGO reading only against another PGO reading. (b)
+**Ir cannot see this at all** — same lesson as the locality entry above, from
+the other end: PGO removes stalls and moves code, and callgrind charges the
+same instruction wherever it sits. Do not try to attribute it with
+`cg_edges.py`. (c) The training workload is three pools on **seed 7**,
+deliberately not the seed anything is measured on; a profile fitted to the
+sequence under test flatters itself. The measurement was on seed 11.
+
+**Not measured: the ML actor.** `selfplay_train` shares the whole engine with
+`bot_ladder`, so the win should carry, but that is an inference. The script
+takes a binary name and a `PGO_TRAIN` command for whoever measures it.
 
 Two notes for whoever repeats it. The run's `load average` line warned; it
 was a **false positive** — `start 2.49` is the decaying one-minute average
