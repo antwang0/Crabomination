@@ -1555,6 +1555,31 @@ this number are the ones already taken (fewer binaries, `test = false` on
 bin targets) and they are structural, not per-test. Do not sell the next
 sweep on compile time.
 
+**AND "the last of what `find_data_tests.sh` finds that is not a false
+positive" was measured against a broken script.** Fixed at the ninety-first
+pass (the `fn foo() {` line's opening brace was never counted, so every test
+"ended" after one line): the population is **305, of which 20 are sacred**,
+and the membership moved as much as the count — 47 of the old 185 were
+engine-touching tests reported because their *first line* read a definition,
+and 167 pure-data tests were never seen at all. The list as it stands:
+
+```text
+  285 candidates, 3,386 lines
+      157 read exactly ONE `catalog::` factory   1,307 lines   <- the echoes
+      128 read several                           2,079 lines   <- mostly the
+                                                   per-set definition tables
+                                                   the convention asks for,
+                                                   i.e. already the folded form
+  by directory (single-factory): modern 59, classic_sets 43, stx 32,
+      core_rules 12, sos 6, mh 3, recent_b 2 — biggest single file 19
+```
+
+**The 157 single-factory echoes are the sweep, and it is spread over ~60
+files at three lines each**, which is why it is written down rather than
+taken here: it is a convention change with no build-time return (above) and
+it collides with any concurrent session touching the suite. Take it when the
+branch is quiet, as one commit, with the suite green either side.
+
 ## Build time — the file-size lever is dead, measured 2026-08-23
 
 **"Oversized engine files dominate incremental rebuilds" is false on this
