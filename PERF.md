@@ -8841,9 +8841,30 @@ repeats in the self table, at `--decks cube`, post-(2):
   1.87 %  card_can_grant_keyword     <- TAKEN, row (3); -0.283 % of `cube`
   1.33 %  dispatch_board_scan        <- REFUTED, below; `fixed` +0.106 %
   1.30 %  card_type_change_unscoped  <- TAKEN, row (4); -0.405 % of `cube`
+  0.54 %  creature_type_change_in_scope  <- REFUTED with the row below
+  0.49 %  land_type_change_in_scope      <- REFUTED with the row below
   0.79 %  trigger_grant_sources      <- (-60); 0.25 grants found per call
   0.76 %  granted_abilities_of       <- walks `static_abilities` (twice, per (-10))
 ```
+
+**AND SO IS THE OBVIOUS EXTENSION OF THE ROW THAT WON — `card_can_change_
+creature_types` AND `card_can_change_land_types` ON THE SAME SLOT READ
+`fixed` **+0.135 %**, `cube` **+0.145 %**, `sealed` **+0.097 %**, BUILT AND
+REVERTED.** The two siblings of row (4) are the same three-walk shape minus
+the keyword leg, and folding four more bits into `type_bits` (no new valid
+flag, no new slot) made every pool worse — including `cube`, where the row
+that shipped had won.
+
+**The second half of that is the finding, and it is a cost this file had not
+named: a memo slot's miss path is the sum of every family on it, and it is
+paid by whichever consumer touches the card first.** `type_scan_bits` went
+from two bits to six, i.e. **three times the miss**, and the misses did not
+get rarer — so row (4)'s own win was eaten by the extension riding along with
+it. **Adding a consumer to a warm slot is not free. Give a new family its own
+valid flag, or measure the slot's miss again after widening it.** The first
+half is the rule below, twice confirmed: the walks removed here are
+`static_abilities.iter().any()` and `station.iter().any()` on definitions
+that have neither — two length checks.
 
 **`dispatch_board_scan` IS REFUTED — BUILT, MEASURED AND REVERTED at the
 eighty-seventh pass: `fixed` **+0.106 %**, `cube` -0.067 %, `sealed`

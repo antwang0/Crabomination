@@ -124,6 +124,14 @@ refuted.
   three rows that shipped removed five list walks, five pointer-chased loads
   and three list walks respectively. Bits were correct (the function's own
   `debug_assert!` against the four walks it fuses passed); the trade was not.
+- **A memo slot's miss path is the sum of every family on it, and it is paid
+  by whichever consumer touches the card first** (pass 87, same entry, built
+  and reverted: `fixed` +0.135 %, `cube` +0.145 %, `sealed` +0.097 %). Adding
+  `card_can_change_creature_types` and `..._land_types` to the *winning*
+  `type_bits` slot took it from two bits to six — three times the miss, no
+  fewer misses — and ate row (4)'s own win on the pool where it had won.
+  **Give a new family its own valid flag, or re-measure the slot's miss after
+  widening it.**
 
 - **A "more exact" reserve is still a reserve, and `ContinuousEffect` is a
   large struct** (pass 86; `fixed` +0.461 %, `cube` +0.401 %, `sealed`
