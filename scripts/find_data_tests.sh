@@ -10,6 +10,15 @@
 #  - contains `let _ = catalog::*()` or `catalog::*()` calls
 #  - does NOT contain any GameState-touching identifier
 #
+# **This script was wrong in both directions until 2026-08-28** and its output
+# is a delete list, so read the fix before trusting an older count. The
+# `fn foo() {` line's opening brace was never counted, so `brace_depth` was 0
+# on the first body line and every test "ended" after ONE line: a test whose
+# first line read a definition was reported however much engine it touched
+# below (47 such), and a pure-data test whose first line was anything else was
+# missed (167 such). 185 candidates before, **305 after** (285 + 20 sacred),
+# and the membership is what changed, not just the count.
+#
 # Engine-touching markers (case-sensitive substrings).
 ENGINE_MARKERS='two_player_game|multi_player_game|game_with_format|GameState::|GameAction::|add_card_to_|perform_action|do_cleanup|do_untap|drain_stack|cast\(|cast_at|battlefield|priority|check_state_based|resolve_effect|EffectContext|computed_permanent|fire_step|fire_start|register_replacement|seat_commanders|adjust_life|set_life|battlefield_find|effective_life|StackItem::|GameEvent::|granted_triggers|active_player_idx|CardInstance::new|CardInstance ::|CardInstance{|format::Format|Decklist|legality|color_identity|build_deck|cube|draft|Snapshot|view\.|view::'
 
@@ -28,8 +37,16 @@ for file in $(find crabomination_tests/tests -name '*.rs'); do
       name=$0
       start_line=NR
       in_test=1
-      body=""
-      brace_depth=0
+      body=$0
+      # The signature line carries the opening brace, and counting it here
+      # is what makes brace_depth mean what the block below assumes.
+      # Without it the depth was 0 on the first body line, so a test ENDED
+      # after one line - and every test whose first line read a catalog::
+      # definition was reported as pure-data however much engine it touched
+      # underneath. See the header for the before/after counts.
+      brace_depth = 0
+      n = gsub(/\{/, "{", $0); brace_depth += n
+      n = gsub(/\}/, "}", $0); brace_depth -= n
       pending=0
       next
     }
