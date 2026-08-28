@@ -13524,7 +13524,58 @@ impl GameState {
     /// `--decks sos`** at the fifty-eighth tip, plus a `Box` per element in
     /// two of the three callers. The single ability with nothing to borrow
     /// from — CR 804.2's deploy-creatures grant — is a `LazyLock` constant.
+    /// `#[inline]` on the gate, not on the body: the whole point is that the
+    /// three sweep call sites test ten lengths without a call at all, and
+    /// `release-fast` (cgu 16, no LTO) will not inline across a codegen unit
+    /// without being told.
+    #[inline]
     pub(crate) fn granted_abilities_of<'a>(
+        &'a self,
+        me: &'a CardInstance,
+        scan: &GrantScan<'a>,
+    ) -> Vec<&'a crate::effect::ActivatedAbility> {
+        // **"This permanent is granted nothing" is the common answer, and it
+        // is nine length loads away.** Every `out.push`/`out.extend` in the
+        // body draws from one of nine sources — the instance's two grant
+        // lists, the four `GrantScan` vectors, the deploy-creatures flag, the
+        // counter bag (Agatha's Soul Cauldron) and the definition's Station
+        // bands — plus `static_abilities`, which is where all six
+        // `HasActivatedAbilitiesOf*` markers *and* the Conspicuous Snoop
+        // re-read come from, so an empty one rules out that whole half at
+        // once. With all ten empty the body can only return `Vec::new()`.
+        //
+        // Worth gating because the three callers are whole-battlefield
+        // sweeps (`available_mana`, `effective_mana_abilities_into`,
+        // `main_phase_action_with`), so the question is asked per permanent
+        // per sweep. See PERF `(-82)` for the counts this was sized on.
+        if scan.statics.is_empty()
+            && scan.equipment.is_empty()
+            && scan.soulbond.is_empty()
+            && scan.graveyard.is_empty()
+            && me.definition.static_abilities.is_empty()
+            && me.granted_activated_abilities.is_empty()
+            && me.granted_activated_eot.is_empty()
+            && me.counters.is_empty()
+            && me.definition.station.is_empty()
+            && !self.deploy_creatures
+        {
+            debug_assert!(
+                self.granted_abilities_of_inner(me, scan).is_empty(),
+                "the grants-nothing gate missed a source: a new `out.push` in \
+                 `granted_abilities_of_inner` draws from something the ten \
+                 checks above do not cover"
+            );
+            return Vec::new();
+        }
+        self.granted_abilities_of_inner(me, scan)
+    }
+
+    /// The body of [`granted_abilities_of`](Self::granted_abilities_of),
+    /// reached once its grants-nothing gate has declined to answer. Split out
+    /// so the gate can assert against it under `-C debug-assertions=yes`
+    /// (`scripts/robustness_grid.sh`) — the audit is the only thing that
+    /// keeps the ten checks in step with the pushes below.
+    fn granted_abilities_of_inner<'a>(
         &'a self,
         me: &'a CardInstance,
         scan: &GrantScan<'a>,
