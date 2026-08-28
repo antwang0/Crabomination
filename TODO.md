@@ -54,14 +54,19 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    *freeze scope* spans the whole tick. **Two rules, and the second is the
    one to carry: divide a loop's item count by its call count before
    hoisting a per-item board walk out of it — and when the hoist fails
-   because the loop is short, ask whether the scope is long.** Cost of a
-   slot is `(-85)`, now top of the queue: `clear_gates` is one store per
-   slot at every scope exit, so each gate taxes every scope. **(c) counts the
-   passes in `blocker_pair_block` and says leave it** — eight against the
-   twenty-two that paid, i.e. ~0.08 %. **`(-86)` is a closed door**: the
-   `fmt::Write` row in every profile is `wants_converge`'s
-   once-per-card-name `{:?}`, already twice cached, and its `format!` is the
-   robust half of that function. `(-82)` and
+   because the loop is short, ask whether the scope is long.** `(-85)` asked
+   what a slot costs, built the packing that would remove it, and **reverted
+   it**: `cube` +0.011 %, because a gate is READ 3.5x for every scope that
+   EXITS. A slot costs ~113 k Ir a `cube` run and nothing else — add gates
+   freely. **(c) counts the passes in `blocker_pair_block` and says leave
+   it** — eight against the twenty-two that paid, i.e. ~0.08 %. **`(-86)` is
+   a closed door**: the `fmt::Write` row in every profile is
+   `wants_converge`'s once-per-card-name `{:?}`, already twice cached, and
+   its `format!` is the robust half of that function. **`(-87)` is new**: the
+   two layer-4 type gates *miss* 45 k / 27 k times a `cube` run at 262-642 Ir
+   a walk (1.13 % of the pool), and half of the land gate's misses come from
+   `activate_ability_inner`, which holds `&mut self` and so can never
+   memoize. `(-82)` and
    `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the

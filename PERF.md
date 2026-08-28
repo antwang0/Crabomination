@@ -874,8 +874,15 @@ here if it ever needs compacting.
   bot tick — thousands of the calls a per-pass hoist could only ever amortise
   one to three at a time. The test for the slot is one question: **can a
   freeze scope change the answer?** `false` for every printed static on the
-  battlefield. Cost of the slot is in `(-85)`, and it is the clear, not the
-  read.
+  battlefield. A slot costs ~113 k Ir a `cube` run in `clear_gates` and
+  nothing anywhere else; `(-85)` tried to remove even that and is a
+  refutation.
+- **A presence gate is read ~3.5x more often than a scope exits** (pass 94,
+  `(-85)`, built and reverted; `cube` **+0.011 %**). ~400 k gate reads a
+  `cube` run against ~113 k outermost pops, so **any per-read cost added to
+  make the per-exit clear cheaper loses**, and it loses on the pool that asks
+  the most gates while winning on the two that ask fewest — the pool split
+  is the signature of this trade, not an accident of one encoding.
 - **Price a `find` site at its expected stopping point, not at the
   collection's length** (pass 92's concurrent third, and it cost a build).
   A `battlefield.iter().find(|c| c.id == id)` for a permanent that *is* there
@@ -2090,8 +2097,12 @@ slot, run at every outermost scope exit, so the fourth slot shows up as
 **2 % of the win on `cube` and 19 % of it on `fixed`**, where the sweep is
 smaller and the scope count is not. Two readings fall out of that: the whole
 3-slot clear was already costing ~340 k Ir a `cube` run, and **every future
-gate taxes every scope exit whether or not the scope asks it**. `(-85)` is
-the fix and it is O(1).
+gate taxes every scope exit whether or not the scope asks it**. Filed as
+`(-85)`, and **built and reverted in the same pass**: packing the slots into
+one `AtomicU32` makes the clear O(1) and the *read* two instructions dearer,
+and a gate is read 3.5x for every scope that exits. See the entry — a fifth
+slot costs ~113 k Ir (0.004 % of `cube`), which is cheap enough that the
+scaling worry is not one.
 
 Suite 19,032 / 0 / 5, golden traces unmoved; clippy clean.
 
@@ -11929,19 +11940,87 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-85) `clear_gates` IS ONE STORE PER SLOT AT EVERY OUTERMOST SCOPE EXIT,
-AND A SCOPE THAT ASKS NO GATE PAYS FOR ALL OF THEM.** Filed by `(-84)(b)`'s
-counter-row: adding a fourth `PresenceGate` slot cost `Unfreeze::drop`
-**+113,000 / +59,772 / +149,374 Ir** (cube / fixed / sealed) — 19 % of that
-change's win on `fixed`. So the existing three already cost ~340 k a `cube`
-run, and the device gets *more* expensive with every gate added to it, which
-is the wrong direction for a mechanism whose whole point is to be cheap
-enough to add gates to. Four slots of a 3-state answer is 8 bits: pack
-`gates` into **one `AtomicU32`** (2 bits a slot, 0 unset / 1 false / 2 true)
-and the clear is a single `store(0)` regardless of slot count. `gate` /
-`set_gate` become a shift and a mask, which is what they already cost as an
-array index. Sized at ~0.011 % of `cube` and ~0.018 % of `fixed` on its own —
-small, but it is the tax on every gate anyone files after it.
+**(-85) BUILT, MEASURED AND REVERTED — packing `LayerFreeze::gates` into one
+`AtomicU32` is a pool split (`cube` **+0.011 %**), and the reason is a ratio
+worth carrying: a presence gate is READ 3.5x more often than a scope EXITS.**
+Filed by `(-84)(b)`'s counter-row (a fourth slot cost `Unfreeze::drop`
++113,000 / +59,772 / +149,374 Ir), on the argument that `clear_gates` is one
+store per slot at every outermost scope exit and so taxes every future gate.
+The argument is right and the fix still loses:
+
+```text
+base 1924fb21, callgrind, profiling-fast --no-default-features
+  fixed    998,835,007 ->   998,663,701   -0.017 %
+  cube   2,988,414,558 -> 2,988,740,744   +0.011 %
+  sealed 2,972,594,700 -> 2,972,297,675   -0.010 %
+
+cube, the whole diff, and it is two sides:
+  Unfreeze::drop                     10,348,176 -> 10,009,176   -339,000
+  freeze_layers_pop                   1,753,442 ->  1,660,370    -93,072
+  evaluate_requirement_static_hinted 28,217,494 -> 28,888,870   +671,376
+  available_mana                     16,372,603 -> 16,421,127    +48,524
+  scan_land_type_rewrites               654,686 ->    702,076    +47,390
+  blocker_self_block                 10,728,974 -> 10,765,042    +36,068
+```
+
+**The clear was exactly what it was thought to be — 1 Ir a slot a pop, so
+four slots is ~452 k of a `cube` run (0.015 %), and the packed clear takes
+three quarters of it back.** What the entry never counted is the other side:
+`gate()` on an array is one `movzx` of a byte; on a packed word it is a load,
+a shift and a mask. **+2 Ir a read, ~400 k reads a `cube` run against ~113 k
+outermost pops** — 3.5 reads an exit, so a per-read cost cannot be paid for
+by a per-exit saving. `fixed` and `sealed` ask fewer gates per scope and both
+win; `cube`'s requirement walker asks `creature_type_change_in_scope`
+constantly and loses more than the clear returns.
+
+**Standing reading, and the useful half:** the array is the right structure,
+the per-slot clear is the right price for it, and **a fifth gate costs ~113 k
+Ir a `cube` run** (0.004 %) — cheap enough that the scaling worry this entry
+was filed on is not one. Do not rebuild the packing. If a device that clears
+in O(1) *and* reads in one byte load is ever wanted, it has to be an epoch
+stamp, and an epoch stamp is two loads and a compare per read, i.e. the same
+trade in the same direction.
+
+**(-87) THE LAYER-4 TYPE GATES MISS 45 k / 27 k TIMES A `cube` RUN AND EACH
+MISS IS A 262-642 Ir BOARD WALK — 1.13 % OF `cube`, AND HALF OF IT IS ASKED
+FROM `&mut self`, WHERE NO SCOPE CAN EVER MEMOIZE IT.** Read at `efebd811`
+off the same dumps as `(-84)(b)`. The rows are the gates' *closures*, which
+run only on a miss:
+
+```text
+                                    fixed             cube             sealed
+  land_type_change_in_scope     17,648  5,013,924   45,082 15,882,434   47,596 12,487,024
+                       Ir/call            284.1                352.3              262.4
+  creature_type_change_in_scope  2,892    936,378   27,794 17,847,758    8,564  2,872,202
+                                          323.8                642.1              335.4
+                     % of pool             0.60 %               1.13 %             0.52 %
+
+land gate, by caller (calls):        fixed    cube   sealed
+  activate_ability_inner             8,418  19,320   22,794    <- &mut self
+  bot::available_mana                5,900  12,110   15,444
+  scan_land_type_rewrites            3,330   9,478    9,146
+creature gate, cube:
+  evaluate_requirement_static_hinted 18,900
+  dying_snapshot                      8,894
+```
+
+**`activate_ability_inner` is 48-54 % of the land gate's misses and it holds
+`&mut self`, so it is *provably* outside every freeze scope** — the same
+property `card_type_change_unscoped` was written for. An unscoped twin saves
+the depth load and nothing else: the walk is the whole cost. And
+`available_mana`'s misses are 1:1 with `(-82)`'s per-tick `available_mana`
+builds (5,900 on `fixed`, 12,110 on `cube`), which says those asks are each in
+a scope of their own — worth confirming before theorising, because if they are
+*not*, the memo is being reset by something and that is a bug, not a cost.
+
+The walk is `continuous_effects.iter().any(..) || battlefield.iter().any(
+card_can_change_land_types)`. Two devices, both already priced elsewhere: a
+per-definition presence bit keeps all 23 derefs (`dispatch_board_scan` is that
+shape at 226 Ir, against this walk's 262-352), and a battlefield memo is
+`(-62)`'s refuted class — the zone's write rate is the tap rate. **What is
+NOT yet priced is the split**: the `continuous_effects` half and the printed
+half have different write rates, and only the second one is what a tap
+touches. Size them separately before proposing anything.
 
 **(-86) `String as fmt::Write` IS 158,146 CALLS IN THE SIMULATOR AND IT IS
 NOT A LEAD — READ THIS BEFORE CHASING IT.** A `{:?}` Debug format of a whole
