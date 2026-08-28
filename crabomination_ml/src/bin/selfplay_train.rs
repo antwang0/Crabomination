@@ -664,6 +664,14 @@ struct Shared {
     /// Next self-play game index to claim — also the per-game seed salt.
     next_game: AtomicU64,
     games_done: AtomicU64,
+    /// When the run began, and how far in the last game finished (ms). A
+    /// run bounded by `--steps` outlives its actors, so `games / elapsed`
+    /// divides game-playing by a denominator the *learner* owns: 3,000
+    /// games and 288 k rows read 242.6 games/s at `--steps 1` and 92.6 at
+    /// `--steps 200` for identical actor work. These two make the actor
+    /// window reportable on its own.
+    run_start: Instant,
+    actor_ms: AtomicU64,
     /// Games played by the MCTS fleet specifically. Decisions are the
     /// binding budget of a distillation run, so the mix has to be
     /// legible per checkpoint rather than inferred from the deque.
@@ -823,6 +831,9 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             }
         }
         shared.games_done.fetch_add(1, Ordering::Relaxed);
+        shared
+            .actor_ms
+            .fetch_max(shared.run_start.elapsed().as_millis() as u64, Ordering::Relaxed);
         if rec.rows.is_empty() {
             shared.stalls.fetch_add(1, Ordering::Relaxed);
             match rec.stop {
@@ -1655,6 +1666,8 @@ fn main() {
         rows_pushed: AtomicU64::new(0),
         next_game: AtomicU64::new(0),
         games_done: AtomicU64::new(0),
+        run_start: Instant::now(),
+        actor_ms: AtomicU64::new(0),
         games_mcts: AtomicU64::new(0),
         stalls: AtomicU64::new(0),
         stalls_capped: AtomicU64::new(0),
@@ -1680,7 +1693,9 @@ fn main() {
         args.reuse
     );
 
-    let start = Instant::now();
+    // One clock for both, so the actor window and the run's elapsed are
+    // measured from the same origin.
+    let start = shared.run_start;
     // The per-thread fleet flag is a Copy the closure must own (a loop
     // local can't outlive the scope), so the shared state is re-borrowed
     // here for the `move` closures to capture by reference.
@@ -1946,6 +1961,11 @@ fn main() {
 
     let secs = start.elapsed().as_secs_f64();
     let games = shared.games_done.load(Ordering::Relaxed);
+    // Two rates, because they answer different questions and only the
+    // second is the simulator's. `--steps` can outlast the actors: the run
+    // then keeps ticking with nothing playing, and games/elapsed reports a
+    // number three times under the actors' own. The gap is the learner.
+    let actor_s = shared.actor_ms.load(Ordering::Relaxed) as f64 / 1000.0;
     eprintln!(
         "done: {games} games ({:.1}/s), {} rows, {} stalls, {:.0}s",
         games as f64 / secs.max(0.001),
@@ -1953,6 +1973,16 @@ fn main() {
         shared.stalls.load(Ordering::Relaxed),
         secs
     );
+    if actor_s > 0.0 {
+        let share = 100.0 * actor_s / secs.max(0.001);
+        eprintln!(
+            "actors: {:.1} games/s over {:.1}s ({:.0}% of the run{})",
+            games as f64 / actor_s.max(0.001),
+            actor_s,
+            share,
+            if share < 95.0 { "; the rest is the learner outliving them" } else { "" },
+        );
+    }
 }
 
 /// Counters as of the previous checkpoint, so every stats line can report
@@ -2113,6 +2143,11 @@ fn checkpoint(
     *prev = Interval { secs, games, rows, consumed, step };
     let cum_g = games as f64 / secs.max(1e-9);
     let cum_r = rows as f64 / secs.max(1e-9);
+    // The actors' own window. Equal to `secs` while they are still
+    // playing; smaller once `--steps` outlives them, and the gap is what
+    // separates simulator throughput from run throughput.
+    let actor_s = shared.actor_ms.load(Ordering::Relaxed) as f64 / 1000.0;
+    let actor_g = games as f64 / actor_s.max(1e-9);
     // Held-out policy agreement: how often the net's top-scoring
     // candidate is the one the pilot actually played, on decisions it was
     // never trained on. This is the first metric in the program that
@@ -2156,7 +2191,7 @@ fn checkpoint(
     };
     let [t_sample, t_step, t_relabel, t_deck, t_sleep] = timing.take_ms();
     let line = format!(
-        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_opp\":{opp:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"policy_sv\":{policy_sv:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"games_mcts\":{games_mcts},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
+        "{{\"step\":{step},\"loss_ema\":{total:.5},\"loss_win\":{win:.5},\"loss_life\":{life:.5},\"loss_len\":{len:.5},\"loss_opp\":{opp:.5},\"loss_deck\":{deck_loss:.5},\"val_n\":{val_n},\"val_win\":{val_win:.5},\"val_tgt\":{val_tgt:.5},\"val_logloss\":{val_ll:.5},\"val_auc\":{val_auc:.5},\"policy_top1\":{policy_top1:.4},\"policy_loss\":{policy_loss:.5},\"policy_sv\":{policy_sv:.5},\"val_policy\":{val_policy:.4},\"val_policy_chance\":{val_policy_chance:.4},\"pilot_policy\":{pilot_policy:.4},\"val_policy_n\":{val_policy_n},\"train_n\":{train_n},\"train_raw\":{train_raw:.5},\"train_tgt\":{train_tgt:.5},\"rows_consumed\":{consumed},\"rows\":{rows},\"games\":{games},\"games_mcts\":{games_mcts},\"stalls\":{stalls},\"stalls_capped\":{stalls_capped},\"stalls_stuck\":{stalls_stuck},\"elapsed_s\":{secs:.0},\"games_per_s\":{dg:.3},\"rows_per_s\":{dr:.1},\"consumed_per_s\":{dc:.1},\"steps_per_s\":{ds:.3},\"games_per_s_cum\":{cum_g:.3},\"actor_s\":{actor_s:.1},\"actor_games_per_s\":{actor_g:.3},\"rows_per_s_cum\":{cum_r:.1},\"t_sample_ms\":{t_sample},\"t_step_ms\":{t_step},\"t_relabel_ms\":{t_relabel},\"t_deck_ms\":{t_deck},\"t_sleep_ms\":{t_sleep}}}\n"
     );
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()

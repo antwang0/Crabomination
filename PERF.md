@@ -716,13 +716,31 @@ learner to one step and the four actors own the clock: **90.9 games/s ->
 261.0 games/s** on the base binary, and the PGO win goes straight back to the
 `bot_ladder` figure.
 
-**So the standing instruction for any future actor reading: print the time
-split before quoting a throughput number.** `t_step_ms` against `elapsed_s`
-answers "is this run engine-bound or learner-bound?" in one line, and the two
-kinds of run respond to completely different work. A simulator optimization
-measured on a learner-bound configuration is divided by twenty before you see
-it — which is also why `--bench` and `bot_ladder` are the right instruments
-for this file and `selfplay_train` is not.
+**AND THE NUMBER THAT MISLED HERE WAS `selfplay_train`'s OWN, SO IT IS FIXED
+RATHER THAN WRITTEN UP AS A CAUTION.** `games_per_s` was games ÷ *elapsed*,
+and a `--steps`-bounded run outlives its actors — so the denominator belongs
+to the learner. The proof is two runs of one binary doing provably identical
+work:
+
+```text
+  --games 3000 --steps 1     3000 games, 287,852 rows, 12.6 s -> 242.6 /s
+  --games 3000 --steps 200   3000 games, 287,957 rows, 32.8 s ->  92.6 /s
+```
+
+The run now records when the last game finished and prints the actor window
+beside the run's, so the two are never confused again:
+
+```text
+  done:   3000 games (92.2/s), 288422 rows, 0 stalls, 33s
+  actors: 232.0 games/s over 12.9s (27% of the run; the rest is the
+          learner outliving them)
+```
+
+`actor_s` and `actor_games_per_s` join `stats.jsonl` for the series.
+**Quote `actors:`, never `done:`, for anything about the simulator** — a
+simulator optimization measured on the old line was divided by up to three
+before you saw it, which is also why `--bench` and `bot_ladder` are this
+file's instruments and `selfplay_train` was not.
 
 **And it re-prices the ML loop itself.** At a learner-heavy setting the
 training run is not simulator-bound at all, so *no* amount of engine work
