@@ -54,9 +54,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    seeded 4,000-pairing cube sweep, and the two census env vars. Run in full
    at the eighty-ninth pass under a behaviour change; clean.
 6. **Bugs** — ENGINE_BACKLOG's live-match section has **no open entry** (CR
-   613.8 shipped). What is left there is two 🟡 *class* entries: the block
-   pair gate's two hand-written lists, and the printed-vs-computed combat
-   checks' missing guards. Card audits clean — see INCOMPLETE_CARDS.
+   613.8 shipped). Two 🟡 *class* entries were re-read and both shrank: the
+   block pair gate is already one body (the "still open" text was eight
+   passes stale), and the planner's printed flying/reach pre-filters in front
+   of it are fixed — a granted Reach could not block a flier in any plan.
+   What is left is the *batch*-level readings, which no pair function can
+   hold, and the attack side's hold-back **heuristic**, which is a strength
+   change with no gate rather than a legality bug. Card audits clean — see
+   INCOMPLETE_CARDS.
 7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
 8. **Tip state** — PERF "Baseline"'s two newest blocks: the ninetieth's

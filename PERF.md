@@ -1302,11 +1302,14 @@ because it is reproducible, cheap and *is* representative of the game loop
 the whole simulator.
 
 ```text
-# the four pools, same config, at the fifty-third tip
+# the four pools, same config, at the fifty-third tip. The `totals:` line is
+# the whole-program Ir every Log row is a ratio of — read it straight out of
+# the dump rather than through `callgrind_annotate`.
 for d in fixed cube sos sealed; do
   RUST_MIN_STACK=33554432 valgrind --tool=callgrind --callgrind-out-file=cg.$d.out \
     target/profiling-fast/bot_ladder --a gang --b gang --games 6 --threads 1 \
-    --seed 1 --decks $d
+    --seed 1 --decks $d > /dev/null 2>&1
+  printf '%-7s %s\n' "$d" "$(grep -a '^totals:' cg.$d.out | awk '{print $2}')"
 done
 # deck construction alone (0 games played, all setup):
 target/profiling-fast/bot_ladder --a gang --b gang --games 1 --threads 1 \
