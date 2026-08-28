@@ -686,6 +686,43 @@ split confirms it — `fixed` and `cube` move *together* despite having almost
 disjoint hot sets (`fixed` carries no statics at all). A layout win is
 uniform across pools in a way no algorithmic change in this file has been.
 
+**AND THE PROFILE THIS FILE MEASURES ON IS 8.3 % SLOWER THAN THE ONE THE
+PROJECT ALREADY HAS, WHICH NOBODY HAD EVER PRICED.** `release-fast` was
+chosen for build speed — `Cargo.toml` says 2m04s against 10m02s, a 4.9x
+rebuild — and the *throughput* half of that trade was never measured. Four
+binaries, one tree, all four reading the committed invariant:
+
+```text
+  ab_wall.py 8 blocks, --games 2000 --decks fixed --threads 4 --seed 11
+
+  A                    B                      verdict        blocks  bytes(B)
+  release-fast         release (LTO, cgu 1)   -8.28 %         8/8   123,768,408
+  release-fast         release-fast + PGO    -23.79 %         8/8   118,112,504
+  release (LTO)        release-fast + PGO    -16.15 %         8/8   118,112,504
+  release (LTO)        release + PGO          FLAT (-0.33 %)  5/8   119,306,264
+                                              CI -0.57..+0.29
+  release-fast (plain)                                             142,161,400
+```
+
+**So PGO and LTO are substitutes here, not complements, and PGO is the better
+one.** `release-fast + PGO` is the fastest binary measured *and* the cheaper
+build — ~18 min against `release`'s 22-24 — and it beats the LTO profile by
+16 %. Adding LTO and `codegen-units = 1` on top of a profile buys nothing: the
+last row is flat.
+
+**The last row is not a profile that failed to load.** `-Cprofile-use` did
+change codegen there — the binary went 123,768,408 -> 119,306,264, a 3.6 %
+shrink — so the data was read and applied; it simply bought no time on top of
+what whole-program LTO had already found. The consistency check holds too:
+-23.79 % and -8.28 % against a common baseline predict -16.9 % between them,
+and the measured pair is -16.15 %.
+
+**One variable not controlled**: the profile fed to the `release` build was
+generated from a `release-fast` **instrumented** binary. Frontend CFG hashes
+should not depend on `lto`/`codegen-units`, and the size change shows it was
+applied — but a profile raised under `release`'s own settings has not been
+tried, and that is the one way the flat row could still be an artifact.
+
 **Three cautions before anyone leans on it.** (a) It is **opt-in and stays
 opt-in**: no profile in `Cargo.toml` or `.cargo/config.toml` turns it on, so
 every committed number in this file remains a plain `release-fast` number and
