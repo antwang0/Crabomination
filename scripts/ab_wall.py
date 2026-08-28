@@ -44,6 +44,13 @@ Rules this file exists to enforce:
 - **Run the null control** (`--bin-a X --bin-b X`) on the same workload and
   the same block count before trusting a verdict. A null that comes back
   significant means the box moved, not the code.
+- **Read the load line.** This branch runs two concurrent sessions on four
+  cores, and a null taken while the other one was linking came back with a
+  0.72-1.26 block spread — the instrument resolving nothing at all. That was
+  diagnosed by hand afterwards; it is printed now. The run's own share is
+  `--threads N`, so the guardrail warns above `N + 1.5` or on a start load
+  over 1.0. Demonstrated: the same null under six spinners reads a **159.5 %**
+  B spread and a `+/-9.73 %` resolution, against 0.0 % and `+/-1.91 %` quiet.
 
 Calibration on the routine box (Intel Xeon @ 2.10GHz, 4 cores),
 `--games 2000 --decks sos --threads 4`, ~30 s a run:
@@ -95,6 +102,36 @@ def t95(df):
     return next(t for d, t in reversed(T95) if d <= df)
 
 
+def loadavg():
+    """The 1-minute load average, or `None` where the OS has none."""
+    try:
+        import os
+
+        return os.getloadavg()[0]
+    except (AttributeError, OSError):
+        return None
+
+
+def threads_in(workload):
+    """`--threads N` out of the workload, so the run's *own* load is known.
+
+    A verdict is only in doubt when the box carries load this run did not
+    put there, and `--threads 4` accounts for about four of it.
+    """
+    for i, a in enumerate(workload):
+        if a == "--threads" and i + 1 < len(workload):
+            try:
+                return int(workload[i + 1])
+            except ValueError:
+                return None
+        if a.startswith("--threads="):
+            try:
+                return int(a.split("=", 1)[1])
+            except ValueError:
+                return None
+    return None
+
+
 def run(binary, args):
     """One run. Returns (seconds, fingerprint) or exits on a non-zero status."""
     t0 = time.monotonic()
@@ -140,6 +177,17 @@ def main():
     print(f"# {' '.join(workload)}")
     print(f"# {args.blocks} ABBA blocks = {4 * args.blocks} runs")
 
+    # The box's own state, sampled before anything of ours runs. This branch
+    # holds two concurrent sessions on four cores, and a null control taken
+    # while the other one was linking came back with a 0.72-1.26 block spread
+    # — the instrument resolving nothing at all. That was diagnosed by hand
+    # afterwards with `uptime`; the diagnosis belongs in the output.
+    self_threads = threads_in(workload)
+    idle_load = loadavg()
+    if idle_load is not None:
+        print(f"# load average before the first run  {idle_load:.2f}")
+    loads = []
+
     if args.warmup:
         run(args.bin_a, workload)
         run(args.bin_b, workload)
@@ -159,6 +207,9 @@ def main():
         a_all += [a1, a2]
         b_all += [b1, b2]
         ratios.append(b / a)
+        blk = loadavg()
+        if blk is not None:
+            loads.append(blk)
         print(
             f"block {i + 1}  A {a1:6.2f} {a2:6.2f} -> {a:6.2f}   "
             f"B {b1:6.2f} {b2:6.2f} -> {b:6.2f}   B/A {b / a:.4f}"
@@ -208,6 +259,23 @@ def main():
     else:
         print(f"verdict         B is {100 * abs(mean - 1):.2f} % "
               f"{'faster' if mean < 1 else 'SLOWER'} than A")
+    # The load guardrail, printed last so it reads as a caveat on the verdict
+    # just above it rather than as setup noise. `self_threads` is what this
+    # run puts on the box; anything much above that is somebody else, and
+    # ABBA cancels linear drift, not another process's `cargo build`.
+    if loads:
+        budget = (self_threads or 1) + 1.5
+        print(
+            f"load average    start {idle_load:.2f}, "
+            f"{min(loads):.2f}-{max(loads):.2f} across the blocks "
+            f"(this run is ~{self_threads if self_threads else '?'} of it)"
+        )
+        if max(loads) > budget or (idle_load is not None and idle_load > 1.0):
+            print(
+                "WARNING         the box carried load this run did not put "
+                "there. A verdict from a contended box is not a verdict — "
+                "re-run the null control and expect it to come back wide."
+            )
     print(
         "# run `--bin-a X --bin-b X` on the same workload before trusting a "
         "verdict: a null that comes back significant means the box moved, not "
