@@ -10,7 +10,7 @@
 #  - contains `let _ = catalog::*()` or `catalog::*()` calls
 #  - does NOT contain any GameState-touching identifier
 #
-# **This script was wrong three ways until 2026-08-28** and its output is a
+# **This script was wrong FOUR ways until 2026-08-28** and its output is a
 # DELETE LIST, so read the fixes before trusting an older count.
 #
 #  1. The `fn foo() {` line's opening brace was never counted, so
@@ -27,12 +27,22 @@
 #  3. Sacredness read only the doc comment above the test, so a CR citation on
 #     the assert itself did not protect it —
 #     `magmablood_archaic_mana_value_is_six` cites CR 202.3f inside the body.
+#  4. **The helper pass had bug 1 all over again**, one function down: a
+#     helper's body ended on the line after its signature unless the opening
+#     brace was on that signature. Every helper with a multi-line parameter
+#     list — `assert_fetchland_fetches`, `cast_and_resolve_at` — spliced its
+#     *signature* into each caller, which carries no engine marker, so the
+#     fourteen fetchland / dual-land tests in
+#     `modern/lands_equipment_vehicles.rs` and two extra-turn tests in
+#     `core_rules/xtra.rs` were offered up for deletion. Fixed by not closing
+#     a helper until its opening brace has been seen.
 #
-# 185 candidates before, **284 after** (269 + 15 sacred), and the membership
-# moved as much as the count. Of the 269, **145 read exactly one `catalog::`
-# factory** (1,169 lines) and are the echoes the convention is about; the
-# other 124 read several and are mostly the per-set definition tables the
-# convention asks things to be folded *into*.
+# 185 candidates at first, 284 after fixes 1-3, **250 after fix 4** (235 + 15
+# sacred). Fix 4 only ever *removes* rows — no test entered the list because
+# of it. Of the 235, the single-factory definition echoes over ~60 files are
+# the sweep the convention is about; the rest read several factories and are
+# mostly the per-set definition tables the convention asks things to be folded
+# *into*.
 #
 # ⚠ The awk program is in single quotes: an apostrophe in a comment inside it
 # ends the shell string. It has broken this file twice. No contractions.
@@ -57,16 +67,23 @@ for file in $(find crabomination_tests/tests -name '*.rs'); do
         hname = $0
         sub(/^fn /, "", hname); sub(/[(<].*$/, "", hname)
         in_h = 1; hbody = $0
-        hd = 0
-        n = gsub(/\{/, "{", $0); hd += n
+        hd = 0; hopen = 0
+        n = gsub(/\{/, "{", $0); hd += n; hopen += n
         n = gsub(/\}/, "}", $0); hd -= n
+        # A helper is not finished until its opening brace has been SEEN.
+        # Without `hopen` a multi-line signature - `fn assert_fetchland_fetches(`
+        # with its two `fn() -> CardDefinition` parameters on their own lines -
+        # ends the helper on line two, so the body spliced into every caller is
+        # the signature and carries no engine marker. That put fourteen live
+        # engine tests in `modern/lands_equipment_vehicles.rs` on a DELETE list.
+        if (hopen > 0 && hd <= 0) { helper[hname] = hbody; in_h = 0; hbody = "" }
         next
       }
       if (in_h) {
         hbody = hbody "\n" $0
-        n = gsub(/\{/, "{", $0); hd += n
+        n = gsub(/\{/, "{", $0); hd += n; hopen += n
         n = gsub(/\}/, "}", $0); hd -= n
-        if (hd <= 0 && NF > 0) { helper[hname] = hbody; in_h = 0; hbody = "" }
+        if (hopen > 0 && hd <= 0 && NF > 0) { helper[hname] = hbody; in_h = 0; hbody = "" }
       }
       next
     }
