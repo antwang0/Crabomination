@@ -867,6 +867,15 @@ here if it ever needs compacting.
   out of them runs about as often as the *conditional* per-blocker walk it
   replaced, at roughly twice the cost. The deletion ceiling for that walk is
   a real -0.333 % of `cube`; a hoist is simply not the way to it.
+- **When a hoist fails because the loop is short, ask whether the *scope* is
+  long** (pass 94, the same `(-84)(b)`, and it took 54 % of the ceiling the
+  rule above declared unreachable). A `PresenceGate` slot memoizes a board
+  question for the lifetime of a freeze scope, and a scope spans the whole
+  bot tick — thousands of the calls a per-pass hoist could only ever amortise
+  one to three at a time. The test for the slot is one question: **can a
+  freeze scope change the answer?** `false` for every printed static on the
+  battlefield. Cost of the slot is in `(-85)`, and it is the clear, not the
+  read.
 - **Price a `find` site at its expected stopping point, not at the
   collection's length** (pass 92's concurrent third, and it cost a build).
   A `battlefield.iter().find(|c| c.id == id)` for a permanent that *is* there
@@ -2029,6 +2038,62 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### Ninety-fourth pass — the board question the whole planner asks becomes one load, and the gate array is the counter-row
+
+**Void Winnower's block half is a presence gate now, base `efebd811`** —
+`(-84)(b)`, taken by a mechanism the entry never named, one pass after the
+concurrent session built the mechanism it *did* name and refuted it
+(`af0b2546`: the `block_static_scan` hoist reads `fixed` **+0.090 %**).
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     998,970,302 ->   998,652,084   -0.032 %
+  cube    2,993,004,296 -> 2,987,636,608   -0.179 %
+  sealed  2,976,500,440 -> 2,973,724,566   -0.093 %
+
+blocker_self_block, same call count either side (behaviour-preserving):
+                 calls        before        after     Ir/call
+  fixed         32,882     3,405,172    3,035,866   103.6 ->  92.3
+  cube          74,692    16,206,302   10,728,974   217.0 -> 143.6   (-33.8 %)
+  sealed        79,820    13,177,524   10,287,476   165.1 -> 128.9   (-21.9 %)
+```
+
+**Against the deletion ceiling `af0b2546` measured** (`if false && …`:
+`fixed` -0.113 / `cube` -0.333 / `sealed` -0.222 %), this takes **28 / 54 /
+42 %** of it — and takes it on all three pools, where the hoist split them.
+What is left is the callers outside a freeze scope: `declare_blockers`' own
+assignment loop, and every bot path reached on a fresh clone, whose
+`LayerFreeze` resets to unfrozen by construction.
+
+**Anchor check.** The base readings here are `efebd811`, three commits past
+the `cc608dde`-based row above, and they agree with that row's tip figures to
+**238 / 27 / 1,927 Ir** on 1.0 G / 3.0 G / 3.0 G — the portability rule again,
+now checked across a doc commit, a test-fold commit and a tracker commit.
+
+**The change is four lines and the mechanism was already in the tree.** The
+gate was `cmc().is_multiple_of(2) && <whole battlefield walk for
+`OpponentsCantBlockWithEvenMv`>`, and **zero is even**, so half of every
+block-legality question the planner asks paid a ~23-permanent walk for a
+static that one catalog card has. `LayerFreeze::gates` already memoizes a
+board question per freeze scope for the three layer-4 type families; this is
+the same shape — a printed static on the battlefield is exactly what a scope
+cannot change — so it becomes a fourth slot and `pick_blocks`' sweep asks the
+board once instead of once per even blocker. `TypeGate` is now
+`PresenceGate`: the device was never type-specific and a fourth member named
+`BlockEvenMv` made the old name a lie.
+
+**The counter-row is the interesting half, and it is a scaling fact about the
+device, not about this change.** `clear_gates` is a loop of one store per
+slot, run at every outermost scope exit, so the fourth slot shows up as
+`Unfreeze::drop` **+113,000 / +59,772 / +149,374** (cube / fixed / sealed) —
+**2 % of the win on `cube` and 19 % of it on `fixed`**, where the sweep is
+smaller and the scope count is not. Two readings fall out of that: the whole
+3-slot clear was already costing ~340 k Ir a `cube` run, and **every future
+gate taxes every scope exit whether or not the scope asks it**. `(-85)` is
+the fix and it is O(1).
+
+Suite 19,032 / 0 / 5, golden traces unmoved; clippy clean.
 
 ### Ninety-third pass (2) — a pure disjunction is one pass per operand, not twenty-two
 
@@ -11864,6 +11929,20 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-85) `clear_gates` IS ONE STORE PER SLOT AT EVERY OUTERMOST SCOPE EXIT,
+AND A SCOPE THAT ASKS NO GATE PAYS FOR ALL OF THEM.** Filed by `(-84)(b)`'s
+counter-row: adding a fourth `PresenceGate` slot cost `Unfreeze::drop`
+**+113,000 / +59,772 / +149,374 Ir** (cube / fixed / sealed) — 19 % of that
+change's win on `fixed`. So the existing three already cost ~340 k a `cube`
+run, and the device gets *more* expensive with every gate added to it, which
+is the wrong direction for a mechanism whose whole point is to be cheap
+enough to add gates to. Four slots of a 3-state answer is 8 bits: pack
+`gates` into **one `AtomicU32`** (2 bits a slot, 0 unset / 1 false / 2 true)
+and the clear is a single `store(0)` regardless of slot count. `gate` /
+`set_gate` become a shift and a mask, which is what they already cost as an
+array index. Sized at ~0.011 % of `cube` and ~0.018 % of `fixed` on its own —
+small, but it is the tax on every gate anyone files after it.
+
 **(-84) THE BLOCK-LEGALITY TRIO IS 1.46 % OF `cube` AND TWO OF ITS THREE
 ROWS HAVE A NAMED SHAPE.** Read at `ea2cb263`, `--decks cube`, and all three
 are off the top thirty on `fixed` — this is a `cube`/`sealed` entry, so size
@@ -11890,6 +11969,27 @@ by construction. Every keyword it tests by `has_kw` is a *unit* variant, so a
 against `(-78)`'s test 1 before building**: these are short *per-call*
 slices, not a board walk, so what is on offer is the 20 loop set-ups and not
 the elements.
+
+**(b) TAKEN at the ninety-fourth pass, by a mechanism the entry never
+named — `fixed` -0.032 % / `cube` -0.179 % / `sealed` -0.093 %, which is
+28 / 54 / 42 % of the deletion ceiling below, and it wins on all three
+pools where the hoist split them.** See the Baseline. The question moved
+into a `LayerFreeze::gates` **presence-gate** slot: it is a printed static
+on the battlefield, so a freeze scope cannot change the answer, and the
+planner already runs inside one — no signature, no scan, and the walk
+happens once a scope instead of once per even blocker. `TypeGate` is now
+`PresenceGate`. **Before threading a scan through N callers, ask whether
+the question belongs in a `PresenceGate` slot**: the whole test is "can a
+freeze scope change the answer", and the answer here was yes for every
+caller the refutation below measured.
+
+What is left of the ceiling is the callers that are *not* in a scope —
+`declare_blockers` per assignment, and any bot path reached on a fresh
+clone, whose `LayerFreeze` resets to unfrozen. They pay the walk exactly
+as before.
+
+The refutation of the *hoist*, kept in full — a mechanism refuted stays
+refuted, and this one is the reason the gate was worth looking for:
 
 **(b) BUILT, MEASURED TWICE AND REFUTED at the ninety-third pass (2) — the
 hoist costs `fixed` **+0.090 %**. The deletion ceiling is real and it is not

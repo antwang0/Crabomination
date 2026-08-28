@@ -277,8 +277,8 @@ pub(crate) struct LayerFreeze {
     /// Nesting depth of active `with_frozen_layers` scopes; 0 = unfrozen.
     depth: std::sync::atomic::AtomicU32,
     /// Per-scope presence-gate answers: 0 unset, 1 false, 2 true. See
-    /// [`TypeGate`], and [`LayerFreezeState::end_of_scope`] for the clear.
-    gates: [std::sync::atomic::AtomicU8; TypeGate::COUNT],
+    /// [`PresenceGate`], and [`LayerFreezeState::end_of_scope`] for the clear.
+    gates: [std::sync::atomic::AtomicU8; PresenceGate::COUNT],
     state: std::sync::Mutex<LayerFreezeState>,
 }
 
@@ -305,25 +305,30 @@ struct LayerFreezeState {
     perms: SmallVec<[(CardId, std::sync::Arc<crate::game::layers::ComputedPermanent>); 8]>,
 }
 
-/// The layer-4 type families with a presence gate, and the slot each one
+/// The board questions with a presence gate, and the slot each one
 /// memoizes into inside a freeze scope.
 ///
 /// A slot holds this scope's answer, by the same argument as
-/// [`LayerFreezeState::memo`]: each gate is two whole-collection walks whose
+/// [`LayerFreezeState::memo`]: each gate is a whole-collection walk whose
 /// inputs (`continuous_effects`, `battlefield`) cannot change while frozen,
 /// so the second ask is the first answer. The shape it exists for: at the
 /// fiftieth pass's (D) tip, `evaluate_requirement_static`'s card-type gate
 /// made 15,096 of the walk's 34,906 calls, ~5 per target enumeration and
 /// every one the same answer.
+///
+/// The first three are the layer-4 type families; the device is not
+/// type-specific, and anything whose walk reads only frozen state belongs
+/// here.
 #[derive(Clone, Copy)]
-pub(crate) enum TypeGate {
+pub(crate) enum PresenceGate {
     Card = 0,
     Creature = 1,
     Land = 2,
+    BlockEvenMv = 3,
 }
 
-impl TypeGate {
-    const COUNT: usize = 3;
+impl PresenceGate {
+    const COUNT: usize = 4;
 }
 
 impl LayerFreeze {
@@ -350,7 +355,7 @@ impl LayerFreeze {
     }
 
     /// The presence gate's answer for this scope, if it has one.
-    fn gate(&self, gate: TypeGate) -> Option<bool> {
+    fn gate(&self, gate: PresenceGate) -> Option<bool> {
         match self.gates[gate as usize].load(std::sync::atomic::Ordering::Relaxed) {
             1 => Some(false),
             2 => Some(true),
@@ -358,7 +363,7 @@ impl LayerFreeze {
         }
     }
 
-    fn set_gate(&self, gate: TypeGate, answer: bool) {
+    fn set_gate(&self, gate: PresenceGate, answer: bool) {
         self.gates[gate as usize]
             .store(1 + answer as u8, std::sync::atomic::Ordering::Relaxed);
     }
@@ -9026,7 +9031,7 @@ impl GameState {
     /// type line in `compute_permanent_pass` without a `Modification` at all.
     /// It is a per-card flag, so a caller reads it off the card directly.
     pub(crate) fn card_type_change_in_scope(&self) -> bool {
-        self.type_gate(TypeGate::Card, || self.card_type_change_unscoped())
+        self.presence_gate(PresenceGate::Card, || self.card_type_change_unscoped())
     }
 
     /// One presence gate's answer, memoized per freeze scope — see
@@ -9036,8 +9041,8 @@ impl GameState {
     ///
     /// The gates share this because they share the argument: nothing `walk`
     /// reads can change while frozen. A family that does not hold that
-    /// property does not belong in [`TypeGate`].
-    fn type_gate(&self, gate: TypeGate, walk: impl FnOnce() -> bool) -> bool {
+    /// property does not belong in [`PresenceGate`].
+    fn presence_gate(&self, gate: PresenceGate, walk: impl FnOnce() -> bool) -> bool {
         let frozen = self.layer_freeze.depth() > 0;
         if frozen && let Some(v) = self.layer_freeze.gate(gate) {
             return v;
@@ -9183,7 +9188,7 @@ impl GameState {
     /// `debug_assert!`s the implication in the sound direction, so the whole
     /// suite audits the enumeration without any caller paying a gather.
     pub(crate) fn land_type_change_in_scope(&self) -> bool {
-        self.type_gate(TypeGate::Land, || {
+        self.presence_gate(PresenceGate::Land, || {
             self.continuous_effects.iter().any(|e| {
                 matches!(
                     e.modification,
@@ -9209,13 +9214,35 @@ impl GameState {
     /// `debug_assert!`s the implication in the sound direction, so the whole
     /// suite audits the enumeration without any caller paying a gather.
     pub(crate) fn creature_type_change_in_scope(&self) -> bool {
-        self.type_gate(TypeGate::Creature, || {
+        self.presence_gate(PresenceGate::Creature, || {
             self.continuous_effects.iter().any(|e| {
                 matches!(
                     e.modification,
                     Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
                 )
             }) || self.battlefield.iter().any(card_can_change_creature_types)
+        })
+    }
+
+    /// Does any battlefield permanent carry Void Winnower's block half
+    /// (`OpponentsCantBlockWithEvenMv`)? One card in the catalog has it, so
+    /// the answer is `false` on every ordinary board — but
+    /// [`blocker_self_block`](Self::blocker_self_block) asked it with a whole
+    /// battlefield walk per *even-mana-value* blocker, i.e. on half of every
+    /// block-legality question the planner asks.
+    ///
+    /// A printed static on the battlefield is exactly what a freeze scope
+    /// cannot change, so the answer memoizes per scope like the type gates
+    /// above and the planner's per-blocker sweep pays one walk, not one per
+    /// candidate. Printed-only, matching the walk it replaces: the static has
+    /// no layer effect (see `gather_from_static`), so no grant can produce it.
+    pub(crate) fn block_even_mv_lock_in_scope(&self) -> bool {
+        self.presence_gate(PresenceGate::BlockEvenMv, || {
+            self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantBlockWithEvenMv)
+                })
+            })
         })
     }
 

@@ -4595,8 +4595,13 @@ impl GameState {
         }
         let owner = blocker.controller;
         // Void Winnower — an even mana value can't block while an opponent
-        // has the static (zero is even).
+        // has the static (zero is even). Both cheap terms first: the board
+        // question is a presence gate (`block_even_mv_lock_in_scope`), so
+        // inside the planner's freeze scope it is one load rather than the
+        // whole-battlefield walk this used to take on every even blocker.
+        // Only a board that actually plays the card reaches the seat walk.
         if blocker.definition.cost.cmc().is_multiple_of(2)
+            && self.block_even_mv_lock_in_scope()
             && self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, crate::effect::StaticEffect::OpponentsCantBlockWithEvenMv)
