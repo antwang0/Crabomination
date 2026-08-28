@@ -30,12 +30,15 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 **Sequential builds only** (throughput, not RAM — see the environment note).
 
 1. **Perf queue** — PERF "Perf candidates", top-down: `(-9)`'s open half,
-   `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)` is new
-   and is a closed door**: the gather's context census is run and all 71,930
-   are one-per-scope, so read it before proposing a caller-side wrap.
-   Taken/closed: `(-70)`, `(-79)`, `(-77)`, `(-60)`, `(-39)`, the `Box` class,
-   `(-80)` rows 1 and 2 — **row 1 is now a built refutation with a ledger, not
-   an argument.**
+   `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)` is new,
+   is the gather's context census, and its last paragraph is the pass's best
+   rule** — a scope only gathers if a read inside it asks for a computed view,
+   so read a scope's first `&self` calls in source order before deciding the
+   scope is irreducible; that is where `cube` -2.226 % came from. Its named
+   remaining first-reads are the queue's cheapest leads. Taken/closed:
+   `(-70)`, `(-79)`, `(-77)`, `(-60)`, `(-39)`, the `Box` class, `(-80)` rows
+   1 and 2 — **row 1 is now a built refutation with a ledger, not an
+   argument.**
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
@@ -53,9 +56,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed
    `jitter_below` from `--seed`?
-8. **Tip state / build time / filters** — PERF's newest Baseline block, PERF's
-   "Build time" (the rule is "keep the *critical path* flat"), and
-   ENGINE_BACKLOG for the seven filters and what each one reads.
+8. **Tip state / build time / filters** — PERF's two newest Baseline blocks.
+   Whole program at `40334110`: `fixed` 1,013,307,016 / `cube` 3,026,236,892 /
+   `sealed` 3,023,217,402, i.e. **-1.38 / -2.92 / -1.59 % across the pass**,
+   `--bench` invariant byte-identical throughout. Then PERF's "Build time"
+   (the rule is "keep the *critical path* flat") and ENGINE_BACKLOG for the
+   seven filters. **`--bench` is a 1.2-s run on a shared box: check
+   `host_calib_ms` (idle 46-49) before believing a `games_per_s`.**
 
 **Compacted at the ninety-first pass from 90 lines** — a paragraph per pass
 restating numbers that live one file away, which the header forbids. Add a
