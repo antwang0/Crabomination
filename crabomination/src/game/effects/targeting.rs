@@ -651,6 +651,7 @@ impl GameState {
             self.auto_target_for_effect_avoiding(eff, controller, None)
         };
         let mut additional = Vec::new();
+        let mut already_picked: Vec<CardId> = Vec::new();
         let mut slot: u8 = if slot0_filter.is_some() { 0 } else { 1 };
         // Loop-invariant: the seat does not change between slots.
         let opp = self
@@ -695,12 +696,7 @@ impl GameState {
                 // permanent that happens to match the filter; sweep
                 // graveyards first for those.
                 if found.is_none() && eff.prefers_graveyard_target() {
-                    found = self
-                        .players
-                        .iter()
-                        .flat_map(|p| p.graveyard.iter())
-                        .map(|c| Target::Permanent(c.id))
-                        .find(|t| is_legal(t));
+                    found = first_legal_graveyard_card(self, is_legal);
                 }
                 // Battlefield: prefer one not already picked by slot 0 or
                 // earlier slots to avoid double-targeting when the filter is
@@ -719,13 +715,17 @@ impl GameState {
                 // filter itself, so `is_legal` — not this ordering — is what
                 // keeps a gift on the caster's side.
                 if found.is_none() {
-                    let already_picked: Vec<CardId> = std::iter::once(slot_0.clone())
-                        .chain(additional.iter().cloned().map(Some))
-                        .filter_map(|t| match t {
-                            Some(Target::Permanent(id)) => Some(id),
-                            _ => None,
-                        })
-                        .collect();
+                    // Refilled per slot rather than collected per slot: the
+                    // buffer outlives the loop, so the common empty case
+                    // stops allocating.
+                    already_picked.clear();
+                    if let Some(Target::Permanent(id)) = slot_0 {
+                        already_picked.push(id);
+                    }
+                    already_picked.extend(additional.iter().filter_map(|t| match t {
+                        Target::Permanent(id) => Some(*id),
+                        _ => None,
+                    }));
                     // Per *slot*, not per effect: Homesickness is
                     // "target player draws two" + "tap and stun target
                     // creature", and the whole-effect classifier reads the
@@ -752,19 +752,26 @@ impl GameState {
                     // Within a rank, the biggest body wins: ranking by
                     // side alone left removal taking whichever legal
                     // candidate sat earliest on the board.
-                    let best = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| !already_picked.contains(&c.id))
-                        .filter(|c| is_legal_bf(c))
-                        .map(|c| {
-                            let power = self
-                                .computed_permanent(c.id)
-                                .map(|cp| cp.power)
-                                .unwrap_or(c.definition.power);
-                            (rank(c.id, c.controller), -power, c.id)
-                        })
-                        .min();
+                    // A plain loop, not `filter().filter().map().min()`: the
+                    // chain is walked per battlefield permanent per slot and
+                    // every element pays the adapters' `&mut F` forwarding
+                    // (PERF (-78)'s test 1). `min()` keeps the first of equal
+                    // keys and the key ends in the id, so ties cannot happen;
+                    // `<` reproduces it either way.
+                    let mut best: Option<(u8, i32, CardId)> = None;
+                    for c in self.battlefield.iter() {
+                        if already_picked.contains(&c.id) || !is_legal_bf(c) {
+                            continue;
+                        }
+                        let power = self
+                            .computed_permanent(c.id)
+                            .map(|cp| cp.power)
+                            .unwrap_or(c.definition.power);
+                        let key = (rank(c.id, c.controller), -power, c.id);
+                        if best.is_none_or(|b| key < b) {
+                            best = Some(key);
+                        }
+                    }
                     match best {
                         // Never spend an optional slot on the wrong side.
                         Some((2, _, _)) if optional => {}
@@ -787,12 +794,7 @@ impl GameState {
                 // graveyard"). The battlefield walk above can't see them, so
                 // sweep every graveyard as a last resort.
                 if found.is_none() {
-                    found = self
-                        .players
-                        .iter()
-                        .flat_map(|p| p.graveyard.iter())
-                        .map(|c| Target::Permanent(c.id))
-                        .find(|t| is_legal(t));
+                    found = first_legal_graveyard_card(self, is_legal);
                 }
                 found
             };
@@ -808,4 +810,25 @@ impl GameState {
         }
         (slot_0, additional)
     }
+}
+
+/// The first graveyard card, in seat order, that `is_legal` accepts.
+///
+/// Two call sites in `auto_targets_for_effect_all_slots_kicked` wrote this as
+/// `players.iter().flat_map(..).map(..).find(..)`; the walk is per graveyard
+/// card per slot and the adapter stack costs a `&mut F` forward per element
+/// (PERF (-78)).
+fn first_legal_graveyard_card(
+    state: &GameState,
+    is_legal: impl Fn(&Target) -> bool,
+) -> Option<Target> {
+    for p in state.players.iter() {
+        for c in p.graveyard.iter() {
+            let t = Target::Permanent(c.id);
+            if is_legal(&t) {
+                return Some(t);
+            }
+        }
+    }
+    None
 }
