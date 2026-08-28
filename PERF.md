@@ -619,6 +619,39 @@ which will not see a 0.2 % locality win either. A row that is big in
 *call count* and small in *Ir/call* is usually the second kind — `same_team`
 at 26.5 Ir/call is already only ~26 instructions.
 
+**`-C target-cpu=native` IS FLAT, AND IT IS THE SAME LESSON FROM THE BUILD
+SIDE.** Never tried before the ninety-first pass — `pgo`, `target-cpu` and
+`native` appear nowhere in this file, `Cargo.toml` or `.cargo/config.toml` —
+and the box is a Xeon with `avx512f`, `avx512vl`, `bmi2` and `fma` against a
+default target of baseline x86-64, so the whole ISA gap was unmeasured.
+
+```text
+release-fast, RUSTFLAGS="-C target-cpu=native", CARGO_INCREMENTAL=0 (8m 54s).
+Both binaries read the committed invariant: 195,528 decisions / 27.44 turns /
+0 stalls, so they play the same games.
+ab_wall.py, 8 blocks, --games 2000 --decks fixed --threads 4 --seed 11:
+  mean B/A  +0.10 %   median +0.19 %   3/8 blocks faster
+  95 % CI   -0.55 % .. +0.75 %          verdict FLAT
+```
+
+**And it is flat for a reason that predicts the next lever.** The widened ISA
+is vector width and a handful of scalar encodings; this engine walks `Arc`
+graphs and branches on enums, and has nothing to vectorize. The instrument
+this file reaches for cannot see the difference either — a wider register is
+*fewer* instructions, so Ir would have flattered it — which is why this was
+put on the clock directly. **What is left on the build side is layout, not
+width**: branch ordering, block placement and icache, i.e. PGO, and that is
+the half a branchy pointer-chaser can actually use.
+
+Two notes for whoever repeats it. The run's `load average` line warned; it
+was a **false positive** — `start 2.49` is the decaying one-minute average
+from the `--bench` fingerprint run immediately before, and the per-block
+`3.88-4.03` is exactly this run's own four threads. Read the per-block range
+against `--threads`, not the start value. And if it is ever taken, it must be
+**opt-in** (a documented profile or flag, never the default): a
+`target-cpu=native` baseline is not comparable across boxes, and this file's
+committed numbers are.
+
 **`ab_wall.py` prints a load line and warns on a contended box** (eighty-ninth
 pass). A verdict taken while the other session was linking is not a verdict —
 the same null reads `+/-1.91 %` quiet and `+/-9.73 %` under six spinners, and
