@@ -2045,6 +2045,44 @@ invalidation. Base 80140c81:
 **Both actor commits produced 5,915 rows over 60 games with 0 stalls**, i.e.
 identical play, and neither can move `--bench`.
 
+**(8) A `OnceCell` THAT IS NEVER INITIALISED STILL RUNS ITS DROP GLUE, AND
+THE REQUIREMENT WALKER BUILT THREE OF THEM PER CALL — `fixed` -0.412 %,
+`cube` -0.705 %, `sealed` -0.496 %.** Base `4f48f637`.
+
+`evaluate_requirement_static_hinted`'s `Target::Permanent` arm — most of the
+requirement traffic — opened with nine closures and three `OnceCell`s
+(`computed_cell`, `ct_gate`, `shallow_cell`) and then matched `req` to use
+exactly one of them. **Every one of the three is single-use per invocation**
+and the block's own comment already said why for the third: "one call
+evaluates one `req`, the arms are exclusive and a composite requirement
+recurses into a fresh frame". Counted rather than assumed: across the whole
+match, `has_type` appears at seven *arms* and the other four closures at one
+each, none twice and none in a loop, and `computed()` is called only from
+inside those five.
+
+```text
+  where the -22,685,603 on `cube` lands
+  -13,754,758  card_type_change_in_scope      <- the row disappears; without the
+                                                 `get_or_init` closure the gate
+                                                 inlines into the walker
+   -4,220,844  OnceCell::try_init
+   -2,193,616  drop_in_place<OnceCell<Option<Vec<CreatureType>>>>
+   -1,645,212  drop_in_place<OnceCell<Option<Arc<ComputedPermanent>>>>
+     -954,928  OnceCell::try_init'2
+   -6,204,572 / -3,658,628 / +10,078,588  the walker's own three monos (net
+                                          +0.2 M — the gate moved inside)
+  computed_permanent 88,666,682 -> 88,666,682, byte-identical: the laziness
+  the cells existed to provide is unchanged
+```
+
+**The drop rows are the part (-55) did not have.** That entry priced a cell
+at "two constructions and a branch"; two of these three carry a `Vec` or an
+`Arc` inside an `Option`, so they also carry **drop glue that runs on every
+invocation whether or not the cell was ever filled** — 3.8 M of the 22.7 M,
+more than `try_init` itself. **A `OnceCell<T>` where `T` needs drop is not
+free at zero uses.** Count the call sites of what a cell memoizes before
+writing one; if the answer is one, it is a `let`.
+
 **THE ACTOR IS NOT A CLOCK INSTRUMENT, AND ITS NULL CONTROL IS THE PROOF.**
 The pass's throughput verdict is the concurrent half's — `ab_wall.py` on
 `bot_ladder --decks fixed`, **-1.59 % paired against -4.33 % in Ir**, with a

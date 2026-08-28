@@ -3406,7 +3406,6 @@ impl GameState {
                 // and this one is 40 % of the program's `computed_permanent`
                 // calls when it is taken eagerly.
                 type Computed = Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>;
-                let computed_cell: std::cell::OnceCell<Computed> = std::cell::OnceCell::new();
                 // `computed()` is `None` exactly when the card isn't a live
                 // battlefield permanent — `computed_permanent` returns `None`
                 // off the battlefield and takes the printed view mid-gather —
@@ -3416,18 +3415,25 @@ impl GameState {
                     bf_card.is_none()
                         || self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
                 };
-                let computed = || -> &Computed {
-                    computed_cell.get_or_init(|| {
-                        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
-                            // Mid-recompute: printed types. A fast path, not
-                            // the guard — `computed_permanent` enforces the
-                            // reentrancy rule for every caller and answers the
-                            // same printed view a layer pass slower.
-                            None
-                        } else {
-                            bf_card.and_then(|_| self.computed_permanent(*cid))
-                        }
-                    })
+                // **No `OnceCell`, and none of the three this block used to
+                // build.** One call evaluates one `req`, the arms below are
+                // exclusive, and a composite requirement recurses into a fresh
+                // frame — so `computed()`, the card-type gate and the shallow
+                // creature-type read each run **at most once** per invocation
+                // and a cell is pure construction. That is the fifty-fifth
+                // pass's refutation (a cell around a once-per-call gate is
+                // +1.24 M on `fixed`), which this block recorded for one of
+                // the three and then kept for the other two.
+                let computed = || -> Computed {
+                    if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+                        // Mid-recompute: printed types. A fast path, not
+                        // the guard — `computed_permanent` enforces the
+                        // reentrancy rule for every caller and answers the
+                        // same printed view a layer pass slower.
+                        None
+                    } else {
+                        bf_card.and_then(|_| self.computed_permanent(*cid))
+                    }
                 };
                 // The card-type family is most of the requirement traffic
                 // (`Creature` / `Land` / `Nonland` / `Noncreature` / `Artifact`)
@@ -3437,12 +3443,9 @@ impl GameState {
                 // battlefield walk over printed shapes — before gathering.
                 // `bestowed` (CR 702.103d) rewrites the type line without a
                 // `Modification`, so it joins the gate off the card itself.
-                let ct_gate: std::cell::OnceCell<bool> = std::cell::OnceCell::new();
                 let has_type = |t: crate::card::CardType| {
-                    let gathered = *ct_gate.get_or_init(|| {
-                        !computed_absent()
-                            && (card.bestowed || self.card_type_change_in_scope())
-                    });
+                    let gathered =
+                        !computed_absent() && (card.bestowed || self.card_type_change_in_scope());
                     if !gathered {
                         return card.definition.card_types.contains(&t);
                     }
@@ -3470,21 +3473,15 @@ impl GameState {
                 // stored set, so with neither in scope all three paths give
                 // the printed line.
                 //
-                // No `OnceCell` around the gate, unlike `ct_gate`: one call
-                // evaluates one `req`, the arms are exclusive and a composite
-                // requirement recurses into a fresh frame, so the gate runs at
-                // most once and the cell was pure overhead (+1.24 M on
-                // `fixed` when it was one).
-                let shallow_cell: std::cell::OnceCell<Option<Vec<crate::card::CreatureType>>> =
-                    std::cell::OnceCell::new();
+                // The gate here has never had a cell, for the reason the
+                // block above now applies to all three.
                 let has_ctype = |ct: &crate::card::CreatureType| {
                     if !self.creature_type_change_in_scope() {
                         return card.definition.subtypes.creature_types.contains(ct);
                     }
                     match computed() {
                         Some(cp) => cp.subtypes.creature_types.contains(ct),
-                        None => match shallow_cell.get_or_init(|| self.shallow_creature_types(*cid))
-                        {
+                        None => match self.shallow_creature_types(*cid) {
                             Some(types) => types.contains(ct),
                             None => card.definition.subtypes.creature_types.contains(ct),
                         },
