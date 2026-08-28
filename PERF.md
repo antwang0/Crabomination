@@ -560,6 +560,14 @@ on both sides; the absolute number then describes mimalloc's interception,
 but the *ratio* is sound. Wall-clock is still the arbiter for anything
 allocator- or cache-shaped, where Ir undercounts.
 
+**But "sub-5 %" is about `--bench`, not about the clock.** A *paired* ABBA
+run (`scripts/ab_wall.py`, 8 blocks) resolved **+/-0.34 %** on `--decks fixed
+--games 2000` at the eighty-eighth pass, and measured a pass worth -4.33 % in
+Ir at **-1.59 %** with 8/8 blocks and a null that came back flat. So an
+accumulated pass *can* be put on the clock; a single commit under a couple of
+percent still cannot. Run the null on the workload you are about to quote —
+the resolution is the workload's, not the box's (`sos` reads +/-2 %).
+
 **`--threads N` needs enough work to fill N workers.** The queue holds
 `decks x ceil(games / 20)` chunks under `--paired`; a worker that finds it
 empty exits. `--threads 24 --games 8` therefore runs four workers and looks
@@ -1675,6 +1683,46 @@ whole-program Ir, callgrind, profiling-fast --no-default-features,
   (the pass base `aefae7bb` read 1,106,711,404 / 3,355,240,795 /
    3,291,519,150 — **-4.33 % / -3.93 % / -3.76 %** across both halves)
 ```
+
+**AND THE PASS WAS PUT ON THE CLOCK, WHICH IS THE PROJECT'S #1 METRIC AND
+NOT WHAT IR SAID.** `ab_wall.py`, both binaries `release-fast` + mimalloc,
+base `aefae7bb` vs tip `8fcea726`:
+
+```text
+--a gang --b gang --games 2000 --decks fixed --threads 4 --seed 11
+8 ABBA blocks = 32 runs
+
+A/B      mean B/A 0.9841  (-1.59 %)   median 0.9836   blocks B faster 8/8
+         95 % CI  -1.89 .. -1.28 %
+         A spread 25.90-26.20 s (1.2 %)   B spread 25.50-25.70 s (0.8 %)
+null     --bin-a base --bin-b base, same workload, same block count
+         mean 1.0005 (+0.05 %)   CI -0.29 .. +0.39 %   blocks B faster 3/8
+         FLAT — resolution +/-0.34 %
+```
+
+**-1.59 % on the clock against -4.33 % in Ir on the same pool.** The gap is
+the *build*, not the measurement: callgrind reads `profiling-fast
+--no-default-features` — system allocator, no LTO — and this pass's wins were
+allocation-shaped almost throughout (the CoW `Vec` class, `SmallVec` locals,
+the adapter chains that were feeding `Vec` builders). mimalloc already charges
+less for what those changes removed, so a saved `malloc` is worth less on the
+shipped binary than in the profile. **Ir is the ranking instrument; it is not
+a wall-clock estimate, and this pass is the ratio between them: 2.7x.**
+
+**Also: do NOT read the pass's win off the `--bench` `games/s` line above.**
+It went 224.4-228.9 -> 245.3-245.6 across the pass, which is **+7.5 %** — five
+times the paired reading, in the other direction from the Ir gap, and taken
+hours apart on unpaired runs. That is exactly the estimator `ab_wall.py` was
+written to replace, and the eighty-fourth pass's "the wall clock overstated a
+change twenty-five-fold" from the other side. `host_calib_ms` does not save
+it: 46 against 45-48 is the same reading, and the box still moved.
+
+**The null also dates `ab_wall.py`'s own calibration.** Its docstring says
+"this box resolves +/-2 % and nothing finer", measured on `--decks sos
+--games 2000`. On `--decks fixed --games 2000` the null resolves **+/-0.34 %**
+— six times finer, on a workload with a 1.6 % within-binary spread instead of
+6.5 %. **The resolution is a property of the workload, not of the box**, so
+run the null on the workload you are about to quote.
 
 ### Eighty-seventh pass — a refutation written against a *mechanism* that a later pass built, and the SBA board scan halves
 

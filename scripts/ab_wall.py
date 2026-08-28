@@ -51,10 +51,19 @@ Calibration on the routine box (Intel Xeon @ 2.10GHz, 4 cores),
     8 blocks, base vs tip   mean +0.18 %   CI -1.64 .. +2.00 %   FLAT
     8 blocks, null control  mean -0.40 %   CI -2.45 .. +1.66 %   FLAT
 
-**So this box resolves +/-2 % and nothing finer, at 32 runs and sixteen
-minutes a side.** That is why PERF's "sub-5 % changes need callgrind, not
-`--bench`" holds, and it is now a number rather than an impression. Four
-blocks is *not* enough: the same pair read `+1.26 %` with a half-range
+**THE RESOLUTION IS A PROPERTY OF THE WORKLOAD, NOT OF THE BOX**, and the
+`sos` line above was read as the latter for four passes. `--games 2000
+--decks fixed --threads 4`, same box, same 8 blocks:
+
+    8 blocks, null control  mean +0.05 %   CI -0.29 .. +0.39 %   FLAT
+
+**+/-0.34 %, six times finer**, because that workload's within-binary spread
+is 1.6 % against `sos`'s 6.5 %. So: **run the null on the workload you are
+about to quote**, and read its "cannot resolve anything smaller than" line
+rather than carrying a number over from another pool. What survives from the
+`sos` calibration is the shape of the mistake, not its magnitude.
+
+Four blocks is *not* enough: the same pair read `+1.26 %` with a half-range
 "resolution" of `+/-0.67 %` at four blocks, which is a significant verdict on
 an effect that eight blocks and the null both call flat.
 """
