@@ -2339,11 +2339,15 @@ mod tests {
         //
         // The whole seed range is a sweep, not just these ten: set the loop to
         // `0..4000u64`, add an `eprintln!` of the seed and run it
-        // `--no-capture`. 883 s under nextest in a debug build, and **clean at
-        // the eighty-seventh pass** — every pairing terminated and
-        // `bot_rejection_count()` did not move, with the picker's off-board
-        // gate, `EntityMatches`' empty-selector answer and the two block
-        // selectors' watcher fallback all in it.
+        // `--no-capture`. Clean at the eighty-seventh pass and **re-run clean
+        // at its tip** (931.8 s under nextest in a debug build, 4,000
+        // pairings): every match terminated inside its 180 s budget and
+        // `bot_rejection_count()` did not move. That tip carries the picker's
+        // off-board gate, `EntityMatches`' empty-selector answer, the two
+        // block selectors' watcher fallback, the ward gate's cost read, and
+        // the pass's whole memo device (`CardMemo`'s five slots) — the last
+        // of which is a *behaviour* claim the suite audits and this sweep
+        // audits on real boards.
         for seed in [0u64, 1, 2, 3, 4, 62, 2113, 2719, 3637, 3789] {
             let state = crate::cube::build_cube_state_seeded(seed);
             let (done_tx, done_rx) = mpsc::channel();

@@ -87,7 +87,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    --structural-only` 21,795 scanned / 0 need review, `audit_stubs` 21,795 /
    0 flagged, `audit_variant_coverage` 0 dead capabilities over 1,695
    variants. The seeded 4,000-pairing sweep is clean at the eighty-seventh
-   tip.
+   tip **and re-run clean at its last code commit** (931.8 s, every match
+   inside its 180 s budget, `bot_rejection_count()` unmoved) — that run
+   carries the whole memo device, which is the one behaviour claim in the
+   pass that only a real board can audit.
 7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
 8. **Tip state** — PERF "Baseline"'s **CLOSING STATE** block: the
