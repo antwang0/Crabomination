@@ -30,8 +30,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 1. **Perf queue** — PERF "Perf candidates". `(-77)`'s memo device is **mined
    and bounded** (three rows shipped, two refuted); `(-51)(a)` is **re-sized
    in the actor block and its named blocker shipped**, so take it next.
-   Then (-70) (quiet window only), (-69)'s two unclaimed rows, (-78)'s
-   remaining adapter-chain sites, (-60), (-61), (-59).
+   `(-78)`'s `flat_map` half is **swept** — six commits, `FlatMap::next` off
+   the profile as a named row; what is left of it is `Chain` at a third the
+   traffic and none of it a whole-board walk, so expect a tenth. Then (-70)
+   (quiet window only), (-69)'s two unclaimed rows, (-60), (-61), (-59).
 2. **Perf method** — PERF's "How to measure", **"Standing rules for a perf
    pass"** (moved there from this file this pass) and "Which pool a change
    moves". Read all three pools; a pool split is a revert.
@@ -46,6 +48,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `selfplay` seed `jitter_below` from `--seed`?
 7. **Tip state** — PERF "Baseline"'s newest "STATE AT …", and the actor
    re-read in "Profile of record" (**-8.02 %** since pass 83, play identical).
+   The eighty-seventh pass is **-4.33 % `fixed` / -3.93 % `cube` / -3.76 %
+   `sealed`** across both halves, `--bench` byte-identical throughout.
+8. **Filters** — all five syntax filters read zero; `audit_variant_coverage`
+   needed a **bit bridge** this pass (a definition bitmask crossing the crate
+   boundary made a live capability look dead) and reads zero again.
+   `bot_rejection_count()` over the seeded cube sweep is the one that watches
+   the live-server path, and it is clean at the tip.
 
 ## Standing rules for a perf pass — moved to `PERF.md`
 

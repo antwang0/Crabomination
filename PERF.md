@@ -1611,6 +1611,36 @@ same mechanical change is 0.28 % on the attack declaration and 0.05 % here,
 because these two walks run on few boards. Across all six commits the pass's
 adapter sweep is `fixed` **-1.44 %** / `cube` **-1.13 %**.
 
+**STATE AT `2f5e4927`, the tip of this half at the end of the pass.**
+
+```text
+suite  cargo nextest run --workspace --exclude crabomination_client
+       19,062 / 0 / 5   (~72 s after the build; six new regression tests
+       across the pass, all of them assertions their predecessors could not
+       make)
+clippy --workspace --exclude crabomination_client --all-targets   clean
+golden traces  unmoved (they run inside the suite above)
+--bench  195,528 decisions / 27.44 turns / 611.0 decisions a game /
+         0 stalls (cap 0 / stuck 0 / draw 0) / determinism ok /
+         thread_determinism ok (3 vs 1 threads identical)
+         — **byte-identical to the committed invariant**, across eight
+         perf commits and three behaviour-changing bug fixes
+         245.3-245.6 games/s over three runs, peak_rss_mib 28.3-28.5,
+         host_calib_ms 46 (`release-fast`, mimalloc, 2.10 GHz Xeon, 3
+         threads), against 238.2-242.8 mid-pass and the pass base's
+         224.4-228.9 at calib 45-48
+robustness  --games 120 --threads 3 --seed 7 --decks all (five pools,
+         2,040 games): 0 undecided, no panic
+         seeded cube sweep, 4,000 pairings through
+         `server::bot_rejection_count()`: **0 rejections, 883 s** — re-run
+         with the pass's three behaviour changes in it
+whole-program Ir, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1
+  fixed  1,058,826,730   cube  3,223,413,257   sealed  3,167,858,247
+  (the pass base `aefae7bb` read 1,106,711,404 / 3,355,240,795 /
+   3,291,519,150 — **-4.33 % / -3.93 % / -3.76 %** across both halves)
+```
+
 ### Eighty-seventh pass — a refutation written against a *mechanism* that a later pass built, and the SBA board scan halves
 
 **(-11) said a per-definition presence bitmask "cannot be a lazily-cached
