@@ -843,20 +843,22 @@ impl GameState {
         // pass because an empty group list is what lets the pass stay small
         // — it reads only the battlefield and the active statics, so the
         // hoist is mechanical.
-        let groups: Vec<crate::card::SelectionRequirement> = if has_legal_target {
-            self.battlefield
-                .iter()
-                .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
-                .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
-                    Some(crate::effect::StaticEffect::AttackTogether { filter }) => {
-                        Some(filter.clone())
+        // Two `for` loops rather than `flat_map(..).filter_map(..).collect()`:
+        // this is a whole-board walk executed once per declaration, and
+        // `FlatMap::next` costs ~20 Ir a permanent whether or not any card's
+        // `static_abilities` list has anything in it (PERF (-78)).
+        let mut groups: Vec<crate::card::SelectionRequirement> = Vec::new();
+        if has_legal_target {
+            for c in self.battlefield.iter() {
+                for sa in &c.definition.static_abilities {
+                    if let Some(crate::effect::StaticEffect::AttackTogether { filter }) =
+                        self.active_static(&sa.effect, c)
+                    {
+                        groups.push(filter.clone());
                     }
-                    _ => None,
-                })
-                .collect()
-        } else {
-            Vec::new()
-        };
+                }
+            }
+        }
         // CR 508.1a/d — Oracle en-Vec's mandate: only the chosen creatures may
         // attack, and each of them that can attack must.
         let mandate = self.armed_attack_mandate_for(p);
@@ -1627,25 +1629,26 @@ impl GameState {
                 // attack is aimed at a planeswalker (Mila) — not the player.
                 let is_pw_attack =
                     matches!(atk.target, crate::game::types::AttackTarget::Planeswalker(_));
-                let listeners: Vec<(CardId, Effect)> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == defender)
-                    .flat_map(|c| {
-                        c.definition
-                            .triggered_abilities
-                            .iter()
-                            .filter(|t| {
-                                t.event.kind == EventKind::Attacks
-                                    && (t.event.scope
-                                        == crate::effect::EventScope::ControllerAttackedByOpponent
-                                        || (is_pw_attack
-                                            && t.event.scope
-                                                == crate::effect::EventScope::ControllerPlaneswalkerAttackedByOpponent))
-                            })
-                            .map(move |t| (c.id, t.effect.clone()))
-                    })
-                    .collect();
+                // Plain loops, same reason as `groups` above: a whole-board
+                // walk per attacker, and the `flat_map` was ~20 Ir a
+                // permanent before the filter saw a single trigger.
+                let mut listeners: Vec<(CardId, Effect)> = Vec::new();
+                for c in self.battlefield.iter() {
+                    if c.controller != defender {
+                        continue;
+                    }
+                    for t in &c.definition.triggered_abilities {
+                        if t.event.kind == EventKind::Attacks
+                            && (t.event.scope
+                                == crate::effect::EventScope::ControllerAttackedByOpponent
+                                || (is_pw_attack
+                                    && t.event.scope
+                                        == crate::effect::EventScope::ControllerPlaneswalkerAttackedByOpponent))
+                        {
+                            listeners.push((c.id, t.effect.clone()));
+                        }
+                    }
+                }
                 for (src, effect) in listeners {
                     self.stack.push(
                         TriggerPush::new(src, defender, effect)
@@ -1751,22 +1754,20 @@ impl GameState {
         if any_attackers {
             let ap = self.active_player_idx;
             #[allow(clippy::type_complexity)]
-            let you_attack: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> = self
-                .battlefield
-                .iter()
-                .flat_map(|c| {
-                    let ctrl = c.controller;
-                    c.definition
-                        .triggered_abilities
-                        .iter()
-                        .filter(move |t| {
-                            t.event.kind == EventKind::YouAttack
-                                && (ctrl == ap
-                                    || t.event.scope == crate::effect::EventScope::AnyPlayer)
-                        })
-                        .map(move |t| (c.id, ctrl, t.effect.clone(), t.event.filter.clone()))
-                })
-                .collect();
+            // Plain loops, same reason as `groups` and `listeners` above.
+            let mut you_attack: Vec<(CardId, usize, Effect, Option<crate::effect::Predicate>)> =
+                Vec::new();
+            for c in self.battlefield.iter() {
+                let ctrl = c.controller;
+                for t in &c.definition.triggered_abilities {
+                    if t.event.kind == EventKind::YouAttack
+                        && (ctrl == ap
+                            || t.event.scope == crate::effect::EventScope::AnyPlayer)
+                    {
+                        you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()));
+                    }
+                }
+            }
             for (src, ctrl, effect, filter) in you_attack {
                 // CR 603.2 — the "whenever you attack with …" rider is a
                 // trigger-time gate read off the finished attack declaration.
