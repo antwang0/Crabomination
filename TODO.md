@@ -56,7 +56,17 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    Cargo.toml says why). **The rest of that family is unswept**:
    `CardInstance::has_keyword` is 98,082 calls at 48 Ir and `same_team`
    143,564 at 26.5 on `fixed`; both are bigger bodies, so they are a
-   measurement, not a copy of this one. **`(-84)` is the
+   measurement, not a copy of this one.
+   **And the adapter tax has a census now: every `&mut F::call_mut` in the
+   program (1.39 % of `fixed`, 253,752 calls) comes from a `collect()`, and
+   `pick_attacks_inner` owned 41 % of it** — taken, -0.266 / -0.155 / -0.166 %,
+   the whole delta in that one row. **The second-ranked row was built and
+   reverted at a fortieth of its predicted size**, so the rule is: **rank a
+   `call_mut` census by the closure's CAPTURES, not by its call count** — 27 Ir
+   a forward for a predicate capturing four things, 5 Ir for one capturing
+   nothing. Four rows are still open (`do_untap` 33,840, `pick_blocks_inner`
+   28,274, `mana_source_table` 26,430, `process_echo` 16,166); read each one's
+   closure before spending a build. **`(-84)` is the
    block-legality trio — 1.46 % of `cube`, off the top thirty on `fixed`.
    Its (a) is TAKEN (-0.125 / -0.262 / -0.176 %, the row fell 58 %) and
    **(b) is TAKEN too, one pass after the hoist that was supposed to take it
@@ -204,10 +214,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `fa979b3a` (on `origin`): `fixed` 989,689,177 /
-   `cube` 2,965,899,097 / `sealed` 2,947,614,907.** `--bench` there: 195,528
+   **Anchor, MEASURED at `7e637ce7` (on `origin`): `fixed` 987,055,424 /
+   `cube` 2,961,309,121 / `sealed` 2,942,730,802.** `--bench` there: 195,528
    decisions / 27.44 turns / 611.0 a game / 0 stalls / determinism ok,
-   `host_calib_ms` 46. One anchor back was filed at `c1e4363c` — **998,970,064
+   `host_calib_ms` 50. One anchor back, `fa979b3a`: 989,689,177 /
+   2,965,899,097 / 2,947,614,907 — the interval is `pick_attacks_inner`'s
+   loops alone. One before that was filed at `c1e4363c` — **998,970,064
    / 2,993,004,323 / 2,976,502,367, and that hash no longer resolves**, which
    is this file's own "a hash in a doc is a liability" rule catching a doc
    written between two rebases. Taking it at its word ("the last engine

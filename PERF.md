@@ -2194,6 +2194,59 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 The pass also built and reverted two changes; both are written up where the
 next taker will look — the Cauldron bit under the ninety-second pass (3)'s
 block, `(-84)(b)`'s block-side scan in its own entry.
+### Ninety-third pass (4) — every `call_mut` in the program is a `collect()`, and its price per call varies 5x
+
+**`&mut F::call_mut` — the adapter-forwarding tax — is 1.39 % of `fixed` over
+253,752 calls, and a `--separate-callers=4` census says every one of them
+comes from `Vec::from_iter`.** No `Chain`, no `FlatMap`, no `find`: a
+`collect()` driving a predicate is the whole row. That is a sharper statement
+than `(-78)` could make, and it costs one callgrind run with no rebuild.
+
+```text
+cg_contexts.py call_mut, --decks fixed, at `fa979b3a`.  254,184 calls.
+  104,462  from_iter <- bot::pick_attacks_inner            (3 contexts)
+   33,840  from_iter <- do_untap
+   32,080  from_iter <- check_state_based_actions_into      (3 contexts)
+   28,274  from_iter <- bot::pick_blocks_inner              (3 contexts)
+   26,430  from_iter <- mana_source_table
+   16,166  from_iter <- process_echo
+```
+
+**`pick_attacks_inner`'s two whole-board collects are TAKEN** — `fixed`
+-0.266 % / `cube` -0.155 % / `sealed` -0.166 %, and `call_mut`'s own row
+13,760,044 -> 10,945,232, so the **-2,814,812 in that one row is the whole
+-2,633,753 the program moved**. Both sites are
+`battlefield.iter().filter(..).collect()` walked per element on every one of
+the function's 2,718 calls: `(-78)`'s test 1, answered yes.
+
+**`compute_battlefield_creatures`'s is BUILT AND REVERTED, and it is why this
+entry exists.** It is the same shape — a whole-board `filter().map().collect()`
+run once per state-based-action sweep, 32,080 forwards, the second-largest row
+in the census:
+
+```text
+  fixed  987,055,424 -> 986,991,817   -0.0064 %
+  cube  2,961,309,121 -> 2,961,094,961 -0.0072 %
+  sealed 2,942,730,802 -> 2,942,565,959 -0.0056 %
+```
+
+**One fortieth of what the count predicted, on a site the census ranked
+second.** The two differ by ~5x in Ir per forward — 27 against 5 — and the
+mechanism is the closure's captured environment. `pick_attacks_inner`'s
+predicate captures `state`, `seat`, `attack_power_caps` and `target_player`,
+so `&mut F` is a fat pointer chase per element; `compute_battlefield_creatures`'s
+is `|c| c.definition.is_creature()`, which captures **nothing** and (since the
+pass one entry down) inlines to a mask test, so the forward is nearly free.
+
+**THE RULE: rank a `call_mut` census by the closure's CAPTURES, not by its
+call count.** A count is what the instrument gives you and it is off by an
+order of magnitude between the top two rows of the same table. Read the
+predicate before spending a build: nothing captured means nothing to collect.
+The corollary for the four rows still open — `do_untap`, `pick_blocks_inner`,
+`mana_source_table`, `process_echo` — is that their *counts* are worth between
+1.8 M and 0.15 M Ir depending entirely on that, so read each one's closure
+first.
+
 ### Ninety-third pass (3) — eleven `#[inline]`s, and the rule that said not to measure them
 
 **`CardDefinition::is_creature` is the second-most-called function in the
@@ -7462,6 +7515,26 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Ninety-third pass (4) — one collect taken, one reverted, and the census that ranked them wrong
+
+**Taken: `pick_attacks_inner`'s two whole-board collects become loops** —
+`fixed` -0.266 % / `cube` -0.155 % / `sealed` -0.166 %, the whole delta
+landing in `call_mut`'s own row. **Reverted: the same shape in
+`compute_battlefield_creatures`** — -0.0064 / -0.0072 / -0.0056 %, a fortieth
+of what its place in the census predicted. Numbers, the census and the rule
+that falls out (rank by the closure's captures, not by call count) are in the
+Baseline.
+
+### Ninety-third pass (3) — `#[inline]` on the card-type predicates
+
+**Taken, `release-fast` -0.907 / -0.741 / -0.831 %, thin LTO -0.175 / -0.124 /
+-0.162 %.** Eleven attributes on `CardDefinition`'s card-type predicates, a
+family worth 1.32 % of `fixed` over 852 k calls. The standing rule said not to
+take one on an Ir number because LTO would already have it; LTO has 80 % of
+it. Rule corrected in place, `[profile.profiling-lto]` added because
+`profiling` OOMs on the candidate side only. Baseline has the caller tables
+and the OOM.
 
 ### Ninety-third pass — the targeter's borrowed filter, hoisted seat and hand-written walk
 
