@@ -10614,9 +10614,51 @@ fn ward_tax_burden(tax: &crate::card::WardCost) -> i32 {
 /// over-estimates what some casts consume, which errs toward holding a
 /// spell, never toward blanking one. Actions with no recognized target
 /// shape pass.
+/// Which cost [`ward_gate_ok`] would have to cover — *named* rather than
+/// read, because reading it is a `find_card_anywhere` walk plus a `ManaCost`
+/// clone (one allocation) and only the warded branch wants either.
+enum WardedCost {
+    Free,
+    /// The card's printed cost, wherever the card is.
+    Spell(CardId),
+    /// The back face's cost (transform / disturb casts).
+    BackFace(CardId),
+    /// The prepare-cast inset spell's cost, off a battlefield creature.
+    PrepareInset(CardId),
+    /// One activated ability's mana cost. Granted abilities index past the
+    /// printed list; a missing one falls back to free, which errs permissive —
+    /// the gate still sees the tax itself.
+    Ability(CardId, usize),
+}
+
+impl WardedCost {
+    fn resolve(&self, state: &GameState) -> ManaCost {
+        let empty = || ManaCost::new(Vec::new());
+        match *self {
+            Self::Free => empty(),
+            Self::Spell(id) => state
+                .find_card_anywhere(id)
+                .map(|c| c.definition.cost.clone())
+                .unwrap_or_else(empty),
+            Self::BackFace(id) => state
+                .find_card_anywhere(id)
+                .and_then(|c| c.definition.back_face.as_deref().map(|b| b.cost.clone()))
+                .unwrap_or_else(empty),
+            Self::PrepareInset(id) => state
+                .battlefield_find(id)
+                .and_then(|c| c.definition.prepare_spell.as_deref().map(|s| s.cost.clone()))
+                .unwrap_or_else(empty),
+            Self::Ability(id, i) => state
+                .battlefield_find(id)
+                .and_then(|c| c.definition.activated_abilities.get(i))
+                .map(|a| a.mana_cost.clone())
+                .unwrap_or_else(empty),
+        }
+    }
+}
+
 fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
-    let empty = ManaCost::new(vec![]);
-    let (mut cost, target, additional): (ManaCost, &Option<Target>, &[Target]) = match action {
+    let (which, target, additional): (WardedCost, &Option<Target>, &[Target]) = match action {
         GameAction::CastSpell { card_id, target, additional_targets, .. }
         | GameAction::CastSpellDelve { card_id, target, additional_targets, .. }
         | GameAction::CastGift { card_id, target, additional_targets, .. }
@@ -10637,43 +10679,44 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
         | GameAction::CastSpellAlternative { card_id, target, additional_targets, .. }
         | GameAction::CastAdventureCreature { card_id, target, additional_targets, .. }
         | GameAction::CastPlotted { card_id, target, additional_targets, .. } => {
-            let cost = state
-                .find_card_anywhere(*card_id)
-                .map(|c| c.definition.cost.clone())
-                .unwrap_or(empty);
-            (cost, target, additional_targets.as_slice())
+            (WardedCost::Spell(*card_id), target, additional_targets.as_slice())
         }
         // Back-face casts pay the back's cost.
         GameAction::CastSpellBack { card_id, target, additional_targets, .. }
         | GameAction::CastDisturb { card_id, target, additional_targets, .. } => {
-            let cost = state
-                .find_card_anywhere(*card_id)
-                .and_then(|c| c.definition.back_face.as_deref().map(|b| b.cost.clone()))
-                .unwrap_or(empty);
-            (cost, target, additional_targets.as_slice())
+            (WardedCost::BackFace(*card_id), target, additional_targets.as_slice())
         }
         // Prepare-casts pay the inset spell's cost.
         GameAction::CastPrepareSpell { creature_id, target, additional_targets, .. } => {
-            let cost = state
-                .battlefield_find(*creature_id)
-                .and_then(|c| c.definition.prepare_spell.as_deref().map(|s| s.cost.clone()))
-                .unwrap_or(empty);
-            (cost, target, additional_targets.as_slice())
+            (WardedCost::PrepareInset(*creature_id), target, additional_targets.as_slice())
         }
         GameAction::ActivateAbility { card_id, ability_index, target, additional_targets, .. } => {
-            // Granted abilities index past the printed list; missing costs
-            // fall back to free, which errs permissive — the gate still
-            // sees the tax itself.
-            let cost = state
-                .battlefield_find(*card_id)
-                .and_then(|c| c.definition.activated_abilities.get(*ability_index))
-                .map(|a| a.mana_cost.clone())
-                .unwrap_or(empty);
-            (cost, target, additional_targets.as_slice())
+            (WardedCost::Ability(*card_id, *ability_index), target, additional_targets.as_slice())
         }
-        GameAction::ActivateLoyaltyAbility { target, .. } => (empty, target, &[]),
+        GameAction::ActivateLoyaltyAbility { target, .. } => (WardedCost::Free, target, &[]),
         _ => return true,
     };
+    // The gate only has an opinion when a chosen target is a permanent
+    // carrying a real ward cost, and most candidates carry no target at all:
+    // `cast_candidates`' `retain` alone asks this ~12,500 times a six-game
+    // `cube` run and the cost read was 10,736 allocations and 10,834
+    // `find_card_anywhere` walks of them. Collect the taxes first — `Vec::new`
+    // does not allocate until one is pushed — and read the cost only if there
+    // is one. `ward_tax` is pure, so asking it about every target rather than
+    // stopping at the first unpayable one is a reordering, not a behaviour
+    // change; the payability decision below is still the same `all`.
+    let mut taxes: Vec<crate::card::WardCost> = Vec::new();
+    for t in target.iter().chain(additional.iter()) {
+        if let Target::Permanent(id) = t
+            && let Some(tax) = ward_tax(state, *id, seat)
+        {
+            taxes.push(tax);
+        }
+    }
+    if taxes.is_empty() {
+        return true;
+    }
+    let mut cost = which.resolve(state);
     // The one candidate shape that sinks *extra* mana into the cast: a
     // plain CastSpell with a chosen X (`max_affordable_x` dumps the whole
     // spare pool into it). Price the X into the gate, or a max-X spell
@@ -10681,13 +10724,7 @@ fn ward_gate_ok(state: &GameState, seat: usize, action: &GameAction) -> bool {
     if let GameAction::CastSpell { x_value: Some(x), .. } = action {
         cost.symbols.push(crate::mana::ManaSymbol::Generic(*x));
     }
-    target.iter().chain(additional.iter()).all(|t| match t {
-        Target::Permanent(id) => match ward_tax(state, *id, seat) {
-            Some(tax) => ward_tax_payable(state, seat, &tax, &cost),
-            None => true,
-        },
-        _ => true,
-    })
+    taxes.iter().all(|tax| ward_tax_payable(state, seat, tax, &cost))
 }
 
 /// For an X-cost spell (or a spell whose effect reads
