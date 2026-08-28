@@ -2875,11 +2875,29 @@ impl GameState {
                 .is_some_and(|p| self.players[p].graveyard.len() >= 7),
             Predicate::MetalcraftActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
-                self.battlefield
-                    .iter()
-                    .filter(|c| c.controller == p && c.definition.is_artifact())
-                    .count()
-                    >= 3
+                // CR 613 — "three or more artifacts" counts the *computed*
+                // type line, so Mycosynth Lattice turns Metalcraft on. The
+                // layer read is second and gated: the printed answer is
+                // already `true` for a real artifact, and
+                // `card_type_change_unscoped` (memo-backed) is `false` on
+                // almost every board, where this is the printed scan it
+                // replaces plus one load. Counts up to three and stops.
+                let typed = self.card_type_change_unscoped();
+                let mut n = 0;
+                for c in self.battlefield.iter().filter(|c| c.controller == p) {
+                    let artifact = c.definition.is_artifact()
+                        || (typed
+                            && self.computed_permanent(c.id).is_some_and(|cp| {
+                                cp.card_types.contains(&crate::card::CardType::Artifact)
+                            }));
+                    if artifact {
+                        n += 1;
+                        if n >= 3 {
+                            break;
+                        }
+                    }
+                }
+                n >= 3
             }
             Predicate::FerociousActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };

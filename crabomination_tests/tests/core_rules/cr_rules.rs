@@ -63,8 +63,10 @@
 //! — a granted harmonize), and a one-sided damage doubler sparing the
 //! controller's own side (CR 614.5), a permanent Gift given as it enters
 //! (CR 702.165 — Scrapshooter firing Jolly Gerbils), conditional self-pump
-//! stacking on +1/+1 counters in layer 7 (CR 613.7c — Aven Heartstabber), and
-//! {X} in a card's cost counting as 0 outside the stack (CR 202.3b).
+//! stacking on +1/+1 counters in layer 7 (CR 613.7c — Aven Heartstabber),
+//! {X} in a card's cost counting as 0 outside the stack (CR 202.3b), and a
+//! layer-7 self-pump condition reading a layer-4 type change through the
+//! dependency rule (CR 613.8 — Mycosynth Lattice under Scrapyard Mongrel).
 
 use crabomination::catalog;
 use crabomination::card::CounterType;
@@ -10508,4 +10510,93 @@ fn cr_613_a_cda_filter_reading_computed_power_does_not_recurse() {
     // The whole-board pass takes the same path.
     let board = g.compute_battlefield();
     assert_eq!(board.len(), 1, "one permanent on the board");
+}
+
+// ── CR 613.8 — a condition that reads what a lower layer changed ─────────────
+
+/// Mycosynth Lattice makes **every** permanent an artifact in layer 4, and
+/// Scrapyard Mongrel's "as long as you control an artifact" is a layer-7
+/// condition. CR 613.8's dependency orders the type change first, so the
+/// Mongrel is pumped by a Forest it does not itself control an artifact
+/// without.
+///
+/// The Lattice sits on the *opponent's* side and the Mongrel's controller
+/// owns nothing printed as an artifact, so the condition is false on printed
+/// characteristics and true only through layer 4. That is the whole point of
+/// the test: before the eighty-ninth pass the three condition-gated statics
+/// were evaluated inside `gather_continuous_effects_inner` under the
+/// `in_layer_gather` guard, which pins every characteristic read to the
+/// printed one, and this read 3/3.
+#[test]
+fn cr_613_8_pump_condition_sees_a_layer_four_type_change() {
+    let mut g = two_player_game();
+    let mongrel = g.add_card_to_battlefield(0, catalog::scrapyard_mongrel());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let cp = g.computed_permanent(mongrel).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "no artifact yet, no pump");
+    assert!(!cp.keywords.contains(&crabomination::card::Keyword::Trample));
+
+    g.add_card_to_battlefield(1, catalog::mycosynth_lattice());
+    let cp = g.computed_permanent(mongrel).unwrap();
+    assert_eq!(
+        (cp.power, cp.toughness),
+        (5, 3),
+        "CR 613.8: layer 4 makes the Forest an artifact, so the layer-7 condition holds",
+    );
+    assert!(
+        cp.keywords.contains(&crabomination::card::Keyword::Trample),
+        "the same condition gates the keyword half of the grant",
+    );
+}
+
+/// The negative the test above needs: with the Lattice gone the condition is
+/// false again, so the dependency is being *evaluated* rather than latched.
+#[test]
+fn cr_613_8_pump_condition_turns_off_with_the_type_change() {
+    let mut g = two_player_game();
+    let mongrel = g.add_card_to_battlefield(0, catalog::scrapyard_mongrel());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let lattice = g.add_card_to_battlefield(1, catalog::mycosynth_lattice());
+    assert_eq!(g.computed_permanent(mongrel).unwrap().power, 5);
+    g.battlefield.retain(|c| c.id != lattice);
+    assert_eq!(
+        g.computed_permanent(mongrel).unwrap().power,
+        3,
+        "the layer-4 source left, so the layer-7 condition is false again",
+    );
+}
+
+/// Metalcraft counts the *computed* type line (CR 613 / 701.x): Mycosynth
+/// Lattice makes every permanent an artifact in layer 4, so Ardent Recruit's
+/// "three or more artifacts" turns on off three Forests it controls.
+///
+/// The pair above fixed the *mechanism* — an in-gather condition can reach
+/// the computed board now — but this predicate counted
+/// `definition.is_artifact()` directly and so asked the wrong question either
+/// way. `FerociousActive` and `FormidableActive` beside it already read
+/// `computed_permanent`.
+#[test]
+fn cr_613_metalcraft_counts_computed_artifacts() {
+    let mut g = two_player_game();
+    let recruit = g.add_card_to_battlefield(0, catalog::ardent_recruit());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    assert_eq!(
+        g.computed_permanent(recruit).unwrap().power,
+        1,
+        "three Forests are not three artifacts",
+    );
+    let lattice = g.add_card_to_battlefield(1, catalog::mycosynth_lattice());
+    assert_eq!(
+        g.computed_permanent(recruit).unwrap().power,
+        3,
+        "CR 613: layer 4 makes them artifacts, so Metalcraft is on",
+    );
+    g.battlefield.retain(|c| c.id != lattice);
+    assert_eq!(
+        g.computed_permanent(recruit).unwrap().power,
+        1,
+        "and off again when the layer-4 source leaves",
+    );
 }

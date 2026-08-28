@@ -176,6 +176,28 @@ power **2**) and a layer-4 grant the gather emits itself
     suite 19,064 / 0 / 5, golden traces unmoved, --bench byte-identical
     (no bench archetype carries an affected condition)
 
+**AND THE OTHER HALF, WHICH THE MECHANISM CANNOT REACH: a predicate that
+never asks the board.** The census above counts `MetalcraftActive` (4 uses
+under the three gated statics) among the affected population, but it counted
+`c.definition.is_artifact()` **directly** — so a Mycosynth Lattice still did
+not turn Metalcraft on, mechanism or no mechanism. Measured on the shipped
+fix before the change: Ardent Recruit beside three Forests under an
+opponent's Lattice read power 1, not 3. It now counts the computed type line,
+with the layer read second and behind `card_type_change_unscoped()` (the
+memo-backed "can anything on this board change a card's types" gate, `false`
+on almost every board) and a stop at three.
+`cr_rules::cr_613_metalcraft_counts_computed_artifacts` covers it in both
+directions. `FerociousActive` and `FormidableActive` next to it already read
+`computed_permanent`; they are the pattern.
+
+**Still open, one predicate and one use:**
+`Predicate::ColorIsMostCommonAmongPermanents` tallies
+`definition.printed_colors()` through `most_common_permanent_colors()`, so a
+layer-5 colour change (Mycosynth Lattice's own `GrantColorless`, Painter's
+Servant) is invisible to it. Same one-line shape as Metalcraft, but there is
+no `card_color_change_unscoped()` gate to hang it on yet and the tally is a
+whole-board walk with a `HashMap`, so it wants that gate built first.
+
 The entry as filed, kept for its census:
 
 Fixing the above exposed it. `StaticEffect::PumpSelfIf`'s condition is
