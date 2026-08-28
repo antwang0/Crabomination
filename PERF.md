@@ -11943,6 +11943,22 @@ and the clear is a single `store(0)` regardless of slot count. `gate` /
 array index. Sized at ~0.011 % of `cube` and ~0.018 % of `fixed` on its own —
 small, but it is the tax on every gate anyone files after it.
 
+**(-86) `String as fmt::Write` IS 158,146 CALLS IN THE SIMULATOR AND IT IS
+NOT A LEAD — READ THIS BEFORE CHASING IT.** A `{:?}` Debug format of a whole
+`CardDefinition` runs **217 times** on a six-game `cube` run at ~57,000 Ir
+apiece — 12,464,496 Ir inclusive, **0.42 % of the run** — and every one of
+them is `CardDefinition::wants_converge`. It is *already* two-level cached
+(a thread-local table keyed on the name's pointer, then a process-wide map),
+so the format runs **at most once per card name per process**: 217 formats
+is 217 distinct names, and a `selfplay_train` actor amortises the whole
+family to nothing over millions of games. It is visible only because the
+bench is six games long. **The `format!` is also the robust half of that
+function** — its predecessor enumerated fifteen `Effect` arms and had rotted
+in both directions — so replacing it with a structural walk trades a real
+0.4 % of a *short* run for the exact defect class the function's doc
+comment records. Leave it; and when a `fmt` row appears in a profile, check
+whether it is per-name or per-call before pricing it.
+
 **(-84) THE BLOCK-LEGALITY TRIO IS 1.46 % OF `cube` AND TWO OF ITS THREE
 ROWS HAVE A NAMED SHAPE.** Read at `ea2cb263`, `--decks cube`, and all three
 are off the top thirty on `fixed` — this is a `cube`/`sealed` entry, so size
@@ -12048,7 +12064,22 @@ build, read `cube` — because an early-exiting `any` over ~23 cards is exactly
 the shape the ninety-second pass's concurrent third found to be a third of
 its arithmetic.
 
-**(c) NOT NEW, twice over.** `granted_abilities_of_inner`'s residue is
+**(c) `blocker_pair_block` HAS THE SAME SHAPE AS (a) AND THE ARITHMETIC SAYS
+LEAVE IT.** 62,366 calls / 14,267,772 / 0.475 % of `cube`, 228.8 Ir of self.
+Counted by hand at `2bbf26f9`: three passes over `atk_kws` (the
+`CantBeBlockedIfDefenderControls` `any`, `block_barred_by_protection_filter`,
+and the landwalk-family `for kw in`) and five over `blocker_kws`
+(`CantBlockUnlessMoreCreaturesThanAttacker`, `blocker_matching_restriction_bars`,
+`CantBlockCreatureType`, `CantBlockPowerAtLeastOwnToughness`,
+`CantBlockUnlessMoreLandsThanAttacker`) — **eight, against (a)'s
+twenty-two.** (a) measured ~6.3 Ir per removed pass, so fusing six of these
+is ~38 Ir a call, **~0.08 % of `cube`**, and it costs restructuring a
+rules-critical function plus a signature change on
+`blocker_matching_restriction_bars` (two callers) to keep its predicate
+single-sourced. **Count the passes before applying (a)'s device: the win is
+linear in the pass count and this one is a third of the site that paid.**
+
+**(d) NOT NEW, twice over.** `granted_abilities_of_inner`'s residue is
 93,770 calls / 15,319,136 / 0.51 % of `cube`, and the requirement-walker half
 of it is `(-83)`'s `granted_abilities_of` row — read that entry, not this
 one. And `Unfreeze::drop` (207,446 calls / 10,235,176 self) has one callee,

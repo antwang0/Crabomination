@@ -56,7 +56,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    hoisting a per-item board walk out of it — and when the hoist fails
    because the loop is short, ask whether the scope is long.** Cost of a
    slot is `(-85)`, now top of the queue: `clear_gates` is one store per
-   slot at every scope exit, so each gate taxes every scope. `(-82)` and
+   slot at every scope exit, so each gate taxes every scope. **(c) counts the
+   passes in `blocker_pair_block` and says leave it** — eight against the
+   twenty-two that paid, i.e. ~0.08 %. **`(-86)` is a closed door**: the
+   `fmt::Write` row in every profile is `wants_converge`'s
+   once-per-card-name `{:?}`, already twice cached, and its `format!` is the
+   robust half of that function. `(-82)` and
    `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
