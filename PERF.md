@@ -2019,6 +2019,35 @@ invalidation. Base 80140c81:
 **Both actor commits produced 5,915 rows over 60 games with 0 stalls**, i.e.
 identical play, and neither can move `--bench`.
 
+**AND A WALL-CLOCK NUMBER FOR THIS PASS WAS ATTEMPTED AND IS REFUSED BY ITS
+OWN NULL CONTROL — RECORD THE ATTEMPT, NOT A NUMBER.** The pass is -3.93 % of
+`cube` and -8.02 % of the actor in Ir, and the file's own rule is to halve an
+Ir delta before quoting it as throughput, so the actor was A/B'd on the
+shipped allocator: `release-fast`, mimalloc, `CRAB_NO_JITTER=1 selfplay_train
+--actors 3 --games 3000 --steps 1 --seed 7`, ABBA blocks, first run
+discarded. `aefae7bb` (the pass's base) against `63083cfe`.
+
+```text
+                       per-block B/A ratio (lower = the tip is faster)
+  A/B   6 blocks   0.65  0.87  1.06  1.19  1.04  1.15
+  NULL  6 blocks   0.83  1.00  1.26  1.13  0.72  0.75     <- same binary!
+```
+
+**The null control's spread is wider than the effect's**, so the instrument
+resolves nothing here and no verdict is available. The cause is named and
+structural: **this branch runs two concurrent sessions on a four-core box**,
+and `uptime` read a load average of **3.53** during the run — the ABBA design
+cancels linear drift and cannot cancel someone else's `cargo build`. `--games
+200` was tried first and is worse still: the run prints elapsed seconds as an
+integer, so a 1-second workload quantises every rate to the same 199.8.
+
+**What the run *did* establish, and it is the half worth keeping:** both
+binaries produced **288,106 rows over 3,000 games with 0 stalls**, i.e. the
+fingerprint check passed and the two tips play the same games. **Before
+believing any clock verdict on this branch, print the load average and run
+the null at the same block count** — that is the fifty-ninth pass's rule and
+it is what stopped a +6 % "regression" from being written down here.
+
 **THE ROBUSTNESS GATE WAS RUN FOR ALL SEVEN MEMO FAMILIES, ON GAMES RATHER
 THAN TESTS, AND IT IS CLEAN.** Every memo this pass added rests on a
 `debug_assert!` that re-runs the computation on a hit, and (-58)'s rule is
