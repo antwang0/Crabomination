@@ -1531,6 +1531,75 @@ build.
 
 ## Baseline
 
+### Eighty-ninth pass, the concurrent half — the actor's own clock, read at last, and the whole robustness gate run under a behaviour change
+
+**STATE AT `863d80cb`+ (the ward gate, the CR 613.8 two-phase gather, and the
+other half's eight perf commits).**
+
+```text
+whole-program Ir, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1
+  fixed  1,043,038,225   cube  3,169,628,393   sealed  3,115,488,706
+  (the pass base `dc478735` read 1,059,426,578 / 3,217,542,883 /
+   3,163,675,366 — **-1.55 % / -1.49 % / -1.52 %** across both halves)
+
+suite   19,064 / 0 / 5, clippy clean, golden traces unmoved
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0), determinism ok,
+        thread_determinism ok (3 vs 1 threads identical)
+        — byte-identical to the committed invariant, across a rules change
+        284.5 / 302.9 / 301.4 games/s, peak_rss_mib 28.2-30.1,
+        host_calib_ms 53-72 (`release-fast`, mimalloc, 2.10 GHz Xeon,
+        3 threads, box idle)
+```
+
+**THE ACTOR'S OWN CLOCK — `selfplay_train`, the committed recipe, and this
+file has not carried a reading of it since the fifty-eighth pass.**
+`--actors 3 --games 120 --steps 1 --seed 7`, `release-fast`, box idle:
+
+```text
+  149.6 / 149.8 / 149.8 / 149.8 / 149.8 / 149.8 games/s
+  ~11,700 rows a run, 0 stalls
+```
+
+Two notes on the recipe itself, both against what "How to measure" says:
+
+* **The 0.1 % repeatability claim is confirmed to the decimal** — six
+  consecutive runs inside 0.13 %.
+* **"Always discard the first run" did not reproduce here.** The bullet
+  records a first run reading ~45 % low, every time, over four separate
+  batches; this batch's first run is 149.6 against 149.8, i.e. 0.13 % — the
+  same spread as the rest. Keep discarding it (a 45 % outlier costs nothing to
+  guard against), but the effect is not unconditional, and a pass that sees it
+  should say what else was running.
+
+**THE ROBUSTNESS GATE, RUN IN FULL UNDER A BEHAVIOUR CHANGE.** The CR 613.8
+fix moves what the layer system answers mid-gather, so it gets the whole
+ladder rather than the suite:
+
+```text
+scripts/robustness_grid.sh   30 cells (5 pools x 6 seeds x 120 games)
+                             33,120 games, 0 failures, 0 undecided anywhere
+actor leg (the encoder-reachable memos the ladder cannot reach)
+  target-audit/overflow/selfplay_train --actors 3, seeds 7/23 x 120
+  and 41/97/5 x 400 — 1,440 games, 0 stalls, no assertion
+seeded cube sweep, 4,000 pairings through `server::bot_rejection_count()`
+  914.1 s under nextest in a debug build: every match terminated inside its
+  180 s budget and the count did not move
+CRAB_SIM_REJECTS=1  0 / 126,608 simulated declarations over six cells
+  (cube + all, seeds 3/7/11, --games 20)
+CRAB_PAY_FAILS=1    fixed 0/11,254 — still zero; cube 3,368/20,372 (16.5 %,
+  3,292 probe / 76 committed); sos 956/9,114 (10.5 %, 952 / 4)
+```
+
+**And the undecided count finally answers its own question.** `--decks all
+--games 120 --seed 21` reads **2 undecided of 2,040**, and the
+`undecided_by` line this half added prints `cap 0 / stuck 0 / draw 2` — both
+are rules draws, nothing capped and nothing stuck. That is the whole point of
+the split: the bare count would have cost a rebuild to interpret, and the
+grid's own 30 cells then read 0 undecided at the same game count, which is
+what says a draw is rare rather than absent.
+
 ### Eighty-ninth pass — the zone memo does not generalise from the graveyard to the battlefield, and the reason is the zone's *write* rate
 
 **`zone::Graveyard`'s device — a presence answer memoized on the zone and
@@ -13420,6 +13489,38 @@ cube, the fifty-fifth tip — the top of 74 contexts):
 between three of those rows, and it is `&mut self`, so a freeze scope is not
 the tool. The `declare_attackers` / `declare_blockers` rows are scope-firsts
 and their gather is prepaid work for the rest of the scope, not waste.
+
+**(-39) RE-READ AT THE EIGHTY-NINTH PASS AND IT IS ESSENTIALLY CLOSED:
+`--decks sealed --games 1` is **11,223,669 Ir**, and a fifth of that is not
+deck building at all.** Twenty seconds under callgrind, no rebuild of
+anything but `bot_ladder`:
+
+```text
+  3,328,829  29.66 %  recommend::rank_shape              (self; 672 shape ranks)
+  1,762,068  15.70 %  __memcpy                           <- 76 % is the warm-up
+    843,224   7.51 %  recommend::static_build_score      (684 calls, 1,233 Ir)
+  ~1,020,000   9.1 %  the allocator family
+    ~558,000   5.0 %  _dl_relocate_object + tunables_init + do_lookup_x
+  inclusive
+  7,132,432  63.55 %  selfplay::heuristic_sealed_build   (twelve builds)
+  2,858,326  25.47 %  selfplay::sealed_pool
+  2,385,902  21.26 %  OnceLock::initialize   <- 163 leaked definitions, once
+                                                per *thread*, not per build
+```
+
+**The 21 % `OnceLock::initialize` and the 12 % `LocalKey::with -> __memcpy`
+under it are the per-thread memo warm-up — 163 distinct factories at ~8.2 k Ir
+of `memcpy` apiece, which is `Box::new(f())` moving a `CardDefinition` out of
+the factory's frame.** A ladder process pays it once; a `selfplay_train`
+actor pays it once in a run of hundreds of thousands of games. **So this
+instrument's absolute over-states the per-build cost by ~a quarter, and a
+pass ranking rows in it has to subtract the warm-up first** — the steady
+state is ~**600 k Ir a build**, against ~1.87 M at the eighty-third pass's
+actor reading. Deck construction is now ~2 % of an actor, not 5.37 %, and a
+30 % cut of `rank_shape` — the only row left with any size — is 0.3 % of the
+actor. **Take something else first.**
+
+The entry as it stood:
 
 **(-39) THE DECK BUILDER — 111.8 M -> 34.9 M at the fifty-fourth pass
 (-68.80 %), 34.6 M -> 26.6 M at the fifty-sixth (-23.13 % Ir, -14 % wall
