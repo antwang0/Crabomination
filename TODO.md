@@ -157,7 +157,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    file batch, binary green either side; it is a convention change, not a
    build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `ea2cb263`: `fixed` 1,000,218,574 / `cube`
+   **Anchor, MEASURED at `c1e4363c` (the last engine commit): `fixed`
+   998,970,064 / `cube` 2,993,004,323 / `sealed` 2,976,502,367.** `--bench`
+   at `af0b2546`: 195,528 decisions / 27.44 turns / 0 stalls, determinism
+   **and** thread_determinism ok (3 vs 1 threads identical).
+   One anchor back, **MEASURED at `ea2cb263`: `fixed` 1,000,218,574 / `cube`
    3,000,861,798 / `sealed` 2,981,763,332** — re-read independently at
    `b613c26f` (two doc/test commits later) as 1,000,218,658 / 3,000,861,934 /
    2,981,763,240, **agreeing to 84 / 136 / 92 Ir**, which is what the
