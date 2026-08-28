@@ -8793,7 +8793,7 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-76) THE MEMO DEVICE THE EIGHTY-SEVENTH PASS PROVED HAS FOUR MORE
+**(-77) THE MEMO DEVICE THE EIGHTY-SEVENTH PASS PROVED HAS FOUR MORE
 CALLERS, AND THEY ARE 4.75 % OF `cube` BETWEEN THEM.** `sba_board_scan` was
 1.59 % and is 0.75 %; the shape it used — *a whole-board walk asking a
 question that is a pure function of each permanent's `CardDefinition`* —

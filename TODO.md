@@ -113,7 +113,7 @@ refuted.
   a cache "cannot be a lazily-cached field" because ~20 sites rewrite a
   definition through `Arc::make_mut`, and that was true until pass 83 built
   the chokepoint.** A refutation written against an *argument* dates; one
-  written against a *measurement* does not. PERF's `(-76)` has the device
+  written against a *measurement* does not. PERF's `(-77)` has the device
   and the three tests a candidate has to pass.
 
 - **A "more exact" reserve is still a reserve, and `ContinuousEffect` is a
