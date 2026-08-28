@@ -5891,14 +5891,21 @@ impl GameState {
                 .any(|((victim, _), amt)| *victim == i && *amt >= 21);
             // Phyrexian Unlife — the life half of the loss SBA is skipped
             // (poison / commander losses still apply).
-            let unlife = self.player_unlife_active(i);
+            //
+            // `player_unlife_active` is a whole-board static-ability walk and
+            // both readers below are `effective_life(i) <= 0 && !unlife`, so
+            // it goes *behind* that test rather than in front of it: on a
+            // healthy board the walk never runs at all, instead of twice a
+            // sweep per seat. `&Self` rather than a capture, because the
+            // enclosing `self` is `&mut`.
+            let unlife = |g: &Self| g.player_unlife_active(i);
             // CR 104.3c — a player who tried to draw from an empty library
             // loses here, not inside the draw. `lose_to_empty_draw` arms the
             // flag; this is the only place it becomes an elimination, so a
             // decked player leaves through the CR 800.4a leg below like every
             // other loss.
             let decked = self.players[i].pending_deck_loss;
-            let lost = (self.effective_life(i) <= 0 && !unlife)
+            let lost = (self.effective_life(i) <= 0 && !unlife(self))
                 || self.effective_poison(i) >= self.poison_loss_threshold(i)
                 || lost_to_commander
                 || decked;
@@ -5921,7 +5928,7 @@ impl GameState {
                 // the SBA order that would fire (life, then poison, then
                 // commander damage — CR 704.5a/c/v).
                 use crate::player::LossCause;
-                let cause = if self.effective_life(i) <= 0 && !unlife {
+                let cause = if self.effective_life(i) <= 0 && !unlife(self) {
                     LossCause::LifeDepleted
                 } else if self.effective_poison(i) >= self.poison_loss_threshold(i) {
                     LossCause::Poison
