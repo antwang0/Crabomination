@@ -53,7 +53,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    builds, **not** on the bigger targeting row: the probe census in the same
    dumps says a sweep builds 0.40 targeted candidates and runs 0.47 probes,
    so there is almost nothing to defer there. It also names three things
-   already right that must not be re-taken, plus one refutation. `(-83)` is a
+   already right that must not be re-taken, plus one refutation.
+   **Its targeting half is part-taken at the ninety-third pass and the entry
+   had ranked it wrong** — three quarters of that row was adapters, a per-slot
+   `Vec`, a cloned filter and a doubled lookup, none of which the outside-in
+   sizing could see. The rule that fell out is the queue's cheapest habit:
+   **run `cg_edges.py --callees` on a 3 % row before theorising about it.**
+   `(-83)` is a
    pool-split entry: read which of its three caller stories a change is aimed
    at before proposing one. **The probe census by caller is now in the
    Baseline** — `accept_on` is 20.71 % of `fixed` and every one of its five
@@ -76,11 +82,16 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    the average of two populations, not the price of the calls the gate
    removes**. Its concurrent third adds a third: **a rebase shrinks a patch
    without shrinking its measurement** (see PERF's standing rules and the
-   cauldron entry), and **the Cauldron bit is now reverted** — recovering the
-   third of the gate's population that `me.counters.is_empty()` costs reads
-   `sealed` -0.129 % / `cube` -0.043 % / `fixed` **+0.005 %**, measured twice,
-   and the `fixed` sign is the wider `GrantScan`, not the walk. Do not
-   rebuild it.
+   cauldron entry), and **the Cauldron bit is now reverted** — *having the
+   bit* reads `sealed` -0.129 % / `cube` -0.043 % / `fixed` **+0.005 %**
+   (measured twice, and confirmed a third time at the ninety-third pass by two
+   whole-program anchors that bracket the revert commit alone: `fixed` -0.006
+   / `cube` +0.038 / `sealed` +0.125 % for removing it). The `fixed` sign is
+   the wider `GrantScan`, not the walk. Do not rebuild it —
+   **but the split is 20x asymmetric and it is the one open question here**:
+   the rule reverted a change that costs 0.006 % of the bench pool to save
+   0.125 % of `sealed`, and `sealed`/`cube` are the pools the training loop
+   plays. Not re-landed unilaterally; decide it deliberately or leave it.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
@@ -109,25 +120,46 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    freeze-scope gates, the CR 602.5 frame reuse and the grants-nothing gate:
    30 cells, 33,120 games, 0 undecided, 0 failures, with `--bench`
    byte-identical at that tip (195,528 / 27.44 / 611.0 / 0 stalls /
-   `determinism ok` / `thread_determinism ok 3 vs 1`). No pass re-armed the
+   `determinism ok` / `thread_determinism ok 3 vs 1`). **And once more at
+   `b635037f`** with the ninety-third pass's two targeter commits in — 30
+   cells, 33,120 games, 0 undecided, 0 failures, with that pass's new
+   `first_opponent_of drifted from opponents_of` assertion **verified present
+   in the audited binary by `strings`**, which is the check the script's own
+   header asks for. No pass re-armed the
    4,000-pairing cube sweep: all are behaviour-preserving by construction and
    `--bench` is byte-identical through them.
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
    Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed
    `jitter_below` from `--seed`?
-7b. **Test suite** — `find_data_tests.sh` was wrong **three ways** and is
-   fixed (brace counting, helper bodies, sacredness); its output is a delete
-   list and each bug put live engine tests on it. The population is 284 (15
-   sacred), of which 145 single-factory definition echoes over ~60 files are
-   the sweep the convention asks for. **First slice taken** —
-   `stx/part_23.rs`'s nineteen are one `PrintedShape` table, and the pattern
-   is in the tree to copy. The remaining ~126 and their deltas are sized in
-   PERF's "Test-suite cleanup". One commit per file batch, suite green either
-   side; it is a convention change, not a build-time one.
+7b. **Test suite** — `find_data_tests.sh` was wrong **four ways** and is
+   fixed; its output is a DELETE list and every bug put live engine tests on
+   it. The fourth is the ninety-third pass's and it is bug 1 one function
+   down: **a helper's body ended on the line after its signature unless the
+   opening brace was on that line**, so every multi-line-signature helper
+   spliced its own signature into each caller —
+   `modern/lands_equipment_vehicles.rs`'s fourteen fetchland / dual-land tests
+   and two in `core_rules/xtra.rs`, sixteen live engine tests offered up for
+   deletion. **Population 250 (235 + 15 sacred)**, and the fix only ever
+   removes rows, which is the check to run on the next one. **Two slices
+   taken**: `stx/part_23.rs`'s nineteen and `classic_sets/ogw.rs`'s eight are
+   `PrintedShape` tables, the pattern is in the tree to copy, and the rule
+   found doing it is **a test that pins a card-specific *effect shape* — a
+   modal `min`/`max`, a `Search` filter, a `CantBeBlockedBy(_)` variant — is
+   not an echo and does not fold**; `rna.rs` is mostly those. One commit per
+   file batch, binary green either side; it is a convention change, not a
+   build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
    **Anchor, MEASURED at `ea2cb263`: `fixed` 1,000,218,574 / `cube`
-   3,000,861,798 / `sealed` 2,981,763,332.** (At `2a59a81c` it was
+   3,000,861,798 / `sealed` 2,981,763,332** — re-read independently at
+   `b613c26f` (two doc/test commits later) as 1,000,218,658 / 3,000,861,934 /
+   2,981,763,240, **agreeing to 84 / 136 / 92 Ir**, which is what the
+   portability rule looks like when two sessions check it. One anchor back,
+   `b635037f`: 1,000,278,628 / 2,999,730,000 / 2,978,042,227 — and since
+   `ea2cb263`'s only parent is `b635037f`, that pair prices the Cauldron
+   revert on its own to `fixed` -0.006 / `cube` +0.038 / `sealed` +0.125 %,
+   a third confirmation of that commit's own A/B by a different route.
+   (At `2a59a81c` it was
    1,003,202,820 / 3,005,261,303 / 2,995,293,565.) (At `96ec5071` it was 1,012,617,375 / 3,026,000,396 /
    3,022,989,126, so **-0.93 / -0.69 / -0.92 %** since.) Re-read the anchor,
    don't sum the rows — PERF's cauldron-bit entry is why: one row was filed

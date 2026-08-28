@@ -1710,11 +1710,44 @@ build time   not re-measured: the section above measured this exact question
 one file, one batch range, every row mechanical. The other ~126 are the same
 job spread over ~60 files; the pattern is now in the tree to copy.
 
+**Second slice taken, `classic_sets/ogw.rs`, ninety-third pass** — eight
+echoes into eleven `PrintedShape` rows (two of them checked two cards apiece),
+`classic_sets` 6,078 -> 6,071 tests, LOC -77 / +64, binary green either side.
+
+```text
+  the rule found doing it, and it is what stops the sweep over-reaching:
+  a test that pins a card-specific EFFECT SHAPE does not fold.
+    rna.rs   applied_biomancy   ChooseModesCast (2 modes, min 1, max 2)
+             swirling_torrent   ChooseModesCast (min 1, max 2)
+             growth_chamber_..  Search { filter: HasName("...") }
+    ogw.rs   kor_castigator     CantBeBlockedBy(_) matched by VARIANT
+  A `PrintedShape` row can only assert what the table has a column for, and
+  pinning `CantBeBlockedBy`'s payload asserts MORE than the test it replaces.
+  Fold the P/T-and-keyword echoes; leave the shape asserts as per-card tests,
+  which is what "per-card tests assert what is unique" already meant.
+```
+
+**AND THE SCRIPT WAS WRONG A FOURTH WAY, FOUND THE SAME SITTING AND BY THE
+SAME METHOD.** `modern/lands_equipment_vehicles.rs` sat at the top of the
+by-file count with **fourteen** rows, and reading three of them showed all
+fourteen delegate to `assert_fetchland_fetches` / `assert_deck_dual_land` —
+helpers that seed a library, activate an ability, and assert a sacrifice and a
+life payment. **The helper-collection pass had bug 1**: a helper closed as
+soon as its brace depth hit zero, and a multi-line parameter list has depth
+zero on its signature line, so the body spliced into every caller was the
+signature. Sixteen live engine tests (those fourteen plus two callers of
+`cast_and_resolve_at` in `core_rules/xtra.rs`) were on the delete list.
+Population **266 -> 250** (235 + 15 sacred); **no row was added by the fix**,
+which is the check to run on the next one.
+
 **The reusable half is about the tool, not the tests.** A script whose output
-is a delete list is a *safety* instrument, and every one of its three bugs
+is a delete list is a *safety* instrument, and every one of its **four** bugs
 put live engine tests on that list. It had been run and quoted by three
-passes. **Re-derive a filter's output against a handful of its own hits
-before acting on it** — reading eight of the 185 is what found all three.
+passes, and *fixed* by one, before the fourth was found. **Re-derive a
+filter's output against a handful of its own hits before acting on it** —
+reading eight of the 185 found the first three, and reading three of the
+fourteen in one file found the fourth. **Read the file with the most hits
+first: a filter's false positives cluster, because they share a helper.**
 
 ## Build time — the file-size lever is dead, measured 2026-08-23
 
@@ -1965,6 +1998,111 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-third pass — the multi-slot targeter, read from the inside, and the freeze that looked missing
+
+**`auto_targets_for_effect_all_slots_kicked` is the second-largest half of
+`(-82)` and nothing had ever opened it.** That entry sized the function from
+outside (3.16 % of `fixed`, 11,162 Ir a call, ~20 requirement questions a
+call) and concluded the lever was the *number* of calls, which its own probe
+census then nearly refuted. The callee table says three quarters of the row is
+not the requirement walk at all:
+
+```text
+callees of the targeter, `sealed`, base 648d1807 (11,098 calls, 96,200,052 Ir)
+  147,846   17,627,434  evaluate_requirement_static_hinted   the semantics
+  146,264   30,763,717  FnMut for &mut F::call_mut           the adapters
+   26,742    2,901,450  target_filter_for_slot_in_mode_kicked
+   11,734    2,726,269  SelectionRequirement::clone
+   11,734    3,176,564  drop_in_place<SelectionRequirement>
+   11,734    2,745,791  opponents_of
+   12,106    1,151,904  __rust_dealloc
+    7,908    8,754,442  Map::try_fold  +  2,738  12,376,541  Map::fold
+```
+
+**Two commits, and the row falls 10-14 % on every pool.**
+
+```text
+whole program, callgrind, profiling-fast --no-default-features,
+--games 6 --threads 1 --seed 1, base 648d1807
+                     base            (A) asks         (B) walk
+  fixed     1,006,760,372   1,005,610,639   -0.114 %   1,003,838,211  -0.176 %
+  cube      3,017,827,191   3,013,010,772   -0.160 %   3,011,600,161  -0.047 %
+  sealed    3,011,285,308   2,999,013,515   -0.408 %   2,994,041,770  -0.166 %
+                       across the two:  fixed -0.290 / cube -0.206 / sealed -0.573 %
+
+the function's own row, base -> tip
+  fixed    32,124,044 -> 28,782,183   -10.4 %   (2,878 calls)
+  cube     47,056,352 -> 41,314,565   -12.2 %   (3,492)
+  sealed   96,200,052 -> 79,840,300   -17.0 %   (11,168)
+```
+
+(A) is three questions the frame already had the answer to: the slot-0 filter
+lookup ran twice, `opponents_of(controller).first()` allocated a `Vec` per
+*slot* for one loop-invariant seat, and the slot filter was deep-cloned out of
+`eff` to be read through a reference. (B) is `(-78)`'s test 1 applied to three
+chains that are walked per battlefield permanent (or per graveyard card) per
+slot: `call_mut` 37,690,794 -> 33,115,540, `Map::fold` 14,804,456 ->
+13,246,942, `Map::try_fold` 2,043,786 -> 979,360 on `sealed`.
+
+**AND THE PASS IS ITS OWN TEST OF THE ENTRY BELOW IT.** The cauldron entry
+asks for a whole-program re-read at the tip rather than a sum of claimed
+deltas. Taken here: the anchor at `2a59a81c` is 1,003,202,820 / 3,005,261,303 /
+2,995,293,565 and at `b635037f` — the same two commits plus two doc-only ones
+— it is **1,000,278,628 / 2,999,730,000 / 2,978,042,227**, i.e. **-0.292 /
+-0.184 / -0.576 %**, against the A/B's -0.290 / -0.206 / -0.573. Two sessions,
+two binaries, three pools, agreeing to 0.002 / 0.022 / 0.003 percentage
+points.
+
+**And the same device prices somebody else's commit for free, which is what
+makes it worth the ten minutes.** `ea2cb263` (the Cauldron revert) has exactly
+one parent, `b635037f`, so two anchors bracket it alone:
+
+```text
+                b635037f          ea2cb263 (theirs)   b613c26f (re-read here)
+  fixed     1,000,278,628      1,000,218,574          1,000,218,658
+  cube      2,999,730,000      3,000,861,798          3,000,861,934
+  sealed    2,978,042,227      2,981,763,332          2,981,763,240
+  the revert alone:  fixed -0.006 %   cube +0.038 %   sealed +0.125 %
+```
+
+That is a **third** confirmation of that commit's own A/B (`fixed` +0.0057 /
+`cube` -0.0378 / `sealed` -0.1237 % for *having* the bit), by a completely
+different route, and the two independent readings of the same engine
+`b613c26f` vs `ea2cb263` — two sessions, two containers, two builds — differ
+by **84 / 136 / 92 Ir, 0.000008 %**. **The portability rule is not folklore:
+another session's anchor is a usable base to the eighth significant figure.**
+The one thing the numbers do not settle is the decision: the split is +0.006 %
+of the bench pool against -0.125 % of `sealed`, 20x asymmetric toward the
+pools the training loop actually plays. Left as the open question in TODO's
+NEXT rather than re-landed on one session's reading.
+
+**REFUTED IN THE SAME SITTING, AND IT IS THE half worth reading: the missing
+freeze scope is not missing.** Both of this function's siblings —
+`legal_targets_for_filter` and `auto_target_for_effect_avoiding_set_xc` —
+wrap their candidate walk in `with_frozen_layers`, with a doc comment
+explaining that otherwise each `check_target_legality` opens its own scope and
+re-gathers. The multi-slot targeter does not, and it makes 17,792
+`computed_permanent` calls through `check_target_legality_with_source` at
+**1,106 Ir apiece** on `sealed` against 76 Ir for a caller known to be inside
+a warm scope. That reads exactly like a missing scope. It is not:
+
+```text
+wrapping the body in with_frozen_layers, base b635037f
+  fixed   1,000,278,628 -> 1,000,348,190   +0.007 %
+  cube    2,999,730,000 -> 2,999,814,029   +0.003 %
+  sealed  2,978,042,227 -> 2,978,316,949   +0.009 %
+```
+
+Every caller path reaches it from inside `next_action_settled`'s tick scope or
+`sim_spell_action`'s, so the added scope is a nested push and pop and nothing
+else — ~24 Ir a call of pure charge. **The 1,106 Ir is a `perms` miss, not a
+gather**: a bot probe runs on a freshly cloned state whose `LayerFreeze` is
+`default()`, so the scope is warm for the *effect list* and cold for every
+permanent the walk has not yet asked about, and `compute_permanent_pass` is
+215 Ir of self plus its callees. **An expensive `computed_permanent` is two
+different costs wearing one row, and the freeze scope only fixes one of
+them.** Tell them apart by the caller's Ir/call *ratio* to a known-warm
+caller, not by its absolute value.
 ### Ninety-second pass (3) — one lock per scoped read, and a `find` is not its collection's length
 
 **A concurrent session's pass, run against `414acf08` and rebased twice onto
@@ -7058,6 +7196,37 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-third pass — the targeter's borrowed filter, hoisted seat and hand-written walk
+
+**Taken, two commits, `fixed` -0.290 % / `cube` -0.206 % / `sealed`
+-0.573 %.** Numbers, composition and the whole-program re-read are in the
+Baseline. What each half is:
+
+**(A) `6a7476fc` — three answers the frame already had.** The slot-0 filter
+lookup ran twice (once as `.is_some()`, once for the value) and it is a walk
+of the whole effect tree; `opponents_of(controller).first()` built and dropped
+a `Vec` per *slot* for a seat that cannot change between slots
+(`first_opponent_of` answers it with a `debug_assert!` tying its order to
+`opponents_of`'s); and the slot filter was `clone()`d out of `eff` —
+deep-copying the `And`/`Or` tree — to be read through a reference two lines
+later. `auto_target_for_effect_avoiding_set_xc_inner` took the same
+`opponents_of` fix.
+
+**(B) `b635037f` — `(-78)`'s test 1, three sites.** The ranked battlefield
+pick (`filter().filter().map().min()`), and two graveyard sweeps
+(`players.iter().flat_map().map().find()`, now one shared helper), are walked
+per battlefield permanent / per graveyard card per slot; `already_picked` was
+`collect()`ed per slot and is now one buffer cleared and refilled. `min()`
+keeps the first of equal keys and the key ends in the card id, so ties cannot
+arise and `<` reproduces it either way.
+
+**Refuted in the same sitting: wrapping the function in `with_frozen_layers`**
+(`fixed` +0.007 / `cube` +0.003 / `sealed` +0.009 %). Its two siblings do it
+and it makes 17,792 `computed_permanent` calls at 1,106 Ir — but every caller
+path already sits inside a tick scope, and that 1,106 is a `perms` miss rather
+than a gather. See the Baseline for the way to tell those apart without a
+build.
+
 ### Ninety-first pass — `compute_permanents(&[])`, and the reorder that only moves a gather
 
 **Taken.** `compute_permanents` returns early on an empty id list instead of
@@ -11744,6 +11913,28 @@ third are inside one `SweepMana`'s tick, so the reachable share is 2,442 scans
 cannot join them because it runs *during* payment, after taps have moved the
 board. The standing rule applies as written: a board memo is worth the board's
 write rate, and tapping is the write.
+
+**THE TARGETING HALF IS PART-TAKEN AT THE NINETY-THIRD PASS, AND THE ENTRY
+RANKED IT WRONG — read that before proposing anything else here.** The lever
+was never the call count this entry spent its space bounding: opening the
+function's callee table showed **three quarters of the row is not the
+requirement walk** — the adapters (`call_mut`, 1.25 % of `sealed` on its own),
+a per-slot `Vec` for one seat, a deep-cloned filter, and a slot-0 lookup run
+twice. Two commits took the function's own row **-10.4 / -12.2 / -17.0 %** and
+the program -0.290 / -0.206 / -0.573 %; the Baseline has both tables. **The
+generalisable half: this entry sized a function from *outside* — total, calls,
+Ir/call, and the counts of its two biggest callees — and every one of those
+numbers was right while the conclusion drawn from them was wrong. One
+`cg_edges.py --callees` on a 3 % row costs nothing and is the first thing to
+run, not the last.**
+
+What is left inside it, at `b635037f`: `evaluate_requirement_static_hinted`
+(the semantics, and `(-83)`'s row), `check_target_legality_with_source`'s
+17,792 `computed_permanent` calls at 1,106 Ir — a `perms` miss, **not** a
+gather, and the freeze scope that looks like the fix is built and refuted in
+the Baseline — and `has_hostile_ward`, which re-finds by id a permanent the
+ranking loop is holding (8,838 calls / 1.23 M on `sealed`, so ~0.02 %: a
+clarity fix with a number, not a candidate).
 
 **(-83) THE REQUIREMENT WALKER IS THE THIRD-LARGEST ENGINE FUNCTION IN THE
 PROGRAM AND ITS CALLERS ARE THREE DIFFERENT STORIES.** `evaluate_requirement_
