@@ -450,7 +450,13 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   illegal move proves nothing.**
 
   **What `CRAB_SIM_REJECTS=names` still names on `cube` seed 11**, and these
-  are the next leads rather than anything this pass fixed:
+  are the next leads rather than anything this pass fixed. **~~Leads~~ —
+  every row here is a seventy-sixth-pass reading and the counter has read
+  zero in every configuration run since the eighty-first; the table is kept
+  for its *shapes*, not as a work list. Its "`declare_attackers_banded`'s
+  thirty `CannotAttack` returns need a per-site tag — build that first" is
+  also done**: `attack_reject(line!(), …)` tags sixteen sites and
+  `block_reject` the block side, both printed by `CRAB_SIM_REJECTS=names`.
 
   | count | error | card | the tell |
   |---|---|---|---|
@@ -460,7 +466,38 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   | 24 | `CannotAttack` | `Nimble Mongoose`, `computed_kw=[Shroud]` | the `Angel` row's shape again |
   | 6 | `CannotBlock` | `Arclight Phoenix` | the residue of the pair gate below |
 
-  **Still open, and this is why the entry is 🟡.** The two readings are still
+  **~~Still open~~ — STALE, and the ~310-line refactor it asks for is already
+  done. Re-read at the eighty-ninth pass.** The paragraph below described the
+  pre-eighty-first-pass state and survived the fix that closed it; it is kept
+  because its *cost* argument is still the reason not to widen the shared body
+  further, and struck because its premise is not true any more. **The pair
+  gate is one body and every reading routes through it**, checked by grep
+  rather than by reading:
+
+  * `declare_blockers` calls `blocker_self_block` and then
+    `blocker_pair_block` per assignment, and has no other *per-pair*
+    rejection — every other `block_reject` in it is batch-level (below).
+  * `blocker_can_block_attacker_pair` is `blocker_pair_block(..).is_none()`
+    and `blocker_can_block_anything` is `blocker_self_block(..).is_none()` —
+    two one-line wrappers in `game/mod.rs`, and
+    `blocker_can_block_attacker` is their composition.
+  * the planner asks only those three: **eleven** call sites in
+    `server/bot.rs` and nothing else, `bot_can_block` among them.
+    `grep -n 'blocker_can_block' crabomination/src/server/bot.rs` is the
+    check, and it is the whole check.
+
+  **What is genuinely still two readings is the *batch* level, and it cannot
+  live in a pair function**: CR 509.1c "can't block alone", Okk's
+  bigger-partner rule, the Silent Arbiter cap, the menace count and the
+  must-be-blocked requirements are all statements about the whole
+  declaration. Those have their own unification (`block_requirement_able`,
+  `block_requirement_binds`, `min_blockers_required_kws`) two paragraphs
+  down, and `CRAB_SIM_REJECTS` is what watches the join — **0 of 126,608
+  simulated declarations at the eighty-ninth tip**. The entry stays 🟡 for
+  *that* and for the missing printed-vs-computed guards, not for the pair
+  gate.
+
+  The paragraph as it stood, for its cost argument: the two readings are still
   two hand-written lists. `declare_blockers` has ~20 per-pair gates and
   `blocker_can_block_attacker_pair` now has ~12 of them; the rest are
   blocker-side gates reached through `blocker_can_block_anything`, and nothing
@@ -471,7 +508,7 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   ~20 keyword scans. It wants a per-card "carries any block-restriction
   keyword" bit (the `AttackerFacts` / blocker-facts structs already exist to
   hold one) so the shared body runs only for the pairs that can fail.
-  **Until then `CRAB_SIM_REJECTS` is the guard**: `CRAB_SIM_REJECTS=1
+  **`CRAB_SIM_REJECTS` is the guard**: `CRAB_SIM_REJECTS=1
   bot_ladder --a gang --b gang --games 20 --threads 1 --decks all --seed 3`
   reads 0; `=names` names anything that is not. **Run it over `cube` seeds
   1-24, not three of them** — the three-seed census read the block half as
