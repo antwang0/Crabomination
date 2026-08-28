@@ -697,9 +697,38 @@ same instruction wherever it sits. Do not try to attribute it with
 deliberately not the seed anything is measured on; a profile fitted to the
 sequence under test flatters itself. The measurement was on seed 11.
 
-**Not measured: the ML actor.** `selfplay_train` shares the whole engine with
-`bot_ladder`, so the win should carry, but that is an inference. The script
-takes a binary name and a `PGO_TRAIN` command for whoever measures it.
+**THE ML ACTOR WAS FILED HERE AS "SHOULD CARRY — AN INFERENCE", AND
+MEASURING IT SAID BOTH `-23.1 %` AND `-4.9 %` DEPENDING ON THE WORKLOAD.
+THAT SPLIT IS WORTH MORE THAN THE PGO NUMBER.** Same two `selfplay_train`
+binaries, same box, `--actors 4`, one hour apart:
+
+```text
+  --games 3000 --steps 200   -4.93 %  6/6  CI -8.28 .. -1.59 %  (null +/-1.09)
+  --games 6000 --steps 1    -23.14 %  6/6  CI -23.88 .. -22.39 % (null +/-1.29)
+  binary 147,327,672 -> 121,662,320 bytes (-17.4 %)
+```
+
+**Because the first workload is not measuring the simulator.** Its own
+`stats.jsonl` says `t_step_ms` 31,437 of a 33 s run — **the learner thread is
+busy ~95 % of the wall clock**, doing batch-256 gradient steps in candle,
+which is already-tuned numeric kernels PGO has nothing to give. Drop the
+learner to one step and the four actors own the clock: **90.9 games/s ->
+261.0 games/s** on the base binary, and the PGO win goes straight back to the
+`bot_ladder` figure.
+
+**So the standing instruction for any future actor reading: print the time
+split before quoting a throughput number.** `t_step_ms` against `elapsed_s`
+answers "is this run engine-bound or learner-bound?" in one line, and the two
+kinds of run respond to completely different work. A simulator optimization
+measured on a learner-bound configuration is divided by twenty before you see
+it — which is also why `--bench` and `bot_ladder` are the right instruments
+for this file and `selfplay_train` is not.
+
+**And it re-prices the ML loop itself.** At a learner-heavy setting the
+training run is not simulator-bound at all, so *no* amount of engine work
+moves it; the lever there is the learner (batch size, step cadence, device).
+Nothing in this file has ever said which side a real training configuration
+sits on. That is now a question with a one-line instrument.
 
 Two notes for whoever repeats it. The run's `load average` line warned; it
 was a **false positive** — `start 2.49` is the decaying one-minute average
