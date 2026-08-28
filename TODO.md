@@ -78,7 +78,10 @@ refuted.
   by deleting the rare leg** — one build, and it read -0.675 % before the real
   fix existed. Three tests: is the collection walked per element, is the
   chained leg usually empty, and does the body have a `continue` that has to
-  become a `return` when it moves into a closure.
+  become a `return` when it moves into a closure. **Test 1 is the whole
+  rule**: every candidate of this shape that failed, failed on it, and
+  `activate_ability_inner`'s nine whole-board static walks *deleted outright*
+  are only `fixed` -0.121 % / `cube` -0.167 % in total.
 - **`Vec::clone` hands back `capacity == len`, so every `Vec` inside a
   copy-on-write structure reallocates on its first push after the copy**
   (pass 86, the concurrent half, (-76); `cube` -0.44 % over six sites). The

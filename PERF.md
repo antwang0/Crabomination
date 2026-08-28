@@ -8908,32 +8908,44 @@ and measure**; it costs one build and answers the question outright).
    loop when the leg is rare. **A `continue` in the body becomes a `return`
    when it moves into a closure** — check for one before quoting a line count.
 
-**What is left, ranked by the row the chain sits in** (`--decks cube` at
-`5d2f1acf`, and every one of these is a chain onto a usually-empty tail):
+**WHAT IS LEFT — AND THE FIRST LIST HERE RANKED THE WRONG THING, WHICH IS
+ITSELF THE ENTRY'S TEST 1.** The rows below are the *functions* the remaining
+chains sit in, and a function's row is not its chain's cost: nearly all of
+them turn out to be a chain over a short list **per call**, not per element of
+a board walk.
 
 ```text
-  2.38 %  check_state_based_actions_into  stack.rs:5412 — the death sweep's
-          `triggered_abilities.iter().chain(granted).filter(..)`, per card
-          per sweep; stack.rs:5762 is the stale-Role `flat_map`
-  1.47 %  activate_ability_inner          eleven sites, actions.rs
-  1.29 %  fire_combat_damage_triggers     combat.rs:5320-5321, a *double*
-          chain over the printed list per card per damage event
+  2.38 %  check_state_based_actions_into  stack.rs:5412 — REFUTED BY READING:
+          the chain is inside `.map(|c| …)` over the *dying* cards, so it runs
+          per death, not per card per sweep
+  1.47 %  activate_ability_inner          BUILT AND REFUTED — nine whole-board
+          `battlefield.iter().flat_map(|c| &c.definition.static_abilities)`
+          walks, deleted outright (`battlefield[..0]`), read `fixed`
+          **-0.121 %** / `cube` **-0.167 %** *in total*. That is the ceiling
+          on any gated-scan rewrite of all nine, against ~100 lines of the
+          `cast_static` / `sba_board_scan` bit-per-family device. Most sit
+          behind `!ability_is_mana` or a source-type gate, and the function's
+          50,058 calls are dominated by mana taps that skip them.
+  1.29 %  fire_combat_damage_triggers     REFUTED BY READING: combat.rs:5320's
+          double chain is inside `if let Some(c) = dealer`, i.e. once a call
   1.17 %  evaluate_requirement_static_hinted  eval.rs:3770-3836, five
-          `target.iter().chain(additional_targets.iter())`
-  0.81 %  declare_blockers                combat.rs:2058
-  0.66 %  declare_attackers_banded        eight sites
-  0.50 %  finalize_cast                   actions.rs:8632
-  0.48 %  bot::available_mana             bot.rs:10160
+          `target.iter().chain(additional_targets.iter())` over 1-2 targets
+  0.39 %  do_untap                        stack.rs:2965-3228, five sites, and
+          these *are* whole-board — the only unread ones of the shape
+  0.24 %  cost_reduction_for_spell_full_over  takes the iterator as a
+          **parameter** (`CostStaticSources`), so the fix is a signature change
+  0.12 %  chosen_type_etb_counter_specs   `continue`s the *outer* loop and
+          wants test 3's `return`
 ```
 
-**Two the same pass left deliberately.** `dispatch_triggers_for_events`
-(5.93 %) carries a *triple* chain at mod.rs:17792 over a body long enough that
-moving it into a closure is a refactor of the hottest function in the
-simulator, and its four legs are already behind an all-empty `continue` gate,
-so the elements it pays for are few. `cost_reduction_for_spell_full_over`
-takes the iterator as a **parameter** (`CostStaticSources`), so the fix is a
-signature change; `chosen_type_etb_counter_specs` (0.12 % / 0.10 %) `continue`s
-the *outer* loop and wants test 3's `return`.
+**So the entry's own test 1 is the whole selection rule, and it is cheaper to
+apply than to skip**: the two sites that shipped are the two where the adapter
+wrapped a **whole-board walk executed per call**, and every candidate that
+failed failed on that question alone. `dispatch_triggers_for_events` (5.93 %)
+carries a *triple* chain at mod.rs:17792 and is left for the same reason plus
+one more: its four legs are already behind an all-empty `continue` gate, and
+its body is long enough that moving it into a closure is a refactor of the
+hottest function in the simulator.
 
 **(-77) THE MEMO DEVICE THE EIGHTY-SEVENTH PASS PROVED HAS FOUR MORE
 CALLERS, AND THEY ARE 4.75 % OF `cube` BETWEEN THEM.** `sba_board_scan` was
