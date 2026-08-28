@@ -1008,12 +1008,13 @@ impl FromIterator<(CounterType, u32)> for CounterBag {
     }
 }
 
-impl std::ops::Index<&CounterType> for CounterBag {
-    type Output = u32;
-    fn index(&self, ct: &CounterType) -> &u32 {
-        self.get(ct).expect("no counters of that kind")
-    }
-}
+// No `Index<&CounterType>`. It existed, it panicked on a kind the bag does
+// not hold, and `scripts/audit_panics.py` found it had **no engine or server
+// call site at all** — its only two users were assertions in one test file,
+// which now ask `get(..).copied()` and compare against `Some(n)`. That is the
+// same question without the landmine: the next caller to write
+// `c.counters[&CounterType::PlusOnePlusOne]` for a kind the bag does not hold
+// would have got a panic where `get` returns `None`.
 
 /// CR 122.1b — the keyword counters on a permanent, in the order they were
 /// first added.

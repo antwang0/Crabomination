@@ -271,6 +271,48 @@ not assumed. It also changes golden traces (legitimately) and sits in the
 hottest function in the program, so it needs a `--decks cube` reading and the
 `-C debug-assertions=yes` ladder gate, not just the suite.
 
+### ~~"No panic reachable from bot self-play" had never been checked statically~~ — checked at the ninety-first pass, and it holds
+
+The standing goal was audited only by *reaching* code: the 33,120-game
+`-C debug-assertions=yes` grid proves what a game touches, and says nothing
+about the site nobody touched. `scripts/audit_panics.py` is the static half —
+the seventh filter — and its first reading is:
+
+```text
+109 panicking sites off the bin/test paths
+     75 guarded      a proof (is_empty / is_some / len / match bind / filter)
+                     in the site's own statement region
+     11 lock-poison  Mutex/RwLock, reachable only after some other panic
+     23 bare         no proof the filter's 22-line lookback can see
+```
+
+**All 23 bare sites were read, and every one is safe** — by a guard the
+filter cannot see, which is the useful part of the result:
+
+* **8x `source_owner.unwrap()` in `activate_ability_inner`** — sound, but by a
+  *correlated flag*: `source_in_gy`/`_hand`/`_exile`/`_command` and
+  `source_owner` come out of one tuple 57 lines up, so `Some` is implied by
+  the flag the branch tested. Non-local, and the shape to watch: an enum
+  (`SourceZone::Graveyard(owner)`) would make the binding structural, at the
+  cost of churn in a 1.65 %-of-`fixed` function.
+* **5x `remove_from_hand(..).unwrap()` in the cast paths** — every one is
+  preceded by an `Err(CardNotInHand)` early return, up to ~270 lines above.
+* **2x `try_pay_after_snapshot_mode`** — the `expect` message *is* the proof
+  ("pool covered the cost a line ago").
+* the rest are match arms on a length, `unreachable!` on a variant
+  `perform_action` handles before dispatch, and deck-builder / recommender
+  paths that are not game logic.
+
+**One landmine was real and is gone**: `CounterBag`'s `Index<&CounterType>`
+panicked on a kind the bag does not hold and had **no engine or server call
+site at all** — its only two users were assertions in one test file, which now
+ask `get(..).copied()`. The next caller to write
+`c.counters[&CounterType::PlusOnePlusOne]` would have got a panic where `get`
+returns `None`.
+
+Re-run the filter after touching a hot path; the bare count is the number to
+compare, not a pass/fail.
+
 ### ~~Two headless `OptionalTrigger` sites answered `no` where their own comments said `yes`~~ — fixed, and the third is load-bearing
 
 The decision-plumbing audit's own docstring says a **bare** site is not

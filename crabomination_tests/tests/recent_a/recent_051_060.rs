@@ -95,12 +95,18 @@ mod recent51 {
         let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
         g.resolve_effect(&catalog::hunger_of_the_howlpack().effect, &ctx).unwrap();
         drain_stack(&mut g);
-        assert_eq!(g.battlefield_find(bear).unwrap().counters[&CounterType::PlusOnePlusOne], 1);
+        assert_eq!(
+            g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+            Some(1),
+        );
         // After a death → +3 more (4 total).
         g.players[0].creatures_died_this_turn = 1;
         g.resolve_effect(&catalog::hunger_of_the_howlpack().effect, &ctx).unwrap();
         drain_stack(&mut g);
-        assert_eq!(g.battlefield_find(bear).unwrap().counters[&CounterType::PlusOnePlusOne], 4);
+        assert_eq!(
+            g.battlefield_find(bear).unwrap().counters.get(&CounterType::PlusOnePlusOne).copied(),
+            Some(4),
+        );
     }
 }
 
