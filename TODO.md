@@ -39,9 +39,9 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `(-78)`'s `flat_map` half is **swept** — six commits, `FlatMap::next` off
    the profile as a named row; what is left of it is `Chain` at a third the
    traffic and none of it a whole-board walk, so expect a tenth. **New and
-   half-swept: the write-once `Box` field.** `resolving_spell_snapshot` is
-   `Arc` now (`fixed` -0.287 % / `cube` -0.203 % / `sealed` -0.222 %, 21,896
-   allocations). **The class is closed, not open**: `GameState`'s other `Box`
+   already closed: the write-once `Box` field.** `resolving_spell_snapshot`
+   is `Arc` now (`fixed` -0.287 % / `cube` -0.203 % / `sealed` -0.222 %,
+   21,896 allocations), and the sweep behind it is done: `GameState`'s other `Box`
    is the decider and it is free already (ZST), and `PlayerData` /
    `PlayerCold` / `ColdState` / `CardData` / `CardCold` carry none at all —
    `CardDefinition`'s fourteen sit behind the shared `Arc`. PERF's newest
