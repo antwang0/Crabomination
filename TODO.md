@@ -29,6 +29,12 @@ claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
 **Sequential builds only** (throughput, not RAM — see the environment note).
 
+0. **THE BUILD IS THE LEVER, NOT THE SOURCE.** PGO is a ~24 % win on both
+   pools and `-C target-cpu=native` is flat — width buys nothing here, layout
+   buys everything; numbers and cautions in PERF's Baseline.
+   `scripts/pgo_build.sh`, **opt-in and staying opt-in** so committed readings
+   stay plain `release-fast` ones (CLAUDE.md carries the hazard). Untried
+   after it: PGO on `selfplay_train`, then BOLT.
 1. **Perf queue** — PERF "Perf candidates", top-down: `(-9)`'s open half,
    `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-81)` is new,
    is the gather's context census, and its last paragraph is the pass's best
