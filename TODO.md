@@ -68,7 +68,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
 3. **Instruments** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
-   `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`.
+   `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`,
+   and `selfplay_train`'s new `actors:` line (plus `actor_s` /
+   `actor_games_per_s` in `stats.jsonl`). **Quote `actors:`, never `done:`,
+   for anything about the simulator** — the old rate divided games by a clock
+   the learner owns and read up to 3x low.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
    encodings invalidate the trained nets. Nothing since `dc478735` touches
    `encode.rs`, `crabomination_ml` or `crabomination_nn`.
