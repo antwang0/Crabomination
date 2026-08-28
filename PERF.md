@@ -1583,6 +1583,23 @@ taken here: it is a convention change with no build-time return (above) and
 it collides with any concurrent session touching the suite. Take it when the
 branch is quiet, as one commit, with the suite green either side.
 
+**First slice taken, `stx/part_23.rs`, ninety-first pass.** Its nineteen
+single-factory echoes — `_bNNN` batch bodies checked for mana value, printed
+P/T, a keyword or two and a creature type — are one `PrintedShape` table now,
+row-per-card, asserting exactly what the nineteen asserted.
+
+```text
+tests        19,073 -> 19,055   (-19 + 1)
+LOC          -167 / +81, net -86 of the file's 2,489
+binaries     8, flat            suite green either side, clippy clean
+build time   not re-measured: the section above measured this exact question
+             at nineteen tests and read 7.50 s both ways
+```
+
+**It is the shape the convention asks for and it is the cheapest slice** —
+one file, one batch range, every row mechanical. The other ~126 are the same
+job spread over ~60 files; the pattern is now in the tree to copy.
+
 **The reusable half is about the tool, not the tests.** A script whose output
 is a delete list is a *safety* instrument, and every one of its three bugs
 put live engine tests on that list. It had been run and quoted by three
