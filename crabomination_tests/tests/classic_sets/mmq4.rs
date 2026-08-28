@@ -272,6 +272,28 @@ fn righteous_indignation_pumps_the_blocker() {
     let _ = attacker;
 }
 
+/// And the colour clause it names, which until the eighty-seventh pass was
+/// dead. The trigger filter is `EntityMatches { BlockedAttacker, Black|Red }`
+/// and it is evaluated with the *enchantment* as `ctx.source`, so
+/// `Selector::BlockedAttacker` — which reads `attackers_blocked_by(source)` —
+/// resolved to nothing; `EntityMatches` answers with `all`, and `all` over an
+/// empty selector is vacuously true, so the enchantment pumped a blocker of
+/// anything. The selector falls back to `ctx.trigger_source` for a
+/// third-party watcher now, and the empty set answers `false`.
+#[test]
+fn righteous_indignation_ignores_a_green_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::righteous_indignation());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    attack_and_block(&mut g, attacker, blocker);
+    assert_eq!(
+        g.computed_permanent(blocker).unwrap().power,
+        2,
+        "the blocked attacker is neither black nor red",
+    );
+}
+
 /// Saprazzan Breaker slips through when its mill hits a land.
 #[test]
 fn saprazzan_breaker_is_unblockable_after_milling_a_land() {

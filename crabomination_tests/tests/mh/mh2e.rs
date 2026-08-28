@@ -273,7 +273,42 @@ fn tide_shaper_kicked() {
         cp.subtypes.land_types.contains(&crabomination::card::LandType::Island),
         "land is now an Island"
     );
-    assert_eq!(g.computed_permanent(shaper).unwrap().power, 2, "+1/+1 off the new Island");
+    // **Not** +1/+1 off the land it just retyped, and that is a layer
+    // dependency rather than a bug in the pump. `PumpSelfIf`'s condition is
+    // evaluated *inside* `gather_continuous_effects_inner`, where
+    // `in_layer_gather` pins every characteristic read to the printed one —
+    // so a layer-4 `SetLandTypes` from this very ETB is not visible to a
+    // layer-7 condition that asks "does an opponent control an Island". CR
+    // 613.8's dependency would order them; the engine has that machinery only
+    // for the power-gated case (`AffectedPermanents::CardMatchPowerGated`).
+    // Recorded in ENGINE_BACKLOG.
+    //
+    // Until the eighty-seventh pass this read `2` and passed for the wrong
+    // reason: `Predicate::EntityMatches` answers with `all` over the resolved
+    // selector and `all` over an empty one is vacuously **true**, so the
+    // condition was never evaluated at all and the pump was unconditional.
+    assert_eq!(
+        g.computed_permanent(shaper).unwrap().power,
+        1,
+        "the retyped land is a layer-4 change and the layer-7 condition can't see it",
+    );
+}
+
+/// And the condition it *can* see: a printed Island an opponent controls
+/// turns the pump on, and no Island leaves it off. The pair is what the old
+/// vacuous-`true` test could not assert in either direction.
+#[test]
+fn tide_shaper_pump_reads_a_printed_opponent_island() {
+    let mut g = two_player_game();
+    let shaper = g.add_card_to_battlefield(0, catalog::tide_shaper());
+    assert_eq!(g.computed_permanent(shaper).unwrap().power, 1, "no opponent Island");
+    g.add_card_to_battlefield(1, catalog::island());
+    assert_eq!(g.computed_permanent(shaper).unwrap().power, 2, "an opponent controls an Island");
+    // Its *own* Island is not an opponent's.
+    let mut g2 = two_player_game();
+    let mine = g2.add_card_to_battlefield(0, catalog::tide_shaper());
+    g2.add_card_to_battlefield(0, catalog::island());
+    assert_eq!(g2.computed_permanent(mine).unwrap().power, 1, "your own Island doesn't count");
 }
 
 /// Tizerus Charger escapes with its chosen counter.

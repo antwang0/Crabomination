@@ -1626,14 +1626,9 @@ impl GameState {
             // `EachPermanent(…)` as a plain existence test, where the empty
             // set is a *separate* open defect (see ENGINE_BACKLOG).
             Predicate::EntityMatches { what, filter } => {
-                let unbound_slot = match what {
-                    crate::effect::Selector::Target(n) => {
-                        ctx.targets.get(*n as usize).is_none()
-                    }
-                    _ => false,
-                };
-                !unbound_slot
-                    && self.resolve_selector(what, ctx).into_iter().all(|e| match e {
+                let ents = self.resolve_selector(what, ctx);
+                !ents.is_empty()
+                    && ents.into_iter().all(|e| match e {
                         EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
                             .evaluate_requirement_static(
                                 filter,

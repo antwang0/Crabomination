@@ -33826,16 +33826,37 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
-            Selector::BlockedAttacker => ctx
-                .source
-                .map(|blocker| {
+            // CR 509.1 — the attackers the *blocker this trigger is about* is
+            // blocking. For a self-trigger ("whenever this blocks a creature",
+            // Wall of Frost) that is `ctx.source`; for a **watcher** — a
+            // third-party `EventKind::Blocks` trigger, whose ctx carries the
+            // ability's host as `source` and the blocking creature as
+            // `trigger_source` — it is `trigger_source`, and reading only
+            // `source` left the watcher's clause dead. Righteous Indignation's
+            // event filter is `EntityMatches { BlockedAttacker, Black|Red }`
+            // and it fired for a blocker of anything, because an empty
+            // selector makes `EntityMatches` vacuously true.
+            //
+            // `source` first so no working self-trigger moves; the fallback
+            // only fires where the answer was empty.
+            Selector::BlockedAttacker => {
+                let blocked_by = |blocker: CardId| -> Vec<EntityRef> {
                     self.attackers_blocked_by(blocker)
                         .iter()
                         .filter(|aid| self.battlefield.iter().any(|c| c.id == **aid))
                         .map(|aid| EntityRef::Permanent(*aid))
                         .collect()
-                })
-                .unwrap_or_default(),
+                };
+                let own = ctx.source.map(blocked_by).unwrap_or_default();
+                match (own.is_empty(), ctx.trigger_source) {
+                    (true, Some(EntityRef::Permanent(subject)))
+                        if Some(subject) != ctx.source =>
+                    {
+                        blocked_by(subject)
+                    }
+                    _ => own,
+                }
+            }
             Selector::RadianceGroup { subject } => {
                 let Some(EntityRef::Permanent(subj)) =
                     self.resolve_selector(subject, ctx).into_iter().next()
@@ -33902,16 +33923,25 @@ impl GameState {
                 pool.choose(&mut self.rng.draw()).copied().into_iter().collect()
             }
 
-            Selector::BlockingCreatures => ctx
-                .source
-                .map(|attacker| {
+            // The mirror of `BlockedAttacker`, with the same watcher fallback.
+            Selector::BlockingCreatures => {
+                let blocking = |attacker: CardId| -> Vec<EntityRef> {
                     self.blockers_of(attacker)
                         .into_iter()
                         .filter(|bid| self.battlefield.iter().any(|c| c.id == *bid))
                         .map(EntityRef::Permanent)
                         .collect()
-                })
-                .unwrap_or_default(),
+                };
+                let own = ctx.source.map(blocking).unwrap_or_default();
+                match (own.is_empty(), ctx.trigger_source) {
+                    (true, Some(EntityRef::Permanent(subject)))
+                        if Some(subject) != ctx.source =>
+                    {
+                        blocking(subject)
+                    }
+                    _ => own,
+                }
+            }
             Selector::CreatorOfSource => ctx
                 .source
                 .and_then(|s| self.battlefield_find(s))
