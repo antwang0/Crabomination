@@ -45,8 +45,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    any `selfplay_train` throughput number. **BOLT is blocked here** — no
    `llvm-bolt` in the toolchain and no `perf` in the image.
 1. **Perf queue** — PERF "Perf candidates", top-down. **`(-84)` is the
-   block-legality trio — 1.46 % of `cube`, off the top thirty on `fixed` —
-   and two of its three rows have a named shape and a probe.** `(-82)` and
+   block-legality trio — 1.46 % of `cube`, off the top thirty on `fixed`.
+   Its (a) is TAKEN (-0.125 / -0.262 / -0.176 %, the row fell 58 %); (b) —
+   `blocker_self_block`'s whole-board Void Winnower walk on every
+   even-mana-value blocker — is the next one and the entry names its
+   probe.** `(-82)` and
    `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the

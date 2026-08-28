@@ -2021,6 +2021,52 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-third pass (2) — a pure disjunction is one pass per operand, not twenty-two
+
+**`can_block_attacker_computed` walks two short keyword slices once each
+instead of twenty-two times, base `cc608dde`** — `(-84)(a)`, taken the pass
+it was filed.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed   1,000,218,574 ->   998,970,064   -0.125 %
+  cube    3,000,861,798 -> 2,993,004,323   -0.262 %
+  sealed  2,981,763,332 -> 2,976,502,367   -0.176 %
+
+cube, and every other row is byte-identical:
+  can_block_attacker_computed  13,400,800 -> 5,633,484   -7,767,316  (-58 %)
+  Keyword::eq                   4,617,224 -> 4,529,724      -87,500
+                                     program              -7,857,652
+```
+
+**The enabling observation is about the function's *shape*, and it is worth
+more than the site.** Every rule in it returns `false` and the fallthrough
+returns `true`, so the function is a disjunction and **the order of its tests
+carries no meaning** — which is exactly the licence a fusion needs. Thirteen
+walks over the attacker's set (`has_kw`, `iter().any(matches!)`, two whole
+`for kw in` loops) and nine over the blocker's become one `match` per side.
+Every keyword it read by `has_kw` is a **unit variant**, and
+`KeywordSlice::has_kw` is `discriminant(x) == want && x == k` — so a `match`
+arm *is* the test it replaces, with no semantic step to check.
+
+**Sequencing is the only real constraint and it is small**: six of the
+attacker's rules are decided against a blocker flag (flying/reach,
+horsemanship, shadow), so the blocker's pass runs first; the two that need an
+*attacker* flag — `CanBlockOnlyFlying` and shadow-blocks-only-shadow — are
+settled after both passes. Everything else decides where it is read.
+
+**It read 14 % above `(-84)`'s own sizing, and the entry's warning is why
+that is the interesting part.** The entry said these are short *per-call*
+slices rather than a board walk, so what is on offer is the twenty loop
+set-ups and not the elements — and 58 % of the row was exactly that.
+**A function that walks one short collection N times is paying N prologues;
+rank it by N, not by the collection's length.** `clippy::collapsible_if`
+wants each guarded arm as a `match` guard rather than an `if` inside the
+arm — take that, but only where the arm has no other statement: two of this
+function's arms set a flag *and* test one, and a guard would drop the flag.
+
+Suite 19,055 / 0 / 5, golden traces unmoved; clippy clean.
+
 ### Ninety-third pass — the multi-slot targeter, read from the inside, and the freeze that looked missing
 
 **`auto_targets_for_effect_all_slots_kicked` is the second-largest half of
@@ -11806,7 +11852,10 @@ it there.
   61,408         13,400,800   0.447 %   can_block_attacker_computed
 ```
 
-**(a) `can_block_attacker_computed` makes 22 passes over two short keyword
+**(a) TAKEN at the ninety-third pass (2) — `fixed` -0.125 % / `cube`
+-0.262 % / `sealed` -0.176 %, and the row fell 58 %.** See the Baseline; the
+sizing below stands as written and read 14 % low on `cube`.
+`can_block_attacker_computed` made 22 passes over two short keyword
 slices.** Thirteen over `attacker_kws` (six `has_kw`, three
 `iter().any(matches!)`, two more `has_kw` for Fear/Intimidate, then the
 protection loop and the `CantBeBlockedExceptBy` loop) and nine over
