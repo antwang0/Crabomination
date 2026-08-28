@@ -1982,9 +1982,10 @@ actor  3,851,460,377 (--actors 1 --games 60 --steps 1 --seed 7), play
        byte-identical to the eighty-first and eighty-third readings
 ```
 
-**This session's five perf commits, each against its own named base**
-(a concurrent session landed work between every pair of them, so these do not
-sum to a tip-to-tip delta):
+**This session's perf commits, each against its own named base** (a
+concurrent session landed work between every pair of them, so these do not
+sum to a tip-to-tip delta). The last two are measured on the **actor**,
+because `--bench` never calls the encoder:
 
 ```text
                                      fixed      cube      sealed
@@ -1993,6 +1994,11 @@ sum to a tip-to-tip delta):
   keyword-grant gate memo          -0.308 %  -0.283 %  -0.192 %
   card-type-change gate memo       -0.321 %  -0.405 %  -0.259 %
   combat prevention fusion         -0.277 %  -0.463 %  -0.292 %
+  walker drops three OnceCells     -0.412 %  -0.705 %  -0.496 %
+
+                                     actor
+  library encoder drops a BTreeMap  -0.494 %
+  vocabulary index is a memo slot   -0.507 %
 ```
 
 Two changes were built, measured and reverted in the same pass: the memo on
