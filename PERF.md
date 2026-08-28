@@ -939,6 +939,18 @@ here if it ever needs compacting.
   `drop_in_place<PrintedList<_>>` row (7.9 M of `cube`) and moves the
   `Arc<ComputedPermanent>` into a smaller size class. **Price the *margin*
   with the probe, then expect the removal to beat it.**
+- **A freeze scope only gathers if a read inside it asks for a computed view,
+  and the read that pays is whichever gets there first** (pass 91; `fixed`
+  -0.755 % / `cube` **-2.226 %** / `sealed` -0.856 %, 71,930 gathers ->
+  59,010). `(-81)`'s context census reads every gather as "one per scope, one
+  scope per distinct game state", which makes the count look irreducible —
+  and `resolve_combat`'s pair scope was gathering because its **first two**
+  `&self` calls asked for one permanent's computed keyword set with no
+  presence gate, while the six behind them were all gated.
+  **Read a scope's first few reads in source order before concluding it has
+  to gather.** Expect (-14)'s "guarding one promotes the next": the gate that
+  was already there gets 27 % dearer because it now runs in an unwarmed scope,
+  and the trade is still 44 M against 17.5 M.
 - **A private field is a compiler-driven rename** (pass 91). Turning four
   `pub` fields into private overlays behind same-named accessors is 2,991
   lines over 282 files, and none of them were found by grep: E0616 carries a
@@ -1652,6 +1664,89 @@ matches `crabomination_base` and `crabomination_catalog` too and so forces the
 build.
 
 ## Baseline
+
+### Ninety-first pass (2) — a freeze scope only gathers if its first read makes it
+
+**`creature_redirects_damage_to_controller` and
+`damage_from_source_prevented_by_keyword` get the presence gate, at
+`414acf08`.** Both ask whether one permanent's *computed* keyword set holds
+one keyword, both did it with a bare `computed_permanent`, and both are the
+first two reads inside `resolve_combat_damage_with_filter`'s per-pair freeze
+scope — so between them they were **12,920 whole-effect-set gathers a
+six-game `cube` run**, to answer a question about a keyword almost no
+permanent has.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base 414acf08.
+  fixed   1,021,019,898 -> 1,013,307,016   -0.755 %
+  cube    3,095,128,492 -> 3,026,236,892   -2.226 %
+  sealed  3,049,332,123 -> 3,023,217,402   -0.856 %
+
+gathers            71,930 ->    59,010     (-12,920)
+computed_permanent 387,848 ->   355,828
+allocations      1,588,542 -> 1,526,714
+```
+
+**THE RULE, AND `(-81)`'s CENSUS IS WHAT MADE IT VISIBLE AND ALSO WHAT NEARLY
+HID IT.** That census reads every one of the 71,930 gathers as "one per freeze
+scope, and one scope per read of a distinct game state" — true, and it makes
+the count look irreducible, because a scope is not something you can delete.
+**But a scope only gathers if a read inside it asks for a computed view, and
+the read that pays is whichever gets there first.** `resolve_combat`'s pair
+scope contains six presence-gated reads and two ungated ones, and the two
+ungated ones are first in source order. Gate them and the scope answers the
+whole pair from printed shapes. **Ask what the *first* read in a scope is
+before concluding the scope has to gather.**
+
+```text
+cube self rows, base -> candidate
+  gather_continuous_effects_inner  167,057,236 -> 123,098,812  -43,958,424
+  computed_permanent                90,526,388 ->  83,324,156   -7,202,232
+  _int_free                        100,365,710 ->  96,868,756   -3,496,954
+  compute_permanent_pass            77,230,214 ->  73,733,400   -3,496,814
+  affected_from_requirement         11,364,906 ->   7,948,650   -3,416,256
+  resolve_combat                    48,534,546 ->  45,531,880   -3,002,666
+  malloc                            75,607,702 ->  72,769,224   -2,838,478
+  static_effect_to_effects           7,663,890 ->   5,204,726   -2,459,164
+  free                              61,943,107 ->  59,531,815   -2,411,292
+  creature_redirects_damage_to_controller  25,398 -> 10,376,324  +10,350,926
+  damage_from_source_prevented_by_keyword 1,146,600 ->  8,299,998  +7,153,398
+  damage_prevented_by_protection    14,324,102 ->  18,188,848   +3,864,746
+  CardDefinition::can_grant_keyword  2,640,134 ->   4,580,214   +1,940,080
+```
+
+**`damage_prevented_by_protection` getting 27 % dearer is (-14)'s "guarding
+one promotes the next", and here it is still a large net win.** That function
+already carried this exact gate behind `!self.layers_memoized()` — *skip the
+gate when the gather has already happened, because then the memo read is
+cheaper than the gate's own board walk*. It used to be reached inside a scope
+that had already gathered; now it is reached inside one that has not, so its
+gate runs. The two new gates cost 17.5 M between them and the gather they
+stop costs 44.0 M. Both new gates carry a `debug_assert!` against the ungated
+answer, which is (-58)'s device: 19,073 tests and any
+`-C debug-assertions=yes` ladder run are the audit.
+
+**Closing state.**
+
+```text
+suite   19,073 / 0 / 5; the seven golden traces unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0), determinism ok, thread_determinism ok
+        — byte-identical to the committed invariant
+        games_per_s 257.37 / 244.44 / 261.04 / 243.77 (mean 251.7) against
+        the pass-open 241.8, peak_rss_mib 24.3-24.5, host_calib_ms 46-53
+```
+
+**Two `--bench` runs in that set read 189 and were discarded, and the reason
+is the reading itself: `host_calib_ms` said 50-51 on a box whose idle value
+is 46-49.** A 1.2-second benchmark on a shared four-core VM picks up anything
+else running; the calibration probe is printed *last* precisely so it can be
+compared against the run, and a run whose calib is high is a run to throw
+away. **Check `host_calib_ms` before believing a `games_per_s`** — and note
+that a 27 % outlier passed straight through the mean of four before this was
+checked.
 
 ### Ninety-first pass — four handles to one definition, and the probe under-priced it
 
@@ -10770,10 +10865,25 @@ which is why neither shows a second context. The bot's two collects are one
 scope per call of `pick_blocks_inner` / `pick_attacks_inner`.
 
 **So there is no unscoped-read population to wrap, and this row is not a
-caller-side fix.** What is left of the gather is what `(-58)` says is left:
-either an invalidation *at* the mutation (the board epoch, `(-18)`, built and
-refuted) or an incremental gather. **Do not re-run this census**; it cost one
-`--separate-callers=4` run and this table is its whole result.
+caller-side fix.**
+
+**AND THAT CONCLUSION IS HALF WRONG, WHICH IS THE ENTRY'S MOST USEFUL
+SENTENCE.** "One gather per scope, one scope per distinct game state" makes
+the count look irreducible — a scope is not something you can delete. But
+**a scope only gathers if a read inside it asks for a computed view**, and the
+top two rows fell by 12,920 in the same pass by presence-gating the *first
+two reads* in `resolve_combat`'s pair scope (`fixed` -0.755 % / `cube`
+-2.226 % / `sealed` -0.856 %; see the Baseline). **Before concluding a scope
+has to gather, read its first few `&self` calls in source order and ask which
+one asks for a computed view without a gate.** What is left after that is what
+`(-58)` says is left: either an invalidation *at* the mutation (the board
+epoch, `(-18)`, built and refuted) or an incremental gather.
+
+**Do not re-run this census**; it cost one `--separate-callers=4` run and this
+table is its whole result. Its remaining rows in first-read order:
+`declare_attackers_banded` / `declare_blockers` (`board_keyword_in_scope`, a
+gate already), the bot's two candidate collects, `permanent_value_with`,
+`check_state_based_actions_into`.
 
 **`combat_damage_computed` is (-9)'s remaining half re-sized and it has
 doubled since that entry** — 3,274 calls / 0.71 % there, 6,842 / **2.23 %**
