@@ -8736,6 +8736,15 @@ impl GameState {
                 .map(|c| crate::game::layers::apply_layers_one_gated(c, fx, gates))
                 .collect()
         }
+        // `frozen_effects` *gathers* when this is its scope's first computed
+        // question, so asking it for a list of no permanents pays a whole
+        // gather for an empty answer. Both combat declarations reach here
+        // with an empty subset whenever nothing is being declared and no CR
+        // 508.1/509.1 requirement is live, which is most of the bot's attack
+        // search.
+        if ids.is_empty() {
+            return Vec::new();
+        }
         if let Some(fx) = self.frozen_effects() {
             return go(&self.battlefield, &fx, ids);
         }
@@ -8808,6 +8817,15 @@ impl GameState {
             // this used to gather to prove a negative. Ask the presence gate
             // first — a board with no source that can *grant* a matching
             // keyword cannot have one in its gathered set either.
+            //
+            // **Asking the gate before `frozen_effects` buys nothing and was
+            // measured** (ninety-first pass): inside a scope `frozen_effects`
+            // *is* the gather, so this looks like the same fix as
+            // `damage_prevented_by_protection_inner`'s — but both callers
+            // that reach here inside a scope
+            // (`declare_attackers_banded` / `declare_blockers`) go straight on
+            // to `compute_permanents` in that same scope, so the gather is
+            // moved, not removed, and the gate is then paid for nothing.
             None if !self.keyword_grant_in_scope(&pred) => false,
             None => granted(&self.gather_continuous_effects()),
         };
