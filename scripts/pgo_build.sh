@@ -10,7 +10,12 @@
 #
 # Leaves the optimized binary in `target/$PGO_PROFILE/$BIN` and the merged
 # profile in `$PGO_DIR.profdata`, so a later rebuild can skip straight to the
-# last step with `RUSTFLAGS="-Cprofile-use=..."`.
+# last step with `RUSTFLAGS="-Cprofile-use=..."` — **under the same profile**.
+# Both steps here run under one `PGO_PROFILE` on purpose: a profile raised
+# under `release-fast` and consumed by a `release` build is not rejected, it
+# is *partially* applied, and it silently costs most of the win (-20.75 %
+# became flat; the binary shrank 3.6 % instead of 13.1 %). Nothing warns, so
+# the check is the binary size.
 #
 # **A plain `cargo build` afterwards is a full rebuild**, not an incremental
 # one: changing RUSTFLAGS invalidates the whole cache. Budget for it, or keep

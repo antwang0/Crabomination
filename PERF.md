@@ -704,24 +704,47 @@ binaries, one tree, all four reading the committed invariant:
   release-fast (plain)                                             142,161,400
 ```
 
-**So PGO and LTO are substitutes here, not complements, and PGO is the better
-one.** `release-fast + PGO` is the fastest binary measured *and* the cheaper
-build — ~18 min against `release`'s 22-24 — and it beats the LTO profile by
-16 %. Adding LTO and `codegen-units = 1` on top of a profile buys nothing: the
-last row is flat.
+**AND THE FLAT ROW WAS AN ARTIFACT — THE PROFILE HAD TO BE RAISED UNDER THE
+PROFILE IT IS CONSUMED UNDER. THAT IS THE ENTRY'S MOST REUSABLE LESSON.** The
+`release + PGO` build above reused a profile generated from a `release-fast`
+**instrumented** binary. Redo it with a profile raised under `release`'s own
+settings and the flat row becomes the largest win in the table:
 
-**The last row is not a profile that failed to load.** `-Cprofile-use` did
-change codegen there — the binary went 123,768,408 -> 119,306,264, a 3.6 %
-shrink — so the data was read and applied; it simply bought no time on top of
-what whole-program LTO had already found. The consistency check holds too:
--23.79 % and -8.28 % against a common baseline predict -16.9 % between them,
-and the measured pair is -16.15 %.
+```text
+  release (LTO)         release + PGO, matched profile   -20.75 %  8/8
+                                          CI -21.02 .. -20.48 %
+  release-fast + PGO    release + PGO, matched profile    -5.03 %  8/8
+                                          CI  -5.26 ..  -4.80 %
 
-**One variable not controlled**: the profile fed to the `release` build was
-generated from a `release-fast` **instrumented** binary. Frontend CFG hashes
-should not depend on `lto`/`codegen-units`, and the size change shows it was
-applied — but a profile raised under `release`'s own settings has not been
-tried, and that is the one way the flat row could still be an artifact.
+  binary, same tree:  release-fast          142,161,400
+                      release (LTO)         123,768,408
+                      release + PGO (reused profile) 119,306,264
+                      release-fast + PGO    118,112,504
+                      release + PGO (matched)        107,551,920
+```
+
+**The size column is the tell, and it is how to catch this without an A/B.**
+A mismatched profile is not rejected — it is *partially* applied: 3.6 % off
+the binary and no time, against 13.1 % off and -20.75 % for the matched one.
+Nothing warns. **If a PGO build's binary did not shrink by roughly what the
+matched case shrinks, the profile did not take**, and `-Cllvm-args=
+-pgo-warn-missing-function` will not tell you either, because a matched build
+warns about `std` and the dependency graph anyway.
+
+`scripts/pgo_build.sh` is immune by construction — it instruments and rebuilds
+under one `PGO_PROFILE` — which is why the hand-run shortcut, not the script,
+is what produced the artifact.
+
+**So PGO and LTO DO stack, and the whole ladder is worth 27.6 %.** Against the
+plain `release-fast` this file measures on: `release` (LTO) 0.917,
+`release-fast + PGO` 0.762, `release + PGO` **0.724**. The arithmetic closes —
+-16.15 % and -20.75 % from a common baseline predict -5.5 % between the two
+PGO builds, and the direct pair reads -5.03 %.
+
+**Which one to build is a build-time question, not a throughput one.**
+`release-fast + PGO` is ~18 min for -23.8 %; `release + PGO` is ~44 min (two
+LTO builds) for -27.6 %. The last 5 % costs 26 minutes of wall clock per
+build, so it belongs to a long training run, not to an iteration loop.
 
 **Three cautions before anyone leans on it.** (a) It is **opt-in and stays
 opt-in**: no profile in `Cargo.toml` or `.cargo/config.toml` turns it on, so

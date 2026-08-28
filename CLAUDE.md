@@ -11,10 +11,11 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   (`cargo run --release --bin bot_ladder -- --bench`); profiling uses
   `--profile profiling` (release + full debuginfo + frame pointers). Numbers
   from any other profile don't go in `PERF.md`.
-- **`scripts/pgo_build.sh` is opt-in and must stay opt-in.** A PGO build is
-  `release-fast` by profile name but ~24 % faster, so it is the one binary
+- **`scripts/pgo_build.sh` is opt-in and must stay opt-in.** A PGO build
+  carries its profile's name but is 24-28 % faster, so it is the one binary
   that can be filed as a baseline reading by mistake. Quote a PGO number only
-  against another PGO number.
+  against another PGO number, and raise the profile under the profile it will
+  be consumed under — a mismatched one is partially applied with no warning.
 
 ## Performance
 

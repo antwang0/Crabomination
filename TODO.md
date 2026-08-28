@@ -32,9 +32,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 0. **THE BUILD IS THE LEVER, NOT THE SOURCE.** PGO is a ~24 % win on both
    pools and `-C target-cpu=native` is flat — width buys nothing here, layout
    buys everything. **And the profile this file measures on is 8.3 % slower
-   than `release`, which nobody had priced**: `release-fast + PGO` is the
-   fastest binary *and* the cheaper build, beating LTO by 16 %, while PGO on
-   top of LTO is flat — the two are substitutes. Matrix in PERF's Baseline.
+   than `release`, which nobody had priced.** Ladder against it: LTO 0.917,
+   `release-fast`+PGO 0.762, `release`+PGO **0.724** — they stack. **A profile
+   must be raised under the profile it is consumed under**, or it is partially
+   applied with no warning and the win vanishes; the binary size is the check.
+   Matrix in PERF's Baseline.
    `scripts/pgo_build.sh`, **opt-in and staying opt-in** so committed readings
    stay plain `release-fast` ones (CLAUDE.md carries the hazard). Measured on
    the actor too, and **the same binaries read -23.1 % or -4.9 % depending on
