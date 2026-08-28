@@ -3298,7 +3298,7 @@ impl GameState {
     pub(crate) fn trigger_grant_sources(&self) -> Vec<TriggerGrant<'_>> {
         let mut out = Vec::new();
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        for src in self.all_static_sources() {
+        self.for_each_static_source(|src| {
             for sa in &src.definition.static_abilities {
                 if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
                     filter,
@@ -3313,7 +3313,7 @@ impl GameState {
                     });
                 }
             }
-        }
+        });
         out
     }
 
@@ -4675,6 +4675,37 @@ impl GameState {
                 .iter()
                 .flat_map(|p| p.command.iter().filter(|c| c.command_zone_abilities_active())),
         )
+    }
+
+    /// [`all_static_sources`] as a visitor, with the command-zone half behind
+    /// a presence gate.
+    ///
+    /// The chained form above is `Chain<slice::Iter, FlatMap<_, Filter<_>>>`,
+    /// and its per-element branch plus the `FlatMap` state machine cost about
+    /// **20 Ir a permanent** — half of `trigger_grant_sources`' entire row on
+    /// `--decks fixed`, where the inner loop never runs at all because the
+    /// bench archetypes carry no `static_abilities` entry. Measured by
+    /// deleting the command half outright (a deliberately wrong probe):
+    /// `fixed` **-0.675 %**, `cube` **-0.406 %**, and the function's own row
+    /// -56 % / -50 %.
+    ///
+    /// Every game without a conspiracy or a commander has an empty command
+    /// zone, so the gate is clear and the caller walks a plain slice. The
+    /// closure is monomorphized per call site, so the battlefield half inlines
+    /// exactly as the `for` loop it replaces.
+    ///
+    /// [`all_static_sources`]: Self::all_static_sources
+    pub(crate) fn for_each_static_source<'a>(&'a self, mut f: impl FnMut(&'a CardInstance)) {
+        for src in self.battlefield.iter() {
+            f(src);
+        }
+        if self.players.iter().any(|p| !p.command.is_empty()) {
+            for p in &self.players {
+                for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
+                    f(src);
+                }
+            }
+        }
     }
 
     /// CR 103.5 — seat `seat` as the starting player. Call after building

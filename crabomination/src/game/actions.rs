@@ -13332,7 +13332,7 @@ impl GameState {
         use crate::effect::{Selector, StaticEffect};
         let mut scan = GrantScan::default();
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        for src in self.all_static_sources() {
+        self.for_each_static_source(|src| {
             for sa in &src.definition.static_abilities {
                 // CR 611.2 — a grant may sit under a duration/predicate
                 // wrapper ("Threshold — this creature has '…'"); unwrap it
@@ -13355,7 +13355,7 @@ impl GameState {
                 }
                 scan.statics.push((applies_to, ability, src));
             }
-        }
+        });
         // Riftstone Portal — "as long as this card is in your graveyard,
         // lands you control have '…'". The grant is live from the graveyard,
         // scoped to the owning seat's permanents.
