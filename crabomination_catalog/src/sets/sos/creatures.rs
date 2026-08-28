@@ -5235,10 +5235,17 @@ pub fn nita_forum_conciliator() -> CardDefinition {
 ///
 /// Mica, Reader of Ruins — 4/4 Legendary Human Artificer, Ward—Pay 3 life
 /// (enforced). Magecraft trigger wraps `Effect::MayDo` around
-/// `Seq(Sacrifice(Artifact) + CopySpell(TriggerSource))`; the auto-decider
-/// declines by default, so the copy fires only when scripted yes.
+/// `Seq(Sacrifice(Artifact) + If(sacrificed, CopySpell(TriggerSource)))`;
+/// the auto-decider declines by default, so the copy fires only when
+/// scripted yes.
+///
+/// The `If` is the printed "**If you do**". Without it the `Seq` copied the
+/// spell whether or not an artifact was actually sacrificed, so a Mica
+/// controller with an empty board still got a free copy off every instant
+/// and sorcery.
 pub fn mica_reader_of_ruins() -> CardDefinition {
     use crate::effect::shortcut::magecraft;
+    use crate::effect::Predicate;
     use crate::mana::r;
     CardDefinition {
         name: "Mica, Reader of Ruins",
@@ -5260,9 +5267,19 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
                     count: Value::Const(1),
                     filter: SelectionRequirement::HasCardType(CardType::Artifact),
                 },
-                Effect::CopySpellMayChooseTargets {
-                    what: Selector::TriggerSource,
-                    count: Value::Const(1),
+                // "If you do" — `Value::SacrificedCount` is the per-resolution
+                // scratch `sacrifice_one` bumps, so this reads whether the
+                // step above actually found an artifact to sacrifice.
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::SacrificedCount,
+                        Value::Const(1),
+                    ),
+                    then: Box::new(Effect::CopySpellMayChooseTargets {
+                        what: Selector::TriggerSource,
+                        count: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ])),
         })],

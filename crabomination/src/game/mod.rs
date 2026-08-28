@@ -8717,6 +8717,26 @@ impl GameState {
         self.priority.player_with_priority
     }
 
+    /// CR 104.2 — once the game has ended, nothing more is asked of anyone.
+    ///
+    /// A resolution can end the game *midway* and then suspend on a choice its
+    /// own remainder needs: Traumatic Critique's lethal X kills the opponent,
+    /// and the same resolution's "draw two, then discard a card" then posed a
+    /// discard the engine would never accept an answer to (`GameAlreadyOver`
+    /// on every submit — recorded replay, 2026-08-27: the winner sat stuck
+    /// behind an unanswerable modal). Called wherever a suspend becomes a
+    /// pending decision, and when the game-over transition fires with a
+    /// decision already up.
+    pub(crate) fn drop_pending_choices_if_game_over(&mut self) -> bool {
+        if self.game_over.is_some() {
+            self.suspend_signal = None;
+            self.pending_decision = None;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Give priority to the active player and reset consecutive passes.
     pub fn give_priority_to_active(&mut self) {
         self.priority.player_with_priority = self.active_player_idx;
@@ -22093,6 +22113,9 @@ impl GameState {
             let mut splice_events = self.resolve_effect(&spliced, &splice_ctx)?;
             events.append(&mut splice_events);
         }
+        if self.drop_pending_choices_if_game_over() {
+            return Ok(events);
+        }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
                 decision,
@@ -22449,6 +22472,9 @@ impl GameState {
         ctx.mana_spent = mana_spent;
         ctx.event_amount = event_amount;
         let events = self.resolve_effect(&effect, &ctx)?;
+        if self.drop_pending_choices_if_game_over() {
+            return Ok(events);
+        }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
                 decision,
@@ -22498,6 +22524,9 @@ impl GameState {
         let mut ctx = EffectContext::for_ability(source, controller, target.clone());
         ctx.x_value = x_value;
         let events = self.resolve_effect(effect, &ctx)?;
+        if self.drop_pending_choices_if_game_over() {
+            return Ok(events);
+        }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
                 decision,

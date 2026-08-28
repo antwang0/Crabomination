@@ -6029,10 +6029,12 @@ impl GameState {
                 match winner {
                     None => {
                         self.game_over = Some(None);
+                        self.drop_pending_choices_if_game_over();
                         events.push(GameEvent::GameOver { winner: None });
                     }
                     Some(winner) => {
                         self.game_over = Some(Some(winner));
+                        self.drop_pending_choices_if_game_over();
                         // CR 407.2 — the winner becomes the owner of everything
                         // in the ante zone.
                         if self.playing_for_ante {

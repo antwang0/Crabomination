@@ -2479,3 +2479,103 @@ fn an_opponents_edict_takes_the_viewers_pick_while_off_priority() {
     assert_eq!(g.players[0].life, 19, "each opponent loses 1");
     assert_eq!(g.players[1].life, 21, "and the caster gains it");
 }
+
+/// CR 104.2 — once the game has ended, nothing more is asked of anyone.
+///
+/// A resolution can end the game midway and then suspend on a choice its own
+/// remainder needs: Traumatic Critique's lethal X killed the opponent, and
+/// the same resolution's "draw two, then discard a card" posed a discard the
+/// engine would never accept an answer to — every submit bounced with
+/// `GameAlreadyOver`, so the winner sat stuck behind an unanswerable modal
+/// (recorded replay, 2026-08-27). The suspend is now dropped when the game
+/// is already over: the spell's draws still happen, the discard never asks,
+/// and the game is simply won.
+#[test]
+fn a_lethal_traumatic_critique_does_not_pose_an_unanswerable_discard() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let tc = g.add_card_to_hand(0, catalog::traumatic_critique());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[1].life = 3; // X=3 is exactly lethal
+    g.perform_action(GameAction::CastSpell {
+        card_id: tc,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Traumatic Critique castable at X=3");
+    drain_stack(&mut g);
+
+    assert_eq!(g.game_over, Some(Some(0)), "the damage half ends the game");
+    assert!(
+        g.pending_decision.is_none(),
+        "and no discard is posed into the ended game — it could never be answered",
+    );
+}
+
+/// Mica, Reader of Ruins: "you may sacrifice an artifact. **If you do**, copy
+/// that spell." The conditional is load-bearing — the body was a bare
+/// `Seq([Sacrifice, CopySpell])`, so a Mica controller with no artifact at
+/// all still got a free copy off every instant and sorcery they cast.
+#[test]
+fn mica_only_copies_the_spell_if_an_artifact_was_actually_sacrificed() {
+    use crabomination::decision::Decision;
+    // Bolt the opponent with Mica out, always answering "yes" to the may.
+    // With an artifact: sacrificed, spell copied, 6 damage. Without one:
+    // nothing to sacrifice, so no copy and only the original 3.
+    let bolt_damage_dealt = |have_artifact: bool| -> i32 {
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        g.add_card_to_battlefield(0, catalog::mica_reader_of_ruins());
+        if have_artifact {
+            g.add_card_to_battlefield(0, catalog::sol_ring());
+        }
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[1].life = 20;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("Lightning Bolt castable for {R}");
+        for _ in 0..8 {
+            if let Some(pd) = g.pending_decision.as_ref() {
+                let answer = match &pd.decision {
+                    // "Sacrifice an artifact to copy the spell?" — always yes.
+                    Decision::OptionalTrigger { .. } => DecisionAnswer::Bool(true),
+                    Decision::ChooseTarget { legal, .. } => {
+                        DecisionAnswer::Target(legal[0].clone())
+                    }
+                    _ => DecisionAnswer::Bool(true),
+                };
+                g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+                continue;
+            }
+            if g.stack.is_empty() {
+                break;
+            }
+            g.perform_action(GameAction::PassPriority).expect("resolve");
+        }
+        20 - g.players[1].life
+    };
+
+    assert_eq!(
+        bolt_damage_dealt(true),
+        6,
+        "with an artifact the sacrifice happens and the Bolt is copied",
+    );
+    assert_eq!(
+        bolt_damage_dealt(false),
+        3,
+        "with no artifact there is nothing to sacrifice, so no copy",
+    );
+}
