@@ -25410,191 +25410,154 @@ pub fn can_block_attacker_computed(
     attacker_power: i32,
 ) -> bool {
     let blocker_kws = &blocker_computed.keywords();
-    // Unblockable: can't be blocked at all.
-    if attacker_kws.has_kw(&Keyword::Unblockable) {
-        return false;
-    }
-    // Flying: can only be blocked by fliers or reach.
-    if attacker_kws.has_kw(&Keyword::Flying)
-        && !blocker_kws.has_kw(&Keyword::Flying)
-        && !blocker_kws.has_kw(&Keyword::Reach)
-    {
-        return false;
-    }
-    // Wanderlight Spirit: this blocker can block only creatures with flying.
-    if blocker_kws.has_kw(&Keyword::CanBlockOnlyFlying)
-        && !attacker_kws.has_kw(&Keyword::Flying)
-    {
-        return false;
-    }
-    // Horsemanship: can only be blocked by other Horsemanship creatures.
-    if attacker_kws.has_kw(&Keyword::Horsemanship)
-        && !blocker_kws.has_kw(&Keyword::Horsemanship)
-    {
-        return false;
-    }
-    // Shadow: can only block/be blocked by other shadow creatures.
-    if attacker_kws.has_kw(&Keyword::Shadow)
-        && !blocker_kws.has_kw(&Keyword::Shadow)
-        && !blocker_kws.has_kw(&Keyword::CanBlockShadow)
-    {
-        return false;
-    }
-    if blocker_kws.has_kw(&Keyword::Shadow) && !attacker_kws.has_kw(&Keyword::Shadow) {
-        return false;
-    }
-    // Skulk (CR 702.72a): can't be blocked by creatures with greater power.
-    // Both sides use layer-computed power (an anthem-pumped Skulk attacker
-    // dodges bigger blockers correctly).
-    if attacker_kws.has_kw(&Keyword::Skulk) && blocker_computed.power > attacker_power {
-        return false;
-    }
-    // Formation Breaker (CR 509.1b): creatures with power less than this
-    // creature's power can't block it — the inverse of Skulk.
-    if attacker_kws.has_kw(&Keyword::CantBeBlockedByPowerLess)
-        && blocker_computed.power < attacker_power
-    {
-        return false;
-    }
-    // Questing Beast (CR 509.1b): can't be blocked by creatures with power N
-    // or less — a fixed threshold, not relative to the attacker's power.
-    if attacker_kws.iter().any(|k| {
-        matches!(k, Keyword::CantBeBlockedByPowerAtMost(n) if blocker_computed.power <= *n as i32)
-    }) {
-        return false;
-    }
-    // Juggernaut (CR 509.1b): can't be blocked by a given creature type.
-    if attacker_kws.iter().any(|k| {
-        matches!(k, Keyword::CantBeBlockedByCreatureType(t)
-            if blocker_computed.subtypes().creature_types.contains(t))
-    }) {
-        return false;
-    }
-    // Squeak By (CR 509.1b): can't be blocked by creatures with power N or
-    // greater — the fixed-threshold mirror of `CantBeBlockedByPowerAtMost`.
-    if attacker_kws.iter().any(|k| {
-        matches!(k, Keyword::CantBeBlockedByPowerAtLeast(n) if blocker_computed.power >= *n as i32)
-    }) {
-        return false;
-    }
-    // Ironclaw Orcs (CR 509.1b): this blocker can't block creatures with power
-    // N or greater — a restriction on the blocker keyed off the attacker.
-    if blocker_kws.iter().any(|k| {
-        matches!(k, Keyword::CantBlockPowerAtLeast(n) if attacker_power >= *n as i32)
-    }) {
-        return false;
-    }
-    // Sunweb (CR 509.1b): the low-power mirror — this blocker only stops real
-    // threats.
-    if blocker_kws
-        .iter()
-        .any(|k| matches!(k, Keyword::CantBlockPowerAtMost(n) if attacker_power <= *n as i32))
-    {
-        return false;
-    }
-    // Spitfire Handler (CR 509.1b): the self-relative threshold.
-    if blocker_kws.has_kw(&Keyword::CantBlockGreaterPowerThanSelf)
-        && attacker_power > blocker_computed.power
-    {
-        return false;
-    }
-    // Fear (CR 702.36): can only be blocked by artifact creatures and/or
-    // black creatures.
-    if attacker_kws.has_kw(&Keyword::Fear) {
-        let blocker_is_artifact = blocker.definition.is_artifact();
-        let blocker_is_black = blocker_computed.colors.contains(crate::mana::Color::Black);
-        if !blocker_is_artifact && !blocker_is_black {
-            return false;
+    let blocker_power = blocker_computed.power;
+
+    // **Two passes over two short slices, not twenty-two.** This function is
+    // a pure disjunction — every rule that fires returns `false` and the
+    // fallthrough returns `true` — so the order of the tests is not
+    // load-bearing, and the twenty-two `has_kw` / `iter().any(matches!)` /
+    // `for kw in` walks it used to make (thirteen over the attacker's set,
+    // nine over the blocker's) collapse into one `match` per side. Every
+    // keyword read by `has_kw` here is a *unit* variant, so a `match` arm is
+    // exactly the discriminant compare `has_kw` was doing.
+    //
+    // The blocker's pass runs first because six of the attacker's rules are
+    // decided against a blocker flag (flying/reach, shadow, horsemanship);
+    // the two that need an *attacker* flag are settled after both passes.
+    let (mut b_flying, mut b_reach, mut b_only_flying) = (false, false, false);
+    let (mut b_horsemanship, mut b_shadow, mut b_can_block_shadow) = (false, false, false);
+    for k in blocker_kws.iter() {
+        match k {
+            Keyword::Flying => b_flying = true,
+            Keyword::Reach => b_reach = true,
+            // Wanderlight Spirit: this blocker can block only fliers.
+            Keyword::CanBlockOnlyFlying => b_only_flying = true,
+            Keyword::Horsemanship => b_horsemanship = true,
+            Keyword::Shadow => b_shadow = true,
+            Keyword::CanBlockShadow => b_can_block_shadow = true,
+            // CR 509.1b — the three blocker-side power gates (Ironclaw Orcs,
+            // Sunweb, Spitfire Handler); each reads only the attacker's
+            // power, so it is decided where it is read.
+            Keyword::CantBlockPowerAtLeast(n) if attacker_power >= *n as i32 => return false,
+            Keyword::CantBlockPowerAtMost(n) if attacker_power <= *n as i32 => return false,
+            Keyword::CantBlockGreaterPowerThanSelf if attacker_power > blocker_power => {
+                return false;
+            }
+            _ => {}
         }
     }
-    // Intimidate (CR 702.13): can only be blocked by artifact creatures
-    // or creatures that share a color with the attacker. We compare the
-    // attacker's *computed* colors (which include hybrid / mono-hybrid
-    // pips and color-setting effects, via `ComputedPermanent.colors`)
-    // against the blocker's computed colors — not raw `{C}` cost pips.
-    if attacker_kws.has_kw(&Keyword::Intimidate) {
-        let blocker_is_artifact = blocker.definition.is_artifact();
-        let shares_color = blocker_computed.colors.intersects(attacker_colors);
-        if !blocker_is_artifact && !shares_color {
-            return false;
-        }
-    }
-    // Protection from a color (CR 702.16e): the attacker can't be blocked
-    // by a creature of a color it has protection from. Read the blocker's
-    // computed colors so hybrid-pip and effect-granted colors count.
-    for kw in attacker_kws {
-        if let Keyword::Protection(color) = kw
-            && blocker_computed.colors.contains(color)
-        {
-            return false;
-        }
-        // CR 702.16e — "protection from its colors": can't be blocked by a
-        // creature sharing any of the attacker's own colors.
-        if matches!(kw, Keyword::ProtectionFromOwnColors)
-            && blocker_computed.colors.intersects(attacker_colors)
-        {
-            return false;
-        }
-        // CR 702.16b — protection from creatures: can't be blocked at all.
-        if matches!(kw, Keyword::ProtectionFromCreatures) {
-            return false;
-        }
-        // CR 702.16e — protection from a creature type: can't be blocked by a
-        // creature of that type.
-        if let Keyword::ProtectionFromCreatureType(ty) = kw
-            && blocker_computed.subtypes().creature_types.contains(ty)
-        {
-            return false;
-        }
-        // CR 702.16 — protection from each mana value other than N (Haktos):
-        // can't be blocked by a creature whose mana value isn't N.
-        if let Keyword::ProtectionFromManaValueExcept(n) = kw
-            && blocker.definition.cost.cmc() != *n
-        {
-            return false;
-        }
-        // CR 702.16 — protection from each mana value of a parity: can't be
-        // blocked by a creature whose mana value matches the chosen quality.
-        if let Keyword::ProtectionFromManaValueParity { odd } = kw
-            && (blocker.definition.cost.cmc() % 2 == 1) == *odd
-        {
-            return false;
-        }
-        // CR 702.16 — protection from multicolored: can't be blocked by a
-        // creature that is two or more colors.
-        if matches!(kw, Keyword::ProtectionFromMulticolored)
-            && blocker_computed.colors.len() >= 2
-        {
-            return false;
-        }
-        // CR 702.16 — protection from monocolored: can't be blocked by a
-        // creature that is exactly one color.
-        if matches!(kw, Keyword::ProtectionFromMonocolored)
-            && blocker_computed.colors.len() == 1
-        {
-            return false;
-        }
-        // CR 702.16j — protection from a card type: can't be blocked by a
-        // creature of that type (matters for artifact/enchantment creatures).
-        if let Keyword::ProtectionFromCardType(t) = kw
-            && blocker_computed.card_types().contains(t)
-        {
-            return false;
-        }
-        // CR 702.16 — protection from everything: can't be blocked at all.
-        if matches!(kw, Keyword::ProtectionFromEverything) {
-            return false;
-        }
-    }
-    // CR 509.1b "can't be blocked except by [filter]" / "can't be blocked by
-    // [filter]" — evaluate the blocker's computed characteristics against the
-    // attacker's filter keywords.
-    for kw in attacker_kws {
-        match kw {
-            Keyword::CantBeBlockedExceptBy(filter)
-                if !blocker_matches_block_filter(blocker, blocker_computed, filter) => {
+
+    let (mut a_flying, mut a_shadow) = (false, false);
+    for k in attacker_kws {
+        match k {
+            // Unblockable (CR 509.1b), CR 702.16b protection from creatures
+            // and CR 702.16e protection from everything: no blocker at all.
+            Keyword::Unblockable
+            | Keyword::ProtectionFromCreatures
+            | Keyword::ProtectionFromEverything => return false,
+            // Flying: only fliers and reach may block.
+            Keyword::Flying => {
+                if !b_flying && !b_reach {
                     return false;
                 }
+                a_flying = true;
+            }
+            // Horsemanship: only other horsemanship creatures may block.
+            Keyword::Horsemanship if !b_horsemanship => return false,
+            // Shadow: shadow blocks shadow, and shadow blockers block only
+            // shadow — the second half needs the whole attacker pass, so it
+            // is settled below.
+            Keyword::Shadow => {
+                if !b_shadow && !b_can_block_shadow {
+                    return false;
+                }
+                a_shadow = true;
+            }
+            // Skulk (CR 702.72a) and Formation Breaker's inverse: both sides
+            // use layer-computed power, so an anthem-pumped Skulk attacker
+            // dodges bigger blockers correctly.
+            Keyword::Skulk if blocker_power > attacker_power => return false,
+            Keyword::CantBeBlockedByPowerLess if blocker_power < attacker_power => {
+                return false;
+            }
+            // Questing Beast / Squeak By (CR 509.1b): fixed thresholds rather
+            // than a relative one.
+            Keyword::CantBeBlockedByPowerAtMost(n) if blocker_power <= *n as i32 => {
+                return false;
+            }
+            Keyword::CantBeBlockedByPowerAtLeast(n) if blocker_power >= *n as i32 => {
+                return false;
+            }
+            // Juggernaut (CR 509.1b): can't be blocked by a creature type.
+            Keyword::CantBeBlockedByCreatureType(t)
+                if blocker_computed.subtypes().creature_types.contains(t) =>
+            {
+                return false;
+            }
+            // Fear (CR 702.36): artifact creatures and/or black creatures.
+            Keyword::Fear
+                if !blocker.definition.is_artifact()
+                    && !blocker_computed.colors.contains(crate::mana::Color::Black) =>
+            {
+                return false;
+            }
+            // Intimidate (CR 702.13): artifact creatures, or creatures
+            // sharing a colour with the attacker. Both sides' *computed*
+            // colours, so hybrid pips and colour-setting effects count.
+            Keyword::Intimidate
+                if !blocker.definition.is_artifact()
+                    && !blocker_computed.colors.intersects(attacker_colors) =>
+            {
+                return false;
+            }
+            // CR 702.16e — protection from a colour, from the attacker's own
+            // colours, and from a creature type: read the blocker's computed
+            // colours so hybrid-pip and effect-granted colours count.
+            Keyword::Protection(color) if blocker_computed.colors.contains(color) => {
+                return false;
+            }
+            Keyword::ProtectionFromOwnColors
+                if blocker_computed.colors.intersects(attacker_colors) =>
+            {
+                return false;
+            }
+            Keyword::ProtectionFromCreatureType(ty)
+                if blocker_computed.subtypes().creature_types.contains(ty) =>
+            {
+                return false;
+            }
+            // CR 702.16 — protection from each mana value other than N
+            // (Haktos), from a parity, from multicoloured / monocoloured, and
+            // from a card type.
+            Keyword::ProtectionFromManaValueExcept(n)
+                if blocker.definition.cost.cmc() != *n =>
+            {
+                return false;
+            }
+            Keyword::ProtectionFromManaValueParity { odd }
+                if (blocker.definition.cost.cmc() % 2 == 1) == *odd =>
+            {
+                return false;
+            }
+            Keyword::ProtectionFromMulticolored if blocker_computed.colors.len() >= 2 => {
+                return false;
+            }
+            Keyword::ProtectionFromMonocolored if blocker_computed.colors.len() == 1 => {
+                return false;
+            }
+            Keyword::ProtectionFromCardType(t)
+                if blocker_computed.card_types().contains(t) =>
+            {
+                return false;
+            }
+            // CR 509.1b "can't be blocked except by [filter]" / "can't be
+            // blocked by [filter]", against the blocker's computed
+            // characteristics.
+            Keyword::CantBeBlockedExceptBy(filter)
+                if !blocker_matches_block_filter(blocker, blocker_computed, filter) =>
+            {
+                return false;
+            }
             Keyword::CantBeBlockedBy(filter)
                 if blocker_matches_block_filter(blocker, blocker_computed, filter) =>
             {
@@ -25602,6 +25565,15 @@ pub fn can_block_attacker_computed(
             }
             _ => {}
         }
+    }
+
+    // The two rules that need the attacker's whole set before they can be
+    // decided.
+    if b_only_flying && !a_flying {
+        return false;
+    }
+    if b_shadow && !a_shadow {
+        return false;
     }
     true
 }
