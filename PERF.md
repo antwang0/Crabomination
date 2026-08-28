@@ -2002,6 +2002,31 @@ robustness  --games 120 --threads 3 --seed 7 --decks all (five pools,
 whole-program Ir  fixed 1,094,185,204  cube 3,324,283,340
                   sealed 3,256,373,073
 ```
+**CLOSING STATE — the eighty-seventh pass's tip, all gates re-run together.**
+Base `aefae7bb` (the pass's start) to tip, callgrind, `profiling-fast
+--no-default-features`, `--a gang --b gang --games 6 --threads 1 --seed 1`,
+**rustc 1.95.0 (59807616e 2026-04-14)** on an Intel Xeon @ 2.10 GHz
+(`host_calib_ms` 52):
+
+```text
+              aefae7bb            tip                 pass
+  fixed    1,106,711,919 -> 1,052,410,526        -4.906 %
+  cube     3,355,241,293 -> 3,187,946,489        -4.986 %
+  sealed   3,291,518,912 -> 3,141,044,210        -4.571 %
+  actor    (pass 83) 4,187,375,624 -> 3,824,255,309 before the vocab memo,
+           -8.02 % with play byte-identical
+
+suite   19,063 / 0 / 5      clippy  clean (workspace less the client)
+golden traces  unmoved (they run inside the suite)
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) / determinism ok / thread_determinism ok
+        — byte-identical to the committed invariant at every commit of the
+        pass, both halves
+instruments  CRAB_SIM_REJECTS 0 in 25 cells; CRAB_PAY_FAILS `fixed` 0.00 %
+robustness   -C debug-assertions=yes, 33,120 ladder games + 360 actor games,
+             no assertion, no overflow, no panic, 0 undecided
+```
+
 **STATE AT the eighty-seventh pass's last perf commit (`3730f9d0`)** — the
 gate was run in full at each of the five, not once at the end.
 
