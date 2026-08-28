@@ -10695,6 +10695,23 @@ pass's bargain is working. (c) A sim probe costs **72,666 Ir against
 `main_phase_action_with`'s 45,146**, which is the one number in this block
 nobody has explained.
 
+**(c) IS STILL OPEN AND `--separate-callers=3` IS NOT THE INSTRUMENT — recorded
+so nobody spends the run again (ninety-second pass).** The gap survives at the
+ninety-second tip on `fixed`: **61,878 Ir a probe from `sim_spell_action_inner`
+against 41,870 from `main_phase_action_with`**, the same ~1.5x. A depth-3 dump
+puts `pay_census::in_probe` and its caller in the context chain, so the two
+sites *are* separable — but only for frames within three of the leaf, and
+`accept_on`'s body is deeper than that. What it does bound is the **checkpoint**:
+the `memcpy` that names a probe site reads **413 Ir a probe at
+`main_phase_action_with`, 437 at `sim_spell_action_inner` and 454 at
+`pick_land_to_play`** — within 6 % across three sites and two orders below the
+gap. **So the extra 20,000 Ir is not the clone and not CoW unsharing at the
+clone; it is the action the probe then performs.** That leaves board state (a
+sim probes a later, larger board) and action mix, and neither is a profile
+question — the next attempt wants a *counter* (permanents on the board and
+actions per probe, split by `in_probe`'s origin, which `pay_census` already
+tracks) rather than a deeper dump.
+
 **So the attack search's cost is the engine playing a turn, not the bot
 choosing.** `sim_step` + the direct `perform_action_inner` is 37.2 % of the
 program against `cast_candidates`' 3.6 %. The levers are fewer sims
