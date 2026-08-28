@@ -181,6 +181,30 @@ fn harvest_mage_rewrites_your_land_taps() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0);
 }
 
+/// And with no decider to ask, the colour is the one the hand is *for*.
+///
+/// A bare `Decision::ChooseColor` reaches `AutoDecider`, which answers with
+/// the first legal colour — White, for every headless seat, which wastes the
+/// pip for any non-white deck. The engine already had the needs-aware answer
+/// (`best_color_for_hand`, used by the two extra-mana riders); this was the
+/// third shape of the same question and the only one still asking.
+#[test]
+fn harvest_mage_picks_the_colour_the_hand_needs_when_nobody_is_asked() {
+    let mut g = main_phase();
+    let mage = g.add_card_to_battlefield(0, catalog::harvest_mage());
+    g.clear_sickness(mage);
+    // Two red pips in hand and nothing white: the pick has to be Red.
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::shivan_dragon());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    activate(&mut g, 0, mage, 0, None);
+    g.players[0].mana_pool.empty();
+    tap_ability(&mut g, 0, island, 0);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "the hand is red");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 0, "not AutoDecider's White");
+}
+
 /// Kill Switch holds every other artifact down while it stays tapped, and
 /// releases them once it untaps.
 #[test]

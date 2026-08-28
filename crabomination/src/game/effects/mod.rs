@@ -10216,15 +10216,7 @@ impl GameState {
                                     Color::Red,
                                     Color::Green,
                                 ];
-                                let color = match self.decider.decide(
-                                    &crate::decision::Decision::ChooseColor {
-                                        source: ctx.source.unwrap_or(CardId(0)),
-                                        legal,
-                                    },
-                                ) {
-                                    crate::decision::DecisionAnswer::Color(c) => c,
-                                    _ => Color::White,
-                                };
+                                let color = self.chosen_mana_color(p, &legal, ctx.source);
                                 add_one(self, p, color);
                                 events.push(GameEvent::ManaAdded {
                                     player: p,
@@ -10404,16 +10396,7 @@ impl GameState {
                             let color = if legal.len() == 1 {
                                 legal[0]
                             } else {
-                                match self.decider.decide(
-                                    &crate::decision::Decision::ChooseColor {
-                                        source: ctx.source.unwrap_or(CardId(0)),
-                                        legal: legal.clone(),
-                                    },
-                                ) {
-                                    crate::decision::DecisionAnswer::Color(c)
-                                        if legal.contains(&c) => c,
-                                    _ => legal[0],
-                                }
+                                self.chosen_mana_color(p, &legal, ctx.source)
                             };
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
@@ -10474,16 +10457,7 @@ impl GameState {
                                 let color = if legal.len() == 1 {
                                     legal[0]
                                 } else {
-                                    match self.decider.decide(
-                                        &crate::decision::Decision::ChooseColor {
-                                            source: ctx.source.unwrap_or(CardId(0)),
-                                            legal: legal.clone(),
-                                        },
-                                    ) {
-                                        crate::decision::DecisionAnswer::Color(c)
-                                            if legal.contains(&c) => c,
-                                        _ => legal[0],
-                                    }
+                                    self.chosen_mana_color(p, &legal, ctx.source)
                                 };
                                 add_one(self, p, color);
                                 events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
@@ -10526,18 +10500,7 @@ impl GameState {
                             self.players[p].mana_pool.add_colorless(mult);
                             events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                         } else {
-                            let source = ctx.source.unwrap_or(CardId(0));
-                            let answer = self.decider.decide(
-                                &crate::decision::Decision::ChooseColor {
-                                    source,
-                                    legal: legal.clone(),
-                                },
-                            );
-                            let color = match answer {
-                                crate::decision::DecisionAnswer::Color(c)
-                                    if legal.contains(&c) => c,
-                                _ => legal[0],
-                            };
+                            let color = self.chosen_mana_color(p, &legal, ctx.source);
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
@@ -10579,15 +10542,7 @@ impl GameState {
                                 source: ctx.source,
                             });
                         } else {
-                            let source = ctx.source.unwrap_or(CardId(0));
-                            let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
-                                source,
-                                legal: legal.clone(),
-                            });
-                            let color = match answer {
-                                crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
-                                _ => legal[0],
-                            };
+                            let color = self.chosen_mana_color(p, &legal, ctx.source);
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
@@ -10643,19 +10598,11 @@ impl GameState {
                         // UI prompt per pip would require a multi-step pending
                         // state and isn't needed by any catalog card today.
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
-                        let source = ctx.source.unwrap_or(CardId(0));
                         let legal = vec![
                             Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                         ];
                         for _ in 0..n {
-                            let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
-                                source,
-                                legal: legal.clone(),
-                            });
-                            let color = match answer {
-                                crate::decision::DecisionAnswer::Color(c) => c,
-                                _ => Color::White,
-                            };
+                            let color = self.chosen_mana_color(p, &legal, ctx.source);
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
@@ -10671,18 +10618,8 @@ impl GameState {
                         // N pips, each chosen from the restricted palette
                         // (Culling Ritual: {B} or {G} per permanent destroyed).
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
-                        let source = ctx.source.unwrap_or(CardId(0));
-                        let fallback = colors.first().copied().unwrap_or(Color::White);
                         for _ in 0..n {
-                            let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
-                                source,
-                                legal: colors.clone(),
-                            });
-                            let color = match answer {
-                                crate::decision::DecisionAnswer::Color(c)
-                                    if colors.contains(&c) => c,
-                                _ => fallback,
-                            };
+                            let color = self.chosen_mana_color(p, colors, ctx.source);
                             add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }

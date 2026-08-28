@@ -52,7 +52,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `sealed`** across both halves, `--bench` byte-identical throughout.
 8. **Filters** — all five syntax filters read zero; `audit_variant_coverage`
    needed a **bit bridge** this pass (a definition bitmask crossing the crate
-   boundary made a live capability look dead) and reads zero again.
+   boundary made a live capability look dead) and reads zero again. **A sixth:
+   `scripts/audit_decision_plumbing.py`** — 195 `decider.decide` sites, 97
+   plumbed / 98 bare, and it retired ENGINE_BACKLOG's "~45 live bugs" claim
+   (every effect that audit named is plumbed now). Bare is a triage
+   population, not a gate; the calibration is in that section.
    `bot_rejection_count()` over the seeded cube sweep is the one that watches
    the live-server path, and it is clean at the tip.
 

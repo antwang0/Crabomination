@@ -2496,14 +2496,24 @@ impl crate::game::GameState {
     /// always yields White, wasting the pip for any non-white deck;
     /// interactive choice is a TODO.md item.)
     pub(crate) fn best_color_for_hand(&self, p: usize) -> ManaColor {
-        let mut best = (0u32, ManaColor::White);
-        for c in [
-            ManaColor::White,
-            ManaColor::Blue,
-            ManaColor::Black,
-            ManaColor::Red,
-            ManaColor::Green,
-        ] {
+        self.best_color_for_hand_among(
+            p,
+            &[ManaColor::White, ManaColor::Blue, ManaColor::Black, ManaColor::Red, ManaColor::Green],
+        )
+    }
+
+    /// [`best_color_for_hand`] restricted to a legal set — a "produce one of
+    /// *these* colors" ability (Mox Amber's legendary union, a dual land's
+    /// two). Falls back to the set's first entry, which is what the bare
+    /// `ChooseColor` ask did for every headless seat.
+    ///
+    /// One walker for both: the unrestricted form is this one over all five,
+    /// so the needs-aware answer cannot drift between the two shapes.
+    ///
+    /// [`best_color_for_hand`]: Self::best_color_for_hand
+    pub(crate) fn best_color_for_hand_among(&self, p: usize, legal: &[ManaColor]) -> ManaColor {
+        let mut best = (0u32, legal.first().copied().unwrap_or(ManaColor::White));
+        for &c in legal {
             let pips: u32 = self.players[p]
                 .hand
                 .iter()
@@ -2514,6 +2524,38 @@ impl crate::game::GameState {
             }
         }
         best.1
+    }
+
+    /// The one answer to "add one mana of a color of your choice", from the
+    /// legal set, for every shape of the question `Effect::AddMana` carries.
+    ///
+    /// Seven sites asked it and every one of them fell back to
+    /// `legal[0]`/`White` for a headless seat, because a bare
+    /// `Decision::ChooseColor` reaches `AutoDecider` and it answers with the
+    /// first legal colour. That wastes the pip for any non-white deck — in
+    /// the *training* path, where every seat is headless — and the engine has
+    /// had the needs-aware answer since the extra-mana riders were written.
+    /// One function so the seven cannot drift; the parallel-walker class this
+    /// repo keeps closing.
+    ///
+    /// A real decider (scripted test, UI seat) is still asked.
+    pub(crate) fn chosen_mana_color(
+        &mut self,
+        p: usize,
+        legal: &[ManaColor],
+        source: Option<CardId>,
+    ) -> ManaColor {
+        if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            return self.best_color_for_hand_among(p, legal);
+        }
+        let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
+            source: source.unwrap_or(CardId(0)),
+            legal: legal.to_vec(),
+        });
+        match answer {
+            crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
+            _ => self.best_color_for_hand_among(p, legal),
+        }
     }
 
     /// Colored-pip weight of everything `p` holds and controls, per color.

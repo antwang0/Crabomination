@@ -763,12 +763,43 @@ the count does not matter.**
 
 ## Decision-plumbing audit (2026-07): bare `decider.decide` sites
 
-A sweep for the "Ad Nauseam pattern" (fixed 2026-07: a mid-resolution
-choice consulted `self.decider` directly, so AutoDecider's blanket
-defaults answered for every seat — bots AND wants_ui humans). ~125
+> ⚠ **RE-RUN MECHANICALLY 2026-08-28 AND THE "~45 LIVE BUGS" BELOW IS STALE.**
+> `scripts/audit_decision_plumbing.py` classifies every `decider.decide` site
+> by whether its own statement region carries one of the plumbing markers —
+> `seat_suspends` + `suspend_signal`, `stashed_resolution_answer`,
+> `pending_decision`/`wants_ui` (the action-time suspension), or an explicit
+> `DeciderKind` branch. Reading: **195 sites, 97 plumbed, 98 bare.**
+>
+> **Every effect the classes below name by name is plumbed now** — Cascade,
+> Madness, Dredge, Ripple, Cipher, Forage, Collect Evidence, Discover, the
+> four free-cast primitives, Possibility Storm, Fateseal,
+> `ChooseNumberDestroyByPower` ("the worst single finding"), `MayPayGenericUpTo`
+> — checked by grepping the filter's bare list for each: zero hits. The work
+> landed across the intervening passes and nobody updated this section.
+>
+> **"Bare" is not "bug", and the calibration matters**: three sampled at
+> random came out one false positive (`gather_combat_damage_decisions`
+> suspends through `pending_decision`, which is why that marker is in the
+> list), one live class-5 default (`Effect::AddMana`'s colour picks — **fixed
+> 2026-08-28**, see below), and one arguable (`Effect::MayRepeat` declines
+> for a bot, which is a weak choice rather than a wrong one). Treat the 98 as
+> a **triage population and a number to compare against**, which is what the
+> filter is for; the class list below is history.
+>
+> **Closed 2026-08-28 — the `Effect::AddMana` colour family (class 5).**
+> Seven sites asked "add one mana of a colour of your choice" and every one
+> fell back to `legal[0]`/White for a headless seat, i.e. for every seat in
+> the training path, wasting the pip for any non-white deck. They go through
+> one `GameState::chosen_mana_color` now, which asks a real decider and
+> answers a headless one with `best_color_for_hand_among` — the needs-aware
+> pick the extra-mana riders had used since they were written, and the third
+> shape of the question was the only one still asking. Regression:
+> `classic_sets::nms4::harvest_mage_picks_the_colour_the_hand_needs_when_nobody_is_asked`.
+
+The 2026-07 reading, kept as history. ~125
 direct `decide` call sites audited across `effects/mod.rs`,
 `effects/movement.rs`, `combat.rs`, `stack.rs`, `game/mod.rs`,
-`actions.rs`. ~45 are live bugs, in five classes. AutoDecider defaults
+`actions.rs`. ~45 were live bugs, in five classes. AutoDecider defaults
 for reference: OptionalTrigger→no, ChooseAmount→0, ChooseCards→first
 `min` (empty when min=0, the "up to N" case), ChooseColor→first legal
 (≈ always White), ChooseMode→0.
