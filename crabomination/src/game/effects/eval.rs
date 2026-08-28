@@ -1617,6 +1617,21 @@ impl GameState {
                     self.battlefield_find(cid).map(|c| c.controller) == Some(self.active_player_idx)
                 }),
             Predicate::CurrentStepIs(step) => self.step == *step,
+            // An **unbound target slot** is "no entity", not "every entity".
+            // `all` over an empty selector is vacuously true, so
+            // `If { cond: EntityMatches { Target(0), … } }` on an ability
+            // whose target was never chosen ran its `then` branch — Eagle of
+            // Deliverance drew a card off a counter it had put on nothing.
+            // Scoped to the slot: this predicate is also written over
+            // `EachPermanent(…)` as a plain existence test, where the empty
+            // set is a *separate* open defect (see ENGINE_BACKLOG).
+            Predicate::EntityMatches { what, filter }
+                if matches!(what, crate::effect::Selector::Target(n)
+                    if ctx.targets.get(*n as usize).is_none()) =>
+            {
+                let _ = filter;
+                false
+            }
             Predicate::EntityMatches { what, filter } => self
                 .resolve_selector(what, ctx)
                 .into_iter()

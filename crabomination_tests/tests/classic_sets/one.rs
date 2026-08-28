@@ -1478,13 +1478,51 @@ fn reject_imperfection_proliferates_on_cheap_spells() {
     g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::CastSpell { card_id: ri, target: None, additional_targets: vec![], x_value: None, mode: None }).unwrap();
+    // Name the countered spell: the "if that spell's mana value was 3 or
+    // less" clause reads slot 0, and a cast with `target: None` leaves it
+    // unbound (see ENGINE_BACKLOG — the clause used to read *true* off an
+    // unbound slot, so this test passed whatever the mana value was).
+    g.perform_action(GameAction::CastSpell { card_id: ri, target: Some(Target::Permanent(div)), additional_targets: vec![], x_value: None, mode: None }).unwrap();
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Divination"), "countered");
     assert_eq!(
         g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
         2,
         "MV 3 → proliferated",
+    );
+}
+
+/// The other half of the same clause: an expensive spell is countered and
+/// nothing proliferates. Before the unbound-slot guard in
+/// `Predicate::EntityMatches`, `EntityMatches { Target(0), ManaValueAtMost(3) }`
+/// read *true* off an unbound slot, so the card proliferated whatever it
+/// countered and the sibling test above passed for the wrong reason.
+#[test]
+fn reject_imperfection_does_not_proliferate_on_expensive_spells() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    // Opponent casts Shivan Dragon (MV 6); we counter with Reject Imperfection.
+    let drag = g.add_card_to_hand(1, catalog::shivan_dragon());
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 2);
+    g.players[1].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell { card_id: drag, target: None, additional_targets: vec![], x_value: None, mode: None }).unwrap();
+    let ri = g.add_card_to_hand(0, catalog::reject_imperfection());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: ri, target: Some(Target::Permanent(drag)), additional_targets: vec![], x_value: None, mode: None }).unwrap();
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Shivan Dragon"), "countered");
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "MV 6 → no proliferate",
     );
 }
 
