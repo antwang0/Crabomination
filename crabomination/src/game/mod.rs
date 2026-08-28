@@ -2478,6 +2478,80 @@ pub mod pay_census {
 
 }
 
+/// CR 613.8's dependency ordering, for the one shape this engine can express:
+/// the continuous effects gathered **so far**, installed while the gather's
+/// condition-gated tail evaluates its predicates.
+///
+/// `computed_permanent`'s reentrancy branch normally answers with the printed
+/// view, because a read that re-entered the gather would rebuild it from the
+/// same state and reach that read again without bound. While this slot is
+/// filled the branch answers with the partial set instead — so a layer-7
+/// condition ("as long as an opponent controls an Island") sees a layer-4 type
+/// change made in the same gather. Empty at every other point, which is the
+/// guard's original behaviour.
+///
+/// **The read takes the slot out for the duration of the layer application**,
+/// so a `computed_permanent` reached from *inside* it falls back to the
+/// printed view. Exactly one ply, bounded by construction rather than by a
+/// depth counter — and one ply is what a condition asking about another
+/// permanent's characteristics needs. Two permanents whose effects each gate
+/// on the other's computed shape are the cycle CR 613.8 resolves by
+/// dependency ordering and this does not model.
+///
+/// Thread-local rather than a `GameState` field, for `pay_census::PROBE_DEPTH`'s
+/// reason: the gather runs on whatever state the caller holds — a probe clone,
+/// a checkpoint — and a field would be written on every one of them to answer
+/// a question only this tail asks. The gather is synchronous and its own
+/// reentrancy guard bounds it, so a per-thread slot is exactly its extent.
+pub(crate) mod gather_partial {
+    use crate::game::layers::{ContinuousEffect, SecondPass};
+    use std::sync::Arc;
+
+    /// The snapshot and the `SecondPass` gates it implies.
+    pub(crate) type Partial = (Arc<Vec<ContinuousEffect>>, SecondPass);
+
+    thread_local! {
+        static PARTIAL: std::cell::RefCell<Option<Partial>> =
+            const { std::cell::RefCell::new(None) };
+    }
+
+    /// Fill the slot until the returned guard drops. Snapshots `effects`, so
+    /// a phase-two push does not change what a later phase-two condition
+    /// sees; the previous occupant (a gather reached from inside one) is
+    /// restored rather than cleared.
+    pub(crate) fn install(effects: &[ContinuousEffect]) -> Guard {
+        let fx = Arc::new(effects.to_vec());
+        let gates = SecondPass::of(&fx);
+        Guard(PARTIAL.with(|p| p.borrow_mut().replace((fx, gates))))
+    }
+
+    pub(crate) struct Guard(Option<Partial>);
+
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            let prev = self.0.take();
+            PARTIAL.with(|p| *p.borrow_mut() = prev);
+        }
+    }
+
+    /// The installed set, **taken out** for the caller's layer application —
+    /// see the module comment. Pair every `take` with a `put`.
+    pub(crate) fn take() -> Option<Partial> {
+        PARTIAL.with(|p| p.borrow_mut().take())
+    }
+
+    pub(crate) fn put(v: Partial) {
+        PARTIAL.with(|p| *p.borrow_mut() = Some(v));
+    }
+
+    /// Is a partial set installed *right now*? Read by the mid-gather fast
+    /// paths that answer "printed" without going through
+    /// `computed_permanent` — `GameState::layer_reads_are_printed`.
+    pub(crate) fn installed() -> bool {
+        PARTIAL.with(|p| p.borrow().is_some())
+    }
+}
+
 /// Field access on the cold group reads like a `GameState` field.
 impl std::ops::Deref for GameState {
     type Target = ColdState;
@@ -10986,158 +11060,6 @@ impl GameState {
             }
         }
         sa_audit(sa_mask, gs::PUMP_TEAM_BY_CONTROLLED_PERMANENTS, before, all_effects.len());
-        // "As long as [condition], this creature gets +P/+T and has [keyword]."
-        // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
-        // against the source and, while it holds, emit a layer-7 pump plus an
-        // optional keyword grant.
-        let before = all_effects.len();
-        if sa_open(sa_mask, gs::PUMP_SELF_IF) {
-            for &(card, bits) in &sa_cards {
-                if !sa_open(bits, gs::PUMP_SELF_IF) {
-                    continue;
-                }
-                for sa in &card.definition.static_abilities {
-                    let crate::effect::StaticEffect::PumpSelfIf {
-                        condition,
-                        power,
-                        toughness,
-                        keywords,
-                    } = &sa.effect
-                    else {
-                        continue;
-                    };
-                    let ctx = crate::game::effects::EffectContext::for_ability(
-                        card.id,
-                        card.controller,
-                        None,
-                    );
-                    if !self.evaluate_predicate(condition, &ctx) {
-                        continue;
-                    }
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Source,
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::Modify),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::ModifyPowerToughness(*power, *toughness),
-                    });
-                    for kw in keywords {
-                        all_effects.push(ContinuousEffect {
-                            timestamp: card.object_timestamp(),
-                            source: card.id,
-                            affected: AffectedPermanents::Source,
-                            layer: Layer::L6Ability,
-                            sublayer: None,
-                            duration: EffectDuration::WhileSourceOnBattlefield,
-                            modification: Modification::AddKeyword(kw.clone()),
-                        });
-                    }
-                }
-            }
-        }
-        sa_audit(sa_mask, gs::PUMP_SELF_IF, before, all_effects.len());
-        // "As long as [condition], this creature has base power and toughness
-        // P/T." (`StaticEffect::SetBasePtIf`) — a live layer-7b set (Snowmelt
-        // Stag). +N/+M and counters still stack on top per CR 613.7c/f.
-        let before = all_effects.len();
-        if sa_open(sa_mask, gs::SET_BASE_PT_IF) {
-            for &(card, bits) in &sa_cards {
-                if !sa_open(bits, gs::SET_BASE_PT_IF) {
-                    continue;
-                }
-                for sa in &card.definition.static_abilities {
-                    let crate::effect::StaticEffect::SetBasePtIf { condition, power, toughness } =
-                        &sa.effect
-                    else {
-                        continue;
-                    };
-                    let ctx = crate::game::effects::EffectContext::for_ability(
-                        card.id,
-                        card.controller,
-                        None,
-                    );
-                    if !self.evaluate_predicate(condition, &ctx) {
-                        continue;
-                    }
-                    all_effects.push(ContinuousEffect {
-                        timestamp: card.object_timestamp(),
-                        source: card.id,
-                        affected: AffectedPermanents::Source,
-                        layer: Layer::L7PowerTough,
-                        sublayer: Some(PtSublayer::SetValue),
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::SetPowerToughness(*power, *toughness),
-                    });
-                }
-            }
-        }
-        sa_audit(sa_mask, gs::SET_BASE_PT_IF, before, all_effects.len());
-        // "All [filter] have 'This gets +P/+T as long as [condition]'"
-        // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
-        // evaluated per matching permanent with that permanent's controller
-        // as "you".
-        let before = all_effects.len();
-        if sa_open(sa_mask, gs::GRANT_PUMP_SELF_IF) {
-            for &(card, bits) in &sa_cards {
-                if !sa_open(bits, gs::GRANT_PUMP_SELF_IF) {
-                    continue;
-                }
-                for sa in &card.definition.static_abilities {
-                    let crate::effect::StaticEffect::GrantPumpSelfIf {
-                        filter,
-                        condition,
-                        power,
-                        toughness,
-                        keywords,
-                    } = &sa.effect
-                    else {
-                        continue;
-                    };
-                    for subject in &self.battlefield {
-                        if !crate::game::layers::requirement_matches_card(
-                            filter,
-                            subject,
-                            card.controller,
-                        ) {
-                            continue;
-                        }
-                        let ctx = crate::game::effects::EffectContext::for_ability(
-                            subject.id,
-                            subject.controller,
-                            None,
-                        );
-                        if !self.evaluate_predicate(condition, &ctx) {
-                            continue;
-                        }
-                        if *power != 0 || *toughness != 0 {
-                            all_effects.push(ContinuousEffect {
-                                timestamp: card.object_timestamp(),
-                                source: card.id,
-                                affected: AffectedPermanents::Specific(vec![subject.id]),
-                                layer: Layer::L7PowerTough,
-                                sublayer: Some(PtSublayer::Modify),
-                                duration: EffectDuration::WhileSourceOnBattlefield,
-                                modification: Modification::ModifyPowerToughness(*power, *toughness),
-                            });
-                        }
-                        for kw in keywords {
-                            all_effects.push(ContinuousEffect {
-                                timestamp: card.object_timestamp(),
-                                source: card.id,
-                                affected: AffectedPermanents::Specific(vec![subject.id]),
-                                layer: Layer::L6Ability,
-                                sublayer: None,
-                                duration: EffectDuration::WhileSourceOnBattlefield,
-                                modification: Modification::AddKeyword(kw.clone()),
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        sa_audit(sa_mask, gs::GRANT_PUMP_SELF_IF, before, all_effects.len());
         // "[Creatures the selector picks] get +X/+Y" with live Values
         // (`StaticEffect::PumpPTByValue`) — Meishin's hand-sized shrink.
         let before = all_effects.len();
@@ -12899,6 +12821,195 @@ impl GameState {
                 });
             }
         }
+        // ── CR 613.8 phase two: the condition-gated statics ─────────────
+        // Three statics evaluate a `Predicate` *inside* the gather, and a
+        // condition that reads a characteristic a layer can change has to be
+        // evaluated against the layers below it, not against the printed
+        // card: CR 613.8's dependency rule orders a layer-4 type change
+        // before a layer-7 pump that asks about it. ~60 of the catalog's 201
+        // uses read such a characteristic (types, subtypes, colours, P/T,
+        // keywords); the rest read player- or zone-level facts and are
+        // unaffected either way — see ENGINE_BACKLOG.
+        //
+        // **They are last in this function, and that is the whole design.**
+        // `all_effects` is sorted by layer at *apply* time, not as it is
+        // pushed, so "everything below layer 7 is already in the buffer" is
+        // only true because nothing after this point pushes. Keep them here.
+        // Within the three, an earlier one's pushes are *not* visible to a
+        // later one's condition — the snapshot is taken once — which is the
+        // genuinely ambiguous case CR 613.8 leaves to dependency ordering.
+        let _phase_two = (sa_open(sa_mask, gs::PUMP_SELF_IF)
+            || sa_open(sa_mask, gs::SET_BASE_PT_IF)
+            || sa_open(sa_mask, gs::GRANT_PUMP_SELF_IF))
+        .then(|| gather_partial::install(&all_effects));
+        // "As long as [condition], this creature gets +P/+T and has [keyword]."
+        // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
+        // against the source and, while it holds, emit a layer-7 pump plus an
+        // optional keyword grant.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::PUMP_SELF_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::PUMP_SELF_IF) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::PumpSelfIf {
+                        condition,
+                        power,
+                        toughness,
+                        keywords,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                    });
+                    for kw in keywords {
+                        all_effects.push(ContinuousEffect {
+                            timestamp: card.object_timestamp(),
+                            source: card.id,
+                            affected: AffectedPermanents::Source,
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::PUMP_SELF_IF, before, all_effects.len());
+        // "As long as [condition], this creature has base power and toughness
+        // P/T." (`StaticEffect::SetBasePtIf`) — a live layer-7b set (Snowmelt
+        // Stag). +N/+M and counters still stack on top per CR 613.7c/f.
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::SET_BASE_PT_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::SET_BASE_PT_IF) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::SetBasePtIf { condition, power, toughness } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ctx = crate::game::effects::EffectContext::for_ability(
+                        card.id,
+                        card.controller,
+                        None,
+                    );
+                    if !self.evaluate_predicate(condition, &ctx) {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.object_timestamp(),
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetPowerToughness(*power, *toughness),
+                    });
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::SET_BASE_PT_IF, before, all_effects.len());
+        // "All [filter] have 'This gets +P/+T as long as [condition]'"
+        // (`StaticEffect::GrantPumpSelfIf`) — Sedge Sliver. The condition is
+        // evaluated per matching permanent with that permanent's controller
+        // as "you".
+        let before = all_effects.len();
+        if sa_open(sa_mask, gs::GRANT_PUMP_SELF_IF) {
+            for &(card, bits) in &sa_cards {
+                if !sa_open(bits, gs::GRANT_PUMP_SELF_IF) {
+                    continue;
+                }
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::GrantPumpSelfIf {
+                        filter,
+                        condition,
+                        power,
+                        toughness,
+                        keywords,
+                    } = &sa.effect
+                    else {
+                        continue;
+                    };
+                    for subject in &self.battlefield {
+                        if !crate::game::layers::requirement_matches_card(
+                            filter,
+                            subject,
+                            card.controller,
+                        ) {
+                            continue;
+                        }
+                        let ctx = crate::game::effects::EffectContext::for_ability(
+                            subject.id,
+                            subject.controller,
+                            None,
+                        );
+                        if !self.evaluate_predicate(condition, &ctx) {
+                            continue;
+                        }
+                        if *power != 0 || *toughness != 0 {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: AffectedPermanents::Specific(vec![subject.id]),
+                                layer: Layer::L7PowerTough,
+                                sublayer: Some(PtSublayer::Modify),
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::ModifyPowerToughness(*power, *toughness),
+                            });
+                        }
+                        for kw in keywords {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: card.object_timestamp(),
+                                source: card.id,
+                                affected: AffectedPermanents::Specific(vec![subject.id]),
+                                layer: Layer::L6Ability,
+                                sublayer: None,
+                                duration: EffectDuration::WhileSourceOnBattlefield,
+                                modification: Modification::AddKeyword(kw.clone()),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        sa_audit(sa_mask, gs::GRANT_PUMP_SELF_IF, before, all_effects.len());
+        drop(_phase_two);
+        let phase_two_end = all_effects.len();
+        // The invariant the block above depends on, asserted rather than
+        // assumed: nothing emits after phase two. A block inserted between
+        // here and the return would be invisible to every condition that
+        // asked about it, which is the bug this whole section fixes.
+        //
+        // It folds to nothing while the invariant holds — the two lengths are
+        // the same expression with no write between them, so the message does
+        // not even appear in `strings` on a `-C debug-assertions=yes` build.
+        // That is the point: it costs nothing until an edit makes it false.
+        debug_assert_eq!(
+            phase_two_end,
+            all_effects.len(),
+            "a continuous effect was emitted after the CR 613.8 phase-two block",
+        );
         all_effects
     }
 
@@ -12972,6 +13083,17 @@ impl GameState {
         // answer. The guard belongs here, once, where it cannot be forgotten.
         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
             let card = self.battlefield.iter().find(|c| c.id == id)?;
+            // CR 613.8 — the gather's condition-gated tail installs the
+            // effects it has built so far, so a layer-7 condition can see a
+            // layer-4 type change from the same gather. The slot is empty at
+            // every other point inside a gather, which is this guard's
+            // original printed-view answer; `take`/`put` is what bounds the
+            // recursion to one ply. See `gather_partial`.
+            if let Some(partial) = gather_partial::take() {
+                let cp = crate::game::layers::apply_layers_one_gated(card, &partial.0, partial.1);
+                gather_partial::put(partial);
+                return Some(std::sync::Arc::new(cp));
+            }
             return Some(std::sync::Arc::new(crate::game::layers::apply_layers_one(card, &[])));
         }
         // Unfrozen — the common case off a scoped loop — takes no lock at
@@ -22523,7 +22645,7 @@ impl GameState {
     /// not the guard: [`Self::computed_permanent`] enforces it for every
     /// caller, and would answer the same printed view a layer pass slower.
     pub(crate) fn effective_power(&self, card: &CardInstance) -> i32 {
-        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+        if self.layer_reads_are_printed() {
             return card.power();
         }
         self.computed_permanent(card.id).map(|cp| cp.power).unwrap_or_else(|| card.power())
@@ -22531,10 +22653,25 @@ impl GameState {
 
     /// Toughness twin of [`Self::effective_power`].
     pub(crate) fn effective_toughness(&self, card: &CardInstance) -> i32 {
-        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+        if self.layer_reads_are_printed() {
             return card.toughness();
         }
         self.computed_permanent(card.id).map(|cp| cp.toughness).unwrap_or_else(|| card.toughness())
+    }
+
+    /// True when a characteristic read has to answer with the *printed* value:
+    /// inside a gather, with no CR 613.8 partial set installed.
+    ///
+    /// The one place the two conditions are spelled out. `in_layer_gather`
+    /// alone is not the question any more — the gather's condition-gated tail
+    /// installs the effects built so far, and while it does, a read is meant
+    /// to go through [`Self::computed_permanent`] and see them. See
+    /// [`gather_partial`]. The atomic is checked first, so outside a gather
+    /// this is exactly the load it was.
+    #[inline]
+    pub(crate) fn layer_reads_are_printed(&self) -> bool {
+        self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
+            && !gather_partial::installed()
     }
 
     /// The zone scan, cheapest-and-likeliest first. A `CardId` names one

@@ -141,7 +141,42 @@ selectors and widened the guard:
 `EntityMatchesAny` is `any` and was always correct on the empty set. It is the
 shape to prefer for a "some entity matches" clause.
 
-### Open — a layer-7 condition cannot see a layer-4 type change (CR 613.8)
+### ~~A layer-7 condition cannot see a layer-4 type change (CR 613.8)~~ — FIXED at the eighty-ninth pass, by design (b)
+
+**The two-phase gather shipped.** The three condition-gated statics
+(`PumpSelfIf`, `SetBasePtIf`, `GrantPumpSelfIf`) are now the **last** thing
+`gather_continuous_effects_inner` does, and while they evaluate their
+predicates the effects gathered so far are installed in
+`GameState::gather_partial` — a thread-local slot that
+`computed_permanent`'s reentrancy branch reads instead of answering with the
+printed view. The read *takes* the slot out for the duration of the layer
+application, so a `computed_permanent` reached from inside it falls back to
+printed: **exactly one ply, bounded by construction rather than by a depth
+counter**, which is what a condition asking about another permanent's
+characteristics needs. Two permanents each gating on the other's computed
+shape is the cycle CR 613.8 resolves by dependency ordering and this does not
+model.
+
+`GameState::layer_reads_are_printed()` is the one place the two conditions
+(`in_layer_gather` **and** no partial installed) are spelled out; the three
+mid-gather printed fast paths — `effective_power`, `effective_toughness` and
+the requirement walker's `computed()` cell — all ask it, and the last of
+those is why the first attempt looked inert: it had its *own* `in_layer_gather`
+fast path and never reached `computed_permanent` at all.
+
+The ordering is asserted, not assumed: a `debug_assert_eq!` on
+`all_effects.len()` at the end of the function fails if anything is ever
+emitted after phase two. Three tests in `mh::mh2e` cover the two routes —
+a resolved `continuous_effects` entry (`tide_shaper_kicked`, which now reads
+power **2**) and a layer-4 grant the gather emits itself
+(`..._made_by_a_layer_4_static`, Leyline of the Guildpact).
+
+    callgrind, profiling-fast --no-default-features, --games 6 --seed 1
+      fixed  +0.031 %   cube  +0.103 %   sealed  +0.031 %
+    suite 19,064 / 0 / 5, golden traces unmoved, --bench byte-identical
+    (no bench archetype carries an affected condition)
+
+The entry as filed, kept for its census:
 
 Fixing the above exposed it. `StaticEffect::PumpSelfIf`'s condition is
 evaluated **inside `gather_continuous_effects_inner`**, where the

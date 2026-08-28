@@ -273,24 +273,24 @@ fn tide_shaper_kicked() {
         cp.subtypes.land_types.contains(&crabomination::card::LandType::Island),
         "land is now an Island"
     );
-    // **Not** +1/+1 off the land it just retyped, and that is a layer
-    // dependency rather than a bug in the pump. `PumpSelfIf`'s condition is
-    // evaluated *inside* `gather_continuous_effects_inner`, where
-    // `in_layer_gather` pins every characteristic read to the printed one —
-    // so a layer-4 `SetLandTypes` from this very ETB is not visible to a
-    // layer-7 condition that asks "does an opponent control an Island". CR
-    // 613.8's dependency would order them; the engine has that machinery only
-    // for the power-gated case (`AffectedPermanents::CardMatchPowerGated`).
-    // Recorded in ENGINE_BACKLOG.
+    // **CR 613.8 — +1/+1 off the land it just retyped.** The layer-4
+    // `SetLandTypes` from this very ETB has to be ordered before the layer-7
+    // condition that asks "does an opponent control an Island", and it is:
+    // `gather_continuous_effects_inner`'s three condition-gated statics run
+    // last and evaluate their predicates against the effects gathered so far
+    // (`GameState::gather_partial`), rather than against the printed card the
+    // `in_layer_gather` reentrancy guard used to pin them to.
     //
-    // Until the eighty-seventh pass this read `2` and passed for the wrong
-    // reason: `Predicate::EntityMatches` answers with `all` over the resolved
-    // selector and `all` over an empty one is vacuously **true**, so the
-    // condition was never evaluated at all and the pump was unconditional.
+    // This read `1` from the eighty-seventh pass to the eighty-ninth, with
+    // the dependency named as an open defect; and `2` before that for the
+    // *wrong* reason — `Predicate::EntityMatches` answers with `all` over the
+    // resolved selector and `all` over an empty one is vacuously **true**, so
+    // the condition was never evaluated at all and the pump was
+    // unconditional. Its sibling below is what tells those two apart.
     assert_eq!(
         g.computed_permanent(shaper).unwrap().power,
-        1,
-        "the retyped land is a layer-4 change and the layer-7 condition can't see it",
+        2,
+        "CR 613.8: the layer-4 retype is ordered before the layer-7 condition",
     );
 }
 
@@ -309,6 +309,28 @@ fn tide_shaper_pump_reads_a_printed_opponent_island() {
     let mine = g2.add_card_to_battlefield(0, catalog::tide_shaper());
     g2.add_card_to_battlefield(0, catalog::island());
     assert_eq!(g2.computed_permanent(mine).unwrap().power, 1, "your own Island doesn't count");
+}
+
+/// CR 613.8 through the *static* route. The Island-ness here is a layer-4
+/// grant `gather_continuous_effects_inner` emits itself (Leyline of the
+/// Guildpact's "lands you control are every basic land type"), not a resolved
+/// `continuous_effects` entry the gather starts with — the other half of the
+/// class, and the one a fix that only re-read `continuous_effects` would
+/// miss. The ordering half (a source emitted *after* the condition-gated
+/// statics used to sit, e.g. `SelfIsCreatureIf`) is pinned by the
+/// `debug_assert!` at the end of that function instead.
+#[test]
+fn tide_shaper_pump_reads_an_opponent_island_made_by_a_layer_4_static() {
+    let mut g = two_player_game();
+    let shaper = g.add_card_to_battlefield(0, catalog::tide_shaper());
+    g.add_card_to_battlefield(1, catalog::mountain());
+    assert_eq!(g.computed_permanent(shaper).unwrap().power, 1, "a Mountain is not an Island");
+    g.add_card_to_battlefield(1, catalog::leyline_of_the_guildpact());
+    assert_eq!(
+        g.computed_permanent(shaper).unwrap().power,
+        2,
+        "CR 613.8: the Leyline's layer-4 grant is ordered before the layer-7 condition",
+    );
 }
 
 /// Tizerus Charger escapes with its chosen counter.

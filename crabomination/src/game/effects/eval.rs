@@ -3411,10 +3411,7 @@ impl GameState {
                 // off the battlefield and takes the printed view mid-gather —
                 // so the arms that only need to know *that* ask this instead
                 // and never force the cell.
-                let computed_absent = || {
-                    bf_card.is_none()
-                        || self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
-                };
+                let computed_absent = || bf_card.is_none() || self.layer_reads_are_printed();
                 // **No `OnceCell`, and none of the three this block used to
                 // build.** One call evaluates one `req`, the arms below are
                 // exclusive, and a composite requirement recurses into a fresh
@@ -3425,11 +3422,18 @@ impl GameState {
                 // +1.24 M on `fixed`), which this block recorded for one of
                 // the three and then kept for the other two.
                 let computed = || -> Computed {
-                    if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
+                    if self.layer_reads_are_printed() {
                         // Mid-recompute: printed types. A fast path, not
                         // the guard — `computed_permanent` enforces the
                         // reentrancy rule for every caller and answers the
                         // same printed view a layer pass slower.
+                        //
+                        // CR 613.8: the gather's condition-gated tail installs
+                        // the effects built so far, and while it does this is
+                        // *not* a mid-recompute read — a layer-7 condition
+                        // asking about a layer-4 type change has to see it.
+                        // `layer_reads_are_printed` is where the two
+                        // conditions live.
                         None
                     } else {
                         bf_card.and_then(|_| self.computed_permanent(*cid))
