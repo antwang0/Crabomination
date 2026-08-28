@@ -39,8 +39,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
    requirement walker (2.2-3.4 %, the third-largest engine function on
-   `cube`).** `(-82)`'s one open shape needs a *count* before a build — how
-   many targeted candidates a tick ever probes — and it names three things
+   `cube`).** `(-82)`'s weight is on `available_mana`'s 5,900 per-tick
+   builds, **not** on the bigger targeting row: the probe census in the same
+   dumps says a sweep builds 0.40 targeted candidates and runs 0.47 probes,
+   so there is almost nothing to defer there. It also names three things
    already right that must not be re-taken, plus one refutation. `(-83)` is a
    pool-split entry: read which of its three caller stories a change is aimed
    at before proposing one. Then `(-9)`'s open half,

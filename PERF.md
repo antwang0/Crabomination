@@ -11065,17 +11065,39 @@ should not be re-taken:
 * **`computed_permanent` is behind both filters.** 292 calls on `fixed` from
   the whole targeter — the `.map(|c| … power …)` runs only on survivors.
 
-**What is left is the *number* of targeting calls, and the one shape that
-would remove them has a named blocker.** The dry run at the pick site is
-already lazy — the comment in `cast_candidates` says a typical tick probes one
-or two candidates in descending score order — but **target selection is not**:
-the target is a field of the `GameAction` the scorer ranks, so it is built for
-every affordable candidate whether or not that candidate is ever probed.
-Deferring it the way the dry run was deferred needs the scoring path to rank a
-candidate without its target, and today it cannot. Price *that* question
-first: count how many of the 2,878 targeted candidates on `fixed` are ever
-probed. If the answer is one or two per tick, this is a ~2.5 % row on two
-pools; if the scorer genuinely reads the target, the entry is closed.
+**What is left is the *number* of targeting calls — and the shape that would
+remove them is nearly refuted by the probe counts in the same dumps, which is
+why it is written down here rather than built.** The dry run at the pick site
+is already lazy (the comment in `cast_candidates` says a typical tick probes
+one or two candidates in descending score order); **target selection is not**,
+because the target is a field of the `GameAction` the scorer ranks. So the
+question is how many targeted candidates are built and never probed — and the
+probe census bounds it:
+
+```text
+                                       fixed        sealed
+  cast_candidates calls                7,210        16,656
+  auto_targets_for_effect_all_slots    2,878   0.40  11,098  0.67  a sweep
+  probes (pay_census::in_probe) from
+    main_phase_action_with             1,932         6,572
+    sim_spell_action_inner             1,452         4,630
+                                       -----        ------
+                                       3,384   0.47  11,202  0.67  a sweep
+```
+
+**A sweep builds 0.40 targeted candidates and runs 0.47 probes on `fixed`, and
+0.67 of each on `sealed`.** The candidate set a tick produces is already about
+one, so "probe one or two of many" is not what is happening — there is
+almost nothing to defer. The bound is not tight (a probe may be of an
+untargeted candidate, so this does not *prove* the waste is zero), and the
+counter that would close it is one pair of tallies at the two sites. **But do
+not build the deferral on the strength of the 3.16 % row**: price the waste
+first, and the two ratios above say to expect it to be small.
+
+**Which puts the weight of this entry on `available_mana`'s 5,900 builds, not
+on targeting.** That is the half with a *measured* amortisation ratio (2.1)
+and a clear question — can a tick's build be shared with more of the tick? —
+rather than an inferred one.
 
 **Refuted here rather than left open: a shared `grant_scan`.** Three bot-side
 callers build one per call — `available_mana` 5,900, `mana_source_table`
