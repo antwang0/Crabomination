@@ -2051,6 +2051,39 @@ invalidation. Base 80140c81:
 **Both actor commits produced 5,915 rows over 60 games with 0 stalls**, i.e.
 identical play, and neither can move `--bench`.
 
+**THE TWO WORKLOAD INSTRUMENTS ARE RE-READ AT THE PASS'S TIP, AND ONE OF
+THEM MOVED TO ZERO.** The standing rule is to read them before a profile;
+neither had been re-run since the numbers in `(-55)` and `(-51)(b)` were
+written.
+
+**`CRAB_SIM_REJECTS` is 0 in 25 cells** — five pools (`fixed cube sos sealed
+all`) x five seeds (1 11 23 41 97), `--games 12 --threads 3`, **246,000+
+simulated declarations and not one rejection**, attack and block legs both.
+`(-55)`'s guard holds at the tip and across this pass's eight commits.
+
+**`CRAB_PAY_FAILS`, same config as the table in `(-51)(b)` (`--games 12
+--threads 1`), and `--decks fixed` has gone to zero:**
+
+```text
+                 (-51)(b)'s table              this tip
+  fixed  s1    704/12,002   5.87 %          0/11,298   0.00 %
+  fixed  s11   764/12,018   6.36 %          0/11,254   0.00 %
+  cube   s11 3,494/20,502  17.04 %      3,368/20,372  16.53 %
+  all    s11 7,514/43,404  17.31 %      6,530/42,420  15.39 %
+  sealed s11 3,220/23,346  13.79 %      2,620/22,746  11.52 %
+  sos    s1    754/8,324    9.06 %        754/8,324    9.06 %   <- identical
+  sos    s11   956/9,114   10.49 %        956/9,114   10.49 %   <- identical
+```
+
+**`sos` is byte-identical on both seeds, which is what makes the rest a
+reading rather than drift** — the instrument and the comparison are sound.
+`fixed`'s *attempt* count moved too (12,002 -> 11,298), because this pass
+changed bot behaviour, so this is not a like-for-like numerator; **zero is
+still zero**, and that entry's line "on `fixed` it is 100 % coloured — 704 of
+704" is now history. The remaining rollbacks are ~99-100 % `pay_fails_costly`
+(they had already built a source table), which is the half of `(-51)(b)` that
+is still open.
+
 **(8) A `OnceCell` THAT IS NEVER INITIALISED STILL RUNS ITS DROP GLUE, AND
 THE REQUIREMENT WALKER BUILT THREE OF THEM PER CALL — `fixed` -0.412 %,
 `cube` -0.705 %, `sealed` -0.496 %.** Base `4f48f637`.
