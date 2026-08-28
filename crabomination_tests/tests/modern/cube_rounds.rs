@@ -591,24 +591,6 @@ fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
 }
 
 #[test]
-fn vampire_nighthawk_has_flying_deathtouch_lifelink() {
-    use crabomination::card::Keyword;
-    let def = catalog::vampire_nighthawk();
-    assert_eq!((def.power, def.toughness), (2, 3));
-    for kw in [Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink] {
-        assert!(def.keywords.contains(&kw), "Nighthawk has {kw:?}");
-    }
-}
-
-#[test]
-fn wind_drake_is_a_two_two_flier() {
-    use crabomination::card::Keyword;
-    let def = catalog::wind_drake();
-    assert_eq!((def.power, def.toughness), (2, 2));
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
-#[test]
 fn nekrataal_etb_destroys_a_nonblack_creature() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
@@ -652,14 +634,6 @@ fn ravenous_chupacabra_etb_destroys_an_opponent_creature() {
     }).expect("Ravenous Chupacabra castable");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == victim), "opponent's creature destroyed on ETB");
-}
-
-#[test]
-fn sentinel_spider_has_vigilance_and_reach() {
-    use crabomination::card::Keyword;
-    let def = catalog::sentinel_spider();
-    assert_eq!((def.power, def.toughness), (4, 4));
-    assert!(def.keywords.contains(&Keyword::Vigilance) && def.keywords.contains(&Keyword::Reach));
 }
 
 #[test]
@@ -824,14 +798,6 @@ fn arrogant_wurm_is_a_four_four_trampling_madness_wurm() {
     assert_eq!((def.power, def.toughness), (4, 4));
     assert!(def.keywords.contains(&Keyword::Trample));
     assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
-}
-
-#[test]
-fn hill_giant_is_a_vanilla_three_three() {
-    let def = catalog::hill_giant();
-    assert_eq!((def.power, def.toughness), (3, 3));
-    assert!(def.keywords.is_empty() && def.activated_abilities.is_empty()
-        && def.triggered_abilities.is_empty(), "vanilla beater");
 }
 
 #[test]
@@ -2371,3 +2337,54 @@ fn cankerbloom_sacs_to_destroy_and_proliferate() {
         "Proliferate should bump the +1/+1 counter from 1 to 2");
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// One definition audit for the printed bodies this file used to check with a
+// four-line test each. Every row is exactly what the four deleted tests
+// asserted — printed P/T, printed keywords, and Hill Giant's "no abilities at
+// all" — so the coverage is unchanged. Same shape as `stx/part_23.rs`'s
+// table. `arrogant_wurm_is_a_four_four_trampling_madness_wurm` stays: it
+// matches `Madness(_)` by variant, and pinning the payload would assert more
+// than the test it replaces.
+// ─────────────────────────────────────────────────────────────────────────
+
+struct PrintedShape {
+    def: fn() -> crabomination::card::CardDefinition,
+    name: &'static str,
+    pt: (i32, i32),
+    kws: &'static [crabomination::card::Keyword],
+    /// Hill Giant: no keywords and no abilities of any kind.
+    vanilla: bool,
+}
+
+#[test]
+fn cube_rounds_printed_shapes() {
+    use crabomination::card::Keyword;
+    const ROWS: &[PrintedShape] = &[
+        PrintedShape { def: catalog::vampire_nighthawk, name: "vampire_nighthawk",
+            pt: (2, 3), kws: &[Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
+            vanilla: false },
+        PrintedShape { def: catalog::wind_drake, name: "wind_drake",
+            pt: (2, 2), kws: &[Keyword::Flying], vanilla: false },
+        PrintedShape { def: catalog::sentinel_spider, name: "sentinel_spider",
+            pt: (4, 4), kws: &[Keyword::Vigilance, Keyword::Reach], vanilla: false },
+        PrintedShape { def: catalog::hill_giant, name: "hill_giant",
+            pt: (3, 3), kws: &[], vanilla: true },
+    ];
+    for row in ROWS {
+        let def = (row.def)();
+        assert_eq!((def.power, def.toughness), row.pt, "{} printed P/T", row.name);
+        for kw in row.kws {
+            assert!(def.keywords.contains(kw), "{} has {:?}", row.name, kw);
+        }
+        if row.vanilla {
+            assert!(
+                def.keywords.is_empty()
+                    && def.activated_abilities.is_empty()
+                    && def.triggered_abilities.is_empty(),
+                "{} is a vanilla beater",
+                row.name,
+            );
+        }
+    }
+}
