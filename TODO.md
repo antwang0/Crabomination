@@ -21,96 +21,49 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT (handoff — an INDEX, ≤15 lines. Every number lives in PERF,
-ENGINE_BACKLOG or INCOMPLETE_CARDS; nothing here restates one.)
+## NEXT (handoff — an INDEX. Every number lives in PERF, ENGINE_BACKLOG or
+INCOMPLETE_CARDS; a line here that restates one is a line to delete.)
 
 **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
 claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
 and sessions run concurrently: push code before tracker prose, rebase not force.
-**Sequential builds only** — two cold ones are OOM-killed here (PERF hazards).
+**Sequential builds only** (throughput, not RAM — see the environment note).
 
-1. **Perf queue** — PERF "Perf candidates", top-down. **`(-80)` is new and is
-   the allocator census this file asked for since the eightieth pass** — read
-   its first row before proposing anything there: the program's single biggest
-   allocation context is already minimal. **Its event-buffer row is TAKEN**
-   (a `GameState` scratch slot the discarding callers hand back:
-   -0.256/-0.105/-0.200 %, 575,795 -> 555,641 allocations, 88 % of what the
-   context predicted); what is left is (-74) with a name — 33,286 of 60,524
-   deep copies are the cast/activate pipelines unsharing after the probe
-   clone, which is the probe architecture rather than a local fix.
-   `(-79)`'s untried shape is TAKEN (`ANY_GRANT`, -0.97/-1.33/-0.94 %) and
-   its residue is not reachable; then `(-51)(a)`, `(-70)` (quiet window
-   only), `(-69)`'s two unclaimed rows, `(-61)`, `(-59)`. Closed: `(-60)`,
-   `(-77)`, the `Box` class, `(-39)`. **Rules earned: count the walks a bit
-   removes, not the cards it tests; a zone memo is worth the zone's *write*
-   rate, not its read rate; and hoisting a short list once beats hoisting a
-   scalar often.**
+1. **Perf queue** — PERF "Perf candidates", top-down: `(-81)` (new, the
+   gather's caller table; its top row is a *scope* count nobody has split),
+   then `(-9)`'s open half, `(-80)`'s row 3/4, `(-51)(a)`, `(-69)`, `(-61)`,
+   `(-59)`. Taken/closed: `(-70)`, `(-79)`, `(-77)`, `(-60)`, `(-39)`, the
+   `Box` class, `(-80)` rows 1 and 2 — **row 1 is now a built refutation with
+   a ledger, not an argument.**
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
-   pass" and "Which pool a change moves". Read all three pools; a pool split
-   is a revert. The two devices that paid last: the allocation table ranked
-   by calls, and `scripts/cg_calls.py` (call count + Ir/call). **Count the
-   collection's *writes* before ranking an alloc/rehash row** — the same table
-   yielded one win and one refutation this pass.
+   pass", "Which pool a change moves". Read all three pools; a pool split is
+   a revert.
 3. **Instruments** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
    `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`.
-   All read at the tip; see PERF's newest Baseline block.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
-   encodings invalidate the trained nets. **Nothing since `dc478735` touches
-   `encode.rs`, `crabomination_ml` or `crabomination_nn` at all**, so no
-   layout moved. The CR 613.8 fix does change ~60 cards' computed P/T, i.e.
-   the *distribution* a net sees, not the encoding of it — a self-play net
-   re-learns that; a net being compared across the fix does not.
-5. **Robustness gate** — `scripts/robustness_grid.sh` plus the actor leg, the
-   seeded 4,000-pairing cube sweep, and the two census env vars. **All clean
-   at `673f50ff`**, i.e. with every behaviour change of the pass in: CR 613.8,
-   Metalcraft's computed count, the two headless `OptionalTrigger` policies
-   and the event-buffer recycle. The cube sweep is 900.8 s under nextest —
-   arm it by setting `bot_vs_bot_random_cube_decks_terminate`'s loop to
-   `0..4000u64` and restoring the ten named seeds after.
+   encodings invalidate the trained nets. Nothing since `dc478735` touches
+   `encode.rs`, `crabomination_ml` or `crabomination_nn`.
+5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg, the
+   seeded 4,000-pairing cube sweep (arm it in
+   `bot_vs_bot_random_cube_decks_terminate`), the two census env vars. Last
+   full run clean at `673f50ff`; the ninety-first pass is behaviour-preserving
+   by construction and did not re-arm it.
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
-   `ColorIsMostCommonAmongPermanents` is fixed at the ninetieth pass —
-   `card_color_change_unscoped()` is built (layer-5 twin of the type gate, no
-   memo family and the entry says why) and the tally reads computed colours
-   behind it. The whole CR 613.8 residue is closed. Two 🟡 *class* entries
-   were re-read and both shrank — the block pair gate is already one body and
-   the planner's flying/reach pre-filters are fixed; what is left is
-   *batch*-level readings and an attack **heuristic**, not a legality bug.
    Card audits clean — see INCOMPLETE_CARDS.
-7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
-   `selfplay` seed `jitter_below` from `--seed`?
-8. **Tip state** — PERF "Baseline"'s two newest blocks: the ninetieth's
-   `ANY_GRANT` row, and under it the eighty-ninth's end-to-end, the `--bench`
-   invariant and both clocks. The two blocks' baselines were measured
-   independently and agree to ~600 Ir on all three pools.
-9. **Build time** — PERF's "Build time" section, **amended**: the standing
-   rule is now "keep the *critical path* flat", not the binary count. Two
-   zero-test harnesses were switched off (19 -> 17 executables) and the
-   relink measured **flat** — `--no-run` builds in parallel and neither was
-   on the long chain, which is the eight integration binaries. Name the
-   target on that path before proposing a count change.
-10. **Filters** — **seven**. `audit_panics.py` is new and is the static half
-   of "no panic reachable from bot self-play", which until now was audited
-   only by *reaching* code: 109 sites off the bin/test paths, 75 guarded / 11
-   lock-poison / **23 bare, all 23 read and all safe** by a guard its 22-line
-   lookback cannot see (a correlated flag 57 lines up, an `Err` return 270
-   lines up, an `expect` message that states the proof). One real landmine
-   found and removed — `CounterBag`'s panicking `Index`. Compare the bare
-   count, don't re-quote it. The other six all read zero. `audit_decision_plumbing.py`'s 98
-   bare sites are a triage population, and the eighty-ninth pass found the
-   greppable sub-population that *is* a bug: **a site whose comment states the
-   headless policy while relying on `AutoDecider`'s blanket
-   `OptionalTrigger => false`, which contradicts it.** Three of sixteen; two
-   were bugs, and the third's blanket `no` is what bounds the CR 706 chain
-   (built, spun at 100 % CPU, reverted — the reason is at the site).
+7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed
+   `jitter_below` from `--seed`?
+8. **Tip state / build time / filters** — PERF's newest Baseline block, PERF's
+   "Build time" (the rule is "keep the *critical path* flat"), and
+   ENGINE_BACKLOG for the seven filters and what each one reads.
 
-## Standing rules for a perf pass — moved to `PERF.md`
+**Compacted at the ninety-first pass from 90 lines** — a paragraph per pass
+restating numbers that live one file away, which the header forbids. Add a
+pointer, not a paragraph.
 
-The section lived here for thirty passes and grew to **555 lines**, which is
-what put this file over its own 1k limit. It is the *perf record*, not the
-handoff, so it moved **verbatim** to `PERF.md`'s "Standing rules for a perf
-pass" (directly under "How to measure") rather than being compacted away —
-every rule is a refutation with numbers and this file's own instruction was
-not to delete one. Read it there before proposing anything on the perf queue.
+## Standing rules for a perf pass — in `PERF.md`
+
+Moved verbatim (555 lines, every rule a refutation with numbers) to `PERF.md`,
+under "How to measure". Read it before proposing anything on the perf queue.
 
 ## Environment note
 

@@ -10710,6 +10710,48 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-81) THE GATHER IS 71,930 CALLS AND 8.5 % OF `cube` INCLUSIVE, AND ITS
+CALLER TABLE — RE-READ AT THE NINETY-FIRST TIP — SAYS THE LEVER IS STILL THE
+NUMBER OF GATHERS.** Whole program 3,095,128,492 (`fixed` 1,021,019,898,
+`sealed` 3,049,332,123), `--decks cube`, at `9c501f42`.
+
+```text
+callers of gather_continuous_effects_inner   71,930 calls, ~3,655 Ir each
+  48,856   182,247,650   5.89 %  computed_permanent
+  11,740    37,550,954   1.21 %  frozen_effects
+   6,842    25,126,396   0.81 %  compute_permanents
+   4,376    17,797,980   0.57 %  check_state_based_actions_into
+     116       287,030           permanents_with_abilities_removed
+
+callers of compute_permanents               18,258 calls
+   6,842    68,897,482   2.23 %  combat_damage_computed   <- (-9)'s open half
+   4,870    19,893,463   0.64 %  declare_blockers
+   6,546    11,231,980   0.36 %  declare_attackers_banded
+```
+
+**`computed_permanent`'s 48,856 is the row to read first, and it is a *scope*
+count, not a call count.** The function is called 387,848 times; the freeze
+memo answers all but 48,856 of them without a gather, and 207,446
+`with_frozen_layers` scopes plus 33,304 `freeze_layers_pop`s exist — so **most
+scopes never take a gather at all** and the 48,856 splits between "the first
+computed read of a scope that has one" and "a computed read with no scope
+around it at all", which nothing here separates. **Separate them before
+proposing anything**: an unscoped read pays a whole gather for one permanent
+and is a caller-side fix (wrap it), a scope's first read is the memo working.
+One counter answers it.
+
+**`combat_damage_computed` is (-9)'s remaining half re-sized and it has
+doubled since that entry** — 3,274 calls / 0.71 % there, 6,842 / **2.23 %**
+here, 10,070 Ir apiece. It is one gather plus a per-participant layer pass,
+taken once by `resolve_first_strike_damage` and once by `resolve_combat`, and
+(-9)'s two shapes are unchanged: hand the first-strike step's set forward
+(unsound as written — CR 510.2 is a fresh assignment and damage is dealt in
+between), or have `advance_step`'s first-striker gate and the resolver share
+one freeze scope. **The second is the one to price**, and note (-58) before
+building it: sharing *one gather* across the damage batch's pair loops was
+built and refuted with a counterexample, but that entry is about the loop
+inside one step, not about the two steps' two calls.
+
 **(-80) THE ALLOCATOR IS 10.4 % OF `fixed` OVER 575,795 ALLOCATIONS, AND
 HERE IS WHERE THEY COME FROM.** PERF has said for ten passes that the
 allocator family "is the one thing no pass has aimed at directly" and never
