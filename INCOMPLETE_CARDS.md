@@ -153,7 +153,20 @@ The "engine-wide ⏳" notes on these were stale. Status:
 - ✅ **Wandering Archaic // Explore the Vastlands** — back wired (`{4}` → add 6 colorless, gain 3 life) + test.
 - ✅ **Selfless Glyphweaver // Deadly Vanity** — back wired via new `Effect::EachPlayerKeepsOneSacrificeRest` (each player keeps one creature/PW, sacrifices the rest) + test.
 - ✅ **Birgi // Harnfel** — Harnfel back wired (`CardDiscarded` → `ExileTopAndGrantMayPlay { 2 }`), cast from hand as an artifact + test.
-- ✅ **transform-and-cast-from-graveyard** — `GameAction::CastSpellBack` now hops a permitted graveyard card into hand for the back-face cast pipeline (Muldrotha idiom), gated by a one-shot `CardInstance::may_cast_back_from_graveyard` flag set by `Effect::GrantCastBackFromGraveyard`. Pestilent Cauldron's sac ability grants it; Restorative Burst is then castable from the graveyard.
+- 🟡 **transform-and-cast-from-graveyard** — the *mechanism* is wired:
+  `GameAction::CastSpellBack` hops a permitted graveyard card into hand for the
+  back-face cast pipeline (Muldrotha idiom), gated by a one-shot
+  `CardInstance::may_cast_back_from_graveyard` flag that
+  `Effect::GrantCastBackFromGraveyard` sets. **No card grants it**, and the
+  claim that used to stand here — "Pestilent Cauldron's sac ability grants it;
+  Restorative Burst is then castable from the graveyard" — is wrong on both
+  halves: the real Cauldron's third ability is `{4}, {T}: Exile four target
+  cards from a single graveyard. Draw a card.` (checked against the oracle
+  cache, 2026-08-28), it has no sacrifice cost and no rider, and the shipped
+  definition matches the oracle exactly. `GrantCastBackFromGraveyard` is a
+  **dead primitive** in `audit_variant_coverage.py`'s table below, which is how
+  this was caught — a tracker row asserting a construction the filter says does
+  not exist.
 
 ### 4. No "controller-of-target" / "that player" actor (forces each-opponent / you)
 ~~Generous Gift~~ ✅ **FIXED** · ~~Hellrider~~ ✅ **FIXED** (now `Attacks/YourControl`

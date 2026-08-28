@@ -20,10 +20,19 @@ inside those line ranges do not count as an implementation. That is what makes
 the filter stronger than the compiler — exhaustiveness is satisfied by exactly
 those arms.
 
-Reading at 2026-08-27, over 471 + 987 + 237 = 1,695 variants: **zero dead
+Reading at 2026-08-28, over 471 + 987 + 237 = 1,695 variants: **zero dead
 capabilities**, and three dead primitives (`Effect::AddRadCounters`,
 `ExileTopAndMayCastUpToMv`, `GrantCastBackFromGraveyard`) — each an
 implemented effect waiting for the card that wanted it.
+
+**The bit bridge** (see `bit_bridge`) is the third way a variant can be
+implemented, added the same day because the filter cried wolf without it: an
+ability whose engine side reads a *precomputed definition bitmask* names only
+the constant, and the arm that folds the variant into that constant lives in
+`crabomination_base`. Neither end names the other. One variant needs it today
+(`StaticEffect::LegendRuleDoesntApply -> LEGEND_RULE_OFF`) and `--verbose`
+prints every bridge it takes, so a bridge that starts covering for a genuinely
+dead arm is visible rather than silent.
 
 Run: python3 scripts/audit_variant_coverage.py           # ~40 s
      python3 scripts/audit_variant_coverage.py --verbose # + the no-op arms
@@ -64,6 +73,11 @@ NOOP_BODY = re.compile(r"=>\s*(?:\{\s*\}|Ok\(\(\)\)|\(\))\s*,?\s*$")
 # the *dead primitive* half under-report, which is the harmless direction.
 RVALUE_BEFORE = re.compile(r"(=\s*|push\(|Some\(|Box::new\(|vec!\[|return\s+|:\s*|,[ \t]*)$")
 BINDING_ONLY = re.compile(r"(\.\.|_|[a-z_][A-Za-z0-9_]*)")
+# `StaticEffect::X => m |= b::SOME_BIT` in the base crate: the front half of an
+# implementation that lives behind a precomputed definition bitmask. The engine
+# then reads the *constant*, never the variant, so a variant-name grep over the
+# engine cannot see it. Discovered, not hardcoded — see `bit_bridge`.
+BIT_CONST = re.compile(r"\b[a-z_][A-Za-z0-9_]*::([A-Z][A-Z0-9_]{3,})\b")
 
 
 def variants_of(path, enum_name):
@@ -179,6 +193,31 @@ def main():
         for p, a, b in noops:
             print(f"  {p}:{a}-{b}")
 
+    def bit_bridge(v):
+        """The bitmask constant a base-crate arm folds `v` into, if the engine
+        reads that constant.
+
+        The eighty-seventh pass moved several definition-bit computations into
+        `crabomination_base`, and this filter went from zero dead capabilities
+        to one overnight: `StaticEffect::LegendRuleDoesntApply`'s only engine
+        mention is the layer pass's no-op arm, and its implementation is
+        `card.rs`'s `m |= b::LEGEND_RULE_OFF` plus `stack.rs`'s
+        `scan.legend_rule_off` read. Neither end names the other, so follow the
+        constant.
+        """
+        consts = set()
+        for line in rg(["-n", "-w", v] + BASE_DIRS).split("\n"):
+            if not line:
+                continue
+            _, _, rest = line.split(":", 2)
+            if rest.strip().startswith("//"):
+                continue
+            consts |= set(BIT_CONST.findall(rest))
+        for c in sorted(consts):
+            if rg(["-l", "-w", c] + ENGINE_DIRS).strip():
+                return c
+        return None
+
     findings = 0
     for path, name in ENUMS:
         vs = variants_of(path, name)
@@ -199,6 +238,13 @@ def main():
                     continue  # a no-op arm is not an implementation
                 implemented = True
                 break
+            bridge = None
+            if not implemented:
+                bridge = bit_bridge(v)
+                if bridge:
+                    implemented = True
+                    if verbose:
+                        print(f"  bit bridge  {name}::{v} -> {bridge}")
             if in_catalog and not implemented:
                 dead_capability.append(v)
             elif not in_catalog and v not in built:
