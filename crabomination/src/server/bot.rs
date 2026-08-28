@@ -8911,8 +8911,8 @@ fn chump_block_candidates(
     incoming.sort_by_key(|&(_, p)| std::cmp::Reverse(p));
     let mut idle: Vec<CardId> = legal_blockers(state, seat)
         .into_iter()
-        .filter(|c| !used.contains(&c.id))
-        .map(|c| c.id)
+        .filter(|(c, _)| !used.contains(&c.id))
+        .map(|(c, _)| c.id)
         .collect();
     idle.sort_by_cached_key(|&id| permanent_value(state, id, w));
     let mut out = Vec::new();
@@ -8961,11 +8961,11 @@ fn gang_block_candidates(
 
     // Idle bodies, cheapest first: the gang should cost as little as it
     // can and still kill.
-    let mut idle: Vec<&crate::card::CardInstance> = legal_blockers(state, seat)
+    let mut idle: Vec<(&crate::card::CardInstance, _)> = legal_blockers(state, seat)
         .into_iter()
-        .filter(|c| !used.contains(&c.id))
+        .filter(|(c, _)| !used.contains(&c.id))
         .collect();
-    idle.sort_by_cached_key(|c| permanent_value(state, c.id, w));
+    idle.sort_by_cached_key(|(c, _)| permanent_value(state, c.id, w));
     if idle.len() < 2 {
         return Vec::new();
     }
@@ -8983,17 +8983,28 @@ fn gang_block_candidates(
 
     let mut out = Vec::new();
     for atk in targets.into_iter().take(MAX_CANDIDATES) {
-        let a_flying = atk.has_keyword(&Keyword::Flying);
+        // CR 613 — the computed set on both sides, as `declare_blockers`
+        // reads it: a granted Flying is invisible to the printed list, and so
+        // is the granted Reach that answers it. See `evasion_bars_block`.
+        let atk_cp = state.computed_permanent(atk.id);
+        let a_flying = match &atk_cp {
+            Some(cp) => cp.keywords.has_kw(&Keyword::Flying),
+            None => atk.has_keyword(&Keyword::Flying),
+        };
         let a_tough = atk.toughness() - atk.damage as i32;
         let mut gang: Vec<CardId> = Vec::new();
         let mut dmg = 0i32;
-        for b in &idle {
-            if a_flying && !b.has_keyword(&Keyword::Flying) && !b.has_keyword(&Keyword::Reach) {
+        for (b, bcp) in &idle {
+            if evasion_bars_block(
+                a_flying,
+                bcp.keywords.has_kw(&Keyword::Flying),
+                bcp.keywords.has_kw(&Keyword::Reach),
+            ) {
                 continue;
             }
             gang.push(b.id);
             dmg += b.power().max(0);
-            if b.has_keyword(&Keyword::Deathtouch) || dmg >= a_tough {
+            if bcp.keywords.has_kw(&Keyword::Deathtouch) || dmg >= a_tough {
                 break;
             }
         }
@@ -9357,39 +9368,60 @@ fn trim_blocks_to_payable_tax(
     blocks.retain(|(b, _)| keep.contains(b));
 }
 
-/// A creature the bot may legally declare as a blocker: the engine's own
-/// `blocker_self_block`, so the planner cannot offer a blocker the
-/// declaration gate then rejects — and cannot decline one a CR 509.1b
-/// requirement obliges either, which is the direction that deadlocks.
+/// CR 509.1b — flying/reach evasion, off the **computed** keyword sets on
+/// both sides. `true` bars the block.
 ///
-/// It used to be a hand-written subset read off the *printed* view. See
-/// `GameState::blocker_self_block` for what each of the four copies missed.
-fn bot_can_block(state: &GameState, c: &crate::card::CardInstance) -> bool {
-    match state.computed_permanent(c.id) {
-        Some(cp) => state.blocker_can_block_anything(c, &cp),
-        // Not a battlefield permanent by the time the pass ran.
-        None => false,
-    }
+/// A pre-filter, not the gate: `blocker_can_block_attacker_pair` is
+/// authoritative and every planner pass that can afford it per pair calls it.
+/// This exists for the passes that cannot, and it is **one function** because
+/// four hand-written copies of it read the *printed* keyword lists — so a
+/// granted Reach could not block a flier in any plan the bot made, and a
+/// granted Flying was pre-filtered as blockable. The second is caught by the
+/// authoritative gate one line later; the first is a legal line made
+/// permanently invisible, which no rejection counter can ever see, and it is
+/// what `bot_block_plan_sees_a_granted_reach` pins.
+fn evasion_bars_block(attacker_flying: bool, blocker_flying: bool, blocker_reach: bool) -> bool {
+    attacker_flying && !blocker_flying && !blocker_reach
 }
 
-/// The seat's legal blockers, resolved once (CR 509.1a).
+/// The seat's legal blockers and their computed views, resolved once
+/// (CR 509.1a).
 ///
-/// [`bot_can_block`] costs a `computed_permanent` per own permanent — a
-/// layer-memo probe on a hit and a whole `apply_layers_one` on a miss — and
-/// the planner asks it over the whole battlefield five times per declaration,
-/// plus once more from each candidate helper. At `be4a9987` that was
-/// **117,028 calls / 65,311,295 Ir / 1.83 % of `cube`** and 2.03 % of
-/// `fixed`, for an answer that cannot change inside one declaration: nothing
-/// in the planner mutates `state`.
+/// A creature the bot may legally declare as a blocker is the engine's own
+/// `blocker_self_block` answer, so the planner cannot offer a blocker the
+/// declaration gate then rejects — and cannot decline one a CR 509.1b
+/// requirement obliges either, which is the direction that deadlocks. It used
+/// to be a hand-written subset read off the *printed* view; see
+/// `GameState::blocker_self_block` for what each of the four copies missed.
+///
+/// The answer costs a `computed_permanent` per own permanent — a layer-memo
+/// probe on a hit and a whole `apply_layers_one` on a miss — and the planner
+/// asks it over the whole battlefield five times per declaration, plus once
+/// more from each candidate helper. At `be4a9987` that was **117,028 calls /
+/// 65,311,295 Ir / 1.83 % of `cube`** and 2.03 % of `fixed`, for an answer
+/// that cannot change inside one declaration: nothing in the planner mutates
+/// `state`.
+///
+/// **The computed view comes back with it**, because it had to be built
+/// anyway and every caller then reads a keyword off it. Reading the *printed*
+/// list instead is the drift `evasion_bars_block` names: it cost a granted
+/// Reach every block it could have made.
 ///
 /// Returns the instances, not ids: the five passes below then iterate the
 /// handful of legal blockers directly instead of re-walking the whole
 /// battlefield and re-finding each one.
-fn legal_blockers(state: &GameState, seat: usize) -> Vec<&crate::card::CardInstance> {
+fn legal_blockers(
+    state: &GameState,
+    seat: usize,
+) -> Vec<(&crate::card::CardInstance, std::sync::Arc<crate::game::layers::ComputedPermanent>)> {
     state
         .battlefield
         .iter()
-        .filter(|c| c.controller == seat && bot_can_block(state, c))
+        .filter(|c| c.controller == seat)
+        .filter_map(|c| {
+            let cp = state.computed_permanent(c.id)?;
+            state.blocker_can_block_anything(c, &cp).then_some((c, cp))
+        })
         .collect()
 }
 
@@ -9572,21 +9604,27 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     let life_threatened = state.players[seat].life <= total_incoming || poison_threatened;
 
     // CR 509.1a — one resolution for the five passes below. `can_block()`
-    // only checks creature-ness + untapped; `bot_can_block` also excludes
+    // only checks creature-ness + untapped; `legal_blockers` also excludes
     // creatures that genuinely can't block (Decayed CR 702.147, or a granted
     // "can't block") so the bot never submits an illegal block — and it costs
-    // a `computed_permanent` apiece, which is why it is asked once.
+    // a `computed_permanent` apiece, which is why it is asked once and why the
+    // view comes back with the card.
     let may_block = legal_blockers(state, seat);
+    // CR 613 — flying / reach / deathtouch off the **computed** set, which is
+    // what `declare_blockers` and the combat damage step read. The computed
+    // view is the one `legal_blockers` already had to build, so this is free;
+    // reading the printed list here is what made a granted Reach unable to
+    // block a flier in any plan the bot made. See `evasion_bars_block`.
     let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = may_block
         .iter()
-        .map(|c| {
+        .map(|(c, cp)| {
             (
                 c.id,
                 c.power(),
                 c.toughness(),
-                c.has_keyword(&Keyword::Flying),
-                c.has_keyword(&Keyword::Reach),
-                c.has_keyword(&Keyword::Deathtouch),
+                cp.keywords.has_kw(&Keyword::Flying),
+                cp.keywords.has_kw(&Keyword::Reach),
+                cp.keywords.has_kw(&Keyword::Deathtouch),
             )
         })
         .collect();
@@ -9626,7 +9664,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         };
         for a in &attacker_info {
             let (a_id, a_pow, a_tough, a_dt) = (&a.id, &a.power, &a.toughness, &a.deathtouch);
-            if a.flying && !b_flying && !b_reach {
+            if evasion_bars_block(a.flying, b_flying, b_reach) {
                 continue;
             }
             // Authoritative legality gate (CR 509.1b): also honors
@@ -9735,17 +9773,18 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     if life_threatened {
         let mut used: crate::fxhash::HashSet<CardId> =
             assignments.iter().map(|(b, _)| *b).collect();
+        // Same computed reads as the main pass's `blockers`, same reason.
         let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = may_block
             .iter()
-            .filter(|c| !used.contains(&c.id))
-            .map(|c| {
+            .filter(|(c, _)| !used.contains(&c.id))
+            .map(|(c, cp)| {
                 (
                     c.id,
                     c.power(),
                     c.toughness(),
-                    c.has_keyword(&Keyword::Flying),
-                    c.has_keyword(&Keyword::Reach),
-                    c.has_keyword(&Keyword::Deathtouch),
+                    cp.keywords.has_kw(&Keyword::Flying),
+                    cp.keywords.has_kw(&Keyword::Reach),
+                    cp.keywords.has_kw(&Keyword::Deathtouch),
                 )
             })
             .collect();
@@ -9765,15 +9804,15 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             let mut dmg = 0i32;
             let mut kills = false;
             for (b_id, b_pow, _bt, b_fly, b_reach, b_dt) in &idle {
-                if a_flying && !b_fly && !b_reach {
+                if evasion_bars_block(a_flying, *b_fly, *b_reach) {
                     continue;
                 }
                 // The same legality gate the greedy pass above uses. Without
                 // it this pass assembled pairs the engine rejects — and it
                 // rejects the whole *batch*, so one illegal gang member cost
-                // every block the planner had made. `bot_can_block` is the
-                // printed/instance test only; the computed set is where a
-                // granted `CantBlock` and every evasion keyword live.
+                // every block the planner had made. `legal_blockers` answers
+                // only the attacker-independent half; the pair half is where a
+                // granted `CantBlock` and the evasion keywords are read.
                 if !state.blocker_can_block_attacker(*b_id, a_id) {
                     continue;
                 }
@@ -9802,7 +9841,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // that can legally block (respecting flying/reach) onto each
     // must-be-blocked attacker still missing a blocker.
     for atk in &attacker_info {
-        let (a_id, a_flying) = (&atk.id, atk.flying);
+        let a_id = &atk.id;
         if !atk.must_be_blocked
             || !state.block_requirement_binds(*a_id)
             || assignments.iter().any(|(_, aid)| aid == a_id)
@@ -9811,20 +9850,22 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         }
         // Pick the cheapest (lowest-power) legal idle blocker so a forced block
         // doesn't throw away the bot's best body.
-        if let Some(idle) = may_block
+        if let Some((idle, _)) = may_block
             .iter()
-            .filter(|c| {
+            .filter(|(c, _)| {
                 !assignments.iter().any(|(bid, _)| *bid == c.id)
-                    && (!a_flying
-                        || c.has_keyword(&Keyword::Flying)
-                        || c.has_keyword(&Keyword::Reach))
+                    // No flying/reach pre-filter: `blocker_can_block_attacker`
+                    // below answers it off the computed set, and a second
+                    // hand-written copy off the printed one is exactly the
+                    // drift `evasion_bars_block` exists to stop.
+                    //
                     // Both gates, as in `enforce_block_requirements`: one says
                     // the engine counts this body as able and so would demand
                     // it, the other says the pair is legal to declare.
                     && state.block_requirement_able(c, *a_id)
                     && state.blocker_can_block_attacker(c.id, *a_id)
             })
-            .min_by_key(|c| c.power())
+            .min_by_key(|(c, _)| c.power())
         {
             assignments.push((idle.id, *a_id));
         }
@@ -9845,7 +9886,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // minimum with legal idle blockers; if the minimum can't be reached,
     // drop every block on it (better unblocked than an illegal batch).
     for atk in &attacker_info {
-        let (a_id, a_flying, min_blockers) = (&atk.id, atk.flying, atk.min_blockers);
+        let (a_id, min_blockers) = (&atk.id, atk.min_blockers);
         if min_blockers <= 1 {
             continue;
         }
@@ -9858,16 +9899,15 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // forced multi-block.
             let extra = may_block
                 .iter()
-                .filter(|c| {
+                .filter(|(c, _)| {
+                    // Same as above: the authoritative gate is the only
+                    // flying/reach reading here.
                     !assignments.iter().any(|(bid, _)| *bid == c.id)
-                        && (!a_flying
-                            || c.has_keyword(&Keyword::Flying)
-                            || c.has_keyword(&Keyword::Reach))
                         && state.blocker_can_block_attacker(c.id, *a_id)
                 })
-                .min_by_key(|c| c.power());
+                .min_by_key(|(c, _)| c.power());
             match extra {
-                Some(c) => {
+                Some((c, _)) => {
                     assignments.push((c.id, *a_id));
                     count += 1;
                 }
@@ -9912,7 +9952,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     let seeds = assignments
         .iter()
         .map(|(b, _)| *b)
-        .chain(may_block.iter().map(|c| c.id));
+        .chain(may_block.iter().map(|(c, _)| c.id));
     for id in seeds {
         if !multi.contains(&id) && extra_capacity(id) > 0 {
             multi.push(id);
@@ -14186,6 +14226,109 @@ mod tests {
         g.priority.player_with_priority = 1;
         let blocks = pick_blocks_for_test(&g, 1);
         assert!(blocks.len() != 1, "menace takes 0 or 2+ blockers, got {blocks:?}");
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// A creature-type-free anthem granting `keyword` to its controller's
+    /// creatures — the shortest way to put a keyword in the *computed* set and
+    /// nowhere else. Both guards below need one; the granted-Menace guard above
+    /// wrote it out by hand first.
+    #[cfg(test)]
+    fn granting_anthem(name: &'static str, keyword: crate::card::Keyword) -> CardDefinition {
+        use crate::card::{CardType, SelectionRequirement, StaticAbility};
+        use crate::effect::{Selector, StaticEffect};
+        CardDefinition {
+            name,
+            card_types: vec![CardType::Enchantment],
+            static_abilities: vec![StaticAbility {
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword,
+                },
+                description: "Creatures you control have the granted keyword.",
+            }],
+            ..Default::default()
+        }
+    }
+
+    /// CR 509.1b — **the direction `CRAB_SIM_REJECTS` cannot see.** A granted
+    /// Reach is invisible to the printed keyword list, so a planner reading the
+    /// instance view declines a block the engine would have accepted: a legal
+    /// line made permanently invisible. Nothing illegal is ever proposed, so no
+    /// rejection counter reports it and only a test in this direction can.
+    ///
+    /// The defender is at 2 against a 2/2 flier, so the block is wanted — a
+    /// planner test that does not make the planner *want* the move proves
+    /// nothing (the landwalk guard above learned that the hard way).
+    #[test]
+    fn bot_block_plan_sees_a_granted_reach() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(1, granting_anthem("Reach Anthem", Keyword::Reach));
+        let flyer = g.add_card_to_battlefield(0, catalog::wind_drake());
+        g.clear_sickness(flyer);
+        let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        assert!(
+            !g.battlefield_find(ground).unwrap().has_keyword(&Keyword::Reach),
+            "the reach is a grant, not a printed keyword — otherwise this guards nothing",
+        );
+        g.players[1].life = 2;
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: flyer,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(
+            blocks,
+            vec![(ground, flyer)],
+            "a granted Reach blocks a flier at 2 life; got {blocks:?}",
+        );
+        g.declare_blockers(blocks).expect("the plan is legal");
+    }
+
+    /// CR 509.1b, the other direction: a granted **Flying** on the attacker is
+    /// invisible to `AttackerFacts`' printed keyword reads, and a ground block
+    /// against it is what `declare_blockers` rejects — the whole batch, not the
+    /// pair. The engine is the oracle here, as in every guard in this family:
+    /// the plan is handed to it.
+    #[test]
+    fn bot_block_plan_honours_a_granted_flying() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, granting_anthem("Flying Anthem", Keyword::Flying));
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        assert!(
+            !g.battlefield_find(atk).unwrap().has_keyword(&Keyword::Flying),
+            "the flying is a grant, not a printed keyword",
+        );
+        for _ in 0..2 {
+            g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        }
+        // Low enough that the planner wants to chump, so the legality gate is
+        // the only thing that can stop it.
+        g.players[1].life = 2;
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.declare_attackers(vec![crate::game::Attack {
+            attacker: atk,
+            target: crate::game::AttackTarget::Player(1),
+        }])
+        .expect("attack");
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.is_empty(), "no ground creature may block a granted flier: {blocks:?}");
         g.declare_blockers(blocks).expect("the plan is legal");
     }
 
