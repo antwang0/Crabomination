@@ -1858,7 +1858,11 @@ sum to a tip-to-tip delta):
 
 Two changes were built, measured and reverted in the same pass: the memo on
 `dispatch_board_scan` and its extension to the creature/land type siblings.
-Both are written up above with their numbers.
+Both are written up above with their numbers — and **the first of the two was
+re-taken at the eighty-eighth pass in a different shape** (`cube` -0.317 %):
+see that block. The refutation was right about the shape it measured and
+wrong about the row, which is the best thing a refutation with numbers can
+do.
 
 **(6) A sixth commit is measured on the ACTOR, because `--bench` cannot see
 it at all** — `encode_state` is never called on the ladder path.
