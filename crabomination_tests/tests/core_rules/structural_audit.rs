@@ -158,7 +158,11 @@ fn a_clear_any_grant_bit_is_authoritative_for_every_predicate() {
     use crabomination::card::{Keyword, grant_bits};
     use crabomination::mana::Color;
 
-    let battery: Vec<(&str, Box<dyn Fn(&Keyword) -> bool>)> = vec![
+    /// One named predicate of the battery — a `type` because the tuple is
+    /// past clippy's complexity floor inline.
+    type NamedPred<'a> = (&'a str, Box<dyn Fn(&Keyword) -> bool>);
+
+    let battery: Vec<NamedPred<'_>> = vec![
         ("flying", Box::new(|k: &Keyword| matches!(k, Keyword::Flying))),
         ("haste", Box::new(|k: &Keyword| matches!(k, Keyword::Haste))),
         ("hexproof", Box::new(|k: &Keyword| matches!(k, Keyword::Hexproof))),
