@@ -2342,6 +2342,33 @@ so the poll quantum is noise.** And the fingerprint check did pass — both bina
 games with 0 stalls** — which is what says the two tips play the same games
 and that only the clock was in doubt.
 
+**AND THE QUESTION AN Ir PROFILE CANNOT ASK ABOUT THIS PASS: THE MEMO WORD IS
+ON A `CardData` THAT ACTORS SHARE, SO WHY IS IT NOT FALSE SHARING?** Worth
+writing down because the whole device rests on it and callgrind is
+single-threaded.
+
+`sealed_pool` and `sealed_game_template` are `OnceLock`s, so every actor's
+deck is built from `CardInstance`s that **share one `Arc<CardData>`** with
+the pool, and `CardMemo` is written through `&self`. Three facts make that
+safe and quiet:
+
+* **A write to a card never clears a *shared* memo.** `CardInstance`'s
+  `DerefMut` is `Arc::make_mut` *then* `clear()`, and `make_mut` on a shared
+  `Arc` clones first — so the `clear()` lands on the thread's own copy and
+  the pool's original keeps its answers. There is no cross-thread
+  invalidation to ping-pong on.
+* **The only cross-thread write is the fill, and it is idempotent.** Every
+  slot is a pure function of the definition, so N actors racing to fill the
+  same word all store the same bits; a lost update costs a recompute. That is
+  why the setters are a plain load-modify-store and not a `fetch_or`.
+* **`Clone for CardMemo` carries the value**, so a card cloned out of the
+  pool starts warm rather than cold.
+
+**The steady state is therefore a shared-read line**, which is what a
+thread-caching profile would want. If a future pass ever adds a slot that is
+*not* a function of the definition alone, this paragraph stops being true and
+the slot needs its own word.
+
 **THE ROBUSTNESS GATE WAS RUN FOR ALL SEVEN MEMO FAMILIES, ON GAMES RATHER
 THAN TESTS, AND IT IS CLEAN.** Every memo this pass added rests on a
 `debug_assert!` that re-runs the computation on a hit, and (-58)'s rule is
