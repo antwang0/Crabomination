@@ -14521,9 +14521,11 @@ impl GameState {
         // whole-game gather. They share `bf_cp`, which is lazy: each gate asks
         // a presence gate for the exact bit it wants and only forces the view
         // when the answer could be `true`. Off the battlefield the keyword
-        // gates answer `false` outright (`card_keyword_possible` starts with a
-        // `battlefield_find`), which is the same answer the old code paid a
-        // gather to get back as `None`.
+        // gates answer `false` outright (a `bf_src!()` miss), which is the
+        // same answer the old code paid a gather to get back as `None`. Both
+        // take `card_keyword_possible_on` off the permanent this frame has
+        // already found rather than the `CardId` form, which opens with a
+        // second `battlefield_find`.
         let tap_gated = ability.tap_cost || ability.untap_self_cost;
         let on_battlefield = !source_in_gy && !source_in_hand && !source_in_command;
 
@@ -14531,8 +14533,10 @@ impl GameState {
         // activated" (Serra Bestiary). Read off the computed keyword set so a
         // granted restriction applies immediately.
         if tap_gated
-            && self.card_keyword_possible(card_id, |k| {
-                *k == Keyword::CantActivateTapAbilities
+            && bf_src!().is_some_and(|src| {
+                self.card_keyword_possible_on(src, |k| {
+                    *k == Keyword::CantActivateTapAbilities
+                })
             })
             && bf_cp!()
                 .as_ref()
@@ -14560,7 +14564,12 @@ impl GameState {
         // activate its non-mana abilities. Battlefield sources only.
         if on_battlefield
             && !ability_is_mana
-            && self.card_keyword_possible(card_id, |k| *k == Keyword::CantActivateAbilities)
+            && bf_src!()
+                .is_some_and(|src| {
+                    self.card_keyword_possible_on(src, |k| {
+                        *k == Keyword::CantActivateAbilities
+                    })
+                })
             && bf_cp!()
                 .as_ref()
                 .is_some_and(|c| c.keywords().has_kw(&Keyword::CantActivateAbilities))

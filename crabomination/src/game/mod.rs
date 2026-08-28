@@ -9098,7 +9098,7 @@ impl GameState {
         if !is_creature {
             return false;
         }
-        if self.card_keyword_possible(card_id, |k| *k == Keyword::Haste)
+        if self.card_keyword_possible_on(src, |k| *k == Keyword::Haste)
             && self
                 .computed_permanent(card_id)
                 .is_some_and(|c| c.keywords().has_kw(&Keyword::Haste))
@@ -9255,6 +9255,21 @@ impl GameState {
         pred: impl Fn(&Keyword) -> bool,
     ) -> bool {
         let Some(c) = self.battlefield_find(id) else { return false };
+        self.card_keyword_possible_on(c, pred)
+    }
+
+    /// [`card_keyword_possible`](Self::card_keyword_possible) for a caller
+    /// that already holds the permanent. The `CardId` form opens with a
+    /// `battlefield_find` — a linear walk of ~23 `Arc`-boxed permanents whose
+    /// `id` is behind a pointer — and `activate_ability_inner`'s two CR 602.5
+    /// gates and `tap_ability_summoning_sick` have all resolved that lookup
+    /// already. Off the battlefield the id form answers `false`, which is
+    /// what those callers' `is_some_and` gives back.
+    pub(crate) fn card_keyword_possible_on(
+        &self,
+        c: &CardInstance,
+        pred: impl Fn(&Keyword) -> bool,
+    ) -> bool {
         c.definition.keywords.iter().any(&pred)
             || c.granted_keywords_eot.iter().any(&pred)
             || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
