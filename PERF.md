@@ -835,6 +835,32 @@ that measured it — is **not** what happened, deliberately: the detail is the
 refutation, and a rule refuted on a *mechanism* stays refuted. Compact it
 here if it ever needs compacting.
 
+- **Price a `find` site at its expected stopping point, not at the
+  collection's length** (pass 92's concurrent third, and it cost a build).
+  A `battlefield.iter().find(|c| c.id == id)` for a permanent that *is* there
+  stops at the match: half the board at worst, and much less for the lands an
+  auto-tap walks in board order. Two such sites were sized at ~120 Ir apiece
+  from "23 `Arc`-boxed permanents at ~5 Ir each" and measured ~58.
+  `(-38)`'s "read a `cg_sites` number as a **floor**" is about a *sampled
+  instrument* and does not transfer to hand arithmetic over a `find`.
+- **A gate is worth the population it covers, so check each conjunct's hit
+  rate before writing it down — and then check what widening it costs on the
+  pool that gains nothing** (same pass, and the second half is why the change
+  was reverted). `granted_abilities_of`'s gate tests `me.counters.is_empty()`
+  for the Cauldron leg and 35 % of the permanents the mana sweeps visit carry
+  a counter; replacing it with a board-level bit recovers that third and reads
+  `sealed` **-0.129 %** / `cube` **-0.043 %** / `fixed` **+0.005 %**. The
+  `fixed` sign is the extra conjunct and the wider `GrantScan` — built per
+  sweep — not the bit's walk, which never runs on a pool whose archetypes
+  carry no `static_abilities`. **A conjunct swapped into a gate is a struct
+  field somewhere, and the pool that does not gain still pays for it.**
+- **A rebase shrinks a patch without shrinking its measurement** (same pass;
+  the cauldron entry states the rule from the worktree side and it is the same
+  failure). A whole-gate A/B taken at a base that predated a concurrent
+  session's equivalent gate became a one-conjunct diff on rebase and kept the
+  whole-gate number. Re-read the moved row at the **tip** before filing, and
+  treat a changed *row name* — a split, an inline, a rename — as a base
+  mismatch rather than a rounding difference.
 - **An iterator adapter chain is a *per-element* branch, and on a whole-board
   walk it can be more than the loop body** (pass 87, the concurrent half,
   (-78); `fixed` -0.839 % / `cube` -0.552 % for one site).
@@ -1938,6 +1964,138 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### Ninety-second pass (3) — one lock per scoped read, and a `find` is not its collection's length
+
+**A concurrent session's pass, run against `414acf08` and rebased twice onto
+this one.** Three commits landed and a fourth was reverted; the rebase is why
+the third row below has to be read at its own base rather than at the tip
+(see the cauldron entry underneath, whose diagnosis is right and whose
+mechanism is named at the end of this block).
+
+**(1) `computed_permanent` takes one mutex acquisition per scoped read, not
+two.** `5bc5738e`. The `perms` scan, the `memo` read, the layer pass and the
+store now all happen under the guard the scan already holds — one reborrow of
+the `MutexGuard` splits the two fields, so the pass can read `memo` while the
+store writes `perms`. Only the scope's *first* computed read still takes a
+second acquisition, because the gather needs `&self`. Borrowing `memo` in
+place rather than `clone()`ing it out also drops an
+`Arc<Vec<ContinuousEffect>>` refcount pair per miss.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1
+--seed 1.  Base 414acf08.
+  fixed   1,021,019,947 -> 1,017,533,921   -0.341 %
+  cube    3,095,128,061 -> 3,085,435,398   -0.313 %
+  sealed  3,049,332,123 -> 3,039,720,730   -0.315 %
+
+cube: computed_permanent 90,526,388 -> 80,831,002   -9,695,386
+      program                                       -9,692,663
+```
+
+**Every other row on `cube` is byte-identical**, which is what a change
+confined to one function's prologue should look like. 387,848 calls at that
+base, 227,430 of them misses (the `__rust_alloc` edge counts them); the
+178,574 that had a memo to read stop paying an acquisition each. **Holding
+the guard across the pass cannot deadlock, and that is a property of the
+callee's signature rather than of an audit**: `apply_layers_one_gated` takes
+`&CardInstance` and `&[ContinuousEffect]` and has no `&GameState` to re-enter
+through.
+
+**(2) The CR 602.5 gates ask about the permanent the frame already found —
+and it is a third of what the arithmetic said.** `eb665c51`.
+`card_keyword_possible` opens with a `battlefield_find`;
+`activate_ability_inner` had resolved that lookup into `bf_pos` before its
+gate prelude and `tap_ability_summoning_sick` is handed the instance
+outright. All three take a `card_keyword_possible_on(&CardInstance, ..)` form.
+
+```text
+Base 63fc138d (this session's own, pre-rebase).
+  fixed   1,014,249,783 -> 1,013,975,369   -0.027 %
+  cube    3,080,357,393 -> 3,078,914,312   -0.047 %
+  sealed  3,029,710,314 -> 3,028,476,106   -0.041 %
+
+cube: card_keyword_possible   9,613,438 ->        0  (inlines into the caller)
+      activate_ability_inner (three monos)      +9,069,374
+      tap_ability_summoning_sick 5,419,324 -> 4,837,954   -581,370
+      Graveyard::has_anthem        945,036 ->   629,124   -315,912
+      program                                     -1,443,081
+```
+
+**Price a `find` site at its expected stopping point, not at the collection's
+length.** The site was sized at ~120 Ir a call from "23 `Arc`-boxed
+permanents at ~5 Ir each" and measured ~58. A linear scan for a permanent
+that *is* there stops at the match — half the board at worst, and much less
+for the lands an auto-tap walks in board order. `(-38)`'s "read a `cg_sites`
+number as a **floor**" is about a sampled instrument and does not transfer to
+hand arithmetic over a `find`.
+
+**(3) The Cauldron bit — built, measured twice in isolation, REVERTED as a
+pool split.** `ea2cb263`. `granted_abilities_of`'s grants-nothing gate
+carries `me.counters.is_empty()` for Agatha's Soul Cauldron's leg, and **35 %
+of the permanents those sweeps visit carry a counter** (68,632 `is_creature`
+calls out of 196,272 visits came from that leg alone, at `414acf08`) — so the
+conjunct costs the gate a third of its population. Moving the question to the
+board (a `GrantScan::cauldron` bit off the static-source walk `grant_scan`
+already makes) is the obvious fix and it does not pay:
+
+```text
+whole mechanism vs none, both sides built at the tip that carried it
+  84574233   fixed  1,003,144,920 -> 1,003,202,425   +0.0057 %
+             cube   3,006,398,723 -> 3,005,261,166   -0.0378 %
+             sealed 2,999,005,581 -> 2,995,295,037   -0.1237 %
+  ea2cb263   fixed  1,000,218,574 -> 1,000,266,918   +0.0048 %
+             cube   3,000,861,798 -> 2,999,574,487   -0.0429 %
+             sealed 2,981,763,332 -> 2,977,912,099   -0.1292 %
+```
+
+**The two isolations agree and the second one answers the obvious objection.**
+The first wrote the bit into a local captured by
+`for_each_static_source`'s closure; the second writes it straight through the
+`&mut scan` capture the closure already holds, so no capture is added — and
+`fixed` still reads **+~50,000 Ir**. So the `fixed` cost is the *gate's extra
+conjunct and the wider `GrantScan`*, not the closure and not the walk: those
+four archetypes carry no `static_abilities` entry at all, so the bit's own
+`matches!` never runs on that pool. The gain scales with how many permanents
+carry counters, which is why `sealed` sees twenty-six times what `fixed` sees
+of nothing. **A pool split is a revert** — this file's own precedents block
+`fixed` +0.108 % and record `sealed` +0.005 % as one — so the mechanism came
+out and the durable half (a third of the population; the refutation) stayed as
+a comment on the conjunct.
+
+**And the mechanism behind the cauldron entry below is a *rebase*, not a
+stale worktree.** That entry's diagnosis is exactly right and its rule is the
+right rule; the instance it is generalising from is this: the A/B ran in the
+**main tree** at `414acf08`, which predated `d1f0caab`'s gate, and `git
+rebase` then shrank a whole-gate patch into a one-conjunct patch **without
+shrinking the number in the message**. A worktree freezes the base and so
+produces the same failure; so does a long-lived branch. The check the entry
+gives — re-read the moved row at the tip, and treat a changed *row name* as a
+base mismatch — catches all three, and it caught this one.
+
+**Closing state.**
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,055 / 0 / 5 at the merged tip; 18,198 / 0 / 0 for the functional
+        crate after the revert; golden traces unmoved throughout
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) / determinism ok — byte-identical to the
+        committed invariant at this session's base and at its own tip
+        peak_rss_mib 24.1-26.2 either side
+```
+
+**The clock could not see this pass and the run that says so is the one to
+quote.** `ab_wall.py`, 5 ABBA blocks, `--games 2000 --decks fixed --seed 11
+--threads 3`, base binary kept aside before the tip was built: **mean B/A
++1.62 %, 95 % CI -0.78 .. +4.02 %, verdict FLAT** — the sample cannot
+resolve anything smaller than ±2.40 %, and the Ir delta was a quarter of
+that. Do not read the point estimate as a regression: no null control was
+run, and `host_calib_ms` went **54 -> 60** between the two `--bench` readings,
+i.e. the container got ~11 % slower over the hours between them. **Read
+`host_calib_ms` beside any rate before comparing two readings taken hours
+apart.**
 
 ### The cauldron bit re-measured in isolation, and the rule about a worktree base
 
@@ -11427,6 +11585,53 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-84) THE BLOCK-LEGALITY TRIO IS 1.46 % OF `cube` AND TWO OF ITS THREE
+ROWS HAVE A NAMED SHAPE.** Read at `ea2cb263`, `--decks cube`, and all three
+are off the top thirty on `fixed` — this is a `cube`/`sealed` entry, so size
+it there.
+
+```text
+  74,692 calls   16,206,302   0.540 %   blocker_self_block
+  62,366         14,267,772   0.475 %   blocker_pair_block
+  61,408         13,400,800   0.447 %   can_block_attacker_computed
+```
+
+**(a) `can_block_attacker_computed` makes 22 passes over two short keyword
+slices.** Thirteen over `attacker_kws` (six `has_kw`, three
+`iter().any(matches!)`, two more `has_kw` for Fear/Intimidate, then the
+protection loop and the `CantBeBlockedExceptBy` loop) and nine over
+`blocker_kws`. The function is a **pure disjunction** — every arm returns
+`false`, the fallthrough returns `true` — so the order of the tests is not
+load-bearing and one pass per side accumulating flags is behaviour-preserving
+by construction. Every keyword it tests by `has_kw` is a *unit* variant, so a
+`match` arm is exactly the discriminant compare `has_kw` does. **Size it
+against `(-78)`'s test 1 before building**: these are short *per-call*
+slices, not a board walk, so what is on offer is the 20 loop set-ups and not
+the elements.
+
+**(b) `blocker_self_block`'s Void Winnower leg is a whole-board
+`static_abilities` walk taken on half of all blockers.** Its only gate is
+`blocker.definition.cost.cmc().is_multiple_of(2)`, and **zero is even**, so
+every colourless and every even-cost blocker pays it;
+`OpponentsCantBlockWithEvenMv` is one card. The shape wants a block-side twin
+of `attack_static_scan` threaded through `blocker_can_block_anything` (whose
+doc already says it is asked once per blocker, not per pair), and the
+signature change reaches `blocker_can_block_attacker`, which is `pub`.
+**Probe it first** with `(-78)`'s device — replace the walk with `false`,
+build, read `cube` — because an early-exiting `any` over ~23 cards is exactly
+the shape the ninety-second pass's concurrent third found to be a third of
+its arithmetic.
+
+**(c) NOT NEW, twice over.** `granted_abilities_of_inner`'s residue is
+93,770 calls / 15,319,136 / 0.51 % of `cube`, and the requirement-walker half
+of it is `(-83)`'s `granted_abilities_of` row — read that entry, not this
+one. And `Unfreeze::drop` (207,446 calls / 10,235,176 self) has one callee,
+`Arc::drop_slow` at **205,032 calls / 39,365,409 Ir inclusive, 1.31 % of
+`cube`** — freeing the `ComputedPermanent`s the scope memoized, i.e.
+`(-80)`'s pool, built and refuted with a ledger. Roughly one `Arc` per scope,
+so a "skip `end_of_scope` when the scope memoized nothing" bit would fire on
+almost nothing.
 
 **(-82) THE BOT'S HAND SWEEP IS 5.8-6.9 % OF EVERY POOL AND IT IS TWO
 QUESTIONS: "CAN I PAY FOR IT" AND "WHAT WOULD I AIM IT AT".** Read at the

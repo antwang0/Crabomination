@@ -42,7 +42,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    the more useful half: print `t_step_ms` against `elapsed_s` before quoting
    any `selfplay_train` throughput number. **BOLT is blocked here** — no
    `llvm-bolt` in the toolchain and no `perf` in the image.
-1. **Perf queue** — PERF "Perf candidates", top-down. **`(-82)` and `(-83)`
+1. **Perf queue** — PERF "Perf candidates", top-down. **`(-84)` is the
+   block-legality trio — 1.46 % of `cube`, off the top thirty on `fixed` —
+   and two of its three rows have a named shape and a probe.** `(-82)` and
+   `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
    requirement walker (2.2-3.4 %, the third-largest engine function on
@@ -71,7 +74,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    reads 1.10 % as a row and 3.36 % folded on `cube`, and no table here has
    ever named it), and **Ir/call on a function a gate is about to split is
    the average of two populations, not the price of the calls the gate
-   removes**.
+   removes**. Its concurrent third adds a third: **a rebase shrinks a patch
+   without shrinking its measurement** (see PERF's standing rules and the
+   cauldron entry), and **the Cauldron bit is now reverted** — recovering the
+   third of the gate's population that `me.counters.is_empty()` costs reads
+   `sealed` -0.129 % / `cube` -0.043 % / `fixed` **+0.005 %**, measured twice,
+   and the `fixed` sign is the wider `GrantScan`, not the walk. Do not
+   rebuild it.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
@@ -110,10 +119,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    is in the tree to copy. The remaining ~126 and their deltas are sized in
    PERF's "Test-suite cleanup". One commit per file batch, suite green either
    side; it is a convention change, not a build-time one.
-8. **Tip state / build time / filters** — PERF's two newest Baseline blocks.
-   **Anchor, MEASURED at `2a59a81c` rather than accumulated from claimed
-   deltas: `fixed` 1,003,202,820 / `cube` 3,005,261,303 / `sealed`
-   2,995,293,565.** (At `96ec5071` it was 1,012,617,375 / 3,026,000,396 /
+8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
+   **Anchor, MEASURED at `ea2cb263`: `fixed` 1,000,218,574 / `cube`
+   3,000,861,798 / `sealed` 2,981,763,332.** (At `2a59a81c` it was
+   1,003,202,820 / 3,005,261,303 / 2,995,293,565.) (At `96ec5071` it was 1,012,617,375 / 3,026,000,396 /
    3,022,989,126, so **-0.93 / -0.69 / -0.92 %** since.) Re-read the anchor,
    don't sum the rows — PERF's cauldron-bit entry is why: one row was filed
    ~7x high because its A/B ran in a worktree whose base predated the change
@@ -127,7 +136,19 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    and why a one-sided series across a restart read the sign backwards. Then
    ENGINE_BACKLOG for the
    seven filters. **`--bench` is a 1.2-s run on a shared box: check
-   `host_calib_ms` (idle 46-49) before believing a `games_per_s`.**
+   `host_calib_ms` (idle 46-49, and it read 54 then 60 across one session's
+   base and tip readings — an ~11 % container slowdown over three hours)
+   before believing a `games_per_s`.** For a clock comparison use
+   `ab_wall.py`: 5 ABBA blocks of `--games 2000 --decks fixed` resolve
+   **±2.40 %** and nothing smaller, so a sub-1 % Ir change will read FLAT and
+   that is the expected answer, not a contradiction.
+   **`cargo nextest` is not in the image** — `curl -sSLf
+   https://get.nexte.st/latest/linux -o /tmp/nt.tar.gz && tar -xzf
+   /tmp/nt.tar.gz -C ~/.cargo/bin` is the whole setup; don't fall back to
+   `cargo test`. Build budgets: cold `profiling-fast` bot_ladder ~14 min, an
+   engine-only rebuild of it ~4.5 min, `release` ~24-30 min, a debug suite
+   build + run ~9 min. **Take `release` once at the tip as the closing gate,
+   not per candidate.**
 
 **Compacted at the ninety-first pass from 90 lines** — a paragraph per pass
 restating numbers that live one file away, which the header forbids. Add a
