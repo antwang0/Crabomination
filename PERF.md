@@ -1521,6 +1521,42 @@ build.
 
 ## Baseline
 
+### Eighty-eighth pass — a `Box` field that is written once and cloned 22,684 times
+
+**The (-76) class has a third shape and nobody had swept for it: a `Box<T>`
+field on a copy-on-write-adjacent struct that is *never written after it is
+set*.** `GameState::resolving_spell_snapshot` is
+`Option<Box<ResolvingSpell>>`, stamped at the top of each spell resolution
+(CR 706, so a mid-resolution copy rider can still read the popped stack
+entry) and read exactly once, by `Effect::MayCopyThisSpell`. `GameState::
+clone` runs **22,684 times a `cube` run** and **21,440 of them — 94.5 % —
+deep-copied it**, because the bot's probes clone mid-resolution.
+`Option<Arc<ResolvingSpell>>` makes the clone a refcount bump.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base f8e3d357.
+  fixed   1,059,432,363 -> 1,056,387,174   -0.287 %
+  cube    3,217,548,728 -> 3,211,031,131   -0.203 %
+  sealed  3,163,681,558 -> 3,156,653,723   -0.222 %
+  allocations 1,650,928 -> 1,629,032  (-21,896)
+  `GameState::clone`'s callee list loses `Box::clone` entirely
+  (525,972 -> 504,532 calls)
+```
+
+**The -21,896 is 456 more than the 21,440 `Box`es**, and those are the
+`Vec<Target>` inside them: a `Box` deep copy clones what it points at, so the
+allocation count is the box *plus* every heap field under it. **`fixed` reads
+the largest of the three**, which is the opposite of most rows here — the
+bench archetypes cast the same spells with fewer permanents around them, so
+the clone is a bigger share of a smaller program.
+
+**The sweep this suggests, for the next run:** grep `GameState` and
+`PlayerData` for `Box<` and ask of each whether anything writes it after it
+is set. `Arc` is free on a field nothing mutates and wrong on one that is,
+and `Box` is the default only because it was written before the struct
+started being cloned twenty thousand times a run.
+
 ### Eighty-eighth pass — `dispatch_board_scan` IS the memo's row after all, and the refutation one entry up was measuring the wrong shape of it
 
 **The eighty-seventh pass's concurrent half built three bits into

@@ -1656,7 +1656,7 @@ impl GameState {
                 // runs; a "copy this spell" rider resolves after the stack
                 // entry is already popped (the Chain cycle).
                 self.resolving_spell_snapshot =
-                    Some(Box::new(crate::game::ResolvingSpell {
+                    Some(std::sync::Arc::new(crate::game::ResolvingSpell {
                         definition: card.definition.clone(),
                         target: target.clone(),
                         additional_targets: additional_targets.clone(),

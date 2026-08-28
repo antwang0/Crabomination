@@ -2105,7 +2105,10 @@ pub struct GameState {
     /// mint a copy after `resolve_stack_item` popped the stack entry. Set at
     /// the top of each spell resolution, cleared at the top of the next one.
     #[serde(skip)]
-    pub(crate) resolving_spell_snapshot: Option<Box<ResolvingSpell>>,
+    /// `Arc`, not `Box`: it is written once per resolution and never mutated,
+    /// and `GameState::clone` runs 22,684 times a `cube` run — a `Box` deep-
+    /// copied its `Vec<Target>` on 94.5 % of them.
+    pub(crate) resolving_spell_snapshot: Option<std::sync::Arc<ResolvingSpell>>,
     /// Seat whose resolving instant/sorcery has deathtouch (Pestilent Spirit —
     /// `YourISSpellsHaveDeathtouch`). Stamped around the spell's resolution and
     /// cleared after; read in `deal_damage_to_from`. Transient.
