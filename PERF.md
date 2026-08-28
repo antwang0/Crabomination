@@ -2151,7 +2151,24 @@ exactly like this. The check is cheap and mechanical:
 * **and check the gate line: a suite count that no longer matches the tip's
   dates the whole measurement.**
 
-The code stands. Only the number moves.
+**AND THEN THE CODE DID NOT STAND EITHER — `ea2cb263` reverts it, and the
+re-measurement is the better one.** This entry closed on "the code stands, only
+the number moves"; the concurrent half re-ran the A/B properly (both sides at
+`84574233`, the bit's *computation* removed on the A side, all three pools) and
+the answer is a **pool split**: `fixed` **+0.0057 %**, `cube` -0.0378 %,
+`sealed` -0.1237 %. A pool split is a revert, and the mechanism names itself —
+the four `fixed` archetypes carry no `static_abilities` entry, so the bit's
+`matches!` never runs there and the +57,505 is the *wider* `GrantScan`, one
+more field on a struct built per sweep. The gain scales with how many
+permanents carry counters, which is why `sealed` sees six times what `fixed`
+sees of nothing.
+
+Two readings agree to within a few thousandths of a percent on `cube` on two
+different bases (-0.053 % here, -0.038 % there, the difference being whether
+the bit's computation is present on the A side), which is the cross-check that
+makes the revert safe to take. **The durable half of this entry is the rule
+about the worktree base, not the row**; `me.counters.is_empty()` keeps the
+"a third of the population" count as a comment, with the refutation beside it.
 
 ### Ninety-second pass (2) — a probe's caller is a gate until you have counted it
 

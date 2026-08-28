@@ -103,8 +103,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `draw`, which is a game outcome, not a stall. **Re-run again at the
    ninety-second pass with its gate in** — the script's own 30-cell grid,
    33,120 games, 0 undecided, 0 failures, with that pass's `debug_assert!`
-   verified present in the audited binary. Neither pass re-armed the
-   4,000-pairing cube sweep: both are behaviour-preserving by construction and
+   verified present in the audited binary. **And re-run once more at
+   `e1659cd3`, with every behaviour change of the pass in** — the CR 613.8
+   fix, both `OptionalTrigger` policies, the event-buffer recycle, the
+   freeze-scope gates, the CR 602.5 frame reuse and the grants-nothing gate:
+   30 cells, 33,120 games, 0 undecided, 0 failures, with `--bench`
+   byte-identical at that tip (195,528 / 27.44 / 611.0 / 0 stalls /
+   `determinism ok` / `thread_determinism ok 3 vs 1`). No pass re-armed the
+   4,000-pairing cube sweep: all are behaviour-preserving by construction and
    `--bench` is byte-identical through them.
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
    Card audits clean — see INCOMPLETE_CARDS.
