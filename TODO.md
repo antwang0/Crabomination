@@ -47,11 +47,16 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 1. **Perf queue** — PERF "Perf candidates", top-down. **`(-84)` is the
    block-legality trio — 1.46 % of `cube`, off the top thirty on `fixed`.
    Its (a) is TAKEN (-0.125 / -0.262 / -0.176 %, the row fell 58 %) and
-   **(b) is now a refutation with two builds behind it**: the leg is worth
-   -0.113 / -0.333 / -0.222 % by deletion and a hoisted `block_static_scan`
-   costs `fixed` +0.090 %, because the leg is conditional and a block pass
-   has one to three candidates. **Divide a loop's item count by its call
-   count before hoisting a per-item board walk out of it.** `(-82)` and
+   **(b) is TAKEN too, one pass after the hoist that was supposed to take it
+   was built twice and refuted** (-0.032 / -0.179 / -0.093 %, 28/54/42 % of
+   the deletion ceiling, all three pools). The hoist lost because a block
+   pass has one to three candidates; the `PresenceGate` slot wins because a
+   *freeze scope* spans the whole tick. **Two rules, and the second is the
+   one to carry: divide a loop's item count by its call count before
+   hoisting a per-item board walk out of it — and when the hoist fails
+   because the loop is short, ask whether the scope is long.** Cost of a
+   slot is `(-85)`, now top of the queue: `clear_gates` is one store per
+   slot at every scope exit, so each gate taxes every scope. `(-82)` and
    `(-83)`
    are new and are the first sizing this file has of the bot's hand sweep
    (5.8-6.9 % of every pool, and 75-84 % of it is two questions) and of the
