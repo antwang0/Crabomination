@@ -44,7 +44,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    remaining first-reads are the queue's cheapest leads. Taken/closed:
    `(-70)`, `(-79)`, `(-77)`, `(-60)`, `(-39)`, the `Box` class, `(-80)` rows
    1 and 2 — **row 1 is now a built refutation with a ledger, not an
-   argument.**
+   argument.** The ninety-second pass adds two things the queue can use
+   directly: **fold a `'N` row into its parent before ranking a self table**
+   (it is callgrind's recursion level, not a monomorphization — the walker
+   reads 1.10 % as a row and 3.36 % folded on `cube`, and no table here has
+   ever named it), and **Ir/call on a function a gate is about to split is
+   the average of two populations, not the price of the calls the gate
+   removes**.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
@@ -60,7 +66,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    x 120 games/archetype, **38,400 games, no panic, no assertion, no
    overflow**, which is what audits the two new presence gates' soundness
    asserts. `cap 0 / stuck 0` throughout; 4 games of `--decks all` ended
-   `draw`, which is a game outcome, not a stall.
+   `draw`, which is a game outcome, not a stall. **Re-run again at the
+   ninety-second pass with its gate in** — the script's own 30-cell grid,
+   33,120 games, 0 undecided, 0 failures, with that pass's `debug_assert!`
+   verified present in the audited binary. Neither pass re-armed the
+   4,000-pairing cube sweep: both are behaviour-preserving by construction and
+   `--bench` is byte-identical through them.
 6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
    Card audits clean — see INCOMPLETE_CARDS.
 7. **ML** — ML_NOTES. Open, not unilateral: should `selfplay` seed

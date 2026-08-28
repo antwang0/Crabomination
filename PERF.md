@@ -1723,6 +1723,144 @@ build.
 
 ## Baseline
 
+### Ninety-second pass — the answer was "nothing", and the function was finding that out the long way
+
+**`granted_abilities_of` gets a grants-nothing gate.** Every one of the body's
+eighteen `out.push`/`out.extend` sites draws from one of ten sources, and all
+ten are a length load: the instance's two grant lists
+(`granted_activated_abilities`, `granted_activated_eot`), the four `GrantScan`
+vectors (`statics`, `graveyard`, `soulbond`, `equipment`), `deploy_creatures`,
+the counter bag (Agatha's Soul Cauldron), the definition's Station bands, and
+`static_abilities` — which is where all six `HasActivatedAbilitiesOf*` markers
+*and* Conspicuous Snoop's re-read come from, so one `is_empty()` rules out
+that whole half at once. With all ten empty the body can only return
+`Vec::new()`.
+
+```text
+bot_ladder --a gang --b gang --games 6 --threads 1 --seed 1, callgrind,
+profiling-fast --no-default-features.  Base = the ninety-first tip `9c501f42`.
+  fixed   1,021,019,898 -> 1,015,163,661   -0.574 %
+  cube    3,095,128,492 -> 3,086,949,158   -0.264 %
+  sealed  3,049,332,123 -> 3,037,627,253   -0.384 %
+```
+
+**Measured twice, on two bases 22 M Ir apart, and the two agree to three
+thousandths of a percentage point.** The patch was first built and read
+against `636ddb17` — before (-70) landed underneath it — with both halves back
+to back in one warm cache: `fixed` 1,027,456,023 -> 1,021,592,805 **-0.571 %**,
+`cube` 3,117,129,097 -> 3,108,939,402 **-0.263 %**, `sealed` 3,072,094,565 ->
+3,060,352,725 **-0.382 %**. The *absolute* Ir removed is the same to ~0.1 % on
+all three pools (5.86 M / 8.18 M / 11.70 M), which is what "independent of
+(-70)" looks like as a number instead of as an argument. And that `636ddb17`
+base is itself an independent re-reading of the one (-70) was measured against
+(`a2bfb104`): the two agree to **727 / 306 / 2,052 Ir**, the fifth such
+cross-check in this file.
+
+**The commit sits above `40334110`, not above `9c501f42`** — the concurrent
+half of the pass landed the freeze-scope gates while this was under
+measurement, so the row's base is two commits older than its parent. That is
+the file's convention (every row names its base) and it is safe here because
+the two changes do not meet: this one gates `granted_abilities_of`, which
+makes **zero** gather calls on `fixed` and is reached only from the three mana
+sweeps, none of which `40334110` touches. Every behaviour gate below was
+re-run on the rebased tip as well as on `9c501f42`, and both came back the
+same.
+
+**The gate answers for 82-87 % of the questions on two of the three pools.**
+
+```text
+pool     calls   reach the body   gated    self Ir before -> after
+fixed   88,550       15,992       81.9 %    9,139,184 ->  1,955,942
+cube   196,272       93,770       52.2 %   25,466,834 -> 15,319,136
+sealed 167,110       21,428       87.2 %   17,415,260 ->  2,992,742
+```
+
+**And the survivors got *dearer* per call, which is the gate working**: 103 ->
+122 Ir on `fixed`, 130 -> 163 on `cube`, 104 -> 140 on `sealed`. A permanent
+granted nothing runs the shortest path through the body, so the gate takes the
+cheap calls and what is left is the population that genuinely has a source to
+read. **The rule: Ir/call on a function a gate is about to split is not the
+price of the calls the gate will remove.** It is the average of two
+populations, and here the cheap one is five sixths of the count.
+
+**Why the question was worth asking at all: the three callers are
+whole-battlefield sweeps.** `bot::available_mana`,
+`effective_mana_abilities_into` and `bot::main_phase_action_with` each iterate
+the battlefield and ask per permanent, so the cost is one question per
+(permanent x sweep). On `fixed` the function made **zero calls to anything** —
+its entire 0.89 % row was the body finding nothing, which is the cleanest form
+the eighty-eighth pass's rule takes: *count the work items the bit elides*,
+and here the item is the whole body.
+
+**The gate is `#[inline]`, the body is not.** `release-fast` is cgu 16 with no
+LTO and the callers live in `server/bot.rs`, a different codegen unit from
+`game/actions.rs`; without the attribute the fast path would still pay a call
+and a frame. With it there is no `granted_abilities_of` row in the candidate
+dump at all — only `granted_abilities_of_inner`. The arithmetic says why it is
+worth the attribute: `fixed`'s body row fell 7.18 M while the program fell
+5.86 M, so ~1.3 M is the gate's own ten loads at the three call sites and the
+frames it stopped building are inside the 7.18 M.
+
+**The audit is a `debug_assert!`, not a comment.** The gate calls the body and
+asserts the answer is empty under `-C debug-assertions=yes`. That is the only
+thing keeping ten checks in step with eighteen pushes: a nineteenth push, from
+a source the checks do not cover, fails the suite and the grid instead of
+silently dropping an ability off a permanent. Same device as the `CardMemo`
+families and for the same reason — the invariant is a *correspondence* between
+two lists, and a later edit touches one of them.
+
+Gate: suite **19,239 / 0 / 5** under nextest (the `test` profile has
+debug-assertions on, so the audit ran on every one), clippy clean across the
+workspace, `--bench` byte-identical to the committed invariant (195,528
+decisions / 27.44 turns / 611.0 a game / 0 stalls / determinism ok /
+`thread_determinism ok (3 vs 1)`), and the robustness grid at `-C
+debug-assertions=yes` on `[profile.overflow]` — 30 cells, five pools x six
+seeds x 120 games, **33,120 games, 0 undecided, 0 failures**, with the audit's
+own string verified present in the audited binary (`strings | grep -c
+"grants-nothing gate missed a source"` = 2).
+
+### A `'N` suffix in a callgrind dump is a recursion level, not a monomorphization — and it has been under-reading one function by 2x
+
+Callgrind's `--separate-recs` defaults to **2**, so a function that recurses
+gets a second entry named `fn'2` and its self cost is **split across the two**.
+`cg_edges.py` ranks rows as the dump hands them over, so a recursive
+function's row understates it by whatever share of its work happens below the
+first frame — and a `::{{closure}}` row is a third slice of the same function.
+
+The case in point, read at `636ddb17`:
+
+```text
+  evaluate_requirement_static_hinted
+           row as printed      + '2        + ::{{closure}}      folded
+  fixed    18,487,092 1.80 %    1,204,214    2,543,926        2.17 %
+  cube     34,410,938 1.10 %   41,625,816   28,801,832        3.36 %
+  sealed   27,032,508 0.88 %   39,125,372    8,141,572        2.42 %
+```
+
+**Folded, it is the third-largest engine function in the program on `cube`** —
+behind only `dispatch_triggers_for_events` (6.14 %) and the gather (5.36 %),
+and ahead of `computed_permanent` (2.84 %) and `compute_permanent_pass`
+(2.58 %). No self table in this file has ever named it, because on every one of
+them it appeared as its first frame only.
+
+**The proof that `'2` is recursion and not a second instantiation is one line
+of the signature.** `fn evaluate_requirement_static_hinted<'a>(&'a self, …)`
+is generic over a *lifetime* only, and lifetimes are erased before codegen, so
+there is exactly one instantiation to have a row. Its caller table says the
+same thing from the other side: 1,468,226 calls on `cube`, of which **957,198
+(65 %) are the function calling itself** (542,354 from the base name, 414,844
+from `'2`), the rest arriving from `statics_granted_triggers_inner` (142,094),
+`granted_abilities_of` (105,436) and a tail.
+
+**This corrects a footnote in this file.** The (-40)-era table's "\* the `'2`
+monomorphization only; the two split differently per pool" reads `'2` as a
+second instantiation; it is the same instantiation one frame deeper, and "the
+two split differently per pool" is just recursion depth varying with board
+size. Wherever a `'N` row appears — `OnceCell::try_init'2`, `Map::fold'2`,
+`Arc::drop_slow'2`, `Vec::from_iter (nested)'2` — **fold it into its parent
+before ranking**, and fold the parent's `::{{closure}}` rows in too.
+
+
 ### Ninety-first pass (2) — a freeze scope only gathers if its first read makes it
 
 **`creature_redirects_damage_to_controller` and
@@ -10587,7 +10725,13 @@ touches.
 | `sba_board_scan` | 1.66 % | — | 1.77 % |
 | allocator (`malloc`+`free`+`_int_*`) | ~10.7 % | ~13.1 % | ~12.1 % |
 
-\* the `'2` monomorphization only; the two split differently per pool.
+\* **corrected at the ninety-second pass: `'2` is not a monomorphization.** It
+is callgrind's recursion level (`--separate-recs`, default 2), so this cell is
+one frame of a function whose self cost is split across two rows plus a
+`::{{closure}}`, and "the two split differently per pool" is recursion depth
+following board size. The folded figure is the one to compare — see the
+ninety-second pass's Baseline entry, where the same function reads 1.10 % as a
+row and **3.36 %** folded on `cube`.
 
 **The conclusion worth keeping: `fixed` is a sound proxy for the game loop
 and a useless one for the layer path.** The sealed pool — what
