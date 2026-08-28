@@ -45,7 +45,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    pass"** (moved there from this file this pass) and "Which pool a change
    moves". Read all three pools; a pool split is a revert.
 3. **Instruments before profiles** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
-   `server::bot_rejection_count`, `--bench`'s stall split.
+   `server::bot_rejection_count`, `--bench`'s stall split. **All re-read at
+   this tip** (PERF, above the eighty-seventh Baseline block): rejects **0 in
+   25 cells** over 246,000+ simulated declarations, and `CRAB_PAY_FAILS` on
+   `--decks fixed` has gone from ~700 to **zero** while `sos` is
+   byte-identical, which is what makes it a reading rather than drift.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
    encodings invalidate the trained nets. **Two commits this pass are inside
    `encode.rs` and neither moves a byte of output**: the library grouping
@@ -76,10 +80,15 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    tip.
 7. **ML** — deck judge 60.3 % pooled (ML_NOTES). Open, not unilateral: should
    `selfplay` seed `jitter_below` from `--seed`?
-8. **Tip state** — PERF "Baseline"'s newest "STATE AT …", and the actor
-   re-read in "Profile of record" (**-8.02 %** since pass 83, play identical).
-   The eighty-seventh pass is **-4.33 % `fixed` / -3.93 % `cube` / -3.76 %
-   `sealed`** across both halves, `--bench` byte-identical throughout.
+8. **Tip state** — PERF "Baseline"'s **CLOSING STATE** block: the
+   eighty-seventh pass is **-4.906 % `fixed` / -4.986 % `cube` / -4.571 %
+   `sealed`** end to end across both halves, with the rustc version and the
+   box fingerprint beside the numbers. The actor is **-8.02 %** since pass 83
+   with play byte-identical ("Profile of record"). `--bench` byte-identical
+   throughout; suite 19,063 / 0 / 5; clippy clean.
+   **The clock is a ladder-pool instrument, not an actor one**: the pass
+   reads -1.59 % paired on `ab_wall.py --decks fixed` with a flat null, and
+   `selfplay_train --actors 3`'s own null spreads ±26 %.
 9. **Filters** — all five syntax filters read zero; `audit_variant_coverage`
    needed a **bit bridge** this pass (a definition bitmask crossing the crate
    boundary made a live capability look dead) and reads zero again. **A sixth:
