@@ -88,7 +88,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    relink measured **flat** — `--no-run` builds in parallel and neither was
    on the long chain, which is the eight integration binaries. Name the
    target on that path before proposing a count change.
-10. **Filters** — six, all reading zero. `audit_decision_plumbing.py`'s 98
+10. **Filters** — **seven**. `audit_panics.py` is new and is the static half
+   of "no panic reachable from bot self-play", which until now was audited
+   only by *reaching* code: 109 sites off the bin/test paths, 75 guarded / 11
+   lock-poison / **23 bare, all 23 read and all safe** by a guard its 22-line
+   lookback cannot see (a correlated flag 57 lines up, an `Err` return 270
+   lines up, an `expect` message that states the proof). One real landmine
+   found and removed — `CounterBag`'s panicking `Index`. Compare the bare
+   count, don't re-quote it. The other six all read zero. `audit_decision_plumbing.py`'s 98
    bare sites are a triage population, and the eighty-ninth pass found the
    greppable sub-population that *is* a bug: **a site whose comment states the
    headless policy while relying on `AutoDecider`'s blanket
