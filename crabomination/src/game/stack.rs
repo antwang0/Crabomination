@@ -5056,9 +5056,19 @@ impl GameState {
         // their owners' graveyards. We group tied permanents, then consult the
         // controller's decider per group (AutoDecider keeps the newest).
         let legend_groups = {
-            let mut order: Vec<(usize, &str)> = Vec::new();
-            let mut groups: crate::fxhash::HashMap<(usize, &str), Vec<(CardId, String)>> =
-                crate::fxhash::HashMap::default();
+            // Insertion-ordered association list, not a `HashMap`: the map
+            // hashed a `&str` *card name* per legendary permanent per sweep,
+            // allocated a bucket table and a `Vec` for each group and then
+            // needed a parallel `order` list anyway to keep the iteration
+            // deterministic. A board carries one to four legendaries, so a
+            // linear scan over inline storage is cheaper than one hash of a
+            // name, and it is ordered by construction.
+            //
+            // The `String` clones move to the emission below with it: a group
+            // of one is discarded, and every group is one on nearly every
+            // sweep, so the old form allocated a name per legendary permanent
+            // to throw it away.
+            let mut groups: SmallVec<[(usize, &str, SmallVec<[CardId; 2]>); 4]> = SmallVec::new();
             // CR 704.5j reads *current* supertypes, so a continuous grant of
             // the Legendary supertype (Leyline of Singularity, the Ring's
             // emblem) counts. Only pay for the layer computation when such a
@@ -5077,7 +5087,7 @@ impl GameState {
             let mut out = Vec::new();
             if !scan.legend_rule_off && (scan.legendary || supertype_grant_active) {
                 // Walk descending by id so each group's vec is newest-first.
-                let mut by_id: Vec<_> = self
+                let mut by_id: SmallVec<[&CardInstance; 8]> = self
                     .battlefield
                     .iter()
                     .filter(|c| is_legendary(c))
@@ -5086,29 +5096,36 @@ impl GameState {
                     .collect();
                 by_id.sort_by_key(|b| std::cmp::Reverse(b.id));
                 for c in by_id {
-                    let key = (c.controller, c.definition.name);
-                    groups
-                        .entry(key)
-                        .or_insert_with(|| {
-                            order.push(key);
-                            Vec::new()
-                        })
-                        .push((c.id, c.definition.name.to_string()));
+                    let name: &str = c.definition.name;
+                    match groups.iter_mut().find(|(p, n, _)| *p == c.controller && *n == name)
+                    {
+                        Some((.., dups)) => dups.push(c.id),
+                        None => {
+                            let mut dups = SmallVec::new();
+                            dups.push(c.id);
+                            groups.push((c.controller, name, dups));
+                        }
+                    }
                 }
                 // CR 704.5j exception — a same-name group of exactly two whose
                 // members all carry `legend_pair_exempt` (Brothers Yamazaki) is
                 // skipped: the legend rule doesn't apply to them.
-                let pair_exempt = |dups: &[(CardId, String)]| -> bool {
+                let pair_exempt = |dups: &[CardId]| -> bool {
                     dups.len() == 2
-                        && dups.iter().all(|(id, _)| {
+                        && dups.iter().all(|id| {
                             self.battlefield_find(*id)
                                 .is_some_and(|c| c.definition.legend_pair_exempt)
                         })
                 };
-                for k in order {
-                    let dups = groups.remove(&k).unwrap_or_default();
+                for (player, name, dups) in groups {
                     if dups.len() > 1 && !pair_exempt(&dups) {
-                        out.push((k.0, k.1.to_string(), dups));
+                        out.push((
+                            player,
+                            name.to_string(),
+                            dups.into_iter()
+                                .map(|id| (id, name.to_string()))
+                                .collect::<Vec<_>>(),
+                        ));
                     }
                 }
             }
