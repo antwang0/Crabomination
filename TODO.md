@@ -28,12 +28,15 @@ sixty-seventh pass, so don't re-take that.
    push code before tracker prose, rebase not force, **sequential builds only**.
 2. **State at `633acc3e`**: suite 19,044 / 0 / 5, clippy clean, golden traces
    7/7 unmoved, `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
-   determinism + thread_determinism ok), grid green (30 cells / 33,120 games / 0 failures, with
-   the memo's new `share a CardId` assertion verified in the audit binary). Ir anchor and the
-   window's **-0.410 / -0.486 / -0.310 %** are in PERF's Baseline; **each
-   change names its own base**. This box is a 2.10 GHz Xeon (`host_calib_ms`
-   68 against the last pass's 49-56), so no `games_per_s` here compares to any
-   filed one — quote the pair or quote neither.
+   determinism + thread_determinism ok), grid green (30 cells / 33,120 games /
+   0 failures, the memo's new `share a CardId` assertion verified present in
+   the audit binary). Ir anchor and the window's **-0.410 / -0.486 / -0.310 %**
+   are in PERF's Baseline; **each change names its own base**.
+   **Re-verified at the combined tip** with two concurrent sessions' engine
+   commits (`5be9908c`, `ca2bf1a6`) on top: suite 19,044 / 0 / 5, clippy
+   clean, `--bench` still byte-identical, thread_determinism ok. This box is a
+   2.10 GHz Xeon and `host_calib_ms` drifts 51-68 within one session, so no
+   `games_per_s` here compares to any filed one — quote the pair or neither.
 3. **BEST NEXT MOVES, in order.** (a) **`(-38)` IS CLOSED and so is `(-94)`.**
    The `battlefield_find` index memo shipped at -0.283 / -0.446 / -0.300 %,
    and **both of its obvious variants are refuted with numbers in the same
