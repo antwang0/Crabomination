@@ -26,50 +26,35 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `633acc3e`**: suite 19,044 / 0 / 5, clippy clean, golden traces
-   7/7 unmoved, `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
-   determinism + thread_determinism ok), grid green (30 cells / 33,120 games /
-   0 failures, the memo's new `share a CardId` assertion verified present in
-   the audit binary). Ir anchor and the window's **-0.410 / -0.486 / -0.310 %**
-   are in PERF's Baseline; **each change names its own base**.
-   **Re-verified at the combined tip** with two concurrent sessions' engine
-   commits (`5be9908c`, `ca2bf1a6`) on top: suite 19,044 / 0 / 5, clippy
-   clean, `--bench` still byte-identical, thread_determinism ok. This box is a
-   2.10 GHz Xeon and `host_calib_ms` drifts 51-68 within one session, so no
-   `games_per_s` here compares to any filed one — quote the pair or neither.
-3. **BEST NEXT MOVES, in order.** (a) **`(-38)` IS CLOSED and so is `(-94)`.**
-   The `battlefield_find` index memo shipped at -0.283 / -0.446 / -0.300 %,
-   and **both of its obvious variants are refuted with numbers in the same
-   sitting** — an out-of-line miss path (+0.209 / +0.270 / +0.315 %) and a
-   two-entry FIFO (-0.103 / +0.005 / -0.008 %). Do not re-derive either.
-   (b) **The re-profile is DONE and it is `(-96)`: nothing concentrated is
-   left.** Every row above 2 % is either a mined family with its refutation on
-   file, the allocator (an upper bound this instrument cannot tighten), or
-   `Vec::from_iter` spread over 93 callers. **So change instrument, not
-   target** — `(-96)` named three, and **all three have now been run**:
-   `(-95)` the `--games`-doubling call-count diff (which refuted a candidate
-   without a build — the six-game workload was charging `wants_converge`'s
-   `format!` 0.459 % of `cube` for a cost a training run never pays),
-   `(-97)` the actor, `(-98)` the `cg_sites` re-read. (c) **None of the three
-   found a new head.** The profile is a long tail at every magnification —
-   function, call site, and run length — and that is itself the answer: the
-   next real win is a structural change to a mined family, not another row.
-   (d) `(-92)` leads 2 and 3; `(-93)`'s lane device is intact and lanes 10-16 are free, but its
-   consumer list is exhausted.
-   (e) **The actor is re-read too — `(-97)`, and the standing claim is now
-   measured**: thirteen of its top fifteen rows are engine, the only
-   actor-only rows above 1 % are the encoder (1.53 + 1.46 %) and `rank_shape`
-   (1.08 %), 4.07 % in total, and its one distinctive row (`__memcpy` 5.02 %
-   against `cube`'s 2.73 %) is MCTS state copying over 355 callers. **An
-   engine percent is an actor percent**, so keep working the engine.
-   (f) Cards on leftover context.
-4. **The rule this pass produced, and it is one distribution seen twice.**
-   **Rank an `_on` conversion by MISS rate and a memo by HIT rate.** The same
-   four cascade rows were measured both ways in one sitting: converting their
-   lookups to `_on` forms read **+0.099 / +0.406 / +0.195 %** because those
-   lookups are hits, and memoizing the hits read **-0.283 / -0.446 / -0.300 %**.
-   The find memo's hit rate is near one half (286,320 misses on a six-game
-   `cube` run), which is also why it has no cheap out-of-line miss path.
+2. **State at `633acc3e`**, re-verified at the combined tip with two
+   concurrent sessions' engine commits (`5be9908c`, `ca2bf1a6`) on top: suite
+   19,044 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
+   (30 cells / 33,120 games / 0 failures), `--bench` byte-identical
+   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok).
+   Ir anchor and the window's **-0.410 / -0.486 / -0.310 %** are in PERF's
+   Baseline; **each change names its own base**. `host_calib_ms` drifts 51-68
+   inside one session on this box — quote a `games_per_s` with its calib or
+   not at all.
+3. **THE PROFILE HAS NO HEAD LEFT, AND THAT IS THIS PASS'S RESULT.** `(-96)`
+   re-read all three pools, `(-97)` the actor, `(-98)` `cg_sites` after the
+   find memo, `(-95)` the `--games`-doubling lens: **a long tail at every
+   magnification — function, call site, run length.** Every row above 2 % is a
+   mined family with its refutation on file, the allocator (an upper bound
+   this instrument cannot tighten), or `Vec::from_iter` over ~93 callers. So
+   **the next win is a structural change to a mined family, not another row**;
+   read `(-1)`/`(-14)` (the CoW copies, 4.26 % of `cube`) and `(-92)` leads 2
+   and 3 before choosing. `(-93)`'s lane device is intact and lanes 10-16 are
+   free, but its consumer list is exhausted. `(-38)` and `(-94)` are CLOSED —
+   the find memo shipped and both its variants are refuted; do not re-derive.
+   Cards on leftover context.
+4. **Two rules this pass produced.** **Rank an `_on` conversion by MISS rate
+   and a memo by HIT rate** — the same four cascade rows read
+   +0.099 / +0.406 / +0.195 % converted and -0.283 / -0.446 / -0.300 %
+   memoized, in one sitting, because those lookups are hits. And **a row whose
+   call count barely grows when the run doubles is a once-per-process cost**:
+   rank it at its long-run share, which is ~0. That lens refuted a 0.459 %
+   candidate without a build and found candle's net init charged whole to a
+   60-game actor profile.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
