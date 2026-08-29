@@ -36,14 +36,16 @@ sixty-seventh pass, so don't re-take that.
    its own base**. `games_per_s` is 18 % under the last pass's and it is the
    box — `host_calib_ms` 49-56 here against 45-47 there; quote the pair or
    quote neither.
-3. **BEST NEXT MOVES, in order.** (a) **`(-89)`'s `battlefield_find` half.**
-   The cascade is re-read at the tip in that entry: `apply_prevention_shields_with`
-   812 Ir, `creature_redirects` 769, `damage_prevented_by_protection` 763,
-   `damage_from_source_prevented_by_keyword` 681 — 1.42 % of `cube` between
-   them, and what is left in three of the four after `LANE_GRANT` is
-   `card_keyword_possible`'s opening `battlefield_find`. `card_keyword_possible_on`
-   already exists and `resolve_combat` holds the pair. `(-92)` lead 1's `_on`
-   convention, second family. (b) **More lanes** — `(-93)` now carries the
+3. **BEST NEXT MOVES, in order.** (a) **NOT the cascade's `_on` conversion —
+   built and reverted at +0.099 / +0.406 / +0.195 %.** `(-89)` is re-read at
+   the tip (`apply_prevention_shields_with` 812 Ir, `creature_redirects` 769,
+   `damage_prevented_by_protection` 763, `damage_from_source_prevented..` 681,
+   1.42 % of `cube`) but the `battlefield_find` those rows look like they pay
+   **is not paid**: inside a freeze scope `computed_permanent(id)` hits
+   `perms` and never reaches its find. Log block (4) has the numbers and the
+   rule — **an `_on` conversion is worth its top few callers *whose lookup
+   misses***. Size the rows by line before touching them again.
+   (b) **More lanes** — `(-93)` now carries the
    device, its three conditions, the second-consumer rule, and **the hit-rate
    measurement: `callee calls / walk calls` off a dump you already have,
    before you build.** Lanes 9-16 are free (`type_gates` is a `u32`).

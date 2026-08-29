@@ -8927,6 +8927,47 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundredth pass (4) — the cascade's `_on` conversion, BUILT AND REVERTED at +0.099 / +0.406 / +0.195 %
+
+The move `(-89)` and this pass's own NEXT both named as the next one: three
+functions in the combat cascade open on a `CardId` and reach the same
+permanent twice — `card_keyword_possible(id, …)` and `computed_permanent(id)`
+each begin with a linear `battlefield.iter().find` — so hoist one
+`battlefield_find`, hand it to `card_keyword_possible_on` and
+`computed_permanent_on`, and read the controller off it. `(-92)` lead 1's
+convention, applied to a second family.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 98feda21
+  fixed     914,791,061 ->   915,693,122   +0.099 %
+  cube    2,730,990,977 -> 2,742,083,874   +0.406 %
+  sealed  2,708,407,683 -> 2,713,688,004   +0.195 %
+
+every row it touched went the wrong way (calls unchanged):
+  damage_prevented_by_protection    +3.9 / +2.8 / +4.5 %
+  damage_from_source_prevented..    +4.4 / +3.5 / +5.4 %
+  creature_redirects_damage_to..    +1.5 / +1.6 / +1.9 %
+and the self table names one row for essentially the whole regression:
+  damage_prevented_by_protection self, cube   +10,667,422 Ir
+  computed_permanent_hinted                      -34,062   (calls identical)
+```
+
+**The premise was wrong and it is worth stating precisely: inside a freeze
+scope `computed_permanent(id)` does not pay a `battlefield_find`.** It looks
+the id up in the scope's `perms` list and returns on a hit; the find is the
+*miss* path only. The combat resolver calls all three of these from inside its
+per-pair scope, so the hoisted find is pure addition — and
+`creature_redirects_damage_to_controller`, where the diff was *only*
+`computed_permanent(id)` -> `computed_permanent_on(c)` with no new find at
+all, still read +1.5-1.9 %. **The `_on` form pays for its hint on every call
+and redeems it only on a miss.**
+
+So `(-92)` lead 1's rule gets its second half: **an `_on` conversion is worth
+its top few callers *whose lookup misses*.** The ninety-fifth pass's four
+sites were `perms` misses; these three are hits, and the same edit at the same
+kind of site loses. Rank an `_on` candidate by miss rate, not by call count.
+
 ### Hundredth pass (3) — the keyword-grant walk gets a lane, and the pool split was predicted off the call ratios
 
 **`fixed` -0.481 % / `cube` -0.276 % / `sealed` -0.621 %** off `d2c5d30a`.
@@ -15032,16 +15073,18 @@ on `cube` and 39-47 % on `sealed`. `cg_edges.py --callees resolve_combat`,
 `card_keyword_possible` = `battlefield_find(id)` +
 `keyword_grant_in_scope(pred)`, and the second half is now lane-gated.
 
-**What is left is the `battlefield_find` in front of it, and it is the next
-thing to size here.** `card_keyword_possible_on` already exists and
-`creature_redirects_damage_to_controller` already uses it;
-`damage_from_source_prevented_by_keyword` and
-`damage_prevented_by_protection_inner` still open on the `CardId` form, and
-`resolve_combat` holds the pair they are asking about. That is `(-92)` lead
-1's `_on` convention pointed at a second family. **What is refuted, without a
-build: a lane over `keyword_grant_in_scope`'s `continuous_effects` leg** — it
-is not a battlefield walk, the zone cannot key it, and the leg runs before the
-board one in the `||` chain.
+**The `battlefield_find` in front of it is BUILT AND REVERTED at +0.099 /
++0.406 / +0.195 %** — the `_on` conversion of all three, Log block (4). The
+premise was wrong: inside a freeze scope `computed_permanent(id)` looks the id
+up in `perms` and never reaches its find, so the hoist is pure addition, and
+even the pure `computed_permanent_on` swap in
+`creature_redirects_damage_to_controller` read +1.5-1.9 %. **Do not rebuild
+it.** What that leaves in these rows is `card_keyword_possible_on`'s own body
+and the `perms` lookup, and neither has been sized by line.
+
+**Also refuted without a build: a lane over `keyword_grant_in_scope`'s
+`continuous_effects` leg** — it is not a battlefield walk, the zone cannot key
+it, and the leg runs before the board one in the `||` chain.
 
 **(-89, as re-read) RE-READ AT `a69a8287` AND ONE OF ITS PREMISES IS WRONG — the cascade
 is still ~1.9 % of `cube`, but "ten whole-battlefield walks a damage event"
