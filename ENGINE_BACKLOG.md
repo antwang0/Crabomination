@@ -110,7 +110,7 @@ still applies a board-shaped requirement to every graveyard and to exile and
 the callers still separate the results by hand. This closes the *picker*'s
 half; the catalog-wide fix above is still the fix.
 
-### The gate's own wrappers — audited at the ninety-ninth pass, three cards fixed
+### The gate's own wrappers — audited at the ninety-ninth pass (three cards fixed), the walkers' invariants closed at the hundredth
 
 `prefers_graveyard_target` and `may_target_offboard_card` end in `_ => false`,
 so a wrapper neither names closes the gate for its whole subtree.
@@ -126,14 +126,47 @@ walk-order classifier, so it bounced a battlefield permanent; Ugin, Eye of the
 Storms wrote "exile target permanent" as `Move { to: Exile }`, which that
 classifier reads as reanimation, and is `Effect::Exile` now.
 
-**Open: the other three walkers' wrappers.** `primary_target_filter` (69
-unnamed), `may_target_offboard_card` (104) and `accepts_player_target` (101)
-have no catalog-side invariant yet, and a blanket one does not work — a
-"holds a `Move`" version of the test above reports 29 bodies and every one is
-right to answer `false`. Each needs the narrow shape its walker is actually
-about, the way the reanimation one does. The structural fix is the same one
-this whole section names: the walkers should share one recursion over inner
-effects instead of five hand-written ones.
+**The other three walkers — closed at the hundredth pass, two with an
+invariant and one by construction.** All three are 0 findings on a
+non-vacuous population, so they are invariants from the day they landed, not
+ratchets. Each is the narrow shape its walker is actually about, which is
+what the blanket version could not be.
+
+* **`accepts_player_target` (101 unnamed wrappers) — `core_rules::
+  target_walkers::every_reachable_target_player_is_visible_to_the_player_gate`,
+  population 295.** The shape is `Selector::Player(PlayerRef::Target(_))`,
+  and it is the *only* player-target form that survives serialization
+  unambiguously: `Selector::Target(n)` and `PlayerRef::Target(n)` are both a
+  bare `{"Target": n}`, and `PlayerRef` sits in **65 distinct JSON
+  positions**, so a walk keyed on those would go stale as variants are added.
+  `{"Player": {"Target": n}}` needs no list. It under-reports (a bare `who:
+  PlayerRef::Target` under an unnamed wrapper is not caught) and never
+  false-reports, which is the direction an invariant has to err in.
+* **`primary_target_filter` (69 unnamed) — `..::the_primary_target_filter_
+  agrees_with_the_slot_walker_on_slot_zero`, population 7,728, and it needs
+  no tree walk at all.** `primary_target_filter()` and
+  `target_filter_for_slot(0)` are two answers to the same question, and
+  `auto_targets_for_effect` falls back to `Any` when the first is `None` — so
+  a disagreement offers a target the card's own restriction forbids. **A
+  walker checked against another walk of the same tree cannot false-report
+  the way one checked against a guess at what the tree means can**; that is
+  the general form of what made the blanket test useless, and it is the first
+  thing to look for on the next walker.
+* **`may_target_offboard_card` (104 unnamed) — closed by construction, no new
+  test.** Its reachable population is already covered, and the missing shape
+  does not exist: for a zone change the *destination* is the only signal that
+  the source is off board, and `to: Hand(You)` / `Battlefield(You)` — the
+  reanimation invariant's shape — is the whole of it. Every other `Move` with
+  a target is a bounce or a removal aimed at the battlefield (which is why
+  the blanket "holds a `Move`" version reported 29 bodies that were all right
+  to answer `false`), and the graveyard-hate cases name the zone in the
+  filter, where `mentions_offboard_zone` is the half that opens the gate.
+
+**Still open: the structural fix.** The five walkers should share one
+recursion over inner effects instead of five hand-written ones — the
+invariants above catch a missing arm on the shapes they cover, they do not
+stop one being missed. `requires_target` is the only exhaustive walk and so
+the only one that cannot have the bug at all.
 
 ### ~~Vacuous `true` in `Predicate::EntityMatches`~~ — closed at the eighty-seventh pass, and one layer dependency fell out
 

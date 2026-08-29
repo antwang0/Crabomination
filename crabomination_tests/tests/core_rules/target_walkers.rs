@@ -488,3 +488,180 @@ fn up_to_x_graveyard_returns_aim_at_the_graveyard() {
         );
     }
 }
+
+/// The player-target half of the same class: every reachable
+/// `Selector::Player(PlayerRef::Target(_))` has to be visible to
+/// `accepts_player_target`.
+///
+/// `legal_targets_for_filter` offers Player candidates **only** when
+/// `accepts_player_target()` is true (`targeting.rs`, "Skip Player candidates
+/// entirely when the effect operates on permanents/stack"). That walker ends
+/// in `_ => false` and names 29 of the 130 `Effect` wrappers, so a body whose
+/// player slot sits under one of the other 101 answers `false` and the
+/// auto-picker never offers a player for it — the slot resolves empty and the
+/// effect silently does nothing. Same failure and same shape as the
+/// reanimation invariant above, on the other walker.
+///
+/// **Narrow on purpose.** Only `Selector::Player(PlayerRef::Target(n))` is
+/// checked, because it is the one player-target form that cannot be confused
+/// with a permanent one in the serialized tree: both `Selector::Target(n)` and
+/// `PlayerRef::Target(n)` are a bare `{"Target": n}`, and `PlayerRef` sits in
+/// 65 distinct JSON positions. Reading `{"Player": {"Target": n}}` needs no
+/// list of those and cannot go stale as variants are added. It therefore
+/// **under**-reports — a `who: PlayerRef::Target` field under an unnamed
+/// wrapper is not caught — and never false-reports, which is the direction an
+/// invariant has to err in. (The effects that carry a bare `who:
+/// PlayerRef::Target` — `Search`, `SearchPickedBy` — are already named.)
+///
+/// A blanket version of this test does not work, which is why it is this
+/// shape: see the note in `ENGINE_BACKLOG.md` about the "holds a `Move`"
+/// version reporting 29 bodies that are all right to answer `false`.
+///
+/// **Population 295 and 0 findings** — the walker already covers every
+/// wrapper the shipped catalog reaches this shape through, so this is an
+/// invariant rather than a ratchet from the day it lands. The floor below is
+/// what keeps it from going quietly vacuous.
+#[test]
+fn every_reachable_target_player_is_visible_to_the_player_gate() {
+    /// Is there a `Selector::Player(PlayerRef::Target(_))` under `v`, not
+    /// descending into a nested ability definition or a resolution-time body?
+    fn holds_target_player(v: &Value) -> bool {
+        match v {
+            Value::Object(map) => {
+                if is_nested_ability(map) {
+                    return false;
+                }
+                map.iter().any(|(k, inner)| {
+                    if RESOLUTION_TIME_TARGETING.contains(&k.as_str()) {
+                        return false;
+                    }
+                    if k == "Player"
+                        && matches!(inner, Value::Object(p) if p.contains_key("Target"))
+                    {
+                        return true;
+                    }
+                    holds_target_player(inner)
+                })
+            }
+            Value::Array(items) => items.iter().any(holds_target_player),
+            _ => false,
+        }
+    }
+
+    let mut bad: Vec<String> = Vec::new();
+    // The population the invariant is over. A test that reports nothing
+    // because it *looks at* nothing is the failure mode an empty ratchet
+    // hides, so the floor is asserted with the finding list.
+    let mut covered = 0usize;
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<(&'static str, &crabomination::effect::Effect)> =
+            vec![("spell", &def.effect)];
+        for a in &def.activated_abilities {
+            bodies.push(("activated", &a.effect));
+        }
+        for t in &def.triggered_abilities {
+            bodies.push(("triggered", &t.effect));
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(("loyalty", &l.effect));
+        }
+        for (kind, body) in bodies {
+            if !body.requires_target() {
+                continue;
+            }
+            let json = serde_json::to_value(body).expect("Effect serializes");
+            if !holds_target_player(&json) {
+                continue;
+            }
+            covered += 1;
+            if body.accepts_player_target() {
+                continue;
+            }
+            let root = match &json {
+                Value::Object(m) => m.keys().next().cloned().unwrap_or_default(),
+                _ => json.to_string(),
+            };
+            bad.push(format!("Effect::{root} — {} ({kind})", def.name));
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} targeting bodies name a target PLAYER through a wrapper \
+         `accepts_player_target` cannot see, so the auto-picker never offers a \
+         player for the slot they are about:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+    assert!(
+        covered >= 250,
+        "the player-gate invariant is looking at only {covered} bodies — it \
+         has gone vacuous (a serde rename, or the shape moved). It was 295 \
+         when written; re-derive the shape before lowering this."
+    );
+}
+
+/// The third walker, and this one needs no tree walk: **`primary_target_filter`
+/// and `target_filter_for_slot(0)` are two answers to the same question and
+/// have to agree.**
+///
+/// `auto_targets_for_effect` picks slot 0 with `primary_target_filter()` and
+/// falls back to `SelectionRequirement::Any` when it is `None`
+/// (`legal_targets_for_effect`, `targeting.rs`). `target_filter_for_slot(0)`
+/// is the other walk over the same tree and is the one
+/// `every_declared_target_slot_is_answerable` above holds to zero. So a body
+/// where the slot walker finds a filter and the primary walker does not picks
+/// slot 0 against `Any` — the auto-picker offers a target the card's own
+/// restriction forbids, and the engine rejects it at resolution.
+///
+/// This is the narrow shape `ENGINE_BACKLOG` asks for on this walker, and it
+/// is sharper than a wrapper census: it compares the walker against another
+/// walk of the same tree rather than against a guess at what the tree means,
+/// so it cannot false-report the way a blanket "holds a `Move`" test does.
+///
+/// **Population 7,728 and 0 findings**, which is what makes it an invariant
+/// on the day it lands rather than a ratchet.
+#[test]
+fn the_primary_target_filter_agrees_with_the_slot_walker_on_slot_zero() {
+    let mut bad: Vec<String> = Vec::new();
+    let mut covered = 0usize;
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<(&'static str, &crabomination::effect::Effect)> =
+            vec![("spell", &def.effect)];
+        for a in &def.activated_abilities {
+            bodies.push(("activated", &a.effect));
+        }
+        for t in &def.triggered_abilities {
+            bodies.push(("triggered", &t.effect));
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(("loyalty", &l.effect));
+        }
+        for (kind, body) in bodies {
+            let Some(slot0) = body.target_filter_for_slot(0) else { continue };
+            covered += 1;
+            if body.primary_target_filter().is_some() {
+                continue;
+            }
+            bad.push(format!("{} ({kind}) — slot 0 is {slot0:?}", def.name));
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} bodies declare a slot-0 target filter that `primary_target_filter` \
+         cannot see, so the auto-picker chooses slot 0 against `Any` and offers \
+         targets the card forbids:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+    assert!(
+        covered >= 7_000,
+        "the primary/slot agreement invariant is looking at only {covered} \
+         bodies — it has gone vacuous. It was 7,728 when written."
+    );
+}
