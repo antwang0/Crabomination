@@ -9462,15 +9462,22 @@ fn legal_blockers(
     state: &GameState,
     seat: usize,
 ) -> Vec<(&crate::card::CardInstance, std::sync::Arc<crate::game::layers::ComputedPermanent>)> {
-    state
-        .battlefield
-        .iter()
-        .filter(|c| c.controller == seat)
-        .filter_map(|c| {
-            let cp = state.computed_permanent(c.id)?;
-            state.blocker_can_block_anything(c, &cp).then_some((c, cp))
-        })
-        .collect()
+    // A `filter().filter_map().collect()` is two `&mut F::call_mut` forwards
+    // per battlefield permanent, and the second closure captures `state` — the
+    // fat-capture shape PERF's `call_mut` census says to fix. The loop is the
+    // same walk with no forwards; `Vec::from_iter` off a `filter_map` starts
+    // empty too, so the allocation behaviour is unchanged.
+    let mut out = Vec::new();
+    for c in &state.battlefield {
+        if c.controller != seat {
+            continue;
+        }
+        let Some(cp) = state.computed_permanent(c.id) else { continue };
+        if state.blocker_can_block_anything(c, &cp) {
+            out.push((c, cp));
+        }
+    }
+    out
 }
 
 /// Everything the block planner wants to know about one declared attacker.

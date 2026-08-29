@@ -12732,39 +12732,47 @@ impl GameState {
         self.scan_land_type_rewrites(&mut scan);
         // One buffer for the whole walk — see `effective_mana_abilities_into`.
         let mut abilities = Vec::new();
-        self.battlefield
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| c.controller == player && !c.tapped)
-            .filter(|(_, c)| !creature_only || self.permanent_is_creature(c.id))
-            .filter(|(_, c)| only.is_none_or(|set| set.contains(&c.id)))
-            .filter_map(|(bf_idx, c)| {
-                self.effective_mana_abilities_into(c, &scan, &mut abilities);
-                let (first_idx, first) = abilities.first()?;
-                // One walk of each ability's effect tree, not one per colour:
-                // the first ability that makes a colour is the one the old
-                // `find` per colour picked, so walking abilities in order and
-                // claiming each colour once is the same table.
-                let mut colors = crate::mana::ColorSet::empty();
-                let mut color_idx = [0usize; 5];
-                for (i, a) in abilities.iter() {
-                    for col in effect_produced_colors(&a.effect).iter() {
-                        if !colors.contains(col) {
-                            colors.insert(col);
-                            color_idx[color_index(col)] = *i;
-                        }
+        // Three `filter`s and a `filter_map` over the whole battlefield are
+        // four `&mut F::call_mut` forwards per permanent, two of them
+        // capturing `self` — PERF's `call_mut` census, ranked by captures.
+        // The loop is the same walk, same order, with none.
+        let mut out = Vec::new();
+        for (bf_idx, c) in self.battlefield.iter().enumerate() {
+            if c.controller != player || c.tapped {
+                continue;
+            }
+            if creature_only && !self.permanent_is_creature(c.id) {
+                continue;
+            }
+            if only.is_some_and(|set| !set.contains(&c.id)) {
+                continue;
+            }
+            self.effective_mana_abilities_into(c, &scan, &mut abilities);
+            let Some((first_idx, first)) = abilities.first() else { continue };
+            // One walk of each ability's effect tree, not one per colour:
+            // the first ability that makes a colour is the one the old
+            // `find` per colour picked, so walking abilities in order and
+            // claiming each colour once is the same table.
+            let mut colors = crate::mana::ColorSet::empty();
+            let mut color_idx = [0usize; 5];
+            for (i, a) in abilities.iter() {
+                for col in effect_produced_colors(&a.effect).iter() {
+                    if !colors.contains(col) {
+                        colors.insert(col);
+                        color_idx[color_index(col)] = *i;
                     }
                 }
-                Some(ManaSourceInfo {
-                    id: c.id,
-                    bf_idx,
-                    first_idx: *first_idx,
-                    rank: Self::mana_source_cost_rank(first),
-                    colors,
-                    color_idx,
-                })
-            })
-            .collect()
+            }
+            out.push(ManaSourceInfo {
+                id: c.id,
+                bf_idx,
+                first_idx: *first_idx,
+                rank: Self::mana_source_cost_rank(first),
+                colors,
+                color_idx,
+            });
+        }
+        out
     }
 
     /// A listed mana source's live battlefield entry. `battlefield_find` is a
