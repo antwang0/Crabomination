@@ -4594,6 +4594,10 @@ impl GameState {
         // permanent. `card_type_change_unscoped` came off at -5,948,694 and
         // `sba_board_scan` went up 9,249,352 for it. Third refutation of the
         // fusion device in this one function.
+        //
+        // The walk no longer short-circuits, which costs the tail of the
+        // battlefield on a board where something *can* die — and buys the
+        // layer pass over everything the tail holds.
         let type_change = self.card_type_change_unscoped();
         self.battlefield
             .iter()
@@ -4625,6 +4629,75 @@ impl GameState {
                 && ((c.damage as i32) >= t
                     || c.dealt_deathtouch_damage
                     || self.damaged_creatures_die_this_turn))
+    }
+
+    /// CR 704.5f/g/h for one permanent, against a computed view the caller
+    /// supplies. A `find(id)` miss falls back to the instance reads, which is
+    /// the same answer the full view gives for a permanent
+    /// `compute_battlefield_creatures` left out.
+    fn dies_to_sba(
+        &self,
+        c: &crate::card::CardInstance,
+        computed: &[ComputedPermanent],
+        scan: &SbaBoardScan,
+    ) -> bool {
+        // CR 704.5g/CR 305.7 — use the *computed* type so an animated land
+        // (earthbend, creature-lands granted Creature via layers) dies to
+        // lethal damage / toughness ≤ 0 like any creature, not just cards
+        // printed as creatures.
+        let cp = computed.iter().find(|cp| cp.id == c.id);
+        let is_creature = cp
+            .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
+            .unwrap_or_else(|| c.definition.is_creature());
+        if !is_creature {
+            return false;
+        }
+        // Indestructible stops destruction by damage but NOT by toughness ≤ 0.
+        let computed_toughness = cp.map(|cp| cp.toughness).unwrap_or(c.toughness());
+        // Toughness ≤ 0 kills even indestructible creatures.
+        if computed_toughness <= 0 {
+            return true;
+        }
+        // CR 704.5g: lethal damage = damage >= toughness.
+        // CR 704.5h: any damage from a deathtouch source is lethal.
+        // Indestructible creatures don't die to either rule. Read the
+        // *computed* keyword so a layer-6 grant (Aura / Equipment / anthem —
+        // Shielded by Faith) counts, not just the printed keyword +
+        // indestructible counter on the instance.
+        let indestructible = cp
+            .map(|cp| cp.keywords().has_kw(&crate::card::Keyword::Indestructible))
+            .unwrap_or(false)
+            || c.is_indestructible();
+        if indestructible {
+            return false;
+        }
+        // Zilortha — lethal is measured against power, not toughness, for any
+        // creature a LethalDamageByPower static matches. The power threshold
+        // can be 0, so gate on actual damage being marked (a 0-power creature
+        // dies only once it's been dealt damage; an undamaged one survives —
+        // CR 704.5g ruling).
+        let lethal_threshold = if scan.lethal_by_power && self.lethal_damage_by_power(c.id) {
+            cp.map(|cp| cp.power).unwrap_or(c.power())
+        } else {
+            computed_toughness
+        };
+        // Ogre Enforcer — split lethal damage doesn't kill; only a single
+        // source's tally reaching the threshold does.
+        let needs_single_source = cp
+            .map(|cp| cp.keywords().has_kw(&crate::card::Keyword::SurvivesSplitLethalDamage))
+            .unwrap_or(false);
+        let single_source_lethal = !needs_single_source
+            || (c.max_damage_from_single_source() as i32) >= lethal_threshold;
+        if c.damage > 0 && (c.damage as i32) >= lethal_threshold && single_source_lethal {
+            return true;
+        }
+        // Shriveling Rot — "whenever a creature is dealt damage, destroy it"
+        // for the rest of the turn. Indestructible has already returned above,
+        // matching "destroy".
+        if self.damaged_creatures_die_this_turn && c.damage > 0 {
+            return true;
+        }
+        c.dealt_deathtouch_damage && c.damage > 0
     }
 
     /// Owning wrapper for callers with no accumulator of their own (tests,
@@ -5274,90 +5347,25 @@ impl GameState {
         // fall back to the printed type, so the layer pass skips the
         // permanents no card-type-changing effect can animate.
         //
-        // The whole block is behind `death_possible`, because SBA runs at
+        // The whole block is behind `creature_death_possible`, because SBA runs at
         // every priority pass and a board where nothing can die is the common
         // case (86.5 % of sweeps on the `fixed` bench). `computed` is read
         // only by this filter and by the `for id in dead` loop below, so a
         // gated-out sweep leaves both empty and does nothing — which is the
         // answer the layer pass would have given.
-        let (computed, dead): (Vec<ComputedPermanent>, Vec<CardId>) = if !self
-            .creature_death_possible(&scan)
-        {
-            (Vec::new(), Vec::new())
-        } else {
-            let computed = self.compute_battlefield_creatures();
-            let dead = self
-            .battlefield
-            .iter()
-            .filter(|c| {
-                // CR 704.5g/CR 305.7 — use the *computed* type so an animated
-                // land (earthbend, creature-lands granted Creature via layers)
-                // dies to lethal damage / toughness ≤ 0 like any creature, not
-                // just cards printed as creatures.
-                let cp = computed.iter().find(|cp| cp.id == c.id);
-                let is_creature = cp
-                    .map(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
-                    .unwrap_or_else(|| c.definition.is_creature());
-                if !is_creature {
-                    return false;
-                }
-                // Indestructible stops destruction by damage but NOT by toughness ≤ 0.
-                let computed_toughness = cp.map(|cp| cp.toughness).unwrap_or(c.toughness());
-                // Toughness ≤ 0 kills even indestructible creatures.
-                if computed_toughness <= 0 {
-                    return true;
-                }
-                // CR 704.5g: lethal damage = damage >= toughness.
-                // CR 704.5h: any damage from a deathtouch source is lethal.
-                // Indestructible creatures don't die to either rule. Read the
-                // *computed* keyword so a layer-6 grant (Aura / Equipment /
-                // anthem — Shielded by Faith) counts, not just the printed
-                // keyword + indestructible counter on the instance.
-                let indestructible = cp
-                    .map(|cp| cp.keywords().has_kw(&crate::card::Keyword::Indestructible))
-                    .unwrap_or(false)
-                    || c.is_indestructible();
-                if indestructible {
-                    return false;
-                }
-                // Zilortha — lethal is measured against power, not toughness,
-                // for any creature a LethalDamageByPower static matches. The
-                // power threshold can be 0, so gate on actual damage being
-                // marked (a 0-power creature dies only once it's been dealt
-                // damage; an undamaged one survives — CR 704.5g ruling).
-                let lethal_threshold = if scan.lethal_by_power && self.lethal_damage_by_power(c.id) {
-                    computed
-                        .iter()
-                        .find(|cp| cp.id == c.id)
-                        .map(|cp| cp.power)
-                        .unwrap_or(c.power())
-                } else {
-                    computed_toughness
-                };
-                // Ogre Enforcer — split lethal damage doesn't kill; only a
-                // single source's tally reaching the threshold does.
-                let needs_single_source = cp
-                    .map(|cp| {
-                        cp.keywords().has_kw(&crate::card::Keyword::SurvivesSplitLethalDamage)
-                    })
-                    .unwrap_or(false);
-                let single_source_lethal = !needs_single_source
-                    || (c.max_damage_from_single_source() as i32) >= lethal_threshold;
-                if c.damage > 0 && (c.damage as i32) >= lethal_threshold && single_source_lethal {
-                    return true;
-                }
-                // Shriveling Rot — "whenever a creature is dealt damage,
-                // destroy it" for the rest of the turn. Indestructible has
-                // already returned above, matching "destroy".
-                if self.damaged_creatures_die_this_turn && c.damage > 0 {
-                    return true;
-                }
-                c.dealt_deathtouch_damage && c.damage > 0
-            })
-            .map(|c| c.id)
-            .collect();
-            (computed, dead)
-        };
+        let (computed, dead): (Vec<ComputedPermanent>, Vec<CardId>) =
+            if !self.creature_death_possible(&scan) {
+                (Vec::new(), Vec::new())
+            } else {
+                let computed = self.compute_battlefield_creatures();
+                let dead: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| self.dies_to_sba(c, &computed, &scan))
+                    .map(|c| c.id)
+                    .collect();
+                (computed, dead)
+            };
 
         // The gate's audit, run in the sound direction and only where the
         // layer read already happened: every card the full filter kills has to
