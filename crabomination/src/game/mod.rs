@@ -13950,7 +13950,9 @@ impl GameState {
         source: CardId,
         target: CardId,
     ) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         let (Some(tgt), Some(src)) =
@@ -13977,7 +13979,9 @@ impl GameState {
     /// [color] creatures." True when `source` has the static and `target` is a
     /// creature of the named color.
     pub(crate) fn source_damage_to_color_prevented(&self, source: CardId, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         let Some(colors) = self.battlefield_find(source).map(|src| {
@@ -23654,12 +23658,13 @@ fn card_can_prevent_incoming_damage(card: &CardInstance) -> bool {
     })
 }
 
-/// The board half of the seven whole-board damage-shield walks — Iroas,
+/// The board half of the nine whole-board damage-shield walks — Iroas,
 /// Glacial Chasm, Mark of Asylum, The Wanderer, Emmara Tandris, Rune-Tail's
-/// Essence and Well-Laid Plans. Each of them filters on an *instance* field
-/// (`controller`, `is_token`) after finding the static, so the shared question
-/// is only "does the board carry one of these at all"; a `false` means none of
-/// the seven can find anything. Definition-only, so
+/// Essence, Well-Laid Plans, Light of Sanction and Indentured Oaf. Each of
+/// them filters on an *instance* field (`controller`, `is_token`, "is this the
+/// damage's source") after finding the static, so the shared question is only
+/// "does the board carry one of these at all"; a `false` means none of the
+/// nine can find anything. Definition-only, so
 /// [`zone::Battlefield::has_damage_shield`] can memoize it.
 ///
 /// [`zone::Battlefield::has_damage_shield`]: crate::zone::Battlefield::has_damage_shield
@@ -23682,7 +23687,9 @@ fn static_effect_shields_damage(effect: &crate::effect::StaticEffect) -> bool {
         | SE::PreventAllDamageToYourCreatureTokens
         | SE::PreventAllDamageToYourCreatures
         | SE::PreventAllDamageToCreatures
-        | SE::PreventDamageBetweenSharedColorCreatures => true,
+        | SE::PreventDamageBetweenSharedColorCreatures
+        | SE::PreventDamageToYourCreaturesFromYourSources
+        | SE::PreventThisDamageToColor(_) => true,
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
         | SE::WhileNotYourTurn { inner }

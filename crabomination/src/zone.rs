@@ -161,7 +161,7 @@ impl<'a> IntoIterator for &'a mut Graveyard {
 /// sixteen of them.
 ///
 /// **A lane has exactly one predicate**, however many callers ask through it
-/// ([`LANE_SHIELD`] has seven). Nothing enforces that structurally; what
+/// ([`LANE_SHIELD`] has nine). Nothing enforces that structurally; what
 /// catches a second predicate on a lane is [`Battlefield::lane`]'s
 /// `debug_assert!`, which recomputes with the predicate it was *handed* and
 /// compares against the stored bit.
@@ -279,13 +279,13 @@ impl Battlefield {
     }
 
     /// CR 615 — can any permanent here carry one of the whole-board damage
-    /// shields? The board half of seven `GameState` walks — Iroas, Glacial
+    /// shields? The board half of nine `GameState` walks — Iroas, Glacial
     /// Chasm, Mark of Asylum, The Wanderer, Emmara Tandris, Rune-Tail's
-    /// Essence, Well-Laid Plans — each of which walks every permanent's
-    /// `static_abilities` for one variant and finds nothing on almost every
-    /// board. The predicate is their *union*: each walk's own filter is an
-    /// instance field applied after the static is found, so the definition
-    /// question they share is the whole walk.
+    /// Essence, Well-Laid Plans, Light of Sanction, Indentured Oaf — each of
+    /// which walks every permanent's `static_abilities` for one variant and
+    /// finds nothing on almost every board. The predicate is their *union*:
+    /// each walk's own filter is an instance field applied after the static is
+    /// found, so the definition question they share is the whole walk.
     #[inline]
     pub fn has_damage_shield(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
         self.lane(LANE_SHIELD, walk)

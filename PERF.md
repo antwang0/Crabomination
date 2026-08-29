@@ -8874,6 +8874,54 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundredth pass (2) — the last two shield walks join the same lane
+
+**`fixed` -0.128 % / `cube` -0.204 % / `sealed` -0.145 %** off `6bf004f5`.
+
+Light of Sanction (`damage_from_your_source_to_your_creature_prevented`) and
+Indentured Oaf (`source_damage_to_color_prevented`) are the two the first take
+left: the same CR 615 shape, asked from the same `resolve_combat` pair loops,
+and each with a `battlefield_find` — two of them, in Light of Sanction's case
+— in front of its walk. Two more variants in the union, two more gates, no
+other change.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 6bf004f5
+  fixed     920,397,156 ->   919,216,044   -0.128 %
+  cube    2,744,166,729 -> 2,738,558,700   -0.204 %
+  sealed  2,729,299,988 -> 2,725,338,525   -0.145 %
+
+source_damage_to_color_prevented, self Ir / Ir per call (calls unchanged):
+  fixed     454,482 -> 102,114    120.2 -> 27.0   3,782 calls
+  cube    2,106,326 -> 353,646    160.8 -> 27.0  13,098 calls
+  sealed  1,530,926 -> 348,192    118.7 -> 27.0  12,896 calls
+
+resolve_combat absorbs Light of Sanction's inlined walk, calls unchanged:
+  fixed    8,157,350 ->  7,354,658    -9.8 %
+  cube    32,251,012 -> 28,530,244   -11.5 %
+  sealed  26,484,370 -> 23,881,756    -9.8 %
+```
+
+**27.0 Ir/call is the lane's floor, and it is the same on all three pools** —
+the flag test, the word load, two mask tests and the return. That is what a
+whole-board `static_abilities` walk costs once a lane holds its answer, and it
+is the number to price the *next* consumer of this lane against.
+
+**Over both takes `resolve_combat` self falls 10.76 -> 7.35 M (`fixed`,
+-31.7 %), 48.23 -> 28.53 M (`cube`, -40.9 %), 35.68 -> 23.88 M (`sealed`,
+-33.1 %)** with its call count untouched, which is the whole CR 615 family
+leaving the combat resolver's body.
+
+**Ninth cross-session anchor check, and it is an identity.** The first take
+was measured at `840b5ccd` and then rebased over a concurrent session's
+encoder commits (`523406fb` and the four trackers around it). Re-read at the
+rebased tip `6bf004f5` the three pools land within **3,021 / 9,960 / 11,690
+Ir** of the pre-rebase candidate reading — under 0.0005 % — so the intervening
+commits are Ir-neutral on `bot_ladder` and the first take's rows stand as
+filed. The rule from the ninety-ninth pass, used exactly as written: check the
+anchor when the intervening commit did not touch the row.
+
 ### Hundredth pass (1) — one lane for seven damage shields, and `resolve_combat` loses a quarter of its body
 
 **`fixed` -0.280 % / `cube` -0.611 % / `sealed` -0.375 %** off `840b5ccd`.
@@ -14602,13 +14650,13 @@ base 0541c28e+, callgrind, profiling-fast --no-default-features
    the noncombat funnel. One lane (`LANE_SHIELD`), one predicate that is the
    **union** of the seven walks' variant sets — see the Log block for why the
    union is sound and why sharing one lane beats seven. `resolve_combat` lost
-   24-33 % of its self Ir. **What is left of the family, unmeasured:**
-   `damage_from_your_source_to_your_creature_prevented` (Light of Sanction —
-   a whole-board walk behind *two* `battlefield_find`s, asked three times per
-   blocker pair) and `source_damage_to_color_prevented` (Indentured Oaf —
-   3,782 calls x 120 Ir on `fixed`, no board walk, so a lane only buys it the
-   `battlefield_find`). Both want two more variants in the union; take them
-   as one commit and measure it on its own.
+   24-33 % of its self Ir. **The last two joined the same lane in a second
+   commit** (`fixed` -0.128 / `cube` -0.204 / `sealed` -0.145 %): Light of
+   Sanction and Indentured Oaf, two more variants in the union. The family is
+   closed — `damage_prevented_by_protection` and
+   `damage_from_source_prevented_by_keyword` are keyword-gated, not
+   static-gated, and belong to `(-89)`. **The lane's floor is 27.0 Ir a call
+   on every pool**; price any further consumer against that.
 3. **`dispatch_triggers_for_events`' per-card loop, but only with an
    event-kind mask, not a lane.** The lane question ("does any permanent carry
    a printed trigger at all") is `PRESENT` on every real board, so a lane buys
