@@ -3601,7 +3601,7 @@ impl GameState {
         use crate::card::dispatch_bits as db;
         for card in self.battlefield.iter() {
             let bits = card.dispatch_scan_bits();
-            if bits == 0 {
+            if bits & db::BOARD_SCAN == 0 {
                 continue;
             }
             scan.dies_suppressed |= bits & db::DIES_SUPPRESS != 0;

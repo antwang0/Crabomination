@@ -5505,8 +5505,17 @@ impl GameState {
         // `self` mutably, so there was never anything to buffer, and the
         // adapter stack was **3,671,940 Ir / 0.30 % of a six-game `--decks
         // fixed` run** in `Map::try_fold` alone (fifty-ninth pass).
+        // The per-permanent trigger walk is a word load on every permanent
+        // that carries neither scope — `card::dispatch_bits::LISTENER`, the
+        // same device `dispatch_board_scan` uses for its four facts. Unlike
+        // the layer-4 gates, the list this replaces is *not* usually empty
+        // (a cube board's creatures carry printed triggers), which is what
+        // (-77)'s rule says a presence bit needs.
         let mut any_player: Vec<(usize, DamageTrigger)> = Vec::new();
         for c in &self.battlefield {
+            if c.dispatch_scan_bits() & crate::card::dispatch_bits::LISTENER == 0 {
+                continue;
+            }
             let mine = attacker_controller == Some(c.controller);
             let other = c.id != source;
             for t in &c.definition.triggered_abilities {

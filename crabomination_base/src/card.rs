@@ -5541,6 +5541,17 @@ impl CardDefinition {
         {
             m |= b::STRIP;
         }
+        // The two whole-board listener scopes. `fire_combat_damage_triggers`
+        // walks every permanent's printed trigger list per damage event
+        // looking for exactly these; the bits turn that into a word load on
+        // every permanent that carries neither, which is most of a board.
+        for t in &self.triggered_abilities {
+            match t.event.scope {
+                crate::effect::EventScope::YourControl => m |= b::YOUR_CONTROL_TRIGGER,
+                crate::effect::EventScope::AnyPlayer => m |= b::ANY_PLAYER_TRIGGER,
+                _ => {}
+            }
+        }
         m
     }
 
@@ -6517,9 +6528,23 @@ pub mod dispatch_bits {
     /// wrappers `active_static` peels are peeled. Over-approximates the
     /// gates, exactly as the walk it replaces does before evaluating them.
     pub const GRANT_TRIGGER: u64 = 1 << 40;
-    /// The memo's payload.
-    pub const ALL: u64 =
+    /// The definition carries a printed triggered ability whose scope is
+    /// `EventScope::YourControl`, and the twin for `EventScope::AnyPlayer`.
+    /// These are the two the combat-damage dispatch's whole-board listener
+    /// walk looks for; unlike the five above they are about
+    /// `triggered_abilities`, not `static_abilities`, so they are kept out of
+    /// [`BOARD_SCAN`].
+    pub const YOUR_CONTROL_TRIGGER: u64 = 1 << 61;
+    /// See [`YOUR_CONTROL_TRIGGER`].
+    pub const ANY_PLAYER_TRIGGER: u64 = 1 << 62;
+    /// The subset `GameState::dispatch_board_scan` acts on, so its `bits == 0`
+    /// early-out keeps its meaning when a bit is added for another caller.
+    pub const BOARD_SCAN: u64 =
         EQUIP_TRIGGER_GRANT | STRIP_ATTACHED | DIES_SUPPRESS | STRIP | GRANT_TRIGGER;
+    /// The two listener bits, as the combat dispatch asks for them.
+    pub const LISTENER: u64 = YOUR_CONTROL_TRIGGER | ANY_PLAYER_TRIGGER;
+    /// The memo's payload.
+    pub const ALL: u64 = BOARD_SCAN | LISTENER;
 }
 
 /// Two answers about a card's *definition*, memoized on the object: its
