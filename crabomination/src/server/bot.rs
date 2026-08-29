@@ -3125,7 +3125,14 @@ fn permanent_value_with(
     w: &EvalWeights,
 ) -> i32 {
     use crate::card::{CardType, CounterType, Supertype};
-    let Some(c) = state.computed_permanent(id) else { return 0 };
+    // `inst` is this state's battlefield permanent at both callers
+    // (`permanent_value` hands over `battlefield_find`, `eval_material_inner`
+    // the card it is walking), so the `_on` form skips the find.
+    let cp = match inst {
+        Some(c) => state.computed_permanent_on(c),
+        None => state.computed_permanent(id),
+    };
+    let Some(c) = cp else { return 0 };
     let mut v = inst.map(|c| c.definition.cost.cmc() as i32).unwrap_or(0) * w.cmc;
     if c.card_types().contains(&CardType::Creature) {
         v += w.creature_base + c.power.max(0) * w.power + c.toughness.max(0) * w.toughness;
@@ -7453,7 +7460,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
             && state.may_declare_attacker(
                 seat,
                 c,
-                state.computed_permanent(c.id).as_deref(),
+                state.computed_permanent_on(c).as_deref(),
                 &attack_power_caps,
                 Some(target_player),
             )
@@ -7501,7 +7508,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         if c.controller == opp_seat
             && c.can_block()
             && !state
-                .computed_permanent(c.id)
+                .computed_permanent_on(c)
                 .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBlock))
         {
             opp_blockers.push(c);
@@ -9472,7 +9479,7 @@ fn legal_blockers(
         if c.controller != seat {
             continue;
         }
-        let Some(cp) = state.computed_permanent(c.id) else { continue };
+        let Some(cp) = state.computed_permanent_on(c) else { continue };
         if state.blocker_can_block_anything(c, &cp) {
             out.push((c, cp));
         }

@@ -13274,6 +13274,37 @@ impl GameState {
     /// layer pass between them. `Arc` derefs, so callers read fields as
     /// before.
     pub fn computed_permanent(&self, id: CardId) -> Option<std::sync::Arc<ComputedPermanent>> {
+        self.computed_permanent_hinted(id, None)
+    }
+
+    /// [`computed_permanent`](Self::computed_permanent) for a caller that
+    /// already holds the permanent — the `_on` form (ninety-fifth pass).
+    ///
+    /// Every `perms` miss pays one linear `battlefield.iter().find(id)`, and
+    /// there are 289,098 of those on a six-game `cube` run: 19.6 M Ir /
+    /// **0.68 %** between the iterator and `CardId::eq`. A caller that walked
+    /// the battlefield to get here already has the answer.
+    #[inline]
+    pub(crate) fn computed_permanent_on(
+        &self,
+        card: &CardInstance,
+    ) -> Option<std::sync::Arc<ComputedPermanent>> {
+        self.computed_permanent_hinted(card.id, Some(card))
+    }
+
+    /// The body of both. `hint`, when present, is the battlefield permanent
+    /// with `id` — the same shape as
+    /// `evaluate_requirement_static_hinted`, and for the same reason: one
+    /// body, so the hinted and unhinted forms cannot drift.
+    fn computed_permanent_hinted(
+        &self,
+        id: CardId,
+        hint: Option<&CardInstance>,
+    ) -> Option<std::sync::Arc<ComputedPermanent>> {
+        debug_assert!(
+            hint.is_none_or(|c| c.id == id && self.battlefield.iter().any(|b| b.id == id)),
+            "computed_permanent_on was handed a card that is not this battlefield's",
+        );
         // Mid-gather reads take the printed view (`in_layer_gather`, the
         // reentrancy guard) — the effect set is *being built*, so re-entering
         // the gather here would rebuild it from the same state and reach this
@@ -13287,7 +13318,10 @@ impl GameState {
         // with a P/T requirement was a stack overflow rather than a wrong
         // answer. The guard belongs here, once, where it cannot be forgotten.
         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
-            let card = self.battlefield.iter().find(|c| c.id == id)?;
+            let card = match hint {
+            Some(c) => c,
+            None => self.battlefield.iter().find(|c| c.id == id)?,
+        };
             // CR 613.8 — the gather's condition-gated tail installs the
             // effects it has built so far, so a layer-7 condition can see a
             // layer-4 type change from the same gather. The slot is empty at
@@ -13326,7 +13360,10 @@ impl GameState {
                 return Some(cp.clone());
             }
             if let Some((fx, gates)) = &st.memo {
-                let card = self.battlefield.iter().find(|c| c.id == id)?;
+                let card = match hint {
+                    Some(c) => c,
+                    None => self.battlefield.iter().find(|c| c.id == id)?,
+                };
                 let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(
                     card, fx, *gates,
                 ));
@@ -13335,7 +13372,10 @@ impl GameState {
             }
             needs_gather = true;
         }
-        let card = self.battlefield.iter().find(|c| c.id == id)?;
+        let card = match hint {
+            Some(c) => c,
+            None => self.battlefield.iter().find(|c| c.id == id)?,
+        };
         if needs_gather {
             // The scope's first computed read: fill `memo` exactly as
             // `frozen_effects` would, then store both memos under one guard.
