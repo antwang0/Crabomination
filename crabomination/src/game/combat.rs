@@ -4058,7 +4058,10 @@ impl GameState {
         // skipped once the gather has already happened, where the memo read is
         // cheaper than the gate's own board walk.
         const KW: crate::card::Keyword = crate::card::Keyword::DamageToThisGoesToItsController;
-        if !self.layers_memoized() && !self.card_keyword_possible(id, |k| *k == KW) {
+        // `_on`, not the `CardId` form: `c` above is exactly the
+        // `battlefield_find` that form opens with, and this is asked once per
+        // combat-damage assignment.
+        if !self.layers_memoized() && !self.card_keyword_possible_on(c, |k| *k == KW) {
             debug_assert!(
                 !self
                     .computed_permanent(id)
