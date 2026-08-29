@@ -46,9 +46,12 @@ sixty-seventh pass, so don't re-take that.
    what is left in that row is the predicates' own bodies, which is `(-89)`'s
    cascade, so read `(-69)`'s `check_state_based_actions` refutation before
    pulling on it again. (d) `(-89)`'s keyword-gated remainder —
-   the fused-scan move caps at ~0.05 %. (e) The actor-only lever: the
-   `EncodedObject` double copy, ~0.2-0.3 % of `selfplay_train`, and
-   `--feature-census` is its regression check. (f) Cards on leftover context.
+   the fused-scan move caps at ~0.05 %. (e) **The actor-only lever is TAKEN** — the
+   `EncodedObject` double copy, `523406fb`, **-0.413 % of `selfplay_train`**
+   and invisible to `--bench` because `gang` never encodes. What is left on
+   the actor is `encode_state` 1.30 % and `rank_shape` 0.98 %; everything
+   above them is engine, so **an engine percent is an actor percent**.
+   (f) Cards on leftover context.
 4. **Two rules the lane half produced.** A **second** consumer of an existing
    lane is priced on the lane's *answer*, not on the row it gates — where the
    answer is usually `PRESENT` it buys only the misses the first consumer
