@@ -1065,6 +1065,19 @@ here if it ever needs compacting.
   `Vec::clone` hands back `capacity == len`; inlining them removed all 22,930
   of `finalize_cast`'s growths — the largest `grow_one` row on `fixed` — and
   read `fixed` +0.366 % / `cube` +0.291 % / `sealed` +0.322 %.
+- **FILL A `SmallVec` WITH A LOOP, NOT A `collect()` — and this is the
+  largest number in the file for that rule** (pass 97). The SBA death gate's
+  candidate list, one `collect` over the battlefield in a function called at
+  every priority pass, read `fixed` -0.065 % / `cube` -0.362 % / `sealed`
+  +0.007 % as a collect and **-0.580 / -0.766 / -0.549 %** as a `for` loop —
+  0.515 / 0.404 / 0.556 percentage points, i.e. the collect gave the whole win
+  back on two pools and reversed the sign on the third (`SmallVec::extend`
+  +8.0 M and `call_mut` +10.5 M on `sealed`). `Vec::from_iter` specializes to
+  internal iteration and `SmallVec`'s `Extend` does not, so the collect is an
+  external `next()` loop with a spill check per element. **The inline storage
+  is still worth having — it is the iteration protocol that costs, not the
+  buffer.** The ninety-sixth pass's `sorted` entry reached the same rule from
+  `extend()`; `blockers_of` reached it from `collect()` at -0.072 %.
 - **A `SmallVec` without the `union` feature is an *enum*, and the
   discriminant match is the whole trade** (pass 86, `(-71)`; 0.12 % of
   `fixed`). Inlining the gather's `sa_cards` buffer read **+0.108 % on
@@ -2100,6 +2113,61 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### Ninety-seventh pass — closing state at `ec5dc3a9`
+
+The pass's own two commits; the block below this one reads the same code at
+`a69a8287` (a CLAUDE.md commit on top of it) and is the fuller gate.
+
+```text
+suite   19,028 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures, with the death sweep's new `Only` audit armed
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 271.34 at 3 threads, host_calib_ms 44 — see the next
+        block's three-gate reading; the clock is not the instrument.
+
+Ir anchor, callgrind, profiling-fast --no-default-features,
+--games 6 --threads 1 --seed 1:
+                 cd0842e9          ec5dc3a9
+  fixed        957,024,164  ->   946,679,889   -1.081 %
+  cube       2,865,614,086  -> 2,829,634,637   -1.256 %
+  sealed     2,831,048,349  -> 2,805,067,926   -0.918 %
+```
+
+Five commits across that interval: a concurrent session's three `_on` ones and
+this pass's two, which are -0.580 / -0.766 / -0.549 % of it.
+
+**Two more cross-session anchor checks, and they are now routine.**
+`cd0842e9` re-read here agrees with the reading its own commit filed to 966 /
+95 / 408 Ir; `ec5dc3a9` here against `a69a8287` below — the same code, a
+CLAUDE.md commit apart, two sessions, two builds — agrees to **467 / 577 /
+3,533 Ir on 0.9-2.8 G**. Fourth and fifth such checks.
+
+**A CEILING IS A PERCENTAGE OF THE BASE IT WAS READ AT, AND `(-91)` IS THE
+WORKED EXAMPLE.** Its probe read -0.711 / -1.146 / -1.899 % at `e0cbb4a7`. The
+shipped implementation reads -0.673 / -0.721 / -0.813 %, which looks like it
+left half the `sealed` win on the table. It did not. A second, independent
+implementation of the same change, built at `cd4ad277`, lands at
+
+```text
+              the second build         (-91)'s ceiling probe        gap
+  fixed         956,940,755              956,853,484           +0.009 %
+  cube        2,865,377,827            2,865,781,687           -0.014 %
+  sealed      2,830,802,590            2,830,495,172           +0.011 %
+```
+
+— the ceiling's own **absolute** totals, to a hundredth of a percent on every
+pool, with the recompute family landing on the ceiling's after-column to the
+instruction (`sba_scan_bits` 775,056, `printed_color_set` 1,743,454, grant
+327,744, gather 416,518, type 300,626, dispatch 195,320). The percentage
+shrank because `3b8bfd03` took 31 M of `sealed` out from under the ceiling in
+between. **Quote a ceiling with the base it was read at, and re-read it
+against the tip before promising its number**; the absolute total is the part
+that survives, which is the same reason this file keeps anchors rather than
+sums of rows.
 
 ### Ninety-sixth pass (5) — the `_on` form of `computed_permanent`, and where its value actually is
 
@@ -8444,6 +8512,80 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-seventh pass — the SBA death sweep computes the permanents its own gate names
+
+**`ec5dc3a9`, `fixed` -0.559 % / `cube` -0.751 % / `sealed` -0.533 %**, with
+`66e78a2f` under it as a wash (-0.021 / -0.015 / -0.016 %) that exists so the
+change can be audited. Behaviour-preserving: identical decided/undecided and
+identical run output on all three pools.
+
+`check_state_based_actions_into`'s gate walked the battlefield asking
+`card_death_possible` of each permanent, **threw the walk's result away**, and
+then computed layers for every creature on the board. But where neither
+board-global bail fires — Zilortha's `lethal_by_power`, a live layer-7
+reduction — that per-card leg is a **necessary** condition for death, not a
+board-level hint, and the sweep's own `debug_assert!` has been auditing
+exactly that claim for forty passes. So the permanents the gate names are the
+only ones the filter can act on, and **keeping the list is the whole change**:
+`death_sweep_scope` returns `Skip` / `WholeBoard` / `Only(ids)`, and `Only`
+narrows the layer pass (`compute_permanents(ids)`) and the filter walk
+together.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+  base 945d9796 (= cd0842e9 + the extraction)
+  fixed     956,827,217 ->   951,477,425   -0.559 %
+  cube    2,865,172,922 -> 2,843,650,873   -0.751 %
+  sealed  2,830,581,708 -> 2,815,495,211   -0.533 %
+
+layer passes over the whole run (`compute_permanent_gated` calls):
+  fixed    92,012 ->  87,750     -4,262
+  cube    289,098 -> 270,078    -19,020
+  sealed  286,750 -> 268,028    -18,722
+  compute_permanent_pass  -1,068,042 / -5,165,308 / -3,895,112
+```
+
+**The refutation worth keeping is the shape of the candidate list, and it is
+the largest number this file carries for that rule.** Collecting the ids into
+the `SmallVec` instead of pushing them in a `for` loop read:
+
+```text
+  collect()   fixed -0.065 %   cube -0.362 %   sealed +0.007 %
+  for loop    fixed -0.580 %   cube -0.766 %   sealed -0.549 %
+                    +0.515          +0.404           +0.556  percentage points
+  the collect form's own rows, sealed:  SmallVec::extend  +8,022,698
+                                        call_mut         +10,463,304
+```
+
+One `collect` over a battlefield, in a function called at every priority pass,
+**gave the entire win back on two pools and reversed the sign on the third**.
+The ninety-sixth pass's `sorted` entry reached the same rule from `extend`;
+this is `collect` again, at seven times the size of `blockers_of`'s -0.072 %.
+The device is: **where a `SmallVec` is filled inside a hot walk, write the
+loop.** The inline storage is still worth having — it is the *iteration
+protocol*, not the buffer, that costs.
+
+**And the second refutation, which is a caution about reading a `call_mut`
+row:** the extraction of the 60-line filter closure into `GameState::dies_to_sba`
+moved `call_mut` -14,535,686 on `cube` against `dies_to_sba` +5,039,702, which
+reads like a 0.33 % win for turning a fat-capture closure into a method. It is
+not: measured on its own the extraction is **-0.015 %**. That `call_mut` fall
+belongs to the *narrowing* — the filter runs over fewer cards — and the two
+were only ever measured together because the narrowing needed the method for
+its audit. **Split a patch whose rows you want to attribute, or attribute
+nothing.**
+
+**The audit is the reason this is committable.** `Only` is a claim that
+`card_death_possible` is necessary, and under `debug_assertions` the sweep now
+computes the whole-board answer anyway and `debug_assert_eq!`s the two death
+lists. `scripts/robustness_grid.sh` fires it on real boards: **30 cells,
+33,120 games, 0 undecided, 0 failures** at this tip. The 19 k-test suite is
+not that audit and never was.
+
+**What is left of `(-88)`:** its own first question — how many of the 20,152
+`cube` sweeps re-sweep a board nothing has touched since the last one — is
+untouched and is now the larger half.
+
 ### Ninety-sixth pass (3) — the `_on` form of `computed_permanent`
 
 **Two commits, `fixed` -0.50 % / `cube` -0.49 % / `sealed` -0.37 % between
@@ -13530,6 +13672,13 @@ the largest at 862 Ir a call, and `(-61)` already says its Absorb gate is a
 
 **(-88) `check_state_based_actions_into` IS A 2.4-3.1 % SELF ROW ON EVERY
 POOL AND NO ENTRY HAS EVER NAMED IT.** Same tip and same dumps as `(-89)`.
+**HALF TAKEN at `ec5dc3a9` for -0.559 / -0.751 / -0.533 %** — the death
+sweep's whole-board layer pass is now a pass over the permanents its own
+gate names (Log, ninety-seventh pass). **The open half is this entry's own
+first question and it is now the larger one:** 20,152 sweeps a `cube` run
+against 66,612 `perform_action_inner` calls is one sweep per 3.3 actions —
+how many re-sweep a board nothing has touched since the last one? Still
+answerable off the caller table below with no build.
 
 ```text
                      self Ir     % of pool    calls    self Ir/call

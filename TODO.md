@@ -90,18 +90,31 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    is keyed on**, not beside it — a `Deref`-only newtype makes every write a
    compile error, and moving the memo into it makes the one expression the
    newtype cannot stop (`c.definition = other.definition.clone()`) *correct*
-   instead of rare. It read 95 / 63 / 43 % of the ceiling that entry filed;
-   the gap is unexplained and the Baseline says do not re-derive -1.9 % on
-   this tip. **Two NEW entries at the top of the queue, both sized on all
-   three pools at the ninety-fifth pass:**
+   instead of rare. **It read 95 / 63 / 43 % of the ceiling that entry
+   filed and the gap is now explained: there is none.** A second, independent
+   implementation of the same change, built at `cd4ad277` by a concurrent
+   session, lands within 0.009 / 0.014 / 0.011 % of the ceiling probe's own
+   *absolute* totals on all three pools. The percentage shrank because
+   `3b8bfd03` took 31 M of `sealed` out from under the ceiling between the
+   probe and the implementation. **A ceiling is a percentage of the base it
+   was read at** — Baseline, ninety-seventh pass.
+   **Two entries at the top of the queue, both sized on all three pools at
+   the ninety-fifth pass, one of them now half taken:**
    `(-89)` (the combat-damage prevention cascade, **1.55 / 2.34 / 1.69 %**,
    ten questions a damage event; its two largest rows are already taken for
    -0.087 / -0.114 / -0.098 %, eight are left, and **both taken mechanisms
    were then applied to a neighbouring row in the same cascade and both lost
-   there** — read the refutations before repeating either) and `(-88)`
-   (`check_state_based_actions_into`, a **2.4-3.1 %** self row nothing had
-   ever named; its first question is answerable off the caller table with no
-   build). **The `call_mut` census is CLOSED**
+   there** — read the refutations before repeating either).
+   **`(-88)` IS HALF TAKEN** (`ec5dc3a9`, `fixed` -0.559 / `cube` -0.751 /
+   `sealed` -0.533 %): the SBA death sweep's whole-board layer pass is now a
+   pass over the permanents its own gate names, because
+   `card_death_possible` is a *necessary* condition for death and the sweep
+   was throwing that walk's result away. **The open half is that entry's own
+   first question and it is the larger one** — 20,152 sweeps a `cube` run
+   against 66,612 `perform_action_inner` calls, and nobody has asked how many
+   re-sweep a board nothing has touched. Still answerable off the caller
+   table with no build.
+   **The `call_mut` census is CLOSED**
    — all six rows swept at the ninety-fifth pass, and the capture rule
    predicted the order on every one (see the Baseline; `process_echo` is read
    and left at 0.01 %, which is the result, not an omission).
@@ -151,7 +164,13 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
      check + external next)`.** `Vec::from_iter` specializes to *internal*
      iteration and `SmallVec`'s `Extend` does not, so the collect becomes an
      external `next()` loop: `blockers_of` gave back 4.19 M of the 4.15 M +
-     2.2 M its allocations cost, for -0.072 % of `cube` net.
+     2.2 M its allocations cost, for -0.072 % of `cube` net. **And the same
+     rule at seven times the size, which is the one to quote** (pass 97): the
+     SBA death gate's candidate list read -0.065 / -0.362 / **+0.007** % as a
+     `collect()` into a `SmallVec` and -0.580 / -0.766 / -0.549 % as a `for`
+     loop. One collect over a battlefield gave the whole win back on two
+     pools and reversed the sign on the third. **Fill a `SmallVec` with a
+     loop**; the inline storage is fine, the iteration protocol is not.
    * **A `same_team`-shaped call inside a collection walk is a per-*seat*
      question asked per element.** Three answers: hoist it when an earlier
      term of the same `&&` pins its argument, put a cheaper term in front of
@@ -168,6 +187,13 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    * **A rebase shrinks a patch without shrinking its measurement**, and
      **cite an anchor by a hash already on `origin`** — the last one was
      filed at a hash that no longer resolves.
+   * **Split a patch whose rows you want to attribute, or attribute
+     nothing** (pass 97). Extracting the SBA death filter's fat-capture
+     closure into a method moved `call_mut` -14.5 M against the new method's
+     +5.0 M on `cube` — which reads like a 0.33 % win for the extraction and
+     is not: measured alone the extraction is **-0.015 %**. That `call_mut`
+     fall belonged to the narrowing landed beside it, because the filter ran
+     over fewer cards.
    **One open question, not re-landed unilaterally:** the Cauldron revert is a
    20x asymmetric pool split — 0.006 % of the bench pool against 0.125 % of
    `sealed`, and `sealed`/`cube` are the pools the training loop plays.
