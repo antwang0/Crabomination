@@ -38,11 +38,21 @@ sixty-seventh pass, so don't re-take that.
    tip it will land on, because the two changes multiplied on the walk count.
 4. **BEST NEXT MOVES, in order.** (a) `(-92)` — **the profile is FLAT** (six
    functions read by line all say "no hot line"), leads 2 and 3 open.
-   (b) `(-89)`'s eight remaining prevention rows. (c) ENGINE_BACKLOG's "the
-   gate's own wrappers": three of the five target walkers still have no
-   catalog invariant, and a *blanket* one does not work — 29 false findings.
-   (d) The ML question in item 7. (e) Cards only on leftover context.
-5. **Two rules this pass produced.** Fusing two whole-collection `any`s pays
+   (b) `(-89)`'s eight remaining prevention rows, but read PERF's re-read
+   first: its walks are ~250 Ir, not ~900, so the fused-scan move it implies
+   caps at ~0.05 %. (c) ENGINE_BACKLOG's "the gate's own wrappers" — the
+   three open walkers are CLOSED (two invariants at populations 295 and
+   7,728, one by construction); what is left there is the *structural* fix,
+   one shared recursion over inner effects instead of five hand-written
+   walks. (d) The ML question in item 7. (e) Cards only on leftover context.
+5. **The rule the hundredth pass produced, and it generalises past walkers:**
+   **check a hand-written walk against another walk of the same tree, not
+   against a guess at what the tree means.** That is why the slot-agreement
+   invariant works at 7,728 bodies where a blanket "holds a `Move`" test
+   produced 29 false findings — and why both new tests assert their own
+   population, since a test that reports nothing because it looks at nothing
+   is the failure an empty ratchet hides.
+6. **Two rules the ninety-ninth pass produced.** Fusing two whole-collection `any`s pays
    only when both are walked in the same invalidation epoch — price the epoch,
    not the collection (the two type-gate lanes are not, so a fused pass
    removed 3 % of the walks and cost 82 % more per walk). And a `for` loop
