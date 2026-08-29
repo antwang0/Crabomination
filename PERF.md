@@ -48,6 +48,22 @@ scripts/pgo_build.sh selfplay_train  # any other bin, with PGO_TRAIN set
 # if you need to attribute LTO'd code.)
 cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
   --no-default-features
+# THE WHOLE THREE-POOL A/B AS ONE SCRIPT, and on warm caches it is ~10
+# minutes, not the hour the per-step budgets imply. One tree, one target dir,
+# and the base's callgrind runs overlap the candidate's build:
+#   git stash push -m ab
+#   cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
+#     --no-default-features && cp target/profiling-fast/bot_ladder /tmp/base
+#   git stash pop
+#   ( for p in cube fixed sealed; do valgrind --tool=callgrind \
+#       --callgrind-out-file=/tmp/cg.$p.b.out /tmp/base <args> ; done; touch /tmp/b.done ) &
+#   cargo build --profile profiling-fast … && cp target/profiling-fast/bot_ladder /tmp/cand
+#   while [ ! -f /tmp/b.done ]; do sleep 10; done
+#   for p in cube fixed sealed; do valgrind … /tmp/cand … ; done
+# The stash is safe here where PERF's worktree rule warns it is not: nothing
+# rebases mid-run, the tree returns to the same commit both times, and the
+# base binary is *copied out* before the pop. Delete both 215-MB binaries as
+# soon as the six dumps exist.
 # A second CARGO_TARGET_DIR (gitignored: /target-probe/) lets the *next*
 # candidate build while the current one runs under callgrind — callgrind is
 # single-threaded and contention-immune, so the overlap is free. Two cargo

@@ -280,6 +280,14 @@ rebuilds under different `RUSTFLAGS`, which cargo never garbage-collects.
 `rm -rf target/debug/incremental target/debug/examples` freed 5.8 GB and
 `rm -rf target/release-fast` another 7.7 GB, both without a workspace rebuild.
 
+**The audit builds are the other 3 GB, and this run hit 97 % (1.3 GB free).**
+`scripts/robustness_grid.sh` fills `target-audit/` (~1.5 GB) and the actor leg
+adds `selfplay_train` to the same dir for another ~1.5; on top of that, an
+A/B session accumulates copied `profiling-fast` binaries at **215 MB each** in
+whatever scratch dir the base/candidate pair lives in. Delete the A/B binaries
+as soon as their callgrind dumps are taken (the dumps are 1-3 MB and are the
+thing worth keeping), and `rm -rf target-audit` once the grid is green.
+
 **Two cold builds concurrently did NOT OOM at the ninetieth pass** — a `release`
 bot_ladder and a `profiling-fast` one in a second worktree ran together to
 completion-ish on 15 GB, peaking ~10 GB used with 4 GB free. So the "sequential
