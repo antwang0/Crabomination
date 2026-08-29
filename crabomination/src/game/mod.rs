@@ -9379,7 +9379,7 @@ impl GameState {
         self.continuous_effects
             .iter()
             .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k)))
-            || self.battlefield.iter().any(|c| card_can_grant_keyword(c, &pred, synth))
+            || self.board_grants_keyword(&pred, synth)
             || self.players.iter().any(|p| {
                 p.command
                     .iter()
@@ -9405,6 +9405,50 @@ impl GameState {
                         })
                     }))
             })
+    }
+
+    /// The battlefield leg of
+    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope), with the
+    /// zone's grant lane in front of it.
+    ///
+    /// The walk visits every permanent to load one `grant_scan_bits` word and
+    /// answers "no" on a board with no lord, anthem or aura — and it is asked
+    /// once per `card_keyword_possible`, 26,810 / 74,938 / 74,686 times over a
+    /// six-game run of the three pools. The lane holds that answer until
+    /// membership or a definition moves; it is filled from this walk, which
+    /// was loading the same word anyway, so a miss costs nothing extra.
+    ///
+    /// **The `synth` path is deliberately outside the lane.** It reads
+    /// `card.suspected`, an instance field, so no definition-keyed lane can
+    /// hold its answer — the membership rule, unchanged.
+    fn board_grants_keyword(&self, pred: &impl Fn(&Keyword) -> bool, synth: bool) -> bool {
+        use crate::card::grant_bits as gb;
+        if synth {
+            return self.battlefield.iter().any(|c| card_can_grant_keyword(c, pred, synth));
+        }
+        let lane = self.battlefield.grant_lane();
+        if lane == Ok(false) {
+            return false;
+        }
+        let mut any_bits = false;
+        for c in self.battlefield.iter() {
+            if c.grant_scan_bits() & gb::ANY_GRANT == 0 {
+                continue;
+            }
+            any_bits = true;
+            if c.definition.can_grant_keyword(pred) {
+                // Reaching here proves the lane's own predicate, so the early
+                // return can still fill it.
+                if let Err(epoch) = lane {
+                    self.battlefield.store_grant(epoch, true);
+                }
+                return true;
+            }
+        }
+        if let Err(epoch) = lane {
+            self.battlefield.store_grant(epoch, any_bits);
+        }
+        false
     }
 
     /// True when the battlefield permanent `id`'s *computed* keyword set could

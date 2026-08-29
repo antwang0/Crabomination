@@ -172,6 +172,7 @@ const LANE_OUTGOING_PREVENT: u32 = 6;
 const LANE_INCOMING_PREVENT: u32 = 8;
 const LANE_DISPATCH: u32 = 10;
 const LANE_SHIELD: u32 = 12;
+const LANE_GRANT: u32 = 14;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -180,6 +181,13 @@ const LANE_MASK: u32 = 0b11;
 /// audits against — so the memo and the walk it gates cannot drift.
 fn card_has_dispatch_bits(c: &CardInstance) -> bool {
     c.dispatch_scan_bits() & crate::card::dispatch_bits::BOARD_SCAN != 0
+}
+
+/// Can this permanent grant a keyword to anything, whatever the predicate
+/// asks? The [`LANE_GRANT`] predicate, and the one that lane's
+/// `debug_assert!` audits against.
+fn card_has_any_grant_bits(c: &CardInstance) -> bool {
+    c.grant_scan_bits() & crate::card::grant_bits::ANY_GRANT != 0
 }
 
 /// The battlefield: the CoW card list, plus the whole-board questions asked of
@@ -424,6 +432,40 @@ impl Battlefield {
     /// before the walk.
     pub fn store_dispatch(&self, epoch: u64, found: bool) {
         self.store_lane(LANE_DISPATCH, epoch, found);
+    }
+
+    /// The keyword-grant lane, same caller-filled contract as
+    /// [`dispatch_lane`](Self::dispatch_lane): `Ok(present)` is the memo,
+    /// `Err(epoch)` means "walk, then hand that epoch to
+    /// [`store_grant`](Self::store_grant)".
+    ///
+    /// Split rather than closure form because `keyword_grant_in_scope`'s walk
+    /// is *not* the lane's predicate — it evaluates a caller-supplied
+    /// `Fn(&Keyword)` per card on top of the bit — so a closure lane would
+    /// walk twice on every miss. The walk already loads `grant_scan_bits` per
+    /// card, so filling this from it is free.
+    pub fn grant_lane(&self) -> Result<bool, u64> {
+        let epoch = crate::card::definition_epoch();
+        let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
+            UNKNOWN as u32
+        } else {
+            (self.type_gates.load(Ordering::Relaxed) >> LANE_GRANT) & LANE_MASK
+        };
+        debug_assert!(
+            cur == UNKNOWN as u32
+                || (cur == PRESENT as u32) == self.cards.iter().any(card_has_any_grant_bits),
+            "battlefield grant memo is stale: a write reached the cards without clearing it",
+        );
+        match cur {
+            c if c == ABSENT as u32 => Ok(false),
+            c if c == PRESENT as u32 => Ok(true),
+            _ => Err(epoch),
+        }
+    }
+
+    /// Record what the caller's own walk found in the keyword-grant lane.
+    pub fn store_grant(&self, epoch: u64, found: bool) {
+        self.store_lane(LANE_GRANT, epoch, found);
     }
 
     /// Append, through [`CowBox`]'s own `push` so an unshare materializes with
