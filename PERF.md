@@ -14928,6 +14928,31 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-98) `cg_sites.py battlefield_find` RE-READ AFTER THE MEMO — 61.5 M /
+2.35 % BEFORE, 45,813,904 / 1.99 % NOW, AND THE RESIDUE IS TWO SITES.**
+`profiling-lines`, `--decks cube`, `--dump-instr=yes`, at `633acc3e`
+(2,716,751,269 Ir against `profiling-fast`'s 2,717,721,142 — 0.036 % apart, so
+the attribution transfers). Read as a floor, per the tool's own rule.
+
+```text
+  6,427,518  0.28 %  mod.rs:23087   find_card_anywhere's first leg
+  6,276,282  0.27 %  eval.rs:3144   bf_hint_or_find's fallback
+  3,208,280  0.14 %  bot.rs:10018   pick_blocks_inner's closure
+  1,990,344  0.09 %  combat.rs:2490 first_strike_damage_step
+  … then 60+ sites under 0.08 % each
+```
+
+**Both leaders are misses by construction and neither is a candidate.**
+`find_card_anywhere` asks about cards that are mostly *not* on the battlefield
+— that is what the function is for — so its first leg is a full scan every
+time and the memo cannot help it; its visit order was already tuned (the
+comment records the cast path's libraries-first version at ~65 % of the
+function). `eval.rs:3144` is the requirement walker's *unhinted* remainder,
+i.e. exactly the calls the ninety-fifth pass's `_on` conversion could not
+reach. **The 556-site class is now a long tail with no head**: after the two
+leaders, no site is above 0.14 %, which is the same shape `(-96)` found at the
+function level. `(-38)` is closed and this is the last reading it needs.
+
 **(-97) THE ACTOR'S OWN PROFILE, RE-READ AT `633acc3e` WITH `(-95)`'s LENS
 APPLIED, AND IT CONFIRMS "AN ENGINE PERCENT IS AN ACTOR PERCENT" WITH
 NUMBERS.** `selfplay_train --actors 1 --games 60/120 --steps 1 --seed 7`,

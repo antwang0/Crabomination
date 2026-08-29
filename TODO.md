@@ -43,12 +43,15 @@ sixty-seventh pass, so don't re-take that.
    left.** Every row above 2 % is either a mined family with its refutation on
    file, the allocator (an upper bound this instrument cannot tighten), or
    `Vec::from_iter` spread over 93 callers. **So change instrument, not
-   target** — `(-96)` names three that have never been run here, cheapest
-   first. (c) `(-95)` is the first of them and it already refuted a candidate:
-   `--games 12` call-count diffs separate once-per-process costs from per-game
-   ones, and the six-game workload was charging `wants_converge`'s `format!`
-   0.459 % of `cube` for a cost a training run never pays. (d) `(-92)` leads 2
-   and 3; `(-93)`'s lane device is intact and lanes 10-16 are free, but its
+   target** — `(-96)` named three, and **all three have now been run**:
+   `(-95)` the `--games`-doubling call-count diff (which refuted a candidate
+   without a build — the six-game workload was charging `wants_converge`'s
+   `format!` 0.459 % of `cube` for a cost a training run never pays),
+   `(-97)` the actor, `(-98)` the `cg_sites` re-read. (c) **None of the three
+   found a new head.** The profile is a long tail at every magnification —
+   function, call site, and run length — and that is itself the answer: the
+   next real win is a structural change to a mined family, not another row.
+   (d) `(-92)` leads 2 and 3; `(-93)`'s lane device is intact and lanes 10-16 are free, but its
    consumer list is exhausted.
    (e) **The actor is re-read too — `(-97)`, and the standing claim is now
    measured**: thirteen of its top fifteen rows are engine, the only
