@@ -43,8 +43,11 @@ sixty-seventh pass, so don't re-take that.
    **the next win is a structural change to a mined family, not another row**,
    and `(-99)` is the entry point: the 132,370 CoW deep copies attributed by
    calling context for the first time, two contexts holding 42 % of them, with
-   the two design directions it opens and a warning that every pass that gave
-   this family less than a day came back with a refutation. `(-92)` leads 2
+   its **one** remaining design direction (a narrower probe clone) and a
+   warning that every pass that gave this family less than a day came back
+   with a refutation — the other, a no-op-write audit, is closed by
+   `cg_sites deref_mut`: 0.51 % total, 0.07 % largest site, and neither hot
+   context in the table at all. `(-92)` leads 2
    and 3 are the alternative. `(-93)`'s lane device is intact and lanes 11-16 are
    free, but its consumer list is exhausted — and note that every lane after
    the third was found off the **self** table, not off that list, by reading

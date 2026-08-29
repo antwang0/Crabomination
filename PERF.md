@@ -15009,18 +15009,25 @@ of the search, not a bug.
 **That is why this entry is a measurement and not yet a candidate.** Two
 directions it opens, in order, and both are design work rather than a row:
 
-1. **Which of those first writes are no-op writes** — `(-50)`'s question
-   pointed at the two contexts above rather than at the whole codebase.
-   `activate_ability_inner` is ~3,000 lines and the `make_mut`s in it are all
-   *inlined* `DerefMut`s, so the audit needs `cg_sites.py` with `deref_mut` as
-   the needle before any reading of source.
+1. **Which of those first writes are no-op writes — MEASURED AND CLOSED, no
+   source read spent.** `cg_sites.py deref_mut` on a `profiling-lines` build
+   at the same tip: the whole `deref_mut` family is **11,794,986 Ir / 0.51 %**
+   and its largest single site is `stack.rs:6090` at **0.07 %**; after that,
+   `Battlefield::cards_unchecked_mut` 0.04 %, `iter_mut` 0.03 %, and a tail.
+   **Neither of the two hot contexts above appears in the table at all** — so
+   the copies they pay do not come from a few identifiable `DerefMut` lines
+   that could carry a no-op guard, they are spread over many distinct write
+   sites inside two ~3,000-line functions. A site-by-site no-op audit has no
+   target; `(-50)`'s question is answered "nowhere concentrated" here.
 2. **Whether the bot's clone can be made narrower than the whole state** for
    the probe paths specifically — `(-13)`'s and `(-27)`'s territory, and both
    have refutations on file for the *pooling* form of it, not for a narrower
    clone.
 
-**Do not open this without a day for it.** Every previous pass into this
-family that took less came back with a refutation.
+So **direction 2 is the only one left**, and the entry stands as a warning as
+much as a lead: **do not open it without a day for it.** Every previous pass
+into this family that took less came back with a refutation, and direction 1
+is now a third.
 
 **(-98) `cg_sites.py battlefield_find` RE-READ AFTER THE MEMO — 61.5 M /
 2.35 % BEFORE, 45,813,904 / 1.99 % NOW, AND THE RESIDUE IS TWO SITES.**
