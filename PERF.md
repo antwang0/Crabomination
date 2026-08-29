@@ -2161,6 +2161,70 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-ninth pass, the lane half — closing state at `58c22dbd`
+
+Two code commits, both the caller-filled `Battlefield` lane (`(-93)`):
+`c4d450fa` (the trigger dispatcher's board scan) and `841c7b9b`
+(`trigger_grant_sources`' battlefield leg). A concurrent session's commits
+alternate with them, so **each change names its own base** and the anchor
+below is the composed reading over the window.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.10 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,042 / 0 / 5 (cargo nextest); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures, with `battlefield dispatch memo is stale` verified
+        present in the audit binary (4 "memo is stale" strings)
+actor   the leg the grid's header names, re-run because this half lands a
+        new `debug_assert!`: `-C debug-assertions=yes` + `overflow`
+        `selfplay_train`, 4 seeds x `--actors 3 --games 3000 --steps 20` —
+        **12,000 games, 1,155,393 rows, 0 stalls, rc 0**, no panic /
+        assertion / overflow. 125.9-131.2 games/s, an *audit* build.
+--bench 195,528 / 27.44 / 611.0 / 0 stalls (cap 0 / stuck 0 / draw 0) —
+        byte-identical to the committed invariant on both the
+        `profiling-fast` and the `release` binary; determinism ok,
+        thread_determinism ok (3 vs 1). release: games_per_s 308.68 at
+        3 threads, host_calib_ms 47, peak_rss_mib 24.3,
+        bin_bytes 123,617,040.
+
+Ir, callgrind, profiling-fast --no-default-features, --a gang --b gang
+--games 6 --threads 1 --seed 1:
+                        base            after
+  dispatch lane  314e405a        c4d450fa
+    fixed         934,312,297 ->   926,191,983   -0.869 %
+    cube        2,771,803,927 -> 2,762,614,355   -0.332 %
+    sealed      2,769,523,333 -> 2,750,330,255   -0.693 %
+  the same lane  c4d450fa        841c7b9b
+    fixed         926,191,983 ->   923,157,400   -0.328 %
+    cube        2,762,614,355 -> 2,761,970,658   -0.023 %
+    sealed      2,750,330,255 -> 2,740,027,027   -0.375 %
+
+  the window, 314e405a -> 58c22dbd (re-read at the tip, not summed):
+    fixed         934,312,297 ->   923,157,402   -1.194 %
+    cube        2,771,803,927 -> 2,761,970,225   -0.354 %
+    sealed      2,769,523,333 -> 2,740,027,178   -1.064 %
+```
+
+**A seventh cross-session anchor check, and this one is an identity.** The tip
+read at `58c22dbd` and the candidate read at `841c7b9b` differ by **2 / 433 /
+151 Ir** on three pools of 0.9-2.8 G — and four commits sit between them
+(the shared wrapper recursion, a walker correction, `(-27)`'s cast-lock revert,
+and two tracker commits). That is what a *behaviour-preserving* refactor and a
+*reverted* experiment look like in Ir, and it is why the second change's rows
+did not need re-reading at the tip: **an anchor identity is the cheapest proof
+that an intervening commit is Ir-neutral**, and it costs one run you were
+taking anyway.
+
+**The first change WAS re-read, and the numbers moved.** Measured against
+`c2ff4536` it read -0.926 / -0.358 / -0.746 %; rebased onto `314e405a`, whose
+listener bits widened `dispatch_scan_bits` and took ~0.9 M off the row's
+`fixed` base, it reads -0.869 / -0.332 / -0.693 %. Same conclusion, different
+numbers — which is the standing rule doing exactly its job, and the contrast
+with the identity above is the useful pair: **re-read when the intervening
+commit touched the row, and check the anchor when it did not.**
+
 ### Ninety-ninth pass, the concurrent half — closing state at `314e405a`
 
 Four commits: the `layer4_bits` memo (`39299a63`), three off-board targeting

@@ -26,32 +26,34 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `841c7b9b`** (the ninety-eighth and ninety-ninth passes ran
-   concurrently and their commits alternate): suite 19,040 / 0 / 5, clippy
-   clean, golden traces unmoved, `--bench` byte-identical (195,528 / 27.44 /
-   611.0 / 0 stalls, determinism + thread_determinism ok), grid green (30
-   cells / 33,120 games, 4 assertion strings in the audit binary), actor leg
-   green (12,000 games / 1,155,629 rows). Per-commit numbers in PERF's Log;
-   **each names its own base**, because pushes landed between them.
+2. **State at `58c22dbd`** (three sessions' commits alternate through the
+   ninety-eighth and ninety-ninth passes): suite 19,042 / 0 / 5, clippy clean,
+   golden traces 7/7 unmoved, `--bench` byte-identical on both the
+   `profiling-fast` and the `release` binary (195,528 / 27.44 / 611.0 / 0
+   stalls, determinism + thread_determinism ok), grid green (30 cells /
+   33,120 games, 4 assertion strings), actor leg green (12,000 games /
+   1,155,393 rows / 0 stalls). Ir anchor and the window's **-1.194 / -0.354 /
+   -1.064 %** are in PERF's Baseline; **each change names its own base**.
 3. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
-   -0.645 % of `cube` in one commit. Rank a candidate by *what already gates
-   it*, not by its row, and check the second condition too: the walk's
-   per-card body must be more than a length check (memoizing `cast_lock_scan`'s
-   mask is refuted at +0.034 %). The noncombat-damage prevention family
-   (`mod.rs:13600-13900`) is the remaining ungated one; measure its walk first.
+   `(-93)` now carries the device, its two conditions and **four sized
+   consumers**, so start there rather than re-deriving: the
+   noncombat-damage prevention family, `fire_step_triggers`' first
+   battlefield loop (~0.3 % of `fixed`, and read the `cube` side before
+   believing it), and the two the entry refutes with reasons.
    (b) `(-92)` — the profile is FLAT, leads 2 and 3 open. (c) `resolve_combat
    -> SpecFromIter::from_iter`, 26,624 calls / 30.7 M / **1.10 % of `cube`**,
-   no entry. (d) `(-89)`'s keyword-gated remainder — read PERF's re-read
-   first, the fused-scan move caps at ~0.05 %. (e) The target walkers'
-   *structural* fix: one shared recursion over inner effects instead of five
-   hand-written walks (ENGINE_BACKLOG; the catalog invariants are closed).
-   (f) The ML question in item 7 — `pick_attacks_scored` is **46.6 %** of
-   `selfplay_train` and `(-21)` says its lever is the engine's per-step cost,
-   which is what these passes moved. (g) Cards on leftover context.
-4. **`(-27)`'s allocation half is CLOSED** — both pool variants built and
-   refuted. That and the eight other rules these passes produced are in
-   **PERF's "Standing rules for a perf pass"**, which is where a rule belongs
-   once it outlives its run; this section carries state and queue only.
+   no entry — but read `(-69)`'s `check_state_based_actions` refutation first,
+   because that row was real work rather than a `Vec` nobody wanted, and this
+   one's closures do real work too. (d) `(-89)`'s keyword-gated remainder —
+   the fused-scan move caps at ~0.05 %. (e) The actor-only lever: the
+   `EncodedObject` double copy, ~0.2-0.3 % of `selfplay_train`, and
+   `--feature-census` is its regression check. (f) Cards on leftover context.
+4. **Two rules the lane half produced.** A **second** consumer of an existing
+   lane is priced on the lane's *answer*, not on the row it gates — where the
+   answer is usually `PRESENT` it buys only the misses the first consumer
+   would have paid. And **an anchor identity is the cheapest proof that an
+   intervening commit is Ir-neutral**: re-read a change when the commit that
+   landed under it touched the row, check the anchor when it did not.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
