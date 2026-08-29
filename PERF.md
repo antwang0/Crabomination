@@ -2101,6 +2101,40 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fifth pass — closing state at `e0bc5c46`
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,029 / 0 / 5, run once per code commit; the golden traces inside
+        it, unmoved throughout
+clippy  -p crabomination --all-targets   clean at every commit
+grid    scripts/robustness_grid.sh, run twice this pass (at `62a53116` and
+        at the tip) — 30 cells, 33,120 games, 0 undecided, 0 failures each,
+        5 assertion strings verified present in the audit binary both times
+panics  scripts/audit_panics.py — 108 sites, 74 guarded / 11 lock-poison /
+        23 bare. **23 is the number to compare** and it is unchanged from
+        ENGINE_BACKLOG's read-through; the missing site against that
+        reading's 109 is a guarded one, not a bare one.
+audit   scripts/audit_variant_coverage.py — 0 dead capabilities over 1,695
+        variants, the same 3 dead primitives INCOMPLETE_CARDS already lists
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) — byte-identical to the committed
+        invariant; determinism ok / thread_determinism ok (3 vs 1 identical)
+        games_per_s 208.61 at **3** threads (`games_per_s_th` 69.536) and
+        271.89 at 4 (67.973); peak_rss_mib 24.2, host_calib_ms 50-54,
+        bin_bytes 123,614,904
+anchor  fixed 978,492,848 / cube 2,938,264,442 / sealed 2,921,980,262
+```
+
+Against `9b1fa94b`'s anchor the interval reads **-0.256 / -0.238 /
+-0.196 %**; against `386ef808`, where the two concurrent halves of this pass
+started, **-0.733 / -0.673 / -0.594 %**.
+
+**The `games_per_s` line is why this block now carries the thread count** —
+see the (4) entry: the committed 292.65 was a 4-thread reading and this
+container defaults to 3, which is a 30 % lever that `host_calib_ms` and
+`bin_bytes` between them do not catch.
+
 ### Ninety-fifth pass (5) — the `_on` form of a presence gate pays only where the caller already holds the card
 
 **`creature_redirects_damage_to_controller` passes the permanent it found,
