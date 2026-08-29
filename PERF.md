@@ -2161,6 +2161,59 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundredth pass, the second half — closing state at `633acc3e`
+
+One code commit, and it closes the file's oldest open structural entry:
+`633acc3e`, `(-38)`'s `battlefield_find` as a one-entry validated index memo
+on `Battlefield` (`fixed` -0.283 / `cube` -0.446 / `sealed` -0.300 %). Two
+variants of it were built in the same sitting and both are refuted with
+numbers — an out-of-line miss path (`+0.209 / +0.270 / +0.315 %`) and a
+two-entry FIFO (`-0.103 / +0.005 / -0.008 %`, a pool split with zero on the
+two pools training plays). A concurrent session's four commits sit under it;
+the memo was re-read at the tip it landed on and the reading did not move.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.10 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,044 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client) — 19,043 plus the new zone test; golden traces
+        7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, five pools x six seeds x
+        120 games, **33,120 games, 0 failures, 0 undecided**. This is the
+        audit that matters for this pass: the memo's uniqueness premise rides
+        a `debug_assert!` on `find_by_id`'s scan path, and `strings` confirms
+        `two battlefield permanents share a CardId` is present in the audit
+        binary (5 assertion strings in total). The scan-path placement also
+        keeps the grid at its usual ~4 min — on the hit path the same audit
+        would have been a board walk per find.
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 353.21 at 3 threads on a **profiling-fast** binary,
+        host_calib_ms 68, peak_rss_mib 20.6 — and NONE of that is comparable
+        to the block below: different profile AND a different box (2.10 GHz
+        against 2.80, calib 68 against 49-56). The invariant is the reading
+        that transfers; quote `games_per_s` only against its own calib.
+
+Ir anchor at `633acc3e`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     911,042,520      cube 2,717,721,142      sealed 2,700,016,601
+
+  the window, 98feda21 -> 633acc3e (each row measured at its own base; the
+  endpoints are quoted as endpoints, not as the measurement):
+    fixed     914,791,061 ->   911,042,520   -0.410 %
+    cube    2,730,990,977 -> 2,717,721,142   -0.486 %
+    sealed  2,708,407,683 -> 2,700,016,601   -0.310 %
+```
+
+**Tenth cross-session anchor check, and it is an identity again.** The block
+below's `98feda21` anchor was re-taken here from a fresh build at that commit
+and reads **914,790,955 / 2,730,989,522 / 2,708,409,470** against its filed
+914,791,061 / 2,730,990,977 / 2,708,407,683 — apart by **106 / 1,455 /
+1,787 Ir** on 0.91-2.7 G, i.e. **0.1 / 0.5 / 0.7 ppm**. A cold rebuild of the
+same commit in a different container reproduces the anchor to within a
+millionth, which is what makes the window above quotable at all.
+
 ### Hundredth pass — closing state at `98feda21`
 
 Three code commits, all `zone::Battlefield` lanes (`(-93)`): `6bf004f5` and
@@ -14868,6 +14921,17 @@ six-game `cube` run**; the memo's own win (-12.17 M) over a ~50 Ir saving per
 hit puts the hit count at about the same number, so **the hit rate is near one
 half** and a call on the miss path is paid as often as the hit is collected.
 That is the number this A/B was actually worth: it prices the class.
+
+**A SECOND SLOT IS ALSO REFUTED, same sitting, and it says what the misses
+are.** Packing two indices into the same `AtomicU32` (a two-deep FIFO, so an
+alternating source/target pair both stay hot — which is what
+`resolve_combat`'s scope looked like) reads `fixed` **-0.103 %** / `cube`
+**+0.005 %** / `sealed` **-0.008 %** off `633acc3e`: a pool split with zero on
+the two pools the training loop plays, so a revert under the standing rule.
+**The second slot buying nothing means the remaining misses are not an
+alternating pair — they are genuinely distinct ids**, which is what a board
+walk asking about each permanent in turn looks like, and no depth of
+same-collection memo reaches those. One entry is the whole class.
 
 **The rule: an out-of-line miss path is priced at the miss rate, and a memo
 whose hit rate is one half has no cheap miss path.** The four rows that

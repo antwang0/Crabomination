@@ -26,40 +26,36 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `98feda21`** (three lane commits, a concurrent session's
-   between them): suite 19,043 / 0 / 5, clippy clean, golden traces 7/7
-   unmoved, grid green twice (30 cells / 33,120 games each, the new
-   `battlefield grant memo is stale` string verified in the audit binary),
-   `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
-   determinism + thread_determinism ok). Ir anchor and the window's
-   **-0.888 / -1.088 / -1.137 %** are in PERF's Baseline; **each change names
-   its own base**. `games_per_s` is 18 % under the last pass's and it is the
-   box — `host_calib_ms` 49-56 here against 45-47 there; quote the pair or
-   quote neither.
-3. **BEST NEXT MOVES, in order.** (a) **NOT the cascade's `_on` conversion —
-   built and reverted at +0.099 / +0.406 / +0.195 %.** `(-89)` is re-read at
-   the tip (`apply_prevention_shields_with` 812 Ir, `creature_redirects` 769,
-   `damage_prevented_by_protection` 763, `damage_from_source_prevented..` 681,
-   1.42 % of `cube`) but the `battlefield_find` those rows look like they pay
-   **is not paid**: inside a freeze scope `computed_permanent(id)` hits
-   `perms` and never reaches its find. Log block (4) has the numbers and the
-   rule — **an `_on` conversion is worth its top few callers *whose lookup
-   misses***. Size the rows by line before touching them again.
-   (b) **More lanes** — `(-93)` now carries the
-   device, its three conditions, the second-consumer rule, and **the hit-rate
-   measurement: `callee calls / walk calls` off a dump you already have,
-   before you build.** Lanes 9-16 are free (`type_gates` is a `u32`).
-   (c) `(-92)` leads 2 and 3. (d) `(-87)` is taken; `(-82)`'s `available_mana`
-   half, `(-83)`, `(-9)`'s open half. (e) The actor: `encode_state` 1.30 %,
-   `rank_shape` 0.98 %; everything above them is engine, so **an engine
-   percent is an actor percent**. (f) Cards on leftover context.
-4. **The rule this pass produced, and it costs nothing to apply.** For a
-   gated walk, **the lane's miss rate is `callee calls / walk calls` in a dump
-   you already have.** `LANE_GRANT` read 0.70 / 1.15 / 0.017 mean granters a
-   board and then landed -0.481 / -0.276 / -0.621 % in exactly that order. The
-   reverted `fire_step_triggers` lane is what happens when nobody asks. Also:
-   **a lane's predicate may be the UNION of several walks' predicates** when
-   each walk's own filter is an instance field — `LANE_SHIELD` holds nine.
+2. **State at `633acc3e`**: suite 19,044 / 0 / 5, clippy clean, golden traces
+   7/7 unmoved, `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
+   determinism + thread_determinism ok), grid green (30 cells / 33,120 games / 0 failures, with
+   the memo's new `share a CardId` assertion verified in the audit binary). Ir anchor and the
+   window's **-0.410 / -0.486 / -0.310 %** are in PERF's Baseline; **each
+   change names its own base**. This box is a 2.10 GHz Xeon (`host_calib_ms`
+   68 against the last pass's 49-56), so no `games_per_s` here compares to any
+   filed one — quote the pair or quote neither.
+3. **BEST NEXT MOVES, in order.** (a) **`(-38)` IS CLOSED and so is `(-94)`.**
+   The `battlefield_find` index memo shipped at -0.283 / -0.446 / -0.300 %,
+   and **both of its obvious variants are refuted with numbers in the same
+   sitting** — an out-of-line miss path (+0.209 / +0.270 / +0.315 %) and a
+   two-entry FIFO (-0.103 / +0.005 / -0.008 %). Do not re-derive either.
+   (b) **A whole-program re-profile is DUE** — six levers have landed since
+   the last one (three lanes, the listener lane, the shared reader, the find
+   memo) and the candidates list is down to `(-92)`'s two open leads. Take
+   `cg_calls.py` and `cg_edges.py` on all three pools before pulling anything.
+   (c) `(-92)` leads 2 and 3; the profile is FLAT, so read "Profile of record"
+   first. (d) `(-93)`'s lane device is intact and lanes 10-16 are free, but
+   its consumer list is exhausted — a new consumer has to come out of (b).
+   (e) The actor: `encode_state` 1.30 %, `rank_shape` 0.98 %; everything above
+   them is engine, so **an engine percent is an actor percent**. (f) Cards on
+   leftover context.
+4. **The rule this pass produced, and it is one distribution seen twice.**
+   **Rank an `_on` conversion by MISS rate and a memo by HIT rate.** The same
+   four cascade rows were measured both ways in one sitting: converting their
+   lookups to `_on` forms read **+0.099 / +0.406 / +0.195 %** because those
+   lookups are hits, and memoizing the hits read **-0.283 / -0.446 / -0.300 %**.
+   The find memo's hit rate is near one half (286,320 misses on a six-game
+   `cube` run), which is also why it has no cheap out-of-line miss path.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
