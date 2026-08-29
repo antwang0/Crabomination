@@ -95,6 +95,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
      is short, ask whether the scope is long.**
    * **A per-definition presence bit pays only when the walk it replaces is
      over a list that is usually non-empty.**
+   * **`SmallVec` cannot replace a `Vec` of BORROWED data that outlives its
+     last use** — no `#[may_dangle]` on its `Drop`, so the shared borrow runs
+     to the drop point and every `&mut self` call after it is an error.
+     `DispatchScan`'s two lists are that shape (29,474 allocations a `cube`
+     run, ~0.15 %) and are **not** reachable without a borrow refactor of two
+     long functions. Tried, ten errors, reverted.
    * **Price a `Vec -> SmallVec` swap as `alloc + free` minus `n x (spill
      check + external next)`.** `Vec::from_iter` specializes to *internal*
      iteration and `SmallVec`'s `Extend` does not, so the collect becomes an

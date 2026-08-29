@@ -2245,6 +2245,22 @@ where the allocator side alone reads 4.1 M. `fixed` barely moves (-0.007 %)
 because its four archetypes block less; the two pools the training loop plays
 carry it.
 
+**AND THE NEXT SITE THE SAME ARITHMETIC PICKED IS NOT REACHABLE — a hard
+boundary on the device, found by trying it.** `DispatchScan`'s two lists
+(`trigger_grants`, `equip_grants`) are the obvious follow-on: 74,798 scans a
+`cube` run push into one of them on 29,474, i.e. an allocation and a free per
+scan that finds anything, worth an estimated ~3.5-5 M. **`SmallVec`'s `Drop`
+carries no `#[may_dangle]` and `Vec`'s does**, so a `SmallVec` of borrowed
+data holds its shared borrow of `self` alive to its *drop* point where a `Vec`
+releases it at its last *use* — and both lists hold `&'a
+[TriggeredAbility]` / a filter resolved off `&self.battlefield`. Ten borrow
+errors across the two `dispatch_board_scan` callers, and an explicit `drop()`
+at the last use fixes only the fields, not the `scan` binding itself. **The
+device stops where the collection outlives its last use and a `&mut self`
+call sits in between**; the inner `static_granted` `SmallVec` in the same
+loop works precisely because it dies inside the iteration. Not built; the
+restructure is a borrow refactor of two long functions for ~0.15 %.
+
 **Closing state at `9b1fa94b`** — the pass's second gate run, taken after two
 more engine commits landed (this one and the concurrent half's
 `legal_blockers` / `mana_source_table` loops).
