@@ -7,13 +7,20 @@ name every wrapper. Its four siblings in `effect/query.rs` —
 `may_target_offboard_card`, `accepts_player_target` — end in `_ => …`, so a
 wrapper they do not name answers the fallback silently.
 
-**Read the fallback before reading a column as a bug list.** Three of the
-four RESTRICT on it (`prefers_graveyard_target` and `may_target_offboard_card`
-answer `false`, `primary_target_filter` answers `None`), so an unnamed
-wrapper closes the gate for its whole subtree. `accepts_player_target`
-answers `_ => true` — its unnamed wrappers are *permitted*, which its own
-comment calls a conservative default, so its count is not a defect census.
-This report prints the same column for all four. That is the drift the
+**Read the fallback before reading a column as a bug list.** The three that
+RESTRICT (`prefers_graveyard_target`, `may_target_offboard_card` -> `false`;
+`primary_target_filter` -> `None`) now END in `Effect::for_each_inner`, the
+one shared recursion, which `core_rules::target_walkers::the_shared_
+recursion_names_every_effect_wrapper` holds at 130 of 130. **An unnamed
+wrapper there is COVERED, not lost** — it is handled generically instead of
+by an arm of its own, which is the whole point of the hundredth pass's fix.
+`accepts_player_target` does not defer and does not need to: its fallback is
+`_ => true`, a deliberate conservative default (the legality gate still
+rejects a mismatch), so its unnamed wrappers are permitted.
+
+So the "unnamed" column is no longer a defect census for any of the four. It
+is now a *shape* report: which wrappers each walker treats specially rather
+than generically. The report says which regime each walker is in. That is the drift the
 eighty-sixth pass found the hard way: a `Move` out of a graveyard wrapped in
 something the off-board gate did not name resolves targetless in the training
 path, where nothing watches.
@@ -115,9 +122,24 @@ def main() -> int:
             for w in wrappers
             if not re.search(r"\bEffect::" + w + r"\b", bodies[f]) and w not in allowed
         ]
-        gaps += len(missing)
-        print(f"\n{f}: {len(missing)} unnamed of {len(wrappers)}")
-        if show_all or missing:
+        # How the walker treats a wrapper it does not name. Only the first
+        # regime is a defect census; the report used to print all three the
+        # same way, which is what made 100-odd covered wrappers read as gaps.
+        if not missing:
+            # `requires_target`'s outer `match self` has no `_` arm, so the
+            # compiler names every wrapper for it. Checked this way rather
+            # than by looking for `_ =>`: its three nested helpers each end
+            # in one, and that mislabelled it as a restricting fallback.
+            regime, counted = "every wrapper named — exhaustive", 0
+        elif "for_each_inner" in bodies[f]:
+            regime, counted = "deferred to for_each_inner (130/130) — covered", 0
+        elif re.search(r"_ => true", bodies[f]):
+            regime, counted = "fallback `true` — permitted, not a gap", 0
+        else:
+            regime, counted = "fallback RESTRICTS — these are gaps", len(missing)
+        gaps += counted
+        print(f"\n{f}: {len(missing)} unnamed of {len(wrappers)}  [{regime}]")
+        if show_all or counted:
             for w in missing:
                 print(f"    {w}")
     if check and gaps:

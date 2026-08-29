@@ -183,12 +183,29 @@ moved **67 and 61 shipped bodies** from a closed gate to an open one.
 `Reflexive` / `ReflexiveTrigger` are named `=> false` explicitly (CR 603.7:
 their targets are picked fresh at resolution).
 
-**Two still to switch, and neither is a leftover.** `accepts_player_target`
-must NOT be switched — its fallthrough is `_ => true`, so recursing would
-make it *more* restrictive with no drift to fix. `primary_target_filter`
-returns an `Option`, so its fallthrough needs a decision about which inner
-effect is "primary" when a wrapper holds several; the slot-agreement
-invariant above (population 7,728) is what any such change has to keep green.
+**All three restricting walkers are switched.** `primary_target_filter`
+joined them: its fallthrough takes the **first inner effect that has one**,
+which is not a new rule — every explicit arm already followed it (`If` takes
+`then` before `else_`, `FlipCoin` heads before tails, `RollDie` the first
+arm) and `for_each_inner` yields in declaration order. **+32 catalog bodies**
+now surface their real slot-0 filter instead of the `Any` fallback, and the
+slot-agreement invariant (population 7,728) stayed green, which is the check
+that the two walks still answer slot 0 the same way. `for_each_inner` took an
+explicit lifetime for it: the reference that walker returns is borrowed from
+the tree, and a higher-ranked `FnMut(&Effect)` will not let one escape.
+
+**`accepts_player_target` must NOT be switched** — its fallthrough is
+`_ => true`, so recursing would make it *more* restrictive with no drift to
+fix.
+
+**The audit script now reports the REGIME, not just the count.** Its "unnamed"
+column stopped being a defect census the moment the three started deferring:
+a wrapper they do not name is now *covered generically*, which is the point
+of the fix. `scripts/audit_target_walkers.py` labels each walker
+`exhaustive` / `deferred to for_each_inner` / `fallback true — permitted` /
+`fallback RESTRICTS — these are gaps`, and only the last counts toward
+`--check`. **An instrument that survives the fix it measured will misreport
+it**; that is the general form, and it cost this pass a re-read to notice.
 
 **A test whose job is to notice an absence has to be run against a
 deliberately introduced one.** The completeness test passed with an arm
