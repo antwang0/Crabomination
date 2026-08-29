@@ -13,6 +13,18 @@ type LegendGroups<'a> = SmallVec<[(usize, &'a str, SmallVec<[CardId; 2]>); 4]>;
 /// `(source, effect, controller, intervening/subject filter)`.
 type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>);
 
+/// How much of the board the CR 704.5f/g/h death sweep has to compute layers
+/// for — see [`GameState::death_sweep_scope`].
+enum DeathSweep {
+    /// Nothing on this board can die; skip the layer pass entirely.
+    Skip,
+    /// A board-global condition (Zilortha, a live layer-7 reduction) puts every
+    /// creature in reach, so the whole creature board is computed.
+    WholeBoard,
+    /// Only these can die, so only these are computed. Non-empty.
+    Only(SmallVec<[CardId; 4]>),
+}
+
 /// Presence flags for the rare state-based actions, taken in one battlefield
 /// pass by [`GameState::sba_board_scan`]. See that method for the contract.
 #[derive(Debug, Default, Clone, Copy)]
@@ -4555,20 +4567,26 @@ impl GameState {
         s
     }
 
-    /// Can the CR 704.5f/g/h death sweep kill anything on this board, answered
-    /// without a layer read? `false` is authoritative; `true` only means the
-    /// sweep has to compute.
+    /// What the CR 704.5f/g/h death sweep has to compute layers for.
     ///
-    /// Two board-global bails first. Zilortha (`lethal_by_power`) measures
-    /// lethal damage against *computed power*, about which the instance lower
-    /// bound below says nothing; and a live layer-7 toughness reduction
-    /// ([`GameState::pt_reduction_in_scope`]) is exactly the case where that
-    /// lower bound stops being one. With neither in scope every permanent's
-    /// computed toughness is at or above its instance toughness, so the
-    /// per-card leg decides.
-    fn creature_death_possible(&self, scan: &SbaBoardScan) -> bool {
+    /// The old form of this was a `bool` and the sweep answered it by
+    /// computing the *whole* creature board. But when neither board-global bail
+    /// fires, the per-card leg is a **necessary** condition for death, not just
+    /// a board-level hint — which is what the sweep's own `debug_assert!` has
+    /// been auditing all along — so the cards it names are the only ones whose
+    /// computed view the filter can act on. Keeping them instead of throwing
+    /// the walk's result away turns a whole-board layer pass into one over a
+    /// board's damaged permanents.
+    fn death_sweep_scope(&self, scan: &SbaBoardScan) -> DeathSweep {
+        // Two board-global bails first. Zilortha (`lethal_by_power`) measures
+        // lethal damage against *computed power*, about which the instance
+        // lower bound below says nothing; and a live layer-7 toughness
+        // reduction ([`GameState::pt_reduction_in_scope`]) is exactly the case
+        // where that lower bound stops being one. With neither in scope every
+        // permanent's computed toughness is at or above its instance toughness,
+        // so the per-card leg decides — for the whole board and for each card.
         if scan.lethal_by_power || self.pt_reduction_in_scope() {
-            return true;
+            return DeathSweep::WholeBoard;
         }
         // A permanent printed without the Creature type can only be killed
         // once something animates it — the same condition
@@ -4598,13 +4616,22 @@ impl GameState {
         // The walk no longer short-circuits, which costs the tail of the
         // battlefield on a board where something *can* die — and buys the
         // layer pass over everything the tail holds.
+        //
+        // A loop, not a `collect`: `SmallVec`'s `Extend` is external
+        // iteration, so the collect form read `SmallVec::extend` +8.0 M and
+        // `call_mut` +10.5 M on `sealed` and gave the whole win back (PERF's
+        // standing rule, arrived at from the other side).
         let type_change = self.card_type_change_unscoped();
-        self.battlefield
-            .iter()
-            .any(|c| (type_change || c.definition.is_creature()) && self.card_death_possible(c))
+        let mut candidates: SmallVec<[CardId; 4]> = SmallVec::new();
+        for c in &self.battlefield {
+            if (type_change || c.definition.is_creature()) && self.card_death_possible(c) {
+                candidates.push(c.id);
+            }
+        }
+        if candidates.is_empty() { DeathSweep::Skip } else { DeathSweep::Only(candidates) }
     }
 
-    /// The per-card half of [`creature_death_possible`](Self::creature_death_possible):
+    /// The per-card half of [`death_sweep_scope`](Self::death_sweep_scope):
     /// instance reads only, and sound only where no layer-7 reduction is in
     /// scope (the caller checks). One leg per rule the death filter applies —
     /// CR 704.5f toughness ≤ 0, CR 704.5g lethal damage, CR 704.5h deathtouch,
@@ -4633,8 +4660,8 @@ impl GameState {
 
     /// CR 704.5f/g/h for one permanent, against a computed view the caller
     /// supplies. A `find(id)` miss falls back to the instance reads, which is
-    /// the same answer the full view gives for a permanent
-    /// `compute_battlefield_creatures` left out.
+    /// the same answer the full view gives for any permanent
+    /// [`death_sweep_scope`](Self::death_sweep_scope) left out.
     fn dies_to_sba(
         &self,
         c: &crate::card::CardInstance,
@@ -5347,23 +5374,52 @@ impl GameState {
         // fall back to the printed type, so the layer pass skips the
         // permanents no card-type-changing effect can animate.
         //
-        // The whole block is behind `creature_death_possible`, because SBA runs at
+        // The whole block is behind `death_sweep_scope`, because SBA runs at
         // every priority pass and a board where nothing can die is the common
         // case (86.5 % of sweeps on the `fixed` bench). `computed` is read
         // only by this filter and by the `for id in dead` loop below, so a
         // gated-out sweep leaves both empty and does nothing — which is the
         // answer the layer pass would have given.
+        //
+        // `Only` narrows both halves for the same reason: a permanent the
+        // scope did not name cannot die, so computing it produces a view the
+        // filter would only read to say "no". Under `debug_assertions` the
+        // whole-board answer is computed anyway and compared, which is the
+        // audit that claim needs and the one `robustness_grid.sh` fires.
+        let scope = self.death_sweep_scope(&scan);
         let (computed, dead): (Vec<ComputedPermanent>, Vec<CardId>) =
-            if !self.creature_death_possible(&scan) {
+            if matches!(scope, DeathSweep::Skip) {
                 (Vec::new(), Vec::new())
             } else {
-                let computed = self.compute_battlefield_creatures();
+                let computed = match &scope {
+                    DeathSweep::Only(ids) => self.compute_permanents(ids),
+                    _ => self.compute_battlefield_creatures(),
+                };
                 let dead: Vec<CardId> = self
                     .battlefield
                     .iter()
+                    .filter(|c| match &scope {
+                        DeathSweep::Only(ids) => ids.contains(&c.id),
+                        _ => true,
+                    })
                     .filter(|c| self.dies_to_sba(c, &computed, &scan))
                     .map(|c| c.id)
                     .collect();
+                #[cfg(debug_assertions)]
+                if let DeathSweep::Only(ids) = &scope {
+                    let all = self.compute_battlefield_creatures();
+                    let full: Vec<CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| self.dies_to_sba(c, &all, &scan))
+                        .map(|c| c.id)
+                        .collect();
+                    debug_assert_eq!(
+                        full, dead,
+                        "the SBA death scope {ids:?} missed a permanent the whole-board \
+                         sweep kills — `card_death_possible` is not a necessary condition",
+                    );
+                }
                 (computed, dead)
             };
 
