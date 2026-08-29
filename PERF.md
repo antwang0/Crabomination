@@ -13079,6 +13079,74 @@ rather than a call count. (-13) already measured the husk-pool answer at
 are; those are the two questions a flat profile can still answer.
 
 
+### THE ACTOR'S PROFILE, RE-READ AT `8beed408` (ninety-eighth pass)
+
+The first re-read since the ninety-sixth pass took it, and the shape holds:
+**the actor is the bot's attack search wrapped around the engine, and the
+engine rows are the same ones `bot_ladder` shows.** 3,415,123,660 Ir.
+
+```text
+cargo build --profile profiling-fast -p crabomination_ml --bin selfplay_train \
+  --no-default-features
+CRAB_NO_JITTER=1 RUST_MIN_STACK=33554432 valgrind --tool=callgrind \
+  --callgrind-out-file=cg.actor.out target/profiling-fast/selfplay_train \
+  --actors 1 --games 60 --steps 1 --seed 7 --out /tmp/actorprof
+(`grep -c libmimalloc cg.actor.out` = 0, so the allocator is the system one.)
+
+INCLUSIVE — the subtree table is the one to read here
+  94.12 %  play_recorded_game_mcts
+  78.74 %  HeuristicBot::next_action
+  63.24 %  perform_action_inner
+  46.57 %  pick_attacks_scored          <- the largest single subtree
+  46.24 %    simulate_attack_outcome_once   2,329 candidates, 678,088 Ir each
+  28.95 %  main_phase_action_with
+  21.56 %  sim_step                       74,423 calls
+  17.68 %  affordances::accept_on         13,426 probe clones
+  15.02 %  Vec::from_iter (nested)
+  14.14 %  perform_action                 8,347 checkpoint clones
+   9.41 %  try_pay_after_snapshot_mode
+   8.80 %  auto_tap_for_cost_inner
+   7.32 %  with_frozen_layers
+
+SELF
+   6.02 %  dispatch_triggers_for_events   \  the same four rows, the same
+   5.29 %  __memcpy                        |  order, as every `bot_ladder`
+   3.47 %  Arc::clone_from_ref_in          |  pool profile
+  11.3  %  the allocator family           /   1,822,999 allocations
+   2.50 %  check_state_based_actions_into
+   2.07 %  Vec::from_iter (nested)
+   1.98 %  gather_continuous_effects_inner
+   1.76 %  compute_permanent_pass
+  ---- and the rows `bot_ladder` does not have ----
+   1.45 %  encode_card_object             228,515 objects, 217 Ir each
+   1.30 %  encode_state
+   0.98 %  rank_shape                     deck building; scales with games
+   1.03 %  rand_distr normal sample       722,816 calls — NET WEIGHT INIT
+```
+
+**`rand_normal` has grown from 22 calls to 722,816 and it still does not
+scale.** The ninety-sixth pass's note said "22 calls, i.e. net weight init,
+ignore"; the net is bigger now, so the row is bigger, and it is still once per
+process. Re-deriving that costs a reader ten minutes — the rule it belongs to
+is "size a row by whether it scales with games", and this row is the standing
+counter-example.
+
+**`__memcpy` is 5.29 % here against ~2.5 % on `cube`, and the extra is still
+the recorder**: `play_recorded_game_mcts` 273,163 calls, `encode_state`
+241,273, `encode_card_object` 228,515 — the `EncodedObject`s being built on
+the stack and copied into their group `Vec`s. An `EncodedObject` is
+`{ u16, [f32; 53] }` = 216 bytes and is built by value and then pushed, so
+each one is copied twice. **That is the only actor-only lever this profile
+names**, and it is worth ~0.2-0.3 % of the actor: an `_into(&mut EncodedObject)`
+form would remove one of the two copies. Everything above it is engine.
+
+**And the framing number: `ManaCost::cmc` is 452,805 calls / 11.8 M / 0.34 %
+here against 149,660 / 0.13 % on `cube`, because `encode_card_object` asks it
+228,515 times.** A `CardMemo` slot for it is *not* the answer — `(-87)` measured
+a new memo family at `fixed` +0.135 % for widening the miss path of every
+other consumer of that word — but it is the shape of the difference between
+the two workloads.
+
 ### THE ACTOR'S PROFILE, READ FOR THE FIRST TIME (ninety-sixth pass, `599825ba`)
 
 `selfplay_train` is the workload the ML phase actually runs, and every
