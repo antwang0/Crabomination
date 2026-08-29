@@ -141,6 +141,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg, the
    seeded 4,000-pairing cube sweep (arm it in
    `bot_vs_bot_random_cube_decks_terminate`), the two census env vars.
+   **The ACTOR LEG is run at last, at `9b1fa94b`** — the same
+   `-C debug-assertions=yes` + `overflow` build of `-p crabomination_ml --bin
+   selfplay_train`, 4 seeds x `--actors 3 --games 3000 --steps 20`:
+   **12,000 games, 1,161,305 rows, 0 stalls, rc 0, no panic / assertion /
+   overflow**, with the audit binary's 5 assertion strings verified present.
+   It is the only leg that reaches the encoder-side memos (the vocab-index
+   slot), and nothing in this file had ever recorded a run of it. 123-126
+   games/s there, which is an *audit* build and not a throughput number.
    **Green at `10a794a8`: 30 cells, 33,120 games, 0 undecided, 0 failures**,
    with the audit binary's assertion strings verified present (the script's
    own header check — `strings | grep -c "memo is stale"` must be > 0, and a

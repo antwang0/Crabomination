@@ -2271,6 +2271,10 @@ suite   cargo nextest run --workspace --exclude crabomination_client
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
         0 failures; 5 assertion strings verified present in the binary
+actor   the leg the grid's header names and nobody had run: the same
+        `-C debug-assertions=yes` + `overflow` build of selfplay_train,
+        4 seeds x --actors 3 --games 3000 --steps 20 = 12,000 games,
+        1,161,305 rows, 0 stalls, rc 0, no panic / assertion / overflow
 --bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
         (cap 0 / stuck 0 / draw 0) — byte-identical to the committed invariant
         determinism ok / thread_determinism ok (3 vs 1 threads identical)
