@@ -5523,51 +5523,66 @@ impl GameState {
         // the layer-4 gates, the list this replaces is *not* usually empty
         // (a cube board's creatures carry printed triggers), which is what
         // (-77)'s rule says a presence bit needs.
+        //
+        // And a board where *no* permanent carries either scope skips the walk
+        // outright: the zone's listener lane holds that answer across every
+        // combat-damage dispatch until membership or a definition moves. The
+        // lane is filled from this walk — which loads the same memo word per
+        // card and cannot short-circuit, so the fill is both free and exact
+        // (see `zone::Battlefield::listener_lane`).
         let mut any_player: Vec<(usize, DamageTrigger)> = Vec::new();
-        for c in &self.battlefield {
-            if c.dispatch_scan_bits() & crate::card::dispatch_bits::LISTENER == 0 {
-                continue;
-            }
-            let mine = attacker_controller == Some(c.controller);
-            let other = c.id != source;
-            for t in &c.definition.triggered_abilities {
-                match t.event.scope {
-                    crate::effect::EventScope::YourControl if mine => {
-                        if let Some(i) = slot(&t.event.kind) {
-                            by_kind[i].push((
-                                c.id,
-                                t.effect.clone(),
-                                c.controller,
-                                t.event.filter.clone(),
-                                true,
-                            ));
-                        }
-                    }
-                    crate::effect::EventScope::AnyPlayer if other => {
-                        if let Some(i) = slot(&t.event.kind)
-                            && t.event.dealer_filter.as_ref().is_none_or(|f| {
-                                self.evaluate_requirement_static(
-                                    f,
-                                    &Target::Permanent(source),
-                                    c.controller,
-                                    None,
-                                )
-                            })
-                        {
-                            any_player.push((
-                                i,
-                                (
+        let lane = self.battlefield.listener_lane();
+        if lane != Ok(false) {
+            let mut any_listener = false;
+            for c in &self.battlefield {
+                if c.dispatch_scan_bits() & crate::card::dispatch_bits::LISTENER == 0 {
+                    continue;
+                }
+                any_listener = true;
+                let mine = attacker_controller == Some(c.controller);
+                let other = c.id != source;
+                for t in &c.definition.triggered_abilities {
+                    match t.event.scope {
+                        crate::effect::EventScope::YourControl if mine => {
+                            if let Some(i) = slot(&t.event.kind) {
+                                by_kind[i].push((
                                     c.id,
                                     t.effect.clone(),
                                     c.controller,
                                     t.event.filter.clone(),
                                     true,
-                                ),
-                            ));
+                                ));
+                            }
                         }
+                        crate::effect::EventScope::AnyPlayer if other => {
+                            if let Some(i) = slot(&t.event.kind)
+                                && t.event.dealer_filter.as_ref().is_none_or(|f| {
+                                    self.evaluate_requirement_static(
+                                        f,
+                                        &Target::Permanent(source),
+                                        c.controller,
+                                        None,
+                                    )
+                                })
+                            {
+                                any_player.push((
+                                    i,
+                                    (
+                                        c.id,
+                                        t.effect.clone(),
+                                        c.controller,
+                                        t.event.filter.clone(),
+                                        true,
+                                    ),
+                                ));
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
+            }
+            if let Err(epoch) = lane {
+                self.battlefield.store_listener(epoch, any_listener);
             }
         }
         for (i, trig) in any_player {

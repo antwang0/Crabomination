@@ -8927,6 +8927,39 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundredth pass (5) — the combat-damage listener walk gets a lane
+
+**`fixed` -0.127 % / `cube` -0.040 % / `sealed` -0.010 %** off `7df692ef`.
+
+`fire_combat_damage_triggers`' phase-1.5/1.6 walk is one whole-board pass per
+combat-damage dispatch — **6,480 / 20,022 / 22,134 calls** — asking each
+permanent for `dispatch_bits::LISTENER` (`YourControl` / `AnyPlayer` printed
+trigger). `LANE_LISTENER`, split/caller-filled: the walk cannot short-circuit,
+so the fill it hands back is *exact*, and it was loading the same memo word
+anyway.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 7df692ef
+  fixed     914,791,061 ->   913,628,150   -0.127 %
+  cube    2,730,990,977 -> 2,729,894,110   -0.040 %
+  sealed  2,708,407,683 -> 2,708,132,526   -0.010 %
+
+fire_combat_damage_triggers self Ir (calls unchanged):
+  fixed    11,491,452 -> 10,319,220   -10.2 %   6,480 calls
+  cube     38,938,200 -> 37,274,874    -4.3 %  20,022
+  sealed   34,300,658 -> 33,274,068    -3.0 %  22,134
+```
+
+**The row's own comment predicted the small numbers and it was right** — "the
+list this replaces is *not* usually empty (a cube board's creatures carry
+printed triggers)", which is `(-77)`'s rule. The lane is kept anyway because
+its cost on a `PRESENT` board is exactly one word load per *call* against a
+23-card walk, so the downside is bounded near zero and all three pools move
+the right way; it is the same size as `e1f8dfac`'s accepted -0.033 / -0.046 /
+-0.045 %. **`LISTENER` is disjoint from `BOARD_SCAN`** (`dispatch_bits` says
+so and why), so this could not ride the dispatch lane.
+
 ### Hundredth pass (4) — the cascade's `_on` conversion, BUILT AND REVERTED at +0.099 / +0.406 / +0.195 %
 
 The move `(-89)` and this pass's own NEXT both named as the next one: three

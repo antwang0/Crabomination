@@ -173,6 +173,7 @@ const LANE_INCOMING_PREVENT: u32 = 8;
 const LANE_DISPATCH: u32 = 10;
 const LANE_SHIELD: u32 = 12;
 const LANE_GRANT: u32 = 14;
+const LANE_LISTENER: u32 = 16;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -188,6 +189,13 @@ fn card_has_dispatch_bits(c: &CardInstance) -> bool {
 /// `debug_assert!` audits against.
 fn card_has_any_grant_bits(c: &CardInstance) -> bool {
     c.grant_scan_bits() & crate::card::grant_bits::ANY_GRANT != 0
+}
+
+/// Does this permanent carry a `YourControl` / `AnyPlayer` printed trigger —
+/// the two scopes the combat-damage dispatch's listener walk looks for? The
+/// [`LANE_LISTENER`] predicate.
+fn card_has_listener_bits(c: &CardInstance) -> bool {
+    c.dispatch_scan_bits() & crate::card::dispatch_bits::LISTENER != 0
 }
 
 /// The battlefield: the CoW card list, plus the whole-board questions asked of
@@ -466,6 +474,34 @@ impl Battlefield {
     /// Record what the caller's own walk found in the keyword-grant lane.
     pub fn store_grant(&self, epoch: u64, found: bool) {
         self.store_lane(LANE_GRANT, epoch, found);
+    }
+
+    /// The combat-damage listener lane, same caller-filled contract as
+    /// [`dispatch_lane`](Self::dispatch_lane). Split form because the walk it
+    /// gates builds two trigger lists rather than answering a predicate — and
+    /// that walk cannot short-circuit, so the fill it hands back is exact.
+    pub fn listener_lane(&self) -> Result<bool, u64> {
+        let epoch = crate::card::definition_epoch();
+        let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
+            UNKNOWN as u32
+        } else {
+            (self.type_gates.load(Ordering::Relaxed) >> LANE_LISTENER) & LANE_MASK
+        };
+        debug_assert!(
+            cur == UNKNOWN as u32
+                || (cur == PRESENT as u32) == self.cards.iter().any(card_has_listener_bits),
+            "battlefield listener memo is stale: a write reached the cards without clearing it",
+        );
+        match cur {
+            c if c == ABSENT as u32 => Ok(false),
+            c if c == PRESENT as u32 => Ok(true),
+            _ => Err(epoch),
+        }
+    }
+
+    /// Record what the caller's own walk found in the listener lane.
+    pub fn store_listener(&self, epoch: u64, found: bool) {
+        self.store_lane(LANE_LISTENER, epoch, found);
     }
 
     /// Append, through [`CowBox`]'s own `push` so an unshare materializes with
