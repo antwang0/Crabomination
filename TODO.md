@@ -62,20 +62,17 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    unpriced thing is the *write rate of zone membership + `continuous_effects`*
    — price that before proposing a `GameState`-level memo), `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
-   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-91)` IS THE NEW TOP OF THE QUEUE and it is the
-   largest number on the list: the per-object `CardMemo` is cleared by
-   *every* `&mut` reach into a card, and **89.5 % of every memo recompute in
-   the program is caused by a write that cannot have invalidated it**.
-   Deletion ceiling `fixed` -0.711 / `cube` -1.146 / `sealed` **-1.899 %**,
-   measured. Every memoized value is `f(definition)`; the clear is
-   conservative, not necessary; the pointer key is genuinely unsound (17
-   in-place `make_mut(&mut _.definition)` sites) so the fix is to clear at
-   the ~60 greppable definition-write sites — and **the entry names the two
-   things that make that safe: the `debug_assert!`s the robustness grid
-   already fires, and a `Deref`-only newtype on the field that turns a
-   forgotten clear into a compile error.** Read the entry before starting.
-   **Two more NEW entries below it, both sized on all three pools at the
-   ninety-fifth pass:**
+   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-91)` IS TAKEN** (`cd0842e9`,
+   `fixed` -0.673 / `cube` -0.721 / `sealed` -0.813 %, recomputes down
+   89-93 %, robustness grid green over 33,120 games). The device generalises
+   and the Baseline states it as a rule: **put the cache INSIDE the handle it
+   is keyed on**, not beside it — a `Deref`-only newtype makes every write a
+   compile error, and moving the memo into it makes the one expression the
+   newtype cannot stop (`c.definition = other.definition.clone()`) *correct*
+   instead of rare. It read 95 / 63 / 43 % of the ceiling that entry filed;
+   the gap is unexplained and the Baseline says do not re-derive -1.9 % on
+   this tip. **Two NEW entries at the top of the queue, both sized on all
+   three pools at the ninety-fifth pass:**
    `(-89)` (the combat-damage prevention cascade, **1.55 / 2.34 / 1.69 %**,
    ten questions a damage event; its two largest rows are already taken for
    -0.087 / -0.114 / -0.098 %, eight are left, and **both taken mechanisms
@@ -241,16 +238,17 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `599825ba` (on `origin`): `fixed` 963,502,971 /
-   `cube` 2,886,424,672 / `sealed` 2,854,266,716**, with `--bench`
+   **Anchor, MEASURED at `cd0842e9` (on `origin`): `fixed` 957,023,198 /
+   `cube` 2,865,614,181 / `sealed` 2,831,048,757** — the whole
+   ninety-sixth pass is **-2.19 / -2.47 / -3.11 %** off `e0bc5c46`. One
+   anchor back, `599825ba`: 963,502,971 / 2,886,424,672 / 2,854,266,716,
+   with `--bench`
    byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
    stalls, determinism **and** thread_determinism ok), suite 19,029 / 0 / 5,
-   golden traces 7/7 unmoved, clippy clean. One anchor back, `e0cbb4a7`:
-   963,706,773 / 2,899,018,180 / 2,885,278,610; two back, `e0bc5c46`:
-   978,492,848 / 2,938,264,442 / 2,921,980,262 (robustness grid green there —
-   30 cells, 33,120 games, 0 undecided, 0 failures). **The four engine
-   commits across those two anchors are -1.53 / -1.76 / -2.31 %**, most of it
-   the gather pre-scan's memo word.
+   golden traces 7/7 unmoved, clippy clean, and the robustness grid green
+   at both memo commits. Further back, `e0cbb4a7`:
+   963,706,773 / 2,899,018,180 / 2,885,278,610, and `e0bc5c46`:
+   978,492,848 / 2,938,264,442 / 2,921,980,262.
    **Two sessions read `e0bc5c46` independently and agreed to 435 Ir on
    `cube`, 58 on `fixed` and 81,279 on `sealed`** — the third such check, and
    the reason an anchor is checkable at all.

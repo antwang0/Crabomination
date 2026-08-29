@@ -2101,6 +2101,77 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-sixth pass (4) — `(-91)` TAKEN: the memo travels with the definition it describes
+
+**`CardData::definition` is a `Definition` handle that owns the memo, base
+`cea8ba89`.** `(-91)` filed the ceiling and named the two things that make
+moving the clear off `DerefMut` safe; this is both of them, plus a third the
+entry did not have.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     963,502,971 ->   957,023,198   -0.673 %
+  cube    2,886,424,672 -> 2,865,614,181   -0.721 %
+  sealed  2,854,266,716 -> 2,831,048,757   -0.813 %
+
+recompute calls, cube (the family the memo exists to avoid):
+  dispatch_scan_bits   90,792 -> 6,054   -93.3 %
+  grant_scan_bits      77,642 -> 5,276   -93.2 %
+  gather_scan_bits     71,110 -> 6,448   -90.9 %
+  printed_color_set    70,490 -> 22,790  -67.7 %
+  type_scan_bits       70,002 -> 6,304   -91.0 %
+  sba_scan_bits        61,688 -> 6,592   -89.3 %
+sealed: the family is -21.5 M of the program's -23.2 M.
+```
+
+**The third thing, and it is the one worth carrying: put the memo INSIDE the
+handle.** A `Deref`-only newtype stops `c.definition = d` and
+`Arc::make_mut(&mut c.definition)` — the compiler enumerates every write site
+and there were 62 across the workspace, all mechanical. What it cannot stop
+is `c.definition = other.definition.clone()`, because `Clone` has to exist
+for `CardData` to derive it. Moving `memo` from `CardData` into `Definition`
+makes that expression *correct* rather than merely rare: the memo is cloned
+with the definition it is a function of, so **no expression can leave a memo
+beside a definition it does not describe.** The invariant stops being
+enforced and becomes structural, which is a different and better kind of
+claim. Reach for this shape whenever a cache and its key are two fields of
+one struct.
+
+**The audit is the robustness grid, and it is the reason this was takeable at
+all.** Seven accessors, seven `debug_assert_eq!`s against a fresh recompute,
+fired on real boards by `scripts/robustness_grid.sh`: **30 cells, 33,120
+games, 0 undecided, 0 failures**. The 19 k-test suite ran the same assertions
+and is not the audit — an assertion needs a board.
+
+**⚠ TWO ROWS IN THIS DIFF MOVED BY 6.2 M AND 3.5 M AND NEITHER IS REAL —
+lld's identical-code folding re-folds between builds, and the proof is that
+two UNRELATED changes produced the same row to the digit.**
+
+```text
+sealed, SmallVec::extend, three builds:
+  599825ba (tip)                       19,745,326
+  the `sorted` SmallVec experiment     25,971,110
+  this change                          25,971,110   <- different patch, same value
+drop_in_place<PlayerData>: absent from both earlier dumps, 3,554,544 here,
+against Arc::clone_from_ref_in -3,547,150 and Arc::drop_slow -3,295,902.
+```
+
+A symbol that appears, disappears or jumps by a round amount while its
+neighbours move the other way by the same amount is a fold, not a cost.
+**The program total is the truth; a row is a hypothesis about where the
+total went.** Check a suspicious row's *absolute* value in all three builds
+before writing it down.
+
+**The ceiling was `fixed` -0.711 / `cube` -1.146 / `sealed` -1.899 % at
+`e0cbb4a7`; this reads 95 % / 63 % / 43 % of it at a base three commits
+later.** The gap is not the recomputes (fully collapsed) and not the clear's
+two stores (removed — `DerefMut` is now a bare `Arc::make_mut`). It is
+unexplained, and the honest reading is that the two measurements have
+different bases: `sealed`'s fell 31.0 M between them, and the ceiling's
+unaccounted half was 31.6 M. Do not re-derive the ceiling on this tip
+expecting -1.9 %.
+
+
 ### Ninety-sixth pass (3) — `sorted` as a `SmallVec`: BUILT, MEASURED, REVERTED, and it extends the `Extend` rule to a LOCAL
 
 **`compute_permanent_pass`'s `sorted` buffer at `[&ContinuousEffect; 4]`,
@@ -2142,17 +2213,22 @@ it more tightly than that.
 reserves are one allocation each, not regrowth, so sizing them exactly
 removes nothing.
 
-### Ninety-sixth pass — closing state at `599825ba`
+### Ninety-sixth pass — closing state at `cd0842e9`
 
 ```text
 suite   cargo nextest run --workspace --exclude crabomination_client
         19,029 / 0 / 5, run once per code commit; golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures, run twice this pass (both memo commits)
 --bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
         (cap 0 / stuck 0 / draw 0) — byte-identical to the committed
         invariant; determinism ok, thread_determinism ok (3 vs 1)
-        release build, 3 threads: games_per_s 364.80, games_per_s_th 121.599,
-        peak_rss_mib 24.4, bin_bytes 123,624,632, host_calib_ms 53
+        release build, 3 threads: games_per_s 362.97, games_per_s_th 120.991,
+        peak_rss_mib 24.8, bin_bytes 123,612,016, host_calib_ms 55
+        (`599825ba` two gates earlier read 364.80 / 121.599 / 24.4 /
+        123,624,632 / 53 — Ir fell 0.7-0.8 % between them and the clock did
+        not move, which is what a 1.2-s run on a shared box is worth)
 ```
 
 **⚠ That `games_per_s` is NOT comparable to the 217.09 / 280.47 rows the
@@ -2166,11 +2242,17 @@ catch it, exactly as the ninety-fifth pass's note says they would not.
 ```text
 Ir anchor, callgrind, profiling-fast --no-default-features,
 --games 6 --threads 1 --seed 1:
-                 e0bc5c46          599825ba
-  fixed        978,492,790  ->   963,502,971   -1.532 %
-  cube       2,938,264,007  -> 2,886,424,672   -1.764 %
-  sealed     2,921,898,983  -> 2,854,266,716   -2.314 %
+                 e0bc5c46          599825ba          cd0842e9
+  fixed        978,492,790  ->   963,502,971  ->   957,023,198   -2.194 %
+  cube       2,938,264,007  -> 2,886,424,672  -> 2,865,614,181   -2.472 %
+  sealed     2,921,898,983  -> 2,854,266,716  -> 2,831,048,757   -3.108 %
 ```
+
+Six commits across the whole pass: `2b9dd2d8` (the gather pre-scan memo),
+`3b8bfd03` (the legend-rule grouping), a concurrent session's `e0cbb4a7`
+(the ironscale fuse), `6d89b5bc` (encode_state's shared scope, actor-only),
+`edecf3c4` (the census determinism fix, no engine cost) and `cd0842e9`
+(`(-91)`, the memo's lifetime).
 
 Three commits between them: `2b9dd2d8` (the gather's pre-scan memo, -1.418 /
 -1.198 / -1.154 %), `3b8bfd03` (the legend-rule grouping, -0.021 / -0.434 /
@@ -8293,6 +8375,23 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-sixth pass (2) — `(-91)` taken, and the actor's profile read for the first time
+
+**`cd0842e9` — the memo moves into the definition handle**: `fixed` -0.673 %
+/ `cube` -0.721 % / `sealed` -0.813 %, recomputes down 89-93 %, robustness
+grid green over 33,120 games. The device (a `Deref`-only newtype that *owns*
+the cache, so the invariant is structural rather than enforced), the ICF
+warning the diff produced, and the ceiling comparison are in the Baseline.
+
+**Two smaller ones on the actor path, which had never been profiled.**
+`6d89b5bc` puts both seats' mana tables under one freeze scope inside
+`encode_state` (actor -0.062 %, and the delta is the layer-4 land-type gate's
+miss, not the gather it was proposed for); `edecf3c4` makes
+`--feature-census` deterministic, which is what let the first one prove the
+encoding was unchanged over 29,143 encoded objects instead of arguing it.
+PERF's "Profile of record" now carries the actor's own table.
+
+
 ### Ninety-sixth pass — the gather's per-card walk becomes a memo read, and the legend rule stops hashing card names
 
 **Two commits, `fixed` -1.44 % / `cube` -1.63 % / `sealed` -2.21 % between
@@ -12996,6 +13095,14 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-91) TAKEN at `cd0842e9`, `fixed` -0.673 / `cube` -0.721 / `sealed`
+-0.813 %** — the memo now lives *inside* a `Deref`-only `Definition` handle,
+so the invariant is structural and not merely compiler-enforced. The
+Baseline block carries the numbers, the device, the lld-ICF warning the diff
+produced, and why this reads 95 / 63 / 43 % of the ceiling below rather than
+all of it. **The entry's own analysis stands and is kept for the shape of the
+argument:**
 
 **(-91) THE PER-OBJECT MEMO IS THROWN AWAY BY EVERY WRITE THAT REACHES A
 CARD, AND THE DELETION CEILING IS `fixed` -0.711 % / `cube` -1.146 % /
