@@ -62,8 +62,20 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    unpriced thing is the *write rate of zone membership + `continuous_effects`*
    — price that before proposing a `GameState`-level memo), `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
-   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **Two NEW entries replenish the top
-   of the queue, both sized on all three pools at the ninety-fifth pass:**
+   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-91)` IS THE NEW TOP OF THE QUEUE and it is the
+   largest number on the list: the per-object `CardMemo` is cleared by
+   *every* `&mut` reach into a card, and **89.5 % of every memo recompute in
+   the program is caused by a write that cannot have invalidated it**.
+   Deletion ceiling `fixed` -0.711 / `cube` -1.146 / `sealed` **-1.899 %**,
+   measured. Every memoized value is `f(definition)`; the clear is
+   conservative, not necessary; the pointer key is genuinely unsound (17
+   in-place `make_mut(&mut _.definition)` sites) so the fix is to clear at
+   the ~60 greppable definition-write sites — and **the entry names the two
+   things that make that safe: the `debug_assert!`s the robustness grid
+   already fires, and a `Deref`-only newtype on the field that turns a
+   forgotten clear into a compile error.** Read the entry before starting.
+   **Two more NEW entries below it, both sized on all three pools at the
+   ninety-fifth pass:**
    `(-89)` (the combat-damage prevention cascade, **1.55 / 2.34 / 1.69 %**,
    ten questions a damage event; its two largest rows are already taken for
    -0.087 / -0.114 / -0.098 %, eight are left, and **both taken mechanisms

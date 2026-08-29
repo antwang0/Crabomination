@@ -2276,6 +2276,28 @@ when it cannot be refactored.**
 caller, and a helper that exists to be one leg of a fused walk is dead once the
 walk is fused.
 
+### Ninety-fifth pass — closing state, re-taken at `81f2fcb0`
+
+```text
+suite   19,029 / 0 / 5 at the tip; golden traces unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) — byte-identical to the committed
+        invariant; determinism ok / thread_determinism ok (3 vs 1 identical)
+        games_per_s 208.69-224.16 over four runs at **3** threads
+        (games_per_s_th 69.563-74.719), host_calib_ms 53-59,
+        peak_rss_mib 24.5, bin_bytes 123,624,632
+anchor  fixed 963,706,773 / cube 2,899,018,180 / sealed 2,885,278,610
+        (measured at `e0cbb4a7`, one engine commit below this one)
+```
+
+**The `games_per_s` reading fell while `Ir` fell 1.5 % over the same
+interval**, which is the (4) entry's point restated by a different route: the
+first run after a 29-minute `release` build read **160.09** at
+`host_calib_ms` 56, and three runs later on the same binary and the same idle
+box it read 224.16 at 53. **Take `--bench` three times, and never the one
+straight after a build.**
+
 ### Ninety-fifth pass — closing state at `e0bc5c46`
 
 ```text
@@ -12883,6 +12905,77 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-91) THE PER-OBJECT MEMO IS THROWN AWAY BY EVERY WRITE THAT REACHES A
+CARD, AND THE DELETION CEILING IS `fixed` -0.711 % / `cube` -1.146 % /
+`sealed` **-1.899 %** — THE LARGEST NUMBER ON THIS LIST.** Measured at
+`e0cbb4a7` by `(-78)`'s device: comment out the one line
+`d.memo.clear()` in `impl DerefMut for CardInstance` (`card.rs`) and read the
+three pools. **Not committable as measured** — an in-place definition rewrite
+then leaves a stale memo — but the ceiling is real and the fix is a design,
+not a hack.
+
+```text
+base e0cbb4a7, callgrind, profiling-fast --no-default-features
+  fixed     963,706,773 ->   956,853,484   -0.711 %
+  cube    2,899,018,180 -> 2,865,781,687   -1.146 %
+  sealed  2,885,278,610 -> 2,830,495,172   -1.899 %
+
+the recompute family, `sealed` (`cube` is the same shape):
+  CardDefinition::sba_scan_bits        7,338,304 ->   775,056
+              its call count              76,540 ->     8,044   (-89.5 %)
+  CardDefinition::printed_color_set    5,091,060 -> 1,743,454
+  CardDefinition::grant_scan_bits      4,470,670 ->   327,744
+  CardDefinition::gather_scan_bits     4,321,372 ->   416,518
+  CardDefinition::type_scan_bits       3,209,220 ->   300,626
+  CardDefinition::dispatch_scan_bits   2,834,244 ->   195,320
+                             family   27,264,870 -> 3,758,718   -23.5 M
+                            program                             -54.8 M
+```
+
+**89.5 % of every memo recompute in the program is caused by a write that
+cannot have invalidated it** — a tap, a damage point, a counter, a
+`must_block = None`. And the family is only 23.5 M of the 54.8 M the program
+moves: the rest is the two atomic stores `clear()` does on every `&mut` reach
+into a card, plus the miss path inlined into each of the ~1.7 M per-card
+scan reads.
+
+**Every value on `CardMemo` is a pure function of `definition`** — checked,
+one by one: `printed_color_set` reads `color_override` / `keywords` /
+`color_indicator` / `cost`; `vocab_index` reads the name; the five
+`*_scan_bits` families read the definition's own fields. Nothing on
+`CardData` outside `definition` is an input to any of them. The clear is
+**conservative, not necessary**, and its own comment says so.
+
+**The pointer key is unsound and the comment is right about why**: a
+definition is uniquely owned on nearly every card (each `CardInstance::new`
+takes its own `Arc`), so `Arc::make_mut(&mut c.definition)` rewrites it *in
+place* and the pointer does not move. 17 such sites exist.
+
+**So the fix is to clear at the definition-write sites instead.** Greppable:
+17 `make_mut(&mut _.definition)` and 45 `.definition = ` (`card.rs` 19,
+`effects/mod.rs` 16, `actions.rs` 14, `game/mod.rs` 9, `stack.rs` 2,
+`snapshot.rs` 1, `bot.rs` 1 — some of those are constructor-adjacent and a
+fresh `CardData` already has a fresh memo, so the real set is smaller).
+**Two things make this safer than it sounds, and a taker should use both:**
+
+* **The audit already exists and is the one this repo runs.** Every one of
+  the seven accessors carries a `debug_assert_eq!` against a fresh recompute
+  whose message is literally "a definition rewrite did not clear it". The
+  robustness grid — five pools x six seeds x 120 games, 33,120 games — is
+  what fires it, and the 19 k-test suite is not (an assertion needs a
+  *board*).
+* **The compiler can enforce total coverage.** Give `CardData::definition` a
+  newtype with `Deref` to `Arc<CardDefinition>` and **no** `DerefMut`: every
+  read (`c.definition.name`, thousands of them) keeps compiling and every
+  write stops, until it goes through an accessor that clears. That turns a
+  forgotten clear from a silent wrong-rules bug into a compile error, which
+  is the difference between this being a good change and a bad one.
+
+**Size it against the class it is in before starting.** This is `(-50)`'s
+"no-op write through a CoW handle" family seen from the other end: that entry
+asked which writes are no-ops, and this one asks which writes invalidate
+what. Both are about `DerefMut` being the only chokepoint and therefore
+carrying everyone's conservatism.
 **(-90) THE GATHER COUNT IS AT ITS FLOOR AND THE PROFILE IS NOW TOPPED BY
 THREE ROWS NOTHING CAN GATE.** Read at `3b8bfd03`, `--decks cube`, after the
 ninety-sixth pass's two commits. The self table:
