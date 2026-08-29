@@ -34,6 +34,9 @@ sixty-seventh pass, so don't re-take that.
    33,120 games, 4 assertion strings), actor leg green (12,000 games /
    1,155,393 rows / 0 stalls). Ir anchor and the window's **-1.194 / -0.354 /
    -1.064 %** are in PERF's Baseline; **each change names its own base**.
+   Re-verified at `0541c28e`: suite 19,043 / 0 / 5, `--bench` still
+   byte-identical, `audit_panics.py` 23 bare (unchanged), and
+   `crabomination_client` clippy-clean after the four apt packages.
 3. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
    `(-93)` now carries the device, its two conditions and **four sized
    consumers**, so start there rather than re-deriving: the

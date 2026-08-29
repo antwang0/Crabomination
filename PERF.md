@@ -2254,6 +2254,25 @@ numbers — which is the standing rule doing exactly its job, and the contrast
 with the identity above is the useful pair: **re-read when the intervening
 commit touched the row, and check the anchor when it did not.**
 
+**Re-verified at `0541c28e`, i.e. after the concurrent half's next four
+commits landed on top**: suite **19,043 / 0 / 5**, clippy clean, `--bench`
+still byte-identical on a `release` binary rebuilt there (195,528 / 27.44 /
+611.0 / 0 stalls, determinism ok, thread_determinism ok; games_per_s 352.46 at
+3 threads, host_calib_ms 42, peak_rss_mib 24.5, bin_bytes 123,631,848 — the
+clock is 14 % above the same binary's reading forty minutes earlier at
+host_calib_ms 47, which is the container, not the code). `audit_panics.py`
+**108 sites / 74 guarded / 11 lock-poison / 23 bare** — the comparable number
+is unchanged.
+
+**And `crabomination_client` was clippy-checked too, which no recent Baseline
+block records.** `apt-get update && apt-get install -y libwayland-dev
+libasound2-dev libudev-dev libxkbcommon-dev`, then `cargo clippy -p
+crabomination_client --all-targets`: **clean**, ~6 min and ~126 MB of
+`target/` (`cargo clean -p crabomination_client` reclaims it). The
+`--exclude crabomination_client` in every clippy line above is a *container*
+convention, not a statement that the crate is unchecked; CLIENT_BACKLOG's
+header carries the recipe and the reason the crate silently rots without it.
+
 ### Ninety-ninth pass, the concurrent half — closing state at `314e405a`
 
 Four commits: the `layer4_bits` memo (`39299a63`), three off-board targeting
