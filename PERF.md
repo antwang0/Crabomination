@@ -8988,9 +8988,11 @@ bigger than the bare `iter().find()` it replaced and LLVM stopped inlining it
 at those sites. Against `evaluate_requirement_static_hinted`'s fall of
 6.44 / 8.00 / 8.39 M that pair is **net +1.6 / +2.1 / +3.5 M**, i.e. the
 change pays about 0.08-0.13 % for its own code size and still nets the numbers
-above. **That residue is a candidate, not an accident**: keep the inlined half
-tiny (the scan behind `#[inline(never)]`) and it should come back. See
-`(-38)`.
+above. **That residue is not recoverable and the next commit proves it**: the
+scan behind `#[inline(never)]` re-inlines all four rows and still reads
+`fixed` +0.209 / `cube` +0.270 / `sealed` +0.315 %, because the miss path is
+half the traffic and costs 165 Ir out of line against ~58 inlined. See
+`(-94)`, which that A/B closes.
 
 **The concurrent session's (4) below is this entry from the other side and the
 pair is the whole rule.** It converted three of these same cascade rows to
@@ -14839,20 +14841,42 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-94) THE FIND MEMO'S OWN CODE SIZE — `net +1.6 / +2.1 / +3.5 M`, AND IT IS
-THE ONLY THING LEFT OF `(-38)`.** `Battlefield::find_by_id`'s two-path body is
-bigger than the `iter().find()` it replaced, so `bf_hint_or_find` and
-`battlefield_find` stopped inlining at some sites and acquired rows of their
-own (8.05 / 10.15 / 11.92 M and 0.56 / 1.67 / 1.84 M) against a fall of
-6.44 / 8.00 / 8.39 M in `evaluate_requirement_static_hinted`. **The inlined
-half is four instructions; the scan is what is big**, so putting the scan in a
-separate `#[inline(never)]` function should leave `find_by_id` *smaller* than
-what it replaced and let every one of those sites re-inline, at the cost of a
-real call on a miss. One build and one three-pool A/B. Read pass 98's `#[cold]`
-refutation and pass 99's "a branch added to a function that is inlined
-everywhere is not one branch — it is the inlining decision, retaken" first:
-both are this trade seen from the other side, and the miss rate is what
-decides it.
+**(-94) THE FIND MEMO'S OWN CODE SIZE — BUILT, MEASURED AND REVERTED at
+`fixed` +0.209 % / `cube` +0.270 % / `sealed` +0.315 %.** The residue
+`(-38)`'s memo left was `bf_hint_or_find` and `battlefield_find` de-inlining
+at some sites (net +1.6 / +2.1 / +3.5 M against the caller rows they left),
+and the obvious fix was to put the scan behind `#[inline(never)]` so
+`find_by_id`'s inlined half is *smaller* than the `iter().find()` it replaced.
+**The re-inlining happens and the change still loses**, on all three pools:
+
+```text
+base 633acc3e, callgrind, profiling-fast --no-default-features
+  fixed     911,042,520 ->   912,950,419   +0.209 %
+  cube    2,717,721,142 -> 2,725,065,287   +0.270 %
+  sealed  2,700,016,601 -> 2,708,531,049   +0.315 %
+
+  bf_hint_or_find      10,146,168 ->  4,337,936   the re-inlining is real
+  find_card_anywhere    9,431,130 ->  3,982,242
+  declare_blockers     27,655,192 -> 23,906,972
+  resolve_combat       28,134,550 -> 24,526,900
+  find_by_id_scan               0 -> 47,316,688   286,320 calls, 165 Ir each
+```
+
+**The miss path is half the traffic, and out of line it costs 165 Ir where
+inlined it cost ~58.** `find_by_id_scan` is called **286,320 times on a
+six-game `cube` run**; the memo's own win (-12.17 M) over a ~50 Ir saving per
+hit puts the hit count at about the same number, so **the hit rate is near one
+half** and a call on the miss path is paid as often as the hit is collected.
+That is the number this A/B was actually worth: it prices the class.
+
+**The rule: an out-of-line miss path is priced at the miss rate, and a memo
+whose hit rate is one half has no cheap miss path.** The four rows that
+re-inline give back 18.8 M on `cube` and `find_by_id_scan` takes 47.3 M — the
+call frame, the lost per-site specialization of the loop, and the `Option`
+returned through a register pair rather than folded into the caller's control
+flow. `(-38)`'s entry is CLOSED by this: the memo ships as measured, code size
+and all.
+
 
 **(-93) THE CALLER-FILLED LANE — a `zone::Battlefield` lane whose miss costs
 NOTHING. Eight lanes now; the hundredth pass took three more
@@ -19548,12 +19572,11 @@ on `Battlefield` (`find_by_id`; the Log block carries the device and the row
 table). Six passes had been paying this class off one call site at a time
 with `_on` forms; the memo takes the *repeat* half of all 556 of them at once,
 and it needs no invalidation because a hit is verified rather than trusted.
-**What is left of the entry is one residue and it is a candidate**: the
-two-path body is bigger than the bare `iter().find()`, so `bf_hint_or_find`
-and `battlefield_find` de-inlined at some sites and acquired rows of their own
-worth **net +1.6 / +2.1 / +3.5 M** against the caller rows they left. Putting
-the scan behind `#[inline(never)]` so the inlined half is smaller than what it
-replaced should recover it; ~0.08-0.13 % of a pool, and it is one build.
+**The entry is CLOSED.** Its one residue — the two-path body being bigger
+than the bare `iter().find()`, so `bf_hint_or_find` and `battlefield_find`
+de-inlined at some sites, net +1.6 / +2.1 / +3.5 M — was built as `(-94)` and
+is not recoverable: an out-of-line scan re-inlines those rows and loses more
+than it gives back, because the hit rate is near one half.
 **The `_on` conversions this entry's remaining rows asked for are now worth
 much less than they were** — a second find of a permanent the caller already
 looked up is a load and a compare — so re-size one before writing it.
