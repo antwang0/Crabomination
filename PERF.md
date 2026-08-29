@@ -2131,7 +2131,41 @@ a box whose state moves.
 
 ## Baseline
 
-### Ninety-ninth pass — closing state at `c2ff4536`
+### Ninety-ninth pass, the concurrent half — closing state at `314e405a`
+
+Four commits: the `layer4_bits` memo (`39299a63`), three off-board targeting
+defects (`c2ff4536`), `(-27)`'s single-slot pool built and reverted (`02b8bc26`,
+PERF only), and the combat dispatch's listener bits (`314e405a`). Both
+concurrent sessions' commits are under this tip.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.80 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,040 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures; 4 "memo is stale" strings in the audit binary
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 286.17 at 3 threads, host_calib_ms 46,
+        peak_rss_mib 24.4, bin_bytes 123,617,888
+
+Ir, callgrind, profiling-fast --no-default-features, --a gang --b gang
+--games 6 --threads 1 --seed 1. The two perf changes were measured against
+different bases (a concurrent push landed between them), so each is quoted
+against its own:
+                        base            after
+  layer4_bits    e86044f9        39299a63
+    fixed         942,328,621 ->   942,063,715   -0.0281 %
+    cube        2,805,504,637 -> 2,803,504,696   -0.0713 %
+    sealed      2,793,794,884 -> 2,792,862,317   -0.0334 %
+  listener bits  2b16088a        the diff alone
+    fixed         938,100,211 ->   936,455,026   -0.175 %
+    cube        2,795,139,482 -> 2,789,812,681   -0.191 %
+    sealed      2,783,686,742 -> 2,779,354,606   -0.156 %
+```
+
+### Ninety-ninth pass, the concurrent half — the earlier state at `c2ff4536`
 
 Two commits: the `layer4_bits` memo (`39299a63`) and three off-board
 targeting defects (`c2ff4536`). Both concurrent sessions' commits are under
@@ -8801,7 +8835,52 @@ Behaviour-preserving: suite 19,040 / 0 / 5, golden traces 7/7 unmoved, clippy
 clean, `--bench` byte-identical to the committed invariant (195,528 / 27.44 /
 611.0 / 0 stalls, determinism ok, thread_determinism ok 3 vs 1).
 
-### Ninety-ninth pass (2) — the `Arc<ComputedPermanent>` pool's last variant, refuted on the handle's lifetime
+### Ninety-ninth pass, the concurrent half — the combat dispatch's listener walk becomes a word load per permanent
+
+**`fixed` -0.175 % / `cube` -0.191 % / `sealed` -0.156 %.**
+`fire_combat_damage_triggers` walks every permanent's printed
+`triggered_abilities` per damage event looking for two scopes —
+`YourControl` and `AnyPlayer` — and every other scope falls through the
+match. Two bits on the existing `dispatch_bits` memo answer "does this
+definition carry either", so a permanent that carries neither costs one word
+load. The bits are exact rather than an over-approximation (same list, same
+match), so the skip cannot change behaviour.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 2b16088a
+  fixed     938,100,211 ->   936,455,026   -0.175 %
+  cube    2,795,139,482 -> 2,789,812,681   -0.191 %
+  sealed  2,783,686,742 -> 2,779,354,606   -0.156 %
+
+fire_combat_damage_triggers (calls unchanged / self Ir / Ir per call)
+  fixed     6,480  12,284,112 -> 11,491,452   1895.7 -> 1773.4
+  cube     20,022  42,757,732 -> 38,938,200   2135.5 -> 1944.8
+  sealed   22,134  37,085,676 -> 34,300,658   1675.5 -> 1549.7
+dispatch_board_scan, call count unchanged, NOT touched by the diff
+  fixed    46,928  16,676,528 -> 15,805,784    355.4 ->  336.8
+  cube     80,230  30,888,436 -> 29,302,714    385.0 ->  365.2
+  sealed  110,130  32,321,366 -> 30,618,304    293.5 ->  278.0
+```
+
+**A SECOND READER OF A LAZILY-FILLED MEMO MAKES THE FIRST ONE CHEAPER, AND
+THAT IS HALF THIS WIN.** `dispatch_board_scan` is not in the diff and its call
+count does not move, yet it drops 5 % per call on every pool: it shares the
+memo word, and the new caller reaches most permanents first, so the miss path
+`dispatch_board_scan` used to inline is now paid in
+`fire_combat_damage_triggers`. The two row deltas together *are* the program
+delta on all three pools (-1.66 / -5.41 / -4.49 M against -1.65 / -5.33 /
+-4.33 M). **Do not attribute a memo's win to the caller that reads it; the
+population is shared and the miss path lands on whoever is first.**
+
+**And this is `(-77)`'s presence-bit rule on the side where it pays.** The
+same device bought 3 Ir a card on the layer-4 gates earlier in this pass,
+because `static_abilities` is empty on nearly every permanent and the walk it
+replaced was already a length check. Here the list is *not* usually empty — a
+cube board's creatures carry printed triggers — and the bit replaces a real
+per-trigger visit. **The rule is about the list, not about the device.**
+
+### Ninety-ninth pass, the concurrent half (2) — the `Arc<ComputedPermanent>` pool's last variant, refuted on the handle's lifetime
 
 **`fixed` +0.137 % / `cube` +0.097 % / `sealed` +0.097 %, reverted.** The
 single-slot `Option<Arc<ComputedPermanent>>` that `(-27)` was "arithmetic away
@@ -8820,7 +8899,7 @@ function that is inlined everywhere is not one branch; it is the inlining
 decision, re-taken.** That is the same shape as the ninety-eighth pass's
 `#[cold]` refutation from the other direction.
 
-### Ninety-ninth pass — the layer-4 type-change predicates come off the per-object memo
+### Ninety-ninth pass, the concurrent half (3) — the layer-4 type-change predicates come off the per-object memo
 
 **`fixed` -0.028 % / `cube` -0.071 % / `sealed` -0.033 %.** The per-card body
 of `(-87)`'s whole-board walk was the last two predicates in that family still

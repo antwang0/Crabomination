@@ -26,13 +26,13 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `79019a42` (the ninety-eighth and ninety-ninth passes ran
-   concurrently and their commits alternate):** suite 19,038 / 0 / 5, clippy
+2. **State at `841c7b9b` (the ninety-eighth and ninety-ninth passes ran
+   concurrently and their commits alternate):** suite 19,040 / 0 / 5, clippy
    clean, golden traces unmoved, `--bench` byte-identical (195,528 / 27.44 /
    611.0 / 0 stalls, determinism + thread_determinism ok), grid green (30
-   cells / 33,120 games), actor leg green (12,000 games / 1,155,629 rows).
-   **The interval is -1.137 / -1.857 / -1.115 %** and the six commits compose
-   to it exactly; anchor in item 8, per-commit numbers in PERF's Log.
+   cells / 33,120 games, 4 assertion strings in the audit binary), actor leg
+   green (12,000 games / 1,155,629 rows). Per-commit numbers in PERF's Log;
+   **each names its own base**, because pushes landed between them.
 3. **A concurrent push invalidates a MEASUREMENT, not a candidate.** This pass
    built its A/B, had `b12393f9` land under it, and retook the whole thing
    against `e86044f9`: the numbers moved by a quarter, the conclusion did not.
@@ -73,6 +73,20 @@ sixty-seventh pass, so don't re-take that.
    `SmallVec` field of `Copy` items inside a CoW'd group wants a `Clone` that
    is `from_slice`. And **strip the elapsed-time text before diffing two
    `bot_ladder` runs**, or `in 5.8s` reads as a behaviour divergence.
+6. **`(-27)`'s allocation half is CLOSED — both pool variants built and
+   refuted.** The single-slot one loses on a property no tuning moves: the
+   scope does not outlive the `Arc` it computes, so `get_mut` fails seven
+   times in eight. **A pool can only recycle a handle whose lifetime the
+   pool's owner bounds** — check that before counting the allocations.
+7. **Three more rules from the same hours.** A second reader of a lazily-filled
+   memo makes the first one *cheaper*, so do not attribute a memo's win to the
+   caller that reads it (`dispatch_board_scan` fell 5 % per call while not in
+   the diff, and that was half the win). A presence bit pays on the *list*,
+   not on the device: the same bit bought 3 Ir a card where the list is
+   usually empty and ~180 where it is not. And a branch added to a function
+   that is inlined everywhere is not one branch, it is the inlining decision
+   retaken (`end_of_scope` was free and became a 43.9-Ir row over 150,732
+   calls).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
