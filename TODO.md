@@ -21,13 +21,25 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT (handoff — an INDEX. Every number lives in PERF, ENGINE_BACKLOG or
-INCOMPLETE_CARDS; a line here that restates one is a line to delete.)
+## NEXT — the handoff. Fifteen lines. Everything under it is the standing index.
 
-**FIRST:** `git fetch origin claude/modern_decks && git checkout -B
-claude/modern_decks origin/claude/modern_decks` — the container clones `main`,
-and sessions run concurrently: push code before tracker prose, rebase not force.
-**Sequential builds only** (throughput, not RAM — see the environment note).
+1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
+   claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
+   push code before tracker prose, rebase not force, **sequential builds only**.
+2. **State at the ninety-sixth pass:** suite 19,028 / 0 / 5, clippy clean,
+   golden traces unmoved, `--bench` byte-identical to the committed invariant,
+   robustness grid green. Anchor and the pass's -2.7 / -3.0 / -3.5 % are in
+   item 8; the six commits are in PERF's Log.
+3. **BEST NEXT MOVES, in order.** (a) `(-92)` first — **the profile is FLAT**
+   (hottest line 0.97 %, six functions read by line all say "no hot line"), so
+   stop looking for one; its leads 2 and 3 are open and lead 1 is taken.
+   (b) `(-89)`'s eight remaining prevention rows and `(-88)`'s SBA sweep.
+   (c) The open ML question in item 7 — seed the actors' jitter? — now has
+   evidence: `--feature-census` was not reproducible without it.
+   (d) Cards only on leftover context; the three audits are clean at this tip.
+
+## Standing index (every number lives in PERF, ENGINE_BACKLOG or
+INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
 0. **THE BUILD IS THE LEVER, NOT THE SOURCE.** PGO is a ~24 % win on both
    pools and `-C target-cpu=native` is flat — width buys nothing here, layout
@@ -256,11 +268,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    already editing it; do not open a pass for this. One commit per file,
    binary green either side.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `cd0842e9` (on `origin`): `fixed` 957,023,198 /
-   `cube` 2,865,614,181 / `sealed` 2,831,048,757** — the whole
-   ninety-sixth pass is **-2.19 / -2.47 / -3.11 %** off `e0bc5c46`. One
-   anchor back, `599825ba`: 963,502,971 / 2,886,424,672 / 2,854,266,716,
-   with `--bench`
+   **Anchor, MEASURED at `a69a8287` (on `origin`): `fixed` 946,679,422 /
+   `cube` 2,829,634,060 / `sealed` 2,805,064,393** — the whole
+   ninety-sixth pass is **-3.25 / -3.70 / -4.00 %** off `e0bc5c46`, over
+   eight commits whose individual readings compose to it (PERF's closing
+   block has the per-commit table). Earlier anchors on `origin`:
+   `42235e7e` 952,230,291 / 2,851,583,965 / 2,820,631,303; `cd0842e9`
+   957,023,198 / 2,865,614,181 / 2,831,048,757; `599825ba` 963,502,971 /
+   2,886,424,672 / 2,854,266,716, with `--bench`
    byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
    stalls, determinism **and** thread_determinism ok), suite 19,029 / 0 / 5,
    golden traces 7/7 unmoved, clippy clean, and the robustness grid green
@@ -270,11 +285,14 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    **Two sessions read `e0bc5c46` independently and agreed to 435 Ir on
    `cube`, 58 on `fixed` and 81,279 on `sealed`** — the third such check, and
    the reason an anchor is checkable at all.
-   **⚠ The `games_per_s` at this tip is 364.80 at 3 threads against the
-   217.09 the last container filed at the same thread count, on the same
-   `--bench`, at `host_calib_ms` 53 vs 48-56.** Ir fell 2 %, not 68 %. A
-   wall-clock row is a within-sitting instrument; `bin_bytes` and
-   `host_calib_ms` do not catch a container change and did not catch this.
+   **⚠ `--bench` IS NOT A THROUGHPUT INSTRUMENT and this pass proved it
+   three times.** Three release gates, one container, `host_calib_ms`
+   53 / 55 / 55, `games_per_s` 364.80 / 362.97 / **337.51** — the clock went
+   the *wrong way* by 7 % while Ir fell monotonically by 3.3-4.0 %. (And the
+   whole container reads 337-365 against the last one's 217 at the same
+   thread count.) Quote Ir, or `ab_wall.py`'s five ABBA blocks. What
+   `--bench` is for is the invariant: decisions / turns / stalls /
+   determinism, byte-identical at every gate this pass.
    **`games_per_s` IS NOT PORTABLE ACROSS CONTAINERS and the reason is the
    thread count, not the box**: `--bench` defaults to
    `available_parallelism - 1`, this container reports `nproc` 4 and so runs

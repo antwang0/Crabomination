@@ -2262,23 +2262,33 @@ it more tightly than that.
 reserves are one allocation each, not regrowth, so sizing them exactly
 removes nothing.
 
-### Ninety-sixth pass — closing state at `cd0842e9`
+### Ninety-sixth pass — closing state at `a69a8287`
 
 ```text
 suite   cargo nextest run --workspace --exclude crabomination_client
-        19,029 / 0 / 5, run once per code commit; golden traces 7/7 unmoved
+        19,028 / 0 / 5, run once per code commit; golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
-        0 failures, run twice this pass (both memo commits)
+        0 failures, run THREE times this pass (both memo commits and the
+        `_on` one, each of which lands a `debug_assert!` that needs a board)
+audits  audit_incomplete --structural-only 21,795 / 0 to review;
+        audit_stubs 21,795 / 0 flagged; audit_variant_coverage 0 dead
+        capabilities over 1,695 variants, the same 3 dead primitives
 --bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
         (cap 0 / stuck 0 / draw 0) — byte-identical to the committed
         invariant; determinism ok, thread_determinism ok (3 vs 1)
-        release build, 3 threads: games_per_s 362.97, games_per_s_th 120.991,
-        peak_rss_mib 24.8, bin_bytes 123,612,016, host_calib_ms 55
-        (`599825ba` two gates earlier read 364.80 / 121.599 / 24.4 /
-        123,624,632 / 53 — Ir fell 0.7-0.8 % between them and the clock did
-        not move, which is what a 1.2-s run on a shared box is worth)
+        release build, 3 threads: games_per_s 337.51, games_per_s_th 112.504,
+        peak_rss_mib 26.5, bin_bytes 123,612,544, host_calib_ms 55
 ```
+
+**⚠ Three release gates this pass, one container, `host_calib_ms` 53 / 55 /
+55, and `games_per_s` read 364.80 / 362.97 / **337.51** while Ir fell
+monotonically by 3.3-4.0 %.** The clock went the wrong way by 7 % against a
+measured 4 % improvement. This is the third independent demonstration in two
+passes that **a 1.2-second `--bench` is not a throughput instrument**; it is
+the invariant checker (decisions / turns / stalls / determinism), which is
+what it is actually run for. Quote Ir, or `ab_wall.py`'s five ABBA blocks,
+and never a single `--bench` clock.
 
 **⚠ That `games_per_s` is NOT comparable to the 217.09 / 280.47 rows the
 ninety-fifth pass filed at `--threads 3` / `4`.** Same thread count, same
@@ -2291,17 +2301,27 @@ catch it, exactly as the ninety-fifth pass's note says they would not.
 ```text
 Ir anchor, callgrind, profiling-fast --no-default-features,
 --games 6 --threads 1 --seed 1:
-                 e0bc5c46          599825ba          cd0842e9
-  fixed        978,492,790  ->   963,502,971  ->   957,023,198   -2.194 %
-  cube       2,938,264,007  -> 2,886,424,672  -> 2,865,614,181   -2.472 %
-  sealed     2,921,898,983  -> 2,854,266,716  -> 2,831,048,757   -3.108 %
+                 e0bc5c46                       a69a8287
+  fixed        978,492,790   ->              946,679,422   -3.251 %
+  cube       2,938,264,007   ->            2,829,634,060   -3.697 %
+  sealed     2,921,898,983   ->            2,805,064,393   -3.999 %
+
+  intermediate anchors, all on `origin`:
+    599825ba   963,502,971 / 2,886,424,672 / 2,854,266,716
+    cd0842e9   957,023,198 / 2,865,614,181 / 2,831,048,757
+    42235e7e   952,230,291 / 2,851,583,965 / 2,820,631,303
 ```
 
-Six commits across the whole pass: `2b9dd2d8` (the gather pre-scan memo),
-`3b8bfd03` (the legend-rule grouping), a concurrent session's `e0cbb4a7`
-(the ironscale fuse), `6d89b5bc` (encode_state's shared scope, actor-only),
-`edecf3c4` (the census determinism fix, no engine cost) and `cd0842e9`
-(`(-91)`, the memo's lifetime).
+Eight commits across the whole pass, and the per-commit readings compose to
+the anchor. Mine: `2b9dd2d8` (the gather pre-scan memo, -1.418 / -1.198 /
+-1.154 %), `3b8bfd03` (the legend-rule grouping, -0.021 / -0.434 / -1.070 %),
+`cd0842e9` (`(-91)`, the memo's lifetime, -0.673 / -0.721 / -0.813 %),
+`848fc5b4` + `42235e7e` (the `_on` form, -0.50 / -0.49 / -0.37 % together),
+plus `6d89b5bc` (encode_state's shared scope — actor-only, `--bench` does not
+reach `encode_state`) and `edecf3c4` (the census determinism fix, no engine
+cost). Concurrent sessions': `e0cbb4a7` (the ironscale fuse, -0.093 / -0.138
+/ -0.103 %) and `66e78a2f` + `ec5dc3a9` (the SBA death sweep, **-0.583 /
+-0.770 / -0.552 %** measured here as the delta from `42235e7e`).
 
 Three commits between them: `2b9dd2d8` (the gather's pre-scan memo, -1.418 /
 -1.198 / -1.154 %), `3b8bfd03` (the legend-rule grouping, -0.021 / -0.434 /
