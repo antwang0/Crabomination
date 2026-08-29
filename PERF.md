@@ -2134,6 +2134,15 @@ suite   19,028 / 0 / 5; golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
         0 failures, with the death sweep's `Only` audit armed
+actor   the leg the grid's header names, run because this pass lands a
+        `debug_assert!` on a path the encoder reaches: the same
+        `-C debug-assertions=yes` + `overflow` build of `-p crabomination_ml
+        --bin selfplay_train`, 4 seeds x `--actors 3 --games 3000 --steps 20`
+        — **12,000 games, 1,157,922 rows, 0 stalls, rc 0, no panic /
+        assertion / overflow**, with `strings` verifying both the three
+        "memo is stale" messages and the new "is not a necessary condition"
+        one are in the binary. 104-113 games/s there, which is an *audit*
+        build and not a throughput number.
 --bench 195,528 / 27.44 / 611.0 / 0 stalls (cap 0 / stuck 0 / draw 0) —
         byte-identical to the committed invariant; determinism ok,
         thread_determinism ok (3 vs 1). games_per_s 286.05 at 3 threads,

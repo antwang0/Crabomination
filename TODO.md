@@ -248,7 +248,11 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg, the
    seeded 4,000-pairing cube sweep (arm it in
    `bot_vs_bot_random_cube_decks_terminate`), the two census env vars.
-   **The ACTOR LEG is run at last, at `9b1fa94b`** — the same
+   **Re-run at the ninety-seventh pass** (`6e44ce7c`), because that pass lands
+   a `debug_assert!` in the SBA death sweep: same recipe, **12,000 games,
+   1,157,922 rows, 0 stalls, rc 0, no panic / assertion / overflow**, both the
+   "memo is stale" and the new "is not a necessary condition" strings verified
+   present. Earlier, at `9b1fa94b` — the same
    `-C debug-assertions=yes` + `overflow` build of `-p crabomination_ml --bin
    selfplay_train`, 4 seeds x `--actors 3 --games 3000 --steps 20`:
    **12,000 games, 1,161,305 rows, 0 stalls, rc 0, no panic / assertion /
