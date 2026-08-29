@@ -15418,6 +15418,54 @@ counter that would close it is one pair of tallies at the two sites. **But do
 not build the deferral on the strength of the 3.16 % row**: price the waste
 first, and the two ratios above say to expect it to be small.
 
+
+**`(-82)`'S `available_mana` HALF IS REFUTED, AND THE COUNTS DO IT WITH NO
+BUILD SPENT** (pass 97, read off the ninety-seventh tip's dumps). The entry
+put the weight of itself here — "can a tick's build be shared with more of the
+tick?" — and the answer is that it already is:
+
+```text
+cube, --games 6 --threads 1 --seed 1
+  available_mana builds                      12,240
+  cast_candidates calls                      12,478   -> 0.98 builds a call
+  where the builds are (--separate-callers=3):
+    can_afford_in_state_with <- cast_candidates      11,206   91.6 %
+    can_afford_in_state_with <- pick_defensive_removal   282
+    main_phase_action_with <- next_action_inner          260
+    can_afford_in_state_with <- pick_stack_response      152
+    max_affordable_x_for_def <- cast_candidates          130
+  and where cast_candidates' calls come from:
+    sim_spell_action_inner <- simulate_attack_outcome_once  7,004
+    main_phase_action_with <- next_action_inner             5,474
+```
+
+**One build per `cast_candidates` call, and the two halves of that call count
+are both unshareable for different reasons.** The 5,474 real-board calls
+*already* take `main_phase_action_with`'s cell through the `shared:
+Option<&SweepMana>` parameter — the build is attributed to `cast_candidates`
+only because the `OnceCell` initialises lazily at the first affordability
+check, which is inside it. The 7,004 simulation calls sit inside
+`simulate_attack_outcome_once`'s `while !g.is_game_over()` loop, which
+`dry_run`s a mutation into `g` on **every iteration** (24,348
+`sim_spell_action_inner` calls a `cube` run, 12 per simulation, 3.5 of them
+reaching `cast_candidates`), so two consecutive calls are on different boards
+by construction and no cache can span them.
+
+**What is left is 694 builds — 5.7 %** — in the priority-response chain
+(`pick_defensive_removal` / `pick_stack_response` / `main_phase_action_with`
+each build their own where `next_action_inner` could hold one for the whole
+tick). At `cube`'s 55.7 M / 12,240 = 4,552 Ir a build that is ~3.2 M, **0.11 %
+of the pool**, for threading a `&SweepMana` through five picker signatures.
+Filed as not worth it; the entry's targeting half is separately bounded above.
+
+**The rule, and it is the third time this file has reached it from a
+different direction:** a cache's value is `(asks - builds) x build cost`, and
+`asks / builds` is a *ratio in the dump* — `cg_edges.py --callers` on the
+cached function against `--callers` on its owner answers "is this already
+shared?" before any theory about who could share with whom. The two censuses
+this pass built (`(-88)`, `(-87)`) were the same question where the dump could
+not answer it; here it could.
+
 **Which puts the weight of this entry on `available_mana`'s 5,900 builds, not
 on targeting.** That is the half with a *measured* amortisation ratio (2.1)
 and a clear question — can a tick's build be shared with more of the tick? —

@@ -120,8 +120,18 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    and the fourth is two compile-enforced sites — but the membership epoch
    wants a `Battlefield` newtype, 106 mutable-use sites against 871 reads.
    Budget a run for it and take the branch to yourself; it is not a patch to
-   carry across a concurrent session's pushes.** Then `(-82)`'s
-   `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
+   carry across a concurrent session's pushes.**
+   **`(-82)` IS NOW CLOSED — its `available_mana` half is refuted off the
+   dumps with no build spent** (pass 97): 12,240 builds against 12,478
+   `cast_candidates` calls is **0.98 builds a call**, 92 % of builds are
+   inside `cast_candidates`, its 5,474 real-board calls already take
+   `main_phase_action_with`'s shared cell, and its 7,004 simulation calls sit
+   in a loop that `dry_run`s a mutation into the board on every iteration —
+   different board, no cache can span it. What is left is 694 builds (5.7 %,
+   ~0.11 % of `cube`) in the picker chain. **The rule: `asks / builds` is a
+   ratio in the dump — ask "is this already shared?" with
+   `cg_edges.py --callers` before theorising about who could share.** Then
+   `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
    `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-92)` IS THE ENTRY TO READ
    FIRST AND IT IS A MAP, NOT A LEAD: the profile is FLAT.** The whole-program
    line profile (new, in PERF's "Profile of record") says the hottest single
