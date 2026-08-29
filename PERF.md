@@ -8927,6 +8927,85 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundredth pass (6) — `battlefield_find` gets a one-entry index memo, and it needs no invalidation because it verifies instead of trusting
+
+**`fixed` -0.283 % / `cube` -0.446 % / `sealed` -0.300 %** off `623e935a`.
+`(-38)`'s class, which has been the largest *unnamed* structural cost in this
+file since the fifty-second pass, taken whole rather than one call site at a
+time.
+
+`Battlefield` carries one `AtomicU32`: the index `find_by_id` last returned
+from. The fast path is a relaxed load, a bounds check and one `CardId`
+compare; a mismatch of any kind — stale index, shorter board, a different
+permanent in that slot — falls through to the scan, which stores the index it
+found. **Nothing invalidates it, because a hit is verified rather than
+trusted**, which is why it sits outside the lanes' epoch/clear protocol
+entirely. The three earlier structural proposals for this class all needed an
+invalidation story (`(-38)`'s dense `CardId` array doubles the handle; the
+board-presence epoch is on the do-not-rebuild list); this one has none to get
+wrong.
+
+**The premise a hit rests on that a scan does not is that battlefield ids are
+unique** — a scan stops at the first match, a hint can name a later one. The
+`debug_assert!` is on the *scan* path, where it costs the tail of a walk the
+miss was making anyway; on the hit path it would be a board walk in front of
+the memo it exists to avoid.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 623e935a (re-read at the tip it lands on; the first reading, at `98feda21`
+under a concurrent session's two combat commits, was -0.283 / -0.446 / -0.299 —
+the intervening lane is orthogonal to the memo)
+  fixed     913,628,267 ->   911,042,441   -0.283 %
+  cube    2,729,893,349 -> 2,717,721,082   -0.446 %
+  sealed  2,708,134,531 -> 2,700,015,671   -0.300 %
+
+the rows, `cube` self Ir (the same shape on all three pools):
+  combat_damage_prevented_to_self          2,834,846 ->     770,328   -72.8 %
+  ironscale_replace                        2,066,936 ->     489,414   -76.3 %
+  apply_prevention_shields_with           10,442,680 ->   8,229,474   -21.2 %
+  damage_from_source_prevented_by_keyword  7,632,256 ->   6,084,976   -20.3 %
+  creature_redirects_damage_to_controller  7,957,204 ->   6,612,858   -16.9 %
+  evaluate_requirement_static_hinted     104,449,544 ->  96,450,294    -7.7 %
+  activate_ability_inner                  48,409,076 ->  45,301,768    -6.4 %
+  damage_prevented_by_protection          16,128,440 ->  15,450,518    -4.2 %
+```
+
+**The winners name the shape the memo is for: a caller that asks about the
+*same* permanent several times running.** `resolve_combat`'s per-pair freeze
+scope asks for the blocker three or four times — once per prevention gate —
+and `combat_damage_prevented_to_self` and `ironscale_replace`, which are
+nothing *but* a find and a short static scan, lose three quarters of their Ir.
+`(-89)`'s cascade falls without any of the `_on` conversions its entry was
+still asking for, and the four keyword-gated rows it named as "one lead, not
+four" fall together because the lead was the `battlefield_find` in front of
+them.
+
+**Two rows go the other way, and they are the inlining decision retaken.**
+`bf_hint_or_find` and `battlefield_find` acquire rows of their own —
+8.05 / 10.15 / 11.92 M and 0.56 / 1.67 / 1.84 M — because the two-path body is
+bigger than the bare `iter().find()` it replaced and LLVM stopped inlining it
+at those sites. Against `evaluate_requirement_static_hinted`'s fall of
+6.44 / 8.00 / 8.39 M that pair is **net +1.6 / +2.1 / +3.5 M**, i.e. the
+change pays about 0.08-0.13 % for its own code size and still nets the numbers
+above. **That residue is a candidate, not an accident**: keep the inlined half
+tiny (the scan behind `#[inline(never)]`) and it should come back. See
+`(-38)`.
+
+**The concurrent session's (4) below is this entry from the other side and the
+pair is the whole rule.** It converted three of these same cascade rows to
+`_on` forms and read **+0.099 / +0.406 / +0.195 %**, and its diagnosis —
+"an `_on` conversion is worth its top few callers *whose lookup misses*" — is
+exactly why a memo beats a conversion here: the second and later finds of a
+permanent inside one freeze scope are **hits**, and a hit is what this makes
+cost a load and a compare. **Rank an `_on` candidate by miss rate; rank a memo
+candidate by hit rate.** They are not competing devices, they are the two
+halves of the same distribution.
+
+Behaviour-preserving by construction — a verified hit is the card the scan
+would have returned — and the three ladder printouts are byte-identical base
+to candidate on all three pools.
+
 ### Hundredth pass (5) — the combat-damage listener walk gets a lane
 
 **`fixed` -0.127 % / `cube` -0.040 % / `sealed` -0.010 %** off `7df692ef`.
@@ -14760,6 +14839,21 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-94) THE FIND MEMO'S OWN CODE SIZE — `net +1.6 / +2.1 / +3.5 M`, AND IT IS
+THE ONLY THING LEFT OF `(-38)`.** `Battlefield::find_by_id`'s two-path body is
+bigger than the `iter().find()` it replaced, so `bf_hint_or_find` and
+`battlefield_find` stopped inlining at some sites and acquired rows of their
+own (8.05 / 10.15 / 11.92 M and 0.56 / 1.67 / 1.84 M) against a fall of
+6.44 / 8.00 / 8.39 M in `evaluate_requirement_static_hinted`. **The inlined
+half is four instructions; the scan is what is big**, so putting the scan in a
+separate `#[inline(never)]` function should leave `find_by_id` *smaller* than
+what it replaced and let every one of those sites re-inline, at the cost of a
+real call on a miss. One build and one three-pool A/B. Read pass 98's `#[cold]`
+refutation and pass 99's "a branch added to a function that is inlined
+everywhere is not one branch — it is the inlining decision, retaken" first:
+both are this trade seen from the other side, and the miss rate is what
+decides it.
+
 **(-93) THE CALLER-FILLED LANE — a `zone::Battlefield` lane whose miss costs
 NOTHING. Eight lanes now; the hundredth pass took three more
 (`LANE_SHIELD` x2, `LANE_GRANT`), window `840b5ccd -> 98feda21` **-0.888 /
@@ -15118,6 +15212,17 @@ and the `perms` lookup, and neither has been sized by line.
 **Also refuted without a build: a lane over `keyword_grant_in_scope`'s
 `continuous_effects` leg** — it is not a battlefield walk, the zone cannot key
 it, and the leg runs before the board one in the `||` chain.
+
+**TAKEN, and not by an `_on` conversion** (hundredth pass, fourth commit).
+`(-38)`'s one-entry index memo makes the second and later finds of the same id
+a load and a compare, so the four rows fell together without any signature
+changing: `damage_from_source_prevented_by_keyword` -20.3 %,
+`creature_redirects_damage_to_controller` -16.9 %,
+`apply_prevention_shields_with` -21.2 %,
+`combat_damage_prevented_to_self` -72.8 % on `cube`. **"Four rows asking for
+the same id inside one freeze scope" was the right reading and the memo was
+the cheaper answer to it** — an `_on` conversion of this family is now worth a
+load and a compare per row, i.e. re-size it before writing it.
 
 **(-89, as re-read) RE-READ AT `a69a8287` AND ONE OF ITS PREMISES IS WRONG — the cascade
 is still ~1.9 % of `cube`, but "ten whole-battlefield walks a damage event"
@@ -19437,7 +19542,23 @@ side per game; that pass's lattice hoist took the judged path from 1.2 to
 83.2 games/s against 99.8 for the unjudged one, and every build the fifty-
 fourth pass made cheaper is inside it.
 
-**(-38) `battlefield_find` is 4.03 % of the program and has never had an
+**(-38) TAKEN WHOLE AT THE HUNDREDTH PASS' FOURTH COMMIT** — `fixed`
+-0.283 / `cube` -0.446 / `sealed` -0.299 %, a one-entry validated index memo
+on `Battlefield` (`find_by_id`; the Log block carries the device and the row
+table). Six passes had been paying this class off one call site at a time
+with `_on` forms; the memo takes the *repeat* half of all 556 of them at once,
+and it needs no invalidation because a hit is verified rather than trusted.
+**What is left of the entry is one residue and it is a candidate**: the
+two-path body is bigger than the bare `iter().find()`, so `bf_hint_or_find`
+and `battlefield_find` de-inlined at some sites and acquired rows of their own
+worth **net +1.6 / +2.1 / +3.5 M** against the caller rows they left. Putting
+the scan behind `#[inline(never)]` so the inlined half is smaller than what it
+replaced should recover it; ~0.08-0.13 % of a pool, and it is one build.
+**The `_on` conversions this entry's remaining rows asked for are now worth
+much less than they were** — a second find of a permanent the caller already
+looked up is a load and a compare — so re-size one before writing it.
+
+**(-38, original) `battlefield_find` is 4.03 % of the program and has never had an
 entry, because it never appears as a function row — it always inlines.**
 `self.battlefield.iter().find(|c| c.id == id)`, 556 call sites.
 **`scripts/cg_sites.py` is the tool that finds this shape** (added with the

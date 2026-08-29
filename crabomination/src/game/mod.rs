@@ -22793,8 +22793,11 @@ impl GameState {
         self.evaluate_requirement_static(req, target, controller, None)
     }
 
+    /// The battlefield permanent with `id`, through
+    /// [`Battlefield::find_by_id`](crate::zone::Battlefield::find_by_id)'s
+    /// one-entry index memo.
     pub fn battlefield_find(&self, id: CardId) -> Option<&CardInstance> {
-        self.battlefield.iter().find(|c| c.id == id)
+        self.battlefield.find_by_id(id)
     }
 
     /// CR 700.4 — true when a death's graveyard placement was replaced away

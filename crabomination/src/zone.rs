@@ -243,9 +243,61 @@ pub struct Battlefield {
     /// The `definition_epoch` the lanes were computed at. A lane is valid only
     /// while this still matches.
     def_epoch: std::sync::atomic::AtomicU64,
+    /// The index [`find_by_id`](Self::find_by_id) last returned from. Needs no
+    /// invalidation at all — see that function.
+    find_hint: std::sync::atomic::AtomicU32,
 }
 
 impl Battlefield {
+    /// The permanent with `id`, through a one-entry index memo.
+    ///
+    /// `GameState::battlefield_find` is 556 always-inlined call sites and
+    /// **4.03 % of the program** when it was first read (PERF `(-38)`;
+    /// 2.35 % at the last `cg_sites` read, after four of its six named sites
+    /// were paid off with `_on` forms). The remaining ones are the callers
+    /// that ask about the *same* permanent several times running — the
+    /// combat resolver's per-pair freeze scope asks three or four times for
+    /// the blocker alone, once per prevention gate — and a one-entry memo is
+    /// what that shape wants.
+    ///
+    /// **The memo needs no invalidation, because the answer is verified
+    /// rather than trusted.** `cards[hint].id == id` is the whole contract: a
+    /// stale index, a shorter board, a different permanent in that slot all
+    /// fail the same test and fall through to the scan. That is why this sits
+    /// outside the lanes' epoch/clear protocol — nothing a write can do to
+    /// this zone can make a *hit* wrong.
+    ///
+    /// The one premise a hit rests on that a scan does not is that **ids on
+    /// the battlefield are unique** — a scan stops at the first match, a hint
+    /// can name a later one. That is a global engine invariant (`CardId`s come
+    /// off a monotonic counter), and the `debug_assert!` on the scan path is
+    /// its audit: it costs the tail of a walk the miss was making anyway, and
+    /// `scripts/robustness_grid.sh` is what fires it. Auditing it on the *hit*
+    /// path instead would put a board walk in front of the memo it is there to
+    /// avoid.
+    ///
+    /// Break-even is a repeat rate of about a tenth: a hit is a relaxed load,
+    /// a bounds check and one `CardId` compare against the ~58 Ir a scan of
+    /// ~23 `Arc`-boxed permanents costs (PERF's "price a `find` at its
+    /// expected stopping point"), and a miss adds those same few instructions
+    /// plus one store on top of the scan it was going to make anyway.
+    #[inline]
+    pub fn find_by_id(&self, id: crate::card::CardId) -> Option<&CardInstance> {
+        let hint = self.find_hint.load(Ordering::Relaxed) as usize;
+        if let Some(c) = self.cards.get(hint)
+            && c.id == id
+        {
+            return Some(c);
+        }
+        let (i, c) = self.cards.iter().enumerate().find(|(_, c)| c.id == id)?;
+        debug_assert!(
+            !self.cards[i + 1..].iter().any(|o| o.id == id),
+            "two battlefield permanents share a CardId: the find hint could name either",
+        );
+        self.find_hint.store(i as u32, Ordering::Relaxed);
+        Some(c)
+    }
+
     /// True when some permanent here satisfies `walk` — the layer-4 land-type
     /// contributor test. Memoized; a miss walks the board once.
     #[inline]
@@ -529,6 +581,9 @@ impl Clone for Battlefield {
             def_epoch: std::sync::atomic::AtomicU64::new(
                 self.def_epoch.load(Ordering::Relaxed),
             ),
+            find_hint: std::sync::atomic::AtomicU32::new(
+                self.find_hint.load(Ordering::Relaxed),
+            ),
         }
     }
 }
@@ -559,6 +614,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
             cards,
             type_gates: std::sync::atomic::AtomicU32::new(0),
             def_epoch: std::sync::atomic::AtomicU64::new(0),
+            find_hint: std::sync::atomic::AtomicU32::new(0),
         }
     }
 }
@@ -676,6 +732,33 @@ mod tests {
             .map(|(i, d)| CardInstance::new(CardId(i as u32), d, 0))
             .collect::<Vec<_>>()
             .into()
+    }
+
+    /// `find_by_id`'s index memo is verified, not invalidated: every way it
+    /// can go stale — a removal that shifts the board under it, a removal
+    /// that shortens the board past it, the card it names leaving — has to
+    /// fall through to the scan and answer correctly anyway.
+    #[test]
+    fn find_by_id_hint_survives_every_membership_change() {
+        let mut b = bf(vec![
+            crate::catalog::grizzly_bears(),
+            crate::catalog::blood_moon(),
+            crate::catalog::grizzly_bears(),
+        ]);
+        // Warm the hint on the last slot, then shift the board under it.
+        assert_eq!(b.find_by_id(CardId(2)).map(|c| c.id), Some(CardId(2)));
+        b.remove(0);
+        assert_eq!(b.find_by_id(CardId(2)).map(|c| c.id), Some(CardId(2)), "shifted");
+        assert_eq!(b.find_by_id(CardId(1)).map(|c| c.id), Some(CardId(1)));
+        assert!(b.find_by_id(CardId(0)).is_none(), "the removed card is gone");
+        // A hint past the end of a shortened board is a miss, not a panic.
+        assert_eq!(b.find_by_id(CardId(2)).map(|c| c.id), Some(CardId(2)));
+        b.pop();
+        assert!(b.find_by_id(CardId(2)).is_none());
+        assert_eq!(b.find_by_id(CardId(1)).map(|c| c.id), Some(CardId(1)));
+        // An empty board answers `None` through the same path.
+        b.pop();
+        assert!(b.find_by_id(CardId(1)).is_none());
     }
 
     /// Blood Moon sets every nonbasic land's type line; Grizzly Bears does
