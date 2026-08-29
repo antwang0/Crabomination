@@ -83,7 +83,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    * **Run `cg_edges.py --callees` on a 3 % row before theorising about it.**
      `(-82)` sized a function from outside and got the conclusion backwards.
    * **Rank a `call_mut` census by the closure's CAPTURES, not its call
-     count** — 5x between the top two rows of one table.
+     count** — 5x between the top two rows of one table. **And check the
+     CONSUMER before applying the rule**: it is about `collect()` into a
+     `Vec`; `sum`/`fold`/`count`/`for_each`/`any` are already internal
+     iteration and a hand-written loop loses to them
+     (`combat_damage_shaved_for`, +0.010 % on `cube`, reverted).
    * **Halve a no-LTO `#[inline]` reading and halve it again**;
      `[profile.profiling-lto]` is the instrument that checks it (`profiling`
      OOMs on the candidate side only — Cargo.toml says why). **And pick the
@@ -195,16 +199,24 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `9b1fa94b` (on `origin`): `fixed` 981,008,943 /
-   `cube` 2,945,263,123 / `sealed` 2,927,727,759**, `--bench` there
-   byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
-   stalls, determinism **and** thread_determinism ok), `host_calib_ms` 47,
-   `bin_bytes` 123,751,752, and the robustness grid green in the same run
-   (30 cells, 33,120 games, 0 undecided, 0 failures). One anchor back,
-   `fa979b3a`: 989,689,177 / 2,965,899,097 / 2,947,614,907, so the
-   ninety-fourth pass as a whole reads **-0.877 / -0.696 / -0.674 %** — four
-   taken commits (two `same_team`, `blockers_of`, and the concurrent half's
-   three collect-to-loop rewrites) and three built-and-reverted ones. Earlier anchors are in git and in PERF's Baseline blocks; do not
+   **Anchor, MEASURED at `00485d09` (on `origin`): `fixed` 979,343,537 /
+   `cube` 2,941,640,950 / `sealed` 2,924,839,177**, and `544a124b` one commit
+   later reads 978,841,037 / 2,939,951,310 / 2,923,140,480. `--bench` at
+   `00485d09` byte-identical to the committed invariant (195,528 / 27.44 /
+   611.0 / 0 stalls, determinism ok). One anchor back, `9b1fa94b`:
+   981,008,943 / 2,945,263,123 / 2,927,727,759, and one before that
+   `fa979b3a`: 989,689,177 / 2,965,899,097 / 2,947,614,907, so the two passes
+   together read **-1.09 / -0.88 / -0.83 %**.
+   **`games_per_s` IS NOT PORTABLE ACROSS CONTAINERS and the reason is the
+   thread count, not the box**: `--bench` defaults to
+   `available_parallelism - 1`, this container reports `nproc` 4 and so runs
+   **3** threads where the run that filed `games_per_s 292.65` ran 4 —
+   217.09 at `--threads 3`, 280.47 at `--threads 4`, same binary, same
+   minute. The header line carries the count and the Baseline blocks quote
+   only the numbers block, which is how a 33 % lever went unrecorded.
+   **Quote `games_per_s_th`, or pin `--threads` and say so.** `host_calib_ms`
+   and `bin_bytes` do *not* catch this — both agreed to within 0.11 % and
+   15 % respectively across the gap. Earlier anchors are in git and in PERF's Baseline blocks; do not
    add a line per anchor here. Three rules the series produced, and they are
    the whole reason to keep it:
    **cite an anchor by a hash already on `origin`** (one was filed at

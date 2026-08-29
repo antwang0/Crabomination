@@ -2101,6 +2101,74 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fifth pass (4) — a `sum()` over an adapter chain is not a `collect()`, and `games_per_s` is not portable across containers
+
+**`player_protection_card_types` tests the instance field first, base
+`00485d09`** — CR 702.16j's Serra's Emissary walk, asked once per
+combat-damage event, once per noncombat one and once per player-targeted
+spell.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     979,343,537 ->   978,841,037   -0.051 %
+  cube    2,941,640,950 -> 2,939,951,310   -0.057 %
+  sealed  2,924,839,177 -> 2,923,140,480   -0.058 %
+
+prevent_combat_to_target inclusive, identical call counts either side:
+                 calls        before        after     Ir/call
+  fixed         2,686     2,436,272     1,963,094   907 ->  731  (-19.4 %)
+  cube          7,570     8,632,442     7,015,492  1140 ->  927  (-18.7 %)
+  sealed        9,454     8,627,208     7,057,012   912 ->  746  (-18.2 %)
+```
+
+It tested `static_abilities` — a second pointer chase into `definition` and a
+walk of a list empty on nearly every permanent — ahead of the
+`chosen_card_type` that has to be `Some` for the walk to yield anything, and
+that field sits on the `CardData` the controller compare already loaded. The
+same conjunction, reordered.
+
+**THE SECOND SITE IN THE SAME PATCH WAS BUILT, MEASURED AND REVERTED, AND IT
+BOUNDS THE COLLECT-TO-LOOP RULE.** `combat_damage_shaved_for`'s
+`filter().flat_map().filter_map().sum()` became the same walk as a nested
+`for`, and `deal_combat_damage_to_target`'s self row **rose** with a
+byte-identical callee table:
+
+```text
+  deal_combat_damage_to_target, self   +93,070 / +306,784 / +252,116
+                             program   +0.008 / +0.010 / +0.008 %
+```
+
+**`sum()` over an adapter chain is *internal* iteration** — `Iterator::fold`
+all the way down, no per-element `next()` and no forwarding through `&mut F`
+— and the loop is external with a `continue` per rejected card. The census
+rule is about `collect()` into a `Vec`, which specializes to an internal
+`extend` on the *source* iterator and pays the `call_mut` forwards on the
+adapters above it. **Check the consumer before applying the rule: `sum`,
+`fold`, `count`, `for_each` and `any`/`all` are already folding, and a loop
+does not beat them.** This is the same boundary the `Vec -> SmallVec` entry
+found from the other side.
+
+**AND THE CLOSING GATE FOUND THAT `games_per_s` IS NOT COMPARABLE ACROSS
+CONTAINERS, WHICH IS WORTH MORE THAN THE COMMIT.** `--bench` at this tip read
+**196-227 games/s against the committed 292.65**, a 24-33 % gap, on an idle
+box with `host_calib_ms` 48-56 against 47 and `bin_bytes` within 0.11 %. It is
+not a regression — Ir fell 0.17 / 0.12 / 0.10 % over the same interval. It is
+the **thread count**:
+
+```text
+  --bench --threads 3    217.09 games/s   games_per_s_th 72.363
+  --bench --threads 4    280.47           games_per_s_th 70.117
+  committed (9b1fa94b)   292.65           threads not recorded
+```
+
+`--bench` defaults to `available_parallelism - 1`; this container reports
+`nproc` 4 and so runs **3** threads where the one that filed 292.65 ran 4.
+The header line already prints it (`… seed 1, 3 threads, release build`) —
+the Baseline blocks quote the *numbers* block and drop the header, so the one
+parameter with a 33 % lever on the figure is the one that was never written
+down. **Quote `games_per_s_th`, or pin `--threads` and record it.** Both are
+in the output already; nothing needs building.
+
 ### Ninety-fifth pass (3) — the smallest allocation size class is 2-3x cheaper than the family average
 
 **`fire_combat_damage_triggers`' `by_kind` is `SmallVec<[Vec<_>; 4]>`, base
