@@ -8582,9 +8582,15 @@ lists. `scripts/robustness_grid.sh` fires it on real boards: **30 cells,
 33,120 games, 0 undecided, 0 failures** at this tip. The 19 k-test suite is
 not that audit and never was.
 
-**What is left of `(-88)`:** its own first question — how many of the 20,152
-`cube` sweeps re-sweep a board nothing has touched since the last one — is
-untouched and is now the larger half.
+**`(-88)` is now CLOSED, and the other half is a refutation with a number.**
+Its own first question — how many of the 20,152 `cube` sweeps re-sweep a board
+nothing has touched — is answered by `CRAB_SBA_CENSUS` at `6e44ce7c`:
+**17.8-19.0 % on the three pools**, and a skip loses anyway, because the
+witness that proves the state unchanged is a whole-board walk of the same
+shape as the `sba_board_scan` it would skip, paid on 100 % of sweeps against a
+saving on 18 %. See the candidate entry for the arithmetic and the rule.
+**Before proposing a memo keyed on "nothing changed", price the witness
+against the work.**
 
 ### Ninety-sixth pass (3) — the `_on` form of `computed_permanent`
 
@@ -13672,13 +13678,28 @@ the largest at 862 Ir a call, and `(-61)` already says its Absorb gate is a
 
 **(-88) `check_state_based_actions_into` IS A 2.4-3.1 % SELF ROW ON EVERY
 POOL AND NO ENTRY HAS EVER NAMED IT.** Same tip and same dumps as `(-89)`.
-**HALF TAKEN at `ec5dc3a9` for -0.559 / -0.751 / -0.533 %** — the death
-sweep's whole-board layer pass is now a pass over the permanents its own
-gate names (Log, ninety-seventh pass). **The open half is this entry's own
-first question and it is now the larger one:** 20,152 sweeps a `cube` run
-against 66,612 `perform_action_inner` calls is one sweep per 3.3 actions —
-how many re-sweep a board nothing has touched since the last one? Still
-answerable off the caller table below with no build.
+**CLOSED — half taken, half refuted with a census.**
+
+**Taken at `ec5dc3a9` for -0.559 / -0.751 / -0.533 %**: the death sweep's
+whole-board layer pass is now a pass over the permanents its own gate names
+(Log, ninety-seventh pass).
+
+**Refuted at `6e44ce7c`: this entry's own first question, measured.**
+`CRAB_SBA_CENSUS=1` fingerprints the sweep's read set and counts consecutive
+sweeps that see the same state — **3,613 / 20,152 on `cube` (17.93 %), 1,736 /
+9,146 on `fixed` (18.98 %), 5,594 / 31,452 on `sealed` (17.79 %)**, and
+interleaving with the bot's simulation clones makes those a lower bound. **It
+loses by arithmetic before soundness is reached.** A repeat sweep is by
+construction one whose predecessor changed nothing, so the skip saves the
+*no-op* sweep — `sba_board_scan` plus the gated `any` walks, ~2.5-3.5 k Ir —
+on ~18 % of sweeps, while the fingerprint that proves the state unchanged is a
+whole-board walk of the same shape as the `sba_board_scan` it would skip, paid
+on 100 % of them. And a 64-bit hash is not a correctness gate over millions of
+games; an exact snapshot is the walk again plus the storage. **The rule:
+before proposing a memo keyed on "nothing changed", price the witness against
+the work — a witness over the same collection as the work is never cheaper
+than the hit rate.** The instrument stays, gated (+0.004 / +0.001 / +0.003 %
+off, i.e. the ~113 k Ir a gate costs).
 
 ```text
                      self Ir     % of pool    calls    self Ir/call
