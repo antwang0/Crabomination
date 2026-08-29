@@ -50,9 +50,13 @@ sixty-seventh pass, so don't re-take that.
    0.459 % of `cube` for a cost a training run never pays. (d) `(-92)` leads 2
    and 3; `(-93)`'s lane device is intact and lanes 10-16 are free, but its
    consumer list is exhausted.
-   (e) The actor: `encode_state` 1.30 %, `rank_shape` 0.98 %; everything above
-   them is engine, so **an engine percent is an actor percent**. (f) Cards on
-   leftover context.
+   (e) **The actor is re-read too — `(-97)`, and the standing claim is now
+   measured**: thirteen of its top fifteen rows are engine, the only
+   actor-only rows above 1 % are the encoder (1.53 + 1.46 %) and `rank_shape`
+   (1.08 %), 4.07 % in total, and its one distinctive row (`__memcpy` 5.02 %
+   against `cube`'s 2.73 %) is MCTS state copying over 355 callers. **An
+   engine percent is an actor percent**, so keep working the engine.
+   (f) Cards on leftover context.
 4. **The rule this pass produced, and it is one distribution seen twice.**
    **Rank an `_on` conversion by MISS rate and a memo by HIT rate.** The same
    four cascade rows were measured both ways in one sitting: converting their

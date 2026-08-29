@@ -14928,6 +14928,63 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-97) THE ACTOR'S OWN PROFILE, RE-READ AT `633acc3e` WITH `(-95)`'s LENS
+APPLIED, AND IT CONFIRMS "AN ENGINE PERCENT IS AN ACTOR PERCENT" WITH
+NUMBERS.** `selfplay_train --actors 1 --games 60/120 --steps 1 --seed 7`,
+`profiling-fast -p crabomination_ml --no-default-features` (0 `libmimalloc`
+frames in the dump — the flag has to name `crabomination_ml`, see "How to
+measure"). Two run lengths so the once-per-process block can be separated:
+3,308,033,402 Ir at 60 games, 6,148,474,954 at 120 (x1.859).
+
+**The startup block is 83 rows / 57,253,725 Ir = 1.73 % of the 60-game run and
+0 % of a training run**, and it is candle's, not the engine's:
+
+```text
+                                 60 games      120 games   growth
+  rand_distr Normal::sample       722,816 ->    722,816    x1.00  35.3 M, 1.07 %
+  candle impl_avx2                 23,099 ->     23,099    x1.00  12.8 M
+  rand refill_wide                 23,099 ->     23,099    x1.00   0.4 M
+```
+
+Net weight initialisation, charged whole to whatever games the run plays. **A
+60-game actor profile therefore reads `Normal::sample` at 1.07 % and a real
+run reads it at nothing** — the same trap `(-95)` found in `bot_ladder`, in a
+different crate, and the same `--games`-doubling diff finds it.
+
+**The per-game table, at 120 games so the block is already halved. Thirteen of
+the top fifteen rows are engine:**
+
+```text
+  374,722,938  6.09 %  dispatch_triggers_for_events
+  308,368,422  5.02 %  __memcpy_avx_unaligned_erms
+  223,754,938  3.64 %  _int_free          }
+  223,610,691  3.64 %  clone_from_ref_in  }  the allocator family is
+  202,102,545  3.29 %  _int_malloc        }  11.9 % here against 11.1 %
+  169,155,800  2.75 %  malloc             }  on `bot_ladder`'s cube
+  158,048,663  2.57 %  check_state_based_actions_into
+  135,489,984  2.20 %  free
+  127,359,932  2.07 %  Vec::from_iter
+  127,171,806  2.07 %  gather_continuous_effects_inner
+  118,601,411  1.93 %  activate_ability_inner
+  108,092,295  1.76 %  compute_permanent_pass
+  102,372,062  1.66 %  computed_permanent_hinted
+   93,895,348  1.53 %  encode_state             <- actor-only
+   89,840,110  1.46 %  encode_card_object_into  <- actor-only
+   66,637,955  1.08 %  rank_shape               <- actor-only
+```
+
+**The only actor-only rows above 1 % are the encoder (2.99 % between its two)
+and `rank_shape` (1.08 %)** — 4.07 % in total, against ~40 % of the run in
+engine rows above them. The standing claim is now measured, not asserted.
+
+**The one row that is genuinely different from `bot_ladder` is `__memcpy`:
+5.02 % here against 2.73 % on `cube`. It is not a lever.** 4,070,536 call
+edges over ~355 callers; the top three are `play_recorded_game_mcts` (539,847,
+13.3 % — the MCTS state copy, inherent), `Arc::clone_from_ref_in` (526,472)
+and `GameState::clone` (432,864), i.e. the CoW/clone family `(-1)`/`(-14)`
+already own. **The actor copies more because it searches, not because it
+encodes**, and no single caller is worth a pass.
+
 **(-96) THE PROFILE RE-READ AT `633acc3e`, ALL THREE POOLS, AND WHAT IS
 ACTUALLY LEFT.** Six levers landed since the last whole-program read (three
 lanes, the listener lane, the shared reader, the find memo), so this is the
