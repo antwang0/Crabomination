@@ -51,7 +51,15 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    unpriced thing is the *write rate of zone membership + `continuous_effects`*
    — price that before proposing a `GameState`-level memo), `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
-   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **The `call_mut` census is CLOSED**
+   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **Two NEW entries replenish the top
+   of the queue and both are sized on all three pools at the ninety-fifth
+   pass:** `(-89)` (the combat-damage prevention cascade, **1.55 / 2.34 /
+   1.69 %**, ten questions a damage event, one of which is 4 Ir and nine of
+   which are 140-1,140 — start with `prevent_combat_to_target`, the largest
+   and the only one no entry mentions) and `(-88)`
+   (`check_state_based_actions_into`, a **2.4-3.1 %** self row nothing had
+   ever named; its first question is answerable off the caller table with no
+   build). **The `call_mut` census is CLOSED**
    — all six rows swept at the ninety-fifth pass, and the capture rule
    predicted the order on every one (see the Baseline; `process_echo` is read
    and left at 0.01 %, which is the result, not an omission).

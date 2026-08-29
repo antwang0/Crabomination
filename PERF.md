@@ -2085,6 +2085,45 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fifth pass (3) — the smallest allocation size class is 2-3x cheaper than the family average
+
+**`fire_combat_damage_triggers`' `by_kind` is `SmallVec<[Vec<_>; 4]>`, base
+`86936dc9`** — (-71)'s device on an outer `Vec` that allocated on **every**
+call whether or not a trigger fired. `kinds` is one to three entries; the
+inner buckets stay `Vec`, which does not allocate until pushed into, and on
+most boards nothing is.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     979,958,963 ->   979,343,537   -0.063 %
+  cube    2,943,782,560 -> 2,941,640,950   -0.073 %
+  sealed  2,926,054,296 -> 2,924,839,177   -0.042 %
+
+__rust_alloc calls, and the count is exactly the prediction:
+  fixed     534,095 ->   527,615    -6,480
+  cube    1,496,494 -> 1,476,472   -20,022
+  sealed  1,670,053 -> 1,647,919   -22,134
+```
+
+**95 / 107 / 55 Ir per removed allocation** — against the 131 the (-80) row-2
+fix measured and the ~180 the family average implies. A 1-3 element `Vec` of
+pointers, allocated and freed inside one call, is the smallest size class
+there is and its chunk is always hot in the free list. **The family average
+is a ranking number, not a price, and it over-states this end of it by
+2-3x** — which is the other half of the row-2 note that first said so, now
+with the cheap end measured too.
+
+**A measurement note this pass paid for and the next one should not.** The
+first A/B of this patch was taken against a base binary built *before* a
+rebase that pulled in a concurrent session's engine commit, and read
+-0.071 / -0.133 / -0.089 % — i.e. this change plus `blockers_of`. Rebuilding
+the base at the rebased tip gave the numbers above. **Rebuild the base side
+after any rebase**, even one that looks unrelated: TODO's "a build started
+before a rebase compiles the pre-rebase source" applies to the *base* of an
+A/B exactly as it does to the tip. The upside is a free cross-check —
+`blockers_of` reads -0.008 / -0.061 / -0.048 % between those two base
+binaries against its own commit's -0.007 / -0.072 / -0.051 %.
+
 ### Ninety-fifth pass (2) — `do_untap` asks a board question once, not once per permanent
 
 **Base `caf6b146`.** Three of the untap step's whole-board walks are populated
@@ -12432,6 +12471,87 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-89) THE COMBAT-DAMAGE PREVENTION CASCADE IS 1.55 / 2.34 / 1.69 % OF THE
+THREE POOLS AND IT IS TEN QUESTIONS PER DAMAGE EVENT, ASKED ON BOARDS THAT
+CARRY NONE OF THE CARDS THEY ARE ABOUT.** Read at `86936dc9` + the `by_kind`
+patch, `cg_edges.py --callees resolve_combat`, all three pools, one binary.
+Every row is a direct callee of `resolve_combat` (i.e. of
+`resolve_combat_damage_with_filter`, inlined into it):
+
+```text
+                                    fixed            cube            sealed
+                                 calls  Ir/call   calls  Ir/call   calls  Ir/call
+  prevent_combat_to_target        2,686    907    7,570   1,140    9,454    912
+  creature_redirects_damage_..    3,752    686   12,786     976   12,340    640
+  apply_prevention_shields_with   3,752    654   12,754     862   12,340    625
+  damage_prevented_by_protection  1,852    570    6,116     915    5,856    530
+  damage_from_source_prevented..  3,752    503   12,786     732   12,340    465
+  combat_damage_prevented_from    4,172    390   12,656     535   14,350    381
+  ironscale_replace               3,752    357   12,754     476   12,340    356
+  scale_damage_to                 6,438    230   20,324     378   21,794    254
+  source_damage_to_color_prev..   1,852    140    6,116     182    5,856    139
+  combat_damage_prevented_for_d.  4,428      4   13,250       4   15,176      4
+                       total  15,143,052       68,793,909       49,392,824
+                                   1.55 %           2.34 %           1.69 %
+```
+
+**The last row is the shape the other nine want.**
+`combat_damage_prevented_for_dealer` is **4 Ir a call** — it opens on a
+`ColdState` `is_empty()` and stops. The nine above it are 140-1,140 Ir each
+and every one of them ends in "no" on a board with no fog, no Ironscale
+Hydra, no protection, no Absorb and no damage-scaling static.
+
+**Two things are already right and are not the lead.**
+`damage_prevented_by_protection` and `creature_redirects_damage_to_controller`
+each carry a `!layers_memoized() && !card_keyword_possible(..)` gate, and the
+resolver's per-pair freeze scope means the gate is *skipped* once the gather
+has happened — so their 900-ish Ir is the memo read plus the keyword scan, not
+a board walk. Read `(-79)`/`(-61)` before proposing anything keyword-shaped:
+the board-level OR of the per-card grant gates is in the do-not-rebuild list
+twice over.
+
+**What has not been tried is the `combat_damage_prevented_for_dealer` shape
+applied to the other nine**: a *cold-group / instance* `is_empty()`-class bail
+that costs single-digit Ir, ahead of whatever each function does now. The
+open questions, in the order a taker should ask them: (1) does each of the
+nine have a state field whose emptiness is authoritative for it — the
+`combat_damage_prevented_creatures` / `prevent_shields` / `damage_scaling`
+families — or does it need a walk to find out; (2) if it needs a walk, is
+the question a `PresenceGate` slot (a fifth costs ~113 k Ir on `cube`, see
+`(-85)`, which is 0.004 % against a 2.34 % row) or does the caller hold
+`&mut self`; (3) `prevent_combat_to_target` is the largest and has never been
+read at all. **Size (3) first — it is 907-1,140 Ir a call on all three pools
+and no entry in this file mentions it.**
+
+**(-88) `check_state_based_actions_into` IS A 2.4-3.1 % SELF ROW ON EVERY
+POOL AND NO ENTRY HAS EVER NAMED IT.** Same tip and same dumps as `(-89)`.
+
+```text
+                     self Ir     % of pool    calls    self Ir/call
+  fixed           25,580,616       2.61 %     9,146       2,797
+  cube            71,659,780       2.44 %    20,152       3,556
+  sealed          89,865,358       3.07 %    31,452       2,857
+
+callers (cube):  resolve_top_of_stack_inner 8,774 / resolve_combat 4,704 /
+  do_cleanup 2,766 / submit_decision 1,528 / run_effect 2,106 / the rest 274
+its two biggest callees (cube):
+  36,150   80,923,213  2.75 %  Vec::from_iter (nested)   <- the sweep's collects
+  20,260   30,837,328  1.05 %  sba_board_scan
+```
+
+**~2,800-3,600 Ir of *self* is the sweep's fixed cost before any SBA fires**,
+and that is after `sba_board_scan`'s bit table already gates a dozen rare
+legs. `dispatch_triggers_for_events` (6.49 % of `cube`) is the only self row
+above it, and `(-59)` says of that one "there is no hot line, the lever is
+fewer calls" — **ask the same question here first, because it is answerable
+from the caller table above and costs no build**: 20,152 sweeps a `cube` run
+against 66,612 `perform_action_inner` calls is one sweep per 3.3 actions, and
+CR 704.3 says a sweep happens whenever a player would receive priority. How
+many of these are re-sweeps of a board nothing has touched since the last
+one? **Do not run a line profile on this** — `(-59)` spent a cold
+`profiling-lines` build to learn that a function of this shape has no hot
+line, and this one has the same shape (a long chain of gated legs).
 
 **(-85) BUILT, MEASURED AND REVERTED — packing `LayerFreeze::gates` into one
 `AtomicU32` is a pool split (`cube` **+0.011 %**), and the reason is a ratio
