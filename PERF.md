@@ -8687,42 +8687,41 @@ the table above is safe to compress:
 
 ### Ninety-ninth pass (3) — the trigger dispatcher's board scan memoizes on the battlefield zone, and the miss is free
 
-**`fixed` -0.926 % / `cube` -0.358 % / `sealed` -0.746 %** off `c2ff4536`.
-The largest single-commit reading in this file since `(-63)`.
+**`fixed` -0.869 % / `cube` -0.332 % / `sealed` -0.693 %** off `314e405a`.
 
 `dispatch_board_scan` is one battlefield walk per non-empty trigger dispatch —
 **46,928 / 80,230 / 110,130 calls a six-game run** — and every card it visits
 is a `dispatch_scan_bits()` read (one atomic load, one branch) that answers
 "no" on an ordinary permanent. `(-87)`'s device applies verbatim: the
-predicate is a pure function of the *definitions* on the battlefield, so
-`zone::Battlefield` can hold the answer across every dispatch until membership
-or `DEFINITION_EPOCH` moves. It is a third lane on the same packed word,
-cleared by the same `DerefMut`/`push` store.
+predicate (`bits & BOARD_SCAN != 0`) is a pure function of the *definitions*
+on the battlefield, so `zone::Battlefield` can hold the answer across every
+dispatch until membership or `DEFINITION_EPOCH` moves. It is one more lane on
+the same packed word, cleared by the same `DerefMut`/`push` store.
 
-**The one thing that is new is the shape of the API, and it is the whole
-reason the change pays.** The two type gates ask through
-`lane(shift, predicate)`, which *walks the board itself* on a miss. That form
-would have lost here: the dispatcher's walk is not a predicate — the same pass
-also fills `trigger_grants` and `equip_grants` — so a closure lane would walk
-twice on every miss, and the shipped `DerefMut` invalidation serves only
-48.1 / 38.3 / 32.2 % of the type gates' asks (`(-87)`), which is about where a
-doubled miss breaks even. So the lane is split into a read that hands out the
-epoch it read (`dispatch_lane() -> Result<bool, u64>`) and a store the caller
-calls with what its **own** walk found (`store_dispatch(epoch, found)`). A hit
-that says `ABSENT` skips the walk; a miss costs the walk that was happening
-anyway plus one store.
+**What is new is the shape of the API, and it is the whole reason the change
+pays.** The other five lanes ask through `lane(shift, predicate)`, which
+*walks the board itself* on a miss. That form would have lost here: the
+dispatcher's walk is not a predicate — the same pass also fills
+`trigger_grants` and `equip_grants` — so a closure lane would walk twice on
+every miss, and the shipped `DerefMut` invalidation serves only 48.1 / 38.3 /
+32.2 % of the type gates' asks (`(-87)`), which is about where a doubled miss
+breaks even. So the lane is split into a read that hands out the epoch it read
+(`dispatch_lane() -> Result<bool, u64>`) and a store the caller calls with
+what its **own** walk found (`store_dispatch(epoch, found)`). A hit that says
+`ABSENT` skips the walk; a miss costs the walk that was happening anyway plus
+one store.
 
 ```text
 callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
-base c2ff4536
-  fixed     938,100,315 ->   929,415,447   -0.926 %
-  cube    2,795,139,750 -> 2,785,129,227   -0.358 %
-  sealed  2,783,686,875 -> 2,762,924,228   -0.746 %
+base 314e405a
+  fixed     934,312,297 ->   926,191,983   -0.869 %
+  cube    2,771,803,927 -> 2,762,614,355   -0.332 %
+  sealed  2,769,523,333 -> 2,750,330,255   -0.693 %
 
 dispatch_board_scan, self Ir (the row is the whole program delta on `fixed`)
-  fixed      16,676,528 ->  7,993,974   -52.1 %   355 -> 170 Ir a call
-  cube       30,888,436 -> 20,885,653   -32.4 %   385 -> 260
-  sealed     32,321,366 -> 11,541,138   -64.3 %   293 -> 105
+  fixed      15,805,784 ->  7,685,990   -51.4 %   337 -> 164 Ir a call
+  cube       29,302,714 -> 19,868,312   -32.2 %   365 -> 248
+  sealed     30,618,304 -> 11,224,794   -63.3 %   278 -> 102
   call count unchanged on all three pools
 ```
 
@@ -8730,12 +8729,20 @@ dispatch_board_scan, self Ir (the row is the whole program delta on `fixed`)
 `cube` gains least because a cube board really does carry permanents with
 dispatch bits, so the lane answers `PRESENT` and the walk still runs; `sealed`
 gains most. Nothing here is a pool split — all three move the same way — but
-it is the reason a `--decks fixed` reading over-states this one by ~2.5x
+it is the reason a `--decks fixed` reading over-states this one by ~2.6x
 against `cube`.
+
+**Read once against `c2ff4536` and re-read against `314e405a` after a rebase,
+which is the standing rule applied to a case where it did not change the
+conclusion**: -0.926 / -0.358 / -0.746 % became -0.869 / -0.332 / -0.693 %,
+because the concurrent commit under it widened `dispatch_scan_bits` with two
+listener bits and took ~0.9 M Ir off the row's `fixed` base on its own. The
+rows are re-read at the tip, not carried.
 
 Behaviour-preserving: suite 19,040 / 0 / 5, golden traces 7/7 unmoved, clippy
 clean, `--bench` byte-identical to the committed invariant (195,528 / 27.44 /
 611.0 / 0 stalls, determinism ok, thread_determinism ok 3 vs 1).
+
 ### Ninety-ninth pass (2) — the `Arc<ComputedPermanent>` pool's last variant, refuted on the handle's lifetime
 
 **`fixed` +0.137 % / `cube` +0.097 % / `sealed` +0.097 %, reverted.** The
