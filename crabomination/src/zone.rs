@@ -157,10 +157,19 @@ impl<'a> IntoIterator for &'a mut Graveyard {
 
 /// Packed two-bit memo lanes for [`Battlefield`], so one store on the write
 /// path clears every lane. Each lane holds the same `UNKNOWN` / `ABSENT` /
-/// `PRESENT` triple the graveyard's memo uses.
+/// `PRESENT` triple the graveyard's memo uses, and a `u32` word takes
+/// sixteen of them.
+///
+/// **A lane has exactly one caller and therefore exactly one predicate.**
+/// Nothing enforces that structurally; what catches a second predicate on a
+/// lane is [`Battlefield::lane`]'s `debug_assert!`, which recomputes with the
+/// predicate it was *handed* and compares against the stored bit.
 const LANE_LAND: u32 = 0;
 const LANE_CREATURE: u32 = 2;
-const LANE_MASK: u8 = 0b11;
+const LANE_DAMAGE_SCALE: u32 = 4;
+const LANE_OUTGOING_PREVENT: u32 = 6;
+const LANE_INCOMING_PREVENT: u32 = 8;
+const LANE_MASK: u32 = 0b11;
 
 /// The battlefield: the CoW card list, plus the two whole-board questions the
 /// layer-4 type gates ask of it — "can any permanent here contribute an
@@ -198,8 +207,8 @@ const LANE_MASK: u8 = 0b11;
 #[derive(Debug, Default)]
 pub struct Battlefield {
     cards: CowBox<Vec<CardInstance>>,
-    /// `LANE_LAND` / `LANE_CREATURE` two-bit lanes; see the constants.
-    type_gates: AtomicU8,
+    /// Two-bit lanes; see the `LANE_*` constants.
+    type_gates: std::sync::atomic::AtomicU32,
     /// The `definition_epoch` the lanes were computed at. A lane is valid only
     /// while this still matches.
     def_epoch: std::sync::atomic::AtomicU64,
@@ -226,6 +235,34 @@ impl Battlefield {
         self.lane(LANE_CREATURE, walk)
     }
 
+    /// CR 614.2/614.5 — can any permanent here scale a damage event
+    /// (`GameState::damage_scaling_in_scope`'s board half)?
+    #[inline]
+    pub fn has_damage_scaler(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
+        self.lane(LANE_DAMAGE_SCALE, walk)
+    }
+
+    /// CR 615 — can any permanent here prevent damage a *source* would deal
+    /// (`GameState::combat_damage_prevented_from`'s board half)?
+    #[inline]
+    pub fn has_outgoing_damage_prevention(
+        &self,
+        walk: impl Fn(&CardInstance) -> bool + Copy,
+    ) -> bool {
+        self.lane(LANE_OUTGOING_PREVENT, walk)
+    }
+
+    /// CR 615 — the incoming twin of
+    /// [`has_outgoing_damage_prevention`](Self::has_outgoing_damage_prevention)
+    /// (`GameState::combat_damage_prevented_to_self`'s board half).
+    #[inline]
+    pub fn has_incoming_damage_prevention(
+        &self,
+        walk: impl Fn(&CardInstance) -> bool + Copy,
+    ) -> bool {
+        self.lane(LANE_INCOMING_PREVENT, walk)
+    }
+
     /// One lane's answer: a word load and two mask tests on a hit, the board
     /// walk plus one store on a miss.
     ///
@@ -247,17 +284,17 @@ impl Battlefield {
         let stale = self.def_epoch.load(Ordering::Relaxed)
             != crate::card::definition_epoch();
         let cur = if stale {
-            UNKNOWN
+            UNKNOWN as u32
         } else {
             (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK
         };
         debug_assert!(
-            cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(walk),
+            cur == UNKNOWN as u32 || (cur == PRESENT as u32) == self.cards.iter().any(walk),
             "battlefield type-gate memo is stale: a write reached the cards without clearing it",
         );
         match cur {
-            ABSENT => false,
-            PRESENT => true,
+            c if c == ABSENT as u32 => false,
+            c if c == PRESENT as u32 => true,
             _ => self.walk_and_store(shift, walk),
         }
     }
@@ -301,7 +338,7 @@ impl Battlefield {
     fn walk_and_store(&self, shift: u32, walk: impl Fn(&CardInstance) -> bool) -> bool {
         let epoch = crate::card::definition_epoch();
         let found = self.cards.iter().any(walk);
-        let lane = if found { PRESENT } else { ABSENT };
+        let lane = if found { PRESENT as u32 } else { ABSENT as u32 };
         // A rewrite since the epoch was read would be missed by the stamp, so
         // read it *before* the walk: the stamp is then conservative — a lane
         // computed across a rewrite is thrown away on the next ask.
@@ -336,8 +373,8 @@ impl Battlefield {
     #[cfg(test)]
     fn memo(&self, shift: u32) -> Option<bool> {
         match (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK {
-            ABSENT => Some(false),
-            PRESENT => Some(true),
+            c if c == ABSENT as u32 => Some(false),
+            c if c == PRESENT as u32 => Some(true),
             _ => None,
         }
     }
@@ -349,7 +386,9 @@ impl Clone for Battlefield {
     fn clone(&self) -> Self {
         Self {
             cards: self.cards.clone(),
-            type_gates: AtomicU8::new(self.type_gates.load(Ordering::Relaxed)),
+            type_gates: std::sync::atomic::AtomicU32::new(
+                self.type_gates.load(Ordering::Relaxed),
+            ),
             def_epoch: std::sync::atomic::AtomicU64::new(
                 self.def_epoch.load(Ordering::Relaxed),
             ),
@@ -381,7 +420,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
     fn from(cards: CowBox<Vec<CardInstance>>) -> Self {
         Self {
             cards,
-            type_gates: AtomicU8::new(0),
+            type_gates: std::sync::atomic::AtomicU32::new(0),
             def_epoch: std::sync::atomic::AtomicU64::new(0),
         }
     }

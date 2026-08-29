@@ -8729,6 +8729,56 @@ test that LLVM cannot turn back into one. **Fusing two whole-collection
 `any`s is only a win when the collection is walked for both in the same
 epoch; price the epoch, not the collection.**
 
+### Ninety-eighth pass (4) — three more `Battlefield` lanes, and the device generalises at four times the rate of its first two
+
+**`fixed` -0.228 % / `cube` -0.645 % / `sealed` -0.354 %** off `8beed408`.
+
+`(-89)`'s prescription applied with `(-87)`'s device: the remaining ungated
+whole-battlefield presence walks in the damage path get a zone lane each. The
+lane word widens from `AtomicU8` to `AtomicU32` (sixteen two-bit lanes) and
+takes three more:
+
+```text
+  damage_scaling_in_scope   -> has_damage_scaler
+  combat_damage_prevented_from  -> has_outgoing_damage_prevention
+  combat_damage_prevented_to_self -> has_incoming_damage_prevention
+```
+
+**Every one of those three walks reads instance fields — `attached_to`,
+`controller` — and every static it can find is a printed one.** So the
+board-level question "is any of them *here at all*" is definition-only even
+though the walk is not, and that is the whole trick: gate the walk on an
+over-approximating presence lane, and a `false` ends the function without the
+walk ever running. Same argument as the pass's first commit made for
+`equipped_bonus`, now in the other direction — there the predicate was
+widened to *become* definition-only, here it already was.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 8beed408
+  fixed     938,121,440 ->   935,979,797   -0.228 %
+  cube    2,795,140,246 -> 2,777,109,544   -0.645 %
+  sealed  2,783,710,565 -> 2,773,864,006   -0.354 %
+
+cube rows
+  combat_damage_prevented_from   11,204,570 ->    923,590  -10,280,980
+  scale_damage_to                 7,868,298 ->  1,239,518   -6,628,780
+  resolve_combat                 53,346,514 -> 45,390,316   -7,956,198
+    (`combat_damage_prevented_to_self` was inlined into it; it is now an
+     out-of-line 2,834,846 behind its own lane)
+  Battlefield::walk_and_store     4,927,129 ->  8,957,897   +4,030,768
+```
+
+**Four times the first two lanes' rate, and the reason is the caller, not the
+lane.** `(-87)`'s two type gates were already served 70 % of the time by a
+freeze-scope `PresenceGate`; these three had no gate at all and are asked once
+per damage event inside `resolve_combat`. **Rank a presence-lane candidate by
+what already gates it, not by the size of its row.**
+
+Behaviour-preserving: identical run output on all three pools, suite
+19,036 / 0 / 5, golden traces unmoved, clippy clean, `--bench` byte-identical,
+grid 30 cells / 33,120 games / 0 undecided / 0 failures.
+
 ### Ninety-eighth pass (3) — `SmallVec`'s `Clone` is `extend`, and for a `Copy` item that is the wrong instruction
 
 **`fixed` -0.419 % / `cube` -0.297 % / `sealed` -0.328 %** off `b12393f9`.

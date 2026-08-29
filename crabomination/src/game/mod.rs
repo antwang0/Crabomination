@@ -6810,6 +6810,12 @@ impl GameState {
         {
             return true;
         }
+        // The incoming twin of `combat_damage_prevented_from`'s gate, and the
+        // same argument: the walk reads instance fields, the presence question
+        // does not.
+        if !self.battlefield.has_incoming_damage_prevention(card_can_prevent_incoming_damage) {
+            return false;
+        }
         // CR 615 — the Light of Sanction family is controller-scoped and only
         // reaches creatures, so it needs the seat the find already read.
         let seat = me.filter(|c| c.definition.is_creature()).map(|c| c.controller);
@@ -6895,6 +6901,14 @@ impl GameState {
         {
             return true;
         }
+        // The walk below reads `attached_to` and `controller`, but every
+        // static it can find is a printed one — so the board-level "is any of
+        // them here at all" question is definition-only, and the zone
+        // memoizes it. `false` ends the function; `true` costs the walk it
+        // always cost. 19,608 asks a `cube` run at ~460 Ir of walk.
+        if !self.battlefield.has_outgoing_damage_prevention(card_can_prevent_outgoing_damage) {
+            return false;
+        }
         let seat = self
             .battlefield_find(dealer)
             .filter(|c| c.definition.is_creature())
@@ -6967,12 +6981,10 @@ impl GameState {
             || !self.staggered_damage_players.is_empty()
             || self.damage_becomes_this_turn.is_some()
             || self.players.iter().any(|p| p.double_your_source_damage_this_turn)
-            || self.battlefield.iter().any(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| static_effect_scales_damage(&sa.effect))
-            })
+            // The board half is a whole-battlefield walk over a
+            // definition-only predicate, asked once per damage event
+            // (21,154 a `cube` run at ~360 Ir); the zone memoizes it.
+            || self.battlefield.has_damage_scaler(card_can_scale_damage)
     }
 
     pub fn scale_damage_to(
@@ -23534,6 +23546,52 @@ fn card_can_reduce_toughness(card: &CardInstance) -> bool {
         return true;
     }
     def.static_abilities.iter().any(|sa| static_effect_reduces_toughness(&sa.effect))
+}
+
+/// The board half of [`GameState::damage_scaling_in_scope`]: can this
+/// permanent's printed shape scale a damage event? Definition-only, so the
+/// battlefield zone can memoize the whole walk over it.
+#[inline]
+fn card_can_scale_damage(card: &CardInstance) -> bool {
+    card.definition
+        .static_abilities
+        .iter()
+        .any(|sa| static_effect_scales_damage(&sa.effect))
+}
+
+/// The board half of [`GameState::combat_damage_prevented_from`]: the four
+/// statics that walk can find, tested without its `attached_to` /
+/// `controller` conditions. An over-approximation, which is the sound
+/// direction — a `false` here means the walk would have found nothing.
+#[inline]
+fn card_can_prevent_outgoing_damage(card: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as SE;
+    card.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            SE::PreventAllDamageToAndFromEnchanted
+                | SE::PreventAllDamageByEnchanted
+                | SE::PreventAllCombatDamageToAndFromEnchanted
+                | SE::PreventAllCombatDamageToAndFromYourCreatures
+        )
+    })
+}
+
+/// The incoming twin of [`card_can_prevent_outgoing_damage`], for
+/// [`GameState::combat_damage_prevented_to_self`]'s board walk.
+#[inline]
+fn card_can_prevent_incoming_damage(card: &CardInstance) -> bool {
+    use crate::effect::StaticEffect as SE;
+    card.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            SE::PreventAllCombatDamageToAttached
+                | SE::PreventAllDamageToAndFromEnchanted
+                | SE::PreventAllDamageToEnchanted
+                | SE::PreventAllCombatDamageToAndFromEnchanted
+                | SE::PreventAllCombatDamageToAndFromYourCreatures
+        )
+    })
 }
 
 /// True when `effect` can change a damage amount in `scale_damage_to_inner`.
