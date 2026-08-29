@@ -52,11 +52,12 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    — price that before proposing a `GameState`-level memo), `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
    `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **Two NEW entries replenish the top
-   of the queue and both are sized on all three pools at the ninety-fifth
-   pass:** `(-89)` (the combat-damage prevention cascade, **1.55 / 2.34 /
-   1.69 %**, ten questions a damage event, one of which is 4 Ir and nine of
-   which are 140-1,140 — start with `prevent_combat_to_target`, the largest
-   and the only one no entry mentions) and `(-88)`
+   of the queue, both sized on all three pools at the ninety-fifth pass:**
+   `(-89)` (the combat-damage prevention cascade, **1.55 / 2.34 / 1.69 %**,
+   ten questions a damage event; its two largest rows are already taken for
+   -0.087 / -0.114 / -0.098 %, eight are left, and **both taken mechanisms
+   were then applied to a neighbouring row in the same cascade and both lost
+   there** — read the refutations before repeating either) and `(-88)`
    (`check_state_based_actions_into`, a **2.4-3.1 %** self row nothing had
    ever named; its first question is answerable off the caller table with no
    build). **The `call_mut` census is CLOSED**

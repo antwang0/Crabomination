@@ -2101,6 +2101,45 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fifth pass (5) — the `_on` form of a presence gate pays only where the caller already holds the card
+
+**`creature_redirects_damage_to_controller` passes the permanent it found,
+base `62a53116`.** The function opens with `battlefield_find(id)` — it returns
+that card's controller — and then asked its gate through the `CardId` form of
+`card_keyword_possible`, which opens with the same ~23-element walk.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     978,841,037 ->   978,492,848   -0.036 %
+  cube    2,939,951,310 -> 2,938,264,442   -0.057 %
+  sealed  2,923,140,480 -> 2,921,980,262   -0.040 %
+
+creature_redirects_damage_to_controller inclusive, identical call counts:
+                 calls        before        after
+  fixed         3,752     2,575,848     2,230,820   -13.4 %
+  cube         12,786    12,481,180    10,815,778   -13.3 %
+  sealed       12,340     7,897,648     6,777,572   -14.2 %
+```
+
+**THE SAME EDIT AT THE SIBLING SITE LOSES, AND THAT IS THE ENTRY.**
+`damage_from_source_prevented_by_keyword` sits two lines further down the same
+damage cascade, calls the same `CardId` form, and also wants the permanent —
+but only *below* the gate, on the branch the gate rejects on nearly every
+call. Hoisting the find above the gate so `_on` could take it made a
+conditional walk unconditional:
+
+```text
+  damage_from_source_prevented_by_keyword  +106,578 / +531,634 / +349,358
+                                           (+41 Ir a call on `cube`)
+```
+
+**`_on` pays where the caller already holds the permanent *unconditionally*,
+and costs where the caller only needs it on the rare branch.** Two sites, one
+function apart, opposite signs — read what the find feeds before converting
+one, and note that this is the second time in this pass that a mechanical
+"same edit, obvious win" applied to two sites split (the other is
+`combat_damage_shaved_for` one block down).
+
 ### Ninety-fifth pass (4) — a `sum()` over an adapter chain is not a `collect()`, and `games_per_s` is not portable across containers
 
 **`player_protection_card_types` tests the instance field first, base
@@ -12615,18 +12654,29 @@ a board walk. Read `(-79)`/`(-61)` before proposing anything keyword-shaped:
 the board-level OR of the per-card grant gates is in the do-not-rebuild list
 twice over.
 
-**What has not been tried is the `combat_damage_prevented_for_dealer` shape
-applied to the other nine**: a *cold-group / instance* `is_empty()`-class bail
-that costs single-digit Ir, ahead of whatever each function does now. The
-open questions, in the order a taker should ask them: (1) does each of the
-nine have a state field whose emptiness is authoritative for it — the
-`combat_damage_prevented_creatures` / `prevent_shields` / `damage_scaling`
-families — or does it need a walk to find out; (2) if it needs a walk, is
-the question a `PresenceGate` slot (a fifth costs ~113 k Ir on `cube`, see
-`(-85)`, which is 0.004 % against a 2.34 % row) or does the caller hold
-`&mut self`; (3) `prevent_combat_to_target` is the largest and has never been
-read at all. **Size (3) first — it is 907-1,140 Ir a call on all three pools
-and no entry in this file mentions it.**
+**THE TWO LARGEST ROWS ARE TAKEN IN THE PASS THAT FILED THE ENTRY, BOTH BY
+READING THE FUNCTION RATHER THAN THE TABLE.** `prevent_combat_to_target`
+1,140 -> 927 Ir a call on `cube` (the Serra's Emissary walk tests the instance
+field first) and `creature_redirects_damage_to_controller` 976 -> 846 (the
+presence gate takes the permanent the function already found). Together
+`fixed` -0.087 / `cube` -0.114 / `sealed` -0.098 %. See the two Baseline
+blocks — **and read their two refutations before repeating either edit at a
+neighbouring site: both mechanisms were applied to a second row in the same
+cascade and both lost there.**
+
+**What is left, and what has still not been tried: the
+`combat_damage_prevented_for_dealer` shape applied to the other eight** — a
+*cold-group / instance* `is_empty()`-class bail that costs single-digit Ir,
+ahead of whatever each function does now. The open questions, in the order a
+taker should ask them: (1) does each row have a state field whose emptiness is
+authoritative for it — the `combat_damage_prevented_creatures` /
+`prevent_shields` / `damage_scaling` families — or does it need a walk to find
+out; (2) if it needs a walk, is the question a `PresenceGate` slot (a fifth
+costs ~113 k Ir on `cube`, see `(-85)`, which is 0.004 % against a 2.34 % row)
+or does the caller hold `&mut self`; (3) `apply_prevention_shields_with` is now
+the largest at 862 Ir a call, and `(-61)` already says its Absorb gate is a
+4.5x trade that must not be deleted — so what is on offer there is the
+`prevent_static_scan` walk beside it, not the gate.
 
 **(-88) `check_state_based_actions_into` IS A 2.4-3.1 % SELF ROW ON EVERY
 POOL AND NO ENTRY HAS EVER NAMED IT.** Same tip and same dumps as `(-89)`.
