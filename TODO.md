@@ -69,10 +69,18 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    front of `dispatch_triggers_for_events` (11 `event_matches_spec` calls a
    dispatch, so the inner fan-out is not the cost).
    **Read `(-90)` before pulling anything else off this queue.**
-   **Open, in order:** `(-87)` (1.13 % of `cube`; both of its own proposals
-   are built and refuted, what is left is calling the walk less, and the one
-   unpriced thing is the *write rate of zone membership + `continuous_effects`*
-   — price that before proposing a `GameState`-level memo), `(-82)`'s
+   **Open, in order:** **`(-87)` IS NOW THE TOP OF THE QUEUE AND IT IS
+   PRICED** — pass 97 built `CRAB_GATE_CENSUS`, read it and took it back out.
+   The gates' inputs are unchanged on **93.95 % of `cube`'s 242,788 asks,
+   75.76 % of `fixed`'s, 74.30 % of `sealed`'s**, so a `GameState`-level memo
+   walks on ~6 % where today's code walks on 30 % — **~0.9 % of `cube`**, and
+   it reaches the ~50 % of misses that hold `&mut self` and can never see a
+   freeze scope. **But the invalidation has to be precise**: the cheap
+   `&mut battlefield` chokepoint keeps 84 of `cube`'s 94 points and only 36 of
+   76 / 29 of 74 on `fixed` / `sealed`. Both gates are over-approximations —
+   only a stale *`false`* is unsound — so the audit is the `debug_assert!`
+   `gather_continuous_effects` already runs plus the robustness grid. PERF has
+   the table and what a taker still owes. Then `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
    `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-92)` IS THE ENTRY TO READ
    FIRST AND IT IS A MAP, NOT A LEAD: the profile is FLAT.** The whole-program
@@ -184,6 +192,13 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    * **Fold a `'N` row into its parent before ranking a self table**, and
      **Ir/call on a function a gate is about to split is the average of two
      populations.**
+   * **A dormant gate's cost is its CALL COUNT, and `(-85)`'s "add gates
+     freely" was calibrated at ~20 k calls** (pass 97). In front of
+     `presence_gate` (242,788 asks a `cube` run) a census hook read `cube`
+     **+0.049 %** as a `OnceLock<bool>` and **+0.187 %** as an `#[inline]`
+     `AtomicU8` — worse, because `#[inline]` expanded the reader's *cold*
+     branch (an `env::var` that allocates a `String`) into every call site.
+     **Never `#[inline]` a reader whose slow path allocates.**
    * **A rebase shrinks a patch without shrinking its measurement**, and
      **cite an anchor by a hash already on `origin`** — the last one was
      filed at a hash that no longer resolves.

@@ -1065,6 +1065,16 @@ here if it ever needs compacting.
   `Vec::clone` hands back `capacity == len`; inlining them removed all 22,930
   of `finalize_cast`'s growths — the largest `grow_one` row on `fixed` — and
   read `fixed` +0.366 % / `cube` +0.291 % / `sealed` +0.322 %.
+- **A DORMANT GATE'S COST IS ITS CALL COUNT** (pass 97). `(-85)` priced a
+  presence gate at "~113 k Ir and nothing else — add gates freely" on a
+  ~20 k-call site. In front of `presence_gate`, asked **242,788** times a
+  `cube` run, a census hook read `cube` **+0.049 %** as a `OnceLock<bool>` and
+  **+0.187 %** as an `#[inline]` `AtomicU8` fast path — *worse*, because
+  `#[inline]` expanded the reader's **cold** branch (an `env::var` returning a
+  `String`) into all 242,788 call sites. Two rules: multiply ~5 Ir by the site's
+  call count before adding a gate, and **never `#[inline]` a reader whose slow
+  path allocates**. `CRAB_SBA_CENSUS` (20,152 calls, +0.001-0.004 %) is on the
+  other side of that line and stayed.
 - **FILL A `SmallVec` WITH A LOOP, NOT A `collect()` — and this is the
   largest number in the file for that rule** (pass 97). The SBA death gate's
   candidate list, one `collect` over the battlefield in a function called at
@@ -13863,6 +13873,68 @@ is the battlefield's *write* rate — but note this question does not read tap
 state, so the invalidation it actually needs is **zone membership plus
 `continuous_effects`**, not `DerefMut`. Nobody has priced *that* write rate.
 Price it before building anything.
+
+**`(-87)`'S OPEN LEVER IS NOW PRICED, AND THE PRICE SAYS BUILD IT** (pass 97).
+The entry ends "nobody has priced *that* write rate. Price it before building
+anything." `CRAB_GATE_CENSUS` — built, read, and then taken back out, see
+below — fingerprints the gates' inputs at every ask and counts consecutive
+asks that see the same fingerprint:
+
+```text
+                asks     exact repeats        broad repeats
+  cube        242,788   228,106  93.95 %    204,716  84.32 %
+  fixed        20,540    15,562  75.76 %      7,384  35.95 %
+  sealed       56,722    42,146  74.30 %     16,688  29.42 %
+```
+
+**exact** = what an epoch bumped at zone-membership / `continuous_effects` /
+definition writes would see. **broad** = what the *cheap* invalidation a
+`CowBox<Vec<CardInstance>>` chokepoint can actually detect: any `&mut` reach
+into the battlefield, tap and damage included. Both are lower bounds — the
+bot's simulation clones ask on the same thread, so every hop between two
+states reads as a change.
+
+**Two things fall out, and the second is the design.**
+
+1. The gates walk on 72,876 of `cube`'s 242,788 asks (the freeze-scope memo
+   serves the other 70 %). A `GameState`-level memo at the exact rate would
+   walk on ~6 % — **~80 % of the gates' 33.7 M Ir, ~0.9 % of `cube`**, and it
+   reaches the ~50 % of misses that arrive holding `&mut self` and can never
+   see a freeze scope, which is the half this entry says is unreachable today.
+2. **The invalidation has to be precise, and the pool split says so loudly.**
+   On `cube` the cheap chokepoint keeps 84 of the 94 points; on `fixed` and
+   `sealed` it keeps 36 of 76 and 29 of 74 — **it gives back half the win on
+   one pool and 60 % on the other**, because tap and damage writes dominate
+   there. Do not ship the `&mut battlefield` version.
+
+**What a taker still owes**: the enumeration. `continuous_effects` mutations
+and battlefield membership changes are the easy two; the third is a definition
+rewrite on a battlefield permanent, and after `(-91)` those are the compile-
+enforced `Definition` accessors — but they are `CardData` methods with no
+`GameState` to bump. The saving grace is that **both gates are
+over-approximations — `false` is authoritative, `true` only means the gather
+has to run** — so only a stale *`false`* is unsound, and the audit is the one
+`gather_continuous_effects` already runs: `debug_assert!` the implication and
+let `robustness_grid.sh` fire it over 33,120 games.
+
+**And the instrument itself produced a rule about gates.** `(-85)` says "a
+gate is read 3.5x per scope exit, so a slot costs ~113 k Ir and nothing else —
+add gates freely." That was calibrated on a ~20 k-call site. In front of
+`presence_gate`, which is asked **242,788** times a `cube` run, a dormant
+census hook measured:
+
+```text
+  OnceLock<bool>, not inlined     fixed +0.009 %  cube +0.049 %  sealed +0.009 %
+  #[inline] AtomicU8 fast path    fixed +0.055 %  cube +0.187 %  sealed +0.052 %
+```
+
+The second is *worse*, and the reason is the file's own inlining rule seen
+from a new side: `#[inline]` on the reader expanded its **cold** branch — an
+`env::var` returning a `String` — into all 242,788 call sites. **A dormant
+gate is ~5 Ir a call, so its cost is the call count; price it against the site
+before adding one, and never `#[inline]` a reader whose slow path allocates.**
+Both censuses' hooks came out on that reading; `CRAB_SBA_CENSUS` (20,152
+calls, +0.001-0.004 %) stayed.
 
 **(-86) `String as fmt::Write` IS 158,146 CALLS IN THE SIMULATOR AND IT IS
 NOT A LEAD — READ THIS BEFORE CHASING IT.** A `{:?}` Debug format of a whole
