@@ -2230,8 +2230,26 @@ fn forced_blocks(state: &GameState) -> Vec<(CardId, CardId)> {
 /// block planner so a Doran board's high-toughness attackers are scored at
 /// their real threat.
 fn attacker_damage_value(state: &GameState, id: CardId) -> i32 {
+    attacker_damage_value_hinted(state, id, None)
+}
+
+/// [`attacker_damage_value`] for a caller that already holds the attacker —
+/// see `GameState::computed_permanent_on`.
+fn attacker_damage_value_on(state: &GameState, card: &crate::card::CardInstance) -> i32 {
+    attacker_damage_value_hinted(state, card.id, Some(card))
+}
+
+fn attacker_damage_value_hinted(
+    state: &GameState,
+    id: CardId,
+    hint: Option<&crate::card::CardInstance>,
+) -> i32 {
     use crate::card::Keyword;
-    if let Some(cp) = state.computed_permanent(id) {
+    let computed = match hint {
+        Some(c) => state.computed_permanent_on(c),
+        None => state.computed_permanent(id),
+    };
+    if let Some(cp) = computed {
         let mut base = if cp.keywords().has_kw(&Keyword::AssignsCombatDamageByToughness) {
             cp.toughness
         } else {
@@ -6283,7 +6301,7 @@ fn pick_crew_vehicle(state: &GameState, seat: usize) -> Option<GameAction> {
 
     for v in state.battlefield.iter().filter(|c| c.controller == seat) {
         let Some(cost) = v.definition.crew_cost() else { continue };
-        let Some(cp) = state.computed_permanent(v.id) else { continue };
+        let Some(cp) = state.computed_permanent_on(v) else { continue };
         // Already a creature (crewed/animated this turn) → nothing to do.
         if cp.card_types().contains(&CardType::Creature) {
             continue;
@@ -6661,7 +6679,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
         .battlefield
         .iter()
         .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
-        .filter_map(|c| state.computed_permanent(c.id).map(|cp| (c.id, cp.power)))
+        .filter_map(|c| state.computed_permanent_on(c).map(|cp| (c.id, cp.power)))
         .collect();
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
     // Reuses the scan built above: `state` is `&GameState` and nothing
@@ -6692,7 +6710,7 @@ fn pick_removal_ping(state: &GameState, seat: usize) -> Option<GameAction> {
                     // "Deals damage equal to its own power" pingers (firebreather-
                     // style {T} abilities) read the source's computed power.
                     Value::PowerOf(s) if matches!(**s, Selector::This) => state
-                        .computed_permanent(card.id)
+                        .computed_permanent_on(card)
                         .is_some_and(|p| p.power >= remaining),
                     _ => false,
                 };
@@ -6771,7 +6789,7 @@ fn pick_removal_sacrifice(state: &GameState, seat: usize) -> Option<GameAction> 
     foes.sort_by_key(|(_, pow)| std::cmp::Reverse(*pow));
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
-        let src_power = state.computed_permanent(card.id).map(|cp| cp.power).unwrap_or(0);
+        let src_power = state.computed_permanent_on(card).map(|cp| cp.power).unwrap_or(0);
         for (idx, ab) in usable_abilities(state, card, &scan) {
             if !ab.sac_cost {
                 continue;
@@ -7031,7 +7049,7 @@ fn pick_crew(state: &GameState, seat: usize) -> Option<GameAction> {
         let Some(crew_n) = vehicle.definition.crew_cost() else { continue };
         // Already a creature this turn (crewed / animated)? Don't re-crew.
         if state
-            .computed_permanent(vehicle.id)
+            .computed_permanent_on(vehicle)
             .is_some_and(|cp| cp.card_types().contains(&crate::card::CardType::Creature))
         {
             continue;
@@ -7861,7 +7879,7 @@ fn restore_forced_attackers_unchecked(
             if c.controller != seat || attackers.contains(&c.id) {
                 continue;
             }
-            let Some(cp) = state.computed_permanent(c.id) else { continue };
+            let Some(cp) = state.computed_permanent_on(c) else { continue };
             // `attackers` never holds `c.id` here, so "another attacker
             // exists" is just a non-empty batch; spelled as the engine
             // spells it so the two read alike.
@@ -8844,7 +8862,7 @@ fn enforce_block_requirements(
         {
             continue;
         }
-        let obliged = state.computed_permanent(b.id).is_some_and(|cp| {
+        let obliged = state.computed_permanent_on(b).is_some_and(|cp| {
             cp.keywords().has_kw(&Keyword::MustBlock)
                 || cp.keywords().has_kw(&Keyword::MustAttackOrBlock)
         });
@@ -9550,13 +9568,18 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         .iter()
         .filter(|atk| state.defender_for(atk.target) == Some(seat))
         .filter_map(|atk| {
-            let cp = state.computed_permanent(atk.attacker);
-            state.battlefield.iter().find(|c| c.id == atk.attacker).map(|a| AttackerFacts {
+            // The `find` first, then the `_on` form off its result: the layer
+            // view was asked for by id and then the same card was found
+            // anyway, so the miss paid two whole-battlefield walks for one
+            // permanent.
+            let a = state.battlefield.iter().find(|c| c.id == atk.attacker)?;
+            let cp = state.computed_permanent_on(a);
+            Some(AttackerFacts {
                 id: atk.attacker,
                 card: a,
                 cp: cp.clone(),
                 target: atk.target,
-                power: attacker_damage_value(state, atk.attacker),
+                power: attacker_damage_value_on(state, a),
                 toughness: a.toughness(),
                 flying: a.has_keyword(&Keyword::Flying),
                 deathtouch: a.has_keyword(&Keyword::Deathtouch),
@@ -11394,7 +11417,7 @@ fn best_destroy_power_cutoff(state: &GameState, seat: usize, max: u32, w: &EvalW
     for n in 0..=max {
         let mut score = 0i32;
         for c in state.battlefield.iter().filter(|c| c.definition.is_creature()) {
-            let power = state.computed_permanent(c.id).map(|cp| cp.power).unwrap_or(c.power());
+            let power = state.computed_permanent_on(c).map(|cp| cp.power).unwrap_or(c.power());
             if power >= n as i32 {
                 let v = permanent_value(state, c.id, w);
                 score += if c.controller == seat { -v } else { v };

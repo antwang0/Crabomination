@@ -11048,7 +11048,7 @@ impl GameState {
         self.battlefield
             .iter()
             .filter(|c| {
-                self.computed_permanent(c.id)
+                self.computed_permanent_on(c)
                     .is_some_and(|cp| cp.subtypes().creature_types.contains(&crate::card::CreatureType::Flagbearer))
                     && self.check_target_legality(&Target::Permanent(c.id), actor).is_ok()
             })

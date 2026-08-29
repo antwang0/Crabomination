@@ -6017,7 +6017,7 @@ impl GameState {
                     if c.id != subj
                         && c.definition.is_creature()
                         && self
-                            .computed_permanent(c.id)
+                            .computed_permanent_on(c)
                             .is_some_and(|cp| cp.colors.iter().any(|col| subj_colors.contains(col)))
                     {
                         recipients.push(c.id);
@@ -17374,7 +17374,7 @@ impl GameState {
                             c.controller == p
                                 && !keep.contains(&c.id)
                                 && self
-                                    .computed_permanent(c.id)
+                                    .computed_permanent_on(c)
                                     .is_some_and(|cp| cp.subtypes().land_types.contains(&t))
                         }) {
                             keep.push(c.id);
@@ -17387,7 +17387,7 @@ impl GameState {
                             c.controller == p
                                 && !keep.contains(&c.id)
                                 && self
-                                    .computed_permanent(c.id)
+                                    .computed_permanent_on(c)
                                     .is_some_and(|cp| cp.card_types().contains(&CardType::Land))
                         })
                         .map(|c| c.id)
@@ -33833,7 +33833,7 @@ impl GameState {
                 for c in &self.battlefield {
                     if c.id != subj
                         && c.definition.card_types.iter().any(|t| subj_types.contains(t))
-                        && self.computed_permanent(c.id).is_some_and(|cp| {
+                        && self.computed_permanent_on(c).is_some_and(|cp| {
                             cp.colors.iter().any(|col| subj_colors.contains(col))
                         })
                     {

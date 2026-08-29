@@ -3979,7 +3979,7 @@ impl GameState {
             .battlefield
             .iter()
             .filter(|c| c.controller == seat)
-            .filter_map(|c| self.computed_permanent(c.id))
+            .filter_map(|c| self.computed_permanent_on(c))
             .filter(|cp| cp.card_types().contains(&CardType::Creature))
         {
             if cp.keywords().has_kw(&Keyword::Changeling) {
@@ -22899,7 +22899,7 @@ impl GameState {
         let recolored = self.card_color_change_unscoped();
         let mut tally = crate::fxhash::HashMap::<crate::mana::Color, u32>::default();
         for c in &self.battlefield {
-            let colors = match recolored.then(|| self.computed_permanent(c.id)).flatten() {
+            let colors = match recolored.then(|| self.computed_permanent_on(c)).flatten() {
                 Some(cp) => cp.colors.to_vec(),
                 None => c.definition.printed_colors(),
             };
