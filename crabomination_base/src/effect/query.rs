@@ -2528,7 +2528,23 @@ impl Effect {
             // "Return target Aura card from your graveyard" — the pick only
             // ever lives in a graveyard (Hakim, Iridescent Drake).
             Effect::AttachAuraFromGraveyardTo { .. } => true,
-            _ => false,
+            // CR 603.7 — a reflexive body's targets are picked fresh when it
+            // resolves, with its own slot numbering, so the enclosing effect's
+            // slot is not about them (`core_rules::target_walkers` calls this
+            // set `RESOLUTION_TIME_TARGETING`). Named explicitly because the
+            // fallthrough below now recurses.
+            Effect::Reflexive { .. } | Effect::ReflexiveTrigger { .. } => false,
+            // Every other wrapper defers to the shared recursion instead of
+            // answering `false` for its whole subtree. That silent `false` is
+            // the drift ENGINE_BACKLOG's "the gate's own wrappers" is about,
+            // and it has shipped as card bugs three times; `for_each_inner` is
+            // held to 130 of 130 by a test, so a new wrapper is covered here
+            // the moment it is covered there.
+            other => {
+                let mut found = false;
+                other.for_each_inner(&mut |e| found |= e.prefers_graveyard_target());
+                found
+            }
         }
     }
 
@@ -2590,7 +2606,23 @@ impl Effect {
             | Effect::MayDiscardMatching { then: body, .. }
             | Effect::MayPayLife { body, .. } => body.may_target_offboard_card(),
             Effect::Process { then, .. } => then.may_target_offboard_card(),
-            _ => false,
+            // CR 603.7 — a reflexive body's targets are picked fresh when it
+            // resolves, with its own slot numbering, so the enclosing effect's
+            // slot is not about them (`core_rules::target_walkers` calls this
+            // set `RESOLUTION_TIME_TARGETING`). Named explicitly because the
+            // fallthrough below now recurses.
+            Effect::Reflexive { .. } | Effect::ReflexiveTrigger { .. } => false,
+            // Every other wrapper defers to the shared recursion instead of
+            // answering `false` for its whole subtree. That silent `false` is
+            // the drift ENGINE_BACKLOG's "the gate's own wrappers" is about,
+            // and it has shipped as card bugs three times; `for_each_inner` is
+            // held to 130 of 130 by a test, so a new wrapper is covered here
+            // the moment it is covered there.
+            other => {
+                let mut found = false;
+                other.for_each_inner(&mut |e| found |= e.may_target_offboard_card());
+                found
+            }
         }
     }
 
