@@ -13957,6 +13957,38 @@ has to run** — so only a stale *`false`* is unsound, and the audit is the one
 `gather_continuous_effects` already runs: `debug_assert!` the implication and
 let `robustness_grid.sh` fire it over 33,120 games.
 
+**THE INVALIDATION SIZED, SO THE NEXT RUN CAN BUDGET IT.** The key wants to
+be O(1). Three of its four parts already are — `battlefield.len()`,
+`continuous_effects.len()` and `next_effect_timestamp`, which
+`GameState::next_timestamp` advances on **every effect install and on the four
+battlefield entries that stamp a permanent** (`movement.rs:2456`,
+`mod.rs:14298 / 14344 / 14508`). The fourth is a definition rewrite on a
+battlefield permanent, and after `(-91)` that is **two** compile-enforced
+sites (`CardData::set_definition` / `definition_mut`), so a thread-local
+counter bumped there costs ~8 k increments a run and covers it — a global
+`AtomicU64` does not, because one thread's rewrite would invalidate another's
+memo at `--threads 3`.
+
+**What is NOT covered, and it is the whole remaining cost: the nine
+battlefield pushes that stamp nothing** (`movement.rs:2551 / 2654`,
+`effects/mod.rs:2536`, `actions.rs:3174`, `stack.rs:1933 / 2846 / 6960`,
+`mod.rs:7755 / 20855` — checked, none has a `next_timestamp()` within twelve
+lines) plus the removals. A permanent leaving and a different one entering
+between two asks leaves `len` and the timestamp both unchanged, and that is a
+stale *`false`*. So the design needs a membership epoch, and the two ways to
+get one are:
+
+* **19 engine sites** (`self.battlefield.{push,remove,retain}`) bumping it by
+  hand — but ~25 more live in `#[cfg(test)]` blocks in `encode.rs` /
+  `view.rs` / `bot.rs` / `snapshot.rs`, which would go stale silently in
+  `release` and loudly under the audit. A grep, not a claim.
+* **A `Battlefield` newtype** — `Deref` to `[CardInstance]`, membership
+  mutators that bump the epoch, `iter_mut` / `get_mut` that do not. That is
+  the `(-91)` device again and it is the right one, and it is **106 mutable-use
+  sites** of `battlefield` across the workspace against 871 reads. Budget a
+  run for it, and take the branch to yourself: it is not a patch to carry
+  across a concurrent session's pushes.
+
 **And the instrument itself produced a rule about gates.** `(-85)` says "a
 gate is read 3.5x per scope exit, so a slot costs ~113 k Ir and nothing else —
 add gates freely." That was calibrated on a ~20 k-call site. In front of
