@@ -8,6 +8,12 @@
 #   scripts/pgo_build.sh selfplay_train       # the ML actor
 #   PGO_PROFILE=release scripts/pgo_build.sh  # the LTO profile instead
 #
+# Both binaries carry a default training workload; anything else needs
+# PGO_TRAIN. **A real training run should use the PGO actor** — it is worth
+# -23.1 % on the simulator side (PERF's Baseline), and the only reason it is
+# not the default build is that a PGO reading may only be quoted against
+# another PGO reading.
+#
 # Leaves the optimized binary in `target/$PGO_PROFILE/$BIN` and the merged
 # profile in `$PGO_DIR.profdata`, so a later rebuild can skip straight to the
 # last step with `RUSTFLAGS="-Cprofile-use=..."` — **under the same profile**.
@@ -49,6 +55,18 @@ train() {
         "$b" --a gang --b gang --games 300 --decks fixed  --threads 4 --seed 7 >/dev/null
         "$b" --a gang --b gang --games 150 --decks cube   --threads 4 --seed 7 >/dev/null
         "$b" --a gang --b gang --games 20  --decks sealed --threads 4 --seed 7 >/dev/null
+        ;;
+    selfplay_train)
+        # The actor path, and only the actor path. `--steps 1` retires the
+        # learner after one gradient step so the four actors own the clock —
+        # the same reason PERF's actor A/B quotes `--steps 1`: at a
+        # learner-heavy setting ~95 % of the wall clock is candle kernels,
+        # which PGO has nothing to give and which would fill the profile with
+        # counts the simulator never executes. Seed 7, as above, so the
+        # profile is not fitted to a measured run's game sequence. Writes to
+        # a scratch dir; the nets it drops there are throwaway.
+        "$b" --actors 4 --games 3000 --steps 1 --seed 7 \
+            --out "${PGO_OUT:-/tmp/pgo-selfplay-out}" >/dev/null
         ;;
     *)
         if [ -n "${PGO_TRAIN:-}" ]; then
