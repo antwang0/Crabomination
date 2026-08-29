@@ -62,7 +62,16 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    unpriced thing is the *write rate of zone membership + `continuous_effects`*
    — price that before proposing a `GameState`-level memo), `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
-   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-91)` IS TAKEN** (`cd0842e9`,
+   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-92)` IS THE ENTRY TO READ
+   FIRST AND IT IS A MAP, NOT A LEAD: the profile is FLAT.** The whole-program
+   line profile (new, in PERF's "Profile of record") says the hottest single
+   line is 0.97 %, 11,165 lines hold 86 % of the run, and slice iteration
+   plus the pointer/`Vec` machinery under it is **~30 %** of the program.
+   Six functions have been read by line across three passes and all six say
+   "no hot line" — **stop looking for one**; `cg_calls.py` and
+   `cg_contexts.py` are the two questions a flat profile still answers.
+   `(-92)` names the three shapes it does still see, cheapest first.
+   **`(-91)` IS TAKEN** (`cd0842e9`,
    `fixed` -0.673 / `cube` -0.721 / `sealed` -0.813 %, recomputes down
    89-93 %, robustness grid green over 33,120 games). The device generalises
    and the Baseline states it as a rule: **put the cache INSIDE the handle it

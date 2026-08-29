@@ -11962,6 +11962,92 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE WHOLE-PROGRAM LINE PROFILE, TAKEN FOR THE FIRST TIME (ninety-sixth pass, `cd0842e9`, `--decks cube`)
+
+Every earlier line profile in this file was `--in <function>` scoped, so
+nobody had ever asked what the *program's* hottest line is. **It is 0.97 %,
+and 11,165 lines hold 86 % of the run.** The profile is flat, and that is
+the most useful thing this pass measured.
+
+```text
+cargo build --profile profiling-lines -p crabomination --bin bot_ladder \
+  --no-default-features                                    (cold, ~9 min)
+RUST_MIN_STACK=33554432 valgrind --tool=callgrind --dump-instr=yes \
+  --callgrind-out-file=cg.instr.out target/profiling-lines/bot_ladder \
+  --a gang --b gang --games 6 --threads 1 --seed 1 --decks cube
+python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder
+2,865,631,615 Ir against profiling-fast's 2,865,614,181 — the two inline
+identically, which is what makes the attribution transferable.
+
+  23,867,576  0.97 %  ptr/mod.rs:1917      Arc::clone_from_ref_in  (the CoW copy)
+  16,683,846  0.68 %  game/mod.rs:?        dispatch_triggers_for_events
+  12,367,872  0.50 %  effects/eval.rs:3189 the requirement walker's `match req`
+  11,216,374  0.46 %  iter/macros.rs:349   computed_permanent's battlefield find
+  10,814,250  0.44 %  iter/macros.rs:332   the SBA sweep's own walks
+  10,332,090  0.42 %  game/mod.rs:2661     `impl Clone for GameState`'s `Self {`
+```
+
+**Three of those six are a `match` arm dispatch or a struct move and have no
+cheaper form**: `eval.rs:3189` is 8.7 Ir a call over 1,425,996 calls,
+`game/mod.rs:2661` is 455 Ir over 22,684 clones of a ~110-field struct, and
+`game/mod.rs:15582` (0.32 %, not shown) is `perform_action_inner`'s
+`GameAction` match. Those are floors.
+
+**BY SOURCE FILE, AND THIS IS THE FRAMING NUMBER THE FILE HAS BEEN MISSING:**
+
+```text
+  377,262,930  13.17 %  iter/macros.rs     <- core's SLICE ITERATOR
+  295,410,894  10.31 %  game/mod.rs
+  242,965,358   8.48 %  ptr/non_null.rs    <- the pointer stepping under it
+  142,661,390   4.98 %  vec/mod.rs
+  105,561,348   3.68 %  raw_vec/mod.rs
+   99,079,474   3.46 %  src/card.rs        (base: CardId::eq, the memo reads)
+   97,205,165   3.39 %  ptr/mod.rs
+   76,271,460   2.66 %  game/actions.rs
+   75,219,446   2.62 %  effects/eval.rs
+   73,580,970   2.57 %  game/layers.rs
+   62,956,784   2.20 %  src/option.rs
+   58,806,668   2.05 %  game/stack.rs
+   52,688,420   1.84 %  server/bot.rs
+   49,661,734   1.73 %  src/sync.rs   +  1.41 % sync/atomic.rs  (Arc refcounts)
+   41,674,446   1.45 %  src/alloc.rs  +  0.50 % alloc/unix.rs
+```
+
+**Slice iteration, the pointer stepping under it and the `Vec` machinery
+around it are ~30 % of the program.** No engine source file is above 10.3 %.
+That is the shape of a simulator that walks collections, and it says the
+lever is **fewer element visits**, not a faster body — which is exactly what
+every win of the last ten passes has been (presence gates, per-definition
+memos, fused walks, `_on` forms that skip a `find`).
+
+### FIVE FUNCTIONS READ BY LINE ACROSS THREE PASSES, AND ALL FIVE SAY "NO HOT LINE"
+
+Recorded together so nobody spends a sixth cold build to learn it a sixth
+time:
+
+```text
+  dispatch_triggers_for_events  6.68 %   largest line 0.23 %   (-59), pass 89
+  compute_permanent_pass        2.80 %   largest line 0.21 %   pass 96
+  check_state_based_actions_into 2.46 %  largest line 0.44 %   pass 96
+  resolve_combat                1.86 %   largest line 0.23 %   pass 96
+  fire_combat_damage_triggers   1.49 %   largest line 0.23 %   pass 96
+  activate_ability_inner        1.68 %   largest line 0.21 %   pass 96
+```
+
+Every one of them is a sequence of gated whole-collection walks, and in every
+one the top rows are `iter/macros.rs`, `ptr/non_null.rs` and the struct move
+at the end. **`compute_permanent_pass`'s own top rows are the
+`ComputedPermanent { .. }` construction at line 1017 and the `Vec`/overlay
+moves under it — ~30 M / 1.05 % of `cube` to materialise and move the
+struct**, which is the one of these six with a *shape* worth attacking
+rather than a call count. (-13) already measured the husk-pool answer at
++2.60 %, so it is not a pool; it would have to be construction in place.
+
+**Do not run another `--in` line profile on a function of this shape.** Read
+`cg_calls.py` for its call count and `cg_contexts.py` for whose calls they
+are; those are the two questions a flat profile can still answer.
+
+
 ### THE ACTOR'S PROFILE, READ FOR THE FIRST TIME (ninety-sixth pass, `599825ba`)
 
 `selfplay_train` is the workload the ML phase actually runs, and every
@@ -13175,6 +13261,35 @@ fresh `CardData` already has a fresh memo, so the real set is smaller).
 asked which writes are no-ops, and this one asks which writes invalidate
 what. Both are about `DerefMut` being the only chokepoint and therefore
 carrying everyone's conservatism.
+**(-92) THE PROFILE IS FLAT AND THE LEVER IS ELEMENT VISITS — read the
+whole-program line profile in "Profile of record" before pulling anything
+off this queue.** The program's hottest single *line* is 0.97 % and 11,165
+lines hold 86 % of the run; `iter/macros.rs` + `ptr/non_null.rs` + the `Vec`
+machinery are **~30 %** of it, and no engine source file is above 10.3 %.
+Six functions have now been read by line across three passes and all six say
+"no hot line". **So: stop looking for hot lines. The two questions a flat
+profile still answers are `cg_calls.py` (how many calls) and
+`cg_contexts.py` (whose).**
+
+Three shapes the profile does still name, in order:
+
+1. **`computed_permanent`'s battlefield `find` is 19.6 M / 0.68 % of `cube`**
+   — `iter/macros.rs:349` 11.2 M plus `CardId::eq` 8.4 M, one linear find per
+   `perms` miss and there are 289,098 of those. The repo already has the
+   convention for it (the ninety-fifth pass's `_on` form): a
+   `computed_permanent_on(&CardInstance)` skips the find for every caller
+   that already holds the card, and the four biggest — `permanent_value_with`
+   (which is *handed* `Some(c)` and throws it away), `legal_blockers`,
+   `pick_attacks_inner`, `pick_blocks_inner`'s closure — are ~135 k calls
+   between them. Size it at ~68 Ir a skipped find.
+2. **`ComputedPermanent`'s construction and move is ~30 M / 1.05 %** —
+   `compute_permanent_pass`'s line 1017 plus the overlay/`Vec` moves under
+   it, 289,098 times. Not a pool ((-13), +2.60 %); it would have to be
+   construction in place, which means `Arc::new_uninit` and unsafe.
+3. **`Arc::clone_from_ref_in` at `ptr/mod.rs:1917` is the program's hottest
+   line at 0.97 %** — the CoW deep copy itself, 132,370 of them. That is
+   `(-1)`/`(-14)`'s family and the entry to read is those.
+
 **(-90) THE GATHER COUNT IS AT ITS FLOOR AND THE PROFILE IS NOW TOPPED BY
 THREE ROWS NOTHING CAN GATE.** Read at `3b8bfd03`, `--decks cube`, after the
 ninety-sixth pass's two commits. The self table:
