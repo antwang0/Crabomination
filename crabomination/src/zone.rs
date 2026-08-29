@@ -169,12 +169,24 @@ const LANE_CREATURE: u32 = 2;
 const LANE_DAMAGE_SCALE: u32 = 4;
 const LANE_OUTGOING_PREVENT: u32 = 6;
 const LANE_INCOMING_PREVENT: u32 = 8;
+const LANE_DISPATCH: u32 = 10;
 const LANE_MASK: u32 = 0b11;
 
-/// The battlefield: the CoW card list, plus the two whole-board questions the
-/// layer-4 type gates ask of it — "can any permanent here contribute an
-/// `AddLandType` / `SetLandTypes` / `ReplaceBasicLandType` to the gathered
-/// set", and the same for the creature-type family.
+/// Does this permanent contribute anything to
+/// [`GameState::dispatch_board_scan`](crate::game::GameState::dispatch_board_scan)?
+/// The [`LANE_DISPATCH`] predicate, and the one the lane's `debug_assert!`
+/// audits against — so the memo and the walk it gates cannot drift.
+fn card_has_dispatch_bits(c: &CardInstance) -> bool {
+    c.dispatch_scan_bits() & crate::card::dispatch_bits::BOARD_SCAN != 0
+}
+
+/// The battlefield: the CoW card list, plus the whole-board questions asked of
+/// it often enough to want a memo — the two layer-4 type gates ("can any
+/// permanent here contribute an `AddLandType` / `SetLandTypes` /
+/// `ReplaceBasicLandType` to the gathered set", and the same for the
+/// creature-type family), the three damage-scaling / prevention gates, and
+/// the trigger dispatcher's board scan. One lane per question; see the
+/// `LANE_*` constants.
 ///
 /// `land_type_change_in_scope` and `creature_type_change_in_scope` are
 /// 0.60 / 1.13 / 0.52 % of the three pools and each miss is a 262-642 Ir walk
@@ -187,9 +199,10 @@ const LANE_MASK: u32 = 0b11;
 /// outlive the scope, and the zone is where it can.
 ///
 /// **The invalidation is two disjoint questions, and each is answered where it
-/// is cheap.** Both lanes are a function of exactly one thing: the multiset of
+/// is cheap.** Every lane is a function of exactly one thing: the multiset of
 /// *definitions* on the battlefield (`card_can_change_*_types` is written to
-/// read no instance field, deliberately — see its doc comment).
+/// read no instance field, deliberately — see its doc comment;
+/// `dispatch_scan_bits` is a pure function of the definition by construction).
 ///
 /// * *Membership* — a permanent entering or leaving — can only happen through
 ///   [`DerefMut`] or the inherent [`push`](Self::push), and both clear the
@@ -336,22 +349,66 @@ impl Battlefield {
     /// the two call sites keep a word load for the hit.
     #[inline(never)]
     fn walk_and_store(&self, shift: u32, walk: impl Fn(&CardInstance) -> bool) -> bool {
-        let epoch = crate::card::definition_epoch();
-        let found = self.cards.iter().any(walk);
-        let lane = if found { PRESENT as u32 } else { ABSENT as u32 };
         // A rewrite since the epoch was read would be missed by the stamp, so
         // read it *before* the walk: the stamp is then conservative — a lane
         // computed across a rewrite is thrown away on the next ask.
+        let epoch = crate::card::definition_epoch();
+        let found = self.cards.iter().any(walk);
+        self.store_lane(shift, epoch, found);
+        found
+    }
+
+    /// Write one lane with what a walk found, stamped at the `epoch` that walk
+    /// started from.
+    fn store_lane(&self, shift: u32, epoch: u64, found: bool) {
+        let lane = if found { PRESENT as u32 } else { ABSENT as u32 };
         let word = if self.def_epoch.swap(epoch, Ordering::Relaxed) == epoch {
             self.type_gates.load(Ordering::Relaxed)
         } else {
-            // A different epoch was stamped: the other lane describes an older
+            // A different epoch was stamped: the other lanes describe an older
             // definition set and must not survive.
             0
         };
         self.type_gates
             .store((word & !(LANE_MASK << shift)) | (lane << shift), Ordering::Relaxed);
-        found
+    }
+
+    /// The dispatch lane, for a caller that fills it from a walk it was going
+    /// to make anyway: `Ok(present)` is the memo's answer, and `Err(epoch)`
+    /// means "unknown — walk, then hand that same epoch back to
+    /// [`store_dispatch`](Self::store_dispatch)".
+    ///
+    /// The two type gates ask through the closure form above because their
+    /// walk *is* a predicate. The dispatcher's is not: the same pass also
+    /// builds two grant lists, so a closure form would walk the board twice on
+    /// every miss — and the `DerefMut` invalidation serves only 48.1 / 38.3 /
+    /// 32.2 % of the type gates' asks (PERF `(-87)`), which is about where a
+    /// doubled miss breaks even. Splitting the read from the store makes the
+    /// miss cost the walk the caller was making anyway and nothing else.
+    pub fn dispatch_lane(&self) -> Result<bool, u64> {
+        let epoch = crate::card::definition_epoch();
+        let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
+            UNKNOWN as u32
+        } else {
+            (self.type_gates.load(Ordering::Relaxed) >> LANE_DISPATCH) & LANE_MASK
+        };
+        debug_assert!(
+            cur == UNKNOWN as u32
+                || (cur == PRESENT as u32) == self.cards.iter().any(card_has_dispatch_bits),
+            "battlefield dispatch memo is stale: a write reached the cards without clearing it",
+        );
+        match cur {
+            c if c == ABSENT as u32 => Ok(false),
+            c if c == PRESENT as u32 => Ok(true),
+            _ => Err(epoch),
+        }
+    }
+
+    /// Record what the caller's own walk found in the dispatch lane. `epoch`
+    /// is the one [`dispatch_lane`](Self::dispatch_lane) handed out, i.e. read
+    /// before the walk.
+    pub fn store_dispatch(&self, epoch: u64, found: bool) {
+        self.store_lane(LANE_DISPATCH, epoch, found);
     }
 
     /// Append, through [`CowBox`]'s own `push` so an unshare materializes with
@@ -636,6 +693,40 @@ mod tests {
         assert!(!a.shares_with(&b), "the write unshared");
         assert_eq!(b.memo(LANE_LAND), Some(false), "the snapshot's answer is still right");
         assert_eq!(a.memo(LANE_LAND), None);
+    }
+
+    /// The dispatch lane is filled by its caller, so its contract is the pair:
+    /// an unknown lane hands out an epoch, the store makes the next ask a hit,
+    /// and a membership write puts it back to unknown.
+    #[test]
+    fn dispatch_lane_round_trips_through_its_caller() {
+        let mut b = bf(vec![crate::catalog::grizzly_bears()]);
+        let Err(epoch) = b.dispatch_lane() else { panic!("a fresh zone is unknown") };
+        let found = b.iter().any(card_has_dispatch_bits);
+        assert!(!found, "Grizzly Bears contributes nothing to the dispatch scan");
+        b.store_dispatch(epoch, found);
+        assert_eq!(b.dispatch_lane(), Ok(false));
+        assert_eq!(b.memo(LANE_LAND), None, "the other lanes are untouched");
+
+        // Element writes keep it; membership does not.
+        b.iter_mut().for_each(|c| c.tapped = true);
+        assert_eq!(b.dispatch_lane(), Ok(false), "an element write is not a membership change");
+        b.push(CardInstance::new(CardId(99), crate::catalog::blood_moon(), 0));
+        assert!(b.dispatch_lane().is_err(), "push invalidated");
+    }
+
+    /// A card that does carry dispatch bits stores `PRESENT`, and the lane
+    /// packs beside the type gates without disturbing them.
+    #[test]
+    fn dispatch_lane_sees_a_contributor_and_packs_beside_the_type_gates() {
+        let never = |_: &CardInstance| false;
+        let b = bf(vec![crate::catalog::humility()]);
+        assert!(b.iter().any(card_has_dispatch_bits), "Humility strips abilities");
+        assert!(!b.has_land_type_changer(never));
+        let Err(epoch) = b.dispatch_lane() else { panic!("unknown until filled") };
+        b.store_dispatch(epoch, true);
+        assert_eq!(b.dispatch_lane(), Ok(true));
+        assert_eq!(b.memo(LANE_LAND), Some(false), "the land lane survived the store");
     }
 
     #[test]

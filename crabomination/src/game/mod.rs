@@ -3598,36 +3598,51 @@ impl GameState {
         // `card::dispatch_bits`), so a permanent that answers "no" to all
         // four — most of the board — costs one atomic load and a branch.
         // Only the grant list still needs the `static_abilities` walk.
+        //
+        // And a board on which *no* permanent answers "yes" — the common one —
+        // skips the walk outright: `Battlefield`'s dispatch lane holds that
+        // answer across every dispatch until membership or a definition moves.
+        // The lane is filled from this walk rather than by a predicate of its
+        // own, so a miss costs nothing beyond the walk that was happening
+        // anyway (see `zone::Battlefield::dispatch_lane`).
         use crate::card::dispatch_bits as db;
-        for card in self.battlefield.iter() {
-            let bits = card.dispatch_scan_bits();
-            if bits & db::BOARD_SCAN == 0 {
-                continue;
-            }
-            scan.dies_suppressed |= bits & db::DIES_SUPPRESS != 0;
-            scan.strip_on_battlefield |= bits & db::STRIP != 0;
-            if let Some(host) = card.attached_to
-                && bits & (db::EQUIP_TRIGGER_GRANT | db::STRIP_ATTACHED) != 0
-                && let Some(bonus) = card.definition.equipped_bonus.as_ref()
-            {
-                if !bonus.triggers_on_equipment {
-                    scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
+        let lane = self.battlefield.dispatch_lane();
+        if lane != Ok(false) {
+            let mut any_bits = false;
+            for card in self.battlefield.iter() {
+                let bits = card.dispatch_scan_bits();
+                if bits & db::BOARD_SCAN == 0 {
+                    continue;
                 }
-                scan.strip_on_battlefield |= bonus.remove_abilities;
-            }
-            if bits & db::GRANT_TRIGGER != 0 {
-                for sa in &card.definition.static_abilities {
-                    if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
-                        self.active_static(&sa.effect, card)
-                    {
-                        scan.trigger_grants.push(TriggerGrant {
-                            filter: filter.resolve_named_by_source(card.named_card.as_deref()),
-                            ability,
-                            controller: card.controller,
-                            source: card.id,
-                        });
+                any_bits = true;
+                scan.dies_suppressed |= bits & db::DIES_SUPPRESS != 0;
+                scan.strip_on_battlefield |= bits & db::STRIP != 0;
+                if let Some(host) = card.attached_to
+                    && bits & (db::EQUIP_TRIGGER_GRANT | db::STRIP_ATTACHED) != 0
+                    && let Some(bonus) = card.definition.equipped_bonus.as_ref()
+                {
+                    if !bonus.triggers_on_equipment {
+                        scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
+                    }
+                    scan.strip_on_battlefield |= bonus.remove_abilities;
+                }
+                if bits & db::GRANT_TRIGGER != 0 {
+                    for sa in &card.definition.static_abilities {
+                        if let Some(StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                            self.active_static(&sa.effect, card)
+                        {
+                            scan.trigger_grants.push(TriggerGrant {
+                                filter: filter.resolve_named_by_source(card.named_card.as_deref()),
+                                ability,
+                                controller: card.controller,
+                                source: card.id,
+                            });
+                        }
                     }
                 }
+            }
+            if let Err(epoch) = lane {
+                self.battlefield.store_dispatch(epoch, any_bits);
             }
         }
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
