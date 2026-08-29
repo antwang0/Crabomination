@@ -893,6 +893,13 @@ here if it ever needs compacting.
   battlefield. A slot costs ~113 k Ir a `cube` run in `clear_gates` and
   nothing anywhere else; `(-85)` tried to remove even that and is a
   refutation.
+- **A whole-board presence memo pays on two conditions, not one: the caller
+  must not already gate the walk, AND the walk's per-card body must be more
+  than a length check** (pass 98, the cast-lock mask, built and reverted;
+  `fixed` **+0.034 %**). Three lanes shipped in the same pass on 460 / 360 Ir
+  walks; this one replaced a 56 Ir walk over `def.static_abilities` and the
+  out-of-line miss path alone cost more than the whole walk did. It is the
+  rule below seen from the collection level rather than the card level.
 - **A per-definition presence bit pays only when the walk it replaces is over
   a list that is usually non-empty** (pass 94, `(-87)`, built and reverted;
   `cube` **+0.138 %**). `def.static_abilities.iter().any(..)` on a board of
@@ -8873,6 +8880,46 @@ found == 0b11 { break } }` is a loop-carried accumulator with a second exit
 test that LLVM cannot turn back into one. **Fusing two whole-collection
 `any`s is only a win when the collection is walked for both in the same
 epoch; price the epoch, not the collection.**
+
+### Ninety-eighth pass (5) — the cast-lock mask as a zone memo: BUILT, MEASURED, REVERTED, and it sharpens the lane rule
+
+**`fixed` +0.034 % / `cube` +0.015 % / `sealed` +0.028 %, reverted.**
+`cast_lock_scan` folds a `u32` over every battlefield permanent's printed
+statics and runs on **every cast and every ability activation** — the obvious
+next `zone::Battlefield` candidate after the three that won, and the one the
+handoff would have named. It loses, and the reason is the one this file
+already carries twice.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base c0043e43
+  fixed     926,192,192 ->   926,509,460   +0.034 %
+  cube    2,762,614,458 -> 2,763,022,111   +0.015 %
+  sealed  2,750,331,117 -> 2,751,088,879   +0.028 %
+
+cube rows
+  perform_action_inner   37,168,526 -> 35,778,490   -1,390,036   (the walk)
+  Battlefield::fold_and_store     0 ->  1,907,234   +1,907,234   (8,202 calls
+                                                                  at 232.5 Ir)
+```
+
+**The whole walk was 1.39 M.** Its per-card body is
+`for sa in &card.definition.static_abilities`, i.e. a pointer load, a length
+load and a not-taken branch on a board of ordinary permanents — the *same*
+shape `(-77)`'s fourth row and `(-87)`'s per-definition bit were refuted on.
+Inlined into `perform_action_inner` it is ~56 Ir a call; the memo's miss path
+is 232 Ir out of line, and it misses often enough that the arithmetic never
+gets close.
+
+**So the lane rule needs its second half, and this is it.** The three lanes
+that won took **460 / 360 Ir** walks (`combat_damage_prevented_from` tests
+`attached_to == Some(dealer)` and `controller` per card, `scale_damage_to`'s
+gate carries four more operands); this one takes a 56 Ir walk. **A presence
+lane pays on what its caller does not already gate AND on a walk whose
+per-card body is more than a length check — both, not either.** Rank a
+candidate by measuring the walk it would replace, not by the call rate of the
+function around it. A `u32`-valued memo is not the problem and the shape is
+kept in this entry for a caller whose fold is real.
 
 ### Ninety-eighth pass (4) — three more `Battlefield` lanes, and the device generalises at four times the rate of its first two
 
