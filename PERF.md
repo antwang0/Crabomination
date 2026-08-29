@@ -2161,6 +2161,56 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundredth pass, the third half — closing state at `ca2bf1a6`
+
+Three code commits over the block below's tip: `623e935a` (`LANE_LISTENER`),
+`5be9908c` (the three split lanes share one reader — a mechanical refactor,
+Ir identity) and `ca2bf1a6` (`LANE_ACT_GRANT`). A concurrent session's
+`633acc3e` sits between the second and the third, so the last one names
+`5be9908c` as its base and the anchor below is the tip.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.80 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,044 / 0 / 5 (cargo nextest); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures; 5 "memo is stale" strings in the audit binary. Run four
+        times across this pass, once per lane landed.
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 222.14 at 3 threads, host_calib_ms 83,
+        peak_rss_mib 24.2, bin_bytes 123,665,192
+
+Ir anchor at `ca2bf1a6`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     909,660,888      cube 2,716,754,586      sealed 2,697,162,109
+
+  the whole pass, 840b5ccd -> ca2bf1a6 (six lanes and a find memo, each row
+  measured at its own base; these are endpoints, not a measurement):
+    fixed     922,985,500 ->   909,660,888   -1.444 %
+    cube    2,761,036,641 -> 2,716,754,586   -1.604 %
+    sealed  2,739,558,149 -> 2,697,162,109   -1.548 %
+```
+
+**Eleventh cross-session anchor check, and it is the strongest form yet: an
+ADDITIVE identity across two sessions.** `ca2bf1a6` was measured at
+`5be9908c` (-1,381,488 / -969,086 / -2,831,196 Ir) and then rebased over the
+other session's `633acc3e`, which was measured independently and filed
+911,042,520 / 2,717,721,142 / 2,700,016,601. Adding one to the other predicts
+the tip at 909,661,032 / 2,716,752,056 / 2,697,185,405; the tip reads
+909,660,888 / 2,716,754,586 / 2,697,162,109 — apart by **144 / 2,530 /
+23,296 Ir, i.e. 0.2 / 0.9 / 8.6 ppm**. **Two deltas measured in different
+containers against different bases compose to within nine parts per million**,
+which is the proof that neither change is eating the other's win, and it costs
+one run you were taking anyway. An anchor identity says an intervening commit
+is Ir-neutral; an *additive* identity says two commits are independent.
+
+**`host_calib_ms` drifted 49 -> 54 -> 83 inside this one session** while the
+`--bench` invariant stayed byte-identical and the Ir totals fell. That is the
+whole argument for the calib field: a `games_per_s` of 222 here and 353 in the
+block below describe two boxes, not two programs.
+
 ### Hundredth pass, the second half — closing state at `633acc3e`
 
 One code commit, and it closes the file's oldest open structural entry:
@@ -8980,7 +9030,7 @@ the table above is safe to compress:
 
 ## Log
 
-### Hundredth pass (6) — `grant_scan`'s battlefield walk gets a lane, and its visitor's last caller inlines it
+### Hundredth pass (7) — `grant_scan`'s battlefield walk gets a lane, and its visitor's last caller inlines it
 
 **`fixed` -0.151 % / `cube` -0.035 % / `sealed` -0.105 %** off `5be9908c`.
 
@@ -15192,9 +15242,13 @@ and all.
 
 
 **(-93) THE CALLER-FILLED LANE — a `zone::Battlefield` lane whose miss costs
-NOTHING. Eight lanes now; the hundredth pass took three more
-(`LANE_SHIELD` x2, `LANE_GRANT`), window `840b5ccd -> 98feda21` **-0.888 /
--1.088 / -1.137 %** on the three pools.** The
+NOTHING. Ten lanes now; the hundredth pass took five
+(`LANE_SHIELD` x2, `LANE_GRANT`, `LANE_LISTENER`, `LANE_ACT_GRANT`), window
+`840b5ccd -> 98feda21` **-0.888 / -1.088 / -1.137 %** and then a further
+-0.278 / -0.075 / -0.115 % over the two after it. **The three split lanes
+share one `split_lane(shift, audit, what)` reader** (`5be9908c`, Ir identity
+to 726 Ir on 2.7 G), so a fourth costs a shift constant, a predicate and two
+one-line accessors. The
 closure form (`lane(shift, predicate)`) walks the board itself on a miss, so
 it can only be pointed at a walk that *is* a predicate, and it breaks even at
 a hit rate of about one half — which is where the `DerefMut` invalidation
@@ -15231,16 +15285,23 @@ ratio predicted. `cg_calls.py` on a dump you already have answers this in
 seconds; the reverted `fire_step_triggers` lane is what happens when nobody
 asks.
 
-**A NINTH LANE IS FREE AND A TENTH IS NOT.** `type_gates` is a `u32` at two
-bits a lane, so lanes 9-16 cost nothing but a shift constant. Past 16 the word
-has to widen.
+**LANES 11-16 ARE FREE AND A SEVENTEENTH IS NOT.** `type_gates` is a `u32` at
+two bits a lane and ten are used (`LANE_ACT_GRANT` is at shift 18), so the next
+six cost nothing but a shift constant. Past sixteen the word has to widen.
 
 **The remaining consumers, sized off the `fixed` tip profile at `841c7b9b`,
 cheapest first. One is built and reverted, one is taken; the other two are
-not built. A fifth, `keyword_grant_in_scope`'s battlefield leg, was found off
-the `(-89)` cascade rather than this list and is TAKEN at `98feda21` —
-which is the lesson: the list was seeded from one function's callee table and
-the largest consumer on it was not in that function.**
+not built. THREE MORE WERE FOUND OFF THE SELF TABLE RATHER THAN OFF THIS
+LIST AND ALL THREE ARE TAKEN**: `keyword_grant_in_scope`'s battlefield leg
+(`98feda21`, -0.481 / -0.276 / -0.621 %),
+`fire_combat_damage_triggers`' phase-1.5/1.6 listener walk (`623e935a`,
+-0.127 / -0.040 / -0.010 %) and `grant_scan`'s `GrantActivatedAbility` walk
+(`ca2bf1a6`, -0.151 / -0.035 / -0.105 %). **That is the lesson: this list was
+seeded from one function's callee table, and the biggest consumers were not in
+that function.** The method that found all three is `cg_edges.py --rows 40` on
+the self table, read for the word *walk* — any `battlefield.iter()` whose
+per-card body is a definition read is a candidate, and its hit rate is the
+callee ratio above.
 
 1. **`fire_step_triggers`' first battlefield loop — BUILT, MEASURED AND
    REVERTED, `fixed` **-0.221 %** / `cube` **+0.013 %** / `sealed`

@@ -26,15 +26,14 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `633acc3e`**, re-verified at the combined tip with two
-   concurrent sessions' engine commits (`5be9908c`, `ca2bf1a6`) on top: suite
+2. **State at `ca2bf1a6`**, the combined tip of both sessions: suite
    19,044 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
-   (30 cells / 33,120 games / 0 failures), `--bench` byte-identical
-   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok).
-   Ir anchor and the window's **-0.410 / -0.486 / -0.310 %** are in PERF's
-   Baseline; **each change names its own base**. `host_calib_ms` drifts 51-68
-   inside one session on this box — quote a `games_per_s` with its calib or
-   not at all.
+   (30 cells / 33,120 games / 0 failures, 5 assertion strings), `--bench`
+   byte-identical (195,528 / 27.44 / 611.0 / 0 stalls, determinism +
+   thread_determinism ok). Ir anchor and the whole pass's **-1.444 / -1.604 /
+   -1.548 %** are in PERF's Baseline; **each change names its own base**.
+   `host_calib_ms` drifts 49-83 inside one session on this box — quote a
+   `games_per_s` with its calib or not at all.
 3. **THE PROFILE HAS NO HEAD LEFT, AND THAT IS THIS PASS'S RESULT.** `(-96)`
    re-read all three pools, `(-97)` the actor, `(-98)` `cg_sites` after the
    find memo, `(-95)` the `--games`-doubling lens: **a long tail at every
@@ -46,11 +45,26 @@ sixty-seventh pass, so don't re-take that.
    calling context for the first time, two contexts holding 42 % of them, with
    the two design directions it opens and a warning that every pass that gave
    this family less than a day came back with a refutation. `(-92)` leads 2
-   and 3 are the alternative. `(-93)`'s lane device is intact and lanes 10-16 are
-   free, but its consumer list is exhausted. `(-38)` and `(-94)` are CLOSED —
+   and 3 are the alternative. `(-93)`'s lane device is intact and lanes 11-16 are
+   free, but its consumer list is exhausted — and note that every lane after
+   the third was found off the **self** table, not off that list, by reading
+   `cg_edges.py --rows 40` for any `battlefield.iter()` walk whose per-card
+   body is a definition read. `(-89)`'s four remaining rows are 1.42 % of
+   `cube` and the `_on` conversion on them is built and reverted; size them by
+   line first. `(-38)` and `(-94)` are CLOSED —
    the find memo shipped and both its variants are refuted; do not re-derive.
    Cards on leftover context.
-4. **Two rules this pass produced.** **Rank an `_on` conversion by MISS rate
+4. **Five rules this pass produced, all free to apply.** **A gated walk's hit
+   rate is already in your dump**: `callee calls / walk calls` is the mean
+   number of cards its predicate selects, and a lane buys the asks where that
+   is zero — `LANE_GRANT` read 0.70 / 1.15 / 0.017 and then landed -0.481 /
+   -0.276 / -0.621 %, in that order. **A lane's predicate may be the UNION of
+   several walks' predicates** when each walk's own filter is an instance
+   field (`LANE_SHIELD` holds nine). **An ADDITIVE anchor identity proves two
+   changes independent**: this pass's two sessions' deltas, measured in
+   different containers against different bases, composed to within 0.2 / 0.9 /
+   8.6 ppm of the tip, for the cost of a run already being taken. And
+   **rank an `_on` conversion by MISS rate
    and a memo by HIT rate** — the same four cascade rows read
    +0.099 / +0.406 / +0.195 % converted and -0.283 / -0.446 / -0.300 %
    memoized, in one sitting, because those lookups are hits. And **a row whose

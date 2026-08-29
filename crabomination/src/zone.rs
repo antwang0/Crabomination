@@ -476,6 +476,11 @@ impl Battlefield {
     /// stale word — a write that reached the cards without clearing it — fails
     /// loudly under `-C debug-assertions=yes`; `what` names the lane in that
     /// message. Costs nothing in any release profile.
+    ///
+    /// `what` is a *format argument*, so the three lanes share one literal in
+    /// the binary: `robustness_grid.sh`'s "is the assertion actually compiled
+    /// in" check counts `memo is stale` and still sees it, but a per-lane
+    /// `strings` grep will not. The name is there at runtime, where it matters.
     #[inline]
     fn split_lane(
         &self,
