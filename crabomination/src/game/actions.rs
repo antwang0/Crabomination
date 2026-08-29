@@ -11338,16 +11338,30 @@ impl GameState {
     /// permanents they control (Serra's Emissary).
     pub(crate) fn player_protection_card_types(&self, player: usize) -> Vec<crate::card::CardType> {
         use crate::effect::StaticEffect;
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == player)
-            .filter(|c| {
-                c.definition.static_abilities.iter().any(|sa| {
-                    matches!(sa.effect, StaticEffect::YouAndCreaturesProtectionFromChosenCardType)
-                })
-            })
-            .filter_map(|c| c.chosen_card_type.clone())
-            .collect()
+        // Cheapest term first, and it is the same conjunction reordered.
+        // `chosen_card_type` is an instance field on the `CardData` the
+        // controller compare already loaded and is `None` on every permanent
+        // that has never stamped a choice, so it settles the card without the
+        // second pointer chase into `definition` and the `static_abilities`
+        // walk. The static test stays: another card can carry a
+        // `chosen_card_type` for a different reason.
+        //
+        // A loop rather than the four-adapter chain, by the `call_mut`
+        // census's rule — `prevent_combat_to_target` asks this once per
+        // combat-damage event.
+        let mut out = Vec::new();
+        for c in &self.battlefield {
+            if c.controller != player {
+                continue;
+            }
+            let Some(t) = c.chosen_card_type.clone() else { continue };
+            if c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::YouAndCreaturesProtectionFromChosenCardType)
+            }) {
+                out.push(t);
+            }
+        }
+        out
     }
 
     /// True if `player` controls any permanent granting "you have hexproof"
