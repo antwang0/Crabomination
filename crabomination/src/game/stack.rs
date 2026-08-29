@@ -13,6 +13,57 @@ type LegendGroups<'a> = SmallVec<[(usize, &'a str, SmallVec<[CardId; 2]>); 4]>;
 /// `(source, effect, controller, intervening/subject filter)`.
 type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>);
 
+/// `CRAB_SBA_CENSUS` — the state-based-action re-sweep census.
+///
+/// PERF `(-88)`'s open half: the sweep is 2.4-3.1 % of every pool and runs at
+/// every priority pass; this counts how many of those runs see a state the
+/// previous run on this thread already saw. Off unless the variable is set,
+/// and one `OnceLock`-backed atomic load when it is. See
+/// [`GameState::sba_census_tick`] for the fingerprint and for why the count is
+/// a lower bound.
+///
+/// **It answered its question and the answer is no** (pass 97, at
+/// `ec5dc3a9`): **3,613 / 20,152 on `cube`, 1,736 / 9,146 on `fixed`,
+/// 5,594 / 31,452 on `sealed` — 17.8-19.0 %.** A repeat sweep is by
+/// construction one whose predecessor changed nothing, so what a skip would
+/// save is the *no-op* sweep, ~2.5-3.5 k Ir, on ~18 % of sweeps — and the
+/// fingerprint that proves the state is unchanged is a whole-board walk of
+/// the same shape as the `sba_board_scan` it would skip, paid on **100 %** of
+/// them. It loses by arithmetic before soundness is even reached (and a
+/// 64-bit hash is not a correctness gate over millions of games). Kept as the
+/// instrument, not as a lead.
+pub mod sba_census {
+    use std::cell::Cell;
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    pub static SWEEPS: AtomicU64 = AtomicU64::new(0);
+    pub static REPEATS: AtomicU64 = AtomicU64::new(0);
+
+    thread_local! {
+        static PREV: Cell<u64> = const { Cell::new(u64::MAX) };
+    }
+
+    pub fn on() -> bool {
+        static LEVEL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_SBA_CENSUS") {
+            Ok(v) => !v.is_empty() && v != "0",
+            _ => false,
+        })
+    }
+
+    pub(crate) fn tick(fingerprint: u64) {
+        SWEEPS.fetch_add(1, Relaxed);
+        if PREV.with(|p| p.replace(fingerprint)) == fingerprint {
+            REPEATS.fetch_add(1, Relaxed);
+        }
+    }
+
+    /// `(sweeps, repeats)` for a caller that wants to print.
+    pub fn snapshot() -> (u64, u64) {
+        (SWEEPS.load(Relaxed), REPEATS.load(Relaxed))
+    }
+}
+
 /// How much of the board the CR 704.5f/g/h death sweep has to compute layers
 /// for — see [`GameState::death_sweep_scope`].
 enum DeathSweep {
@@ -4514,6 +4565,58 @@ impl GameState {
     /// instead. The four flags that also need an instance condition are
     /// ANDed out of the same word; the four that are purely per-instance
     /// stay as field reads.
+    /// `(-88)`'s open half, as a count rather than a guess: how many SBA
+    /// sweeps see a game state the previous sweep on this thread already saw?
+    ///
+    /// CR 704.3 runs the sweep at every priority pass, so `perform_action_inner`
+    /// drains one per action and more; the entry asks how many of those
+    /// re-sweep a board nothing has touched. The fingerprint below covers the
+    /// sweep's read set — the battlefield's per-card instance fields and
+    /// definition pointer, both seats' life/poison/Ring level, and the lengths
+    /// of every list a gated leg walks. It is a *census instrument*, not the
+    /// gate: a shipped skip would have to prove the read set is complete, and
+    /// this only has to be close enough to size the opportunity.
+    ///
+    /// Interleaving makes it a **lower** bound: the bot's simulation clones
+    /// sweep on this same thread, so every hop between two states counts as a
+    /// change even where both states are individually static.
+    ///
+    /// ```text
+    /// CRAB_SBA_CENSUS=1 bot_ladder --a gang --b gang --games 6 --threads 1 \
+    ///   --seed 1 --decks cube
+    /// ```
+    fn sba_census_tick(&self) {
+        use std::hash::{Hash, Hasher};
+        let mut h = crate::fxhash::FxHasher::default();
+        self.battlefield.len().hash(&mut h);
+        for c in self.battlefield.iter() {
+            (std::sync::Arc::as_ptr(&c.definition) as usize).hash(&mut h);
+            (c.id.0, c.controller, c.owner).hash(&mut h);
+            (c.tapped, c.flipped, c.bestowed, c.attached_to, c.sector).hash(&mut h);
+            (c.damage, c.toughness_bonus, c.perm_toughness_bonus).hash(&mut h);
+            (c.dealt_deathtouch_damage, c.soulbond_partner).hash(&mut h);
+            c.counters.len().hash(&mut h);
+            for (k, n) in c.counters.iter() {
+                (*k as u8, *n).hash(&mut h);
+            }
+        }
+        for p in self.players.iter() {
+            (p.life, p.poison_counters, p.ring_temptations).hash(&mut h);
+        }
+        (
+            self.stack.len(),
+            self.continuous_effects.len(),
+            self.temporary_control.len(),
+            self.temporary_copies.len(),
+            self.state_trigger_armed.len(),
+            self.no_other_sacrifice_armed.len(),
+            self.steal_penalty_armed.len(),
+            self.damaged_creatures_die_this_turn,
+        )
+            .hash(&mut h);
+        sba_census::tick(h.finish());
+    }
+
     fn sba_board_scan(&self) -> SbaBoardScan {
         use crate::card::{sba_bits as b, CounterType};
         let mut s = SbaBoardScan::default();
@@ -4740,6 +4843,9 @@ impl GameState {
     /// The sweep proper. Appends to `events`; never reads it, so a caller may
     /// pass a buffer that already holds this action's earlier events.
     pub fn check_state_based_actions_into(&mut self, events: &mut Vec<GameEvent>) {
+        if sba_census::on() {
+            self.sba_census_tick();
+        }
 
         // CR 904.10 — a face-up non-ongoing scheme is abandoned once no scheme
         // trigger is left on the stack.

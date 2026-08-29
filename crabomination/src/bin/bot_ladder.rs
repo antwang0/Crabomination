@@ -1620,6 +1620,16 @@ fn main() {
             s[0].1, s[0].0, s[1].1, s[1].0, s[2].1, s[2].0,
         );
     }
+    // PERF (-88): how many state-based-action sweeps re-sweep a state the
+    // previous sweep on the thread already saw. Off unless `CRAB_SBA_CENSUS`
+    // is set.
+    if crabomination::game::stack::sba_census::on() {
+        let (sweeps, repeats) = crabomination::game::stack::sba_census::snapshot();
+        println!(
+            "  sba_census {repeats}/{sweeps} repeats ({:.2} %)",
+            if sweeps == 0 { 0.0 } else { 100.0 * repeats as f64 / sweeps as f64 },
+        );
+    }
     // PERF (-51)(b): what the simulator's payments cost when they fail, split
     // by *why*. Off unless `CRAB_PAY_FAILS` is set.
     if crabomination::game::pay_census::level() > 0 {
