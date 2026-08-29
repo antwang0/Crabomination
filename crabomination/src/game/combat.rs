@@ -3969,16 +3969,6 @@ impl GameState {
         }
     }
 
-    /// Ironscale Hydra (CR 615) — does `id` replace incoming combat damage
-    /// with a +1/+1 counter? Reads `StaticEffect::PreventCombatDamageToSelfAndGrow`.
-    fn creature_prevents_combat_damage_grows(&self, id: CardId) -> bool {
-        self.battlefield_find(id).is_some_and(|c| {
-            c.definition.static_abilities.iter().any(|s| {
-                matches!(s.effect, crate::effect::StaticEffect::PreventCombatDamageToSelfAndGrow)
-            })
-        })
-    }
-
     /// Apply the Ironscale replacement to `recipient` taking `dealt` combat
     /// damage: if it has the static and `dealt > 0`, add one +1/+1 counter,
     /// emit the event, and return 0 (the damage is prevented); otherwise
@@ -4011,16 +4001,44 @@ impl GameState {
             );
             return 0;
         }
-        // Sekki trades counters for tokens instead of growing (CR 615).
-        if self.trade_counters_for_damage(recipient, dealt as u32, events) {
+        // The three questions below are one walk of one card's
+        // `static_abilities`, not three `battlefield_find`s and three walks:
+        // Sekki's trade, Ironscale's grow, and the replace-with-counters
+        // family all read the same list of the same permanent, and this runs
+        // once per combat-damage assignment to a creature.
+        // `creature_replaces_damage_with_counters` stays — `deal_damage_to_from`
+        // asks it too — and `creature_prevents_combat_damage_grows` is gone,
+        // this was its only caller.
+        let (sekki, grows, replace_kind) = match self.battlefield_find(recipient) {
+            Some(c) => {
+                use crate::effect::StaticEffect as SE;
+                let (mut sekki, mut grows, mut kind) = (false, false, None);
+                for sa in &c.definition.static_abilities {
+                    match sa.effect {
+                        SE::PreventDamageToSelfTradingCounters { .. } => sekki = true,
+                        SE::PreventCombatDamageToSelfAndGrow => grows = true,
+                        SE::ReplaceDamageToSelfWithCounters { kind: k } => {
+                            kind.get_or_insert(k);
+                        }
+                        _ => {}
+                    }
+                }
+                (sekki, grows, kind)
+            }
+            None => return dealt,
+        };
+        // Sekki trades counters for tokens instead of growing (CR 615). The
+        // gate is exactly `trade_counters_for_damage`'s own: without the
+        // static it returns `false`, and `dealt > 0` is checked above.
+        if sekki && self.trade_counters_for_damage(recipient, dealt as u32, events) {
             return 0;
         }
         // Ironscale Hydra grows by exactly one; Phytohydra grows by the full
         // amount. Both are replacements (CR 614), so they apply even when
         // damage can't be prevented.
-        let (kind, grow) = if self.creature_prevents_combat_damage_grows(recipient) {
+        let (kind, grow) = if grows {
             (crate::card::CounterType::PlusOnePlusOne, 1)
-        } else if let Some(kind) = self.creature_replaces_damage_with_counters(recipient) {
+        } else if let Some(kind) = replace_kind {
             (kind, dealt as u32)
         } else {
             return dealt;
