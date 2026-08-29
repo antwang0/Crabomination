@@ -44,6 +44,50 @@ fn creature_dies_at_lethal_damage() {
     assert!(c.is_dead());
 }
 
+/// The definition memo is keyed to the definition, not to "some write reached
+/// this card" (PERF `(-91)`): a tap or a damage point keeps it, and each of the
+/// two definition writes drops it. The seven accessors' `debug_assert!`s only
+/// audit this where assertions are compiled in; this asserts the *answer*, so
+/// a write path that forgot to clear fails in any profile.
+#[test]
+fn definition_memo_outlives_a_plain_write_and_dies_with_the_definition() {
+    use crabomination::mana::{Color, ColorSet};
+    let (blue, green) = (ColorSet::single(Color::Blue), ColorSet::single(Color::Green));
+
+    let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    assert_eq!(c.printed_color_set(), green); // memoize
+    c.tapped = true;
+    c.damage = 1;
+    c.add_counters(CounterType::PlusOnePlusOne, 1);
+    assert_eq!(c.printed_color_set(), green);
+
+    // in-place rewrite of a uniquely-owned definition — the pointer does not move
+    std::sync::Arc::make_mut(c.definition_mut()).color_override = Some(vec![Color::Blue]);
+    assert_eq!(c.printed_color_set(), blue);
+
+    // wholesale replacement, and back
+    let printed = c.definition.arc();
+    let mut swapped = crabomination::card::CardDefinition::clone(&printed);
+    swapped.color_override = Some(vec![Color::White]);
+    c.set_definition(std::sync::Arc::new(swapped));
+    assert_eq!(c.printed_color_set(), ColorSet::single(Color::White));
+    c.set_definition(printed);
+    assert_eq!(c.printed_color_set(), blue);
+}
+
+/// A memo travels with the definition it describes: assigning one card's
+/// definition to another carries the memo, so the reader cannot see an answer
+/// computed for a definition the card no longer has.
+#[test]
+fn definition_memo_travels_with_an_assigned_definition() {
+    use crabomination::mana::{Color, ColorSet};
+    let mut bear = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
+    let bolt = CardInstance::new(CardId(1), catalog::lightning_bolt(), 0);
+    assert_eq!(bolt.printed_color_set(), ColorSet::single(Color::Red)); // memoize on bolt
+    bear.definition = bolt.definition.clone();
+    assert_eq!(bear.printed_color_set(), ColorSet::single(Color::Red));
+}
+
 #[test]
 fn indestructible_creature_does_not_die_from_damage() {
     let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
