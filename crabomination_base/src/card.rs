@@ -5345,6 +5345,49 @@ impl CardDefinition {
         m
     }
 
+    /// The layer gather's pre-scan bits for this printing — see
+    /// [`gather_spec`]. Pure function of the definition; `CardData`
+    /// memoizes it (`CardData::gather_scan_bits`), which is what keeps the
+    /// static-ability walk and the keyword scan below off the gather's
+    /// per-card path. The two instance facts the same loop reads
+    /// (`suspected`, `attached_to`) are not definition facts and stay there.
+    pub fn gather_scan_bits(&self) -> u64 {
+        use gather_spec as g;
+        let mut m = 0u64;
+        if !self.static_abilities.is_empty() {
+            m |= g::HAS_STATICS;
+            for sa in &self.static_abilities {
+                m |= static_effect_gather_bits(&sa.effect);
+            }
+        }
+        if self.equipped_bonus.is_some() {
+            m |= g::EQUIPPED_BONUS;
+        }
+        if self.soulbond_bonus.is_some() {
+            m |= g::SOULBOND_BONUS;
+        }
+        if self.dynamic_pt.is_some() {
+            m |= g::DYNAMIC_PT;
+        }
+        if !self.level_bands.is_empty() {
+            m |= g::LEVEL_BANDS;
+        }
+        if !self.station.is_empty() {
+            m |= g::STATION;
+        }
+        for kw in self.keywords.iter() {
+            match kw {
+                Keyword::Impending(_) => m |= g::IMPENDING,
+                Keyword::Reconfigure(_) => m |= g::RECONFIGURE,
+                Keyword::Unleash => m |= g::UNLEASH,
+                Keyword::HexproofUnlessAttackingOrBlocking => m |= g::HEXPROOF_UNLESS,
+                Keyword::LivingMetal => m |= g::LIVING_METAL,
+                _ => {}
+            }
+        }
+        m
+    }
+
     /// True when this printing can contribute a layer-6 `AddKeyword` matching
     /// `pred` out of one of its five grant containers — the printed-shape half
     /// of `GameState::keyword_grant_in_scope`, minus the two instance-level
@@ -6251,6 +6294,40 @@ pub mod gather_spec {
     pub const PUMP_PER_SHARED_TYPE: u64 = 1 << 39;
     /// `AnthemForFilter` and `AnthemForFilterIf` share one walk, so one bit.
     pub const ANTHEM_FILTER: u64 = 1 << 40;
+
+    /// The static-effect half — every bit
+    /// [`static_effect_gather_bits`](super::static_effect_gather_bits) can
+    /// set. Bump this with the highest bit above.
+    pub const STATIC_ALL: u64 = (1 << 41) - 1;
+
+    // The definition-derived facts the gather's pre-scan ORs board-wide
+    // alongside the static bits. Same word, above the static half, so one
+    // memo read answers both — see [`CardDefinition::gather_scan_bits`].
+    /// The definition carries at least one static ability.
+    pub const HAS_STATICS: u64 = 1 << 41;
+    /// `equipped_bonus.is_some()`.
+    pub const EQUIPPED_BONUS: u64 = 1 << 42;
+    /// `soulbond_bonus.is_some()`.
+    pub const SOULBOND_BONUS: u64 = 1 << 43;
+    /// `dynamic_pt.is_some()`.
+    pub const DYNAMIC_PT: u64 = 1 << 44;
+    /// `!level_bands.is_empty()`.
+    pub const LEVEL_BANDS: u64 = 1 << 45;
+    /// `!station.is_empty()`.
+    pub const STATION: u64 = 1 << 46;
+    /// A printed `Keyword::Impending`.
+    pub const IMPENDING: u64 = 1 << 47;
+    /// A printed `Keyword::Reconfigure`.
+    pub const RECONFIGURE: u64 = 1 << 48;
+    /// A printed `Keyword::Unleash`.
+    pub const UNLEASH: u64 = 1 << 49;
+    /// A printed `Keyword::HexproofUnlessAttackingOrBlocking`.
+    pub const HEXPROOF_UNLESS: u64 = 1 << 50;
+    /// A printed `Keyword::LivingMetal`.
+    pub const LIVING_METAL: u64 = 1 << 51;
+
+    /// The memo's payload — both halves.
+    pub const ALL: u64 = (1 << 52) - 1;
 }
 
 /// The [`gather_spec`] bits `effect` can contribute.
@@ -6406,6 +6483,12 @@ pub mod dispatch_bits {
 /// bit 30 the card-type valid flag, bit 31 the dispatch one, bits 32-33
 /// [`grant_bits`], 34-35 [`type_bits`], 36-40 [`dispatch_bits`]. Zero is
 /// "nothing known".
+///
+/// A second word holds the layer gather's [`gather_spec`] mask (bits 0-51)
+/// with its valid flag at bit 63 — 52 bits do not fit beside the first
+/// word's tenants, and a second atom is 8 bytes on a `CardData` that is
+/// already hundreds. Both words are cleared together in [`Self::clear`], so
+/// a slot added to either cannot outlive a definition rewrite.
 /// Atomic rather than a `Cell` because `CardData` sits behind an `Arc` that
 /// has to stay `Send`; the halves are written with a plain load-modify-store
 /// because [`Self::clear`] only ever runs on a *uniquely owned* `CardData`
@@ -6413,7 +6496,7 @@ pub mod dispatch_bits {
 /// writers are two setters storing pure functions of the same definition and
 /// a lost update costs a recompute.
 #[derive(Debug, Default)]
-pub struct CardMemo(std::sync::atomic::AtomicU64);
+pub struct CardMemo(std::sync::atomic::AtomicU64, std::sync::atomic::AtomicU64);
 
 impl CardMemo {
     const COLOR_MASK: u64 = 0x1f;
@@ -6427,6 +6510,8 @@ impl CardMemo {
     const VOCAB_SHIFT: u32 = 41;
     const VOCAB_MASK: u64 = 0xffff << Self::VOCAB_SHIFT;
     const DISPATCH_VALID: u64 = 1 << 31;
+    /// On the *second* word; see the type doc.
+    const GATHER_VALID: u64 = 1 << 63;
 
     #[inline]
     fn get(&self) -> Option<crate::mana::ColorSet> {
@@ -6520,19 +6605,36 @@ impl CardMemo {
         );
     }
 
+    #[inline]
+    fn get_gather(&self) -> Option<u64> {
+        let v = self.1.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::GATHER_VALID != 0).then_some(v & gather_spec::ALL)
+    }
+
+    #[inline]
+    fn set_gather(&self, bits: u64) {
+        self.1.store(bits | Self::GATHER_VALID, std::sync::atomic::Ordering::Relaxed);
+    }
+
     /// The invalidation, called from [`CardInstance`]'s `DerefMut`.
     #[inline]
     fn clear(&self) {
         self.0.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.1.store(0, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
 impl Clone for CardMemo {
     /// The clone describes the same definition, so it keeps the answers.
     fn clone(&self) -> Self {
-        Self(std::sync::atomic::AtomicU64::new(
-            self.0.load(std::sync::atomic::Ordering::Relaxed),
-        ))
+        Self(
+            std::sync::atomic::AtomicU64::new(
+                self.0.load(std::sync::atomic::Ordering::Relaxed),
+            ),
+            std::sync::atomic::AtomicU64::new(
+                self.1.load(std::sync::atomic::Ordering::Relaxed),
+            ),
+        )
     }
 }
 
@@ -7129,6 +7231,23 @@ impl CardData {
         }
         let bits = self.definition.sba_scan_bits();
         self.memo.set_sba(bits);
+        bits
+    }
+
+    /// [`CardDefinition::gather_scan_bits`] for this object, memoized on the
+    /// memo's second word and audited by the same `debug_assert!`.
+    #[inline]
+    pub fn gather_scan_bits(&self) -> u64 {
+        if let Some(bits) = self.memo.get_gather() {
+            debug_assert_eq!(
+                bits,
+                self.definition.gather_scan_bits(),
+                "gather scan memo is stale: a definition rewrite did not clear it",
+            );
+            return bits;
+        }
+        let bits = self.definition.gather_scan_bits();
+        self.memo.set_gather(bits);
         bits
     }
 

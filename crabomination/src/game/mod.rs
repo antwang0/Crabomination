@@ -164,7 +164,7 @@ use crate::game::layers::{
     AffectedPermanents, ComputedPermanent, ContinuousEffect, EffectDuration, Layer, Modification,
     PtSublayer,
 };
-use crate::card::{gather_spec, static_effect_gather_bits};
+use crate::card::gather_spec;
 use crate::cow::CowBox;
 use crate::effect::static_effect_strips_abilities;
 use crate::player::Player;
@@ -9615,45 +9615,44 @@ impl GameState {
         // carry no static-ability permanent at all and there is no allocation
         // to remove. With the union it is -0.012 % there and -0.513 % on `cube`.
         let mut sa_cards: SmallVec<[(&CardInstance, u64); 16]> = SmallVec::new();
-        let (mut any_equipped_bonus, mut any_soulbond_bonus, mut any_attached) =
-            (false, false, false);
-        let (mut any_reconfigure, mut any_impending, mut any_unleash) = (false, false, false);
-        let (mut any_hexproof_unless, mut any_dynamic_pt) = (false, false);
-        let (mut any_level_bands, mut any_station, mut any_living_metal) = (false, false, false);
+        let mut any_attached = false;
         let mut any_suspected = false;
-        // Which of the thirty-eight per-static passes below can fire at all.
-        // Each used to walk `sa_cards` itself looking for one `StaticEffect`
-        // variant; this walk answers all thirty-eight at once, per card in
-        // `sa_cards` and OR'd board-wide here. See [`gather_spec`].
+        // Which of the thirty-eight per-static passes below can fire at all,
+        // plus the ten definition facts the loop used to ask field by field.
+        // Each pass used to walk `sa_cards` itself looking for one
+        // `StaticEffect` variant; this walk answers all thirty-eight at once,
+        // per card in `sa_cards` and OR'd board-wide here. See
+        // [`gather_spec`].
+        //
+        // The per-card half is a pure function of the definition and comes
+        // off the per-object memo (`CardData::gather_scan_bits`), so the
+        // static-ability walk and the keyword scan this loop used to do per
+        // permanent per gather happen once per printing instead — the same
+        // device `sba_board_scan` uses one caller over. Only `suspected` and
+        // `attached_to` stay here; they are instance facts.
         let mut sa_mask: u64 = 0;
+        let mut def_mask: u64 = 0;
         for card in self.battlefield.iter() {
-            let def = &card.definition;
+            let bits = card.gather_scan_bits();
             any_suspected |= card.suspected;
-            if !def.static_abilities.is_empty() {
-                let mut bits = 0;
-                for sa in &def.static_abilities {
-                    bits |= static_effect_gather_bits(&sa.effect);
-                }
+            any_attached |= card.attached_to.is_some();
+            def_mask |= bits;
+            if bits & gather_spec::HAS_STATICS != 0 {
+                let bits = bits & gather_spec::STATIC_ALL;
                 sa_cards.push((card, bits));
                 sa_mask |= bits;
             }
-            any_equipped_bonus |= def.equipped_bonus.is_some();
-            any_soulbond_bonus |= def.soulbond_bonus.is_some();
-            any_attached |= card.attached_to.is_some();
-            any_dynamic_pt |= def.dynamic_pt.is_some();
-            any_level_bands |= !def.level_bands.is_empty();
-            any_station |= !def.station.is_empty();
-            for kw in &def.keywords {
-                match kw {
-                    Keyword::Impending(_) => any_impending = true,
-                    Keyword::Reconfigure(_) => any_reconfigure = true,
-                    Keyword::Unleash => any_unleash = true,
-                    Keyword::HexproofUnlessAttackingOrBlocking => any_hexproof_unless = true,
-                    Keyword::LivingMetal => any_living_metal = true,
-                    _ => {}
-                }
-            }
         }
+        let any_equipped_bonus = def_mask & gather_spec::EQUIPPED_BONUS != 0;
+        let any_soulbond_bonus = def_mask & gather_spec::SOULBOND_BONUS != 0;
+        let any_dynamic_pt = def_mask & gather_spec::DYNAMIC_PT != 0;
+        let any_level_bands = def_mask & gather_spec::LEVEL_BANDS != 0;
+        let any_station = def_mask & gather_spec::STATION != 0;
+        let any_impending = def_mask & gather_spec::IMPENDING != 0;
+        let any_reconfigure = def_mask & gather_spec::RECONFIGURE != 0;
+        let any_unleash = def_mask & gather_spec::UNLEASH != 0;
+        let any_hexproof_unless = def_mask & gather_spec::HEXPROOF_UNLESS != 0;
+        let any_living_metal = def_mask & gather_spec::LIVING_METAL != 0;
         // Include static-ability effects from permanents currently on the
         // battlefield.
         //
