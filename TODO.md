@@ -51,9 +51,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    unpriced thing is the *write rate of zone membership + `continuous_effects`*
    — price that before proposing a `GameState`-level memo), `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
-   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **The `call_mut` census has four
-   rows left** (`do_untap`, `pick_blocks_inner`, `mana_source_table`,
-   `process_echo`). **The `#[inline]` family is CLOSED past the card-type
+   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **The `call_mut` census is CLOSED**
+   — all six rows swept at the ninety-fifth pass, and the capture rule
+   predicted the order on every one (see the Baseline; `process_echo` is read
+   and left at 0.01 %, which is the result, not an omission).
+   **The `#[inline]` family is CLOSED past the card-type
    predicates** — `has_keyword` + `counter_count` + `same_team` read +0.45 /
    +0.54 / +0.42 %, and +0.15 / +0.17 / +0.12 % with `has_keyword` dropped, so
    every combination loses including the 10-Ir one-liner. Do not rebuild it.

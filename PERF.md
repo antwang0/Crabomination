@@ -2085,6 +2085,88 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fifth pass (2) — `do_untap` asks a board question once, not once per permanent
+
+**Base `caf6b146`.** Three of the untap step's whole-board walks are populated
+entirely by `static_abilities` entries, and `any_static` — the step's own
+one-walk answer to "does any permanent or command-zone source carry one" —
+already settles them. Two tested it *inside* the walk (`filter(|_| any_static)`
+in the `PreventUntap` scan, and the first term of `untappers`' per-permanent
+condition), so a static-free board walked 23 permanents to answer no 23 times.
+Both take an empty slice instead.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     981,075,745 ->   980,037,300   -0.106 %
+  cube    2,947,304,839 -> 2,945,565,684   -0.059 %
+  sealed  2,929,301,587 -> 2,927,454,867   -0.063 %
+
+do_untap inclusive, identical call counts either side:
+                 calls        before        after
+  fixed         1,758    20,821,604    19,782,918   -4.99 %
+  cube          2,766    46,217,141    44,747,537   -3.18 %
+  sealed        3,658    54,768,109    53,163,703   -2.93 %
+```
+
+**On `fixed` that subtree is the whole program delta** (-1,038,686 against
+-1,038,445); `cube` and `sealed` moved slightly more than it, which is codegen
+around the call and not a second site.
+
+**The counter-reading is the one to carry: the function's *self* row RISES**
+(6,819,216 -> 6,985,086 on `fixed`) while its subtree falls 5 %. `may_decline`'s
+`asking` collect became a loop in the same commit, so its per-element work moved
+out of `call_mut` (-589,718) and into `do_untap`. **A self row is where the code
+is, not what it costs** — read the caller edge when a change moves a walk across
+an inlining boundary.
+
+### Ninety-fifth pass — the `call_mut` census is closed, and its capture rule held on all four remaining rows
+
+**`legal_blockers` and `mana_source_table_inner` are loops, base `386ef808`** —
+the census's two fat-capture rows, taken together because they are one
+mechanism. `legal_blockers` was a whole-battlefield
+`filter().filter_map().collect()` whose second closure captures `state`;
+`mana_source_table_inner` was three `filter`s and a `filter_map`, two of them
+capturing `self`.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     985,714,576 ->   983,047,344   -0.271 %
+  cube    2,958,183,862 -> 2,952,055,336   -0.207 %
+  sealed  2,939,448,831 -> 2,934,228,538   -0.178 %
+
+call_mut's own row:
+  fixed   10,945,232 ->  7,711,600   -3,233,632
+  cube    37,292,920 -> 30,199,682   -7,093,238
+  sealed  28,346,794 -> 22,041,272   -6,305,522
+```
+
+**The removed forwards are 121 / 116 / 121 % of what the program moved**, and
+the residue is both functions growing as the walk came out of line into them
+(`fixed`: `legal_blockers` 0 -> 958,320 as a named row, `mana_source_table`
+235,388 -> 2,851,880). So the win is the forwarding tax and nothing else — the
+same accounting `pick_attacks_inner` produced one pass earlier.
+
+**THE CENSUS IS NOW FULLY SWEPT AND THE CAPTURE RULE PREDICTED EVERY ROW.**
+Ranked by call count the table read `pick_attacks_inner` 104,462 /
+`do_untap` 33,840 / `check_state_based_actions_into` 32,080 /
+`pick_blocks_inner` 28,274 / `mana_source_table` 26,430 / `process_echo`
+16,166. Ranked by what each row's closure captures it reads:
+
+```text
+  pick_attacks_inner   state, seat, caps, target   -0.266 / -0.155 / -0.166 %
+  pick_blocks_inner    state (via legal_blockers)  } together
+  mana_source_table    self x2, scan, buffer       } -0.271 / -0.207 / -0.178 %
+  do_untap             untappers (+ the gate)      -0.106 / -0.059 / -0.063 %
+  check_sba_into       nothing                     -0.006 / -0.007 / -0.006 %
+  process_echo         one `usize`, nothing        read and left
+```
+
+`process_echo` is the row the count ranks fifth and the rule ranks last: 16,166
+forwards, 101,574 Ir of self on `fixed` (**0.01 %**), closures capturing one
+`usize` and nothing at all. It is left as it is, and that is the census's
+result, not an omission. **A `call_mut` census is a ranking instrument only
+after you read the closures; the count alone got the order wrong twice.**
+
 ### Ninety-fourth pass (4) — `blockers_of` returns inline storage, and `SmallVec::extend` takes back half of it
 
 **`blockers_of` is `SmallVec<[CardId; 4]>`, base `a8e43aa6`** — (-71)'s device
