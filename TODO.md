@@ -173,14 +173,16 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `491617b8` (on `origin`): `fixed` 983,739,350 /
-   `cube` 2,953,439,438 / `sealed` 2,934,498,825**, `--bench` there
+   **Anchor, MEASURED at `9b1fa94b` (on `origin`): `fixed` 981,008,943 /
+   `cube` 2,945,263,123 / `sealed` 2,927,727,759**, `--bench` there
    byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
-   stalls, determinism **and** thread_determinism ok), `host_calib_ms` 44,
-   `bin_bytes` 123,750,472. One anchor back, `fa979b3a`: 989,689,177 /
-   2,965,899,097 / 2,947,614,907, so the interval reads **-0.601 / -0.420 /
-   -0.445 %** — the two `same_team` commits plus `pick_attacks_inner`'s
-   loops. Earlier anchors are in git and in PERF's Baseline blocks; do not
+   stalls, determinism **and** thread_determinism ok), `host_calib_ms` 47,
+   `bin_bytes` 123,751,752, and the robustness grid green in the same run
+   (30 cells, 33,120 games, 0 undecided, 0 failures). One anchor back,
+   `fa979b3a`: 989,689,177 / 2,965,899,097 / 2,947,614,907, so the
+   ninety-fourth pass as a whole reads **-0.877 / -0.696 / -0.674 %** — four
+   taken commits (two `same_team`, `blockers_of`, and the concurrent half's
+   three collect-to-loop rewrites) and three built-and-reverted ones. Earlier anchors are in git and in PERF's Baseline blocks; do not
    add a line per anchor here. Three rules the series produced, and they are
    the whole reason to keep it:
    **cite an anchor by a hash already on `origin`** (one was filed at

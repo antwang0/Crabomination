@@ -2206,7 +2206,27 @@ where the allocator side alone reads 4.1 M. `fixed` barely moves (-0.007 %)
 because its four archetypes block less; the two pools the training loop plays
 carry it.
 
-Suite 19,029 / 0 / 5, golden traces unmoved; clippy clean workspace-wide.
+**Closing state at `9b1fa94b`** — the pass's second gate run, taken after two
+more engine commits landed (this one and the concurrent half's
+`legal_blockers` / `mana_source_table` loops).
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,029 / 0 / 5; the golden traces inside it, unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures; 5 assertion strings verified present in the binary
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) — byte-identical to the committed invariant
+        determinism ok / thread_determinism ok (3 vs 1 threads identical)
+        games_per_s 292.65, peak_rss_mib 24.5, host_calib_ms 47,
+        bin_bytes 123,751,752
+anchor  fixed 981,008,943 / cube 2,945,263,123 / sealed 2,927,727,759
+```
+
+Against `491617b8`'s anchor (983,739,350 / 2,953,439,438 / 2,934,498,825) the
+interval reads **-0.278 / -0.277 / -0.231 %**, and against `fa979b3a`'s the
+whole pass reads **-0.877 / -0.696 / -0.674 %**.
 
 ### Ninety-fourth pass (3) — `same_team` was a per-*seat* question asked once per permanent
 
