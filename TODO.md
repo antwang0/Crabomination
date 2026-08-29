@@ -60,7 +60,10 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    **`same_team` then won by the other route in the same hours** (one team row
    instead of two, -0.135 / -0.105 / -0.112 %), which is the two halves of one
    rule meeting from opposite sides: read a hot small function's body for a
-   repeated question *before* reaching for the attribute.
+   repeated question *before* reaching for the attribute. **And then a second
+   time, from the callers** — four walks stopped asking it per permanent
+   (-0.200 / -0.160 / -0.169 %, calls -72 / -73 / -71 %). The function is now
+   1.4 M Ir of `cube` and the family is done.
    **Taken/closed:** `(-84)`(a) and (b), `(-70)`, `(-79)`, `(-77)`, `(-60)`,
    `(-39)`, the `Box` class, `(-80)` rows 1-2, `(-82)`'s targeting half.
    **Refuted with a ledger, do not rebuild:** `(-85)` (a gate is read 3.5x per
@@ -82,6 +85,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
      is short, ask whether the scope is long.**
    * **A per-definition presence bit pays only when the walk it replaces is
      over a list that is usually non-empty.**
+   * **A `same_team`-shaped call inside a collection walk is a per-*seat*
+     question asked per element.** Three answers: hoist it when an earlier
+     term of the same `&&` pins its argument, put a cheaper term in front of
+     it when one exists, or build a per-seat mask — and the mask pays only
+     where the loop is long and nothing cheaper already gates the walk (its
+     own build and closure ate three quarters of what it saved in
+     `eval_material_inner`). ~140 sites were left alone on that test.
    * **A scope only gathers if a read inside it asks for a computed view** —
      read its first `&self` calls in source order; `(-81)`'s named remaining
      first-reads are the cheapest leads.
@@ -156,36 +166,22 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `7e637ce7` (on `origin`): `fixed` 987,055,424 /
-   `cube` 2,961,309,121 / `sealed` 2,942,730,802.** `--bench` there: 195,528
-   decisions / 27.44 turns / 611.0 a game / 0 stalls / determinism ok,
-   `host_calib_ms` 50. One anchor back, `fa979b3a`: 989,689,177 /
-   2,965,899,097 / 2,947,614,907 — the interval is `pick_attacks_inner`'s
-   loops alone. One before that was filed at `c1e4363c` — **998,970,064
-   / 2,993,004,323 / 2,976,502,367, and that hash no longer resolves**, which
-   is this file's own "a hash in a doc is a liability" rule catching a doc
-   written between two rebases. Taking it at its word ("the last engine
-   commit") the interval is the `#[inline]` commit alone and reads **-0.93 /
-   -0.91 / -0.97 %**, against that commit's own A/B of -0.907 / -0.741 /
-   -0.831 at a base seven engine commits older — so **cite the anchor by a
-   hash that is already on `origin`, or the next session cannot check it.**
-   `--bench` at `af0b2546`: 195,528 decisions / 27.44 turns / 0 stalls,
-   determinism **and** thread_determinism ok (3 vs 1 threads identical).
-   One anchor back, **MEASURED at `ea2cb263`: `fixed` 1,000,218,574 / `cube`
-   3,000,861,798 / `sealed` 2,981,763,332** — re-read independently at
-   `b613c26f` (two doc/test commits later) as 1,000,218,658 / 3,000,861,934 /
-   2,981,763,240, **agreeing to 84 / 136 / 92 Ir**, which is what the
-   portability rule looks like when two sessions check it. One anchor back,
-   `b635037f`: 1,000,278,628 / 2,999,730,000 / 2,978,042,227 — and since
-   `ea2cb263`'s only parent is `b635037f`, that pair prices the Cauldron
-   revert on its own to `fixed` -0.006 / `cube` +0.038 / `sealed` +0.125 %,
-   a third confirmation of that commit's own A/B by a different route.
-   (At `2a59a81c` it was
-   1,003,202,820 / 3,005,261,303 / 2,995,293,565.) (At `96ec5071` it was 1,012,617,375 / 3,026,000,396 /
-   3,022,989,126, so **-0.93 / -0.69 / -0.92 %** since.) Re-read the anchor,
-   don't sum the rows — PERF's cauldron-bit entry is why: one row was filed
-   ~7x high because its A/B ran in a worktree whose base predated the change
-   it widened. `--bench` invariant byte-identical throughout.
+   **Anchor, MEASURED at `491617b8` (on `origin`): `fixed` 983,739,350 /
+   `cube` 2,953,439,438 / `sealed` 2,934,498,825**, `--bench` there
+   byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
+   stalls, determinism **and** thread_determinism ok), `host_calib_ms` 44,
+   `bin_bytes` 123,750,472. One anchor back, `fa979b3a`: 989,689,177 /
+   2,965,899,097 / 2,947,614,907, so the interval reads **-0.601 / -0.420 /
+   -0.445 %** — the two `same_team` commits plus `pick_attacks_inner`'s
+   loops. Earlier anchors are in git and in PERF's Baseline blocks; do not
+   add a line per anchor here. Three rules the series produced, and they are
+   the whole reason to keep it:
+   **cite an anchor by a hash already on `origin`** (one was filed at
+   `c1e4363c`, which no longer resolves — a doc written between two rebases);
+   **re-read the anchor, don't sum the rows** (one row was filed ~7x high
+   because its A/B ran in a worktree whose base predated the change it
+   widened); and **two sessions reading the same tip agree to ~100 Ir on 1-3
+   G**, which is what makes an anchor checkable at all.
    Then PERF's "Build time"
    — **the critical-path question it left open is answered**: the target was
    `crabomination_catalog`'s own test harness, 110.7 s of a 213.5 s workspace
@@ -195,7 +191,7 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    and why a one-sided series across a restart read the sign backwards. Then
    ENGINE_BACKLOG for the
    seven filters. **`--bench` is a 1.2-s run on a shared box: check
-   `host_calib_ms` (idle 45-49, and it read 54 then 60 across one session's
+   `host_calib_ms` (idle 44-49, and it read 54 then 60 across one session's
    base and tip readings — an ~11 % container slowdown over three hours)
    **and `bin_bytes`** before believing a `games_per_s`.** The second is new
    and is item 0's own rule made automatic: LTO, PGO and `target-cpu` leave no
@@ -208,9 +204,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    **`cargo nextest` is not in the image** — `curl -sSLf
    https://get.nexte.st/latest/linux -o /tmp/nt.tar.gz && tar -xzf
    /tmp/nt.tar.gz -C ~/.cargo/bin` is the whole setup; don't fall back to
-   `cargo test`. Build budgets: cold `profiling-fast` bot_ladder ~14 min, an
-   engine-only rebuild of it ~4.5 min, `release` ~24-30 min, a debug suite
-   build + run ~9 min. **Take `release` once at the tip as the closing gate,
+   `cargo test`. Build budgets, re-measured on a quiet box: cold
+   `profiling-fast` bot_ladder ~11 min, an engine-only rebuild of it ~3 min,
+   `release` ~20 min, a debug suite build + run ~9 min, one `--decks cube`
+   callgrind ~1-2 min. **A whole three-pool A/B is therefore ~10 min when the
+   caches are warm**, not the hour the earlier budgets imply — the difference
+   is contention, so run the base callgrinds *while* the candidate builds and
+   nothing else. **Take `release` once at the tip as the closing gate,
    not per candidate.**
 
 **Compacted at the ninety-first pass from 90 lines** — a paragraph per pass

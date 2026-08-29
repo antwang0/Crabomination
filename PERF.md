@@ -2142,7 +2142,34 @@ question once per permanent.
   already gated by something cheaper** — which is why the other 140-odd
   `same_team` sites were left alone.
 
-Suite 19,029 / 0 / 5, golden traces unmoved; clippy clean.
+**Closing state at `491617b8`.**
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,029 / 0 / 5; the golden traces inside it, unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh at 10a794a8 — 30 cells, 33,120 games,
+        0 undecided, 0 failures, assertion strings verified in the binary
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) — byte-identical to the committed invariant
+        determinism ok / thread_determinism ok (3 vs 1 threads identical)
+        games_per_s 306.98, peak_rss_mib 26.4, host_calib_ms 44,
+        bin_bytes 123,750,472
+anchor  fixed 983,739,350 / cube 2,953,439,438 / sealed 2,934,498,825
+        (callgrind, profiling-fast --no-default-features, --games 6 --seed 1)
+```
+
+**`host_calib_ms 44` is the quietest this box has read** (the file's idle
+range is 46-49), so `games_per_s 306.98` is not comparable to the 204.11
+filed at `af0b2546` under 56 — quote the calibration with the rate or do not
+quote the rate. The anchor is the number to compare: against `fa979b3a`'s
+989,689,177 / 2,965,899,097 / 2,947,614,907 it is **-0.601 / -0.420 /
+-0.445 %**, which is this pass's two `same_team` commits plus the concurrent
+half's `pick_attacks_inner` loops.
+
+The pass also built and reverted three changes; each is written up where the
+next taker will look — `(-85)`'s packed gate array and `(-87)`'s two
+proposals, in their own entries.
 
 ### Ninety-fourth pass (2) — `same_team` asked about two seats when one settles it
 
