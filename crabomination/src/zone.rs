@@ -404,6 +404,38 @@ impl Battlefield {
             .store((word & !(LANE_MASK << shift)) | (lane << shift), Ordering::Relaxed);
     }
 
+    /// One split lane's read, shared by the three caller-filled lanes below:
+    /// `Ok(present)` is the memo's answer, `Err(epoch)` means "unknown — walk,
+    /// then hand that same epoch back to the matching `store_*`".
+    ///
+    /// `audit` is the lane's predicate, recomputed by the `debug_assert!` so a
+    /// stale word — a write that reached the cards without clearing it — fails
+    /// loudly under `-C debug-assertions=yes`; `what` names the lane in that
+    /// message. Costs nothing in any release profile.
+    #[inline]
+    fn split_lane(
+        &self,
+        shift: u32,
+        audit: fn(&CardInstance) -> bool,
+        what: &str,
+    ) -> Result<bool, u64> {
+        let epoch = crate::card::definition_epoch();
+        let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
+            UNKNOWN as u32
+        } else {
+            (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK
+        };
+        debug_assert!(
+            cur == UNKNOWN as u32 || (cur == PRESENT as u32) == self.cards.iter().any(audit),
+            "battlefield {what} memo is stale: a write reached the cards without clearing it",
+        );
+        match cur {
+            c if c == ABSENT as u32 => Ok(false),
+            c if c == PRESENT as u32 => Ok(true),
+            _ => Err(epoch),
+        }
+    }
+
     /// The dispatch lane, for a caller that fills it from a walk it was going
     /// to make anyway: `Ok(present)` is the memo's answer, and `Err(epoch)`
     /// means "unknown — walk, then hand that same epoch back to
@@ -417,22 +449,7 @@ impl Battlefield {
     /// doubled miss breaks even. Splitting the read from the store makes the
     /// miss cost the walk the caller was making anyway and nothing else.
     pub fn dispatch_lane(&self) -> Result<bool, u64> {
-        let epoch = crate::card::definition_epoch();
-        let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
-            UNKNOWN as u32
-        } else {
-            (self.type_gates.load(Ordering::Relaxed) >> LANE_DISPATCH) & LANE_MASK
-        };
-        debug_assert!(
-            cur == UNKNOWN as u32
-                || (cur == PRESENT as u32) == self.cards.iter().any(card_has_dispatch_bits),
-            "battlefield dispatch memo is stale: a write reached the cards without clearing it",
-        );
-        match cur {
-            c if c == ABSENT as u32 => Ok(false),
-            c if c == PRESENT as u32 => Ok(true),
-            _ => Err(epoch),
-        }
+        self.split_lane(LANE_DISPATCH, card_has_dispatch_bits, "dispatch")
     }
 
     /// Record what the caller's own walk found in the dispatch lane. `epoch`
@@ -453,22 +470,7 @@ impl Battlefield {
     /// walk twice on every miss. The walk already loads `grant_scan_bits` per
     /// card, so filling this from it is free.
     pub fn grant_lane(&self) -> Result<bool, u64> {
-        let epoch = crate::card::definition_epoch();
-        let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
-            UNKNOWN as u32
-        } else {
-            (self.type_gates.load(Ordering::Relaxed) >> LANE_GRANT) & LANE_MASK
-        };
-        debug_assert!(
-            cur == UNKNOWN as u32
-                || (cur == PRESENT as u32) == self.cards.iter().any(card_has_any_grant_bits),
-            "battlefield grant memo is stale: a write reached the cards without clearing it",
-        );
-        match cur {
-            c if c == ABSENT as u32 => Ok(false),
-            c if c == PRESENT as u32 => Ok(true),
-            _ => Err(epoch),
-        }
+        self.split_lane(LANE_GRANT, card_has_any_grant_bits, "grant")
     }
 
     /// Record what the caller's own walk found in the keyword-grant lane.
@@ -481,22 +483,7 @@ impl Battlefield {
     /// gates builds two trigger lists rather than answering a predicate — and
     /// that walk cannot short-circuit, so the fill it hands back is exact.
     pub fn listener_lane(&self) -> Result<bool, u64> {
-        let epoch = crate::card::definition_epoch();
-        let cur = if self.def_epoch.load(Ordering::Relaxed) != epoch {
-            UNKNOWN as u32
-        } else {
-            (self.type_gates.load(Ordering::Relaxed) >> LANE_LISTENER) & LANE_MASK
-        };
-        debug_assert!(
-            cur == UNKNOWN as u32
-                || (cur == PRESENT as u32) == self.cards.iter().any(card_has_listener_bits),
-            "battlefield listener memo is stale: a write reached the cards without clearing it",
-        );
-        match cur {
-            c if c == ABSENT as u32 => Ok(false),
-            c if c == PRESENT as u32 => Ok(true),
-            _ => Err(epoch),
-        }
+        self.split_lane(LANE_LISTENER, card_has_listener_bits, "listener")
     }
 
     /// Record what the caller's own walk found in the listener lane.
