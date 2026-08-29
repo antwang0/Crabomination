@@ -41,9 +41,12 @@ sixty-seventh pass, so don't re-take that.
    magnification — function, call site, run length.** Every row above 2 % is a
    mined family with its refutation on file, the allocator (an upper bound
    this instrument cannot tighten), or `Vec::from_iter` over ~93 callers. So
-   **the next win is a structural change to a mined family, not another row**;
-   read `(-1)`/`(-14)` (the CoW copies, 4.26 % of `cube`) and `(-92)` leads 2
-   and 3 before choosing. `(-93)`'s lane device is intact and lanes 10-16 are
+   **the next win is a structural change to a mined family, not another row**,
+   and `(-99)` is the entry point: the 132,370 CoW deep copies attributed by
+   calling context for the first time, two contexts holding 42 % of them, with
+   the two design directions it opens and a warning that every pass that gave
+   this family less than a day came back with a refutation. `(-92)` leads 2
+   and 3 are the alternative. `(-93)`'s lane device is intact and lanes 10-16 are
    free, but its consumer list is exhausted. `(-38)` and `(-94)` are CLOSED —
    the find memo shipped and both its variants are refuted; do not re-derive.
    Cards on leftover context.

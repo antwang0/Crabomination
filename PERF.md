@@ -14928,6 +14928,50 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-99) THE 132,370 CoW DEEP COPIES, ATTRIBUTED BY CALLING CONTEXT FOR THE
+FIRST TIME — TWO CONTEXTS ARE 42 % OF THEM.** `(-1)`/`(-14)` have been read
+four times by *call count of `make_mut`*; nobody had asked which caller's
+`&mut` reach actually pays the copy. `--separate-callers=3` +
+`cg_contexts.py clone_from_ref_in`, `--decks cube`, `633acc3e`+ (the run reads
+2,716,755,506 Ir, so the contexts cost nothing):
+
+```text
+  141,690 calls to clone_from_ref_in, by context
+   31,838  22.5 %  make_mut <- activate_ability_inner <- activate_ability
+   27,566  19.5 %  make_mut <- cast_spell_with_convoke <- cast_spell
+   16,870  11.9 %  make_mut <- declare_attackers_banded <- perform_action_inner
+    8,174   5.8 %  make_mut <- declare_blockers <- perform_action_inner
+    6,810   4.8 %  make_mut <- do_untap <- advance_step
+    5,430   3.8 %  make_mut <- on_left_battlefield <- remove_..._to_graveyard_raw
+    4,664   3.3 %  make_mut <- resolve_top_of_stack_inner <- resolve_top_of_stack
+    2,554   1.8 %  make_mut <- cast_spell_with_convoke <- perform_action_inner
+   … 10,386 calls in 86 further contexts
+```
+
+**`activate_ability_inner`'s copy RATE is the number to look at, not its
+count: 31,838 copies out of 49,240 `make_mut` calls is 64.7 %**, against
+`resolve_combat`'s 100,452 calls at 33 Ir apiece (i.e. almost none). A caller
+that copies two times in three is one whose handle is **freshly shared every
+time it is reached** — which is what the bot's per-candidate `GameState::clone`
+does, so the first write after each clone must copy and the copy is the price
+of the search, not a bug.
+
+**That is why this entry is a measurement and not yet a candidate.** Two
+directions it opens, in order, and both are design work rather than a row:
+
+1. **Which of those first writes are no-op writes** — `(-50)`'s question
+   pointed at the two contexts above rather than at the whole codebase.
+   `activate_ability_inner` is ~3,000 lines and the `make_mut`s in it are all
+   *inlined* `DerefMut`s, so the audit needs `cg_sites.py` with `deref_mut` as
+   the needle before any reading of source.
+2. **Whether the bot's clone can be made narrower than the whole state** for
+   the probe paths specifically — `(-13)`'s and `(-27)`'s territory, and both
+   have refutations on file for the *pooling* form of it, not for a narrower
+   clone.
+
+**Do not open this without a day for it.** Every previous pass into this
+family that took less came back with a refutation.
+
 **(-98) `cg_sites.py battlefield_find` RE-READ AFTER THE MEMO — 61.5 M /
 2.35 % BEFORE, 45,813,904 / 1.99 % NOW, AND THE RESIDUE IS TWO SITES.**
 `profiling-lines`, `--decks cube`, `--dump-instr=yes`, at `633acc3e`
