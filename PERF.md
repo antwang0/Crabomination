@@ -2161,6 +2161,35 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-ninth pass, the concurrent half (2) — closing state at `e1f8dfac`
+
+The half's second and last gate; the block below it is the first. Four code
+commits in this half (`39299a63`, `c2ff4536`, `314e405a`, `e1f8dfac`) plus
+`02b8bc26`'s refutation, interleaved with the lane half's.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.80 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,043 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures; 4 "memo is stale" strings in the audit binary
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 283.93 at 3 threads, host_calib_ms 45,
+        peak_rss_mib 24.5, bin_bytes 123,626,512
+
+Ir anchor at `f6723404`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     923,157,745      cube 2,761,970,507      sealed 2,740,027,572
+```
+
+**Eighth cross-session anchor check.** That `fixed` figure is the same code
+the lane half filed 923,157,400 for at `c4d450fa` plus trackers — **345 Ir on
+0.92 G**, two sessions and two builds apart. The four passes' checks now run
+23 / 1,612 / 1,497, 966 / 95 / 408, 467 / 577 / 3,533, 9 / 14 / 11 ppm and
+this one; the instrument is not the thing that varies.
+
 ### Ninety-ninth pass, the lane half — closing state at `58c22dbd`
 
 Two code commits, both the caller-filled `Battlefield` lane (`(-93)`):
@@ -8819,6 +8848,42 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Ninety-ninth pass, the concurrent half (4) — seven stacked filters over a one-element list
+
+**`fixed` -0.033 % / `cube` -0.046 % / `sealed` -0.045 %.**
+`dealing_blocker_ids` was `blocker_ids.iter().copied()` under seven
+`.filter()`s. The list is one or two blockers, so the chain's *setup* — seven
+nested `Filter` values and the `try_fold` that drives them — is most of what
+it costs, not its per-element branches.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base f6723404
+  fixed     923,157,745 ->   922,856,686   -0.0326 %
+  cube    2,761,970,507 -> 2,760,692,039   -0.0463 %
+  sealed  2,740,027,572 -> 2,738,783,832   -0.0454 %
+
+Copied<I>::try_fold, calls / self Ir / Ir per call     -> the row is gone
+  fixed     3,612    725,384   200.8
+  cube     12,434  3,333,446   268.1
+  sealed   12,460  2,532,896   203.3
+resolve_combat absorbs the loop: +0.58 / +2.84 / +2.02 M self, calls unchanged
+```
+
+**This is the eighty-seventh pass's concurrent half at the other end of the
+length scale, and the pair is the rule.** That one converted an adapter chain
+over a whole board and called the adapters *half* the row; this one converts a
+chain over one element and the adapters are *all* of it. **The chain's cost has
+a per-call term and a per-element term, and a short list pays only the first —
+so the length that makes a hoist pointless is the length that makes this
+conversion worth taking.** Short-circuit order is unchanged and every CR
+comment stays on the predicate it annotates.
+
+**Eighth cross-session anchor check, taken for free.** This pass's base binary
+reads `fixed` 923,157,745 at `f6723404`; the concurrent session filed
+923,157,400 for the same code at `c4d450fa` + trackers. **345 Ir on 0.92 G**,
+two sessions and two builds apart.
 
 ### Ninety-ninth pass (4) — the same lane gates `trigger_grant_sources`, and the two walks feed each other
 

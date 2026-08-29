@@ -41,10 +41,11 @@ sixty-seventh pass, so don't re-take that.
    battlefield loop (~0.3 % of `fixed`, and read the `cube` side before
    believing it), and the two the entry refutes with reasons.
    (b) `(-92)` — the profile is FLAT, leads 2 and 3 open. (c) `resolve_combat
-   -> SpecFromIter::from_iter`, 26,624 calls / 30.7 M / **1.10 % of `cube`**,
-   no entry — but read `(-69)`'s `check_state_based_actions` refutation first,
-   because that row was real work rather than a `Vec` nobody wanted, and this
-   one's closures do real work too. (d) `(-89)`'s keyword-gated remainder —
+   -> SpecFromIter::from_iter` — **the adapter half is taken** (`e1f8dfac`,
+   seven stacked filters over a one-element list, -0.033 / -0.046 / -0.045 %);
+   what is left in that row is the predicates' own bodies, which is `(-89)`'s
+   cascade, so read `(-69)`'s `check_state_based_actions` refutation before
+   pulling on it again. (d) `(-89)`'s keyword-gated remainder —
    the fused-scan move caps at ~0.05 %. (e) The actor-only lever: the
    `EncodedObject` double copy, ~0.2-0.3 % of `selfplay_train`, and
    `--feature-census` is its regression check. (f) Cards on leftover context.
