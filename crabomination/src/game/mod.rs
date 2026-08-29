@@ -23578,40 +23578,12 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
     }
 }
 
-/// True when `effect` can emit a layer-4 land-type modification. Twin of
-/// [`crate::effect::static_effect_changes_card_types`] for the land-type
-/// family; shares the
-/// gate-wrapper peel for the same reason.
-///
-/// Six variants, and the list is exhaustive against the emitters in
-/// `gather_continuous_effects_inner` and `static_effect_to_effects`: Alpine
-/// Moon and Ultima blank a land's types on their way to stripping it, and the
-/// other four write one directly. `LandsYouControlAreChosenType` is a no-op
-/// until its ETB stamps `chosen_land_type`, but the gate over-approximates
-/// rather than reading the instance — the static is the tell.
-fn static_effect_changes_land_types(effect: &crate::effect::StaticEffect) -> bool {
-    use crate::effect::StaticEffect as SE;
-    match effect {
-        SE::NamedLandsNeutralized
-        | SE::BlightedLandsNeutralized
-        | SE::GrantAllBasicLandTypes { .. }
-        | SE::LandTypeChanger { .. }
-        | SE::LandTypeChangerWhileCounters { .. }
-        | SE::LandsYouControlAreChosenType => true,
-        SE::WhileClassLevelAtLeast { inner, .. }
-        | SE::WhileYourTurn { inner }
-        | SE::WhileNotYourTurn { inner }
-        | SE::WhileCountersAtLeast { inner, .. }
-        | SE::WhileCondition { inner, .. } => static_effect_changes_land_types(inner),
-        _ => false,
-    }
-}
-
 /// True when `card`, on the battlefield, can contribute a layer-4 land-type
 /// modification to the gathered set. The printed-shape half of
 /// [`GameState::land_type_change_in_scope`]; covers the attachment route
 /// (`equipped_bonus.set_land_types`) and every static route, including
 /// CR 721.2a Station bands.
+///
 /// **Reads no instance field, deliberately.** The answer is a pure function of
 /// `card.definition`, which is what lets `zone::Battlefield` memoize the whole
 /// walk against a definition epoch instead of clearing on every tap and damage
@@ -23620,43 +23592,19 @@ fn static_effect_changes_land_types(effect: &crate::effect::StaticEffect) -> boo
 /// over-approximations — only a stale `false` is unsound — so widening costs
 /// at most a gather that would otherwise have been skipped, on a board that
 /// holds such an Equipment at all.
+///
+/// Being definition-pure is also what puts it on the per-object memo
+/// (`card::layer4_bits`) — same device as `card_can_grant_keyword`'s
+/// `grant_scan_bits` — so the per-card body of the walk is one word load and
+/// a mask test rather than a `static_abilities` walk plus a `station` walk off
+/// a large `CardDefinition`.
+///
+/// **Answering both families from one pass is refuted** (ninety-ninth pass):
+/// the two lanes are not asked in the same invalidation epoch, so a fused
+/// walk removed 3 % of the walks and cost 82 % more per walk.
 #[inline]
 fn card_can_change_land_types(card: &CardInstance) -> bool {
-    let def = &card.definition;
-    if def.equipped_bonus.as_ref().is_some_and(|b| b.set_land_types.is_some()) {
-        return true;
-    }
-    def.static_abilities.iter().any(|sa| static_effect_changes_land_types(&sa.effect))
-        || def
-            .station
-            .iter()
-            .any(|band| band.statics.iter().any(static_effect_changes_land_types))
-}
-
-/// True when `effect` can emit a layer-4 *creature*-type modification. Twin of
-/// [`static_effect_changes_land_types`] for the creature-type family; shares
-/// the gate-wrapper peel for the same reason.
-///
-/// Five variants, and the list is exhaustive against the `AddCreatureType` /
-/// `SetCreatureTypes` emitters in `static_effect_to_effects` and in
-/// `gather_continuous_effects_inner`'s stateful passes. `SelfIsCreatureIf` is
-/// the stateful one — it reads a live predicate, so it never routes through
-/// `static_effect_to_effects`, but the printed static is the same tell.
-fn static_effect_changes_creature_types(effect: &crate::effect::StaticEffect) -> bool {
-    use crate::effect::StaticEffect as SE;
-    match effect {
-        SE::CreaturesYouControlAreChosenType
-        | SE::MatchingAreChosenTypeToo { .. }
-        | SE::MatchingLandsAreCreatures { .. }
-        | SE::AddCreatureTypeToMatching { .. }
-        | SE::SelfIsCreatureIf { .. } => true,
-        SE::WhileClassLevelAtLeast { inner, .. }
-        | SE::WhileYourTurn { inner }
-        | SE::WhileNotYourTurn { inner }
-        | SE::WhileCountersAtLeast { inner, .. }
-        | SE::WhileCondition { inner, .. } => static_effect_changes_creature_types(inner),
-        _ => false,
-    }
+    card.layer4_scan_bits() & crate::card::layer4_bits::LAND != 0
 }
 
 /// True when `card`, on the battlefield, can contribute a layer-4
@@ -23664,22 +23612,12 @@ fn static_effect_changes_creature_types(effect: &crate::effect::StaticEffect) ->
 /// [`GameState::creature_type_change_in_scope`]; covers the attachment route
 /// (`equipped_bonus`' two creature-type fields) and every static route,
 /// including CR 721.2a Station bands.
-/// Reads no instance field, for the same reason as
-/// [`card_can_change_land_types`] — see its comment for what the widened
+/// Reads no instance field and comes off the same memo, for the same reasons
+/// as [`card_can_change_land_types`] — see its comment for what the widened
 /// attachment route costs.
 #[inline]
 fn card_can_change_creature_types(card: &CardInstance) -> bool {
-    let def = &card.definition;
-    if def.equipped_bonus.as_ref().is_some_and(|b| {
-        b.set_creature_types.is_some() || !b.add_creature_types.is_empty()
-    }) {
-        return true;
-    }
-    def.static_abilities.iter().any(|sa| static_effect_changes_creature_types(&sa.effect))
-        || def
-            .station
-            .iter()
-            .any(|band| band.statics.iter().any(static_effect_changes_creature_types))
+    card.layer4_scan_bits() & crate::card::layer4_bits::CREATURE != 0
 }
 
 use crate::effect::static_effect_grants_keyword;

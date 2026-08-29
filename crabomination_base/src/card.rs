@@ -5467,6 +5467,41 @@ impl CardDefinition {
         m
     }
 
+    /// `card_can_change_land_types` + `card_can_change_creature_types` for
+    /// this printing — see [`layer4_bits`]. Pure function of the definition;
+    /// `CardData` memoizes it (`CardData::layer4_scan_bits`).
+    pub fn layer4_scan_bits(&self) -> u64 {
+        use crate::effect::{
+            static_effect_changes_creature_types, static_effect_changes_land_types,
+        };
+        use layer4_bits as b;
+        let bonus = self.equipped_bonus.as_ref();
+        let mut m = 0u64;
+        if bonus.is_some_and(|b| b.set_land_types.is_some())
+            || self.static_abilities.iter().any(|sa| static_effect_changes_land_types(&sa.effect))
+            || self
+                .station
+                .iter()
+                .any(|band| band.statics.iter().any(static_effect_changes_land_types))
+        {
+            m |= b::LAND;
+        }
+        if bonus
+            .is_some_and(|b| b.set_creature_types.is_some() || !b.add_creature_types.is_empty())
+            || self
+                .static_abilities
+                .iter()
+                .any(|sa| static_effect_changes_creature_types(&sa.effect))
+            || self
+                .station
+                .iter()
+                .any(|band| band.statics.iter().any(static_effect_changes_creature_types))
+        {
+            m |= b::CREATURE;
+        }
+        m
+    }
+
     /// The trigger dispatcher's board-scan bits for this printing — see
     /// [`dispatch_bits`]. Pure function of the definition; `CardData`
     /// memoizes it (`CardData::dispatch_scan_bits`), which is what keeps the
@@ -6434,6 +6469,28 @@ pub mod type_bits {
     pub const ALL: u64 = ATTACHED | ALWAYS;
 }
 
+/// `card_can_change_land_types` and `card_can_change_creature_types` — the
+/// [`type_bits`] device for the other two layer-4 type families. One bit each
+/// rather than [`type_bits`]' attached/always pair, because both predicates
+/// read no instance field: the attachment route is folded in and widened, so
+/// the zone's memo can key on a definition epoch.
+///
+/// The two predicates are the per-card body of the battlefield walk behind
+/// the engine's `zone::Battlefield` type-gate memo, so they run once per
+/// permanent on every miss: PERF `(-87)` prices the walk at ~430 Ir over ~23
+/// permanents on `cube`, and the body was a `static_abilities` walk plus a
+/// `station` walk off a large `CardDefinition`.
+pub mod layer4_bits {
+    /// The definition can contribute a layer-4 land-type modification: an
+    /// `equipped_bonus` that sets land types, a land-type-changing printed
+    /// static, or a station band that carries one.
+    pub const LAND: u64 = 1 << 58;
+    /// The creature-type twin of [`LAND`].
+    pub const CREATURE: u64 = 1 << 59;
+    /// The memo's payload.
+    pub const ALL: u64 = LAND | CREATURE;
+}
+
 /// The four presence questions the trigger dispatcher's board scan asks of a
 /// definition — see [`sba_bits`] for the device.
 ///
@@ -6510,6 +6567,8 @@ impl CardMemo {
     const VOCAB_SHIFT: u32 = 41;
     const VOCAB_MASK: u64 = 0xffff << Self::VOCAB_SHIFT;
     const DISPATCH_VALID: u64 = 1 << 31;
+    /// Bits 58-59 are [`layer4_bits`]' payload, so the flag is 60.
+    const LAYER4_VALID: u64 = 1 << 60;
     /// On the *second* word; see the type doc.
     const GATHER_VALID: u64 = 1 << 63;
 
@@ -6570,6 +6629,21 @@ impl CardMemo {
         let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
         self.0.store(
             (v & !type_bits::ALL) | bits | Self::TYPE_VALID,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+
+    #[inline]
+    fn get_layer4(&self) -> Option<u64> {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        (v & Self::LAYER4_VALID != 0).then_some(v & layer4_bits::ALL)
+    }
+
+    #[inline]
+    fn set_layer4(&self, bits: u64) {
+        let v = self.0.load(std::sync::atomic::Ordering::Relaxed);
+        self.0.store(
+            (v & !layer4_bits::ALL) | bits | Self::LAYER4_VALID,
             std::sync::atomic::Ordering::Relaxed,
         );
     }
@@ -7387,6 +7461,23 @@ impl CardData {
         }
         let bits = self.definition.type_scan_bits();
         self.definition.memo.set_type(bits);
+        bits
+    }
+
+    /// [`CardDefinition::layer4_scan_bits`] for this object, memoized on the
+    /// same word and audited by the same `debug_assert!`.
+    #[inline]
+    pub fn layer4_scan_bits(&self) -> u64 {
+        if let Some(bits) = self.definition.memo.get_layer4() {
+            debug_assert_eq!(
+                bits,
+                self.definition.layer4_scan_bits(),
+                "layer-4 type-change memo is stale: a definition rewrite did not clear it",
+            );
+            return bits;
+        }
+        let bits = self.definition.layer4_scan_bits();
+        self.definition.memo.set_layer4(bits);
         bits
     }
 

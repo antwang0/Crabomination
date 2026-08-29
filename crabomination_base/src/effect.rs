@@ -9680,6 +9680,61 @@ pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
     }
 }
 
+/// Moved here from the engine so `CardDefinition::layer4_scan_bits` can use
+/// it: the answer is a property of the printed static and nothing else.
+/// True when `effect` can emit a layer-4 land-type modification. Twin of
+/// [`static_effect_changes_card_types`] for the land-type family; shares the
+/// gate-wrapper peel for the same reason.
+///
+/// Six variants, and the list is exhaustive against the emitters in
+/// `gather_continuous_effects_inner` and `static_effect_to_effects`: Alpine
+/// Moon and Ultima blank a land's types on their way to stripping it, and the
+/// other four write one directly. `LandsYouControlAreChosenType` is a no-op
+/// until its ETB stamps `chosen_land_type`, but the gate over-approximates
+/// rather than reading the instance — the static is the tell.
+pub fn static_effect_changes_land_types(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    match effect {
+        SE::NamedLandsNeutralized
+        | SE::BlightedLandsNeutralized
+        | SE::GrantAllBasicLandTypes { .. }
+        | SE::LandTypeChanger { .. }
+        | SE::LandTypeChangerWhileCounters { .. }
+        | SE::LandsYouControlAreChosenType => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_land_types(inner),
+        _ => false,
+    }
+}
+
+/// Moved here for the same reason as [`static_effect_changes_land_types`].
+/// True when `effect` can emit a layer-4 *creature*-type modification.
+///
+/// Five variants, and the list is exhaustive against the `AddCreatureType` /
+/// `SetCreatureTypes` emitters in `static_effect_to_effects` and in
+/// `gather_continuous_effects_inner`'s stateful passes. `SelfIsCreatureIf` is
+/// the stateful one — it reads a live predicate, so it never routes through
+/// `static_effect_to_effects`, but the printed static is the same tell.
+pub fn static_effect_changes_creature_types(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    match effect {
+        SE::CreaturesYouControlAreChosenType
+        | SE::MatchingAreChosenTypeToo { .. }
+        | SE::MatchingLandsAreCreatures { .. }
+        | SE::AddCreatureTypeToMatching { .. }
+        | SE::SelfIsCreatureIf { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_changes_creature_types(inner),
+        _ => false,
+    }
+}
+
 /// True when `effect` can put a layer-6 `Modification::RemoveAllAbilities`
 /// into the gathered set — the static-ability half of the presence gate on
 /// `GameState::permanents_with_abilities_removed`. Over-approximates: the
