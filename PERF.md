@@ -2124,6 +2124,37 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-seventh pass — closing state at `181ce81a`
+
+Three code commits (`66e78a2f`, `ec5dc3a9`, `6e44ce7c`) and the trackers; the
+block below reads the pass's two measured ones on their own.
+
+```text
+suite   19,028 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures, with the death sweep's `Only` audit armed
+--bench 195,528 / 27.44 / 611.0 / 0 stalls (cap 0 / stuck 0 / draw 0) —
+        byte-identical to the committed invariant; determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 286.05 at 3 threads,
+        peak_rss_mib 24.2, bin_bytes 123,754,408, host_calib_ms 47
+
+Ir anchor at the code tip `6e44ce7c` (the two tracker commits above it move
+nothing), callgrind, profiling-fast --no-default-features, --games 6
+--threads 1 --seed 1:
+  fixed     946,721,028      cube 2,829,667,005      sealed 2,805,162,884
+```
+
+The +0.001-0.004 % against `ec5dc3a9` below is `CRAB_SBA_CENSUS`' dormant
+gate, measured — the ~113 k Ir `(-85)` prices a gate at, and the reason the
+*other* census's hook came out (see `(-87)`).
+
+**A third `games_per_s` in this pass's own hours: 271.34, then 286.05, at
+`host_calib_ms` 44 then 47, on a `--bench` whose decision block is
+byte-identical either side.** Nothing in the code moved between them. This
+file now has five such readings; stop filing the clock as if it meant
+something and quote Ir.
+
 ### Ninety-seventh pass — closing state at `ec5dc3a9`
 
 The pass's own two commits; the block below this one reads the same code at

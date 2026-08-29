@@ -58,7 +58,13 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    `llvm-bolt` in the toolchain and no `perf` in the image.
 1. **Perf queue** — PERF "Perf candidates" and its Baseline carry every
    number; this is the state and the rules only.
-   **`(-90)` IS THE NEW TOP ENTRY and it is a map, not a lead** — the
+   **THE NEXT RUN'S FIRST MOVE IS `(-87)`, WHICH PASS 97 PRICED AND DID NOT
+   BUILD** — a `GameState`-level type-gate memo, ~0.9 % of `cube`, with the
+   hit rates measured on all three pools and the invalidation's pool split
+   measured with them. It is the largest priced thing on this list and the
+   entry says what a taker still owes. `(-90)` and `(-92)` below are maps to
+   read first, not leads.
+   **`(-90)` is a map, not a lead** — the
    ninety-sixth pass's whole-profile re-read at `3b8bfd03`, with three sized
    leads (`compute_permanent_pass`' 279.5 Ir body, the diffuse allocation
    table, `granted_abilities_of_inner`) and, more usefully, **four things it
