@@ -3702,28 +3702,40 @@ impl GameState {
                 // instead of taking one each.
                 let (dealing_blocker_ids, attacker_takes_strike_back) =
                     self.with_frozen_layers(|g| {
-                        let ids: Vec<CardId> = blocker_ids
-                            .iter()
-                            .copied()
-                            .filter(|&bid| computed_of(bid)
-                                .is_some_and(|bc| blocker_filter(bc.keywords())))
-                            // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
-                            .filter(|bid| !g.combat_damage_prevented_creatures.contains(bid))
-                            // CR 615.1 — "prevent all combat damage it would deal" (Azorius Ploy).
-                            .filter(|bid| !g.combat_damage_prevented_from(*bid))
-                            // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
-                            .filter(|&bid| !g.combat_damage_prevented_for_dealer(bid))
-                            // CR 702.16e — a blocker whose color the attacker has
-                            // protection from deals no combat damage to it.
-                            .filter(|&bid| !g.damage_prevented_by_protection(bid, atk.id))
-                            // CR 615 — Light of Sanction: your source → your creature.
-                            .filter(|&bid| {
-                                !g.damage_from_your_source_to_your_creature_prevented(bid, atk.id)
-                            })
-                            // CR 615 — Indentured Oaf: a blocker's own damage to a
-                            // chosen color is prevented.
-                            .filter(|&bid| !g.source_damage_to_color_prevented(bid, atk.id))
-                            .collect();
+                        // A `for` loop, not seven stacked `.filter()`s: the
+                        // adapters are a per-element branch each *and* seven
+                        // nested `Filter` values to build per call, on a list
+                        // that is one or two blockers long — so the chain's
+                        // setup is most of what it costs (PERF, the
+                        // eighty-seventh pass's concurrent half). The
+                        // short-circuit order is the chain's, unchanged:
+                        // cheapest and most selective first.
+                        let mut ids: Vec<CardId> = Vec::new();
+                        for &bid in blocker_ids.iter() {
+                            if !computed_of(bid)
+                                .is_some_and(|bc| blocker_filter(bc.keywords()))
+                                // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
+                                || g.combat_damage_prevented_creatures.contains(&bid)
+                                // CR 615.1 — "prevent all combat damage it would deal"
+                                // (Azorius Ploy).
+                                || g.combat_damage_prevented_from(bid)
+                                // CR 615.1 — fog (with Inspire Awe's per-dealer exception).
+                                || g.combat_damage_prevented_for_dealer(bid)
+                                // CR 702.16e — a blocker whose color the attacker has
+                                // protection from deals no combat damage to it.
+                                || g.damage_prevented_by_protection(bid, atk.id)
+                                // CR 615 — Light of Sanction: your source → your creature.
+                                || g.damage_from_your_source_to_your_creature_prevented(
+                                    bid, atk.id,
+                                )
+                                // CR 615 — Indentured Oaf: a blocker's own damage to a
+                                // chosen color is prevented.
+                                || g.source_damage_to_color_prevented(bid, atk.id)
+                            {
+                                continue;
+                            }
+                            ids.push(bid);
+                        }
                         let takes =
                             // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
                             !g.combat_damage_prevented_creatures.contains(&atk.id)
