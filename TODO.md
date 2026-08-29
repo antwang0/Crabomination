@@ -105,15 +105,15 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    -0.087 / -0.114 / -0.098 %, eight are left, and **both taken mechanisms
    were then applied to a neighbouring row in the same cascade and both lost
    there** — read the refutations before repeating either).
-   **`(-88)` IS HALF TAKEN** (`ec5dc3a9`, `fixed` -0.559 / `cube` -0.751 /
-   `sealed` -0.533 %): the SBA death sweep's whole-board layer pass is now a
-   pass over the permanents its own gate names, because
-   `card_death_possible` is a *necessary* condition for death and the sweep
-   was throwing that walk's result away. **The open half is that entry's own
-   first question and it is the larger one** — 20,152 sweeps a `cube` run
-   against 66,612 `perform_action_inner` calls, and nobody has asked how many
-   re-sweep a board nothing has touched. Still answerable off the caller
-   table with no build.
+   **`(-88)` IS CLOSED — half taken, half refuted with a census.** Taken at
+   `ec5dc3a9` (`fixed` -0.559 / `cube` -0.751 / `sealed` -0.533 %): the SBA
+   death sweep's whole-board layer pass is now a pass over the permanents its
+   own gate names, because `card_death_possible` is a *necessary* condition
+   for death and the sweep was throwing that walk's result away. Refuted at
+   `6e44ce7c`: `CRAB_SBA_CENSUS` says **17.8-19.0 %** of sweeps re-see a
+   state, and a skip loses anyway — **price the witness against the work; a
+   witness over the same collection as the work is never cheaper than the hit
+   rate.** The instrument stays, gated and free (+0.004 / +0.001 / +0.003 %).
    **The `call_mut` census is CLOSED**
    — all six rows swept at the ninety-fifth pass, and the capture rule
    predicted the order on every one (see the Baseline; `process_echo` is read
@@ -214,6 +214,8 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    — three of its top rows (`encode_state` 5.7 %, deck building 1.8 %,
    `__memcpy` at twice `cube`'s share) have no row in any `bot_ladder`
    profile at all. Then: `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
+   `CRAB_SBA_CENSUS` (new at pass 97 — the SBA re-sweep rate; it closed
+   `(-88)`'s open half and stays as the instrument),
    `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`,
    and `selfplay_train`'s new `actors:` line (plus `actor_s` /
    `actor_games_per_s` in `stats.jsonl`). **Quote `actors:`, never `done:`,
