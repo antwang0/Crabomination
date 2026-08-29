@@ -874,6 +874,36 @@ that measured it — is **not** what happened, deliberately: the detail is the
 refutation, and a rule refuted on a *mechanism* stays refuted. Compact it
 here if it ever needs compacting.
 
+- **A concurrent push invalidates a MEASUREMENT, not a candidate** (pass 99).
+  A commit landed under this pass's A/B mid-run; the whole thing was retaken
+  against the new base and the numbers moved by a quarter while the conclusion
+  did not. Rebase, rebuild both sides, re-read — and **re-read a candidate
+  against the tip it will land on**, because two changes to the same walk
+  multiply on its count and add on its per-call cost.
+- **Check a hand-written walk against another walk of the same tree, not
+  against a guess at what the tree means** (pass 99/100, the target-walker
+  invariants). The slot-agreement test holds at 7,728 bodies; a blanket
+  "holds a `Move`" version of the same idea produced 29 findings and every one
+  was correct as it stood. **And make such a test assert its own population**,
+  or it goes quietly vacuous — the failure an empty ratchet hides.
+- **A pool can only recycle a handle whose lifetime the pool's owner bounds**
+  (pass 99, `(-27)`'s single-slot variant, built and reverted; `fixed`
+  **+0.137 %**). `computed_permanent` pushes one `Arc` into the scope's memo
+  and returns the other to a caller that collects it *out* of the scope, so
+  `Arc::get_mut` fails at seven of every eight scope exits and 316,576
+  bookkeeping calls recovered 19,086 allocations. Check the lifetime before
+  counting the allocations; the arithmetic was right and the premise was not.
+- **A branch added to a function that is inlined everywhere is not one
+  branch — it is the inlining decision, retaken** (same commit).
+  `end_of_scope` was free, a `None` store and a `clear()` folded into
+  `Unfreeze::drop`; one `if` made it a named 43.9-Ir row over 150,732 calls.
+  Same shape as pass 98's `#[cold]` refutation from the other direction.
+- **A second reader of a lazily-filled memo makes the first one cheaper, so do
+  not attribute a memo's win to the caller that reads it** (pass 99, the
+  combat dispatch's listener bits). `dispatch_board_scan` is not in that diff
+  and its call count does not move, yet it fell 5 % per call on every pool
+  because the new caller reaches most permanents first and pays the miss path
+  it used to inline. The two row deltas together were the whole program delta.
 - **Before hoisting a per-item board walk out of a loop, divide the loop's
   total item count by its call count** (pass 93's second concurrent half,
   `(-84)(b)`, built twice and reverted; `fixed` **+0.090 %**). A "once per

@@ -26,67 +26,32 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `841c7b9b` (the ninety-eighth and ninety-ninth passes ran
-   concurrently and their commits alternate):** suite 19,040 / 0 / 5, clippy
+2. **State at `841c7b9b`** (the ninety-eighth and ninety-ninth passes ran
+   concurrently and their commits alternate): suite 19,040 / 0 / 5, clippy
    clean, golden traces unmoved, `--bench` byte-identical (195,528 / 27.44 /
    611.0 / 0 stalls, determinism + thread_determinism ok), grid green (30
    cells / 33,120 games, 4 assertion strings in the audit binary), actor leg
    green (12,000 games / 1,155,629 rows). Per-commit numbers in PERF's Log;
    **each names its own base**, because pushes landed between them.
-3. **A concurrent push invalidates a MEASUREMENT, not a candidate.** This pass
-   built its A/B, had `b12393f9` land under it, and retook the whole thing
-   against `e86044f9`: the numbers moved by a quarter, the conclusion did not.
-   Rebase, rebuild both sides, re-read — and re-read a candidate against the
-   tip it will land on, because the two changes multiplied on the walk count.
-4. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
-   -0.645 % of `cube` in one commit, and the selection rule is: rank a
-   candidate by *what already gates it*, not by its row. The SBA family is
-   gated by `sba_board_scan`, `blocker_pair_block`'s walks by the attacker's
-   keywords and `action_lock_rejection`'s eight by `cast_lock_scan`'s mask —
-   **and memoizing that mask itself is refuted, +0.034 %** (PERF Log), because
-   the second half of the rule is that the walk's per-card body must be more
-   than a length check. The noncombat-damage prevention family
-   (`mod.rs:13600-13900`) is the remaining ungated one; measure its walk
-   before building.
-   (b) `(-92)` — **the profile is FLAT**, leads 2 and 3 open.
-   (c) `resolve_combat -> SpecFromIter::from_iter`, 26,624 calls / 30.7 M /
-   **1.10 % of `cube`** in one collect family, no entry. (d) `(-89)`'s
-   keyword-gated remainder, but read PERF's re-read first: those walks are
-   ~250 Ir, not ~900, so the fused-scan move caps at ~0.05 %.
-   (e) ENGINE_BACKLOG's target walkers — the three open ones are CLOSED (two
-   invariants at populations 295 and 7,728, one by construction); what is left
-   is the *structural* fix, one shared recursion over inner effects instead of
-   five hand-written walks. (f) The ML question in item 7 — and note the
-   actor's own profile: `pick_attacks_scored` is **46.6 %** of
-   `selfplay_train`, and `(-21)` says its lever is the engine's per-step cost,
+3. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
+   -0.645 % of `cube` in one commit. Rank a candidate by *what already gates
+   it*, not by its row, and check the second condition too: the walk's
+   per-card body must be more than a length check (memoizing `cast_lock_scan`'s
+   mask is refuted at +0.034 %). The noncombat-damage prevention family
+   (`mod.rs:13600-13900`) is the remaining ungated one; measure its walk first.
+   (b) `(-92)` — the profile is FLAT, leads 2 and 3 open. (c) `resolve_combat
+   -> SpecFromIter::from_iter`, 26,624 calls / 30.7 M / **1.10 % of `cube`**,
+   no entry. (d) `(-89)`'s keyword-gated remainder — read PERF's re-read
+   first, the fused-scan move caps at ~0.05 %. (e) The target walkers'
+   *structural* fix: one shared recursion over inner effects instead of five
+   hand-written walks (ENGINE_BACKLOG; the catalog invariants are closed).
+   (f) The ML question in item 7 — `pick_attacks_scored` is **46.6 %** of
+   `selfplay_train` and `(-21)` says its lever is the engine's per-step cost,
    which is what these passes moved. (g) Cards on leftover context.
-5. **The rules these three passes produced.** **Check a hand-written walk
-   against another walk of the same tree, not against a guess at what the tree
-   means** — that is why the slot-agreement invariant works at 7,728 bodies
-   where a blanket "holds a `Move`" test produced 29 false findings, and why
-   both new tests assert their own population. Fusing two whole-collection
-   `any`s pays only when both are walked in the same invalidation epoch, and a
-   `for` loop with a carried accumulator is not a `collect`-free `any`. A
-   repeat-rate census over *asks* over-counts what a memo behind a scope gate
-   delivers, by that gate's service rate. **`#[cold]` on a miss path costs
-   whatever its body would have inlined** — use `#[inline(never)]`. A
-   `SmallVec` field of `Copy` items inside a CoW'd group wants a `Clone` that
-   is `from_slice`. And **strip the elapsed-time text before diffing two
-   `bot_ladder` runs**, or `in 5.8s` reads as a behaviour divergence.
-6. **`(-27)`'s allocation half is CLOSED — both pool variants built and
-   refuted.** The single-slot one loses on a property no tuning moves: the
-   scope does not outlive the `Arc` it computes, so `get_mut` fails seven
-   times in eight. **A pool can only recycle a handle whose lifetime the
-   pool's owner bounds** — check that before counting the allocations.
-7. **Three more rules from the same hours.** A second reader of a lazily-filled
-   memo makes the first one *cheaper*, so do not attribute a memo's win to the
-   caller that reads it (`dispatch_board_scan` fell 5 % per call while not in
-   the diff, and that was half the win). A presence bit pays on the *list*,
-   not on the device: the same bit bought 3 Ir a card where the list is
-   usually empty and ~180 where it is not. And a branch added to a function
-   that is inlined everywhere is not one branch, it is the inlining decision
-   retaken (`end_of_scope` was free and became a 43.9-Ir row over 150,732
-   calls).
+4. **`(-27)`'s allocation half is CLOSED** — both pool variants built and
+   refuted. That and the eight other rules these passes produced are in
+   **PERF's "Standing rules for a perf pass"**, which is where a rule belongs
+   once it outlives its run; this section carries state and queue only.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
