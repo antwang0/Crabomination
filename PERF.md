@@ -8566,6 +8566,93 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-eighth pass (2) — the type-gate memo's invalidation splits in two, and takes 73-80 % of the deletion ceiling
+
+**`fixed` -0.287 % / `cube` -0.328 % / `sealed` -0.295 %** off `630bd29b`.
+With the block below it, **`fixed` -0.464 / `cube` -0.854 / `sealed` -0.405 %**
+off `181ce81a`.
+
+The first commit cleared the lanes on every `&mut` reach into the battlefield,
+which is **139,280 invalidations a `cube` run** against 37,868 reads —
+`resolve_combat` 31,624, `activate_ability_inner` 21,586,
+`resolve_top_of_stack_inner` 21,236, `declare_attackers_banded` 12,996, and so
+on down: taps, damage marks, counters, untaps. None of them can move either
+answer. **The invalidation is two disjoint questions and each is answered
+where it is cheap:**
+
+* **Membership** — a permanent entering or leaving — reaches the cards only
+  through `DerefMut` or the inherent `push`, because `Vec`'s own mutators are
+  reached through `DerefMut`. Both still clear.
+* **A definition rewrite on a permanent already here** happens two derefs
+  below anything the zone can observe. `(-91)`'s `Definition` newtype means
+  there are exactly two accessors that can do one, and they now bump a
+  process-wide `DEFINITION_EPOCH`; each computed lane is stamped with it and a
+  mismatch is a miss. ~8 k bumps a six-game run against 242,788 asks.
+
+so `iter_mut`, `get_mut` and the `&mut` `IntoIterator` — the whole element-write
+family — leave the lanes alone. **Process-wide and not thread-local on
+purpose**: a `GameState` can be built on one thread and played on another, and
+a per-thread counter would compare a stamp against a sequence it was never
+taken from. A rewrite on another thread costs one extra recompute, never a
+wrong answer.
+
+**The third input was deleted rather than tracked.** `card_can_change_*_types`
+read `attached_to`, an *instance* field, which is what made a definition-only
+key unsound. Both gates are over-approximations — only a stale `false` is
+unsound — so the attachment conjunct is simply dropped and an *unattached*
+Equipment whose `equipped_bonus` sets types now answers `true`. That makes the
+lanes a pure function of the definitions on the battlefield. **When a memo's
+key has one awkward input, ask whether the predicate can be widened to not
+have it**: an over-approximating gate can pay for a smaller key with a few
+extra gathers.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 630bd29b
+  fixed     945,041,274 ->   942,328,403   -0.287 %
+  cube    2,814,732,191 -> 2,805,505,066   -0.328 %
+  sealed  2,802,061,388 -> 2,793,794,620   -0.295 %
+
+Battlefield::walk_and_store, calls / self Ir, across both commits:
+            181ce81a     630bd29b        this      hit vs 181ce81a
+  fixed       20,540       12,674       5,008          75.6 %
+           5,950,302    3,837,228   1,562,772
+  cube        72,876       37,868      14,920          79.5 %
+          33,730,192   16,288,132   7,398,495
+  sealed      56,116       38,054      15,182          72.9 %
+          15,345,294   11,056,832   4,861,388
+```
+
+**THE DELETION CEILING, AND IT SAYS THE ENTRY IS NEARLY CLOSED.** `(-78)`'s
+device: remove the invalidation entirely (the memo computed once per zone,
+ever) and read the three pools. Verified behaviour-identical to the shipped
+build on all three — **which is itself a finding: strip the elapsed-time text
+before diffing two `bot_ladder` runs**, or the `in 5.8s` line reads as a
+divergence and costs an hour of chasing one.
+
+```text
+  ceiling  fixed 941,127,494 / cube 2,796,595,503 / sealed 2,790,994,042
+  this pass reads 78.5 % / 73.1 % / 80.2 % of it off `181ce81a`;
+  the gap left is +0.128 / +0.319 / +0.100 %.
+```
+
+**AND THE CENSUS CORRECTION HOLDS A SECOND TIME, IN THE SAME DIRECTION.**
+`CRAB_GATE_CENSUS` predicted the *exact* invalidation would repeat on
+**93.95 / 75.76 / 74.30 %** of asks; the shipped exact-ish key delivers
+**79.5 / 75.6 / 72.9 %** of walks. `fixed` and `sealed` land within 1-2
+points, `cube` over-predicted by 14 — the same pool, the same reason (its
+freeze scope already owns 70 % of asks) and the same sign as the first block's
+broad reading. **The census is right about the pools where a scope gate serves
+little and wrong about the one where it serves most.**
+
+Behaviour-preserving: suite 19,033 / 0 / 5, golden traces unmoved, clippy
+clean, `--bench` byte-identical to the committed invariant, robustness grid 30
+cells / 33,120 games / 0 undecided / 0 failures, and **the actor leg re-run
+for the new assertion** — `-C debug-assertions=yes` + `overflow`
+`selfplay_train`, 4 seeds x `--actors 3 --games 3000 --steps 20`: 12,000
+games, 1,155,629 rows, 0 stalls, rc 0, with `battlefield type-gate memo is
+stale` verified present in the actor binary.
+
 ### Ninety-eighth pass — the layer-4 type gates memoize on the battlefield zone
 
 **`fixed` -0.177 % / `cube` -0.528 % / `sealed` -0.111 %.** `(-87)`'s open
@@ -13906,12 +13993,23 @@ in O(1) *and* reads in one byte load is ever wanted, it has to be an epoch
 stamp, and an epoch stamp is two loads and a compare per read, i.e. the same
 trade in the same direction.
 
-**(-87) TAKEN at the ninety-eighth pass, `fixed` -0.177 / `cube` -0.528 /
-`sealed` -0.111 %** — `GameState.battlefield` is a `zone::Battlefield` and the
-two gates read a packed two-bit memo off it. The Log block carries the numbers,
-the three inlining refutations the build sequence produced, and the census
-correction. **What is left of the entry, and it is now sized rather than
-guessed:**
+**(-87) IS CLOSED. Taken over two commits at the ninety-eighth pass, `fixed`
+-0.464 / `cube` -0.854 / `sealed` -0.405 %**, which is **78.5 / 73.1 / 80.2 %
+of the entry's own deletion ceiling** (`(-78)`'s device, read at the same
+tip: 941,127,494 / 2,796,595,503 / 2,790,994,042). `GameState.battlefield` is
+a `zone::Battlefield`; the two gates read a packed two-bit memo off it, kept
+by a `DerefMut`/`push` clear for membership and a `DEFINITION_EPOCH` stamp for
+definition rewrites, with the predicates widened to read no instance field.
+The two Log blocks carry the numbers, the three inlining refutations the build
+sequence produced, and the census correction — which held twice, in the same
+direction, on the same pool.
+
+**What is left is +0.128 / +0.319 / +0.100 % against a memo that never
+invalidates at all, i.e. the walks that genuine membership and definition
+changes force.** That is a floor for any correct invalidation, not a lead.
+Do not reopen this without a different mechanism.
+
+**The historical analysis, kept for the shape of the argument:**
 
 * The shipped invalidation is the cheap `DerefMut` chokepoint and it serves
   **48.1 / 38.3 / 32.2 %** of the walks. The remaining walks are 37,868 /

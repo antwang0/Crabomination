@@ -177,19 +177,32 @@ const LANE_MASK: u8 = 0b11;
 /// unchanged on 93.95 % of `cube`'s 242,788 asks, so the answer wants to
 /// outlive the scope, and the zone is where it can.
 ///
-/// The memo is sound *by construction*, like [`Graveyard`]'s: [`DerefMut`]
-/// and the `&mut` [`IntoIterator`] are the only ways to reach the cards
-/// mutably, and both clear it. That is broader than the gates need — a tap,
-/// a damage mark or a counter cannot move either answer, which only reads
-/// `attached_to` and the definition — but an enumeration of the write sites
-/// that *can* move it is exactly what this file's header refuses to depend
-/// on. `(-87)` prices the gap: the exact invalidation would repeat on
-/// 93.95 / 75.76 / 74.30 % of asks and this one on 84.32 / 35.95 / 29.42 %.
+/// **The invalidation is two disjoint questions, and each is answered where it
+/// is cheap.** Both lanes are a function of exactly one thing: the multiset of
+/// *definitions* on the battlefield (`card_can_change_*_types` is written to
+/// read no instance field, deliberately — see its doc comment).
+///
+/// * *Membership* — a permanent entering or leaving — can only happen through
+///   [`DerefMut`] or the inherent [`push`](Self::push), and both clear the
+///   lanes. There is no third route: `Vec`'s own mutators are reached through
+///   `DerefMut`.
+/// * *A definition rewrite on a permanent already here* is reached through an
+///   element handle, two derefs below anything this type can observe. It is
+///   caught by stamping each computed lane with
+///   [`definition_epoch`](crate::card::definition_epoch), which the two
+///   accessors that can rewrite a definition bump.
+///
+/// So [`iter_mut`](Self::iter_mut), [`get_mut`](Self::get_mut) and the `&mut`
+/// [`IntoIterator`] — the tap, damage, counter and untap paths, 139,280
+/// invalidations a `cube` run before this split — leave the lanes alone.
 #[derive(Debug, Default)]
 pub struct Battlefield {
     cards: CowBox<Vec<CardInstance>>,
     /// `LANE_LAND` / `LANE_CREATURE` two-bit lanes; see the constants.
     type_gates: AtomicU8,
+    /// The `definition_epoch` the lanes were computed at. A lane is valid only
+    /// while this still matches.
+    def_epoch: std::sync::atomic::AtomicU64,
 }
 
 impl Battlefield {
@@ -231,7 +244,13 @@ impl Battlefield {
     /// never deals.
     #[inline]
     fn lane(&self, shift: u32, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
-        let cur = (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK;
+        let stale = self.def_epoch.load(Ordering::Relaxed)
+            != crate::card::definition_epoch();
+        let cur = if stale {
+            UNKNOWN
+        } else {
+            (self.type_gates.load(Ordering::Relaxed) >> shift) & LANE_MASK
+        };
         debug_assert!(
             cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(walk),
             "battlefield type-gate memo is stale: a write reached the cards without clearing it",
@@ -241,6 +260,31 @@ impl Battlefield {
             PRESENT => true,
             _ => self.walk_and_store(shift, walk),
         }
+    }
+
+    /// `iter_mut` that does **not** invalidate — the tap / damage / counter /
+    /// untap paths. Inherent, so it shadows the `Deref`'d `Vec::iter_mut` at
+    /// every existing call site without touching one. Sound because the lanes
+    /// read only definitions, and a definition rewrite through the handle this
+    /// hands out bumps `definition_epoch` instead.
+    #[inline]
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, CardInstance> {
+        self.cards_unchecked_mut().iter_mut()
+    }
+
+    /// `get_mut` on the same contract as [`iter_mut`](Self::iter_mut).
+    #[inline]
+    pub fn get_mut(&mut self, i: usize) -> Option<&mut CardInstance> {
+        self.cards_unchecked_mut().get_mut(i)
+    }
+
+    /// `&mut` at the cards **without** clearing the lanes. Private: every
+    /// caller is one of the element-write accessors above, whose contract is
+    /// that membership does not move. Public mutation goes through
+    /// [`DerefMut`], which clears.
+    #[inline]
+    fn cards_unchecked_mut(&mut self) -> &mut Vec<CardInstance> {
+        &mut self.cards
     }
 
     /// The miss path, out of line so the hit path stays a word load at each of
@@ -255,9 +299,19 @@ impl Battlefield {
     /// the two call sites keep a word load for the hit.
     #[inline(never)]
     fn walk_and_store(&self, shift: u32, walk: impl Fn(&CardInstance) -> bool) -> bool {
+        let epoch = crate::card::definition_epoch();
         let found = self.cards.iter().any(walk);
         let lane = if found { PRESENT } else { ABSENT };
-        let word = self.type_gates.load(Ordering::Relaxed);
+        // A rewrite since the epoch was read would be missed by the stamp, so
+        // read it *before* the walk: the stamp is then conservative — a lane
+        // computed across a rewrite is thrown away on the next ask.
+        let word = if self.def_epoch.swap(epoch, Ordering::Relaxed) == epoch {
+            self.type_gates.load(Ordering::Relaxed)
+        } else {
+            // A different epoch was stamped: the other lane describes an older
+            // definition set and must not survive.
+            0
+        };
         self.type_gates
             .store((word & !(LANE_MASK << shift)) | (lane << shift), Ordering::Relaxed);
         found
@@ -296,6 +350,9 @@ impl Clone for Battlefield {
         Self {
             cards: self.cards.clone(),
             type_gates: AtomicU8::new(self.type_gates.load(Ordering::Relaxed)),
+            def_epoch: std::sync::atomic::AtomicU64::new(
+                self.def_epoch.load(Ordering::Relaxed),
+            ),
         }
     }
 }
@@ -316,13 +373,17 @@ impl DerefMut for Battlefield {
 
 impl From<Vec<CardInstance>> for Battlefield {
     fn from(cards: Vec<CardInstance>) -> Self {
-        Self { cards: cards.into(), type_gates: AtomicU8::new(0) }
+        Self::from(CowBox::from(cards))
     }
 }
 
 impl From<CowBox<Vec<CardInstance>>> for Battlefield {
     fn from(cards: CowBox<Vec<CardInstance>>) -> Self {
-        Self { cards, type_gates: AtomicU8::new(0) }
+        Self {
+            cards,
+            type_gates: AtomicU8::new(0),
+            def_epoch: std::sync::atomic::AtomicU64::new(0),
+        }
     }
 }
 
@@ -337,11 +398,14 @@ impl<'a> IntoIterator for &'a Battlefield {
     }
 }
 
+// `for c in &mut bf` is an element-write loop, not a membership change: it
+// forwards to the non-clearing `iter_mut` above, not to `DerefMut`.
 impl<'a> IntoIterator for &'a mut Battlefield {
     type Item = &'a mut CardInstance;
     type IntoIter = std::slice::IterMut<'a, CardInstance>;
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        self.deref_mut().iter_mut()
+        self.iter_mut()
     }
 }
 
@@ -478,13 +542,45 @@ mod tests {
         assert_eq!(b.memo(LANE_LAND), None, "push invalidated");
         assert_eq!(b.memo(LANE_CREATURE), None, "both lanes, one store");
 
+        // Element writes do NOT invalidate — that is the whole split.
         assert!(!b.has_land_type_changer(never));
-        for _ in &mut b {}
-        assert_eq!(b.memo(LANE_LAND), None, "&mut iteration invalidated");
+        for c in &mut b {
+            c.tapped = true;
+        }
+        assert_eq!(b.memo(LANE_LAND), Some(false), "&mut iteration is an element write");
+        b.iter_mut().for_each(|c| c.tapped = false);
+        assert_eq!(b.memo(LANE_LAND), Some(false), "so is iter_mut");
+        assert!(b.get_mut(0).is_some());
+        assert_eq!(b.memo(LANE_LAND), Some(false), "so is get_mut");
 
-        assert!(!b.has_land_type_changer(never));
+        // Membership does, through `DerefMut`.
         b.pop();
         assert_eq!(b.memo(LANE_LAND), None, "DerefMut invalidated");
+    }
+
+    /// A definition rewrite reaches the cards two derefs below anything the
+    /// zone can observe, so the lanes are stamped with `definition_epoch`
+    /// instead. Rewriting through the element handle must still be seen.
+    #[test]
+    fn battlefield_definition_rewrite_invalidates_through_the_epoch() {
+        let land = |c: &CardInstance| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, crate::effect::StaticEffect::LandTypeChanger { .. })
+            })
+        };
+        let mut b = bf(vec![crate::catalog::grizzly_bears()]);
+        assert!(!b.has_land_type_changer(land));
+        assert_eq!(b.memo(LANE_LAND), Some(false));
+
+        // The rewrite goes through the element handle, not through the zone.
+        b.iter_mut()
+            .next()
+            .unwrap()
+            .set_definition(std::sync::Arc::new(crate::catalog::blood_moon()));
+        assert!(
+            b.has_land_type_changer(land),
+            "the definition epoch moved, so the lane was recomputed",
+        );
     }
 
     /// The CoW contract survives the wrapper, and the memo travels with the

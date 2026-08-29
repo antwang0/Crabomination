@@ -6698,6 +6698,36 @@ impl std::ops::Deref for Definition {
     }
 }
 
+
+/// Monotone counter of *definition rewrites* anywhere in the process, bumped
+/// by the two accessors that can perform one ([`CardData::definition_mut`] and
+/// [`CardData::set_definition`] — `Definition` has no `DerefMut`, so there is
+/// no third).
+///
+/// A collection-level memo whose answer is a function of the definitions it
+/// holds cannot see a rewrite through an element handle: `iter_mut` hands out
+/// `&mut CardInstance` and the rewrite happens two derefs down. Reading this
+/// counter beside the memo turns that into one relaxed load —
+/// `crate::zone::Battlefield`'s type-gate lanes are the consumer.
+///
+/// Process-wide rather than thread-local **on purpose**: a `GameState` can be
+/// built on one thread and played on another, and a per-thread counter would
+/// then compare against a sequence the memo was never stamped from. A rewrite
+/// on another thread only ever costs an extra recompute, never a wrong answer,
+/// and at ~8 k rewrites a six-game run the over-invalidation is noise.
+static DEFINITION_EPOCH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The current value of [`DEFINITION_EPOCH`]. A memo stamped with this value
+/// is valid for definition reads; any other value means re-read.
+#[inline]
+pub fn definition_epoch() -> u64 {
+    DEFINITION_EPOCH.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+#[inline]
+fn bump_definition_epoch() {
+    DEFINITION_EPOCH.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
 /// A card's mutable per-object state. Reached only through
 /// [`CardInstance`], which owns it behind an `Arc` — see that type for why.
 #[derive(Debug, Clone)]
@@ -7296,6 +7326,7 @@ impl CardData {
     #[inline]
     pub fn definition_mut(&mut self) -> &mut Arc<CardDefinition> {
         self.definition.memo.clear();
+        bump_definition_epoch();
         &mut self.definition.def
     }
 
@@ -7304,6 +7335,7 @@ impl CardData {
     #[inline]
     pub fn set_definition(&mut self, def: Arc<CardDefinition>) {
         self.definition.memo.clear();
+        bump_definition_epoch();
         self.definition.def = def;
     }
 

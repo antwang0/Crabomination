@@ -23612,12 +23612,18 @@ fn static_effect_changes_land_types(effect: &crate::effect::StaticEffect) -> boo
 /// [`GameState::land_type_change_in_scope`]; covers the attachment route
 /// (`equipped_bonus.set_land_types`) and every static route, including
 /// CR 721.2a Station bands.
+/// **Reads no instance field, deliberately.** The answer is a pure function of
+/// `card.definition`, which is what lets `zone::Battlefield` memoize the whole
+/// walk against a definition epoch instead of clearing on every tap and damage
+/// mark. The attachment route is therefore widened: an *unattached* Equipment
+/// whose `equipped_bonus` sets land types answers `true` here. Both gates are
+/// over-approximations — only a stale `false` is unsound — so widening costs
+/// at most a gather that would otherwise have been skipped, on a board that
+/// holds such an Equipment at all.
 #[inline]
 fn card_can_change_land_types(card: &CardInstance) -> bool {
     let def = &card.definition;
-    if card.attached_to.is_some()
-        && def.equipped_bonus.as_ref().is_some_and(|b| b.set_land_types.is_some())
-    {
+    if def.equipped_bonus.as_ref().is_some_and(|b| b.set_land_types.is_some()) {
         return true;
     }
     def.static_abilities.iter().any(|sa| static_effect_changes_land_types(&sa.effect))
@@ -23658,14 +23664,15 @@ fn static_effect_changes_creature_types(effect: &crate::effect::StaticEffect) ->
 /// [`GameState::creature_type_change_in_scope`]; covers the attachment route
 /// (`equipped_bonus`' two creature-type fields) and every static route,
 /// including CR 721.2a Station bands.
+/// Reads no instance field, for the same reason as
+/// [`card_can_change_land_types`] — see its comment for what the widened
+/// attachment route costs.
 #[inline]
 fn card_can_change_creature_types(card: &CardInstance) -> bool {
     let def = &card.definition;
-    if card.attached_to.is_some()
-        && def.equipped_bonus.as_ref().is_some_and(|b| {
-            b.set_creature_types.is_some() || !b.add_creature_types.is_empty()
-        })
-    {
+    if def.equipped_bonus.as_ref().is_some_and(|b| {
+        b.set_creature_types.is_some() || !b.add_creature_types.is_empty()
+    }) {
         return true;
     }
     def.static_abilities.iter().any(|sa| static_effect_changes_creature_types(&sa.effect))
