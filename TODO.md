@@ -223,20 +223,29 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    ADDED a row, which is the check to run on the next one, and both were found
    by **reading three tests in the file at the top of the by-file count — a
    filter's false positives cluster, because they share a helper or an API.**
-   **Six slices taken**: `stx/part_23` (19), `classic_sets/ogw` (8),
+   **Seven slices taken**: `stx/part_23` (19), `classic_sets/ogw` (8),
    `modern/aggro_allied_batches` (11, including three copy-paste batch blocks
    — the convention's other half), `modern/singles_and_legends` (7),
-   `modern/cube_rounds` (4) and `stx/part_00` (5). The pattern is in the tree
-   six times over, and **the sacred list is byte-identical across all of them
-   — run that diff after a fold.** Two
+   `modern/cube_rounds` (4), `stx/part_00` (5) and `modern/decks_11_13` (4).
+   The pattern is in the tree seven times over, and **the sacred list is
+   byte-identical across all of them — run that diff after a fold.** Two
    rules found doing it: **a test that pins a card-specific *effect shape* — a
    modal `min`/`max`, a `Search` filter, a `CantBeBlockedBy(_)` /
-   `Madness(_)` variant — is not an echo and does not fold** (`rna.rs` and
-   most of `cube_expansion_singles.rs` are those), and **a per-cycle table
+   `Madness(_)` / `Suspend(4, _)` / `Typecycling(_)` variant — is not an echo
+   and does not fold** (`rna.rs`, `mh/mh2b.rs` and most of
+   `cube_expansion_singles.rs` are those), and **a per-cycle table
    that already names its card in the failure message is the folded form** —
    leave `ths.rs` / `rtr.rs`'s `*_stat_lines` and `cube_rounds`'s two
-   `*_cycle_definitions` alone. One commit per file batch, binary green either
-   side; it is a convention change, not a build-time one.
+   `*_cycle_definitions` alone.
+   **AND THE REMAINDER IS SIZED, WHICH CHANGES WHAT IT IS WORTH.** Of the 189
+   non-sacred rows, **65 are the effect-shape kind that does not fold and 124
+   are plain echoes that do — and those 124 are spread over 77 files at one to
+   five each.** The big slices are gone; every further commit is a 1-5-test
+   file with a table of its own. Since the sweep buys **no build time** (see
+   PERF's "Test-suite cleanup"), a whole pass spent on a 77-file long tail is
+   a poor trade against anything on the perf queue. Take a file when you are
+   already editing it; do not open a pass for this. One commit per file,
+   binary green either side.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
    **Anchor, MEASURED at `cd0842e9` (on `origin`): `fixed` 957,023,198 /
    `cube` 2,865,614,181 / `sealed` 2,831,048,757** — the whole
