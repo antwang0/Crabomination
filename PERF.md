@@ -2101,6 +2101,55 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-sixth pass (5) — the `_on` form of `computed_permanent`, and where its value actually is
+
+**`computed_permanent_hinted(id, hint)` is the body of both forms, base
+`cd0842e9`.** Every `perms` miss paid one linear
+`battlefield.iter().find(|c| c.id == id)` — 289,098 of them a `cube` run,
+which the whole-program line profile prices at `iter/macros.rs:349` 11.2 M
+plus `CardId::eq` 8.4 M = **19.6 M / 0.68 %** inside this one function.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+(a) four callers, base cd0842e9
+  fixed     957,023,198 ->   952,568,516   -0.465 %
+  cube    2,865,614,181 -> 2,853,129,067   -0.436 %
+  sealed  2,831,048,757 -> 2,821,830,754   -0.326 %
+(b) the next fifteen + one reorder, base 848fc5b4
+  fixed     952,568,516 ->   952,230,291   -0.036 %
+  cube    2,853,129,067 -> 2,851,583,965   -0.054 %
+  sealed  2,821,830,754 -> 2,820,631,303   -0.043 %
+
+cube, (a), and the whole delta is the find:
+  computed_permanent          -74,249,072
+  computed_permanent_hinted   +61,358,172
+  the four converted callers   +43 k to +63 k each (one extra argument)
+```
+
+**THE RULE: an `_on` conversion is worth what its top few callers are worth
+and nothing else.** Four sites read -0.47 / -0.44 / -0.33 %; the next
+*fifteen* read a tenth of that between them. The find is only paid on a
+`perms` miss and the call counts fall off a cliff after `legal_blockers`
+(49,416), `permanent_value_with` (42,860) and `pick_attacks_inner` (24,026).
+**Convert by call count off `cg_edges.py --callers`, not by grepping the
+pattern** — the grep found fifteen provable sites and they were all tail.
+
+**The single best site in (b) was not an `_on` at all.**
+`pick_blocks_inner`'s `attacker_info` asked for the layer view *by id* and
+then ran `battlefield.iter().find(|c| c.id == atk.attacker)` on the next
+line, so every miss walked the battlefield twice for one permanent. Reorder,
+then hint off the result. **Look for a `find` on the line after a lookup by
+id before reaching for an API change.**
+
+**How the hint is kept honest.** One body for both forms, so they cannot
+drift — the same argument `evaluate_requirement_static_hinted` is built on —
+and a `debug_assert!` ties the hint to *this* battlefield. That matters: the
+unhinted form answers `None` for a hand or graveyard card, and a hinted call
+would happily compute layers for one. The suite and the robustness grid fire
+the assertion; a silent wrong answer was the only real risk in the change and
+it is the one the assertion covers.
+
+
 ### Ninety-sixth pass (4) — `(-91)` TAKEN: the memo travels with the definition it describes
 
 **`CardData::definition` is a `Definition` handle that owns the memo, base
@@ -8375,6 +8424,14 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-sixth pass (3) — the `_on` form of `computed_permanent`
+
+**Two commits, `fixed` -0.50 % / `cube` -0.49 % / `sealed` -0.37 % between
+them**, and the rule is in the Baseline: an `_on` conversion is worth what
+its top few callers are worth. Four sites took 95 % of it; the next fifteen
+took a tenth. The best single site in the tail was a *reorder*, not an API
+change — a lookup by id with a `find` for the same card on the next line.
+
 ### Ninety-sixth pass (2) — `(-91)` taken, and the actor's profile read for the first time
 
 **`cd0842e9` — the memo moves into the definition handle**: `fixed` -0.673 %
@@ -13261,6 +13318,11 @@ fresh `CardData` already has a fresh memo, so the real set is smaller).
 asked which writes are no-ops, and this one asks which writes invalidate
 what. Both are about `DerefMut` being the only chokepoint and therefore
 carrying everyone's conservatism.
+**(-92) lead 1 is TAKEN** (`848fc5b4` + `42235e7e`, `fixed` -0.50 / `cube`
+-0.49 / `sealed` -0.37 % between them); leads 2 and 3 are open. The Baseline
+carries the rule the pair produced: an `_on` conversion is worth its top few
+callers and nothing else.
+
 **(-92) THE PROFILE IS FLAT AND THE LEVER IS ELEMENT VISITS — read the
 whole-program line profile in "Profile of record" before pulling anything
 off this queue.** The program's hottest single *line* is 0.97 % and 11,165
