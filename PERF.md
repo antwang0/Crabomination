@@ -2130,8 +2130,12 @@ Three code commits (`66e78a2f`, `ec5dc3a9`, `6e44ce7c`) and the trackers; the
 block below reads the pass's two measured ones on their own.
 
 ```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.80 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
 suite   19,028 / 0 / 5; golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
+panics  scripts/audit_panics.py — 108 sites, 74 guarded / 11 lock-poison /
+        23 bare. **23 is the number to compare** and it is unchanged.
 grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
         0 failures, with the death sweep's `Only` audit armed
 actor   the leg the grid's header names, run because this pass lands a
