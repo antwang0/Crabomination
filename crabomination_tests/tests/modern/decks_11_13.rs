@@ -29,14 +29,6 @@ fn goblin_chainwhirler_etb_pings_opponents_board() {
 }
 
 #[test]
-fn strangleroot_geist_has_haste_and_undying() {
-    use crabomination::card::Keyword;
-    let def = catalog::strangleroot_geist();
-    assert_eq!((def.power, def.toughness), (2, 1));
-    assert!(def.keywords.contains(&Keyword::Haste) && def.keywords.contains(&Keyword::Undying));
-}
-
-#[test]
 fn blood_artist_drains_when_a_creature_dies() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::blood_artist());
@@ -488,14 +480,6 @@ fn rout_flash_mode_casts_at_instant_speed_and_sweeps() {
 }
 
 #[test]
-fn phantom_monster_is_a_three_three_flyer() {
-    use crabomination::card::Keyword;
-    let def = catalog::phantom_monster();
-    assert_eq!((def.power, def.toughness), (3, 3));
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
-#[test]
 fn champion_of_the_parish_grows_when_a_human_enters() {
     let mut g = two_player_game();
     let champ = g.add_card_to_battlefield(0, catalog::champion_of_the_parish());
@@ -508,14 +492,6 @@ fn champion_of_the_parish_grows_when_a_human_enters() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(champ).expect("champ alive");
     assert_eq!((cp.power, cp.toughness), (2, 2), "another Human ETB grows the Champion");
-}
-
-#[test]
-fn soltari_priest_has_shadow_and_pro_red() {
-    use crabomination::card::Keyword;
-    let def = catalog::soltari_priest();
-    assert!(def.keywords.contains(&Keyword::Shadow));
-    assert!(def.keywords.contains(&Keyword::Protection(Color::Red)));
 }
 
 #[test]
@@ -579,15 +555,6 @@ fn selfless_spirit_sac_grants_team_indestructible() {
     assert!(cp.keywords().contains(&Keyword::Indestructible),
         "ally gains indestructible until end of turn");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == spirit), "Spirit sacrificed");
-}
-
-#[test]
-fn reality_smasher_has_ward_discard() {
-    use crabomination::card::{Keyword, WardCost};
-    let def = catalog::reality_smasher();
-    assert_eq!((def.power, def.toughness), (5, 5));
-    assert!(def.keywords.contains(&Keyword::Ward(WardCost::Discard(1))), "Ward—discard a card");
-    assert!(def.keywords.contains(&Keyword::Trample) && def.keywords.contains(&Keyword::Haste));
 }
 
 #[test]
@@ -2259,3 +2226,43 @@ fn pentad_prism_removes_counter_to_add_one_mana_of_any_color() {
     assert_eq!(charge, 1, "Charge counters: 2 → 1 after one activation");
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// One definition audit for the printed bodies this file used to check with a
+// four-line test each. Every row is exactly what the four deleted tests
+// asserted — printed P/T where they pinned it, and printed keywords — so the
+// coverage is unchanged. Same shape as `stx/part_23.rs`'s table; see
+// CLAUDE.md's "one table-driven definition audit per set".
+// ─────────────────────────────────────────────────────────────────────────
+
+struct PrintedShape {
+    def: fn() -> crabomination::card::CardDefinition,
+    name: &'static str,
+    pt: Option<(i32, i32)>,
+    kws: &'static [crabomination::card::Keyword],
+}
+
+#[test]
+fn decks_11_13_printed_shapes() {
+    use crabomination::card::{Keyword, WardCost};
+    const ROWS: &[PrintedShape] = &[
+        PrintedShape { def: catalog::strangleroot_geist, name: "strangleroot_geist",
+            pt: Some((2, 1)), kws: &[Keyword::Haste, Keyword::Undying] },
+        PrintedShape { def: catalog::phantom_monster, name: "phantom_monster",
+            pt: Some((3, 3)), kws: &[Keyword::Flying] },
+        PrintedShape { def: catalog::soltari_priest, name: "soltari_priest",
+            pt: None, kws: &[Keyword::Shadow, Keyword::Protection(Color::Red)] },
+        PrintedShape { def: catalog::reality_smasher, name: "reality_smasher",
+            pt: Some((5, 5)),
+            kws: &[Keyword::Ward(WardCost::Discard(1)), Keyword::Trample, Keyword::Haste] },
+    ];
+    for row in ROWS {
+        let def = (row.def)();
+        if let Some((p, t)) = row.pt {
+            assert_eq!((def.power, def.toughness), (p, t), "{} printed P/T", row.name);
+        }
+        for kw in row.kws {
+            assert!(def.keywords.contains(kw), "{} has {:?}", row.name, kw);
+        }
+    }
+}
