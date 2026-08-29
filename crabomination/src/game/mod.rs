@@ -8133,9 +8133,17 @@ impl GameState {
     /// permanent and it's that controller's turn (Bloodletter of Aclazotz).
     pub fn life_loss_doubled_now(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect;
+        // The controller test pins `src.controller` to the active seat, so the
+        // team question inside the walk has one answer for every permanent it
+        // visits — hoisted, it is asked once instead of once per own
+        // permanent. This walk was **94,974 of `adjust_life`'s `same_team`
+        // calls on a six-game `cube` run, 12 per call, for one bit.**
+        let active = self.active_player_idx;
+        if self.same_team(seat, active) {
+            return false;
+        }
         self.battlefield.iter().any(|src| {
-            src.controller == self.active_player_idx
-                && !self.same_team(seat, src.controller)
+            src.controller == active
                 && src.definition.static_abilities.iter().any(|sa| {
                     matches!(sa.effect, StaticEffect::OpponentLifeLossDoubledDuringYourTurn)
                 })
@@ -14965,9 +14973,16 @@ impl GameState {
         seat: usize,
         pred: impl Fn(&crate::effect::StaticEffect) -> bool,
     ) -> bool {
+        // Cheapest term first: `static_abilities` is empty on nearly every
+        // permanent, so the presence test is a length load and a not-taken
+        // branch, where `same_team` is a team-row read run once per permanent
+        // — 56,312 of them a six-game `cube` run over 2,482 calls, i.e. the
+        // whole board every time. The seat question now runs only for the
+        // handful of permanents that print a matching static.
         self.battlefield.iter().any(|c| {
-            !self.same_team(c.controller, seat)
+            !c.definition.static_abilities.is_empty()
                 && c.definition.static_abilities.iter().any(|sa| pred(&sa.effect))
+                && !self.same_team(c.controller, seat)
         })
     }
 

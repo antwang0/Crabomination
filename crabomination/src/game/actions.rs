@@ -2383,10 +2383,17 @@ impl crate::game::GameState {
             return None;
         }
         // Jin-Gitaxias — "each opponent's maximum hand size is reduced by N."
+        // The presence test goes in front of the seat test for the reason
+        // `opponent_has_static` gives: `static_abilities` is empty on nearly
+        // every permanent and `same_team` was being asked about all of them
+        // (52,978 calls a six-game `cube` run from here alone).
         let reduction: usize = self
             .battlefield
             .iter()
-            .filter(|c| !self.same_team(c.controller, player))
+            .filter(|c| {
+                !c.definition.static_abilities.is_empty()
+                    && !self.same_team(c.controller, player)
+            })
             .flat_map(|c| c.definition.static_abilities.iter())
             .map(|sa| match sa.effect {
                 StaticEffect::OpponentsMaxHandSizeReduced(n) => n as usize,

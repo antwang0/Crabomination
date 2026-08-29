@@ -11528,6 +11528,22 @@ fn eval_material_inner(
         };
     }
     let mut v = 0i32;
+    // `same_team` is a function of the *seat*, not of the permanent, and both
+    // loops below asked it once per element — 55,664 calls a six-game `cube`
+    // run for at most `players.len()` distinct answers. Resolve them once, as
+    // a bitmask rather than a collection: a `SmallVec<[bool; 4]>` here cost
+    // most of what it saved, all of it the collect and the per-element bounds
+    // check. Past seat 63 the mask runs out and the question is asked as
+    // before, so this is exact at any table size.
+    let mut hostile = 0u64;
+    for s in 0..state.players.len().min(64) {
+        if !state.same_team(s, seat) {
+            hostile |= 1 << s;
+        }
+    }
+    let is_hostile = |s: usize| {
+        if s < 64 { hostile & (1 << s) != 0 } else { !state.same_team(s, seat) }
+    };
     for c in &state.battlefield {
         // Lands are worth a small flat amount — enough that ramp/fetch
         // registers and land destruction isn't free, without a flooded
@@ -11557,7 +11573,7 @@ fn eval_material_inner(
         let pv = if sick { 0 } else { pv };
         if c.controller == seat {
             v += pv;
-        } else if !state.same_team(c.controller, seat) {
+        } else if is_hostile(c.controller) {
             v -= pv;
         }
     }
@@ -11579,7 +11595,7 @@ fn eval_material_inner(
             + life_value(state.effective_life(i), w);
         if i == seat {
             v += material;
-        } else if !state.same_team(i, seat) {
+        } else if is_hostile(i) {
             v -= material;
         }
     }

@@ -2085,6 +2085,65 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fourth pass (3) — `same_team` was a per-*seat* question asked once per permanent
+
+**Four walks stop asking `same_team` about every element, base `d1c1e50d`.**
+The pass before made the function 35 % cheaper; this one deletes 73 % of the
+calls.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     985,699,149 ->   983,730,246   -0.200 %
+  cube    2,958,186,009 -> 2,953,459,721   -0.160 %
+  sealed  2,939,463,480 -> 2,934,489,904   -0.169 %
+
+same_team calls, and what is left of the row:
+                before        after      calls before -> after
+  fixed      2,449,496      632,488      143,564 ->  40,654   (-72 %)
+  cube       5,679,240    1,402,716      322,890 ->  86,412   (-73 %)
+  sealed     6,054,644    1,635,028      346,874 ->  99,706   (-71 %)
+
+cube, by site:
+  same_team                                       -4,276,524
+  adjust_life          (life_loss_doubled_now)      -949,790
+  opponent_has_static                               -254,064
+  effective_max_hand_size                           -177,252
+  bot::eval_material_inner (the mask's own cost)     +644,256
+                                          program  -4,726,288
+```
+
+**One shape, four sites, and the sizing is per-site because the fix is.**
+`same_team(x, seat)` is a function of a *seat*, and a battlefield walk has at
+most `players.len()` distinct seats in it — two here — while it asks the
+question once per permanent.
+
+* **`life_loss_doubled_now` is a hoist.** Its walk is
+  `src.controller == active && !same_team(seat, src.controller) && <static>`,
+  so the first term **pins** the second's argument: one answer for the whole
+  walk, asked 12 times a call. It was **94,974 of `adjust_life`'s `same_team`
+  calls** on `cube` — the single biggest caller edge in the table — for one
+  bit.
+* **`opponent_has_static` and `effective_max_hand_size` are operand order.**
+  Both had `same_team` in front of a `static_abilities` scan, and
+  `static_abilities` is empty on nearly every permanent, so the presence test
+  is a length load and a not-taken branch where the seat test is a team-row
+  read. Cheapest first; the seat question now runs only for the permanents
+  that print a matching static.
+* **`bot::eval_material_inner` is a per-seat mask, and it is the one that
+  nearly did not pay.** Two `same_team` calls into a `u64` bitmask, indexed
+  per permanent. Measured on its own it is **-404,523 / -222,084 / -368,491**
+  (cube / fixed / sealed) — the three engine sites alone read -0.146 /
+  -0.177 / -0.157 %. **The first version used a `SmallVec<[bool; 4]>` and it
+  read `cube` -0.165 % against the mask's -0.160 % but `fixed` -0.193 %
+  against -0.200 %**, i.e. a wash with an allocation in it; the mask ships
+  because it cannot allocate and its out-of-range arm asks the real question.
+  Either way the table's own build and closure eat most of what it saves, so
+  **a per-seat table pays only where the loop is long and the walk is not
+  already gated by something cheaper** — which is why the other 140-odd
+  `same_team` sites were left alone.
+
+Suite 19,029 / 0 / 5, golden traces unmoved; clippy clean.
+
 ### Ninety-fourth pass (2) — `same_team` asked about two seats when one settles it
 
 **`same_team` reads one team row instead of two, base `10a794a8`.** NEXT
