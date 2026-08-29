@@ -1092,8 +1092,11 @@ pub struct GameState {
     /// The heavy zones (battlefield, phased_out, exile, stack,
     /// continuous_effects) are [`CowBox`]-wrapped so a `GameState` clone
     /// (affordance probes, the `perform_action` checkpoint) shares them
-    /// until written — see `crate::cow`.
-    pub battlefield: CowBox<Vec<CardInstance>>,
+    /// until written — see `crate::cow`. The battlefield carries its wrapper
+    /// one level out ([`crate::zone::Battlefield`]) so the two layer-4
+    /// type gates' whole-board walks memoize against it; every read and
+    /// write site goes through `Deref`/`DerefMut` unchanged.
+    pub battlefield: crate::zone::Battlefield,
     /// CR 702.26 — permanents that have phased out. They're treated as though
     /// they don't exist (every battlefield query iterates `battlefield`, so a
     /// phased-out permanent is invisible without per-site filtering), yet
@@ -2908,7 +2911,7 @@ impl GameState {
             range_of_influence: None,
             attack_adjacent_only: false,
             deploy_creatures: false,
-            battlefield: CowBox::default(),
+            battlefield: crate::zone::Battlefield::default(),
             phased_out: CowBox::default(),
             exile: CowBox::default(),
             stack: CowBox::default(),
@@ -9218,16 +9221,22 @@ impl GameState {
     /// `debug_assert!`s the implication in the sound direction, so the whole
     /// suite audits the enumeration without any caller paying a gather.
     pub(crate) fn land_type_change_in_scope(&self) -> bool {
-        self.presence_gate(PresenceGate::Land, || {
-            self.continuous_effects.iter().any(|e| {
-                matches!(
-                    e.modification,
-                    Modification::AddLandType(_)
-                        | Modification::SetLandTypes(_)
-                        | Modification::ReplaceBasicLandType(..)
-                )
-            }) || self.battlefield.iter().any(card_can_change_land_types)
-        })
+        // Battlefield operand first: it is the expensive one (dropping the
+        // `continuous_effects` half is 1 % of the row — `(-87)`'s probe) and
+        // it is the one the zone memoizes, so a hit answers the whole
+        // question for a word load. The `continuous_effects` half keeps the
+        // freeze-scope slot, which is where its own walk is cached.
+        self.battlefield.has_land_type_changer(card_can_change_land_types)
+            || self.presence_gate(PresenceGate::Land, || {
+                self.continuous_effects.iter().any(|e| {
+                    matches!(
+                        e.modification,
+                        Modification::AddLandType(_)
+                            | Modification::SetLandTypes(_)
+                            | Modification::ReplaceBasicLandType(..)
+                    )
+                })
+            })
     }
 
     /// The same device for the layer-4 *creature*-type family: a cheap
@@ -9244,14 +9253,16 @@ impl GameState {
     /// `debug_assert!`s the implication in the sound direction, so the whole
     /// suite audits the enumeration without any caller paying a gather.
     pub(crate) fn creature_type_change_in_scope(&self) -> bool {
-        self.presence_gate(PresenceGate::Creature, || {
-            self.continuous_effects.iter().any(|e| {
-                matches!(
-                    e.modification,
-                    Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
-                )
-            }) || self.battlefield.iter().any(card_can_change_creature_types)
-        })
+        // Same shape as the land gate above, and for the same reason.
+        self.battlefield.has_creature_type_changer(card_can_change_creature_types)
+            || self.presence_gate(PresenceGate::Creature, || {
+                self.continuous_effects.iter().any(|e| {
+                    matches!(
+                        e.modification,
+                        Modification::AddCreatureType(_) | Modification::SetCreatureTypes(_)
+                    )
+                })
+            })
     }
 
     /// Does any battlefield permanent carry Void Winnower's block half
@@ -23601,6 +23612,7 @@ fn static_effect_changes_land_types(effect: &crate::effect::StaticEffect) -> boo
 /// [`GameState::land_type_change_in_scope`]; covers the attachment route
 /// (`equipped_bonus.set_land_types`) and every static route, including
 /// CR 721.2a Station bands.
+#[inline]
 fn card_can_change_land_types(card: &CardInstance) -> bool {
     let def = &card.definition;
     if card.attached_to.is_some()
@@ -23646,6 +23658,7 @@ fn static_effect_changes_creature_types(effect: &crate::effect::StaticEffect) ->
 /// [`GameState::creature_type_change_in_scope`]; covers the attachment route
 /// (`equipped_bonus`' two creature-type fields) and every static route,
 /// including CR 721.2a Station bands.
+#[inline]
 fn card_can_change_creature_types(card: &CardInstance) -> bool {
     let def = &card.definition;
     if card.attached_to.is_some()
