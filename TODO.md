@@ -26,25 +26,28 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at the ninety-eighth pass (`b12393f9`):** suite 19,033 / 0 / 5,
-   clippy clean, golden traces unmoved, `--bench` byte-identical, grid green
-   (30 cells / 33,120 games) **and the actor leg re-run** (12,000 games,
-   1,155,629 rows, 0 stalls) for the pass's new assertion. Anchor and the
-   pass's -0.464 / -0.854 / -0.405 % are in item 8; two commits, PERF's Log.
-3. **`(-87)` IS CLOSED** — the layer-4 type gates memoize on a
-   `zone::Battlefield`, keyed by a `DerefMut` clear for membership and a
-   `DEFINITION_EPOCH` stamp for definition rewrites, with the predicates
-   widened to read no instance field. It took **78.5 / 73.1 / 80.2 % of its
-   own deletion ceiling**; what is left is the walks a real change forces.
+2. **State at the ninety-ninth pass (`c2ff4536`):** suite 19,035 / 0 / 5,
+   clippy clean, golden traces unmoved, `--bench` byte-identical (195,528 /
+   27.44 / 611.0 / 0 stalls, thread_determinism ok), grid green (30 cells /
+   33,120 games) with the pass's new assertion verified in the audit binary.
+   Anchor and the -0.028 / -0.071 / -0.033 % are in item 8; PERF's Log.
+3. **A concurrent push invalidates a MEASUREMENT, not a candidate.** This pass
+   built its A/B, had `b12393f9` land under it, and retook the whole thing
+   against `e86044f9`: the numbers moved by a quarter, the conclusion did not.
+   Rebase, rebuild both sides, re-read — and re-read a candidate against the
+   tip it will land on, because the two changes multiplied on the walk count.
 4. **BEST NEXT MOVES, in order.** (a) `(-92)` — **the profile is FLAT** (six
    functions read by line all say "no hot line"), leads 2 and 3 open.
-   (b) `(-89)`'s eight remaining prevention rows. (c) The ML question in item
-   7 — seed the actors' jitter? (d) Cards only on leftover context.
-5. **Two rules this pass produced, both cheap to re-lose.** A repeat-rate
-   census over *asks* over-counts what a memo behind a scope gate delivers, by
-   that gate's service rate (predicted 94 % on `cube`, delivered 79.5 %; the
-   other two pools matched). And **`#[cold]` on a miss path costs whatever its
-   body would have inlined** — use `#[inline(never)]`.
+   (b) `(-89)`'s eight remaining prevention rows. (c) ENGINE_BACKLOG's "the
+   gate's own wrappers": three of the five target walkers still have no
+   catalog invariant, and a *blanket* one does not work — 29 false findings.
+   (d) The ML question in item 7. (e) Cards only on leftover context.
+5. **Two rules this pass produced.** Fusing two whole-collection `any`s pays
+   only when both are walked in the same invalidation epoch — price the epoch,
+   not the collection (the two type-gate lanes are not, so a fused pass
+   removed 3 % of the walks and cost 82 % more per walk). And a `for` loop
+   with a carried accumulator is not a `collect`-free `any`: LLVM keeps the
+   second exit test, which is where that 82 % went.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

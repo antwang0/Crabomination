@@ -110,6 +110,31 @@ still applies a board-shaped requirement to every graveyard and to exile and
 the callers still separate the results by hand. This closes the *picker*'s
 half; the catalog-wide fix above is still the fix.
 
+### The gate's own wrappers — audited at the ninety-ninth pass, three cards fixed
+
+`prefers_graveyard_target` and `may_target_offboard_card` end in `_ => false`,
+so a wrapper neither names closes the gate for its whole subtree.
+`scripts/audit_target_walkers.py` prints the matrix: `requires_target` names
+all 130 `Effect` wrappers because it is exhaustive, the other four name 26-61.
+`core_rules::target_walkers::every_reachable_reanimation_is_visible_to_the_
+offboard_gate` is the catalog half of it and is an invariant, not a ratchet.
+
+Fixed: Reap's four graveyard slots were bare `Selector::Target(n)` and
+surfaced no filter at all; Rise from the Wreck's four board-shaped filters
+named no zone and `OptionalTargets` hid the `Move { to: Hand(You) }` from the
+walk-order classifier, so it bounced a battlefield permanent; Ugin, Eye of the
+Storms wrote "exile target permanent" as `Move { to: Exile }`, which that
+classifier reads as reanimation, and is `Effect::Exile` now.
+
+**Open: the other three walkers' wrappers.** `primary_target_filter` (69
+unnamed), `may_target_offboard_card` (104) and `accepts_player_target` (101)
+have no catalog-side invariant yet, and a blanket one does not work — a
+"holds a `Move`" version of the test above reports 29 bodies and every one is
+right to answer `false`. Each needs the narrow shape its walker is actually
+about, the way the reanimation one does. The structural fix is the same one
+this whole section names: the walkers should share one recursion over inner
+effects instead of five hand-written ones.
+
 ### ~~Vacuous `true` in `Predicate::EntityMatches`~~ — closed at the eighty-seventh pass, and one layer dependency fell out
 
 `EntityMatches` answered with `all` over the resolved selector, and `all` over

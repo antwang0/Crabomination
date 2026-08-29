@@ -2124,6 +2124,45 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-ninth pass — closing state at `c2ff4536`
+
+Two commits: the `layer4_bits` memo (`39299a63`) and three off-board
+targeting defects (`c2ff4536`). Both concurrent sessions' commits are under
+this tip; the Ir anchor is this pass's own base plus its one perf change.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.80 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,035 / 0 / 5 (two tests added); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures, with `layer-4 type-change memo is stale` verified present
+        in the audit binary (4 "memo is stale" strings, was 3)
+--bench 195,528 / 27.44 / 611.0 / 0 stalls (cap 0 / stuck 0 / draw 0) —
+        byte-identical to the committed invariant; determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 270.58 then 277.37 at
+        3 threads, host_calib_ms 45, peak_rss_mib 24.4,
+        bin_bytes 123,615,928
+
+Ir anchor, callgrind, profiling-fast --no-default-features, --a gang --b gang
+--games 6 --threads 1 --seed 1:
+                 e86044f9          39299a63
+  fixed        942,328,621  ->   942,063,715   -0.0281 %
+  cube       2,805,504,637  -> 2,803,504,696   -0.0713 %
+  sealed     2,793,794,884  -> 2,792,862,317   -0.0334 %
+```
+
+**Seventh cross-session anchor check, and the first one taken across a
+rebase.** This pass built its first base at `b62030ba` and read
+945,041,251 / 2,814,733,803 / 2,802,062,885 — against the ninety-eighth
+pass's own filed 945,041,274 / 2,814,732,191 / 2,802,061,388 that is
+**23 / 1,612 / 1,497 Ir on 0.9-2.8 G**, two sessions and two builds apart.
+Then `b12393f9` landed mid-pass and the whole A/B was retaken against
+`e86044f9`; the new base agrees with *that* commit's filed -0.287 / -0.328 /
+-0.295 % to three decimal places. **A concurrent push invalidates a
+measurement, not a candidate** — rebase, rebuild both sides, re-read. The
+numbers moved by a quarter (see the Log); the conclusion did not.
+
 ### Ninety-eighth pass — closing state at `b12393f9`
 
 ```text
@@ -8610,6 +8649,67 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-ninth pass — the layer-4 type-change predicates come off the per-object memo
+
+**`fixed` -0.028 % / `cube` -0.071 % / `sealed` -0.033 %.** The per-card body
+of `(-87)`'s whole-board walk was the last two predicates in that family still
+walking a `CardDefinition`; the ninety-eighth pass's widening made them pure
+functions of the definition, which is exactly the condition for `CardMemo`.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base e86044f9
+  fixed     942,328,621 ->   942,063,715   -0.0281 %
+  cube    2,805,504,637 -> 2,803,504,696   -0.0713 %
+  sealed  2,793,794,884 -> 2,792,862,317   -0.0334 %
+
+Battlefield::walk_and_store (calls unchanged / self Ir / Ir per call)
+  fixed     5,008  1,562,772 -> 1,232,282   312.1 -> 246.1
+  cube     14,920  7,398,495 -> 4,927,129   495.9 -> 330.2
+  sealed   15,182  4,861,388 -> 3,530,150   320.2 -> 232.5
+miss path added: CardDefinition::layer4_scan_bits 1,786 / 4,798 / 5,432 calls
+for 67,162 / 207,794 / 220,744 Ir.
+```
+
+A third off the per-walk cost, and the program moves less than the row does
+because the list the memo replaces (`static_abilities`, then `station`) is
+empty on nearly every permanent — one length check, the shape `(-89)` warns
+about. `layer4_bits` is one bit per family rather than `type_bits`'
+attached/always pair, because neither predicate reads an instance field any
+more.
+
+**AND THE SAME CHANGE MEASURED TWICE, ONCE PER BASE, IS THE USEFUL PART.**
+Built first against `b62030ba` it read -0.0122 / -0.0916 / -0.0401 % over
+12,674 / 37,868 / 38,054 walks; the concurrent session's `b12393f9` then took
+the walk counts to 5,008 / 14,920 / 15,182 and the *same diff* reads
+-0.0281 / -0.0713 / -0.0334 %. The row shrank by two thirds and the program
+delta by a quarter, because the two changes multiply on the walk count and
+add on the per-walk cost. **Re-read a candidate against the tip it will land
+on**, which is the Baseline's ceiling rule seen from the other end.
+
+**ANSWERING BOTH LANES FROM ONE PASS IS REFUTED, MEASURED.** The obvious
+follow-on — one probe returning a two-bit mask, `walk_and_store` filling both
+lanes — loses on all three pools:
+
+```text
+against the same-base candidate, at b62030ba
+  fixed     944,926,101 ->   947,849,983   +0.309 %
+  cube    2,812,154,774 -> 2,822,400,762   +0.364 %
+  sealed  2,800,939,774 -> 2,808,559,528   +0.272 %
+walks   37,868 -> 36,596 on cube (-3.4 %), 12,674 -> 12,674, 38,054 -> 38,050
+Ir/call    356.3 -> 649.4 / 287.9 -> 519.3 / 254.6 -> 455.1
+```
+
+**The two lanes are not asked in the same invalidation epoch** — that is what
+the 3.4 % says, and on the other two pools the count does not move at all —
+so the fusion buys one walk in thirty and pays 82 % more for every one it
+keeps. The cost is the shape, not the extra test: `any(pred)` is a
+short-circuiting internal loop, and `for c in .. { found |= probe(c); if
+found == 0b11 { break } }` is a loop-carried accumulator with a second exit
+test that LLVM cannot turn back into one. **Fusing two whole-collection
+`any`s is only a win when the collection is walked for both in the same
+epoch; price the epoch, not the collection.**
+
 ### Ninety-eighth pass (3) — `SmallVec`'s `Clone` is `extend`, and for a `Copy` item that is the wrong instruction
 
 **`fixed` -0.419 % / `cube` -0.297 % / `sealed` -0.328 %** off `b12393f9`.
@@ -14119,6 +14219,16 @@ direction, on the same pool.
 invalidates at all, i.e. the walks that genuine membership and definition
 changes force.** That is a floor for any correct invalidation, not a lead.
 Do not reopen this without a different mechanism.
+
+**The remaining walks' per-card BODY was a separate lever and it is taken**
+(ninety-ninth pass, `fixed` -0.028 / `cube` -0.071 / `sealed` -0.033 %): the
+two predicates were the last of the layer-4 family still walking
+`static_abilities` plus `station` off a `CardDefinition`, and the widening
+above is what let them onto `CardMemo` as `layer4_bits`. A third off the
+per-walk cost, 495.9 -> 330.2 Ir on `cube`. **And fusing the two lanes into
+one pass loses** (+0.31 / +0.36 / +0.27 %) — the lanes are not asked in the
+same invalidation epoch, so it removes 3.4 % of `cube`'s walks and 0 % of the
+other two pools' while costing 82 % more per walk. The Log has the shape.
 
 **The historical analysis, kept for the shape of the argument:**
 
