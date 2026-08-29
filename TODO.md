@@ -85,8 +85,13 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    `&mut battlefield` chokepoint keeps 84 of `cube`'s 94 points and only 36 of
    76 / 29 of 74 on `fixed` / `sealed`. Both gates are over-approximations —
    only a stale *`false`* is unsound — so the audit is the `debug_assert!`
-   `gather_continuous_effects` already runs plus the robustness grid. PERF has
-   the table and what a taker still owes. Then `(-82)`'s
+   `gather_continuous_effects` already runs plus the robustness grid. **PERF
+   sizes the invalidation too: three of the key's four parts are already O(1)
+   (`battlefield.len()`, `continuous_effects.len()`, `next_effect_timestamp`)
+   and the fourth is two compile-enforced sites — but the membership epoch
+   wants a `Battlefield` newtype, 106 mutable-use sites against 871 reads.
+   Budget a run for it and take the branch to yourself; it is not a patch to
+   carry across a concurrent session's pushes.** Then `(-82)`'s
    `available_mana` half, `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
    `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-92)` IS THE ENTRY TO READ
    FIRST AND IT IS A MAP, NOT A LEAD: the profile is FLAT.** The whole-program
