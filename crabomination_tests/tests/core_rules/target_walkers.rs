@@ -665,3 +665,145 @@ fn the_primary_target_filter_agrees_with_the_slot_walker_on_slot_zero() {
          bodies — it has gone vacuous. It was 7,728 when written."
     );
 }
+
+/// `Effect::for_each_inner` names every `Effect` wrapper — 130 of 130.
+///
+/// The five walkers' whole failure mode is that four of them end in `_ => …`,
+/// so a wrapper they do not name answers the fallback for its entire subtree.
+/// `for_each_inner` is the shared recursion they are meant to fall through
+/// to, which only works if *it* is complete. This reads the enum and holds it
+/// there.
+///
+/// The extraction is the one `scripts/audit_target_walkers.py` uses — a
+/// wrapper is an `Effect` variant with an `Effect` somewhere in its fields —
+/// so the test and the audit cannot disagree about what a wrapper is. The
+/// population is asserted with the finding list: a parse that silently stops
+/// finding variants would otherwise pass by looking at nothing.
+#[test]
+fn the_shared_recursion_names_every_effect_wrapper() {
+    let effect_rs = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../crabomination_base/src/effect.rs"
+    );
+    let query_rs = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../crabomination_base/src/effect/query.rs"
+    );
+    let enum_src = std::fs::read_to_string(effect_rs).expect("effect.rs");
+    let query_src = std::fs::read_to_string(query_rs).expect("query.rs");
+
+    // The `{ … }` of `pub enum Effect`, brace-matched.
+    let start = enum_src.find("\npub enum Effect {").expect("enum Effect");
+    let open = enum_src[start..].find('{').expect("brace") + start;
+    let mut depth = 0usize;
+    let mut end = open;
+    for (i, ch) in enum_src[open..].char_indices() {
+        match ch {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    end = open + i;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    // Strip doc comments and attributes BEFORE splitting: they carry
+    // unbalanced brackets of their own, and counting those is what makes a
+    // depth-based split find 10 variants instead of 130. Angle brackets are
+    // deliberately not counted either — `scripts/audit_target_walkers.py`
+    // splits on `{([` / `})]` only, and the two have to agree.
+    let stripped: String = enum_src[open + 1..end]
+        .lines()
+        .filter(|l| {
+            let t = l.trim_start();
+            !(t.starts_with("///") || t.starts_with("//!") || t.starts_with("//")
+                || t.starts_with("#["))
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut variants: Vec<String> = Vec::new();
+    let (mut d, mut cur) = (0i32, String::new());
+    for ch in stripped.chars() {
+        match ch {
+            '{' | '(' | '[' => d += 1,
+            '}' | ')' | ']' => d -= 1,
+            _ => {}
+        }
+        cur.push(ch);
+        if ch == ',' && d == 0 {
+            variants.push(std::mem::take(&mut cur));
+        }
+    }
+    if !cur.trim().is_empty() {
+        variants.push(cur);
+    }
+
+    // The function's own `{ … }`, brace-matched. Taking the rest of the file
+    // instead makes the test vacuous: the other four walkers name most of
+    // these variants too, so every lookup below would succeed no matter what
+    // `for_each_inner` contains. (Found by deleting an arm and watching this
+    // test pass.)
+    let fn_at = query_src.find("pub fn for_each_inner").expect("for_each_inner");
+    let fn_open = query_src[fn_at..].find('{').expect("brace") + fn_at;
+    let mut fd = 0usize;
+    let mut fn_end = fn_open;
+    for (i, ch) in query_src[fn_open..].char_indices() {
+        match ch {
+            '{' => fd += 1,
+            '}' => {
+                fd -= 1;
+                if fd == 0 {
+                    fn_end = fn_open + i;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let body = &query_src[fn_open..=fn_end];
+    assert!(
+        body.len() > 2_000,
+        "`for_each_inner`'s body brace-matched to {} bytes — the extraction \
+         is wrong, not the function",
+        body.len()
+    );
+
+    let mut wrappers = 0usize;
+    let mut missing: Vec<String> = Vec::new();
+    for v in &variants {
+        let clean = v.as_str();
+        if !clean.contains("Effect") {
+            continue;
+        }
+        let Some(name) = clean
+            .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+            .find(|w| w.chars().next().is_some_and(char::is_uppercase))
+        else {
+            continue;
+        };
+        wrappers += 1;
+        if !body.contains(&format!("Effect::{name} ")) && !body.contains(&format!("Effect::{name}("))
+        {
+            missing.push(name.to_string());
+        }
+    }
+    missing.sort();
+    missing.dedup();
+    assert!(
+        missing.is_empty(),
+        "{} of {wrappers} `Effect` wrappers are missing from `for_each_inner`, \
+         so every walker that falls through to it answers the fallback for \
+         their whole subtree:\n  {}",
+        missing.len(),
+        missing.join("\n  ")
+    );
+    assert!(
+        wrappers >= 120,
+        "the wrapper extraction found only {wrappers} variants — it has gone \
+         vacuous (the enum moved, or a `///` shape changed). It was 130 when \
+         written."
+    );
+}

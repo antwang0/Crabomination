@@ -157,6 +157,286 @@ impl Effect {
         }
     }
 
+    /// Every `Effect` nested directly inside this one, in declaration order.
+    ///
+    /// **The one recursion the five target walkers were each hand-writing.**
+    /// `requires_target` is exhaustive over all ~1000 variants, so the
+    /// compiler makes it name every wrapper; `primary_target_filter`,
+    /// `prefers_graveyard_target`, `may_target_offboard_card` and
+    /// `accepts_player_target` end in `_ => …` and name 26-61 of the 130, so
+    /// a wrapper none of them names answers the fallback silently for its
+    /// whole subtree. That is the drift `ENGINE_BACKLOG`'s "the gate's own
+    /// wrappers" is about, and it has shipped as card bugs three times.
+    ///
+    /// This is the shared half: **one arm per wrapper, in one place**, so a
+    /// new wrapper is a single edit rather than five, and forgetting it
+    /// breaks every walker together instead of one silently.
+    /// `core_rules::target_walkers::the_shared_recursion_names_every_effect_
+    /// wrapper` holds it to 130 of 130 by reading `effect.rs` — the same
+    /// extraction `scripts/audit_target_walkers.py` does, so the test and the
+    /// audit cannot disagree about what a wrapper is.
+    ///
+    /// It yields bodies *unconditionally*. A caller that must not descend
+    /// into a resolution-time body (`Reflexive`, `ReflexiveTrigger` — CR
+    /// 603.7 payoffs whose targets are picked fresh when they resolve) has to
+    /// say so itself; that is a property of the question being asked, not of
+    /// the tree.
+    pub fn for_each_inner(&self, f: &mut impl FnMut(&Effect)) {
+        match self {
+            Effect::Seq(v)
+            | Effect::ChooseMode(v) => {
+                for e in v {
+                    f(e);
+                }
+            }
+            Effect::If { then, else_, .. }
+            | Effect::IfRevealFromHand { then, else_, .. }
+            | Effect::LookTopMayBottomAllElse { then, else_, .. } => {
+                f(then);
+                f(else_);
+            }
+            Effect::ForEach { body, .. }
+            | Effect::Repeat { body, .. }
+            | Effect::EachPlayerDoes { body, .. }
+            | Effect::MayDo { body, .. }
+            | Effect::MayDoBy { body, .. }
+            | Effect::MayPayX { body, .. }
+            | Effect::MayPayGenericUpTo { body, .. }
+            | Effect::MayPayRepeatedly { body, .. }
+            | Effect::Reflexive { body, .. }
+            | Effect::TemptingOffer { body, .. }
+            | Effect::ReplaceYourNextDrawThisTurn { body, .. }
+            | Effect::AtNextEndStep { body, .. }
+            | Effect::AtEndOfCombat { body, .. }
+            | Effect::AtYourNextUpkeep { body, .. }
+            | Effect::AtNextTurnsUpkeep { body, .. }
+            | Effect::MayExileSelfThen { body, .. }
+            | Effect::HauntCreature { body, .. }
+            | Effect::ChooseSector { body, .. }
+            | Effect::MayRepeat { body, .. }
+            | Effect::OnEachSpellYouCastUntilEndOfYourNextTurn { body, .. }
+            | Effect::ReflexiveTrigger { body, .. }
+            | Effect::CapTargetsAtX { body, .. }
+            | Effect::TargetsExactlyX { body, .. }
+            | Effect::CapTargetsAt { body, .. }
+            | Effect::OptionalTargets { body, .. }
+            | Effect::OathCatchUp { body, .. }
+            | Effect::OnAttackedUntilYourNextTurn { body, .. }
+            | Effect::OnMatchingAttacksThisTurn { body, .. }
+            | Effect::WithSacrificedPt { body, .. }
+            | Effect::WithTappedPower { body, .. }
+            | Effect::DelayUntil { body, .. }
+            | Effect::DelayUntilWithCapture { body, .. }
+            | Effect::WhenTargetDiesThisTurn { body, .. }
+            | Effect::CreaturesYouControlEnteringThisTurn { body, .. }
+            | Effect::WhenTargetDealsCombatDamageToPlayerThisTurn { body, .. }
+            | Effect::CreaturesYouControlDyingThisTurn { body, .. }
+            | Effect::WheneverCreatureDiesThisTurn { body, .. }
+            | Effect::CreaturesYouControlDealingCombatDamageThisTurn { body, .. }
+            | Effect::WheneverYouGainLifeThisTurn { body, .. }
+            | Effect::WheneverOpponentMakesYouDiscardThisTurn { body, .. }
+            | Effect::WheneverCardEntersOpponentGraveyardThisTurn { body, .. }
+            | Effect::OnEachSpellCastThisTurn { body, .. }
+            | Effect::OnYourNextSpellCastThisTurn { body, .. }
+            | Effect::OnYourNextExhaustActivationThisTurn { body, .. }
+            | Effect::OnYourNextInstantSorceryThisTurn { body, .. }
+            | Effect::OnYourNextNamedSpellThisTurn { body, .. }
+            | Effect::WhenTargetLeavesBattlefieldThisTurn { body, .. }
+            | Effect::AtEachCombatThisTurn { body, .. }
+            | Effect::WhenLastCreatedTokenLeaves { body, .. } => {
+                f(body);
+            }
+            Effect::FlipCoin { on_heads, on_tails, .. }
+            | Effect::FlipCoinBy { on_heads, on_tails, .. }
+            | Effect::EachPlayerFlipsCoin { on_heads, on_tails, .. } => {
+                f(on_heads);
+                f(on_tails);
+            }
+            Effect::FlipCoinsUntilLoseOrStop { tiers, .. } => {
+                for (_, e) in tiers {
+                    f(e);
+                }
+            }
+            Effect::RollDie { results, on_doubles, .. } => {
+                for (_, _, e) in results {
+                    f(e);
+                }
+                if let Some(e) = on_doubles {
+                    f(e);
+                }
+            }
+            Effect::ChooseN { modes, .. }
+            | Effect::ChooseUpToN { modes, .. }
+            | Effect::ChooseModesCast { modes, .. }
+            | Effect::ChooseModesByPoints { modes, .. }
+            | Effect::ChooseUnchosenMode { modes, .. }
+            | Effect::EscalatingThisTurn { modes, .. } => {
+                for e in modes {
+                    f(e);
+                }
+            }
+            Effect::Escalate { modes, cost, .. } => {
+                for e in modes {
+                    f(e);
+                }
+                f(cost);
+            }
+            Effect::MayPayBy { body, else_, .. }
+            | Effect::MayPay { body, else_, .. }
+            | Effect::MayPayLife { body, else_, .. } => {
+                f(body);
+                if let Some(e) = else_ {
+                    f(e);
+                }
+            }
+            Effect::MayDoElse { body, else_, .. } => {
+                f(body);
+                f(else_);
+            }
+            Effect::PlayerChoosesNumber { then, .. }
+            | Effect::LifeBidding { then, .. }
+            | Effect::PayEnergy { then, .. }
+            | Effect::PayEnergyValue { then, .. }
+            | Effect::PayAnyEnergy { then, .. }
+            | Effect::Process { then, .. }
+            | Effect::CollectEvidence { then, .. }
+            | Effect::CollectEvidenceX { then, .. }
+            | Effect::Forage { then, .. }
+            | Effect::ExileTopBatchesUntilLandLast { then, .. }
+            | Effect::DiscardUnlessPutCardOnTop { then, .. }
+            | Effect::MayExileFromYourGraveyard { then, .. }
+            | Effect::TargetPlayerThen { then, .. }
+            | Effect::RevealUntilNonlandThen { then, .. }
+            | Effect::ChooseCreatureTypeThen { then, .. }
+            | Effect::EachPlayerChoosesCreatureTypeThen { then, .. }
+            | Effect::RevealTopThenIf { then, .. }
+            | Effect::RevealDrawnCardThenIf { then, .. }
+            | Effect::Parley { then, .. }
+            | Effect::RevealAnyNumberFromHand { then, .. }
+            | Effect::PayPerCounterOrSacrifice { then, .. }
+            | Effect::AnyPlayerMayExileFromGraveyard { then, .. }
+            | Effect::EachPlayerMayExileAnyNumberFromGraveyard { then, .. } => {
+                f(then);
+            }
+            Effect::MaySacrifice { then, else_, .. }
+            | Effect::MaySacrificeSource { then, else_, .. }
+            | Effect::MayTap { then, else_, .. }
+            | Effect::MayDiscard { then, else_, .. }
+            | Effect::MayDiscardMatching { then, else_, .. } => {
+                f(then);
+                if let Some(e) = else_ {
+                    f(e);
+                }
+            }
+            Effect::SeparateIntoPiles { chosen, other, .. }
+            | Effect::ChooseOneAmong { chosen, other, .. } => {
+                f(chosen);
+                f(other);
+            }
+            Effect::PayEnergyOrElse { otherwise, .. }
+            | Effect::PayEnergyOrElseValue { otherwise, .. }
+            | Effect::PayManaOrElse { otherwise, .. }
+            | Effect::Tribute { otherwise, .. }
+            | Effect::MayExileFromGraveyardElse { otherwise, .. } => {
+                f(otherwise);
+            }
+            Effect::MillThenToHand { otherwise, .. }
+            | Effect::MillThenToHandN { otherwise, .. } => {
+                if let Some(e) = otherwise {
+                    f(e);
+                }
+            }
+            Effect::MillThenBranchByType { land, creature, noncreature, .. } => {
+                f(land);
+                f(creature);
+                f(noncreature);
+            }
+            Effect::MayCastPermanentFromHandFree { else_, .. }
+            | Effect::PlayerMayPayLifeElse { else_, .. } => {
+                f(else_);
+            }
+            Effect::PlayersMayAccept { on_accept, otherwise, .. } => {
+                f(on_accept);
+                f(otherwise);
+            }
+            Effect::TurnFaceUpFree { if_cant: Some(e), .. } => {
+                f(e);
+            }
+            Effect::RevealTopThenShuffle { on_match, .. } => {
+                f(on_match);
+            }
+            Effect::LookTopPutMatchingOntoBattlefield { then, .. }
+            | Effect::PutFromHandOntoBattlefield { then, .. } => {
+                if let Some(e) = then {
+                    f(e);
+                }
+            }
+            Effect::FlipUntilLoss { per_win, .. } => {
+                f(per_win);
+            }
+            Effect::FlipCoinsChooseCount { per_win, per_loss, all_won, .. } => {
+                f(per_win);
+                f(per_loss);
+                f(all_won);
+            }
+            Effect::ApplyToTargets { effect, .. } => {
+                f(effect);
+            }
+            Effect::UnlessPlayerPays { then, if_paid, .. } => {
+                f(then);
+                if let Some(e) = if_paid {
+                    f(e);
+                }
+            }
+            Effect::ExileTopAndGrantMayPlay { uncast_penalty: Some(e), .. } => {
+                f(e);
+            }
+            Effect::SacrificeAnyNumber { per_each, .. } => {
+                f(per_each);
+            }
+            Effect::ClashWithOpponent { on_win, .. } => {
+                f(on_win);
+            }
+            Effect::Punisher { options, otherwise, .. } => {
+                for e in options {
+                    f(e);
+                }
+                f(otherwise);
+            }
+            Effect::VillainousChoice { option_a, option_b, .. } => {
+                f(option_a);
+                f(option_b);
+            }
+            Effect::ExileThenBranchByController { theirs, .. } => {
+                f(theirs);
+            }
+            Effect::EachPlayerChoosesNumberHighestLoses { on_you_win, .. } => {
+                f(on_you_win);
+            }
+            Effect::NthResolutionThisTurn { branches, .. } => {
+                for e in branches {
+                    f(e);
+                }
+            }
+            Effect::PreventNextDamageToYouFromChosenSourceWithRider { rider, .. } => {
+                f(rider);
+            }
+            Effect::AnyPlayerMayAccept { accepted, otherwise, .. } => {
+                f(accepted);
+                f(otherwise);
+            }
+            Effect::AnteTopOfLibrary { then, else_, .. } => {
+                if let Some(e) = then {
+                    f(e);
+                }
+                if let Some(e) = else_ {
+                    f(e);
+                }
+            }
+            _ => {}
+        }
+    }
+
     /// True if this effect (transitively) requires a chosen target (i.e.
     /// references `Selector::Target(_)` anywhere). Used for cast-time
     /// validation.
