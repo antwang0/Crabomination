@@ -39,13 +39,17 @@ sixty-seventh pass, so don't re-take that.
    and **both of its obvious variants are refuted with numbers in the same
    sitting** — an out-of-line miss path (+0.209 / +0.270 / +0.315 %) and a
    two-entry FIFO (-0.103 / +0.005 / -0.008 %). Do not re-derive either.
-   (b) **A whole-program re-profile is DUE** — six levers have landed since
-   the last one (three lanes, the listener lane, the shared reader, the find
-   memo) and the candidates list is down to `(-92)`'s two open leads. Take
-   `cg_calls.py` and `cg_edges.py` on all three pools before pulling anything.
-   (c) `(-92)` leads 2 and 3; the profile is FLAT, so read "Profile of record"
-   first. (d) `(-93)`'s lane device is intact and lanes 10-16 are free, but
-   its consumer list is exhausted — a new consumer has to come out of (b).
+   (b) **The re-profile is DONE and it is `(-96)`: nothing concentrated is
+   left.** Every row above 2 % is either a mined family with its refutation on
+   file, the allocator (an upper bound this instrument cannot tighten), or
+   `Vec::from_iter` spread over 93 callers. **So change instrument, not
+   target** — `(-96)` names three that have never been run here, cheapest
+   first. (c) `(-95)` is the first of them and it already refuted a candidate:
+   `--games 12` call-count diffs separate once-per-process costs from per-game
+   ones, and the six-game workload was charging `wants_converge`'s `format!`
+   0.459 % of `cube` for a cost a training run never pays. (d) `(-92)` leads 2
+   and 3; `(-93)`'s lane device is intact and lanes 10-16 are free, but its
+   consumer list is exhausted.
    (e) The actor: `encode_state` 1.30 %, `rank_shape` 0.98 %; everything above
    them is engine, so **an engine percent is an actor percent**. (f) Cards on
    leftover context.

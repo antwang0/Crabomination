@@ -14928,6 +14928,95 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-96) THE PROFILE RE-READ AT `633acc3e`, ALL THREE POOLS, AND WHAT IS
+ACTUALLY LEFT.** Six levers landed since the last whole-program read (three
+lanes, the listener lane, the shared reader, the find memo), so this is the
+replenishment the list was down to. `cube` self costs, with each row's status
+so nobody re-derives one:
+
+```text
+  191,671,398  7.05 %  dispatch_triggers_for_events   (-59)/(-90): no hot line,
+                                                      mask ceiling 0.86 %
+  ~301,000,000 11.1 %  the allocator family           1,426,345 allocs; UPPER
+   (malloc/_int_malloc/free/_int_free/shims)          BOUND — callgrind runs
+                                                      the system allocator and
+                                                      the shipped build is
+                                                      mimalloc
+  115,723,654  4.26 %  Arc::make_mut's deep copies    132,370 of 865,758
+                       (inclusive)                    make_mut calls actually
+                                                      copy — 15.3 %. (-1)/(-14),
+                                                      mined across four passes
+   89,015,336  3.28 %  clone_from_ref_in (self)       same family
+   82,622,298  3.04 %  gather_continuous_effects_inner
+   75,148,674  2.77 %  compute_permanent_pass         (-92) lead 2: needs
+                                                      Arc::new_uninit + unsafe
+   71,707,978  2.64 %  check_state_based_actions_into (-69) refutation, read it
+   69,528,097  2.56 %  Vec::from_iter (SpecFromIter-  407,863 call edges over
+                       Nested), 185 Ir/call            ~93 callers — DIFFUSE
+   59,684,668  2.20 %  computed_permanent_hinted      355,828 calls, 201,780
+                                                      allocs; (-27)'s pool is
+                                                      refuted
+   45,301,768  1.67 %  activate_ability_inner
+```
+
+**Nothing concentrated is left, and that is the finding.** The two rows a
+reader would reach for first are both already-mined families with their
+refutations on file, the third is the allocator (whose number is an upper
+bound this instrument cannot tighten), and the fourth — `Vec::from_iter` at
+2.56 % — is 93 callers with no single one above 78 M *inclusive*. The last six
+passes each took 0.3-0.9 % out of rows that were 1-4 % and concentrated in one
+or two call sites; there is no such row now.
+
+**So the next pass should change instrument, not target.** Three that have
+never been run here, cheapest first: (a) `--games 12` call-count diffs on all
+three pools, which `(-95)` just used to refute a candidate and which nothing
+else in this file has ever applied; (b) `cg_sites.py` on a `profiling-lines`
+build for a *second* always-inlined needle now that `battlefield_find` is
+closed — `computed_permanent`, `evaluate_requirement_static_hinted`'s hint
+path and `CardInstance::has_keyword` (411,884 calls, 45.2 Ir) are the
+candidates; (c) the actor's own profile, which is where the workload actually
+is and which has been read once.
+
+**(-95) THE SIX-GAME WORKLOAD CHARGES EVERY ONCE-PER-PROCESS COST TO SIX
+GAMES. One row is big enough to matter, and it is REFUTED BY MEASUREMENT:
+`CardDefinition::wants_converge`'s `format!`, 0.459 % of `cube` and ~0 % of a
+training run.** It renders the whole definition with `{self:?}` and substring-
+searches for `ConvergedValue` / `ManaValueAtMostConverged` — 217 calls,
+**12,468,533 Ir inclusive, 57 k Ir apiece**, the largest single *concentrated*
+source line left in the profile and the only `fmt::format` caller in the
+engine's hot path. It is also the only one whose call count **saturates**:
+
+```text
+--decks cube, profiling-fast, /tmp/base3, one binary, two run lengths
+                        --games 6         --games 12        growth
+  program            2,717,721,142     4,529,284,272        x1.667
+  wants_converge's
+    format! calls              217               242        x1.12
+    Ir                  12,468,533        13,916,258        x1.12
+    share of program        0.459 %           0.307 %       and falling
+  effect_short_text          612 calls       1,606 calls    x2.62 (per-game)
+```
+
+**The cache is process-wide** (a `OnceLock<RwLock<HashMap<String,bool>>>`
+behind a thread-local L1), so the `format!` runs once per *card name per
+process*, bounded by the catalog. Six games see 217 distinct names; a 30 k-game
+gate sees a few thousand, once, and the row is gone. **Do not spend a build on
+it**, and do not replace the Debug-string oracle with a structural walk either
+— its doc comment records that the hand-written walker it replaced "had
+already rotted in both directions", and a scanning `fmt::Write` sink swaps one
+short memcpy per chunk for two substring searches per chunk, which is very
+likely a loss.
+
+**THE INSTRUMENT IS THE TRANSFERABLE PART: run the same pool at `--games 12`
+and diff the CALL COUNTS.** A row whose calls grow x1.0-1.15 while the program
+grows x1.67 is a once-per-process cost and its share of a training run is ~0;
+rank it at its 12-game share or lower, never at its 6-game one. **And the
+sweep bounds the damage: 138 rows are saturating and they are 27,399,327 Ir
+between them, 1.01 % of the six-game `cube` run** — so every other row in this
+file's profile of record is a genuine per-game cost and the instrument stands.
+`scripts/cg_calls.py` on the two dumps is the whole recipe.
+
+
 **(-94) THE FIND MEMO'S OWN CODE SIZE — BUILT, MEASURED AND REVERTED at
 `fixed` +0.209 % / `cube` +0.270 % / `sealed` +0.315 %.** The residue
 `(-38)`'s memo left was `bf_hint_or_find` and `battlefield_find` de-inlining
