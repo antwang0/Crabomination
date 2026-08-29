@@ -599,6 +599,26 @@ fn build_profile() -> String {
         .unwrap_or_else(|| "optimized (profile unknown)".to_string())
 }
 
+/// This binary's own size in bytes, printed beside the profile name.
+///
+/// [`build_profile`] catches a `release-fast` number filed as a `release`
+/// one; it cannot catch the *other* build-side variable this branch found,
+/// because LTO, PGO and `target-cpu` are `RUSTFLAGS` and leave no `cfg` and
+/// no path difference. A PGO binary and a plain one both live in
+/// `target/release-fast/` and both print `release-fast build`, while PERF's
+/// rule is that a PGO reading only compares to another PGO reading — the same
+/// class of mistake, one level up.
+///
+/// NEXT item 0 already names the diagnostic: **"the binary size is the
+/// check"**, because a profile that was raised under a different profile
+/// applies partially and silently, and the size is what moves. That check was
+/// a thing someone had to remember to run; this prints it on every bench, so
+/// two readings that differ by a build rather than by a commit say so on
+/// their own line.
+fn build_size_bytes() -> Option<u64> {
+    std::fs::metadata(std::env::current_exe().ok()?).ok().map(|m| m.len())
+}
+
 /// Host speed probe: a fixed, deterministic mixed ALU + random-access
 /// workload, timed on one thread.
 ///
@@ -1456,6 +1476,13 @@ fn main() {
         match peak_rss_mib() {
             Some(m) => println!("  peak_rss_mib   {m:.1}"),
             None => println!("  peak_rss_mib   n/a"),
+        }
+        // Build fingerprint — see `build_size_bytes`. Beside the host block
+        // for the same reason: neither is a throughput number, and both are
+        // what a moved absolute has to be checked against first.
+        match build_size_bytes() {
+            Some(b) => println!("  bin_bytes      {b}"),
+            None => println!("  bin_bytes      n/a"),
         }
         // Host fingerprint — see `host_calib_ms`. Printed last so it never
         // sits between two numbers that get diffed.

@@ -195,9 +195,13 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    and why a one-sided series across a restart read the sign backwards. Then
    ENGINE_BACKLOG for the
    seven filters. **`--bench` is a 1.2-s run on a shared box: check
-   `host_calib_ms` (idle 46-49, and it read 54 then 60 across one session's
+   `host_calib_ms` (idle 45-49, and it read 54 then 60 across one session's
    base and tip readings — an ~11 % container slowdown over three hours)
-   before believing a `games_per_s`.** For a clock comparison use
+   **and `bin_bytes`** before believing a `games_per_s`.** The second is new
+   and is item 0's own rule made automatic: LTO, PGO and `target-cpu` leave no
+   `cfg` and no path difference, so a PGO binary prints `release-fast build`
+   exactly like a plain one — the size is what tells them apart, and a
+   partially-applied profile is what it catches. For a clock comparison use
    `ab_wall.py`: 5 ABBA blocks of `--games 2000 --decks fixed` resolve
    **±2.40 %** and nothing smaller, so a sub-1 % Ir change will read FLAT and
    that is the expected answer, not a contradiction.
