@@ -334,8 +334,7 @@ fn veteran_warleader_counts_creatures_and_grants_a_keyword() {
     let mut g = two_player_game();
     let leader = g.add_card_to_battlefield(0, catalog::veteran_warleader());
     let ally = g.add_card_to_battlefield(0, catalog::kitesail_scout());
-    g.battlefield_find_mut(ally).unwrap().definition =
-        std::sync::Arc::new(catalog::lantern_scout());
+    g.battlefield_find_mut(ally).unwrap().set_definition(std::sync::Arc::new(catalog::lantern_scout()));
     let cp = g.computed_permanent(leader).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2), "two creatures → 2/2");
 

@@ -804,7 +804,7 @@ mod recent106 {
         // Opponent's infect creature loses the keyword.
         let carrier = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         if let Some(c) = g.battlefield_find_mut(carrier) {
-            let def = std::sync::Arc::make_mut(&mut c.definition);
+            let def = std::sync::Arc::make_mut(c.definition_mut());
             def.keywords.push(Keyword::Infect);
         }
         assert!(!g.computed_permanent(carrier).unwrap().keywords().contains(&Keyword::Infect),

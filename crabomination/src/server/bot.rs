@@ -15571,13 +15571,13 @@ mod tests {
         let trampler = g.add_card_to_battlefield(0, beater("Stomper", vec![Keyword::Trample]));
         // One 0/3 wall that can't kill either — only a chump is possible.
         let wall = g.add_card_to_battlefield(1, beater("Wall", vec![]));
-        if let Some(w) = g.battlefield_find_mut(wall) { w.definition = std::sync::Arc::new(
+        if let Some(w) = g.battlefield_find_mut(wall) { w.set_definition(std::sync::Arc::new(
             CardDefinition {
                 name: "Wall",
                 card_types: vec![CardType::Creature],
                 toughness: 3,
                 ..Default::default()
-            }); }
+            })); }
         g.players[1].life = 3; // 8 incoming ≫ 3 → life threatened
         g.attacking = vec![
             Attack { attacker: vanilla, target: AttackTarget::Player(1) },

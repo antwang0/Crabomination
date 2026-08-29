@@ -5647,7 +5647,7 @@ fn infect_spell_damage_to_player_grants_poison_per_cr_702_90b() {
     // permanent's keyword list. Bypassing the layer system here keeps
     // the test focused on the damage routing rather than wiring up a
     // continuous-effect bookkeeping layer.
-    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(bear).unwrap().definition)
+    std::sync::Arc::make_mut(g.battlefield_find_mut(bear).unwrap().definition_mut())
         .keywords
         .push(Keyword::Infect);
     assert!(
@@ -5715,7 +5715,7 @@ fn toxic_attacker_adds_poison_on_combat_damage() {
     use crabomination::game::{Attack, AttackTarget};
     let mut g = two_player_game();
     let bear = setup_attacker(&mut g, 0, catalog::grizzly_bears);
-    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(bear).unwrap().definition)
+    std::sync::Arc::make_mut(g.battlefield_find_mut(bear).unwrap().definition_mut())
         .keywords
         .push(Keyword::Toxic(2));
 
@@ -6001,7 +6001,7 @@ fn library_position_from_top_zero_is_top() {
 fn lifelink_combat_damage_gains_life() {
     let mut g = two_player_game();
     let lifelinker = setup_attacker(&mut g, 0, catalog::serra_angel);
-    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(lifelinker).unwrap().definition).keywords.push(
+    std::sync::Arc::make_mut(g.battlefield_find_mut(lifelinker).unwrap().definition_mut()).keywords.push(
         crabomination::card::Keyword::Lifelink,
     );
     let life_before = g.players[0].life;
@@ -6864,7 +6864,7 @@ fn indestructible_survives_deathtouch_damage() {
     let c = g.battlefield_find_mut(big).unwrap();
     c.damage = 1;
     c.dealt_deathtouch_damage = true;
-    std::sync::Arc::make_mut(&mut c.definition).keywords.push(Keyword::Indestructible);
+    std::sync::Arc::make_mut(c.definition_mut()).keywords.push(Keyword::Indestructible);
 
     g.check_state_based_actions();
     assert!(g.battlefield.iter().any(|c| c.id == big),
@@ -7398,7 +7398,7 @@ fn flanking_shrinks_nonflanking_blocker() {
     let mut g = two_player_game();
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(attacker).unwrap().definition)
+    std::sync::Arc::make_mut(g.battlefield_find_mut(attacker).unwrap().definition_mut())
         .keywords
         .push(crabomination::card::Keyword::Flanking);
     g.clear_sickness(attacker);
@@ -7426,7 +7426,7 @@ fn bushido_pumps_attacker_when_blocked() {
     let mut g = two_player_game();
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(attacker).unwrap().definition).keywords
+    std::sync::Arc::make_mut(g.battlefield_find_mut(attacker).unwrap().definition_mut()).keywords
         .push(crabomination::card::Keyword::Bushido(2));
     g.clear_sickness(attacker);
     g.step = TurnStep::DeclareAttackers;
@@ -7473,7 +7473,7 @@ fn rampage_pumps_attacker_per_extra_blocker() {
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(attacker).unwrap().definition).keywords
+    std::sync::Arc::make_mut(g.battlefield_find_mut(attacker).unwrap().definition_mut()).keywords
         .push(crabomination::card::Keyword::Rampage(2));
     g.clear_sickness(attacker);
     g.step = TurnStep::DeclareAttackers;

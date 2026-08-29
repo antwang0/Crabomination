@@ -1163,7 +1163,7 @@ impl GameState {
             } = &self.stack[idx]
             {
                 (
-                    card.definition.clone(),
+                    card.definition.arc(),
                     *caster,
                     target.clone(),
                     additional_targets.clone(),
@@ -1510,7 +1510,7 @@ impl GameState {
             || spec.non_legendary)
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
-            let def = std::sync::Arc::make_mut(&mut c.definition);
+            let def = std::sync::Arc::make_mut(c.definition_mut());
             def.triggered_abilities
                 .extend(spec.extra_triggered.iter().cloned());
             def.activated_abilities
@@ -1621,7 +1621,7 @@ impl GameState {
         };
         let mode = &modes[idx];
         if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
-            let def = std::sync::Arc::make_mut(&mut c.definition);
+            let def = std::sync::Arc::make_mut(c.definition_mut());
             def.power = mode.power;
             def.toughness = mode.toughness;
             for kw in &mode.keywords {
@@ -1665,7 +1665,7 @@ impl GameState {
         if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
             && let Some(def) = c.definition.with_mode_applied(idx)
         {
-            c.definition = std::sync::Arc::new(def);
+            c.set_definition(std::sync::Arc::new(def));
             c.chosen_mode = Some(idx as u8);
         }
         true
@@ -4386,7 +4386,7 @@ impl GameState {
                         return Ok(());
                     };
                     let mut inst =
-                        crate::card::CardInstance::new(new_id, card.definition.clone(), me);
+                        crate::card::CardInstance::new(new_id, card.definition.arc(), me);
                     inst.is_token = true;
                     StackItem::Spell {
                         card: Box::new(inst),
@@ -7575,7 +7575,7 @@ impl GameState {
                     return Ok(());
                 }
                 self.spend_energy(p, *energy);
-                let card_def = self.find_card_anywhere(top_id).map(|c| c.definition.clone());
+                let card_def = self.find_card_anywhere(top_id).map(|c| c.definition.arc());
                 if let Some(card_def) = card_def {
                     let auto_target =
                         self.auto_target_for_effect_avoiding(&card_def.effect, p, Some(top_id));
@@ -12905,7 +12905,7 @@ impl GameState {
                         }
                         continue;
                     }
-                    let Some(def) = self.find_card_anywhere(cid).map(|c| c.definition.clone())
+                    let Some(def) = self.find_card_anywhere(cid).map(|c| c.definition.arc())
                     else {
                         continue;
                     };
@@ -13921,7 +13921,7 @@ impl GameState {
                                 .or_default()
                                 .push((**trigger).clone());
                         } else if let Some(c) = self.battlefield_find_mut(cid) {
-                            std::sync::Arc::make_mut(&mut c.definition)
+                            std::sync::Arc::make_mut(c.definition_mut())
                                 .triggered_abilities
                                 .push((**trigger).clone());
                         }
@@ -13950,7 +13950,7 @@ impl GameState {
                         } else if let Some(c) = self.battlefield_find_mut(cid)
                             && !c.definition.keywords.contains(keyword)
                         {
-                            std::sync::Arc::make_mut(&mut c.definition)
+                            std::sync::Arc::make_mut(c.definition_mut())
                                 .keywords
                                 .push(keyword.clone());
                         }
@@ -13975,7 +13975,7 @@ impl GameState {
                         } else if let Some(c) = self.battlefield_find_mut(cid)
                             && !c.definition.keywords.contains(keyword)
                         {
-                            std::sync::Arc::make_mut(&mut c.definition)
+                            std::sync::Arc::make_mut(c.definition_mut())
                                 .keywords
                                 .push(keyword.clone());
                         }
@@ -14108,7 +14108,7 @@ impl GameState {
                 self.move_card_to(src, &dest, &ret_ctx, events);
                 // Strip the Creature type so it returns as an enchantment.
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
-                    let def = std::sync::Arc::make_mut(&mut c.definition);
+                    let def = std::sync::Arc::make_mut(c.definition_mut());
                     def.card_types.retain(|t| *t != CardType::Creature);
                 }
                 Ok(())
@@ -14808,7 +14808,7 @@ impl GameState {
                         } else if let Some(c) = self.battlefield_find_mut(cid)
                             && !c.definition.keywords.contains(&kw)
                         {
-                            std::sync::Arc::make_mut(&mut c.definition).keywords.push(kw.clone());
+                            std::sync::Arc::make_mut(c.definition_mut()).keywords.push(kw.clone());
                         }
                     }
                 }
@@ -16190,7 +16190,7 @@ impl GameState {
                     .players
                     .iter()
                     .find_map(|pl| pl.graveyard.iter().find(|c| c.id == card_id))
-                    .map(|c| c.definition.clone())
+                    .map(|c| c.definition.arc())
                 else {
                     return Ok(());
                 };
@@ -16202,7 +16202,7 @@ impl GameState {
                 if let Some(a) = own {
                     new_def.activated_abilities.push(a);
                 }
-                let original = std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
+                let original = std::mem::replace(c.definition_mut(), std::sync::Arc::new(new_def));
                 self.temporary_copies.push(crate::game::TempCopy {
                     shapeshifter: false,
                     card: cid,
@@ -17805,7 +17805,7 @@ impl GameState {
                 let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
                     return Ok(());
                 };
-                let def = self.battlefield_find(src).map(|c| c.definition.clone());
+                let def = self.battlefield_find(src).map(|c| c.definition.arc());
                 let Some(def) = def else { return Ok(()); };
                 // CR 702.115b — one copy per opponent other than the defender.
                 let opps: Vec<usize> = (0..self.players.len())
@@ -17914,7 +17914,7 @@ impl GameState {
                             .iter()
                             .find_map(|pl| pl.graveyard.iter().find(|c| c.id == src_id))
                     })
-                    .map(|c| (*c.definition).clone());
+                    .map(|c| (**c.definition).clone());
                 let Some(mut def) = source_def else { return Ok(()); };
                 // Apply extra creature types & P/T override.
                 let mut extra_types = def.subtypes.creature_types.clone();
@@ -18031,7 +18031,7 @@ impl GameState {
                         _ => None,
                     });
                 let Some(src_id) = src_id else { return Ok(()); };
-                let Some(def) = self.battlefield.iter().find(|c| c.id == src_id).map(|c| c.definition.clone())
+                let Some(def) = self.battlefield.iter().find(|c| c.id == src_id).map(|c| c.definition.arc())
                 else { return Ok(()); };
                 for _ in 0..n {
                     let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
@@ -18067,7 +18067,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .find(|c| c.id == src_id)
-                    .map(|c| c.definition.clone())
+                    .map(|c| c.definition.arc())
                 else {
                     return Ok(());
                 };
@@ -20579,7 +20579,7 @@ impl GameState {
                     if let StackItem::Spell { card, .. } = si
                         && ids.contains(&card.id)
                     {
-                        std::sync::Arc::make_mut(&mut card.definition).color_override =
+                        std::sync::Arc::make_mut(card.definition_mut()).color_override =
                             Some(vec![color]);
                     }
                 }
@@ -22083,7 +22083,7 @@ impl GameState {
                     };
                     self.move_card_to(id, &dest, ctx, events);
                     if let Some(c) = self.battlefield_find_mut(id) {
-                        let def = std::sync::Arc::make_mut(&mut c.definition);
+                        let def = std::sync::Arc::make_mut(c.definition_mut());
                         if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Nightmare) {
                             def.subtypes.creature_types.push(crate::card::CreatureType::Nightmare);
                         }
@@ -22145,7 +22145,7 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                let Some(def) = self.find_card_anywhere(id).map(|c| c.definition.clone()) else {
+                let Some(def) = self.find_card_anywhere(id).map(|c| c.definition.arc()) else {
                     return Ok(());
                 };
                 if def.is_land() {
@@ -22616,7 +22616,7 @@ impl GameState {
                 if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
                     c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
                     // "…a black Zombie in addition to its other types."
-                    let def = std::sync::Arc::make_mut(&mut c.definition);
+                    let def = std::sync::Arc::make_mut(c.definition_mut());
                     if !def.subtypes.creature_types.contains(&crate::card::CreatureType::Zombie) {
                         def.subtypes.creature_types.push(crate::card::CreatureType::Zombie);
                     }
@@ -23450,7 +23450,7 @@ impl GameState {
                         continue;
                     }
                     let def = self.players[p].graveyard.iter().find(|c| c.id == cid)
-                        .map(|c| c.definition.clone());
+                        .map(|c| c.definition.arc());
                     let Some(def) = def else { continue };
                     let auto = self.auto_target_for_effect_avoiding(&def.effect, p, Some(cid));
                     // Free-cast from the graveyard; exile on resolve.
@@ -24239,7 +24239,7 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(id)
                         && !c.definition.keywords.has_kw(&crate::card::Keyword::Decayed)
                     {
-                        std::sync::Arc::make_mut(&mut c.definition)
+                        std::sync::Arc::make_mut(c.definition_mut())
                             .keywords
                             .push(crate::card::Keyword::Decayed);
                     }
@@ -24965,7 +24965,7 @@ impl GameState {
                     return Ok(());
                 }
                 let Some(original) = target.clone() else { return Ok(()) };
-                let (def, caster) = (card.definition.clone(), *caster);
+                let (def, caster) = (card.definition.arc(), *caster);
                 let (mode, x_value, converged_value) = (*mode, *x_value, *converged_value);
                 let others: Vec<Target> = self
                     .enumerate_legal_targets(&def.effect, caster)
@@ -27205,7 +27205,7 @@ impl GameState {
                         _ => matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true)),
                     };
                     if cast {
-                        let def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                        let def = self.find_card_anywhere(cid).map(|c| c.definition.arc());
                         let Some(def) = def else { continue };
                         let auto_target =
                             self.auto_target_for_effect_avoiding(&def.effect, caster, Some(cid));
@@ -27284,7 +27284,7 @@ impl GameState {
                     }
                 }
                 if let Some(cid) = hit {
-                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.arc());
                     if let Some(card_def) = card_def {
                         let src = ctx.source.unwrap_or(CardId(0));
                         let decision = Decision::OptionalTrigger {
@@ -27723,7 +27723,7 @@ impl GameState {
                     .into_iter()
                     .find_map(|e| e.as_card_id())
                     .and_then(|id| self.find_card_anywhere(id))
-                    .map(|c| c.definition.clone());
+                    .map(|c| c.definition.arc());
                 if let Some(src_def) = src_def {
                     for ent in self.resolve_selector(what, ctx) {
                         let Some(cid) = ent.as_permanent_id() else { continue };
@@ -27752,7 +27752,7 @@ impl GameState {
                                 continue;
                             }
                             let original =
-                                std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
+                                std::mem::replace(c.definition_mut(), std::sync::Arc::new(new_def));
                             // CR 400.7 — in its next zone the object is its
                             // printed card again; `revert_copy_on_leave`
                             // restores this (a dead Clone is a Clone in the
@@ -27786,7 +27786,7 @@ impl GameState {
                 // top card of the library).
                 let src_def = src
                     .and_then(|id| self.find_card_anywhere(id))
-                    .map(|c| c.definition.clone());
+                    .map(|c| c.definition.arc());
                 let Some(src_def) = src_def else { return Ok(()) };
                 let copy_def = if *non_legendary {
                     let mut d = (*src_def).clone();
@@ -27805,7 +27805,7 @@ impl GameState {
                     let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) else {
                         continue;
                     };
-                    let original = std::mem::replace(&mut c.definition, copy_def.clone());
+                    let original = std::mem::replace(c.definition_mut(), copy_def.clone());
                     self.temporary_copies.push(crate::game::TempCopy {
                     shapeshifter: false,
                         card: cid,
@@ -28127,7 +28127,7 @@ impl GameState {
                             && target.is_some()
                             && additional_targets.is_empty() =>
                     {
-                        Some((i, card.definition.clone(), target.clone()))
+                        Some((i, card.definition.arc(), target.clone()))
                     }
                     _ => None,
                 });
@@ -28282,7 +28282,7 @@ impl GameState {
                 if !targets_only_me {
                     return Ok(());
                 }
-                let (def, caster) = (card.definition.clone(), *caster);
+                let (def, caster) = (card.definition.arc(), *caster);
                 let (mode, x_value, converged_value) = (*mode, *x_value, *converged_value);
                 let others: Vec<CardId> = self
                     .battlefield
@@ -28425,7 +28425,7 @@ impl GameState {
                             ..
                         } = &self.stack[idx]
                         {
-                            (card.definition.clone(), target.clone(), additional_targets.clone())
+                            (card.definition.arc(), target.clone(), additional_targets.clone())
                         } else {
                             continue;
                         };
@@ -28646,7 +28646,7 @@ impl GameState {
                                 .find(|c| c.definition.name == n.as_str())
                                 .is_some_and(|c| {
                                     self.definition_matches_requirement(
-                                        c.definition.clone(),
+                                        c.definition.arc(),
                                         f,
                                         ctx.controller,
                                     )
@@ -30494,7 +30494,7 @@ impl GameState {
                 };
                 events.push(GameEvent::PermanentExiled { card_id: id });
                 if let Some(front) = card.front_face.take() {
-                    card.definition = front;
+                    card.set_definition(front);
                 }
                 card.transformed = false;
                 self.place_card_in_dest(
@@ -30537,8 +30537,8 @@ impl GameState {
                 };
                 let Some(mut card) = taken else { return Ok(()) };
                 let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
-                card.front_face = Some(card.definition.clone());
-                card.definition = std::sync::Arc::new(back);
+                card.front_face = Some(card.definition.arc());
+                card.set_definition(std::sync::Arc::new(back));
                 card.transformed = true;
                 events.push(GameEvent::Transformed { card_id: id });
                 self.place_card_in_dest(
@@ -30657,8 +30657,8 @@ impl GameState {
                 }
                 let mut card = self.players[owner].graveyard.remove(pos);
                 let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
-                card.front_face = Some(card.definition.clone());
-                card.definition = std::sync::Arc::new(back);
+                card.front_face = Some(card.definition.arc());
+                card.set_definition(std::sync::Arc::new(back));
                 card.transformed = true;
                 events.push(GameEvent::Transformed { card_id: src });
                 self.place_card_in_dest(
@@ -31335,7 +31335,7 @@ impl GameState {
                     return Ok(());
                 };
                 let Some(def) =
-                    self.exile.iter().find(|c| c.id == card_id).map(|c| c.definition.clone())
+                    self.exile.iter().find(|c| c.id == card_id).map(|c| c.definition.arc())
                 else {
                     return Ok(());
                 };
@@ -31350,7 +31350,7 @@ impl GameState {
                 if let Some(a) = own {
                     new_def.activated_abilities.push(a);
                 }
-                let original = std::mem::replace(&mut c.definition, std::sync::Arc::new(new_def));
+                let original = std::mem::replace(c.definition_mut(), std::sync::Arc::new(new_def));
                 self.temporary_copies.push(crate::game::TempCopy {
                     shapeshifter: false,
                     card: cid,
@@ -31578,7 +31578,7 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(id) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(id) {
-                        let def = std::sync::Arc::make_mut(&mut c.definition);
+                        let def = std::sync::Arc::make_mut(c.definition_mut());
                         for kw in def.keywords.iter_mut() {
                             if let crate::card::Keyword::Equip(cost) = kw {
                                 cost.reduce_generic(*amount);
@@ -31748,7 +31748,7 @@ impl GameState {
                     .iter()
                     .find(|c| c.id == src)
                     .or_else(|| self.battlefield.iter().find(|c| c.id == src))
-                    .map(|c| c.definition.clone())
+                    .map(|c| c.definition.arc())
                 else {
                     return Ok(());
                 };
@@ -32237,7 +32237,7 @@ impl GameState {
                 }
                 if let Some(cid) = hit {
                     use crate::decision::{Decision, DecisionAnswer};
-                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.arc());
                     if let Some(card_def) = card_def {
                         let src = ctx.source.unwrap_or(CardId(0));
                         let decision = Decision::OptionalTrigger {
@@ -32334,7 +32334,7 @@ impl GameState {
                         continue;
                     }
                     use crate::decision::{Decision, DecisionAnswer};
-                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.arc());
                     let Some(card_def) = card_def else { continue };
                     // Free copies of the spell you just cast are near-strictly
                     // upside, and the offers chain (a cast between asks can
@@ -32427,7 +32427,7 @@ impl GameState {
                 }
                 if let Some(cid) = hit {
                     use crate::decision::{Decision, DecisionAnswer};
-                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.arc());
                     if let Some(card_def) = card_def {
                         let src = ctx.source.unwrap_or(CardId(0));
                         let decision = Decision::OptionalTrigger {
@@ -32863,7 +32863,7 @@ impl GameState {
                 // the cast card itself).
                 let card_def = self
                     .find_card_anywhere(card_id)
-                    .map(|c| c.definition.clone());
+                    .map(|c| c.definition.arc());
                 let Some(card_def) = card_def else { return Ok(()); };
                 let auto_target = self.auto_target_for_effect_avoiding(
                     &card_def.effect,
@@ -32992,7 +32992,7 @@ impl GameState {
                             }
                         }
                         let name = card_ref.definition.name;
-                        let card_def = card_ref.definition.clone();
+                        let card_def = card_ref.definition.arc();
                         // Free casts are upside: Auto seats accept everything
                         // (blanket "no" made the whole loop a no-op). The
                         // re-offer loop can't suspend per card; scripted
@@ -33108,7 +33108,7 @@ impl GameState {
                 };
                 let card_def = self
                     .find_card_anywhere(card_id)
-                    .map(|c| c.definition.clone());
+                    .map(|c| c.definition.arc());
                 let Some(card_def) = card_def else { return Ok(()) };
                 let auto_target =
                     self.auto_target_for_effect_avoiding(&card_def.effect, p, Some(card_id));
@@ -33199,7 +33199,7 @@ impl GameState {
                     .exile
                     .iter()
                     .find(|c| c.id == source)
-                    .map(|c| c.definition.clone());
+                    .map(|c| c.definition.arc());
                 let Some(def) = original_def else { return Ok(()); };
                 // "You *may* cast a copy" — a real prompt, same
                 // stash-and-rerun shape as `Effect::MayDo`. A wants_ui

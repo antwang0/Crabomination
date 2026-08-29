@@ -535,7 +535,7 @@ fn misconception_gaining_protection_makes_an_attached_aura_fall_off() {
     assert_eq!(g.battlefield_find(aura).unwrap().attached_to, Some(bear),
         "the Aura is attached");
     // The bear gains protection from white.
-    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(bear).unwrap().definition)
+    std::sync::Arc::make_mut(g.battlefield_find_mut(bear).unwrap().definition_mut())
         .keywords.push(Keyword::Protection(Color::White));
     let _ = g.check_state_based_actions();
     drain_stack(&mut g);

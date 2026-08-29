@@ -2961,7 +2961,7 @@ fn swimmer_in_nightmares_scales_and_evades() {
 
 /// Resolve a saga's chapter `idx` (0-based) with the given target.
 fn resolve_chapter(g: &mut GameState, saga: CardId, controller: usize, idx: usize, target: Option<Target>) {
-    let def = g.battlefield_find(saga).unwrap().definition.clone();
+    let def = g.battlefield_find(saga).unwrap().definition.arc();
     let eff = def.saga_chapters[idx].1.clone();
     let ctx = crabomination::game::effects::EffectContext::for_trigger(saga, controller, target, 0);
     g.resolve_effect(&eff, &ctx).unwrap();

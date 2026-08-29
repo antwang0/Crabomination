@@ -1018,7 +1018,7 @@ fn compute_permanent_pass(
         id: card.id,
         controller,
         // The one handle: the four overlays above dropped theirs.
-        def: card.definition.clone(),
+        def: card.definition.arc(),
         card_types: card_types.into_overlay(),
         supertypes: supertypes.into_overlay(),
         subtypes: subtypes.into_overlay(),

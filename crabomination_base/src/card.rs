@@ -6638,17 +6638,71 @@ impl Clone for CardMemo {
     }
 }
 
+/// The definition handle on a [`CardData`], and the reason [`CardMemo`] does
+/// not have to be thrown away by every write that reaches a card.
+///
+/// `Deref`s to the `Arc`, so **every read site is unchanged** —
+/// `c.definition.name`, `&c.definition`, `c.definition.is_creature()` all
+/// still compile through two derefs. What it does *not* have is `DerefMut`
+/// and a public field, so an assignment to the field and a `make_mut` on it
+/// stop compiling: a definition rewrite has to go through
+/// [`CardData::definition_mut`] or [`CardData::set_definition`], which clear
+/// the memo.
+///
+/// That is the whole device. `CardInstance`'s `DerefMut` used to clear the
+/// memo because it is the one chokepoint every `&mut` reach goes through —
+/// which is provable and enormously conservative: **89.5 % of every memo
+/// recompute in the program was caused by a tap, a damage point or a
+/// counter**, none of which is an input to any memoized value (each is a
+/// pure function of `definition`). PERF's `(-91)` has the measurement.
+/// Keying the memo on the `Arc` pointer instead would be *unsound* — a
+/// uniquely-owned definition is rewritten in place by `Arc::make_mut` and
+/// the pointer does not move — so the clear has to move to the write sites,
+/// and this type is what makes "every write site" a compiler-checked claim
+/// rather than a grep.
+#[derive(Debug, Clone)]
+pub struct Definition {
+    def: Arc<CardDefinition>,
+    /// **The memo lives here, not on [`CardData`], and that is what makes
+    /// the invariant structural rather than enforced.** Both fields are
+    /// private, so the only way to change `def` is through an accessor that
+    /// clears — and the only *other* way to change what a `CardData`'s
+    /// definition is, `c.definition = other.definition.clone()`, carries
+    /// this memo along with the definition it describes, which is correct.
+    /// There is no expression that leaves a memo beside a definition it is
+    /// not a function of.
+    memo: CardMemo,
+}
+
+impl Definition {
+    #[inline]
+    pub(crate) fn new(def: Arc<CardDefinition>) -> Self {
+        Self { def, memo: CardMemo::default() }
+    }
+
+    /// The `Arc`, cloned. A bare `.clone()` on the field gives a
+    /// `Definition` (the outer type's `Clone` wins), so a caller that wants
+    /// the `Arc` — which is what every such site wanted before this type
+    /// existed — says `arc()`.
+    #[inline]
+    pub fn arc(&self) -> Arc<CardDefinition> {
+        self.def.clone()
+    }
+}
+
+impl std::ops::Deref for Definition {
+    type Target = Arc<CardDefinition>;
+    #[inline]
+    fn deref(&self) -> &Arc<CardDefinition> {
+        &self.def
+    }
+}
+
 /// A card's mutable per-object state. Reached only through
 /// [`CardInstance`], which owns it behind an `Arc` — see that type for why.
 #[derive(Debug, Clone)]
 pub struct CardData {
     pub id: CardId,
-    /// Memo for [`Self::printed_color_set`] and [`Self::sba_scan_bits`]; see
-    /// [`CardMemo`]. Not `pub`, not serialized, and cleared by
-    /// `CardInstance`'s `DerefMut` — the one unshare point every `&mut` reach
-    /// into a card goes through, so the invalidation is provable rather than
-    /// an enumeration of the paths that rewrite a definition.
-    memo: CardMemo,
     /// Static blueprint, shared behind an `Arc` so materializing a
     /// `CardData` (which the CoW handle does only for a card actually being
     /// written) doesn't deep-copy the definition's ~two dozen `Vec` fields.
@@ -6657,7 +6711,7 @@ pub struct CardData {
     /// (MDFC face-swap, "loses all abilities", overload effect override,
     /// keyword grants) go through `Arc::make_mut`, which clones lazily only
     /// when the `Arc` is actually shared.
-    pub definition: Arc<CardDefinition>,
+    pub definition: Definition,
     pub owner: usize,
     pub controller: usize,
     pub tapped: bool,
@@ -7204,7 +7258,7 @@ impl CardData {
     /// clearing the memo.
     #[inline]
     pub fn printed_color_set(&self) -> crate::mana::ColorSet {
-        if let Some(cs) = self.memo.get() {
+        if let Some(cs) = self.definition.memo.get() {
             debug_assert_eq!(
                 cs,
                 self.definition.printed_color_set(),
@@ -7213,7 +7267,7 @@ impl CardData {
             return cs;
         }
         let cs = self.definition.printed_color_set();
-        self.memo.set(cs);
+        self.definition.memo.set(cs);
         cs
     }
 
@@ -7221,7 +7275,7 @@ impl CardData {
     /// same word and audited by the same `debug_assert!`.
     #[inline]
     pub fn sba_scan_bits(&self) -> u64 {
-        if let Some(bits) = self.memo.get_sba() {
+        if let Some(bits) = self.definition.memo.get_sba() {
             debug_assert_eq!(
                 bits,
                 self.definition.sba_scan_bits(),
@@ -7230,15 +7284,34 @@ impl CardData {
             return bits;
         }
         let bits = self.definition.sba_scan_bits();
-        self.memo.set_sba(bits);
+        self.definition.memo.set_sba(bits);
         bits
+    }
+
+    /// The one way to get `&mut` at the definition, and the only place
+    /// besides [`Self::set_definition`] that clears the memo. For
+    /// `Arc::make_mut(c.definition_mut())` — an in-place rewrite of a
+    /// uniquely-owned definition, which is what most of the ~17 rewrite
+    /// sites do. See [`Definition`].
+    #[inline]
+    pub fn definition_mut(&mut self) -> &mut Arc<CardDefinition> {
+        self.definition.memo.clear();
+        &mut self.definition.def
+    }
+
+    /// Replace the definition wholesale (face swap, copy effect, revert),
+    /// clearing the memo. See [`Definition`].
+    #[inline]
+    pub fn set_definition(&mut self, def: Arc<CardDefinition>) {
+        self.definition.memo.clear();
+        self.definition.def = def;
     }
 
     /// [`CardDefinition::gather_scan_bits`] for this object, memoized on the
     /// memo's second word and audited by the same `debug_assert!`.
     #[inline]
     pub fn gather_scan_bits(&self) -> u64 {
-        if let Some(bits) = self.memo.get_gather() {
+        if let Some(bits) = self.definition.memo.get_gather() {
             debug_assert_eq!(
                 bits,
                 self.definition.gather_scan_bits(),
@@ -7247,7 +7320,7 @@ impl CardData {
             return bits;
         }
         let bits = self.definition.gather_scan_bits();
-        self.memo.set_gather(bits);
+        self.definition.memo.set_gather(bits);
         bits
     }
 
@@ -7255,7 +7328,7 @@ impl CardData {
     /// same word and audited by the same `debug_assert!`.
     #[inline]
     pub fn grant_scan_bits(&self) -> u64 {
-        if let Some(bits) = self.memo.get_grant() {
+        if let Some(bits) = self.definition.memo.get_grant() {
             debug_assert_eq!(
                 bits,
                 self.definition.grant_scan_bits(),
@@ -7264,7 +7337,7 @@ impl CardData {
             return bits;
         }
         let bits = self.definition.grant_scan_bits();
-        self.memo.set_grant(bits);
+        self.definition.memo.set_grant(bits);
         bits
     }
 
@@ -7272,7 +7345,7 @@ impl CardData {
     /// same word and audited by the same `debug_assert!`.
     #[inline]
     pub fn type_scan_bits(&self) -> u64 {
-        if let Some(bits) = self.memo.get_type() {
+        if let Some(bits) = self.definition.memo.get_type() {
             debug_assert_eq!(
                 bits,
                 self.definition.type_scan_bits(),
@@ -7281,7 +7354,7 @@ impl CardData {
             return bits;
         }
         let bits = self.definition.type_scan_bits();
-        self.memo.set_type(bits);
+        self.definition.memo.set_type(bits);
         bits
     }
 
@@ -7298,7 +7371,7 @@ impl CardData {
     /// suite audits both the invalidation and the "one vocabulary" claim.
     #[inline]
     pub fn vocab_index(&self, compute: impl Fn(&CardDefinition) -> u16) -> u16 {
-        if let Some(i) = self.memo.get_vocab() {
+        if let Some(i) = self.definition.memo.get_vocab() {
             debug_assert_eq!(
                 i,
                 compute(&self.definition),
@@ -7308,7 +7381,7 @@ impl CardData {
             return i;
         }
         let i = compute(&self.definition);
-        self.memo.set_vocab(i);
+        self.definition.memo.set_vocab(i);
         i
     }
 
@@ -7316,7 +7389,7 @@ impl CardData {
     /// same word and audited by the same `debug_assert!`.
     #[inline]
     pub fn dispatch_scan_bits(&self) -> u64 {
-        if let Some(bits) = self.memo.get_dispatch() {
+        if let Some(bits) = self.definition.memo.get_dispatch() {
             debug_assert_eq!(
                 bits,
                 self.definition.dispatch_scan_bits(),
@@ -7325,7 +7398,7 @@ impl CardData {
             return bits;
         }
         let bits = self.definition.dispatch_scan_bits();
-        self.memo.set_dispatch(bits);
+        self.definition.memo.set_dispatch(bits);
         bits
     }
 }
@@ -7380,14 +7453,11 @@ impl std::ops::Deref for CardInstance {
 impl std::ops::DerefMut for CardInstance {
     #[inline]
     fn deref_mut(&mut self) -> &mut CardData {
-        let d = Arc::make_mut(&mut self.0);
-        // Conservative: a write reaching the card at all clears the colour
-        // memo, whether or not it touches the definition. `Arc::make_mut` on
-        // a *uniquely owned* definition rewrites it in place, so keying the
-        // memo on the definition pointer would not see the MDFC face-swap or
-        // the Mind Bend colour override.
-        d.memo.clear();
-        d
+        // No memo clear here. Every memoized value is a pure function of
+        // `definition`, and `definition` cannot be written through this
+        // handle — see [`Definition`]. Clearing here was sound and cost
+        // 89.5 % of every recompute in the program (PERF `(-91)`).
+        Arc::make_mut(&mut self.0)
     }
 }
 
@@ -7449,8 +7519,7 @@ impl CardInstance {
         }
         CardData {
             id,
-            memo: CardMemo::default(),
-            definition,
+            definition: Definition::new(definition),
             owner,
             controller: owner,
             tapped: false,
@@ -7725,12 +7794,12 @@ impl CardInstance {
                 .keywords
                 .iter()
                 .any(|k| matches!(k, Keyword::Disguise(_)));
-        self.face_up_def = Some(self.definition.clone());
-        self.definition = Arc::new(if warded {
+        self.face_up_def = Some(self.definition.arc());
+        self.set_definition(Arc::new(if warded {
             facedown_disguise_definition()
         } else {
             facedown_creature_definition()
-        });
+        }));
         self.face_down = true;
     }
 
@@ -7750,7 +7819,8 @@ impl CardInstance {
     pub fn reset_room_doors(&mut self) {
         if self.unlocked_doors != 0 && self.definition.room.is_some() {
             self.unlocked_doors = 0;
-            self.definition = Arc::new(self.definition.room_definition_with(0));
+            let d = self.definition.room_definition_with(0);
+            self.set_definition(Arc::new(d));
         }
     }
 
@@ -7769,12 +7839,12 @@ impl CardInstance {
             // the appended solved abilities: re-derive from the un-appended base.
             // The base always-on abilities are those minus the solved set.
             if let Some(case) = self.definition.case.clone() {
-                let mut d = (*self.definition).clone();
+                let mut d = (**self.definition).clone();
                 let (t, a, s) = (&mut d.triggered_abilities, &mut d.activated_abilities, &mut d.static_abilities);
                 t.truncate(t.len().saturating_sub(case.solved_triggered.len()));
                 a.truncate(a.len().saturating_sub(case.solved_activated.len()));
                 s.truncate(s.len().saturating_sub(case.solved_static.len()));
-                self.definition = Arc::new(d);
+                self.set_definition(Arc::new(d));
             }
         }
     }
@@ -7786,7 +7856,8 @@ impl CardInstance {
             return false;
         }
         self.case_solved = true;
-        self.definition = Arc::new(self.definition.case_definition_solved());
+        let d = self.definition.case_definition_solved();
+        self.set_definition(Arc::new(d));
         true
     }
 
@@ -7803,7 +7874,8 @@ impl CardInstance {
             return false;
         }
         self.unlocked_doors |= bit;
-        self.definition = Arc::new(self.definition.room_definition_with(self.unlocked_doors));
+        let d = self.definition.room_definition_with(self.unlocked_doors);
+        self.set_definition(Arc::new(d));
         true
     }
 
@@ -7823,7 +7895,7 @@ impl CardInstance {
         }) else {
             return false;
         };
-        let mut def = (*self.definition).clone();
+        let mut def = (**self.definition).clone();
         def.card_types = vec![CardType::Enchantment];
         def.subtypes.creature_types.clear();
         def.subtypes.enchantment_subtypes = vec![EnchantmentSubtype::Aura];
@@ -7841,8 +7913,8 @@ impl CardInstance {
                 ..Default::default()
             },
         );
-        self.licid_creature_def = Some(self.definition.clone());
-        self.definition = Arc::new(def);
+        self.licid_creature_def = Some(self.definition.arc());
+        self.set_definition(Arc::new(def));
         true
     }
 
@@ -7855,7 +7927,7 @@ impl CardInstance {
             return;
         }
         if let Some(def) = self.licid_creature_def.take() {
-            self.definition = def;
+            self.set_definition(def);
             self.attached_to = None;
         }
     }
@@ -7871,7 +7943,7 @@ impl CardInstance {
         self.face_up_def.as_ref()?;
         let real = self.face_up_def.take()?;
         let name = real.name;
-        self.definition = real;
+        self.set_definition(real);
         self.face_down = false;
         self.cloaked = false;
         Some(name)
@@ -7893,8 +7965,8 @@ impl CardInstance {
             flip.cost = self.definition.cost.clone();
             flip.color_indicator = self.definition.printed_colors();
         }
-        self.unflipped_def = Some(self.definition.clone());
-        self.definition = Arc::new(flip);
+        self.unflipped_def = Some(self.definition.arc());
+        self.set_definition(Arc::new(flip));
         self.flipped = true;
         Some(name)
     }
@@ -7906,7 +7978,7 @@ impl CardInstance {
             return;
         }
         if let Some(top) = self.unflipped_def.take() {
-            self.definition = top;
+            self.set_definition(top);
             self.flipped = false;
         }
     }
@@ -7919,7 +7991,7 @@ impl CardInstance {
             return;
         }
         if let Some(front) = self.front_face.take() {
-            self.definition = front;
+            self.set_definition(front);
             self.transformed = false;
         }
     }
@@ -7932,7 +8004,7 @@ impl CardInstance {
             return;
         }
         if let Some(printed) = self.prototype_printed.take() {
-            self.definition = printed;
+            self.set_definition(printed);
             self.cast_as_prototype = false;
         }
     }
@@ -7945,7 +8017,7 @@ impl CardInstance {
         if self.mutate_stack.is_empty() {
             // Seed the pile with a bare component carrying the host's printed
             // card, so leaving the battlefield can scatter every component.
-            let mut host = CardInstance::new(self.id, self.definition.clone(), self.owner);
+            let mut host = CardInstance::new(self.id, self.definition.arc(), self.owner);
             host.is_token = self.is_token;
             self.mutate_stack.push(host);
         }
@@ -7963,7 +8035,7 @@ impl CardInstance {
     /// characteristics with every component card's abilities unioned in.
     pub fn rebuild_mutate_definition(&mut self) {
         let Some(top) = self.mutate_stack.first() else { return };
-        let mut def = (*top.definition).clone();
+        let mut def = (**top.definition).clone();
         for comp in self.mutate_stack.iter().skip(1) {
             def.triggered_abilities
                 .extend(comp.definition.triggered_abilities.iter().cloned());
@@ -7980,7 +8052,7 @@ impl CardInstance {
         // CR 730.2d — the merged permanent is a token only if its *topmost*
         // component is one.
         let top_is_token = top.is_token;
-        self.definition = Arc::new(def);
+        self.set_definition(Arc::new(def));
         self.is_token = top_is_token;
     }
 
@@ -8668,8 +8740,8 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         if wire.transformed
             && let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone())
         {
-            c.front_face = Some(c.definition.clone());
-            c.definition = Arc::new(back);
+            c.front_face = Some(c.definition.arc());
+            c.set_definition(Arc::new(back));
             c.transformed = true;
         }
         // CR 710 — restore a flipped permanent: stash the top, swap the active
@@ -8677,20 +8749,22 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         if wire.flipped
             && let Some(flip) = c.definition.flip_face.as_ref().map(|f| (**f).clone())
         {
-            c.unflipped_def = Some(c.definition.clone());
-            c.definition = Arc::new(flip);
+            c.unflipped_def = Some(c.definition.arc());
+            c.set_definition(Arc::new(flip));
             c.flipped = true;
         }
         // CR 709.5 — restore a Room permanent's unlocked doors (the live
         // definition is the union of unlocked doors' abilities).
         if wire.unlocked_doors != 0 && c.definition.room.is_some() {
             c.unlocked_doors = wire.unlocked_doors;
-            c.definition = Arc::new(c.definition.room_definition_with(wire.unlocked_doors));
+            let d = c.definition.room_definition_with(wire.unlocked_doors);
+            c.set_definition(Arc::new(d));
         }
         // MKM — restore a solved Case (switch on its "Solved —" abilities).
         if wire.case_solved && c.definition.case.is_some() {
             c.case_solved = true;
-            c.definition = Arc::new(c.definition.case_definition_solved());
+            let d = c.definition.case_definition_solved();
+            c.set_definition(Arc::new(d));
         }
         // CR 716.2 — Class level round-trips as a plain field (abilities are
         // predicate-gated, so no definition rebuild is needed).
@@ -8722,7 +8796,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         if let Some(idx) = wire.chosen_mode
             && let Some(def) = c.definition.with_mode_applied(idx as usize)
         {
-            c.definition = Arc::new(def);
+            c.set_definition(Arc::new(def));
         }
         c.chosen_card_type = wire.chosen_card_type;
         c.echo_paid = wire.echo_paid;
@@ -8763,8 +8837,8 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         if wire.cast_as_prototype
             && let Some(proto_def) = c.definition.with_prototype_applied()
         {
-            c.prototype_printed = Some(c.definition.clone());
-            c.definition = Arc::new(proto_def);
+            c.prototype_printed = Some(c.definition.arc());
+            c.set_definition(Arc::new(proto_def));
             c.cast_as_prototype = true;
         }
         c.saddled = wire.saddled;

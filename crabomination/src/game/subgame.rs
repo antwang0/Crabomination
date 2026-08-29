@@ -40,7 +40,7 @@ impl GameState {
         sub.rng = self.rng.fork();
         for seat in 0..seats {
             let defs: Vec<crate::card::CardDefinition> =
-                self.players[seat].library.iter().map(|c| (*c.definition).clone()).collect();
+                self.players[seat].library.iter().map(|c| (**c.definition).clone()).collect();
             // CR 729.3 — a player with no library can't play; they lose the
             // subgame immediately rather than deck out on the first draw.
             for def in defs {

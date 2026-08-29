@@ -3248,8 +3248,8 @@ impl GameState {
             if back.is_instant() || back.is_sorcery() {
                 return;
             }
-            c.front_face = Some(c.definition.clone());
-            c.definition = std::sync::Arc::new(back);
+            c.front_face = Some(c.definition.arc());
+            c.set_definition(std::sync::Arc::new(back));
             c.transformed = true;
         } else {
             let Some(front) = c.front_face.clone() else { return };
@@ -3257,7 +3257,7 @@ impl GameState {
                 return;
             }
             c.front_face = None;
-            c.definition = front;
+            c.set_definition(front);
             c.transformed = false;
         }
         self.apply_as_transforms_effect(id, events);
@@ -5726,8 +5726,8 @@ impl GameState {
             return;
         }
         let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
-        card.front_face = Some(card.definition.clone());
-        card.definition = std::sync::Arc::new(back);
+        card.front_face = Some(card.definition.arc());
+        card.set_definition(std::sync::Arc::new(back));
         card.transformed = true;
         events.push(crate::game::GameEvent::Transformed { card_id: cid });
     }
@@ -7780,13 +7780,13 @@ impl GameState {
         if self.apply_enters_as_copy(id, ctrl, events) && !minted_extra_types.is_empty()
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id)
         {
-            let mut def = (*c.definition).clone();
+            let mut def = (**c.definition).clone();
             for t in minted_extra_types {
                 if !def.subtypes.creature_types.contains(&t) {
                     def.subtypes.creature_types.push(t);
                 }
             }
-            c.definition = std::sync::Arc::new(def);
+            c.set_definition(std::sync::Arc::new(def));
         }
         // CR 614.1c — the token's own printed "enters with N counters". Read
         // *after* `apply_enters_as_copy` so a copy token uses the copied
@@ -13430,7 +13430,7 @@ impl GameState {
         {
             let printed = &snap.definition.subtypes.creature_types;
             if cp.subtypes().creature_types.iter().any(|t| !printed.contains(t)) {
-                std::sync::Arc::make_mut(&mut snap.definition).subtypes.creature_types =
+                std::sync::Arc::make_mut(snap.definition_mut()).subtypes.creature_types =
                     cp.subtypes().creature_types.clone();
             }
         }
@@ -14150,7 +14150,7 @@ impl GameState {
         // The oldest entry holds the original printed definition.
         if let Some(pos) = self.temporary_copies.iter().position(|tc| tc.card == card.id) {
             if let Some(def) = self.temporary_copies[pos].original_def() {
-                card.definition = def;
+                card.set_definition(def);
             }
             retain_cold!(self.temporary_copies, |tc| tc.card != card.id);
         }
@@ -14175,7 +14175,7 @@ impl GameState {
                 if let Some(def) = tc.original_def()
                     && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card)
                 {
-                    c.definition = def;
+                    c.set_definition(def);
                 }
             } else {
                 kept.push(tc);
@@ -14443,7 +14443,7 @@ impl GameState {
         // library; the deck is then shuffled (CR 103.2).
         for (p, cards) in owned.into_iter().enumerate() {
             for c in cards {
-                let def = c.definition.clone();
+                let def = c.definition.arc();
                 self.players[p].library.push(CardInstance::new(c.id, def, p));
             }
             self.shuffle_library(p, events);
@@ -14461,7 +14461,7 @@ impl GameState {
 
         // 727.5 — the exempt cards never joined a deck; Karn deploys them.
         for c in exempt {
-            let def = c.definition.clone();
+            let def = c.definition.arc();
             let id = c.id;
             let mut inst = CardInstance::new(id, def, c.owner);
             inst.controller = starter;
@@ -21024,7 +21024,7 @@ impl GameState {
                             crate::card::Zone::Hand => &*self.players[player].hand,
                             _ => &*self.players[player].library,
                         };
-                        let def = src.iter().find(|c| c.id == *card_id).map(|c| c.definition.clone());
+                        let def = src.iter().find(|c| c.id == *card_id).map(|c| c.definition.arc());
                         let blocked = matches!(to, crate::effect::ZoneDest::Battlefield { .. })
                             && def.as_ref().is_some_and(|d| {
                                 self.battlefield_entry_from_zone_blocked(d, from_zone)
@@ -21144,7 +21144,7 @@ impl GameState {
                             .as_ref()
                             .is_some_and(|f| {
                                 self.definition_matches_requirement(
-                                    card.definition.clone(),
+                                    card.definition.arc(),
                                     f,
                                     player,
                                 )
@@ -21944,7 +21944,7 @@ impl GameState {
         let Ok(def) = serde_json::from_value::<crate::card::CardDefinition>(rewritten) else {
             return;
         };
-        *std::sync::Arc::make_mut(&mut card.definition) = def;
+        *std::sync::Arc::make_mut(card.definition_mut()) = def;
     }
 
     /// Resolve a spell's effect tree. On suspension, installs a
@@ -21981,7 +21981,7 @@ impl GameState {
         // the program) at the sixty-sixth tip. Cloning the `Arc` keeps the
         // definition alive independently of `card` — which is moved to the
         // graveyard further down — for one refcount bump.
-        let def = card.definition.clone();
+        let def = card.definition.arc();
         let effect: &Effect = match override_effect.as_ref() {
             Some(e) => e,
             None => {
@@ -22228,8 +22228,8 @@ impl GameState {
             let (owner, cid) = (card.owner, card.id);
             let mut card = card;
             let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
-            card.front_face = Some(card.definition.clone());
-            card.definition = std::sync::Arc::new(back);
+            card.front_face = Some(card.definition.arc());
+            card.set_definition(std::sync::Arc::new(back));
             card.transformed = true;
             events.push(GameEvent::Transformed { card_id: cid });
             self.place_card_in_dest(

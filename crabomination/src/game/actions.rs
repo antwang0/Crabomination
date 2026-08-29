@@ -3022,10 +3022,10 @@ impl GameState {
             };
             // Keep the front installed until the play is accepted — a
             // rejected play must restore the card unmodified.
-            let front = card.definition.clone();
-            card.definition = std::sync::Arc::new(*back);
+            let front = card.definition.arc();
+            card.set_definition(std::sync::Arc::new(*back));
             if !card.definition.is_land() {
-                card.definition = front;
+                card.set_definition(front);
                 restore(self, card);
                 return Err(GameError::NotALand(card_id));
             }
@@ -3168,7 +3168,7 @@ impl GameState {
                 tap_other_filter: None, from_hand: false,
                 ..Default::default()
             });
-            std::sync::Arc::make_mut(&mut card.definition).activated_abilities = kept;
+            std::sync::Arc::make_mut(card.definition_mut()).activated_abilities = kept;
         }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);
@@ -3569,14 +3569,14 @@ impl GameState {
                 Some(b) => *b,
                 None => return Err(GameError::NotALand(card_id)),
             };
-            (card.definition.clone(), back)
+            (card.definition.arc(), back)
         };
         // Swap the in-hand definition to the back face in place. The
         // hand card's back_face slot is kept (it points at the back
         // we just installed), so a later restore can flip back without
         // a second catalog lookup.
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
-            c.definition = std::sync::Arc::new(back_def);
+            c.set_definition(std::sync::Arc::new(back_def));
         }
         // Delegate to the regular cast path. The back face's cost,
         // type, target filters, and effect now drive validation.
@@ -3590,7 +3590,7 @@ impl GameState {
         if result.is_err()
             && let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
         {
-            c.definition = front_def;
+            c.set_definition(front_def);
         }
         result
     }
@@ -3620,13 +3620,13 @@ impl GameState {
                 .find(|c| c.id == card_id)
                 .expect("has_in_hand verified");
             match card.definition.with_prototype_applied() {
-                Some(d) => (card.definition.clone(), d),
+                Some(d) => (card.definition.arc(), d),
                 None => return Err(GameError::InvalidTarget),
             }
         };
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             c.prototype_printed = Some(front_def.clone());
-            c.definition = std::sync::Arc::new(proto_def);
+            c.set_definition(std::sync::Arc::new(proto_def));
             c.cast_as_prototype = true;
         }
         let result = self.cast_spell(card_id, target, additional_targets, mode, x_value);
@@ -3636,7 +3636,7 @@ impl GameState {
         if result.is_err()
             && let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
         {
-            c.definition = front_def;
+            c.set_definition(front_def);
             c.cast_as_prototype = false;
         }
         result
@@ -3665,7 +3665,7 @@ impl GameState {
                 .find(|c| c.id == card_id)
                 .expect("has_in_hand verified");
             match card.definition.mutate.clone() {
-                Some(c) => (card.definition.clone(), c),
+                Some(c) => (card.definition.arc(), c),
                 None => return Err(GameError::InvalidTarget),
             }
         };
@@ -3685,7 +3685,7 @@ impl GameState {
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
             let mut d = (*printed).clone();
             d.cost = mutate_cost;
-            c.definition = std::sync::Arc::new(d);
+            c.set_definition(std::sync::Arc::new(d));
             c.mutate_onto = Some((host, on_top));
         }
         let result = self.cast_spell(card_id, None, Vec::new(), None, x_value);
@@ -3697,7 +3697,7 @@ impl GameState {
                     if let StackItem::Spell { card, .. } = item
                         && card.id == card_id
                     {
-                        card.definition = printed;
+                        card.set_definition(printed);
                         break;
                     }
                 }
@@ -3705,7 +3705,7 @@ impl GameState {
             }
             Err(e) => {
                 if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
-                    c.definition = printed;
+                    c.set_definition(printed);
                     c.mutate_onto = None;
                 }
                 Err(e)
@@ -5272,7 +5272,8 @@ impl GameState {
         }
         card.unlocked_doors &= !bit;
         let doors = card.unlocked_doors;
-        card.definition = std::sync::Arc::new(card.definition.room_definition_with(doors));
+        let d = card.definition.room_definition_with(doors);
+        card.set_definition(std::sync::Arc::new(d));
     }
 
     /// CR 702.41 — cast a modal spell paying its Entwine cost; every mode
@@ -7638,7 +7639,7 @@ impl GameState {
                 self.sacrificed_mana_value,
             ) {
                 let sac_card = self.sacrificed_card;
-                let def = std::sync::Arc::make_mut(&mut card.definition);
+                let def = std::sync::Arc::make_mut(card.definition_mut());
                 def.effect = Effect::WithSacrificedPt {
                     power: pw,
                     total_power: self.sacrificed_total_power,
@@ -8560,7 +8561,7 @@ impl GameState {
             || granted_storm)
             .then(|| {
                 (
-                    card.definition.clone(),
+                    card.definition.arc(),
                     self.spells_cast_this_turn.saturating_sub(1),
                 )
             })
@@ -8571,7 +8572,7 @@ impl GameState {
                 card.definition
                     .keywords
                     .has_kw(&Keyword::Gravestorm)
-                    .then(|| (card.definition.clone(), self.permanents_to_graveyard_this_turn))
+                    .then(|| (card.definition.arc(), self.permanents_to_graveyard_this_turn))
             })
             // "Copy it for each OTHER instant and sorcery spell you've cast
             // this turn" (Show of Confidence). The caster's I/S counter has
@@ -8582,7 +8583,7 @@ impl GameState {
                     .has_kw(&Keyword::SpellStorm)
                     .then(|| {
                         (
-                            card.definition.clone(),
+                            card.definition.arc(),
                             self.players[p]
                                 .instants_or_sorceries_cast_this_turn
                                 .saturating_sub(1),
@@ -8594,7 +8595,7 @@ impl GameState {
             .or_else(|| {
                 card.definition
                     .copies_on_cast_x
-                    .then(|| (card.definition.clone(), x_value))
+                    .then(|| (card.definition.arc(), x_value))
             });
 
         // CR 608.2b — remember whether the primary target is a battlefield
@@ -9090,8 +9091,8 @@ impl GameState {
         // (CR 702.146a) and resolves as the back-face permanent; presence was
         // checked before payment above.
         let back = card.definition.back_face.as_ref().map(|b| (**b).clone()).unwrap();
-        card.front_face = Some(card.definition.clone());
-        card.definition = std::sync::Arc::new(back);
+        card.front_face = Some(card.definition.arc());
+        card.set_definition(std::sync::Arc::new(back));
         card.transformed = true;
         // The back face is usually a creature (no target); when it's an Aura it
         // needs an enchant target chosen as the spell goes on the stack (CR
@@ -10769,7 +10770,7 @@ impl GameState {
         // effect to the alternative version so it resolves with "each"
         // instead of "target" semantics (or whatever the override says).
         if let Some(override_effect) = alt.effect_override {
-            std::sync::Arc::make_mut(&mut card.definition).effect = override_effect;
+            std::sync::Arc::make_mut(card.definition_mut()).effect = override_effect;
         }
 
         auto_events.push(GameEvent::SpellCast {

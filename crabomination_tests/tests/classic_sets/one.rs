@@ -1767,7 +1767,7 @@ fn rebel_salvo_strips_indestructible() {
     let mut g = two_player_game();
     let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     if let Some(c) = g.battlefield_find_mut(foe) {
-        std::sync::Arc::make_mut(&mut c.definition).keywords.push(Keyword::Indestructible);
+        std::sync::Arc::make_mut(c.definition_mut()).keywords.push(Keyword::Indestructible);
     }
     let salvo = g.add_card_to_hand(0, catalog::rebel_salvo());
     g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);

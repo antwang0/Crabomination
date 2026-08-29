@@ -500,8 +500,8 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     if cs.transformed
         && let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone())
     {
-        c.front_face = Some(c.definition.clone());
-        c.definition = std::sync::Arc::new(back);
+        c.front_face = Some(c.definition.arc());
+        c.set_definition(std::sync::Arc::new(back));
         c.transformed = true;
     }
     c.is_token = cs.is_token;

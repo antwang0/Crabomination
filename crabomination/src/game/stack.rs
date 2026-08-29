@@ -1673,7 +1673,7 @@ impl GameState {
                 // entry is already popped (the Chain cycle).
                 self.resolving_spell_snapshot =
                     Some(std::sync::Arc::new(crate::game::ResolvingSpell {
-                        definition: card.definition.clone(),
+                        definition: card.definition.arc(),
                         target: target.clone(),
                         additional_targets: additional_targets.clone(),
                         mode,
@@ -4437,7 +4437,7 @@ impl GameState {
             {
                 Some(d) => d,
                 None => match self.battlefield_find(id) {
-                    Some(c) => c.definition.clone(),
+                    Some(c) => c.definition.arc(),
                     None => continue,
                 },
             };
@@ -4451,7 +4451,7 @@ impl GameState {
                 .graveyard
                 .last()
                 .filter(|c| c.definition.is_creature())
-                .map(|c| c.definition.clone());
+                .map(|c| c.definition.arc());
             let target = match want {
                 Some(top) => {
                     // The printed card's own abilities ride along on the copy
@@ -4470,7 +4470,7 @@ impl GameState {
             if card.definition.name == target.name {
                 continue;
             }
-            card.definition = target;
+            card.set_definition(target);
             rewrote = true;
             if !self
                 .temporary_copies
@@ -4923,7 +4923,7 @@ impl GameState {
                 {
                     self.temporary_copies.remove(pos);
                     if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card) {
-                        c.definition = def;
+                        c.set_definition(def);
                         reverted = true;
                     }
                 }
