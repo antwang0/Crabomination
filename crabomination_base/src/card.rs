@@ -6193,6 +6193,132 @@ pub mod sba_bits {
     pub const ALL: u64 = UNCONDITIONAL | UNFLIPPED | STEAL_PENALTY | EQUIPMENT;
 }
 
+/// Which of `gather_continuous_effects_inner`'s per-static passes can fire.
+///
+/// Thirty-eight of that function's passes walk `sa_cards` looking for one
+/// `StaticEffect` variant each, and a typical board carries none of them —
+/// thirty-eight walks of the same short list, each re-reading every card's
+/// static abilities to find nothing, inside the simulator's hottest function.
+/// One walk in the pre-scan sets the bits here, per card and OR'd board-wide;
+/// a pass skips a card whose bit is clear ([`sa_open`]) instead of walking its
+/// statics. Bits over-approximate — every pass still runs its own `match` — so
+/// a set bit costs only the walk it always paid.
+///
+/// The gate is *per card*, not a slice swap on the whole list: an empty
+/// `sa_cards` must cost what it cost before. A `mask & bit` per pass over a
+/// shared list measured **+1.03 % on `--decks fixed`**, where `sa_cards` is
+/// empty and all thirty-eight passes were already free.
+pub mod gather_spec {
+    pub const GRANT_KEYWORD: u64 = 1 << 0;
+    pub const GRANT_KEYWORD_TO_ATTACKERS: u64 = 1 << 1;
+    pub const PUMP_PT: u64 = 1 << 2;
+    pub const SELF_HAS_KEYWORD_WHILE: u64 = 1 << 3;
+    pub const SELF_HAS_KEYWORD_WHILE_PREDICATE: u64 = 1 << 4;
+    pub const NOT_CREATURE_WHILE_DEVOTION_BELOW: u64 = 1 << 5;
+    pub const NON_AURA_ENCHANTMENTS_ARE_CREATURES: u64 = 1 << 6;
+    pub const NONCREATURE_ARTIFACTS_ARE_CREATURES: u64 = 1 << 7;
+    pub const NONCREATURE_ARTIFACTS_LOSE_ABILITIES: u64 = 1 << 8;
+    pub const PUMP_PT_PER_OTHER_OF_TYPE: u64 = 1 << 9;
+    pub const SELF_IS_CREATURE_WHILE_COUNTERS_AT_LEAST: u64 = 1 << 10;
+    pub const SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST: u64 = 1 << 11;
+    pub const GAIN_KEYWORDS_FROM_EXILED_WITH: u64 = 1 << 12;
+    pub const PUMP_SELF_BY_EXILED_WITH_STATS: u64 = 1 << 13;
+    pub const PROTECTION_FROM_EXILED_WITH_CARD_TYPES: u64 = 1 << 14;
+    pub const NAMED_LANDS_NEUTRALIZED: u64 = 1 << 15;
+    pub const BLIGHTED_LANDS_NEUTRALIZED: u64 = 1 << 16;
+    pub const PUMP_SELF_BY_CONTROLLED_PERMANENTS: u64 = 1 << 17;
+    pub const PUMP_SELF_BY_VALUE: u64 = 1 << 18;
+    pub const PUMP_TEAM_PER_ATTACHMENT_ON_SOURCE: u64 = 1 << 19;
+    pub const PUMP_TEAM_BY_CONTROLLED_PERMANENTS: u64 = 1 << 20;
+    pub const PUMP_SELF_IF: u64 = 1 << 21;
+    pub const SET_BASE_PT_IF: u64 = 1 << 22;
+    pub const GRANT_PUMP_SELF_IF: u64 = 1 << 23;
+    pub const PUMP_PT_BY_VALUE: u64 = 1 << 24;
+    pub const PUMP_TEAM_IF: u64 = 1 << 25;
+    pub const PUMP_PER_BUSHIDO: u64 = 1 << 26;
+    pub const ANTHEM_FOR_CHOSEN_TYPE: u64 = 1 << 27;
+    pub const ANTHEM_FOR_CHOSEN_COLOR: u64 = 1 << 28;
+    pub const GRANT_KEYWORD_TO_CHOSEN_TYPE: u64 = 1 << 29;
+    pub const ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP: u64 = 1 << 30;
+    pub const SET_BASE_PT_FOR_FILTER: u64 = 1 << 31;
+    pub const SELF_HAS_KEYWORD_IF: u64 = 1 << 32;
+    pub const SELF_HAS_DRAFT_NOTED_KEYWORDS: u64 = 1 << 33;
+    pub const SELF_IS_CREATURE_IF: u64 = 1 << 34;
+    pub const ANNIHILATOR_PER_PLUS_ONE_COUNTER: u64 = 1 << 35;
+    pub const SELF_BASE_PT_FROM_VALUE: u64 = 1 << 36;
+    pub const SET_BASE_PT_FOR_FILTER_FROM_VALUE: u64 = 1 << 37;
+    pub const ARTIFACTS_ARE_EQUIPMENT: u64 = 1 << 38;
+    pub const PUMP_PER_SHARED_TYPE: u64 = 1 << 39;
+    /// `AnthemForFilter` and `AnthemForFilterIf` share one walk, so one bit.
+    pub const ANTHEM_FILTER: u64 = 1 << 40;
+}
+
+/// The [`gather_spec`] bits `effect` can contribute.
+///
+/// The five gate wrappers recurse rather than returning a bit of their own:
+/// `active_static` peels them, so a pass reached through one still sees the
+/// inner variant. Anything unmapped is `0` — a pass whose variant is missing
+/// here is skipped, which is what [`sa_audit`] exists to catch.
+pub fn static_effect_gather_bits(effect: &crate::effect::StaticEffect) -> u64 {
+    use crate::effect::StaticEffect as SE;
+    use gather_spec as g;
+    match effect {
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCondition { inner, .. }
+        | SE::WhileCountersAtLeast { inner, .. } => static_effect_gather_bits(inner),
+        SE::GrantKeyword { .. } => g::GRANT_KEYWORD,
+        SE::GrantKeywordToAttackers { .. } => g::GRANT_KEYWORD_TO_ATTACKERS,
+        SE::PumpPT { .. } => g::PUMP_PT,
+        SE::SelfHasKeywordWhile { .. } => g::SELF_HAS_KEYWORD_WHILE,
+        SE::SelfHasKeywordWhilePredicate { .. } => g::SELF_HAS_KEYWORD_WHILE_PREDICATE,
+        SE::NotCreatureWhileDevotionBelow { .. } => g::NOT_CREATURE_WHILE_DEVOTION_BELOW,
+        SE::NonAuraEnchantmentsAreCreatures { .. } => g::NON_AURA_ENCHANTMENTS_ARE_CREATURES,
+        SE::NoncreatureArtifactsAreCreatures => g::NONCREATURE_ARTIFACTS_ARE_CREATURES,
+        SE::NoncreatureArtifactsLoseAbilities => g::NONCREATURE_ARTIFACTS_LOSE_ABILITIES,
+        SE::PumpPTPerOtherOfType { .. } => g::PUMP_PT_PER_OTHER_OF_TYPE,
+        SE::SelfIsCreatureWhileCountersAtLeast { .. } => {
+            g::SELF_IS_CREATURE_WHILE_COUNTERS_AT_LEAST
+        }
+        SE::SelfHasKeywordWhileCountersAtLeast { .. } => {
+            g::SELF_HAS_KEYWORD_WHILE_COUNTERS_AT_LEAST
+        }
+        SE::GainKeywordsFromExiledWith { .. } => g::GAIN_KEYWORDS_FROM_EXILED_WITH,
+        SE::PumpSelfByExiledWithStats => g::PUMP_SELF_BY_EXILED_WITH_STATS,
+        SE::ProtectionFromExiledWithCardTypes => g::PROTECTION_FROM_EXILED_WITH_CARD_TYPES,
+        SE::NamedLandsNeutralized => g::NAMED_LANDS_NEUTRALIZED,
+        SE::BlightedLandsNeutralized => g::BLIGHTED_LANDS_NEUTRALIZED,
+        SE::PumpSelfByControlledPermanents { .. } => g::PUMP_SELF_BY_CONTROLLED_PERMANENTS,
+        SE::PumpSelfByValue { .. } => g::PUMP_SELF_BY_VALUE,
+        SE::PumpTeamPerAttachmentOnSource { .. } => g::PUMP_TEAM_PER_ATTACHMENT_ON_SOURCE,
+        SE::PumpTeamByControlledPermanents { .. } => g::PUMP_TEAM_BY_CONTROLLED_PERMANENTS,
+        SE::PumpSelfIf { .. } => g::PUMP_SELF_IF,
+        SE::SetBasePtIf { .. } => g::SET_BASE_PT_IF,
+        SE::GrantPumpSelfIf { .. } => g::GRANT_PUMP_SELF_IF,
+        SE::PumpPTByValue { .. } => g::PUMP_PT_BY_VALUE,
+        SE::PumpTeamIf { .. } => g::PUMP_TEAM_IF,
+        SE::PumpPerBushido { .. } => g::PUMP_PER_BUSHIDO,
+        SE::AnthemForChosenType { .. } => g::ANTHEM_FOR_CHOSEN_TYPE,
+        SE::AnthemForChosenColor { .. } => g::ANTHEM_FOR_CHOSEN_COLOR,
+        SE::GrantKeywordToChosenType { .. } => g::GRANT_KEYWORD_TO_CHOSEN_TYPE,
+        SE::AnthemForColorSharedWithLibraryTop { .. } => {
+            g::ANTHEM_FOR_COLOR_SHARED_WITH_LIBRARY_TOP
+        }
+        SE::SetBasePtForFilter { .. } => g::SET_BASE_PT_FOR_FILTER,
+        SE::SelfHasKeywordIf { .. } => g::SELF_HAS_KEYWORD_IF,
+        SE::SelfHasDraftNotedKeywords => g::SELF_HAS_DRAFT_NOTED_KEYWORDS,
+        SE::SelfIsCreatureIf { .. } => g::SELF_IS_CREATURE_IF,
+        SE::AnnihilatorPerPlusOneCounter => g::ANNIHILATOR_PER_PLUS_ONE_COUNTER,
+        SE::SelfBasePtFromValue { .. } => g::SELF_BASE_PT_FROM_VALUE,
+        SE::SetBasePtForFilterFromValue { .. } => g::SET_BASE_PT_FOR_FILTER_FROM_VALUE,
+        SE::ArtifactsAreEquipment => g::ARTIFACTS_ARE_EQUIPMENT,
+        SE::PumpPerSharedType { .. } => g::PUMP_PER_SHARED_TYPE,
+        SE::AnthemForFilter { .. } | SE::AnthemForFilterIf { .. } => g::ANTHEM_FILTER,
+        _ => 0,
+    }
+}
+
 /// The two presence questions `card_can_grant_keyword`'s prologue asks of a
 /// definition before it can answer "no" — see [`sba_bits`] for the device.
 pub mod grant_bits {
