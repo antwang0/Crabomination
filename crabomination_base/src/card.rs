@@ -7195,7 +7195,7 @@ pub struct CardData {
     /// Damage marked on this permanent this turn, tallied per damaging source
     /// *instance* — "unless lethal damage dealt by a single source is marked
     /// on it" (Ogre Enforcer). Reset at cleanup; in-memory only.
-    pub damage_by_source_this_turn: smallvec::SmallVec<[(CardId, u32); 2]>,
+    pub damage_by_source_this_turn: crate::copyvec::CopyVec<[(CardId, u32); 2]>,
     /// Set when this creature is declared as a blocker; powers "creature that
     /// attacked or blocked this turn" filters (Gideon's Triumph). Cleared in
     /// per-turn cleanup. Transient — not serialized (defaults false on reload).
@@ -7204,7 +7204,7 @@ pub struct CardData {
     /// Outlives combat teardown (`block_map` is cleared at end of combat) so
     /// delayed "each creature that was blocked by one of those creatures this
     /// turn" clauses resolve (Triton Tactics). Cleared in per-turn cleanup.
-    pub blocked_attackers_this_turn: smallvec::SmallVec<[CardId; 4]>,
+    pub blocked_attackers_this_turn: crate::copyvec::CopyVec<[CardId; 4]>,
     /// CR 702.39 — Provoke: the attacker this creature must block this
     /// combat if able. Set when an attacker provokes it (untap + force
     /// block); cleared at end of combat. Transient — not serialized.
@@ -7738,9 +7738,9 @@ impl CardInstance {
             attacked_last_turn: false,
             attack_ban: AttackBan::None,
             damage_by_source_name_this_turn: Vec::new(),
-            damage_by_source_this_turn: smallvec::SmallVec::new(),
+            damage_by_source_this_turn: crate::copyvec::CopyVec::new(),
             blocked_this_turn: false,
-            blocked_attackers_this_turn: smallvec::SmallVec::new(),
+            blocked_attackers_this_turn: crate::copyvec::CopyVec::new(),
             must_block: None,
             exiled_by: None,
             exiled_with: None,

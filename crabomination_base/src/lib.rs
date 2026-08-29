@@ -18,6 +18,7 @@
 #![allow(clippy::large_enum_variant)]
 
 pub mod card;
+pub mod copyvec;
 pub mod cow;
 pub mod dungeons;
 pub mod effect;

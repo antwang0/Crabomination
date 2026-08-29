@@ -816,13 +816,13 @@ pub struct PlayerData {
     /// Names of the spells this player has cast this turn (Grim Reminder).
     /// Cleared at untap.
     #[serde(with = "crate::static_str_serde::vec", default)]
-    pub spell_names_cast_this_turn: smallvec::SmallVec<[crate::static_str_serde::StaticStr; 1]>,
+    pub spell_names_cast_this_turn: crate::copyvec::CopyVec<[crate::static_str_serde::StaticStr; 1]>,
     /// Card ids of the spells this player has cast this turn, in cast order —
     /// "the first instant spell … you've cast this turn" (Alania, Divergent
     /// Storm) resolves each id through `find_card_anywhere`. Cleared with
     /// `spell_names_cast_this_turn`.
     #[serde(default)]
-    pub spell_ids_cast_this_turn: smallvec::SmallVec<[crate::card::CardId; 4]>,
+    pub spell_ids_cast_this_turn: crate::copyvec::CopyVec<[crate::card::CardId; 4]>,
     /// Turn number through which this player may cast creature spells from
     /// their graveyard by foraging (Osteomancer Adept). Cleared at cleanup.
     #[serde(default)]
@@ -1229,8 +1229,8 @@ impl Player {
             cant_lose_this_turn: false,
             damage_floor_this_turn: false,
             attack_tax_until_your_turn: 0,
-            spell_names_cast_this_turn: smallvec::SmallVec::new(),
-            spell_ids_cast_this_turn: smallvec::SmallVec::new(),
+            spell_names_cast_this_turn: crate::copyvec::CopyVec::new(),
+            spell_ids_cast_this_turn: crate::copyvec::CopyVec::new(),
             forage_graveyard_casts_turn: None,
             skip_turns: 0,
             skip_next_untap_step: 0,

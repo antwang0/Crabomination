@@ -8610,6 +8610,73 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-eighth pass (3) — `SmallVec`'s `Clone` is `extend`, and for a `Copy` item that is the wrong instruction
+
+**`fixed` -0.419 % / `cube` -0.297 % / `sealed` -0.328 %** off `b12393f9`.
+
+`smallvec`'s `Clone` is `SmallVec::from(self.as_slice())`, which lands in
+`extend_from_slice` → `Extend::extend`: a `reserve` plus an **external**
+`next()` loop, for a `Copy` item and for an empty vector alike.
+`SmallVec::from_slice` is a `ptr::copy_nonoverlapping`, is on stable, and is
+bounded on exactly `A::Item: Copy` — but the crate reaches it only through an
+inherent method, never through `Clone`.
+
+That is a *deep-copy* cost, not a per-event one: these vectors sit in the CoW
+state groups, so each is cloned once per `Arc::make_mut` copy and once per
+`GameState::clone`. `SmallVec as Extend::extend` was **337,280 calls /
+22.7 M Ir / 0.81 % of `cube`**, and **251,044 of those were under
+`Arc::clone_from_ref_in` (206,024) or `GameState::clone` (45,020)**.
+
+`crabomination_base::copyvec::CopyVec<A>` is a `Deref`/`DerefMut` newtype over
+`SmallVec<A>` whose only difference is a `Clone` that copies. Six fields moved
+to it and **not one of their ~55 call sites changed** — only the declarations
+and their constructors:
+
+```text
+  CardData::damage_by_source_this_turn      [(CardId, u32); 2]
+  CardData::blocked_attackers_this_turn     [CardId; 4]
+  GameState::blocked_attackers              [CardId; 4]
+  GameState::blocks_declared_this_turn      [(CardId, CardId); 2]
+  PlayerData::spell_names_cast_this_turn    [StaticStr; 1]
+  PlayerData::spell_ids_cast_this_turn      [CardId; 4]
+```
+
+`PlayerData::spell_casts_this_turn` (`[CastProfile; 1]`) stays: `CastProfile`
+carries a `Vec<CardType>` and is not `Copy`. It is most of the 22,032 clone-path
+extends that remain.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base b12393f9
+  fixed     942,328,403 ->   938,382,831   -0.419 %
+  cube    2,805,505,066 -> 2,797,142,324   -0.297 %
+  sealed  2,793,794,620 -> 2,784,622,362   -0.328 %
+
+cube rows
+  SmallVec as Extend::extend    22,654,690 -> 10,367,588   -12,287,102
+                       calls       337,280 ->    108,268      -68.0 %
+  __memcpy_avx_unaligned_erms   71,360,687 -> 74,281,478    +2,920,791
+  Arc::clone_from_ref_in        87,584,248 -> 89,015,336    +1,431,088
+  SmallVec::try_grow               627,476 ->    288,392      -339,084
+```
+
+**The rule, and it is the other half of one this file already carries.** The
+existing `SmallVec` rules are about *filling* one — `Vec::from_iter`
+specializes to internal iteration and `SmallVec`'s `Extend` does not, so fill
+with a `for` loop. This is the *copying* side of the same cause, and it is
+cheaper to fix because it is one impl rather than N call sites: **a
+`SmallVec` field of `Copy` items inside a CoW'd group wants a `Clone` that is
+`from_slice`.** Price it by the deep-copy count, not the event count.
+
+**And one signature had to move with it:** `static_str_serde::vec::serialize`
+was bounded `C: Deref<Target = [StaticStr]>`, which a wrapper cannot satisfy —
+a newtype's `Deref` stops at the container it wraps. `AsRef<[_]>` is the bound
+that takes `Vec`, `SmallVec` and any wrapper over either.
+
+Behaviour-preserving: identical run output on all three pools, suite 19,036 /
+0 / 5, golden traces unmoved, clippy clean, `--bench` byte-identical, grid 30
+cells / 33,120 games / 0 undecided / 0 failures.
+
 ### Ninety-eighth pass (2) — the type-gate memo's invalidation splits in two, and takes 73-80 % of the deletion ceiling
 
 **`fixed` -0.287 % / `cube` -0.328 % / `sealed` -0.295 %** off `630bd29b`.

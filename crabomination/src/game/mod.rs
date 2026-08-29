@@ -1191,13 +1191,13 @@ pub struct GameState {
     /// and in the cold group that write unshared ~89 collections. See PERF's
     /// seventy-second pass.
     #[serde(default)]
-    pub(crate) blocked_attackers: SmallVec<[CardId; 4]>,
+    pub(crate) blocked_attackers: crate::copyvec::CopyVec<[CardId; 4]>,
     /// `(blocker, attacker)` pairs declared this turn, kept off the permanents
     /// so it survives the blocker's death — "destroy it and all creatures it
     /// blocked this turn" (Defiant Vanguard). Cleared at cleanup. Out of the
     /// cold group for the same reason as `blocked_attackers`.
     #[serde(default)]
-    pub(crate) blocks_declared_this_turn: SmallVec<[(CardId, CardId); 2]>,
+    pub(crate) blocks_declared_this_turn: crate::copyvec::CopyVec<[(CardId, CardId); 2]>,
     /// Skip the draw on the very first turn (turn 1, first player).
     pub skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
@@ -2934,8 +2934,8 @@ impl GameState {
             combat_damage_assignment: Default::default(),
             combat_damage_plan_step: None,
             blockers_declared: false,
-            blocked_attackers: SmallVec::new(),
-            blocks_declared_this_turn: SmallVec::new(),
+            blocked_attackers: crate::copyvec::CopyVec::new(),
+            blocks_declared_this_turn: crate::copyvec::CopyVec::new(),
             // Multiplayer (3+) doesn't skip the first draw — only the 2-player
             // starting player does.
             skip_first_draw: n <= 2,

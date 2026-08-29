@@ -89,13 +89,15 @@ pub mod vec {
     use serde::de::Deserialize;
     use serde::{Deserializer, Serializer};
 
-    // Generic over the container so an inline-storage field (`SmallVec`) uses
-    // the same module and the same wire shape — a sequence either way.
+    // Generic over the container so an inline-storage field (`SmallVec`, or a
+    // `CopyVec` wrapping one) uses the same module and the same wire shape — a
+    // sequence either way. `AsRef`, not `Deref`: a wrapper's `Deref` stops at
+    // the container it wraps, and every container here is `AsRef<[_]>`.
     pub fn serialize<S: Serializer, C>(v: &C, ser: S) -> Result<S::Ok, S::Error>
     where
-        C: std::ops::Deref<Target = [super::StaticStr]>,
+        C: AsRef<[super::StaticStr]>,
     {
-        serde::Serialize::serialize(&**v, ser)
+        serde::Serialize::serialize(v.as_ref(), ser)
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>, C>(de: D) -> Result<C, D::Error>
