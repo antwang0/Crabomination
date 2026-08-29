@@ -2101,6 +2101,44 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fifth pass (6) — three questions about one card's statics are one walk
+
+**`ironscale_replace` reads `static_abilities` once, base `e0bc5c46`.** Sekki's
+trade, Ironscale's grow and the replace-with-counters family are three
+questions about the *same permanent's* `static_abilities`, and the function
+asked each through its own helper: three `battlefield_find`s and three walks
+per combat-damage assignment to a creature.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     978,492,848 ->   977,586,631   -0.093 %
+  cube    2,938,264,442 -> 2,934,218,573   -0.138 %
+  sealed  2,921,980,262 -> 2,918,966,128   -0.103 %
+
+ironscale_replace inclusive, identical call counts either side:
+                 calls        before        after   Ir/call
+  fixed         3,752     1,342,748       442,580   358 -> 118  (-67 %)
+  cube         12,754     6,081,190     2,057,086   477 -> 161  (-66 %)
+  sealed       12,340     4,394,372     1,471,276   356 -> 119  (-67 %)
+```
+
+That subtree is the whole program delta (-900,168 / -4,024,104 / -2,923,096
+against -906,217 / -4,045,869 / -3,014,134), so nothing else moved.
+
+**The half that generalises is the `&mut self` one.** The third question fed
+`trade_counters_for_damage`, which is `&mut self` and so cannot be handed a
+borrowed card — but its own first act was the same lookup, and its early-out
+is exactly "no such static". Reading the bit in the fused walk and using it to
+*gate the call* removes that lookup without touching the function:
+`sekki && self.trade_counters_for_damage(..)` is equivalent because the only
+other early-out is `dealt == 0`, checked at the top of the caller. **A
+`&mut self` helper whose first act is a read is gateable by that read even
+when it cannot be refactored.**
+
+`creature_prevents_combat_damage_grows` is deleted with it — this was its only
+caller, and a helper that exists to be one leg of a fused walk is dead once the
+walk is fused.
+
 ### Ninety-fifth pass — closing state at `e0bc5c46`
 
 ```text
@@ -2129,6 +2167,14 @@ anchor  fixed 978,492,848 / cube 2,938,264,442 / sealed 2,921,980,262
 Against `9b1fa94b`'s anchor the interval reads **-0.256 / -0.238 /
 -0.196 %**; against `386ef808`, where the two concurrent halves of this pass
 started, **-0.733 / -0.673 / -0.594 %**.
+
+**Re-read at `e0cbb4a7`, three engine commits later** (this half's
+`ironscale_replace`, the concurrent half's base-crate move and its gather
+pre-scan): **fixed 963,706,773 / cube 2,899,018,180 / sealed 2,885,278,610**,
+i.e. **-1.51 / -1.34 / -1.26 %** over that short interval and **-2.23 /
+-2.00 / -1.84 %** for the pass as a whole against `386ef808`. The `--bench`
+and grid rows above were taken at `e0bc5c46` and are not re-run for that
+interval; the concurrent half's own closing block covers its two.
 
 **The `games_per_s` line is why this block now carries the thread count** —
 see the (4) entry: the committed 292.65 was a 4-thread reading and this
@@ -12688,15 +12734,16 @@ a board walk. Read `(-79)`/`(-61)` before proposing anything keyword-shaped:
 the board-level OR of the per-card grant gates is in the do-not-rebuild list
 twice over.
 
-**THE TWO LARGEST ROWS ARE TAKEN IN THE PASS THAT FILED THE ENTRY, BOTH BY
-READING THE FUNCTION RATHER THAN THE TABLE.** `prevent_combat_to_target`
-1,140 -> 927 Ir a call on `cube` (the Serra's Emissary walk tests the instance
-field first) and `creature_redirects_damage_to_controller` 976 -> 846 (the
-presence gate takes the permanent the function already found). Together
-`fixed` -0.087 / `cube` -0.114 / `sealed` -0.098 %. See the two Baseline
-blocks — **and read their two refutations before repeating either edit at a
-neighbouring site: both mechanisms were applied to a second row in the same
-cascade and both lost there.**
+**THREE ROWS ARE TAKEN IN THE PASS THAT FILED THE ENTRY, ALL THREE BY READING
+THE FUNCTION RATHER THAN THE TABLE.** `prevent_combat_to_target` 1,140 -> 927
+Ir a call on `cube` (the Serra's Emissary walk tests the instance field
+first), `creature_redirects_damage_to_controller` 976 -> 846 (the presence
+gate takes the permanent the function already found), and `ironscale_replace`
+477 -> 161 (three questions about one card's statics become one walk).
+Together `fixed` -0.180 / `cube` -0.252 / `sealed` -0.201 %. See the three
+Baseline blocks — **and read the two refutations in them before repeating any
+of the edits at a neighbouring site: two of the three mechanisms were applied
+to a second row in the same cascade and both lost there.**
 
 **What is left, and what has still not been tried: the
 `combat_damage_prevented_for_dealer` shape applied to the other eight** — a

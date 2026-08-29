@@ -200,16 +200,18 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `e0bc5c46` (on `origin`): `fixed` 978,492,848 /
-   `cube` 2,938,264,442 / `sealed` 2,921,980,262**, the robustness grid green
-   there (30 cells, 33,120 games, 0 undecided, 0 failures, 5 assertion strings
-   verified in the audit binary), `--bench` byte-identical to the committed
-   invariant (195,528 / 27.44 / 611.0 / 0 stalls, determinism **and**
-   thread_determinism ok), `games_per_s` **208.61 at 3 threads / 271.89 at
-   4**, `host_calib_ms` 50-54, `bin_bytes` 123,614,904. Two anchors back,
-   `9b1fa94b`: 981,008,943 / 2,945,263,123 / 2,927,727,759, and one before
-   that `fa979b3a`: 989,689,177 / 2,965,899,097 / 2,947,614,907, so the two
-   passes together read **-1.13 / -0.93 / -0.87 %**.
+   **Anchor, MEASURED at `e0cbb4a7` (on `origin`): `fixed` 963,706,773 /
+   `cube` 2,899,018,180 / `sealed` 2,885,278,610.** One anchor back,
+   `e0bc5c46`: 978,492,848 / 2,938,264,442 / 2,921,980,262, with the
+   robustness grid green there (30 cells, 33,120 games, 0 undecided, 0
+   failures, 5 assertion strings verified in the audit binary), `--bench`
+   byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
+   stalls, determinism **and** thread_determinism ok), `games_per_s`
+   **208.61 at 3 threads / 271.89 at 4**, `host_calib_ms` 50-54, `bin_bytes`
+   123,614,904 — **and the three engine commits between those two anchors are
+   -1.51 / -1.34 / -1.26 %, most of it the gather pre-scan's memo word.**
+   Two anchors further back, `fa979b3a`: 989,689,177 / 2,965,899,097 /
+   2,947,614,907, so the two passes together read **-2.63 / -2.25 / -2.11 %**.
    **`games_per_s` IS NOT PORTABLE ACROSS CONTAINERS and the reason is the
    thread count, not the box**: `--bench` defaults to
    `available_parallelism - 1`, this container reports `nproc` 4 and so runs
