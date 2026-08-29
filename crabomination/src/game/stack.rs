@@ -3007,18 +3007,22 @@ impl GameState {
         }
         let untappers: Vec<usize> = {
             let mut u = if active_skips_untap { vec![] } else { vec![p] };
-            for c in &self.battlefield {
-                if any_static
-                    && c.controller != p
-                    && !u.contains(&c.controller)
-                    && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(StaticEffect::UntapAllYoursEachUntapStep)
-                        )
-                    })
-                {
-                    u.push(c.controller);
+            // `any_static` was the first term of the per-permanent condition,
+            // so a static-free board walked the whole battlefield to answer
+            // "no" 23 times. It is a board-level answer: ask it once.
+            if any_static {
+                for c in &self.battlefield {
+                    if c.controller != p
+                        && !u.contains(&c.controller)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                self.active_static(&sa.effect, c),
+                                Some(StaticEffect::UntapAllYoursEachUntapStep)
+                            )
+                        })
+                    {
+                        u.push(c.controller);
+                    }
                 }
             }
             u
@@ -3122,7 +3126,12 @@ impl GameState {
             // `EachPermanent(req)` blocks every matching permanent.
             let mut prevent_filters: Vec<SelectionRequirement> = Vec::new();
             let mut global_prevent = false;
-            for c in self.battlefield.iter().filter(|_| any_static) {
+            // Same shape as `untappers` above: everything this walk can find
+            // is a `static_abilities` entry, so a static-free board has none.
+            // An empty slice answers that without a per-permanent test.
+            let prevent_scan: &[crate::card::CardInstance] =
+                if any_static { &self.battlefield } else { &[] };
+            for c in prevent_scan {
                 for sa in &c.definition.static_abilities {
                     match &sa.effect {
                         StaticEffect::PreventUntap {
@@ -3250,10 +3259,12 @@ impl GameState {
         // untap steps" (Winter Moon, Imi Statue). Pre-resolve each cap's
         // matching permanents (the untap loop below borrows the battlefield
         // mutably), then let each player untap at most one per cap.
-        let untap_caps: Vec<(crate::fxhash::HashSet<crate::card::CardId>, u32)> = self
-            .battlefield
+        // Same gate: the caps are `static_abilities` entries, so a
+        // static-free board has none and the walk is dead.
+        let cap_scan: &[crate::card::CardInstance] =
+            if any_static { &self.battlefield } else { &[] };
+        let untap_caps: Vec<(crate::fxhash::HashSet<crate::card::CardId>, u32)> = cap_scan
             .iter()
-            .filter(|_| any_static)
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
             .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
                 Some(StaticEffect::MaxOneUntapPerStep { filter }) => Some((filter, 1)),
@@ -3282,16 +3293,15 @@ impl GameState {
         // CR 502.1 — ask each `MayChooseNotToUntap` permanent's controller
         // before the loop (which borrows the battlefield mutably).
         let may_decline: crate::fxhash::HashSet<crate::card::CardId> = {
-            let asking: Vec<(crate::card::CardId, usize, &'static str)> = self
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.tapped
-                        && untappers.contains(&c.controller)
-                        && c.definition.keywords.has_kw(&crate::card::Keyword::MayChooseNotToUntap)
-                })
-                .map(|c| (c.id, c.controller, c.definition.name))
-                .collect();
+            let mut asking: Vec<(crate::card::CardId, usize, &'static str)> = Vec::new();
+            for c in &self.battlefield {
+                if c.tapped
+                    && untappers.contains(&c.controller)
+                    && c.definition.keywords.has_kw(&crate::card::Keyword::MayChooseNotToUntap)
+                {
+                    asking.push((c.id, c.controller, c.definition.name));
+                }
+            }
             let mut set = crate::fxhash::HashSet::default();
             for (id, _seat, name) in asking {
                 if let crate::decision::DecisionAnswer::Bool(true) =
