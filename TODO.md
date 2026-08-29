@@ -200,14 +200,16 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `00485d09` (on `origin`): `fixed` 979,343,537 /
-   `cube` 2,941,640,950 / `sealed` 2,924,839,177**, and `544a124b` one commit
-   later reads 978,841,037 / 2,939,951,310 / 2,923,140,480. `--bench` at
-   `00485d09` byte-identical to the committed invariant (195,528 / 27.44 /
-   611.0 / 0 stalls, determinism ok). One anchor back, `9b1fa94b`:
-   981,008,943 / 2,945,263,123 / 2,927,727,759, and one before that
-   `fa979b3a`: 989,689,177 / 2,965,899,097 / 2,947,614,907, so the two passes
-   together read **-1.09 / -0.88 / -0.83 %**.
+   **Anchor, MEASURED at `e0bc5c46` (on `origin`): `fixed` 978,492,848 /
+   `cube` 2,938,264,442 / `sealed` 2,921,980,262**, the robustness grid green
+   there (30 cells, 33,120 games, 0 undecided, 0 failures, 5 assertion strings
+   verified in the audit binary), `--bench` byte-identical to the committed
+   invariant (195,528 / 27.44 / 611.0 / 0 stalls, determinism **and**
+   thread_determinism ok), `games_per_s` **208.61 at 3 threads / 271.89 at
+   4**, `host_calib_ms` 50-54, `bin_bytes` 123,614,904. Two anchors back,
+   `9b1fa94b`: 981,008,943 / 2,945,263,123 / 2,927,727,759, and one before
+   that `fa979b3a`: 989,689,177 / 2,965,899,097 / 2,947,614,907, so the two
+   passes together read **-1.13 / -0.93 / -0.87 %**.
    **`games_per_s` IS NOT PORTABLE ACROSS CONTAINERS and the reason is the
    thread count, not the box**: `--bench` defaults to
    `available_parallelism - 1`, this container reports `nproc` 4 and so runs
