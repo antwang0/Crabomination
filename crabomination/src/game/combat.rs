@@ -5307,7 +5307,13 @@ impl GameState {
         // One [`DamageTrigger`] bucket per requested kind; drained in order at
         // the bottom.
         let slot = |k: &EventKind| kinds.iter().position(|want| want == k);
-        let mut by_kind: Vec<Vec<DamageTrigger>> = kinds.iter().map(|_| Vec::new()).collect();
+        // Inline, by (-71)'s device: `kinds` is one to three entries and the
+        // outer `Vec` allocated on **every** call whether or not a trigger
+        // fires — 6,480 / 20,022 / 22,134 allocations over six bench games.
+        // The inner buckets stay `Vec`, and `Vec::new()` does not allocate
+        // until something is pushed into it, which on most boards is never.
+        let mut by_kind: SmallVec<[Vec<DamageTrigger>; 4]> =
+            kinds.iter().map(|_| Vec::new()).collect();
 
         // One lookup of the dealer, not two: the controller Phase 1b onward
         // needs is a field of the card Phase 1 walks the battlefield to find.
