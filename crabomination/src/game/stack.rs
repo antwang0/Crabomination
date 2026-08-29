@@ -4,6 +4,11 @@ use crate::decision::{Decision, DecisionAnswer};
 use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::types::{DelayedKind, DelayedTrigger};
 
+/// CR 704.5j's same-name groups for one sweep, keyed `(controller, name)` in
+/// insertion order — see `check_state_based_actions_into`'s legend block for
+/// why this is an association list and not a `HashMap`.
+type LegendGroups<'a> = SmallVec<[(usize, &'a str, SmallVec<[CardId; 2]>); 4]>;
+
 /// A collected death/leaves trigger to fire from a dying permanent:
 /// `(source, effect, controller, intervening/subject filter)`.
 type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>);
@@ -5068,7 +5073,7 @@ impl GameState {
             // of one is discarded, and every group is one on nearly every
             // sweep, so the old form allocated a name per legendary permanent
             // to throw it away.
-            let mut groups: SmallVec<[(usize, &str, SmallVec<[CardId; 2]>); 4]> = SmallVec::new();
+            let mut groups: LegendGroups<'_> = SmallVec::new();
             // CR 704.5j reads *current* supertypes, so a continuous grant of
             // the Legendary supertype (Leyline of Singularity, the Ring's
             // emblem) counts. Only pay for the layer computation when such a
