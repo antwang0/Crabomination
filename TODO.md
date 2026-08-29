@@ -87,12 +87,16 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    `llvm-bolt` in the toolchain and no `perf` in the image.
 1. **Perf queue** — PERF "Perf candidates" and its Baseline carry every
    number; this is the state and the rules only.
-   **THE NEXT RUN'S FIRST MOVE IS `(-87)`, WHICH PASS 97 PRICED AND DID NOT
-   BUILD** — a `GameState`-level type-gate memo, ~0.9 % of `cube`, with the
-   hit rates measured on all three pools and the invalidation's pool split
-   measured with them. It is the largest priced thing on this list and the
-   entry says what a taker still owes. `(-90)` and `(-92)` below are maps to
-   read first, not leads.
+   **`(-87)` IS TAKEN — pass 97 priced it, pass 98 built it as the
+   `zone::Battlefield` lane** (`walk_and_store`, hit 75.6 / 79.5 / 72.9 %
+   against the ask counts the census predicted 93.95 / 75.76 / 74.30 % for,
+   and the pass reads 78.5 / 73.1 / 80.2 % of its own deletion ceiling). The
+   device then generalised to `(-89)`'s damage-shield walks at four times the
+   rate of its first two lanes. **The transferable half is the method, not the
+   entry: a census that prices a memo's hit rate before anyone builds it cost
+   one `release-fast` build and turned a "nobody has priced it" into a
+   shipped 0.6-0.9 %.** `(-90)` and `(-92)` below are maps to read first, not
+   leads.
    **`(-90)` is a map, not a lead** — the
    ninety-sixth pass's whole-profile re-read at `3b8bfd03`, with three sized
    leads (`compute_permanent_pass`' 279.5 Ir body, the diffuse allocation
@@ -104,23 +108,7 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    front of `dispatch_triggers_for_events` (11 `event_matches_spec` calls a
    dispatch, so the inner fan-out is not the cost).
    **Read `(-90)` before pulling anything else off this queue.**
-   **Open, in order:** **`(-87)` IS NOW THE TOP OF THE QUEUE AND IT IS
-   PRICED** — pass 97 built `CRAB_GATE_CENSUS`, read it and took it back out.
-   The gates' inputs are unchanged on **93.95 % of `cube`'s 242,788 asks,
-   75.76 % of `fixed`'s, 74.30 % of `sealed`'s**, so a `GameState`-level memo
-   walks on ~6 % where today's code walks on 30 % — **~0.9 % of `cube`**, and
-   it reaches the ~50 % of misses that hold `&mut self` and can never see a
-   freeze scope. **But the invalidation has to be precise**: the cheap
-   `&mut battlefield` chokepoint keeps 84 of `cube`'s 94 points and only 36 of
-   76 / 29 of 74 on `fixed` / `sealed`. Both gates are over-approximations —
-   only a stale *`false`* is unsound — so the audit is the `debug_assert!`
-   `gather_continuous_effects` already runs plus the robustness grid. **PERF
-   sizes the invalidation too: three of the key's four parts are already O(1)
-   (`battlefield.len()`, `continuous_effects.len()`, `next_effect_timestamp`)
-   and the fourth is two compile-enforced sites — but the membership epoch
-   wants a `Battlefield` newtype, 106 mutable-use sites against 871 reads.
-   Budget a run for it and take the branch to yourself; it is not a patch to
-   carry across a concurrent session's pushes.**
+   **Open, in order:**
    **`(-82)` IS NOW CLOSED — its `available_mana` half is refuted off the
    dumps with no build spent** (pass 97): 12,240 builds against 12,478
    `cast_candidates` calls is **0.98 builds a call**, 92 % of builds are

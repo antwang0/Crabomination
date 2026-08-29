@@ -15175,7 +15175,13 @@ state, so the invalidation it actually needs is **zone membership plus
 `continuous_effects`**, not `DerefMut`. Nobody has priced *that* write rate.
 Price it before building anything.
 
-**`(-87)`'S OPEN LEVER IS NOW PRICED, AND THE PRICE SAYS BUILD IT** (pass 97).
+**`(-87)`'S OPEN LEVER WAS PRICED AT PASS 97 AND BUILT AT PASS 98** — the
+`zone::Battlefield` lane, hit 75.6 / 79.5 / 72.9 % against the ask counts
+below. Kept because the *method* transfers and the prediction can be
+checked against the outcome: a census costing one `release-fast` build
+turned this entry's "nobody has priced that write rate" into a shipped
+0.6-0.9 %, and the exact-vs-broad split below is what told the taker not
+to invalidate on `&mut battlefield`.
 The entry ends "nobody has priced *that* write rate. Price it before building
 anything." `CRAB_GATE_CENSUS` — built, read, and then taken back out, see
 below — fingerprints the gates' inputs at every ask and counts consecutive
