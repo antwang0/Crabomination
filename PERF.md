@@ -14281,6 +14281,75 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-93) THE CALLER-FILLED LANE — a `zone::Battlefield` lane whose miss costs
+NOTHING, and the four consumers left after the two this pass took.** The
+closure form (`lane(shift, predicate)`) walks the board itself on a miss, so
+it can only be pointed at a walk that *is* a predicate, and it breaks even at
+a hit rate of about one half — which is where the `DerefMut` invalidation
+actually sits (48.1 / 38.3 / 32.2 %, `(-87)`). The split form
+(`dispatch_lane() -> Result<bool, u64>` + `store_dispatch(epoch, found)`)
+removes that constraint entirely: the caller walks, the caller stores, and a
+miss costs the walk it was making anyway. **Any whole-board walk whose answer
+is a pure function of the definitions can use it, whatever else the walk
+produces.** Taken twice at the ninety-ninth pass (`fixed` -0.869 / -0.328 %,
+`sealed` -0.693 / -0.375 %); both Log blocks carry the numbers.
+
+**Two conditions, and the second is the one that refutes candidates.** The
+walk's per-card body must be more than a length check (`cast_lock_scan`'s mask
+is refuted at +0.034 % on exactly that), *and* nothing cheaper may already
+gate it. A third, learned here: **a second consumer of an existing lane is
+priced on the lane's ANSWER, not on the row it gates** — where the answer is
+usually `PRESENT` it buys only the misses the first consumer would have paid,
+which is why `trigger_grant_sources` reads `cube` +1.2 % on its own row and
+the program still falls.
+
+**The remaining consumers, sized off the `fixed` tip profile at `841c7b9b`,
+cheapest first. None is built.**
+
+1. **`fire_step_triggers`' first battlefield loop — 11.1 M / 1.20 % of
+   `fixed` self over 14,860 calls, and the four bench archetypes carry not one
+   step-keyed trigger.** The loop asks `t.event.kind == StepBegins(step)` per
+   printed ability per permanent, plus a `station.is_empty()`; the lane
+   predicate is `!station.is_empty() || triggered_abilities.iter().any(|t|
+   matches!(t.event.kind, StepBegins(_)))`, definition-only, and the loop
+   computes it for free while it runs (caller-filled). **The catch is
+   condition 2**: for a land or a vanilla creature the body *is* a length
+   check, so what the lane buys is the boards where permanents carry triggers
+   that are not step-keyed. Estimated ~200 of the function's 747 Ir of self a
+   call, i.e. ~0.3 % of `fixed` and less elsewhere — and a `fixed`-heavy
+   reading is exactly the trap CLAUDE.md's "a number is about a pool" names,
+   because a cube board *does* carry upkeep triggers. **Read the `cube` side
+   before believing this one.**
+2. **The noncombat-damage prevention family (`mod.rs:13600-13900`)** — the
+   remaining ungated whole-board prevention walk, per the ninety-ninth pass's
+   own queue. Measure the walk before pointing a lane at it.
+3. **`dispatch_triggers_for_events`' per-card loop, but only with an
+   event-kind mask, not a lane.** The lane question ("does any permanent carry
+   a printed trigger at all") is `PRESENT` on every real board, so a lane buys
+   nothing. What would work is a per-definition mask of the `EventKind`
+   *discriminants* its triggers carry, OR'd at the board level and tested
+   against the batch's own kinds — but `EventKind` has **113 variants**, so it
+   needs a `u128` and a 113-arm `kind_index()`, and `(-90)` already refuted the
+   *inner* form of the same idea (11 `event_matches_spec` calls a dispatch).
+   The outer form is untested; price the loop's prologue first (~13 M / 0.44 %
+   of `cube` at the eighty-ninth pass's line profile) — that is the ceiling.
+4. **`sba_board_scan` is NOT a candidate and this is why**: it reads
+   `flipped`, `controller != owner`, `attached_to`, `bestowed`,
+   `soulbond_partner`, `sector` and `counters` — six instance fields — so no
+   definition-keyed lane can hold its answer. A lane needs a predicate that
+   reads the definition and nothing else; that is the whole membership rule.
+
+**And the allocation table, re-read at `841c7b9b` on `fixed` (526,301
+allocations, the family ~10.4 %), says the reserve sweep is not worth a pass.**
+Growths per call at the top `grow_one` sites: `mana_source_table` 1.95,
+`deal_combat_damage_to_target` 2.20, `pick_attacks_inner` 2.16,
+`resolve_combat` 1.73, `send_to_graveyard` 0.75,
+`effective_mana_abilities_into` 0.13. A `with_capacity` removes only the
+*second* growth — `(-80)` row 2's rule, "reserving capacity moves that
+allocation earlier; it does not remove it" — so the whole family is worth
+~0.3 % of `fixed` spread over six sites, each needing its own size argument.
+Take one when you are already in the function.
+
 **(-91) TAKEN at `cd0842e9`, `fixed` -0.673 / `cube` -0.721 / `sealed`
 -0.813 %** — the memo now lives *inside* a `Deref`-only `Definition` handle,
 so the invariant is structural and not merely compiler-enforced. The
