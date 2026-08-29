@@ -317,7 +317,14 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    lands a `debug_assert!` or a presence gate: the 19 k-test suite is not
    their audit, because an assertion needs a *board* to fire on. Five earlier
    runs (through `b635037f`) were also clean and are in git; do not add a
-   line per run here. No pass has re-armed the 4,000-pairing cube sweep: the
+   line per run here. **The 4,000-pairing cube sweep is RE-ARMED AND CLEAN at `527f872f`** —
+   981.7 s under nextest in a debug build, every match terminated inside its
+   180 s budget, `bot_rejection_count()` unmoved. It had not been run since
+   the eighty-seventh pass, and the twelve passes since carry the `CardMemo`
+   redesign, the SBA death sweep's narrowed scope, the target-walker
+   unification and the encoder's in-place write. Re-arm it after a pass that
+   changes what the *bot* proposes or what the engine accepts; the recipe is
+   in the test's own doc comment. Previously: the
    passes since have been behaviour-preserving by construction and `--bench`
    is byte-identical through them (195,528 / 27.44 / 611.0 / 0 stalls /
    `determinism ok` / `thread_determinism ok 3 vs 1`).

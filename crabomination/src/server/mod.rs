@@ -2339,10 +2339,20 @@ mod tests {
         //
         // The whole seed range is a sweep, not just these ten: set the loop to
         // `0..4000u64`, add an `eprintln!` of the seed and run it
-        // `--no-capture`. Clean at the eighty-seventh pass and **re-run clean
-        // at its tip** (931.8 s under nextest in a debug build, 4,000
-        // pairings): every match terminated inside its 180 s budget and
-        // `bot_rejection_count()` did not move. That tip carries the picker's
+        // `--no-capture`.
+        //
+        // **Re-armed and clean at the ninety-seventh pass** (`527f872f`,
+        // 981.7 s under nextest in a debug build, 4,000 pairings): every match
+        // terminated inside its 180 s budget and `bot_rejection_count()` did
+        // not move. It had not been re-armed since the eighty-seventh pass,
+        // and the twelve passes in between carry the `CardMemo` redesign and
+        // its `Definition` handle, the SBA death sweep's narrowed scope, the
+        // target-walker unification and the encoder's in-place write — all
+        // behaviour claims the suite audits by construction and this sweep
+        // audits on 4,000 real cube boards.
+        //
+        // Clean at the eighty-seventh pass too (931.8 s, 4,000
+        // pairings). That tip carries the picker's
         // off-board gate, `EntityMatches`' empty-selector answer, the two
         // block selectors' watcher fallback, the ward gate's cost read, and
         // the pass's whole memo device (`CardMemo`'s five slots) — the last

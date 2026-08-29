@@ -2440,6 +2440,12 @@ panics  scripts/audit_panics.py — 108 sites, 74 guarded / 11 lock-poison /
         23 bare. **23 is the number to compare** and it is unchanged.
 grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
         0 failures, with the death sweep's `Only` audit armed
+sweep   the seeded 4,000-pairing cube sweep, re-armed at `527f872f` for the
+        first time since the eighty-seventh pass: **981.7 s, 4,000 pairings,
+        every match terminated inside its 180 s budget, `bot_rejection_count()`
+        unmoved.** The twelve passes since its last run carry the `CardMemo`
+        redesign and its `Definition` handle, this pass's narrowed death
+        sweep, the target-walker unification and the encoder's in-place write.
 actor   the leg the grid's header names, run because this pass lands a
         `debug_assert!` on a path the encoder reaches: the same
         `-C debug-assertions=yes` + `overflow` build of `-p crabomination_ml
