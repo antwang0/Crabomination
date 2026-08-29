@@ -9119,6 +9119,45 @@ test that LLVM cannot turn back into one. **Fusing two whole-collection
 `any`s is only a win when the collection is walked for both in the same
 epoch; price the epoch, not the collection.**
 
+### Ninety-eighth pass (6) — the encoder writes in place, and it is the actor's first entry
+
+**The actor -0.413 %**, and `bot_ladder` unmoved: `--bench` runs `gang`
+(`EvalWeights`), which never encodes, so this is a change no pool profile in
+this file can see. It is the lever the pass's actor re-read named.
+
+An `EncodedObject` is `{ u16, [f32; 53] }` = **216 bytes**, and
+`encode_card_object` built one by value, the caller mutated two or three
+features, and then pushed it — **so every encoded object was copied twice**,
+zeroed on the stack and memcpy'd into its group `Vec`. There are 228,515 of
+them in a sixty-game run. The by-value form stays (two callers genuinely want
+a value); the five push sites push an empty object and fill it through
+`encode_card_object_into(c, vocab, &mut EncodedObject)`.
+
+```text
+CRAB_NO_JITTER=1 valgrind --tool=callgrind, profiling-fast
+  -p crabomination_ml --bin selfplay_train --no-default-features,
+  --actors 1 --games 60 --steps 1 --seed 7
+  3,369,647,071 -> 3,355,717,483   -0.413 %
+
+  encode_card_object       49,471,393 ->          0
+  encode_card_object_into           0 -> 45,358,123    -4,113,270
+  __memcpy_avx_unaligned  180,719,708 -> 167,057,888   -13,661,820
+  encode_state             44,316,950 -> 48,022,373    +3,705,423  (the pushes)
+```
+
+**`out` is documented as assumed-zeroed** — the `_into` form writes only the
+features it sets, exactly as the by-value form did over a fresh
+`[0.0; OBJ_FEATS]` — and every caller pushes `EncodedObject::default()`
+immediately before.
+
+**The gate for an `encode.rs` change is `--feature-census`, and it passed
+byte-identical**: `selfplay_train --feature-census 8 --seed 5` produces the
+same 133 lines before and after, over ~29 k encoded objects. That is the check
+the encoding caution has always wanted; use it on anything under `encode.rs`.
+Also: suite 19,043 / 0 / 5, clippy clean, the actor leg of the robustness gate
+re-run (4 seeds x `--actors 3 --games 3000 --steps 20` — 12,000 games,
+1,156,416 rows, 0 stalls, rc 0), grid green.
+
 ### Ninety-eighth pass (5) — the cast-lock mask as a zone memo: BUILT, MEASURED, REVERTED, and it sharpens the lane rule
 
 **`fixed` +0.034 % / `cube` +0.015 % / `sealed` +0.028 %, reverted.**

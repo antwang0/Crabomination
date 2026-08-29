@@ -19,7 +19,7 @@ use crate::fxhash::HashMap;
 
 use crabomination_nn::{
     EncodedObject, EncodedState, G_BF_OPP, G_BF_SELF, G_GY_OPP, G_GY_SELF, G_HAND_SELF,
-    G_LIB_SELF, G_STACK_OPP, G_STACK_SELF, GLOBAL_FEATS, OBJ_FEATS,
+    G_LIB_SELF, G_STACK_OPP, G_STACK_SELF, GLOBAL_FEATS,
 };
 
 use crate::card::{CardInstance, CounterType};
@@ -274,7 +274,12 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     s.groups[G_BF_OPP].reserve(bf);
     for c in g.battlefield.iter() {
         let group = if c.controller == seat { G_BF_SELF } else { G_BF_OPP };
-        let mut o = encode_battlefield_object(g, c, vocab);
+        // Push an empty object and fill it in place: see
+        // `encode_card_object_into` for what the by-value form cost.
+        let grp = &mut s.groups[group];
+        grp.push(EncodedObject::default());
+        let o = grp.last_mut().expect("just pushed");
+        encode_battlefield_object_into(g, c, vocab, o);
         if !no_combat {
             // An object is never both an attacker and a blocker in one
             // combat, so one feature pair serves both endpoints.
@@ -319,7 +324,6 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
                 o.feats[33] = 1.0;
             }
         }
-        s.groups[group].push(o);
     }
     // Castability is per-seat state, so the hand's live/dead split is
     // computed against this seat's own untapped sources.
@@ -341,7 +345,10 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     let cover = source_cover(&sources);
     let cover_extra = cover_with_extra(&cover);
     for c in g.players[seat].hand.iter() {
-        let mut o = encode_card_object(c, vocab);
+        let grp = &mut s.groups[G_HAND_SELF];
+        grp.push(EncodedObject::default());
+        let o = grp.last_mut().expect("just pushed");
+        encode_card_object_into(c, vocab, o);
         if !no_cast && !c.definition.is_land() {
             o.feats[25] =
                 if affordable_covered(&c.definition.cost, n_sources, &cover) { 1.0 } else { 0.0 };
@@ -356,12 +363,13 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
                 0.0
             };
         }
-        s.groups[G_HAND_SELF].push(o);
     }
     for (group, p) in [(G_GY_SELF, seat), (G_GY_OPP, opp)] {
         s.groups[group].reserve(g.players[p].graveyard.len());
         for c in g.players[p].graveyard.iter() {
-            s.groups[group].push(encode_card_object(c, vocab));
+            let grp = &mut s.groups[group];
+            grp.push(EncodedObject::default());
+            encode_card_object_into(c, vocab, grp.last_mut().expect("just pushed"));
         }
     }
     encode_library(&mut s, g, seat, vocab);
@@ -532,9 +540,11 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
     counts.sort_unstable_by_key(|e| e.0);
     s.groups[G_LIB_SELF].reserve(counts.len());
     for (_, c, n) in counts {
-        let mut o = encode_card_object(c, vocab);
+        let grp = &mut s.groups[G_LIB_SELF];
+        grp.push(EncodedObject::default());
+        let o = grp.last_mut().expect("just pushed");
+        encode_card_object_into(c, vocab, o);
         o.feats[27] = n as f32 / 4.0;
-        s.groups[G_LIB_SELF].push(o);
     }
 }
 
@@ -778,9 +788,27 @@ fn object_keyword_bits(c: &CardInstance) -> u16 {
 }
 
 fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
+    let mut o = EncodedObject::default();
+    encode_card_object_into(c, vocab, &mut o);
+    o
+}
+
+/// [`encode_card_object`] writing through a handle the caller already owns.
+///
+/// An `EncodedObject` is `{ u16, [f32; 53] }` = 216 bytes. Returned by value
+/// and then pushed, each one is copied **twice**: zeroed on the stack, filled,
+/// and memcpy'd into its group `Vec`. `encode_card_object` was 228,515 calls a
+/// sixty-game actor run with a 6.9 M-Ir `__memcpy` edge of its own, and
+/// `encode_state` another 7.8 M for the pushes (ninety-eighth pass's actor
+/// profile). A caller that pushes an empty object and fills it in place pays
+/// one of the two.
+///
+/// `out` is assumed **zeroed**: this writes only the features it sets, exactly
+/// as the by-value form did over a fresh `[0.0; OBJ_FEATS]`.
+fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObject) {
     use crate::card::Keyword;
     let def = &c.definition;
-    let mut feats = [0.0f32; OBJ_FEATS];
+    let feats = &mut out.feats;
     feats[0] = def.cost.cmc() as f32 / 8.0;
     feats[1] = if def.is_creature() { 1.0 } else { 0.0 };
     feats[2] = if def.is_land() { 1.0 } else { 0.0 };
@@ -882,7 +910,7 @@ fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObject {
     // Memoized on the card object — `index_of` is a hash lookup and the
     // actor asks it once per encoded object plus once per library card,
     // 438,318 times a sixty-game run at ~49 Ir. See `CardData::vocab_index`.
-    EncodedObject { card: c.vocab_index(|d| vocab.index_of(d.name)), feats }
+    out.card = c.vocab_index(|d| vocab.index_of(d.name));
 }
 
 /// Any printed or EOT-granted keyword matching `pred`, minus removals.
@@ -951,8 +979,13 @@ fn is_hard_to_block(k: &crate::card::Keyword) -> bool {
 /// effective P/T net of damage, the damage itself and the part of the
 /// P/T that expires at cleanup, tapped, summoning sickness, loyalty,
 /// SOS prepared status, attacking, and counters.
-fn encode_battlefield_object(g: &GameState, c: &CardInstance, vocab: &Vocab) -> EncodedObject {
-    let mut o = encode_card_object(c, vocab);
+fn encode_battlefield_object_into(
+    g: &GameState,
+    c: &CardInstance,
+    vocab: &Vocab,
+    o: &mut EncodedObject,
+) {
+    encode_card_object_into(c, vocab, o);
     let f = &mut o.feats;
     f[4] = c.power().max(0) as f32 / 8.0;
     f[5] = (c.toughness() - c.damage as i32).max(0) as f32 / 8.0;
@@ -1010,7 +1043,6 @@ fn encode_battlefield_object(g: &GameState, c: &CardInstance, vocab: &Vocab) -> 
             f[48 + i] = c.counter_count(kind) as f32 / scale;
         }
     }
-    o
 }
 
 #[cfg(test)]
