@@ -8874,6 +8874,66 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundredth pass (1) — one lane for seven damage shields, and `resolve_combat` loses a quarter of its body
+
+**`fixed` -0.280 % / `cube` -0.611 % / `sealed` -0.375 %** off `840b5ccd`.
+
+Seven `GameState` walks — Iroas, Glacial Chasm, Mark of Asylum, The Wanderer,
+Emmara Tandris, Rune-Tail's Essence, Well-Laid Plans — each answer "is there
+a shield of *my* kind on the board", each by walking every permanent's
+`static_abilities`, and each is asked per attacker and per blocker pair inside
+`resolve_combat`. Six of the seven do a `battlefield_find` first, so the cost
+per ask is two whole-board scans, and the answer on every board these decks
+ever build is `false`.
+
+They share one lane (`LANE_SHIELD`, the closure form). The predicate is the
+union of the nine `StaticEffect` variants the seven walks match, with the CR
+611.2 wrappers peeled even where the walk matches the bare variant — an
+over-approximation, which is the sound direction, and the direction the two
+existing prevention lanes already take. The gate goes *first*, ahead of the
+`battlefield_find`, so `ABSENT` costs a word load and skips both scans.
+
+**A single shared lane, not seven.** Each walk's *own* variant is a subset of
+the union, so a `false` on the union is a `false` for all seven; the only cost
+of sharing is that a board carrying any one of the nine runs all seven walks,
+which is a board that already had one of them to do. It is also what makes the
+lane pay: seven consumers filling one memo means the first ask in an epoch
+covers the other six, where seven lanes would each buy their own miss.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 840b5ccd
+  fixed     922,985,500 ->   920,400,177   -0.280 %
+  cube    2,761,036,641 -> 2,744,176,689   -0.611 %
+  sealed  2,739,558,149 -> 2,729,288,298   -0.375 %
+
+the two callers the seven inline into, self Ir (calls unchanged):
+  resolve_combat            3,190 / 6,036 / 8,458 calls
+    fixed      10,761,164 ->  8,157,350   -24.2 %
+    cube       48,233,594 -> 32,251,012   -33.1 %
+    sealed     35,684,022 -> 26,484,370   -25.8 %
+  deal_damage_to_from         178 / 300 / 558 calls
+    fixed         253,500 ->    207,350   -18.2 %
+    cube          855,512 ->    591,046   -30.9 %
+    sealed      1,458,746 ->  1,029,218   -29.4 %
+```
+
+**Both rows together are 2.65 / 16.25 / 9.63 M against program deltas of
+2.59 / 16.86 / 10.27 M**, so the lane's own cost is inside the noise of the
+rows it removes and the remainder is `shared_color_creature_damage_prevented`,
+the one of the seven the inliner left standing (10 calls x 361 Ir on `fixed`).
+
+**The rule this row adds to `(-93)`: a lane's predicate may be the UNION of
+several walks' predicates when each walk's own filter is an instance field.**
+The seven differ only in which `controller` / `is_token` test they apply
+*after* finding the static; the definition question they share is the whole
+board walk, and that is what a lane can hold. `(-93)`'s condition 2 ("nothing
+cheaper may already gate it") is satisfied precisely because the existing gate
+— `damage_cant_be_prevented_this_turn` — is a turn flag that is false on every
+ordinary turn.
+
+Behaviour-preserving: the three ladder printouts are identical base to
+candidate on all three pools (only the wall-clock line moves).
 ### Ninety-ninth pass, the concurrent half (4) — seven stacked filters over a one-element list
 
 **`fixed` -0.033 % / `cube` -0.046 % / `sealed` -0.045 %.**
@@ -14503,7 +14563,8 @@ which is why `trigger_grant_sources` reads `cube` +1.2 % on its own row and
 the program still falls.
 
 **The remaining consumers, sized off the `fixed` tip profile at `841c7b9b`,
-cheapest first. One is built and reverted; the other three are not built.**
+cheapest first. One is built and reverted, one is taken; the other two are
+not built.**
 
 1. **`fire_step_triggers`' first battlefield loop — BUILT, MEASURED AND
    REVERTED, `fixed` **-0.221 %** / `cube` **+0.013 %** / `sealed`
@@ -14535,9 +14596,19 @@ base 0541c28e+, callgrind, profiling-fast --no-default-features
    `lane.is_err()` would recover `cube` and `sealed` to flat and leave the
    change worth +0.22 % of the bench pool and nothing on the two that matter —
    which is not worth carrying, and is why it was not built.
-2. **The noncombat-damage prevention family (`mod.rs:13600-13900`)** — the
-   remaining ungated whole-board prevention walk, per the ninety-ninth pass's
-   own queue. Measure the walk before pointing a lane at it.
+2. **TAKEN at the hundredth pass** (`fixed` -0.280 / `cube` -0.611 / `sealed`
+   -0.375 %): the damage-shield family, and it was bigger than "noncombat"
+   because six of the seven walks are asked from `resolve_combat`, not from
+   the noncombat funnel. One lane (`LANE_SHIELD`), one predicate that is the
+   **union** of the seven walks' variant sets — see the Log block for why the
+   union is sound and why sharing one lane beats seven. `resolve_combat` lost
+   24-33 % of its self Ir. **What is left of the family, unmeasured:**
+   `damage_from_your_source_to_your_creature_prevented` (Light of Sanction —
+   a whole-board walk behind *two* `battlefield_find`s, asked three times per
+   blocker pair) and `source_damage_to_color_prevented` (Indentured Oaf —
+   3,782 calls x 120 Ir on `fixed`, no board walk, so a lane only buys it the
+   `battlefield_find`). Both want two more variants in the union; take them
+   as one commit and measure it on its own.
 3. **`dispatch_triggers_for_events`' per-card loop, but only with an
    event-kind mask, not a lane.** The lane question ("does any permanent carry
    a printed trigger at all") is `PRESENT` on every real board, so a lane buys

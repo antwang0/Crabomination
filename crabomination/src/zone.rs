@@ -160,16 +160,18 @@ impl<'a> IntoIterator for &'a mut Graveyard {
 /// `PRESENT` triple the graveyard's memo uses, and a `u32` word takes
 /// sixteen of them.
 ///
-/// **A lane has exactly one caller and therefore exactly one predicate.**
-/// Nothing enforces that structurally; what catches a second predicate on a
-/// lane is [`Battlefield::lane`]'s `debug_assert!`, which recomputes with the
-/// predicate it was *handed* and compares against the stored bit.
+/// **A lane has exactly one predicate**, however many callers ask through it
+/// ([`LANE_SHIELD`] has seven). Nothing enforces that structurally; what
+/// catches a second predicate on a lane is [`Battlefield::lane`]'s
+/// `debug_assert!`, which recomputes with the predicate it was *handed* and
+/// compares against the stored bit.
 const LANE_LAND: u32 = 0;
 const LANE_CREATURE: u32 = 2;
 const LANE_DAMAGE_SCALE: u32 = 4;
 const LANE_OUTGOING_PREVENT: u32 = 6;
 const LANE_INCOMING_PREVENT: u32 = 8;
 const LANE_DISPATCH: u32 = 10;
+const LANE_SHIELD: u32 = 12;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -184,9 +186,9 @@ fn card_has_dispatch_bits(c: &CardInstance) -> bool {
 /// it often enough to want a memo — the two layer-4 type gates ("can any
 /// permanent here contribute an `AddLandType` / `SetLandTypes` /
 /// `ReplaceBasicLandType` to the gathered set", and the same for the
-/// creature-type family), the three damage-scaling / prevention gates, and
-/// the trigger dispatcher's board scan. One lane per question; see the
-/// `LANE_*` constants.
+/// creature-type family), the three damage-scaling / prevention gates, the
+/// whole-board damage-shield family, and the trigger dispatcher's board scan.
+/// One lane per question; see the `LANE_*` constants.
 ///
 /// `land_type_change_in_scope` and `creature_type_change_in_scope` are
 /// 0.60 / 1.13 / 0.52 % of the three pools and each miss is a 262-642 Ir walk
@@ -274,6 +276,19 @@ impl Battlefield {
         walk: impl Fn(&CardInstance) -> bool + Copy,
     ) -> bool {
         self.lane(LANE_INCOMING_PREVENT, walk)
+    }
+
+    /// CR 615 — can any permanent here carry one of the whole-board damage
+    /// shields? The board half of seven `GameState` walks — Iroas, Glacial
+    /// Chasm, Mark of Asylum, The Wanderer, Emmara Tandris, Rune-Tail's
+    /// Essence, Well-Laid Plans — each of which walks every permanent's
+    /// `static_abilities` for one variant and finds nothing on almost every
+    /// board. The predicate is their *union*: each walk's own filter is an
+    /// instance field applied after the static is found, so the definition
+    /// question they share is the whole walk.
+    #[inline]
+    pub fn has_damage_shield(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
+        self.lane(LANE_SHIELD, walk)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

@@ -13666,7 +13666,9 @@ impl GameState {
     /// has a `PreventDamageToYourAttackers` static in play (Iroas, God of
     /// Victory). Overridden by "damage can't be prevented" (CR 615.12).
     pub(crate) fn damage_to_attacker_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         if !self.attacking.iter().any(|a| a.attacker == target) {
@@ -13687,7 +13689,9 @@ impl GameState {
     /// "prevent all damage that would be dealt to you" static (Glacial Chasm),
     /// unless prevention is shut off this turn (615.12).
     pub(crate) fn all_damage_to_player_prevented(&self, player: usize) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         // One walk. This used to collect the controlled ids into a `Vec` and
@@ -13737,7 +13741,9 @@ impl GameState {
     /// "prevent all noncombat damage to creatures you control" static (Mark of
     /// Asylum). Consulted only at the noncombat damage funnel.
     pub(crate) fn noncombat_damage_to_creature_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         let Some(tgt) = self.battlefield_find(target) else { return false };
@@ -13759,7 +13765,9 @@ impl GameState {
     /// its controller/owner controls. Consulted only at the noncombat funnel.
     pub(crate) fn noncombat_damage_to_you_and_permanents_prevented(&self, victim: crate::game::effects::EntityRef) -> bool {
         use crate::game::effects::EntityRef;
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         let seat = match victim {
@@ -13781,7 +13789,9 @@ impl GameState {
     /// creature tokens you control." True when `target` is a token creature
     /// whose controller has the static. Consulted on both damage paths.
     pub(crate) fn all_damage_to_creature_token_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         let Some(tgt) = self.battlefield_find(target) else { return false };
@@ -13803,7 +13813,9 @@ impl GameState {
     /// CR 615 — Rune-Tail's Essence: "prevent all damage that would be dealt
     /// to creatures you control." Consulted on both damage paths.
     pub(crate) fn all_damage_to_your_creature_prevented(&self, target: CardId) -> bool {
-        if self.damage_cant_be_prevented_this_turn {
+        if self.damage_cant_be_prevented_this_turn
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         let Some(tgt) = self.battlefield_find(target) else { return false };
@@ -13840,7 +13852,10 @@ impl GameState {
         src: CardId,
         tgt: CardId,
     ) -> bool {
-        if self.damage_cant_be_prevented_this_turn || src == tgt {
+        if self.damage_cant_be_prevented_this_turn
+            || src == tgt
+            || !self.battlefield.has_damage_shield(card_can_shield_damage)
+        {
             return false;
         }
         let live = self.battlefield.iter().any(|c| {
@@ -23637,6 +23652,44 @@ fn card_can_prevent_incoming_damage(card: &CardInstance) -> bool {
                 | SE::PreventAllCombatDamageToAndFromYourCreatures
         )
     })
+}
+
+/// The board half of the seven whole-board damage-shield walks — Iroas,
+/// Glacial Chasm, Mark of Asylum, The Wanderer, Emmara Tandris, Rune-Tail's
+/// Essence and Well-Laid Plans. Each of them filters on an *instance* field
+/// (`controller`, `is_token`) after finding the static, so the shared question
+/// is only "does the board carry one of these at all"; a `false` means none of
+/// the seven can find anything. Definition-only, so
+/// [`zone::Battlefield::has_damage_shield`] can memoize it.
+///
+/// [`zone::Battlefield::has_damage_shield`]: crate::zone::Battlefield::has_damage_shield
+#[inline]
+fn card_can_shield_damage(card: &CardInstance) -> bool {
+    card.definition.static_abilities.iter().any(|sa| static_effect_shields_damage(&sa.effect))
+}
+
+/// The [`card_can_shield_damage`] variant set. An over-approximation of the
+/// walks it gates — the CR 611.2 wrappers are peeled here even where the walk
+/// matches the bare variant — which is the sound direction.
+fn static_effect_shields_damage(effect: &crate::effect::StaticEffect) -> bool {
+    use crate::effect::StaticEffect as SE;
+    match effect {
+        SE::PreventDamageToYourAttackers
+        | SE::PreventAllDamageToController
+        | SE::PreventAllDamageToControllerFromOthersSources
+        | SE::PreventNoncombatDamageToYourCreatures
+        | SE::PreventNoncombatDamageToYouAndYourPermanents
+        | SE::PreventAllDamageToYourCreatureTokens
+        | SE::PreventAllDamageToYourCreatures
+        | SE::PreventAllDamageToCreatures
+        | SE::PreventDamageBetweenSharedColorCreatures => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_shields_damage(inner),
+        _ => false,
+    }
 }
 
 /// True when `effect` can change a damage amount in `scale_damage_to_inner`.
