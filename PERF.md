@@ -2124,6 +2124,50 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-eighth pass — closing state at `b12393f9`
+
+```text
+suite   19,033 / 0 / 5; golden traces unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures, with the new `battlefield type-gate memo is stale`
+        assertion verified present in the audit binary
+actor   the actor leg re-run for that assertion: `-C debug-assertions=yes`
+        + `overflow` `selfplay_train`, 4 seeds x `--actors 3 --games 3000
+        --steps 20` — 12,000 games, 1,155,629 rows, 0 stalls, rc 0
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 313.30 at 3 threads, host_calib_ms 46 against the pass's
+        opening 284.46 at the same calib — **10 % of wall clock against
+        0.5 % of Ir, so it is the host, not the change.** The clock is not
+        the instrument; the Ir anchor is.
+
+Ir anchor, callgrind, profiling-fast --no-default-features,
+--games 6 --threads 1 --seed 1:
+                 181ce81a          b12393f9
+  fixed        946,720,798  ->   942,328,403   -0.464 %
+  cube       2,829,667,509  -> 2,805,505,066   -0.854 %
+  sealed     2,805,164,959  -> 2,793,794,620   -0.405 %
+```
+
+Two commits, both this pass's, and they compose to the anchor: `630bd29b`
+-0.177 / -0.528 / -0.111 % and `b12393f9` -0.287 / -0.328 / -0.295 %.
+
+**A sixth cross-session anchor check, and it prices an instrument twice.** The
+base read here (`181ce81a`) against the reading filed at `a69a8287` — the same
+code plus `6e44ce7c`'s `CRAB_SBA_CENSUS` hook and three prose commits — is
++41,376 / +33,449 / +100,566 Ir, i.e. **+0.004 / +0.001 / +0.004 %**, exactly
+what that commit filed for the dormant hook. A gate's cost is its call count,
+and 20,152 calls a `cube` run reads as nothing twice in a row.
+
+**AND A MEASUREMENT HAZARD THAT COST AN HOUR: strip the elapsed-time text
+before diffing two `bot_ladder` runs.** `N decided, 0 undecided, in 5.8s` is
+not reproducible, so an `md5sum` of the raw output reads as a behaviour
+divergence on whichever pool happens to cross a tenth of a second. It said the
+deletion-ceiling probe changed `sealed`'s games (it does not) and that this
+pass's second commit changed `cube`'s (it does not). Diff
+`sed -E 's/in [0-9.]+s//'` output, or compare the decided/undecided counts.
+
 ### Ninety-seventh pass — closing state at `181ce81a`
 
 Three code commits (`66e78a2f`, `ec5dc3a9`, `6e44ce7c`) and the trackers; the

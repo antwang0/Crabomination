@@ -26,17 +26,25 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at the ninety-sixth pass:** suite 19,028 / 0 / 5, clippy clean,
-   golden traces unmoved, `--bench` byte-identical to the committed invariant,
-   robustness grid green. Anchor and the pass's -2.7 / -3.0 / -3.5 % are in
-   item 8; the six commits are in PERF's Log.
-3. **BEST NEXT MOVES, in order.** (a) `(-92)` first — **the profile is FLAT**
-   (hottest line 0.97 %, six functions read by line all say "no hot line"), so
-   stop looking for one; its leads 2 and 3 are open and lead 1 is taken.
-   (b) `(-89)`'s eight remaining prevention rows and `(-88)`'s SBA sweep.
-   (c) The open ML question in item 7 — seed the actors' jitter? — now has
-   evidence: `--feature-census` was not reproducible without it.
-   (d) Cards only on leftover context; the three audits are clean at this tip.
+2. **State at the ninety-eighth pass (`b12393f9`):** suite 19,033 / 0 / 5,
+   clippy clean, golden traces unmoved, `--bench` byte-identical, grid green
+   (30 cells / 33,120 games) **and the actor leg re-run** (12,000 games,
+   1,155,629 rows, 0 stalls) for the pass's new assertion. Anchor and the
+   pass's -0.464 / -0.854 / -0.405 % are in item 8; two commits, PERF's Log.
+3. **`(-87)` IS CLOSED** — the layer-4 type gates memoize on a
+   `zone::Battlefield`, keyed by a `DerefMut` clear for membership and a
+   `DEFINITION_EPOCH` stamp for definition rewrites, with the predicates
+   widened to read no instance field. It took **78.5 / 73.1 / 80.2 % of its
+   own deletion ceiling**; what is left is the walks a real change forces.
+4. **BEST NEXT MOVES, in order.** (a) `(-92)` — **the profile is FLAT** (six
+   functions read by line all say "no hot line"), leads 2 and 3 open.
+   (b) `(-89)`'s eight remaining prevention rows. (c) The ML question in item
+   7 — seed the actors' jitter? (d) Cards only on leftover context.
+5. **Two rules this pass produced, both cheap to re-lose.** A repeat-rate
+   census over *asks* over-counts what a memo behind a scope gate delivers, by
+   that gate's service rate (predicted 94 % on `cube`, delivered 79.5 %; the
+   other two pools matched). And **`#[cold]` on a miss path costs whatever its
+   body would have inlined** — use `#[inline(never)]`.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
@@ -326,8 +334,11 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    already editing it; do not open a pass for this. One commit per file,
    binary green either side.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `a69a8287` (on `origin`): `fixed` 946,679,422 /
-   `cube` 2,829,634,060 / `sealed` 2,805,064,393** — the whole
+   **Anchor, MEASURED at `b12393f9` (on `origin`): `fixed` 942,328,403 /
+   `cube` 2,805,505,066 / `sealed` 2,793,794,620** — the ninety-eighth pass is
+   **-0.464 / -0.854 / -0.405 %** off `181ce81a` over two commits. Earlier:
+   `181ce81a` 946,720,798 / 2,829,667,509 / 2,805,164,959; `a69a8287`
+   946,679,422 / 2,829,634,060 / 2,805,064,393 — the whole
    ninety-sixth pass is **-3.25 / -3.70 / -4.00 %** off `e0bc5c46`, over
    eight commits whose individual readings compose to it (PERF's closing
    block has the per-commit table). Earlier anchors on `origin`:
