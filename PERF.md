@@ -13433,7 +13433,38 @@ reach 0.86 %); and four freeze scopes to widen, all of which turn out to be
 one gather per distinct game state (see the Log's context table).
 
 
-**(-89) THE COMBAT-DAMAGE PREVENTION CASCADE IS 1.55 / 2.34 / 1.69 % OF THE
+**(-89) RE-READ AT `a69a8287` AND ONE OF ITS PREMISES IS WRONG — the cascade
+is still ~1.9 % of `cube`, but "ten whole-battlefield walks a damage event"
+is not where the Ir is, and a taker who fuses the walks will be disappointed.**
+The rows at that tip, `cg_edges.py --callees resolve_combat`, `--decks cube`:
+
+```text
+  apply_prevention_shields_with   12,754   862 Ir   0.39 %
+  creature_redirects_damage_to..  12,786   821      0.37 %
+  damage_from_source_prevented..  12,786   732      0.33 %
+  scale_damage_to                 20,324   378      0.27 %
+  prevent_combat_to_target         7,570   927      0.25 %
+  combat_damage_prevented_from    12,656   536      0.24 %
+  ironscale_replace               12,754   161      TAKEN (e0cbb4a7)
+  combat_damage_prevented_for_de. 13,250     4      the model
+                                                 ~1.9 % together
+```
+
+**A battlefield walk in this family costs ~230-300 Ir, not the 900 the row
+does**, because its per-card body is `for sa in &card.definition
+.static_abilities` and that list is *empty on nearly every permanent* — one
+length check, which is exactly the shape `(-87)` and `(-77)`'s fourth row
+were refuted on. The whole-program line profile prices
+`prevent_static_scan`'s inner loop (`effects/movement.rs:73`, inlined into
+`resolve_combat`) at **2.5 M / 0.10 %** for all 12,754 of its calls
+together. **So hoisting `prevent_static_scan` out of the per-event
+`apply_prevention_shields` — the obvious fused-scan move, and the one this
+entry's shape suggests — has a ceiling of about 0.05 %.** The Ir is in the
+gated legs' own bodies (`battlefield_find` on the source, the keyword
+predicates, the shield lists), not in the scans in front of them. Size a leg
+before gating it.
+
+**(-89, original) THE COMBAT-DAMAGE PREVENTION CASCADE IS 1.55 / 2.34 / 1.69 % OF THE
 THREE POOLS AND IT IS TEN QUESTIONS PER DAMAGE EVENT, ASKED ON BOARDS THAT
 CARRY NONE OF THE CARDS THEY ARE ABOUT.** Read at `86936dc9` + the `by_kind`
 patch, `cg_edges.py --callees resolve_combat`, all three pools, one binary.
