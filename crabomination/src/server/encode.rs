@@ -324,7 +324,17 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // Castability is per-seat state, so the hand's live/dead split is
     // computed against this seat's own untapped sources.
     let no_cast = ablated(ABLATE_CASTABILITY);
-    let sources = if no_cast { Vec::new() } else { g.untapped_mana_colors(seat) };
+    // Both seats' source tables under ONE freeze scope. `mana_source_table`
+    // opens its own, so two calls gathered the whole continuous-effect set
+    // twice per encode and built two `perms` memos; nested scopes reuse the
+    // outer one. `g` is `&GameState` for the whole function, so the
+    // opponent's half is the same answer wherever it is computed — it is
+    // read ~90 lines down, next to the globals it fills.
+    let (sources, opp_sources) = if no_cast {
+        (Vec::new(), Vec::new())
+    } else {
+        g.with_frozen_layers(|g| (g.untapped_mana_colors(seat), g.untapped_mana_colors(opp)))
+    };
     s.groups[G_HAND_SELF].reserve(g.players[seat].hand.len());
     // One mask cover for the whole hand — see `source_cover`.
     let n_sources = sources.len() as u32;
@@ -413,7 +423,6 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // The opponent's half is public and is what makes "they have two
     // untapped blue" — the shape of every instant-speed decision — even
     // representable.
-    let opp_sources = if no_cast { Vec::new() } else { g.untapped_mana_colors(opp) };
     if !no_cast {
         for (base, src) in [(24, &sources), (30, &opp_sources)] {
             for ci in 0..5 {
