@@ -41,9 +41,13 @@ sixty-seventh pass, so don't re-take that.
 4. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
    -0.645 % of `cube` in one commit, and the selection rule is: rank a
    candidate by *what already gates it*, not by its row. The SBA family is
-   gated by `sba_board_scan` and `blocker_pair_block`'s walks by the
-   attacker's keywords; the noncombat-damage prevention family
-   (`mod.rs:13600-13900`) and `action_lock_rejection`'s eight are **not**.
+   gated by `sba_board_scan`, `blocker_pair_block`'s walks by the attacker's
+   keywords and `action_lock_rejection`'s eight by `cast_lock_scan`'s mask —
+   **and memoizing that mask itself is refuted, +0.034 %** (PERF Log), because
+   the second half of the rule is that the walk's per-card body must be more
+   than a length check. The noncombat-damage prevention family
+   (`mod.rs:13600-13900`) is the remaining ungated one; measure its walk
+   before building.
    (b) `(-92)` — **the profile is FLAT**, leads 2 and 3 open.
    (c) `resolve_combat -> SpecFromIter::from_iter`, 26,624 calls / 30.7 M /
    **1.10 % of `cube`** in one collect family, no entry. (d) `(-89)`'s
