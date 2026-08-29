@@ -173,11 +173,51 @@ what the blanket version could not be.
   to answer `false`), and the graveyard-hate cases name the zone in the
   filter, where `mentions_offboard_zone` is the half that opens the gate.
 
-**Still open: the structural fix.** The five walkers should share one
-recursion over inner effects instead of five hand-written ones — the
-invariants above catch a missing arm on the shapes they cover, they do not
-stop one being missed. `requires_target` is the only exhaustive walk and so
-the only one that cannot have the bug at all.
+**The structural fix shipped at the hundredth pass.**
+`Effect::for_each_inner` is the one recursion, **130 of 130 wrappers**, held
+there by `core_rules::target_walkers::the_shared_recursion_names_every_
+effect_wrapper` reading `effect.rs` with the same extraction the audit script
+uses. `prefers_graveyard_target` and `may_target_offboard_card` defer to it
+instead of answering `false` for an unnamed wrapper's whole subtree, which
+moved **67 and 61 shipped bodies** from a closed gate to an open one.
+`Reflexive` / `ReflexiveTrigger` are named `=> false` explicitly (CR 603.7:
+their targets are picked fresh at resolution).
+
+**Two still to switch, and neither is a leftover.** `accepts_player_target`
+must NOT be switched — its fallthrough is `_ => true`, so recursing would
+make it *more* restrictive with no drift to fix. `primary_target_filter`
+returns an `Option`, so its fallthrough needs a decision about which inner
+effect is "primary" when a wrapper holds several; the slot-agreement
+invariant above (population 7,728) is what any such change has to keep green.
+
+**A test whose job is to notice an absence has to be run against a
+deliberately introduced one.** The completeness test passed with an arm
+deleted on its first draft: it searched from `pub fn for_each_inner` to
+end-of-file, and the other four walkers' mentions satisfied every lookup. It
+brace-matches the function now. Do this to the next such test before
+believing it.
+
+**Unresolved, recorded rather than dropped: one non-reproducing failure of
+`server::bot::stack_response_tests::mulligan_sim_prefers_the_functional_hand`.**
+It failed once in a full-suite run at the hundredth pass and has not
+reproduced in **nine** subsequent full runs (six with the walker change, three
+without). What was ruled out, with numbers, so nobody re-derives it:
+
+* **Not the tie-break jitter.** `mulligan_branch_value` seeds its own shuffle
+  but leaves `bot::jitter_below` on the unseeded stream, which is the obvious
+  suspect and is *not* it: the assertion holds for all **40** explicit jitter
+  seeds tried, and 200 consecutive unseeded runs in one process produced
+  **one distinct result pair** (`Some(18)`, `Some(0)`). The function is
+  deterministic for this input.
+* **Not a wall clock.** There is no `Instant::now` anywhere under
+  `server/bot.rs` or `game/` — only `server/lobby.rs`, which this path does
+  not touch.
+* **Not cross-test state.** nextest is process-per-test here, so the
+  thread-local jitter seed another test installs cannot leak.
+
+Left standing: resource pressure during that particular run (the container
+was at ~9 GB free and falling). If it recurs, capture the assertion message —
+the test has two, and which one fired narrows this a lot.
 
 ### ~~Vacuous `true` in `Predicate::EntityMatches`~~ — closed at the eighty-seventh pass, and one layer dependency fell out
 
