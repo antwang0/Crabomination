@@ -339,9 +339,13 @@ pub fn demonic_junker() -> CardDefinition {
 
 /// Rise from the Wreck — {2}{G} Sorcery. Four separately-filtered graveyard
 /// slots, each optional.
+///
+/// Every slot carries `InYourGraveyard` because the card says "from your
+/// graveyard": the filters are otherwise board-shaped, and
+/// `legal_targets_for_filter` applies them to the battlefield too.
 pub fn rise_from_the_wreck() -> CardDefinition {
     let slot = |n: u8, filter: R| Effect::Move {
-        what: Selector::TargetFiltered { slot: n, filter },
+        what: Selector::TargetFiltered { slot: n, filter: filter.and(R::InYourGraveyard) },
         to: ZoneDest::Hand(PlayerRef::You),
     };
     CardDefinition {

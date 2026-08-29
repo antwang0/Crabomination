@@ -2210,6 +2210,13 @@ impl Effect {
                 matches!(return_to, crate::card::ExileReturnZone::Graveyard)
             }
             Effect::ApplyToTargets { effect, .. } => effect.prefers_graveyard_target(),
+            // "Return up to X target cards from your graveyard" (Reap, Rise
+            // from the Wreck): the wrapper only makes the slots optional, so
+            // the body's answer is its answer. Without this arm the walk
+            // aimed both cards at the battlefield and bounced a permanent —
+            // see `core_rules::target_walkers::
+            // every_reachable_reanimation_is_visible_to_the_offboard_gate`.
+            Effect::OptionalTargets { body, .. } => body.prefers_graveyard_target(),
             Effect::DelayUntilWithCapture { body, .. }
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }

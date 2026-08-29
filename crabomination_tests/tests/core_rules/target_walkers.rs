@@ -318,3 +318,173 @@ mod offboard_gate {
         );
     }
 }
+
+/// The whole-catalog twin of [`every_declared_target_slot_is_answerable`], for
+/// the off-board gate rather than the slot walker.
+///
+/// `Effect::prefers_graveyard_target` and `Effect::may_target_offboard_card`
+/// are two more hand-written walks over the same ~2 000 variants, and unlike
+/// `requires_target` they end in `_ => false`. So a wrapper neither of them
+/// names answers `false` for its whole subtree, and the auto-picker's
+/// last-resort graveyard/exile walk is then closed for an effect that really
+/// does reanimate — which resolves targetless in the training path, silently,
+/// which is the defect the gate was written for seen from the other side.
+/// `scripts/audit_target_walkers.py` reports the whole (walker, wrapper)
+/// matrix statically; this asserts the half a catalog card can reach.
+///
+/// **The shape has to be the reanimation one, not "holds a `Move`".** A
+/// blanket version of this test reports 29 bodies and every one of them is
+/// correct to answer `false`: Feign Death, Malakir Rebirth and Saffi
+/// Eriksdotter target a *live* creature and move it after it dies; Crystal
+/// Shard and Erratic Portal bounce a battlefield permanent. Opening the gate
+/// for those would aim them at a graveyard card that then fizzles — the
+/// original defect, re-created. What the gate is for is a `Move` **of the
+/// target itself** to *your* hand or battlefield, which only a card already
+/// off the board can satisfy.
+///
+/// Two exclusions, both load-bearing:
+///
+/// * **The moved thing has to be the target.** Intrude on the Mind moves a
+///   `SeparatedPile` to your hand and targets the *player* who splits it.
+/// * **`ZoneDest::Exile` is not a tell.** 112 catalog sites move a target to
+///   exile and most of them are battlefield removal (Excise's "exile target
+///   attacking creature"); `Effect::Exile` is the canonical form for that.
+///   `prefers_graveyard_target` reads a Move-to-Exile as reanimation anyway,
+///   as a walk-*order* heuristic — which is why Ugin, Eye of the Storms had
+///   to become an `Effect::Exile` when the `OptionalTargets` arm below
+///   stopped hiding it.
+#[test]
+fn every_reachable_reanimation_is_visible_to_the_offboard_gate() {
+    /// A destination that makes the *target* an off-board card: your hand or
+    /// your battlefield. See the exclusions above for why exile is not one.
+    fn is_reanimating_dest(dest: &Value) -> bool {
+        match dest {
+            Value::Object(m) => match (m.get("Hand"), m.get("Battlefield")) {
+                (Some(Value::String(who)), _) => who == "You",
+                (_, Some(Value::Object(b))) => {
+                    b.get("controller").and_then(|c| c.as_str()) == Some("You")
+                }
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    /// Does this selector name a target slot at its own root?
+    fn is_target_selector(what: &Value) -> bool {
+        matches!(what, Value::Object(m) if m.contains_key("Target")
+            || m.contains_key("TargetFiltered"))
+    }
+
+    /// Is there such a `Move` under `v`, not descending into a nested ability
+    /// definition or a resolution-time body?
+    fn holds_reanimation(v: &Value) -> bool {
+        match v {
+            Value::Object(map) => {
+                if is_nested_ability(map) {
+                    return false;
+                }
+                map.iter().any(|(k, inner)| {
+                    if RESOLUTION_TIME_TARGETING.contains(&k.as_str()) {
+                        return false;
+                    }
+                    if k == "Move"
+                        && inner.get("to").is_some_and(is_reanimating_dest)
+                        && inner.get("what").is_some_and(is_target_selector)
+                    {
+                        return true;
+                    }
+                    holds_reanimation(inner)
+                })
+            }
+            Value::Array(items) => items.iter().any(holds_reanimation),
+            _ => false,
+        }
+    }
+
+    let mut bad: Vec<String> = Vec::new();
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<(&'static str, &crabomination::effect::Effect)> =
+            vec![("spell", &def.effect)];
+        for a in &def.activated_abilities {
+            bodies.push(("activated", &a.effect));
+        }
+        for t in &def.triggered_abilities {
+            bodies.push(("triggered", &t.effect));
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(("loyalty", &l.effect));
+        }
+        for (kind, body) in bodies {
+            if !body.requires_target() || body.may_target_offboard_card() {
+                continue;
+            }
+            // A filter that names the zone opens the walk on its own
+            // (`mentions_offboard_zone`), so the gate is not what decides it.
+            if body
+                .primary_target_filter()
+                .is_some_and(|f| f.mentions_offboard_zone())
+            {
+                continue;
+            }
+            let json = serde_json::to_value(body).expect("Effect serializes");
+            if !holds_reanimation(&json) {
+                continue;
+            }
+            let root = match &json {
+                Value::Object(m) => m.keys().next().cloned().unwrap_or_default(),
+                _ => json.to_string(),
+            };
+            bad.push(format!("Effect::{root} — {} ({kind})", def.name));
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} targeting bodies reanimate through a wrapper the off-board gate \
+         cannot see, so the auto-picker never reaches the graveyard card they \
+         are about:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+}
+
+/// The two cards the invariant above named, at the site the arm changed.
+///
+/// Reap and Rise from the Wreck both read "return … from your graveyard to
+/// your hand", and both express it the way the catalog always has — a
+/// `Move { to: Hand(You) }`, whose zone is carried by the effect shape rather
+/// than by a filter predicate (Raise Dead and Regrowth are the same). Wrapped
+/// in `OptionalTargets` for the "up to X" clause, the shape was invisible to
+/// `prefers_graveyard_target`, so the picker walked the battlefield first,
+/// found a permanent that satisfies a zone-blind filter, and bounced it.
+#[test]
+fn up_to_x_graveyard_returns_aim_at_the_graveyard() {
+    use crabomination::game::two_player_game;
+    use crabomination::game::types::Target;
+
+    for (name, def) in
+        [("Reap", catalog::reap()), ("Rise from the Wreck", catalog::rise_from_the_wreck())]
+    {
+        let mut g = two_player_game();
+        // A battlefield permanent the zone-blind filter also matches, so the
+        // walk *order* is what decides — not the absence of a board target.
+        let onboard = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let buried = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        // Reap's slot 0 is "target opponent"; its graveyard slots are 1-4, so
+        // read every slot rather than just the primary one.
+        let (primary, extra) = g.auto_targets_for_effect_all_slots(&def.effect, 0, None);
+        let picked: Vec<Target> = primary.into_iter().chain(extra).collect();
+        assert!(
+            picked.contains(&Target::Permanent(buried)),
+            "{name} returns from your graveyard and aimed at {picked:?} instead \
+             (board card {onboard:?})",
+        );
+        assert!(
+            !picked.contains(&Target::Permanent(onboard)),
+            "{name} bounced a battlefield permanent: {picked:?}",
+        );
+    }
+}

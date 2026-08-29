@@ -144,14 +144,17 @@ pub fn taigam_master_opportunist() -> CardDefinition {
 /// colorless spell exiles a colored permanent; the ultimate tutors your whole
 /// colorless top end into a free-cast pile.
 pub fn ugin_eye_of_the_storms() -> CardDefinition {
+    // `Effect::Exile`, not `Move { to: Exile }`: the target is a battlefield
+    // permanent, and `prefers_graveyard_target` reads a Move-to-Exile as the
+    // reanimation shape and walks graveyards first. That was invisible while
+    // `OptionalTargets` hid it from the walker; it is not now.
     let exile_colored = || Effect::OptionalTargets {
         min: 0,
-        body: Box::new(Effect::Move {
+        body: Box::new(Effect::Exile {
             what: Selector::TargetFiltered {
                 slot: 0,
                 filter: R::Not(Box::new(R::Colorless)),
             },
-            to: ZoneDest::Exile,
         }),
     };
     CardDefinition {

@@ -370,6 +370,11 @@ pub fn phyrexian_grimoire() -> CardDefinition {
 /// Reap — {1}{G} Instant. Slot 0 is the opponent; slots 1-4 are graveyard
 /// cards, each returned only if the opponent's black permanent count reaches
 /// that far (four is the practical ceiling for "up to X").
+///
+/// The graveyard slots carry `InYourGraveyard` because the card says "from
+/// your graveyard": a bare `Selector::Target(n)` declares no filter, so
+/// `target_filter_for_slot` never surfaced the slot and the four returns
+/// picked nothing at all.
 pub fn reap() -> CardDefinition {
     use crate::mana::g;
     let blacks = Value::CountOf(Box::new(Selector::ControlledBy {
@@ -379,7 +384,7 @@ pub fn reap() -> CardDefinition {
     let take = |slot: u8| Effect::If {
         cond: Predicate::ValueAtLeast(blacks.clone(), Value::Const(slot as i32)),
         then: Box::new(Effect::Move {
-            what: Selector::Target(slot),
+            what: Selector::TargetFiltered { slot, filter: R::InYourGraveyard },
             to: ZoneDest::Hand(PlayerRef::You),
         }),
         else_: Box::new(Effect::Noop),
