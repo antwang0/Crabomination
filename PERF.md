@@ -11863,6 +11863,57 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE ACTOR'S PROFILE, READ FOR THE FIRST TIME (ninety-sixth pass, `599825ba`)
+
+`selfplay_train` is the workload the ML phase actually runs, and every
+"Profile of record" block below it is `bot_ladder`. They are not the same
+program: **three of the actor's top rows have no row at all in any of the
+three `bot_ladder` pool profiles**, so nothing in this file had ever priced
+them.
+
+```text
+CRAB_NO_JITTER=1 RUST_MIN_STACK=33554432 valgrind --tool=callgrind \
+  --callgrind-out-file=cg.actor.out target/profiling-fast/selfplay_train \
+  --actors 1 --games 60 --steps 1 --seed 7 --out /tmp/actorprof
+3,493,965,685 Ir.  (`-p crabomination_ml --no-default-features` — that crate
+has its own mimalloc default; check the dump for `libmimalloc` frames, 0 here.)
+
+  5.88 %  dispatch_triggers_for_events        \
+  5.06 %  __memcpy                             |  shared with bot_ladder,
+  3.45 %  Arc::clone_from_ref_in               |  same order, same shape
+ 10.7  %  the allocator family                /
+  ---- and then the rows bot_ladder does not have ----
+  5.72 %  encode_state, INCLUSIVE (6,378 calls, 31,367 Ir each)
+            of which encode_card_object 1.94 % over 228,515 objects
+            and mana_source_table       0.93 % over 12,756 calls
+  1.84 %  build_random_deck -> recommend::lattice (120 calls, one per deck)
+            of which rank_shape 0.94 % over 6,840 calls (56 shapes a deck)
+  1.41 %  candle rand_normal — 22 calls, i.e. NET WEIGHT INIT. Does not
+          scale; it is 1.4 % of a 60-game run and ~0 of a real one. Ignore.
+```
+
+**`__memcpy` is 5.06 % here against 2.48 % on `cube`**, and the extra is the
+recorder: `play_recorded_game_mcts` 273,163 calls, `encode_state` 241,273,
+`encode_card_object` 228,515 — i.e. the `EncodedState` rows being built and
+moved. That is the actor's own cost and no `--bench` reading will ever show
+it.
+
+**Two rules for reading an actor profile, both learned here:**
+
+* **Size a row by whether it scales with games.** `rand_normal` is 1.41 % of
+  this run and zero of a training run; `lattice` is per *deck*, so it scales
+  with games; `encode_state` is per recorded position, so it scales with
+  rows. A 60-game run over-weights everything that happens once.
+* **`--feature-census` is the encoder's regression check, and it was not
+  reproducible until this pass.** Two runs of `--feature-census 8 --seed 5`
+  on one binary disagreed by 12 positions and 515 objects out of 820 /
+  29,143, because `play_recorded_game` left `bot::jitter_below` on the
+  unseeded thread-local RNG. It now seeds per game. **With it pinned, a diff
+  of two census outputs is a byte-level "did the encoding move" answer over
+  ~29 k encoded objects** — which is what the encoding caution has always
+  needed and never had. Use it on any change that touches `encode.rs`.
+
+
 Callgrind on `profiling-fast --no-default-features` (= `release-fast` opt
 settings + debuginfo; system allocator, because valgrind replaces malloc and
 a mimalloc build would measure the interception), 1 thread, `--a gang --b

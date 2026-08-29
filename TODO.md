@@ -157,7 +157,19 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
-3. **Instruments** — `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
+3. **Instruments** — **`--feature-census` is now deterministic and is the
+   ENCODER'S regression check**: `selfplay_train --feature-census 8 --seed 5`
+   twice, diff the two outputs, and a byte-identical pair says the encoding
+   did not move over ~29 k encoded objects. Use it on anything touching
+   `encode.rs` (item 4's caution had no such check before). It was
+   *not* reproducible until the ninety-sixth pass — the census's own games
+   left `bot::jitter_below` unseeded. **The same hole is still open on the
+   training actors** (item 7's question), and the comment over
+   `play_recorded_game_mcts`' reseed now says so instead of claiming exact
+   replay. **And PERF's "Profile of record" now carries the ACTOR's profile**
+   — three of its top rows (`encode_state` 5.7 %, deck building 1.8 %,
+   `__memcpy` at twice `cube`'s share) have no row in any `bot_ladder`
+   profile at all. Then: `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
    `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`,
    and `selfplay_train`'s new `actors:` line (plus `actor_s` /
    `actor_games_per_s` in `stats.jsonl`). **Quote `actors:`, never `done:`,
