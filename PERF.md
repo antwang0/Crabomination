@@ -8649,6 +8649,25 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-ninth pass (2) — the `Arc<ComputedPermanent>` pool's last variant, refuted on the handle's lifetime
+
+**`fixed` +0.137 % / `cube` +0.097 % / `sealed` +0.097 %, reverted.** The
+single-slot `Option<Arc<ComputedPermanent>>` that `(-27)` was "arithmetic away
+from a ~0.25 % `cube` win" — built, measured, and the arithmetic was right
+about everything except its premise. The entry carries the ledger; the finding
+in one line is that **the scope does not outlive the handle it computes**, so
+`Arc::get_mut` fails on seven of every eight scope exits and 316,576
+bookkeeping calls recover 19,086 allocations.
+
+**And the two rows it cost are the more general half.** `end_of_scope` was
+free before this — a `None` store and a `clear()` that the compiler folded
+into `Unfreeze::drop` — and adding one branch made it a named 43.9-Ir row over
+150,732 calls. `arc_computed` did the same to `computed_permanent_hinted`.
+Between them +15.67 M against the allocator's -4.37 M. **A branch added to a
+function that is inlined everywhere is not one branch; it is the inlining
+decision, re-taken.** That is the same shape as the ninety-eighth pass's
+`#[cold]` refutation from the other direction.
+
 ### Ninety-ninth pass — the layer-4 type-change predicates come off the per-object memo
 
 **`fixed` -0.028 % / `cube` -0.071 % / `sealed` -0.033 %.** The per-card body
@@ -14935,6 +14954,45 @@ of allocator. That is the whole trade on `cube` and it is nearly a wash;
 `fixed`, where scopes are as frequent and boards are smaller (74,926 loops for
 25,894 allocations, 2.89 to one), is where it loses outright. **Count the
 reclaim points against the allocations reclaimed before building a pool.**
+
+**THE SINGLE-SLOT VARIANT IS NOW BUILT AND IT LOSES TOO — `fixed` +0.137 % /
+`cube` +0.097 % / `sealed` +0.097 %, and the reason is structural, not
+arithmetic.** Built at `2b16088a`: an `Option<Arc<ComputedPermanent>>` on
+`LayerFreezeState`, filled at `end_of_scope` from `perms.pop()` when
+`Arc::get_mut` says the entry is unique, drained by an `arc_computed` that
+overwrites it in place. It removes all three of the `Vec` pool's own costs —
+no pool `Vec` to allocate on a `GameState` clone, no reclaim *loop*, one
+branch and one `get_mut` at each end. The ledger:
+
+```text
+base 2b16088a, callgrind, profiling-fast --no-default-features
+  fixed     938,100,211 ->   939,382,280   +0.137 %
+  cube    2,795,139,482 -> 2,797,849,468   +0.097 %
+  sealed  2,783,686,742 -> 2,786,395,475   +0.097 %
+
+cube, top movers                    __rust_alloc  1,426,336 -> 1,407,250
+  arc_computed          +9.06 M       165,844 calls @ 54.6 Ir
+  end_of_scope          +6.61 M       150,732 calls @ 43.9 Ir
+  computed_permanent_hinted -4.57 M   } code moved into the two rows above,
+  Unfreeze::drop            -4.28 M   } not saved
+  the allocator family      -4.37 M   (_int_free, malloc, free, _int_malloc,
+                                       drop_slow, __rdl_alloc, consolidate)
+  drop_in_place<ComputedPermanent> +0.62 M, drop_in_place<LayerFreeze> +0.40 M
+```
+
+**316,576 bookkeeping calls for 19,086 allocations — an 11.5 % hit rate, and
+that is the whole finding.** `Arc::get_mut` fails on seven of every eight
+scope exits, because `computed_permanent` pushes one handle into `perms` and
+**returns the other to the caller**, and the caller is usually
+`compute_battlefield`-shaped: it collects the handles inside
+`with_frozen_layers` and returns the collection *out* of the scope. The scope
+that computed the `Arc` does not outlive it. **A pool can only recycle a
+handle whose lifetime the pool's owner bounds**; check that before counting
+the allocations, because the arithmetic above (150,732 scopes x ~217 Ir a
+pair, against 15.7 M of bookkeeping, predicts -0.57 % on `cube`) is right and
+the premise is wrong. `(-27)`'s allocation half is closed: both variants
+built, both refuted, and the last named one refuted on a property no tuning
+of the probe can move.
 
 **Two of the added rows are the device paying for itself in its own coin.**
 `drop_in_place<LayerFreeze>` +1.51 M, `realloc` +1.22 M and `finish_grow`
