@@ -132,16 +132,27 @@ non-vacuous population, so they are invariants from the day they landed, not
 ratchets. Each is the narrow shape its walker is actually about, which is
 what the blanket version could not be.
 
-* **`accepts_player_target` (101 unnamed wrappers) — `core_rules::
-  target_walkers::every_reachable_target_player_is_visible_to_the_player_gate`,
-  population 295.** The shape is `Selector::Player(PlayerRef::Target(_))`,
-  and it is the *only* player-target form that survives serialization
-  unambiguously: `Selector::Target(n)` and `PlayerRef::Target(n)` are both a
-  bare `{"Target": n}`, and `PlayerRef` sits in **65 distinct JSON
-  positions**, so a walk keyed on those would go stale as variants are added.
-  `{"Player": {"Target": n}}` needs no list. It under-reports (a bare `who:
-  PlayerRef::Target` under an unnamed wrapper is not caught) and never
-  false-reports, which is the direction an invariant has to err in.
+* **`accepts_player_target` — its "101 unnamed wrappers" are NOT a defect
+  census, and this is the correction the audit's uniform framing needs.**
+  Alone in the family its fallthrough is **`_ => true`**, not `_ => false`:
+  an unnamed wrapper is *permitted*, and the function's own comment calls
+  that a conservative default because the legality gate still rejects a
+  mismatch. So there is no silent-fizzle drift to close here, and a test
+  claiming to close one would be vacuous. What *can* go wrong is the ~30
+  arms that answer `false` on purpose (the `CounterSpell` family,
+  `SupportCounters`, `DistributeCounters`, `Fight`), and
+  `core_rules::target_walkers::every_reachable_target_player_is_visible_to_
+  the_player_gate` holds those: **population 295, 0 findings** — no shipped
+  card routes a target player through a refusing arm.
+  The shape it looks for is `Selector::Player(PlayerRef::Target(_))`, the
+  only player-target form that survives serialization unambiguously:
+  `Selector::Target(n)` and `PlayerRef::Target(n)` are both a bare
+  `{"Target": n}`, and `PlayerRef` sits in **65 distinct JSON positions**, so
+  a walk keyed on those would go stale as variants are added.
+  `{"Player": {"Target": n}}` needs no list.
+  **Read a walker's fallthrough arm before reading its unnamed count as a
+  bug list** — `scripts/audit_target_walkers.py` prints the same column for
+  all five and only three of them restrict.
 * **`primary_target_filter` (69 unnamed) — `..::the_primary_target_filter_
   agrees_with_the_slot_walker_on_slot_zero`, population 7,728, and it needs
   no tree walk at all.** `primary_target_filter()` and

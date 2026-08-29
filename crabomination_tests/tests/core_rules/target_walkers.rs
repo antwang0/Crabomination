@@ -489,18 +489,28 @@ fn up_to_x_graveyard_returns_aim_at_the_graveyard() {
     }
 }
 
-/// The player-target half of the same class: every reachable
-/// `Selector::Player(PlayerRef::Target(_))` has to be visible to
-/// `accepts_player_target`.
+/// No catalog body that names a target **player** may land on one of
+/// `accepts_player_target`'s explicit `=> false` arms.
 ///
-/// `legal_targets_for_filter` offers Player candidates **only** when
+/// `legal_targets_for_filter` offers Player candidates only when
 /// `accepts_player_target()` is true (`targeting.rs`, "Skip Player candidates
-/// entirely when the effect operates on permanents/stack"). That walker ends
-/// in `_ => false` and names 29 of the 130 `Effect` wrappers, so a body whose
-/// player slot sits under one of the other 101 answers `false` and the
-/// auto-picker never offers a player for it — the slot resolves empty and the
-/// effect silently does nothing. Same failure and same shape as the
-/// reanimation invariant above, on the other walker.
+/// entirely when the effect operates on permanents/stack"), so a body that
+/// names a target player and is refused never gets that slot filled.
+///
+/// **This walker's fallthrough is `_ => true`, not `_ => false`, and that
+/// makes it the one exception in the family.** The other three restrict on
+/// the fallback (`prefers_graveyard_target` and `may_target_offboard_card`
+/// answer `false`, `primary_target_filter` answers `None`), so for them an
+/// unnamed wrapper silently closes the gate for its whole subtree — the drift
+/// `ENGINE_BACKLOG`'s "the gate's own wrappers" is about. Here the unnamed
+/// case is *permitted*: `accepts_player_target`'s own comment calls it a
+/// conservative default and points out the legality gate still rejects a
+/// mismatch. So this test is not about the 101 unnamed wrappers at all — it
+/// cannot be, and a version of it that claimed to be would be vacuous. It is
+/// about the ~30 arms that say `false` on purpose (the `CounterSpell` family,
+/// `SupportCounters`, `DistributeCounters`, `Fight`): those are the ones that
+/// can refuse a player, and a card routing a player target through one is the
+/// bug this catches.
 ///
 /// **Narrow on purpose.** Only `Selector::Player(PlayerRef::Target(n))` is
 /// checked, because it is the one player-target form that cannot be confused
@@ -517,10 +527,10 @@ fn up_to_x_graveyard_returns_aim_at_the_graveyard() {
 /// shape: see the note in `ENGINE_BACKLOG.md` about the "holds a `Move`"
 /// version reporting 29 bodies that are all right to answer `false`.
 ///
-/// **Population 295 and 0 findings** — the walker already covers every
-/// wrapper the shipped catalog reaches this shape through, so this is an
-/// invariant rather than a ratchet from the day it lands. The floor below is
-/// what keeps it from going quietly vacuous.
+/// **Population 295 and 0 findings** — no shipped card routes a target player
+/// through a refusing arm, so this is an invariant rather than a ratchet from
+/// the day it lands. The floor below is what keeps it from going quietly
+/// vacuous.
 #[test]
 fn every_reachable_target_player_is_visible_to_the_player_gate() {
     /// Is there a `Selector::Player(PlayerRef::Target(_))` under `v`, not

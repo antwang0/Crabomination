@@ -5,7 +5,15 @@
 name every wrapper. Its four siblings in `effect/query.rs` —
 `primary_target_filter`, `prefers_graveyard_target`,
 `may_target_offboard_card`, `accepts_player_target` — end in `_ => …`, so a
-wrapper they do not name answers the fallback silently. That is the drift the
+wrapper they do not name answers the fallback silently.
+
+**Read the fallback before reading a column as a bug list.** Three of the
+four RESTRICT on it (`prefers_graveyard_target` and `may_target_offboard_card`
+answer `false`, `primary_target_filter` answers `None`), so an unnamed
+wrapper closes the gate for its whole subtree. `accepts_player_target`
+answers `_ => true` — its unnamed wrappers are *permitted*, which its own
+comment calls a conservative default, so its count is not a defect census.
+This report prints the same column for all four. That is the drift the
 eighty-sixth pass found the hard way: a `Move` out of a graveyard wrapped in
 something the off-board gate did not name resolves targetless in the training
 path, where nothing watches.
