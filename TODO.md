@@ -85,6 +85,11 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
      is short, ask whether the scope is long.**
    * **A per-definition presence bit pays only when the walk it replaces is
      over a list that is usually non-empty.**
+   * **Price a `Vec -> SmallVec` swap as `alloc + free` minus `n x (spill
+     check + external next)`.** `Vec::from_iter` specializes to *internal*
+     iteration and `SmallVec`'s `Extend` does not, so the collect becomes an
+     external `next()` loop: `blockers_of` gave back 4.19 M of the 4.15 M +
+     2.2 M its allocations cost, for -0.072 % of `cube` net.
    * **A `same_team`-shaped call inside a collection walk is a per-*seat*
      question asked per element.** Three answers: hoist it when an earlier
      term of the same `&&` pins its argument, put a cheaper term in front of

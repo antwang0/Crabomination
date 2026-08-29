@@ -14552,13 +14552,17 @@ impl GameState {
         self.blocked_attackers.contains(&attacker)
     }
 
-    pub fn blockers_of(&self, attacker: CardId) -> Vec<CardId> {
+    /// Inline storage, by (-71)'s device: `resolve_combat` asks this once per
+    /// attacker per damage step — 29,362 calls a six-game `cube` run, 23,726
+    /// of them collecting — and CR 509.1b multi-blocks of more than four
+    /// blockers do not happen, so the answer never leaves the stack.
+    pub fn blockers_of(&self, attacker: CardId) -> SmallVec<[CardId; 4]> {
         // Asked outside combat and on every unblocked attacker; the map is
         // empty for most of a game and an empty `collect()` is not free.
         if self.block_map.is_empty() {
-            return Vec::new();
+            return SmallVec::new();
         }
-        let mut ids: Vec<CardId> = self
+        let mut ids: SmallVec<[CardId; 4]> = self
             .block_map
             .iter()
             .filter(|(_, atks)| atks.contains(&attacker))

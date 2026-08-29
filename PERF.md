@@ -2085,6 +2085,47 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-fourth pass (4) — `blockers_of` returns inline storage, and `SmallVec::extend` takes back half of it
+
+**`blockers_of` is `SmallVec<[CardId; 4]>`, base `a8e43aa6`** — (-71)'s device
+on the one remaining allocating call in the combat-damage loop.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     983,739,930 ->   983,671,271   -0.007 %
+  cube    2,953,439,051 -> 2,951,314,840   -0.072 %
+  sealed  2,934,498,227 -> 2,932,990,470   -0.051 %
+
+cube, and the whole diff is four rows plus their counter-row:
+  Vec::from_iter (SpecFromIterNested)   83,688,951 -> 79,543,341  -4,145,610
+  _int_free                             96,052,350 -> 95,125,774    -926,576
+  malloc                                72,039,972 -> 71,332,162    -707,810
+  free                                  58,945,723 -> 58,353,235    -592,488
+  FlattenCompat::iter_fold               5,656,352 ->  5,118,450    -537,902
+  SmallVec::extend                      11,054,914 -> 15,244,212  +4,189,298
+  resolve_combat                        52,969,580 -> 53,405,934    +436,354
+  blockers_of                            1,220,720 ->  1,488,414    +267,694
+                                                program           -2,124,211
+```
+
+**`resolve_combat` asks it 29,362 times a `cube` run and 23,726 of those
+collected**, i.e. allocated and freed a `Vec` for a list that is almost always
+0-2 `CardId`s; CR 509.1b multi-blocks past four blockers do not happen, so
+inline storage never spills.
+
+**The counter-row is the finding: `SmallVec`'s `Extend` gives back roughly
+half of what the allocation saves.** `Vec`'s `SpecFromIterNested` drives the
+source iterator *internally* (the `FlattenCompat::iter_fold` row is that fold,
+and it falls with the change); `SmallVec` has no such specialization, so the
+collect becomes an external `next()` loop with a spill check per element.
+**Price a `Vec -> SmallVec` swap as `alloc + free` MINUS `n x (spill check +
+external next)`, not as `alloc + free`** — at 23,726 collects that is 2.1 M net
+where the allocator side alone reads 4.1 M. `fixed` barely moves (-0.007 %)
+because its four archetypes block less; the two pools the training loop plays
+carry it.
+
+Suite 19,029 / 0 / 5, golden traces unmoved; clippy clean workspace-wide.
+
 ### Ninety-fourth pass (3) — `same_team` was a per-*seat* question asked once per permanent
 
 **Four walks stop asking `same_team` about every element, base `d1c1e50d`.**

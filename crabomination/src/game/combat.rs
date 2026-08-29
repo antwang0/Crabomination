@@ -3244,7 +3244,7 @@ impl GameState {
                 // blockers, or (CR 509.2) a multi-block blocker ordering the
                 // attackers it blocks.
                 let default_order = match self.attackers_blocked_by(attacker) {
-                    atks if atks.len() > 1 => atks.to_vec(),
+                    atks if atks.len() > 1 => atks.iter().copied().collect(),
                     _ => self.blockers_of(attacker),
                 };
                 let order = self.resolve_damage_order(&default_order, answer);
@@ -3433,7 +3433,7 @@ impl GameState {
             if blocker_ids.len() > 1
                 && let Some(order) = self.combat_damage_order.get(&atk.id)
             {
-                blocker_ids = order.clone();
+                blocker_ids = order.iter().copied().collect();
             }
             // Butcher Orgg divides over the defending player's creatures
             // instead of its blockers, blocked or not.

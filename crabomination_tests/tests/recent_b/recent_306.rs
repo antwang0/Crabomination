@@ -53,7 +53,7 @@ fn can_block_any_number_takes_all_comers() {
     assert_eq!(g.attackers_blocked_by(guard).len(), 3);
     // Every attacker is blocked, so none goes unblocked.
     for &a in &atk {
-        assert_eq!(g.blockers_of(a), vec![guard]);
+        assert_eq!(g.blockers_of(a).as_slice(), [guard]);
     }
 }
 
