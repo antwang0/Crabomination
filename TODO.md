@@ -46,6 +46,17 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `llvm-bolt` in the toolchain and no `perf` in the image.
 1. **Perf queue** — PERF "Perf candidates" and its Baseline carry every
    number; this is the state and the rules only.
+   **`(-90)` IS THE NEW TOP ENTRY and it is a map, not a lead** — the
+   ninety-sixth pass's whole-profile re-read at `3b8bfd03`, with three sized
+   leads (`compute_permanent_pass`' 279.5 Ir body, the diffuse allocation
+   table, `granted_abilities_of_inner`) and, more usefully, **four things it
+   refutes by inspection with no build spent**: every freeze scope worth
+   widening (the gather count is at its floor — `cg_contexts.py` says all six
+   top contexts are one gather per distinct game state, and Ir/call says
+   "gather" and is wrong about all of them), and a batch event-kind mask in
+   front of `dispatch_triggers_for_events` (11 `event_matches_spec` calls a
+   dispatch, so the inner fan-out is not the cost).
+   **Read `(-90)` before pulling anything else off this queue.**
    **Open, in order:** `(-87)` (1.13 % of `cube`; both of its own proposals
    are built and refuted, what is left is calling the walk less, and the one
    unpriced thing is the *write rate of zone membership + `continuous_effects`*
@@ -200,18 +211,24 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    `*_cycle_definitions` alone. One commit per file batch, binary green either
    side; it is a convention change, not a build-time one.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `e0cbb4a7` (on `origin`): `fixed` 963,706,773 /
-   `cube` 2,899,018,180 / `sealed` 2,885,278,610.** One anchor back,
-   `e0bc5c46`: 978,492,848 / 2,938,264,442 / 2,921,980,262, with the
-   robustness grid green there (30 cells, 33,120 games, 0 undecided, 0
-   failures, 5 assertion strings verified in the audit binary), `--bench`
+   **Anchor, MEASURED at `599825ba` (on `origin`): `fixed` 963,502,971 /
+   `cube` 2,886,424,672 / `sealed` 2,854,266,716**, with `--bench`
    byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
-   stalls, determinism **and** thread_determinism ok), `games_per_s`
-   **208.61 at 3 threads / 271.89 at 4**, `host_calib_ms` 50-54, `bin_bytes`
-   123,614,904 — **and the three engine commits between those two anchors are
-   -1.51 / -1.34 / -1.26 %, most of it the gather pre-scan's memo word.**
-   Two anchors further back, `fa979b3a`: 989,689,177 / 2,965,899,097 /
-   2,947,614,907, so the two passes together read **-2.63 / -2.25 / -2.11 %**.
+   stalls, determinism **and** thread_determinism ok), suite 19,029 / 0 / 5,
+   golden traces 7/7 unmoved, clippy clean. One anchor back, `e0cbb4a7`:
+   963,706,773 / 2,899,018,180 / 2,885,278,610; two back, `e0bc5c46`:
+   978,492,848 / 2,938,264,442 / 2,921,980,262 (robustness grid green there —
+   30 cells, 33,120 games, 0 undecided, 0 failures). **The four engine
+   commits across those two anchors are -1.53 / -1.76 / -2.31 %**, most of it
+   the gather pre-scan's memo word.
+   **Two sessions read `e0bc5c46` independently and agreed to 435 Ir on
+   `cube`, 58 on `fixed` and 81,279 on `sealed`** — the third such check, and
+   the reason an anchor is checkable at all.
+   **⚠ The `games_per_s` at this tip is 364.80 at 3 threads against the
+   217.09 the last container filed at the same thread count, on the same
+   `--bench`, at `host_calib_ms` 53 vs 48-56.** Ir fell 2 %, not 68 %. A
+   wall-clock row is a within-sitting instrument; `bin_bytes` and
+   `host_calib_ms` do not catch a container change and did not catch this.
    **`games_per_s` IS NOT PORTABLE ACROSS CONTAINERS and the reason is the
    thread count, not the box**: `--bench` defaults to
    `available_parallelism - 1`, this container reports `nproc` 4 and so runs

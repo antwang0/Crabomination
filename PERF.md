@@ -2101,6 +2101,143 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-sixth pass — closing state at `599825ba`
+
+```text
+suite   cargo nextest run --workspace --exclude crabomination_client
+        19,029 / 0 / 5, run once per code commit; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 a game / 0 stalls
+        (cap 0 / stuck 0 / draw 0) — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1)
+        release build, 3 threads: games_per_s 364.80, games_per_s_th 121.599,
+        peak_rss_mib 24.4, bin_bytes 123,624,632, host_calib_ms 53
+```
+
+**⚠ That `games_per_s` is NOT comparable to the 217.09 / 280.47 rows the
+ninety-fifth pass filed at `--threads 3` / `4`.** Same thread count, same
+`--bench`, `host_calib_ms` 53 against 48-56 — and 68 % apart. Ir fell 1.5-2.3 %
+over the same interval, which cannot be it. It is a different container, and
+that is the whole content of the reading: **a wall-clock row is a
+within-sitting instrument only.** `bin_bytes` and `host_calib_ms` did not
+catch it, exactly as the ninety-fifth pass's note says they would not.
+
+```text
+Ir anchor, callgrind, profiling-fast --no-default-features,
+--games 6 --threads 1 --seed 1:
+                 e0bc5c46          599825ba
+  fixed        978,492,790  ->   963,502,971   -1.532 %
+  cube       2,938,264,007  -> 2,886,424,672   -1.764 %
+  sealed     2,921,898,983  -> 2,854,266,716   -2.314 %
+```
+
+Three commits between them: `2b9dd2d8` (the gather's pre-scan memo, -1.418 /
+-1.198 / -1.154 %), `3b8bfd03` (the legend-rule grouping, -0.021 / -0.434 /
+-1.070 %) and a concurrent session's `e0cbb4a7` (the ironscale fuse, -0.093 /
+-0.138 / -0.103 %). The three compose to -1.53 / -1.76 / -2.31 %, which is
+what the anchor reads — **re-read the anchor, don't sum the rows** held here,
+and this time the sum agreed.
+
+**Two sessions read `e0bc5c46` independently this pass and agreed to 435 Ir
+on `cube` and 58 on `fixed`** (2,938,264,007 vs 2,938,264,442; 978,492,790 vs
+978,492,848), which is the third such check and the reason an anchor is
+checkable at all. `sealed` differed by 81,279 (0.003 %) — the largest of the
+three gaps and still an order below anything this file calls a result.
+
+
+### Ninety-sixth pass (2) — a card *name* is not a hash key when the population is four
+
+**The legend rule's grouping is an insertion-ordered `SmallVec`, base
+`2b9dd2d8`.** CR 704.5j groups battlefield legendaries by `(controller,
+name)`; the old form hashed the `&'static str` name per legendary permanent
+per SBA sweep, allocated a bucket table and a `Vec` per group, kept a
+parallel `order: Vec<(usize, &str)>` so the iteration stayed deterministic,
+and allocated each member's name as a `String` — then discarded all of it,
+because a group of one is not a legend-rule group.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     964,612,937 ->   964,407,302   -0.021 %
+  cube    2,903,059,453 -> 2,890,469,246   -0.434 %
+  sealed  2,888,189,359 -> 2,857,271,924   -1.070 %
+
+__rust_alloc calls:
+  fixed     527,615 ->   527,615           0
+  cube    1,476,472 -> 1,432,620     -43,852
+  sealed  1,647,919 -> 1,544,655    -103,264
+
+cube, the whole diff and it is all one side:
+  _int_free                        -2,364,962
+  malloc                           -1,982,065
+  free                             -1,710,228
+  hashbrown rustc_entry            -1,089,986
+  check_state_based_actions_into   -1,076,170   (self)
+  hashbrown remove_entry           -1,021,696
+  finish_grow                        -715,680
+  hashbrown fallible_with_capacity   -661,576
+```
+
+**`fixed` reads zero because the four bench archetypes carry no legendary
+permanent at all** — the same pool shape (-71) found for `sa_cards`. A pool
+that cannot reach the code is not a pool split; check which pools the row
+exists on before reading a 0.02 % as noise or as a loss.
+
+**The rule: a `HashMap` keyed on a string is two costs, and the second is the
+one that hides.** The hash walks the key's bytes, and the table needs a
+parallel insertion-order list wherever the iteration must be deterministic —
+which in this engine is everywhere, because HashMap order in game logic is a
+cross-process determinism bug. An ordered association list over inline
+storage answers both at a population of four, and `sealed` (the most
+legendary-dense of the three pools) paid **1.07 %** for the difference.
+
+### Ninety-sixth pass — the layer gather's per-card walk is a memo read
+
+**`CardDefinition::gather_scan_bits` on a second `CardMemo` word, base
+`e0bc5c46`** (the anchor commit `2b9dd2d8` is measured against; the
+mechanical cross-crate move one commit earlier carries no logic change and
+its own caller stayed in `crabomination_base`).
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     978,492,790 ->   964,612,937   -1.418 %
+  cube    2,938,264,007 -> 2,903,059,453   -1.198 %
+  sealed  2,921,898,983 -> 2,888,189,359   -1.154 %
+
+cube, the whole diff and it is two sides:
+  gather_continuous_effects_inner, self   123,850,028 -> 83,074,932   -32.9 %
+  CardDefinition::gather_scan_bits (miss)           0 ->  3,594,230
+  static_effect_gather_bits                         0 ->    130,084
+  CardMemo::clone (the second word)                        +274,440
+  allocator rows                                              ±0.6 M
+```
+
+The pre-scan's per-card body was: one `static_abilities` walk, five
+`Option`/`Vec` field probes on the definition, and a **`keywords` list scan
+with a five-arm match**. All of it is a pure function of the definition, so
+it is the `sba_scan_bits` device one caller over — 41 `gather_spec` bits plus
+ten definition flags in one word, read through `CardData::gather_scan_bits`
+and audited by the same `debug_assert_eq!` against a recompute.
+
+```text
+misses  71,110 at 50.5 Ir over ~1.36 M card visits  =  5.2 %
+```
+
+**The new family got its own word and its own valid flag, not a share of the
+first**, per the standing rule that a slot's miss path is the sum of every
+family on it: the payload is 52 bits and the existing word is occupied
+through bit 57. Eight more bytes on a `CardData` that is already hundreds
+cost `CardMemo::clone` +274,440 on `cube` — 0.7 % of what the walk returned.
+
+**This is the counter-example the per-definition-bit rule needs, and the rule
+already predicted it.** `(-87)`'s bit lost (+0.138 %) because it replaced
+`def.static_abilities.iter().any(..)` — one length check on an ordinary
+board. `(-77)`'s fourth row lost for the same reason. This one replaces a
+list scan with a five-arm match *plus* five field probes *plus* the statics
+walk, i.e. `sba_scan_bits`'s shape, and reads the same sign
+`sba_scan_bits` did. **Count the work items per card visit; the count is the
+whole test, and a `keywords` walk is a work item where an `is_empty()` is
+not.**
+
 ### Ninety-fifth pass (6) — three questions about one card's statics are one walk
 
 **`ironscale_replace` reads `static_abilities` once, base `e0bc5c46`.** Sekki's
@@ -8093,6 +8230,57 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-sixth pass — the gather's per-card walk becomes a memo read, and the legend rule stops hashing card names
+
+**Two commits, `fixed` -1.44 % / `cube` -1.63 % / `sealed` -2.21 % between
+them**, both behaviour-preserving (identical games, decisions and outcomes on
+all three pools) and both the same device from opposite ends: a per-card body
+that is a pure function of the definition, and a per-sweep container whose
+population is one to four.
+
+**(A) `2b9dd2d8` — `CardDefinition::gather_scan_bits`, memoized on a second
+`CardMemo` word.** `gather_continuous_effects_inner`'s pre-scan walked each
+permanent's `static_abilities`, probed five definition `Option`/`Vec` fields
+and scanned its `keywords` list, once per permanent per gather — 59,002
+gathers a `cube` run at ~23 permanents apiece. `fixed` -1.418 % / `cube`
+-1.198 % / `sealed` -1.154 %; the gather's own self row falls 123,850,028 ->
+83,074,932. Numbers, the miss rate and the reason the new family gets its own
+word are in the Baseline.
+
+**(B) `3b8bfd03` — the legend rule's grouping is an ordered `SmallVec`, not a
+`HashMap` keyed on a card *name*.** `fixed` -0.021 % / `cube` -0.434 % /
+`sealed` -1.070 %, and -43,852 / -103,264 allocations. The map hashed a
+`&str` name per legendary permanent per sweep, allocated a bucket table and a
+`Vec` per group and needed a parallel `order` list to stay deterministic — to
+throw all of it away, because a group of one is not a legend-rule group and
+nearly every group is one.
+
+**The survey that found both, and the four contexts it ruled OUT, which is
+the half worth keeping.** `--separate-callers=4` + `cg_contexts.py` on the
+59,002 gathers says the top four are already one gather per distinct game
+state and cannot be scoped away:
+
+```text
+  6,546  frozen_effects <- board_keyword_in_scope <- declare_attackers_banded
+  4,870  frozen_effects <- board_keyword_in_scope <- declare_blockers
+  4,840  compute_permanents <- combat_damage_computed <- resolve_combat
+  4,380  computed_permanent <- call_mut <- Vec::from_iter <- pick_blocks_inner
+  4,290  computed_permanent <- with_frozen_layers <- declare_blockers
+  4,040  computed_permanent <- permanent_value_with <- eval_material_inner
+```
+
+Every one of them is a *scope's first* gather: `frozen_effects` gathering
+**is** the scope's gather, `pick_blocks_inner` is called 4,554 times and each
+call is already wrapped in `with_frozen_layers` (4,380 gathers / 4,554 calls),
+`eval_material_inner` is reached 6,468 times through `eval_material_frozen`
+and each of those is a *different* simulated state, and
+`combat_damage_computed` is called once per `resolve_combat`. **The gather
+count is at its floor for this call graph; the remaining lever on it is the
+cost of one gather, which is what (A) took.** Do not spend another build
+looking for a scope to widen without running `cg_contexts.py` first — Ir/call
+says "gather" for all six of these and is wrong about every one.
+
+
 ### Ninety-third pass (4) — one collect taken, one reverted, and the census that ranked them wrong
 
 **Taken: `pick_attacks_inner`'s two whole-board collects become loops** —
@@ -12694,6 +12882,67 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-90) THE GATHER COUNT IS AT ITS FLOOR AND THE PROFILE IS NOW TOPPED BY
+THREE ROWS NOTHING CAN GATE.** Read at `3b8bfd03`, `--decks cube`, after the
+ninety-sixth pass's two commits. The self table:
+
+```text
+  dispatch_triggers_for_events   6.59 %   (-59): no hot line, fewer calls only
+  the allocator family          10.8 %    1,432,620 allocations, ~217 Ir a pair
+  compute_permanent_pass         2.79 %   289,098 calls at 279.5 Ir self
+  gather_continuous_effects_inner 2.86 %  59,002 calls, floor (see the Log)
+  computed_permanent             2.56 %   355,828 calls, 81 % `perms` miss
+  check_state_based_actions_into 2.4 %
+  __memcpy                       2.48 %   1,026,751 calls
+  evaluate_requirement_static_hinted x3   3.55 % over 1,425,996 calls
+```
+
+**Three leads, in the order a taker should size them:**
+
+1. **`compute_permanent_pass` is 289,098 calls at 279.5 Ir of self, and the
+   count is a floor — the lever is the price of one pass.** `perms` misses
+   81 % of `computed_permanent`'s 355,828 calls, which reads like a broken
+   memo and is not: `cg_contexts.py --separate-callers=4` says the passes are
+   ~one per (scope, *distinct* card).
+
+```text
+  48,216  computed_permanent <- legal_blockers <- pick_blocks_inner
+  43,226  compute_permanents <- combat_damage_computed          (whole board)
+  34,994  computed_permanent <- permanent_value_with <- eval_material_inner
+  24,000  compute_permanents <- check_state_based_actions_into <- resolve_combat
+  21,778  compute_permanents <- declare_blockers                (whole board)
+```
+
+   `legal_blockers` asks about 10.85 cards a call and pays 10.59 passes;
+   `eval_material_inner` pays 5.4 over 6,468 calls, each on a *different*
+   simulated state whose scope starts empty. Nothing here is a scope to
+   widen. What is left is the body: 1.9 `affected_includes_gated` calls a
+   pass (the gathered list is short), 0.17 `PrintedList::push` (most passes
+   modify no list) and a sort on ~10 % — so the 279.5 Ir is the layer walk
+   itself, and it has never been read. (-27)'s allocation half stands
+   separately: one `Arc<ComputedPermanent>` per miss is 201,780 on `cube`,
+   14 % of every allocation in the program.
+2. **The allocation table is diffuse and its top row is `finish_grow`
+   (377,079, 26 %)**, spread over ~90 `grow_one` sites none of which is above
+   0.17 %. The named rows below it are `computed_permanent` 201,780,
+   `Arc::clone_from_ref_in` 201,610 (the CoW deep copies, inherent) and
+   `Vec::from_iter` 127,441. **Read the mimalloc caveat before pricing any of
+   it**: callgrind runs the system allocator and the shipped build does not,
+   so the ~10.8 % is an upper bound on what a removed allocation is worth.
+3. **`evaluate_requirement_static_hinted` is 3.55 % over 1,425,996 calls and
+   927,746 of them are its own recursion.** The external entries are
+   `statics_granted_triggers_inner` 142,094 (1.39 % inclusive) and
+   `granted_abilities_of_inner` 105,436 (1.07 %). The first is already gated
+   by the dispatcher's batch pre-filter; the second has not been read.
+
+**Refuted by inspection this pass, no build spent, and do not re-derive
+them:** a batch event-kind mask in front of `dispatch_triggers_for_events`'
+inner loop (`event_matches_spec` is 820,738 calls over 74,798 dispatches =
+**11 per dispatch**, so the inner fan-out is not the cost and a mask can only
+reach 0.86 %); and four freeze scopes to widen, all of which turn out to be
+one gather per distinct game state (see the Log's context table).
+
 
 **(-89) THE COMBAT-DAMAGE PREVENTION CASCADE IS 1.55 / 2.34 / 1.69 % OF THE
 THREE POOLS AND IT IS TEN QUESTIONS PER DAMAGE EVENT, ASKED ON BOARDS THAT
