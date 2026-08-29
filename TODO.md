@@ -38,11 +38,13 @@ sixty-seventh pass, so don't re-take that.
    byte-identical, `audit_panics.py` 23 bare (unchanged), and
    `crabomination_client` clippy-clean after the four apt packages.
 3. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
-   `(-93)` now carries the device, its two conditions and **four sized
-   consumers**, so start there rather than re-deriving: the
-   noncombat-damage prevention family, `fire_step_triggers`' first
-   battlefield loop (~0.3 % of `fixed`, and read the `cube` side before
-   believing it), and the two the entry refutes with reasons.
+   `(-93)` carries the device, its **three** conditions and four sized
+   consumers, so start there rather than re-deriving.
+   `fire_step_triggers` is BUILT AND REVERTED (`fixed` -0.221 / `cube`
+   +0.013 / `sealed` +0.053 % — a pool split, and it loses on the two pools
+   training plays); it produced the third condition, **the fill must be free,
+   i.e. the walk has to already ask the lane's question.** What is left is the
+   noncombat-damage prevention family and the two the entry refutes.
    (b) `(-92)` — the profile is FLAT, leads 2 and 3 open. (c) `resolve_combat
    -> SpecFromIter::from_iter` — **the adapter half is taken** (`e1f8dfac`,
    seven stacked filters over a one-element list, -0.033 / -0.046 / -0.045 %);
@@ -55,12 +57,15 @@ sixty-seventh pass, so don't re-take that.
    the actor is `encode_state` 1.30 % and `rank_shape` 0.98 %; everything
    above them is engine, so **an engine percent is an actor percent**.
    (f) Cards on leftover context.
-4. **Two rules the lane half produced.** A **second** consumer of an existing
+4. **Three rules the lane half produced.** A **second** consumer of an existing
    lane is priced on the lane's *answer*, not on the row it gates — where the
    answer is usually `PRESENT` it buys only the misses the first consumer
    would have paid. And **an anchor identity is the cheapest proof that an
    intervening commit is Ir-neutral**: re-read a change when the commit that
-   landed under it touched the row, check the anchor when it did not.
+   landed under it touched the row, check the anchor when it did not. And a
+   lane whose *fill* is not free is a pool split waiting to happen — the
+   `fixed` archetypes are the board where every presence question answers
+   `ABSENT`, so a lane measured there alone always looks like a win.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

@@ -14481,32 +14481,54 @@ is a pure function of the definitions can use it, whatever else the walk
 produces.** Taken twice at the ninety-ninth pass (`fixed` -0.869 / -0.328 %,
 `sealed` -0.693 / -0.375 %); both Log blocks carry the numbers.
 
-**Two conditions, and the second is the one that refutes candidates.** The
-walk's per-card body must be more than a length check (`cast_lock_scan`'s mask
-is refuted at +0.034 % on exactly that), *and* nothing cheaper may already
-gate it. A third, learned here: **a second consumer of an existing lane is
+**Three conditions, and the last two are what refute candidates.** The walk's
+per-card body must be more than a length check (`cast_lock_scan`'s mask is
+refuted at +0.034 % on exactly that); nothing cheaper may already gate it; and
+**the fill must be free — the walk has to already ask the lane's question.**
+The third is `fire_step_triggers` below, built and reverted at
+`fixed` -0.221 / `cube` +0.013 / `sealed` +0.053 %: adding one `matches!` per
+printed ability to fill the lane costs more on a board where the lane answers
+`PRESENT` than the skip saves on a board where it does not, and the boards
+where it answers `PRESENT` are `cube` and `sealed`. A fourth, learned here:
+**a second consumer of an existing lane is
 priced on the lane's ANSWER, not on the row it gates** — where the answer is
 usually `PRESENT` it buys only the misses the first consumer would have paid,
 which is why `trigger_grant_sources` reads `cube` +1.2 % on its own row and
 the program still falls.
 
 **The remaining consumers, sized off the `fixed` tip profile at `841c7b9b`,
-cheapest first. None is built.**
+cheapest first. One is built and reverted; the other three are not built.**
 
-1. **`fire_step_triggers`' first battlefield loop — 11.1 M / 1.20 % of
-   `fixed` self over 14,860 calls, and the four bench archetypes carry not one
-   step-keyed trigger.** The loop asks `t.event.kind == StepBegins(step)` per
-   printed ability per permanent, plus a `station.is_empty()`; the lane
-   predicate is `!station.is_empty() || triggered_abilities.iter().any(|t|
-   matches!(t.event.kind, StepBegins(_)))`, definition-only, and the loop
-   computes it for free while it runs (caller-filled). **The catch is
-   condition 2**: for a land or a vanilla creature the body *is* a length
-   check, so what the lane buys is the boards where permanents carry triggers
-   that are not step-keyed. Estimated ~200 of the function's 747 Ir of self a
-   call, i.e. ~0.3 % of `fixed` and less elsewhere — and a `fixed`-heavy
-   reading is exactly the trap CLAUDE.md's "a number is about a pool" names,
-   because a cube board *does* carry upkeep triggers. **Read the `cube` side
-   before believing this one.**
+1. **`fire_step_triggers`' first battlefield loop — BUILT, MEASURED AND
+   REVERTED, `fixed` **-0.221 %** / `cube` **+0.013 %** / `sealed`
+   **+0.053 %**.** The lane predicate is `!station.is_empty() ||
+   triggered_abilities.iter().any(|t| matches!(t.event.kind, StepBegins(_)))`
+   — definition-only, and the loop computes it while it runs, so the
+   caller-filled form applies exactly as it does to the two takes above. **It
+   is a pool split, and the pools it loses on are the two the training loop
+   plays**, so it is a revert under the standing rule.
+
+```text
+base 0541c28e+, callgrind, profiling-fast --no-default-features
+  fixed     922,987,143 ->   920,947,107   -0.221 %
+  cube    2,761,041,323 -> 2,761,395,369   +0.013 %
+  sealed  2,739,549,090 -> 2,741,000,221   +0.053 %
+```
+
+   **The entry predicted the sign before the build and the numbers are the
+   rule, so keep both.** The four bench archetypes carry not one step-keyed
+   trigger, so `fixed` is a board where the lane always answers `ABSENT`; a
+   cube or sealed board carries upkeep triggers, the lane answers `PRESENT`,
+   the walk runs anyway, and what is left is the caller-fill's own cost — one
+   `matches!` per printed ability and one `station.is_empty()` per permanent,
+   paid on every step of every turn. **So the third condition for a
+   caller-filled lane is that the fill be free, and it is only free when the
+   walk already asks the lane's question.** `dispatch_board_scan` and
+   `trigger_grant_sources` both load the same memo word they would have loaded
+   anyway; this loop had to add a test. A variant that hoists the fill behind
+   `lane.is_err()` would recover `cube` and `sealed` to flat and leave the
+   change worth +0.22 % of the bench pool and nothing on the two that matter —
+   which is not worth carrying, and is why it was not built.
 2. **The noncombat-damage prevention family (`mod.rs:13600-13900`)** — the
    remaining ungated whole-board prevention walk, per the ninety-ninth pass's
    own queue. Measure the walk before pointing a lane at it.
