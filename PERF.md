@@ -2161,11 +2161,13 @@ a box whose state moves.
 
 ## Baseline
 
-### Hundredth pass — closing state at `d2c5d30a`
+### Hundredth pass — closing state at `98feda21`
 
-Two code commits, both `LANE_SHIELD` (`(-93)`): `6bf004f5` (seven walks) and
-`4ba40d75` (the last two). A concurrent session's commits sit under and
-between them, so each names its own base and the anchor below is the tip.
+Three code commits, all `zone::Battlefield` lanes (`(-93)`): `6bf004f5` and
+`4ba40d75` (`LANE_SHIELD`, nine damage-shield walks) and `98feda21`
+(`LANE_GRANT`, `keyword_grant_in_scope`'s battlefield leg). A concurrent
+session's commits sit under and between them, so each names its own base and
+the anchor below is the tip.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
@@ -2173,32 +2175,36 @@ rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
 suite   19,043 / 0 / 5 (cargo nextest); golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
-        0 failures; 4 "memo is stale" strings in the audit binary. This is
-        the audit that matters for this pass: `LANE_SHIELD` is a seventh
-        lane on `Battlefield::lane`'s `debug_assert!`, so 33,120 games of
-        `-C debug-assertions=yes` is what proves no write path reached the
-        cards without clearing the word.
+        0 failures, run twice (once per lane), with the new
+        `battlefield grant memo is stale` string verified present in the
+        audit binary. This is the audit that matters for this pass: the two
+        new lanes ride `Battlefield::lane`'s / `grant_lane`'s
+        `debug_assert!`, and 33,120 games of `-C debug-assertions=yes` is
+        what proves no write path reached the cards without clearing the word.
 --bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
         invariant; determinism ok, thread_determinism ok (3 vs 1).
-        games_per_s 231.71 at 3 threads, host_calib_ms 49,
-        peak_rss_mib 24.2, bin_bytes 123,632,816
+        games_per_s 222.81 at 3 threads, host_calib_ms 54,
+        peak_rss_mib 24.3, bin_bytes 123,639,536
 
-Ir anchor at `d2c5d30a`, callgrind, profiling-fast --no-default-features,
+Ir anchor at `98feda21`, callgrind, profiling-fast --no-default-features,
 --a gang --b gang --games 6 --threads 1 --seed 1:
-  fixed     919,216,044      cube 2,738,558,700      sealed 2,725,338,525
+  fixed     914,791,061      cube 2,730,990,977      sealed 2,708,407,683
 
-  the window, 840b5ccd -> d2c5d30a:
-    fixed     922,985,500 ->   919,216,044   -0.408 %
-    cube    2,761,036,641 -> 2,738,558,700   -0.814 %
-    sealed  2,739,558,149 -> 2,725,338,525   -0.519 %
+  the window, 840b5ccd -> 98feda21 (each row re-read at its own base, then
+  the endpoints):
+    fixed     922,985,500 ->   914,791,061   -0.888 %
+    cube    2,761,036,641 -> 2,730,990,977   -1.088 %
+    sealed  2,739,558,149 -> 2,708,407,683   -1.137 %
 ```
 
-**`games_per_s` is 18 % under the ninety-ninth pass's and it is the box, not
-the code.** `host_calib_ms` reads **49-56** here against 45-47 there, the
-`--bench` decision/turn invariant is byte-identical, and the Ir totals — which
+**`games_per_s` is 18-22 % under the ninety-ninth pass's and it is the box,
+not the code.** `host_calib_ms` reads **49-56** here against 45-47 there and
+drifts within a single session (49 at the second gate, 54 at the third); the
+`--bench` decision/turn invariant is byte-identical and the Ir totals — which
 are host-independent — fell on all three pools. **`host_calib_ms` is the only
 thing that makes a committed `games_per_s` comparable across containers**;
-quote the pair or quote neither.
+quote the pair or quote neither, and at `wall_s` 1.4 do not read a 5 % move
+as anything.
 
 **Ninth cross-session anchor check, and it is an identity.** `6bf004f5` was
 measured at `840b5ccd` and then rebased over a concurrent session's encoder
@@ -14681,7 +14687,9 @@ and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
 **(-93) THE CALLER-FILLED LANE — a `zone::Battlefield` lane whose miss costs
-NOTHING, and the four consumers left after the two this pass took.** The
+NOTHING. Eight lanes now; the hundredth pass took three more
+(`LANE_SHIELD` x2, `LANE_GRANT`), window `840b5ccd -> 98feda21` **-0.888 /
+-1.088 / -1.137 %** on the three pools.** The
 closure form (`lane(shift, predicate)`) walks the board itself on a miss, so
 it can only be pointed at a walk that *is* a predicate, and it breaks even at
 a hit rate of about one half — which is where the `DerefMut` invalidation
@@ -14708,9 +14716,26 @@ usually `PRESENT` it buys only the misses the first consumer would have paid,
 which is why `trigger_grant_sources` reads `cube` +1.2 % on its own row and
 the program still falls.
 
+**AND THE HIT RATE IS ALREADY IN EVERY DUMP YOU HAVE — measure it before you
+build.** For a walk that calls something only on the cards its lane predicate
+selects, `callee calls / walk calls` is the mean number of selected cards a
+board carries, and a lane buys the asks where that is zero. `LANE_GRANT` read
+**0.70 / 1.15 / 0.017** (`can_grant_keyword` over `keyword_grant_in_scope`
+asks) and then landed **-0.481 / -0.276 / -0.621 %**, in exactly the order the
+ratio predicted. `cg_calls.py` on a dump you already have answers this in
+seconds; the reverted `fire_step_triggers` lane is what happens when nobody
+asks.
+
+**A NINTH LANE IS FREE AND A TENTH IS NOT.** `type_gates` is a `u32` at two
+bits a lane, so lanes 9-16 cost nothing but a shift constant. Past 16 the word
+has to widen.
+
 **The remaining consumers, sized off the `fixed` tip profile at `841c7b9b`,
 cheapest first. One is built and reverted, one is taken; the other two are
-not built.**
+not built. A fifth, `keyword_grant_in_scope`'s battlefield leg, was found off
+the `(-89)` cascade rather than this list and is TAKEN at `98feda21` —
+which is the lesson: the list was seeded from one function's callee table and
+the largest consumer on it was not in that function.**
 
 1. **`fire_step_triggers`' first battlefield loop — BUILT, MEASURED AND
    REVERTED, `fixed` **-0.221 %** / `cube` **+0.013 %** / `sealed`
@@ -14975,45 +15000,48 @@ whose cost is the memo read plus the keyword scan, not a board walk. Read
 produced is the ranking one**: a presence lane is worth what its caller does
 *not* already gate, so rank candidates by that and not by row size.
 
-**(-89) RE-READ AT `d2c5d30a` — two more rows closed and the four that are
-left are all one shape.** The hundredth pass's `LANE_SHIELD` took
-`source_damage_to_color_prevented` from 182 to **27.0** Ir a call on `cube`
-and `damage_from_your_source_to_your_creature_prevented` to **21.3**, both at
-12,786 calls. `cg_edges.py --callees resolve_combat`, `--decks cube`, at that
-tip:
+**(-89) RE-READ TWICE AT THE HUNDREDTH PASS — four rows closed, and the four
+that are left are all one shape.** `LANE_SHIELD` took
+`source_damage_to_color_prevented` from 182 to **27.0** Ir a call on `cube`,
+`damage_from_your_source_to_your_creature_prevented` to **21.3**, and the
+three `damage_to_attacker` / `creature_token` / `your_creature` shields to
+**21.0**; then `LANE_GRANT` took 6-14 % more off the three keyword-gated rows
+on `cube` and 39-47 % on `sealed`. `cg_edges.py --callees resolve_combat`,
+`--decks cube`, at `98feda21`:
 
 ```text
-  damage_prevented_by_protection   12,786   887 Ir   0.41 %
-  apply_prevention_shields_with    12,754   862      0.40 %
-  creature_redirects_damage_to..   12,786   821      0.38 %
-  damage_from_source_prevented..   12,786   732      0.34 %
-  prevent_combat_to_target          7,570   751      0.21 %
-  combat_damage_prevented_to_self  12,786   295      0.14 %
-  scale_damage_to                  20,324   135      0.10 %
-  combat_damage_prevented_from     19,326   123      0.09 %
+  apply_prevention_shields_with    12,754   812 Ir   0.379 %
+  creature_redirects_damage_to..   12,786   769      0.360 %
+  damage_prevented_by_protection   12,786   763      0.357 %
+  damage_from_source_prevented..   12,786   681      0.319 %
+  prevent_combat_to_target          7,570   752      0.208 %
+  combat_damage_prevented_to_self  12,786   295      0.138 %
+  scale_damage_to                  20,324   135      0.100 %
+  combat_damage_prevented_from     19,326   123      0.087 %
   ironscale_replace                12,754   161      0.075 %
   source_damage_to_color_prev..    12,786    27      TAKEN (LANE_SHIELD)
   damage_from_your_source_to_..    12,786    21      TAKEN (LANE_SHIELD)
+  the three board shields           5,590    21      TAKEN (LANE_SHIELD)
   combat_damage_prevented_for_d.   19,920     4      the model
 ```
 
-**The top four are 1.54 % of `cube` and all four run `card_keyword_possible`,
-whose callee table is the same three rows in each** (`Graveyard::has_anthem`
-~2 a call, `CardDefinition::can_grant_keyword` ~1.15 a call, `Keyword::eq`).
-So they are not four leads, they are one: `card_keyword_possible` =
-`battlefield_find(id)` + `keyword_grant_in_scope(pred)`.
+**The top four are 1.42 % of `cube` and three of them run
+`card_keyword_possible`, whose callee table is the same rows in each**
+(`Graveyard::has_anthem` exactly 2 a call, `CardDefinition::can_grant_keyword`,
+`Keyword::eq`). So they are not three leads, they are one:
+`card_keyword_possible` = `battlefield_find(id)` +
+`keyword_grant_in_scope(pred)`, and the second half is now lane-gated.
 
-**And `keyword_grant_in_scope`'s battlefield leg is REFUTED BY INSPECTION,
-no build spent.** It is `battlefield.iter().any(|c| card_can_grant_keyword(c,
-&pred, synth))`, and pass 87's per-definition keyword-grant bit already made
-that per-card body **one word load** — which is `(-93)` condition 2 exactly,
-the rule `cast_lock_scan`'s mask was refuted on at +0.034 %. A union lane over
-it would also be the "board-level OR of the per-card grant gates", which the
-do-not-rebuild list carries twice. **What is NOT refuted is the
-`battlefield_find` in front of it**: `card_keyword_possible_on` already
-exists, `resolve_combat` holds the pair it is asking about, and four rows ask
-for the same id inside one freeze scope. That is `(-92)` lead 1's `_on`
-convention pointed at a second family, and it is the next thing to size here.
+**What is left is the `battlefield_find` in front of it, and it is the next
+thing to size here.** `card_keyword_possible_on` already exists and
+`creature_redirects_damage_to_controller` already uses it;
+`damage_from_source_prevented_by_keyword` and
+`damage_prevented_by_protection_inner` still open on the `CardId` form, and
+`resolve_combat` holds the pair they are asking about. That is `(-92)` lead
+1's `_on` convention pointed at a second family. **What is refuted, without a
+build: a lane over `keyword_grant_in_scope`'s `continuous_effects` leg** — it
+is not a battlefield walk, the zone cannot key it, and the leg runs before the
+board one in the `||` chain.
 
 **(-89, as re-read) RE-READ AT `a69a8287` AND ONE OF ITS PREMISES IS WRONG — the cascade
 is still ~1.9 % of `cube`, but "ten whole-battlefield walks a damage event"

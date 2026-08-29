@@ -26,46 +26,38 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `58c22dbd`** (three sessions' commits alternate through the
-   ninety-eighth and ninety-ninth passes): suite 19,042 / 0 / 5, clippy clean,
-   golden traces 7/7 unmoved, `--bench` byte-identical on both the
-   `profiling-fast` and the `release` binary (195,528 / 27.44 / 611.0 / 0
-   stalls, determinism + thread_determinism ok), grid green (30 cells /
-   33,120 games, 4 assertion strings), actor leg green (12,000 games /
-   1,155,393 rows / 0 stalls). Ir anchor and the window's **-1.194 / -0.354 /
-   -1.064 %** are in PERF's Baseline; **each change names its own base**.
-   Re-verified at `0541c28e`: suite 19,043 / 0 / 5, `--bench` still
-   byte-identical, `audit_panics.py` 23 bare (unchanged), and
-   `crabomination_client` clippy-clean after the four apt packages.
-3. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
-   `(-93)` carries the device, its **three** conditions and four sized
-   consumers, so start there rather than re-deriving.
-   `fire_step_triggers` is BUILT AND REVERTED (`fixed` -0.221 / `cube`
-   +0.013 / `sealed` +0.053 % — a pool split, and it loses on the two pools
-   training plays); it produced the third condition, **the fill must be free,
-   i.e. the walk has to already ask the lane's question.** What is left is the
-   noncombat-damage prevention family and the two the entry refutes.
-   (b) `(-92)` — the profile is FLAT, leads 2 and 3 open. (c) `resolve_combat
-   -> SpecFromIter::from_iter` — **the adapter half is taken** (`e1f8dfac`,
-   seven stacked filters over a one-element list, -0.033 / -0.046 / -0.045 %);
-   what is left in that row is the predicates' own bodies, which is `(-89)`'s
-   cascade, so read `(-69)`'s `check_state_based_actions` refutation before
-   pulling on it again. (d) `(-89)`'s keyword-gated remainder —
-   the fused-scan move caps at ~0.05 %. (e) **The actor-only lever is TAKEN** — the
-   `EncodedObject` double copy, `523406fb`, **-0.413 % of `selfplay_train`**
-   and invisible to `--bench` because `gang` never encodes. What is left on
-   the actor is `encode_state` 1.30 % and `rank_shape` 0.98 %; everything
-   above them is engine, so **an engine percent is an actor percent**.
-   (f) Cards on leftover context.
-4. **Three rules the lane half produced.** A **second** consumer of an existing
-   lane is priced on the lane's *answer*, not on the row it gates — where the
-   answer is usually `PRESENT` it buys only the misses the first consumer
-   would have paid. And **an anchor identity is the cheapest proof that an
-   intervening commit is Ir-neutral**: re-read a change when the commit that
-   landed under it touched the row, check the anchor when it did not. And a
-   lane whose *fill* is not free is a pool split waiting to happen — the
-   `fixed` archetypes are the board where every presence question answers
-   `ABSENT`, so a lane measured there alone always looks like a win.
+2. **State at `98feda21`** (three lane commits, a concurrent session's
+   between them): suite 19,043 / 0 / 5, clippy clean, golden traces 7/7
+   unmoved, grid green twice (30 cells / 33,120 games each, the new
+   `battlefield grant memo is stale` string verified in the audit binary),
+   `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
+   determinism + thread_determinism ok). Ir anchor and the window's
+   **-0.888 / -1.088 / -1.137 %** are in PERF's Baseline; **each change names
+   its own base**. `games_per_s` is 18 % under the last pass's and it is the
+   box — `host_calib_ms` 49-56 here against 45-47 there; quote the pair or
+   quote neither.
+3. **BEST NEXT MOVES, in order.** (a) **`(-89)`'s `battlefield_find` half.**
+   The cascade is re-read at the tip in that entry: `apply_prevention_shields_with`
+   812 Ir, `creature_redirects` 769, `damage_prevented_by_protection` 763,
+   `damage_from_source_prevented_by_keyword` 681 — 1.42 % of `cube` between
+   them, and what is left in three of the four after `LANE_GRANT` is
+   `card_keyword_possible`'s opening `battlefield_find`. `card_keyword_possible_on`
+   already exists and `resolve_combat` holds the pair. `(-92)` lead 1's `_on`
+   convention, second family. (b) **More lanes** — `(-93)` now carries the
+   device, its three conditions, the second-consumer rule, and **the hit-rate
+   measurement: `callee calls / walk calls` off a dump you already have,
+   before you build.** Lanes 9-16 are free (`type_gates` is a `u32`).
+   (c) `(-92)` leads 2 and 3. (d) `(-87)` is taken; `(-82)`'s `available_mana`
+   half, `(-83)`, `(-9)`'s open half. (e) The actor: `encode_state` 1.30 %,
+   `rank_shape` 0.98 %; everything above them is engine, so **an engine
+   percent is an actor percent**. (f) Cards on leftover context.
+4. **The rule this pass produced, and it costs nothing to apply.** For a
+   gated walk, **the lane's miss rate is `callee calls / walk calls` in a dump
+   you already have.** `LANE_GRANT` read 0.70 / 1.15 / 0.017 mean granters a
+   board and then landed -0.481 / -0.276 / -0.621 % in exactly that order. The
+   reverted `fire_step_triggers` lane is what happens when nobody asks. Also:
+   **a lane's predicate may be the UNION of several walks' predicates** when
+   each walk's own filter is an instance field — `LANE_SHIELD` holds nine.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
