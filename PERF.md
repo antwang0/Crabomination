@@ -8980,6 +8980,40 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundredth pass (6) — `grant_scan`'s battlefield walk gets a lane, and its visitor's last caller inlines it
+
+**`fixed` -0.151 % / `cube` -0.035 % / `sealed` -0.105 %** off `5be9908c`.
+
+`grant_scan` is **11,672 / 26,546 / 30,536 calls** and opens with a whole-board
+walk asking each permanent's `static_abilities` for a `GrantActivatedAbility`
+under the CR 611.2 wrappers. `LANE_ACT_GRANT`, split/caller-filled: the walk
+already iterates the same list, so filling the lane costs one wrapper-peel per
+*printed static* — and `static_abilities` is empty on most of a board, so on
+those permanents it costs nothing at all.
+
+Taking the battlefield half out of `for_each_static_source` left that visitor
+with no callers, so it is deleted and its command-zone presence gate is
+written out at the one site that had it. **Its measurement is kept in that
+comment, because it is still load-bearing**: chaining the command zone onto
+the battlefield iterator is ~20 Ir a permanent, `fixed` -0.675 % / `cube`
+-0.406 % when the command half was deleted as a wrong probe.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 5be9908c
+  fixed     913,627,979 ->   912,246,491   -0.151 %
+  cube    2,729,894,635 -> 2,728,925,549   -0.035 %
+  sealed  2,708,133,252 -> 2,705,302,056   -0.105 %
+
+grant_scan self Ir / Ir per call (calls unchanged):
+  fixed    6,654,834 -> 5,204,240   570.2 -> 445.9   -21.8 %   11,672 calls
+  cube    16,523,484 -> 14,034,654  622.4 -> 528.7   -15.1 %   26,546
+  sealed  14,508,204 -> 11,098,458  475.1 -> 363.5   -23.5 %   30,536
+```
+
+**`cube`'s row falls 2.49 M and the program falls 0.97 M**, because deleting
+the visitor moved its closure's work into the callers that inlined it rather
+than removing it. The program total is the number; the row is the mechanism.
 ### Hundredth pass (6) — `battlefield_find` gets a one-entry index memo, and it needs no invalidation because it verifies instead of trusting
 
 **`fixed` -0.283 % / `cube` -0.446 % / `sealed` -0.300 %** off `623e935a`.

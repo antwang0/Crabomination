@@ -13412,12 +13412,16 @@ impl GameState {
     ///
     /// Bound to `&self`, so it is invalid the moment the board changes; there
     /// is deliberately no cached copy on `GameState`.
-    pub(crate) fn grant_scan(&self) -> GrantScan<'_> {
+    pub(crate) fn grant_scan<'a>(&'a self) -> GrantScan<'a> {
         use crate::effect::{Selector, StaticEffect};
         let mut scan = GrantScan::default();
-        // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        self.for_each_static_source(|src| {
+        // One source's `GrantActivatedAbility` statics, appended to the scan.
+        // `found` is the lane's own predicate — the same match without the
+        // gate evaluation — computed on the way past so the battlefield walk
+        // below fills the lane for free.
+        let mut push_grants = |src: &'a CardInstance, found: &mut bool| {
             for sa in &src.definition.static_abilities {
+                *found |= crate::effect::static_effect_grants_activated(&sa.effect);
                 // CR 611.2 — a grant may sit under a duration/predicate
                 // wrapper ("Threshold — this creature has '…'"); unwrap it
                 // and honour the gate.
@@ -13439,7 +13443,40 @@ impl GameState {
                 }
                 scan.statics.push((applies_to, ability, src));
             }
-        });
+        };
+        // A board where no permanent carries the static at all — nearly every
+        // board — skips the walk outright. The lane is filled from the walk
+        // itself, which is already iterating the same `static_abilities`
+        // (empty on most of a board), so a miss costs one wrapper-peel per
+        // printed static and nothing else.
+        let lane = self.battlefield.act_grant_lane();
+        if lane != Ok(false) {
+            let mut found = false;
+            for src in self.battlefield.iter() {
+                push_grants(src, &mut found);
+            }
+            if let Err(epoch) = lane {
+                self.battlefield.store_act_grant(epoch, found);
+            }
+        }
+        // CR 315.5 — a face-up conspiracy grants from the command zone too.
+        // Not lane-gated: the lane is about the battlefield, and this leg
+        // already opens on the `is_empty` presence gate `for_each_static_source`
+        // carried before the lane made that visitor's last caller inline it.
+        // That gate is load-bearing and its number is worth keeping: chaining
+        // the command zone onto the battlefield iterator instead costs about
+        // **20 Ir a permanent** (`Chain<slice::Iter, FlatMap<_, Filter<_>>>`'s
+        // per-element branch plus the `FlatMap` state machine), measured at
+        // `fixed` -0.675 % / `cube` -0.406 % by deleting the command half as a
+        // deliberately wrong probe.
+        if self.players.iter().any(|p| !p.command.is_empty()) {
+            let mut ignored = false;
+            for p in &self.players {
+                for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
+                    push_grants(src, &mut ignored);
+                }
+            }
+        }
         // Riftstone Portal — "as long as this card is in your graveyard,
         // lands you control have '…'". The grant is live from the graveyard,
         // scoped to the owning seat's permanents.

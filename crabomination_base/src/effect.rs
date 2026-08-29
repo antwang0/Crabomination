@@ -9769,6 +9769,23 @@ pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
     }
 }
 
+/// The `GrantActivatedAbility` twin of [`static_grants_triggered_ability`],
+/// with the same wrapper set and the same over-approximation: `grant_scan`'s
+/// walk peels *and evaluates* the gates, so a `true` here may still be a
+/// closed gate, and only `false` is acted on.
+pub fn static_effect_grants_activated(effect: &StaticEffect) -> bool {
+    use StaticEffect as SE;
+    match effect {
+        SE::GrantActivatedAbility { .. } => true,
+        SE::WhileClassLevelAtLeast { inner, .. }
+        | SE::WhileYourTurn { inner }
+        | SE::WhileNotYourTurn { inner }
+        | SE::WhileCountersAtLeast { inner, .. }
+        | SE::WhileCondition { inner, .. } => static_effect_grants_activated(inner),
+        _ => false,
+    }
+}
+
 /// True when `effect` can be a `GrantTriggeredAbility` once the gate wrappers
 /// are peeled — i.e. when the engine's `active_static` could hand one back.
 /// The wrapper set is `active_static`'s, so the two must be edited together;

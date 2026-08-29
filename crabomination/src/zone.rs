@@ -174,6 +174,7 @@ const LANE_DISPATCH: u32 = 10;
 const LANE_SHIELD: u32 = 12;
 const LANE_GRANT: u32 = 14;
 const LANE_LISTENER: u32 = 16;
+const LANE_ACT_GRANT: u32 = 18;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -196,6 +197,17 @@ fn card_has_any_grant_bits(c: &CardInstance) -> bool {
 /// [`LANE_LISTENER`] predicate.
 fn card_has_listener_bits(c: &CardInstance) -> bool {
     c.dispatch_scan_bits() & crate::card::dispatch_bits::LISTENER != 0
+}
+
+/// Does this permanent carry a printed `GrantActivatedAbility` static, under
+/// whatever CR 611.2 wrappers? The [`LANE_ACT_GRANT`] predicate — an
+/// over-approximation of `grant_scan`'s walk, which also *evaluates* those
+/// wrappers, and that is the sound direction.
+fn card_has_activated_grant(c: &CardInstance) -> bool {
+    c.definition
+        .static_abilities
+        .iter()
+        .any(|sa| crate::effect::static_effect_grants_activated(&sa.effect))
 }
 
 /// The battlefield: the CoW card list, plus the whole-board questions asked of
@@ -541,6 +553,21 @@ impl Battlefield {
     /// Record what the caller's own walk found in the listener lane.
     pub fn store_listener(&self, epoch: u64, found: bool) {
         self.store_lane(LANE_LISTENER, epoch, found);
+    }
+
+    /// The activated-grant lane, same caller-filled contract as
+    /// [`dispatch_lane`](Self::dispatch_lane). Split form because
+    /// `grant_scan`'s walk builds a list and evaluates each grant's CR 611.2
+    /// gate, so it is not the lane's predicate — but it is already iterating
+    /// each permanent's `static_abilities`, which is empty on most of a board,
+    /// so filling the lane from it costs one wrapper-peel per printed static.
+    pub fn act_grant_lane(&self) -> Result<bool, u64> {
+        self.split_lane(LANE_ACT_GRANT, card_has_activated_grant, "activated-grant")
+    }
+
+    /// Record what the caller's own walk found in the activated-grant lane.
+    pub fn store_act_grant(&self, epoch: u64, found: bool) {
+        self.store_lane(LANE_ACT_GRANT, epoch, found);
     }
 
     /// Append, through [`CowBox`]'s own `push` so an unshare materializes with
