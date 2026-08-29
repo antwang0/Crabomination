@@ -8685,6 +8685,57 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-ninth pass (4) — the same lane gates `trigger_grant_sources`, and the two walks feed each other
+
+**`fixed` -0.328 % / `cube` -0.023 % / `sealed` -0.375 %** off `c4d450fa`.
+
+`GRANT_TRIGGER` is one of the five bits `BOARD_SCAN` covers, so the dispatch
+lane's `ABSENT` is authoritative for `trigger_grant_sources` too: no
+battlefield permanent grants a trigger. And when the lane is *unknown* this
+walk fills it, because it is already loading the same memo word per card — so
+the two whole-board walks raise each other's hit rate instead of each paying
+its own miss. The command-zone leg (CR 315.5) keeps its own walk, gated as
+`for_each_static_source` already gated it.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base c4d450fa
+  fixed     926,191,983 ->   923,157,400   -0.328 %
+  cube    2,762,614,355 -> 2,761,970,658   -0.023 %
+  sealed  2,750,330,255 -> 2,740,027,027   -0.375 %
+
+trigger_grant_sources, self Ir        calls (unchanged)
+  fixed       7,499,194 -> 4,973,268   -33.7 %      27,724
+  cube       14,707,898 -> 14,886,942   +1.2 %      49,654
+  sealed     15,545,586 -> 6,933,340   -55.4 %      65,954
+
+and the cross-service, which is the half worth quoting — dispatch_board_scan
+falls again on all three pools without being touched:
+  fixed       7,685,990 -> 7,177,704
+  cube       19,868,312 -> 19,045,820
+  sealed     11,224,794 -> 9,523,760
+```
+
+**`cube`'s row goes the other way and the change still wins there.** A cube
+board really does carry a permanent with a `BOARD_SCAN` bit, so the lane
+answers `PRESENT`, the walk runs anyway, and the lane read is pure cost
+(+1.2 % of the row, +179 k Ir); the program still falls, because the
+`dispatch_board_scan` cross-service is worth more than that. **A second
+consumer of an existing lane is priced on the lane's answer, not on the row
+it gates** — where the answer is usually `PRESENT` a second consumer buys
+only the filled-in misses.
+
+**The rule the pair produced: two walks over one collection in one
+invalidation epoch should share one lane, not fuse.** The ninety-ninth pass's
+own refutation (item 6 of TODO's NEXT) is the other side of it — fusing two
+`any`s whose lanes are invalidated at *different* rates loses. Here the epoch
+is identical because it is literally the same lane, and the sharing is free
+because the second walk already reads the same per-card word.
+
+Behaviour-preserving: suite 19,042 / 0 / 5, golden traces 7/7 unmoved, clippy
+clean, `--bench` byte-identical to the committed invariant (195,528 / 27.44 /
+611.0 / 0 stalls, determinism ok, thread_determinism ok 3 vs 1).
+
 ### Ninety-ninth pass (3) — the trigger dispatcher's board scan memoizes on the battlefield zone, and the miss is free
 
 **`fixed` -0.869 % / `cube` -0.332 % / `sealed` -0.693 %** off `314e405a`.

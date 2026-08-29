@@ -3390,28 +3390,58 @@ impl GameState {
     ///
     /// [`statics_granted_triggers_for`]: Self::statics_granted_triggers_for
     pub(crate) fn trigger_grant_sources(&self) -> Vec<TriggerGrant<'_>> {
+        use crate::card::dispatch_bits as db;
         let mut out = Vec::new();
-        // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        self.for_each_static_source(|src| {
-            if src.dispatch_scan_bits() & crate::card::dispatch_bits::GRANT_TRIGGER == 0 {
-                return;
+        // `GRANT_TRIGGER` is one of the bits the dispatcher's board-scan lane
+        // covers, so `ABSENT` is authoritative here too: no battlefield
+        // permanent grants a trigger. And when the lane is unknown this walk
+        // fills it, because it is already loading the same word per card —
+        // the two walks feed each other's hit rate. See
+        // `zone::Battlefield::dispatch_lane`.
+        let lane = self.battlefield.dispatch_lane();
+        if lane != Ok(false) {
+            let mut any_bits = false;
+            for src in self.battlefield.iter() {
+                let bits = src.dispatch_scan_bits();
+                any_bits |= bits & db::BOARD_SCAN != 0;
+                if bits & db::GRANT_TRIGGER == 0 {
+                    continue;
+                }
+                self.push_trigger_grants(src, &mut out);
             }
-            for sa in &src.definition.static_abilities {
-                if let Some(crate::effect::StaticEffect::GrantTriggeredAbility {
-                    filter,
-                    ability,
-                }) = self.active_static(&sa.effect, src)
-                {
-                    out.push(TriggerGrant {
-                        filter: filter.resolve_named_by_source(src.named_card.as_deref()),
-                        ability,
-                        controller: src.controller,
-                        source: src.id,
-                    });
+            if let Err(epoch) = lane {
+                self.battlefield.store_dispatch(epoch, any_bits);
+            }
+        }
+        // CR 315.5 — a face-up conspiracy grants from the command zone too.
+        if self.players.iter().any(|p| !p.command.is_empty()) {
+            for p in &self.players {
+                for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
+                    if src.dispatch_scan_bits() & db::GRANT_TRIGGER != 0 {
+                        self.push_trigger_grants(src, &mut out);
+                    }
                 }
             }
-        });
+        }
         out
+    }
+
+    /// One source's live `GrantTriggeredAbility` statics, appended to `out`.
+    /// The shared body of [`trigger_grant_sources`](Self::trigger_grant_sources)'
+    /// two zone legs.
+    fn push_trigger_grants<'a>(&self, src: &'a CardInstance, out: &mut Vec<TriggerGrant<'a>>) {
+        for sa in &src.definition.static_abilities {
+            if let Some(crate::effect::StaticEffect::GrantTriggeredAbility { filter, ability }) =
+                self.active_static(&sa.effect, src)
+            {
+                out.push(TriggerGrant {
+                    filter: filter.resolve_named_by_source(src.named_card.as_deref()),
+                    ability,
+                    controller: src.controller,
+                    source: src.id,
+                });
+            }
+        }
     }
 
     /// [`statics_granted_triggers_for`] against a prebuilt grant list, for a
