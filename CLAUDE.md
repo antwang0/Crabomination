@@ -9,8 +9,15 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   runs at opt-level 0, so any number measured there describes the compiler,
   not the code. Throughput runs use `--release`
   (`cargo run --release --bin bot_ladder -- --bench`); profiling uses
-  `--profile profiling` (release + full debuginfo + frame pointers). Numbers
-  from any other profile don't go in `PERF.md`.
+  **`--profile profiling-fast`** (`release-fast` + debuginfo — the same opt
+  settings as the A/B binaries, and the engine rebuilds in ~3 min instead of
+  ~24). Numbers from any other profile don't go in `PERF.md`.
+  **`--profile profiling` does not build in this container** — rustc peaks at
+  ~5.9 GB on the engine's single codegen unit and the memcg kills it
+  (`signal: 9`). Use `profiling-lto` when the question is specifically
+  whether LTO already inlines a callee, and `profiling-lines` (cold) when it
+  is per-source-line attribution; PERF's "How to measure" has all four and
+  when each is the right instrument.
 - **`scripts/pgo_build.sh` is opt-in and must stay opt-in.** A PGO build
   carries its profile's name but is 24-28 % faster, so it is the one binary
   that can be filed as a baseline reading by mistake. Quote a PGO number only
