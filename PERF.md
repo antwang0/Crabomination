@@ -2163,6 +2163,42 @@ Then `b12393f9` landed mid-pass and the whole A/B was retaken against
 measurement, not a candidate** — rebase, rebuild both sides, re-read. The
 numbers moved by a quarter (see the Log); the conclusion did not.
 
+### Ninety-eighth pass (2) — closing state at `79019a42`, with the ninety-ninth interleaved
+
+Two sessions ran concurrently through this interval and their commits
+alternate; the anchor below is the tip of both.
+
+```text
+suite   19,038 / 0 / 5; golden traces unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
+        0 failures
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 313.04 at 3 threads, host_calib_ms 44.
+
+Ir anchor, callgrind, profiling-fast --no-default-features,
+--games 6 --threads 1 --seed 1:
+                 181ce81a          79019a42
+  fixed        946,720,798  ->   935,959,897   -1.137 %
+  cube       2,829,667,509  -> 2,777,133,820   -1.857 %
+  sealed     2,805,164,959  -> 2,773,877,997   -1.115 %
+```
+
+The ninety-eighth pass's four commits are -0.177 / -0.528 / -0.111 %
+(`630bd29b`), -0.287 / -0.328 / -0.295 % (`b12393f9`), -0.419 / -0.297 /
+-0.328 % (`8beed408`) and -0.228 / -0.645 / -0.354 % (`79019a42`); the
+ninety-ninth's code commits are `39299a63` (-0.028 / -0.071 / -0.033 %) and
+`c2ff4536`. **Compounded they give -1.137 % on `fixed` exactly**, which is the
+composition check this file asks for.
+
+**And `c2ff4536` is the worked example of the "re-read the moved row at the
+tip" rule coming out clean.** `79019a42` was measured against `8beed408` and
+then rebased over a concurrent session's targeting fix; re-read at the tip it
+lands within **0.002 / 0.001 / 0.0005 %** of the pre-rebase reading. The rule
+is not "a rebase invalidates a measurement" — it is "check", and the check is
+one build and three runs.
+
 ### Ninety-eighth pass — closing state at `b12393f9`
 
 ```text
@@ -14137,7 +14173,26 @@ reach 0.86 %); and four freeze scopes to widen, all of which turn out to be
 one gather per distinct game state (see the Log's context table).
 
 
-**(-89) RE-READ AT `a69a8287` AND ONE OF ITS PREMISES IS WRONG — the cascade
+**(-89) HALF TAKEN AT THE NINETY-EIGHTH PASS: three of the cascade's rows now
+open on a `zone::Battlefield` presence lane, `fixed` -0.228 / `cube` -0.645 /
+`sealed` -0.354 %** (`79019a42`, Log). The entry's own prescription — "the
+`combat_damage_prevented_for_dealer` shape applied to the other eight, a bail
+that costs single-digit Ir ahead of whatever each function does now" — turned
+out to be answerable without a `PresenceGate` slot at all: the walks read
+instance fields but every static they can find is printed, so the *board-level*
+question is definition-only and the zone memo answers it.
+`combat_damage_prevented_from` 11.20 M -> 0.92 M, `scale_damage_to` 7.87 M ->
+1.24 M, `combat_damage_prevented_to_self` gated inside `resolve_combat`.
+
+**What is left of the cascade is the keyword-gated rows** —
+`damage_prevented_by_protection`, `creature_redirects_damage_to_controller`,
+`damage_from_source_prevented_by_keyword`, `apply_prevention_shields_with` —
+whose cost is the memo read plus the keyword scan, not a board walk. Read
+`(-61)` before proposing anything there; and **the rule the taken half
+produced is the ranking one**: a presence lane is worth what its caller does
+*not* already gate, so rank candidates by that and not by row size.
+
+**(-89, as re-read) RE-READ AT `a69a8287` AND ONE OF ITS PREMISES IS WRONG — the cascade
 is still ~1.9 % of `cube`, but "ten whole-battlefield walks a damage event"
 is not where the Ir is, and a taker who fuses the walks will be disappointed.**
 The rows at that tip, `cg_edges.py --callees resolve_combat`, `--decks cube`:

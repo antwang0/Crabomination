@@ -26,38 +26,49 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at the ninety-ninth pass (`c2ff4536`):** suite 19,035 / 0 / 5,
-   clippy clean, golden traces unmoved, `--bench` byte-identical (195,528 /
-   27.44 / 611.0 / 0 stalls, thread_determinism ok), grid green (30 cells /
-   33,120 games) with the pass's new assertion verified in the audit binary.
-   Anchor and the -0.028 / -0.071 / -0.033 % are in item 8; PERF's Log.
+2. **State at `79019a42` (the ninety-eighth and ninety-ninth passes ran
+   concurrently and their commits alternate):** suite 19,038 / 0 / 5, clippy
+   clean, golden traces unmoved, `--bench` byte-identical (195,528 / 27.44 /
+   611.0 / 0 stalls, determinism + thread_determinism ok), grid green (30
+   cells / 33,120 games), actor leg green (12,000 games / 1,155,629 rows).
+   **The interval is -1.137 / -1.857 / -1.115 %** and the six commits compose
+   to it exactly; anchor in item 8, per-commit numbers in PERF's Log.
 3. **A concurrent push invalidates a MEASUREMENT, not a candidate.** This pass
    built its A/B, had `b12393f9` land under it, and retook the whole thing
    against `e86044f9`: the numbers moved by a quarter, the conclusion did not.
    Rebase, rebuild both sides, re-read — and re-read a candidate against the
    tip it will land on, because the two changes multiplied on the walk count.
-4. **BEST NEXT MOVES, in order.** (a) `(-92)` — **the profile is FLAT** (six
-   functions read by line all say "no hot line"), leads 2 and 3 open.
-   (b) `(-89)`'s eight remaining prevention rows, but read PERF's re-read
-   first: its walks are ~250 Ir, not ~900, so the fused-scan move it implies
-   caps at ~0.05 %. (c) ENGINE_BACKLOG's "the gate's own wrappers" — the
-   three open walkers are CLOSED (two invariants at populations 295 and
-   7,728, one by construction); what is left there is the *structural* fix,
-   one shared recursion over inner effects instead of five hand-written
-   walks. (d) The ML question in item 7. (e) Cards only on leftover context.
-5. **The rule the hundredth pass produced, and it generalises past walkers:**
-   **check a hand-written walk against another walk of the same tree, not
-   against a guess at what the tree means.** That is why the slot-agreement
-   invariant works at 7,728 bodies where a blanket "holds a `Move`" test
-   produced 29 false findings — and why both new tests assert their own
-   population, since a test that reports nothing because it looks at nothing
-   is the failure an empty ratchet hides.
-6. **Two rules the ninety-ninth pass produced.** Fusing two whole-collection `any`s pays
-   only when both are walked in the same invalidation epoch — price the epoch,
-   not the collection (the two type-gate lanes are not, so a fused pass
-   removed 3 % of the walks and cost 82 % more per walk). And a `for` loop
-   with a carried accumulator is not a `collect`-free `any`: LLVM keeps the
-   second exit test, which is where that 82 % went.
+4. **BEST NEXT MOVES, in order.** (a) **More `zone::Battlefield` lanes** —
+   -0.645 % of `cube` in one commit, and the selection rule is: rank a
+   candidate by *what already gates it*, not by its row. The SBA family is
+   gated by `sba_board_scan` and `blocker_pair_block`'s walks by the
+   attacker's keywords; the noncombat-damage prevention family
+   (`mod.rs:13600-13900`) and `action_lock_rejection`'s eight are **not**.
+   (b) `(-92)` — **the profile is FLAT**, leads 2 and 3 open.
+   (c) `resolve_combat -> SpecFromIter::from_iter`, 26,624 calls / 30.7 M /
+   **1.10 % of `cube`** in one collect family, no entry. (d) `(-89)`'s
+   keyword-gated remainder, but read PERF's re-read first: those walks are
+   ~250 Ir, not ~900, so the fused-scan move caps at ~0.05 %.
+   (e) ENGINE_BACKLOG's target walkers — the three open ones are CLOSED (two
+   invariants at populations 295 and 7,728, one by construction); what is left
+   is the *structural* fix, one shared recursion over inner effects instead of
+   five hand-written walks. (f) The ML question in item 7 — and note the
+   actor's own profile: `pick_attacks_scored` is **46.6 %** of
+   `selfplay_train`, and `(-21)` says its lever is the engine's per-step cost,
+   which is what these passes moved. (g) Cards on leftover context.
+5. **The rules these three passes produced.** **Check a hand-written walk
+   against another walk of the same tree, not against a guess at what the tree
+   means** — that is why the slot-agreement invariant works at 7,728 bodies
+   where a blanket "holds a `Move`" test produced 29 false findings, and why
+   both new tests assert their own population. Fusing two whole-collection
+   `any`s pays only when both are walked in the same invalidation epoch, and a
+   `for` loop with a carried accumulator is not a `collect`-free `any`. A
+   repeat-rate census over *asks* over-counts what a memo behind a scope gate
+   delivers, by that gate's service rate. **`#[cold]` on a miss path costs
+   whatever its body would have inlined** — use `#[inline(never)]`. A
+   `SmallVec` field of `Copy` items inside a CoW'd group wants a `Clone` that
+   is `from_slice`. And **strip the elapsed-time text before diffing two
+   `bot_ladder` runs**, or `in 5.8s` reads as a behaviour divergence.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
@@ -347,8 +358,10 @@ INCOMPLETE_CARDS; a line here that restates one is a line to delete)
    already editing it; do not open a pass for this. One commit per file,
    binary green either side.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `b12393f9` (on `origin`): `fixed` 942,328,403 /
-   `cube` 2,805,505,066 / `sealed` 2,793,794,620** — the ninety-eighth pass is
+   **Anchor, MEASURED at `79019a42` (on `origin`): `fixed` 935,959,897 /
+   `cube` 2,777,133,820 / `sealed` 2,773,877,997** — the interval off
+   `181ce81a` is **-1.137 / -1.857 / -1.115 %** over six commits. Earlier:
+   `b12393f9` 942,328,403 / 2,805,505,066 / 2,793,794,620 — the ninety-eighth pass is
    **-0.464 / -0.854 / -0.405 %** off `181ce81a` over two commits. Earlier:
    `181ce81a` 946,720,798 / 2,829,667,509 / 2,805,164,959; `a69a8287`
    946,679,422 / 2,829,634,060 / 2,805,064,393 — the whole
