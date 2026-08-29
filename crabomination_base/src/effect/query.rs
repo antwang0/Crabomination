@@ -176,12 +176,16 @@ impl Effect {
     /// extraction `scripts/audit_target_walkers.py` does, so the test and the
     /// audit cannot disagree about what a wrapper is.
     ///
+    /// The lifetime is explicit so a caller may keep what it is handed:
+    /// `primary_target_filter` returns a reference borrowed from the tree,
+    /// and a higher-ranked `FnMut(&Effect)` would not let one escape.
+    ///
     /// It yields bodies *unconditionally*. A caller that must not descend
     /// into a resolution-time body (`Reflexive`, `ReflexiveTrigger` — CR
     /// 603.7 payoffs whose targets are picked fresh when they resolve) has to
     /// say so itself; that is a property of the question being asked, not of
     /// the tree.
-    pub fn for_each_inner(&self, f: &mut impl FnMut(&Effect)) {
+    pub fn for_each_inner<'a>(&'a self, f: &mut impl FnMut(&'a Effect)) {
         match self {
             Effect::Seq(v)
             | Effect::ChooseMode(v) => {
@@ -2289,7 +2293,26 @@ impl Effect {
             Effect::RollDie { results, .. } => results
                 .iter()
                 .find_map(|(_, _, e)| e.primary_target_filter()),
-            _ => None,
+            // CR 603.7 — a reflexive body's targets are picked fresh when it
+            // resolves, with its own slot numbering, so the enclosing effect's
+            // slot-0 filter is not its. Named because the fallthrough recurses.
+            Effect::Reflexive { .. } | Effect::ReflexiveTrigger { .. } => None,
+            // The first inner effect that has one, which is the convention every
+            // explicit arm above already follows — `If` takes `then` before
+            // `else_`, `FlipCoin` heads before tails, `RollDie` the first arm.
+            // `for_each_inner` yields in declaration order, so this is that rule
+            // applied to the 69 wrappers no arm named, which answered `None` for
+            // their whole subtree and left the auto-picker choosing slot 0
+            // against `Any`.
+            other => {
+                let mut found = None;
+                other.for_each_inner(&mut |e| {
+                    if found.is_none() {
+                        found = e.primary_target_filter();
+                    }
+                });
+                found
+            }
         }
     }
 
