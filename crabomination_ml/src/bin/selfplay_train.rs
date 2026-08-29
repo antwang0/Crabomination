@@ -2417,13 +2417,25 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
         let deck_a = heuristic_sealed_build(&sealed_pool(salt(1)), salt(3));
         let deck_b = heuristic_sealed_build(&sealed_pool(salt(2)), salt(4));
         let template = sealed_game_template(&deck_a, &deck_b);
+        // Pin the tie-break jitter stream per game. Without this the census
+        // is not reproducible: two runs of the same `--seed` disagreed by
+        // 12 positions and 515 objects out of 820 / 29,143 (2026-08-29),
+        // because `play_recorded_game` leaves `bot::jitter_below` on the
+        // unseeded thread-local RNG. A census whose two runs disagree cannot
+        // be a before/after instrument, which is what a feature-coverage
+        // question needs it to be. Only the census is pinned — whether the
+        // *training* actors should be is TODO's open question, and this is
+        // the evidence for it, not the answer.
+        let game_seed = rng.random_range(0..u64::MAX);
+        crabomination::server::bot::set_jitter_seed(Some(game_seed ^ 0xFEA7_5EED));
         let rec = play_recorded_game(
             &template,
             [EvalWeights::default(), EvalWeights::default()],
-            rng.random_range(0..u64::MAX),
+            game_seed,
             50_000,
             vocab,
         );
+        crabomination::server::bot::set_jitter_seed(None);
         for (state, _, _, _) in crabomination::server::leaf_capture::drain() {
             leaf.add(&state);
         }

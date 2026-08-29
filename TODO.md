@@ -177,10 +177,16 @@ and sessions run concurrently: push code before tracker prose, rebase not force.
    It is the only leg that reaches the encoder-side memos (the vocab-index
    slot), and nothing in this file had ever recorded a run of it. 123-126
    games/s there, which is an *audit* build and not a throughput number.
-   **Green at `10a794a8`: 30 cells, 33,120 games, 0 undecided, 0 failures**,
-   with the audit binary's assertion strings verified present (the script's
-   own header check — `strings | grep -c "memo is stale"` must be > 0, and a
-   0 means `RUSTFLAGS` did not reach the crate). Run it after any pass that
+   **Green at `599825ba`: 30 cells, 33,120 games, 0 undecided, 0 failures**
+   (and at `10a794a8` before it), with the audit binary's assertion strings
+   verified present (the script's own header check — `strings | grep -c
+   "memo is stale"` must be > 0, and a 0 means `RUSTFLAGS` did not reach the
+   crate). **That count is a LINE count, not a message count** — Rust's
+   string literals land contiguously in `.rodata`, so several messages share
+   one `strings` line; there are eight such assertions in the tree and the
+   header prints 5. The gate is "> 0"; do not read the number as a census,
+   and do not "fix" it by expecting it to track the assertion count. Run it
+   after any pass that
    lands a `debug_assert!` or a presence gate: the 19 k-test suite is not
    their audit, because an assertion needs a *board* to fire on. Five earlier
    runs (through `b635037f`) were also clean and are in git; do not add a

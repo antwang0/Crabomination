@@ -440,9 +440,18 @@ pub fn play_recorded_game_mcts(
         g.players[seat].library.shuffle(&mut rng);
     }
     // The in-game rolls (mulligan reshuffles, random discards) key off the
-    // same seed, so a training game that crashes or produces a suspect row
-    // can be replayed exactly. Derived rather than drawn, so the explore
-    // draw below keeps its old position in the stream.
+    // same seed. Derived rather than drawn, so the explore draw below keeps
+    // its old position in the stream.
+    //
+    // **This is not yet a full replay.** `bot::jitter_below`'s tie-break
+    // stream is a thread-local that nothing seeds on this path, so a
+    // re-run of the same `seed` plays a *different* game: two runs of
+    // `--feature-census 8 --seed 5` disagreed by 12 positions and 515
+    // encoded objects out of 820 / 29,143 (2026-08-29). Setting
+    // `bot::set_jitter_seed` here would close it — see TODO's open question
+    // under ML, which is deliberately not decided here because it changes
+    // what every training run generates. `CRAB_NO_JITTER=1` pins it for a
+    // measurement in the meantime, and `feature_census` pins it per game.
     g.rng.reseed(seed ^ 0x5EED_600D_C0DE_1234);
     g.start_mulligan_phase();
     // Opening-move exploration. Both seats otherwise play the same

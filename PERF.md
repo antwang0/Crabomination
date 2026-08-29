@@ -2101,6 +2101,47 @@ a box whose state moves.
 
 ## Baseline
 
+### Ninety-sixth pass (3) — `sorted` as a `SmallVec`: BUILT, MEASURED, REVERTED, and it extends the `Extend` rule to a LOCAL
+
+**`compute_permanent_pass`'s `sorted` buffer at `[&ContinuousEffect; 4]`,
+base `599825ba`.** The buffer reserved on 65,054 of 289,098 passes (22.5 %)
+for 9.0 M Ir of `do_reserve_and_handle` on `cube` — one to two *borrowed*
+effects, allocated and freed inside one call, in a local that never escapes.
+(-71)'s device says a local is where inline storage belongs, and the returned-
+buffer caveat does not apply.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1.
+  fixed     963,502,971 ->   965,615,192   +0.219 %
+  cube    2,886,424,672 -> 2,885,587,605   -0.029 %
+  sealed  2,854,266,716 -> 2,863,949,434   +0.339 %
+
+sealed, and it is two sides that do not net:
+  compute_permanent_pass, self         +7,499,124
+  SmallVec::extend                     +6,225,784
+  Arc::clone_from_ref_in               -3,796,898
+fixed, the same shape at half the size:
+  compute_permanent_pass, self         +3,011,908
+  SmallVec::extend                     +2,089,708
+  Arc::clone_from_ref_in               -1,276,016
+  the allocator rows together          -1,156,341
+```
+
+**The `Vec -> SmallVec` entry's rule was written about `collect()`; this says
+it holds for `extend()` too, and gives the ratio.** `Vec`'s `Extend` reserves
+the size hint's lower bound and pushes into raw capacity; `SmallVec`'s
+reserves and then pays a `spilled()` compare **per element**, and here the
+element count is one or two on 22.5 % of calls and *zero on the other 77.5 %*
+— where the inline buffer is pure cost and the `Vec` never allocated
+anyway. **A 22.5 % growth rate is below this device's break-even even for a
+local**: (-71) shipped at 97 % and the returned-buffer case measured nothing
+at 13 %. The break-even is between 22.5 % and 97 %, and nothing has bracketed
+it more tightly than that.
+
+**Do not rebuild it, and do not reach for `reserve` either** — the 65,054
+reserves are one allocation each, not regrowth, so sizing them exactly
+removes nothing.
+
 ### Ninety-sixth pass — closing state at `599825ba`
 
 ```text
