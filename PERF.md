@@ -8566,6 +8566,90 @@ the table above is safe to compress:
 
 ## Log
 
+### Ninety-eighth pass — the layer-4 type gates memoize on the battlefield zone
+
+**`fixed` -0.177 % / `cube` -0.528 % / `sealed` -0.111 %.** `(-87)`'s open
+lever, taken by the device `zone.rs` was written for: the answer lives on the
+zone, and `DerefMut` is the invalidation, so the enumeration of write sites
+never has to be right.
+
+`GameState.battlefield` is now `zone::Battlefield` — the same `CowBox<Vec<
+CardInstance>>` plus one `AtomicU8` carrying two packed two-bit lanes, one per
+type-gate family. `land_type_change_in_scope` / `creature_type_change_in_scope`
+ask the zone first and keep the freeze-scope `PresenceGate` for their
+`continuous_effects` operand only (that operand is 1 % of the row — `(-87)`'s
+probe). Every read and write site is untouched: `Deref` / `DerefMut` /
+`IntoIterator` / serde forward, and the inherent `push` forwards `CowBox`'s so
+`(-76)`'s materialize-with-room stays.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 181ce81a
+  fixed     946,720,798 ->   945,041,274   -0.177 %
+  cube    2,829,667,509 -> 2,814,732,191   -0.528 %
+  sealed  2,805,164,959 -> 2,802,061,388   -0.111 %
+
+the two gates' whole-board walks (calls / self Ir):
+              base walks  cand walks   hit     base Ir      cand Ir       delta
+  fixed          20,540      12,674   38.3 %   5,950,302   3,837,228  -2,113,074
+  cube           72,876      37,868   48.1 %  33,730,192  16,288,132 -17,442,060
+  sealed         56,116      38,054   32.2 %  15,345,294  11,056,832  -4,288,462
+program delta  -1,679,524 / -14,935,318 / -3,103,571; the difference is the
+memo read inlined into the call sites (+0.43 / +2.51 / +1.19 M), spread over
+`evaluate_requirement_static_hinted`, `activate_ability_inner`,
+`bot::available_mana`, `resolve_combat` and `dying_snapshot`.
+cube card visits 1.68 M -> 0.92 M, which is the "fewer element visits" lever
+the whole-program line profile names.
+```
+
+**A REPEAT-RATE CENSUS TAKEN OVER *ASKS* OVER-COUNTS WHAT A MEMO BEHIND AN
+EXISTING SCOPE GATE CAN DELIVER, BY THAT GATE'S SERVICE RATE.** `(-87)`'s
+`CRAB_GATE_CENSUS` read broad repeats at **84.32 / 35.95 / 29.42 %** of asks
+and this memo delivers **48.1 / 38.3 / 32.2 %** of walks. `fixed` and `sealed`
+agree; `cube` is off by 36 points, and `cube` is exactly the pool where the
+`PresenceGate` already serves 70 % of asks. Every one of those is an
+intra-scope repeat the census counted and a zone memo cannot *newly* serve.
+Read a census over the population the change can actually reach.
+
+**THREE BUILDS WERE SPENT ON INLINING, NOT ON THE MEMO, AND THE SEQUENCE IS
+THE RULE.** Moving a whole-board walk behind a generic zone accessor moves its
+predicate across a monomorphization *and* a module boundary, and
+`profiling-fast` is `codegen-units = 16` with no LTO, so neither crosses by
+default. A walk that was one inlined loop becomes a loop of calls, and at
+~20 Ir a card body the call overhead is half the cost.
+
+```text
+  1. `any(&walk)` (an `impl Fn` used twice, so borrowed)
+     -> core::ops::function::impls::call_mut  0 -> 18,846,034 on cube
+     The `&F: FnMut` shim does not inline.  Fix: `+ Copy` and pass by value.
+     read  fixed +0.139 / cube -0.113 / sealed +0.169 %
+  2. `#[cold]` on the miss path
+     -> LLVM optimizes a cold function for size, so the `walk` fn item stops
+     inlining into its loop: 920,622 out-of-line predicate calls, ~+9.2 M.
+     read  fixed +0.143 / cube -0.099 / sealed +0.176 %
+  3. cold removed, nothing else
+     -> still out of line (other module, cgu 16, no LTO)
+     read  fixed +0.116 / cube -0.134 / sealed +0.152 %
+  4. `#[inline]` on `card_can_change_{land,creature}_types`
+     + `#[inline(never)]` on the miss path                     SHIPPED
+     read  fixed -0.177 / cube -0.528 / sealed -0.111 %
+```
+
+The shipped shape is: a `#[inline]` hit path (word load, two mask tests) at
+each of the two call sites, and one `#[inline(never)]` instance of the walk
+per predicate with the predicate inlined into its loop — 37,868 calls at
+430.1 Ir on `cube`, against the two closures' 45,082 + 27,794 at 352.3 / 642.1.
+**Marking a miss path `#[cold]` costs whatever its body would have inlined**;
+`#[inline(never)]` gets the out-of-lining without the size mode.
+
+**The audit is the reason this is committable.** The memo is a claim that no
+write reaches the cards except through `DerefMut` or the `&mut`
+`IntoIterator`; `Battlefield::lane` `debug_assert!`s it against a fresh walk
+on every read, and `scripts/robustness_grid.sh` fires it — **30 cells, 33,120
+games, 0 undecided, 0 failures**, with `battlefield type-gate memo is stale`
+verified present in the audit binary. Behaviour-preserving: 19,032 / 0 / 5,
+golden traces unmoved, `--bench` byte-identical to the committed invariant.
+
 ### Ninety-seventh pass — the SBA death sweep computes the permanents its own gate names
 
 **`ec5dc3a9`, `fixed` -0.559 % / `cube` -0.751 % / `sealed` -0.533 %**, with
@@ -13822,7 +13906,49 @@ in O(1) *and* reads in one byte load is ever wanted, it has to be an epoch
 stamp, and an epoch stamp is two loads and a compare per read, i.e. the same
 trade in the same direction.
 
-**(-87) THE LAYER-4 TYPE GATES MISS 45 k / 27 k TIMES A `cube` RUN AND EACH
+**(-87) TAKEN at the ninety-eighth pass, `fixed` -0.177 / `cube` -0.528 /
+`sealed` -0.111 %** — `GameState.battlefield` is a `zone::Battlefield` and the
+two gates read a packed two-bit memo off it. The Log block carries the numbers,
+the three inlining refutations the build sequence produced, and the census
+correction. **What is left of the entry, and it is now sized rather than
+guessed:**
+
+* The shipped invalidation is the cheap `DerefMut` chokepoint and it serves
+  **48.1 / 38.3 / 32.2 %** of the walks. The remaining walks are 37,868 /
+  12,674 / 38,054 at ~430 / 303 / 291 Ir, i.e. **0.58 / 0.41 / 0.39 % of the
+  three pools still on the table.**
+* The exact invalidation — bump on battlefield *membership*, on a definition
+  rewrite, and on `attached_to` — would take a share of those. Do not size it
+  off `CRAB_GATE_CENSUS`'s 93.95 / 75.76 / 74.30 % without applying this
+  pass's correction: those are ask-population rates and the freeze scope
+  already owns 70 % of `cube`'s asks. The honest read is the *ratio* the two
+  censuses give — exact/broad = 1.11 / 2.11 / 2.53 — against the walk rates
+  measured here, which puts the remaining win at roughly `cube` -0.1 % and
+  `fixed` / `sealed` -0.2 % each. **Measure it before building it.**
+* **The newtype the exact version needs now exists, so its 106-site cost is
+  already paid.** "The invalidation sized" below was filed by a concurrent
+  session hours before this landed and reaches the same shape from the other
+  end: membership mutators bump an epoch, `iter_mut` / `get_mut` do not, and a
+  *thread-local* (never a global `AtomicU64` — one thread's rewrite would
+  invalidate another's memo at `--threads 3`) counter at `(-91)`'s two
+  compile-enforced definition-write accessors covers the fourth key part.
+  What is left of that work is moving the clear out of `DerefMut` and into
+  `Battlefield`'s membership entry points.
+* **And the fourth key part can be deleted rather than tracked.**
+  `card_can_change_*_types` reads `attached_to`, an *instance* field, which is
+  why a definition-only epoch is unsound as written. But both gates are
+  over-approximations — only a stale `false` is unsound — so dropping the
+  `attached_to` conjunct and answering `true` for any permanent whose
+  definition carries an `equipped_bonus` land/creature-type field is sound by
+  widening. That makes the memo's input a pure function of the *definitions on
+  the battlefield*, and costs only the gathers that a land-type-setting
+  Equipment sitting unattached would newly trigger.
+* The other lever is the write rate itself: every `&mut` reach into the
+  battlefield now costs a memo clear as well as a CoW unshare, so a hot
+  `for c in &mut self.battlefield` that only *reads* is worth twice what
+  `(-1)`/`(-14)` price it at. Nobody has swept those sites.
+
+**(-87, original) THE LAYER-4 TYPE GATES MISS 45 k / 27 k TIMES A `cube` RUN AND EACH
 MISS IS A 262-642 Ir BOARD WALK — 1.13 % OF `cube`, AND HALF OF IT IS ASKED
 FROM `&mut self`, WHERE NO SCOPE CAN EVER MEMOIZE IT. Both of the entry's own
 proposals are now built and refuted; the two blocks at the end are the
