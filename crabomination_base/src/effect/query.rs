@@ -109,6 +109,29 @@ fn implicit_creature_for_slot(what: &Selector, slot: u8) -> Option<&'static Sele
     matches!(what, Selector::Target(n) if *n == slot).then_some(&IMPLICIT_CREATURE_TARGET)
 }
 
+/// CR 115.4 "any target" — a creature, a planeswalker, a battle, or a player.
+///
+/// The catalog writes Lightning Bolt as `DealDamage { to: Selector::Target(0) }`
+/// with no filter at all, and the fallback both target walkers take for a
+/// filterless slot is `SelectionRequirement::Any` — which matches a **land**.
+/// `enumerate_legal_targets(&banefire.effect, 0)` listed the opponent's Forest
+/// until this existed. Nothing in Magic can be dealt damage but those four
+/// object kinds, so the fallback for a damage slot is this, not `Any`.
+static IMPLICIT_ANY_TARGET: std::sync::LazyLock<SelectionRequirement> =
+    std::sync::LazyLock::new(|| {
+        SelectionRequirement::Creature
+            .or(SelectionRequirement::Planeswalker)
+            .or(SelectionRequirement::HasCardType(crate::card::CardType::Battle))
+            .or(SelectionRequirement::Player)
+    });
+
+/// `Some(&any target)` when `what` is a bare numbered target — the damage
+/// family's implicit filter, the same shape as
+/// [`implicit_creature_if_bare_target`] for the pump family.
+fn implicit_any_target_if_bare(what: &Selector) -> Option<&'static SelectionRequirement> {
+    matches!(what, Selector::Target(_)).then_some(&*IMPLICIT_ANY_TARGET)
+}
+
 impl Effect {
     pub const NOOP: Effect = Effect::Noop;
 
@@ -1903,12 +1926,14 @@ impl Effect {
             // Prefer the damage target's own filter; fall back to a filter
             // hidden in the damage amount (Rabid Bite: `PowerOf(slot 0)`).
             Effect::DealDamage { to, amount }
-            | Effect::EachControlledCreatureDealsDamage { to, amount } => {
-                sel_filter(to).or_else(|| match amount {
+            | Effect::EachControlledCreatureDealsDamage { to, amount } => sel_filter(to)
+                .or_else(|| match amount {
                     Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_filter(s),
                     _ => None,
                 })
-            }
+                // CR 115.4 — a bare `Target(n)` here is "any target", not
+                // "anything at all"; without this the picker offers a land.
+                .or_else(|| implicit_any_target_if_bare(to)),
             Effect::RadianceDamage { subject, .. } | Effect::SameNameDamage { subject, .. } => {
                 sel_filter(subject)
             }

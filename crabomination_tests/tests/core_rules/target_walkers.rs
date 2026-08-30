@@ -135,6 +135,37 @@ fn every_declared_target_slot_is_answerable() {
     );
 }
 
+/// CR 115.4 — "any target" is a creature, a planeswalker, a battle or a
+/// player, and a land is none of them.
+///
+/// The catalog writes Lightning Bolt as `DealDamage { to: Selector::Target(0) }`
+/// with no filter, which is the right shape; the defect was the *fallback*.
+/// Both target walkers use `SelectionRequirement::Any` for a filterless slot,
+/// and `Any` matches every permanent — so `enumerate_legal_targets` listed the
+/// opponent's Forest for Banefire, and the bot's own casting path could aim a
+/// burn spell at a land and fizzle. `IMPLICIT_ANY_TARGET` is the damage
+/// family's answer, the same device `IMPLICIT_CREATURE_TARGET` is for pump.
+#[test]
+fn an_any_target_burn_spell_offers_no_land() {
+    use crabomination::game::types::Target;
+    use crabomination::game::two_player_game;
+
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let land = g.add_card_to_battlefield(1, catalog::forest());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let legal = g.enumerate_legal_targets(&catalog::banefire().effect, 0);
+    assert!(
+        legal.contains(&Target::Player(1)) && legal.contains(&Target::Permanent(bear)),
+        "a player and a creature are any-targets: {legal:?}"
+    );
+    assert!(
+        !legal.contains(&Target::Permanent(land)),
+        "a land is not an any-target: {legal:?}"
+    );
+}
+
 /// The picker and the CR 608.2b checker aim at one slot, so they must not
 /// disagree about it.
 ///
