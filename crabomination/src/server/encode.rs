@@ -998,21 +998,57 @@ fn encode_battlefield_object_into(
     f[5] = (c.toughness() - c.damage as i32).max(0) as f32 / 8.0;
     f[6] = if c.tapped { 1.0 } else { 0.0 };
     f[7] = if c.summoning_sick { 1.0 } else { 0.0 };
-    f[8] = c.counter_count(CounterType::Loyalty) as f32 / 8.0;
-    f[9] = if c.counter_count(CounterType::Prepared) > 0 { 1.0 } else { 0.0 };
     f[10] = if g.attacking.iter().any(|a| a.attacker == c.id) { 1.0 } else { 0.0 };
     f[11] = if c.is_token { 1.0 } else { 0.0 };
-    // Counters beyond loyalty/prepared, by count. P/T counters reach the
-    // net twice — through effective P/T and here — which is deliberate: a
-    // 3/3 that is a 2/2 plus a counter dies differently to bounce and
-    // counter-hate than a printed 3/3 does.
-    if !ablated(ABLATE_RELATIONS) {
-        let special: u32 = c
-            .counters
-            .iter()
-            .filter(|(k, _)| !matches!(k, CounterType::Loyalty | CounterType::Prepared))
-            .map(|(_, v)| *v)
-            .sum();
+    // ONE walk of the counter bag for all eight counter slots. `CounterBag`
+    // is a `Vec<(CounterType, u32)>` and `counter_count` is a linear scan of
+    // it, so the seven calls this replaces (loyalty, prepared, and the five
+    // kinds below) each re-walked the same list — 530,194 of the actor's
+    // 864,830 `counter_count` calls, 5.57 M Ir, and most permanents carry no
+    // counters at all so nearly all of it was call overhead on an empty
+    // `Vec`. The slots are written to zero first rather than relying on a
+    // freshly-defaulted object, so the function's output does not depend on
+    // what the caller handed it.
+    //
+    // Feature 34 sums every kind except loyalty/prepared. P/T counters reach
+    // the net twice — through effective P/T and through 48/49 — which is
+    // deliberate: a 3/3 that is a 2/2 plus a counter dies differently to
+    // bounce and counter-hate than a printed 3/3 does.
+    //
+    // 48..53 are the kinds the SoS pool puts on permanents (+1/+1 by a wide
+    // margin, then stun, Page and Growth) plus -1/-1, which the pool never
+    // uses but every other format does; stun, Page and Growth had no path to
+    // the net at all before them.
+    let want_special = !ablated(ABLATE_RELATIONS);
+    let want_kinds = !ablated(ABLATE_COUNTERS);
+    f[8] = 0.0;
+    f[9] = 0.0;
+    if want_kinds {
+        f[48..53].fill(0.0);
+    }
+    let mut special = 0u32;
+    for (kind, n) in c.counters.iter() {
+        match kind {
+            CounterType::Loyalty => f[8] = *n as f32 / 8.0,
+            CounterType::Prepared => {
+                if *n > 0 {
+                    f[9] = 1.0;
+                }
+            }
+            _ => special += *n,
+        }
+        if want_kinds {
+            match kind {
+                CounterType::PlusOnePlusOne => f[48] = *n as f32 / 4.0,
+                CounterType::MinusOneMinusOne => f[49] = *n as f32 / 4.0,
+                CounterType::Stun => f[50] = *n as f32 / 2.0,
+                CounterType::Page => f[51] = *n as f32 / 3.0,
+                CounterType::Growth => f[52] = *n as f32 / 3.0,
+                _ => {}
+            }
+        }
+    }
+    if want_special {
         f[34] = special as f32 / 4.0;
     }
     // Expiry (round 40). Features 4/5 encode the board as if nothing
@@ -1027,28 +1063,6 @@ fn encode_battlefield_object_into(
         f[45] = c.damage as f32 / 8.0;
         f[46] = c.power_bonus as f32 / 4.0;
         f[47] = c.toughness_bonus as f32 / 4.0;
-    }
-    // Counter kinds (round 40). Feature 34 above sums them all into one
-    // scalar, so three +1/+1 and three stun counters encode identically
-    // — opposite facts. These split out the kinds the SoS pool puts on
-    // permanents (+1/+1 by a wide margin, then stun, Page and Growth)
-    // plus -1/-1, which the pool never uses but every other format
-    // does. The stat counters reach the net through effective P/T as
-    // well, which is the same deliberate double-encoding feature 34
-    // documents; stun, Page and Growth had no path to it at all.
-    if !ablated(ABLATE_COUNTERS) {
-        for (i, (kind, scale)) in [
-            (CounterType::PlusOnePlusOne, 4.0),
-            (CounterType::MinusOneMinusOne, 4.0),
-            (CounterType::Stun, 2.0),
-            (CounterType::Page, 3.0),
-            (CounterType::Growth, 3.0),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            f[48 + i] = c.counter_count(kind) as f32 / scale;
-        }
     }
 }
 
