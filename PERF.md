@@ -15814,7 +15814,8 @@ answer one id) at **near zero** — they have no memo to gain and only that miss
 path. Refuted without a build; do not re-open it on the sharp edge alone.
 
 **(-106) `compute_permanent_pass`'s `sorted` IS THE PROGRAM'S SINGLE LARGEST
-ALLOCATION CONTEXT — 61,518 OF 1,384,794 (4.4 %) ON `cube`.** Read off
+ALLOCATION CONTEXT — 61,518 OF 1,384,794 (4.4 %) ON `cube`.**
+**TAKEN, 2026-08-30 (this session, base `ed0e1361`).** Read off
 `--separate-callers=3` at `ae429ae7`: `finish_grow <- do_reserve_and_handle
 <- compute_permanent_pass`, and the only `extend` in that function is
 `sorted`. At ~209 Ir a malloc/free round trip on this pool (1,384,794
