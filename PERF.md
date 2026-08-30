@@ -9918,6 +9918,56 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-ninth pass (1) — a buff Aura was holding the trigger dispatcher's two lanes open, for an empty list
+
+**`fixed` -2.9565 % / `cube` -0.6237 % / `sealed` -0.0000 %** at `dc829911`,
+off `f2793cd5`. `release-fast --no-default-features`, callgrind, six games,
+one thread, seed 1; both binaries built in one sitting from one warm cache.
+
+```text
+                        base            candidate       delta
+  fixed             873,409,228 ->    847,586,970     -2.9565 %
+  cube            2,597,006,946 ->  2,580,810,097     -0.6237 %
+  sealed          2,573,047,133 ->  2,573,047,041     -0.0000 %   (92 Ir)
+```
+
+`EQUIP_TRIGGER_GRANT` was set for any `equipped_bonus` that is not
+Jitte-shaped, **whether or not it carried a triggered ability**. A Rancor or a
+Bonesplitter therefore pushed `(host, &[])` into `equip_grants`, and
+`dispatch_triggers_for_events` read a non-empty grant list for the rest of the
+game: no member lane, no fast-path gate, a freeze push/pop per dispatch. The
+bit is also in `BOARD_SCAN`, so the same aura held `LANE_DISPATCH` open too —
+which is why two walks this change does not touch fall with it.
+
+```text
+  fixed                              base ->    candidate        delta
+  dispatch_triggers_for_events  63,355,708 -> 46,167,026   -17,188,682  -27.1 %
+  dispatch_board_scan            7,188,396 ->  4,075,520    -3,112,876  -43.3 %
+  trigger_grant_sources          5,064,458 ->  2,824,706    -2,239,752  -44.2 %
+  freeze_layers_pop                629,770 ->    116,444      -513,326  -81.5 %
+  _int_free / malloc / free / finish_grow / grow_one          -2,022,659
+  cube
+  dispatch_triggers_for_events 178,185,728 ->168,068,114   -10,117,614   -5.7 %
+  dispatch_board_scan           19,032,084 -> 16,577,616    -2,454,468  -12.9 %
+  trigger_grant_sources         15,257,904 -> 13,751,036    -1,506,868   -9.9 %
+  freeze_layers_pop              1,755,040 ->  1,431,306      -323,734  -18.4 %
+  no row anywhere regresses by more than noise on any pool
+```
+
+**`sealed` at 92 Ir out of 2.57 G is the null control `(-110)` said this
+instrument lacks**, and it was predicted before the build: the census reads
+zero grant-live dispatches on `sealed`, so a change that only removes
+grant-live walks must not move it. A three-pool A/B whose third column is
+*known in advance to be flat* prices the instrument's own noise floor at the
+same time as the change.
+
+**The rule: a presence bit named for what a field *is* must be gated on the
+field being non-empty.** `EQUIP_TRIGGER_GRANT`'s doc said "hands its triggered
+abilities to the host"; the predicate asked only whether the bonus existed.
+Both walkers that consume it made the same omission, so the `debug_assert!`
+that cross-checks them agreed on the wrong answer — **a cross-check between
+two hand-written walkers audits drift, never a premise they share.**
+
 ### Hundred-and-eighth pass (1) — the dispatch walk gets a member list, and four shapes that lose to it
 
 **`fixed` -0.3308 % / `sealed` -0.1793 % / `cube` +0.0467 %** at `ddb9e930`,
@@ -17467,6 +17517,10 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-120) CLOSED at `dc829911` — `fixed` -2.9565 % / `cube` -0.6237 % /
+`sealed` -0.0000 %. See the Log; `fixed`'s is the largest single row in this
+file.**
 
 **(-120) TAKEN, 2026-08-30 — THE GRANT-LIVE HALF OF `(-115)`: FOUR GATES MAKE
 A DISPATCH GRANT-LIVE AND ONLY ONE OF THEM IS EVENT-KIND FILTERED.**
