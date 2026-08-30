@@ -30,8 +30,11 @@ sixty-seventh pass, so don't re-take that.
 2. **State at `cecaccb4`+**, re-run at that tip rather than labelled forward: suite
    19,050 / 0 / 5, clippy clean, golden traces 7/7, `--bench` byte-identical
    (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok,
-   `host_calib_ms` 50, `games_per_s` 363, **`peak_rss_mib` 18.8 against the 24.3-24.7
-   filed two passes ago — not attributed, and worth one look**). Ir anchor with the
+   `host_calib_ms` 50, `games_per_s` 363, `peak_rss_mib` 18.8-19.1). **The `peak_rss`
+   drop from the filed 24.3-24.7 is NOT this pass's** — checked against a binary built
+   before it, which reads 19.6 on the same box, so it is the container or an earlier
+   tip; this pass moves it 19.6 -> 19.1. One `--bench` on the base is the whole control
+   and it costs two minutes. Ir anchor with the
    pass's shipped half (a) in it: **876,247,675 / 2,612,930,886 / 2,591,254,100**. The
    grid is `e64762b2`'s, not re-run since. **Each change names its own base**, and see
    item 7 for what a cross-session re-read is and is not worth.
