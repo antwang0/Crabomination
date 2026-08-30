@@ -17406,6 +17406,44 @@ the ones next to it.
 See the Log; the rule it adds is **rank a chain of pure guards by cost x
 rejection rate**, and the entry as claimed is kept there.
 
+**(-118) CLOSED WITHOUT A CHANGE — THE ACTOR FLEET SCALES LINEARLY TO THE
+CORE COUNT AND FLAT BEYOND IT. THERE IS NO CONTENTION TO FIND.** The seed
+list for this file has carried "actor scaling (games/sec at 1, half, full
+actor counts — find contention if sublinear)" since the section was created
+and nobody had run it. Measured at the hundred-and-seventh tip, `release` +
+mimalloc, 4-core box:
+
+```text
+RUST_MIN_STACK=33554432 CRAB_NO_JITTER=1 target/release/selfplay_train \
+  --actors N --games 2000 --steps 1 --seed 7 --out /tmp/scale.N
+read the `actors:` line, not `done:` — `--steps` can outlast the actors.
+
+  actors   games/s        vs 1 actor    two runs
+     1     65.9 / 63.0        1.00x
+     2    135.1               2.09x
+     4    277.2 / 293.3       4.36x      <- 4 cores
+     8    280.6               4.35x      oversubscribed, flat
+```
+
+**Two facts, and the second is the more useful one.** (a) 4.36x on four cores
+is linear inside the ~5 % run-to-run variance the repeats show (the 1-actor
+run is 30 s of wall and the 4-actor one 7 s, so they do not see the same
+thermal window; do not read the 0.36 as superlinearity). Eight actors on four
+cores is flat, not worse — the fleet does not thrash. **Nothing here is a
+candidate.** (b) **`rows` is 193,736 on every one of the eight runs, at 1, 2,
+4 and 8 actors.** The game index is a single `fetch_add` and every game's
+seed is a pure function of it, so the *set* of games is actor-count-
+independent by construction — and this measures that it is, which is the
+cross-process determinism filter applied to the fleet dimension rather than
+the thread one.
+
+**Size the run before trusting it.** The first attempt used `--games 120` and
+read 51.8 / 168.8 / 292.0 — **3.26x on two actors**, which is impossible, and
+the reason is that the 120-game run is 0.4-2.3 s and mostly one-time cost. At
+2,000 games the same three numbers are 65.9 / 135.1 / 277.2. **A scaling
+curve needs a workload long enough that the parallel section dominates; check
+the shape for a superlinear step before reading anything into it.**
+
 **(-117) TAKEN at `172a40c8` — `fixed` -0.0051 % / `cube` -0.0599 % /
 `sealed` -0.0839 %, and it REFUTES THE LINE ROW THAT NAMED IT.** The entry
 below priced `block_sides_seen`'s per-(permanent, trigger) construction off
