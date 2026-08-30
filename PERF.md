@@ -9630,6 +9630,33 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourth pass (9) — the targeting invariant, and the two see-throughs it needed
+
+**`fixed` -0.039 % / `cube` -0.078 % / `sealed` -0.070 %** at `9fec2a6f`, off
+`45c55cc3`. A correctness commit that reads as a small win, for the same reason
+`d9e6454d` did: a narrower filter rejects a candidate earlier in the walk.
+
+`every_targeting_spell_or_ability_says_what_it_targets` gates 3,932 bodies —
+a spell or activated ability that needs a target must give slot 0 a filter.
+Getting to zero took seven more walker arms (six of them **unit variants whose
+whole shape is "target player names a card and loses it"** — no field to read
+the slot off, so the arm returns `Player` outright) and six card fixes.
+
+**The device to reuse: "the controller/owner OF X" is X's filter, not a player
+one.** Parallectric Feedback damages "target *spell*'s controller", so slot 0
+is the spell — and `sel_filter` learning that was not enough:
+`cr_601_2c_every_catalog_target_filter_is_surfaced` failed because `sel_find`,
+the CR 608.2b half, had not. **That is the second time in two commits that an
+invariant caught a filter the aim walker surfaces and the slot walker does
+not** (`CoinFlipDestroyLoop` and `MoveChosenKeyword` at `45c55cc3`). The pair
+is not optional: a filter only one of them sees aims correctly and re-checks
+against nothing, which is *worse* than no filter, because it looks fixed.
+
+**Three exceptions, one shape**: Officious Interrogation, Jeska's Will and
+Tithe name their target player only from inside a `Value` or a `Predicate`, and
+both target walkers reach `Selector`s. That is the one open shape the invariant
+knows about, and it is a `Value`/`Predicate` walker away.
+
 ### Hundred-and-seventh pass (2) — four pure guards, and the one that discriminates was last
 
 **`fixed` -0.1185 % / `cube` -0.4652 % / `sealed` -0.3698 %** at `89917b05`,
