@@ -35,9 +35,16 @@ sixty-seventh pass, so don't re-take that.
    before it, which reads 19.6 on the same box, so it is the container or an earlier
    tip; this pass moves it 19.6 -> 19.1. One `--bench` on the base is the whole control
    and it costs two minutes. Ir anchor with the
-   pass's shipped half (a) in it: **876,247,675 / 2,612,930,886 / 2,591,254,100**. The
-   grid is `e64762b2`'s, not re-run since. **Each change names its own base**, and see
-   item 7 for what a cross-session re-read is and is not worth.
+   pass's shipped half (a) in it: **876,247,675 / 2,612,930,886 / 2,591,254,100**.
+   The grid is `2e0450f4`'s — 30 cells, 33,120 games, **0 failures and 0 undecided on
+   every cell**, rebuilt and re-run there so it audits `find_by_id_mut`'s hint on real
+   boards. **The ACTOR is -3.58 %** over `c92f3851 -> 2e0450f4`, and two of the three
+   commits behind that are invisible to every `--bench` pool. **Each change names its
+   own base**, and see item 7 for what a cross-session re-read is and is not worth.
+   **Within one container, a `peak_rss` or `games_per_s` taken while the box is still
+   building is not a reading**: the first `--bench` after each of two release builds
+   read 26.8 MiB / 312 g/s and 24.7 / 314, and the settled runs read 24.5-24.7 at
+   332-340 — the high RSS and the low throughput are the same fact.
 3. **`games_per_s` does not transfer between containers and an Ir anchor does** — settle a
    suspected wall-clock regression with **one anchor run**, never a rebuild of the base.
 4. **The three devices this pass paid on, in order of reuse.** (a) A memo on a named
@@ -54,12 +61,22 @@ sixty-seventh pass, so don't re-take that.
    calls that never grew. **The mass that is left is FIRST allocations**, which only a
    different buffer (`(-107)`, `EncodedState`'s eight groups, 66,485 -> 12,660) or fewer
    objects can reach — and the by-value form of the latter is built and reverted at
-   `(-111)`. Do not re-sweep this table.
-6. **THE ACTOR IS WHERE THE LARGEST WIN OF THE PASS WAS, AND `--bench` CANNOT SEE IT.**
-   Re-read at `bb67895a` (Profile of record); `rank_shape` is byte-identical to the
-   `c92f3851` reading, so the deck half of the workload is a control. The recorder's
-   de-dup key was a second copy of the pair it had just pushed — **-1.360 %**
-   (`817b9736`), against `cube`'s -0.341 % for the pass's largest engine change.
+   `(-111)`. Do not re-sweep this table. **The division is `scripts/cg_growth.py`**
+   (`eabe2425`) — it folds *both* growth paths (`grow_one`, the push side, and
+   `do_reserve_and_handle`, the `reserve`/`extend`/`append` side) and joins each
+   caller's own call count, which is what `(-103)` and `(-108)` each did by hand for
+   one table and then closed with "no row left".
+6. **THE ACTOR IS WHERE THE LARGEST WINS OF THE PASS WERE, AND `--bench` CANNOT SEE
+   THEM — write the script before trusting the rule.** `cg_growth.py`'s first run put
+   the recorder's four parallel accumulators at **75.15 growths a call**, fifty times
+   the next row, and one `with_capacity` apiece shipped at **-0.391 %** (`2e0450f4`) —
+   a row both earlier passes of the same rule had walked past, because each applied it
+   to whichever table and pool it was already looking at. Run it on every dump.
+   Actor profile re-read at `bb67895a` (Profile of record); `rank_shape` is
+   byte-identical to the `c92f3851` reading, so the deck half of the workload is a
+   control and the totals compare, not just the shares. The recorder's de-dup key was a
+   second copy of the pair it had just pushed — **-1.360 %** (`817b9736`), against
+   `cube`'s -0.341 % for the pass's largest engine change.
    Open there, `(-107)`: `encode_state`'s 66,485 reserve growths (2nd largest in the
    program, invisible to every pool) and `computed_permanent_hinted`'s 433,775 `Arc`s
    (12.8 % of every allocation the actor makes).

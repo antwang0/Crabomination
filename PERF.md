@@ -2292,7 +2292,57 @@ change did nothing** — it is evidence the workload did not reach it. (It is
 also the fourteenth cross-container anchor check, and the tightest yet on
 `fixed`: 0.4 ppm across two containers *and* a commit.)
 
-### Hundred-and-third pass, this session's half — closing state at `a019fee3`
+### Hundred-and-third pass, this session's half — closing state at `2e0450f4`
+
+Six code commits and one script. Engine: `ed0e1361` (74 `&mut` battlefield
+scans join the find memo), `cfa883ae` (`compute_permanent_pass`'s `sorted`
+takes inline storage), `244e849b` (the by-value `SmallVec` loop, swept),
+`a019fee3` (`auto_tap_for_cost_inner`'s events reserve once). **Actor-only**:
+`817b9736` (the recorder's de-dup key stops being a second copy of the pair)
+and `2e0450f4` (its four parallel accumulators reserve once) — neither is
+reachable from any `--bench` pool. Plus `eabe2425`, `scripts/cg_growth.py`,
+which is what found the last of them.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,050 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved across all six
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh, rebuilt and re-run at this tip — 30 cells,
+        five pools x six seeds x 120 games, **33,120 games, 0 failures, 0
+        undecided on every cell**; 5 assertion strings in the audit binary.
+--bench 195,528 / 27.44 / 611.0 / 0 stalls, 0 undecided — byte-identical to
+        the committed invariant; determinism ok, thread_determinism ok
+        (3 vs 1). games_per_s 333.19 / 335.08 / 340.39, peak_rss_mib
+        24.5-24.7, bin_bytes 123,855,408, `release` + mimalloc.
+
+Ir anchors, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1, at the tip:
+  fixed 881,049,781   cube 2,627,208,208   sealed 2,603,784,415
+
+  this session's engine commits, ae429ae7 (= 0367c09c's code) -> a019fee3,
+  one container, every pair adjacent builds:
+    fixed     887,234,325 ->   883,014,888   -0.476 %
+    cube    2,655,120,084 -> 2,633,198,611   -0.826 %
+    sealed  2,625,608,126 -> 2,610,142,425   -0.589 %
+  and the tip against the same start, both sessions:
+    fixed  -0.697 %    cube  -1.051 %    sealed  -0.831 %
+
+The ACTOR, `selfplay_train --actors 1 --games 120 --steps 1 --seed 7`:
+  6,113,733,616 (c92f3851)  ->  5,894,976,329   **-3.58 %**
+  of which -1.360 % is `817b9736`, -0.391 % is `2e0450f4` and -0.343 % is
+  `a019fee3`; 11,899 rows and 0 stalls at every reading in the window.
+```
+
+**A `peak_rss_mib` or `games_per_s` taken while the box is still busy is not a
+reading.** The first `--bench` after each of this pass's two release builds
+read 26.8 MiB / 312 g/s and 24.7 / 314 g/s; the settled runs read 24.5-24.7 at
+332-340. The high RSS and the low throughput are the same fact. Take the
+column from a run whose `games_per_s` is in family. The `auto_tap` reserve's
+own RSS cost, A/B'd on two `profiling-fast` binaries, is **+0.3 MiB**
+(19.4 -> 19.7).
+
+### Hundred-and-third pass, this session's earlier half — closing state at `a019fee3`
 
 Five code commits: `ed0e1361` (74 `&mut` battlefield scans join the find memo),
 `cfa883ae` (`compute_permanent_pass`'s `sorted` takes inline storage),
