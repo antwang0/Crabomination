@@ -9457,6 +9457,54 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fifth pass (1) — `(-109)`'s half (a), rescued from a bundle, and the null control that licensed re-reading it
+
+**`fixed` -0.565 % / `cube` -0.453 % / `sealed` -0.420 %** off `5ea962ac`.
+
+`snapshot_payment_state`'s `tapped` is a `collect` over a `Filter`, which
+cannot size-hint past the filter and so walks the 0->4->8->16 ladder — 17,838
+`do_reserve_and_handle` growths over 11,420 snapshots, 1.56 a call, the
+largest single context in `(-108)`'s table. `Vec::with_capacity(battlefield
+.len())` + `extend` makes it one allocation, over-allocating by the opponent's
+share of the board, which is the trade.
+
+**This is `(-109)` half (a), and `(-109)` reverted it.** That entry measured
+(a)+(b) together (`-0.247 / +0.226 / -0.313 %`) and (b) alone
+(`+0.317 / +0.689 / +0.118 %`), concluded the instrument could not attribute
+either, and threw out both. Differencing its own two rows predicts (a) at
+`-0.56 / -0.46 / -0.43` — which is what it measures.
+
+```text
+base 5ea962ac, callgrind, profiling-fast --no-default-features
+  fixed     880,881,095 ->   875,900,750   -0.565 %
+  cube    2,626,933,644 -> 2,615,021,161   -0.453 %
+  sealed  2,603,421,399 -> 2,592,481,087   -0.420 %
+
+every mover on `cube`, and the whole program delta is -11,912,483:
+  snapshot_payment_state      1,256,360 ->  4,293,572   +3.04 M  the collect moves in
+  Vec::from_iter (nested)    68,994,027 -> 65,106,783   -3.89 M  and out of here
+  _int_malloc                62,132,089 -> 59,387,442   -2.74 M
+  realloc                     8,651,644 ->  6,682,069   -1.97 M  -22.8 %
+  _int_realloc                6,002,896 ->  4,626,977   -1.38 M  -22.9 %
+  _int_free                  82,760,816 -> 81,466,523   -1.29 M
+  finish_grow                13,697,520 -> 12,954,160   -0.74 M
+  do_reserve_and_handle       3,143,448 ->  2,474,424   -0.67 M  -21.3 %
+```
+
+**`compute_permanent_pass` and `SmallVec::extend` do not appear in the movers
+at all** — the two rows that swung ±27 M in `(-109)`'s bundled reading and
+decided its sign. That was half (b). Half (a) is explained entirely by its own
+rows, which is `(-109)` rule 1 satisfied rather than defeated.
+
+**The rule: never revert a bundle on a program number.** Split it and read the
+halves. `(-109)` spent three builds establishing that it could not attribute a
+two-part change and never spent the fourth that would have separated them; the
+win had been sitting in a refuted entry since.
+
+Behaviour-preserving: the three ladder printouts are byte-identical base to
+candidate on all three pools, suite 19,050 / 0 / 5, golden traces 7/7, clippy
+clean.
+
 ### Hundred-and-fourth pass (2) — the trigger half of `(-104)`, and the spell half priced and declined
 
 **`fixed` -0.013 % / `cube` -0.034 % / `sealed` -0.061 %** at `381fac97`, off
@@ -16496,9 +16544,46 @@ question `(-109)` leaves open: cgu 16 + thin LTO is buildable here where
 way to attribute sub-floor changes in the oversized modules — the alternative
 to splitting them.
 
-**TAKEN, 2026-08-30 — the hundred-and-fifth pass, null-control route.**
+**TAKEN AND ANSWERED, 2026-08-30 — and the answer is that THE FLOOR IS NOT
+AMBIENT: two nulls read `+0.006 %` at worst.** Both are uncalled `pub fn`s in
+`actions.rs`, so the executed instruction stream is unchanged by construction
+and every Ir below is instrument noise and nothing else:
 
-**(-109) THE MEASUREMENT FLOOR IN `actions.rs` IS ~0.7 % OF `cube`, AND THIS
+```text
+base 5ea962ac, callgrind, profiling-fast --no-default-features
+                                    fixed      cube      sealed
+  null 1  a ~25-line uncalled fn   -0.001 %  -0.000 %   -0.001 %
+  null 2  the same, and it also    +0.006 %  +0.001 %   -0.000 %
+          instantiates SmallVec<[&ContinuousEffect; 8]>::extend
+```
+
+**Null 2 is the sharp one**: it is a second user of the *exact*
+monomorphization `(-109)` blames for the ±0.7 % swing, referenced from
+`actions.rs`, and it moves nothing. **So mass does not perturb this
+instrument, and neither does a second instantiation** — the reproducibility of
+a zero-content change is about **1 part in 15,000**, not 1 part in 140.
+
+**`(-109)`'s rule 2 is therefore wrong as stated and is corrected below.**
+There is no floor to subtract from an `actions.rs` reading. What `(-109)`
+actually saw was *content* coupling: its half (b) altered live call sites and
+flipped an unrelated monomorphization's inlining. Its rule 1 — attribute a
+program number to rows before believing it — is the whole of the lesson and it
+stands.
+
+**And correcting rule 2 immediately paid: `(-109)` HALF (a) ALONE HAD NEVER
+BEEN MEASURED, AND IT IS A WIN ON ALL THREE POOLS** — see the Log. The entry
+read (a)+(b) and (b) alone, declared the pair unattributable, and reverted
+both; (a) by itself is **-0.565 / -0.453 / -0.420 %**, which is what the
+entry's own two numbers imply if they are differenced. **Never revert a bundle
+on a program number: split it and read the halves.**
+
+
+**(-109) HALF (a) IS TAKEN AT THE HUNDRED-AND-FIFTH PASS
+(-0.565 / -0.453 / -0.420 %) AND THIS ENTRY'S HEADLINE CLAIM IS REFUTED BY
+`(-110)`'s NULL CONTROLS — read rule 2 below before anything else here.
+The entry is kept in full because the way it went wrong is the lesson.**
+
+**(-109, as filed) THE MEASUREMENT FLOOR IN `actions.rs` IS ~0.7 % OF `cube`, AND THIS
 ENTRY IS THREE BUILDS SPENT ESTABLISHING IT.** Two changes to the payment
 checkpoint were built and reverted, and the reason is the instrument rather
 than the code.
@@ -16557,11 +16642,17 @@ three pools, and the `extend` stays.**
 1. **Attribute a program number to a function row before believing it.** Every
    reading above is explained by one row; two of the three are explained by a
    row the change does not touch.
-2. **At `codegen-units = 16` with no LTO, `actions.rs` has a ~0.7 % noise
-   floor on `cube`** — larger than several changes this file has *shipped*. A
-   change to that module worth less than that cannot be attributed on this
-   instrument. Splitting the module (TODO's build-time lever) would also be a
-   *measurement* lever.
+2. ~~**At `codegen-units = 16` with no LTO, `actions.rs` has a ~0.7 % noise
+   floor on `cube`**~~ — **WRONG, and `(-110)` measured it.** Two null
+   controls (uncalled `pub fn`s, zero executed instructions, one of them
+   instantiating the very `SmallVec::extend` monomorphization blamed below)
+   read **+0.006 % at worst on three pools**. There is no ambient floor: this
+   instrument reproduces a zero-content change to about 1 part in 15,000. What
+   this entry saw was *content* coupling from half (b), and rule 1 is the
+   whole lesson. **Half (a) alone, never measured here, is
+   -0.565 / -0.453 / -0.420 % and shipped at the hundred-and-fifth pass** — so
+   this rule also cost a real win. Splitting the module remains a build-time
+   question and is *not* a measurement one.
 3. **A `SmallVec::extend` in a hot frame is a monomorphization the inliner can
    move**, so `(-106)`'s shape carries a 17 M downside that nothing in the
    source hints at. The push loop removes the risk and costs `sealed` 0.06 %;

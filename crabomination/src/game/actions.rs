@@ -11820,15 +11820,17 @@ impl GameState {
     /// `restore_payment_state` finds nothing to put back for a card the
     /// snapshot never recorded.
     pub(crate) fn snapshot_payment_state(&self, payer: usize) -> PaymentSnapshot {
-        PaymentSnapshot {
-            pool: self.players[payer].mana_pool.clone(),
-            tapped: self
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == payer)
-                .map(|c| (c.id, c.tapped))
-                .collect(),
-        }
+        // `collect` over a `Filter` cannot size-hint past the filter, so it
+        // walks the 0->4->8->16 growth ladder: 17,838 `do_reserve_and_handle`
+        // growths over 11,420 snapshots, 1.56 a call and the largest single
+        // context in `(-108)`'s table. One `with_capacity` at the board's
+        // length is one allocation — an over-allocation by the opponent's
+        // share, which is the trade (PERF `(-109)` half (a)).
+        let mut tapped = Vec::with_capacity(self.battlefield.len());
+        tapped.extend(
+            self.battlefield.iter().filter(|c| c.controller == payer).map(|c| (c.id, c.tapped)),
+        );
+        PaymentSnapshot { pool: self.players[payer].mana_pool.clone(), tapped }
     }
 
     /// Restore the mana pool and tapped state captured by a prior
