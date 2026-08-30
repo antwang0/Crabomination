@@ -482,16 +482,27 @@ pub fn play_recorded_game_mcts(
         (0..2).map(|_| Box::new(HeuristicBot::uniform_baseline()) as Box<dyn Bot>).collect();
 
     // (turn, seat, encoded state) — labelled after the game decides.
-    let mut snaps: Vec<(u32, usize, crabomination_nn::EncodedState)> = Vec::new();
-    let mut heur: Vec<i32> = Vec::new();
+    //
+    // The four accumulators below are parallel and reach the same length, and
+    // a game emits ~99 snapshots (11,899 rows over 120 games), so each of them
+    // walked 0->4->8->...->128. That is **75 growths a game between them**, the
+    // highest growths-per-call ratio in the program by fifty times
+    // (`scripts/cg_growth.py`, PERF (-110)) — and `snaps`' element carries a
+    // whole `EncodedState`, so each re-growth memcpys the lot. One reserve
+    // apiece covers the mean game outright and leaves a long one a single
+    // growth.
+    const SNAP_HINT: usize = 128;
+    let mut snaps: Vec<(u32, usize, crabomination_nn::EncodedState)> =
+        Vec::with_capacity(SNAP_HINT);
+    let mut heur: Vec<i32> = Vec::with_capacity(SNAP_HINT);
     // Raw per-seat stats at each snapshot, parallel to `snaps` — the aux
     // targets are deltas between a seat's consecutive snapshots, so the
     // raw values have to be captured live and diffed at labelling time.
-    let mut raw: Vec<[f32; 4]> = Vec::new();
+    let mut raw: Vec<[f32; 4]> = Vec::with_capacity(SNAP_HINT);
     // The opponent's held card names per snapshot, parallel to `snaps` —
     // the belief head's target (round 39). Recorded here because only
     // the recorder may look; the encoder never carries it.
-    let mut opp_hands: Vec<Vec<u16>> = Vec::new();
+    let mut opp_hands: Vec<Vec<u16>> = Vec::with_capacity(SNAP_HINT);
     let mut last_turn = (0u32, usize::MAX);
     let mut last_step = crate::game::TurnStep::Untap;
     // The de-duplication key is the last pair *pushed*, and `snaps` already
