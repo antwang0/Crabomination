@@ -15819,13 +15819,37 @@ calls come through one chain, and its consumer already holds a buffer:
     <- continue_spell_resolution                   2,446
 ```
 
-**And the one friction to plan for**: `activate_ability_inner` reads the
-resolved events *before* appending them —
-`resolve_extra_mana_on_land_tap(card_id, p, &resolved, &mut events)` — so an
-out-parameter makes that an `&events[mark..]` beside an `&mut events` and the
-borrow checker will refuse it. Pass the `mark` index instead, or `split_at_mut`
-at it. That is the whole design question; everything else is threading one
-`&mut Vec<GameEvent>` through two frames.
+**And the friction to plan for is EVENT ORDER, not the borrow checker.**
+`activate_ability_inner` does, in this order:
+
+```rust
+  if ability.tap_cost {
+      self.resolve_extra_mana_on_land_tap(card_id, p, &resolved, &mut events);
+  }
+  events.append(&mut resolved);
+```
+
+so the accumulator ends up `[… tap events][extra-mana events][the ability's
+own ManaAdded]`. Resolving straight into `events` puts the ability's own
+events *first* and the extra mana after — a different batch order, which
+`dispatch_triggers_for_events` then sees, so **golden traces move and the
+change stops being behaviour-preserving.** (Whether the current order is even
+right is a separate question: CR 605.1b has the triggered mana ability
+resolving *after* the tapping one, which is the new order, not the old. Do not
+settle that in the same commit as the allocation.)
+
+Three ways out, in the order a taker should price them: **splice** the
+extra-mana events in at `mark` (buffer them locally, and only the boards that
+actually carry such a grant pay for it — the function's own presence gate
+returns before touching anything on the rest); **reorder** deliberately and
+justify the trace move as the CR 605.1b fix; or a **reusable scratch buffer**
+on `GameState`, which preserves order exactly but adds a `Vec` to a struct
+cloned 22,510 times a run and needs `gather_partial`'s take/put discipline
+because `activate_ability_inner` can re-enter itself. The borrow itself is the
+easy half: the two reads of `resolved`
+(`ColorlessManaAdded`-present and the `Mirror` colour) are **loop-invariant
+scalars**, so hoisting them above the grant loop makes the whole function need
+`&events[mark..]` only once, before its first push.
 
 **(-101) A STORED `fn` POINTER WHOSE VALUE IS FIXED PER FIELD IS TWO COSTS,
 AND THE SECOND ONE HAD NEVER BEEN PRICED HERE. TAKEN ON `ComputedPermanent`
