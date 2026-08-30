@@ -2928,7 +2928,8 @@ impl GameState {
             // A free divider (Butcher Orgg) always gets an assignment choice —
             // it divides over the defending player's creatures, not its
             // blockers, so the multi-blocker gate doesn't apply.
-            let free_divider = !self.free_division_targets(atk.id, computed).is_empty();
+            let free_divider =
+                !self.free_division_targets(atk.id, atk.free_divider, computed).is_empty();
             if blocker_ids.len() <= 1 && !free_divider {
                 continue;
             }
@@ -3005,6 +3006,7 @@ impl GameState {
                     atk.id,
                     atk.has_deathtouch,
                     atk.has_trample,
+                    atk.free_divider,
                     &order,
                     computed,
                 );
@@ -3151,16 +3153,20 @@ impl GameState {
     /// control". Returns the divisible creature set (every creature the
     /// defending player controls, id-ordered) or empty when the attacker has
     /// no such ability.
+    ///
+    /// `free_divider` is the attacker's own
+    /// `DividesCombatDamageAmongDefenders`, read by the caller off the
+    /// `ComputedPermanent` it already holds. It used to be a whole-board
+    /// `any()` here — 32,210 calls a `--actors 1 --games 60` run, each a
+    /// linear find of the attacker, for a keyword no ordinary board carries
+    /// (PERF `(-113)`).
     fn free_division_targets(
         &self,
         attacker: CardId,
+        free_divider: bool,
         computed: &[ComputedPermanent],
     ) -> Vec<CardId> {
-        let free = computed.iter().any(|c| {
-            c.id == attacker
-                && c.keywords().has_kw(&Keyword::DividesCombatDamageAmongDefenders)
-        });
-        if !free {
+        if !free_divider {
             return vec![];
         }
         let Some(defender) = self
@@ -3192,10 +3198,11 @@ impl GameState {
         attacker: CardId,
         attacker_deathtouch: bool,
         has_trample: bool,
+        free_divider: bool,
         order: &[CardId],
         computed: &[ComputedPermanent],
     ) -> (Vec<(CardId, u32)>, bool) {
-        let free = self.free_division_targets(attacker, computed);
+        let free = self.free_division_targets(attacker, free_divider, computed);
         if free.is_empty() {
             (self.combat_lethals(attacker_deathtouch, order, computed), has_trample)
         } else {
@@ -3277,8 +3284,17 @@ impl GameState {
                 // A multi-block blocker (CR 510.1e) has no trample outlet.
                 let trample = self.attackers_blocked_by(attacker).len() <= 1
                     && atk_cp.is_some_and(|c| c.keywords().has_kw(&Keyword::Trample));
-                let (lethals, trample) =
-                    self.combat_assignment_plan(attacker, deathtouch, trample, &order, &computed);
+                let free_divider = atk_cp.is_some_and(|c| {
+                    c.keywords().has_kw(&Keyword::DividesCombatDamageAmongDefenders)
+                });
+                let (lethals, trample) = self.combat_assignment_plan(
+                    attacker,
+                    deathtouch,
+                    trample,
+                    free_divider,
+                    &order,
+                    &computed,
+                );
                 let split = self.resolve_damage_assignment(total_power, &lethals, trample, answer);
                 self.combat_damage_assignment.insert(attacker, split);
             }
@@ -3337,6 +3353,8 @@ impl GameState {
                     }).sum(),
                     assigns_as_unblocked: kws
                         .has_kw(&Keyword::AssignsDamageAsThoughUnblocked),
+                    free_divider: kws
+                        .has_kw(&Keyword::DividesCombatDamageAmongDefenders),
                     // CR 510.1 — a creature with "deals no combat damage this
                     // turn" (Master of Cruelties) is skipped in both damage
                     // steps even though it's a legal attacker/blocker. CR 614.9
@@ -3444,7 +3462,7 @@ impl GameState {
             }
             // Butcher Orgg divides over the defending player's creatures
             // instead of its blockers, blocked or not.
-            let free_targets = self.free_division_targets(atk.id, computed);
+            let free_targets = self.free_division_targets(atk.id, atk.free_divider, computed);
 
             // Goblin Psychopath — the charge armed by a lost coin flip sends
             // this attacker's whole combat-damage assignment at its
@@ -5790,5 +5808,9 @@ struct AttackerInfo {
     /// above because CR 510.1 assignment is one turn-based action taken
     /// before any damage is dealt.
     assigns_as_unblocked: bool,
+    /// Butcher Orgg (CR 510.1a variant) — read here so the three consumers
+    /// don't each linear-scan `computed` for this attacker. See
+    /// [`GameState::free_division_targets`].
+    free_divider: bool,
     should_deal: bool,
 }
