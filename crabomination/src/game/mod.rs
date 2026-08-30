@@ -18297,6 +18297,13 @@ impl GameState {
         if freeze {
             self.freeze_layers_push();
         }
+        // CR 509.3a/c dedupe set for the four block-count `EventKind`s, and
+        // nothing else ever pushes to it. Declared here rather than at the
+        // top of the trigger loop, by `(-71)`'s device: constructing and
+        // dropping it per (permanent, trigger) was 10.5 M Ir, 0.40 % of a
+        // `cube` run (PERF `(-117)`). One `Vec` a dispatch, cleared per
+        // trigger, capacity kept.
+        let mut block_sides_seen: Vec<CardId> = Vec::new();
         for card in &self.battlefield {
             if no_grants
                 && card.definition.triggered_abilities.is_empty()
@@ -18426,7 +18433,7 @@ impl GameState {
                 // wordings (509.3b/d — "blocks *a creature*") read the whole
                 // partner set via `Selector::BlockedAttacker` /
                 // `BlockingCreatures`, so one trigger instance still covers all.
-                let mut block_sides_seen: Vec<CardId> = Vec::new();
+                block_sides_seen.clear();
                 for ev in events {
                     // **The kind test goes first and the three exclusions
                     // after it, and that ordering is the measurement.** All
