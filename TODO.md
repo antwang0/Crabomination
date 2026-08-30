@@ -43,7 +43,12 @@ sixty-seventh pass, so don't re-take that.
    ~49 M of iteration, answered by `cg_calls.py` off a dump you already have.
 6. **Open, in order:** `(-115)`'s `Battlefield` member-list lane (the per-card-bit form is
    priced at 0.10 % and refuted by `(-114)`); `(-107)`'s `computed_permanent_hinted` `Arc`s
-   on the actor; **actor scaling at 1 / half / full actor counts, never measured.**
+   on the actor. **Actor scaling is NOT unmeasured — `(-52)` closed it**: 1/2/3/4/6
+   actors on four cores, per-actor throughput flat (39.2 / 40.0 / 39.6 / 40.2 games/s)
+   and the sixth buying +2.6 %, so plan one actor per core; the memory knob is
+   `--window` (~1.3 KiB a row), not `--actors` (~6 MiB each). Do not spend a build
+   re-deriving it, and do not size parallel efficiency off `--bench`, which is 1.5 s
+   of wall at four threads and mostly startup.
 7. **Cards:** `audit_oracle_verbs.py`, 219 rows / 10,949 cards; check three rows in the
    source before believing a class. **Inscription of Insight is not the card it is named
    after** — three wrong modes and a missing kicker; needs a dynamic-P/T token and a
