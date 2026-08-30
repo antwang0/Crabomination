@@ -2311,6 +2311,45 @@ containers are `decisions` / `turns_per_game` / `decisions_per_game` /
 `peak_rss_mib` 24.5 is in the 24.4-24.7 family, not the neighbouring
 session's 18.8-19.1 — same split, same rule.
 
+### Hundred-and-sixth pass (4) — the card half's close at `768f8024`
+
+Four dropped riders off `scripts/audit_oracle_verbs.py`'s three smallest verb
+classes, plus the one primitive the first of them needed
+(`CounterUnlessPaid`'s `if_paid`, 106 initializers taking `None`
+mechanically).
+
+```text
+suite   18,809 / 0 / 5;  golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 per game / 0 stalls
+        — byte-identical, so none of the four cards is in a `fixed`
+        archetype. determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 391.75 / 371.14, host_calib_ms 65 / 55,
+        peak_rss_mib 24.6 / 24.5, bin_bytes 123,894,000.
+
+Ir endpoint `90a629a1` -> `768f8024` (BOTH sessions' work in the window —
+an endpoint, not an A/B), callgrind, profiling-fast -p crabomination
+--no-default-features:
+  fixed     875,791,350 ->   873,773,290   -0.2304 %
+  cube    2,606,284,270 -> 2,591,002,802   -0.5863 %
+  sealed  2,586,715,468 -> 2,572,771,830   -0.5390 %
+```
+
+**The reading's one job was to price the `Effect` enum's new field**, since
+`if_paid` is a global change where the four cards are not: `Option<Box<Effect>>`
+is eight bytes on a variant that is nowhere near the largest, the enum's 448
+bytes do not move, and the window is negative on all three pools. **Keep new
+fat payloads boxed** (the note above `Effect`'s definition) and a new field
+costs nothing measurable.
+
+**And the walker invariant earned its keep the same afternoon it landed.**
+`the_shared_recursion_names_every_effect_wrapper` failed within 45 s of the
+new field — a variant that holds an `Effect` has to be named in
+`for_each_inner` or every walker falling through to it answers the fallback
+for the whole subtree. That is the test catching the exact class it was
+written for, on a change made by the other session, before the suite got past
+`core_rules`.
+
 ### Hundred-and-sixth pass (3) — this session's close at `785b50d5`+
 
 Three code commits this session — `(-107)`'s single buffer (`d402e5da`), the
