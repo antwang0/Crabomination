@@ -9501,6 +9501,25 @@ halves. `(-109)` spent three builds establishing that it could not attribute a
 two-part change and never spent the fourth that would have separated them; the
 win had been sitting in a refuted entry since.
 
+**Cross-session check, and this one is NOT an identity — which is itself
+worth the line.** Rebased over three of the other session's commits and
+re-read, the same change reads `876,247,675 / 2,612,930,886 / 2,591,254,100`
+against the candidate's `875,900,750 / 2,615,021,161 / 2,592,481,087`:
+**+396 / -799 / -473 ppm**. Every previous cross-session check in this file
+landed inside a few ppm; this one does not, because `2a1de9ac` is a real code
+change on a path `bot_ladder` reaches rather than a tracker commit. The drift
+is that commit's own content, it is 7-14x smaller than the delta above, and
+the rows here name their own base — which is exactly what the convention is
+for. **A cross-session check is only an identity when what landed under it was
+prose.**
+
+**And the null control firms up half (b)'s refutation as a side effect.**
+`(-109)` dismissed (b)'s `+0.317 / +0.689 / +0.118 %` as something the
+instrument could not attribute. With no ambient floor, that is a **real
+regression**: sorting the snapshot once per capture costs more than the linear
+`find`s it saves, on all three pools. (b) is refuted on its merits now, not
+set aside.
+
 Behaviour-preserving: the three ladder printouts are byte-identical base to
 candidate on all three pools, suite 19,050 / 0 / 5, golden traces 7/7, clippy
 clean.

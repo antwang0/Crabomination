@@ -67,12 +67,20 @@ sixty-seventh pass, so don't re-take that.
    Open there, `(-107)`: `encode_state`'s 66,485 reserve growths (2nd largest in the
    program, invisible to every pool) and `computed_permanent_hinted`'s 433,775 `Arc`s
    (12.8 % of every allocation the actor makes).
-7. **THE INSTRUMENT HAS A FLOOR AND `(-109)` IS THREE BUILDS SPENT FINDING IT.** At
-   `codegen-units = 16` with no LTO a ten-line edit in `actions.rs` moves `cube` by
-   **±0.7 %** through inlining alone — larger than several shipped changes in PERF's
-   Log. **Attribute a program number to a function row before believing it**; two of
-   the three readings there are explained by a row the change does not touch.
-   Splitting the oversized modules is a *measurement* lever, not only a build-time one.
+7. **THE INSTRUMENT HAS NO FLOOR — `(-109)`'s HEADLINE IS REFUTED AND IT COST A REAL
+   WIN.** `(-110)` measured it with two null controls (uncalled `pub fn`s in
+   `actions.rs`, zero executed instructions, one of them instantiating the very
+   `SmallVec::extend` monomorphization `(-109)` blamed): **+0.006 % at worst on three
+   pools**, i.e. ~1 part in 15,000. There is nothing to subtract from an `actions.rs`
+   reading, and **splitting the oversized modules is a build-time question only**.
+   What `(-109)` saw was content coupling from its half (b) — whose `+0.689 %` on `cube`
+   is therefore a **real regression**, not an unattributable one. Its rule 1 stands and
+   is the whole lesson: **attribute a program number to rows before believing it.**
+   **The rule this pass adds: never revert a bundle on a program number — split it and
+   read the halves.** `(-109)` measured (a)+(b) and (b), never (a); (a) alone is
+   **-0.565 / -0.453 / -0.420 %** and shipped at `8a59e648`. **A cross-session check is
+   only an identity when what landed under it was prose** — the re-read over `2a1de9ac`
+   drifted +396 / -799 / -473 ppm, which is that commit's own content.
    ROBUSTNESS: bare panics 23 -> 3 (deck construction, deliberately). No open
    TODO/FIXME in `src`, no `#[ignore]`d tests.
 8. **CARDS: the printed characteristics are DONE; what a card DOES is the open lane.**
