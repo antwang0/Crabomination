@@ -9508,6 +9508,42 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourth pass (4) — the zone predicate seventy-nine cards were missing, and it is a win as well as a fix
+
+**`fixed` -0.513 % / `cube` -0.562 % / `sealed` -0.418 %** at `d9e6454d`, off
+`13435f3e`. Game outcomes byte-identical on all three pools, golden traces
+7/7 unmoved.
+
+A correctness change is not usually a perf row and this one is, for a reason
+worth carrying: **a filter with the zone predicate FIRST short-circuits on
+every candidate from the wrong zone**. `And(InYourGraveyard, Creature)`
+rejects a battlefield permanent on one test where `Creature` alone ran the
+whole requirement and then matched. The enumerator's battlefield walk used to
+produce candidates for a reanimation spell; now it produces none.
+
+**How the class was found — the method is the transferable half.** The engine
+change at `13435f3e` left the catalog question open ("a card whose effect
+reaches a graveyard has to say so in its filter"), and the census that asks it
+is a *join*, not a walker: 127 bodies serialize a `Move` of their own target
+to your hand or battlefield, and `scripts/.scryfall_cache.json` splits them —
+77 print "from your graveyard", 38 do not. The discriminator that survives
+without the oracle text is a **filter predicate**: every one of the 38 names
+`ControlledByYou`, `OwnedByYou` or `ExiledWithSource`, because a blink or a
+bounce is of a permanent you already control. That is what makes the gate an
+invariant rather than an allowlist. **Use the oracle cache to discover a
+class and a structural predicate to gate it** — a list of 79 names would go
+stale on the next card.
+
+### Hundred-and-fourth pass (3) — the enumerator learns which zones an effect reaches
+
+**`fixed` +0.000 % / `cube` -0.048 % / `sealed` -0.047 %** at `13435f3e`, off
+`381fac97`. `legal_targets_for_filter` walked every graveyard and exile with
+the same requirement it applied to the battlefield; it takes the scope now,
+and `enumerate_legal_targets_xc` asks the same
+`may_target_offboard_card || mentions_offboard_zone` question the auto-picker
+has been gated on since the eighty-sixth pass. `fixed` reads exactly zero
+because none of its four archetypes targets a graveyard.
+
 ### Hundred-and-fifth pass (1) — `(-109)`'s half (a), rescued from a bundle, and the null control that licensed re-reading it
 
 **`fixed` -0.565 % / `cube` -0.453 % / `sealed` -0.420 %** off `5ea962ac`.
