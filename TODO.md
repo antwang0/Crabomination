@@ -26,26 +26,34 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Three sessions at once: code before tracker prose, **rebase
    not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
-   build **and re-read it then** — three sessions have now re-derived actor scaling off one
-   seed-list line. A seed-list line is not a status. **Nothing is claimed.**
-2. **Gates re-run at `cc95793f`:** suite **19,074 / 0 / 5**, clippy clean (also
-   `--features trig-census`), traces 7/7, `--bench` 195,528 / 27.44 / 611.0 / 0 stalls, byte-identical to the
-   committed invariant, determinism + thread_determinism ok. Grid not re-run — behaviour
-   unmoved; **its ACTOR leg is the only gate that reaches the encoder**, so run that leg for
-   any `encode.rs` / `EncodedState` change (PERF's hundred-and-sixth block has the command).
-3. **`(-115)` IS TAKEN** (`f759c060`) — the dispatch gate answered positionally, on
-   `Battlefield`'s lane word. **The rule: a member list is worth its loop-invariant branch in
-   proportion to the share of the walk that can use it — a CENSUS question, not a hit-rate
-   one** (the lane hits 86 % everywhere and `cube` still loses). Its four refutations are one
-   failure — **a 280-line loop body is register-starved, so the hand-rolled form loses** — and
-   the fourth is that **a never-taken runtime gate in front of a call is not free there**, so
-   a census inside such a loop is a cargo feature, not an env var. `(-115)` has all four.
+   build **and re-read it then**. A seed-list line is not a status. **Nothing is claimed.**
+   ⚠ **Do not rebase while a build runs** — cargo fixes its plan at start, so a dep rlib
+   built before the rebase is linked after it and the error names the wrong file
+   (`GLOBAL_FEATS == 57` failing while the source said 57). And **kill orphaned `rustc`**
+   after killing a cargo (`ps -o ppid` = 1): one stole 60 % of four cores for 25 minutes.
+2. **Gates at `96b85558`:** suite **19,075 / 0 / 5**, clippy clean (also `--features
+   trig-census`), traces **7/7 unmoved**, `--bench` 195,528 / 27.44 / 611.0 / 0 stalls
+   byte-identical to the invariant, determinism + thread_determinism green. Grid not re-run —
+   behaviour unmoved; **its ACTOR leg is the only gate that reaches the encoder**, so run that
+   leg for any `encode.rs` / `EncodedState` change (the other session moved both, v8).
+3. **`(-120)`+`(-121)` TAKEN — `fixed` -2.970 % / `cube` -2.585 % / `sealed` -0.016 %**, the
+   largest pass in PERF. `EQUIP_TRIGGER_GRANT` was set for any `equipped_bonus`, empty
+   ability list or not, so a Rancor cost the dispatcher its member lane, its gate and a
+   freeze scope all game. **Two rules, both general: a presence bit named for what a field
+   *is* must be gated on the field being non-empty — and a cross-check between two
+   hand-written walkers audits drift, never a premise they share** (the `debug_assert!` here
+   agreed on the wrong answer for both). Third: **a filter measured worthless behind a defect
+   is not measured at all** — `(-121)` was correctly declined, then won 2 % once `(-120)`
+   changed its population. Re-run the census after a fix that moves what it counts.
 4. **Do not retake:** `(-112)`; dispatch's per-event gate (61 AND 106); a third line profile
-   of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since).
-5. **Open, in order:** `cube`'s grant-live dispatch visits — a third of its walk, on boards
-   twice the size, and nothing has touched them; then `(-107)`'s `computed_permanent_hinted`
-   `Arc`s on the actor. Sizing: a training box goes off `--window`, not `--actors`, and
-   `(-52)`'s per-row figure was 8x low — see PERF's actor-scaling block before quoting it.
+   of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since);
+   the `turn_granted_triggers` / `granted_triggers_eot` retains (census: zero on all pools).
+5. **Open, in order:** grant-live is now **zero on every pool**, so `(-115)`'s leftover is
+   closed — the dispatch walk is down to 15.5 / 28.3 / 32.5 % of its visits and what is left
+   is the *body*, not the walk. Next is `(-107)`'s `computed_permanent_hinted` `Arc`s on the
+   actor (433,775 allocations, 12.8 % of the actor's), then `(-114)`'s keyword presence bit.
+   **The `trig-census` reason mask (`zone::trig_census`) is the instrument that found this
+   pass** — extend it before guessing at the dispatcher again.
 6. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
    class. untap / scry / surveil are CLOSED; next `draw` (38) and `counters` (33), unexamined.
    **Inscription of Insight and All-Out Assault are primitive jobs**, not card fixes.

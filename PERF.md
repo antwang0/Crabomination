@@ -280,6 +280,19 @@ pass because they are measurement rules, not handoff.**
   with a Bus error.** That directory reached 19 GB of a 30 GB allowance at the
   hundred-and-fifth pass and 14 GB at the hundred-and-sixth; delete it first
   and re-run before believing anything else about the failure.
+* ⚠ **Do not rebase while a build is running.** Cargo fixes its unit graph and
+  fingerprints when it starts, so a dependency rlib compiled *before* the
+  rebase is linked *after* it — and the failure names the wrong thing. The
+  hundred-and-ninth pass lost a 25-minute build to
+  `assert!(GLOBAL_FEATS == 57)` failing against a source file that said 57:
+  `crabomination_nn` had been compiled at the pre-rebase value. Rebase between
+  builds, never across one.
+* ⚠ **Killing a `cargo` does not kill its `rustc` children.** The orphan
+  keeps its CPU and its output path — `ps -o pid,ppid -C rustc`, PPID 1 is the
+  giveaway. One held 2.5 of four cores for 25 minutes after its parent was
+  gone, which is why the next build "took 40 minutes"; it took 13. Reap them
+  before starting the replacement, and note that two rustcs writing one
+  artifact path is its own hazard.
 * ⚠ **Two cargo builds at once take ~1.5x each on four cores**, and a cold
   `release` of this workspace is ~25 min on its own. Start the one whose
   result gates the next step first.
@@ -2286,6 +2299,47 @@ a filter that narrows an enumerated set removes candidates the picker was
 already ordering past, so it costs nothing measurable — except where the
 narrowing lets the walk *reject earlier*, which is `d9e6454d` (-0.5 %, the zone
 predicate first in the `And`), `9fec2a6f` (-0.08 %) and `eb13fa43` (-0.04 %).
+
+### Hundred-and-ninth pass — this session's close at `96b85558`
+
+Two code commits, one candidate: `(-120)`'s empty-equip-grant defect
+(`dc829911`) and `(-121)`'s event-kind retain on the gate it exposed
+(`0c4d6ece`). Off `f2793cd5`, the largest pass in this file.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,075 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved across both,
+        determinism + thread_determinism green in-suite
+clippy  --workspace --exclude crabomination_client --all-targets   clean,
+        and `-p crabomination --all-targets --features trig-census`
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant on both commits. determinism ok. games_per_s 206-215,
+        host_calib_ms 53, peak_rss_mib 28.2-28.8, `release-fast` + mimalloc
+        (NOT the `release` build the rows above are on — the invariant
+        columns transfer, `games_per_s` and `bin_bytes` do not).
+
+Ir, release-fast --no-default-features, --a gang --b gang --games 6
+--threads 1 --seed 1, `f2793cd5` -> `0c4d6ece`:
+                       fixed          cube           sealed
+  (-120) the bit      -2.9565 %      -0.6237 %      -0.0000 %
+  (-121) the retain   -0.0141 %      -1.9733 %      -0.0163 %
+  together            -2.970  %      -2.585  %      -0.016  %
+
+trig-census, the dispatch walk's element visits as a share of the board it
+would walk unaided — the pass's own before/after:
+                       fixed          cube           sealed
+  at f2793cd5          33.36 %        53.92 %        32.45 %
+  at 0c4d6ece          15.47 %        28.25 %        32.45 %
+  grant-live dispatches  8,724 -> 0    17,000 -> 0    0 -> 0
+```
+
+⚠ **`sealed` is the control and it is exactly flat by construction** — its
+census read zero grant-live dispatches before the pass and after it, so
+neither commit can touch it, and 92 Ir / 419 k Ir out of 2.57 G is what this
+instrument's noise floor looks like on a run that genuinely changed nothing.
+`(-110)` asked for a null control; this is one that was *predicted*, not
+found.
 
 ### Hundred-and-eighth pass — this session's close at `cc95793f`
 
