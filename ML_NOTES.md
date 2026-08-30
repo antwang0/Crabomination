@@ -3408,3 +3408,67 @@ reference, so it is a program decision, not a code one. On the flip:
 re-run `.ladder/run_r53_targeteval.sh` (parked on a pool property),
 re-run the zero-incidence flags (walkerchip, buff2for1, convlands,
 impulse), and run `--feature-census` before sizing anything new.
+
+## Replay diagnostic: the client bot's combat judgment (2026-08-31)
+
+Fifteen human-vs-bot client games from 2026-08-30 (`replays/replay-17881*.jsonl`,
+with the shadow decision logs in `replays/decisions.jsonl/` — local, not
+committed), reconstructed board-by-board with the decision logs' bot
+counterfactuals. Both reported failure modes are real, reproducible, and
+mechanically distinct. The client pilot under test:
+`MctsBot { iterations: 64, weights: net_eval_det1, ..default }`
+(`server/lobby.rs:44`) — and `search_combat` is off in that default, so
+every attack declaration fell through to the heuristic's one-turn sims
+with their settled leaves scored by the CHAMPION NET, not the material
+eval.
+
+**Under-attack, the smoking gun.** Game 5 (replay-1788118995-5), turns
+18 and 20: the bot held two Campus Composers (3/4) and a FLYING Emeritus
+of Ideation (5/5) against a defending board with no flyer and no reach —
+five unblockable damage a turn, declined twice, at 3–8 life against
+17–23, where racing was its only line. Tap-state verified from the event
+stream: everything untapped at declare-attackers, spells sequenced
+post-combat. It lost at −2. Game 14 shows the chronic form: five parity
+turns holding the bigger board, then an attack with exactly the wrong
+subset (a 1/2 and a 4/2 into five blockers; both died for a 2/2).
+
+**Over-attack, convicted by the shadow log.** In game 3 the bot's
+counterfactual in the HUMAN's seat would have rammed Shopkeeper's Bane
+(4/2 trample) into two-then-three 2/2s on three separate turns — the
+trade-down the human declined all game while winning. The old SOS probe's
+82 %-of-eligible over-attack pattern, still alive: the one-turn sim
+prices "even trade plus chip damage" positive, sees no tempo, and casts
+nothing for the defender (the standing open lead).
+
+**Three apparent errors that are not** (recorded so the next reader
+doesn't re-flag them): Moseo attacking into bigger ground creatures
+flies; the 0-power Pensive Professor attacks are Increment payoffs —
+both seats make them; Rancorous Archaic reads 2/2 printed but enters
+with converge counters, so the human attacks the bot declined were with
+a much larger trampler than a naive replay read shows.
+
+**Mechanism.** The r40 census finding, observed in the wild: the sims'
+settled post-combat leaves are a state shape the v5-era champion never
+trained on (two-thirds of what gets scored; r44 proved the error is
+bias). Compounding it at lopsided life: the calibrated win head
+SATURATES — the documented histogram failure ("a flat landscape in which
+every candidate line scores the same... turns a better predictor into a
+worse player"). At 3-vs-23, "attack with the unblockable flyer" and
+"hold everything" both score ≈0 and the tie goes to passivity. That is
+the game-5 hold, exactly.
+
+**Remedies, in the order to try them:**
+1. *Saturation fallback* (small, heuristic-level): when the net's win
+   probability is in the saturated tails, hand the decision's scoring
+   back to the material eval, which stays discriminative there. The
+   ply-taper blend (`ply_blend_factor`) is the existing precedent for
+   muting the net's voice where it is known-bad. Flag + r52-style gate;
+   note the ladder may under-read it (both mirror seats saturate
+   together, and saturated positions are often already decided) — the
+   client-facing quality argument stands independent of the ladder
+   number, the same shape as the determinized-search adoption.
+2. *head_leaf* (queued, the real fix): a leaf head trained on
+   settled/leaf-matched rows, consumed by sims and search only. These
+   replays are its first client-visible evidence.
+3. The over-attack half stays with the standing open lead (sims that
+   respect the defender's open mana / cast for both sides).
