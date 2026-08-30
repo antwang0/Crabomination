@@ -44,9 +44,13 @@ sixty-seventh pass, so don't re-take that.
    the inline buffer**; `for x in v` vs `for &x in &v` was worth -0.19 / -0.22 / -0.18 %
    on one 72-byte site and inverted the sign of `(-106)`. (c) Rank an allocation by its
    `--separate-callers=3` **context**, not its function.
-5. **Allocator, 11.2 % and 1,384,794 allocations at ~209 Ir a round trip.** The reserve
-   half is closed (`(-103)`) and the largest single context is taken (`(-106)`,
-   `compute_permanent_pass`'s `sorted`, 4.4 % of every malloc). **Next is `(-104)`** —
+5. **Allocator, 11.2 % and 1,384,794 allocations at ~209 Ir a round trip.** `(-103)`'s
+   reserve half was NOT closed — it had divided the `grow_one` table only, and the
+   `do_reserve_and_handle` table had one row above 1.5 a call (`(-108)`,
+   `auto_tap_for_cost_inner`, -0.34 / -0.29 / -0.36 % and -0.34 % of the actor;
+   **`Vec::append` is a reserve site and shows in neither push census**). The largest
+   single context is taken (`(-106)`, `compute_permanent_pass`'s `sorted`, 4.4 % of every
+   malloc). **Next is `(-104)`** —
    the `Vec<GameEvent>` `resolve_effect` / `activate_ability_inner` *return*, 46,258
    allocations, census done to the one friction (event order, not the borrow checker).
    After that: `computed_permanent_hinted`'s 201,780 `Arc`s (`(-92)` lead 2).

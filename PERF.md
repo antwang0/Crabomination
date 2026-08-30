@@ -9332,6 +9332,57 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-third pass (6) — `(-103)`'s division had a second table, and it names one row on every pool
+
+**`fixed` -0.336 % / `cube` -0.288 % / `sealed` -0.356 %**, and
+**`selfplay_train` -0.343 %**, off `927aa505` (`a019fee3`).
+
+`(-103)` ranked `RawVec::grow_one`'s callers by growths per **call** and took
+every row above 1.5. **It divided one table.** `grow_one` is the `push` path;
+`do_reserve_and_handle` is the `reserve` / `extend` / `append` path and is
+159,482 of `finish_grow`'s 440,455 calls. Nobody had divided it. Doing so
+names exactly one row above the threshold, on both instruments:
+
+```text
+  auto_tap_for_cost_inner   cube    19,306 growths / 11,250 calls = 1.72
+                            actor   51,112 growths / 26,476 calls = 1.93
+```
+
+The function opens `events` empty and `append`s each tapped source's
+resolution into it, so a five-source payment walks 0->4->8->16 through
+`Vec::append`'s own reserve. One `events.reserve(16)` on the first append,
+guarded on emptiness so a payment that taps nothing allocates nothing.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 927aa505
+  fixed     885,993,893 ->   883,014,888   -0.336 %
+  cube    2,640,805,085 -> 2,633,198,611   -0.288 %
+  sealed  2,619,474,584 -> 2,610,142,425   -0.356 %
+  actor   5,938,457,883 -> 5,918,096,696   -0.343 %   (11,899 rows both sides)
+
+cube — its own reserve edge 19,306 -> 8,680 growths, 10.40 M -> 1.92 M Ir
+  _int_malloc            64,253,006 -> 62,304,931   -1.95 M
+  realloc                 9,802,651 ->  8,651,814   -1.15 M
+  _int_realloc            6,812,357 ->  6,003,254   -0.81 M
+  _int_free_merge_chunk   8,755,033 ->  8,003,546   -0.75 M
+  _int_free              84,676,428 -> 83,994,770   -0.68 M
+  __memcpy               72,894,046 -> 72,234,962   -0.66 M
+  finish_grow            15,047,360 -> 14,613,920   -0.43 M
+  auto_tap_for_cost_inner 7,200,206 ->  7,215,250   +0.02 M   (the guard)
+```
+
+**Two things generalise.** (a) **A rule that ranks one table has to be
+re-applied to every table that reaches the same allocator.** `(-103)`'s own
+closing line — "the `grow_one` table has no row left that the rule takes" —
+was true and read as "the rule is spent". (b) `Vec::append` **is** a reserve
+site: it reserves `other.len()` each time, so a loop that appends N times
+walks the growth ladder exactly as N pushes would, and it does not appear in
+the `grow_one` table at all.
+
+**And it is the third change on this branch to transfer to the actor at its
+own rate** — -0.29 % of `cube` against -0.34 % of `selfplay_train`.
+
 ### Hundred-and-third pass (5) — the recorder's de-dup key was a second copy of the pair; the ACTOR falls 1.36 %
 
 **`selfplay_train` 6,020,307,568 -> 5,938,457,883, -1.360 %** off `bb67895a`
@@ -16093,6 +16144,30 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-108) `(-103)`'s DIVISION APPLIES TO EVERY TABLE THAT REACHES
+`finish_grow`, NOT JUST `grow_one` — AND THE SECOND TABLE HAD ONE ROW LEFT.
+TAKEN AT `a019fee3` FOR -0.336 / -0.288 / -0.356 % AND -0.343 % OF THE
+ACTOR.** `do_reserve_and_handle` is the `reserve` / `extend` / `append` path
+and 159,482 of `finish_grow`'s 440,455 calls; divided by call count it names
+`auto_tap_for_cost_inner` at 1.72 (`cube`) and 1.93 (actor). Log has the
+ledger. **`Vec::append` is a reserve site** — it reserves `other.len()` every
+time, so an append loop walks the growth ladder exactly as pushes would and
+appears in *neither* the `grow_one` table nor any push census.
+
+**What the second table has left, at `927aa505`, `cube`:**
+
+```text
+  37,868  Vec::from_iter (nested)          diffuse, ~93 callers ((-96))
+  19,306  auto_tap_for_cost_inner          TAKEN -> 8,680
+  11,506  dispatch_triggers_for_events     0.14 a call — a first allocation
+   8,146  mana_source_table                already reserved at (-103)
+   4,704  resolve_combat                   already reserved at (-103)
+```
+
+and on the actor `encode_state`'s 66,485 is second only to `Vec::from_iter` —
+that one is `(-107)`, and it is a first allocation per group rather than a
+re-growth, so a reserve moves it and only a different buffer removes it.
 
 **(-107) THE ACTOR HAS TWO ALLOCATION ROWS `--bench` CANNOT SEE, AND ONE OF
 THEM IS THE SECOND-LARGEST `reserve` GROWER IN THE PROGRAM.** Read off the
