@@ -99,6 +99,16 @@ sixty-seventh pass, so don't re-take that.
    rank it at its long-run share, which is ~0. That lens refuted a 0.459 %
    candidate without a build and found candle's net init charged whole to a
    60-game actor profile.
+5. **CARDS — the lane is open and it is not mined.** Buckets 4 and 10 of
+   INCOMPLETE_CARDS closed this run (five defects, of which one was an invented
+   card and one was a class of 41), and **every one was found by re-reading a
+   tracker row against the oracle cache rather than by trusting the row.** Three
+   of the rows were wrong in both directions: a card already fixed, a card
+   broken differently than the row said, a row right about the symptom and
+   blind to the cause under it. Two new `scripts/audit_*` cross-reference a
+   source field against the cache; the pattern generalises to any field whose
+   default is the wrong answer. Open: bucket 6 (Phyrexian mana, Mox Diamond),
+   bucket 7 (whole keyword mechanics), bucket 8 (copy-token), one SOS card.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
