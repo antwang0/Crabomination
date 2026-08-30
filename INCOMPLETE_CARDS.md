@@ -405,6 +405,36 @@ creatures, counting themselves toward their own affinity; 9 artifact creatures
 missing Artifact; 6 enchantment creatures missing Enchantment; 13 tribal spells
 missing Kindred.
 
+**The keyword column then came down 48 -> 23 the same way, and 25 of the 48
+were the reader.** A flat `Keyword::(\w+)` scan read the keyword inside a
+*payload* as printed, so `CantBeBlockedExceptBy(HasKeyword(Flying))` — the
+right primitive for "can't be blocked except by creatures with flying" — made
+five correct cards read as fliers; a file-local `fn ward_1() -> Keyword` read
+as no keyword; and `HexproofFrom*` / `ProtectionFromMatching` are what Scryfall
+reports as plain "Hexproof" / "Protection". The eleven real ones were three
+unprinted evasion keywords (Tempest Angler, Outcaster Trailblazer, Aquastrand
+Spider), Daxos's Indestructible, Feral Throwback's Trample, The Locust God's
+Haste (its *tokens* have it), Moonshadow's Flying-for-Menace, Kitesail
+Larcenist's missing Ward {1}, Azorius First-Wing's missing protection from
+enchantments, and two cards whose printed *grant* had been flattened to a
+static keyword (Putrid Imp, Voltaic Brawler).
+
+**The 23 that remain are modelling choices, not defects** — a keyword standing
+in for spelled-out text (Frost Titan's ward, Exalted Angel's lifelink,
+Necromancy's flash, Mistform Ultimus's changeling) or a conditional/granted one
+(Paradise Druid's untapped hexproof, three Goblins' haste, prowess-as-a-trigger,
+granted vigilance). Closing that residue is shape work on the filter.
+
+**And the stat columns are now clean while the EFFECT trees have never been
+cross-referenced at all.** Two of the eleven turned up cards whose printed
+*text* does not match either — Tempest Angler prints "whenever you cast a
+noncreature spell, put a +1/+1 counter on this creature" and ships an ETB
+scry 2; Outcaster Trailblazer prints an ETB mana, a power-4 draw trigger and
+plot {2}{G}, and ships a "cast a spell with mana value 5+" draw-and-token.
+**Neither is visible to any column this audit has**, and both were found only
+because a keyword row pointed at the card. That is the next audit: the oracle
+text against the effect tree.
+
 **The reusable half is what it cost to make those columns believable.** Four
 distinct reading bugs came out of getting there and three were already wrong
 for the audit's *existing* columns — a card's body ran past the next private

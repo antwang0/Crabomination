@@ -76,8 +76,16 @@ sixty-seventh pass, so don't re-take that.
    for the *existing* columns. Disbelieve a class of findings too large to be true and
    check three of its rows in the source; this run the two largest classes were reader
    bugs and the four smallest were the real defects. Still open: INCOMPLETE_CARDS buckets
-   6 / 7 / 8, 3 dead primitives, `audit_dropped_may`'s 327 rows and the keyword column's
-   48 — all four **noise until someone teaches the filter the shapes**.
+   6 / 7 / 8 and 3 dead primitives. The keyword column came down the same way
+   (48 -> 23, and **25 of the 48 were the reader**: a payload's keyword read as printed,
+   a `fn ward_1() -> Keyword` read as none, `HexproofFrom*` read as not-Hexproof); its 23
+   survivors are modelling choices, and `audit_dropped_may`'s 327 rows are still noise —
+   both want shape work on the filter, not card work.
+   **THE NEXT AUDIT IS ORACLE TEXT vs THE EFFECT TREE.** Every printed *characteristic* is
+   now checked and every one is clean; nothing has ever checked what a card *does*. Two
+   cards fell out sideways this run — Tempest Angler ships an ETB scry for a
+   "+1/+1 counter on noncreature cast", Outcaster Trailblazer ships a mana-value-5 draw
+   for an ETB-mana-and-power-4 trigger — and both were invisible to every column here.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
