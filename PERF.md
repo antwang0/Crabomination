@@ -1959,16 +1959,17 @@ them — reviewability, merge conflicts with a concurrent session — but the
 iteration loop is not one, and a mechanical move of a 34.7 k-line `impl
 GameState` block is not free of risk.
 
-**A SECOND REASON ARRIVED AT `(-109)` AND IT IS A MEASUREMENT ONE, NOT A
-BUILD ONE.** At `codegen-units = 16` with no LTO, a ten-line edit in
-`actions.rs` moved `cube` by **±0.7 %** through inlining decisions alone —
-larger than several changes this file has shipped, and enough to invert the
-sign of a change worth 2.6 M Ir. So the module sizes now bound what can be
-*attributed* in them, not just what can be reviewed. That does not make the
-split cheap or its own perf effect known (re-partitioning the CGUs is exactly
-the thing that moved), but it is the argument this section said it was
-waiting for. Anyone taking it: anchor all three pools either side, expect the
-delta to be codegen rather than code, and land it as its own commit. The lever that *does* bear on the
+**A SECOND REASON WAS PROPOSED AT `(-109)` AND `(-110)` REFUTED IT — SO THIS
+SECTION STANDS UNCHANGED, AND THE ROUND TRIP IS WORTH READING.** `(-109)`
+argued that at `codegen-units = 16` with no LTO the module sizes bound what
+can be *attributed* in them (a ten-line edit in `actions.rs` moving `cube` by
+±0.7 %), which would have made a split a measurement lever as well as a build
+one. `(-110)`'s null controls — uncalled `pub fn`s in `actions.rs` with zero
+executed instructions, one of them instantiating the very `SmallVec::extend`
+monomorphization `(-109)` blamed — read **+0.006 % at worst on three pools**.
+There is no floor to subtract: what `(-109)` saw was its own diff's content,
+not the instrument. **Splitting the oversized modules is a build-time question
+only, and this section has already answered it.** The lever that *does* bear on the
 33-41 s is the one already written down: **keep the integration-binary count
 flat or lower, and never add a new top-level `tests/*.rs`.** Twenty binaries
 is what the relink costs.
