@@ -635,7 +635,8 @@ fn pump_spells_buff_friendly_bear() {
         (catalog::lesson_in_honor(), true, 4, Some(4), None),
         (catalog::silverquill_resolve(), true, 3, Some(5), Some(Keyword::Lifelink)),
         (catalog::owlin_tactician(), true, 3, None, Some(Keyword::Flying)),
-        (catalog::mob_mentality(), false, 3, Some(3), None),
+        // Mob Mentality left this table at the 2026-08-30 type audit: it is an
+        // Aura granting trample, not a mass pump — see `stx::part_06`.
         (catalog::plant_mascot(), false, 3, Some(3), None),
     ] {
         let name = def.name;

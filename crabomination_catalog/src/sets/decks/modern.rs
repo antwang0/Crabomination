@@ -260,7 +260,7 @@ pub fn lava_dart() -> CardDefinition {
             count: 1,
         }],
         cost: cost(&[r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::DealDamage {
             to: Selector::Target(0),
@@ -2844,7 +2844,7 @@ pub fn mine_collapse() -> CardDefinition {
     CardDefinition {
         name: "Mine Collapse",
         cost: cost(&[generic(3), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::You,
@@ -2929,6 +2929,7 @@ pub fn satyr_wayfinder() -> CardDefinition {
 pub fn coldsteel_heart() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
+        supertypes: vec![Supertype::Snow],
         name: "Coldsteel Heart",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
@@ -4722,7 +4723,7 @@ pub fn pounce() -> CardDefinition {
     CardDefinition {
         name: "Pounce",
         cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Fight {
             attacker: Selector::TargetFiltered {
                 slot: 0,
@@ -7581,6 +7582,7 @@ pub fn mayhem_devil() -> CardDefinition {
 pub fn boreal_druid() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
+        supertypes: vec![Supertype::Snow],
         name: "Boreal Druid",
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
@@ -8109,11 +8111,10 @@ pub fn lumra_bellow_of_the_woods() -> CardDefinition {
 /// pattern to fire on `EntersBattlefield` of *cards* into graveyard via
 /// the `CreatureDied` listener with `OpponentControl`).
 pub fn crabomination() -> CardDefinition {
-    use crate::card::Supertype as Sup;
     CardDefinition {
         name: "Crabomination",
         cost: cost(&[generic(4), b(), b()]),
-        supertypes: vec![Sup::Legendary],
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Crab, CreatureType::Demon],
@@ -11286,7 +11287,7 @@ pub fn strangle() -> CardDefinition {
     CardDefinition {
         name: "Strangle",
         cost: cost(&[r()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
@@ -11502,7 +11503,7 @@ pub fn brain_maggot() -> CardDefinition {
     CardDefinition {
         name: "Brain Maggot",
         cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Creature, CardType::Enchantment],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Insect],
             ..Default::default()
@@ -12323,7 +12324,7 @@ pub fn red_suns_zenith() -> CardDefinition {
     CardDefinition {
         name: "Red Sun's Zenith",
         cost: cost(&[x(), r()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: Selector::Target(0),
             amount: Value::XFromCost,
@@ -14432,11 +14433,10 @@ pub fn zealous_conscripts() -> CardDefinition {
 /// deathtouch ping no longer finishes the kill — the printed "deals no
 /// combat damage this turn" rider is now honored.
 pub fn master_of_cruelties() -> CardDefinition {
-    use crate::card::Supertype as Sup;
     CardDefinition {
         name: "Master of Cruelties",
         cost: cost(&[generic(3), b(), r()]),
-        supertypes: vec![Sup::Legendary],
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Demon],
@@ -15944,7 +15944,7 @@ pub fn glaring_fleshraker() -> CardDefinition {
     CardDefinition {
         name: "Glaring Fleshraker",
         cost: cost(&[generic(2), colorless(1)]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
             ..Default::default()
@@ -15977,7 +15977,7 @@ pub fn detectives_phoenix() -> CardDefinition {
     CardDefinition {
         name: "Detective's Phoenix",
         cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Creature, CardType::Enchantment],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phoenix],
             ..Default::default()
@@ -17475,7 +17475,7 @@ pub fn rejuvenate() -> CardDefinition {
     CardDefinition {
         name: "Rejuvenate",
         cost: cost(&[generic(3), g()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(5),
@@ -18255,6 +18255,7 @@ pub fn chainers_edict() -> CardDefinition {
 pub fn mai_scornful_striker() -> CardDefinition {
     use crate::effect::shortcut::on_attack;
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         name: "Mai, Scornful Striker",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
@@ -18962,11 +18963,11 @@ pub fn blazing_rootwalla() -> CardDefinition {
 /// Trample. Madness {1}{R}. "Whenever Anje's Ravager attacks, discard your
 /// hand, then draw three cards."
 pub fn anjes_ravager() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, Supertype, TriggeredAbility};
+use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Anje's Ravager",
         cost: cost(&[generic(2), r()]),
-        supertypes: vec![Supertype::Legendary],
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vampire, CreatureType::Berserker],
@@ -20429,7 +20430,7 @@ pub fn kozileks_command() -> CardDefinition {
     CardDefinition {
         name: "Kozilek's Command",
         cost: cost(&[x(), colorless(2)]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Instant, CardType::Kindred],
         effect: Effect::ChooseN {
             picks: vec![0, 2],
             modes: vec![
@@ -24414,7 +24415,7 @@ pub fn boggart_shenanigans() -> CardDefinition {
     CardDefinition {
         name: "Boggart Shenanigans",
         cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Enchantment],
+        card_types: vec![CardType::Enchantment, CardType::Kindred],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Goblin],
             ..Default::default()
@@ -25878,6 +25879,7 @@ pub fn profts_eidetic_memory() -> CardDefinition {
     use crate::effect::shortcut::etb;
     use crate::game::TurnStep;
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         name: "Proft's Eidetic Memory",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Enchantment],
@@ -26094,7 +26096,7 @@ pub fn pinnacle_emissary() -> CardDefinition {
     CardDefinition {
         name: "Pinnacle Emissary",
         cost: cost(&[generic(1), u(), r()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
@@ -32903,7 +32905,7 @@ pub fn thing_in_the_ice() -> CardDefinition {
         name: "Awoken Horror",
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Horror],
+            creature_types: vec![CreatureType::Kraken, CreatureType::Horror],
             ..Default::default()
         },
         power: 7,
@@ -32925,7 +32927,7 @@ pub fn thing_in_the_ice() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Wall],
+            creature_types: vec![CreatureType::Horror],
             ..Default::default()
         },
         toughness: 4,
@@ -37910,7 +37912,7 @@ pub fn elvish_promenade() -> CardDefinition {
     CardDefinition {
         name: "Elvish Promenade",
         cost: cost(&[generic(3), g()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::CountMatching {
@@ -39016,7 +39018,7 @@ pub fn sphinx_of_the_steel_wind() -> CardDefinition {
     CardDefinition {
         name: "Sphinx of the Steel Wind",
         cost: cost(&[generic(5), w(), u(), b()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Sphinx],
             ..Default::default()
@@ -39270,7 +39272,7 @@ pub fn spirit_of_the_labyrinth() -> CardDefinition {
     CardDefinition {
         name: "Spirit of the Labyrinth",
         cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Creature, CardType::Enchantment],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
@@ -40535,7 +40537,7 @@ pub fn skred() -> CardDefinition {
         name: "Skred",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        supertypes: vec![Supertype::Snow],
+        supertypes: vec![],
         effect: Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::SnowPermanentCountControlledBy(PlayerRef::You),
@@ -41127,7 +41129,7 @@ pub fn somber_hoverguard() -> CardDefinition {
     CardDefinition {
         name: "Somber Hoverguard",
         cost: cost(&[generic(5), u()]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drone],
             ..Default::default()
@@ -41149,7 +41151,7 @@ pub fn broodstar() -> CardDefinition {
         name: "Broodstar",
         dynamic_pt: Some(DynamicPt::ArtifactsControlled { base: 0 }),
         cost: cost(&[generic(8), u(), u()]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
@@ -41187,7 +41189,7 @@ pub fn carapace_forger() -> CardDefinition {
     CardDefinition {
         name: "Carapace Forger",
         cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Artificer],
             ..Default::default()
@@ -41219,7 +41221,7 @@ pub fn qumulox() -> CardDefinition {
     CardDefinition {
         name: "Qumulox",
         cost: cost(&[generic(6), u(), u()]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast],
             ..Default::default()
@@ -50262,7 +50264,7 @@ pub fn eidolon_of_rhetoric() -> CardDefinition {
     CardDefinition {
         name: "Eidolon of Rhetoric",
         cost: cost(&[generic(2), w()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Creature, CardType::Enchantment],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
@@ -50429,7 +50431,7 @@ pub fn all_is_dust() -> CardDefinition {
     CardDefinition {
         name: "All Is Dust",
         cost: cost(&[generic(7)]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
         effect: Effect::SacrificeAllMatching {
             who: Selector::Player(PlayerRef::EachPlayer),
             filter: SelectionRequirement::Permanent.and(SelectionRequirement::Colorless.negate()),
@@ -51520,7 +51522,7 @@ pub fn admonition_angel() -> CardDefinition {
     CardDefinition {
         name: "Admonition Angel",
         cost: cost(&[generic(3), w(), w(), w()]),
-        supertypes: vec![Supertype::Legendary],
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Angel],
@@ -58388,7 +58390,7 @@ pub fn thieves_fortune() -> CardDefinition {
     CardDefinition {
         name: "Thieves' Fortune",
         cost: cost(&[generic(2), u()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Instant, CardType::Kindred],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Rogue],
             ..Default::default()
@@ -58413,7 +58415,7 @@ pub fn notorious_throng() -> CardDefinition {
     CardDefinition {
         name: "Notorious Throng",
         cost: cost(&[generic(3), u()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Rogue],
             ..Default::default()
@@ -58794,7 +58796,7 @@ pub fn morsel_theft() -> CardDefinition {
     CardDefinition {
         name: "Morsel Theft",
         cost: cost(&[generic(2), b(), b()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Kindred, CardType::Sorcery],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Rogue],
             ..Default::default()
@@ -58904,7 +58906,7 @@ pub fn peppersmoke() -> CardDefinition {
     CardDefinition {
         name: "Peppersmoke",
         cost: cost(&[b()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Instant, CardType::Kindred],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Faerie],
             ..Default::default()
@@ -60396,7 +60398,7 @@ pub fn eyeblights_ending() -> CardDefinition {
     CardDefinition {
         name: "Eyeblight's Ending",
         cost: cost(&[generic(2), b()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Instant, CardType::Kindred],
         effect: Effect::Destroy {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -66344,7 +66346,7 @@ pub fn fissure() -> CardDefinition {
     CardDefinition {
         name: "Fissure",
         cost: cost(&[generic(3), r(), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
             what: target_filtered(SelectionRequirement::Creature.or(SelectionRequirement::Land)),
         },
@@ -66376,7 +66378,7 @@ pub fn seismic_spike() -> CardDefinition {
     CardDefinition {
         name: "Seismic Spike",
         cost: cost(&[generic(2), r(), r()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Land),
@@ -66393,7 +66395,7 @@ pub fn boulderfall() -> CardDefinition {
     CardDefinition {
         name: "Boulderfall",
         cost: cost(&[generic(6), r(), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(5),

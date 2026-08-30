@@ -529,10 +529,9 @@ pub fn cephalid_coliseum() -> CardDefinition {
 /// Add {U}.` `{U}, {T}: You may play the exiled card without paying its mana
 /// cost if a player has 20 or less life.`
 pub fn shelldock_isle() -> CardDefinition {
-    use crate::card::Supertype;
     CardDefinition {
         name: "Shelldock Isle",
-        supertypes: vec![Supertype::Legendary],
+        supertypes: vec![],
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             tap_add(Color::Blue),

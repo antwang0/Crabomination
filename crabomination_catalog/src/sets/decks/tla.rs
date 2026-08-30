@@ -4305,7 +4305,7 @@ pub fn white_lotus_tile() -> CardDefinition {
     CardDefinition {
         name: "White Lotus Tile",
         cost: cost(&[generic(4)]),
-        supertypes: vec![Supertype::Legendary],
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![etb(Effect::Tap {
             what: Selector::This,

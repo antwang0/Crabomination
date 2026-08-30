@@ -431,7 +431,7 @@ pub fn obsianus_golem() -> CardDefinition {
     CardDefinition {
         name: "Obsianus Golem",
         cost: cost(&[generic(6)]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Golem],
             ..Default::default()

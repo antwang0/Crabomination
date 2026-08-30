@@ -566,7 +566,7 @@ pub fn cinderclasm() -> CardDefinition {
     CardDefinition {
         name: "Cinderclasm",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
@@ -595,7 +595,7 @@ pub fn cathartic_pyre() -> CardDefinition {
     CardDefinition {
         name: "Cathartic Pyre",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
@@ -991,7 +991,7 @@ pub fn magmatic_sinkhole() -> CardDefinition {
     CardDefinition {
         name: "Magmatic Sinkhole",
         cost: cost(&[generic(5), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Delve],
         effect: Effect::Seq(vec![
             Effect::Surveil {

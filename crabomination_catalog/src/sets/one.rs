@@ -513,7 +513,7 @@ pub fn swooping_lookout() -> CardDefinition {
     CardDefinition {
         name: "Swooping Lookout",
         cost: cost(&[w()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
             ..Default::default()
@@ -630,7 +630,7 @@ pub fn cutthroat_centurion() -> CardDefinition {
     CardDefinition {
         name: "Cutthroat Centurion",
         cost: cost(&[generic(2), b()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phyrexian, CreatureType::Warrior],
             ..Default::default()
@@ -662,7 +662,7 @@ pub fn shrapnel_slinger() -> CardDefinition {
     CardDefinition {
         name: "Shrapnel Slinger",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast, CreatureType::Phyrexian],
             ..Default::default()

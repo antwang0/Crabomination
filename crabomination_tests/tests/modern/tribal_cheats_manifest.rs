@@ -724,9 +724,10 @@ fn broodstar_pt_scales_with_artifacts() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
     let star = g.add_card_to_battlefield(0, catalog::broodstar());
-    // 3 Ornithopters + Broodstar itself = 4 artifacts.
+    // Broodstar is a `Creature — Beast`, not an artifact creature (it shipped
+    // as one until 2026-08-30), so only the three Ornithopters count.
     let c = g.computed_permanent(star).unwrap();
-    assert_eq!((c.power, c.toughness), (4, 4), "*/* = artifacts you control");
+    assert_eq!((c.power, c.toughness), (3, 3), "*/* = artifacts you control");
 }
 
 /// Carapace Forger gets +1/+1 while you control three or more artifacts.
@@ -734,8 +735,10 @@ fn broodstar_pt_scales_with_artifacts() {
 fn carapace_forger_grows_with_artifacts() {
     let mut g = two_player_game();
     let cf = g.add_card_to_battlefield(0, catalog::carapace_forger());
-    assert_eq!(g.computed_permanent(cf).unwrap().power, 2, "just the Forger = 1 artifact");
-    for _ in 0..2 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    // `Creature — Elf Artificer`, not an artifact creature, so it does not
+    // count itself (it shipped as one until 2026-08-30).
+    assert_eq!(g.computed_permanent(cf).unwrap().power, 2, "no artifacts yet");
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
     assert_eq!(g.computed_permanent(cf).unwrap().power, 3, "three artifacts → +1/+1");
 }
 

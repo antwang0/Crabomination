@@ -830,6 +830,7 @@ pub fn tomik_wielder_of_law() -> CardDefinition {
 /// wall of toughness and turns a creature into a draw engine.
 pub fn the_pride_of_hull_clade() -> CardDefinition {
     CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
         keywords: vec![Keyword::Defender],
         self_cost_reduction_per: Some((
             Value::TotalToughnessControlled,

@@ -14,7 +14,7 @@ pub fn searing_wind() -> CardDefinition {
     CardDefinition {
         name: "Searing Wind",
         cost: cost(&[generic(8), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: deal(5, target()),
         ..Default::default()
     }

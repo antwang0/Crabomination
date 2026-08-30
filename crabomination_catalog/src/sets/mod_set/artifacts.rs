@@ -1375,6 +1375,7 @@ pub fn the_great_henge() -> CardDefinition {
     use crate::effect::Predicate;
     use crate::mana::{Color, g};
     CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
         name: "The Great Henge",
         cost: cost(&[generic(7), g(), g()]),
         card_types: vec![CardType::Artifact],

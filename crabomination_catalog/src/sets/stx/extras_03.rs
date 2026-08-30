@@ -475,7 +475,7 @@ pub fn furnace_hellkite() -> CardDefinition {
     CardDefinition {
         name: "Furnace Hellkite",
         cost: cost(&[generic(5), r(), r()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dragon],
             ..Default::default()
@@ -804,6 +804,7 @@ pub fn quandrix_quickener() -> CardDefinition {
 pub fn search_for_glory() -> CardDefinition {
     use crate::card::Supertype;
     CardDefinition {
+        supertypes: vec![Supertype::Snow],
         name: "Search for Glory",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
@@ -954,7 +955,7 @@ pub fn discover_the_formula() -> CardDefinition {
     CardDefinition {
         name: "Discover the Formula",
         cost: cost(&[generic(4), u(), u()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -1167,7 +1168,7 @@ pub fn sequence_engine() -> CardDefinition {
     CardDefinition {
         name: "Sequence Engine",
         cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Artifact],
         effect: Effect::RevealUntilFind {
             who: PlayerRef::You,
             find: SelectionRequirement::HasCardType(CardType::Instant)
@@ -1513,7 +1514,7 @@ pub fn grim_bounty() -> CardDefinition {
     CardDefinition {
         name: "Grim Bounty",
         cost: cost(&[generic(2), b(), b()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -1700,7 +1701,7 @@ pub fn slip_through_space() -> CardDefinition {
     CardDefinition {
         name: "Slip Through Space",
         cost: cost(&[u()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),

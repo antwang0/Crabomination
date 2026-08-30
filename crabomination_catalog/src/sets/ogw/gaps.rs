@@ -129,7 +129,7 @@ pub fn mirrorpool() -> CardDefinition {
     CardDefinition {
         name: "Mirrorpool",
         card_types: vec![CardType::Land],
-        supertypes: vec![crate::card::Supertype::Legendary],
+        supertypes: vec![],
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
             effect: StaticEffect::EntersTapped {

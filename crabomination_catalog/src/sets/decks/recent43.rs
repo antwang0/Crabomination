@@ -155,6 +155,7 @@ pub fn buried_ruin() -> CardDefinition {
 /// your graveyard on top of your library.`
 pub fn academy_ruins() -> CardDefinition {
     CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
         name: "Academy Ruins",
         card_types: vec![CardType::Land],
         activated_abilities: vec![

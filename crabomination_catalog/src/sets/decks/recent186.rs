@@ -72,7 +72,7 @@ pub fn inquisitive_glimmer() -> CardDefinition {
     CardDefinition {
         name: "Inquisitive Glimmer",
         cost: cost(&[w(), u()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Creature, CardType::Enchantment],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fox, CreatureType::Glimmer],
             ..Default::default()

@@ -776,7 +776,7 @@ pub fn treasure_cruise() -> CardDefinition {
     CardDefinition {
         name: "Treasure Cruise",
         cost: cost(&[generic(7), u()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Delve],
         effect: Effect::Draw {
             who: Selector::You,

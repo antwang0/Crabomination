@@ -580,24 +580,33 @@ fn team_pump_spells_pump_and_grant_keyword() {
 }
 
 #[test]
-fn heroic_defiance_pumps_and_grants_hexproof_and_indestructible() {
+fn heroic_defiance_and_mob_mentality_are_auras() {
+    // Both shipped as synthesised Instants under names Scryfall already owns
+    // (2026-08-30). Heroic Defiance is a {1}{W} Aura for +3/+3; Mob Mentality
+    // is a {R} Aura granting trample.
     use crabomination::game::types::Target;
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::heroic_defiance());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Defiance castable");
-    drain_stack(&mut g);
-    let bear_card = g.battlefield_find(bear).expect("Bear");
-    assert!(bear_card.has_keyword(&Keyword::Hexproof));
-    assert!(bear_card.has_keyword(&Keyword::Indestructible));
-    assert_eq!(bear_card.power(), 3, "Bear pumped to 3 power");
-    assert_eq!(bear_card.toughness(), 3);
+    for (def, dp, kw) in [
+        (catalog::heroic_defiance(), 3, None),
+        (catalog::mob_mentality(), 0, Some(Keyword::Trample)),
+    ] {
+        let name = def.name;
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, def);
+        g.players[0].mana_pool.add(Color::White, 2);
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).unwrap_or_else(|e| panic!("{name} castable: {e:?}"));
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(bear).expect("bear alive");
+        assert_eq!(cp.power, 2 + dp, "{name}: enchanted power");
+        if let Some(k) = kw {
+            assert!(cp.keywords().contains(&k), "{name}: grants {k:?}");
+        }
+    }
 }
 
 #[test]

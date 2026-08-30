@@ -410,7 +410,7 @@ pub fn brimstone_trebuchet() -> CardDefinition {
     CardDefinition {
         name: "Brimstone Trebuchet",
         cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Wall],
             ..Default::default()
@@ -7895,7 +7895,7 @@ pub fn surging_flame() -> CardDefinition {
     CardDefinition {
         name: "Surging Flame",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: deal(2, target_any()),
         triggered_abilities: vec![ripple(4)],
         ..Default::default()
@@ -7919,27 +7919,30 @@ pub fn surging_dementia() -> CardDefinition {
     }
 }
 
-/// Surging Might — {G} Instant. Ripple 4. Target creature gets +1/+1 and gains
-/// trample until end of turn.
+/// Surging Might — {2}{G} Aura. Enchanted creature gets +2/+2. Ripple 4.
+///
+/// It shipped as an Instant that pumped +1/+1 and granted trample — a card
+/// that does not exist (2026-08-30).
 pub fn surging_might() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
     use crate::effect::shortcut::{ripple, target_filtered};
     CardDefinition {
         name: "Surging Might",
         cost: cost(&[generic(2), g()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Trample,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        }),
         triggered_abilities: vec![ripple(4)],
         ..Default::default()
     }
@@ -12157,7 +12160,7 @@ pub fn rotten_reunion() -> CardDefinition {
     CardDefinition {
         name: "Rotten Reunion",
         cost: cost(&[b()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(cost(&[generic(1), b()]))],
         effect: Effect::Seq(vec![
             Effect::Move {
@@ -13215,7 +13218,7 @@ pub fn slaying_fire() -> CardDefinition {
     CardDefinition {
         name: "Slaying Fire",
         cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
             to: Selector::Target(0),
             amount: Value::IfPred {

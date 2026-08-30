@@ -198,7 +198,7 @@ pub fn savage_punch() -> CardDefinition {
     CardDefinition {
         name: "Savage Punch",
         cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::If {
                 cond: Predicate::FerociousActive {

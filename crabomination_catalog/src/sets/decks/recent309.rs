@@ -175,6 +175,7 @@ pub fn make_your_own_luck() -> CardDefinition {
 /// graveyards-and-exile tax is dropped — no cast-origin spell filter yet.)
 pub fn aven_interrupter() -> CardDefinition {
     CardDefinition {
+        supertypes: vec![],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CounterSpellToZone {
@@ -349,6 +350,7 @@ pub fn vraska_joins_up() -> CardDefinition {
 /// flashback always costs the card's mana cost.)
 pub fn archmages_newt() -> CardDefinition {
     CardDefinition {
+        supertypes: vec![],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Salamander, CreatureType::Mount],
             ..Default::default()

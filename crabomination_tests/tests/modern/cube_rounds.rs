@@ -1501,7 +1501,7 @@ fn sundering_eruption_front_face_burns_a_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let erupt = g.add_card_to_hand(0, catalog::sundering_eruption());
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: erupt,
@@ -1521,13 +1521,13 @@ fn sundering_eruption_back_face_plays_as_a_mountain() {
     let id = g.add_card_to_hand(0, catalog::sundering_eruption());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::PlayLandBack(id))
-        .expect("Mount Tyrhus plays via PlayLandBack");
+        .expect("Volcanic Fissure plays via PlayLandBack");
     drain_stack(&mut g);
     let card = g.battlefield_find(id).expect("on battlefield");
-    assert_eq!(card.definition.name, "Mount Tyrhus");
+    assert_eq!(card.definition.name, "Volcanic Fissure");
     assert!(card.definition.subtypes.land_types.contains(&crabomination::card::LandType::Mountain));
     // ETB-tap trigger taps it.
-    assert!(card.tapped, "Mount Tyrhus enters tapped");
+    assert!(card.tapped, "Volcanic Fissure enters tapped");
 }
 
 #[test]

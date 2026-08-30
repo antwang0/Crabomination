@@ -771,7 +771,7 @@ pub fn pit_fight() -> CardDefinition {
     CardDefinition {
         name: "Pit Fight",
         cost: cost(&[generic(1), hybrid(Color::Red, Color::Green)]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Fight {
             attacker: Selector::TargetFiltered {
                 slot: 0,

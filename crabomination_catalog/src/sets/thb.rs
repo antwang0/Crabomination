@@ -3003,7 +3003,7 @@ pub fn sea_gods_scorn() -> CardDefinition {
     CardDefinition {
         name: "Sea God's Scorn",
         cost: cost(&[generic(4), u(), u()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         affinity_filter: Some(
             SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
         ),

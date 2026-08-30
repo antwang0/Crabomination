@@ -1795,7 +1795,7 @@ pub fn sacred_fire() -> CardDefinition {
     CardDefinition {
         name: "Sacred Fire",
         cost: cost(&[r(), w()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::DealDamage {

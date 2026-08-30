@@ -573,7 +573,7 @@ pub fn return_of_the_wildspeaker() -> CardDefinition {
     CardDefinition {
         name: "Return of the Wildspeaker",
         cost: cost(&[generic(4), g()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::Draw {
                 who: Selector::You,

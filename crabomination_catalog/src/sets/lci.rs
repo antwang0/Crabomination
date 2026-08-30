@@ -1768,6 +1768,7 @@ pub fn family_reunion() -> CardDefinition {
 /// creature or artifact: put a +1/+1 counter on Bartolomé.
 pub fn bartolome_del_presidio() -> CardDefinition {
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         name: "Bartolomé del Presidio",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Creature],

@@ -18,6 +18,7 @@ use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, x};
 /// enters, you gain 1 life; if it's a Spider, put a +1/+1 counter on it.
 pub fn aunt_may() -> CardDefinition {
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         name: "Aunt May",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],

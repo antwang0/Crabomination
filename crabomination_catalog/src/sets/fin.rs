@@ -8491,7 +8491,7 @@ pub fn eden_seat_of_the_sanctum() -> CardDefinition {
     CardDefinition {
         name: "Eden, Seat of the Sanctum",
         card_types: vec![CardType::Land],
-        supertypes: vec![Supertype::Legendary],
+        supertypes: vec![],
         subtypes: Subtypes {
             land_types: vec![LandType::Town],
             ..Default::default()

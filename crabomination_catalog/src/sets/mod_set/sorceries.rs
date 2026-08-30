@@ -61,7 +61,7 @@ pub fn chandras_pyrohelix() -> CardDefinition {
     CardDefinition {
         name: "Chandra's Pyrohelix",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::DealDamageDivided {
             retaliate_to_source: false,
             total: Value::Const(2),
@@ -289,7 +289,7 @@ pub fn rakshasas_bargain() -> CardDefinition {
 
 /// Sundering Eruption — {2}{R} Sorcery. Sundering Eruption deals 3 damage
 /// to target creature or planeswalker. Modal-double-faced; the back face
-/// (Mount Tyrhus) is a Mountain that enters tapped and taps for {R}.
+/// (Volcanic Fissure) is a Mountain that enters tapped and taps for {R}.
 ///
 /// The front (Sorcery) is cast normally; the back is played via
 /// `GameAction::PlayLandBack`. The `back_face` slot only swaps in the
@@ -299,7 +299,7 @@ pub fn sundering_eruption() -> CardDefinition {
     use super::super::etb_tap;
     use crate::card::LandType;
     let back = CardDefinition {
-        name: "Mount Tyrhus",
+        name: "Volcanic Fissure",
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![LandType::Mountain],
@@ -311,8 +311,8 @@ pub fn sundering_eruption() -> CardDefinition {
     };
     CardDefinition {
         name: "Sundering Eruption",
-        // Real Oracle: `{1}{R}` Sorcery (DSK).
-        cost: cost(&[generic(1), r()]),
+        // Real Oracle: `{2}{R}` Sorcery (DSK); the back is Volcanic Fissure.
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
@@ -332,7 +332,7 @@ pub fn big_score() -> CardDefinition {
     CardDefinition {
         name: "Big Score",
         cost: cost(&[generic(3), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard {
             count: 1,
             filter: None,
@@ -450,7 +450,7 @@ pub fn boil() -> CardDefinition {
     CardDefinition {
         name: "Boil",
         cost: cost(&[generic(3), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::HasLandType(LandType::Island)),
             body: Box::new(Effect::Destroy {
@@ -777,7 +777,7 @@ pub fn inspired_charge() -> CardDefinition {
     CardDefinition {
         name: "Inspired Charge",
         cost: cost(&[generic(2), w(), w()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1055,7 +1055,7 @@ pub fn flame_sweep() -> CardDefinition {
     CardDefinition {
         name: "Flame Sweep",
         cost: cost(&[generic(2), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature.and(
                 SelectionRequirement::Not(Box::new(SelectionRequirement::HasKeyword(
@@ -1231,7 +1231,7 @@ pub fn grapple_with_the_past() -> CardDefinition {
     CardDefinition {
         name: "Grapple with the Past",
         cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Mill {
                 who: Selector::You,

@@ -195,7 +195,7 @@ pub fn boggart_mischief() -> CardDefinition {
     CardDefinition {
         name: "Boggart Mischief",
         cost: cost(&[generic(2), b()]),
-        card_types: vec![CardType::Enchantment],
+        card_types: vec![CardType::Enchantment, CardType::Kindred],
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Blight 1 to create two Goblins?".into(),
             body: Box::new(Effect::Seq(vec![

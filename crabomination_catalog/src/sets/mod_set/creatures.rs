@@ -6271,7 +6271,7 @@ pub fn bitterblossom() -> CardDefinition {
     CardDefinition {
         name: "Bitterblossom",
         cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Enchantment],
+        card_types: vec![CardType::Enchantment, CardType::Kindred],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Faerie],
             ..Default::default()

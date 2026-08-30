@@ -126,6 +126,16 @@ def creature_subtypes_ref(card, face=None):
 # pre-2021 printing of `Kindred`. Anything outside these two sets (a Dungeon,
 # a Sticker, an Attraction's "Artifact Attraction" oddities) makes the line
 # unreadable for this audit and the card is SKIPPED, not flagged.
+# The variant NAME, however the file spells the path. `modern.rs` writes
+# `Sup::Legendary` (`use crate::card::Supertype as Sup`), and a scan keyed on
+# `Supertype::` read an empty list on every one of those — 30-odd correct
+# legends reported as missing the supertype (2026-08-30).
+ST_VARIANT = re.compile(r"\b(?:\w+::)*(Legendary|Basic|Snow|World|Ongoing)\b")
+CT_VARIANT = re.compile(
+    r"\b(?:\w+::)*(Land|Creature|Artifact|Enchantment|Planeswalker|Battle|Instant"
+    r"|Sorcery|Kindred|Scheme|Vanguard|Conspiracy|Plane|Phenomenon)\b"
+)
+
 REF_SUPERS = {"Basic", "Legendary", "Snow", "World", "Ongoing"}
 REF_TYPES = {
     "Artifact", "Battle", "Creature", "Enchantment", "Instant", "Kindred",
@@ -392,16 +402,14 @@ def helper_table(text):
         # so the two type columns can see the ~11 k cards built through a
         # helper instead of skipping them.
         for field in ("card_types", "supertypes"):
-            enum = "CardType" if field == "card_types" else "Supertype"
             for mm in own_helper_fields(body, r"\b" + field + r":\s*vec!\["):
                 v = vec_after(body, mm.start())
                 # A *constant* is a plain list of `CardType::X`. `recent311`'s
                 # `spell` helper writes `vec![if sorcery { Sorcery } else
                 # { Instant }]`, which is a parameter wearing a literal's
                 # clothes — capturing it read 85 cards as both types at once.
-                if v is not None and re.fullmatch(
-                    r"\s*(?:" + enum + r"::\w+\s*,?\s*)+", v
-                ):
+                var = ST_VARIANT if field == "supertypes" else CT_VARIANT
+                if v is not None and re.fullmatch(r"\s*(?:[\w:]+\s*,?\s*)+", v) and var.findall(v):
                     consts.setdefault(m.group(1), {})[field] = v
                 break
         if base and base.group(1) in consts:
@@ -497,7 +505,7 @@ def audit():
             # vec![CardType::Land] }` answered for the card above it. That read
             # Dominaria's Judgment and Pay No Heed — both `instant(...)` one-liners
             # — as Lands (2026-08-30).
-            cut = re.search(r"\nfn \w+", body)
+            cut = re.search(r"\n(?:pub(?:\([^)]*\))?\s+)?fn \w+", body)
             if cut:
                 body = body[: cut.start()]
             body = strip_token_literals(body)
@@ -543,12 +551,19 @@ def audit():
                 ref_supers, ref_types = ref_tl
                 ctypes = field_vec(body, "card_types", vecfns)
                 if ctypes is not None:
-                    code_types = set(re.findall(r"CardType::(\w+)", ctypes))
+                    code_types = set(CT_VARIANT.findall(ctypes))
+                    # A command-zone object shares its name with a normal card
+                    # (the Vanguard avatar "Maraxus of Keld" and the Legends
+                    # creature), and the cache is keyed by name, so the
+                    # reference is about the other one. Skip, don't flag.
+                    if code_types & {"Vanguard", "Scheme", "Plane", "Phenomenon", "Conspiracy"} \
+                            and not (code_types & ref_types):
+                        code_types = set()
                     if code_types and code_types != ref_types:
                         d["ct"].append((tag, sorted(code_types), sorted(ref_types)))
                     stv = field_vec(body, "supertypes", vecfns) or ""
-                    code_supers = set(re.findall(r"Supertype::(\w+)", stv))
-                    if code_supers != ref_supers:
+                    code_supers = set(ST_VARIANT.findall(stv))
+                    if code_types and code_supers != ref_supers:
                         d["st"].append((tag, sorted(code_supers), sorted(ref_supers)))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)

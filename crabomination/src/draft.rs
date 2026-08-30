@@ -856,7 +856,7 @@ pub fn build_draft_match_state(
 /// draft visibility) but share the same source-of-truth set of names.
 const FICTIONAL_CARD_NAMES: &[&str] = &[
     "Sundering Eruption",
-    "Mount Tyrhus",
+    "Volcanic Fissure",
 ];
 
 /// Convenience: the cube pool used as the draft pool, filtered to

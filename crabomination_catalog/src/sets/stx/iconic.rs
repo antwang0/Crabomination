@@ -158,42 +158,33 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
 
 // ── Heroic Defiance (batch 20+) ────────────────────────────────────────────
 
-/// Heroic Defiance — {1}{W} Instant.
+/// Heroic Defiance — {1}{W} Aura. Enchanted creature gets +3/+3.
 ///
-/// Printed Oracle (synthesised): "Target creature you control gets +1/+1
-/// and gains hexproof and indestructible until end of turn."
-///
-/// 2-mana protection trick — saves a creature from removal and adds
-/// +1/+1 to win the combat trade. Hexproof + indestructible covers most
-/// targeted-removal interactions in one shot. Stronger than (and so
-/// renamed from) the existing Beaming Defiance, which only grants
-/// indestructible without hexproof.
+/// It shipped as a synthesised "{1}{W} Instant: +1/+1 and hexproof and
+/// indestructible until end of turn" under a name Scryfall already owns —
+/// a synthesised card is supposed to carry a name the oracle does not
+/// (2026-08-30). The printed "unless it shares a color with the most common
+/// color among all permanents" gate wants a board-wide colour census and is
+/// the residual; the Aura is unconditional here.
 pub fn heroic_defiance() -> CardDefinition {
-    use crate::effect::Duration;
+    use crate::card::{EnchantmentSubtype, EquipBonus};
     CardDefinition {
         name: "Heroic Defiance",
         cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Hexproof,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 3,
+            toughness: 3,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

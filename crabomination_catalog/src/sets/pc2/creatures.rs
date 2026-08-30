@@ -8,7 +8,7 @@ pub fn baleful_strix() -> CardDefinition {
     CardDefinition {
         name: "Baleful Strix",
         cost: cost(&[u(), b()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bird],
             ..Default::default()

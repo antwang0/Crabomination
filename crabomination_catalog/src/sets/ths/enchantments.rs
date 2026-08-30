@@ -253,6 +253,7 @@ fn your_creatures() -> Selector {
 /// you this turn.
 pub fn spear_of_heliod() -> CardDefinition {
     CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -286,6 +287,7 @@ pub fn spear_of_heliod() -> CardDefinition {
 pub fn whip_of_erebos() -> CardDefinition {
     use crate::effect::{DelayedTriggerKind, ZoneDest};
     CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -333,6 +335,7 @@ pub fn whip_of_erebos() -> CardDefinition {
 /// artifact creature token. Activate only as a sorcery.
 pub fn hammer_of_purphoros() -> CardDefinition {
     CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

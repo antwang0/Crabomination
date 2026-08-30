@@ -5988,7 +5988,9 @@ mod recent {
 
     /// Surging Might pumps a creature +1/+1 and grants trample.
     #[test]
-    fn surging_might_pumps_and_grants_trample() {
+    fn surging_might_enchants_for_plus_two() {
+        // A {2}{G} Aura for +2/+2, not the +1/+1-and-trample Instant it
+        // shipped as (2026-08-30).
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
         let might = g.add_card_to_hand(0, catalog::surging_might());
@@ -5996,8 +5998,7 @@ mod recent {
         g.players[0].mana_pool.add_colorless(2);
         cast_at(&mut g, might, Target::Permanent(bear));
         let cp = g.computed_permanent(bear).unwrap();
-        assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
-        assert!(cp.keywords().contains(&Keyword::Trample), "gained trample");
+        assert_eq!((cp.power, cp.toughness), (4, 4), "+2/+2 from the Aura");
     }
 
     /// Surging Dementia makes each player discard; a rippled copy doubles it.

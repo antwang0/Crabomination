@@ -337,7 +337,7 @@ pub fn divine_gambit() -> CardDefinition {
     CardDefinition {
         name: "Divine Gambit",
         cost: cost(&[w(), w()]),
-        card_types: vec![CardType::Instant],
+        card_types: vec![CardType::Sorcery],
         // Push (modern_decks, batch 77): both printed clauses now ship.
         // Body 1: exile target nonland permanent. Body 2: the target's
         // *controller* may put a permanent card from their hand onto
@@ -1389,7 +1389,7 @@ pub fn fire_prophecy() -> CardDefinition {
     CardDefinition {
         name: "Fire Prophecy",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(

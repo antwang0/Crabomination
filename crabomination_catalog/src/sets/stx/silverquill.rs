@@ -42,7 +42,7 @@ pub fn spirited_companion() -> CardDefinition {
     CardDefinition {
         name: "Spirited Companion",
         cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Creature],
+        card_types: vec![CardType::Creature, CardType::Enchantment],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dog],
             ..Default::default()

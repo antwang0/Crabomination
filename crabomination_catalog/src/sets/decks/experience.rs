@@ -112,7 +112,7 @@ pub fn daxos_the_returned() -> CardDefinition {
     CardDefinition {
         name: "Daxos the Returned",
         cost: cost(&[generic(1), w(), b()]),
-        card_types: vec![CardType::Enchantment, CardType::Creature],
+        card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Soldier, CreatureType::Zombie],

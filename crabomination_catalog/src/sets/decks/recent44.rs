@@ -4,7 +4,7 @@
 use crate::card::{
     AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, SelectionRequirement as R, Selector, StaticAbility, StaticEffect, Subtypes,
-    Supertype, TriggeredAbility, Value, WardCost,
+    TriggeredAbility, Value, WardCost,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{ActivatedAbility, PlayerRef};
@@ -153,7 +153,7 @@ pub fn sundering_growth() -> CardDefinition {
     CardDefinition {
         name: "Sundering Growth",
         cost: cost(&[hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(R::Artifact.or(R::Enchantment)),
@@ -171,7 +171,7 @@ pub fn glowrider() -> CardDefinition {
     CardDefinition {
         name: "Glowrider",
         cost: cost(&[generic(2), w()]),
-        supertypes: vec![Supertype::Legendary],
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Cleric],

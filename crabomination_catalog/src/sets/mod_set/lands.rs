@@ -321,6 +321,7 @@ pub fn reflecting_pool() -> CardDefinition {
 /// The variable amount uses `Value::CreatureCountControlledBy(You)`.
 pub fn gaeas_cradle() -> CardDefinition {
     CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
         name: "Gaea's Cradle",
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {

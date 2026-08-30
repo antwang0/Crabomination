@@ -840,7 +840,7 @@ pub fn diviners_wand() -> CardDefinition {
     CardDefinition {
         name: "Diviner's Wand",
         cost: cost(&[generic(3)]),
-        card_types: vec![CardType::Artifact],
+        card_types: vec![CardType::Artifact, CardType::Kindred],
         subtypes: Subtypes {
             artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
             ..Default::default()
@@ -1527,52 +1527,32 @@ pub fn wisdom_of_the_ancients() -> CardDefinition {
 
 // ── Mob Mentality ──────────────────────────────────────────────────────────
 
-/// Mob Mentality — {R} Instant (synthesised STX Lorehold flavor).
-/// "Creatures you control get +1/+1 until end of turn. If you've cast
-/// another spell this turn, they also gain first strike until end of
-/// turn."
+/// Mob Mentality — {R} Aura. Enchanted creature has trample.
 ///
-/// A combat-step finisher — pump everyone, then upgrade with first
-/// strike if you cast a setup spell first. Wired as
-/// `Seq(ForEach(Creature & ControlledByYou) → PumpPT(+1/+1 EOT),
-///      If(SpellsCastThisTurnAtLeast(2)) → ForEach(...) → GrantKeyword(FirstStrike EOT))`.
-/// Tests: `mob_mentality_pumps_each_friendly_creature`,
-/// `mob_mentality_grants_first_strike_after_second_spell`.
+/// It shipped as a synthesised "{R} Instant: creatures you control get +1/+1,
+/// and first strike if you cast another spell" under a name Scryfall already
+/// owns — the catalog's own rule is that a synthesised card carries a name the
+/// oracle does not (2026-08-30). The printed card's second clause ("whenever
+/// all non-Wall creatures you control attack, enchanted creature gets +X/+0")
+/// wants an all-attack trigger and is the residual.
 pub fn mob_mentality() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
     CardDefinition {
         name: "Mob Mentality",
         cost: cost(&[r()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                body: Box::new(Effect::PumpPT {
-                    what: Selector::TriggerSource,
-                    power: Value::Const(1),
-                    toughness: Value::Const(1),
-                    duration: Duration::EndOfTurn,
-                }),
-            },
-            Effect::If {
-                cond: Predicate::SpellsCastThisTurnAtLeast {
-                    who: PlayerRef::You,
-                    at_least: Value::Const(2),
-                },
-                then: Box::new(Effect::ForEach {
-                    selector: Selector::EachPermanent(
-                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                    ),
-                    body: Box::new(Effect::GrantKeyword {
-                        what: Selector::TriggerSource,
-                        keyword: Keyword::FirstStrike,
-                        duration: Duration::EndOfTurn,
-                    }),
-                }),
-                else_: Box::new(Effect::Noop),
-            },
-        ]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: crate::effect::shortcut::target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Trample],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

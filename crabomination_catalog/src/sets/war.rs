@@ -2514,6 +2514,7 @@ fn god_eternal_recur() -> [TriggeredAbility; 2] {
 pub fn god_eternal_bontu() -> CardDefinition {
     let [dies, exiled] = god_eternal_recur();
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![
             etb(Effect::SacrificeAnyNumber {
@@ -2540,6 +2541,7 @@ pub fn god_eternal_bontu() -> CardDefinition {
 pub fn god_eternal_oketra() -> CardDefinition {
     let [dies, exiled] = god_eternal_recur();
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::DoubleStrike],
         triggered_abilities: vec![
             TriggeredAbility {
@@ -3604,6 +3606,7 @@ pub fn samut_tyrant_smasher() -> CardDefinition {
 pub fn god_eternal_rhonas() -> CardDefinition {
     let [dies, exiled] = god_eternal_recur();
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Deathtouch],
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
@@ -5595,6 +5598,7 @@ pub fn tezzeret_master_of_the_bridge() -> CardDefinition {
 pub fn god_eternal_kefnet() -> CardDefinition {
     let [dies, exiled] = god_eternal_recur();
     CardDefinition {
+        supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
             TriggeredAbility {

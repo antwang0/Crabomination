@@ -1630,7 +1630,7 @@ pub fn questing_phelddagrif() -> CardDefinition {
         ..Default::default()
     };
     CardDefinition {
-        supertypes: vec![Supertype::Legendary],
+        supertypes: vec![],
         activated_abilities: vec![
             ActivatedAbility {
                 mana_cost: cost(&[g()]),
