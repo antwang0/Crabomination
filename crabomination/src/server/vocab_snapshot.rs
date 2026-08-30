@@ -44,7 +44,11 @@
 
 /// The names whose embedding indices are frozen. Index 0 is the reserved
 /// unknown slot, so this list starts at index 1.
-pub const VOCAB_SNAPSHOT: [&str; 2272] = [
+///
+/// `static`, not `const`: every use is a runtime `iter()`, and a `const` of
+/// 2,272 fat pointers is materialized at each of them (`clippy::
+/// large_const_arrays`).
+pub static VOCAB_SNAPSHOT: [&str; 2272] = [
     "Additive Evolution",
     "Adrix and Nev, Twincasters",
     "Ambitious Augmenter",
