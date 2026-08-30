@@ -3126,3 +3126,55 @@ index with `.min(emb.rows - 1)`, mapping an unknown card to *the last card's*
 embedding rather than to index 0, the reserved unknown slot. Unreachable
 before only because the hard size check rejected the net first; reachable the
 moment padding exists.
+
+## Representation correctness fixes (2026-08-30, from the state/decision audit)
+
+Four defects where the encoding or the search's imagined future diverged
+from engine truth. Landed as correctness changes (the house rule's
+re-justification clause), not measured wins — what each invalidates or
+confounds is the point of this entry.
+
+- **MCTS rollouts now answer pending decisions with
+  `decide_pending_policy`** (`server/mcts.rs`; heuristic rollouts only —
+  the uniform-rollout control keeps `AutoDecider`, since its actions are
+  random anyway). The rollout was the one lookahead still scoring every
+  line under an AutoDecider future: no-op scries, first-candidate tutors,
+  head-of-hand discards, declined optional triggers, amounts of zero.
+  That is the exact divergence `decide_pending_policy`'s doc says it was
+  extracted to close, applied to the seven heuristic sim loops and never
+  to this one. Consequence for the record: mcts ladder numbers from
+  before this date were measured under the weaker rollout policy; quote
+  them as such next to any new mcts reading.
+- **Combat encoding honours CR 509.1b** (`server/encode.rs`): feat 29
+  and globals 39/40 read `blocked_attackers` (unioned with `block_map`
+  so synthetic states still work), so an attacker whose blockers died to
+  first strike or removal no longer feeds its full power into "incoming
+  unblocked power" when the damage step will deal zero. Globals 39/40
+  also now carry trample-through: the excess over live blockers'
+  effective toughness (the default lethal-to-each assignment), which is
+  everything once every blocker is gone. This corrects the signal at
+  settled post-combat states — the exact leaf shape the round-40 census
+  said the search evaluates most.
+- **Dead trigger sources encode from LKI / the graveyard**
+  (`encode_stack`): a dies-trigger — the most common trigger class on
+  the stack — encoded as an all-zero object, including feature 27 at 0.0
+  where every real object carries 0.25. The truly-unknown fallback now
+  keeps that baseline too. Exile is deliberately not searched (face-down
+  cards mix into it; see the audit's leak note).
+- **Feature 34 no longer rides `rel`'s ablation bit.** The counter sum
+  is battlefield state, not a relation; gating it under `rel` meant
+  every `--ablate rel` arm ever run measured "relations plus counters"
+  and its result is not attributable to either. Standing caveat on the
+  round-12 rel attribution. Also: feat 42 now reads
+  `CounterType::Indestructible` (CR 122.1), which the keyword walk
+  cannot see.
+
+Distribution note before the next gate: the champion and every committed
+net trained on rows carrying the old combat/trigger signals. The encoder
+now tells the truth, but a net trained on the lie will be consuming a
+distribution it never saw at exactly the settled-combat leaves; a ladder
+arm that mixes old nets with the new encoder measures the fix *and* that
+mismatch together. Re-gate the mcts profiles (and re-run
+`--feature-census` if sizing anything against occupancy) before quoting
+new numbers against pre-fix baselines. The heuristic-pilot ladder is
+unaffected (it never encodes).

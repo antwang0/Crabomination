@@ -154,8 +154,10 @@ const ABLATE_COUNTERS: u16 = 128;
 /// this exists to prevent.
 ///
 /// * `lib` / `cast` — the round-11 library group and castability block.
-/// * `rel` — the round-12 block whole: the relation flags (28..=35),
-///   the stack groups, and stack depth.
+/// * `rel` — the round-12 block: the relation flags (28..=33, 35),
+///   the stack groups, and stack depth. Feature 34 (the counter sum)
+///   shipped with this block but is battlefield state, not a relation,
+///   and no longer rides its bit — see `encode_battlefield_object`.
 /// * `combat` / `kw` — round 28 (v6): combat structure (object feats
 ///   37..=39, globals 36..=40) and keyword classes plus exile counts
 ///   (object feats 40..=44, globals 41..=42).
@@ -310,7 +312,16 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
                 if g.block_map.contains_key(&c.id) {
                     o.feats[28] = 1.0;
                 }
-                if g.block_map.values().any(|attackers| attackers.contains(&c.id)) {
+                // CR 509.1b: an attacker that became blocked stays blocked
+                // when its blockers leave combat (first-strike deaths,
+                // post-block removal) — `block_map` forgets that the moment
+                // `remove_permanent_from_combat` runs, `blocked_attackers`
+                // doesn't, and the damage step reads the latter. The union
+                // also keeps synthetically built states (tests, hand-rolled
+                // sims) that fill only the map reading as blocked.
+                if g.blocked_attackers().contains(&c.id)
+                    || g.block_map.values().any(|attackers| attackers.contains(&c.id))
+                {
                     o.feats[29] = 1.0;
                 }
                 if c.attached_to.is_some() {
@@ -454,17 +465,37 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
         if let Some(slot) = step_slot {
             gl[slot] = 1.0;
         }
-        // Power aimed at each life total through creatures nothing
-        // blocks. Before blocks it is the whole attack; after, what got
+        // Power aimed at each life total: unblocked attackers in full,
+        // blocked tramplers by the excess over their live blockers'
+        // effective toughness (the default lethal-to-each assignment,
+        // CR 702.19g — everything when every blocker is already gone).
+        // Before blocks it is the whole attack; after, what gets
         // through — the phase one-hots above disambiguate which.
         for a in g.attacking.iter() {
             if let crate::game::types::AttackTarget::Player(p) = a.target {
-                let is_blocked = blocker_sums.contains_key(&a.attacker)
+                // CR 509.1b again (see feat 29): `blocked_attackers`, not
+                // `block_map`, is what the damage step reads. Without it an
+                // attacker whose blocker died to first strike read its full
+                // power into this global while the engine deals zero — a
+                // wrong signal at exactly the settled combat states the
+                // search evaluates most.
+                let blocked = g.blocked_attackers().contains(&a.attacker)
+                    || blocker_sums.contains_key(&a.attacker)
                     || g.block_map.values().any(|att| att.contains(&a.attacker));
-                if !is_blocked
-                    && let Some((pw, _)) = eff_pt(a.attacker)
-                {
-                    gl[if p == seat { 39 } else { 40 }] += pw as f32 / 12.0;
+                let Some(c) = g.battlefield.iter().find(|c| c.id == a.attacker) else {
+                    continue;
+                };
+                let pw = c.power().max(0);
+                let through = if !blocked {
+                    pw
+                } else if c.has_keyword(&crate::card::Keyword::Trample) {
+                    let (_, t) = blocker_sums.get(&a.attacker).copied().unwrap_or((0, 0));
+                    (pw - t).max(0)
+                } else {
+                    0
+                };
+                if through > 0 {
+                    gl[if p == seat { 39 } else { 40 }] += through as f32 / 12.0;
                 }
             }
         }
@@ -550,8 +581,11 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
 
 /// The stack, one object per item, split by controller like the
 /// battlefield. Spells encode their own card; a trigger encodes its
-/// source if that is still on the battlefield, and otherwise an unknown
-/// object — rare, and its group and depth still carry signal. Depth from
+/// source — from the battlefield, or for a source that has left it (a
+/// dies / leaves-the-battlefield trigger, the most common trigger class
+/// on the stack) from the engine's LKI snapshot or the graveyard. Only a
+/// source in no readable zone encodes as an unknown object, and even that
+/// keeps the multiplicity baseline every real object carries. Depth from
 /// the top of the stack (the item that resolves first) lands in feature
 /// 36, because pooling would otherwise erase resolution order.
 fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
@@ -571,12 +605,37 @@ fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab)
             }
             let mut o = match item {
                 StackItem::Spell { card, .. } => encode_card_object(card, vocab),
-                StackItem::Trigger { source, .. } => g
-                    .battlefield
-                    .iter()
-                    .find(|c| c.id == *source)
-                    .map(|c| encode_card_object(c, vocab))
-                    .unwrap_or_default(),
+                StackItem::Trigger { source, .. } => {
+                    // Battlefield first (the common, previously-only
+                    // case); then CR 603.10 LKI, which carries the source
+                    // as it last existed on the battlefield; then the
+                    // graveyard, where a dies-trigger's source actually
+                    // is. Exile is deliberately skipped: it mixes
+                    // face-down (hidden) cards in, and a trigger source
+                    // there is rare enough to take the unknown object
+                    // instead of auditing the leak.
+                    let inst = g
+                        .battlefield
+                        .iter()
+                        .find(|c| c.id == *source)
+                        .or_else(|| g.died_card_snapshots.get(source))
+                        .or_else(|| g.leaves_bf_lki.get(source))
+                        .or_else(|| {
+                            g.players
+                                .iter()
+                                .flat_map(|p| p.graveyard.iter())
+                                .find(|c| c.id == *source)
+                        });
+                    inst.map(|c| encode_card_object(c, vocab)).unwrap_or_else(|| {
+                        let mut o = EncodedObject::default();
+                        // The multiplicity baseline every other object
+                        // gets from `encode_card_object`; without it the
+                        // unknown trigger was the one object class
+                        // off-distribution on feature 27.
+                        o.feats[27] = 1.0 / 4.0;
+                        o
+                    })
+                }
             };
             // The stack is a Vec used LIFO: the last element is the top.
             o.feats[36] = (n - 1 - i) as f32 / 4.0;
@@ -907,6 +966,11 @@ fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObj
                 feats[40 + 2 * i] = 1.0;
             }
         }
+        // The Indestructible *counter* (CR 122.1) is handled in
+        // `encode_battlefield_object_into`'s single counter walk, not
+        // here — a second `counter_count` scan per object in every zone
+        // is what that walk exists to avoid, and counters only sit on
+        // battlefield objects anyway.
         if c.ward().is_some() || kb & okw::HARD_TO_TARGET != 0 {
             feats[41] = 1.0;
         }
@@ -1010,17 +1074,21 @@ fn encode_battlefield_object_into(
     // freshly-defaulted object, so the function's output does not depend on
     // what the caller handed it.
     //
-    // Feature 34 sums every kind except loyalty/prepared. P/T counters reach
-    // the net twice — through effective P/T and through 48/49 — which is
-    // deliberate: a 3/3 that is a 2/2 plus a counter dies differently to
-    // bounce and counter-hate than a printed 3/3 does.
+    // Feature 34 sums every kind except loyalty/prepared — unconditionally:
+    // it is battlefield state like damage or tapped, not a relation. It
+    // shipped inside the round-12 block and rode `rel`'s ablation bit, so
+    // every `--ablate rel` arm ever run was measuring "relations plus
+    // counters", attributable to neither. P/T counters reach the net twice
+    // — through effective P/T and through 48/49 — which is deliberate: a
+    // 3/3 that is a 2/2 plus a counter dies differently to bounce and
+    // counter-hate than a printed 3/3 does.
     //
     // 48..53 are the kinds the SoS pool puts on permanents (+1/+1 by a wide
     // margin, then stun, Page and Growth) plus -1/-1, which the pool never
     // uses but every other format does; stun, Page and Growth had no path to
     // the net at all before them.
-    let want_special = !ablated(ABLATE_RELATIONS);
     let want_kinds = !ablated(ABLATE_COUNTERS);
+    let want_kw = !ablated(ABLATE_KW);
     f[8] = 0.0;
     f[9] = 0.0;
     if want_kinds {
@@ -1037,6 +1105,14 @@ fn encode_battlefield_object_into(
             }
             _ => special += *n,
         }
+        // CR 122.1 / 702.12: an Indestructible *counter* grants the
+        // ability (`is_indestructible` reads it), and the keyword walk in
+        // `encode_card_object_into` can't see it — it lives here, not in
+        // `keyword_counters`. Same ablation bit as the keyword flag it
+        // completes; rides this walk so it costs no second scan.
+        if want_kw && *n > 0 && matches!(kind, CounterType::Indestructible) {
+            f[42] = 1.0;
+        }
         if want_kinds {
             match kind {
                 CounterType::PlusOnePlusOne => f[48] = *n as f32 / 4.0,
@@ -1048,9 +1124,7 @@ fn encode_battlefield_object_into(
             }
         }
     }
-    if want_special {
-        f[34] = special as f32 / 4.0;
-    }
+    f[34] = special as f32 / 4.0;
     // Expiry (round 40). Features 4/5 encode the board as if nothing
     // reverts: 5 is toughness *net of* damage, so a 4/4 with three
     // damage read as a 4/1 though it is whole again at cleanup, and a
@@ -1524,6 +1598,13 @@ mod tests {
         assert_eq!(c.feats[45], c7.feats[45], "expiry block survives");
         assert_eq!(c.feats[34], c7.feats[34], "the round-12 counter sum survives");
 
+        // Feature 34 is battlefield state, not a relation: it survives
+        // `rel` too. It used to ride that block's bit, so every `rel`
+        // ablation arm was really measuring "relations plus counters".
+        off(&["rel"]);
+        let c = find(&encode_state(&g, 0, &vocab));
+        assert!((c.feats[34] - 2.0 / 4.0).abs() < 1e-6, "counter sum survives rel ablation");
+
         // v6 parity: exactly the round-40 slots are blank and nothing
         // else moved.
         off(&["hist", "exp", "ctr"]);
@@ -1634,6 +1715,98 @@ mod tests {
         assert_eq!(s.global[39], 0.0, "walker attack leaves the life total alone");
     }
 
+    /// CR 509.1b / 510.1c — an attacker that became blocked stays blocked
+    /// after every blocker leaves combat (first-strike deaths, post-block
+    /// removal): the damage step deals nothing to the player, so the
+    /// encoding must not read its power as incoming. Regression for the
+    /// `block_map`-only read, which fed the full power into global 39/40
+    /// at exactly the settled combat states the search evaluates most.
+    #[test]
+    fn a_blocked_attacker_stays_blocked_when_its_blockers_leave_combat() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        g.step = TurnStep::CombatDamage;
+        g.active_player_idx = 1;
+        let mut atk = CardInstance::new(crate::card::CardId(1), catalog::hill_giant(), 1);
+        atk.controller = 1;
+        g.battlefield.push(atk);
+        g.attacking.push(crate::game::types::Attack {
+            attacker: crate::card::CardId(1),
+            target: crate::game::types::AttackTarget::Player(0),
+        });
+        // Declared blocked; the blocker has since left combat — gone from
+        // `block_map`, exactly what `remove_permanent_from_combat` leaves.
+        g.blocked_attackers.push(crate::card::CardId(1));
+
+        let s = encode_state(&g, 0, &vocab);
+        assert_eq!(s.global[39], 0.0, "a blocked attacker's power is not incoming");
+        assert_eq!(s.group(G_BF_OPP)[0].feats[29], 1.0, "and it still reads as blocked");
+
+        // The same attacker with trample tramples everything through:
+        // CR 702.19g, no live blocker left to assign lethal to.
+        g.battlefield[0].granted_keywords_eot.push(crate::card::Keyword::Trample);
+        let s = encode_state(&g, 0, &vocab);
+        assert!((s.global[39] - 3.0 / 12.0).abs() < 1e-6, "trample: everything through");
+
+        // With a live 2/2 blocker back in the map, only the excess over
+        // its effective toughness tramples through.
+        let mut blocker = CardInstance::new(crate::card::CardId(3), catalog::grizzly_bears(), 0);
+        blocker.controller = 0;
+        g.battlefield.push(blocker);
+        g.block_map.insert(crate::card::CardId(3), smallvec::smallvec![crate::card::CardId(1)]);
+        let s = encode_state(&g, 0, &vocab);
+        assert!((s.global[39] - 1.0 / 12.0).abs() < 1e-6, "trample over a live blocker: excess only");
+    }
+
+    /// A trigger whose source has left the battlefield — a dies trigger,
+    /// the most common trigger class on the stack — used to encode as an
+    /// all-zero object: unknown card, every feature blank, even the
+    /// feature-27 multiplicity baseline every other object carries. It now
+    /// reads the card from the LKI snapshots or the graveyard, and the
+    /// truly-unknown fallback stays on distribution.
+    #[test]
+    fn a_dead_trigger_source_still_encodes_its_card() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        // The dead source sits in its owner's graveyard, where a resolved
+        // dies-trigger's subject actually is while the trigger waits.
+        let dead = CardInstance::new(crate::card::CardId(2), catalog::hill_giant(), 1);
+        g.players[1].graveyard.push(dead);
+        g.stack.push(
+            crate::game::types::TriggerPush::new(
+                crate::card::CardId(2),
+                1,
+                crate::effect::Effect::VentureInto { dungeon: "Undercity".into() },
+            )
+            .build(),
+        );
+
+        let s = encode_state(&g, 0, &vocab);
+        let o = &s.group(G_STACK_OPP)[0];
+        assert_eq!(o.feats[1], 1.0, "the dead source still reads as a creature");
+        assert!((o.feats[4] - 3.0 / 8.0).abs() < 1e-6, "with its printed power");
+        assert!((o.feats[27] - 1.0 / 4.0).abs() < 1e-6, "and the multiplicity baseline");
+
+        // A source in no readable zone encodes unknown — but keeps the
+        // baseline, not the off-distribution zero it used to carry.
+        g.stack.clear();
+        g.stack.push(
+            crate::game::types::TriggerPush::new(
+                crate::card::CardId(999),
+                1,
+                crate::effect::Effect::VentureInto { dungeon: "Undercity".into() },
+            )
+            .build(),
+        );
+        let s = encode_state(&g, 0, &vocab);
+        let o = &s.group(G_STACK_OPP)[0];
+        assert_eq!(o.card, 0, "unknown card");
+        assert_eq!(o.feats[4], 0.0, "no invented features");
+        assert!((o.feats[27] - 1.0 / 4.0).abs() < 1e-6, "baseline survives the fallback");
+    }
+
     /// The round-28 keyword classes: granted keywords reach the flags
     /// (the card embedding can never see a grant), removals win, and the
     /// coarse classes cover their parametrized variants.
@@ -1664,6 +1837,14 @@ mod tests {
         let o = &s.group(G_BF_SELF)[0];
         assert_eq!(o.feats[41], 0.0, "removed hexproof does not flag");
         assert_eq!(o.feats[43], 1.0, "shadow unaffected");
+
+        // CR 122.1 / 702.12 — an Indestructible *counter* grants the
+        // ability (`is_indestructible` reads it) without any keyword; the
+        // flag has to see it too.
+        g.battlefield[0].add_counters(CounterType::Indestructible, 1);
+        let s = encode_state(&g, 0, &vocab);
+        let o = &s.group(G_BF_SELF)[0];
+        assert_eq!(o.feats[42], 1.0, "an Indestructible counter sets the flag");
     }
 
     /// CR 122.1b — a keyword *counter* grants the exact variant, and the

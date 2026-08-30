@@ -1880,7 +1880,7 @@ impl HeuristicBot {
 /// family (a running life commitment on the bot struct) is handled by
 /// `next_action` before this table; a sim reaching it here declines, the
 /// conservative read.
-fn decide_pending_policy(
+pub(crate) fn decide_pending_policy(
     state: &GameState,
     seat: usize,
     w: &EvalWeights,

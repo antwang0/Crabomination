@@ -575,7 +575,29 @@ impl MctsBot {
             if g.pending_decision.is_some() {
                 let answer = {
                     let pending = g.pending_decision.as_ref().unwrap();
-                    AutoDecider.decide(&pending.decision)
+                    if self.cfg.heuristic_rollouts {
+                        // `decide_pending_policy` exists so simulations
+                        // answer decisions the way the bot's future self
+                        // would; every heuristic sim loop uses it, and this
+                        // rollout was the one lookahead still scoring every
+                        // line under an AutoDecider future — no-op scries,
+                        // first-candidate tutors, head-of-hand discards,
+                        // declined optional triggers, amounts of zero.
+                        // `eval_modes: false` is the in-sim convention (no
+                        // nested clone-and-resolve).
+                        super::bot::decide_pending_policy(
+                            &g,
+                            pending.acting_player(),
+                            &self.cfg.weights,
+                            &pending.decision,
+                            false,
+                        )
+                    } else {
+                        // The uniform-rollout control keeps the pre-policy
+                        // floor: actions are random there, so a policy-table
+                        // decision answer would be the odd one out.
+                        AutoDecider.decide(&pending.decision)
+                    }
                 };
                 actions += 1;
                 if g.perform_action(GameAction::SubmitDecision(answer)).is_err() {
