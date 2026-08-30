@@ -1957,7 +1957,18 @@ integration binaries**, and its spread does not order by file size either (the
 `actions.rs` (16.5 k) for build time.** There may be other reasons to split
 them — reviewability, merge conflicts with a concurrent session — but the
 iteration loop is not one, and a mechanical move of a 34.7 k-line `impl
-GameState` block is not free of risk. The lever that *does* bear on the
+GameState` block is not free of risk.
+
+**A SECOND REASON ARRIVED AT `(-109)` AND IT IS A MEASUREMENT ONE, NOT A
+BUILD ONE.** At `codegen-units = 16` with no LTO, a ten-line edit in
+`actions.rs` moved `cube` by **±0.7 %** through inlining decisions alone —
+larger than several changes this file has shipped, and enough to invert the
+sign of a change worth 2.6 M Ir. So the module sizes now bound what can be
+*attributed* in them, not just what can be reviewed. That does not make the
+split cheap or its own perf effect known (re-partitioning the CGUs is exactly
+the thing that moved), but it is the argument this section said it was
+waiting for. Anyone taking it: anchor all three pools either side, expect the
+delta to be codegen rather than code, and land it as its own commit. The lever that *does* bear on the
 33-41 s is the one already written down: **keep the integration-binary count
 flat or lower, and never add a new top-level `tests/*.rs`.** Twenty binaries
 is what the relink costs.
@@ -2270,8 +2281,11 @@ rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
 suite   19,050 / 0 / 5 (cargo nextest --workspace --exclude
         crabomination_client); golden traces 7/7 unmoved across all five
 clippy  --workspace --exclude crabomination_client --all-targets   clean
-grid    scripts/robustness_grid.sh — 30 cells, **33,120 games, 0 failures,
-        0 undecided**; 5 assertion strings in the audit binary.  (at 244e849b)
+grid    scripts/robustness_grid.sh — 30 cells, five pools x six seeds x 120
+        games, **33,120 games, 0 failures, 0 undecided on every cell**; 5
+        assertion strings in the audit binary. Re-taken at the tip (over the
+        other session's card commits as well), so it is the audit of
+        `find_by_id_mut`'s hint on real boards, not a stale reading.
 --bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
         invariant; determinism ok, thread_determinism ok (3 vs 1).
         games_per_s 332.54 / 333.49 / 334.47, host_calib_ms 47,
