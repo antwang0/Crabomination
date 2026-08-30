@@ -2190,6 +2190,32 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-third pass, the card half (3) — closing state at `09546495`
+
+Two more card commits: `a3a261d4` (the verb audit's tuning) and `09546495`
+(three dropped riders it found — Glassblower's Puzzleknot was *drawing* where
+it prints "scry 2", Master of Death's ETB surveil 2 was absent, Fountain of
+Renewal had no way to cash itself in).
+
+```text
+suite   19,050 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    30 cells, 33,120 games, 0 failures, 0 undecided — the gate that
+        matters for three new resolution paths
+--bench and the Ir anchor are the `e64762b2` block's, LABELLED not re-run:
+        none of the fourteen cards touched since is in the four `fixed`
+        archetypes, so the `--bench` invariant cannot move, and a six-game
+        `cube` sample priced 107 card-type changes at 56 ppm (see the block
+        below) — three riders are not measurable against that.
+```
+
+**The card lane closes with `audit_catalog_stats.py` at cost 0 / P/T 0 / card
+type 0 / supertype 0 / subtype 2 / keyword 23 over 17,229 cards, and a new
+queue in its place**: `scripts/audit_oracle_verbs.py`, 225 rows over 10,949
+cards with oracle text, asking whether the effect tree does the verbs the
+oracle names. Six of its classes are spot-checked in the source and the
+real-finding rate is high.
+
 ### Hundred-and-third pass, the card half (2) — closing state at `e64762b2`
 
 Two card commits past the block below: `6cbf37a7` (eleven cards' printed

@@ -27,7 +27,8 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
    the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
-2. **State at `e64762b2`** (the other session's `b0603f33` landed after these numbers):
+2. **State at `09546495`** (`--bench` and the Ir anchor are `e64762b2`'s, labelled not
+   re-run — no card touched since is in the four `fixed` archetypes):
    suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid 30 cells / 33,120 games /
    0 failures / **0 undecided on every cell** (re-taken at this tip, so it audits
    `find_by_id_mut`'s hint on real boards), `--bench` byte-identical (195,528 / 27.44 /
@@ -74,28 +75,23 @@ sixty-seventh pass, so don't re-take that.
    Splitting the oversized modules is a *measurement* lever, not only a build-time one.
    ROBUSTNESS: bare panics 23 -> 3 (deck construction, deliberately). No open
    TODO/FIXME in `src`, no `#[ignore]`d tests.
-8. **CARDS: 118 defects closed, and every one came out of ONE script.**
-   `audit_catalog_stats.py`'s new type-line columns are worked to **cost 0 / P/T 0 /
-   type 0 / supertype 0** at 17,229 checked. What they found: **34 spells at the wrong
-   speed** (a Lava Dart that could not be cast at instant speed, a Treasure Cruise that
-   could), **23 permanents missing Legendary** so the legend rule never fired on Karn
-   Liberated or Gaea's Cradle and 9 carrying it wrongly, 5 affinity creatures typed as
-   artifacts and counting themselves, and **six cards that were not the card they are
-   named after**. **The method is the transferable half — `audit the audit`:** four
-   reading bugs came out of making those columns believable and three were already wrong
-   for the *existing* columns. Disbelieve a class of findings too large to be true and
-   check three of its rows in the source; this run the two largest classes were reader
-   bugs and the four smallest were the real defects. Still open: INCOMPLETE_CARDS buckets
-   6 / 7 / 8 and 3 dead primitives. The keyword column came down the same way
-   (48 -> 23, and **25 of the 48 were the reader**: a payload's keyword read as printed,
-   a `fn ward_1() -> Keyword` read as none, `HexproofFrom*` read as not-Hexproof); its 23
-   survivors are modelling choices, and `audit_dropped_may`'s 327 rows are still noise —
-   both want shape work on the filter, not card work.
-   **THE NEXT AUDIT IS ORACLE TEXT vs THE EFFECT TREE.** Every printed *characteristic* is
-   now checked and every one is clean; nothing has ever checked what a card *does*. Two
-   cards fell out sideways this run — Tempest Angler ships an ETB scry for a
-   "+1/+1 counter on noncreature cast", Outcaster Trailblazer ships a mana-value-5 draw
-   for an ETB-mana-and-power-4 trigger — and both were invisible to every column here.
+8. **CARDS: the printed characteristics are DONE; what a card DOES is the open lane.**
+   `audit_catalog_stats.py` reads **cost 0 / P/T 0 / type 0 / supertype 0 / subtype 2 /
+   keyword 23** over 17,229 cards, and every survivor is a modelling choice with its
+   reason in INCOMPLETE_CARDS. 118 defects closed getting there — 34 spells at the wrong
+   speed, 23 permanents outside the legend rule, 5 affinity creatures counting themselves
+   as artifacts, and eight cards that were not the card they are named after.
+   **The queue for the next run is `scripts/audit_oracle_verbs.py`: 225 rows over 10,949
+   cards, "the oracle names a verb and the effect tree has no primitive for it".** Six
+   classes are spot-checked and the real-finding rate is high — Codespell Cleric is a
+   body-only stub, Baral drops the trigger that draws, Crawl from the Cellar drops its
+   Zombie counter, Teferi drops "untap up to two lands". `counter_spell`'s five are the
+   documented ward-shaped approximation. **The standing lesson, now three times over: a
+   class of findings too large to be true is the FILTER, not the catalog** — check three
+   of its rows in the source before believing it (722 -> 254 -> 228 -> 225 on this one).
+   Also open: INCOMPLETE_CARDS buckets 6 / 7 / 8, 3 dead primitives, and
+   `audit_dropped_may`'s 327 rows, still noise until someone teaches it the shapes.
+
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
