@@ -2599,7 +2599,7 @@ impl GameState {
                     }
                     _ => None,
                 };
-                let mut trig_events = self.continue_trigger_resolution_with_source(
+                self.continue_trigger_resolution_with_source_into(
                     source,
                     controller,
                     *effect,
@@ -2612,6 +2612,7 @@ impl GameState {
                     event_amount,
                     trigger_player,
                     additional_targets,
+                    &mut events,
                 )?;
                 if had_lki {
                     self.resolving_lki_source = None;
@@ -2621,7 +2622,6 @@ impl GameState {
                     self.resolving_lki_subject = None;
                     self.leaves_bf_lki.remove(&sid);
                 }
-                events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
                     return Ok(events);
                 }

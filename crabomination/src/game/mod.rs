@@ -16173,7 +16173,7 @@ impl GameState {
         self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
         let mut events = vec![];
         self.discard_card(seat, card_id, &mut events);
-        events.extend(self.continue_ability_resolution(card_id, seat, &effect, None)?);
+        self.continue_ability_resolution_x_into(card_id, seat, &effect, None, 0, &mut events)?;
         Ok(events)
     }
 
@@ -20437,12 +20437,11 @@ impl GameState {
                 additional_targets,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more = self.continue_trigger_resolution_with_source(
+                self.continue_trigger_resolution_with_source_into(
                     source, controller, remaining, target, mode, x_value, converged_value,
                     mana_spent, trigger_source_ent, event_amount, trigger_player,
-                    additional_targets,
+                    additional_targets, &mut evs,
                 )?;
-                evs.append(&mut more);
                 evs
             }
             ResumeContext::Ability {
@@ -20453,10 +20452,9 @@ impl GameState {
                 remaining,
             } => {
                 let mut evs = self.apply_pending_effect_answer(in_progress, &answer)?;
-                let mut more = self.continue_ability_resolution(
-                    source, controller, &remaining, target,
+                self.continue_ability_resolution_x_into(
+                    source, controller, &remaining, target, 0, &mut evs,
                 )?;
-                evs.append(&mut more);
                 evs
             }
             ResumeContext::Mulligan { player, mulligans_taken, next_player } => {
@@ -22620,6 +22618,45 @@ impl GameState {
         trigger_player: Option<usize>,
         additional_targets: Vec<Target>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = Vec::new();
+        self.continue_trigger_resolution_with_source_into(
+            source,
+            controller,
+            effect,
+            target,
+            mode,
+            x_value,
+            converged_value,
+            mana_spent,
+            trigger_source_ent,
+            event_amount,
+            trigger_player,
+            additional_targets,
+            &mut events,
+        )?;
+        Ok(events)
+    }
+
+    /// `continue_trigger_resolution_with_source` appending into a
+    /// caller-owned buffer — see
+    /// [`resolve_effect_into`](Self::resolve_effect_into).
+    #[allow(clippy::too_many_arguments)]
+    pub fn continue_trigger_resolution_with_source_into(
+        &mut self,
+        source: CardId,
+        controller: usize,
+        effect: crate::effect::Effect,
+        target: Option<Target>,
+        mode: usize,
+        x_value: u32,
+        converged_value: u32,
+        mana_spent: u32,
+        trigger_source_ent: Option<crate::game::effects::EntityRef>,
+        event_amount: u32,
+        trigger_player: Option<usize>,
+        additional_targets: Vec<Target>,
+        out: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         // Event-amount-relative filters re-checked at resolution
         // (ManaValueLessThanEventAmount) read this scratch.
         self.trigger_event_amount_scratch = event_amount;
@@ -22650,7 +22687,7 @@ impl GameState {
                 Some(filter)
                     if !self.evaluate_requirement_static(&filter, t, controller, Some(source)) =>
                 {
-                    return Ok(vec![]);
+                    return Ok(());
                 }
                 _ => Some(t.clone()),
             },
@@ -22683,9 +22720,9 @@ impl GameState {
         }
         ctx.mana_spent = mana_spent;
         ctx.event_amount = event_amount;
-        let events = self.resolve_effect(&effect, &ctx)?;
+        self.resolve_effect_into(&effect, &ctx, out)?;
         if self.drop_pending_choices_if_game_over() {
-            return Ok(events);
+            return Ok(());
         }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -22707,46 +22744,15 @@ impl GameState {
                 },
             });
         }
-        Ok(events)
+        Ok(())
     }
 
-    /// Resolve an activated ability's effect tree.
-    pub(crate) fn continue_ability_resolution(
-        &mut self,
-        source: CardId,
-        controller: usize,
-        effect: &crate::effect::Effect,
-        target: Option<Target>,
-    ) -> Result<Vec<GameEvent>, GameError> {
-        self.continue_ability_resolution_x(source, controller, effect, target, 0)
-    }
-
-    /// `continue_ability_resolution` with the activation's chosen X threaded
-    /// in, so an inline-resolving mana ability's body can read
-    /// `Value::XFromCost` (the MMQ storage lands' "remove any number of
+    /// Resolve an activated ability's effect tree, appending into a
+    /// caller-owned buffer — see
+    /// [`resolve_effect_into`](Self::resolve_effect_into). `x_value` is the
+    /// activation's chosen X, so an inline-resolving mana ability's body can
+    /// read `Value::XFromCost` (the MMQ storage lands' "remove any number of
     /// storage counters: add that much mana").
-    pub(crate) fn continue_ability_resolution_x(
-        &mut self,
-        source: CardId,
-        controller: usize,
-        effect: &crate::effect::Effect,
-        target: Option<Target>,
-        x_value: u32,
-    ) -> Result<Vec<GameEvent>, GameError> {
-        let mut events = Vec::new();
-        self.continue_ability_resolution_x_into(
-            source,
-            controller,
-            effect,
-            target,
-            x_value,
-            &mut events,
-        )?;
-        Ok(events)
-    }
-
-    /// `continue_ability_resolution_x` appending into a caller-owned buffer —
-    /// see [`resolve_effect_into`](Self::resolve_effect_into).
     pub(crate) fn continue_ability_resolution_x_into(
         &mut self,
         source: CardId,
