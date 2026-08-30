@@ -9746,6 +9746,23 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourth pass (10) — an exception list becomes a walker
+
+**`fixed` +0.021 % / `cube` -0.036 % / `sealed` -0.050 %** at `eb13fa43`, off
+`785b50d5`. The targeting invariant shipped with three documented exceptions,
+all one shape — Officious Interrogation, Jeska's Will and Tithe name their
+target player **only inside a `Value` or a `Predicate`**, and both target
+walkers descend `Selector`s. `implicit_player_in_value` (`HandSizeOf`,
+`CountMatching { sel: ControlledBy / CardsInZone }`), `_in_predicate`
+(`ValueAtLeast` / `All` / `Any` / `Not`) and `_in_payload` (a `ManaPayload`'s
+amount) answer all three, and `CreateToken`'s count, `AddMana`'s pool and
+`If`'s cond consult them. The invariant has no exceptions now.
+
+**The rule this closes the pass on: a name in an exception list goes stale on
+the next card; a walker does not.** It is the same argument that made the
+reanimation invariant gate on `ControlledByYou` rather than on seventy-nine
+names, and it is worth paying three small helpers for.
+
 ### Hundred-and-seventh pass (3) — one dedupe Vec a dispatch, and the line row that named it is refuted
 
 **`fixed` -0.0051 % / `cube` -0.0599 % / `sealed` -0.0839 %** at `172a40c8`,
