@@ -3326,7 +3326,14 @@ impl GameState {
         let computed_of =
             |id: CardId| -> Option<&ComputedPermanent> { computed.iter().find(|c| c.id == id) };
 
-        let attacker_infos: Vec<AttackerInfo> = self
+        // Inline storage, `(-71)`'s device: this never leaves the frame (it is
+        // read as a slice by `gather_combat_damage_decisions` and by the loop
+        // below), and a `collect` over a `filter_map` cannot size-hint past
+        // the filter, so it walked the 0->4->8 ladder on every damage step.
+        // Eight attackers covers an alpha strike; a wider one spills to the
+        // heap exactly as before. NOT a `reserve`: this removes the
+        // allocation rather than moving it, so `(-80)`'s floor doesn't apply.
+        let attacker_infos: SmallVec<[AttackerInfo; 8]> = self
             .attacking
             .iter()
             .filter_map(|atk| {
@@ -3735,7 +3742,12 @@ impl GameState {
                         // eighty-seventh pass's concurrent half). The
                         // short-circuit order is the chain's, unchanged:
                         // cheapest and most selective first.
-                        let mut ids: Vec<CardId> = Vec::new();
+                        // Inline storage, like `blockers_of`'s answer that
+                        // feeds it: CR 509.1b multi-blocks of more than four
+                        // blockers do not happen, and this never leaves the
+                        // frame — the `Vec` allocated once per blocked
+                        // attacker per damage step to hold one or two ids.
+                        let mut ids: SmallVec<[CardId; 4]> = SmallVec::new();
                         for &bid in blocker_ids.iter() {
                             if !computed_of(bid)
                                 .is_some_and(|bc| blocker_filter(bc.keywords()))
