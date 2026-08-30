@@ -24547,6 +24547,11 @@ pub fn fiery_gambit() -> CardDefinition {
         name: "Fiery Gambit",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
+        // The three tiers were the wrong effects: tier 2 printed "6 damage to
+        // each opponent" and read "draw 3", tier 3 printed "draw nine cards
+        // and untap all lands you control" and read "each opponent loses 5
+        // life". Only tier 1 was the card. Damage, not life loss — the
+        // difference is visible to prevention, protection and lifelink.
         effect: Effect::FlipCoinsUntilLoseOrStop {
             tiers: vec![
                 (
@@ -24558,17 +24563,27 @@ pub fn fiery_gambit() -> CardDefinition {
                 ),
                 (
                     2,
-                    Box::new(Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(3),
+                    Box::new(Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(6),
                     }),
                 ),
                 (
                     3,
-                    Box::new(Effect::LoseLife {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(5),
-                    }),
+                    Box::new(Effect::Seq(vec![
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(9),
+                        },
+                        Effect::Untap {
+                            what: Selector::EachPermanent(
+                                SelectionRequirement::Land
+                                    .and(SelectionRequirement::ControlledByYou)
+                                    .and(SelectionRequirement::Tapped),
+                            ),
+                            up_to: None,
+                        },
+                    ])),
                 ),
             ],
         },

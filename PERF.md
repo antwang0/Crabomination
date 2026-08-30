@@ -911,6 +911,17 @@ off the targeting lane (`13435f3e` / `d9e6454d` / `d0799d5c` / `45c55cc3`).**
   targets a *spell*, which `Target` cannot express) and the ~25 reflexive
   triggers ("whenever this deals combat damage to a creature, tap that
   creature"), whose slot `combat.rs:5234` **stamps from the event**.
+- **`audit_oracle_verbs.py`'s false positives are the same shape: a verb done
+  by a BESPOKE effect has no primitive in the tree and the filter cannot see
+  it.** Breath of Fury is the checked example — its "untap all creatures you
+  control" is inside `Effect::SacrificeEnchantedForExtraCombat`'s resolver, so
+  the audit reports a missing `Untap` that is neither missing nor wrong.
+  Read the resolver, not only the effect tree, before filing a row. Of the
+  nine rows in the audit's three smallest classes, seven were real (four
+  fixed at the hundred-and-sixth pass), one is this, and one — All-Out
+  Assault's "when you next attack this turn, untap each creature you control"
+  — needs a `DelayedKind` that does not exist yet, so it is a primitive job
+  and not a catalog one.
 - **`dispatch_triggers_for_events`' self cost is mostly the per-event
   bookkeeping switch** — entry timestamps, soulbond, land equilibrium, the
   per-turn tallies — **not the listener search.** A listener index keyed on

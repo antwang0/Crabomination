@@ -4093,13 +4093,14 @@ fn decide_target_by_outcome(
         }
     }
     for list in [&opp_perms, &own_perms] {
-        for extreme in [
+        for &(id, _) in [
             list.iter().max_by_key(|(_, v)| *v),
             list.iter().min_by_key(|(_, v)| *v),
-        ] {
-            if let Some(&(id, _)) = extreme {
-                picks.push(Some(Target::Permanent(id)));
-            }
+        ]
+        .into_iter()
+        .flatten()
+        {
+            picks.push(Some(Target::Permanent(id)));
         }
     }
     if optional {

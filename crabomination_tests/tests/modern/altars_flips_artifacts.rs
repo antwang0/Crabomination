@@ -851,12 +851,20 @@ fn goblin_bomb_detonates_at_five_fuse() {
     assert!(g.players[1].life <= 0, "Goblin Bomb deals 20 to the target player");
 }
 
+/// The three tiers are the printed ones: 3 damage to target creature, then
+/// 6 damage to each opponent, then draw nine and untap all lands you control.
+/// The catalog had "draw 3" and "each opponent loses 5" in the second and
+/// third slots — a card that was not the card it is named after.
 #[test]
 fn fiery_gambit_three_wins_fires_all_tiers() {
     let mut g = two_player_game();
     let gambit = g.add_card_to_hand(0, catalog::fiery_gambit());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    for _ in 0..12 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let lands: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::mountain())).collect();
+    for id in &lands {
+        g.battlefield_find_mut(*id).expect("land").tapped = true;
+    }
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     let hand_before = g.players[0].hand.len();
@@ -871,8 +879,16 @@ fn fiery_gambit_three_wins_fires_all_tiers() {
         mode: None, x_value: None }).expect("Fiery Gambit castable");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "1+ wins: 3 damage kills the 2/2");
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3, "2+ wins: draw three (minus the cast Gambit)");
-    assert_eq!(g.players[1].life, 15, "3+ wins: each opponent loses 5");
+    assert_eq!(g.players[1].life, 14, "2+ wins: 6 damage to each opponent");
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 1 + 9,
+        "3+ wins: draw nine (minus the cast Gambit)"
+    );
+    assert!(
+        lands.iter().all(|id| !g.battlefield_find(*id).unwrap().tapped),
+        "3+ wins: all your lands untap"
+    );
 }
 
 #[test]
@@ -888,7 +904,7 @@ fn fiery_gambit_lost_flip_does_nothing() {
         mode: None, x_value: None }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear), "losing the first flip cancels everything");
-    assert_eq!(g.players[1].life, 20, "no life loss on a lost gambit");
+    assert_eq!(g.players[1].life, 20, "no damage on a lost gambit");
 }
 
 // ── Utility artifacts ───────────────────────────────────────────────────────
