@@ -874,13 +874,24 @@ fn compute_permanent_pass(
     // effects long, so a `collect` whose result is 0-1 elements never
     // allocates, and the `is_layer_sorted` guard that made the skip sound for
     // a hand-built list cost more than the `Vec` it avoided. See PERF's Log.
-    let mut sorted: Vec<&ContinuousEffect> = Vec::new();
+    //
+    // **Inline storage, not the heap** (PERF (-106)): the `Vec` form was the
+    // program's single largest allocation context — 61,518 of a `cube` run's
+    // 1,384,794 allocations, 4.4 % of every malloc, all of them
+    // `do_reserve_and_handle` under these two `extend`s. Eight slots at 8
+    // bytes a reference covers a list that is ~2 long ((-56b)); the list is a
+    // pure local consumed by the loop below, so nothing outside sees the type.
+    // (-56b) refuted four ways of *not* building the list and named this one
+    // as the fifth ("a stack-backed `Extend` target, which is a dependency
+    // decision") — `smallvec` is a dependency now, and its `Extend` is the
+    // same external-iteration shape `Vec::extend_desugared` already was, so
+    // the swap moves the buffer and nothing else.
+    let mut sorted: smallvec::SmallVec<[&ContinuousEffect; 8]> = smallvec::SmallVec::new();
     if !effects.is_empty() || !eot_grants.is_empty() {
         // Two `extend`s rather than one `collect` over a `chain`: `eot_grants`
         // is empty on almost every card, and `Chain::next` pays its "which
         // side" branch on **every element of the first side** whether or not
-        // the second has any. Both halves stay internal iteration, which is
-        // what (-56b) says the `collect` is worth keeping.
+        // the second has any.
         sorted.extend(effects.iter().filter(|e| affects(e, card, gate_power, gate_types)));
         sorted.extend(eot_grants.iter());
         sorted.sort_by(|a, b| {
@@ -890,7 +901,10 @@ fn compute_permanent_pass(
         });
     }
 
-    for effect in sorted {
+    // By reference, not by value: `SmallVec`'s by-value `IntoIter` carries the
+    // whole inline buffer, so `for effect in sorted` moves 72 bytes on every
+    // pass whether or not the list has anything in it.
+    for effect in &sorted {
         match &effect.modification {
             // Layer 2
             Modification::ChangeController(c) => controller = *c,
