@@ -1961,8 +1961,28 @@ impl Effect {
             | Effect::ApplyToTargets { filter, .. }
             | Effect::DeliverUntoEvil { filter, .. }
             | Effect::DestroyTargets { filter } => Some(filter),
+            // CR 115.4 — the same implicit "any target" as `DealDamage`:
+            // these deal or prevent damage, and a land is not a legal
+            // recipient. `RedirectDamageToThisThisTurn`'s target is a damage
+            // *source*, not a recipient, so it keeps the plain answer.
             Effect::PayAnyEnergyDealDamage { to }
-            | Effect::RedirectDamageToThisThisTurn { to } => sel_filter(to),
+            | Effect::DealDamageExcessToController { to, .. }
+            | Effect::RevealUntilLandDamage { to, .. } => {
+                sel_filter(to).or_else(|| implicit_any_target_if_bare(to))
+            }
+            // "Prevent the next N damage that would be dealt to any target"
+            // (Healing Salve, Candles' Glow, Militant Monk) — the recipient
+            // side of CR 115.4, same four kinds.
+            Effect::PreventNextDamage { target, .. }
+            | Effect::PreventNextDamageAndGainLife { target, .. } => {
+                sel_filter(target).or_else(|| implicit_any_target_if_bare(target))
+            }
+            // Guard Dogs prevents the damage a target *creature* would deal —
+            // the target is the source, so it is the pump family's filter.
+            Effect::PreventCombatDamageByTargetThisTurn { target } => {
+                sel_filter(target).or_else(|| implicit_creature_if_bare_target(target))
+            }
+            Effect::RedirectDamageToThisThisTurn { to } => sel_filter(to),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
@@ -1972,7 +1992,9 @@ impl Effect {
             Effect::MustBlockTarget { blocker, attacker } => {
                 sel_filter(blocker).or_else(|| sel_filter(attacker))
             }
-            Effect::DealDamageEqualToPower { target, .. } => sel_filter(target),
+            Effect::DealDamageEqualToPower { target, .. } => {
+                sel_filter(target).or_else(|| implicit_any_target_if_bare(target))
+            }
             // Land hosing targets the land slot (Tide Shaper's kicked mode).
             Effect::BecomeBasicLand { what, .. } | Effect::GainLandType { what, .. } => {
                 sel_filter(what)
@@ -1980,7 +2002,9 @@ impl Effect {
             // The chosen creature (`source`) is the targeted object; the
             // per-creature/opponent recipients are not targeted.
             Effect::DealDamageEqualToPowerToEach { source, .. } => sel_filter(source),
-            Effect::EachDealsDamageEqualToPower { target, .. } => sel_filter(target),
+            Effect::EachDealsDamageEqualToPower { target, .. } => {
+                sel_filter(target).or_else(|| implicit_any_target_if_bare(target))
+            }
             // The targeted side may be `b` when `a` is the source itself
             // (Volatile Stormdrake exchanges `This` with a targeted creature).
             Effect::ExchangeControl { a, b } => sel_filter(a).or_else(|| sel_filter(b)),
@@ -2223,8 +2247,27 @@ impl Effect {
             | Effect::PlayerCantCastMatchingThisTurn { who, .. } => {
                 implicit_player_if_bare_player_ref(who)
             }
-            Effect::PlayerCantPlayLandsThisTurn { player } => {
+            Effect::PlayerCantPlayLandsThisTurn { player }
+            | Effect::SkipPlayerDrawStep { player }
+            | Effect::SkipPlayerUntapStep { player } => {
                 implicit_player_if_bare_player_ref(player)
+            }
+            Effect::StaggerPlayerUntilYourNextTurn { who }
+            | Effect::ChooseColorThenDiscardMatching { who }
+            | Effect::ChooseCardTypeRevealHandDamage { who, .. }
+            | Effect::HeadGames { who }
+            | Effect::TradeSecrets { who }
+            | Effect::NameCardRevealRandomDiscardNamed { who, .. }
+            | Effect::NameCardThenRevealTopBin { who }
+            | Effect::NameCardRevealUntilThenBin { who }
+            | Effect::GuessColorCountInHand { who, .. }
+            | Effect::ExileBottomOfGraveyard { who }
+            | Effect::AttackMandateNextTurn { who } => {
+                implicit_player_if_bare_player_ref(who)
+            }
+            Effect::RedirectDrawsThisTurn { from } => implicit_player_if_bare_player_ref(from),
+            Effect::DiscardHandDrawThatMany { who } => {
+                sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
             Effect::ExileChosenFromHand { from, .. } => {
                 sel_filter(from).or_else(|| implicit_player_if_bare_player_field(from))
