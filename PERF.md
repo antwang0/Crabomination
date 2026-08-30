@@ -9549,6 +9549,41 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourth pass (5) — CR 115.4, and a correctness row that COSTS Ir
+
+**`fixed` +0.087 % / `cube` +0.007 % / `sealed` +0.082 %** at `d0799d5c`, off
+`6a569981`. Kept: the enumerator was offering a **land** as the target of a
+burn spell.
+
+The catalog writes Lightning Bolt as `DealDamage { to: Selector::Target(0) }`
+with no filter — the right shape — and both target walkers fall back to
+`SelectionRequirement::Any` for a filterless slot. `Any` matches every
+permanent, and nothing re-checks a damage target's legality, so
+`enumerate_legal_targets(&banefire().effect, 0)` listed the opponent's Forest.
+`IMPLICIT_ANY_TARGET` (creature / planeswalker / battle / player) is the
+damage family's implicit filter, the same device `IMPLICIT_CREATURE_TARGET`
+already is for pump.
+
+**The Ir sign is the point of the entry.** A constant-`true` fallback became a
+four-way `Or` evaluated per candidate, and the burn-heavy `fixed` archetypes
+pay most — the one pool where the change matters is the one it costs. This
+file's rule is "no measured win → revert or justify as a pure correctness
+change"; this is the second half, written down with its number so nobody
+re-opens it as a regression. Game outcomes are byte-identical on all three
+pools, because the picker lists players first and the *bot* was already
+choosing legally — only the offered set was wrong.
+
+**And the census behind it is a lane, not a finished sweep.** Slots reached by
+a bare `Selector::Target(n)` that no `TargetFiltered` ever filters: **375
+bodies before this change, 263 after**. The residue splits by
+`accepts_player_target`: **59 `false`**, almost all counterspells
+(`CounterSpell { what: Target(0) }` targets a *spell*, which `Target` cannot
+express, so the enumerator's list is not what aims them — structural false
+positives), and **204 `true`**, which is the real open sub-class: an effect
+whose only target is a player still enumerates every battlefield permanent.
+`IMPLICIT_PLAYER_TARGET` exists and covers a bare `PlayerRef::Target(n)`; the
+204 are the bodies that reach a player some other way.
+
 ### Hundred-and-fourth pass (4) — the zone predicate seventy-nine cards were missing, and it is a win as well as a fix
 
 **`fixed` -0.513 % / `cube` -0.562 % / `sealed` -0.418 %** at `d9e6454d`, off

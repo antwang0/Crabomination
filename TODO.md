@@ -26,7 +26,11 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
-   the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
+   the PERF entry before you spend a build on it (`d6a9b3d5`). **`(-107)`'s
+   single-backing-buffer half is claimed at `f7d6a036`; nothing else is.**
+   **AND: `rm -rf target/debug/incremental` when a `release` link dies with a Bus
+   error** — it is the disk, not the linker; that directory reached 19 GB of a 30 GB
+   allowance here and the memcg-style failure it produces names neither.
 2. **State at `cecaccb4`+**, re-run at that tip rather than labelled forward: suite
    19,050 / 0 / 5, clippy clean, golden traces 7/7, `--bench` byte-identical
    (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok,
@@ -112,6 +116,37 @@ sixty-seventh pass, so don't re-take that.
    of its rows in the source before believing it (722 -> 254 -> 228 -> 225 on this one).
    Also open: INCOMPLETE_CARDS buckets 6 / 7 / 8, 3 dead primitives, and
    `audit_dropped_may`'s 327 rows, still noise until someone teaches it the shapes.
+
+
+9. **THE TARGETING LANE — one engine gate, 79 card filters, and 204 rows still open.**
+   Closed this pass: `legal_targets_for_filter` walked every graveyard and exile for any
+   filter (ENGINE_BACKLOG's "the target enumerator is zone-blind"), so `Any` listed every
+   card in every zone and the UI path and the training path targeted different sets. It
+   takes the scope now and `enumerate_legal_targets_xc` asks the **same**
+   `may_target_offboard_card || mentions_offboard_zone` question the auto-picker has been
+   gated on since the eighty-sixth pass. **Then the catalog half: 79 bodies said "from
+   your graveyard" in their oracle and nothing in their filter, so Zombify with an empty
+   graveyard STOLE a battlefield creature.** `from_your_graveyard()` /
+   `from_any_graveyard()` is the spelling, and the fix reads `fixed` **-0.513 %**,
+   because a zone predicate first in the `And` short-circuits every candidate the
+   enumerator used to test in full. **The method is the reusable half: discover a class
+   by joining the census against `scripts/.scryfall_cache.json`, then gate it on a
+   STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou` / `OwnedByYou` /
+   `ExiledWithSource`, which is what makes the test an invariant instead of a list of 79
+   names that goes stale on the next card.
+   **Open, and it is the same census one question further on**: slots reached by a bare
+   `Selector::Target(n)` that no `TargetFiltered` ever filters — 375 bodies, 263 after
+   the CR 115.4 fix (`d0799d5c`, which is the damage sub-class and the one with a single
+   right answer). Of the residue, **59 are `accepts_player_target() == false` and almost
+   all counterspells** — `CounterSpell { what: Target(0) }` targets a *spell*, which the
+   `Target` enum cannot express, so the enumerator's list is not what aims them; treat
+   them as structural false positives, not findings. **The open sub-class is the 204
+   with `player = true`**: an effect whose only target is a player still enumerates every
+   battlefield permanent, because the fallback is `Any`. `IMPLICIT_PLAYER_TARGET` already
+   covers a bare `PlayerRef::Target(n)`, so the 204 are the bodies that reach a player
+   some other way — find that shape and the class closes the way the damage one did.
+   The census is not in the tree; rebuild it from `every_reanimating_move_says_which_
+   zone_its_target_is_in`, which is the same walk with a different predicate.
 
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
