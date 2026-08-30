@@ -16540,6 +16540,43 @@ hit rate is higher than 43 % on another pool, or the block planner's vectors
 are longer than the combat sample says, the trade inverts. Ten sites name the
 type explicitly; the rest read through `Deref` and do not care.
 
+**(-112) THE RESERVE LANE IS CLOSED — `(-103)`'s DIVISION APPLIED TO EVERY
+REMAINING LEADER AND NOTHING IS LEFT ABOVE 1.3 GROWTHS A CALL.** Read at the
+hundred-and-fifth pass's tip, `--decks cube`, after `snapshot_payment_state`
+(the table's largest context, 1.56 a call) went at `8a59e648`:
+
+```text
+  do_reserve_and_handle, 68,261 calls          growths   calls   per call
+    Vec::from_iter (nested)                     19,538       —   diffuse, ~93
+                                                                 callers ((-96))
+    dispatch_triggers_for_events                11,506 139,422    0.08
+    auto_tap_for_cost_inner                      8,680       —   TAKEN ((-108))
+    mana_source_table                            8,146       —   reserved ((-103))
+    resolve_combat                               4,700       —   reserved ((-103))
+
+  grow_one, 255,090 calls
+    Vec::push_mut                               37,920       —   the generic row
+    dispatch_board_scan                         29,466  80,214    0.37
+    resolve_combat                              17,192       —   reserved ((-103))
+    grant_scan                                  11,410  26,546    0.43
+    affected_from_requirement                   10,434  44,788    0.23
+    deal_combat_damage_to_target                 8,608   7,110    1.21  <- only one
+```
+
+**Every remaining named context is below one growth a call except
+`deal_combat_damage_to_target` at 1.21, and that one is 8,608 growths — a
+third of what `snapshot_payment_state` was worth.** Below 1.0 the Vec never
+leaves its first allocation on most calls, so `(-80)`'s rule bites: a reserve
+**moves** that allocation earlier, it does not remove it, and it charges the
+majority of calls that never grew.
+
+**So the allocation mass that is left is FIRST allocations, and a reserve
+cannot touch them.** Two shapes can: a different buffer (`(-107)`'s
+single-backing-store for `EncodedState`'s eight groups, 66,485 -> 12,660) or
+fewer objects (`computed_permanent_hinted`'s `Arc`s — but see `(-111)`, which
+built the by-value form and reverted it). **Neither is a reserve, and the
+reserve lane should not be re-swept.**
+
 **(-110) THE Ir INSTRUMENT HAS NO NULL CONTROL, AND `(-109)` SAYS IT NEEDS
 ONE.** `ab_wall.py` ships a null control for the wall-clock instrument; the Ir
 instrument — which every Log row in this file is measured on — has never had

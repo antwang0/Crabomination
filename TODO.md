@@ -46,16 +46,15 @@ sixty-seventh pass, so don't re-take that.
    the inline buffer**; `for x in v` vs `for &x in &v` was worth -0.19 / -0.22 / -0.18 %
    on one 72-byte site and inverted the sign of `(-106)`. (c) Rank an allocation by its
    `--separate-callers=3` **context**, not its function.
-5. **Allocator, 11.2 % and 1,384,794 allocations at ~209 Ir a round trip.** `(-103)`'s
-   reserve half was NOT closed — it had divided the `grow_one` table only, and the
-   `do_reserve_and_handle` table had one row above 1.5 a call (`(-108)`,
-   `auto_tap_for_cost_inner`, -0.34 / -0.29 / -0.36 % and -0.34 % of the actor;
-   **`Vec::append` is a reserve site and shows in neither push census**). The largest
-   single context is taken (`(-106)`, `compute_permanent_pass`'s `sorted`, 4.4 % of every
-   malloc). **Next is `(-104)`** —
-   the `Vec<GameEvent>` `resolve_effect` / `activate_ability_inner` *return*, 46,258
-   allocations, census done to the one friction (event order, not the borrow checker).
-   After that: `computed_permanent_hinted`'s 201,780 `Arc`s (`(-92)` lead 2).
+5. **THE RESERVE LANE IS CLOSED — `(-112)`.** `(-103)`'s division applied to every
+   remaining leader at this pass's tip: nothing is above **1.3 growths a call** except
+   `deal_combat_damage_to_target` at 1.21, and that is 8,608 growths, a third of what
+   `snapshot_payment_state` was worth before `8a59e648` took it. Below 1.0 a reserve
+   *moves* the allocation rather than removing it (`(-80)`) and charges the majority of
+   calls that never grew. **The mass that is left is FIRST allocations**, which only a
+   different buffer (`(-107)`, `EncodedState`'s eight groups, 66,485 -> 12,660) or fewer
+   objects can reach — and the by-value form of the latter is built and reverted at
+   `(-111)`. Do not re-sweep this table.
 6. **THE ACTOR IS WHERE THE LARGEST WIN OF THE PASS WAS, AND `--bench` CANNOT SEE IT.**
    Re-read at `bb67895a` (Profile of record); `rank_shape` is byte-identical to the
    `c92f3851` reading, so the deck half of the workload is a control. The recorder's
