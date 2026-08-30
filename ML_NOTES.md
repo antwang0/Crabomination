@@ -3225,3 +3225,53 @@ levers this audit priced cheaply (this and the MCTS rollout-policy fix)
 both landed inside a week of the audit; the remaining list
 (mid-resolution ChooseTarget arms, ChooseModes, X-as-a-branch, Serum
 Powder) is in the audit memory and the ranked shortlist stands.
+
+## Round 53 — outcome-judged mid-resolution targets: measured, NOT adopted
+
+The second menu item off the representation audit, and the honest null
+to round 52's adoption. `Decision::ChooseTarget` on the suspending path
+(trigger target picks, cast-slot / off-board picks) is answered by
+`decide_choose_target` — a polarity guess: opponent's biggest, else our
+cheapest, else lowest-life opponent. Wrong in three documented ways: a
+beneficial trigger whose legal set spans both sides buffs THEIR biggest
+creature; undersized removal marks the 3/3 instead of killing the 2/2;
+an optional "up to one" target can never be declined. `target_eval`
+(profile `targeteval`) settles the corner candidates through
+`settle_answer` and replaces the guess on strict improvement only, at
+real decisions only. Both failure modes are pinned by unit tests
+through the real `drain_trigger_queue` suspend path
+(`target_eval_tests` in bot.rs).
+
+**Incidence**: 0.65 asks/game, 13.2 % of all decisions — the densest
+family gated yet (`.ladder/r53_probe.txt`).
+
+**The gate** (`.ladder/run_r53_targeteval.sh`, pre-registered):
+`targeteval` vs `gang`, sealed, seeds 43/97, 12 000 games each.
+**50.1 % on both seeds, intervals straddling 50** (the ladder's own
+verdict line) — pooled +0.10, sweep asymmetry same-signed on both
+(37/24 and 43/32). Per the pre-registered r50 rule this does **not**
+adopt: flag stays off by default, code, tests and profile stay for
+re-measurement — the `fetch_arms` disposition.
+
+**The diagnostic worth keeping**: despite 5× round 52's decision
+density, divergence was *rarer* — 5 939 and 5 925 of 6 000 pairs exact
+mirrors (rho −0.975/−0.980; 12 000 games carrying ~500 000 games'
+precision). The strict-improvement rule turns the flag into a
+measurement of its own premise, and the answer is that in SOS sealed
+the polarity guess is almost always already right: this pool's
+mid-resolution targets are overwhelmingly removal-shaped, and
+beneficial-span-both-sides triggers are a thin slice of the 0.65. That
+is a pool property, not a mechanism failure — the same read as the
+static-anthem deferral. **Re-run when modern/cube decks (denser
+triggers, equipment, counters-matter) enter a pool**; it rides the
+existing script unchanged.
+
+Also recorded during implementation, for the next targeting round: the
+seven INLINE `self.decider.decide` ChooseTarget sites in
+`effects/mod.rs` (council votes, copy retargeting, "change the target",
+effects/mod.rs:759/1335/1403/11736/14913/16436/16476) never reach any
+policy at any flag setting — AutoDecider first-legal for every seat,
+bots, sims and humans' opponents alike. The `Decider` trait has no
+`&GameState` access, so these need per-site suspend plumbing
+(`ResumeContext`), not a policy change. That is the remaining
+ChooseTarget hole, and it is invisible to this round's gate.

@@ -485,6 +485,37 @@ pub struct EvalWeights {
     /// the control ([`damage_order_on`](Self::damage_order_on),
     /// `.ladder/run_r52_dmgorder.sh`).
     pub damage_order: bool,
+    /// Mid-resolution targets judged by settled outcome (round 53):
+    /// `Decision::ChooseTarget` on the suspending path — trigger target
+    /// picks (`drain_trigger_queue`) and the cast-slot / off-board picks
+    /// in `actions.rs` — is answered by `decide_choose_target`, a
+    /// polarity guess that hard-codes "hit the opponent's biggest, else
+    /// give up our cheapest" and can never decline an optional "up to
+    /// one" target. Correct for removal, backwards for every beneficial
+    /// resolution effect whose legal set spans both sides — the same
+    /// classifier gap `target_arms` (round 46, +0.95) closed for
+    /// cast-time slot 0, at the raise sites that flag never touched.
+    /// Under this flag the corner candidates (biggest/smallest permanent
+    /// per side, each legal player, the decline when optional) are
+    /// settled by `settle_answer` and the heuristic's pick is replaced
+    /// only on strict improvement, so games where the guess is right
+    /// play (and antithetically pair) exactly as before. Real decisions
+    /// only (`eval_modes`); sims keep the cheap guess. The seven inline
+    /// `self.decider.decide` sites in `effects/mod.rs` (votes, copy
+    /// retargeting) never reach any policy and are NOT covered — a
+    /// separate hole needing per-site suspend plumbing.
+    ///
+    /// **Measured round 53 and left off**: 50.1 % on both ladder seeds
+    /// (intervals straddling 50 — the ladder's own verdict line), sweep
+    /// asymmetry same-signed on both (37/24, 43/32). A positive lean
+    /// the r50 rule does not adopt. The diagnosis is a pool property:
+    /// 5,925+ of 6,000 pairs were exact mirrors, i.e. the polarity
+    /// guess is almost always already right in SOS sealed, where
+    /// mid-resolution targets are mostly removal-shaped. Re-run on a
+    /// trigger-denser pool (modern/cube) before re-judging
+    /// ([`target_eval_on`](Self::target_eval_on), profile `targeteval`,
+    /// `.ladder/run_r53_targeteval.sh`).
+    pub target_eval: bool,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
     /// its ultimate (recorded: ten turns, a lost game). The flag adds
@@ -613,6 +644,7 @@ impl EvalWeights {
             converge_lands: false,
             chump_blocks: false,
             damage_order: false,
+            target_eval: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -688,6 +720,7 @@ impl EvalWeights {
             converge_lands: false,
             chump_blocks: false,
             damage_order: false,
+            target_eval: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -746,6 +779,7 @@ impl EvalWeights {
             converge_lands: false,
             chump_blocks: false,
             damage_order: false,
+            target_eval: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -1166,6 +1200,13 @@ impl EvalWeights {
     /// default (profile `dmgorder` vs `gang`).
     pub const fn damage_order_on() -> Self {
         Self { damage_order: true, ..Self::block_gang_search() }
+    }
+
+    /// The default plus outcome-judged mid-resolution targets. The
+    /// opt-in for [`target_eval`](Self::target_eval); ladder as A
+    /// against the default (profile `targeteval` vs `gang`).
+    pub const fn target_eval_on() -> Self {
+        Self { target_eval: true, ..Self::block_gang_search() }
     }
 
     /// The attack-search profile plus the walker chip candidate. The
@@ -2090,8 +2131,16 @@ fn decide_pending_policy_inner(
         // should instead hit the opponent's *most* valuable
         // permanent — or, when forced to choose among its own
         // permanents, give up the *least* valuable.
-        crate::decision::Decision::ChooseTarget { legal, .. } if !legal.is_empty() => {
-            decide_choose_target(state, seat, legal, w)
+        crate::decision::Decision::ChooseTarget { legal, optional, .. } if !legal.is_empty() => {
+            // Round 53: judge the corner candidates by settled outcome at
+            // the real decision. Inside a sim (`eval_modes` off) the
+            // clone-and-resolve would multiply whole-state clones, so the
+            // polarity guess below stands there — the same split every
+            // other outcome policy in this table uses.
+            let by_outcome = (w.target_eval && eval_modes)
+                .then(|| decide_target_by_outcome(state, seat, legal, *optional, w))
+                .flatten();
+            by_outcome.unwrap_or_else(|| decide_choose_target(state, seat, legal, w))
         }
         // AutoDecider answers every amount with 0, which turns
         // "choose up to X" payoffs into no-ops and (worse) reads
@@ -3995,6 +4044,100 @@ fn decide_scry(
 /// does (`AutoDecider` answers any nested decision), and keep the best
 /// material eval. Ties and unevaluable modes keep the lowest index, so
 /// the old mode-0 behavior is the floor, never regressed below.
+/// Round 53 — judge a mid-resolution target by settled outcome instead
+/// of the polarity guess. `decide_choose_target` hard-codes "hit the
+/// opponent's biggest, else give up our cheapest": right for removal,
+/// backwards for every beneficial resolution effect whose legal set
+/// spans both sides, and structurally unable to decline an optional
+/// "up to one" target. Rather than settling every legal target (a big
+/// board is a big list), the candidates are the corners the polarity
+/// question turns on — the biggest and smallest permanent on each side,
+/// every legal player, and the decline when the pick is optional —
+/// scored by [`settle_answer`], which prices the actual effect with no
+/// classifier in between. The heuristic's own pick anchors the
+/// comparison and is replaced only on **strict** improvement, so a
+/// position where the guess is right (or the difference doesn't settle)
+/// returns `None` and plays exactly as before the flag.
+fn decide_target_by_outcome(
+    state: &GameState,
+    seat: usize,
+    legal: &[crate::game::types::Target],
+    optional: bool,
+    w: &EvalWeights,
+) -> Option<crate::decision::DecisionAnswer> {
+    use crate::decision::DecisionAnswer;
+    use crate::game::types::Target;
+    let default_pick = match decide_choose_target(state, seat, legal, w) {
+        DecisionAnswer::Target(t) => t,
+        // The heuristic always answers `Target` on a non-empty list;
+        // anything else means the contract changed under us — bail.
+        _ => return None,
+    };
+    // `None` in a candidate slot is the decline.
+    let mut picks: Vec<Option<Target>> = vec![Some(default_pick.clone())];
+    let mut own_perms: Vec<(crate::card::CardId, i32)> = Vec::new();
+    let mut opp_perms: Vec<(crate::card::CardId, i32)> = Vec::new();
+    for t in legal {
+        match t {
+            Target::Permanent(id) => {
+                if let Some(c) = state.battlefield_find(*id) {
+                    let v = permanent_value(state, *id, w);
+                    if c.controller == seat {
+                        own_perms.push((*id, v));
+                    } else {
+                        opp_perms.push((*id, v));
+                    }
+                }
+            }
+            Target::Player(_) => picks.push(Some(t.clone())),
+        }
+    }
+    for list in [&opp_perms, &own_perms] {
+        for extreme in [
+            list.iter().max_by_key(|(_, v)| *v),
+            list.iter().min_by_key(|(_, v)| *v),
+        ] {
+            if let Some(&(id, _)) = extreme {
+                picks.push(Some(Target::Permanent(id)));
+            }
+        }
+    }
+    if optional {
+        picks.push(None);
+    }
+    let mut seen: Vec<Option<Target>> = Vec::new();
+    picks.retain(|p| {
+        if seen.contains(p) {
+            false
+        } else {
+            seen.push(p.clone());
+            true
+        }
+    });
+    let score = |p: &Option<Target>| -> Option<i32> {
+        let answer = match p {
+            Some(t) => DecisionAnswer::Target(t.clone()),
+            None => DecisionAnswer::DeclineTarget,
+        };
+        settle_answer(state, seat, w, answer)
+    };
+    // No settled baseline, no comparison: keep the heuristic.
+    let default_score = score(&picks[0])?;
+    let mut best: (i32, &Option<Target>) = (default_score, &picks[0]);
+    for p in picks.iter().skip(1) {
+        if let Some(s) = score(p)
+            && s > best.0
+        {
+            best = (s, p);
+        }
+    }
+    match best.1 {
+        Some(t) if *t == default_pick => None,
+        Some(t) => Some(DecisionAnswer::Target(t.clone())),
+        None => Some(DecisionAnswer::DeclineTarget),
+    }
+}
+
 fn decide_mode_by_outcome(
     state: &GameState,
     seat: usize,
@@ -19808,5 +19951,118 @@ mod damage_order_tests {
             ids.iter().take(2).any(|id| *id == giant),
             "deathtouch: the 3/3 is among the two that die, got {ids:?}"
         );
+    }
+}
+
+#[cfg(test)]
+mod target_eval_tests {
+    use super::*;
+    use crate::catalog;
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::types::PendingTriggerPush;
+    use crate::game::{GameState, TurnStep};
+    use crate::player::Player;
+
+    fn two_player_game() -> GameState {
+        let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::PreCombatMain;
+        g.players[0].wants_ui = true;
+        g
+    }
+
+    /// Fire `effect` as seat 0's trigger through the real suspending path
+    /// (`drain_trigger_queue`) and return the pending ChooseTarget.
+    fn suspend_on_target(g: &mut GameState, source: crate::card::CardId, effect: Effect) {
+        g.drain_trigger_queue(vec![PendingTriggerPush {
+            actor: Some(0),
+            source,
+            controller: 0,
+            effect,
+            subject: None,
+            event_amount: 0,
+            mode: None,
+            intervening_if: None,
+            from_mana_ability: false,
+            x_value: 0,
+            converged_value: 0,
+            mana_spent: 0,
+        }]);
+        assert!(
+            matches!(
+                g.pending_decision.as_ref().map(|p| &p.decision),
+                Some(crate::decision::Decision::ChooseTarget { .. })
+            ),
+            "fixture: the trigger must suspend on a target pick"
+        );
+    }
+
+    fn answer(g: &GameState, w: &EvalWeights) -> crate::decision::DecisionAnswer {
+        let pending = g.pending_decision.as_ref().unwrap();
+        decide_pending_policy(g, pending.acting_player(), w, &pending.decision, true)
+    }
+
+    /// A beneficial trigger whose legal set spans both sides: the polarity
+    /// guess buffs the opponent's biggest creature; the settled outcome
+    /// puts the counters on our own. This is the round-46 classifier gap
+    /// at the raise site `target_arms` never touched.
+    #[test]
+    fn a_beneficial_trigger_targets_our_own_side() {
+        let mut g = two_player_game();
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+        suspend_on_target(
+            &mut g,
+            mine,
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        );
+        // The guess, documented: biggest opposing permanent.
+        match answer(&g, &EvalWeights::default()) {
+            crate::decision::DecisionAnswer::Target(crate::game::types::Target::Permanent(id)) => {
+                assert_eq!(id, theirs, "the polarity guess buffs THEIR creature")
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
+        // The settled outcome: our own creature.
+        match answer(&g, &EvalWeights::target_eval_on()) {
+            crate::decision::DecisionAnswer::Target(crate::game::types::Target::Permanent(id)) => {
+                assert_eq!(id, mine, "the settled outcome buffs OURS")
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
+    }
+
+    /// Undersized removal: two damage kills their 2/2 outright but only
+    /// marks their 3/3. The guess targets the biggest; the outcome takes
+    /// the kill. Also the mirror-discipline half: the improvement is
+    /// strict, so when the guess and the outcome agree the flag answers
+    /// exactly as the guess did.
+    #[test]
+    fn undersized_removal_takes_the_kill_over_the_mark() {
+        let mut g = two_player_game();
+        let source = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+        suspend_on_target(
+            &mut g,
+            source,
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        );
+        match answer(&g, &EvalWeights::default()) {
+            crate::decision::DecisionAnswer::Target(crate::game::types::Target::Permanent(id)) => {
+                assert_eq!(id, big, "the guess aims at the biggest")
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
+        match answer(&g, &EvalWeights::target_eval_on()) {
+            crate::decision::DecisionAnswer::Target(crate::game::types::Target::Permanent(id)) => {
+                assert_eq!(id, small, "the outcome takes the kill: {small:?} dies, {big:?} heals")
+            }
+            other => panic!("expected a permanent target, got {other:?}"),
+        }
     }
 }
