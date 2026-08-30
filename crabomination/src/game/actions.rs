@@ -13030,6 +13030,15 @@ impl GameState {
                 self.decider = prev_decider;
                 self.players[player].wants_ui = prev_wants_ui;
                 if let Ok(mut evs) = result {
+                    // One allocation for the batch instead of the
+                    // 0->4->8->16 ladder `append` walks up: this row is 1.72
+                    // reserve-growths a call on `cube` and 1.93 on the actor
+                    // (PERF (-108)), both above (-103)'s threshold. Guarded on
+                    // emptiness so a payment that taps nothing still allocates
+                    // nothing.
+                    if events.is_empty() {
+                        events.reserve(16);
+                    }
                     events.append(&mut evs);
                 }
             }
@@ -13099,6 +13108,11 @@ impl GameState {
             };
             if let Ok(mut evs) = result {
                 crate::game::pay_census::record_tap(3, 1);
+                // Same reserve as the colored loop above; the two share
+                // `events` and either can be the first to append.
+                if events.is_empty() {
+                    events.reserve(16);
+                }
                 events.append(&mut evs);
             } else {
                 break;
