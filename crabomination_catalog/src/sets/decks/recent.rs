@@ -7830,7 +7830,7 @@ pub fn grim_harvest() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         triggered_abilities: vec![recover(cost(&[generic(2), b()]))],

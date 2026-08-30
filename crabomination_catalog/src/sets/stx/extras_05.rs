@@ -549,7 +549,8 @@ pub fn lorehold_lookback() -> CardDefinition {
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Creature
-                        .or(SelectionRequirement::HasCardType(CardType::Artifact)),
+                        .or(SelectionRequirement::HasCardType(CardType::Artifact))
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
@@ -1541,7 +1542,10 @@ pub fn lorehold_memorialist() -> CardDefinition {
         cost: cost(&[r(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::HasCardType(CardType::Creature)),
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Creature)
+                    .from_your_graveyard(),
+            ),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         ..Default::default()

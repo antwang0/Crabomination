@@ -514,6 +514,138 @@ fn every_reachable_reanimation_is_visible_to_the_offboard_gate() {
     );
 }
 
+/// Every reanimating `Move` says which zone its target is in.
+///
+/// The filter language has no implicit zone, so a `Move` of its own target to
+/// *your* hand or *your* battlefield whose filter names none is satisfied by a
+/// permanent on the battlefield, by a card in exile, and by one in an
+/// opponent's graveyard. `prefers_graveyard_target` makes the auto-picker walk
+/// graveyards first, which hides it on a board that has one — and Zombify with
+/// an empty graveyard picked a battlefield creature and put it onto *your*
+/// battlefield, i.e. stole it. Seventy-nine bodies carried that defect when
+/// this test was written; `SelectionRequirement::from_your_graveyard` /
+/// `from_any_graveyard` is how a card says it.
+///
+/// **The blink shape is the exclusion and it is structural, not a list.** A
+/// `Move` to your hand or battlefield of a permanent you already control
+/// (Cloudshift, Kor Skyfisher, Soulherder, Thassa) names `ControlledByYou`,
+/// `OwnedByYou` or `ExiledWithSource` in its filter — thirty-eight bodies, and
+/// every one of them is correct as it stands. Those predicates are the tell,
+/// so they satisfy this test.
+#[test]
+fn every_reanimating_move_says_which_zone_its_target_is_in() {
+    fn is_reanimating_dest(dest: &Value) -> bool {
+        match dest {
+            Value::Object(m) => match (m.get("Hand"), m.get("Battlefield")) {
+                (Some(Value::String(who)), _) => who == "You",
+                (_, Some(Value::Object(b))) => {
+                    b.get("controller").and_then(|c| c.as_str()) == Some("You")
+                }
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+    const ZONEY: [&str; 7] = [
+        "InYourGraveyard",
+        "InOpponentGraveyard",
+        "InGraveyard",
+        "InExile",
+        "ControlledByYou",
+        "ExiledWithSource",
+        "OwnedByYou",
+    ];
+    fn walk(
+        v: &Value,
+        body: &crabomination::effect::Effect,
+        card: &str,
+        kind: &str,
+        out: &mut Vec<String>,
+    ) {
+        match v {
+            Value::Object(map) => {
+                if is_nested_ability(map) {
+                    return;
+                }
+                for (k, inner) in map {
+                    if RESOLUTION_TIME_TARGETING.contains(&k.as_str()) {
+                        continue;
+                    }
+                    if k == "Move"
+                        && inner.get("to").is_some_and(is_reanimating_dest)
+                        && let Some(Value::Object(w)) = inner.get("what")
+                    {
+                        if let Some(tf) = w.get("TargetFiltered") {
+                            let f =
+                                tf.get("filter").map(|f| f.to_string()).unwrap_or_default();
+                            if !ZONEY.iter().any(|z| f.contains(z)) {
+                                out.push(format!(
+                                    "{card} ({kind}) filter={}",
+                                    &f[..f.len().min(110)]
+                                ));
+                            }
+                        } else if let Some(n) = w.get("Target").and_then(|n| n.as_u64()) {
+                            // The `Move` re-references a slot whose filter was
+                            // declared at its first mention; ask the slot
+                            // walker for it.
+                            let f = body
+                                .target_filter_for_slot(n as u8)
+                                .map(|f| format!("{f:?}"))
+                                .unwrap_or_else(|| "<none>".to_string());
+                            if !ZONEY.iter().any(|z| f.contains(z)) {
+                                out.push(format!(
+                                    "{card} ({kind}) slot {n} filter={}",
+                                    &f[..f.len().min(110)]
+                                ));
+                            }
+                        }
+                    }
+                    walk(inner, body, card, kind, out);
+                }
+            }
+            Value::Array(items) => {
+                for i in items {
+                    walk(i, body, card, kind, out);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut bad: Vec<String> = Vec::new();
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<(&'static str, &crabomination::effect::Effect)> =
+            vec![("spell", &def.effect)];
+        for a in &def.activated_abilities {
+            bodies.push(("activated", &a.effect));
+        }
+        for t in &def.triggered_abilities {
+            bodies.push(("triggered", &t.effect));
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(("loyalty", &l.effect));
+        }
+        for (kind, body) in bodies {
+            let json = serde_json::to_value(body).expect("Effect serializes");
+            walk(&json, body, def.name, kind, &mut bad);
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    // Come Back Wrong destroys a battlefield creature and returns *that* card,
+    // so its slot-0 filter is board-shaped on purpose; the `Move` is the
+    // second use of a slot the `Destroy` above it already aimed.
+    bad.retain(|r| !r.starts_with("Come Back Wrong "));
+    assert!(
+        bad.is_empty(),
+        "{} reanimating bodies name no zone, so their target can be a \
+         battlefield permanent, a card in exile, or one in an opponent's \
+         graveyard:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+}
+
 /// The two cards the invariant above named, at the site the arm changed.
 ///
 /// Reap and Rise from the Wreck both read "return … from your graveyard to

@@ -195,7 +195,9 @@ pub fn starfield_of_nyx() -> CardDefinition {
                 description: "Return an enchantment card from your graveyard to the battlefield?"
                     .into(),
                 body: Box::new(Effect::Move {
-                    what: target_filtered(SelectionRequirement::Enchantment),
+                    what: target_filtered(
+                        SelectionRequirement::Enchantment.from_your_graveyard(),
+                    ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
@@ -857,7 +859,9 @@ pub fn auramancer() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "Return an enchantment card from your graveyard to your hand?".into(),
                 body: Box::new(Effect::Move {
-                    what: target_filtered(SelectionRequirement::Enchantment),
+                    what: target_filtered(
+                        SelectionRequirement::Enchantment.from_your_graveyard(),
+                    ),
                     to: ZoneDest::Hand(PlayerRef::You),
                 }),
             },
@@ -886,7 +890,7 @@ pub fn monk_idealist() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Enchantment),
+                what: target_filtered(SelectionRequirement::Enchantment.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
@@ -921,7 +925,7 @@ pub fn wildwood_rebirth() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         ..Default::default()

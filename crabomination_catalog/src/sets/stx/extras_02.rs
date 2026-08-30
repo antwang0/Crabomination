@@ -753,9 +753,16 @@ pub fn persist() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature.and(
-                    SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary).negate(),
-                )),
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(
+                            SelectionRequirement::HasSupertype(
+                                crate::card::Supertype::Legendary,
+                            )
+                            .negate(),
+                        )
+                        .from_your_graveyard(),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -1034,7 +1041,8 @@ pub fn sevinnes_reclamation() -> CardDefinition {
             // Mainline: reanimate a ≤3-MV permanent card from your gy.
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3)),
+                    SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3))
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

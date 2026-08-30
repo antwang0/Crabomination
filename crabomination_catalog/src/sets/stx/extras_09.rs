@@ -934,7 +934,7 @@ pub fn lorehold_cathedral() -> CardDefinition {
                 // candidate, then applies the Creature filter (off-battlefield
                 // reads consult `CardDefinition.is_creature()`).
                 effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
@@ -1355,7 +1355,10 @@ pub fn witherbloom_reanimist() -> CardDefinition {
             // Target-filter walks all zones for the candidate; the gy
             // card matches `Creature` via off-bf is_creature() read.
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature.from_your_graveyard()
+                        .from_your_graveyard(),
+                ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             once_per_turn: false,
@@ -1376,7 +1379,9 @@ pub fn witherbloom_reanimist() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(2))
+                        .from_your_graveyard()
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },

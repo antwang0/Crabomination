@@ -898,7 +898,7 @@ pub fn witherbloom_necromancy() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -1690,7 +1690,8 @@ pub fn lorehold_resurgence() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3))
+                    .from_your_graveyard(),
             ),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
@@ -1720,7 +1721,7 @@ pub fn witherbloom_studies() -> CardDefinition {
                 amount: Value::Const(3),
             },
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),

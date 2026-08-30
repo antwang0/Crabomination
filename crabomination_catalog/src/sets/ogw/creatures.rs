@@ -1372,15 +1372,16 @@ pub fn ulamogs_crusher() -> CardDefinition {
 }
 
 /// Artisan of Kozilek — {9} 10/9. Cast → return target creature card from your
-/// graveyard to the battlefield; Annihilator 2. (The target's "from your
-/// graveyard" zone gate is dropped — same approximation as Disentomb.)
+/// graveyard to the battlefield; Annihilator 2.
 pub fn artisan_of_kozilek() -> CardDefinition {
     use crate::card::SelectionRequirement;
     use crate::effect::{PlayerRef, ZoneDest};
     CardDefinition {
         keywords: vec![Keyword::Annihilator(2)],
         triggered_abilities: vec![on_cast(Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(
+                SelectionRequirement::Creature.from_your_graveyard(),
+            ),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
                 tapped: false,

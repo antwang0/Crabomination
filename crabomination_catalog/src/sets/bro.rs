@@ -357,9 +357,9 @@ pub fn recommission() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Artifact)
-                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact)
+                        .and(SelectionRequirement::ManaValueAtMost(3))
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,

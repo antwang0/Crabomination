@@ -360,7 +360,7 @@ pub fn cemetery_recruitment() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),

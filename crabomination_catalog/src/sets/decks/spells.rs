@@ -378,9 +378,11 @@ pub fn goryos_vengeance() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature.and(
-                    SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary),
-                )),
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasSupertype(crate::card::Supertype::Legendary))
+                        .from_your_graveyard(),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

@@ -97,7 +97,7 @@ pub fn defossilize() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -753,7 +753,7 @@ pub fn coati_scavenger() -> CardDefinition {
                 count: 4,
             },
             then: Box::new(Effect::Move {
-                what: target_filtered(SelectionRequirement::PermanentCard),
+                what: target_filtered(SelectionRequirement::PermanentCard.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
             else_: Box::new(Effect::Noop),
@@ -1448,7 +1448,7 @@ pub fn oltec_archaeologists() -> CardDefinition {
         toughness: 4,
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Artifact),
+                what: target_filtered(SelectionRequirement::Artifact.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::Scry {
@@ -3256,7 +3256,7 @@ pub fn walk_with_the_ancestors() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::PermanentCard),
+                what: target_filtered(SelectionRequirement::PermanentCard.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::Discover {

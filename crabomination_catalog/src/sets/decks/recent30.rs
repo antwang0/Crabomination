@@ -441,9 +441,11 @@ pub fn back_on_track() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature.or(
-                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle),
-                )),
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle))
+                        .from_your_graveyard(),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

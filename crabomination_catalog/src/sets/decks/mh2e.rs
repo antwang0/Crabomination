@@ -410,7 +410,7 @@ pub fn graceful_restoration() -> CardDefinition {
         effect: Effect::ChooseMode(vec![
             Effect::Seq(vec![
                 Effect::Move {
-                    what: target_filtered(R::Creature),
+                    what: target_filtered(R::Creature.from_your_graveyard()),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,

@@ -942,7 +942,10 @@ pub fn postmortem_lunge() -> CardDefinition {
                 ),
                 then: Box::new(Effect::Seq(vec![
                     Effect::Move {
-                        what: target_filtered(SelectionRequirement::Creature),
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .from_your_graveyard(),
+                        ),
                         to: ZoneDest::Battlefield {
                             controller: PlayerRef::You,
                             tapped: false,
@@ -1545,7 +1548,7 @@ pub fn resurrection() -> CardDefinition {
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
                 tapped: false,
@@ -2159,7 +2162,9 @@ pub fn lorehold_recovery() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    SelectionRequirement::Creature.from_your_graveyard(),
+                ),
                 to: crate::effect::ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

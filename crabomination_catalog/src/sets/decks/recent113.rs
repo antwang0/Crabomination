@@ -326,7 +326,8 @@ pub fn vesperlark() -> CardDefinition {
             ),
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(1)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(1))
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
@@ -778,7 +779,7 @@ pub fn graveshifter() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MayDo {
             description: "Return target creature card from your graveyard to your hand?".into(),
             body: Box::new(Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
         })],

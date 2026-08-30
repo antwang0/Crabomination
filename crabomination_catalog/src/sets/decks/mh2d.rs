@@ -683,7 +683,8 @@ pub fn revolutionist() -> CardDefinition {
         keywords: vec![Keyword::Madness(cost(&[generic(3), r()]))],
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(
-                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
+                R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))
+                    .from_your_graveyard(),
             ),
             to: ZoneDest::Hand(PlayerRef::You),
         })],

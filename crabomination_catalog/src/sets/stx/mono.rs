@@ -850,7 +850,7 @@ pub fn healing_technique() -> CardDefinition {
                 amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
             },
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Any),
+                what: target_filtered(SelectionRequirement::Any.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),

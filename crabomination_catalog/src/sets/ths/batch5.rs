@@ -377,7 +377,18 @@ pub fn rescue_from_the_underworld() -> CardDefinition {
             Effect::DelayUntilWithCapture {
                 kind: DelayedTriggerKind::YourNextUpkeep,
                 capture: Selector::Target(0),
-                body: Box::new(reanimate_slot0()),
+                // Slot 0 declares its filter here rather than through a bare
+                // `Selector::Target(0)`: the slot walker reads the filter off
+                // the *body*, and with none "target creature card in your
+                // graveyard" enumerates every permanent in every zone.
+                // Resolution is unchanged — both selectors name slot 0.
+                body: Box::new(Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.from_your_graveyard(),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
             },
             Effect::DelayUntilWithCapture {
                 kind: DelayedTriggerKind::YourNextUpkeep,

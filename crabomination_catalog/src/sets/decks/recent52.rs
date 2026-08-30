@@ -451,7 +451,7 @@ pub fn ghostly_dancers() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::Move {
-                    what: target_filtered(R::Enchantment),
+                    what: target_filtered(R::Enchantment.from_your_graveyard()),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             },
@@ -602,7 +602,8 @@ pub fn vat_emergence() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(R::Creature),
+                // "from **a** graveyard" — either one.
+                what: target_filtered(R::Creature.from_any_graveyard()),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -704,7 +705,7 @@ pub fn macabre_reconstruction() -> CardDefinition {
         effect: Effect::ApplyToTargets {
             max_targets: 2,
             min_targets: 0,
-            filter: R::Creature,
+            filter: R::Creature.from_your_graveyard(),
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
                 to: ZoneDest::Hand(PlayerRef::You),

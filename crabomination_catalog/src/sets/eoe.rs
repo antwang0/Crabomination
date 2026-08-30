@@ -1543,7 +1543,8 @@ pub fn interceptor_mechan() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact)
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),

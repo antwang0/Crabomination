@@ -100,7 +100,7 @@ pub fn elvish_regrower() -> CardDefinition {
         power: 4,
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(R::PermanentCard),
+            what: target_filtered(R::PermanentCard.from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..Default::default()

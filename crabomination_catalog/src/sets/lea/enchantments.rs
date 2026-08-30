@@ -92,7 +92,9 @@ pub fn animate_dead() -> CardDefinition {
                     Effect::Move {
                         what: Selector::TargetFiltered {
                             slot: 0,
-                            filter: SelectionRequirement::Creature,
+                            // "Enchant creature card in **a** graveyard" —
+                            // either one, and never a battlefield permanent.
+                            filter: SelectionRequirement::Creature.from_any_graveyard(),
                         },
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                     },

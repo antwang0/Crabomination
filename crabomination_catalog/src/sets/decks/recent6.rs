@@ -36,7 +36,7 @@ pub fn karmic_guide() -> CardDefinition {
             Keyword::Echo(cost(&[generic(3), w(), w()])),
         ],
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
                 tapped: false,

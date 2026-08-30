@@ -89,7 +89,10 @@ pub fn daretti_rocketeer_engineer() -> CardDefinition {
         filter: R::Artifact.and(R::ControlledByYou),
         count: Value::ONE,
         then: Box::new(Effect::Move {
-            what: Selector::TargetFiltered { slot: 0, filter: R::Artifact },
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: R::Artifact.from_your_graveyard(),
+            },
             to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
         }),
         else_: None,

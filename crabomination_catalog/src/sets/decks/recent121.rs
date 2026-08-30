@@ -66,7 +66,7 @@ pub fn bonebind_orator() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: true,
             effect: Effect::Move {
-                what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                what: target_filtered(R::Creature.and(R::OtherThanSource).from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             ..Default::default()

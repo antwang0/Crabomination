@@ -3095,7 +3095,7 @@ pub fn true_ancestry() -> CardDefinition {
         subtypes: lesson(),
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Permanent),
+                what: target_filtered(SelectionRequirement::Permanent.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             investigate(1),
@@ -4573,14 +4573,14 @@ pub fn zukos_conviction() -> CardDefinition {
         effect: Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: true,
                 },
             }),
             else_: Box::new(Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             }),
         },

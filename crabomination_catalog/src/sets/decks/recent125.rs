@@ -89,7 +89,10 @@ pub fn sun_blessed_healer() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::Move {
-                what: target_filtered(R::PermanentCard.and(R::ManaValueAtMost(2))),
+                what: target_filtered(
+                    R::PermanentCard.and(R::ManaValueAtMost(2))
+                        .from_your_graveyard(),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

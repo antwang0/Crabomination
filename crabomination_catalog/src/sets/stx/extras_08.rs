@@ -495,7 +495,8 @@ pub fn lorehold_researcher() -> CardDefinition {
             effect: Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
@@ -743,8 +744,8 @@ pub fn lorehold_resurrectionist() -> CardDefinition {
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                        SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3))
+                            .from_your_graveyard(),
                     ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,

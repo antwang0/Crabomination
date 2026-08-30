@@ -834,7 +834,10 @@ pub fn abiding_grace() -> CardDefinition {
                     amount: Value::ONE,
                 },
                 Effect::Move {
-                    what: target_filtered(R::Creature.and(R::ManaValueAtMost(1))),
+                    what: target_filtered(
+                        R::Creature.and(R::ManaValueAtMost(1))
+                            .from_your_graveyard(),
+                    ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
@@ -1127,7 +1130,7 @@ pub fn late_to_dinner() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(R::Creature),
+                what: target_filtered(R::Creature.from_your_graveyard()),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -1423,7 +1426,7 @@ pub fn disciple_of_the_sun() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(R::Permanent.and(R::ManaValueAtMost(3))),
+            what: target_filtered(R::Permanent.and(R::ManaValueAtMost(3)).from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..Default::default()

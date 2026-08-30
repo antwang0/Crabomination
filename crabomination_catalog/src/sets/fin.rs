@@ -4361,7 +4361,8 @@ pub fn sorceresss_schemes() -> CardDefinition {
             Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },

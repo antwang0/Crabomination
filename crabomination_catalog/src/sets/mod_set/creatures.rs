@@ -2734,7 +2734,9 @@ pub fn eternal_witness() -> CardDefinition {
             // `auto_target_for_effect` falls through to graveyards when
             // no battlefield permanent matches.
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Player.negate()),
+                what: target_filtered(
+                    SelectionRequirement::Player.negate().from_your_graveyard(),
+                ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
@@ -4674,7 +4676,10 @@ pub fn portal_to_phyrexia() -> CardDefinition {
                     EventScope::YourControl,
                 ),
                 effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    // "from **a** graveyard" — either one.
+                    what: target_filtered(
+                        SelectionRequirement::Creature.from_any_graveyard(),
+                    ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
@@ -5826,7 +5831,7 @@ pub fn gravedigger() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..Default::default()
@@ -6382,7 +6387,8 @@ pub fn rotting_regisaur() -> CardDefinition {
 pub fn sun_titan() -> CardDefinition {
     let recur = || Effect::Move {
         what: target_filtered(
-            SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3)),
+            SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3))
+                .from_your_graveyard(),
         ),
         to: ZoneDest::Battlefield {
             controller: PlayerRef::You,

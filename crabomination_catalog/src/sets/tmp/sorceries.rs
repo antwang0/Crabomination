@@ -22,7 +22,11 @@ pub fn reanimate() -> CardDefinition {
                 amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
             },
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                // "from **a** graveyard" — either one, but never the
+                // battlefield and never exile.
+                what: target_filtered(
+                    SelectionRequirement::Creature.from_any_graveyard(),
+                ),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,

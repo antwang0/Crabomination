@@ -1407,7 +1407,7 @@ pub fn unburial_rites() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
                 tapped: false,
@@ -3751,7 +3751,7 @@ pub fn raise_dead() -> CardDefinition {
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         ..Default::default()
@@ -5095,7 +5095,7 @@ pub fn regrowth() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Any),
+            what: target_filtered(SelectionRequirement::Any.from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         ..Default::default()
@@ -6766,7 +6766,8 @@ pub fn unearth() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Move {
             what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(1)),
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(1))
+                    .from_your_graveyard(),
             ),
             to: ZoneDest::Battlefield {
                 controller: PlayerRef::You,
@@ -12063,7 +12064,7 @@ pub fn phyrexian_reclamation() -> CardDefinition {
             tap_cost: false,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             once_per_turn: false,
@@ -12660,7 +12661,7 @@ pub fn kolaghans_command() -> CardDefinition {
             modes: vec![
                 // Mode 0: return target creature card from your gy to hand.
                 Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 // Mode 1: target player discards a card.
@@ -12726,7 +12727,7 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: -3,
                 effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Any),
+                    what: target_filtered(SelectionRequirement::Any.from_your_graveyard()),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 ..Default::default()
@@ -26141,7 +26142,7 @@ pub fn metamorphosis_fanatic() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: false,
@@ -28789,7 +28790,10 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                         amount: Value::Const(2),
                     },
                     Effect::Move {
-                        what: target_filtered(SelectionRequirement::Creature),
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .from_your_graveyard(),
+                        ),
                         to: ZoneDest::Hand(PlayerRef::You),
                     },
                 ]),
@@ -30904,7 +30908,7 @@ pub fn mausoleum_turnkey() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
         ..Default::default()
@@ -41107,7 +41111,8 @@ pub fn lord_of_the_undead() -> CardDefinition {
             effect: Effect::Move {
                 what: target_filtered(
                     SelectionRequirement::Creature
-                        .and(SelectionRequirement::HasCreatureType(CreatureType::Zombie)),
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Zombie))
+                        .from_your_graveyard(),
                 ),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
@@ -43599,7 +43604,7 @@ pub fn midnight_recovery() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(SelectionRequirement::Creature.from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
             Effect::Cipher,

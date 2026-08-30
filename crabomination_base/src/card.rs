@@ -2870,6 +2870,24 @@ impl SelectionRequirement {
         Self::Not(Box::new(self))
     }
 
+    /// This filter, restricted to a card in **your** graveyard.
+    ///
+    /// The filter language has no implicit zone: a reanimation filter that
+    /// names none is satisfied by a permanent on the battlefield, by a card
+    /// in exile, and by one in an opponent's graveyard, because
+    /// `legal_targets_for_filter` applies the same requirement to every zone
+    /// the effect can reach. A card that prints "from your graveyard" says so
+    /// with this. See `core_rules::target_walkers::offboard_gate`.
+    pub fn from_your_graveyard(self) -> Self {
+        Self::InYourGraveyard.and(self)
+    }
+
+    /// This filter, restricted to a card in **any** graveyard — the
+    /// "from a graveyard" wording (Reanimate, Animate Dead).
+    pub fn from_any_graveyard(self) -> Self {
+        Self::InGraveyard.and(self)
+    }
+
     /// Rewrite every `IsSource` atom to a constant. Used when a filter is
     /// evaluated against a card that has already left the battlefield, where
     /// the "is this the granting source?" answer is known up front but the

@@ -954,7 +954,7 @@ pub fn ravos_soultender() -> CardDefinition {
             effect: Effect::MayDo {
                 description: "return a creature card from your graveyard to your hand".into(),
                 body: Box::new(Effect::Move {
-                    what: target_filtered(R::Creature),
+                    what: target_filtered(R::Creature.from_your_graveyard()),
                     to: ZoneDest::Hand(PlayerRef::You),
                 }),
             },

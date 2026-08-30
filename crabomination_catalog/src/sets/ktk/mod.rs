@@ -188,7 +188,8 @@ pub fn alesha_who_smiles_at_death() -> CardDefinition {
                     what: Selector::TargetFiltered {
                         slot: 0,
                         filter: SelectionRequirement::Creature
-                            .and(SelectionRequirement::PowerAtMost(2)),
+                            .and(SelectionRequirement::PowerAtMost(2))
+                            .from_your_graveyard(),
                     },
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,

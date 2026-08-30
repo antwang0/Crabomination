@@ -525,7 +525,7 @@ pub fn mudflat_village() -> CardDefinition {
                 mana_cost: cost(&[generic(1), b()]),
                 sac_cost: true,
                 effect: Effect::Move {
-                    what: target_filtered(kindred()),
+                    what: target_filtered(kindred().from_your_graveyard()),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
                 ..Default::default()
@@ -1261,8 +1261,11 @@ pub fn come_back_wrong() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
+            // The slot carries its filter here — a bare `Selector::Target(0)`
+            // declares none, so the enumerator falls back to `Any` and offers
+            // players and cards in every zone for "destroy target creature".
             Effect::Destroy {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
             },
             Effect::If {
                 // Only reanimate if the destroy actually buried a creature card

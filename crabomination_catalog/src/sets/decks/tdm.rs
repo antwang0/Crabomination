@@ -2559,7 +2559,8 @@ pub fn sidisi_regent_of_the_mire() -> CardDefinition {
             effect: Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
-                    filter: R::Creature.and(R::ManaValueEqualsSacrificedPlus(1)),
+                    filter: R::Creature.and(R::ManaValueEqualsSacrificedPlus(1))
+                        .from_your_graveyard(),
                 },
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },

@@ -159,7 +159,9 @@ pub fn timeless_witness() -> CardDefinition {
     );
     // ETB: return target card from your graveyard to hand (Eternal Witness).
     c.triggered_abilities = vec![etb(Effect::Move {
-        what: target_filtered(SelectionRequirement::Player.negate()),
+        what: target_filtered(
+            SelectionRequirement::Player.negate().from_your_graveyard(),
+        ),
         to: ZoneDest::Hand(PlayerRef::You),
     })];
     c

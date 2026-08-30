@@ -353,7 +353,7 @@ pub fn undergrowth_recon() -> CardDefinition {
                 EventScope::ActivePlayer,
             ),
             effect: Effect::Move {
-                what: target_filtered(R::Land),
+                what: target_filtered(R::Land.from_your_graveyard()),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: true,
@@ -544,7 +544,10 @@ pub fn magnetic_snuffler() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
                 Effect::Move {
-                    what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                    what: target_filtered(
+                        R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                            .from_your_graveyard(),
+                    ),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
