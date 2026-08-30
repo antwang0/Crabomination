@@ -201,3 +201,51 @@ fn kemuri_onna_discards_from_one_targeted_player() {
     assert_eq!(g.players[0].hand.len(), p0_before, "the caster discarded nothing");
     assert_eq!(g.players[1].hand.len(), p1_before - 1, "the targeted player discarded one");
 }
+
+/// "…that player controls", not "an opponent controls" — the two agree in a
+/// heads-up game and diverge the moment there is a third seat.
+///
+/// Throat Slitter and Mistblade Shinobi both filtered on
+/// `ControlledByOpponent`, so a Ninja that connected with seat 1 could destroy
+/// or bounce seat 2's creature. The board here has **only** the uninvolved
+/// seat's creature, so the old filter finds a legal target and the correct one
+/// finds none and resolves targetless.
+#[test]
+fn ninja_combat_triggers_only_reach_the_damaged_players_board() {
+    use crabomination::player::Player;
+
+    /// Local, because each file in this binary has its own; see `tmp.rs`.
+    fn advance_to(g: &mut GameState, step: TurnStep) {
+        while g.step != step {
+            g.perform_action(GameAction::PassPriority).expect("pass priority");
+        }
+    }
+
+    for (name, def) in [
+        ("Throat Slitter", catalog::throat_slitter()),
+        ("Mistblade Shinobi", catalog::mistblade_shinobi()),
+    ] {
+        let mut g = two_player_game();
+        g.players.push(Player::new(2, "P2"));
+        // The only creature on the board belongs to the seat the Ninja never
+        // touches. Grizzly Bears is green, so Throat Slitter's "nonblack"
+        // clause does not spare it.
+        let bystander = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        let ninja = g.add_card_to_battlefield(0, def);
+        g.clear_sickness(ninja);
+
+        advance_to(&mut g, TurnStep::DeclareAttackers);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: ninja,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("the Ninja attacks seat 1");
+        drain_stack(&mut g);
+        advance_to(&mut g, TurnStep::PostCombatMain);
+
+        assert!(
+            g.battlefield_find(bystander).is_some(),
+            "{name} reached a creature the damaged player does not control",
+        );
+    }
+}

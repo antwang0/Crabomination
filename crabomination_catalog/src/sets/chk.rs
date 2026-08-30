@@ -3410,10 +3410,14 @@ pub fn throat_slitter() -> CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[generic(2), b()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            // "…destroy target nonblack creature **that player** controls" —
+            // `ControlledByTriggerPlayer`, not `ControlledByOpponent`. The two
+            // agree in a heads-up game, where the damaged player is the only
+            // opponent, and diverge in every multiplayer one.
             effect: Effect::Destroy {
                 what: target_filtered(
                     SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent)
+                        .and(SelectionRequirement::ControlledByTriggerPlayer)
                         .and(crate::card::SelectionRequirement::Not(Box::new(
                             SelectionRequirement::HasColor(crate::mana::Color::Black),
                         ))),
@@ -3557,9 +3561,12 @@ pub fn mistblade_shinobi() -> CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[u()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            // "…return target creature **that player** controls" — see
+            // Throat Slitter for why `ControlledByOpponent` is not that.
             effect: Effect::Move {
                 what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByTriggerPlayer),
                 ),
                 to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },

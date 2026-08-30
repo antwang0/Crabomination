@@ -189,7 +189,18 @@ target creature or planeswalker" — rebuilt on `AdditionalCastCost::
 DiscardXFromCost`, the shape Sickening Dreams and Firestorm already use, and
 the test that locked in the invented text is replaced.
 
-**Still open:** Emeritus of Truce // STP · several CHK Ninjas. **And the
+~~several CHK Ninjas~~ ✅ (2026-08-29) — all six re-read against the oracle.
+Four were already right (Okiba-Gang and Walker bind the damaged seat as
+`PlayerRef::Target(0)`, Skullsnatcher as `ExileUpToNFromGraveyards { of }`,
+Higure and Ninja of the Deep Hours are self-scoped). **Two were not:** Throat
+Slitter and Mistblade Shinobi filtered "that player controls" as
+`ControlledByOpponent`, which agrees in a heads-up game and lets the Ninja
+destroy or bounce an *uninvolved* third seat's creature. Both carry
+`ControlledByTriggerPlayer` now, and the regression test builds the third seat.
+
+**Still open:** Emeritus of Truce // STP — an **SOS** card, so its definition
+*is* its spec (no oracle to arbitrate) and TODO's encoding caution names that
+pool; leave it to a run that intends a pool change. **And the
 lesson the two closed rows share is a filter for the rest of this file:** a row
 here is a claim about code, and three of the five in this bucket were wrong
 about it in both directions — one card was already fixed, one was broken
