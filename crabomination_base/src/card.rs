@@ -6202,6 +6202,45 @@ pub struct CardCold {
     /// abilities). When the pile leaves the battlefield each component goes
     /// to that zone as its own card.
     pub mutate_stack: Vec<CardInstance>,
+    /// Keywords granted with `Duration::EndOfTurn` via `Effect::GrantKeyword`.
+    /// Cleared at the Cleanup step alongside `power_bonus`/`toughness_bonus`.
+    /// Stored separately from `definition.keywords` so the printed-Oracle
+    /// keywords aren't permanently mutated by an EOT pump (engine fix —
+    /// push modern_decks batch 24). `has_keyword` checks both vectors.
+    pub granted_keywords_eot: Vec<Keyword>,
+    /// Per-grant layer timestamps for `granted_keywords_eot` (same indices;
+    /// CR 613.7). Lets the layer walk order an EOT grant against
+    /// RemoveKeyword / RemoveAllAbilities effects instead of always
+    /// pre-merging it. Grants pushed without a timestamp (tests, legacy
+    /// snapshots) default to 0 — ordered before every tracked effect,
+    /// matching the old pre-merge behavior.
+    pub granted_keywords_eot_ts: Vec<u64>,
+    /// Until-end-of-turn flashback granted to this card while it sits in a
+    /// graveyard — "target instant/sorcery card in your graveyard gains
+    /// flashback until end of turn; the flashback cost equals its mana
+    /// cost" (the SOS "Flashback" instant). Read by `cast_flashback` via
+    /// [`effective_flashback`]; cleared at cleanup (including graveyard
+    /// cards). Transient grant, so it shares `granted_keywords_eot`'s
+    /// lifetime; serialized for mid-turn snapshot consistency.
+    pub granted_flashback_eot: Option<crate::mana::ManaCost>,
+    /// Until-end-of-turn Harmonize (CR 702.180) granted to this card while it
+    /// sits in a graveyard — "target instant/sorcery card in your graveyard
+    /// gains harmonize until end of turn; its harmonize cost equals its mana
+    /// cost" (Songcrafter Mage). Read by `cast_harmonize` via
+    /// [`effective_harmonize`]; cleared at cleanup.
+    pub granted_harmonize_eot: Option<crate::mana::ManaCost>,
+    /// Alternative cost the controller may pay to cast this card via its
+    /// `may_play_until` permission instead of casting it for free — the
+    /// "miracle {N}" cost granted by Lorehold, the Historian. Read by
+    /// `cast_from_zone_without_paying`; its lifetime tracks `may_play_until`
+    /// (cleared together by the expiry sweep and when a cast consumes the
+    /// permission). `None` for ordinary free may-play grants.
+    pub granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
+    /// Conditional surcharge on a granted may-play cast: "it costs [cost]
+    /// more to cast this way unless the spell targets a permanent matching
+    /// [filter]" (Mavinda, Students' Advocate's {8}-unless-your-creature).
+    /// Shares `may_play_until`'s lifetime.
+    pub granted_cast_surcharge_eot: Option<(crate::mana::ManaCost, SelectionRequirement)>,
 }
 
 /// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.
@@ -7107,19 +7146,6 @@ pub struct CardData {
     /// stamps the life lost). `Value::RememberedAmountOfSource` reads it —
     /// "gain life equal to the life you lost" (Soulgorger Orgg).
     pub remembered_amount: Option<i32>,
-    /// Keywords granted with `Duration::EndOfTurn` via `Effect::GrantKeyword`.
-    /// Cleared at the Cleanup step alongside `power_bonus`/`toughness_bonus`.
-    /// Stored separately from `definition.keywords` so the printed-Oracle
-    /// keywords aren't permanently mutated by an EOT pump (engine fix —
-    /// push modern_decks batch 24). `has_keyword` checks both vectors.
-    pub granted_keywords_eot: Vec<Keyword>,
-    /// Per-grant layer timestamps for `granted_keywords_eot` (same indices;
-    /// CR 613.7). Lets the layer walk order an EOT grant against
-    /// RemoveKeyword / RemoveAllAbilities effects instead of always
-    /// pre-merging it. Grants pushed without a timestamp (tests, legacy
-    /// snapshots) default to 0 — ordered before every tracked effect,
-    /// matching the old pre-merge behavior.
-    pub granted_keywords_eot_ts: Vec<u64>,
     /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
     /// count; the host gets the keyword while one or more such counters
     /// are on it. Applied as a layer-6 keyword addition during
@@ -7258,32 +7284,6 @@ pub struct CardData {
     /// deals combat damage to a player, the controller may cast a free copy of
     /// this card. `None` for ordinary exile.
     pub encoded_on: Option<CardId>,
-    /// Until-end-of-turn flashback granted to this card while it sits in a
-    /// graveyard — "target instant/sorcery card in your graveyard gains
-    /// flashback until end of turn; the flashback cost equals its mana
-    /// cost" (the SOS "Flashback" instant). Read by `cast_flashback` via
-    /// [`effective_flashback`]; cleared at cleanup (including graveyard
-    /// cards). Transient grant, so it shares `granted_keywords_eot`'s
-    /// lifetime; serialized for mid-turn snapshot consistency.
-    pub granted_flashback_eot: Option<crate::mana::ManaCost>,
-    /// Until-end-of-turn Harmonize (CR 702.180) granted to this card while it
-    /// sits in a graveyard — "target instant/sorcery card in your graveyard
-    /// gains harmonize until end of turn; its harmonize cost equals its mana
-    /// cost" (Songcrafter Mage). Read by `cast_harmonize` via
-    /// [`effective_harmonize`]; cleared at cleanup.
-    pub granted_harmonize_eot: Option<crate::mana::ManaCost>,
-    /// Alternative cost the controller may pay to cast this card via its
-    /// `may_play_until` permission instead of casting it for free — the
-    /// "miracle {N}" cost granted by Lorehold, the Historian. Read by
-    /// `cast_from_zone_without_paying`; its lifetime tracks `may_play_until`
-    /// (cleared together by the expiry sweep and when a cast consumes the
-    /// permission). `None` for ordinary free may-play grants.
-    pub granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
-    /// Conditional surcharge on a granted may-play cast: "it costs [cost]
-    /// more to cast this way unless the spell targets a permanent matching
-    /// [filter]" (Mavinda, Students' Advocate's {8}-unless-your-creature).
-    /// Shares `may_play_until`'s lifetime.
-    pub granted_cast_surcharge_eot: Option<(crate::mana::ManaCost, SelectionRequirement)>,
     /// A color chosen as this permanent entered (CR 614/107.4 — Coldsteel
     /// Heart, choose-a-color mana rocks). Read by `ManaPayload::
     /// ChosenColorOfSource` so a `{T}: Add the chosen color` ability taps for
@@ -7739,8 +7739,6 @@ impl CardInstance {
             chosen_permanent: None,
             chosen_player: None,
             remembered_amount: None,
-            granted_keywords_eot: Vec::new(),
-            granted_keywords_eot_ts: Vec::new(),
             keyword_counters: KeywordCounters::default(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
@@ -7770,10 +7768,6 @@ impl CardInstance {
             exiled_by: None,
             exiled_with: None,
             encoded_on: None,
-            granted_flashback_eot: None,
-            granted_harmonize_eot: None,
-            granted_alt_cast_cost_eot: None,
-            granted_cast_surcharge_eot: None,
             chosen_color: None,
             monstrous: false,
             sector: None,
