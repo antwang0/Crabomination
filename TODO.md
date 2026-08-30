@@ -21,98 +21,53 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT — the handoff. Fifteen lines. Everything under it is the standing index.
+## NEXT — the handoff. Everything under it is the standing index.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
-   claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
-   push code before tracker prose, rebase not force, **sequential builds only**.
-   **And say what you are building before you build it.** Two sessions took
-   the graveyard's second lane the same evening, independently, down to the
-   predicate — one 35-minute A/B wasted, and only the tests survived from the
-   loser (`d6a9b3d5`). The queue in item 3 is the claim board: before an A/B
-   that costs a build, push a one-line "TAKEN by this session, <date>" onto
-   the entry you are pulling. A push costs seconds; a duplicated A/B costs an
-   hour of one core.
-1b. **`CardData`'s WIDTH is DONE, both halves.** Three instalments landed:
-   `daf30ed1` + `be6ec1ec` took 864 -> 568 bytes (**-0.596 / -0.605 /
-   -0.696 %**), and `b2330629` moved `tapped` and five per-turn flags out of
-   the `Arc` onto the `CardInstance` handle (**-0.966 / -0.949 / -1.236 %**,
-   deep copies 136,436 -> 100,016 on `cube`). Nothing here is left to claim.
-1c. **CLAIMED, 2026-08-30, this session: `Overlay`'s `proj` FIELD.**
-   `ComputedPermanent`'s four characteristics each store a
-   `fn(&CardDefinition) -> &T` that is a compile-time constant per field — 32
-   bytes on a struct built 289,098 times and `Arc`-allocated 201,780 times a
-   six-game `cube` run, and an indirect call on the printed-side read, which
-   is the common one. A type parameter makes it a field offset. Sized against
-   the eighty-fourth pass's padding probe (+8 bytes = `fixed` +0.040 % /
-   `cube` +0.058 %) the width alone is ~-0.16 / -0.23 %; the read side is what
-   the A/B is for. Contained in `layers.rs`.
-2. **State at `6d30b1e6`**, the combined tip of both sessions: suite
-   19,044 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
+   claude/modern_decks origin/claude/modern_decks`. Two sessions run at once:
+   push code before tracker prose, rebase not force, **sequential builds
+   only**, and **push a one-line "TAKEN, <date>" onto the PERF entry before
+   you spend a build on it** (`d6a9b3d5` — one duplicated 35-minute A/B).
+   CLAIMED right now: `Overlay`'s `proj` field, PERF `(-92)`, the other
+   session. Nothing else is.
+2. **State at `b6218fad`** (the tracker commits above it are prose): suite
+   19,048 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
    (30 cells / 33,120 games / 0 failures, 5 assertion strings), `--bench`
    byte-identical (195,528 / 27.44 / 611.0 / 0 stalls, determinism +
-   thread_determinism ok). Ir anchor and the whole pass's **-1.535 / -1.646 /
-   -1.573 %** are in PERF's Baseline; **each change names its own base**.
-   **The lane sizes fall off a cliff after the third** (-0.28/-0.61/-0.38 down
-   to -0.09/-0.04/-0.03): the family is mined, and a seventh lane is not the
-   next move.
-   `host_calib_ms` drifts 49-83 inside one session on this box — quote a
-   `games_per_s` with its calib or not at all.
-3. **THE PROFILE HAS NO HEAD LEFT, AND THAT IS THIS PASS'S RESULT.** `(-96)`
-   re-read all three pools, `(-97)` the actor, `(-98)` `cg_sites` after the
-   find memo, `(-95)` the `--games`-doubling lens: **a long tail at every
-   magnification — function, call site, run length.** Every row above 2 % is a
-   mined family with its refutation on file, the allocator (an upper bound
-   this instrument cannot tighten), or `Vec::from_iter` over ~93 callers. So
-   **the next win is a structural change to a mined family, not another row**,
-   and `(-99)` is the entry point: the 132,370 CoW deep copies attributed by
-   calling context for the first time, two contexts holding 42 % of them, with
-   its **one** remaining design direction (a narrower probe clone) and a
-   warning that every pass that gave this family less than a day came back
-   with a refutation — the other, a no-op-write audit, is closed by
-   `cg_sites deref_mut`: 0.51 % total, 0.07 % largest site, and neither hot
-   context in the table at all. `(-92)` leads 2
-   and 3 are the alternative. `(-93)`'s lane device is intact and lanes 11-16 are
-   free, but its consumer list is exhausted — and note that every lane after
-   the third was found off the **self** table, not off that list, by reading
-   `cg_edges.py --rows 40` for any `battlefield.iter()` walk whose per-card
-   body is a definition read. `(-95)`'s lens is now run on **all three** pools
-   (saturating share 0.28 / 0.56 / 0.37 %, so the six-game workload is clean
-   everywhere) and it came back with a correction to itself: the program's
-   growth for a doubled `--games` is **x2.49 / x1.67 / x2.02**, engine rows
-   move with it, so read the threshold against the pool's own growth. `(-89)`'s four remaining rows are 1.42 % of
-   `cube` and the `_on` conversion on them is built and reverted; size them by
-   line first. `(-38)` and `(-94)` are CLOSED —
-   the find memo shipped and both its variants are refuted; do not re-derive.
-   Cards on leftover context.
-4. **Five rules this pass produced, all free to apply.** **A gated walk's hit
-   rate is already in your dump**: `callee calls / walk calls` is the mean
-   number of cards its predicate selects, and a lane buys the asks where that
-   is zero — `LANE_GRANT` read 0.70 / 1.15 / 0.017 and then landed -0.481 /
-   -0.276 / -0.621 %, in that order. **A lane's predicate may be the UNION of
-   several walks' predicates** when each walk's own filter is an instance
-   field (`LANE_SHIELD` holds nine). **An ADDITIVE anchor identity proves two
-   changes independent**: this pass's two sessions' deltas, measured in
-   different containers against different bases, composed to within 0.2 / 0.9 /
-   8.6 ppm of the tip, for the cost of a run already being taken. And
-   **rank an `_on` conversion by MISS rate
-   and a memo by HIT rate** — the same four cascade rows read
-   +0.099 / +0.406 / +0.195 % converted and -0.283 / -0.446 / -0.300 %
-   memoized, in one sitting, because those lookups are hits. And **a row whose
-   call count barely grows when the run doubles is a once-per-process cost**:
-   rank it at its long-run share, which is ~0. That lens refuted a 0.459 %
-   candidate without a build and found candle's net init charged whole to a
-   60-game actor profile.
+   thread_determinism ok). Ir anchor, the pass window and the `peak_rss_mib`
+   24.2 -> 26.8 the wider `CardInstance` costs are in PERF's Baseline.
+   **Each change names its own base**; quote a `games_per_s` only with its
+   `host_calib_ms` (it drifts 49-83 inside one session on this box).
+3. **READ PERF `(-100)` FIRST.** The hundred-and-first pass took `CardData`'s
+   CoW deep copy apart for **-1.64 / -1.59 / -1.94 %** across the window — the
+   largest block on this branch — and the transferable half is one instrument:
+   **read the copies by TYPE (`--demangle=no`; callgrind merges
+   monomorphizations into one row), not only by calling context.** Then both
+   halves of a type are levers: its **width** (~0.44 Ir a byte a copy, which
+   only `CardData`'s 68,610 copies made pay) and the fields **written on an
+   object whose writer changes nothing else on it** (those belong on the
+   handle, outside the `Arc` — six of them were -0.95 to -1.24 % on their
+   own). It closes `(-99)` and narrows `(-51)(a)` and `(-74)`. **The trap it
+   paid for: a field is not cold because its name says so.** Four
+   damage-bookkeeping vectors passed every syntactic test and read `cube`
+   **+0.072 %**; the tell was one row of the `make_mut` caller table
+   (`resolve_combat`, 3.32 -> 16.29 M), not the total. Diff the whole table.
+4. **Everything left on `(-100)` is 0.06-0.09 % apiece, so re-read the profile
+   before pulling one.** The fresh three-pool read is in PERF's Profile of
+   record: the **allocator family is now the largest row on every pool
+   (10.44 / 10.25 / 10.78 %)**, and `finish_grow` — a *re*allocation, which a
+   reserve removes outright rather than moves — is **361,249 of `cube`'s
+   1,392,312 allocations**, with its `grow_one` caller table filed.
+   `dispatch_triggers_for_events` is 7.2-7.8 % and still has no hot line.
+   `(-93)`'s lanes 11-16 are free but its consumer list is exhausted.
 5. **CARDS — the lane is open and it is not mined.** Buckets 4 and 10 of
-   INCOMPLETE_CARDS closed this run (five defects, of which one was an invented
-   card and one was a class of 41), and **every one was found by re-reading a
-   tracker row against the oracle cache rather than by trusting the row.** Three
-   of the rows were wrong in both directions: a card already fixed, a card
-   broken differently than the row said, a row right about the symptom and
-   blind to the cause under it. Two new `scripts/audit_*` cross-reference a
-   source field against the cache; the pattern generalises to any field whose
-   default is the wrong answer. Open: bucket 6 (Phyrexian mana, Mox Diamond),
-   bucket 7 (whole keyword mechanics), bucket 8 (copy-token), one SOS card.
+   INCOMPLETE_CARDS closed (five defects, one an invented card and one a class
+   of 41), and every one was found by re-reading a tracker row against the
+   oracle cache rather than trusting the row. Two new `scripts/audit_*`
+   cross-reference a source field against the cache; the pattern generalises to
+   any field whose default is the wrong answer. Open: bucket 6 (Phyrexian
+   mana, Mox Diamond), bucket 7 (whole keyword mechanics), bucket 8
+   (copy-token), one SOS card.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
