@@ -636,26 +636,31 @@ def audit():
                     d["kw"].append((tag, sorted(code_kw), sorted(rk)))
     return per_set
 
-per_set = audit()
-detail = sys.argv[1] if len(sys.argv) > 1 else None
+def main():
+    per_set = audit()
+    detail = sys.argv[1] if len(sys.argv) > 1 else None
+    
+    if detail:
+        d = per_set.get(detail)
+        if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
+        for dim in ("cost", "pt", "type", "ct", "st", "kw"):
+            print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
+            for tag, got, ref in d[dim]:
+                print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
+    else:
+        dims = ("cost", "pt", "type", "ct", "st", "kw")
+        print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}")
+        print("-" * 56)
+        tot = {"checked": 0, **{k: 0 for k in dims}}
+        for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
+            d = per_set[s]
+            if not d["checked"]: continue
+            for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
+            print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
+        print("-" * 56)
+        print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
+        print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
 
-if detail:
-    d = per_set.get(detail)
-    if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-    for dim in ("cost", "pt", "type", "ct", "st", "kw"):
-        print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
-        for tag, got, ref in d[dim]:
-            print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
-else:
-    dims = ("cost", "pt", "type", "ct", "st", "kw")
-    print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}")
-    print("-" * 56)
-    tot = {"checked": 0, **{k: 0 for k in dims}}
-    for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
-        d = per_set[s]
-        if not d["checked"]: continue
-        for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
-        print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
-    print("-" * 56)
-    print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
-    print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
+
+if __name__ == "__main__":
+    main()
