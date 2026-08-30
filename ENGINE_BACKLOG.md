@@ -61,8 +61,13 @@ then gate it on a STRUCTURAL predicate** — all 38 blink bodies name `Controlle
 / `OwnedByYou` / `ExiledWithSource`, which is what made the test an invariant instead
 of a list of 79 names that goes stale on the next card.
 (d) **Group a census by the nearest enclosing enum key**: 204 card rows were ~40 arms.
-**Open, one shape:** Officious Interrogation / Jeska's Will / Tithe name their target
-player only from inside a `Value` or a `Predicate`, which neither walker reaches.
+(e) **An exception list is a walker you have not written yet.** The invariant shipped
+with three of them — Officious Interrogation, Jeska's Will and Tithe name their target
+player only from inside a `Value` or a `Predicate`, which the `Selector`-descending
+walkers cannot reach — and they are `implicit_player_in_value` /
+`implicit_player_in_predicate` / `implicit_player_in_payload` now (`eb13fa43`,
+`cube` -0.036 %). Same argument as (c): a name goes stale on the next card, a walker
+does not. **The invariant has no exceptions.**
 **Checked, do not re-check:** the counterspells (target a spell `Target` cannot
 express) and the ~25 reflexive "that creature" triggers (`combat.rs` stamps the slot
 at push time); and there is **no `std::collections` default-hasher iteration in engine

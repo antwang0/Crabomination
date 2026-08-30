@@ -48,10 +48,13 @@ sixty-seventh pass, so don't re-take that.
    source before believing a class. **Inscription of Insight is not the card it is named
    after** — three wrong modes and a missing kicker; needs a dynamic-P/T token and a
    kicked-dependent `ChooseN`, so it is a primitive job.
-8. **Targeting is CLOSED and gated (pass 104's other half).** Its four transferable
-   rules moved verbatim to ENGINE_BACKLOG's "Targeting — the four rules pass 104
-   closed on"; the open residue there is the three cards that name a target player
-   only from inside a `Value` or a `Predicate`, which neither walker reaches.
+8. **Targeting is CLOSED and gated (pass 104's other half), residue included.** Its
+   transferable rules live in ENGINE_BACKLOG's "Targeting — the four rules pass 104
+   closed on". The three cards that named a target player only from inside a `Value` or
+   a `Predicate` are answered by `implicit_player_in_value` / `_in_predicate` /
+   `_in_payload` (`eb13fa43`), so
+   `every_targeting_spell_or_ability_says_what_it_targets` has **no exceptions** —
+   because a name in a list goes stale on the next card and a walker does not.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
