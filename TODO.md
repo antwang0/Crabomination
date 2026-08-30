@@ -57,10 +57,17 @@ sixty-seventh pass, so don't re-take that.
    this file's older wording, and is kept only for the two facts it adds: eight
    actors on four cores is flat rather than worse, and `rows` is identical at
    1/2/4/8 — the determinism filter on the fleet axis, which no test covers.**
-7. **Cards:** `audit_oracle_verbs.py`, 219 rows / 10,949 cards; check three rows in the
-   source before believing a class. **Inscription of Insight is not the card it is named
-   after** — three wrong modes and a missing kicker; needs a dynamic-P/T token and a
-   kicked-dependent `ChooseN`, so it is a primitive job.
+7. **Cards:** `audit_oracle_verbs.py`, ~213 rows / 10,949 cards; check three rows in the
+   source before believing a class. **Its three smallest classes (untap / scry / surveil,
+   9 rows) are CLOSED**: five real defects fixed (Teferi's delayed untap, Anticognition's
+   delirium half, Don't Make a Sound's paid surveil, Momo's absent third mode, Fiery
+   Gambit's two wrong tiers), one false positive recorded in PERF's Standing rules
+   (a verb done by a bespoke resolver is invisible to the effect-tree filter), and
+   All-Out Assault parked as a primitive job ("when you next attack this turn" has no
+   `DelayedKind`). **Inscription of Insight is not the card it is named after** — three
+   wrong modes and a missing kicker; needs a dynamic-P/T token and a kicked-dependent
+   `ChooseN`, so it is a primitive job too. Next: the `draw` (38) and `counters` (33)
+   classes, which nobody has spot-checked.
 8. **Targeting is CLOSED and gated (pass 104's other half), residue included.** Its
    transferable rules live in ENGINE_BACKLOG's "Targeting — the four rules pass 104
    closed on". The three cards that named a target player only from inside a `Value` or
