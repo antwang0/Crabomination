@@ -539,7 +539,10 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
     }
     counts.sort_unstable_by_key(|e| e.0);
     s.groups[G_LIB_SELF].reserve(counts.len());
-    for (_, c, n) in counts {
+    // By reference: this buffer is 32 x 24 bytes inline, so a by-value
+    // `IntoIter` would move 768 bytes out of the frame on every encoded
+    // state — PERF's hundred-and-third pass (3).
+    for &(_, c, n) in &counts {
         let grp = &mut s.groups[G_LIB_SELF];
         grp.push(EncodedObject::default());
         let o = grp.last_mut().expect("just pushed");

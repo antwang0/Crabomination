@@ -5305,7 +5305,7 @@ impl GameState {
                     .filter(|c| !(c.is_token && c.definition.nonlegendary_as_token))
                     .collect();
                 by_id.sort_by_key(|b| std::cmp::Reverse(b.id));
-                for c in by_id {
+                for &c in &by_id {
                     let name: &str = c.definition.name;
                     match groups.iter_mut().find(|(p, n, _)| *p == c.controller && *n == name)
                     {

@@ -1438,7 +1438,7 @@ impl GameState {
                     }
                 }
             }
-            for id in tapped {
+            for &id in &tapped {
                 if let Some(c) = self.battlefield_find_mut(id) {
                     c.tapped = true;
                 }
@@ -2073,7 +2073,7 @@ impl GameState {
                     }
                 }
             }
-            for id in tapped {
+            for &id in &tapped {
                 if let Some(c) = self.battlefield_find_mut(id) {
                     c.tapped = true;
                 }
@@ -2273,7 +2273,7 @@ impl GameState {
                     for (p, s) in snapshots {
                         self.restore_payment_state(p, s);
                     }
-                    for (p, n) in life_paid {
+                    for &(p, n) in &life_paid {
                         self.players[p].life += n as i32;
                     }
                     return Err(block_reject(line!(), GameError::CannotBlock(assignments[0].0)));
@@ -2401,7 +2401,7 @@ impl GameState {
                 }
             }
         }
-        for (id, d) in pt_deltas {
+        for &(id, d) in &pt_deltas {
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.power_bonus += d;
                 c.toughness_bonus += d;
@@ -2437,7 +2437,7 @@ impl GameState {
                 }
             }
         });
-        for (id, d) in frenzy_deltas {
+        for &(id, d) in &frenzy_deltas {
             if let Some(c) = self.battlefield_find_mut(id) {
                 c.power_bonus += d;
             }
