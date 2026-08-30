@@ -2998,7 +2998,7 @@ impl GameState {
         let mut card = if from_top {
             self.players[p].library.remove(0)
         } else if self.players[p].has_in_hand(card_id) {
-            self.players[p].remove_from_hand(card_id).unwrap()
+            self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?
         } else if from_exile {
             Self::take_card(&mut self.exile, card_id)
                 .ok_or(GameError::CardNotInHand(card_id))?
@@ -3564,7 +3564,7 @@ impl GameState {
                 .hand
                 .iter()
                 .find(|c| c.id == card_id)
-                .expect("has_in_hand verified");
+                .ok_or(GameError::CardNotInHand(card_id))?;
             let back = match card.definition.back_face.clone() {
                 Some(b) => *b,
                 None => return Err(GameError::NotALand(card_id)),
@@ -3618,7 +3618,7 @@ impl GameState {
                 .hand
                 .iter()
                 .find(|c| c.id == card_id)
-                .expect("has_in_hand verified");
+                .ok_or(GameError::CardNotInHand(card_id))?;
             match card.definition.with_prototype_applied() {
                 Some(d) => (card.definition.arc(), d),
                 None => return Err(GameError::InvalidTarget),
@@ -3663,7 +3663,7 @@ impl GameState {
                 .hand
                 .iter()
                 .find(|c| c.id == card_id)
-                .expect("has_in_hand verified");
+                .ok_or(GameError::CardNotInHand(card_id))?;
             match card.definition.mutate.clone() {
                 Some(c) => (card.definition.arc(), c),
                 None => return Err(GameError::InvalidTarget),
@@ -5708,7 +5708,7 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
-        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_from_library_top == Some(card_id);
@@ -5780,7 +5780,7 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
-        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_from_library_top == Some(card_id);
@@ -5951,7 +5951,7 @@ impl GameState {
             .pool_before
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
-        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_from_library_top == Some(card_id);
@@ -6584,7 +6584,8 @@ impl GameState {
         // leak it onto the next cast.
         let spend_float_choice = self.pending_cast_spend_float.take();
 
-        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        let mut card =
+            self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_from_library_top == Some(card_id);
@@ -10471,7 +10472,7 @@ impl GameState {
 
         // Remove the spell card from hand now (so the pitch card doesn't
         // accidentally collide with it during validation).
-        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        let mut card = self.players[p].remove_from_hand(card_id).ok_or(GameError::CardNotInHand(card_id))?;
         card.cast_from_hand = true;
         card.cast_from_exile = false;
         card.cast_from_library = self.casting_from_library_top == Some(card_id);
@@ -12090,10 +12091,13 @@ impl GameState {
             // Fast path: the player already has the mana floating — pay it.
             if self.players[payer].mana_pool.clone().pay_for_spell(cost, kind).is_ok() {
                 let pool_before = self.players[payer].mana_pool.clone();
+                // A proof on a *clone* is not a proof the panic audit can see,
+                // and nothing has been mutated on this path yet, so the
+                // impossible branch is a clean `Err` rather than a panic.
                 let side_effects = self.players[payer]
                     .mana_pool
                     .pay_for_spell(cost, kind)
-                    .expect("pool covered the cost a line ago");
+                    .map_err(GameError::Mana)?;
                 return Ok(PaymentReceipt { auto_events: vec![], side_effects, pool_before });
             }
             // A from-hand mana source (Elvish Spirit Guide) that could chip
@@ -12225,10 +12229,18 @@ impl GameState {
                         self.pay_life_cost(payer, n);
                         self.players[payer].mana_pool.add_colorless(n);
                         let pool_before = self.players[payer].mana_pool.clone();
-                        let side_effects = self.players[payer]
-                            .mana_pool
-                            .pay_for_spell(cost, kind)
-                            .expect("probe covered the cost a line ago");
+                        // Same class as the fast path above, with one extra
+                        // obligation: the life cost and the colorless add
+                        // already happened, so the impossible branch has to
+                        // unwind them rather than only report.
+                        let side_effects = match self.players[payer].mana_pool.pay_for_spell(cost, kind)
+                        {
+                            Ok(se) => se,
+                            Err(e) => {
+                                self.restore_payment_state(payer, snapshot);
+                                return Err(GameError::Mana(e));
+                            }
+                        };
                         return Ok(PaymentReceipt { auto_events, side_effects, pool_before });
                     }
                 }
@@ -14128,30 +14140,38 @@ impl GameState {
         }
         let (source_in_gy, source_in_hand, source_in_exile, source_in_command, source_owner) = {
             if bf_pos.is_some() {
-                (false, false, false, false, None)
+                // The permanent's own owner, not `None`: making this total is
+                // what lets the fourteen reads below be a plain `usize`. The
+                // four flags are all `false` here and every read is inside one
+                // of them, so the value is never consulted — but a value that
+                // is *true* if it ever is beats a sentinel that panics.
+                // (A `bf_pos.and_then(get)` form, skipping the macro's dead
+                // re-`find`, was built and reads 15-42 k Ir *worse* on all
+                // three pools. Kept as measured.)
+                (false, false, false, false, bf_src!().map_or(p, |c| c.owner))
             } else if let Some(o) = self
                 .players
                 .iter()
                 .position(|pl| pl.graveyard.iter().any(|c| c.id == card_id))
             {
-                (true, false, false, false, Some(o))
+                (true, false, false, false, o)
             } else if let Some(o) = self
                 .players
                 .iter()
                 .position(|pl| pl.hand.iter().any(|c| c.id == card_id))
             {
-                (false, true, false, false, Some(o))
+                (false, true, false, false, o)
             } else if let Some(owner) =
                 self.exile.iter().find(|c| c.id == card_id).map(|c| c.owner)
             {
-                (false, false, true, false, Some(owner))
+                (false, false, true, false, owner)
             // CR 902.5 — a Vanguard's abilities function from the command zone.
             } else if let Some(o) = self
                 .players
                 .iter()
                 .position(|pl| pl.command.iter().any(|c| c.id == card_id))
             {
-                (false, false, false, true, Some(o))
+                (false, false, false, true, o)
             } else {
                 return Err(GameError::CardNotOnBattlefield(card_id));
             }
@@ -14184,7 +14204,7 @@ impl GameState {
             }};
         }
         let held: HeldAbility = if source_in_gy {
-            let owner = source_owner.unwrap();
+            let owner = source_owner;
             let card = self.players[owner].graveyard.iter()
                 .find(|c| c.id == card_id)
                 .ok_or(GameError::AbilityIndexOutOfBounds)?;
@@ -14204,7 +14224,7 @@ impl GameState {
                 )
             }
         } else if source_in_hand {
-            let owner = source_owner.unwrap();
+            let owner = source_owner;
             HeldAbility::printed_of(
                 self.players[owner].hand.iter().find(|c| c.id == card_id),
                 ability_index,
@@ -14216,7 +14236,7 @@ impl GameState {
             )?
         } else if source_in_command {
             HeldAbility::printed_of(
-                self.players[source_owner.unwrap()].command.iter().find(|c| c.id == card_id),
+                self.players[source_owner].command.iter().find(|c| c.id == card_id),
                 ability_index,
             )?
         } else {
@@ -14377,15 +14397,15 @@ impl GameState {
         // (Power Depot) may fund abilities of artifact sources.
         let ability_spend_kind = {
             let def = if source_in_gy {
-                self.players[source_owner.unwrap()].graveyard.iter()
+                self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id).map(|c| &c.definition)
             } else if source_in_hand {
-                self.players[source_owner.unwrap()].hand.iter()
+                self.players[source_owner].hand.iter()
                     .find(|c| c.id == card_id).map(|c| &c.definition)
             } else if source_in_exile {
                 self.exile.iter().find(|c| c.id == card_id).map(|c| &c.definition)
             } else if source_in_command {
-                self.players[source_owner.unwrap()].command.iter()
+                self.players[source_owner].command.iter()
                     .find(|c| c.id == card_id).map(|c| &c.definition)
             } else {
                 bf_src!().map(|c| &c.definition)
@@ -14413,7 +14433,7 @@ impl GameState {
         // except abilities flagged `opponents_only` (CR 602.5 — Detention
         // Vortex's escape clause), which only an opponent of the controller may.
         if source_in_gy || source_in_hand || source_in_exile || source_in_command {
-            if source_owner != Some(p) {
+            if source_owner != p {
                 return Err(GameError::NotYourPriority);
             }
         } else {
@@ -14436,7 +14456,7 @@ impl GameState {
         // for a `named_card` matching this source's printed name.
         if !ability_is_mana {
             let source_name = if source_in_gy {
-                self.players[source_owner.unwrap()].graveyard.iter()
+                self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id)
                     .map(|c| c.definition.name)
             } else {
@@ -14467,11 +14487,11 @@ impl GameState {
         // artifact (rare) are caught the same way.
         if !ability_is_mana {
             let src_is_artifact = if source_in_gy {
-                self.players[source_owner.unwrap()].graveyard.iter()
+                self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id)
                     .is_some_and(|c| c.definition.is_artifact())
             } else if source_in_hand {
-                self.players[source_owner.unwrap()].hand.iter()
+                self.players[source_owner].hand.iter()
                     .find(|c| c.id == card_id)
                     .is_some_and(|c| c.definition.is_artifact())
             } else {
@@ -14552,11 +14572,11 @@ impl GameState {
         // `CreatureActivatedAbilitiesLocked` static is in play (global).
         if !ability_is_mana {
             let src_is_creature = if source_in_gy {
-                self.players[source_owner.unwrap()].graveyard.iter()
+                self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id)
                     .is_some_and(|c| c.definition.is_creature())
             } else if source_in_hand {
-                self.players[source_owner.unwrap()].hand.iter()
+                self.players[source_owner].hand.iter()
                     .find(|c| c.id == card_id)
                     .is_some_and(|c| c.definition.is_creature())
             } else {
@@ -16837,7 +16857,7 @@ impl GameState {
         // resolves *after* the source is in exile, mirroring `sac_cost`
         // for battlefield sources.
         if ability.exile_self_cost && source_in_gy {
-            let owner = source_owner.unwrap();
+            let owner = source_owner;
             if let Some(mut card) = Self::take_card(&mut self.players[owner].graveyard, card_id) {
                 card.controller = owner;
                 self.exile.push(card);
@@ -16857,7 +16877,7 @@ impl GameState {
         // the (typically empty) mana cost is paid, before the mana ability
         // resolves.
         if ability.exile_self_cost && source_in_hand {
-            let owner = source_owner.unwrap();
+            let owner = source_owner;
             if let Some(mut card) = Self::take_card(&mut self.players[owner].hand, card_id) {
                 card.controller = owner;
                 self.exile.push(card);
@@ -16894,7 +16914,7 @@ impl GameState {
         // shared discard path (CardDiscarded event, madness, etc.) after mana
         // payments succeed but before the effect resolves.
         if ability.discard_self_cost && source_in_hand {
-            let owner = source_owner.unwrap();
+            let owner = source_owner;
             self.discard_card(owner, card_id, &mut events);
         }
 

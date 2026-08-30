@@ -42,7 +42,10 @@ pub(crate) fn per_seat_continuation(rest: &[usize], make: impl Fn(usize) -> Effe
     let mut effs: Vec<Effect> = rest.iter().map(|&q| make(q)).collect();
     match effs.len() {
         0 => Effect::Noop,
-        1 => effs.pop().unwrap(),
+        // `unwrap_or` rather than `unwrap`: the arm proves the `pop`, but a
+        // `match` on `len()` is not a proof `scripts/audit_panics.py` can see,
+        // and `Noop` is what an empty list means one arm up anyway.
+        1 => effs.pop().unwrap_or(Effect::Noop),
         _ => Effect::Seq(effs),
     }
 }
@@ -19405,7 +19408,11 @@ impl GameState {
                 if spare {
                     // Bounce the least useful match: a tapped land first, then
                     // the lowest mana value.
-                    let pick = candidates
+                    // `spare` is only `true` on the branch where `candidates`
+                    // was non-empty, but that proof is a `bool` two blocks up:
+                    // fold the emptiness into the binding instead of asserting
+                    // it, so a later edit to the gate cannot panic the actor.
+                    let Some(pick) = candidates
                         .iter()
                         .copied()
                         .min_by_key(|id| {
@@ -19413,7 +19420,9 @@ impl GameState {
                                 .map(|c| (!c.tapped, c.definition.cost.cmc()))
                                 .unwrap_or((true, 0))
                         })
-                        .expect("non-empty");
+                    else {
+                        return Ok(());
+                    };
                     self.move_card_to(
                         pick,
                         &ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),

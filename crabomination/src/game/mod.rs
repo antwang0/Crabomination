@@ -15721,7 +15721,11 @@ impl GameState {
             }
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
-            GameAction::SubmitDecision(_) => unreachable!(),
+            // Unreachable: the `if let` 400 lines up returns for this
+            // variant before the dispatch is entered. An `Err` rather than
+            // `unreachable!()` because the proof is that far away and the
+            // caller is bot self-play (`scripts/audit_panics.py`).
+            GameAction::SubmitDecision(_) => Err(GameError::NoDecisionPending),
             GameAction::Cycle { card_id, x_value } => self.cycle_card(card_id, x_value),
             GameAction::Reinforce { card_id, target } => self.reinforce_card(card_id, target),
             GameAction::ActivateDiscardAbility { card_id } => {

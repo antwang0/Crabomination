@@ -397,7 +397,7 @@ not assumed. It also changes golden traces (legitimately) and sits in the
 hottest function in the program, so it needs a `--decks cube` reading and the
 `-C debug-assertions=yes` ladder gate, not just the suite.
 
-### ~~"No panic reachable from bot self-play" had never been checked statically~~ — checked at the ninety-first pass, and it holds
+### ~~"No panic reachable from bot self-play" had never been checked statically~~ — checked at the ninety-first pass, and the bare population taken 23 -> 4 at the hundred-and-first
 
 The standing goal was audited only by *reaching* code: the 33,120-game
 `-C debug-assertions=yes` grid proves what a game touches, and says nothing
@@ -438,6 +438,51 @@ returns `None`.
 
 Re-run the filter after touching a hot path; the bare count is the number to
 compare, not a pass/fail.
+
+**AND THE BARE POPULATION IS NOW FOUR (2026-08-30), because "safe by a guard
+the filter cannot see" is a claim that dates.** The ninety-first pass read all
+23 and cleared them; every clearance was a *proof at a distance*, which is
+exactly the thing a later edit to one arm breaks silently — and the engine's
+caller is a training actor where a panic at game 400,000 costs hours. Nineteen
+were converted to the error the site's own guard would have returned:
+
+```text
+112 sites / 23 bare   ->   84 sites / 4 bare
+  14x source_owner.unwrap()      -> `src_owner!()`, a macro that returns the
+     (activate_ability_inner)       same `CardNotOnBattlefield(card_id)` the
+                                    construction site's own miss returns.
+                                    The enum this entry proposed would have
+                                    been the same guarantee at ~30 sites of
+                                    churn in a hot function; the macro is 15
+                                    lines and the compiler folds the branch.
+   6x remove_from_hand(..).unwrap() -> `.ok_or(CardNotInHand(card_id))?`
+   3x .expect("has_in_hand verified") -> the same
+   2x pay_for_spell(..).expect(..)  -> `map_err(GameError::Mana)?`; the
+     (try_pay_after_snapshot_mode)     second one restores the payment
+                                       snapshot first, because the life cost
+                                       and the colorless add already ran.
+                                       **A proof on a *clone* is not a proof
+                                       the audit can see** — that was the
+                                       entry's "the expect message IS the
+                                       proof", and the message was right and
+                                       is not a mechanism.
+   1x effs.pop().unwrap()          -> `unwrap_or(Effect::Noop)`
+   1x candidates ... .expect("non-empty") -> `let Some(..) else { return }`
+   1x GameAction::SubmitDecision(_) => unreachable!()
+                                   -> `Err(NoDecisionPending)`
+   1x draft.rs's secondary colour  -> a total `unwrap_or`
+```
+
+Ir-neutral on all three pools (see PERF's Log), suite green, grid green.
+
+**The four that stay, and why they are not conversions.** One is
+`perform_action_inner`-adjacent and three are deck construction —
+`build_random_deck_from`'s second `build_shape`, `evaluate_candidates_slots`'
+racing leader, `best_build_by`'s `n > 0`. Each would have to invent a
+fallback deck, and **an actor that silently trains on a 0-card deck is worse
+than one that crashes**: the crash is visible in the first minute, the poisoned
+rows are not. They are contracts on a config value, not on game state, and
+they stay loud on purpose. Do not "fix" them into `unwrap_or_default()`.
 
 ### ~~Two headless `OptionalTrigger` sites answered `no` where their own comments said `yes`~~ — fixed, and the third is load-bearing
 

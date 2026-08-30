@@ -705,11 +705,14 @@ pub fn top_two_colors(picks: &[CardFactory]) -> [Color; 2] {
         .find(|(c, _)| *c != primary)
         .map(|(c, _)| *c)
         .unwrap_or_else(|| {
-            // Pick any color other than the primary as the fallback.
+            // Pick any color other than the primary as the fallback. `Color::
+            // ALL` has five distinct entries so the `find` always hits, but
+            // say that in the code rather than in a panic message — this runs
+            // in the training actor, which builds two decks a game.
             Color::ALL
                 .into_iter()
                 .find(|c| *c != primary)
-                .unwrap()
+                .unwrap_or(if primary == Color::White { Color::Blue } else { Color::White })
         });
     [primary, secondary]
 }
