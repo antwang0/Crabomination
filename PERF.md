@@ -9629,6 +9629,41 @@ i.e. a card that wrote "destroy target creature" without its filter. The other
 residue is the counterspells, which target a spell the `Target` enum cannot
 express and which the enumerator's list never aims.
 
+### Hundred-and-sixth pass (2) — seven scans of one `Vec` become one walk
+
+**actor -0.2543 %** at `71e55636`, off `d402e5da`. Suite 18,798 / 0 / 5,
+golden traces 7/7 unmoved, clippy clean. `--bench` not re-run: `bot_ladder`
+reaches no encoder on any pool.
+
+`encode_battlefield_object_into` asked `CardInstance::counter_count` **seven
+times per permanent** — loyalty, prepared, and the five kinds in features
+48..53 — and `CounterBag` is a `Vec<(CounterType, u32)>`, so each call is a
+linear scan of the *same* list. Feature 34's filtered sum was an eighth walk
+of it. One walk now fills all eight slots.
+
+```text
+actor, callgrind, profiling-fast -p crabomination_ml --no-default-features:
+  3,134,987,026 -> 3,127,014,641   -0.2543 %
+
+every mover, net -7,957,910:
+  CardInstance::counter_count       9,887,987 ->  4,314,497   -5,573,490
+  encode_state (self)              47,970,872 -> 44,452,323   -3,518,549
+  the allocator family + __memcpy                               +647,000
+```
+
+**The callee row and the caller row fall together, and that is the general
+shape of an N-calls-to-one-walk change.** `counter_count` loses exactly the
+5,573,490 the caller table attributed to `encode_state`, and `encode_state`'s
+*own* self loses another 3.5 M: the seven call sequences were inlined into it,
+so the argument setup and the seven returns were its instructions, not the
+callee's. **A caller-table row understates such a change by about 60 % here** —
+price both sides before deciding a row is too small to take.
+
+**The rule: rank a per-object read by (calls x scans), not by its Ir/call.**
+`counter_count` is 11.5 Ir a call, which reads as free; it was 530,194 calls
+because one function asked it seven times per object, and that product is what
+made it the largest callee of the encoder by count.
+
 ### Hundred-and-sixth pass (1) — `(-107)`'s single buffer, and the growth ladder's other half
 
 **actor -0.5275 %** at `d402e5da`, off `f7d6a036`. `EncodedState` held
