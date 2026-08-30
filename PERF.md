@@ -14118,6 +14118,50 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE ACTOR RE-READ AT `c92f3851` — THE CoW COPY FAMILY FALLS BY THE SAME 41 % THERE AS ON `bot_ladder`
+
+`selfplay_train --actors 1 --games 120 --steps 1 --seed 7 --out <dir>`,
+`profiling-fast -p crabomination_ml --no-default-features`, callgrind.
+**6,113,733,616 Ir** against `(-97)`'s 6,148,474,954 at `633acc3e`; 120 games,
+11,893 rows, 0 stalls. The two runs are **not** the same workload — four card
+fixes from the other session land in that window and a card fix changes the
+games a cube actor plays — so read the *shares*, not the total.
+
+```text
+                                 633acc3e (-97)      c92f3851        share
+  dispatch_triggers_for_events   374,722,938 6.09%  383,520,709  6.27 %
+  __memcpy_avx_unaligned_erms    308,368,422 5.02%  311,528,687  5.10 %
+  _int_free                      223,754,938 3.64%  221,370,934  3.62 %
+  Arc::clone_from_ref_in         223,610,691 3.64%  131,634,351  2.15 %  <--
+  _int_malloc                    202,102,545 3.29%  192,622,796  3.15 %
+  malloc                         169,155,800 2.75%  166,300,976  2.72 %
+  check_state_based_actions_into 158,048,663 2.57%  161,538,532  2.64 %
+  free                           135,489,984 2.20%  133,916,685  2.19 %
+  Vec::from_iter                 127,359,932 2.07%  128,956,156  2.11 %
+  gather_continuous_effects_in.  127,171,806 2.07%  130,935,400  2.14 %
+  activate_ability_inner         118,601,411 1.93%  120,350,979  1.97 %
+  compute_permanent_pass         108,092,295 1.76%  108,543,362  1.78 %
+  computed_permanent_hinted      102,372,062 1.66%   99,413,876  1.63 %
+  encode_state                    93,895,348 1.53%   93,537,391  1.53 %
+  encode_card_object_into         89,840,110 1.46%   91,569,647  1.50 %
+  rank_shape                      66,637,955 1.08%   65,739,164  1.08 %
+```
+
+**Fifteen of the sixteen rows are flat to within 0.1 points and one moved:
+the deep copy, 3.64 % -> 2.15 %, i.e. -41.1 %.** `bot_ladder --decks cube`
+read the same family 3.28 % -> 1.93 % over the same window, **-41.2 %**. So
+`(-97)`'s "an engine percent is an actor percent" is now confirmed for a
+*change* and not only for a *level* — the width and count levers of `(-100)`
+transfer to the workload the branch actually exists to run, at the same rate,
+and nothing about the actor's extra copying (MCTS state, the encoder) dilutes
+them.
+
+**And the flat fifteen are the control.** A shifted workload would move
+`encode_state` and `rank_shape` — the two rows that are pure actor and
+proportional to games and decks — and they read 1.53 -> 1.53 % and
+1.08 -> 1.08 %. The card fixes changed which games are played, not how many.
+
+
 ### THE THREE POOLS RE-READ AT `b6218fad`, AFTER THE `CardData` PASS
 
 The copy family it took apart is no longer in the top ten of any pool:

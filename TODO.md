@@ -39,9 +39,15 @@ sixty-seventh pass, so don't re-take that.
    and the `peak_rss_mib` 24.2 -> 26.8 -> 24.3 story are in PERF's Baseline.
    **Each change names its own base**; quote a `games_per_s` only with its
    `host_calib_ms` (it drifts 49-83 inside one session on this box).
-3. **READ PERF `(-100)` FIRST.** The hundred-and-first pass took `CardData`'s
-   CoW deep copy apart for **-1.64 / -1.59 / -1.94 %** across the window — the
-   largest block on this branch — and the transferable half is one instrument:
+3. **READ PERF `(-100)` FIRST, and it is confirmed on the actor.** The copy
+   family it took apart reads **3.64 % -> 2.15 % of `selfplay_train`** over
+   the same window, against 3.28 % -> 1.93 % on `bot_ladder --decks cube` —
+   -41.1 % against -41.2 %, with the fifteen other rows of `(-97)`'s table
+   flat to 0.1 points. `(-97)`'s "an engine percent is an actor percent" now
+   holds for a *change*, not only for a *level*.
+   The pass itself took `CardData`'s CoW deep copy apart for
+   **-1.64 / -1.59 / -1.94 %** on the three pools — the largest block on this
+   branch — and the transferable half is one instrument:
    **read the copies by TYPE (`--demangle=no`; callgrind merges
    monomorphizations into one row), not only by calling context.** Then both
    halves of a type are levers: its **width** (~0.44 Ir a byte a copy, which
