@@ -16,6 +16,15 @@ not a semantics one — "draws a card" against `Effect::Draw` — so it cannot s
 a card that draws the wrong number or draws for the wrong player. It can see a
 card that does not draw at all.
 
+**Standing at 228 rows over 10,949 cards with oracle text (2026-08-30), and
+the rate of real findings is high.** Six classes were spot-checked in the
+source: Codespell Cleric is a body-only stub (its whole ETB counter ability is
+absent), Fountain of Renewal drops its sac-for-a-card, Baral drops the trigger
+that draws, Crawl from the Cellar drops its Zombie counter, Master of Death
+drops its ETB surveil 2, Teferi drops "untap up to two lands". The
+`counter_spell` rows are the ward-shaped approximation this catalog documents
+and are the only class checked that was not real.
+
     python3 scripts/audit_oracle_verbs.py             # per-verb summary
     python3 scripts/audit_oracle_verbs.py draw        # the rows for one verb
     python3 scripts/audit_oracle_verbs.py --check     # exit 1 on any finding
@@ -110,8 +119,13 @@ VERBS = {
     ),
     "counters": (
         r"\+1/\+1 counter|\-1/\-1 counter",
-        r"CounterType::|AddCounter|RemoveCounter|Endure|Adapt|Bolster|Monstrosity"
-        r"|Proliferate|enters_with_counters|Amplify|Graft|Modular|Evolve|Bloodthirst",
+        # `Counters\b` (plural) is what catches the *doublers*
+        # (`ExtraPlusOneCounters`, `DoublePlusOneCounters`) without also
+        # catching `CounterUnlessPaid`, which is the other verb entirely.
+        r"CounterType::|AddCounter|RemoveCounter|Counters\b|counters\b|Endure|Adapt"
+        r"|Bolster|Monstrosity|Proliferate|Amplify|Graft|Modular|Evolve|Bloodthirst"
+        r"|Outlast|Renown|Mentor|Undying|Persist|Fabricate|Reinforce|Scavenge"
+        r"|Earthbend|Incubate|Support|Training|Backup",
     ),
     "tap_target": (
         r"\btaps? (?:target|up to|all|each)\b",
