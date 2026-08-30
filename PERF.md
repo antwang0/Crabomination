@@ -2287,20 +2287,22 @@ already ordering past, so it costs nothing measurable — except where the
 narrowing lets the walk *reject earlier*, which is `d9e6454d` (-0.5 %, the zone
 predicate first in the `And`), `9fec2a6f` (-0.08 %) and `eb13fa43` (-0.04 %).
 
-### Hundred-and-eighth pass — this session's close at `ddb9e930`
+### Hundred-and-eighth pass — this session's close at `cc95793f`
 
-One code commit, `(-115)`'s member-list lane, on a base that already carried
-the other two sessions' work through `72d083c9`.
+One code commit, `(-115)`'s member-list lane (`f759c060`), rebased onto the
+other two sessions' work through `72d083c9`; every gate below is re-run at the
+rebased tip, not at the tip the Ir rows were taken on.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,067 / 0 / 5 (cargo nextest --workspace --exclude
+suite   19,074 / 0 / 5 (cargo nextest --workspace --exclude
         crabomination_client); golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean,
-        and `-p crabomination --features trig-census`
+        and `-p crabomination --all-targets --features trig-census`
 --bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
-        invariant. determinism ok, thread_determinism ok (3 vs 1).
-        games_per_s 390.58 / 389.91, host_calib_ms 52, peak_rss_mib 24.5,
+        invariant, before and after the rebase. determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 403.20 (390.58 / 389.91
+        pre-rebase), host_calib_ms 52-67, peak_rss_mib 24.5-24.6,
         bin_bytes 123,757,936, `release` + mimalloc.
 
 Ir, release-fast --no-default-features, --a gang --b gang --games 6

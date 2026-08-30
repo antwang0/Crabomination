@@ -21,67 +21,36 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT — the handoff. Rewritten each run; ≤15 lines. Every number lives in PERF.
+## NEXT — the handoff. Rewritten each run; ≤ 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
-   origin/claude/modern_decks`. Two sessions run at once: code before tracker prose,
-   **rebase not force**, **sequential builds only**, push "TAKEN, <date>" onto a PERF entry
-   before spending a build — **and re-read the entry when you do**: both sessions paid a
-   12-min `profiling-lines` build for `(-115)` on the same afternoon. **Nothing is claimed.**
-2. **Gates re-run at `9ad6ceba`:** suite **19,070 / 0 / 5**, clippy clean (the
-   `VOCAB_SNAPSHOT` `large_const_arrays` warning is fixed), traces 7/7. `--bench` was
-   taken on the `172a40c8` binary — byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
-   determinism + thread_determinism ok, `games_per_s` 305-315, `peak_rss` 24.5,
-   this box is a 2.80 GHz Xeon and reads 25 % SLOWER than the 2.10 GHz one). Grid not
-   re-run — nothing since changed behaviour. Window `2b38c673 -> 172a40c8`:
-   **-0.401 / -0.760 / -0.774 %**.
-   **The grid has an ACTOR leg and it is the only gate that reaches the encoder** —
-   `bot_ladder` encodes no state on any pool, so the 30 cells cannot trip an encoder
-   assertion. Run it for any `encode.rs` / `EncodedState` change: same `RUSTFLAGS`
-   build of `-p crabomination_ml --bin selfplay_train`, then `--actors 3 --steps 2
-   --games 6000 --seed 41` (~40 s, 577 k rows). Clean at the encoder half's close.
-3. **The rule this pass adds (`(-116)`, cube -0.465 %, no new state):** a chain of pure
-   `continue` guards needs all of them, so the order is free — **rank by cost x rejection
-   rate, not by which looks cheapest.** Look for the shape in other multi-guard loops.
-4. **Two counterweights.** (`(-117)`) a `std` line row inside an inlined-to-death
-   function does not name the construct you can see from it — `vec/mod.rs:464` read as
-   10.5 M, measured 1.5 M; price a `std`-row candidate as a guess. (`(-119)`, built and
-   reverted at +0.098 / +0.070 / +0.044 %) **a shared walk behind a monomorphic VALUE
-   parameter is a code-size saving** — replacing `board_keyword_in_scope`'s runtime tag
-   list with seven `matches!` closures bought seven copies of a whole-board walk. Count
-   the call sites before turning a value parameter into a type one.
-5. **Do not retake:** the reserve lane `(-112)`; dispatch's per-event gate (pass 61 AND
-   106); a **third** line profile of `dispatch_triggers_for_events` — its remainder is
-   ~49 M of iteration, answered by `cg_calls.py` off a dump you already have.
-6. **Open, in order:** `(-115)`'s `Battlefield` member-list lane (the per-card-bit form is
-   priced at 0.10 % and refuted by `(-114)`); `(-107)`'s `computed_permanent_hinted` `Arc`s
-   on the actor. **Actor scaling is NOT unmeasured — `(-52)` closed it**: 1/2/3/4/6
-   actors on four cores, per-actor throughput flat (39.2 / 40.0 / 39.6 / 40.2 games/s)
-   and the sixth buying +2.6 %, so plan one actor per core; the memory knob is
-   `--window` (~1.3 KiB a row), not `--actors` (~6 MiB each). Do not spend a build
-   re-deriving it, and do not size parallel efficiency off `--bench`, which is 1.5 s
-   of wall at four threads and mostly startup. **`(-118)` re-derived it anyway, off
-   this file's older wording, and is kept only for the two facts it adds: eight
-   actors on four cores is flat rather than worse, and `rows` is identical at
-   1/2/4/8 — the determinism filter on the fleet axis, which no test covers.**
-7. **Cards:** `audit_oracle_verbs.py`, ~213 rows / 10,949 cards; check three rows in the
-   source before believing a class. **Its three smallest classes (untap / scry / surveil,
-   9 rows) are CLOSED**: five real defects fixed (Teferi's delayed untap, Anticognition's
-   delirium half, Don't Make a Sound's paid surveil, Momo's absent third mode, Fiery
-   Gambit's two wrong tiers), one false positive recorded in PERF's Standing rules
-   (a verb done by a bespoke resolver is invisible to the effect-tree filter), and
-   All-Out Assault parked as a primitive job ("when you next attack this turn" has no
-   `DelayedKind`). **Inscription of Insight is not the card it is named after** — three
-   wrong modes and a missing kicker; needs a dynamic-P/T token and a kicked-dependent
-   `ChooseN`, so it is a primitive job too. Next: the `draw` (38) and `counters` (33)
-   classes, which nobody has spot-checked.
-8. **Targeting is CLOSED and gated (pass 104's other half), residue included.** Its
-   transferable rules live in ENGINE_BACKLOG's "Targeting — the four rules pass 104
-   closed on". The three cards that named a target player only from inside a `Value` or
-   a `Predicate` are answered by `implicit_player_in_value` / `_in_predicate` /
-   `_in_payload` (`eb13fa43`), so
-   `every_targeting_spell_or_ability_says_what_it_targets` has **no exceptions** —
-   because a name in a list goes stale on the next card and a walker does not.
+   origin/claude/modern_decks`. Three sessions at once: code before tracker prose, **rebase
+   not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
+   build **and re-read it then** — three sessions have now re-derived actor scaling off one
+   seed-list line. A seed-list line is not a status. **Nothing is claimed.**
+2. **Gates re-run at `cc95793f`:** suite **19,074 / 0 / 5**, clippy clean (also
+   `--features trig-census`), traces 7/7, `--bench` 195,528 / 27.44 / 611.0 / 0 stalls, byte-identical to the
+   committed invariant, determinism + thread_determinism ok. Grid not re-run — behaviour
+   unmoved; **its ACTOR leg is the only gate that reaches the encoder**, so run that leg for
+   any `encode.rs` / `EncodedState` change (PERF's hundred-and-sixth block has the command).
+3. **`(-115)` IS TAKEN** (`f759c060`) — the dispatch gate answered positionally, on
+   `Battlefield`'s lane word. **The rule: a member list is worth its loop-invariant branch in
+   proportion to the share of the walk that can use it — a CENSUS question, not a hit-rate
+   one** (the lane hits 86 % everywhere and `cube` still loses). Its four refutations are one
+   failure — **a 280-line loop body is register-starved, so the hand-rolled form loses** — and
+   the fourth is that **a never-taken runtime gate in front of a call is not free there**, so
+   a census inside such a loop is a cargo feature, not an env var. `(-115)` has all four.
+4. **Do not retake:** `(-112)`; dispatch's per-event gate (61 AND 106); a third line profile
+   of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since).
+5. **Open, in order:** `cube`'s grant-live dispatch visits — a third of its walk, on boards
+   twice the size, and nothing has touched them; then `(-107)`'s `computed_permanent_hinted`
+   `Arc`s on the actor. Sizing: a training box goes off `--window`, not `--actors`, and
+   `(-52)`'s per-row figure was 8x low — see PERF's actor-scaling block before quoting it.
+6. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
+   class. untap / scry / surveil are CLOSED; next `draw` (38) and `counters` (33), unexamined.
+   **Inscription of Insight and All-Out Assault are primitive jobs**, not card fixes.
+7. **Targeting is CLOSED and gated**; its four transferable rules live in ENGINE_BACKLOG's
+   "Targeting — the four rules pass 104 closed on".
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
