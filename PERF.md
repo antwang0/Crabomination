@@ -9431,6 +9431,86 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourth pass (2) — the trigger half of `(-104)`, and the spell half priced and declined
+
+**`fixed` -0.013 % / `cube` -0.034 % / `sealed` -0.061 %** at `381fac97`, off
+`da4a6ca2`.
+
+`continue_trigger_resolution_with_source` is `resolve_effect`'s second caller
+(4,632 of 30,552 on `cube`) and `resolve_top_of_stack_inner` already holds the
+buffer it appends into. Same conversion as (1), plus the three
+`submit_decision` resume paths and the landcycle activation, which spell the
+identical `let mut more = …; evs.append(&mut more)`.
+`continue_ability_resolution` / `_x` had no callers left and are deleted.
+
+**The program number on `fixed` is small enough to be an inlining artifact and
+the row table says it is not** — this is `(-109)`'s rule applied, and it is the
+reason a 0.013 % delta is filed rather than discarded:
+
+```text
+  malloc / _int_malloc / free / _int_free / malloc_consolidate  -0.40 M
+  finish_grow + do_reserve_and_handle                           -0.25 M
+  resolve_top_of_stack_inner   12,508,630 -> 12,379,776         -0.13 M
+  __memcpy                     71,984,424 -> 71,930,348         -0.05 M
+  continue_trigger_resolution_with_source 1,299,986 -> 1,249,768 (the split)
+```
+
+**The spell half is priced and declined, and the reason is a shape rule.**
+`continue_spell_resolution` is 2,446 calls (~0.023 % of `cube`) and 500 lines
+with **22 `return Ok(events)` sites**. An `_into` conversion has to keep those
+returns valid, and the two ways to do it both cost more than the win: a `_body`
+taking the buffer by value loses the caller's prior content on the error path
+(where `resolve_effect` dropped only its own), and a `(Result, Vec)` return
+rewrites all 22. **When the accumulator is returned from more than a handful of
+places, the out-parameter conversion stops being mechanical** — that is the
+line, and `(-104)`'s two taken halves are both on the near side of it.
+
+### Hundred-and-fourth pass (1) — `resolve_effect`'s `Vec` return, the dominant half of `(-104)`
+
+**`fixed` -0.245 % / `cube` -0.221 % / `sealed` -0.257 %** at `da4a6ca2`, off
+`b0603f33`'s base (`59ef58e6`'s code).
+
+`resolve_effect` opened a `Vec<GameEvent>` per call, handed it up as
+`Result<Vec<GameEvent>, GameError>` and had the caller `append` and free it.
+`resolve_effect_into` takes the caller's buffer with `mem::take`, resolves into
+it and puts it back; `resolve_effect` is the wrapper the 21 cold sites keep.
+`activate_ability_inner` (21,434 of the 23,474 calls through
+`continue_ability_resolution_x`) now passes its own accumulator down.
+
+**The friction the entry named was event ORDER and the way past it is a
+splice.** The CR 605.1b extra-mana events had to land *before* the ability's
+own; they are buffered into a local `Vec` and spliced in at `mark`. The helper's
+presence gate returns before touching anything on a board with no such grant, so
+the local is allocated only where one exists — and the batch order
+`dispatch_triggers_for_events` sees is unchanged, which is why the traces do not
+move.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+  fixed     883,044,002 ->   880,880,535   -0.245 %
+  cube    2,632,744,583 -> 2,626,934,252   -0.221 %
+  sealed  2,610,134,584 -> 2,603,419,041   -0.257 %
+
+cube, by row — the whole delta is the allocator family and the append:
+  _int_free            83,987,813 -> 82,760,788   -1.23 M
+  malloc               63,489,006 -> 62,439,576   -1.05 M
+  finish_grow          14,609,680 -> 13,697,520   -0.91 M
+  free                 51,570,589 -> 50,681,233   -0.89 M
+  Vec::append_elements    701,768 ->     48,704   -0.65 M
+  grow_one              6,670,080 ->  6,122,880   -0.55 M
+  __rustc::__rdl_alloc 11,903,220 -> 11,697,984   -0.21 M
+  _int_malloc          62,250,940 -> 62,132,131   -0.12 M
+  __memcpy             72,233,453 -> 71,984,424   -0.25 M
+  resolve_effect(_into) 4,530,758 ->  5,199,830   +0.67 M   (the take/put)
+  activate_ability_inner 44,309,314 -> 44,443,424 +0.13 M   (mark + splice)
+```
+
+**~23,400 allocations at ~209 Ir a round trip is the whole win**, which is the
+21,434 activations plus their appends and nothing else. `(-109)`'s
+`compute_permanent_pass` outlining artifact — the one that decided two of that
+entry's readings — is **not** in this diff's row table, and the three pools agree
+to within 0.036 points; both are why the number is filed as real.
+
 ### Hundred-and-third pass (6) — `(-103)`'s division had a second table, and it names one row on every pool
 
 **`fixed` -0.336 % / `cube` -0.288 % / `sealed` -0.356 %**, and
@@ -16521,7 +16601,16 @@ could separate. Naming the buffer needs source reading, not another dump.
 candidate** — they are the `Result<Vec<GameEvent>, GameError>` these two
 frames *return*. `(-104)` is what is left of them.
 
-**TAKEN, 2026-08-30 — the hundred-and-fourth pass, splice route.**
+**(-104) CLOSED AT THE HUNDRED-AND-FOURTH PASS — TWO HALVES TAKEN
+(`da4a6ca2` -0.245 / -0.221 / -0.257 %, `381fac97` -0.013 / -0.034 /
+-0.061 %), THE THIRD PRICED AND DECLINED.** The splice route was the one the
+entry ranked first and it worked: the extra-mana events are buffered and
+spliced at `mark`, so the batch order is unchanged and the traces do not move.
+Log has both ledgers and the shape rule the declined half produced (**an
+out-parameter conversion stops being mechanical once the accumulator is
+returned from more than a handful of places** — `continue_spell_resolution` has
+22 such sites for ~0.023 % of `cube`). What is left of the family is
+`(-107)`'s `encode_state`, which `--bench` cannot see.
 
 **(-104) THE TWO REMAINING GROWTH LEADERS ARE A `Vec<GameEvent>` RETURN, NOT A
 MISSING RESERVE — 46,258 ALLOCATIONS, 3.3 % OF EVERY ALLOCATION THE PROGRAM
