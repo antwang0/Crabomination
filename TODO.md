@@ -48,12 +48,15 @@ sixty-seventh pass, so don't re-take that.
 4. **Do not retake:** `(-112)`; dispatch's per-event gate (61 AND 106); a third line profile
    of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since);
    the `turn_granted_triggers` / `granted_triggers_eot` retains (census: zero on all pools).
-5. **Open, in order:** grant-live is now **zero on every pool**, so `(-115)`'s leftover is
-   closed — the dispatch walk is down to 15.5 / 28.3 / 32.5 % of its visits and what is left
-   is the *body*, not the walk. Next is `(-107)`'s `computed_permanent_hinted` `Arc`s on the
-   actor (433,775 allocations, 12.8 % of the actor's), then `(-114)`'s keyword presence bit.
-   **The `trig-census` reason mask (`zone::trig_census`) is the instrument that found this
-   pass** — extend it before guessing at the dispatcher again.
+5. **Open, in order: `(-122)` first** — the activated-grant walk is the trigger dispatcher's
+   twin (O(permanents x grants) requirement evaluations on the mana sweep, top of the ratio
+   table at 11.68x) and it has had none of the four devices the trigger side got; PERF says
+   which one fits and to size it with `cg_contexts.py` first. Then `(-107)`'s
+   `computed_permanent_hinted` `Arc`s — **the allocator is now the largest cluster on every
+   pool, 9.7-10.5 %**. Grant-live is zero everywhere, so `(-115)`'s leftover is closed and
+   what is left in dispatch is the *body*; `sealed` is now where it costs most (7.09 %).
+   ⚠ **`grep mimalloc` is not the allocator check** — it returns zero either way and cost
+   this pass a profile. PERF's "How to measure" now carries the positive test.
 6. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
    class. untap / scry / surveil are CLOSED; next `draw` (38) and `counters` (33), unexamined.
    **Inscription of Insight and All-Out Assault are primitive jobs**, not card fixes.

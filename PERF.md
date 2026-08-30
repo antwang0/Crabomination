@@ -113,6 +113,15 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 #     --callgrind-out-file=cg.actor.out target/profiling-fast/selfplay_train \
 #     --actors 1 --games 60 --steps 1 --seed 7 --out /tmp/actorprof
 # and the same `grep -c libmimalloc` check on the dump applies.
+# ⚠ AND **`grep mimalloc` IS NOT THE CHECK** — mimalloc's symbols are `mi_*` /
+# `_mi_*` and it is statically linked, so both `nm -C <bin> | grep mimalloc`
+# and `grep libmimalloc <dump>` return zero on a mimalloc binary, i.e. the same
+# answer as on a correct one. The hundred-and-ninth pass lost a profile to it
+# (read 6.7-7.4 % low across all three pools). Positive tests:
+#   nm <bin> | grep -cE " (T|t) (_)?mi_"     # 0 = system allocator
+#   grep -c 'fn=.*mi_' <dump>                # 0 = system-allocator run
+# and the row table is the backstop: `_int_malloc`/`_int_free`/`malloc`/`free`
+# is glibc, `mi_theap_malloc_aligned` is mimalloc.
 # `-p crabomination` is load-bearing for `bot_ladder`. Drop it and
 # `--no-default-features` does not reach the engine crate: the binary keeps mimalloc, callgrind
 # measures mimalloc-under-valgrind instead of the system allocator, and the
@@ -16178,6 +16187,70 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### ALL THREE POOLS RE-READ AT `cab8d5d7`, AFTER `(-120)`/`(-121)`
+
+`release-fast --no-default-features`, callgrind, six games, one thread,
+seed 1. Totals `fixed` 847,467,337 / `cube` 2,529,883,427 / `sealed`
+2,572,625,951 — an independent rebuild that reproduces the `(-121)` A/B's
+candidate column to **77 / 1,179 / 1,072 Ir**, i.e. under 2 parts per million.
+That is the cheapest confirmation of an A/B on file and it is worth taking
+whenever a profile follows one.
+
+⚠ **THE ALLOCATOR CHECK IN "How to measure" IS NOT `grep mimalloc`.**
+mimalloc's symbols are `mi_*` / `_mi_*` and it is statically linked, so
+`nm -C <bin> | grep mimalloc` returns **zero on a mimalloc binary** and
+`grep libmimalloc <dump>` returns zero too — the object is `bot_ladder`. The
+hundred-and-ninth pass profiled a default-features binary behind exactly that
+check and read `fixed` / `cube` / `sealed` **6.7 / 7.1 / 7.4 % low**, which is
+this file's documented ~11 % and looked like a free win on the control pool.
+Use one of these instead, both of which are positive tests:
+```text
+nm <bin> | grep -cE " (T|t) (_)?mi_"      # 0 = system allocator
+grep -c 'fn=.*mi_' <dump>                 # 0 = the dump is a system-alloc run
+```
+**A check that returns zero for the thing it is looking for AND zero when it
+is broken is not a check.** The row tables are the backstop: `_int_malloc` /
+`_int_free` / `malloc` / `free` mean glibc, `mi_theap_malloc_aligned` means
+mimalloc.
+
+```text
+row                                                   fixed%   cube%  sealed%
+dispatch_triggers_for_events                            5.43    5.18     7.09
+gather_continuous_effects_inner                         3.32    3.27     2.75
+_int_free                                               3.46    3.14     3.46
+layers::compute_permanent_pass                          2.52    3.12     2.19
+check_state_based_actions_into                          3.10    2.86     3.46
+__memcpy_avx_unaligned_erms                             2.30    2.72     3.44
+Vec::SpecFromIterNested::from_iter                      2.41    2.57     2.28
+malloc                                                  2.67    2.40     2.68
+computed_permanent_hinted                               1.91    2.25     1.90
+_int_malloc                                             1.73    2.19     2.17
+Arc::clone_from_ref_in                                  2.65    2.03     2.47
+free                                                    2.22    1.95     2.20
+activate_ability_inner                                  1.89    1.75     1.93
+perform_action_inner                                    2.36    1.48     1.94
+fire_combat_damage_triggers                             1.22    1.48     1.30
+evaluate_requirement_static_hinted (3 instances)        1.87    3.81     2.54
+event_matches_spec                                      0.39    1.26     1.82
+GameState::clone                                        1.62    1.14     1.44
+```
+
+**Two things this table says that the last one did not.**
+
+(a) **The allocator is now the largest single cluster on every pool** —
+`_int_free` + `malloc` + `_int_malloc` + `free` is **9.68 % of `cube`**,
+10.08 % of `fixed`, 10.51 % of `sealed`, before counting the rows that feed it
+(`Arc::clone_from_ref_in` 2.03, `Vec::from_iter` 2.57, `__memcpy` 2.72). That
+is `(-80)`'s finding still standing, and `(-107)`'s `computed_permanent_hinted`
+`Arc`s (2.25 % of `cube` in self alone) are the largest named contributor.
+
+(b) **`dispatch_triggers_for_events` is still the top row but `sealed` is now
+where it costs most** (7.09 %, against `cube`'s 5.18 and `fixed`'s 5.43) —
+inverted by this pass, which took 53.9 % of `cube`'s walk to 28.3 % and left
+`sealed` untouched at 32.5 %. `sealed` has zero grants and an 86 % lane hit
+rate, so what is left there is the **per-event bookkeeping switch**, exactly
+as the standing rule says. The walk is done; the body is not.
+
 ### THE ACTOR RE-READ AT `bb67895a` — AND THE DECK BUILDER IS BYTE-IDENTICAL, WHICH MAKES THIS THE CLEANEST ACTOR COMPARISON ON FILE
 
 `selfplay_train --actors 1 --games 120 --steps 1 --seed 7 --out <dir>`,
@@ -17637,6 +17710,43 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-122) THE ACTIVATED-GRANT WALK IS THE TRIGGER DISPATCHER'S TWIN AND IT HAS
+HAD NONE OF THE FOUR DEVICES THE TRIGGER SIDE GOT.** Read off `p.cube` at
+`cab8d5d7` with the ratio device (`cg_ratio.py cube fixed --floor 0.45`),
+which ranks it 4th at **2.69x**:
+
+```text
+  granted_abilities_of_inner   93,778 calls / 31,641,022 incl / 1.25 % of cube
+  its callers                  44,738  effective_mana_abilities_into
+                               35,416  bot::available_mana
+                               12,958  bot::main_phase_action_with
+  the walker it drives         evaluate_requirement_static_hinted, 3 instances,
+                               3.81 % of cube against 1.87 % of fixed; the
+                               recursive instance alone is 1.47 vs 0.13 —
+                               **11.68x, the top row of the whole ratio table**
+```
+
+The body is `for (applies_to, ability, src) in &scan.statics` with a
+`self.evaluate_requirement_static_on(req, me, …)` per pair — **O(permanents x
+grants) `SelectionRequirement` evaluations, and its own comment says it runs
+"for every untapped permanent" on the mana sweep.** That is precisely the
+shape `statics_granted_triggers_inner` had before this pass.
+
+**The device that fits is `(-115)`'s, not `(-121)`'s**: an activated grant has
+no event kind, so there is nothing to pre-filter against a batch. But
+`Selector::EachPermanent(req)` is a *board-wide* question being asked one
+permanent at a time — evaluate each grant's `req` **once over the board into a
+`u64` index mask** when the scan is built, and every later ask is a bit test.
+`GrantScan` is already the right place (it has `LANE_ACT_GRANT` and fills it
+on the walk it was making anyway), and `(-115)`'s four refutations apply
+verbatim to how the mask is *read*, so read them before building.
+
+**Size it before taking it**: the ceiling is the `evaluate_requirement_static_on`
+share reached through this caller, not `granted_abilities_of_inner`'s own
+1.25 %. Get that with `cg_contexts.py` (`--separate-callers=3`), which nothing
+has run on the walker; the entry table above is one level and the walker's own
+recursion (533,788 of its 1,425,066 calls are itself) will hide inside it.
 
 **(-120) CLOSED at `dc829911` — `fixed` -2.9565 % / `cube` -0.6237 % /
 `sealed` -0.0000 %. See the Log; `fixed`'s is the largest single row in this
