@@ -549,6 +549,7 @@ pub fn prophetic_titan() -> CardDefinition {
         to: target_any(),
     };
     let dig = Effect::LookPickToHand(Box::new(LookPick {
+        rest_bottom_random: true,
         who: PlayerRef::You,
         count: Value::Const(4),
     ..Default::default()

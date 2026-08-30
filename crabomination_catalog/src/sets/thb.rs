@@ -4024,6 +4024,7 @@ pub fn nessian_wanderer() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![constellation(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(3),
             pick_filter: Some(SelectionRequirement::Land),
@@ -5682,6 +5683,7 @@ pub fn thassas_intervention() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::XFromCost,
                 take: Some(Value::Const(2)),
@@ -6190,6 +6192,7 @@ pub fn calix_destinys_hand() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 1,
                 effect: Effect::LookPickToHand(Box::new(LookPick {
+                    rest_bottom_random: true,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     pick_filter: Some(SelectionRequirement::Enchantment),
@@ -6820,6 +6823,7 @@ pub fn siona_captain_of_the_pyleas() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![
             etb(Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(7),
                 pick_filter: Some(SelectionRequirement::HasEnchantmentSubtype(

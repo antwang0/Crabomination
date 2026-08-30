@@ -883,6 +883,7 @@ pub fn monumental_henge() -> CardDefinition {
                 mana_cost: cost(&[generic(2), w(), w()]),
                 tap_cost: true,
                 effect: Effect::LookPickToHand(Box::new(LookPick {
+                    rest_bottom_random: true,
                     who: PlayerRef::You,
                     count: Value::Const(5),
                     pick_filter: Some(historic()),
@@ -1386,6 +1387,7 @@ pub fn rosecot_knight() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(6),
             pick_filter: Some(R::Artifact.or(R::Enchantment)),

@@ -123,6 +123,7 @@ pub fn tajuru_paragon() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(6),
                 pick_filter: Some(R::Creature),

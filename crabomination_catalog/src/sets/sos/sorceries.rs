@@ -1868,7 +1868,6 @@ pub fn flow_state() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 take: Some(Value::Const(2)),
-                rest_bottom_random: true,
     ..Default::default()
 }))),
             else_: Box::new(Effect::LookPickToHand(Box::new(LookPick {

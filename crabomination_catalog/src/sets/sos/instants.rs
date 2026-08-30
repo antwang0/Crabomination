@@ -904,7 +904,6 @@ pub fn stress_dream() -> CardDefinition {
             Effect::LookPickToHand(Box::new(LookPick {
                 who: PlayerRef::You,
                 count: Value::Const(2),
-                rest_bottom_random: true,
     ..Default::default()
 })),
         ]),

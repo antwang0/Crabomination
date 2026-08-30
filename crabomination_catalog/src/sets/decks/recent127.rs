@@ -384,6 +384,7 @@ pub fn frontier_seeker() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(5),
             pick_filter: Some(

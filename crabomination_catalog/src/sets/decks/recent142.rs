@@ -329,6 +329,7 @@ pub fn solitary_sanctuary() -> CardDefinition {
 /// bargained); put two into your hand and the rest on the bottom.
 pub fn farsight_ritual() -> CardDefinition {
     let dig = |count: i32| Effect::LookPickToHand(Box::new(LookPick {
+        rest_bottom_random: true,
         who: PlayerRef::You,
         count: Value::Const(count),
         take: Some(Value::Const(2)),

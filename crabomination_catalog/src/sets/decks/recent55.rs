@@ -110,6 +110,7 @@ pub fn ingenious_smith() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![
             etb(Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 pick_filter: Some(R::Artifact),

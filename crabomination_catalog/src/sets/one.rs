@@ -6860,6 +6860,7 @@ pub fn green_suns_twilight() -> CardDefinition {
                 exile_rest: false,
             }),
             else_: Box::new(Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: x_plus_one(),
                 pick_filter: Some(dig_filter()),
@@ -7142,6 +7143,7 @@ pub fn noxious_assault() -> CardDefinition {
 pub fn contagious_vorrac() -> CardDefinition {
     let dig = |extra: Option<Effect>| {
         let look = Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(SelectionRequirement::Land),

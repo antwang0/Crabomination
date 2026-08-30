@@ -304,6 +304,7 @@ pub fn living_phone() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![on_dies(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(5),
             pick_filter: Some(

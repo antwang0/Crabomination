@@ -341,6 +341,7 @@ pub fn harald_king_of_skemfar() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(5),
                 pick_filter: Some(

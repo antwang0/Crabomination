@@ -5657,6 +5657,7 @@ pub fn pulsar_squadron_ace() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(5),
             pick_filter: Some(SelectionRequirement::HasArtifactSubtype(

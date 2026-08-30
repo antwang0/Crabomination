@@ -132,7 +132,6 @@ pub fn sleight_of_hand() -> CardDefinition {
         effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(2),
-            rest_bottom_random: true,
     ..Default::default()
 })),
         ..Default::default()
@@ -8416,6 +8415,7 @@ pub fn vivien_reid() -> CardDefinition {
                 x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::LookPickToHand(Box::new(LookPick {
+                    rest_bottom_random: true,
                     who: PlayerRef::You,
                     count: Value::Const(4),
                     pick_filter: Some(
@@ -26816,6 +26816,7 @@ pub fn leyline_of_the_guildpact() -> CardDefinition {
 /// your hand, and the rest on the bottom in a random order.
 pub fn consult_the_star_charts() -> CardDefinition {
     let look = |take: i32| Effect::LookPickToHand(Box::new(LookPick {
+        rest_bottom_random: true,
         who: PlayerRef::You,
         count: Value::CountOf(Box::new(Selector::EachPermanent(
             SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
@@ -28675,6 +28676,7 @@ pub fn narset_parter_of_veils() -> CardDefinition {
             x_cost: false,
             loyalty_cost: -2,
             effect: Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 pick_filter: Some(
@@ -32375,6 +32377,7 @@ pub fn adventure_awaits() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(5),
             pick_filter: Some(SelectionRequirement::Creature),
@@ -48716,6 +48719,7 @@ pub fn memory_deluge() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Flashback(cost(&[generic(5), u(), u()]))],
         effect: Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::CastSpellManaSpent,
             take: Some(Value::Const(2)),
@@ -59789,6 +59793,7 @@ pub fn militia_bugler() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(

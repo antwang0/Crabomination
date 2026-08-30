@@ -1451,6 +1451,7 @@ pub fn master_piandao() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![on_attack(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(
@@ -1931,6 +1932,7 @@ pub fn seismic_sense() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         subtypes: lesson(),
         effect: Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::count(Selector::EachPermanent(
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
@@ -2954,6 +2956,7 @@ pub fn guru_pathik() -> CardDefinition {
         power: 2,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(5),
             pick_filter: Some(

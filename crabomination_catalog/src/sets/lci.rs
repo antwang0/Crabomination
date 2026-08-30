@@ -2545,6 +2545,7 @@ pub fn staunch_crewmate() -> CardDefinition {
         power: 2,
         toughness: 1,
         triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Const(4),
             pick_filter: Some(
@@ -5237,6 +5238,7 @@ pub fn sinuous_benthisaur() -> CardDefinition {
         power: 4,
         toughness: 4,
         triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
+            rest_bottom_random: true,
             who: PlayerRef::You,
             count: Value::Sum(vec![
                 Value::CountMatching {

@@ -51,6 +51,7 @@ pub fn sigarda_champion_of_light() -> CardDefinition {
                 },
             ),
             effect: Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(5),
                 pick_filter: Some(
@@ -3006,6 +3007,7 @@ pub fn star_charter() -> CardDefinition {
                 },
             ])),
             effect: Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 pick_filter: Some(
@@ -12873,6 +12875,7 @@ pub fn recruitment_officer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w()]),
             effect: Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(4),
                 pick_filter: Some(

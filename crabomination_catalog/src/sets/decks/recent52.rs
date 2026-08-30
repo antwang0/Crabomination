@@ -212,6 +212,7 @@ pub fn loot_exuberant_explorer() -> CardDefinition {
             mana_cost: cost(&[generic(4), g(), g()]),
             tap_cost: true,
             effect: Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(6),
                 pick_filter: Some(R::Creature.and(R::ManaValueAtMostYourCount(Box::new(R::Land)))),
