@@ -16324,6 +16324,42 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-111) `computed_permanent`'s `Arc` IS 201,820 OF `cube`'s 1,296,530
+ALLOCATIONS (15.6 %) AND THE HANDLE IS 72 BYTES. TAKEN, 2026-08-30 — the
+hundred-and-fourth pass, by-value route.**
+
+Read off `cg.cube` at `381fac97`: `computed_permanent_hinted` is **355,838
+calls / 57.16 M self Ir / 160.6 Ir a call**, and **201,820 of those calls go
+straight to `__rust_alloc`** — one `Arc<ComputedPermanent>` per memo miss and
+per unfrozen read. At ~209 Ir a malloc/free round trip that is **~42 M Ir,
+1.61 % of `cube`**, the largest single allocation row left in the program.
+
+**`(-27)`'s pool is refuted and `(-92)` lead 2 (`Arc::new_uninit`) is priced at
+nearly nothing — the struct is 72 bytes since `(-101)`, so the copy the
+`new_uninit` shape removes is nine words.** The allocation is the cost, not
+the copy, and the way to not allocate is to not have an `Arc`: `def` is the
+one handle inside, the four characteristics are `Option<Box<..>>` overlays
+that are `None` on ~83 % of computed permanents (`PrintedList::push` is 46,304
+allocations over 270,098 passes), and a `Clone` is therefore an atomic bump
+plus nine words on most of them.
+
+**The arithmetic to check against a build**, `cube`:
+
+```text
+  save   201,820 Arc allocations                            -42.2 M
+  pay    ~34 k overlay Box clones on the memo store          +7.1 M
+  pay    355,838 nine-word copies (misses + hits)            +3.2 M
+  pay    355,838 extra `def` refcount bumps                  +0.4 M
+                                                     net    ~ -31 M  (-1.2 %)
+```
+
+**The refutation to watch for is the one `(-100)` rule (a) predicts**: a
+by-value handle turns every *hit* into a copy, and `legal_blockers` /
+`AttackerFacts` hold these in `Vec`s whose element grows 8 -> 72 bytes. If the
+hit rate is higher than 43 % on another pool, or the block planner's vectors
+are longer than the combat sample says, the trade inverts. Ten sites name the
+type explicitly; the rest read through `Deref` and do not care.
+
 **(-110) THE Ir INSTRUMENT HAS NO NULL CONTROL, AND `(-109)` SAYS IT NEEDS
 ONE.** `ab_wall.py` ships a null control for the wall-clock instrument; the Ir
 instrument — which every Log row in this file is measured on — has never had
