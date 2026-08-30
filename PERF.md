@@ -2248,6 +2248,13 @@ Ir anchor at `d2ce2cf8`, callgrind, profiling-fast --no-default-features,
 --a gang --b gang --games 6 --threads 1 --seed 1:
   fixed     877,016,684      cube 2,610,227,969      sealed 2,591,878,145
 
+  **re-taken at `874d6e53`, which carries the other session's `d402e5da`
+  (`EncodedState`'s single buffer, actor -0.528 %): 877,016,261 /
+  2,610,226,689 / 2,591,875,968, i.e. -0.5 / -0.5 / -0.8 ppm.** An
+  actor-only change is `bot_ladder`-neutral to one part per million on all
+  three pools — the cleanest confirmation on file that the two instruments
+  measure disjoint work, and the fifteenth cross-check of the anchor itself.
+
   the window, `9bf0411a`'s code -> this tip, one container, every pair
   adjacent builds:
     fixed     883,044,002 ->   877,016,684   -0.683 %
