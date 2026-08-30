@@ -12790,6 +12790,13 @@ impl GameState {
                     }
                 }
             }
+            // One allocation for the table instead of the 0->4->8->16 ladder
+            // (13,604 `grow_one` calls a six-game `cube` run, 1.60 per call).
+            // Guarded on emptiness so a seat with nothing untapped still
+            // allocates nothing.
+            if out.is_empty() {
+                out.reserve(16);
+            }
             out.push(ManaSourceInfo {
                 id: c.id,
                 bf_idx,

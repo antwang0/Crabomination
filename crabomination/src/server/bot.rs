@@ -7464,7 +7464,13 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     // through `&mut F::call_mut` once per permanent — PERF (-78)'s test 1,
     // and this function was 41 % of the program's whole adapter-forwarding
     // tax between this site and `opp_blockers` below.
-    let mut raw_attackers: Vec<&crate::card::CardInstance> = Vec::new();
+    // Inline storage: this and `opp_blockers` below are the two board-walk
+    // locals `pick_attacks_inner` fills on every call, and between them they
+    // are 12,996 `grow_one` calls a six-game `cube` run (2.87 a call). A board
+    // rarely puts sixteen candidates on either side, and when it does the
+    // spill is one allocation instead of the 0->4->8->16 ladder.
+    let mut raw_attackers: smallvec::SmallVec<[&crate::card::CardInstance; 16]> =
+        smallvec::SmallVec::new();
     for c in state.battlefield.iter() {
         // Two instance reads before the layer view: `computed_permanent`
         // is ~1.5 k Ir on a first read and asking it about every land and
@@ -7517,7 +7523,8 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     let lethal_swing = lethal_swing || racing;
     // The second whole-board walk, and a plain loop for the same reason as
     // `raw_attackers` above.
-    let mut opp_blockers: Vec<&crate::card::CardInstance> = Vec::new();
+    let mut opp_blockers: smallvec::SmallVec<[&crate::card::CardInstance; 16]> =
+        smallvec::SmallVec::new();
     for c in state.battlefield.iter() {
         // A creature that's tapped, not a creature, or has a
         // computed `CantBlock` (Sandstorm Verge, pacifism-
@@ -7749,7 +7756,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
             state.battlefield.iter().find(|c| c.id == *id).map(|c| c.power())
         })
         .sum();
-    let mut attacks: Vec<Attack> = Vec::new();
+    let mut attacks: Vec<Attack> = Vec::with_capacity(attackers.len());
     for (pw_id, loyalty) in walker_targets {
         // Only redirect when we can plausibly finish it
         // off (total attacking power >= loyalty). Avoids
@@ -7771,7 +7778,7 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
                 .map(|c| c.power())
                 .unwrap_or(0)
         });
-        let mut remaining: Vec<crate::card::CardId> = Vec::new();
+        let mut remaining: Vec<crate::card::CardId> = Vec::with_capacity(attackers.len());
         for id in attackers.drain(..) {
             let pow = state
                 .battlefield

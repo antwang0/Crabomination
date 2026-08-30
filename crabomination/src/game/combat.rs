@@ -3366,6 +3366,13 @@ impl GameState {
         if self.gather_combat_damage_decisions(&attacker_infos, computed, &blocker_filter) {
             return Ok(vec![]);
         }
+        // Past the early returns, this batch always emits at least one event
+        // (`resolve_combat` appends `CombatResolved` unconditionally), and the
+        // accumulator is threaded through `deal_combat_damage_to_target` and
+        // `check_state_based_actions_into` after this. Those three share one
+        // `Vec` and grew it 34,438 times a six-game `cube` run — 11 % of every
+        // `grow_one` call in the program — climbing 0->4->8->16->32 per batch.
+        events.reserve(32);
 
         // CR 615.1 — "Prevent all combat damage this turn" (Owlin
         // Shieldmage, Holy Day, Constant Mists). When the global flag is
