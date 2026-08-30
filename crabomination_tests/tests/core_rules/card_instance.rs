@@ -173,3 +173,15 @@ fn defender_cannot_attack() {
     std::sync::Arc::make_mut(c.definition_mut()).keywords.push(Keyword::Defender);
     assert!(!c.can_attack());
 }
+
+/// `ComputedPermanent`'s four characteristics are `Overlay`s whose projection
+/// into `CardDefinition` is a **type**, not a stored `fn` pointer: 104 -> 72
+/// bytes on a struct built 289,098 times and `Arc`-allocated 201,780 times a
+/// six-game `cube` run. PERF's padding probe prices 8 bytes on it at `fixed`
+/// +0.040 % / `cube` +0.058 %, so the four pointers were ~0.16-0.23 % on
+/// width alone; the direct read was the rest of the measured -0.481 / -0.394
+/// / -0.497 %.
+#[test]
+fn computed_permanent_carries_no_projection_pointers() {
+    assert_eq!(std::mem::size_of::<crabomination::game::layers::ComputedPermanent>(), 72);
+}

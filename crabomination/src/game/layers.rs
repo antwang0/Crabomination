@@ -299,6 +299,53 @@ pub enum AffectedPermanents {
 
 // ── Computed permanent ────────────────────────────────────────────────────────
 
+/// Which `CardDefinition` field an [`Overlay`] projects into, as a **type**
+/// rather than the `fn` pointer field it used to be.
+///
+/// There are exactly four projections and each characteristic's is fixed at
+/// compile time, so storing it cost 8 bytes on every overlay (32 on every
+/// `ComputedPermanent`) and turned the printed-side read — the overwhelmingly
+/// common one — into an indirect call the optimizer cannot see through once
+/// the struct has been handed out behind an `Arc`. As a type parameter the
+/// read is a field offset and the overlay is just its `Option<Box<_>>`.
+pub trait DefProj: 'static {
+    type Val: Clone + 'static;
+    fn printed(def: &crate::card::CardDefinition) -> &Self::Val;
+}
+
+/// [`DefProj`] for a characteristic stored as a `Vec` and read as a slice —
+/// the override side is a `Box<[T]>`, so the item type has to be nameable.
+pub trait DefProjList: 'static {
+    type Item: Clone + 'static;
+    fn printed(def: &crate::card::CardDefinition) -> &Vec<Self::Item>;
+}
+
+macro_rules! def_proj {
+    ($name:ident, $val:ty, $field:ident) => {
+        pub struct $name;
+        impl DefProj for $name {
+            type Val = $val;
+            #[inline]
+            fn printed(def: &crate::card::CardDefinition) -> &$val {
+                &def.$field
+            }
+        }
+    };
+}
+
+def_proj!(CardTypesOf, Vec<CardType>, card_types);
+def_proj!(SupertypesOf, Vec<Supertype>, supertypes);
+def_proj!(SubtypesOf, Subtypes, subtypes);
+
+pub struct KeywordsOf;
+impl DefProjList for KeywordsOf {
+    type Item = Keyword;
+    #[inline]
+    fn printed(def: &crate::card::CardDefinition) -> &Vec<Keyword> {
+        &def.keywords
+    }
+}
+
 /// A layer-computed characteristic that is usually exactly the printed one —
 /// the **layer pass's working form**, which borrows the definition.
 ///
@@ -320,26 +367,22 @@ pub enum AffectedPermanents {
 /// `(-70)`) as `fixed` 0.532 % / `cube` 0.580 %.
 /// [`into_overlay`](Self::into_overlay) drops the handle at the one
 /// construction site and [`ComputedPermanent`] keeps exactly one.
-pub(crate) struct Printed<'a, T: Clone + 'static> {
+pub(crate) struct Printed<'a, P: DefProj> {
     src: &'a crate::card::CardDefinition,
-    proj: fn(&crate::card::CardDefinition) -> &T,
-    over: Option<Box<T>>,
+    over: Option<Box<P::Val>>,
 }
 
-impl<'a, T: Clone> Printed<'a, T> {
+impl<'a, P: DefProj> Printed<'a, P> {
     #[inline]
-    pub(crate) fn new(
-        src: &'a crate::card::CardDefinition,
-        proj: fn(&crate::card::CardDefinition) -> &T,
-    ) -> Self {
-        Self { src, proj, over: None }
+    pub(crate) fn new(src: &'a crate::card::CardDefinition) -> Self {
+        Self { src, over: None }
     }
 
-    /// Hand the projection and any override to the stored form, dropping the
-    /// borrow. The definition comes back from [`ComputedPermanent::def`].
+    /// Hand any override to the stored form, dropping the borrow. The
+    /// definition comes back from [`ComputedPermanent::def`].
     #[inline]
-    pub(crate) fn into_overlay(self) -> Overlay<T> {
-        Overlay { proj: self.proj, over: self.over }
+    pub(crate) fn into_overlay(self) -> Overlay<P> {
+        Overlay { over: self.over }
     }
 }
 
@@ -347,48 +390,46 @@ impl<'a, T: Clone> Printed<'a, T> {
 /// computed characteristic. A read takes the definition from the one
 /// `Arc<CardDefinition>` [`ComputedPermanent`] holds, so the four
 /// characteristics cost one reference bump to build and one to drop.
-pub struct Overlay<T: Clone + 'static> {
-    proj: fn(&crate::card::CardDefinition) -> &T,
-    over: Option<Box<T>>,
+pub struct Overlay<P: DefProj> {
+    over: Option<Box<P::Val>>,
 }
 
-impl<T: Clone> Overlay<T> {
+impl<P: DefProj> Overlay<P> {
     /// The override once a layer wrote one, else the printed value.
     #[inline]
-    fn get<'a>(&'a self, def: &'a crate::card::CardDefinition) -> &'a T {
+    fn get<'a>(&'a self, def: &'a crate::card::CardDefinition) -> &'a P::Val {
         match &self.over {
             Some(v) => v,
-            None => (self.proj)(def),
+            None => P::printed(def),
         }
     }
 }
 
-impl<T: Clone> Clone for Overlay<T> {
+impl<P: DefProj> Clone for Overlay<P> {
     fn clone(&self) -> Self {
-        Self { proj: self.proj, over: self.over.clone() }
+        Self { over: self.over.clone() }
     }
 }
 
 /// [`Overlay`] for a list — see [`PrintedList`] for why the override is a
 /// `Box<[T]>`.
-pub struct OverlayList<T: Clone + 'static> {
-    proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
-    over: Option<Box<[T]>>,
+pub struct OverlayList<P: DefProjList> {
+    over: Option<Box<[P::Item]>>,
 }
 
-impl<T: Clone> OverlayList<T> {
+impl<P: DefProjList> OverlayList<P> {
     #[inline]
-    fn get<'a>(&'a self, def: &'a crate::card::CardDefinition) -> &'a [T] {
+    fn get<'a>(&'a self, def: &'a crate::card::CardDefinition) -> &'a [P::Item] {
         match &self.over {
             Some(v) => v,
-            None => (self.proj)(def),
+            None => P::printed(def),
         }
     }
 }
 
-impl<T: Clone> Clone for OverlayList<T> {
+impl<P: DefProjList> Clone for OverlayList<P> {
     fn clone(&self) -> Self {
-        Self { proj: self.proj, over: self.over.clone() }
+        Self { over: self.over.clone() }
     }
 }
 
@@ -410,39 +451,35 @@ impl<T: Clone> Clone for OverlayList<T> {
 /// `Deref<Target = [T]>` rather than `&Vec<T>`: every read site uses slice
 /// API (`contains`, `iter`, `has_kw`, `is_empty`), and the four writers are
 /// the inherent methods below.
-pub(crate) struct PrintedList<'a, T: Clone + 'static> {
+pub(crate) struct PrintedList<'a, P: DefProjList> {
     src: &'a crate::card::CardDefinition,
-    proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
-    over: Option<Box<[T]>>,
+    over: Option<Box<[P::Item]>>,
 }
 
-impl<'a, T: Clone> PrintedList<'a, T> {
+impl<'a, P: DefProjList> PrintedList<'a, P> {
     #[inline]
-    pub(crate) fn new(
-        src: &'a crate::card::CardDefinition,
-        proj: fn(&crate::card::CardDefinition) -> &Vec<T>,
-    ) -> Self {
-        Self { src, proj, over: None }
+    pub(crate) fn new(src: &'a crate::card::CardDefinition) -> Self {
+        Self { src, over: None }
     }
 
     /// [`Printed::into_overlay`] for a list.
     #[inline]
-    pub(crate) fn into_overlay(self) -> OverlayList<T> {
-        OverlayList { proj: self.proj, over: self.over }
+    pub(crate) fn into_overlay(self) -> OverlayList<P> {
+        OverlayList { over: self.over }
     }
 
     /// The printed list, or the override once one exists.
     #[inline]
-    fn current(&self) -> &[T] {
+    fn current(&self) -> &[P::Item] {
         match &self.over {
             Some(v) => v,
-            None => (self.proj)(self.src),
+            None => P::printed(self.src),
         }
     }
 
     /// Append, materializing with room for the element in one allocation.
-    pub(crate) fn push(&mut self, value: T) {
-        let mut v: Vec<T> = Vec::with_capacity(self.current().len() + 1);
+    pub(crate) fn push(&mut self, value: P::Item) {
+        let mut v: Vec<P::Item> = Vec::with_capacity(self.current().len() + 1);
         v.extend_from_slice(self.current());
         v.push(value);
         self.over = Some(v.into_boxed_slice());
@@ -451,8 +488,8 @@ impl<'a, T: Clone> PrintedList<'a, T> {
     /// `Vec::retain`, materializing the survivors. One allocation whether or
     /// not an override already exists — the printed side is far the common
     /// one, and every caller here is behind a presence gate.
-    pub(crate) fn retain(&mut self, mut f: impl FnMut(&T) -> bool) {
-        let kept: Vec<T> = self.current().iter().filter(|x| f(x)).cloned().collect();
+    pub(crate) fn retain(&mut self, mut f: impl FnMut(&P::Item) -> bool) {
+        let kept: Vec<P::Item> = self.current().iter().filter(|x| f(x)).cloned().collect();
         self.over = Some(kept.into_boxed_slice());
     }
 
@@ -465,7 +502,7 @@ impl<'a, T: Clone> PrintedList<'a, T> {
     /// Mutable access to the elements, materializing first. Cannot change the
     /// length — the two callers rewrite keywords in place (Trait Doctoring's
     /// protection-colour swap, the landwalk retype).
-    pub(crate) fn iter_mut(&mut self) -> std::slice::IterMut<'_, T> {
+    pub(crate) fn iter_mut(&mut self) -> std::slice::IterMut<'_, P::Item> {
         if self.over.is_none() {
             self.over = Some(self.current().to_vec().into_boxed_slice());
         }
@@ -473,10 +510,10 @@ impl<'a, T: Clone> PrintedList<'a, T> {
     }
 }
 
-impl<T: Clone> std::ops::Deref for PrintedList<'_, T> {
-    type Target = [T];
+impl<P: DefProjList> std::ops::Deref for PrintedList<'_, P> {
+    type Target = [P::Item];
     #[inline]
-    fn deref(&self) -> &[T] {
+    fn deref(&self) -> &[P::Item] {
         self.current()
     }
 }
@@ -491,13 +528,13 @@ impl<T: Clone> std::ops::Deref for PrintedList<'_, T> {
 /// one appended keyword. Materializing with room for the element removes the
 /// third. Inherent, so it shadows the `Deref`'d `Vec::push` at every existing
 /// call site without touching one.
-impl<T: Clone> Printed<'_, Vec<T>> {
+impl<T: Clone + 'static, P: DefProj<Val = Vec<T>>> Printed<'_, P> {
     #[inline]
     pub(crate) fn push(&mut self, value: T) {
         match &mut self.over {
             Some(v) => v.push(value),
             None => {
-                let printed = (self.proj)(self.src);
+                let printed = P::printed(self.src);
                 let mut v = Vec::with_capacity(printed.len() + 1);
                 v.extend_from_slice(printed);
                 v.push(value);
@@ -507,24 +544,23 @@ impl<T: Clone> Printed<'_, Vec<T>> {
     }
 }
 
-impl<T: Clone> std::ops::Deref for Printed<'_, T> {
-    type Target = T;
+impl<P: DefProj> std::ops::Deref for Printed<'_, P> {
+    type Target = P::Val;
     #[inline]
-    fn deref(&self) -> &T {
+    fn deref(&self) -> &P::Val {
         match &self.over {
             Some(v) => v,
-            None => (self.proj)(self.src),
+            None => P::printed(self.src),
         }
     }
 }
 
 /// The clone point: the first layer write materializes the printed value.
-impl<T: Clone> std::ops::DerefMut for Printed<'_, T> {
+impl<P: DefProj> std::ops::DerefMut for Printed<'_, P> {
     #[inline]
-    fn deref_mut(&mut self) -> &mut T {
-        let proj = self.proj;
+    fn deref_mut(&mut self) -> &mut P::Val {
         let src = self.src;
-        self.over.get_or_insert_with(|| Box::new(proj(src).clone()))
+        self.over.get_or_insert_with(|| Box::new(P::printed(src).clone()))
     }
 }
 
@@ -542,11 +578,11 @@ pub struct ComputedPermanent {
     pub controller: usize,
     /// The printed definition every overlay above projects into.
     pub def: std::sync::Arc<crate::card::CardDefinition>,
-    card_types: Overlay<Vec<CardType>>,
-    supertypes: Overlay<Vec<Supertype>>,
-    subtypes: Overlay<Subtypes>,
+    card_types: Overlay<CardTypesOf>,
+    supertypes: Overlay<SupertypesOf>,
+    subtypes: Overlay<SubtypesOf>,
     pub colors: ColorSet,
-    keywords: OverlayList<Keyword>,
+    keywords: OverlayList<KeywordsOf>,
     pub power: i32,
     pub toughness: i32,
     /// True when at least one `Modification::RemoveAllAbilities` continuous
@@ -720,9 +756,9 @@ fn compute_permanent_pass(
     // these materializes only if a layer below actually writes to it.
     let mut controller = card.controller;
     let def = &card.definition;
-    let mut card_types = Printed::new(def, |d| &d.card_types);
-    let mut supertypes = Printed::new(def, |d| &d.supertypes);
-    let mut subtypes = Printed::new(def, |d| &d.subtypes);
+    let mut card_types = Printed::<CardTypesOf>::new(def);
+    let mut supertypes = Printed::<SupertypesOf>::new(def);
+    let mut subtypes = Printed::<SubtypesOf>::new(def);
     // CR 702.103d — while bestowed, the permanent is an Aura enchantment,
     // not a creature. Strip the Creature type and add the Aura subtype so
     // it isn't a valid blocker/attacker/removal target and the orphan-Aura
@@ -742,7 +778,7 @@ fn compute_permanent_pass(
         }
     }
     let mut colors = colors_from_card(card);
-    let mut keywords = PrintedList::new(def, |d| &d.keywords);
+    let mut keywords = PrintedList::<KeywordsOf>::new(def);
     // EOT-granted keywords join the layer walk as synthetic L6 effects at
     // their grant timestamps (CR 613.7), so a grant resolved *after* a
     // RemoveAllAbilities / RemoveKeyword effect survives it while an
