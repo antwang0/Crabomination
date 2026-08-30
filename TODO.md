@@ -118,78 +118,46 @@ sixty-seventh pass, so don't re-take that.
    `audit_dropped_may`'s 327 rows, still noise until someone teaches it the shapes.
 
 
-9. **THE TARGETING LANE — one engine gate, 79 card filters, and 204 rows still open.**
-   Closed this pass: `legal_targets_for_filter` walked every graveyard and exile for any
-   filter (ENGINE_BACKLOG's "the target enumerator is zone-blind"), so `Any` listed every
-   card in every zone and the UI path and the training path targeted different sets. It
-   takes the scope now and `enumerate_legal_targets_xc` asks the **same**
-   `may_target_offboard_card || mentions_offboard_zone` question the auto-picker has been
-   gated on since the eighty-sixth pass. **Then the catalog half: 79 bodies said "from
-   your graveyard" in their oracle and nothing in their filter, so Zombify with an empty
-   graveyard STOLE a battlefield creature.** `from_your_graveyard()` /
-   `from_any_graveyard()` is the spelling, and the fix reads `fixed` **-0.513 %**,
-   because a zone predicate first in the `And` short-circuits every candidate the
-   enumerator used to test in full. **The method is the reusable half: discover a class
-   by joining the census against `scripts/.scryfall_cache.json`, then gate it on a
-   STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou` / `OwnedByYou` /
-   `ExiledWithSource`, which is what makes the test an invariant instead of a list of 79
-   names that goes stale on the next card.
-   **The unfiltered-slot census is CLOSED, both halves.** Four instalments:
-   `d0799d5c` (CR 115.4's any-target for `DealDamage`), `d2ce2cf8` (bare
-   `PlayerRef::Target(n)` in a player field), `41b1423d` (the rest of the damage and
-   prevention family, plus eighteen more player slots) and `45c55cc3` (**twenty cards
-   whose printed noun is narrower than the field's own type** — Terminate destroyed any
-   permanent). **The invariant caught the fourth instalment being silently wrong**:
-   `CoinFlipDestroyLoop` and `MoveChosenKeyword` had no arm in `target_filter_for_slot`,
-   so a filter declared on their slots aims correctly and re-checks against nothing —
-   **when a catalog fix declares a filter on a slot, check the slot walker has an arm
-   for that effect.** The original framing, kept because the numbers are the map: Slots reached by a bare `Selector::Target(n)` that no `TargetFiltered` filters:
-   375 bodies, and the fallback both walkers take for them is `SelectionRequirement::Any`.
-   Two instalments shipped — `d0799d5c` (CR 115.4: `Any` matched a **land**, so Banefire
-   offered the opponent's Forest) and `d2ce2cf8` (a bare `PlayerRef::Target(n)` in a
-   player field, so Disrupting Scepter's "target player discards" offered the whole
-   board). Grouped by the nearest enclosing enum key rather than by card, **157 walker
-   paths -> 93**, which is the reading to take: 204 card rows were ~40 arms.
-   **What is left is NOT an engine gap.** The residue is `Tap` / `SkipNextUntap` /
-   `Destroy` / `GrantKeyword` with a bare target, and `accepts_player_target` already
-   answers `false` for that whole group — no player is ever offered there, so the
-   over-match is within permanents only: a card that printed "destroy target creature"
-   and wrote no filter. That is a per-card lane and it is worth what a per-card lane is
-   worth. The other residue is the counterspells, which target a spell the `Target` enum
-   cannot express and which the enumerator never aims. **Rebuild the census from
-   `every_reanimating_move_says_which_zone_its_target_is_in`** — same walk, different
-   predicate — and group by the nearest uppercase JSON key, or you will triage 375 cards
-   instead of 40 match arms.
-   **The device this lane produced three times: an implicit filter for a field whose
-   type already says what it is.** `IMPLICIT_CREATURE_TARGET` (pump, pre-existing),
-   `IMPLICIT_ANY_TARGET` (damage, CR 115.4) and `implicit_player_if_bare_player_field`
-   (player fields) are the same one line. When a walker answers `None` for a slot, ask
-   what the *field* is before adding a per-card filter.
-   **Two whole groups of the residue are STRUCTURAL FALSE POSITIVES — checked, so
-   nobody re-checks them.** (a) The 32 counterspell rows: `CounterSpell { what:
-   Target(0) }` targets a *spell on the stack*, which `Target` cannot express, so the
-   enumerator's list never aims them. (b) The ~25 reflexive rows — `Whenever this
-   creature deals combat damage to a creature, tap that creature` (Orochi Ranger and
-   the whole Kashi/Matsu tribe, Mercurial Kite, Mephitic Ooze, Phage, the two
-   Basilisks) — spell "that creature" as `Selector::Target(0)`, and `combat.rs:5234`
-   **binds the damaged creature at push time**. The slot is stamped, never chosen, so
-   the absent filter costs nothing. What is genuinely left is ~23 cards whose printed
-   noun is narrower than `Any` (Terminate, Feast of Worms' land, Ashnod's
-   Transmogrant's *non*artifact creature, Sweep Away, Dispatch, …).
-   **ROBUSTNESS, checked this pass and worth not re-checking:** there is no
-   `std::collections` default-hasher iteration in engine or bot logic. Nine
-   `std::collections::Hash*` uses exist; the only two on a game path are a
-   `HashSet<usize>` in `bot.rs`'s belief redeal (membership only, never iterated) and
-   `wants_converge`'s L2 name cache (lookup only). Cross-process determinism holds and
-   `golden_trace::seeded_games_match_their_digests` is the standing check, since a test
-   process is a new process.
+9. **THE TARGETING LANE IS CLOSED — one engine gate, 79 reanimation filters, and a
+   four-instalment census. Eight commits, `d0799d5c`..`45c55cc3` plus `13435f3e`
+   `d9e6454d`; PERF's Log has every ledger.** What it fixed, so nobody re-finds it:
+   `legal_targets_for_filter` walked every graveyard and exile for **any** filter, so
+   the UI path and the training path targeted different sets; **79 bodies said "from
+   your graveyard" in their oracle and nothing in their filter**, so Zombify with an
+   empty graveyard STOLE a battlefield creature; `Any` matched a **land**, so Banefire
+   offered the opponent's Forest and Terminate destroyed any permanent; and a bare
+   `PlayerRef::Target(n)` made "target player discards" offer the whole board.
+   **Four transferable rules.**
+   (a) **Discover a class by joining the census against `scripts/.scryfall_cache.json`,
+   then gate it on a STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou`
+   / `OwnedByYou` / `ExiledWithSource`, which is what makes the test an invariant
+   instead of a list of 79 names that goes stale on the next card.
+   (b) **An implicit filter belongs to the FIELD, not the card.** `IMPLICIT_CREATURE_
+   TARGET` (pump), `IMPLICIT_ANY_TARGET` (damage, CR 115.4) and
+   `implicit_player_if_bare_player_field` are one line each; the per-card filter is only
+   for nouns narrower than the field's own type (twenty of those, `45c55cc3`).
+   (c) **When a catalog fix declares a filter on a slot, check the slot walker has an
+   arm for that effect** — `every_declared_target_slot_is_answerable` caught
+   `CoinFlipDestroyLoop` and `MoveChosenKeyword` mid-pass, where the fix would have
+   aimed correctly and re-checked against nothing.
+   (d) **Group a census by the nearest enclosing enum key**, not by card: 204 card rows
+   were ~40 match arms.
+   **Two groups are structural false positives — checked, so nobody re-checks them:**
+   the counterspells (`CounterSpell { what: Target(0) }` targets a *spell*, which
+   `Target` cannot express) and the ~25 reflexive triggers ("whenever this deals combat
+   damage to a creature, tap that creature"), whose slot `combat.rs:5234` **stamps from
+   the event**.
+   **ROBUSTNESS, checked this pass:** no `std::collections` default-hasher iteration in
+   engine or bot logic — nine uses exist, the only two on a game path are membership-only
+   (`bot.rs`'s belief redeal) and lookup-only (`wants_converge`'s L2 cache). Cross-process
+   determinism holds; `golden_trace::seeded_games_match_their_digests` is the check,
+   since a test process is a new process.
    **AND ON `dispatch_triggers_for_events`, the largest self row (7.46 % of `cube`,
    139,412 calls at 1,397 Ir):** its self cost is mostly the **per-event bookkeeping
    switch** — entry timestamps, soulbond, land equilibrium, the per-turn tallies — not
    the listener search. A listener index keyed on `EventKind` cannot reach the row's
-   whole share, which is what `(-90)`'s "mask ceiling 0.86 %" was already saying;
-   read the function before pricing an index for it.
-
+   whole share, which is what `(-90)`'s "mask ceiling 0.86 %" was already saying; read
+   the function before pricing an index for it.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
