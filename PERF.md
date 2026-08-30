@@ -9992,6 +9992,39 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-eighth pass (2) — the three bare panics on the actor's path, and both robustness gates re-run
+
+`scripts/audit_panics.py` had **79 sites / 3 bare**, and all three bare ones
+were on `selfplay::build_candidates_cfg`'s path — the one `selfplay_train`
+runs twice a game. `shapes[0]` indexed before its length was read; an
+`expect("enumerated shape rebuilds")` resting on "it came from the lattice, so
+it isn't hollow"; and `best_build_v3` / `best_build_by` on `n == 0`. All three
+now degrade to an empty deck, which is one counted loss rather than a dead
+training run. **79 / 3 -> 75 / 0** at `f2f7d58c`.
+
+**None of the three is a `debug_assert!`, and the reason generalises:** an
+empty or unplayable pool and `n == 0` are *legal inputs* to a deck builder,
+not invariants a caller has broken. Asserting them would put the degradation
+behind `cfg(debug_assertions)` and so out of reach of the suite, which is
+exactly where the regression test for it has to live.
+
+**Both robustness gates re-run at this tip, and the grid is the first real
+audit `(-115)`'s invalidation protocol has had.**
+
+```text
+grid    30 cells, five pools x six seeds x 120 games — 33,120 games,
+        0 failures, 0 undecided; 7 assertion strings in the audit binary,
+        one of them the lane's own "triggerer memo is stale"
+actor   selfplay_train --actors 3 --steps 2 --games 6000 --seed 41:
+        6,000 games, 574,149 rows, 0 stalls, rc 0, 7 assertion strings
+```
+
+A member-list lane is a *positional* memo where every other lane is a presence
+bit, so a stale one drops a trigger silently rather than costing a walk. 33 k
+games under `-C debug-assertions=yes` is the difference between that being
+argued and being audited.
+
+
 ### Hundred-and-ninth pass (2) — the equip gate gets the event-kind filter the board gate has had since (-83)
 
 **`cube` -1.9733 % / `fixed` -0.0141 % / `sealed` -0.0163 %** at `0c4d6ece`,
