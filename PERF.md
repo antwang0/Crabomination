@@ -2161,13 +2161,13 @@ a box whose state moves.
 
 ## Baseline
 
-### Hundredth pass, the third half — closing state at `ca2bf1a6`
+### Hundredth pass, the third half — closing state at `6d30b1e6`
 
-Three code commits over the block below's tip: `623e935a` (`LANE_LISTENER`),
-`5be9908c` (the three split lanes share one reader — a mechanical refactor,
-Ir identity) and `ca2bf1a6` (`LANE_ACT_GRANT`). A concurrent session's
-`633acc3e` sits between the second and the third, so the last one names
-`5be9908c` as its base and the anchor below is the tip.
+Four code commits: `623e935a` (`LANE_LISTENER`), `5be9908c` (the three split
+lanes share one reader — mechanical, Ir identity), `ca2bf1a6`
+(`LANE_ACT_GRANT`) and `6d30b1e6` (the graveyard memo becomes lanes). A
+concurrent session's `633acc3e` sits between the second and the third, so each
+names its own base and the anchor below is the tip.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
@@ -2175,22 +2175,40 @@ rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
 suite   19,044 / 0 / 5 (cargo nextest); golden traces 7/7 unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, 0 undecided,
-        0 failures; 5 "memo is stale" strings in the audit binary. Run four
+        0 failures; 5 "memo is stale" strings in the audit binary. Run five
         times across this pass, once per lane landed.
 --bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
         invariant; determinism ok, thread_determinism ok (3 vs 1).
-        games_per_s 222.14 at 3 threads, host_calib_ms 83,
-        peak_rss_mib 24.2, bin_bytes 123,665,192
+        games_per_s 231.87 at 3 threads, host_calib_ms 49,
+        peak_rss_mib 24.2, bin_bytes 123,665,832
 
-Ir anchor at `ca2bf1a6`, callgrind, profiling-fast --no-default-features,
+Ir anchor at `6d30b1e6`, callgrind, profiling-fast --no-default-features,
 --a gang --b gang --games 6 --threads 1 --seed 1:
-  fixed     909,660,888      cube 2,716,754,586      sealed 2,697,162,109
+  fixed     908,813,370      cube 2,715,598,253      sealed 2,696,452,688
 
-  the whole pass, 840b5ccd -> ca2bf1a6 (six lanes and a find memo, each row
+  the whole pass, 840b5ccd -> 6d30b1e6 (seven lanes and a find memo, each row
   measured at its own base; these are endpoints, not a measurement):
-    fixed     922,985,500 ->   909,660,888   -1.444 %
-    cube    2,761,036,641 -> 2,716,754,586   -1.604 %
-    sealed  2,739,558,149 -> 2,697,162,109   -1.548 %
+    fixed     922,985,500 ->   908,813,370   -1.535 %
+    cube    2,761,036,641 -> 2,715,598,253   -1.646 %
+    sealed  2,739,558,149 -> 2,696,452,688   -1.573 %
+```
+
+**The lane device took seven of those eight commits and the sizes fall off a
+cliff after the third**: -0.280 / -0.611 / -0.375, then -0.128 / -0.204 /
+-0.145, -0.481 / -0.276 / -0.621, -0.127 / -0.040 / -0.010, -0.151 / -0.035 /
+-0.105, -0.093 / -0.043 / -0.026. **The first three were the whole-board walks
+a reader trips over; the last three had to be hunted off the self table, and
+each is worth about a tenth of the first.** That is the shape of a mined
+family, and it is the same conclusion `(-96)` reached from the other end.
+
+### Hundredth pass, the third half — the `ca2bf1a6` gate (superseded by the block above)
+
+Its `--bench` and grid readings are the same ones; what is worth keeping is
+the anchor check.
+
+```text
+Ir anchor at `ca2bf1a6`:
+  fixed     909,660,888      cube 2,716,754,586      sealed 2,697,162,109
 ```
 
 **Eleventh cross-session anchor check, and it is the strongest form yet: an

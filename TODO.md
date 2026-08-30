@@ -26,12 +26,15 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
-2. **State at `ca2bf1a6`**, the combined tip of both sessions: suite
+2. **State at `6d30b1e6`**, the combined tip of both sessions: suite
    19,044 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
    (30 cells / 33,120 games / 0 failures, 5 assertion strings), `--bench`
    byte-identical (195,528 / 27.44 / 611.0 / 0 stalls, determinism +
-   thread_determinism ok). Ir anchor and the whole pass's **-1.444 / -1.604 /
-   -1.548 %** are in PERF's Baseline; **each change names its own base**.
+   thread_determinism ok). Ir anchor and the whole pass's **-1.535 / -1.646 /
+   -1.573 %** are in PERF's Baseline; **each change names its own base**.
+   **The lane sizes fall off a cliff after the third** (-0.28/-0.61/-0.38 down
+   to -0.09/-0.04/-0.03): the family is mined, and a seventh lane is not the
+   next move.
    `host_calib_ms` drifts 49-83 inside one session on this box — quote a
    `games_per_s` with its calib or not at all.
 3. **THE PROFILE HAS NO HEAD LEFT, AND THAT IS THIS PASS'S RESULT.** `(-96)`
