@@ -16340,13 +16340,43 @@ re-growth, so a reserve moves it and only a different buffer removes it.
 **(-107) THE ACTOR HAS TWO ALLOCATION ROWS `--bench` CANNOT SEE, AND ONE OF
 THEM IS THE SECOND-LARGEST `reserve` GROWER IN THE PROGRAM.** Read off the
 actor profile at `bb67895a` (Profile of record). `encode_state` is **66,485
-`do_reserve_and_handle` growths over 12,660 encoded states — ~5.25 group
-`Vec`s allocated per state, 25.5 M Ir inclusive**, and `bot_ladder` runs the
-encoder on no pool. `EncodedState::default` builds `NUM_GROUPS` empty `Vec`s
-and the reserves then have to allocate every one of them; the states are
-retained by the recorder, so a scratch buffer needs a reuse discipline rather
-than a swap. **Do not change what the encoder emits** — `EncodedState`'s
-layout is in the retrain caution — but its *buffers* are free to change.
+`do_reserve_and_handle` growths over 12,660 encoded states — ~5.25 of the
+eight group `Vec`s allocated per state, 28,387,649 Ir inclusive, 0.48 % of the
+actor at 427 Ir a growth** — and `bot_ladder` runs the encoder on no pool.
+`EncodedState::default` builds `NUM_GROUPS` empty `Vec`s and the reserves then
+allocate every non-empty one; the states are retained by the recorder, so a
+scratch buffer needs a reuse discipline rather than a swap.
+
+**The only shape that removes them is one backing buffer for all eight groups**
+(`Vec<EncodedObject>` plus `[u16; NUM_GROUPS + 1]` offsets) — 12,660
+allocations instead of 66,485, ~23 M Ir / **0.39 % of the actor**. That is a
+refactor across `crabomination_nn` and the trainer's forward pass
+(`trunk1_w.cols == NUM_GROUPS * 2 * obj_hidden + GLOBAL_FEATS` reads the
+groups positionally), **priced and deliberately not taken in one sitting**: it
+changes no encoded *value* and so needs no retrain, but a half-threaded
+version of it would. **Do not change what the encoder emits** — `EncodedState`'s
+emitted layout is in the retrain caution — but its *buffers* are free to change.
+
+**`encode_state`'s callee table at the tip, so nobody re-derives it** (12,660
+calls, 7,297 Ir of self apiece):
+
+```text
+  1,015,070   10,629,038  CardInstance::counter_count      80 a state
+    452,509  113,052,080  encode_card_object_into
+    186,632   12,917,900  CardInstance::power
+    145,010   11,213,746  CardInstance::toughness
+     77,342   10,848,943  affordable_covered
+     66,485   28,387,649  do_reserve_and_handle            <- this entry
+     12,660   58,899,136  with_frozen_layers
+     11,892    9,778,684  insertion_sort_shift_left        } counts.sort,
+        768    1,041,864  ipnsort                          } 10.8 M / 0.18 %
+      7,920      388,300  Vocab::index_of                  memoized on the card
+```
+
+The library dedup's `counts.iter_mut().find` does **not** appear as a callee —
+it is inlined into the 7,297 Ir of self — and its sort is 0.18 % on its own.
+The sort is what makes two shuffles of one library encode identically, so it
+is not droppable.
 
 **The second is the snapshot loop's own copy, and it is CLOSED at `817b9736`
 for -1.360 % of the actor** (Log, pass (5)):
