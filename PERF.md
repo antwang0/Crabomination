@@ -2314,10 +2314,11 @@ suite   19,075 / 0 / 5 (cargo nextest --workspace --exclude
 clippy  --workspace --exclude crabomination_client --all-targets   clean,
         and `-p crabomination --all-targets --features trig-census`
 --bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
-        invariant on both commits. determinism ok. games_per_s 206-215,
-        host_calib_ms 53, peak_rss_mib 28.2-28.8, `release-fast` + mimalloc
-        (NOT the `release` build the rows above are on — the invariant
-        columns transfer, `games_per_s` and `bin_bytes` do not).
+        invariant on both commits and across seven runs over four builds.
+        determinism ok, thread_determinism ok (3 vs 1). peak_rss_mib
+        27.9-29.9, `release-fast` + mimalloc (NOT the `release` build the
+        rows above are on — the invariant columns transfer, `games_per_s`
+        and `bin_bytes` do not).
 
 Ir, release-fast --no-default-features, --a gang --b gang --games 6
 --threads 1 --seed 1, `f2793cd5` -> `0c4d6ece`:
@@ -2333,6 +2334,16 @@ would walk unaided — the pass's own before/after:
   at 0c4d6ece          15.47 %        28.25 %        32.45 %
   grant-live dispatches  8,724 -> 0    17,000 -> 0    0 -> 0
 ```
+
+⚠ **`games_per_s` ranged 147.9-214.7 on ONE box in ONE session, at
+`host_calib_ms` 52-65 throughout**, over four builds whose Ir differs by at
+most 3 % and whose `decisions` are byte-identical. That is a 45 % spread the
+calibration does not predict and no code change explains — the fifth
+confirmation of this file's rule, and the sharpest, because here the
+*binaries* are pinned as well as the host. **Do not read a `--bench`
+wall-clock column as a result at this container's noise level; it is a
+liveness check.** The number of record for anything under ~5 % is Ir, from
+two binaries built in one sitting off one warm cache.
 
 ⚠ **`sealed` is the control and it is exactly flat by construction** — its
 census read zero grant-live dispatches before the pass and after it, so
