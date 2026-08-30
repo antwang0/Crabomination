@@ -2179,6 +2179,44 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-third pass, the card half — closing state at `0bda7d63`
+
+One commit on top of the block below: `0bda7d63`, 107 cards given the type
+line they print (34 at the wrong spell speed, 23 outside the legend rule, 5
+affinity creatures counting themselves as artifacts, six cards that were not
+the card they are named after). Rules-affecting by construction, so it gets
+its own anchor rather than sharing one.
+
+```text
+suite   19,050 / 0 / 5; golden traces 7/7 unmoved — none of the 107 is in a
+        traced game
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    30 cells, 33,120 games, 0 failures, 0 undecided
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical, and **it has to
+        be**: not one of the 107 cards is in the four `fixed` archetypes.
+        determinism ok, thread_determinism ok. games_per_s 316.08,
+        host_calib_ms 44, peak_rss_mib 24.5, bin_bytes 123,849,184.
+
+Ir anchor at `0bda7d63`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     885,996,416      cube 2,640,804,402      sealed 2,619,514,623
+
+  against the block below (`244e849b`, the other container):
+    fixed     885,996,044 ->   885,996,416    +372 Ir     0.4 ppm
+    cube    2,640,655,854 -> 2,640,804,402  +148,548 Ir  56 ppm
+    sealed  2,619,479,921 -> 2,619,514,623   +34,702 Ir  13 ppm
+```
+
+**A hundred and seven rules-affecting card changes moved the six-game `cube`
+sample by 56 parts per million, and that is a statement about the sample, not
+about the change.** Six games deal a handful of the catalog; the same 107
+cards are, over a training run, 34 spells castable at the wrong speed and 23
+permanents the legend rule never applied to. **No anchor in this file can
+price a correctness change, and a near-zero delta on one is not evidence the
+change did nothing** — it is evidence the workload did not reach it. (It is
+also the fourteenth cross-container anchor check, and the tightest yet on
+`fixed`: 0.4 ppm across two containers *and* a commit.)
+
 ### Hundred-and-third pass, this session's half — closing state at `244e849b`
 
 Three code commits, one family — allocations and how a buffer is read:

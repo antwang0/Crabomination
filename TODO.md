@@ -27,10 +27,15 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
    the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
-2. **State at `817b9736`** (engine numbers taken at `244e849b`, one card commit below): suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
+2. **State at `0bda7d63`:** suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
    30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical
-   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok). Window `0367c09c -> 244e849b` **-0.140 / -0.545 / -0.233 %**;
-   anchors and the unexplained 141-ppm `fixed` cross-container gap in PERF's Baseline.
+   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok,
+   `peak_rss_mib` 24.5). Anchor 885,996,416 / 2,640,804,402 / 2,619,514,623 and the
+   unexplained 141-ppm `fixed` cross-container gap in PERF's Baseline.
+   **The 107-card type commit is Ir-neutral at this sample**: `244e849b -> 0bda7d63`
+   reads +372 / +148,548 / +34,702 Ir, i.e. **0.4 / 56 / 13 ppm**. Six games of `cube`
+   barely deal those cards; over a training run they are 34 spells at the wrong speed and
+   23 permanents outside the legend rule, which no anchor can price.
 3. **`games_per_s` does not transfer between containers and an Ir anchor does** — settle a
    suspected wall-clock regression with **one anchor run**, never a rebuild of the base.
 4. **The three devices this pass paid on, in order of reuse.** (a) A memo on a named
@@ -55,10 +60,20 @@ sixty-seventh pass, so don't re-take that.
    (12.8 % of every allocation the actor makes).
 7. **ROBUSTNESS: bare panics 23 -> 3** (deck construction, deliberately). No open
    TODO/FIXME in `src`, no `#[ignore]`d tests.
-8. **CARDS: audit the field, not the row — and audit the audit.** `audit_catalog_stats.py`
-   now carries type/supertype columns; standing at 17,229 checked, card type 77 /
-   supertype 55 open. Also open: INCOMPLETE_CARDS buckets 6 / 7 / 8, 3 dead primitives,
-   and `audit_dropped_may`'s 327 rows — **noise until someone teaches it the shapes**.
+8. **CARDS: 118 defects closed, and every one came out of ONE script.**
+   `audit_catalog_stats.py`'s new type-line columns are worked to **cost 0 / P/T 0 /
+   type 0 / supertype 0** at 17,229 checked. What they found: **34 spells at the wrong
+   speed** (a Lava Dart that could not be cast at instant speed, a Treasure Cruise that
+   could), **23 permanents missing Legendary** so the legend rule never fired on Karn
+   Liberated or Gaea's Cradle and 9 carrying it wrongly, 5 affinity creatures typed as
+   artifacts and counting themselves, and **six cards that were not the card they are
+   named after**. **The method is the transferable half — `audit the audit`:** four
+   reading bugs came out of making those columns believable and three were already wrong
+   for the *existing* columns. Disbelieve a class of findings too large to be true and
+   check three of its rows in the source; this run the two largest classes were reader
+   bugs and the four smallest were the real defects. Still open: INCOMPLETE_CARDS buckets
+   6 / 7 / 8, 3 dead primitives, `audit_dropped_may`'s 327 rows and the keyword column's
+   48 — all four **noise until someone teaches the filter the shapes**.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

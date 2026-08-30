@@ -377,6 +377,12 @@ more serious defect and the easier one to confirm.
 | ~~Stingerback Terror~~ ✅ **FIXED** 2026-08-30 | decks/modern.rs | shipped as an **invented card**: a {2}{R}{R} *Legendary* 7/7 Scorpion Dragon with menace, ward—pay 3 life and saddle 3, whose saddled attack drained half of each opponent's life. No such card exists and the cache holds no Mount with that text. Now the printed one — flying, trample, `PumpSelfByValue { HandSizeOf(You), -1/-1 }`, `plot_cost` {2}{R} — all four primitives already shipped. Its three saddle-mechanics tests moved to Brightfield Glider. |
 | ~~Descendant of Storms~~ ✅ **FIXED** 2026-08-30 | mod_set/creatures.rs | shipped as a 2/2 flying **Spirit** with a dies-trigger that made a Human Soldier token — the card's own types and its token's, swapped, plus a keyword and a trigger it does not have. Now the printed {W} 2/1 Human Soldier with "whenever it attacks, you may pay {1}{W}; if you do, it endures 1" (`MayPay` + `Effect::Endure`, both shipped). |
 
+| ~~Surging Might~~ ✅ **FIXED** 2026-08-30 | decks/recent.rs | printed a {2}{G} **Aura** for +2/+2 with ripple 4; shipped as a {2}{G} Instant for +1/+1 and trample. Now the Aura. |
+| ~~Mob Mentality~~ ✅ **FIXED** 2026-08-30 | stx/extras_04.rs | printed a {R} Aura granting trample; shipped as a *synthesised* "creatures you control get +1/+1, and first strike if you cast another spell" Instant — **under a name Scryfall owns**, which is the catalog's own synthesis rule broken. Now the Aura; its "whenever all non-Wall creatures you control attack, enchanted creature gets +X/+0" clause wants an all-attack trigger and is the residual. |
+| ~~Heroic Defiance~~ ✅ **FIXED** 2026-08-30 | stx/iconic.rs | same shape as Mob Mentality: a printed {1}{W} Aura for +3/+3, shipped as a synthesised "+1/+1, hexproof and indestructible" Instant under a real name. The printed "unless it shares a color with the most common color among all permanents" gate wants a board-wide colour census and is the residual. |
+| ~~Thing in the Ice~~ ✅ **FIXED** 2026-08-30 | decks/modern.rs | a Wall, not a `Creature — Horror`; its Awoken Horror back was a plain Horror, not a `Kraken Horror`. |
+| ~~Sundering Eruption~~ ✅ **FIXED** 2026-08-30 | mod_set/sorceries.rs | {1}{R} for a {2}{R} card, and its back face was named "Mount Tyrhus" — the printed back is **Volcanic Fissure**. |
+
 **Both were found by the same instrument and neither was on any tracker row**:
 `scripts/audit_catalog_stats.py`'s type and keyword columns, read against the
 committed scryfall cache after that script's own cost column was fixed (it had
@@ -385,6 +391,30 @@ Legends Elder Dragons as drift against their own upkeep). **Audit the audit
 before believing its silence**: the cost column read 8 findings and 0 of them
 were real; after the fix it reads 0 findings, and the eight real defects were
 in the columns nobody had disbelieved.
+
+**And then the audit grew the two columns nobody had ever run catalog-wide —
+card type and supertype — and they were worth 107 more cards.** The classes,
+in descending damage: 34 spells at the wrong *speed* (24 printed Instants
+shipped as Sorceries, 10 the other way — a Treasure Cruise the bot could cast
+on the opponent's turn); 23 permanents missing **Legendary**, so the legend
+rule never fired on Karn Liberated, Liliana of the Veil, Gaea's Cradle or the
+four God-Eternals, and 9 carrying it wrongly, so a second Gray Merchant of
+Asphodel was being sacrificed; 5 affinity creatures (Broodstar, Somber
+Hoverguard, Carapace Forger, Qumulox, Glaring Fleshraker) typed as **artifact**
+creatures, counting themselves toward their own affinity; 9 artifact creatures
+missing Artifact; 6 enchantment creatures missing Enchantment; 13 tribal spells
+missing Kindred.
+
+**The reusable half is what it cost to make those columns believable.** Four
+distinct reading bugs came out of getting there and three were already wrong
+for the audit's *existing* columns — a card's body ran past the next private
+`fn`, a bound `let back = CardDefinition { … }` answered for the card, an
+aliased `Sup::Legendary` read as no supertype at all, and a helper whose
+"constant" was `vec![if sorcery { … } else { … }]` read as both types. **Every
+one of them was found by disbelieving a class of findings that was too large
+to be true, and checking three of its rows in the source.** The four smallest
+classes in the first run were the real defects; the two largest were bugs in
+the reader.
 
 Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 **synthesized** fabricated-name cards (only `_b###` factories exist), so the
