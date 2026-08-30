@@ -2220,45 +2220,44 @@ reading — the `--bench` invariants (`decisions`, `turns_per_game`,
 `decisions_per_game`, stalls) are what carries across, and they are identical.
 The actor anchor above is a same-box A/B and is the number to quote.
 
-### Hundred-and-fourth pass, this session's close at `d0799d5c`
+### Hundred-and-fourth pass, this session's close at `d2ce2cf8`
 
-Four code commits, three families: the `Vec<GameEvent>` return (`da4a6ca2`
+Six code commits, three families: the `Vec<GameEvent>` return (`da4a6ca2`
 `381fac97`, `(-104)` closed), the target enumerator's zone scope (`13435f3e`
-engine + `d9e6454d`, seventy-nine card filters) and CR 115.4's implicit
-any-target filter (`d0799d5c`). `(-111)` was built and reverted in the same
-window and is not in the tree.
+engine + `d9e6454d`, seventy-nine card filters) and the implicit-filter family
+(`d0799d5c` CR 115.4's any-target, `d2ce2cf8` the player fields). `(-111)` was
+built and reverted in the same window and is not in the tree.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,054 / 0 / 5 (cargo nextest --workspace --exclude
-        crabomination_client) — +4 on the block below are the enumerator's
-        two scope tests, the reanimation-filter invariant and the CR 115.4
-        one; golden traces 7/7 unmoved across all four commits
+suite   19,055 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client) — +5 on the block below are the enumerator's
+        two scope tests, the reanimation-filter invariant, CR 115.4's and the
+        player-field one; golden traces 7/7 unmoved across all six commits
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 grid    scripts/robustness_grid.sh, rebuilt at this tip — 30 cells, five
         pools x six seeds x 120 games, **33,120 games, 0 failures,
         0 undecided**; 5 assertion strings in the audit binary
 --bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
-        invariant across seven runs over two builds; determinism ok,
-        thread_determinism ok (3 vs 1). games_per_s 400.72 / 402.63 / 403.33,
-        host_calib_ms 37-43, peak_rss_mib 24.1-24.4 settled (a third run read
-        26.5, which is this file's own "the box is still busy" artifact),
-        bin_bytes 123,729,960, `release` + mimalloc.
+        invariant across ten runs over three builds; determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 427.12 / 408.18 / 417.68,
+        host_calib_ms 39-42, peak_rss_mib 24.6-24.7,
+        bin_bytes 123,731,688, `release` + mimalloc.
 
-Ir anchor at `d0799d5c`, callgrind, profiling-fast --no-default-features,
+Ir anchor at `d2ce2cf8`, callgrind, profiling-fast --no-default-features,
 --a gang --b gang --games 6 --threads 1 --seed 1:
-  fixed     877,014,198      cube 2,610,219,763      sealed 2,591,837,461
+  fixed     877,016,684      cube 2,610,227,969      sealed 2,591,878,145
 
   the window, `9bf0411a`'s code -> this tip, one container, every pair
   adjacent builds:
-    fixed     883,044,002 ->   877,014,198   -0.683 %
-    cube    2,632,744,583 -> 2,610,219,763   -0.856 %
-    sealed  2,610,134,584 -> 2,591,837,461   -0.701 %
+    fixed     883,044,002 ->   877,016,684   -0.683 %
+    cube    2,632,744,583 -> 2,610,227,969   -0.855 %
+    sealed  2,610,134,584 -> 2,591,878,145   -0.699 %
 ```
 
-**`peak_rss_mib` reads 24.1-24.4 here and the other session reads 18.8-19.1
+**`peak_rss_mib` reads 24.6-24.7 here and the other session reads 18.8-19.1
 at a neighbouring tip.** Both are settled runs (`games_per_s` in family,
-`host_calib_ms` 37-43 against their 50), so this is the container difference
+`host_calib_ms` 39-42 against their 50), so this is the container difference
 this file's own rule predicts and not a change either pass made. **Compare an
 RSS column only against one taken in the same container**; the `--bench`
 invariant (decisions / turns / stalls) is the column that transfers, and it is
@@ -9580,6 +9579,48 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Hundred-and-fourth pass (6) — the unfiltered-slot census's player half, and a comment that guarded the wrong thing
+
+**`fixed` +0.000 % / `cube` +0.000 % / `sealed` +0.002 %** at `d2ce2cf8`, off
+`d0799d5c`. Free, and the reason it is free is the point: the filter it adds is
+evaluated on a slot whose answer the picker already reached, so it removes
+candidates without adding work.
+
+`primary_target_filter` answers `None` for a bare `PlayerRef::Target(n)` in a
+field the effect reads as a **player**; both walkers then fall back to
+`SelectionRequirement::Any`, which matches every battlefield permanent. So
+Disrupting Scepter's "target player discards a card" listed the board, and a
+permanent picked there resolves to no player and the ability does nothing.
+Twenty-three variants had no arm at all; the existing "player-targeting
+effects" group had an arm that stopped at `sel_filter`.
+
+**Three devices, and the third is the one to reuse.** (a) A `Selector::Player`
+arm in `sel_filter` subsumes the one-arm helper
+`implicit_player_if_bare_player_target` that had covered exactly
+`ExileTopMintPerChosenColor` since the seventy-fifth pass — put the answer in
+the shared projection, not in one caller. (b) The edict arm's comment said its
+fallthrough was deliberate, "so existing edicts keep their explicit-target
+casting contract" — **that contract is `requires_target`, a different walker,
+which this does not touch.** A comment that names a reason is still a claim
+with a date on it; check which function it is about before honouring it.
+(c) The census's own shape: group the findings by the **nearest enclosing enum
+key** in the serialized body, and 204 card rows collapse to ~40 walker arms —
+the thing you actually have to edit.
+
+```text
+census: paths from a bare `Selector::Target(n)` no walker filters, over
+        bodies that accept a player target
+  157 paths  ->  93   (this commit)
+```
+
+**What is left of it is a catalog lane, not an engine one.** The residue is
+`Tap` / `SkipNextUntap` / `Destroy` / `GrantKeyword` with a bare target, and
+`accepts_player_target` already answers **false** for that whole group — so no
+player is ever offered there and the over-match is within permanents only,
+i.e. a card that wrote "destroy target creature" without its filter. The other
+residue is the counterspells, which target a spell the `Target` enum cannot
+express and which the enumerator's list never aims.
 
 ### Hundred-and-sixth pass (1) — `(-107)`'s single buffer, and the growth ladder's other half
 
