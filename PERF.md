@@ -10076,6 +10076,18 @@ Both walkers that consume it made the same omission, so the `debug_assert!`
 that cross-checks them agreed on the wrong answer — **a cross-check between
 two hand-written walkers audits drift, never a premise they share.**
 
+**The class was then audited and it has exactly one member — do not re-take
+this sweep.** All six `*_scan_bits` functions in `crabomination_base/src/card.rs`
+were read against the rule. Every other bit already asks the emptiness
+question where there is one (`gather_spec::HAS_STATICS` on
+`!static_abilities.is_empty()`, `type_bits::ATTACHED` on `set_card_types
+.is_some() || !add_card_types.is_empty()`, `layer4_bits::CREATURE` on the same
+pair for creature types, `sba_bits::SAGA` on `!saga_chapters.is_empty()`,
+`can_grant_keyword` on `any(&b.keywords)` rather than on the bonus existing),
+and the rest are `Option` fields where presence *is* the fact
+(`sacrifice_when`, `flip_when_predicate`, `dynamic_pt`, …). Only
+`EQUIP_TRIGGER_GRANT` named a collection and tested its wrapper.
+
 ### Hundred-and-eighth pass (1) — the dispatch walk gets a member list, and four shapes that lose to it
 
 **`fixed` -0.3308 % / `sealed` -0.1793 % / `cube` +0.0467 %** at `ddb9e930`,
