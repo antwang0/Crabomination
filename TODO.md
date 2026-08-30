@@ -26,6 +26,13 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B
    claude/modern_decks origin/claude/modern_decks`. Sessions run concurrently:
    push code before tracker prose, rebase not force, **sequential builds only**.
+   **And say what you are building before you build it.** Two sessions took
+   the graveyard's second lane the same evening, independently, down to the
+   predicate — one 35-minute A/B wasted, and only the tests survived from the
+   loser (`d6a9b3d5`). The queue in item 3 is the claim board: before an A/B
+   that costs a build, push a one-line "TAKEN by this session, <date>" onto
+   the entry you are pulling. A push costs seconds; a duplicated A/B costs an
+   hour of one core.
 2. **State at `6d30b1e6`**, the combined tip of both sessions: suite
    19,044 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
    (30 cells / 33,120 games / 0 failures, 5 assertion strings), `--bench`
