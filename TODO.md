@@ -27,7 +27,7 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
    the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
-2. **State at `244e849b`:** suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
+2. **State at `817b9736`** (engine numbers taken at `244e849b`, one card commit below): suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
    30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical
    (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok). Window `0367c09c -> 244e849b` **-0.140 / -0.545 / -0.233 %**;
    anchors and the unexplained 141-ppm `fixed` cross-container gap in PERF's Baseline.
@@ -45,10 +45,14 @@ sixty-seventh pass, so don't re-take that.
    the `Vec<GameEvent>` `resolve_effect` / `activate_ability_inner` *return*, 46,258
    allocations, census done to the one friction (event order, not the borrow checker).
    After that: `computed_permanent_hinted`'s 201,780 `Arc`s (`(-92)` lead 2).
-6. **The actor has not been profiled since `633acc3e`** (`(-97)`), and this pass shipped
-   one actor-only site (`encode.rs`'s 768-byte `IntoIter`) on mechanism rather than on a
-   reading. A `crabomination_ml` `profiling-fast` run at the tip is the cheapest way to
-   both close that and refresh the Profile of record.
+6. **THE ACTOR IS WHERE THE LARGEST WIN OF THE PASS WAS, AND `--bench` CANNOT SEE IT.**
+   Re-read at `bb67895a` (Profile of record); `rank_shape` is byte-identical to the
+   `c92f3851` reading, so the deck half of the workload is a control. The recorder's
+   de-dup key was a second copy of the pair it had just pushed — **-1.360 %**
+   (`817b9736`), against `cube`'s -0.341 % for the pass's largest engine change.
+   Open there, `(-107)`: `encode_state`'s 66,485 reserve growths (2nd largest in the
+   program, invisible to every pool) and `computed_permanent_hinted`'s 433,775 `Arc`s
+   (12.8 % of every allocation the actor makes).
 7. **ROBUSTNESS: bare panics 23 -> 3** (deck construction, deliberately). No open
    TODO/FIXME in `src`, no `#[ignore]`d tests.
 8. **CARDS: audit the field, not the row — and audit the audit.** `audit_catalog_stats.py`

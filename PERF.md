@@ -9294,6 +9294,51 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-third pass (5) — the recorder's de-dup key was a second copy of the pair; the ACTOR falls 1.36 %
+
+**`selfplay_train` 6,020,307,568 -> 5,938,457,883, -1.360 %** off `bb67895a`
+(`817b9736`), and `bot_ladder` cannot see a single instruction of it.
+
+`play_recorded_game_mcts` skips a snapshot whose encoded pair equals the last
+one it pushed, and held that key as `Option<[EncodedState; 2]>` — **a second
+copy of a pair `snaps` already owns**. Every accepted snapshot therefore
+cloned two whole `EncodedState`s (one `Vec` per group, so ~5 allocations and a
+copy of every encoded object apiece) purely to keep the comparison alive. The
+key is now the index of that pair's seat-0 entry in `snaps`.
+
+```text
+CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 120 --steps 1 --seed 7,
+callgrind, profiling-fast -p crabomination_ml --no-default-features
+  _int_malloc               190,040,391 -> 158,224,792   -31.82 M
+  __memcpy_avx_unaligned    305,745,219 -> 289,633,518   -16.11 M
+  _int_free                 215,901,283 -> 209,193,961    -6.71 M
+  play_recorded_game_mcts    18,192,773 ->  12,108,478    -6.08 M
+  unlink_chunk               20,436,232 ->  14,969,564    -5.47 M
+  malloc_consolidate         34,278,087 ->  29,198,369    -5.08 M
+  malloc                    164,249,979 -> 159,247,759    -5.00 M
+  free                      131,698,755 -> 129,191,952    -2.51 M
+  drop_in_place<[EncodedState; 2]>  594,353 ->  0   the array moves now
+```
+
+**The output check is the one that matters here and it is exact**: 120 games,
+**11,899 rows, 0 stalls** on both sides at the same seed. A recorder change is
+behaviour-preserving when the rows it emits are the same rows.
+
+**Three things generalise.**
+
+1. **A de-duplication key that is a copy of data the program already keeps is
+   a copy that can be an index.** `(-88)`'s rule was "price the witness
+   against the work"; this is its cheap cousin — when the witness *is* the
+   work's own output, there is no witness to pay for.
+2. **`(-97)` charged 13.3 % of the actor's `__memcpy` to
+   `play_recorded_game_mcts` as "the MCTS state copy, inherent". A third of
+   that row was this.** A row labelled inherent in one pass is a row nobody
+   has read the source of.
+3. **This is why the actor gets profiled.** Nothing in `bot_ladder`'s three
+   pools executes the recorder or the encoder, so the largest single win of
+   the pass — 1.36 % against `cube`'s 0.34 % — is invisible to every number
+   in this file's Baseline. `(-107)` carries the two rows still open there.
+
 ### Hundred-and-third pass (4) — the by-value `SmallVec` loop, swept
 
 **`fixed` -0.0028 % / `cube` -0.0094 % / `sealed` -0.0190 %** off `cfa883ae`.
@@ -14551,6 +14596,81 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE ACTOR RE-READ AT `bb67895a` — AND THE DECK BUILDER IS BYTE-IDENTICAL, WHICH MAKES THIS THE CLEANEST ACTOR COMPARISON ON FILE
+
+`selfplay_train --actors 1 --games 120 --steps 1 --seed 7 --out <dir>`,
+`profiling-fast -p crabomination_ml --no-default-features`, callgrind, 0
+`libmimalloc` frames. **6,020,307,568 Ir** against `c92f3851`'s
+6,113,733,616 — **-1.53 %** over a window carrying this session's three perf
+commits plus the other session's card work.
+
+**`rank_shape` reads 65,739,164 at both tips, to the instruction.** That row
+is the deck builder, which runs twice a game, so an identical count says the
+actor built the same decks and played the same length of workload — the
+control `(-95)` and `(-97)` both wanted and neither had. Read the totals here,
+not only the shares.
+
+```text
+                                 c92f3851        bb67895a          share
+  dispatch_triggers_for_events  383,520,709   377,500,872   6.27 %  ->  6.27 %
+  __memcpy_avx_unaligned_erms   311,528,687   305,745,219   5.10 %  ->  5.08 %
+  _int_free                     221,370,934   215,901,283   3.62 %  ->  3.59 %
+  _int_malloc                   192,622,796   190,040,391   3.15 %  ->  3.16 %
+  malloc                        166,300,976   164,249,979   2.72 %  ->  2.73 %
+  check_state_based_actions_into161,538,532   158,992,910   2.64 %  ->  2.64 %
+  free                          133,916,685   131,698,755   2.19 %  ->  2.19 %
+  gather_continuous_effects_in. 130,935,400   130,319,040   2.14 %  ->  2.16 %
+  Arc::clone_from_ref_in        131,634,351   130,143,309   2.15 %  ->  2.16 %
+  Vec::from_iter (nested)       128,956,156   127,187,568   2.11 %  ->  2.11 %
+  activate_ability_inner        120,350,979   116,887,939   1.97 %  ->  1.94 %
+  compute_permanent_pass        108,543,362   109,817,412   1.78 %  ->  1.82 %
+  computed_permanent_hinted      99,413,876    98,082,453   1.63 %  ->  1.63 %
+  encode_state                   93,537,391    92,383,517   1.53 %  ->  1.53 %
+  encode_card_object_into        91,569,647    91,710,690   1.50 %  ->  1.52 %
+  rank_shape                     65,739,164    65,739,164   1.08 %  ->  1.09 %
+```
+
+**`compute_permanent_pass` LEAVES THE ALLOCATION TABLE ENTIRELY, which is
+`(-106)` confirmed on the workload.** It was the largest single allocation
+context on `bot_ladder --decks cube` (61,518 of 1,384,794); at this tip it
+does not appear among the actor's `__rust_alloc` callers at all, and its own
+`do_reserve_and_handle` row is gone. Its *self* Ir rises 1.78 -> 1.82 % —
+the inline-or-spilled branch, exactly as the three-pool A/B priced it.
+
+**`encode_state` falls 1.23 % of itself while its sibling
+`encode_card_object_into` rises 0.15 %**, which is the only reading available
+for `244e849b`'s actor-only site (the 768-byte `IntoIter` in that function).
+It is a differential against an unchanged neighbour, not an A/B; treat it as
+consistent-with rather than measured.
+
+**THE ACTOR'S ALLOCATION CENSUS, 3,380,837 CALLS OVER 120 GAMES, AND TWO OF
+THE TOP ROWS ARE INVISIBLE TO EVERY `--bench` POOL:**
+
+```text
+  callers of __rust_alloc                     calls
+  656,028  finish_grow                                (the growth path)
+  433,775  computed_permanent_hinted                  the Arc<ComputedPermanent>
+  346,535  Arc::clone_from_ref_in                     the CoW deep copy
+  323,781  Vec::from_iter (nested)
+  186,395  Vec::clone
+  136,278  GameState::clone
+   96,193  gather_continuous_effects_inner
+   93,120  CowBox<Vec<T>>::push
+
+  callers of do_reserve_and_handle             calls        Ir (incl)
+   71,045  Vec::from_iter (nested)             71,045      39,917,447
+   66,485  encode_state                        66,485      25,503,509   <- actor-only
+   51,112  auto_tap_for_cost_inner             51,112      31,820,359
+   35,956  mana_source_table                   35,956       4,775,973
+   10,828  resolve_combat                      10,828      20,934,769
+```
+
+`encode_state` is **the second-largest `reserve` grower in the program and
+`bot_ladder` cannot see it**: 66,485 growths over 12,660 encoded states, i.e.
+~5.25 group `Vec`s allocated per state, and `EncodedState::default` builds
+`NUM_GROUPS` empty `Vec`s that the reserves then have to allocate. See
+`(-107)`.
+
 ### THE ACTOR RE-READ AT `c92f3851` — THE CoW COPY FAMILY FALLS BY THE SAME 41 % THERE AS ON `bot_ladder`
 
 `selfplay_train --actors 1 --games 120 --steps 1 --seed 7 --out <dir>`,
@@ -15935,6 +16055,33 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-107) THE ACTOR HAS TWO ALLOCATION ROWS `--bench` CANNOT SEE, AND ONE OF
+THEM IS THE SECOND-LARGEST `reserve` GROWER IN THE PROGRAM.** Read off the
+actor profile at `bb67895a` (Profile of record). `encode_state` is **66,485
+`do_reserve_and_handle` growths over 12,660 encoded states — ~5.25 group
+`Vec`s allocated per state, 25.5 M Ir inclusive**, and `bot_ladder` runs the
+encoder on no pool. `EncodedState::default` builds `NUM_GROUPS` empty `Vec`s
+and the reserves then have to allocate every one of them; the states are
+retained by the recorder, so a scratch buffer needs a reuse discipline rather
+than a swap. **Do not change what the encoder emits** — `EncodedState`'s
+layout is in the retrain caution — but its *buffers* are free to change.
+
+**The second is the snapshot loop's own copy, and it is CLOSED at `817b9736`
+for -1.360 % of the actor** (Log, pass (5)):
+`selfplay::play_recorded_game_mcts` kept its de-duplication key as a second
+copy of the last pair (`Option<[EncodedState; 2]>`), so every accepted
+snapshot cloned two whole states — ~5 allocations and a copy of every encoded
+object apiece — purely to keep a comparison alive. The key is now an index
+into `snaps`, which already holds that pair. `play_recorded_game_mcts` was the
+program's largest single `__memcpy` caller (541,135 calls / 19.1 M Ir), a row
+`(-97)` charged to "the MCTS state copy, inherent" — a third of it was this.
+
+**And the third is `computed_permanent_hinted`'s 433,775 `Arc` allocations —
+12.8 % of every allocation the actor makes**, against 201,780 on a six-game
+`cube` run. `(-92)` lead 2 (`Arc::new_uninit` + unsafe) is the only shape
+anyone has proposed for it and `(-27)`'s pool is refuted; it is the largest
+untaken allocation row in the program.
 
 **(-105) A MEMO ON A NAMED HELPER HAS A `_mut` TWIN, AND `(-102)` CLOSED ONLY
 THE READ HALF. TAKEN AT THE HUNDRED-AND-THIRD PASS FOR -0.119 / -0.195 /
