@@ -9247,6 +9247,56 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-third pass (2) — the `&mut` twin of the find memo, and 74 sites that never had one
+
+**`fixed` -0.119 % / `cube` -0.195 % / `sealed` -0.234 %** off `ae429ae7`.
+
+`(-102)` closed the read side: fifty raw `battlefield.iter().find(|c| c.id ==
+x)` scans joined `Battlefield::find_by_id`'s one-entry memo. **It closed one
+half of the class.** `GameState::battlefield_find_mut` was
+`self.battlefield.iter_mut().find(|c| c.id == id)` — no memo — and 73 other
+sites in the engine spelled that longhand directly. Same question, third
+spelling, and the only one with a write on the end.
+
+`Battlefield::find_by_id_mut` locates on the **shared** side (the hint, then
+`position` on `&self.cards`) and reaches for `&mut` only once an index is in
+hand. Two things follow: the hit skips the scan through the same memo the read
+path uses, and a *miss* costs no `CowBox` unshare — `iter_mut()` deep-copied
+the whole zone before it knew whether the id was there.
+
+```text
+callgrind, profiling-fast --no-default-features, --a gang --b gang
+--games 6 --threads 1 --seed 1.  base ae429ae7
+  fixed     887,234,325 ->   886,182,938   -0.119 %
+  cube    2,655,120,084 -> 2,649,944,503   -0.195 %
+  sealed  2,625,608,126 -> 2,619,473,675   -0.234 %
+
+cube, the rows it came off — callers losing their inlined scan
+  resolve_combat               28,381,030 -> 25,036,820   -3.34 M
+  resolve_top_of_stack_inner   15,311,084 -> 12,509,654   -2.80 M
+  activate_ability_inner       45,413,970 -> 44,309,314   -1.10 M
+  apply_soulbond_pairing        2,542,258 ->  2,122,944   -0.42 M
+  mint_token_onto_battlefield   1,376,192 ->  1,183,622   -0.19 M
+  Battlefield::find_by_id_mut           0 ->    510,486   the new row
+  dispatch_triggers_for_events192,288,440 ->195,121,092   +2.83 M  <- see below
+```
+
+**The unshare half is real and worth almost nothing, and that is the finding
+to carry.** `Arc::make_mut` 848,814 -> 848,708 calls and
+`Arc::clone_from_ref_in` 107,912 -> 107,878: **34 deep copies out of 107,912**,
+~16 k Ir. So on this workload `battlefield_find_mut` essentially always hits —
+the whole -0.195 % is the memo and the de-inlined scan, not the CoW sharp
+edge. **Which refutes the obvious follow-on before it is built**: the same
+`iter_mut().find(…)` shape over the other CoW zones (11 `hand` sites, 30
+`exile`, 3 `command`, and `command_card_mut`, which takes `&mut` on *every*
+seat's `PlayerData` to answer) has no memo to offer and only that same
+near-zero miss path. Do not spend a build on it.
+
+`dispatch_triggers_for_events` rises 2.83 M on `cube` / 0.83 M on `fixed`
+while calling none of this: it is `codegen-units = 16` moving inline decisions
+elsewhere in a 17 k-line module, the same effect the panic-audit priced at
+`(-101)`'s tip. Price a change on the program, not on the site.
+
 ### Hundred-and-third pass (1) — the four `grow_one` rows above 1.5 growths a call
 
 **`fixed` -0.323 % / `cube` -0.242 % / `sealed` -0.195 %** off `c92f3851`
@@ -15744,6 +15794,61 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-105) A MEMO ON A NAMED HELPER HAS A `_mut` TWIN, AND `(-102)` CLOSED ONLY
+THE READ HALF. TAKEN AT THE HUNDRED-AND-THIRD PASS FOR -0.119 / -0.195 /
+-0.234 % — LARGER THAN THE READ SWEEP THAT PRECEDED IT.**
+`GameState::battlefield_find_mut` was `iter_mut().find(|c| c.id == id)` and 73
+other engine sites spelled that longhand. `Battlefield::find_by_id_mut`
+locates on the shared side and takes `&mut` only on a hit. Log has the rows.
+
+**Two rules, and the second is a refutation with a number.** (a) `(-102)`'s
+"grep for the query's longhand" is not finished until the `_mut` spelling is
+grepped too — it is a *third* spelling of the same question and the only one
+with a write on the end. (b) **The `CowBox` sharp edge is real here and worth
+~16 k Ir**: the miss path this removes fires 34 times out of 107,912 deep
+copies on `cube`, so the whole win is the memo. That prices the identical
+shape over the other CoW zones (11 `hand` sites, 30 `exile`, 3 `command`,
+plus `command_card_mut`, which takes `&mut` on every seat's `PlayerData` to
+answer one id) at **near zero** — they have no memo to gain and only that miss
+path. Refuted without a build; do not re-open it on the sharp edge alone.
+
+**(-106) `compute_permanent_pass`'s `sorted` IS THE PROGRAM'S SINGLE LARGEST
+ALLOCATION CONTEXT — 61,518 OF 1,384,794 (4.4 %) ON `cube`.** Read off
+`--separate-callers=3` at `ae429ae7`: `finish_grow <- do_reserve_and_handle
+<- compute_permanent_pass`, and the only `extend` in that function is
+`sorted`. At ~209 Ir a malloc/free round trip on this pool (1,384,794
+allocations against a 297 M allocator family) that is ~12.9 M Ir, **0.48 % of
+`cube`**, and it is a *pure local* consumed by the loop directly below it —
+`(-103)`'s rule (b) shape exactly.
+
+**`(-56b)` refuted four ways of not allocating it and named the fifth**: "the
+way to keep both would be a stack-backed `Extend` target (a `SmallVec`), which
+is a dependency decision, not a code one." `smallvec` is a dependency now.
+**And `(-56b)`'s own reason not to has expired**: it measured against a
+`collect()`, whose `Vec::from_iter` takes the internal-iteration path; the
+function has since moved to two `extend`s, and `Vec::extend` over a `Filter`
+is `extend_desugared` — external iteration already. So a `SmallVec` swap is
+apples to apples on the iteration axis and only moves the buffer. Size it at
+8 slots (`&ContinuousEffect` is 8 bytes, and `affected_includes_gated` runs
+520,142 times over 270,078 passes, i.e. ~1.9 effects considered apiece).
+
+**The next four contexts after it, same dump, so nobody re-derives them:**
+
+```text
+  61,518  finish_grow <- do_reserve_and_handle <- compute_permanent_pass
+  56,084  finish_grow <- grow_one <- Vec::push_mut          <- see (-104)
+  48,216  computed_permanent_hinted <- legal_blockers <- pick_blocks_inner
+  46,304  PrintedList<P>::push <- compute_permanent_pass <- ..._gated
+  40,374  computed_permanent_hinted <- permanent_value_with <- eval_material
+  34,794  clone_from_ref_in <- make_mut <- cast_spell_with_convoke
+  29,474  finish_grow <- grow_one <- dispatch_board_scan
+```
+
+`computed_permanent_hinted`'s 201,780 are the `Arc<ComputedPermanent>` itself
+— `(-92)` lead 2, and `(-27)`'s pool is refuted. `compute_permanent_pass` is
+**107,822 allocations between its two rows, 7.8 % of the program's**, which is
+the largest single function in the census.
 
 **(-103) RANK A `grow_one` ROW BY GROWTHS PER **CALL**, NOT BY GROWTHS —
 TAKEN AT `0367c09c` FOR -0.323 / -0.242 / -0.195 %, AND THE FOUR ROWS THAT
