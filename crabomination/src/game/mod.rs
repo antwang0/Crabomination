@@ -18428,6 +18428,18 @@ impl GameState {
                 // `BlockingCreatures`, so one trigger instance still covers all.
                 let mut block_sides_seen: Vec<CardId> = Vec::new();
                 for ev in events {
+                    // **The kind test goes first and the three exclusions
+                    // after it, and that ordering is the measurement.** All
+                    // four are pure `continue` guards, so the order is free to
+                    // choose; the kind test rejects the great majority of
+                    // (trigger, event) pairs, and the three below then run
+                    // only on the pairs that matched. `is_event_hardcoded` is
+                    // a match over the whole `GameEvent` enum and was the
+                    // largest named source line in this function (PERF
+                    // `(-116)`).
+                    if !crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
+                        continue;
+                    }
                     if is_event_hardcoded(ev, &ta.event) {
                         continue;
                     }
@@ -18445,124 +18457,122 @@ impl GameState {
                     {
                         continue;
                     }
-                    if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
-                        let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
-                        if matches!(
-                            ta.event.kind,
-                            crate::effect::EventKind::Blocks
-                                | crate::effect::EventKind::BecomesBlocked
-                                | crate::effect::EventKind::BlocksNOrMore(_)
-                                | crate::effect::EventKind::BecomesBlockedByNOrMore(_)
-                        ) && let Some(crate::game::effects::EntityRef::Permanent(sid)) = subject
-                        {
-                            // CR 509.3e — the count gate reads the finished
-                            // block assignment, so the whole batch is visible
-                            // regardless of which pair carried the event.
-                            let reached = match ta.event.kind {
-                                crate::effect::EventKind::BlocksNOrMore(n) => {
-                                    self.attackers_blocked_by(sid).len() as u32 >= n
-                                }
-                                crate::effect::EventKind::BecomesBlockedByNOrMore(n) => {
-                                    self.blocker_count_of(sid) as u32 >= n
-                                }
-                                _ => true,
-                            };
-                            if !reached || block_sides_seen.contains(&sid) {
-                                continue;
+                    let subject = crate::game::effects::event_subject(ev, &ta.event.kind);
+                    if matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::Blocks
+                            | crate::effect::EventKind::BecomesBlocked
+                            | crate::effect::EventKind::BlocksNOrMore(_)
+                            | crate::effect::EventKind::BecomesBlockedByNOrMore(_)
+                    ) && let Some(crate::game::effects::EntityRef::Permanent(sid)) = subject
+                    {
+                        // CR 509.3e — the count gate reads the finished
+                        // block assignment, so the whole batch is visible
+                        // regardless of which pair carried the event.
+                        let reached = match ta.event.kind {
+                            crate::effect::EventKind::BlocksNOrMore(n) => {
+                                self.attackers_blocked_by(sid).len() as u32 >= n
                             }
-                            block_sides_seen.push(sid);
-                        }
-                        // Evaluate the trigger's intervening filter here, before
-                        // consuming any once-per-turn / per-subject budget: a
-                        // candidate whose filter fails must not "use up" the
-                        // once-per-turn slot (CR 603.4 — a trigger that doesn't
-                        // meet its condition simply doesn't trigger). The same
-                        // filter is re-checked in `drain_trigger_queue`; this
-                        // pre-check just gates the budget bookkeeping. Powers
-                        // Faerie Mastermind's "second card each turn" payoff.
-                        if let Some(filter) = &ta.event.filter {
-                            let ctx = crate::game::effects::EffectContext {
-                                controller: card.controller,
-                                source: Some(card.id),
-                                targets: vec![],
-                                trigger_source: subject,
-                                mode: 0,
-                                x_value: 0,
-                                converged_value: 0,
-                                mana_spent: 0,
-                                mana_spent_by_color: Vec::new(),
-                                source_name: None,
-                                cast_from_hand: true,
-                                event_amount: self.event_amount_for(ev),
-                                kicked: false,
-                                kicked_options: Vec::new(),
-                                kick_count: 0,
-                                bargained: false,
-                                cast_via_mayhem: false,
-                                cast_via_waterbend: false,
-                                cast_collected_evidence: false,
-                                entwined: false,
-                                spree_modes: Vec::new(),
-                            };
-                            if !self.evaluate_predicate(filter, &ctx) {
-                                if !fanout {
-                                    break;
-                                }
-                                continue;
+                            crate::effect::EventKind::BecomesBlockedByNOrMore(n) => {
+                                self.blocker_count_of(sid) as u32 >= n
                             }
-                        }
-                        // Per-subject cap ("triggers only twice each turn"
-                        // counted per creature — Nadu). Deferred bump (the
-                        // battlefield is immutably borrowed here).
-                        if let (Some(cap), Some(crate::game::effects::EntityRef::Permanent(sid))) =
-                            (ta.event.per_subject_cap, subject)
-                        {
-                            let key = (card.id, sid);
-                            let used = self.per_subject_trigger_uses.get(&key).copied().unwrap_or(0)
-                                + capped_fired_this_batch.iter().filter(|k| **k == key).count() as u8;
-                            if used >= cap {
-                                continue;
-                            }
-                            capped_fired_this_batch.push(key);
-                        }
-                        // CR 800.4 — a "when you lose control of this" trigger
-                        // belongs to the seat that lost it, which is no longer
-                        // the permanent's controller by dispatch time.
-                        let controller = match (&ta.event.kind, ev) {
-                            (
-                                crate::effect::EventKind::LostControlOfThis,
-                                GameEvent::ControlChanged { from, .. },
-                            ) => *from,
-                            _ => card.controller,
+                            _ => true,
                         };
-                        candidates.push(TriggerCandidate {
-                            source: card.id,
-                            effect: ta.effect.clone(),
-                            controller,
-                            filter: ta.event.filter.clone(),
-                            subject,
+                        if !reached || block_sides_seen.contains(&sid) {
+                            continue;
+                        }
+                        block_sides_seen.push(sid);
+                    }
+                    // Evaluate the trigger's intervening filter here, before
+                    // consuming any once-per-turn / per-subject budget: a
+                    // candidate whose filter fails must not "use up" the
+                    // once-per-turn slot (CR 603.4 — a trigger that doesn't
+                    // meet its condition simply doesn't trigger). The same
+                    // filter is re-checked in `drain_trigger_queue`; this
+                    // pre-check just gates the budget bookkeeping. Powers
+                    // Faerie Mastermind's "second card each turn" payoff.
+                    if let Some(filter) = &ta.event.filter {
+                        let ctx = crate::game::effects::EffectContext {
+                            controller: card.controller,
+                            source: Some(card.id),
+                            targets: vec![],
+                            trigger_source: subject,
+                            mode: 0,
+                            x_value: 0,
+                            converged_value: 0,
+                            mana_spent: 0,
+                            mana_spent_by_color: Vec::new(),
+                            source_name: None,
+                            cast_from_hand: true,
                             event_amount: self.event_amount_for(ev),
-                            triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
-                            triggered_by_death: matches!(
-                                ev,
-                                GameEvent::CreatureDied { .. }
-                                    | GameEvent::CreatureSacrificed { .. }
-                            ),
-                            triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
-                            from_mana_ability: matches!(
-                                ev,
-                                GameEvent::TappedForMana { .. }
-                                    | GameEvent::ManaAdded { .. }
-                                    | GameEvent::ColorlessManaAdded { .. }
-                            ),
-                            actor: crate::game::effects::events::event_actor(self, ev),
-                        });
-                        if ta.event.once_per_turn && trig_idx < n_printed {
-                            once_fired_this_batch.insert(once_key);
+                            kicked: false,
+                            kicked_options: Vec::new(),
+                            kick_count: 0,
+                            bargained: false,
+                            cast_via_mayhem: false,
+                            cast_via_waterbend: false,
+                            cast_collected_evidence: false,
+                            entwined: false,
+                            spree_modes: Vec::new(),
+                        };
+                        if !self.evaluate_predicate(filter, &ctx) {
+                            if !fanout {
+                                break;
+                            }
+                            continue;
                         }
-                        if !fanout {
-                            break;
+                    }
+                    // Per-subject cap ("triggers only twice each turn"
+                    // counted per creature — Nadu). Deferred bump (the
+                    // battlefield is immutably borrowed here).
+                    if let (Some(cap), Some(crate::game::effects::EntityRef::Permanent(sid))) =
+                        (ta.event.per_subject_cap, subject)
+                    {
+                        let key = (card.id, sid);
+                        let used = self.per_subject_trigger_uses.get(&key).copied().unwrap_or(0)
+                            + capped_fired_this_batch.iter().filter(|k| **k == key).count() as u8;
+                        if used >= cap {
+                            continue;
                         }
+                        capped_fired_this_batch.push(key);
+                    }
+                    // CR 800.4 — a "when you lose control of this" trigger
+                    // belongs to the seat that lost it, which is no longer
+                    // the permanent's controller by dispatch time.
+                    let controller = match (&ta.event.kind, ev) {
+                        (
+                            crate::effect::EventKind::LostControlOfThis,
+                            GameEvent::ControlChanged { from, .. },
+                        ) => *from,
+                        _ => card.controller,
+                    };
+                    candidates.push(TriggerCandidate {
+                        source: card.id,
+                        effect: ta.effect.clone(),
+                        controller,
+                        filter: ta.event.filter.clone(),
+                        subject,
+                        event_amount: self.event_amount_for(ev),
+                        triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
+                        triggered_by_death: matches!(
+                            ev,
+                            GameEvent::CreatureDied { .. }
+                                | GameEvent::CreatureSacrificed { .. }
+                        ),
+                        triggered_by_attack: matches!(ev, GameEvent::AttackerDeclared(_)),
+                        from_mana_ability: matches!(
+                            ev,
+                            GameEvent::TappedForMana { .. }
+                                | GameEvent::ManaAdded { .. }
+                                | GameEvent::ColorlessManaAdded { .. }
+                        ),
+                        actor: crate::game::effects::events::event_actor(self, ev),
+                    });
+                    if ta.event.once_per_turn && trig_idx < n_printed {
+                        once_fired_this_batch.insert(once_key);
+                    }
+                    if !fanout {
+                        break;
                     }
                 }
             }
