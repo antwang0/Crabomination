@@ -1214,6 +1214,14 @@ pub(crate) fn build_random_deck_from<R: Rng>(
     // best build dominates plays it nearly always, while close calls stay
     // diverse. A ~12-point score gap costs ~e× likelihood at t = 1;
     // t → 0 collapses to the argmax.
+    // `shapes[0]` below is an index and the lattice is empty for a pool with
+    // no playable card at all. An out-of-bounds here is a panic on the actor's
+    // deck-building path — `selfplay::build_candidates_cfg` calls this twice
+    // per game — and a panic at game 400 k kills a training run. Degrade to an
+    // empty deck: the game decks out, the bench counts it, the run survives.
+    if shapes.is_empty() {
+        return GauntletDeck { label: "empty".to_string(), cards: Vec::new() };
+    }
     let k = shapes.len().min(5);
     let scale = (12.0 * t).max(1e-6);
     let best = shapes[0].static_score as f64;
@@ -1245,10 +1253,10 @@ pub(crate) fn build_random_deck_from<R: Rng>(
         rng,
         scores,
     )
-    .unwrap_or_else(|| {
-        // The noisy rebuild can only fail if the shape was hollow —
-        // and it came from enumerate, so it isn't. Defensive: fall
-        // back to the enumerated build itself.
+    .or_else(|| {
+        // The noisy rebuild can only fail if the shape was hollow — and it
+        // came from the lattice, so it isn't. Defensive: the same shape
+        // unjittered.
         build_shape(
             chosen.colors.as_slice(),
             chosen.splash.as_slice(),
@@ -1257,8 +1265,30 @@ pub(crate) fn build_random_deck_from<R: Rng>(
             rng,
             scores,
         )
-        .expect("enumerated shape rebuilds")
+    })
+    .or_else(|| {
+        // And if *that* fails, the rest of the lattice. "It came from the
+        // lattice, so it isn't hollow" is a claim this function cannot check,
+        // and the `expect` that used to sit here is a panic on the actor's
+        // deck-building path. A hollow shape is skipped, not fatal.
+        shapes.iter().find_map(|s| {
+            build_shape(
+                s.colors.as_slice(),
+                s.splash.as_slice(),
+                (cfg.target_spells, cfg.total_lands, 0),
+                cfg,
+                rng,
+                scores,
+            )
+        })
     });
+    // Every shape in the lattice is hollow, so the pool has no playable card
+    // in any colour pair. Same degradation as the empty lattice above, and
+    // **not** a `debug_assert!`: an empty or unplayable pool is a legal input
+    // to a deck builder, not an engine invariant a caller has broken.
+    let Some(build) = build else {
+        return GauntletDeck { label: "empty".to_string(), cards: Vec::new() };
+    };
     GauntletDeck { label: build.label.clone(), cards: build.deck() }
 }
 
@@ -2323,15 +2353,16 @@ where
             let mut st = state.lock().unwrap();
             let EvalState { evals, slots } = &mut *st;
             let z = cfg.racing_confidence_z;
-            let &leader = active
-                .iter()
-                .max_by(|&&a, &&b| {
-                    evals[a]
-                        .win_rate()
-                        .partial_cmp(&evals[b].win_rate())
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .expect("racing round has active candidates");
+            // `active.len() >= 2` by the round's own guard a hundred lines up,
+            // so `max_by` cannot be `None` — but a proof that far away is not
+            // one this statement makes, and `scripts/audit_panics.py` is right
+            // to read it as bare. Ending the halving is the correct answer if
+            // it ever is empty, and it costs a dead branch to say so.
+            let Some(&leader) = active.iter().max_by(|&&a, &&b| {
+                evals[a].win_rate().partial_cmp(&evals[b].win_rate()).unwrap_or(std::cmp::Ordering::Equal)
+            }) else {
+                break;
+            };
             let leader_lb =
                 active.iter().map(|&i| evals[i].ci_bounds(z).0).fold(f64::MIN, f64::max);
             active.retain(|&i| {

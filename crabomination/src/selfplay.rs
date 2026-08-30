@@ -210,10 +210,14 @@ pub fn build_candidates_cfg(
 /// their sixteen tries.
 pub fn best_build_v3(pool: &[CardFactory], n: usize, seed: u64) -> Vec<CardFactory> {
     let cfg = SimConfig { builder_v3: true, ..SimConfig::default() };
+    // `n == 0`, or a pool with no playable card, has no best build — and an
+    // empty deck is the answer, not a panic. This is the actor's deck-building
+    // path (`selfplay_train` calls it twice a game); a panic at game 400 k
+    // kills a training run where a decked-out game is one counted loss.
     build_candidates_cfg(pool, n, seed, &cfg)
         .into_iter()
         .max_by_key(|d| static_deck_score_v3(d))
-        .expect("n > 0 builds")
+        .unwrap_or_default()
 }
 
 /// Best of `n` candidate builds under an arbitrary judge (higher is
@@ -225,12 +229,14 @@ pub fn best_build_by<F: FnMut(&[CardFactory]) -> f64>(
     seed: u64,
     mut judge: F,
 ) -> Vec<CardFactory> {
+    // Same contract as [`best_build_v3`]: no candidates means an empty deck,
+    // never a panic on the actor's path.
     build_candidates(pool, n, seed)
         .into_iter()
         .map(|d| (judge(&d), d))
         .max_by(|a, b| a.0.total_cmp(&b.0))
         .map(|(_, d)| d)
-        .expect("n > 0 builds")
+        .unwrap_or_default()
 }
 
 /// Greedy hill-climb over single spell swaps, under an arbitrary judge.
@@ -679,6 +685,25 @@ mod tests {
         assert_eq!(plain, "Sealed #7", "a standard pool reads as before");
     }
     use super::*;
+
+    /// The actor's deck-building path must not panic on a degenerate input.
+    /// A panic at game 400 k kills a training run; an empty deck is one
+    /// counted loss. `scripts/audit_panics.py` flagged both `expect("n > 0
+    /// builds")` sites as bare and they were.
+    #[test]
+    fn a_degenerate_build_request_yields_an_empty_deck_rather_than_a_panic() {
+        let pool = sealed_pool(7);
+        assert!(best_build_v3(&pool, 0, 7).is_empty(), "no candidates, no build");
+        assert!(best_build_by(&pool, 0, 7, |_| 0.0).is_empty());
+        // An empty pool has no playable card in any colour pair, so every
+        // shape in the lattice is hollow — the path the removed
+        // `expect("enumerated shape rebuilds")` sat on.
+        assert!(best_build_v3(&[], 4, 7).is_empty(), "an empty pool builds nothing");
+        assert!(best_build_by(&[], 4, 7, |_| 0.0).is_empty());
+        // And the normal call still builds a legal 40, so the guards are
+        // additions rather than a change of behaviour.
+        assert_eq!(best_build_v3(&pool, 4, 7).len(), 40);
+    }
 
     /// The client's sealed-opponent recipe: best-of-16 under the v3
     /// judge is a legal 40, deterministic in the seed, and actually the
