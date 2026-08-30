@@ -162,6 +162,7 @@ const ABLATE_KW: u16 = 16;
 const ABLATE_HISTORY: u16 = 32;
 const ABLATE_EXPIRY: u16 = 64;
 const ABLATE_COUNTERS: u16 = 128;
+const ABLATE_V8: u16 = 256;
 
 /// Every ablatable block by the name the trainer and the ladder accept.
 /// One table so the two binaries can't drift on which names are legal —
@@ -179,7 +180,11 @@ const ABLATE_COUNTERS: u16 = 128;
 /// * `hist` / `exp` / `ctr` — round 40 (v7): turn-scoped history
 ///   (globals 43..=54), expiry (object feats 45..=47), and the counter
 ///   split (object feats 48..=52).
-pub const ABLATION_BLOCKS: [(&str, u16); 8] = [
+/// * `v8` — 2026-08-30 (modern precondition 3): artifact/enchantment
+///   type bits (object feats 53/54), the modern counter kinds
+///   (55..=58: Lore, Charge, Shield, Finality), and land drops
+///   remaining (globals 55/56).
+pub const ABLATION_BLOCKS: [(&str, u16); 9] = [
     ("lib", ABLATE_LIBRARY),
     ("cast", ABLATE_CASTABILITY),
     ("rel", ABLATE_RELATIONS),
@@ -188,6 +193,7 @@ pub const ABLATION_BLOCKS: [(&str, u16); 8] = [
     ("hist", ABLATE_HISTORY),
     ("exp", ABLATE_EXPIRY),
     ("ctr", ABLATE_COUNTERS),
+    ("v8", ABLATE_V8),
 ];
 
 /// Turn the named feature blocks *off* for an ablation run; everything
@@ -578,7 +584,27 @@ fn encode_state_inner(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState
             gl[53 + side] = pl.cards_exiled_this_turn as f32 / 3.0;
         }
     }
-    const _: () = assert!(GLOBAL_FEATS == 55, "extend the fill above when adding globals");
+    if !ablated(ABLATE_V8) {
+        // Land drops remaining this turn, self then opponent, / 2
+        // (Azusa-class grants are the headroom). "Can I still
+        // land-and-spell this turn" is the most common main-phase
+        // sequencing read; feature 26's next-turn castability assumed
+        // the drop was there, and now the net can see whether it is.
+        // `can_player_play_land` checks locks and the count, not the
+        // turn, so the off-turn opponent reads their standing drop —
+        // public, and the active-player flag (gl 9) says whose turn
+        // makes it spendable.
+        for (side, p) in [(0usize, seat), (1, opp)] {
+            let remaining = if g.can_player_play_land(p) {
+                g.max_lands_per_turn(p)
+                    .saturating_sub(g.players[p].lands_played_this_turn)
+            } else {
+                0
+            };
+            gl[55 + side] = remaining as f32 / 2.0;
+        }
+    }
+    const _: () = assert!(GLOBAL_FEATS == 57, "extend the fill above when adding globals");
 
     s
 }
@@ -929,6 +955,14 @@ fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObj
     feats[3] = if def.is_planeswalker() { 1.0 } else { 0.0 };
     feats[4] = def.power.max(0) as f32 / 8.0;
     feats[5] = def.toughness.max(0) as f32 / 8.0;
+    // v8: the two permanent classes the round-4 flags left in one
+    // undifferentiated "none of the above" bucket. The embedding carries
+    // the type for in-vocab cards; tokens and off-vocab cards live on
+    // these bits alone, and a modern board is mostly made of them.
+    if !ablated(ABLATE_V8) {
+        feats[53] = if def.is_artifact() { 1.0 } else { 0.0 };
+        feats[54] = if def.is_enchantment() { 1.0 } else { 0.0 };
+    }
     // Evasion/combat keywords, granted ones included (`has_keyword`
     // reads printed + granted lists; the granted lists are simply empty
     // off the battlefield). First and double strike share a flag — for a
@@ -1128,6 +1162,11 @@ fn encode_battlefield_object_into(
             f[1] = if cp.card_types().contains(&CardType::Creature) { 1.0 } else { 0.0 };
             f[2] = if cp.card_types().contains(&CardType::Land) { 1.0 } else { 0.0 };
             f[3] = if cp.card_types().contains(&CardType::Planeswalker) { 1.0 } else { 0.0 };
+            if !ablated(ABLATE_V8) {
+                f[53] = if cp.card_types().contains(&CardType::Artifact) { 1.0 } else { 0.0 };
+                f[54] =
+                    if cp.card_types().contains(&CardType::Enchantment) { 1.0 } else { 0.0 };
+            }
             f[4] = cp.power.max(0) as f32 / 8.0;
             f[5] = (cp.toughness - c.damage as i32).max(0) as f32 / 8.0;
             let mut kb = 0u16;
@@ -1201,10 +1240,14 @@ fn encode_battlefield_object_into(
     // the net at all before them.
     let want_kinds = !ablated(ABLATE_COUNTERS);
     let want_kw = !ablated(ABLATE_KW);
+    let want_v8 = !ablated(ABLATE_V8);
     f[8] = 0.0;
     f[9] = 0.0;
     if want_kinds {
         f[48..53].fill(0.0);
+    }
+    if want_v8 {
+        f[55..59].fill(0.0);
     }
     let mut special = 0u32;
     for (kind, n) in c.counters.iter() {
@@ -1232,6 +1275,20 @@ fn encode_battlefield_object_into(
                 CounterType::Stun => f[50] = *n as f32 / 2.0,
                 CounterType::Page => f[51] = *n as f32 / 3.0,
                 CounterType::Growth => f[52] = *n as f32 / 3.0,
+                _ => {}
+            }
+        }
+        // v8: the kinds a modern pool trades on that fell into feature
+        // 34's undifferentiated sum. A saga's chapter IS its state (a
+        // stun counter and chapter III encoded identically); Chalice on
+        // 1 and on 3 are different cards. Scales are "how many before
+        // this stops mattering", per the house rule.
+        if want_v8 {
+            match kind {
+                CounterType::Lore => f[55] = *n as f32 / 3.0,
+                CounterType::Charge => f[56] = *n as f32 / 4.0,
+                CounterType::Shield => f[57] = *n as f32 / 2.0,
+                CounterType::Finality => f[58] = *n as f32 / 2.0,
                 _ => {}
             }
         }
@@ -1763,15 +1820,17 @@ mod tests {
         let c = find(&encode_state(&g, 0, &vocab));
         assert!((c.feats[34] - 2.0 / 4.0).abs() < 1e-6, "counter sum survives rel ablation");
 
-        // v6 parity: exactly the round-40 slots are blank and nothing
-        // else moved.
-        off(&["hist", "exp", "ctr"]);
+        // v6 parity: exactly the round-40-and-later slots are blank and
+        // nothing else moved. `v8` joins the off-list since its block
+        // (2026-08-30) — the v7 gate's historical control arm was
+        // `hist,exp,ctr` alone, before v8 existed to blank.
+        off(&["hist", "exp", "ctr", "v8"]);
         let v6 = encode_state(&g, 0, &vocab);
         assert_eq!(v6.global[..43], v7.global[..43]);
-        assert_eq!(v6.global[43..], [0.0; 12]);
+        assert_eq!(v6.global[43..], [0.0; 14]);
         let c6 = find(&v6);
         assert_eq!(c6.feats[..45], c7.feats[..45]);
-        assert_eq!(c6.feats[45..], [0.0; 8]);
+        assert_eq!(c6.feats[45..], [0.0; 14]);
 
         g.battlefield.pop();
         g.players[0].life_gained_this_turn = 0;
@@ -2075,6 +2134,55 @@ mod tests {
         assert!((unbuffed.feats[4] - 2.0 / 8.0).abs() < 1e-6, "their bear is not ours to buff");
         assert!((s.global[22] - 3.0 / 12.0).abs() < 1e-6, "the power total sees the anthem");
         assert!((s.global[23] - 2.0 / 12.0).abs() < 1e-6);
+    }
+
+    /// The v8 block (modern precondition 3): artifact/enchantment type
+    /// bits in every zone, the modern counter kinds, land drops
+    /// remaining — and the `v8` ablation bit blanks exactly this block.
+    #[test]
+    fn the_v8_block_reaches_the_encoding() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        // An artifact in hand (printed path), an enchantment with two
+        // lore counters on the battlefield (computed path + counters).
+        g.players[0]
+            .hand
+            .push(CardInstance::new(crate::card::CardId(1), catalog::cauldron_of_essence(), 0));
+        let mut saga = CardInstance::new(crate::card::CardId(2), catalog::glorious_anthem(), 0);
+        saga.controller = 0;
+        saga.add_counters(CounterType::Lore, 2);
+        saga.add_counters(CounterType::Charge, 3);
+        g.battlefield.push(saga);
+
+        let s = encode_state(&g, 0, &vocab);
+        let hand = &s.group(G_HAND_SELF)[0];
+        assert_eq!(hand.feats[53], 1.0, "artifact bit in hand");
+        assert_eq!(hand.feats[54], 0.0);
+        let bf = &s.group(G_BF_SELF)[0];
+        assert_eq!(bf.feats[54], 1.0, "enchantment bit on the battlefield");
+        assert_eq!(bf.feats[53], 0.0);
+        assert!((bf.feats[55] - 2.0 / 3.0).abs() < 1e-6, "lore counters split out");
+        assert!((bf.feats[56] - 3.0 / 4.0).abs() < 1e-6, "charge counters split out");
+        assert!((bf.feats[34] - 5.0 / 4.0).abs() < 1e-6, "feature 34 still sums them");
+        // Land drops: neither seat has played one; both read a standing
+        // drop (`can_player_play_land` checks locks, not the turn).
+        assert!((s.global[55] - 1.0 / 2.0).abs() < 1e-6, "our drop remaining");
+        assert!((s.global[56] - 1.0 / 2.0).abs() < 1e-6, "their standing drop");
+        g.players[0].lands_played_this_turn = 1;
+        let s2 = encode_state(&g, 0, &vocab);
+        assert_eq!(s2.global[55], 0.0, "spent drop reads zero");
+
+        // The ablation bit blanks exactly this block.
+        off(&["v8"]);
+        let s3 = encode_state(&g, 0, &vocab);
+        let bf3 = &s3.group(G_BF_SELF)[0];
+        assert_eq!(bf3.feats[53..59], [0.0; 6], "v8 object feats off");
+        assert_eq!([s3.global[55], s3.global[56]], [0.0; 2], "v8 globals off");
+        assert_eq!(bf3.feats[34], bf.feats[34], "the round-12 counter sum survives");
+        assert_eq!(s3.group(G_HAND_SELF)[0].feats[53], 0.0, "hand bit off too");
+        off(&[]);
     }
 
     /// A static keyword grant — which never touches the instance fields

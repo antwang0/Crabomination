@@ -3365,3 +3365,46 @@ Remaining precondition (3): the v8 feature block — artifact/enchantment
 type bits, Lore/Charge/Shield/Finality counters, land-drop-remaining
 global — under one ablation bit with SHARD_VERSION 9. Then the pool
 flags, and the r53 re-run.
+
+## The v8 feature block (2026-08-30) — modern precondition 3 of 3
+
+SHARD_VERSION 9. OBJ_FEATS 53 → 59, GLOBAL_FEATS 55 → 57, one ablation
+bit (`v8`), and `LEGACY_FEATS` gains the v7 pair (53, 55) so every
+existing checkpoint zero-pads at load — verified live: the champion
+loads through the pad and plays bit-identically to its pre-v8 smoke run
+(same seed, same 8-game line), which is the pad computing exactly what
+the old binary computed.
+
+- **Object feats 53/54 — artifact / enchantment type bits**, printed in
+  every zone, layer-computed on the battlefield. The round-4 flags left
+  "not a creature, not a land, not a planeswalker" as one class, and
+  with the embedding dead for off-vocab cards that class held most of a
+  modern board's non-creature permanents: Chalice, a Signet and a Saga
+  encoded identically.
+- **Object feats 55..=58 — Lore /3, Charge /4, Shield /2, Finality /2.**
+  The modern counter kinds the v7 split has no slot for; all previously
+  folded into feature 34's undifferentiated sum (a saga on chapter III
+  and a stunned creature read the same). Feature 34 still sums
+  everything, the same deliberate double-encoding as +1/+1.
+- **Globals 55/56 — land drops remaining**, self then opponent, /2.
+  `can_player_play_land` gates locks and the count (not the turn, so
+  the off-turn seat reads its standing drop); feature 26's next-turn
+  castability assumed the drop was there, and now the net can see it.
+
+Census note, recorded so the occupancy rule is not mis-applied: this
+block is FOR the cube pool, and its sealed-row occupancy is expected
+low-to-zero for the counter kinds (SOS has artifacts and enchantments,
+no sagas or chalices). That is the vocab-extension situation again —
+infrastructure ahead of the pool switch, adoption decided by training
+rounds on the pool that exercises it, not by a sealed census. Run
+`--feature-census` on cube rows when a cube training pool exists.
+
+**The modern-pool preconditions are now all three landed** (vocabulary
+2,272 frozen names; layer-aware encoding at noise-level cost; this
+block). What remains before modern decks can enter ML pools is wiring,
+not representation: a `--decks cube` ladder leg and a `selfplay_train`
+pool flag — and that flip ends comparability with every recorded SOS
+reference, so it is a program decision, not a code one. On the flip:
+re-run `.ladder/run_r53_targeteval.sh` (parked on a pool property),
+re-run the zero-incidence flags (walkerchip, buff2for1, convlands,
+impulse), and run `--feature-census` before sizing anything new.

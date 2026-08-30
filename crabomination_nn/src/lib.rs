@@ -141,7 +141,22 @@ pub const G_STACK_OPP: usize = 7;
 ///   49 −1/−1 / 4, 50 stun / 2 (the bearer's next untap is skipped),
 ///   51 Page / 3, 52 Growth / 3. +1/+1 and −1/−1 reach the net through
 ///   effective P/T as well; the rest had no path to it at all.
-pub const OBJ_FEATS: usize = 53;
+///
+/// Feats 53..=58 are the v8 block (2026-08-30, modern precondition 3),
+/// gated by the `v8` ablation bit:
+///
+/// * 53 artifact / 54 enchantment type bits — printed off the
+///   battlefield, layer-computed on it. The embedding carries the type
+///   for in-vocab cards, but tokens and every off-vocab card fell back
+///   to three type flags that could not tell a Chalice from a Signet
+///   from a Saga: "not a creature, not a land, not a planeswalker" was
+///   one class holding most of a modern board's non-creature permanents.
+/// * 55..=58 the modern counter kinds the v7 split has no slot for:
+///   55 Lore / 3 (a saga's chapter IS its state), 56 Charge / 4
+///   (Chalice on 1 vs 3 are different cards), 57 Shield / 2,
+///   58 Finality / 2. All previously folded into feature 34's
+///   undifferentiated sum.
+pub const OBJ_FEATS: usize = 59;
 /// Global scalar feature count. Baked into encoded rows likewise.
 ///
 /// Globals 36..=42 are round 28: fine combat phase one-hots (36
@@ -161,10 +176,17 @@ pub const OBJ_FEATS: usize = 53;
 /// / 5; 45/46 instants and sorceries cast (Burrog Barrage), / 3; 47/48
 /// spells cast (storm), / 4; 49/50 creatures died, / 3; 51/52 cards
 /// that left the graveyard, / 3; 53/54 cards exiled, / 3.
-pub const GLOBAL_FEATS: usize = 55;
+///
+/// Globals 55/56 are the v8 block: land drops remaining this turn, self
+/// then opponent, / 2 (Azusa-class effects are the headroom). "Can I
+/// still land-and-spell this turn" is the most common main-phase
+/// sequencing read, and until now feature 26's next-turn castability
+/// simply assumed the drop was available.
+pub const GLOBAL_FEATS: usize = 57;
 
 /// Feature counts of earlier encoder generations, oldest first: v5
-/// (pre-round-28) and v6 (round 28 through 39). Checkpoints trained
+/// (pre-round-28), v6 (round 28 through 39), and v7 (round 40 through
+/// the 2026-08-30 v8 block). Checkpoints trained
 /// against one of these have weight matrices sized to it, and
 /// [`PlayNet::load`] widens them with zero columns rather than
 /// rejecting them, which computes exactly what the old binary computed
@@ -180,7 +202,7 @@ pub const GLOBAL_FEATS: usize = 55;
 /// whose `VarMap::load` is exact-shape, so it pads by this table before
 /// setting. The two loaders disagreeing is the failure mode — a pilot
 /// that loads in the engine and not in the trainer, mid-run.
-pub const LEGACY_FEATS: [(usize, usize); 2] = [(37, 36), (45, 43)];
+pub const LEGACY_FEATS: [(usize, usize); 3] = [(37, 36), (45, 43), (53, 55)];
 
 /// Standard trainer configuration (the file's shapes win at load time).
 /// Sizes quadrupled in round 4: four gate rounds measured the small net
@@ -390,7 +412,7 @@ pub struct TrainRow {
 /// `OBJ_FEATS`, `GLOBAL_FEATS`, group order, or the row layout changes —
 /// stale shards must fail loudly, not decode as garbage.
 pub const SHARD_MAGIC: [u8; 4] = *b"CRML";
-pub const SHARD_VERSION: u32 = 8;
+pub const SHARD_VERSION: u32 = 9;
 
 /// Serialize rows into a self-describing shard (little-endian throughout).
 pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
