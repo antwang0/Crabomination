@@ -6940,9 +6940,7 @@ pub struct CardData {
     pub definition: Definition,
     pub owner: usize,
     pub controller: usize,
-    pub tapped: bool,
     pub damage: u32,
-    pub summoning_sick: bool,
     pub power_bonus: i32,
     pub toughness_bonus: i32,
     /// Permanent-duration P/T deltas (`Effect::PumpPT { duration: Permanent }`,
@@ -7242,20 +7240,6 @@ pub struct CardData {
     /// linked source permanent remains on the battlefield (regardless of the
     /// source's tapped state). Released once the source leaves.
     pub untap_locked_while_present: Option<CardId>,
-    /// CR 702.142 — set when this creature is declared as an attacker;
-    /// gates Boast activated abilities ("activate only if this attacked
-    /// this turn"). Cleared in per-turn cleanup. Transient — not
-    /// serialized (defaults to false on snapshot reload).
-    pub attacked_this_turn: bool,
-    /// Whether this creature attacked during its controller's *current or
-    /// most recent* turn. Unlike `attacked_this_turn` it survives the
-    /// intervening turns, and rolls into `attacked_last_turn` at its
-    /// controller's untap step.
-    pub attacked_own_turn: bool,
-    /// Whether this creature attacked during its controller's *previous*
-    /// turn, so `Keyword::CantAttackIfAttackedLastTurn` (Giant Turtle) can
-    /// read it.
-    pub attacked_last_turn: bool,
     /// Wall of Dust — "that creature can't attack during its controller's
     /// next turn". `Pending` is set when the ban lands; it promotes to
     /// `Active` at the bearer's controller's untap step and clears at that
@@ -7265,10 +7249,6 @@ pub struct CardData {
     /// *instance* — "unless lethal damage dealt by a single source is marked
     /// on it" (Ogre Enforcer). Reset at cleanup; in-memory only.
     pub damage_by_source_this_turn: crate::copyvec::CopyVec<[(CardId, u32); 2]>,
-    /// Set when this creature is declared as a blocker; powers "creature that
-    /// attacked or blocked this turn" filters (Gideon's Triumph). Cleared in
-    /// per-turn cleanup. Transient — not serialized (defaults false on reload).
-    pub blocked_this_turn: bool,
     /// Attackers this creature blocked this turn, in declaration order.
     /// Outlives combat teardown (`block_map` is cleared at end of combat) so
     /// delayed "each creature that was blocked by one of those creatures this
@@ -7597,14 +7577,41 @@ impl std::ops::DerefMut for CardData {
 /// of the `&'static str` name field. Manual impls let `CardInstance` be
 /// `Deserialize<'de>` for any `'de`, which is a hard requirement for
 /// containers like `Box<CardInstance>` inside `StackItem`.
+/// **The six combat/untap flags live on the handle, outside the `Arc`.**
+/// They are the ones a write reaches on a card the writer did *not* otherwise
+/// change: a `{T}` activation writes `tapped` and nothing else, and 100 % of
+/// `activate_ability_inner`'s `make_mut` calls were deep copies because of it
+/// (PERF `(-51)(a)`'s land tap). Inside the group each of those writes cloned
+/// the whole `CardData`; on the handle they are a byte in the zone's own
+/// vector, which the write had already unshared to reach the card at all.
+/// Field lookup finds them before `Deref` does, so `card.tapped = true` reads
+/// and writes exactly as it did — but `&mut CardData` cannot see them, which
+/// is what the compiler checks.
 #[derive(Clone)]
-pub struct CardInstance(Arc<CardData>);
+pub struct CardInstance {
+    data: Arc<CardData>,
+    /// CR 301.4 / 302.6 — tapped.
+    pub tapped: bool,
+    /// CR 302.6 — this creature has not been controlled since its
+    /// controller's turn began, so it cannot attack or pay `{T}`.
+    pub summoning_sick: bool,
+    /// CR 506.3c — attacked this combat (any turn's).
+    pub attacked_this_turn: bool,
+    /// Attacked during its controller's own turn — the half
+    /// `attacked_last_turn` is promoted from at untap.
+    pub attacked_own_turn: bool,
+    /// `attacked_own_turn` as of the previous turn (Kithkin Greatheart's
+    /// "attacked during your last turn").
+    pub attacked_last_turn: bool,
+    /// CR 509.1 — blocked at least one attacker this combat.
+    pub blocked_this_turn: bool,
+}
 
 impl std::ops::Deref for CardInstance {
     type Target = CardData;
     #[inline]
     fn deref(&self) -> &CardData {
-        &self.0
+        &self.data
     }
 }
 
@@ -7618,19 +7625,27 @@ impl std::ops::DerefMut for CardInstance {
         // `definition`, and `definition` cannot be written through this
         // handle — see [`Definition`]. Clearing here was sound and cost
         // 89.5 % of every recompute in the program (PERF `(-91)`).
-        Arc::make_mut(&mut self.0)
+        Arc::make_mut(&mut self.data)
     }
 }
 
 impl std::fmt::Debug for CardInstance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&*self.0, f)
+        std::fmt::Debug::fmt(&*self.data, f)
     }
 }
 
 impl From<CardData> for CardInstance {
     fn from(data: CardData) -> Self {
-        Self(Arc::new(data))
+        Self {
+            data: Arc::new(data),
+            tapped: false,
+            summoning_sick: false,
+            attacked_this_turn: false,
+            attacked_own_turn: false,
+            attacked_last_turn: false,
+            blocked_this_turn: false,
+        }
     }
 }
 
@@ -7678,14 +7693,12 @@ impl CardInstance {
         if definition.is_battle() && definition.defense > 0 {
             counters.insert(CounterType::Defense, definition.defense);
         }
-        CardData {
+        let mut inst: CardInstance = CardData {
             id,
             definition: Definition::new(definition),
             owner,
             controller: owner,
-            tapped: false,
             damage: 0,
-            summoning_sick,
             power_bonus: 0,
             toughness_bonus: 0,
             perm_power_bonus: 0,
@@ -7763,12 +7776,8 @@ impl CardInstance {
             created_by: None,
             damage_prevention_off_eot: false,
             untap_locked_while_present: None,
-            attacked_this_turn: false,
-            attacked_own_turn: false,
-            attacked_last_turn: false,
             attack_ban: AttackBan::None,
             damage_by_source_this_turn: crate::copyvec::CopyVec::new(),
-            blocked_this_turn: false,
             blocked_attackers_this_turn: crate::copyvec::CopyVec::new(),
             must_block: None,
             exiled_with: None,
@@ -7793,7 +7802,10 @@ impl CardInstance {
             resolve_riders: None,
             cold: crate::cow::CowBox::default(),
         }
-        .into()
+        .into();
+        // The one handle flag `new` does not leave at its default: CR 302.6.
+        inst.summoning_sick = summoning_sick;
+        inst
     }
 
     pub fn new_token(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
