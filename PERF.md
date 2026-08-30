@@ -9537,6 +9537,51 @@ cube, by row — the whole delta is the allocator family and the append:
 entry's readings — is **not** in this diff's row table, and the three pools agree
 to within 0.036 points; both are why the number is filed as real.
 
+### Hundred-and-third pass (7) — the ranker written this pass finds its own first row: the recorder, at 75 growths a call
+
+**`selfplay_train` -0.391 %** off `d446833c` (`2e0450f4`), and `bot_ladder`
+executes none of it.
+
+`scripts/cg_growth.py` — `(-103)`/`(-108)`'s discriminator as one command,
+committed at `eabe2425` — ranks a growth caller by growths per **call**. Its
+first run on the actor put `play_recorded_game_mcts` at **75.15**, fifty times
+the next engine row and the highest ratio in the program. Nothing had looked:
+the row is invisible to every `--bench` pool, and at the *function* level it
+is unremarkable.
+
+Four accumulators (`snaps`, `heur`, `raw`, `opp_hands`) are parallel, reach the
+same length, and a game emits ~99 snapshots (11,899 rows over 120 games), so
+each walked 0->4->8->...->128. **`snaps`' element carries a whole
+`EncodedState`**, so every re-growth memcpy'd the lot. One
+`Vec::with_capacity(128)` apiece.
+
+```text
+CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 120 --steps 1 --seed 7
+callgrind, profiling-fast -p crabomination_ml --no-default-features
+  5,918,096,696 -> 5,894,976,329   -0.391 %   (-23,120,367)
+
+  play_recorded_game_mcts's growth edge  9,018 -> 6,154 calls,
+                                     8,751,404 -> 2,135,141 Ir   -76 %
+  __memcpy_avx_unaligned   287,889,253 -> 282,395,165   -5.49 M
+  _int_free                207,392,776 -> 203,652,588   -3.74 M
+  malloc                   159,424,809 -> 156,395,409   -3.03 M
+  finish_grow               33,385,400 ->  30,702,880   -2.68 M
+  free                     129,191,952 -> 126,690,141   -2.50 M
+  _int_malloc              153,397,175 -> 151,422,729   -1.97 M
+  Vec::append_elements       1,948,948 ->     151,824   -1.80 M
+```
+
+11,899 rows and 0 stalls both sides. The residue (6,154 growths) is
+`opp_hands`' inner `Vec<u16>` collects — one allocation each, not a ladder.
+
+**The finding is about the instrument, not the function.** `(-103)` and
+`(-108)` both established the division by hand, on `bot_ladder`, and both
+closed with "no row left that the rule takes" — of the table they had joined,
+on the pool they had joined it for. **A rule with no script is a rule that
+gets applied to whatever table the pass happened to be looking at.** Fifteen
+minutes of Python found a 0.39 % row that two passes of the same rule had
+walked past, on the workload the branch exists to run. Write the script.
+
 ### Hundred-and-third pass (6) — `(-103)`'s division had a second table, and it names one row on every pool
 
 **`fixed` -0.336 % / `cube` -0.288 % / `sealed` -0.356 %**, and
@@ -16587,7 +16632,13 @@ it is inlined into the 7,297 Ir of self — and its sort is 0.18 % on its own.
 The sort is what makes two shuffles of one library encode identically, so it
 is not droppable.
 
-**The second is the snapshot loop's own copy, and it is CLOSED at `817b9736`
+**`encode_state` is now the top removable growth row on the actor.** After
+`2e0450f4` the actor's `cg_growth.py` table reads
+`play_recorded_game_mcts` 51.28 (6,154 growths, 2.1 M Ir — `opp_hands`' inner
+collects, one allocation each) and `encode_state` 5.25 (66,485, 27.5 M), so
+this entry is what is left there.
+
+**The second row was the snapshot loop's own copy, CLOSED at `817b9736`
 for -1.360 % of the actor** (Log, pass (5)):
 `selfplay::play_recorded_game_mcts` kept its de-duplication key as a second
 copy of the last pair (`Option<[EncodedState; 2]>`), so every accepted
