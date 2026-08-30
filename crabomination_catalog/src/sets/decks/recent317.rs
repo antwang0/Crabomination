@@ -798,6 +798,7 @@ pub fn override_card() -> CardDefinition {
                 who: PlayerRef::You,
                 filter: R::Artifact,
             }))),
+            if_paid: None,
         },
     )
 }

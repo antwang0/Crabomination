@@ -381,6 +381,7 @@ pub fn wizard_replica() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],

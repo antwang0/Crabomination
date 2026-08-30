@@ -74,6 +74,7 @@ pub fn rethink() -> CardDefinition {
             mana_cost: ManaCost::default(),
             exile: false,
             extra_generic: Some(Value::ManaValueOf(Box::new(Selector::Target(0)))),
+            if_paid: None,
         },
     )
 }
@@ -89,6 +90,7 @@ pub fn spiketail_drake() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],

@@ -416,6 +416,7 @@ pub fn spell_contortion() -> crate::card::CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             Effect::Draw { who: Selector::You, amount: Value::TimesKicked },
         ]),

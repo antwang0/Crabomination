@@ -951,6 +951,7 @@ pub fn aether_spike() -> CardDefinition {
                     mana_cost: cost(&[]),
                     exile: false,
                     extra_generic: Some(Value::EnergyPaidThisEffect),
+                    if_paid: None,
                 }),
             },
         ]),
@@ -1063,6 +1064,7 @@ pub fn hope_ender_coatl() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         })],
         ..Default::default()
     }

@@ -18391,7 +18391,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CounterUnlessPaid { what, mana_cost, exile, extra_generic } => {
+            Effect::CounterUnlessPaid { what, mana_cost, exile, extra_generic, if_paid } => {
                 // Counter target spell unless its controller pays `mana_cost`.
                 // Auto-pays on behalf of the spell's controller via the
                 // existing `auto_tap_for_cost` + `mana_pool.pay` path: if
@@ -18468,6 +18468,13 @@ impl GameState {
                     } else {
                         self.route_to_graveyard(*card, events);
                     }
+                }
+                // "If they do, surveil 2" (Don't Make a Sound) — the mirror
+                // branch, in this effect's own context so `PlayerRef::You` is
+                // the counterspell's controller. Same shape as
+                // `UnlessPlayerPays`'s `if_paid`.
+                if paid && let Some(e) = if_paid {
+                    self.run_effect(e, ctx, events)?;
                 }
                 Ok(())
             }

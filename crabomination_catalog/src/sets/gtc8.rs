@@ -109,6 +109,7 @@ pub fn spell_rupture() -> CardDefinition {
             mana_cost: cost(&[]),
             exile: false,
             extra_generic: Some(Value::PowerOf(Box::new(Selector::GreatestPowerYouControl))),
+            if_paid: None,
         },
         ..Default::default()
     }

@@ -303,6 +303,7 @@ pub fn spell_shrivel() -> CardDefinition {
                 mana_cost: cost(&[generic(4)]),
                 exile: true,
                 extra_generic: None,
+                if_paid: None,
             },
         )
     }

@@ -998,6 +998,7 @@ pub fn thassas_rebuff() -> CardDefinition {
             mana_cost: ManaCost::default(),
             exile: false,
             extra_generic: Some(Value::DevotionTo(vec![Color::Blue])),
+            if_paid: None,
         },
     )
 }

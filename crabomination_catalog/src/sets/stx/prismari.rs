@@ -2193,6 +2193,7 @@ pub fn prismari_tideburst() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             Effect::Scry {
                 who: PlayerRef::You,
@@ -6341,6 +6342,7 @@ pub fn prismari_inkwave_b129() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -7679,6 +7681,7 @@ pub fn prismari_counterscribe_b147() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -8096,6 +8099,7 @@ pub fn prismari_spellburst_b153() -> CardDefinition {
             mana_cost: mc(&[gc(3)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -9725,6 +9729,7 @@ pub fn prismari_spellbreaker_b167() -> CardDefinition {
                 mana_cost: crate::mana::cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
         }],
         ..Default::default()

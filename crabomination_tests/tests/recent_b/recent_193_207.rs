@@ -990,6 +990,37 @@ mod recent205 {
         assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "countered spell in graveyard");
     }
 
+    /// "…unless its controller pays {2}. If they do, surveil 2." The paid
+    /// rider was dropped; `CounterUnlessPaid` carries an `if_paid` branch for
+    /// it now, mirroring `UnlessPlayerPays`.
+    #[test]
+    fn dont_make_a_sound_surveils_when_the_tax_is_paid() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+        g.players[1].mana_pool.add(Color::Green, 1);
+        g.players[1].mana_pool.add_colorless(3); // one to cast, two to pay the tax
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast bear");
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let lib = g.players[0].library.len();
+        let counter = g.add_card_to_hand(0, catalog::dont_make_a_sound());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: counter, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("soft-counter the bear");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(bear).is_some(), "the {{2}} was paid, so the bear resolved");
+        assert_eq!(g.players[0].library.len(), lib, "surveil 2 looks, it does not draw");
+    }
+
     /// Keys to the House tutors a basic land to hand for {1}, {T}, Sacrifice.
     #[test]
     fn keys_to_the_house_fetches_a_basic() {

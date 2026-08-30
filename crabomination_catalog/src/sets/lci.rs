@@ -4499,6 +4499,7 @@ pub fn confounding_riddle() -> CardDefinition {
                 mana_cost: cost(&[generic(4)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
         ]),
         ..Default::default()

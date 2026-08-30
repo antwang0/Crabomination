@@ -1648,6 +1648,7 @@ pub fn lilting_refrain() -> CardDefinition {
                 mana_cost: cost(&[]),
                 exile: false,
                 extra_generic: Some(verses()),
+                if_paid: None,
             },
             ..Default::default()
         }],

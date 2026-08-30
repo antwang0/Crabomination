@@ -703,6 +703,7 @@ pub fn invoke_prejudice() -> CardDefinition {
                 mana_cost: ManaCost::default(),
                 exile: false,
                 extra_generic: Some(Value::ManaValueOf(Box::new(Selector::TriggerSource))),
+                if_paid: None,
             },
         }],
         ..enchantment("Invoke Prejudice", cost(&[u(), u(), u(), u()]))

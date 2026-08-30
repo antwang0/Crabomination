@@ -4169,6 +4169,7 @@ pub fn no_more_lies() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exile: true,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -4719,6 +4720,7 @@ pub fn spell_stutter() -> CardDefinition {
                 )),
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Faerie),
             }),
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -4741,6 +4743,7 @@ pub fn spectral_interference() -> CardDefinition {
             mana_cost: cost(&[generic(4)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -5492,6 +5495,7 @@ pub fn diversion_unit() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],
@@ -5746,6 +5750,7 @@ pub fn geistlight_snare() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -7091,12 +7096,14 @@ pub fn dazzling_denial() -> CardDefinition {
                 mana_cost: cost(&[generic(4)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             }),
             else_: Box::new(Effect::CounterUnlessPaid {
                 what: Selector::Target(0),
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             }),
         },
         ..Default::default()
@@ -7370,6 +7377,7 @@ pub fn spectral_denial() -> CardDefinition {
             mana_cost: crate::mana::ManaCost::default(),
             exile: false,
             extra_generic: Some(Value::XFromCost),
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -12697,6 +12705,7 @@ pub fn logic_knot() -> CardDefinition {
             mana_cost: cost(&[]),
             exile: false,
             extra_generic: Some(Value::XFromCost),
+            if_paid: None,
         },
         ..Default::default()
     }

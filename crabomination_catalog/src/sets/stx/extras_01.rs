@@ -814,6 +814,7 @@ pub fn whirlwind_denial() -> CardDefinition {
                     mana_cost: cost(&[generic(4)]),
                     exile: false,
                     extra_generic: None,
+                    if_paid: None,
                 }),
                 else_: Box::new(Effect::Noop),
             }),
@@ -1900,6 +1901,7 @@ pub fn quench() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }

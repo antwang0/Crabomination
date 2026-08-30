@@ -118,6 +118,7 @@ pub fn decisive_denial() -> CardDefinition {
                 mana_cost: three,
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             // Mode 1: target creature you control (slot 0) fights target
             // creature you don't control (slot 1) — both printed targets
@@ -5876,6 +5877,7 @@ pub fn quandrix_counterweave() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             Effect::AddCounter {
                 what: Selector::TargetFiltered {
@@ -8045,6 +8047,7 @@ pub fn quandrix_counterspell_b146() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -8575,6 +8578,7 @@ pub fn quandrix_mind_curl_b150() -> CardDefinition {
             mana_cost: mc(&[gc(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -9475,6 +9479,7 @@ pub fn quandrix_counterpoint_b158() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -10528,6 +10533,7 @@ pub fn quandrix_echobinder_b167() -> CardDefinition {
             mana_cost: crate::mana::cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -10762,6 +10768,7 @@ pub fn quandrix_sumcheck_b172() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -11489,6 +11496,7 @@ pub fn quandrix_quickdraw_b187() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -11664,6 +11672,7 @@ pub fn quandrix_wavelock_b174() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -12545,6 +12554,7 @@ pub fn quandrix_sparkbender_b202() -> CardDefinition {
             mana_cost: one,
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }

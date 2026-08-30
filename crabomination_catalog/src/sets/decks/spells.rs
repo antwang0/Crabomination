@@ -551,6 +551,7 @@ pub fn mystical_dispute() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         alternative_cost: Some(AlternativeCost {
             awaken: false,

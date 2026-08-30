@@ -430,6 +430,11 @@ impl Effect {
                     f(e);
                 }
             }
+            // Only the paid rider is an inner `Effect` — `what` is the
+            // counterspell's own target slot, not a subtree.
+            Effect::CounterUnlessPaid { if_paid: Some(e), .. } => {
+                f(e);
+            }
             Effect::ExileTopAndGrantMayPlay { uncast_penalty: Some(e), .. } => {
                 f(e);
             }

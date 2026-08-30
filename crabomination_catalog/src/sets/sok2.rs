@@ -539,6 +539,7 @@ pub fn oppressive_will() -> CardDefinition {
             mana_cost: cost(&[]),
             exile: false,
             extra_generic: Some(hand()),
+            if_paid: None,
         },
     )
 }

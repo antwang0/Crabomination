@@ -197,6 +197,7 @@ pub fn cephalid_shrine() -> CardDefinition {
                 mana_cost: ManaCost::default(),
                 exile: false,
                 extra_generic: Some(Value::CardsNamedLikeTriggerSpellInAllGraveyards),
+                if_paid: None,
             },
         }],
         ..enchantment("Cephalid Shrine", cost(&[generic(1), u(), u()]))

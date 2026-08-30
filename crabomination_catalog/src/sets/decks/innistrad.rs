@@ -5029,6 +5029,7 @@ pub fn flip_the_switch() -> CardDefinition {
                 mana_cost: cost(&[generic(4)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             Effect::CreateToken {
                 who: PlayerRef::You,

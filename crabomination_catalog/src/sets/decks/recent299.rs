@@ -117,6 +117,7 @@ pub fn overrule() -> CardDefinition {
                 mana_cost: ManaCost::default(),
                 exile: false,
                 extra_generic: Some(Value::XFromCost),
+                if_paid: None,
             },
             Effect::GainLife {
                 who: Selector::You,

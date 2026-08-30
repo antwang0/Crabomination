@@ -20,11 +20,17 @@ pub fn dont_make_a_sound() -> CardDefinition {
         name: "Don't Make a Sound",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
+        // "…unless its controller pays {2}. If they do, surveil 2." The
+        // paid rider was dropped, so the card was a strictly worse Mana Leak.
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(R::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: Some(Box::new(Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            })),
         },
         ..Default::default()
     }

@@ -561,6 +561,27 @@ fn momo_playful_pet_ltb_makes_food() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "Food minted on LTB");
 }
 
+/// Momo prints three modes and the catalog carried two — the scry arm was a
+/// mode the decider could never pick. Asserts the arm exists and runs.
+#[test]
+fn momo_playful_pet_third_mode_is_scry_two() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::momo_playful_pet());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let lib = g.players[0].library.len();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Modes(vec![2])]));
+    g.remove_to_graveyard_with_triggers(m);
+    drain_stack(&mut g);
+    assert!(
+        !g.battlefield.iter().any(|c| c.definition.name == "Food"),
+        "mode 2 was taken, so no Food"
+    );
+    assert_eq!(g.players[0].library.len(), lib, "scry 2 looks, it does not draw");
+}
+
 /// Tiger-Seal untaps when you draw your second card each turn.
 #[test]
 fn tiger_seal_untaps_on_second_draw() {

@@ -1325,6 +1325,7 @@ pub fn scent_of_brine() -> CardDefinition {
                 mana_cost: cost(&[]),
                 exile: false,
                 extra_generic: Some(Value::CardsRevealedThisEffect),
+                if_paid: None,
             }),
         },
     )
@@ -1447,6 +1448,7 @@ pub fn brine_seer() -> CardDefinition {
             mana_cost: cost(&[]),
             exile: false,
             extra_generic: Some(Value::CardsRevealedThisEffect),
+            if_paid: None,
         },
     )
 }

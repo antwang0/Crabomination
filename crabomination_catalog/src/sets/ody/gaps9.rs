@@ -137,6 +137,7 @@ pub fn rites_of_refusal() -> CardDefinition {
                     Box::new(Value::CardsDiscardedThisEffect),
                     Box::new(Value::Const(3)),
                 )),
+                if_paid: None,
             },
         ]),
     )

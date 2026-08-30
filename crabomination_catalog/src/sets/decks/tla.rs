@@ -187,6 +187,7 @@ pub fn itll_quench_ya() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -971,10 +972,17 @@ pub fn momo_playful_pet() -> CardDefinition {
                         definition: Box::new(food_token()),
                     },
                     Effect::AddCounter {
-                        what: target_filtered(SelectionRequirement::Creature),
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::ONE,
                     },
+                    // The printed third mode, which was absent — a
+                    // "choose one" with two of its three arms is a mode the
+                    // decider can never pick.
+                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
                 ],
             },
         }],

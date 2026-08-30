@@ -6905,6 +6905,13 @@ pub enum Effect {
         /// is its power" (Mausoleum Wanderer rides `SacrificedPower`).
         #[serde(default)]
         extra_generic: Option<Value>,
+        /// The mirror branch — "…unless its controller pays {2}. If they do,
+        /// surveil 2" (Don't Make a Sound). Runs only when the tax was
+        /// actually paid, in this effect's own context, so `PlayerRef::You`
+        /// is the counterspell's controller. Same shape as
+        /// [`Effect::UnlessPlayerPays`]'s `if_paid`.
+        #[serde(default)]
+        if_paid: Option<Box<Effect>>,
     },
     /// CR 702.21 — Ward's "counter that spell or ability unless its
     /// controller pays [cost]" trigger body. Walks the stack for the

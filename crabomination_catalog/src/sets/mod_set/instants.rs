@@ -126,6 +126,7 @@ pub fn spell_pierce() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -143,6 +144,7 @@ pub fn mana_leak() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -421,6 +423,7 @@ pub fn daze() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         alternative_cost: Some(AlternativeCost {
             awaken: false,
@@ -823,6 +826,7 @@ pub fn lose_focus() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -1623,6 +1627,7 @@ pub fn convolute() -> CardDefinition {
             mana_cost: cost(&[generic(4)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }

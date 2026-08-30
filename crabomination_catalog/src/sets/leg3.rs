@@ -924,6 +924,7 @@ pub fn in_the_eye_of_chaos() -> CardDefinition {
                 mana_cost: ManaCost::default(),
                 exile: false,
                 extra_generic: Some(Value::ManaValueOf(Box::new(Selector::TriggerSource))),
+                if_paid: None,
             },
         }],
         ..world("In the Eye of Chaos", cost(&[generic(2), u()]))

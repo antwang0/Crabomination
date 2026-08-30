@@ -664,6 +664,7 @@ pub fn sunken_field() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         },

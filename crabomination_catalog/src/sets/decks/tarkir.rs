@@ -2546,6 +2546,7 @@ pub fn dispelling_exhale() -> CardDefinition {
         mana_cost: cost(&[generic(amt)]),
         exile: false,
         extra_generic: None,
+        if_paid: None,
     };
     CardDefinition {
         name: "Dispelling Exhale",

@@ -165,6 +165,7 @@ pub fn circular_logic() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: R::Any,
                 }),
+                if_paid: None,
             },
         )
     }

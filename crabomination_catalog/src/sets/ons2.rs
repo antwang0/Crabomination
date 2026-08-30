@@ -1092,6 +1092,7 @@ pub fn ixidors_will() -> CardDefinition {
                 Box::new(tribe_count(CreatureType::Wizard)),
                 Box::new(Value::Const(2)),
             )),
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -1889,6 +1890,7 @@ pub fn complicate() -> CardDefinition {
         mana_cost: cost(&[generic(n)]),
         exile: false,
         extra_generic: None,
+        if_paid: None,
     };
     CardDefinition {
         name: "Complicate",
@@ -2500,6 +2502,7 @@ pub fn disruptive_pitmage() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],

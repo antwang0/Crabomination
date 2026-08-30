@@ -248,6 +248,7 @@ pub fn mindstatic() -> CardDefinition {
             mana_cost: cost(&[generic(6)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }

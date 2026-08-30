@@ -492,6 +492,7 @@ pub fn evasive_action() -> CardDefinition {
             mana_cost: ManaCost::default(),
             exile: false,
             extra_generic: Some(Value::DomainCount(PlayerRef::You)),
+            if_paid: None,
         },
     )
 }

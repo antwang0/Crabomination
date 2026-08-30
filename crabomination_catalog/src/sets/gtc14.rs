@@ -75,6 +75,7 @@ pub fn frontline_medic() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],

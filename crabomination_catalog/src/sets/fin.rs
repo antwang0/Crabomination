@@ -3883,6 +3883,7 @@ pub fn syncopate() -> CardDefinition {
             mana_cost: cost(&[]),
             exile: true,
             extra_generic: Some(Value::XFromCost),
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -7330,6 +7331,7 @@ pub fn swallowed_by_leviathan() -> CardDefinition {
                     zone: crate::card::Zone::Graveyard,
                     filter: SelectionRequirement::Any,
                 })),
+                if_paid: None,
             },
         ]),
         ..Default::default()

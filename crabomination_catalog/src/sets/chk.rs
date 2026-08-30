@@ -147,6 +147,7 @@ pub fn nether_void() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
         }],
         ..Default::default()
@@ -518,6 +519,7 @@ pub fn ghost_lit_warder() -> CardDefinition {
         mana_cost: cost(&[generic(tax)]),
         exile: false,
         extra_generic: None,
+        if_paid: None,
     };
     CardDefinition {
         name: "Ghost-Lit Warder",
@@ -3228,6 +3230,7 @@ pub fn soratami_savant() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],
@@ -4665,6 +4668,7 @@ pub fn callow_jushi() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],

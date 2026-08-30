@@ -1008,6 +1008,7 @@ pub fn quandrix_charm() -> CardDefinition {
                 mana_cost: counter_cost,
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             // Mode 1: destroy target enchantment.
             Effect::Destroy {

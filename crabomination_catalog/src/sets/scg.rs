@@ -412,6 +412,7 @@ pub fn hindering_touch() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
         )
     }

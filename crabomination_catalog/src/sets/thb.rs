@@ -5697,6 +5697,7 @@ pub fn thassas_intervention() -> CardDefinition {
                     Box::new(Value::Const(2)),
                     Box::new(Value::XFromCost),
                 )),
+                if_paid: None,
             },
         ]),
         ..Default::default()

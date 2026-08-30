@@ -1806,6 +1806,7 @@ pub fn force_spike() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -5342,6 +5343,7 @@ pub fn mana_tithe() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -7715,6 +7717,7 @@ pub fn miscalculation() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -11036,12 +11039,14 @@ pub fn stubborn_denial() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             }),
             else_: Box::new(Effect::CounterUnlessPaid {
                 what: target_filtered(spell_filter),
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             }),
         },
         ..Default::default()
@@ -25038,6 +25043,7 @@ pub fn spiketail_hatchling() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],
@@ -29059,6 +29065,7 @@ pub fn izzet_charm() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             Effect::DealDamage {
                 to: tf(SelectionRequirement::Creature),
@@ -29151,6 +29158,7 @@ pub fn flusterstorm() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -31884,6 +31892,7 @@ pub fn jwari_disruption() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         back_face: Some(Box::new(znr_mdfc_land("Jwari Ruins", Color::Blue))),
         ..Default::default()
@@ -32653,6 +32662,7 @@ pub fn anticognition() -> CardDefinition {
                 mana_cost: cost(&[generic(2)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             }),
         },
         ..Default::default()
@@ -39576,6 +39586,7 @@ pub fn make_disappear() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -40842,6 +40853,7 @@ pub fn cursecatcher() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],
@@ -43176,6 +43188,7 @@ pub fn censor() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -50143,6 +50156,7 @@ pub fn mausoleum_wanderer() -> CardDefinition {
                 exile: false,
                 // X = the sacrificed Wanderer's power (cost-sac LKI).
                 extra_generic: Some(Value::SacrificedPower),
+                if_paid: None,
             },
             ..Default::default()
         }],
@@ -51717,6 +51731,7 @@ pub fn vodalian_hexcatcher() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             ..Default::default()
         }],
@@ -59111,6 +59126,7 @@ pub fn rune_snag() -> CardDefinition {
                 Box::new(Value::Const(2)),
                 Box::new(Value::SameNamedInAllGraveyards),
             )),
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -59776,6 +59792,7 @@ pub fn metallic_rebuke() -> CardDefinition {
             mana_cost: cost(&[generic(3)]),
             exile: false,
             extra_generic: None,
+            if_paid: None,
         },
         ..Default::default()
     }
@@ -65555,6 +65572,7 @@ pub fn condescend() -> CardDefinition {
                 mana_cost: crate::mana::ManaCost::default(),
                 exile: false,
                 extra_generic: Some(Value::XFromCost),
+                if_paid: None,
             },
             Effect::Scry {
                 who: PlayerRef::You,
@@ -66099,6 +66117,7 @@ pub fn temur_charm() -> CardDefinition {
                 mana_cost: cost(&[generic(3)]),
                 exile: false,
                 extra_generic: None,
+                if_paid: None,
             },
             Effect::ForEach {
                 selector: Selector::EachPermanent(
