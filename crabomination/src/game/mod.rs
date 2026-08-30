@@ -18314,12 +18314,81 @@ impl GameState {
         // `cube` run (PERF `(-117)`). One `Vec` a dispatch, cleared per
         // trigger, capacity kept.
         let mut block_sides_seen: Vec<CardId> = Vec::new();
-        for card in &self.battlefield {
-            if no_grants
-                && card.definition.triggered_abilities.is_empty()
-                && card.definition.station.is_empty()
-            {
-                continue;
+        // The fast-path `continue` below, asked once for the board instead of
+        // once per permanent. With no grant of any kind in play only a
+        // permanent carrying a printed trigger or a Station band can get past
+        // it, and *which indices those are* is the same pure definition
+        // question the zone's other lanes answer — so on a hit this walk
+        // visits the two or three permanents that can fire rather than the
+        // whole board, and on a miss it fills the lane from the walk it was
+        // going to make anyway (PERF `(-115)`).
+        //
+        // `board` is held for the whole walk on purpose: the `for card in
+        // &self.battlefield` this replaces borrowed the zone for its own
+        // duration, and that borrow is what makes the hand-rolled freeze scope
+        // below sound (no `&mut self` call can happen inside the loop). An
+        // index walk alone would end the borrow at each card's last use and
+        // quietly give that guarantee up.
+        let board = &self.battlefield;
+        // Asked only under `no_grants`: a dispatch with a grant live walks the
+        // whole board whatever the lane says, so reading it there is pure cost.
+        let lane = no_grants.then(|| board.trigger_members());
+        let members = lane.and_then(Result::ok);
+        let n = board.len();
+        // Fill only when this dispatch walks the whole board *and* asks the
+        // predicate: under a live grant the gate short-circuits before the two
+        // definition loads, and adding them back to fill the lane would be the
+        // fusion this file has refuted four times.
+        let mut fill = if n <= 64 {
+            lane.and_then(Result::err).map(|epoch| (epoch, 0u64))
+        } else {
+            None
+        };
+        // On a hit every member satisfies the predicate by the lane's
+        // contract, so the gate itself is dead too.
+        let gate = no_grants && members.is_none();
+        // Two walks over one body. The member list when the lane hit — a hit
+        // implies `n <= 64`, so one word covers the board — and otherwise the
+        // slice iterator this loop always was. Driving the *miss* path by index
+        // too is the obvious simplification and it read `cube` +0.156 %: random
+        // access costs a bounds check and a live index where an iterator costs
+        // neither, so the list earns that only where it actually skips cards.
+        let mut bits = members.unwrap_or(0);
+        // `enumerate()`, not a counter advanced inside the gate. Only the fill
+        // needs the index and a grant-live dispatch neither gates nor fills, so
+        // carrying it by hand looks like the cheaper shape — and it is not:
+        // `fixed` +0.069 / `cube` +0.071 / `sealed` +0.028 % against this,
+        // because the hand-rolled counter is a loop-carried dependency through
+        // a conditional where the iterator's is not. Measured, reverted.
+        let mut walk = board.iter().enumerate();
+        loop {
+            let (i, card) = match members {
+                None => match walk.next() {
+                    Some(pair) => pair,
+                    None => break,
+                },
+                Some(_) => {
+                    if bits == 0 {
+                        break;
+                    }
+                    let i = bits.trailing_zeros() as usize;
+                    bits &= bits - 1;
+                    match board.get(i) {
+                        Some(card) => (i, card),
+                        None => break,
+                    }
+                }
+            };
+            if gate {
+                let carries = crate::zone::card_is_triggerer(card);
+                if let Some((_, f)) = fill.as_mut()
+                    && carries
+                {
+                    *f |= 1u64 << i;
+                }
+                if !carries {
+                    continue;
+                }
             }
             let stripped = stripped_ids.contains(&card.id);
             // Walk printed triggered abilities AND any transient
@@ -18593,6 +18662,17 @@ impl GameState {
                     }
                 }
             }
+        }
+        if let Some((epoch, bits)) = fill {
+            self.battlefield.store_trigger_members(epoch, bits);
+        }
+        // Compile-time gated, and **after** the walk: an out-of-line call in
+        // the preamble makes every value the loop keeps live spill around it,
+        // and even a never-taken runtime gate there read `cube` +0.037 %.
+        // See the `trig-census` feature in Cargo.toml.
+        #[cfg(feature = "trig-census")]
+        if crate::zone::trig_census::on() {
+            crate::zone::trig_census::tick(no_grants, n, members.map(u64::count_ones));
         }
         if freeze {
             self.freeze_layers_pop();

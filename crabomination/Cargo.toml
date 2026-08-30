@@ -51,6 +51,17 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 default = ["mimalloc"]
 mimalloc = ["dep:mimalloc"]
 
+# PERF (-115)'s member-list census (`CRAB_TRIG_CENSUS=1`, printed by
+# `bot_ladder`). Compile-time rather than runtime because the tick sits in the
+# trigger dispatcher's per-dispatch preamble: the env-gated version, with the
+# gate never taken, still read `fixed` +0.044 % / `cube` +0.037 % / `sealed`
+# +0.028 % — the call makes the loop's live values spill around it. Off, it is
+# not in the binary at all.
+#
+#   cargo build --profile release-fast -p crabomination --bin bot_ladder \
+#     --features trig-census
+trig-census = []
+
 # `cargo test` builds a *test harness* per `[[bin]]` on top of the normal
 # binary, and seven of the nine bins carry no `#[cfg(test)]` block at all — so
 # seven of the twenty executables a `cargo test` relinks exist to run zero

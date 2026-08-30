@@ -217,6 +217,10 @@ const LANE_SHIELD: u32 = 12;
 const LANE_GRANT: u32 = 14;
 const LANE_LISTENER: u32 = 16;
 const LANE_ACT_GRANT: u32 = 18;
+/// Not a presence lane: `PRESENT` here means "the member list beside it is
+/// computed", and the list is what the caller reads. It shares the word so
+/// that the one store every write path already makes clears it too.
+const LANE_TRIGGERER: u32 = 20;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -250,6 +254,127 @@ fn card_has_activated_grant(c: &CardInstance) -> bool {
         .static_abilities
         .iter()
         .any(|sa| crate::effect::static_effect_grants_activated(&sa.effect))
+}
+
+/// Can this permanent contribute a trigger of its **own** to
+/// [`GameState::dispatch_triggers_for_events`](crate::game::GameState::dispatch_triggers_for_events)
+/// — a printed triggered ability or a CR 721.2a Station band? The
+/// [`LANE_TRIGGERER`] predicate, and the dispatcher's fast-path `continue`
+/// calls it rather than spelling it a second time: a member list and the gate
+/// it stands in for have to be the same question or the list is unsound.
+pub(crate) fn card_is_triggerer(c: &CardInstance) -> bool {
+    !c.definition.triggered_abilities.is_empty() || !c.definition.station.is_empty()
+}
+
+/// [`card_is_triggerer`] over a whole board as an index mask — the member
+/// list's audit, recomputed by [`Battlefield::trigger_members`]'
+/// `debug_assert!`. `0` past 64 cards, which is where the list stops being
+/// representable and so is never stored.
+fn triggerer_bits(cards: &[CardInstance]) -> u64 {
+    if cards.len() > 64 {
+        return 0;
+    }
+    let mut bits = 0u64;
+    for (i, c) in cards.iter().enumerate() {
+        if card_is_triggerer(c) {
+            bits |= 1u64 << i;
+        }
+    }
+    bits
+}
+
+/// `CRAB_TRIG_CENSUS` — the trigger dispatcher's member-list census.
+///
+/// PERF `(-115)`: the lane replaces the dispatch walk's per-card gate with a
+/// list of the indices that can pass it, so what it is worth is
+/// `hits x (board - members)` visits against the walks the misses still make.
+/// Three counts answer that and nothing else does — the lane's read and its
+/// fill both inline away, so no callgrind row carries them.
+///
+/// Off unless the variable is set; one `OnceLock`-backed load when it is.
+#[cfg(feature = "trig-census")]
+pub mod trig_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// Dispatches that asked the lane (i.e. reached it with no grant live).
+    pub static ASKS: AtomicU64 = AtomicU64::new(0);
+    /// …of which the lane answered.
+    pub static HITS: AtomicU64 = AtomicU64::new(0);
+    /// Permanents on the board over those asks, and members over the hits —
+    /// the two sides of what a hit skips.
+    pub static BOARD: AtomicU64 = AtomicU64::new(0);
+    pub static MEMBERS: AtomicU64 = AtomicU64::new(0);
+    /// Dispatches that walked the board with a grant live, where the lane is
+    /// no use and the walk is the whole cost, and the permanents they walked.
+    pub static GRANTED: AtomicU64 = AtomicU64::new(0);
+    pub static GRANT_BOARD: AtomicU64 = AtomicU64::new(0);
+    /// Loop bodies the walk actually runs — `popcount` on a hit, the whole
+    /// board otherwise. The denominator every per-visit Ir figure needs, and
+    /// it is free: both numbers are known before the walk starts.
+    pub static VISITS: AtomicU64 = AtomicU64::new(0);
+
+    /// `0` not yet read, `1` off, `2` on. **Not a `OnceLock`**: the gate is
+    /// asked once per dispatch and `get_or_init` there is ~20 Ir apiece. One
+    /// relaxed byte and a compare is ~2, and the store is idempotent, so the
+    /// race two threads can run here has one outcome.
+    static ON: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+    #[inline]
+    pub fn on() -> bool {
+        match ON.load(Relaxed) {
+            1 => false,
+            2 => true,
+            _ => init(),
+        }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn init() -> bool {
+        let v = match std::env::var("CRAB_TRIG_CENSUS") {
+            Ok(v) => !v.is_empty() && v != "0",
+            _ => false,
+        };
+        ON.store(if v { 2 } else { 1 }, Relaxed);
+        v
+    }
+
+    /// One dispatch: `members` is `Some(count)` on a hit.
+    #[cold]
+    #[inline(never)]
+    pub fn tick(no_grants: bool, board: usize, members: Option<u32>) {
+        if !no_grants {
+            GRANTED.fetch_add(1, Relaxed);
+            GRANT_BOARD.fetch_add(board as u64, Relaxed);
+            VISITS.fetch_add(board as u64, Relaxed);
+            return;
+        }
+        ASKS.fetch_add(1, Relaxed);
+        BOARD.fetch_add(board as u64, Relaxed);
+        match members {
+            Some(m) => {
+                HITS.fetch_add(1, Relaxed);
+                MEMBERS.fetch_add(m as u64, Relaxed);
+                VISITS.fetch_add(m as u64, Relaxed);
+            }
+            None => {
+                VISITS.fetch_add(board as u64, Relaxed);
+            }
+        }
+    }
+
+    /// `(asks, hits, board, members, granted, grant_board, visits)`.
+    pub fn snapshot() -> [u64; 7] {
+        [
+            ASKS.load(Relaxed),
+            HITS.load(Relaxed),
+            BOARD.load(Relaxed),
+            MEMBERS.load(Relaxed),
+            GRANTED.load(Relaxed),
+            GRANT_BOARD.load(Relaxed),
+            VISITS.load(Relaxed),
+        ]
+    }
 }
 
 /// The battlefield: the CoW card list, plus the whole-board questions asked of
@@ -300,6 +425,10 @@ pub struct Battlefield {
     /// The index [`find_by_id`](Self::find_by_id) last returned from. Needs no
     /// invalidation at all — see that function.
     find_hint: std::sync::atomic::AtomicU32,
+    /// Which battlefield *indices* satisfy [`card_is_triggerer`], one bit
+    /// each. Read only while [`LANE_TRIGGERER`] says the list is computed, so
+    /// it inherits the lanes' invalidation whole and needs none of its own.
+    trig_members: std::sync::atomic::AtomicU64,
 }
 
 impl Battlefield {
@@ -644,6 +773,46 @@ impl Battlefield {
         self.store_lane(LANE_ACT_GRANT, epoch, found);
     }
 
+    /// The trigger dispatcher's **member list**: `Ok(bits)` names the
+    /// battlefield indices carrying a printed trigger or a Station band,
+    /// `Err(epoch)` means "unknown — walk, then hand that same epoch to
+    /// [`store_trigger_members`](Self::store_trigger_members)".
+    ///
+    /// Every other lane answers *is there one*, which still leaves the caller
+    /// walking the board; this one answers *which*, so on a hit the walk does
+    /// not happen. That is what separates it from the forty-eighth pass's
+    /// refuted trigger-carrier mask (+0.58 %, PERF): those bits were rebuilt
+    /// inside `dispatch_board_scan` on every dispatch, so the loads added to
+    /// one walk paid for the loads removed from another. These outlive the
+    /// dispatch, and the fill rides the walk a miss was making anyway.
+    pub fn trigger_members(&self) -> Result<u64, u64> {
+        let epoch = crate::card::definition_epoch();
+        let known = self.def_epoch.load(Ordering::Relaxed) == epoch
+            && (self.type_gates.load(Ordering::Relaxed) >> LANE_TRIGGERER) & LANE_MASK
+                == PRESENT as u32;
+        if !known {
+            return Err(epoch);
+        }
+        let bits = self.trig_members.load(Ordering::Relaxed);
+        debug_assert!(
+            bits == triggerer_bits(&self.cards),
+            "battlefield triggerer memo is stale: a write reached the cards without clearing it",
+        );
+        Ok(bits)
+    }
+
+    /// Record the member list a caller's own full walk built, stamped at the
+    /// `epoch` [`trigger_members`](Self::trigger_members) handed out. A board
+    /// wider than 64 has no list, so the lane stays unknown there and the next
+    /// dispatch walks — the caller must not have built bits for one either.
+    pub fn store_trigger_members(&self, epoch: u64, bits: u64) {
+        if self.cards.len() > 64 {
+            return;
+        }
+        self.trig_members.store(bits, Ordering::Relaxed);
+        self.store_lane(LANE_TRIGGERER, epoch, true);
+    }
+
     /// Append, through [`CowBox`]'s own `push` so an unshare materializes with
     /// room for the card (PERF `(-76)`). Inherent, so it shadows the `Deref`'d
     /// `Vec::push`; the memo is invalidated exactly as `DerefMut` would.
@@ -685,6 +854,9 @@ impl Clone for Battlefield {
             find_hint: std::sync::atomic::AtomicU32::new(
                 self.find_hint.load(Ordering::Relaxed),
             ),
+            trig_members: std::sync::atomic::AtomicU64::new(
+                self.trig_members.load(Ordering::Relaxed),
+            ),
         }
     }
 }
@@ -716,6 +888,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
             type_gates: std::sync::atomic::AtomicU32::new(0),
             def_epoch: std::sync::atomic::AtomicU64::new(0),
             find_hint: std::sync::atomic::AtomicU32::new(0),
+            trig_members: std::sync::atomic::AtomicU64::new(0),
         }
     }
 }
@@ -1056,6 +1229,46 @@ mod tests {
         b.store_dispatch(epoch, true);
         assert_eq!(b.dispatch_lane(), Ok(true));
         assert_eq!(b.memo(LANE_LAND), Some(false), "the land lane survived the store");
+    }
+
+    /// `(-115)`'s lane is a *positional* answer where the others are a
+    /// presence bit, and the dispatcher reads it **instead of** the per-card
+    /// gate — so a stale one silently drops a trigger rather than costing a
+    /// walk. It has to fall over exactly where the presence lanes do.
+    #[test]
+    fn trigger_member_list_is_filled_and_invalidated() {
+        let mut b = bf(vec![
+            crate::catalog::grizzly_bears(),
+            crate::catalog::grave_titan(),
+            crate::catalog::grizzly_bears(),
+        ]);
+        assert_eq!(triggerer_bits(&b), 0b010, "only the Titan carries a printed trigger");
+        let Err(epoch) = b.trigger_members() else { panic!("unknown until filled") };
+        b.store_trigger_members(epoch, triggerer_bits(&b));
+        assert_eq!(b.trigger_members(), Ok(0b010));
+
+        b.iter_mut().for_each(|c| c.tapped = true);
+        assert_eq!(b.trigger_members(), Ok(0b010), "an element write is not a membership change");
+
+        b.push(CardInstance::new(CardId(9), crate::catalog::grizzly_bears(), 0));
+        assert!(b.trigger_members().is_err(), "push invalidated");
+        let Err(epoch) = b.trigger_members() else { unreachable!() };
+        b.store_trigger_members(epoch, triggerer_bits(&b));
+        assert_eq!(b.trigger_members(), Ok(0b010), "and refills at the new membership");
+
+        b.pop();
+        assert!(b.trigger_members().is_err(), "DerefMut invalidated");
+    }
+
+    /// Sixty-five permanents have no member list, so the lane stays unknown
+    /// and every dispatch keeps walking. The dispatcher must not build bits
+    /// for one either — an index of 64 does not fit the word.
+    #[test]
+    fn trigger_member_list_is_not_stored_past_sixty_four_permanents() {
+        let b = bf((0..65).map(|_| crate::catalog::grizzly_bears()).collect());
+        let Err(epoch) = b.trigger_members() else { panic!("unknown until filled") };
+        b.store_trigger_members(epoch, 0);
+        assert!(b.trigger_members().is_err(), "a 65-card board has no member list");
     }
 
     #[test]

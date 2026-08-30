@@ -1640,6 +1640,25 @@ fn main() {
             if sweeps == 0 { 0.0 } else { 100.0 * repeats as f64 / sweeps as f64 },
         );
     }
+    // PERF (-115): what the trigger dispatcher's member list is worth — hit
+    // rate, and the board it skips against the members it keeps. Off unless
+    // `CRAB_TRIG_CENSUS` is set.
+    #[cfg(feature = "trig-census")]
+    if crabomination::zone::trig_census::on() {
+        let [asks, hits, board, members, granted, grant_board, visits] =
+            crabomination::zone::trig_census::snapshot();
+        let base = board + grant_board;
+        println!(
+            "  trig_census {hits}/{asks} hits ({:.2} %), {granted} grant-live \
+             (board/dispatch {:.2}); board/ask {:.2}, members/hit {:.2}; \
+             visits {visits}/{base} ({:.2} % of the walk left)",
+            if asks == 0 { 0.0 } else { 100.0 * hits as f64 / asks as f64 },
+            if granted == 0 { 0.0 } else { grant_board as f64 / granted as f64 },
+            if asks == 0 { 0.0 } else { board as f64 / asks as f64 },
+            if hits == 0 { 0.0 } else { members as f64 / hits as f64 },
+            if base == 0 { 0.0 } else { 100.0 * visits as f64 / base as f64 },
+        );
+    }
     // PERF (-51)(b): what the simulator's payments cost when they fail, split
     // by *why*. Off unless `CRAB_PAY_FAILS` is set.
     if crabomination::game::pay_census::level() > 0 {
