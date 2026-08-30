@@ -6091,17 +6091,30 @@ macro_rules! eot_wear_off {
     };
 }
 
-/// The rarely-written, heap-owning tail of a card object: registries and
-/// cast-time riders only a handful of cards touch. Held behind one CoW
-/// handle so a `CardData` unshare — the deep copy every zone write pays —
-/// bumps a refcount instead of cloning twenty-two collections that are
-/// empty on essentially every card. `Deref`/`DerefMut` keep every
+/// The rarely-written tail of a card object: registries, cast-time riders
+/// and the until-end-of-turn grants only a handful of cards touch. Held
+/// behind one CoW handle so a `CardData` unshare — the deep copy every zone
+/// write pays — bumps a refcount instead of cloning thirty-odd fields that
+/// are empty on essentially every card. `Deref`/`DerefMut` keep every
 /// `card.field` access working unchanged.
 ///
-/// Membership rule, same as [`crate::cow::CowBox`]'s other groups: a field
-/// belongs here only if it owns heap *and* is written rarely. A per-turn or
-/// per-zone-change `clear()` counts as a write, so the sweeps that clear
-/// these guard theirs on `is_empty()`.
+/// **The group is a `CardData` *width* lever and that is what prices it.**
+/// `CardData` is deep-copied 68,610 times on a six-game `cube` run — 48 % of
+/// every CoW copy in the program — and the copy is essentially the
+/// field-by-field move of its bytes, so a byte taken out of `CardData` is
+/// worth ~0.44 Ir a copy plus whatever clone logic the field carries.
+///
+/// Membership rule: a field belongs here if it is written rarely **and**
+/// either owns heap or is wide enough for its bytes to pay (16 +). A
+/// per-turn or per-zone-change `clear()` counts as a write, so the sweeps
+/// that clear these guard theirs on `is_empty()`.
+///
+/// **"Written rarely" is a measurement, not a reading of the field name.**
+/// The four damage-bookkeeping vectors (`damaged_by_this_turn` and
+/// siblings) look exactly like members and are not: moving them put 12.97 M
+/// Ir on `resolve_combat`'s `make_mut` edge for a 5 M saving, because a
+/// combat step writes them on every creature that deals or takes damage.
+/// They stay in `CardData`.
 #[derive(Debug, Clone, Default)]
 pub struct CardCold {
     /// Activated abilities granted to this specific permanent by resolved
@@ -6241,6 +6254,51 @@ pub struct CardCold {
     /// [filter]" (Mavinda, Students' Advocate's {8}-unless-your-creature).
     /// Shares `may_play_until`'s lifetime.
     pub granted_cast_surcharge_eot: Option<(crate::mana::ManaCost, SelectionRequirement)>,
+    /// CR 712 — the front-face definition, kept while `transformed` so the
+    /// permanent can flip back. In-memory only (not serialized): the serde
+    /// wire stores the front name and rebuilds this on load.
+    pub front_face: Option<Arc<CardDefinition>>,
+    /// CR 702.160 — the printed (full, colorless) definition, kept while
+    /// `cast_as_prototype` so the permanent reverts to its full mana cost,
+    /// color, and size when it leaves the battlefield. In-memory only: the
+    /// wire keeps the name + `cast_as_prototype` and rebuilds this on load.
+    pub prototype_printed: Option<Arc<CardDefinition>>,
+    /// CR 710 — the unflipped (top) definition, kept while `flipped`. In-memory
+    /// only: the serde wire stores the top name + the `flipped` flag.
+    pub unflipped_def: Option<Arc<CardDefinition>>,
+    /// CR 708 — while this permanent is on the battlefield face down (morph /
+    /// manifest), `definition` is swapped to the vanilla 2/2 face-down
+    /// definition and the real card is stashed here so it can be turned face
+    /// up (and is restored as the card leaves the battlefield). In-memory
+    /// only: the serde wire stores the real name + a `face_down_permanent`
+    /// flag and rebuilds this on load.
+    pub face_up_def: Option<Arc<CardDefinition>>,
+    /// Licid — while this permanent is an Aura, its creature definition waits
+    /// here. In-memory only: the wire carries `licid_attached` and
+    /// `make_licid_aura` re-derives from the freshly-resolved printed card.
+    pub licid_creature_def: Option<Arc<CardDefinition>>,
+    /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
+    /// count; the host gets the keyword while one or more such counters
+    /// are on it. Applied as a layer-6 keyword addition during
+    /// `compute_battlefield`. Distinct from `definition.keywords`
+    /// (printed) and `granted_keywords_eot` (transient EOT grants) so
+    /// the printed/granted/counter sources can be inspected separately
+    /// (e.g., for "remove all abilities" effects). Defaults to empty.
+    /// Push (modern_decks batch 183): added per CR 122.1b.
+    pub keyword_counters: KeywordCounters,
+    /// "You may cast/play this card without paying its mana cost" permission
+    /// granted by Practiced Scrollsmith, Suspend Aggression, Nita, …
+    /// Set by `Effect::GrantMayPlay`; consumed by
+    /// `GameAction::CastFromZoneWithoutPaying`; cleared on expiry by
+    /// `clean_per_turn_state` / next-turn cleanup, and also cleared
+    /// whenever the card changes zones (the grantor's "that card" stops
+    /// referring to it once it moves).
+    pub may_play_until: Option<MayPlayPermission>,
+    /// CR 603.6e — set on a card in exile that a permanent's "exile until
+    /// ~ leaves" ability put there. When that source leaves the
+    /// battlefield the engine returns this card to `ExileLink::return_to`.
+    /// `None` for ordinary (permanent) exile.
+    pub exiled_by: Option<ExileLink>,
 }
 
 /// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.
@@ -6894,6 +6952,19 @@ pub struct CardData {
     pub perm_power_bonus: i32,
     pub perm_toughness_bonus: i32,
     pub counters: CounterBag,
+    /// Sources that have dealt damage to this creature this turn. Powers
+    /// "When a creature dealt damage by this creature this turn dies"
+    /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
+    /// Reset at cleanup; in-memory only.
+    pub damaged_by_this_turn: Vec<CardId>,
+    /// Seats this permanent has dealt damage to this *game*, and the
+    /// planeswalkers likewise (The Fallen). Never reset per turn.
+    pub damaged_players_this_game: Vec<usize>,
+    pub damaged_permanents_this_game: Vec<CardId>,
+    /// Damage dealt to this permanent this turn, tallied per damaging
+    /// source's *name* (Blazing Effigy's "other sources named Blazing
+    /// Effigy"). Reset at cleanup; in-memory only.
+    pub damage_by_source_name_this_turn: Vec<(&'static str, u32)>,
     pub attached_to: Option<CardId>,
     /// CR 303.4a — the seat this Aura enchants, for "enchant player" Auras
     /// (the Curse cycle, Psychic Possession). Mutually exclusive with
@@ -6947,34 +7018,11 @@ pub struct CardData {
     /// the front so `Effect::Transform` can toggle back. Reconstructed on
     /// snapshot load from the front name + this flag.
     pub transformed: bool,
-    /// CR 712 — the front-face definition, kept while `transformed` so the
-    /// permanent can flip back. In-memory only (not serialized): the serde
-    /// wire stores the front name and rebuilds this on load.
-    pub front_face: Option<Arc<CardDefinition>>,
-    /// CR 702.160 — the printed (full, colorless) definition, kept while
-    /// `cast_as_prototype` so the permanent reverts to its full mana cost,
-    /// color, and size when it leaves the battlefield. In-memory only: the
-    /// wire keeps the name + `cast_as_prototype` and rebuilds this on load.
-    pub prototype_printed: Option<Arc<CardDefinition>>,
     /// CR 710 — true while this flip card is showing its flipped (bottom) face.
     /// `definition` is swapped to the flip face; `unflipped_def` stashes the
     /// top so it can be restored on zone change. Reconstructed on snapshot load
     /// from the top name + this flag.
     pub flipped: bool,
-    /// CR 710 — the unflipped (top) definition, kept while `flipped`. In-memory
-    /// only: the serde wire stores the top name + the `flipped` flag.
-    pub unflipped_def: Option<Arc<CardDefinition>>,
-    /// CR 708 — while this permanent is on the battlefield face down (morph /
-    /// manifest), `definition` is swapped to the vanilla 2/2 face-down
-    /// definition and the real card is stashed here so it can be turned face
-    /// up (and is restored as the card leaves the battlefield). In-memory
-    /// only: the serde wire stores the real name + a `face_down_permanent`
-    /// flag and rebuilds this on load.
-    pub face_up_def: Option<Arc<CardDefinition>>,
-    /// Licid — while this permanent is an Aura, its creature definition waits
-    /// here. In-memory only: the wire carries `licid_attached` and
-    /// `make_licid_aura` re-derives from the freshly-resolved printed card.
-    pub licid_creature_def: Option<Arc<CardDefinition>>,
     /// CR 702.182 — true while this permanent is face down because it was
     /// Cloaked (so its 2/2 face-down body has ward {2}, like Disguise). The
     /// real card carries no keyword to re-derive this, so it's tracked here and
@@ -7146,23 +7194,6 @@ pub struct CardData {
     /// stamps the life lost). `Value::RememberedAmountOfSource` reads it —
     /// "gain life equal to the life you lost" (Soulgorger Orgg).
     pub remembered_amount: Option<i32>,
-    /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
-    /// count; the host gets the keyword while one or more such counters
-    /// are on it. Applied as a layer-6 keyword addition during
-    /// `compute_battlefield`. Distinct from `definition.keywords`
-    /// (printed) and `granted_keywords_eot` (transient EOT grants) so
-    /// the printed/granted/counter sources can be inspected separately
-    /// (e.g., for "remove all abilities" effects). Defaults to empty.
-    /// Push (modern_decks batch 183): added per CR 122.1b.
-    pub keyword_counters: KeywordCounters,
-    /// "You may cast/play this card without paying its mana cost" permission
-    /// granted by Practiced Scrollsmith, Suspend Aggression, Nita, …
-    /// Set by `Effect::GrantMayPlay`; consumed by
-    /// `GameAction::CastFromZoneWithoutPaying`; cleared on expiry by
-    /// `clean_per_turn_state` / next-turn cleanup, and also cleared
-    /// whenever the card changes zones (the grantor's "that card" stops
-    /// referring to it once it moves).
-    pub may_play_until: Option<MayPlayPermission>,
     /// CR 704.5h: true if this creature has been dealt damage by a source
     /// with deathtouch since the last time SBAs were checked. Causes
     /// destruction regardless of damage amount vs toughness.
@@ -7177,11 +7208,6 @@ pub struct CardData {
     /// wipes, so "if 4 or more damage was dealt to it this turn" (Rushing-Tide
     /// Zubera) reads correctly. Reset at cleanup. In-memory only.
     pub damage_dealt_to_this_turn: u32,
-    /// Sources that have dealt damage to this creature this turn. Powers
-    /// "When a creature dealt damage by this creature this turn dies"
-    /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
-    /// Reset at cleanup; in-memory only.
-    pub damaged_by_this_turn: Vec<CardId>,
     /// Controller of the source that most recently dealt *combat* damage to
     /// this creature. Stamped at the combat-damage chokepoint so a
     /// "whenever this is dealt combat damage" trigger can name the attacking
@@ -7226,10 +7252,6 @@ pub struct CardData {
     /// intervening turns, and rolls into `attacked_last_turn` at its
     /// controller's untap step.
     pub attacked_own_turn: bool,
-    /// Seats this permanent has dealt damage to this *game*, and the
-    /// planeswalkers likewise (The Fallen). Never reset per turn.
-    pub damaged_players_this_game: Vec<usize>,
-    pub damaged_permanents_this_game: Vec<CardId>,
     /// Whether this creature attacked during its controller's *previous*
     /// turn, so `Keyword::CantAttackIfAttackedLastTurn` (Giant Turtle) can
     /// read it.
@@ -7239,10 +7261,6 @@ pub struct CardData {
     /// `Active` at the bearer's controller's untap step and clears at that
     /// turn's cleanup.
     pub attack_ban: AttackBan,
-    /// Damage dealt to this permanent this turn, tallied per damaging
-    /// source's *name* (Blazing Effigy's "other sources named Blazing
-    /// Effigy"). Reset at cleanup; in-memory only.
-    pub damage_by_source_name_this_turn: Vec<(&'static str, u32)>,
     /// Damage marked on this permanent this turn, tallied per damaging source
     /// *instance* — "unless lethal damage dealt by a single source is marked
     /// on it" (Ogre Enforcer). Reset at cleanup; in-memory only.
@@ -7260,11 +7278,6 @@ pub struct CardData {
     /// combat if able. Set when an attacker provokes it (untap + force
     /// block); cleared at end of combat. Transient — not serialized.
     pub must_block: Option<CardId>,
-    /// CR 603.6e — set on a card in exile that a permanent's "exile until
-    /// ~ leaves" ability put there. When that source leaves the
-    /// battlefield the engine returns this card to `ExileLink::return_to`.
-    /// `None` for ordinary (permanent) exile.
-    pub exiled_by: Option<ExileLink>,
     /// The permanent whose ability created this token — "tokens created with
     /// this enchantment" (Saproling Burst). `None` for cards and for tokens
     /// minted outside a permanent's ability.
@@ -7678,6 +7691,10 @@ impl CardInstance {
             perm_power_bonus: 0,
             perm_toughness_bonus: 0,
             counters,
+            damaged_by_this_turn: Vec::new(),
+            damaged_players_this_game: Vec::new(),
+            damaged_permanents_this_game: Vec::new(),
+            damage_by_source_name_this_turn: Vec::new(),
             attached_to: None,
             attached_to_player: None,
             soulbond_partner: None,
@@ -7693,15 +7710,10 @@ impl CardInstance {
             bestowed: false,
             face_down: false,
             transformed: false,
-            front_face: None,
-            prototype_printed: None,
             flipped: false,
-            unflipped_def: None,
             unlocked_doors: 0,
             case_solved: false,
             class_level: 0,
-            face_up_def: None,
-            licid_creature_def: None,
             cloaked: false,
             is_token: false,
             loyalty_uses_this_turn: 0,
@@ -7739,12 +7751,9 @@ impl CardInstance {
             chosen_permanent: None,
             chosen_player: None,
             remembered_amount: None,
-            keyword_counters: KeywordCounters::default(),
-            may_play_until: None,
             dealt_deathtouch_damage: false,
             dealt_damage_this_turn: false,
             damage_dealt_to_this_turn: 0,
-            damaged_by_this_turn: Vec::new(),
             combat_damager_controller: None,
             regeneration_shields: 0,
             regeneration_control_grant: None,
@@ -7756,16 +7765,12 @@ impl CardInstance {
             untap_locked_while_present: None,
             attacked_this_turn: false,
             attacked_own_turn: false,
-            damaged_players_this_game: Vec::new(),
-            damaged_permanents_this_game: Vec::new(),
             attacked_last_turn: false,
             attack_ban: AttackBan::None,
-            damage_by_source_name_this_turn: Vec::new(),
             damage_by_source_this_turn: crate::copyvec::CopyVec::new(),
             blocked_this_turn: false,
             blocked_attackers_this_turn: crate::copyvec::CopyVec::new(),
             must_block: None,
-            exiled_by: None,
             exiled_with: None,
             encoded_on: None,
             chosen_color: None,
