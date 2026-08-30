@@ -1658,6 +1658,20 @@ fn main() {
             if hits == 0 { 0.0 } else { members as f64 / hits as f64 },
             if base == 0 { 0.0 } else { 100.0 * visits as f64 / base as f64 },
         );
+        // PERF (-120): which gate made each grant-live dispatch, and what the
+        // event-kind filter the other three lack would have left.
+        let [reason, reason_visits, filtered, filtered_visits] =
+            crabomination::zone::trig_census::reason_snapshot();
+        let names = crabomination::zone::trig_census::REASON_NAMES;
+        for i in 0..16 {
+            if reason[i] == 0 && filtered[i] == 0 {
+                continue;
+            }
+            println!(
+                "  trig_reason {:<18} {:>8} dispatches / {:>9} visits   filtered {:>8} / {:>9}",
+                names[i], reason[i], reason_visits[i], filtered[i], filtered_visits[i],
+            );
+        }
     }
     // PERF (-51)(b): what the simulator's payments cost when they fail, split
     // by *why*. Off unless `CRAB_PAY_FAILS` is set.

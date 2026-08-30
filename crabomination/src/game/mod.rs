@@ -18279,6 +18279,47 @@ impl GameState {
         // loads instead — the loop body runs 945,812 times over six bench
         // games and most of a board is lands and vanilla creatures.
         let no_grants = !any_static_grant && !any_own_grant && !any_equip_grant;
+        // PERF `(-120)`: which of the four gates is live, and which would
+        // survive the event-kind filter `trigger_grants` already carries.
+        // Computed here where the batch and both grant lists are in scope;
+        // compiled out entirely without the feature.
+        #[cfg(feature = "trig-census")]
+        let (census_reason, census_filtered) = {
+            use crate::game::effects::events::event_kind_matches;
+            use crate::zone::trig_census as tc;
+            let batch_can_match = |ab: &crate::card::TriggeredAbility| {
+                events.iter().any(|ev| event_kind_matches(self, ev, &ab.event, None))
+            };
+            let turn = !self.turn_granted_triggers.is_empty();
+            let own = !self.granted_triggers_eot.is_empty();
+            let equip = !equip_grants.is_empty();
+            let mut reason = 0u8;
+            let mut filtered = 0u8;
+            if !trigger_grants.is_empty() {
+                reason |= tc::GRANT_STATIC;
+                filtered |= tc::GRANT_STATIC;
+            }
+            if turn {
+                reason |= tc::GRANT_TURN;
+                if self.turn_granted_triggers.iter().any(|(_, ab)| batch_can_match(ab)) {
+                    filtered |= tc::GRANT_TURN;
+                }
+            }
+            if own {
+                reason |= tc::GRANT_OWN;
+                if self.granted_triggers_eot.values().flatten().any(|ab| batch_can_match(ab)) {
+                    filtered |= tc::GRANT_OWN;
+                }
+            }
+            if equip {
+                reason |= tc::GRANT_EQUIP;
+                if equip_grants.iter().flat_map(|(_, abs)| abs.iter()).any(|ab| batch_can_match(ab))
+                {
+                    filtered |= tc::GRANT_EQUIP;
+                }
+            }
+            (reason, filtered)
+        };
         // CR 613 — the grant filters and event filters below read the
         // *computed* type line, so each (permanent, grant) pair can force a
         // `computed_permanent`, and outside a freeze scope that is a
@@ -18672,7 +18713,12 @@ impl GameState {
         // See the `trig-census` feature in Cargo.toml.
         #[cfg(feature = "trig-census")]
         if crate::zone::trig_census::on() {
-            crate::zone::trig_census::tick(no_grants, n, members.map(u64::count_ones));
+            crate::zone::trig_census::tick(
+                census_reason,
+                census_filtered,
+                n,
+                members.map(u64::count_ones),
+            );
         }
         if freeze {
             self.freeze_layers_pop();

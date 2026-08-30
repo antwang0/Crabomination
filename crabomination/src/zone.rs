@@ -313,6 +313,32 @@ pub mod trig_census {
     /// it is free: both numbers are known before the walk starts.
     pub static VISITS: AtomicU64 = AtomicU64::new(0);
 
+    /// PERF `(-120)`: **which** of the four gates made a dispatch grant-live,
+    /// as the sixteen buckets of the `GRANT_*` reason mask, and the visits
+    /// each bucket cost. `GRANTED` counts them as one bit and so cannot say
+    /// whether the grant-live walks are reachable by an event-kind filter.
+    pub static REASON: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
+    pub static REASON_VISITS: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
+    /// The same masks recomputed with the three unfiltered gates dropped when
+    /// no event in the batch could match any ability under them — i.e. what
+    /// `(-120)`'s filter would leave. `[0]` is "would have become no-grant".
+    pub static FILTERED: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
+    pub static FILTERED_VISITS: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
+
+    /// Reason-mask bits: board `GrantTriggeredAbility` statics (already
+    /// event-kind filtered), CR 611.2 turn-scoped watchers, per-card EOT
+    /// grants, and `equipped_bonus` triggers. Mask `0` is `no_grants`.
+    pub const GRANT_STATIC: u8 = 1;
+    pub const GRANT_TURN: u8 = 2;
+    pub const GRANT_OWN: u8 = 4;
+    pub const GRANT_EQUIP: u8 = 8;
+    /// Bucket labels, indexed by the mask.
+    pub const REASON_NAMES: [&str; 16] = [
+        "none", "static", "turn", "static+turn", "own", "static+own", "turn+own",
+        "static+turn+own", "equip", "static+equip", "turn+equip", "static+turn+equip", "own+equip",
+        "static+own+equip", "turn+own+equip", "all",
+    ];
+
     /// `0` not yet read, `1` off, `2` on. **Not a `OnceLock`**: the gate is
     /// asked once per dispatch and `get_or_init` there is ~20 Ir apiece. One
     /// relaxed byte and a compare is ~2, and the store is idempotent, so the
@@ -339,10 +365,18 @@ pub mod trig_census {
         v
     }
 
-    /// One dispatch: `members` is `Some(count)` on a hit.
+    /// One dispatch: `members` is `Some(count)` on a hit, `reason` is the
+    /// gate mask above (`0` = `no_grants`) and `filtered` the same mask with
+    /// `(-120)`'s event-kind filter applied to the three gates that lack one.
     #[cold]
     #[inline(never)]
-    pub fn tick(no_grants: bool, board: usize, members: Option<u32>) {
+    pub fn tick(reason: u8, filtered: u8, board: usize, members: Option<u32>) {
+        let no_grants = reason == 0;
+        let visits = if no_grants { members.map(u64::from) } else { None }.unwrap_or(board as u64);
+        REASON[reason as usize].fetch_add(1, Relaxed);
+        REASON_VISITS[reason as usize].fetch_add(visits, Relaxed);
+        FILTERED[filtered as usize].fetch_add(1, Relaxed);
+        FILTERED_VISITS[filtered as usize].fetch_add(visits, Relaxed);
         if !no_grants {
             GRANTED.fetch_add(1, Relaxed);
             GRANT_BOARD.fetch_add(board as u64, Relaxed);
@@ -361,6 +395,15 @@ pub mod trig_census {
                 VISITS.fetch_add(board as u64, Relaxed);
             }
         }
+    }
+
+    /// `(dispatches, visits)` per reason bucket, and the same under
+    /// `(-120)`'s filter: `(reason, reason_visits, filtered, filtered_visits)`.
+    pub fn reason_snapshot() -> [[u64; 16]; 4] {
+        fn read(a: &[AtomicU64; 16]) -> [u64; 16] {
+            std::array::from_fn(|i| a[i].load(Relaxed))
+        }
+        [read(&REASON), read(&REASON_VISITS), read(&FILTERED), read(&FILTERED_VISITS)]
     }
 
     /// `(asks, hits, board, members, granted, grant_board, visits)`.
