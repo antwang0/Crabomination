@@ -9076,6 +9076,31 @@ Graveyard::has_anthem, the lane that was already there (calls unchanged):
   fixed   6.4 -> 8.5 Ir    cube 6.2 -> 8.2    sealed 5.2 -> 7.2
 ```
 
+**INDEPENDENTLY BUILT AND MEASURED BY THE CONCURRENT SESSION, HOURS EARLIER,
+AGAINST A BASE 14 / 45 / 42 M Ir HIGHER — AND THE TWO READINGS ARE THE SAME
+CHANGE WEARING DIFFERENT PERCENTAGES.** That build (`0541c28e`, same two
+lanes, same predicate, same `grant_scan` gate, dropped in favour of this one)
+read **`fixed` -0.134 / `cube` -0.085 / `sealed` -0.065 %** — one and a half
+to two and a half times these figures.
+
+```text
+                        this entry (cfdf69f2)   the other build (0541c28e)
+  the graveyard walk removed, absolute Ir
+    fixed                    -950 k                    -755 k
+    cube                   -1,451 k                  -1,346 k
+    sealed                   -993 k                    -982 k
+  the same, as a percentage of the pool
+    fixed                   -0.093 %                  -0.134 %
+```
+
+**The Ir the walk costs is a property of the workload; the percentage is a
+property of whatever else has been taken out from under it.** `ca2bf1a6` and
+the six commits with it moved `grant_scan`'s other walks in between, so the
+same removal is a larger share of a smaller program. This is the Baseline's
+"a ceiling is a percentage of the base it was read at" seen on a *taken*
+change rather than a probe, and it is the fourth time this file has needed
+the sentence. The lanes' own tests came from the other build (`d6a9b3d5`).
+
 **Packing a second question onto a one-question memo costs the first question
 about 2 Ir a call**, and that is the whole delta: a bare `match load()` becomes
 `match (load() >> shift) & 0b11`. At `has_anthem`'s 49,724 / 142,860 / 140,200
