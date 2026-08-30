@@ -45028,7 +45028,11 @@ pub fn agathas_soul_cauldron() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::ExileWithSource {
-                    what: Selector::Target(0),
+                    // "exile target card from a graveyard"
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::InGraveyard,
+                    },
                 },
                 Effect::If {
                     cond: Predicate::EntityMatches {

@@ -66,6 +66,13 @@ fn implicit_player_if_controlled_by_target(
     .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
+/// CR 115.4's narrower cousin: "target player or planeswalker" — the recipient
+/// set of a damage effect that cannot hit a creature (Flaming Gambit).
+static IMPLICIT_PLAYER_OR_PLANESWALKER: std::sync::LazyLock<SelectionRequirement> =
+    std::sync::LazyLock::new(|| {
+        SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)
+    });
+
 /// `Some(&Player)` for a field the effect reads as a **player** whose selector
 /// is a bare numbered target — `Discard { who: Target(0) }` ("target player
 /// discards a card"). The caller supplies the "this field is a player" half by
@@ -1910,6 +1917,12 @@ impl Effect {
                 // Without it `LoseLife { who: Player(Target(0)) }` reports no
                 // filter, the enumerator falls back to `Any`, and Geth's
                 // Verdict offers every permanent alongside the two players.
+                //
+                // "The controller/owner **of** X" is X's filter, not a player
+                // one: Parallectric Feedback damages "target *spell*'s
+                // controller", so slot 0 is the spell.
+                Selector::Player(PlayerRef::ControllerOf(inner))
+                | Selector::Player(PlayerRef::OwnerOf(inner)) => sel_filter(inner),
                 Selector::Player(who) => implicit_player_if_bare_player_ref(who),
                 Selector::EachMatching { filter, .. } => Some(filter),
                 Selector::EachPermanent(f) => Some(f),
@@ -2266,9 +2279,34 @@ impl Effect {
                 implicit_player_if_bare_player_ref(who)
             }
             Effect::RedirectDrawsThisTurn { from } => implicit_player_if_bare_player_ref(from),
+            // "deals X damage to target player or planeswalker" — the slot has
+            // no selector field at all, so the shape is the whole answer.
+            Effect::DamageTargetPlayerMayRedirect { .. } => {
+                Some(&IMPLICIT_PLAYER_OR_PLANESWALKER)
+            }
             // "Target opponent gets an emblem with …" (Ob Nixilis Reignited's
             // ultimate) — the emblem's recipient is the slot.
             Effect::CreateEmblem { who, .. } => implicit_player_if_bare_player_ref(who),
+            // Unit variants whose whole shape is "target player <names a card
+            // and loses it>": the slot is a player by construction, there is
+            // no field to read it off, and without an arm here the enumerator
+            // falls back to `Any` and offers the board.
+            Effect::NameCardTargetDiscardsOneOrYouDraw
+            | Effect::NameCardTargetDiscardsMatching
+            | Effect::NameCardExileMatchingAllZones
+            | Effect::LiarsPendulum
+            | Effect::FertileImagination { .. }
+            | Effect::OpponentRevealsPickToBattlefield { .. } => Some(&IMPLICIT_PLAYER_TARGET),
+            Effect::Search { who, .. } | Effect::RevealTopThenShuffle { who, .. } => {
+                implicit_player_if_bare_player_ref(who)
+            }
+            Effect::SacrificeAndRemember { who, .. } => implicit_player_if_bare_player_ref(who),
+            // "Exile X target cards from a single graveyard" (Rats' Feast) —
+            // the slot is the graveyard's *owner*.
+            Effect::MoveChosen { from, .. } => match from {
+                Selector::CardsInZone { who, .. } => implicit_player_if_bare_player_ref(who),
+                _ => sel_filter(from),
+            },
             Effect::DiscardHandDrawThatMany { who } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
@@ -3586,6 +3624,11 @@ impl Effect {
                 // of that player's library" (`ExileTopOfLibrary { who:
                 // Player(Target(0)) }`).
                 Selector::Player(PlayerRef::Target(s2)) if *s2 == slot => Some(&PLAYER),
+                // "the controller/owner **of** X" declares whatever X does —
+                // Parallectric Feedback's slot 0 is the *spell*, reached
+                // through `Player(ControllerOf(TargetFiltered))`.
+                Selector::Player(PlayerRef::ControllerOf(i))
+                | Selector::Player(PlayerRef::OwnerOf(i)) => sel_find(i, slot),
                 Selector::AttachedTo(i)
                 | Selector::AttachedToMe(i)
                 | Selector::RadianceGroup { subject: i }

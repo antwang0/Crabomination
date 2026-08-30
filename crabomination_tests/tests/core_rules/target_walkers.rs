@@ -208,6 +208,112 @@ fn a_target_player_effect_offers_no_permanent() {
     }
 }
 
+/// A spell or activated ability that needs a target says what it targets.
+///
+/// A slot with no filter enumerates against `SelectionRequirement::Any` and is
+/// not re-checked at CR 608.2b either, so the printed noun is enforced
+/// *nowhere*: Terminate destroyed any permanent, Banefire offered the
+/// opponent's Forest, and Disrupting Scepter's "target player discards" listed
+/// the whole board. Four instalments closed the class — an implicit filter for
+/// the field (`IMPLICIT_CREATURE_TARGET`, `IMPLICIT_ANY_TARGET`,
+/// `implicit_player_if_bare_player_field`) where the field's own type says
+/// what the slot is, and a per-card filter for the nouns narrower than that.
+/// This keeps it closed.
+///
+/// **Triggered abilities are out of scope, structurally.** "Whenever this
+/// creature deals combat damage to a creature, tap that creature" spells the
+/// subject as `Selector::Target(0)`, and `combat.rs` binds the damaged
+/// creature at push time — the slot is stamped, never chosen, so the absent
+/// filter costs nothing. ~25 bodies are that shape.
+///
+/// **The counterspell families are out of scope too**: their target is a
+/// spell on the stack, which `Target` cannot express, so the enumerator's
+/// list is not what aims them.
+#[test]
+fn every_targeting_spell_or_ability_says_what_it_targets() {
+    /// Effects whose slot is a spell or ability on the stack.
+    const SPELL_TARGETING: [&str; 16] = [
+        "CounterSpell",
+        "CounterSpellIfNameExiledWithSource",
+        "CounterSpellExileSameNamed",
+        "CounterSpellDrawIfUnderpaid",
+        "CounterSpellToZone",
+        "CounterSpellExileNameLock",
+        "CounterSpellDiscardSplicedNames",
+        "CounterAbility",
+        "CounterSpellOrAbility",
+        "CounterUnlessPaid",
+        "CounterUnless",
+        "MakeSpellUncounterable",
+        "ChangeSpellTarget",
+        "CopySpell",
+        "CounterSpellExileMayPlayFree",
+        "ChooseNewTargetsForSpell",
+    ];
+    /// The slot is named only from inside a `Value` or a `Predicate`, and
+    /// both target walkers reach `Selector`s. All three are "target player":
+    /// Officious Interrogation counts what that player controls, Jeska's Will
+    /// reads their hand size, Tithe compares their land count. Reaching them
+    /// needs a `Value`/`Predicate` walker the engine does not have — the one
+    /// open shape this invariant knows about.
+    const VALUE_ONLY: [&str; 3] = ["Officious Interrogation", "Jeska's Will", "Tithe"];
+
+    fn holds_spell_target(v: &Value) -> bool {
+        match v {
+            Value::Object(map) => map
+                .iter()
+                .any(|(k, i)| SPELL_TARGETING.contains(&k.as_str()) || holds_spell_target(i)),
+            Value::Array(items) => items.iter().any(holds_spell_target),
+            _ => false,
+        }
+    }
+    let mut bad: Vec<String> = Vec::new();
+    let mut covered = 0usize;
+    for factory in catalog::all_known_factories() {
+        let def: CardDefinition = factory();
+        let mut bodies: Vec<(&'static str, &crabomination::effect::Effect)> =
+            vec![("spell", &def.effect)];
+        for a in &def.activated_abilities {
+            bodies.push(("activated", &a.effect));
+        }
+        for l in &def.loyalty_abilities {
+            bodies.push(("loyalty", &l.effect));
+        }
+        for (kind, body) in bodies {
+            if !body.requires_target() {
+                continue;
+            }
+            covered += 1;
+            if body.primary_target_filter().is_some() || VALUE_ONLY.contains(&def.name) {
+                continue;
+            }
+            let json = serde_json::to_value(body).expect("Effect serializes");
+            if holds_spell_target(&json) {
+                continue;
+            }
+            let root = match &json {
+                Value::Object(m) => m.keys().next().cloned().unwrap_or_default(),
+                _ => "?".to_string(),
+            };
+            bad.push(format!("Effect::{root} — {} ({kind})", def.name));
+        }
+    }
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} spell/activated bodies need a target and give slot 0 no filter, so the \
+         enumerator offers `Any` — every permanent, and a player too:\n  {}",
+        bad.len(),
+        bad.join("\n  ")
+    );
+    assert!(
+        covered >= 3_000,
+        "the targeting invariant is looking at only {covered} bodies — it has gone \
+         vacuous. It was 3,932 when written."
+    );
+}
+
 /// The picker and the CR 608.2b checker aim at one slot, so they must not
 /// disagree about it.
 ///

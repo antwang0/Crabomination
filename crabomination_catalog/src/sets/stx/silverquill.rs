@@ -13387,7 +13387,10 @@ pub fn silverquill_vindict_b165() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::Destroy {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: crate::card::SelectionRequirement::Creature,
+                },
             },
             Effect::GainLife {
                 who: Selector::You,

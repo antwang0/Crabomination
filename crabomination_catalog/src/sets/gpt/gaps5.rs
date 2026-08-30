@@ -116,7 +116,14 @@ pub fn parallectric_feedback() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::DealDamage {
-            to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+            // "target spell's controller" — slot 0 is the spell, and without
+            // the filter it enumerates against `Any` over the battlefield.
+            to: Selector::Player(PlayerRef::ControllerOf(Box::new(
+                Selector::TargetFiltered {
+                    slot: 0,
+                    filter: crate::card::SelectionRequirement::IsSpellOnStack,
+                },
+            ))),
             amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
         },
         ..Default::default()

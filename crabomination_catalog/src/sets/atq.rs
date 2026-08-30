@@ -213,7 +213,12 @@ pub fn ashnods_transmogrant() -> CardDefinition {
             sac_cost: true,
             effect: Effect::Seq(vec![
                 Effect::AddCounter {
-                    what: Selector::Target(0),
+                    // "target **nonartifact** creature" — it becomes an
+                    // artifact below, so the filter is load-bearing.
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Creature.and(R::Artifact.negate()),
+                    },
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
                 },
@@ -802,7 +807,7 @@ pub fn dwarven_weaponsmith() -> CardDefinition {
             sac_other_filter: Some((R::Artifact, 1)),
             condition: Some(upkeep_only()),
             effect: Effect::AddCounter {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },

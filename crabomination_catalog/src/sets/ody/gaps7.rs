@@ -445,7 +445,9 @@ pub fn divert() -> CardDefinition {
         Effect::UnlessPlayerPays {
             who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
             cost: crate::card::WardCost::Mana(cost(&[generic(2)])),
-            then: Box::new(Effect::ChooseNewTargetsForSpell { what: Selector::Target(0) }),
+            then: Box::new(Effect::ChooseNewTargetsForSpell {
+                what: Selector::TargetFiltered { slot: 0, filter: R::IsSpellOnStack },
+            }),
             if_paid: None,
         },
     )
