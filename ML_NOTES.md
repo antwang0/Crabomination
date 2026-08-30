@@ -3313,3 +3313,55 @@ ablation bit with SHARD_VERSION 9. Then a `--decks cube` leg and a
 training-pool flag, at which point the r53 `targeteval` re-run and the
 zero-incidence flags (walkerchip, buff2for1, convlands, impulse) all
 become live again.
+
+## Layer-aware encoding (2026-08-30) — modern precondition 2 of 3
+
+The documented #1 encoder gap for a modern pool, closed. Battlefield
+objects now encode layer-resolved truth: `encode_state` opens one
+`with_frozen_layers` scope (nested scopes reuse it — the castability
+block already opened one) and every battlefield read goes through
+`computed_permanent_on`, memoized per permanent inside the scope. What
+changed, site by site:
+
+- **Feats 4/5 (effective P/T)**: computed power / toughness − damage.
+  An anthem's +1/+1 finally reaches the net — 258 `PumpPT` statics in
+  the catalog against the 5 the SOS deferral was priced on.
+- **Feats 1/2/3 (type flags)**: computed card types — an animated
+  manland reads as the creature it currently is.
+- **Every keyword-derived feature (12..=19, 40..=44)**: rebuilt from
+  `ComputedPermanent.keywords()`, the final word after static grants,
+  EOT grants, CR 122.1b counters (all folded by the gather), removals
+  and lose-all. Static grants never touched the instance fields the old
+  walk read; granted ward now reaches feat 41. One deliberate contract
+  change rode along: a keyword *counter* now reaches the class flags
+  too (a hexproof-countered creature IS hard to target) — the old
+  exclusion was `any_keyword`'s resolution limit, not a ruling; the
+  test was updated with the reasoning.
+- **The other contaminated sites**: `eff_pt` (combat feats 37/38 and
+  the blocker sums), the lands/creatures/power totals (globals 14..=23),
+  and the gl 39/40 through-power loop (computed power AND computed
+  trample — a sword-granted trample was invisible to the raw walk).
+
+Off-battlefield objects (hand, graveyards, library, stack) keep the
+printed+instance walk — no layers apply off the battlefield.
+
+**The cost, re-measured as prescribed** (not assumed from the SoS-era
+~10 % gather profile): release `bot_ladder`, net-vs-net pilot (encodes
+every eval), 1 600 games per cell, same seed —
+fixed 3.0 s → 2.9 s, cube 3.4 s → 3.3 s (pre-layer → layer-aware).
+**Within run-to-run noise on both pools, cube included** — the frozen
+scope pays one gather per encode and one memoized layer pass per
+permanent, and the branch's perf passes had already crushed the gather.
+Single runs each side, so this is "no measurable cost at 3-second
+resolution", not a speedup claim.
+
+Distribution note, same as the combat fixes: nets trained on unbuffed
+rows now see buffed ones wherever statics exist. In SOS sealed that is
+five cards' worth of drift (the original deferral's own count), so the
+champion is effectively unaffected there; on a cube pool the drift is
+the whole point and only newly trained nets will have seen it.
+
+Remaining precondition (3): the v8 feature block — artifact/enchantment
+type bits, Lore/Charge/Shield/Finality counters, land-drop-remaining
+global — under one ablation bit with SHARD_VERSION 9. Then the pool
+flags, and the r53 re-run.

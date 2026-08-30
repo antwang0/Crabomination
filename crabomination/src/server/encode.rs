@@ -218,6 +218,16 @@ fn ablated(bit: u16) -> bool {
 /// Encode the position from `seat`'s perspective. Two-player only, like
 /// the rest of the bot stack.
 pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
+    // One frozen-layer scope for the whole encode (modern precondition 2):
+    // the battlefield reads below take layer-resolved truth per permanent
+    // (`computed_permanent_on`, memoized per card inside the scope), and
+    // the castability block already opened a scope of its own — nested
+    // scopes reuse the outer gather, so this is one continuous-effect
+    // gather per encoded state, not one per read.
+    g.with_frozen_layers(|g| encode_state_inner(g, seat, vocab))
+}
+
+fn encode_state_inner(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     let opp = 1 - seat;
     let mut s = EncodedState::default();
 
@@ -258,10 +268,10 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // actually trade on.
     let no_combat = ablated(ABLATE_COMBAT);
     let eff_pt = |id: crate::card::CardId| {
-        g.battlefield
-            .iter()
-            .find(|c| c.id == id)
-            .map(|c| (c.power().max(0), (c.toughness() - c.damage as i32).max(0)))
+        g.battlefield.iter().find(|c| c.id == id).and_then(|c| {
+            let cp = g.computed_permanent_on(c)?;
+            Some((cp.power.max(0), (cp.toughness - c.damage as i32).max(0)))
+        })
     };
     // Attacker → summed P/T of its blockers (`block_map` is blocker →
     // attackers, so this is the map inverted).
@@ -406,15 +416,29 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     let (mut lands, mut untapped, mut creatures, mut power) = ([0i32; 2], [0i32; 2], [0i32; 2], [0i32; 2]);
     for c in g.battlefield.iter() {
         let side = if c.controller == seat { 0 } else { 1 };
-        if c.definition.is_land() {
+        // Computed types and power, so an animated manland counts as the
+        // creature it currently is and an anthem's pump reaches the power
+        // totals — the same memoized layer pass the group loop paid.
+        let (is_land, is_creature, pw) = match g.computed_permanent_on(c) {
+            Some(cp) => {
+                use crate::card::CardType;
+                (
+                    cp.card_types().contains(&CardType::Land),
+                    cp.card_types().contains(&CardType::Creature),
+                    cp.power.max(0),
+                )
+            }
+            None => (c.definition.is_land(), c.definition.is_creature(), c.power().max(0)),
+        };
+        if is_land {
             lands[side] += 1;
             if !c.tapped {
                 untapped[side] += 1;
             }
         }
-        if c.definition.is_creature() {
+        if is_creature {
             creatures[side] += 1;
-            power[side] += c.power().max(0);
+            power[side] += pw;
         }
     }
 
@@ -500,10 +524,19 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
                 let Some(c) = g.battlefield.iter().find(|c| c.id == a.attacker) else {
                     continue;
                 };
-                let pw = c.power().max(0);
+                // Computed power and trample: a granted trample (sword,
+                // anthem rider) is exactly the case the raw keyword walk
+                // missed.
+                let (pw, trample) = match g.computed_permanent_on(c) {
+                    Some(cp) => (
+                        cp.power.max(0),
+                        cp.keywords().contains(&crate::card::Keyword::Trample),
+                    ),
+                    None => (c.power().max(0), c.has_keyword(&crate::card::Keyword::Trample)),
+                };
                 let through = if !blocked {
                     pw
-                } else if c.has_keyword(&crate::card::Keyword::Trample) {
+                } else if trample {
                     let (_, t) = blocker_sums.get(&a.attacker).copied().unwrap_or((0, 0));
                     (pw - t).max(0)
                 } else {
@@ -1073,12 +1106,76 @@ fn encode_battlefield_object_into(
 ) {
     encode_card_object_into(c, vocab, o);
     let f = &mut o.feats;
-    f[4] = c.power().max(0) as f32 / 8.0;
-    f[5] = (c.toughness() - c.damage as i32).max(0) as f32 / 8.0;
     f[6] = if c.tapped { 1.0 } else { 0.0 };
     f[7] = if c.summoning_sick { 1.0 } else { 0.0 };
     f[10] = if g.attacking.iter().any(|a| a.attacker == c.id) { 1.0 } else { 0.0 };
     f[11] = if c.is_token { 1.0 } else { 0.0 };
+    // Layer-resolved truth (modern precondition 2). The base pass above
+    // wrote the printed/instance view; a battlefield object overwrites it
+    // with the computed one, so anthems and equipment pumps reach P/T,
+    // type changes reach the type flags, and static keyword grants —
+    // which never touch the instance fields the base walk reads — reach
+    // every keyword-derived feature. `ComputedPermanent.keywords()` is
+    // the final word (printed + EOT + CR 122.1b counters, all folded by
+    // the gather, minus removals and lose-all), so overwriting rather
+    // than OR-ing is what makes removals stick. One memoized layer pass
+    // per permanent inside `encode_state`'s frozen scope; the raw
+    // fallback is unreachable for a real battlefield walk and exists so
+    // a malformed synthetic state degrades instead of panicking.
+    match g.computed_permanent_on(c) {
+        Some(cp) => {
+            use crate::card::CardType;
+            f[1] = if cp.card_types().contains(&CardType::Creature) { 1.0 } else { 0.0 };
+            f[2] = if cp.card_types().contains(&CardType::Land) { 1.0 } else { 0.0 };
+            f[3] = if cp.card_types().contains(&CardType::Planeswalker) { 1.0 } else { 0.0 };
+            f[4] = cp.power.max(0) as f32 / 8.0;
+            f[5] = (cp.toughness - c.damage as i32).max(0) as f32 / 8.0;
+            let mut kb = 0u16;
+            let mut warded = false;
+            for k in cp.keywords() {
+                kb |= okw_exact_bit(k);
+                if is_hard_to_target(k) {
+                    kb |= okw::HARD_TO_TARGET;
+                }
+                if is_hard_to_block(k) {
+                    kb |= okw::HARD_TO_BLOCK;
+                }
+                if matches!(k, crate::card::Keyword::Ward(..)) {
+                    warded = true;
+                }
+            }
+            for (i, bit) in [
+                okw::FLYING,
+                okw::REACH,
+                okw::MENACE,
+                okw::DEATHTOUCH,
+                okw::LIFELINK,
+                okw::TRAMPLE,
+                okw::STRIKE,
+                okw::VIGILANCE,
+            ]
+            .iter()
+            .enumerate()
+            {
+                f[12 + i] = if kb & bit != 0 { 1.0 } else { 0.0 };
+            }
+            if !ablated(ABLATE_KW) {
+                for (i, bit) in
+                    [okw::HASTE, okw::INDESTRUCTIBLE, okw::DEFENDER].iter().enumerate()
+                {
+                    f[40 + 2 * i] = if kb & bit != 0 { 1.0 } else { 0.0 };
+                }
+                f[41] = if warded || kb & okw::HARD_TO_TARGET != 0 { 1.0 } else { 0.0 };
+                f[43] = if kb & okw::HARD_TO_BLOCK != 0 { 1.0 } else { 0.0 };
+                // The Indestructible *counter* lives in `counters`, not the
+                // layer pass; the walk below re-ORs it into f[42].
+            }
+        }
+        None => {
+            f[4] = c.power().max(0) as f32 / 8.0;
+            f[5] = (c.toughness() - c.damage as i32).max(0) as f32 / 8.0;
+        }
+    }
     // ONE walk of the counter bag for all eight counter slots. `CounterBag`
     // is a `Vec<(CounterType, u32)>` and `counter_count` is a linear scan of
     // it, so the seven calls this replaces (loyalty, prepared, and the five
@@ -1908,13 +2005,19 @@ mod tests {
         assert_eq!(o.feats[42], 1.0, "an Indestructible counter sets the flag");
     }
 
-    /// CR 122.1b — a keyword *counter* grants the exact variant, and the
-    /// encoder's exact-variant flags read it. The class flags (41 / 43)
-    /// deliberately do not: `any_keyword` walks printed and granted only.
-    /// This is the leg `object_keyword_bits` handles by iterating the counter
-    /// list rather than probing it once per keyword, so it gets its own test.
+    /// CR 122.1b — a keyword *counter* grants the ability, and on the
+    /// battlefield every keyword-derived feature reads it: the computed
+    /// list (layer-aware encoding, modern precondition 2) folds counters
+    /// into the layer pass, so a Hexproof counter reaches the
+    /// hard-to-target class flag that `any_keyword`'s printed+granted
+    /// walk could never see. That old exclusion was a resolution limit
+    /// ("a counter granting a parametrized keyword class is beyond this
+    /// resolution"), not a ruling — the class flags exist to say what the
+    /// permanent IS, and a hexproof-countered creature is hard to target.
+    /// Off-battlefield objects keep the old walk (no layers off the
+    /// battlefield).
     #[test]
-    fn keyword_counters_reach_the_exact_flags_and_not_the_class_flags() {
+    fn keyword_counters_reach_the_exact_flags_and_the_class_flags() {
         use crate::card::Keyword;
         let _guard = encode_guard();
         let vocab = Vocab::sos_sealed();
@@ -1928,13 +2031,74 @@ mod tests {
         let s = encode_state(&g, 0, &vocab);
         let o = &s.group(G_BF_SELF)[0];
         assert_eq!(o.feats[12], 1.0, "a Flying counter sets the exact flag");
-        assert_eq!(o.feats[41], 0.0, "a Hexproof counter does not set the class flag");
+        assert_eq!(o.feats[41], 1.0, "a Hexproof counter sets the class flag (CR 122.1b)");
 
-        // A removed keyword beats a counter, same as `has_keyword`.
+        // A removed keyword beats a counter, same as the layer order.
         g.battlefield[0].removed_keywords_eot.push(Keyword::Flying);
         let s = encode_state(&g, 0, &vocab);
         let o = &s.group(G_BF_SELF)[0];
         assert_eq!(o.feats[12], 0.0, "removal beats the counter");
+    }
+
+    /// The static-anthem hole, closed (modern precondition 2): a
+    /// continuous +1/+1 resolved through the layer system reaches
+    /// effective P/T and the power totals. This was the documented #1
+    /// encoder gap for a modern pool — 258 `PumpPT` statics in the
+    /// catalog against the 5 the SOS deferral was priced on — and until
+    /// this change the creature encoded at its unbuffed stats while the
+    /// engine fought with the buffed ones.
+    #[test]
+    fn a_static_anthem_reaches_the_encoding() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        let mut anthem =
+            CardInstance::new(crate::card::CardId(1), catalog::glorious_anthem(), 0);
+        anthem.controller = 0;
+        g.battlefield.push(anthem);
+        let mut mine = CardInstance::new(crate::card::CardId(2), catalog::grizzly_bears(), 0);
+        mine.controller = 0;
+        g.battlefield.push(mine);
+        let mut theirs = CardInstance::new(crate::card::CardId(3), catalog::grizzly_bears(), 1);
+        theirs.controller = 1;
+        g.battlefield.push(theirs);
+
+        let s = encode_state(&g, 0, &vocab);
+        let buffed = s
+            .group(G_BF_SELF)
+            .iter()
+            .find(|o| o.feats[1] == 1.0)
+            .expect("the creature encoded");
+        assert!((buffed.feats[4] - 3.0 / 8.0).abs() < 1e-6, "anthem power reaches feat 4");
+        assert!((buffed.feats[5] - 3.0 / 8.0).abs() < 1e-6, "anthem toughness reaches feat 5");
+        let unbuffed = &s.group(G_BF_OPP)[0];
+        assert!((unbuffed.feats[4] - 2.0 / 8.0).abs() < 1e-6, "their bear is not ours to buff");
+        assert!((s.global[22] - 3.0 / 12.0).abs() < 1e-6, "the power total sees the anthem");
+        assert!((s.global[23] - 2.0 / 12.0).abs() < 1e-6);
+    }
+
+    /// A static keyword grant — which never touches the instance fields
+    /// the base walk reads — reaches the keyword flags. Two Knight
+    /// Exemplars buff each other (+1/+1 and indestructible to OTHER
+    /// Knights), so each encodes as a 3/3 with the indestructible class
+    /// flag on, off nothing but the layer pass.
+    #[test]
+    fn a_static_keyword_grant_reaches_the_flags() {
+        let _guard = encode_guard();
+        let vocab = Vocab::sos_sealed();
+        let mut g = two_player_game();
+        for id in [1, 2] {
+            let mut k =
+                CardInstance::new(crate::card::CardId(id), catalog::knight_exemplar(), 0);
+            k.controller = 0;
+            g.battlefield.push(k);
+        }
+        let s = encode_state(&g, 0, &vocab);
+        for o in s.group(G_BF_SELF) {
+            assert!((o.feats[4] - 3.0 / 8.0).abs() < 1e-6, "the other's +1/+1 lands");
+            assert_eq!(o.feats[42], 1.0, "granted indestructible reaches the class flag");
+            assert_eq!(o.feats[18], 1.0, "printed first strike still flags");
+        }
     }
 
     /// The round-12 relation block: attachment edges split by controller,
