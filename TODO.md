@@ -32,6 +32,11 @@ sixty-seventh pass, so don't re-take that.
    7/7, `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls, determinism +
    thread_determinism ok, `games_per_s` 305-315, `peak_rss` 24.5). Grid not re-run —
    nothing changed behaviour. Window `2b38c673 ->` here: **-0.401 / -0.760 / -0.774 %**.
+   **The grid has an ACTOR leg and it is the only gate that reaches the encoder** —
+   `bot_ladder` encodes no state on any pool, so the 30 cells cannot trip an encoder
+   assertion. Run it for any `encode.rs` / `EncodedState` change: same `RUSTFLAGS`
+   build of `-p crabomination_ml --bin selfplay_train`, then `--actors 3 --steps 2
+   --games 6000 --seed 41` (~40 s, 577 k rows). Clean at the encoder half's close.
 3. **The rule this pass adds (`(-116)`, cube -0.465 %, no new state):** a chain of pure
    `continue` guards needs all of them, so the order is free — **rank by cost x rejection
    rate, not by which looks cheapest.** Look for the shape in other multi-guard loops.
