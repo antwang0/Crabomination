@@ -134,19 +134,29 @@ sixty-seventh pass, so don't re-take that.
    STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou` / `OwnedByYou` /
    `ExiledWithSource`, which is what makes the test an invariant instead of a list of 79
    names that goes stale on the next card.
-   **Open, and it is the same census one question further on**: slots reached by a bare
-   `Selector::Target(n)` that no `TargetFiltered` ever filters — 375 bodies, 263 after
-   the CR 115.4 fix (`d0799d5c`, which is the damage sub-class and the one with a single
-   right answer). Of the residue, **59 are `accepts_player_target() == false` and almost
-   all counterspells** — `CounterSpell { what: Target(0) }` targets a *spell*, which the
-   `Target` enum cannot express, so the enumerator's list is not what aims them; treat
-   them as structural false positives, not findings. **The open sub-class is the 204
-   with `player = true`**: an effect whose only target is a player still enumerates every
-   battlefield permanent, because the fallback is `Any`. `IMPLICIT_PLAYER_TARGET` already
-   covers a bare `PlayerRef::Target(n)`, so the 204 are the bodies that reach a player
-   some other way — find that shape and the class closes the way the damage one did.
-   The census is not in the tree; rebuild it from `every_reanimating_move_says_which_
-   zone_its_target_is_in`, which is the same walk with a different predicate.
+   **The unfiltered-slot census is CLOSED on the engine side and open on the catalog
+   side.** Slots reached by a bare `Selector::Target(n)` that no `TargetFiltered` filters:
+   375 bodies, and the fallback both walkers take for them is `SelectionRequirement::Any`.
+   Two instalments shipped — `d0799d5c` (CR 115.4: `Any` matched a **land**, so Banefire
+   offered the opponent's Forest) and `d2ce2cf8` (a bare `PlayerRef::Target(n)` in a
+   player field, so Disrupting Scepter's "target player discards" offered the whole
+   board). Grouped by the nearest enclosing enum key rather than by card, **157 walker
+   paths -> 93**, which is the reading to take: 204 card rows were ~40 arms.
+   **What is left is NOT an engine gap.** The residue is `Tap` / `SkipNextUntap` /
+   `Destroy` / `GrantKeyword` with a bare target, and `accepts_player_target` already
+   answers `false` for that whole group — no player is ever offered there, so the
+   over-match is within permanents only: a card that printed "destroy target creature"
+   and wrote no filter. That is a per-card lane and it is worth what a per-card lane is
+   worth. The other residue is the counterspells, which target a spell the `Target` enum
+   cannot express and which the enumerator never aims. **Rebuild the census from
+   `every_reanimating_move_says_which_zone_its_target_is_in`** — same walk, different
+   predicate — and group by the nearest uppercase JSON key, or you will triage 375 cards
+   instead of 40 match arms.
+   **The device this lane produced three times: an implicit filter for a field whose
+   type already says what it is.** `IMPLICIT_CREATURE_TARGET` (pump, pre-existing),
+   `IMPLICIT_ANY_TARGET` (damage, CR 115.4) and `implicit_player_if_bare_player_field`
+   (player fields) are the same one line. When a walker answers `None` for a slot, ask
+   what the *field* is before adding a per-card filter.
 
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
