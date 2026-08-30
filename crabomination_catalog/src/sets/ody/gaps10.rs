@@ -299,7 +299,12 @@ pub fn holistic_wisdom() -> CardDefinition {
                     filter: R::SharesCardTypeWithExiledBySource,
                 },
                 then: Box::new(Effect::Move {
-                    what: Selector::Target(0),
+                    // "target card in your graveyard" — the zone predicate is
+                    // load-bearing, see `target_walkers::offboard_gate`.
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Any.from_your_graveyard(),
+                    },
                     to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 }),
                 else_: Box::new(Effect::Noop),

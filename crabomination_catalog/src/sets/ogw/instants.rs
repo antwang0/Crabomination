@@ -1,6 +1,6 @@
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
 use crate::effect::shortcut::{
-    awaken, deal, pump_target, return_target_to_hand, surge, target, target_filtered,
+    awaken, deal, pump_target, return_target_creature_to_hand, surge, target, target_filtered,
 };
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{ManaCost, b, colorless, cost, g, generic, r, u};
@@ -268,7 +268,7 @@ pub fn sweep_away() -> CardDefinition {
         name: "Sweep Away",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
-        effect: return_target_to_hand(),
+        effect: return_target_creature_to_hand(),
         ..Default::default()
     }
 }

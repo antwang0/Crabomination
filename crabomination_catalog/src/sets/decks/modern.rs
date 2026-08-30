@@ -30148,7 +30148,7 @@ pub fn crimson_wisps() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::GrantKeyword {
-                what: Selector::Target(0),
+                what: target_filtered(SelectionRequirement::Creature),
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
             },
@@ -65088,7 +65088,7 @@ pub fn the_wandering_emperor() -> CardDefinition {
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::AddCounter {
-                        what: Selector::Target(0),
+                        what: target_filtered(SelectionRequirement::Creature),
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::Const(1),
                     },

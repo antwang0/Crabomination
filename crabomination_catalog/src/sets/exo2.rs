@@ -1301,8 +1301,19 @@ pub fn mogg_assassin() -> CardDefinition {
             tap_cost: true,
             effect: Effect::FlipCoin {
                 count: Value::ONE,
-                on_heads: Box::new(Effect::Destroy { what: Selector::Target(0) }),
-                on_tails: Box::new(Effect::Destroy { what: Selector::Target(1) }),
+                on_heads: Box::new(Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: crate::card::SelectionRequirement::Creature
+                            .and(crate::card::SelectionRequirement::ControlledByOpponent),
+                    },
+                }),
+                on_tails: Box::new(Effect::Destroy {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: crate::card::SelectionRequirement::Creature,
+                    },
+                }),
             },
             ..Default::default()
         }],

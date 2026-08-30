@@ -2799,7 +2799,10 @@ pub fn nissa_worldwaker() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: animate(Selector::Target(0)),
+                effect: animate(Selector::TargetFiltered {
+                    slot: 0,
+                    filter: R::Land.and(R::ControlledByYou),
+                }),
                 ..Default::default()
             },
             LoyaltyAbility {

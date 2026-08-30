@@ -165,7 +165,7 @@ pub fn dispatch() -> CardDefinition {
                 who: PlayerRef::You,
             },
             then: Box::new(Effect::Exile {
-                what: Selector::Target(0),
+                what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
             }),
             else_: Box::new(Effect::Tap {
                 what: Selector::Target(0),

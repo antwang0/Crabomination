@@ -128,7 +128,7 @@ pub fn greenbelt_guardian() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[g()]),
                 effect: Effect::GrantKeyword {
-                    what: target(),
+                    what: target_filtered(SelectionRequirement::Creature),
                     keyword: Keyword::Trample,
                     duration: Duration::EndOfTurn,
                 },
@@ -436,7 +436,7 @@ pub fn drix_fatemaker() -> CardDefinition {
         power: 3,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::AddCounter {
-            what: target(),
+            what: target_filtered(SelectionRequirement::Creature),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],

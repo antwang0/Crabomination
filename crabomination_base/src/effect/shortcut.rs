@@ -72,8 +72,22 @@ pub fn destroy_target_no_regen() -> Effect {
     Effect::DestroyNoRegen { what: target() }
 }
 pub fn exile_target() -> Effect { Effect::Exile { what: target() } }
+/// "Destroy target **creature**. It can't be regenerated." The unfiltered
+/// sibling above leaves slot 0 open, and an unfiltered slot enumerates every
+/// permanent — Terminate destroyed anything. See TODO's unfiltered-slot
+/// census.
+pub fn destroy_target_creature_no_regen() -> Effect {
+    Effect::DestroyNoRegen { what: target_filtered(SelectionRequirement::Creature) }
+}
 pub fn return_target_to_hand() -> Effect {
     Effect::Move { what: target(), to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(target()))) }
+}
+/// "Return target **creature** to its owner's hand" — the filtered sibling.
+pub fn return_target_creature_to_hand() -> Effect {
+    Effect::Move {
+        what: target_filtered(SelectionRequirement::Creature),
+        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(target()))),
+    }
 }
 pub fn pump_target(power: i32, toughness: i32) -> Effect {
     Effect::PumpPT {

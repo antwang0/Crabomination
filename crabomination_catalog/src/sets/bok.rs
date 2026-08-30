@@ -1357,9 +1357,12 @@ pub fn stream_of_consciousness() -> CardDefinition {
 /// Toils of Night and Day — {2}{U} Arcane instant. Tap or untap two permanents.
 pub fn toils_of_night_and_day() -> CardDefinition {
     let flip = |slot: u8| {
+        // "target permanent" — without the filter the slot enumerates against
+        // `Any`, which also matches a player.
+        let what = || Selector::TargetFiltered { slot, filter: R::Permanent };
         Effect::ChooseMode(vec![
-            Effect::Tap { what: Selector::Target(slot) },
-            Effect::Untap { what: Selector::Target(slot), up_to: None },
+            Effect::Tap { what: what() },
+            Effect::Untap { what: what(), up_to: None },
         ])
     };
     arcane_instant(

@@ -339,7 +339,11 @@ pub fn blatant_thievery() -> CardDefinition {
     sorcery(
         "Blatant Thievery",
         cost(&[generic(4), u(), u(), u()]),
-        Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::Permanent },
+        Effect::GainControl {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Permanent },
+            to: None,
+            duration: Duration::Permanent,
+        },
     )
 }
 

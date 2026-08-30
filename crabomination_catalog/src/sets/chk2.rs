@@ -1569,7 +1569,7 @@ pub fn feast_of_worms() -> CardDefinition {
                 },
                 then: Box::new(Effect::Seq(vec![
                     Effect::Destroy {
-                        what: Selector::Target(0),
+                        what: Selector::TargetFiltered { slot: 0, filter: R::Land },
                     },
                     Effect::Sacrifice {
                         who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(

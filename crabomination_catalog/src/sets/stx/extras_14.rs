@@ -588,7 +588,7 @@ pub fn essence_infusion() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
-                what: target(),
+                what: target_filtered(SelectionRequirement::Creature),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
@@ -612,7 +612,7 @@ pub fn professors_warning() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::AddCounter {
-                what: target(),
+                what: target_filtered(SelectionRequirement::Creature),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
@@ -743,7 +743,7 @@ pub fn infuse_with_vitality() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::GrantKeyword {
-                what: target(),
+                what: target_filtered(SelectionRequirement::Creature),
                 keyword: Keyword::Deathtouch,
                 duration: Duration::EndOfTurn,
             },

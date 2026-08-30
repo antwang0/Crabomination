@@ -184,7 +184,12 @@ pub fn carrionette() -> CardDefinition {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 cost: crate::card::WardCost::Mana(cost(&[generic(2)])),
                 then: Box::new(Effect::Seq(vec![
-                    Effect::Exile { what: Selector::Target(0) },
+                    Effect::Exile {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: crate::card::SelectionRequirement::Creature,
+                        },
+                    },
                     Effect::Exile { what: Selector::This },
                 ])),
                 if_paid: None,
@@ -878,8 +883,14 @@ pub fn phyrexian_splicer() -> CardDefinition {
                     Keyword::Trample,
                     Keyword::Shadow,
                 ],
-                from: Selector::Target(0),
-                to: Selector::Target(1),
+                from: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: crate::card::SelectionRequirement::Creature,
+                },
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: crate::card::SelectionRequirement::Creature,
+                },
             },
             ..Default::default()
         }],

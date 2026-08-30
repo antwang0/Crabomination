@@ -199,8 +199,16 @@ pub fn crooked_scales() -> CardDefinition {
             tap_cost: true,
             mana_cost: cost(&[generic(4)]),
             effect: Effect::CoinFlipDestroyLoop {
-                win: Selector::Target(0),
-                lose: Selector::Target(1),
+                win: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: crate::card::SelectionRequirement::Creature
+                        .and(crate::card::SelectionRequirement::ControlledByOpponent),
+                },
+                lose: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: crate::card::SelectionRequirement::Creature
+                        .and(crate::card::SelectionRequirement::ControlledByYou),
+                },
                 repeat_cost: cost(&[generic(3)]),
             },
             ..Default::default()

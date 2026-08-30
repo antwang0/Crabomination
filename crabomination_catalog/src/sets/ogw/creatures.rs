@@ -331,11 +331,11 @@ pub fn vile_aggregate() -> CardDefinition {
 /// Murk Strider — {3}{U} 3/2 Eldrazi Processor. Devoid. ETB: process one → if
 /// you do, return target creature to its owner's hand.
 pub fn murk_strider() -> CardDefinition {
-    use crate::effect::shortcut::{etb, return_target_to_hand};
+    use crate::effect::shortcut::{etb, return_target_creature_to_hand};
     CardDefinition {
         triggered_abilities: vec![etb(Effect::Process {
             count: 1,
-            then: Box::new(return_target_to_hand()),
+            then: Box::new(return_target_creature_to_hand()),
         })],
         ..processor("Murk Strider", cost(&[generic(3), u()]), 3, 2)
     }

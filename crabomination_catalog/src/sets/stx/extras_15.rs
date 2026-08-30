@@ -323,7 +323,9 @@ pub fn kelpie_guide() -> CardDefinition {
                     ),
                     n: Value::Const(8),
                 }),
-                effect: Effect::Tap { what: target() },
+                effect: Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                },
                 ..Default::default()
             },
         ],

@@ -39,7 +39,10 @@ pub fn brave_the_wilds() -> CardDefinition {
             Effect::If {
                 cond: Predicate::SpellWasBargained,
                 then: Box::new(Effect::BecomeCreature {
-                    what: Selector::Target(0),
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: R::Land.and(R::ControlledByYou),
+                    },
                     power: Value::Const(3),
                     toughness: Value::Const(3),
                     creature_types: vec![CreatureType::Elemental],

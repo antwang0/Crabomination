@@ -2266,6 +2266,9 @@ impl Effect {
                 implicit_player_if_bare_player_ref(who)
             }
             Effect::RedirectDrawsThisTurn { from } => implicit_player_if_bare_player_ref(from),
+            // "Target opponent gets an emblem with …" (Ob Nixilis Reignited's
+            // ultimate) — the emblem's recipient is the slot.
+            Effect::CreateEmblem { who, .. } => implicit_player_if_bare_player_ref(who),
             Effect::DiscardHandDrawThatMany { who } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
@@ -3938,6 +3941,15 @@ impl Effect {
                 }
                 Effect::MustBlockTarget { blocker, attacker } => {
                     sel_find(blocker, slot).or_else(|| sel_find(attacker, slot))
+                }
+                // Two-slot effects whose slots carry their own filters:
+                // Crooked Scales picks an opponent's creature and one of
+                // yours, Phyrexian Splicer moves a keyword between two.
+                Effect::CoinFlipDestroyLoop { win, lose, .. } => {
+                    sel_find(win, slot).or_else(|| sel_find(lose, slot))
+                }
+                Effect::MoveChosenKeyword { from, to, .. } => {
+                    sel_find(from, slot).or_else(|| sel_find(to, slot))
                 }
                 Effect::DealDamageEqualToPower { source, target } => {
                     sel_find(source, slot).or_else(|| sel_find(target, slot))

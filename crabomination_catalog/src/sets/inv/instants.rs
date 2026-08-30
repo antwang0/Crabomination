@@ -1,5 +1,5 @@
 use crate::card::{CardDefinition, CardType};
-use crate::effect::shortcut::{destroy_target_no_regen, draw};
+use crate::effect::shortcut::{destroy_target_creature_no_regen, draw};
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{b, cost, r, u};
 
@@ -10,7 +10,7 @@ pub fn terminate() -> CardDefinition {
         name: "Terminate",
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Instant],
-        effect: destroy_target_no_regen(),
+        effect: destroy_target_creature_no_regen(),
         ..Default::default()
     }
 }

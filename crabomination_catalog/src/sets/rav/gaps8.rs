@@ -188,7 +188,7 @@ pub fn flash_conscription() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Untap {
-                what: Selector::Target(0),
+                what: target_filtered(R::Creature),
                 up_to: None,
             },
             Effect::GainControl {
