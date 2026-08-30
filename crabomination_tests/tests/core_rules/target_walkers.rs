@@ -166,6 +166,48 @@ fn an_any_target_burn_spell_offers_no_land() {
     );
 }
 
+/// A "target player <does X>" effect offers players, not permanents.
+///
+/// `primary_target_filter` answers `None` for a bare `PlayerRef::Target(n)`
+/// in a player field, both target walkers then fall back to
+/// `SelectionRequirement::Any`, and `Any` matches every battlefield permanent
+/// — so Disrupting Scepter's "target player discards a card" listed the
+/// board, and a permanent picked there resolves to no player at all and the
+/// ability silently does nothing. `implicit_player_if_bare_player_field` is
+/// the answer, and it is the same device as `IMPLICIT_CREATURE_TARGET` for
+/// pump and `IMPLICIT_ANY_TARGET` for damage.
+#[test]
+fn a_target_player_effect_offers_no_permanent() {
+    use crabomination::game::types::Target;
+    use crabomination::game::two_player_game;
+
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+
+    // The activated-ability shape and the edict shape, which the walker used
+    // to leave unfiltered for a documented (and, as it turns out, unrelated)
+    // reason.
+    let scepter = catalog::disrupting_scepter();
+    let discard = &scepter.activated_abilities[0].effect;
+    for (name, eff) in
+        [("Disrupting Scepter", discard), ("Diabolic Edict", &catalog::diabolic_edict().effect)]
+    {
+        let legal = g.enumerate_legal_targets(eff, 0);
+        assert!(
+            legal.contains(&Target::Player(1)),
+            "{name} targets a player and offered none: {legal:?}"
+        );
+        assert!(
+            !legal.contains(&Target::Permanent(bear))
+                && !legal.contains(&Target::Permanent(land)),
+            "{name} offered a permanent for a player slot: {legal:?}"
+        );
+    }
+}
+
 /// The picker and the CR 608.2b checker aim at one slot, so they must not
 /// disagree about it.
 ///

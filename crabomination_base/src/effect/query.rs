@@ -66,10 +66,18 @@ fn implicit_player_if_controlled_by_target(
     .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
-/// `Some(&Player)` when `what` is a bare `Selector::Player(Target(_))`
-/// (Oona's "target opponent exiles…").
-fn implicit_player_if_bare_player_target(what: &Selector) -> Option<&'static SelectionRequirement> {
-    matches!(what, Selector::Player(PlayerRef::Target(_))).then_some(&IMPLICIT_PLAYER_TARGET)
+/// `Some(&Player)` for a field the effect reads as a **player** whose selector
+/// is a bare numbered target — `Discard { who: Target(0) }` ("target player
+/// discards a card"). The caller supplies the "this field is a player" half by
+/// choosing the arm; this supplies the "it is a target" half.
+///
+/// Without it `primary_target_filter` answers `None`, both target walkers fall
+/// back to `SelectionRequirement::Any`, and Disrupting Scepter offers every
+/// battlefield permanent alongside the two players — a pick the `PlayerRef`
+/// then cannot resolve, so the ability silently does nothing.
+fn implicit_player_if_bare_player_field(who: &Selector) -> Option<&'static SelectionRequirement> {
+    matches!(who, Selector::Target(_) | Selector::Player(PlayerRef::Target(_)))
+        .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
 /// Slot-keyed sibling of [`implicit_player_if_bare_player_target`].
@@ -1896,6 +1904,13 @@ impl Effect {
         }
         fn sel_filter(s: &Selector) -> Option<&SelectionRequirement> {
             match s {
+                // A selector that *is* a player names a player slot — the
+                // arm the seventy-fifth pass's census predicted ("`sel_filter`
+                // has no arm for a player target") and left for later.
+                // Without it `LoseLife { who: Player(Target(0)) }` reports no
+                // filter, the enumerator falls back to `Any`, and Geth's
+                // Verdict offers every permanent alongside the two players.
+                Selector::Player(who) => implicit_player_if_bare_player_ref(who),
                 Selector::EachMatching { filter, .. } => Some(filter),
                 Selector::EachPermanent(f) => Some(f),
                 Selector::CardsInZone { filter, .. } => Some(filter),
@@ -1987,7 +2002,9 @@ impl Effect {
             | Effect::CreateTokenAttacking { who, .. }
             | Effect::Amass { who, .. }
             | Effect::Incubate { who, .. } => implicit_player_if_bare_player_ref(who),
-            Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
+            Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => {
+                sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
+            }
             Effect::LoseHalfLife { who, .. }
             | Effect::LoseLifePerControlled { who, .. }
             | Effect::MillHalf { who, .. }
@@ -2146,18 +2163,26 @@ impl Effect {
             | Effect::Mill { who, .. }
             | Effect::MillUntilLands { who, .. }
             | Effect::MillTwoRepeatSharing { who, .. }
-            | Effect::ExileTopOfLibrary { who, .. } => sel_filter(who),
-            Effect::ExileTopMintPerChosenColor { who, .. } => {
-                sel_filter(who).or_else(|| implicit_player_if_bare_player_target(who))
+            | Effect::ExileTopOfLibrary { who, .. }
+            | Effect::ExileTopMintPerChosenColor { who, .. } => {
+                sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
-            Effect::Drain { to, .. } => sel_filter(to),
-            Effect::AddPoison { who, .. } => sel_filter(who),
+            Effect::Drain { to, .. } => {
+                sel_filter(to).or_else(|| implicit_player_if_bare_player_field(to))
+            }
+            Effect::AddPoison { who, .. } => {
+                sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
+            }
             Effect::DiscardChosen { from, .. } | Effect::DiscardChosenFromRevealed { from, .. } => {
-                sel_filter(from)
+                sel_filter(from).or_else(|| implicit_player_if_bare_player_field(from))
             }
             Effect::BottomChosenFromHandAndDraw { from, .. }
-            | Effect::TopChosenFromHand { from, .. } => sel_filter(from),
-            Effect::SearchSplitOpponentChooses { opponent, .. } => sel_filter(opponent),
+            | Effect::TopChosenFromHand { from, .. } => {
+                sel_filter(from).or_else(|| implicit_player_if_bare_player_field(from))
+            }
+            Effect::SearchSplitOpponentChooses { opponent, .. } => {
+                sel_filter(opponent).or_else(|| implicit_player_if_bare_player_field(opponent))
+            }
             Effect::RedirectSpellTargetToSelf { what } => sel_filter(what),
             Effect::DoubleDamageFromSourceThisTurn { what } => sel_filter(what),
             Effect::CounterSpellDiscardSplicedNames { what } => sel_filter(what),
@@ -2165,15 +2190,59 @@ impl Effect {
             Effect::RedirectYourDamageToChosen { what }
             | Effect::RedirectYourCombatDamageToTarget { what }
             | Effect::PreventAllDamageFromTargetThisTurn { what, .. } => sel_filter(what),
-            Effect::ManaClash { opponent } => sel_filter(opponent),
+            Effect::ManaClash { opponent } => {
+                sel_filter(opponent).or_else(|| implicit_player_if_bare_player_field(opponent))
+            }
+            // The rest of the "target player <does something to their own
+            // stuff>" family. Every field below is a player by construction,
+            // so a bare `PlayerRef::Target(n)` in it names a player slot and
+            // the fallback is `Player`, not `Any`. Ungated, Disrupting
+            // Scepter's "target player discards a card" offered every
+            // battlefield permanent and the pick then resolved to nothing.
+            Effect::ExileChosenFromHandOrGraveyard { who, .. }
+            | Effect::RevealTopChooseToGraveyard { who, .. }
+            | Effect::ExileTopAndGrantMayPlay { who, .. }
+            | Effect::RevealHandDiscardAllMatching { who, .. }
+            | Effect::RevealHandDiscardMatchingUnlessPayLife { who, .. }
+            | Effect::SearchPickedBy { who, .. }
+            | Effect::SearchUpToN { who, .. }
+            | Effect::ShuffleGraveyardIntoLibrary { who }
+            | Effect::ShuffleFilteredGraveyardIntoLibrary { who, .. }
+            | Effect::ControlPlayerNextTurn { who }
+            | Effect::ChooseStepToSkipThisTurn { who }
+            | Effect::LookAtTop { who, .. }
+            | Effect::RearrangeTop { who, .. }
+            | Effect::LookTopExileOneOfN { who, .. }
+            | Effect::AddMana { who, .. }
+            | Effect::TakeExtraTurn { who, .. }
+            | Effect::LoseGame { who }
+            | Effect::RevealHand { who }
+            | Effect::RevealTopOfLibrary { who }
+            | Effect::ShuffleLibrary { who }
+            | Effect::SkipNextCombatPhase { who }
+            | Effect::PlayerCantCastMatchingThisTurn { who, .. } => {
+                implicit_player_if_bare_player_ref(who)
+            }
+            Effect::PlayerCantPlayLandsThisTurn { player } => {
+                implicit_player_if_bare_player_ref(player)
+            }
+            Effect::ExileChosenFromHand { from, .. } => {
+                sel_filter(from).or_else(|| implicit_player_if_bare_player_field(from))
+            }
+            Effect::PutCardFromHandOnTopOfLibrary { who }
+            | Effect::PutCardsFromHandOnBottom { who, .. } => {
+                sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
+            }
             // Edict-class effects: "target player sacrifices a permanent."
             // The `who` selector usually carries a `target_filtered(Player)`
-            // filter (Sudden Edict, Cruel Edict-style spells); bare
-            // `Selector::Target(0)` falls through unchanged so existing
-            // edicts that pre-date the filter primitive (Diabolic Edict,
-            // Geth's Verdict) keep their explicit-target casting contract.
+            // filter (Sudden Edict, Cruel Edict-style spells); the bare
+            // `Selector::Target(0)` the pre-primitive edicts use (Diabolic
+            // Edict, Geth's Verdict) gets the same `Player` answer from the
+            // fallback now. It does not change what needs a target —
+            // `requires_target` is a different walker — only what the
+            // enumerator offers, which used to include every permanent.
             Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => {
-                sel_filter(who)
+                sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
             // Compound effects: walk into the children. Spells like Goryo's
             // Vengeance wrap a `Move` (target legendary creature) in a
