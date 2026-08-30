@@ -16968,22 +16968,34 @@ impl GameState {
             // it afterward. Only tapping qualifies per the printed text.
             self.mana_production_multiplier =
                 if ability.tap_cost { self.mana_production_multiplier_for(p) } else { 1 };
-            let resolved = self.continue_ability_resolution_x(
+            // Resolved straight into `events`: the `Vec` this used to return
+            // and append was one of the program's two largest allocation
+            // sites (PERF `(-104)`). The extra-mana events below still have
+            // to land *before* the ability's own, so they are buffered and
+            // spliced in at `mark` — a `Vec` only the boards that carry such
+            // a grant ever allocate, and the batch order the trace records is
+            // unchanged.
+            let mark = events.len();
+            let resolved = self.continue_ability_resolution_x_into(
                 card_id,
                 p,
                 effect,
                 target.clone(),
                 x_value.unwrap_or(0),
+                &mut events,
             );
             self.mana_production_multiplier = 1;
-            let mut resolved = resolved?;
+            resolved?;
             // CR 605.1b — triggered mana abilities ("Whenever a land is
             // tapped for mana, … adds …") don't use the stack; they resolve
             // here, right after the tapping ability.
             if ability.tap_cost {
-                self.resolve_extra_mana_on_land_tap(card_id, p, &resolved, &mut events);
+                let mut extra = Vec::new();
+                self.resolve_extra_mana_on_land_tap(card_id, p, &events[mark..], &mut extra);
+                if !extra.is_empty() {
+                    events.splice(mark..mark, extra);
+                }
             }
-            events.append(&mut resolved);
         } else {
             // Non-mana activated ability goes on the stack.
             let ability_target = target.clone();

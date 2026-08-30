@@ -1803,11 +1803,32 @@ impl GameState {
         options[n].clone()
     }
 
+    /// Resolve `effect` into a fresh `Vec`. Prefer
+    /// [`resolve_effect_into`](Self::resolve_effect_into) wherever the caller
+    /// already holds an accumulator — this wrapper allocates one per call.
     pub fn resolve_effect(
         &mut self,
         effect: &Effect,
         ctx: &EffectContext,
     ) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = Vec::new();
+        self.resolve_effect_into(effect, ctx, &mut events)?;
+        Ok(events)
+    }
+
+    /// `resolve_effect` appending into a caller-owned buffer. The buffer is
+    /// taken and put back, so the resolution reuses the caller's capacity
+    /// instead of opening a `Vec` the caller then appends and frees. On error
+    /// the buffer is truncated back to its entry length, so a failed
+    /// resolution leaves it exactly as `resolve_effect`'s dropped `Vec` did.
+    pub fn resolve_effect_into(
+        &mut self,
+        effect: &Effect,
+        ctx: &EffectContext,
+        out: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let mark = out.len();
+        let mut events = std::mem::take(out);
         // Reset sacrificed-power / sacrificed-toughness / sacrificed-mana-value
         // scratch for this independent resolution.
         self.sacrificed_power = None;
@@ -1877,7 +1898,6 @@ impl GameState {
         self.cards_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
         self.names_this_resolution.clear();
-        let mut events = vec![];
         // Most resolutions target nothing, and an empty `collect()` is still
         // a `Vec::from_iter` call with its size-hint dance — see PERF's (-45).
         let new_targets: Vec<CardId> = if ctx.targets.is_empty() {
@@ -1900,7 +1920,11 @@ impl GameState {
         if self.resolution_depth == 0 {
             self.resolution_causer = None;
         }
-        ran?;
+        if let Err(e) = ran {
+            events.truncate(mark);
+            *out = events;
+            return Err(e);
+        }
         // Quina — a resolution that minted one or more tokens under a
         // player's control mints one extra rider token per
         // `TokenCreationAddsToken` static that player controls (single
@@ -1970,7 +1994,8 @@ impl GameState {
                 events.push(GameEvent::DiscardedBatch { player, count });
             }
         }
-        Ok(events)
+        *out = events;
+        Ok(())
     }
 
     /// Sacrifice one permanent `id` controlled by `who` (CR 701.16): emit the

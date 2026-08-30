@@ -22733,11 +22733,34 @@ impl GameState {
         target: Option<Target>,
         x_value: u32,
     ) -> Result<Vec<GameEvent>, GameError> {
+        let mut events = Vec::new();
+        self.continue_ability_resolution_x_into(
+            source,
+            controller,
+            effect,
+            target,
+            x_value,
+            &mut events,
+        )?;
+        Ok(events)
+    }
+
+    /// `continue_ability_resolution_x` appending into a caller-owned buffer —
+    /// see [`resolve_effect_into`](Self::resolve_effect_into).
+    pub(crate) fn continue_ability_resolution_x_into(
+        &mut self,
+        source: CardId,
+        controller: usize,
+        effect: &crate::effect::Effect,
+        target: Option<Target>,
+        x_value: u32,
+        out: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         let mut ctx = EffectContext::for_ability(source, controller, target.clone());
         ctx.x_value = x_value;
-        let events = self.resolve_effect(effect, &ctx)?;
+        self.resolve_effect_into(effect, &ctx, out)?;
         if self.drop_pending_choices_if_game_over() {
-            return Ok(events);
+            return Ok(());
         }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
@@ -22751,7 +22774,7 @@ impl GameState {
                 },
             });
         }
-        Ok(events)
+        Ok(())
     }
 
     /// Evaluate whether `target` satisfies `req` given the current game state.
