@@ -2179,6 +2179,53 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-third pass, this session's half — closing state at `244e849b`
+
+Three code commits, one family — allocations and how a buffer is read:
+`ed0e1361` (74 `&mut` battlefield scans join the find memo), `cfa883ae`
+(`compute_permanent_pass`'s `sorted` takes inline storage) and `244e849b`
+(the by-value `SmallVec` loop, swept). The other session's card-audit work is
+interleaved and is Rust-neutral (`scripts/` only), so the window below is
+these three.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,050 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client) — +1 on the block below is
+        `zone::tests::find_by_id_mut_misses_without_unsharing`;
+        golden traces 7/7 unmoved across all three commits
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, five pools x six seeds x 120
+        games, **33,120 games, 0 failures, 0 undecided**; 5 assertion strings
+        in the audit binary. This is the audit of the new
+        `find_by_id_mut` hint's uniqueness `debug_assert!` on real boards.
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 327.71 / 329.69 over two runs, host_calib_ms 47,
+        peak_rss_mib 24.5-24.6, bin_bytes 123,846,792, `release` + mimalloc.
+
+Ir anchor at `244e849b`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     885,996,044      cube 2,640,655,854      sealed 2,619,479,921
+
+  the window, ae429ae7 (= 0367c09c's code) -> 244e849b, one container,
+  every pair adjacent builds:
+    fixed     887,234,325 ->   885,996,044   -0.140 %
+    cube    2,655,120,084 -> 2,640,655,854   -0.545 %
+    sealed  2,625,608,126 -> 2,619,479,921   -0.233 %
+```
+
+**One cross-container reading does NOT reproduce, and it is worth writing
+down because this file's standing claim is that Ir transfers exactly.** This
+session's base at `0367c09c`'s code read `cube` and `sealed` **0.21 and 0.30
+ppm** from the committed anchor — the usual agreement — but `fixed`
+**887,234,325 against 887,359,427, 141 ppm**, three orders of magnitude
+worse than the other two pools *in the same pair of runs*. Both dumps carry
+zero `libmimalloc` frames, so it is not the allocator-flag trap. Unexplained;
+it does not touch any A/B here (every pair is two adjacent builds in one
+container), but **quote a `fixed` anchor across containers with this in mind**
+until someone reproduces it.
+
 ### Hundred-and-third pass (1) — closing state at `0367c09c`
 
 One code commit past the block below: `0367c09c`, four `Vec`s reserved or
@@ -9246,6 +9293,38 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Hundred-and-third pass (4) — the by-value `SmallVec` loop, swept
+
+**`fixed` -0.0028 % / `cube` -0.0094 % / `sealed` -0.0190 %** off `cfa883ae`.
+Pass (3)'s one-character finding applied as a class, and the whole point is
+that it is a *rule* now rather than one site.
+
+Six by-value `for x in <smallvec>` loops in engine code, found by matching
+`SmallVec`-typed locals against `for … in <name>` (ten more matches were
+`Vec`s sharing a name — check the declaration, not the loop). Each becomes
+`for &x in &v`; every element type involved is `Copy`, so nothing else moves.
+
+```text
+  site                              inline bytes an IntoIter moved
+  encode.rs:542   counts             32 x 24 = 768   <- actor-only, see below
+  combat.rs:2404  pt_deltas           8 x  8 =  64
+  combat.rs:2440  frenzy_deltas       8 x  8 =  64
+  stack.rs:5308   by_id               8 x  8 =  64
+  combat.rs:2276  life_paid           2 x 12 =  32
+  combat.rs:1441 / 2076  tapped       4 x  4 =  16  (x2)
+```
+
+**`sealed` gains the most, and it is exactly what pass (3) cost there**:
+-497,806 Ir against (3)'s +504,052, so the two commits compose to +6,246 Ir
+on that pool — flat — while `cube` keeps (3)'s -0.341 %. A pool that pays for
+one change can be paid back by the class it belongs to.
+
+**`encode.rs`'s 768 bytes are the largest by an order and `--bench` cannot
+see them**: the encoder runs on `selfplay_train` and on no ladder pool (PERF's
+"Which pool a change moves", and `(-97)`). It is taken on the same mechanism,
+not on its own reading; a 768-byte move per encoded state is ~96 words, and
+the actor encodes one per decision.
 
 ### Hundred-and-third pass (3) — the layer pass's effect list leaves the heap, and one `&` is half of it
 

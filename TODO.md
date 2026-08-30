@@ -21,54 +21,40 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT — the handoff. Seven items, and every number under them lives in PERF.
+## NEXT — the handoff. Eight items; every number under them lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
    the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
-2. **State at `0367c09c`:** suite 19,049 / 0 / 5, clippy clean, golden traces 7/7, grid
-   30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical (195,528 /
-   27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok). Pass window
-   **-2.45 / -2.27 / -2.65 %** (`cfdf69f2 -> 0367c09c`, both sessions); anchors, the
-   `peak_rss_mib` 24.2 -> 26.8 -> 24.3 -> 24.6 story and each change's own base in PERF's
-   Baseline.
-3. **Ir transfers between containers; `games_per_s` does not, with or without its calib.**
-   Both sessions read `c92f3851` independently: **anchors 0.02-0.07 ppm apart, wall clocks
-   28 % apart** (431 vs ~308), with calib pointing the wrong way. When a wall-clock reading
-   looks like a regression, settle it with **one anchor run**, not a rebuild of the base.
-4. **READ PERF `(-100)` FIRST — and it is confirmed on the actor.** `CardData`'s CoW copy
-   came apart for -1.64 / -1.59 / -1.94 %, and the same family reads 3.64 % -> 2.15 % of
-   `selfplay_train` against 3.28 % -> 1.93 % of `bot_ladder cube`, so "an engine percent is
-   an actor percent" now holds for a *change*. The instrument: **read the copies by TYPE**
-   (`--demangle=no`), then take a type's *width* and the fields **written on an object
-   whose writer changes nothing else on it**. Trap: a field is not cold because its name
-   says so — four damage vectors read +0.072 % and the tell was one `make_mut` caller row.
-5. **The profile has no head; the allocator is the largest family (10.2-10.8 %) and its
-   reserve half is now CLOSED** — PERF `(-103)`: divide the `grow_one` table by each
-   caller's own call count, above 1.5 there were exactly four rows and all four shipped
-   (-0.32 / -0.24 / -0.20 %). Everything left is ~1 growth a call, i.e. a *first*
-   allocation a reserve only moves — including the single largest row
-   (`dispatch_board_scan`, 29,474 at 0.37). **What is left of the family is `(-104)`**: the
-   `Vec<GameEvent>` that `resolve_effect` and `activate_ability_inner` *return*, 46,258
-   allocations (3.3 % of the program), ceiling ~0.38 % of `cube`, census done down to the
-   one borrow-checker friction. `dispatch_triggers_for_events` is 7.2 % with no hot line.
-   Three devices that paid this pass, PERF `(-101)`/`(-102)`/`(-103)`: a stored `fn`
-   pointer whose value is fixed per field costs width *and* an indirect read; when a memo
-   lands on a named helper, **grep for the query's longhand**; and a filtered board-walk
-   **local** wants inline storage, not a reserve — `(-76)`'s read-count test is about
-   fields and does not apply to a frame.
-6. **ROBUSTNESS: the panic audit's bare population is 23 -> 3.** The three that stay are
-   deck construction, where a fallback deck poisons a training run more quietly than a
-   crash. Price: `cube` +0.084 %, and it is one function leaving its caller's inline budget
-   — at `codegen-units = 16` with no LTO an edit anywhere in a 17 k-line module moves
-   inline decisions elsewhere. Price a correctness change on the program, not on the site.
-7. **CARDS: audit the field, not the row — and audit the audit.** `audit_catalog_stats.py`
-   was reading an ability's `cost:` as the card's (8 findings, 0 real); fixed, and its
-   other columns then produced eleven real defects, two of them cards that do not exist
-   under their names. Open: INCOMPLETE_CARDS buckets 6 / 7 / 8, 3 dead primitives, and
-   `audit_dropped_may`'s 327 rows — **noise until someone teaches it the shapes** (six
-   spot-checked, all six already correct).
+2. **State at `244e849b`:** suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
+   30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical
+   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok). Window `0367c09c -> 244e849b` **-0.140 / -0.545 / -0.233 %**;
+   anchors and the unexplained 141-ppm `fixed` cross-container gap in PERF's Baseline.
+3. **`games_per_s` does not transfer between containers and an Ir anchor does** — settle a
+   suspected wall-clock regression with **one anchor run**, never a rebuild of the base.
+4. **The three devices this pass paid on, in order of reuse.** (a) A memo on a named
+   helper has a `_mut` twin — `(-102)` swept fifty read sites and left 74 write ones
+   (`(-105)`, -0.12 / -0.20 / -0.23 %). (b) **A `SmallVec`'s by-value `IntoIter` carries
+   the inline buffer**; `for x in v` vs `for &x in &v` was worth -0.19 / -0.22 / -0.18 %
+   on one 72-byte site and inverted the sign of `(-106)`. (c) Rank an allocation by its
+   `--separate-callers=3` **context**, not its function.
+5. **Allocator, 11.2 % and 1,384,794 allocations at ~209 Ir a round trip.** The reserve
+   half is closed (`(-103)`) and the largest single context is taken (`(-106)`,
+   `compute_permanent_pass`'s `sorted`, 4.4 % of every malloc). **Next is `(-104)`** —
+   the `Vec<GameEvent>` `resolve_effect` / `activate_ability_inner` *return*, 46,258
+   allocations, census done to the one friction (event order, not the borrow checker).
+   After that: `computed_permanent_hinted`'s 201,780 `Arc`s (`(-92)` lead 2).
+6. **The actor has not been profiled since `633acc3e`** (`(-97)`), and this pass shipped
+   one actor-only site (`encode.rs`'s 768-byte `IntoIter`) on mechanism rather than on a
+   reading. A `crabomination_ml` `profiling-fast` run at the tip is the cheapest way to
+   both close that and refresh the Profile of record.
+7. **ROBUSTNESS: bare panics 23 -> 3** (deck construction, deliberately). No open
+   TODO/FIXME in `src`, no `#[ignore]`d tests.
+8. **CARDS: audit the field, not the row — and audit the audit.** `audit_catalog_stats.py`
+   now carries type/supertype columns; standing at 17,229 checked, card type 77 /
+   supertype 55 open. Also open: INCOMPLETE_CARDS buckets 6 / 7 / 8, 3 dead primitives,
+   and `audit_dropped_may`'s 327 rows — **noise until someone teaches it the shapes**.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
