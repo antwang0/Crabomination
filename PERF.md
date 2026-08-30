@@ -2329,53 +2329,56 @@ reading — the `--bench` invariants (`decisions`, `turns_per_game`,
 `decisions_per_game`, stalls) are what carries across, and they are identical.
 The actor anchor above is a same-box A/B and is the number to quote.
 
-### Hundred-and-fourth pass, this session's close at `45c55cc3`
+### Hundred-and-fourth pass, this session's close at `785b50d5`
 
-Eight code commits, three families: the `Vec<GameEvent>` return (`da4a6ca2`
+Nine code commits, three families: the `Vec<GameEvent>` return (`da4a6ca2`
 `381fac97`, `(-104)` closed), the target enumerator's zone scope (`13435f3e`
 engine + `d9e6454d`, seventy-nine card filters) and the unfiltered-slot census
-(`d0799d5c` `d2ce2cf8` `41b1423d` `45c55cc3`). `(-111)` and `(-114)` were built
-and reverted in the same window and are not in the tree.
+(`d0799d5c` `d2ce2cf8` `41b1423d` `45c55cc3` `9fec2a6f`, closed by an
+invariant). `(-111)` and `(-114)` were built and reverted in the same window
+and are not in the tree.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,055 / 0 / 5 (cargo nextest --workspace --exclude
-        crabomination_client) — +5 on the block below are the enumerator's
-        two scope tests, the reanimation-filter invariant, CR 115.4's and the
-        player-field one; golden traces 7/7 unmoved across all eight commits
+suite   19,058 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client) — +8 on `9bf0411a`: the enumerator's two scope
+        tests, the reanimation-filter invariant, CR 115.4's, the player-field
+        one, the targeting invariant, and the other session's two;
+        golden traces 7/7 unmoved across all nine commits
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 grid    scripts/robustness_grid.sh, rebuilt at this tip — 30 cells, five
         pools x six seeds x 120 games, **33,120 games, 0 failures,
         0 undecided**; 5 assertion strings in the audit binary
 --bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
-        invariant across sixteen runs over five builds; determinism ok,
-        thread_determinism ok (3 vs 1). games_per_s 429.66 / 412.46 (a third
-        run read 364.00 at host_calib_ms 53 and peak_rss 26.4, which is this
-        file's "the box is still busy" artifact and not a reading),
-        host_calib_ms 40-42, peak_rss_mib 24.4-24.6,
-        bin_bytes 123,734,072, `release` + mimalloc.
+        invariant across twenty runs over six builds; determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 405.26 / 407.06 / 421.71,
+        host_calib_ms 39-42, peak_rss_mib 24.2-24.4,
+        bin_bytes 123,736,792, `release` + mimalloc.
 
-Ir anchor at `45c55cc3`, callgrind, profiling-fast --no-default-features,
+Ir anchor at `785b50d5`, callgrind, profiling-fast --no-default-features,
 --a gang --b gang --games 6 --threads 1 --seed 1:
-  fixed     877,014,316      cube 2,610,235,660      sealed 2,591,882,923
+  fixed     873,591,495      cube 2,591,948,683      sealed 2,574,103,496
+  (this tip carries the other session's `90a629a1` as well, which is why it
+  sits below this session's own last A/B of 876,667,926 / 2,608,212,408 /
+  2,590,065,071)
 
-  the window, `9bf0411a`'s code -> this tip, one container, every pair
-  adjacent builds:
-    fixed     883,044,002 ->   877,014,316   -0.683 %
-    cube    2,632,744,583 -> 2,610,235,660   -0.855 %
-    sealed  2,610,134,584 -> 2,591,882,923   -0.699 %
+  this session's window, `9bf0411a`'s code -> `9fec2a6f`, one container,
+  every pair adjacent builds:
+    fixed     883,044,002 ->   876,667,926   -0.722 %
+    cube    2,632,744,583 -> 2,608,212,408   -0.932 %
+    sealed  2,610,134,584 -> 2,590,065,071   -0.769 %
 
-**Five of the eight commits are correctness changes and four of those read
+**Six of the nine commits are correctness changes and four of those read
 +/-0.001 % or less.** That is the expected shape and it is worth stating once:
 a filter that narrows an enumerated set removes candidates the picker was
-already ordering past, so it costs nothing measurable — except `d9e6454d`,
-where putting the zone predicate *first* in the `And` short-circuits every
-battlefield permanent the enumerator used to test in full and reads -0.5 %.
+already ordering past, so it costs nothing measurable — except where the
+narrowing lets the walk *reject earlier*, which is `d9e6454d` (-0.5 %, the zone
+predicate first in the `And`) and `9fec2a6f` (-0.08 %).
 ```
 
-**`peak_rss_mib` reads 24.4-24.6 here and the other session reads 18.8-19.1
+**`peak_rss_mib` reads 24.2-24.4 here and the other session reads 18.8-19.1
 at a neighbouring tip.** Both are settled runs (`games_per_s` in family,
-`host_calib_ms` 40-42 against their 50), so this is the container difference
+`host_calib_ms` 39-42 against their 50), so this is the container difference
 this file's own rule predicts and not a change either pass made. **Compare an
 RSS column only against one taken in the same container**; the `--bench`
 invariant (decisions / turns / stalls) is the column that transfers, and it is
