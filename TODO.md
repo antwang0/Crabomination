@@ -27,19 +27,12 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
    the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
-2. **State at `a019fee3`:** suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
-   30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical
-   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok,
-   `peak_rss_mib` 24.5-24.7, `games_per_s` 332-334). Anchor 883,014,888 /
-   2,633,198,611 / 2,610,142,425; window `0367c09c -> a019fee3` **-0.476 / -0.826 /
-   -0.589 %**, and the **actor -3.20 %** over `c92f3851 -> a019fee3`. **A `peak_rss`
-   or `games_per_s` taken while the box is still building is not a reading** — the
-   first run at this tip read 26.8 MiB / 312 g/s and the next three read 24.5-24.7 /
-   332-334. Also in PERF's Baseline: the unexplained 141-ppm `fixed` cross-container gap.
-   **The 107-card type commit is Ir-neutral at this sample**: `244e849b -> 0bda7d63`
-   reads +372 / +148,548 / +34,702 Ir, i.e. **0.4 / 56 / 13 ppm**. Six games of `cube`
-   barely deal those cards; over a training run they are 34 spells at the wrong speed and
-   23 permanents outside the legend rule, which no anchor can price.
+2. **State at `e64762b2`** (the other session's `b0603f33` landed after these numbers):
+   suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid 30 cells / 33,120 games /
+   0 failures / 0 undecided, `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
+   determinism + thread_determinism ok, `peak_rss_mib` 24.3). Anchor 883,043,038 /
+   2,632,744,205 / 2,610,137,238. **Whole pass `cfdf69f2 -> e64762b2`: -2.93 / -3.09 /
+   -3.23 %**, both sessions. Each change names its own base; PERF's Baseline has all of it.
 3. **`games_per_s` does not transfer between containers and an Ir anchor does** — settle a
    suspected wall-clock regression with **one anchor run**, never a rebuild of the base.
 4. **The three devices this pass paid on, in order of reuse.** (a) A memo on a named

@@ -2179,6 +2179,44 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-third pass, the card half (2) — closing state at `e64762b2`
+
+Two card commits past the block below: `6cbf37a7` (eleven cards' printed
+keywords, and 25 of the column's 48 rows turned out to be the reader) and its
+tracker commit. Measured at `e64762b2`; the other session's `b0603f33` landed
+after and is not in these numbers.
+
+```text
+suite   19,050 / 0 / 5; golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    30 cells, 33,120 games, 0 failures, 0 undecided
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical; determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 319.04, host_calib_ms 44,
+        peak_rss_mib 24.3, bin_bytes 123,844,224, `release` + mimalloc.
+
+Ir anchor at `e64762b2`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     883,043,038      cube 2,632,744,205      sealed 2,610,137,238
+
+  since `0bda7d63` (both sessions; the other's `(-108)` and `(-109)` work plus
+  eleven keyword fixes — endpoints, not a measurement):
+    fixed     885,996,416 ->   883,043,038   -0.333 %
+    cube    2,640,804,402 -> 2,632,744,205   -0.305 %
+    sealed  2,619,514,623 -> 2,610,137,238   -0.358 %
+
+  the whole pass, cfdf69f2 -> e64762b2, both sessions:
+    fixed     909,660,984 ->   883,043,038   -2.926 %
+    cube    2,716,755,593 -> 2,632,744,205   -3.092 %
+    sealed  2,697,159,120 -> 2,610,137,238   -3.226 %
+```
+
+**The audit columns close at cost 0 / P/T 0 / card type 0 / supertype 0 /
+subtype 2 / keyword 23**, over 17,229 cards checked, and the two remaining
+subtype rows and all 23 keyword rows are modelling choices with their reasons
+in INCOMPLETE_CARDS. **Every printed characteristic in this catalog is now
+cross-referenced against the oracle and clean; nothing has ever checked what a
+card *does*.**
+
 ### Hundred-and-third pass, the card half — closing state at `0bda7d63`
 
 One commit on top of the block below: `0bda7d63`, 107 cards given the type
