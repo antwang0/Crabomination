@@ -482,7 +482,7 @@ pub fn play_recorded_game_mcts(
         (0..2).map(|_| Box::new(HeuristicBot::uniform_baseline()) as Box<dyn Bot>).collect();
 
     // (turn, seat, encoded state) — labelled after the game decides.
-    let mut snaps = Vec::new();
+    let mut snaps: Vec<(u32, usize, crabomination_nn::EncodedState)> = Vec::new();
     let mut heur: Vec<i32> = Vec::new();
     // Raw per-seat stats at each snapshot, parallel to `snaps` — the aux
     // targets are deltas between a seat's consecutive snapshots, so the
@@ -494,7 +494,14 @@ pub fn play_recorded_game_mcts(
     let mut opp_hands: Vec<Vec<u16>> = Vec::new();
     let mut last_turn = (0u32, usize::MAX);
     let mut last_step = crate::game::TurnStep::Untap;
-    let mut last_pair: Option<[crabomination_nn::EncodedState; 2]> = None;
+    // The de-duplication key is the last pair *pushed*, and `snaps` already
+    // holds it — so this is the index of that pair's seat-0 entry rather
+    // than a second copy of it. Holding the pair itself meant every accepted
+    // snapshot cloned two whole `EncodedState`s (each one a `Vec` per group,
+    // so ~5 allocations and a copy of every encoded object) purely to keep
+    // the comparison alive. Snapshots are pushed in seat pairs and nothing
+    // else pushes to `snaps`, so `i` and `i + 1` are the pair.
+    let mut last_pair: Option<usize> = None;
     let (mut actions, mut stale) = (0usize, 0usize);
     while !g.is_game_over() && actions < max_actions && stale < STALE_ROUNDS {
         let new_turn = (g.turn_number, g.active_player_idx) != last_turn;
@@ -521,9 +528,12 @@ pub fn play_recorded_game_mcts(
         if new_turn || step_point {
             last_turn = (g.turn_number, g.active_player_idx);
             let pair = [encode_state(&g, 0, vocab), encode_state(&g, 1, vocab)];
-            if last_pair.as_ref() != Some(&pair) {
-                for (seat, s) in pair.iter().enumerate() {
-                    snaps.push((g.turn_number, seat, s.clone()));
+            let repeat = last_pair
+                .is_some_and(|i| snaps[i].2 == pair[0] && snaps[i + 1].2 == pair[1]);
+            if !repeat {
+                last_pair = Some(snaps.len());
+                for (seat, s) in pair.into_iter().enumerate() {
+                    snaps.push((g.turn_number, seat, s));
                     heur.push(crate::server::bot::eval_material_public(
                         &g,
                         seat,
@@ -539,7 +549,6 @@ pub fn play_recorded_game_mcts(
                             .collect(),
                     );
                 }
-                last_pair = Some(pair);
             }
         }
         last_step = g.step;
