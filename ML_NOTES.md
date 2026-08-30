@@ -3472,3 +3472,45 @@ the game-5 hold, exactly.
    replays are its first client-visible evidence.
 3. The over-attack half stays with the standing open lead (sims that
    respect the defender's open mana / cast for both sides).
+
+## Round 54 — the saturation fallback: outcome-neutral, adopted for the client
+
+The replay diagnostic's first remedy, built and measured same-day.
+`net_tail_guard` (profile `net-guard`): the scored combat pickers
+(`pick_attacks_scored` / `pick_blocks_scored`) evaluate the PRE-DECISION
+state once and, on a net read outside the calibrate histogram's own
+rankable band [0.05, 0.95], silence the net for that one decision — all
+candidates score on the material eval, which stays discriminative where
+the sigmoid's p·(1−p) sensitivity has collapsed below the tie-break
+jitter. Keyed per decision, never per leaf (one argmax, one currency);
+mid-band untouched; the decided-game clamp extended from "decided" to
+"effectively decided". Contract pinned by `tail_guard_tests` with a
+constant-probability stub net, including the game-5 shape: under a
+saturated net the guarded picker declares the attack the material
+weights find.
+
+**The gate** (`.ladder/run_r54_tailguard.sh`, pre-registered):
+`net-guard` vs `net-det1`, champion loaded, sealed, seeds 43/97.
+**49.9 % [49.9, 50.0] and 50.0 % [49.9, 50.0]** — the most precise null
+the ladder has produced: 5,977 and 5,985 of 6,000 pairs exact mirrors
+(rho −0.992/−0.995; 12,000 games carrying the precision of 1.5–2.4
+MILLION). The flag fires and changes play, and virtually never changes
+who wins — exactly the pre-registered mechanism: saturated positions
+are mostly already decided, so the ladder is structurally blind to
+playing them better. The ~15–23 divergent pairs per seed lean 14 A / 23
+B pooled — ~1.5σ, unresolved at even this precision, recorded rather
+than chased.
+
+**Adopted for the client, not the ladder** — the pre-registered clause,
+decided on the determinized-search precedent (a client default the
+ladder cannot price): `lobby.rs`'s pilot is now `net_tail_guard_on()`;
+`net-det1` and every ladder control stay flagless so recorded
+references remain comparable. The regression evidence is the 2026-08-30
+game 5 (replay-1788118995-5, turns 18/20): a flying 5/5 the human could
+not block, held at 3–8 life for two turns of a lost race, everything
+untapped. The threshold stays anchored to the calibrate band —
+pre-registered as not-a-knob.
+
+The mid-band leaf bias stays head_leaf's job (this is a consumption
+guard, not a model fix), and the over-attack half stays with the
+open-mana sim lead.

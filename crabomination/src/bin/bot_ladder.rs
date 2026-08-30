@@ -289,6 +289,11 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "det3" => Some(Pilot::Scored(EvalWeights::determinized3())),
         "net" => Some(Pilot::Scored(EvalWeights::net_eval())),
         "net-det1" => Some(Pilot::Scored(EvalWeights::net_eval_det1())),
+        // The saturation fallback (replay diagnostic, 2026-08-31): the
+        // scored combat pickers silence a net reading outside [0.05,
+        // 0.95] for that decision and rank on material instead. Gate as
+        // A against `net-det1`.
+        "net-guard" => Some(Pilot::Scored(EvalWeights::net_tail_guard_on())),
         // The pre-2026-08-22 net shape: branched off `atk-sim`, so
         // without either adopted blocking layer. The control for the
         // rebase, and the shape every net gate from round 26 to 46 ran
@@ -570,7 +575,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which

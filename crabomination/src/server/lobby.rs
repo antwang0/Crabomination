@@ -44,7 +44,15 @@ fn default_bot() -> Box<dyn super::Bot> {
         Box::new(MctsBot::new(MctsConfig {
             iterations: 64,
             horizon_turns: 3,
-            weights: super::EvalWeights::net_eval_det1(),
+            // `net_eval_det1` plus the saturation fallback (round 54):
+            // outcome-neutral on the ladder at ±0.06 — mirrors saturate
+            // together, so the ladder is structurally blind to it — and
+            // adopted for the client on the replay evidence (2026-08-30
+            // game 5: a flying 5/5 the human could not block, held for
+            // two turns of a lost race). The determinized-search shape:
+            // a client default the ladder cannot price. Ladder control
+            // profiles stay flagless.
+            weights: super::EvalWeights::net_tail_guard_on(),
             ..MctsConfig::default()
         }))
     } else {

@@ -332,6 +332,28 @@ pub struct EvalWeights {
     /// than a knob: the schedule is the hypothesis under test, and knobs
     /// multiply gate rounds.
     pub net_blend_ply: bool,
+    /// The saturation fallback (replay diagnostic, 2026-08-31): when the
+    /// net scores the *current* state outside the calibrate histogram's
+    /// rankable band [0.05, 0.95] — that tool's own printout: "the search
+    /// cannot rank lines inside a saturated band" — the scored combat
+    /// pickers silence the net for that one decision and score every
+    /// candidate with the material eval instead. A sigmoid's sensitivity
+    /// is p·(1−p): at 3 life against 23 every settled leaf reads ≈0.01,
+    /// the candidate deltas truncate below the tie-break jitter, and
+    /// first-wins-ties hands the decision back to the eval-free menu
+    /// default — a flying 5/5 the defender could not block was held for
+    /// two turns of a lost race (game 5 of the 2026-08-30 replays,
+    /// tap-verified). Keyed on the pre-decision state so all of one
+    /// argmax's candidates score in the same currency; mid-band
+    /// decisions keep the net untouched, where its measured edge lives.
+    /// The decided-game clamp (±100 000·unit dominating the net's
+    /// 0..10 000) is this same principle at p ∈ {0, 1}; the guard
+    /// extends it to "effectively decided". Off by default until
+    /// laddered ([`net_tail_guard_on`](Self::net_tail_guard_on), profile
+    /// `net-guard`), with the caveat pre-registered in the gate script:
+    /// mirror seats saturate together, so the ladder may under-read a
+    /// change whose client-facing case stands on its own.
+    pub net_tail_guard: bool,
     /// Sequence the land drop instead of taking the first land that
     /// covers the most missing colors. Two additions:
     ///
@@ -645,6 +667,7 @@ impl EvalWeights {
             chump_blocks: false,
             damage_order: false,
             target_eval: false,
+            net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -721,6 +744,7 @@ impl EvalWeights {
             chump_blocks: false,
             damage_order: false,
             target_eval: false,
+            net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -780,6 +804,7 @@ impl EvalWeights {
             chump_blocks: false,
             damage_order: false,
             target_eval: false,
+            net_tail_guard: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -1207,6 +1232,13 @@ impl EvalWeights {
     /// against the default (profile `targeteval` vs `gang`).
     pub const fn target_eval_on() -> Self {
         Self { target_eval: true, ..Self::block_gang_search() }
+    }
+
+    /// The client pilot plus the saturation fallback. The opt-in for
+    /// [`net_tail_guard`](Self::net_tail_guard); ladder as A against
+    /// `net-det1` (the same weights minus the flag).
+    pub const fn net_tail_guard_on() -> Self {
+        Self { net_tail_guard: true, ..Self::net_eval_det1() }
     }
 
     /// The attack-search profile plus the walker chip candidate. The
@@ -8512,7 +8544,29 @@ pub(crate) fn attack_candidates_for_mcts(
     candidates
 }
 
+/// The saturation fallback's switch (see [`EvalWeights::net_tail_guard`]):
+/// weights for scoring ONE decision's candidates. When the flag is on and
+/// the net reads the current state outside the rankable band
+/// [0.05, 0.95] (the `--calibrate` histogram's saturation definition),
+/// the returned copy has `net_slot` zeroed, so every leaf this decision
+/// settles is scored by the material eval — linear, and therefore still
+/// able to order "attack for five free damage" above "hold" when the
+/// win probability of both rounds to the same integer. Keyed on the
+/// pre-decision state, never per leaf: candidates of one argmax must
+/// share a currency, or the comparison at the band's edge is between a
+/// probability and an unbounded material score.
+fn tail_guarded(state: &GameState, seat: usize, w: &EvalWeights) -> EvalWeights {
+    if !w.net_tail_guard || w.net_slot == 0 {
+        return *w;
+    }
+    match super::net_eval::win_prob(state, seat, w.net_slot) {
+        Some(p) if !(0.05..=0.95).contains(&p) => EvalWeights { net_slot: 0, ..*w },
+        _ => *w,
+    }
+}
+
 fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<Attack> {
+    let w = &tail_guarded(state, seat, w);
     let mut candidates = attack_candidates_for_mcts(state, seat, w);
     if candidates.len() == 1 {
         return candidates.swap_remove(0);
@@ -9261,6 +9315,9 @@ fn repair_block_candidate(state: &GameState, seat: usize, blocks: &mut Vec<(Card
 }
 
 fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
+    // Same saturation fallback as the attack picker: a flat net can't
+    // rank block plans either, and the tie falls to the greedy menu.
+    let w = &tail_guarded(state, seat, w);
     let mut candidates = block_candidates_for_mcts(state, seat, w);
     if candidates.len() == 1 {
         return candidates.swap_remove(0);
@@ -20065,5 +20122,107 @@ mod target_eval_tests {
             }
             other => panic!("expected a permanent target, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tail_guard_tests {
+    use super::*;
+    use crate::catalog;
+    use crate::game::{GameState, TurnStep};
+    use crate::player::Player;
+    use std::sync::Arc;
+
+    /// A net that answers every state with one constant probability —
+    /// exactly what a saturated head looks like to the decision loop.
+    struct ConstNet(f32);
+    impl crabomination_nn::NetEvaluator for ConstNet {
+        fn eval(&self, _s: crabomination_nn::EncodedState) -> f32 {
+            self.0
+        }
+    }
+
+    /// The net slots are process-global; serialize the tests that
+    /// install one, and always uninstall on the way out.
+    static SLOT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn with_const_net<R>(p: f32, f: impl FnOnce(u8) -> R) -> R {
+        let _guard = SLOT_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = super::super::net_eval::SLOT_CANDIDATE;
+        super::super::net_eval::set_slot(slot, Some(Arc::new(ConstNet(p))));
+        let out = f(slot);
+        super::super::net_eval::set_slot(slot, None);
+        out
+    }
+
+    fn two_player_game() -> GameState {
+        let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 1;
+        g
+    }
+
+    /// The switch itself: a saturated read silences the net for the
+    /// decision, a mid-band read leaves it alone, and the flag gates it.
+    #[test]
+    fn the_guard_trips_exactly_in_the_saturated_band() {
+        let g = two_player_game();
+        let mut w = EvalWeights::net_tail_guard_on();
+        with_const_net(0.01, |slot| {
+            w.net_slot = slot;
+            assert_eq!(tail_guarded(&g, 1, &w).net_slot, 0, "p=0.01 is unrankable");
+        });
+        with_const_net(0.5, |slot| {
+            w.net_slot = slot;
+            assert_eq!(tail_guarded(&g, 1, &w).net_slot, slot, "mid-band keeps the net");
+        });
+        with_const_net(0.96, |slot| {
+            w.net_slot = slot;
+            assert_eq!(tail_guarded(&g, 1, &w).net_slot, 0, "the winning tail saturates too");
+        });
+        with_const_net(0.01, |slot| {
+            let mut off = EvalWeights::net_eval_det1();
+            off.net_slot = slot;
+            assert_eq!(tail_guarded(&g, 1, &off).net_slot, slot, "flag off: unchanged");
+        });
+    }
+
+    /// The contract on a game-5-shaped board (flying 5/5 the defender
+    /// cannot block, attacker far behind on life): under a saturated
+    /// net, the guarded picker declares the attack the material eval
+    /// finds — the same answer the pure material weights give — instead
+    /// of whatever the flat landscape's tie-break falls into.
+    #[test]
+    fn a_saturated_net_falls_back_to_the_material_attack() {
+        let mut g = two_player_game();
+        g.turn_number = 20;
+        g.players[1].life = 3;
+        g.players[0].life = 23;
+        let flyer = g.add_card_to_battlefield(1, catalog::emeritus_of_ideation());
+        g.clear_sickness(flyer);
+        let wall = g.add_card_to_battlefield(0, catalog::pensive_professor());
+        g.clear_sickness(wall);
+
+        let material_choice = {
+            let w = EvalWeights::net_eval_det1();
+            // net_slot stays SLOT_BEST but nothing is loaded there in
+            // tests, so this IS the material path.
+            pick_attacks_scored(&g, 1, &w)
+        };
+        assert!(
+            material_choice.iter().any(|a| a.attacker == flyer),
+            "fixture: the material eval must want the free flying attack"
+        );
+
+        let guarded_choice = with_const_net(0.01, |slot| {
+            let mut w = EvalWeights::net_tail_guard_on();
+            w.net_slot = slot;
+            pick_attacks_scored(&g, 1, &w)
+        });
+        assert_eq!(
+            guarded_choice, material_choice,
+            "saturated read: the guarded picker gives the material answer"
+        );
     }
 }
