@@ -766,6 +766,47 @@ mod tests {
         assert_eq!(plain.memo(), Some(false));
     }
 
+    /// The second lane. Riftstone Portal is the only
+    /// `GrantActivatedAbilityFromGraveyard` shape in the catalog, so the lane
+    /// it gates is `ABSENT` on every board the bench deals — which is what
+    /// makes it a win and also what makes it invisible to the suite unless a
+    /// test deals the card. Both lanes answer independently off one packed
+    /// word, and neither store disturbs the other.
+    #[test]
+    fn the_activated_grant_lane_is_independent_of_the_anthem_lane() {
+        let g = gy(vec![crate::catalog::riftstone_portal(), crate::catalog::wonder()]);
+        assert_eq!(g.memo_lane(GY_LANE_ACT_GRANT), None, "lazy until asked");
+        assert!(g.has_activated_grant());
+        assert_eq!(g.memo_lane(GY_LANE_ACT_GRANT), Some(true));
+        assert_eq!(g.memo_lane(GY_LANE_ANTHEM), None, "the other lane is untouched");
+        assert!(g.has_anthem(), "and Wonder still answers it");
+        assert_eq!(
+            g.memo_lane(GY_LANE_ACT_GRANT),
+            Some(true),
+            "packing did not disturb the first lane",
+        );
+
+        let plain = gy(vec![crate::catalog::shivan_dragon()]);
+        assert!(!plain.has_activated_grant());
+        assert_eq!(plain.memo_lane(GY_LANE_ACT_GRANT), Some(false));
+    }
+
+    /// A write clears **both** lanes, which is the packing's whole contract:
+    /// a card entering the graveyard can carry either static.
+    #[test]
+    fn a_graveyard_write_clears_every_lane() {
+        let mut g = gy(vec![crate::catalog::shivan_dragon()]);
+        assert!(!g.has_anthem());
+        assert!(!g.has_activated_grant());
+        assert_eq!(g.memo_lane(GY_LANE_ANTHEM), Some(false));
+        assert_eq!(g.memo_lane(GY_LANE_ACT_GRANT), Some(false));
+
+        g.push(CardInstance::new(CardId(99), crate::catalog::riftstone_portal(), 0));
+        assert_eq!(g.memo_lane(GY_LANE_ANTHEM), None, "push cleared the anthem lane");
+        assert_eq!(g.memo_lane(GY_LANE_ACT_GRANT), None, "and the grant lane, one store");
+        assert!(g.has_activated_grant(), "and the new card is seen");
+    }
+
     /// The whole point: a write invalidates, and a read does not.
     #[test]
     fn writes_invalidate_and_reads_do_not() {
