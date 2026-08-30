@@ -9790,6 +9790,41 @@ i.e. a card that wrote "destroy target creature" without its filter. The other
 residue is the counterspells, which target a spell the `Target` enum cannot
 express and which the enumerator's list never aims.
 
+### Hundred-and-sixth pass (4) — `(-113)`'s growth half: two frames' worth of inline storage
+
+**`fixed` -0.0935 % / `cube` -0.0719 % / `sealed` -0.1281 %** at `90a629a1`.
+Suite 18,791 / 0 / 5, golden traces 7/7 unmoved, clippy clean.
+
+Two `Vec`s in `resolve_combat_damage_with_filter` never leave the frame:
+`attacker_infos` (a `collect` over a `filter_map`, so no size hint past the
+filter — the 0->4->8 ladder on every damage step) and the strike-back
+`dealing_blocker_ids` (one allocation per blocked attacker to hold one or two
+ids). Both take inline storage, `(-71)`'s device; `blockers_of`, which feeds
+the second, has been `SmallVec<[CardId; 4]>` since that pass.
+
+```text
+sealed, every mover, net -3,317,568:
+  the allocator family                                     -3,321,000
+  Vec::from_iter (SpecFromIter)     4,199,054 -> 3,112,556  -1,086,498
+  RawVecInner::finish_grow         11,498,760 -> 11,220,200   -278,560
+  SmallVec::Extend                 17,884,330 -> 18,972,374 +1,088,044
+  __memcpy_avx_unaligned_erms      87,955,481 -> 88,574,353   +618,872
+
+resolve_combat's growth division, sealed: 23,398 -> 17,820 over 8,458 calls,
+2.77 -> 2.11 a call.
+```
+
+**The trade is explicit and worth quoting: the inline buffers pay ~1.7 M in
+`Extend` and `memcpy` to save ~5.0 M of allocator.** That ratio is what makes
+`(-71)`'s device different from a `reserve`: a reserve moves the allocation
+and pays the same copy, so below `(-80)`'s floor it is all cost. Here the
+allocation is *removed* and the copy is what replaces it, so the floor does
+not apply and a row at 2.77 growths a call is not the threshold that matters —
+**"does it escape the frame" is.**
+
+~1 of the 2.11 growths left is the deliberate `events.reserve(32)` from
+`0367c09c`, which the division folds in and which is the returned `Vec`.
+
 ### Hundred-and-sixth pass (3) — BUILT, MEASURED AND REVERTED, AND PASS 61 HAD ALREADY REVERTED IT
 
 **This is the same candidate pass 61 built and reverted — `is_event_hardcoded`'s
@@ -17223,10 +17258,14 @@ the cheapest untried thing in the function and it is not a tabulation**, so
 NEXT item 2 has been carrying "what dispatch's self cost actually is" as an
 open question for two passes; this closes the measurement half of it.
 
-**THE GROWTH HALF IS TAKEN, 2026-08-30 (the other session)** — the two
-never-escaping `Vec`s in `resolve_combat_damage_with_filter` (`attacker_infos`
-and the strike-back `dealing_blocker_ids`) to inline storage, `(-71)`'s device.
-Not a reserve: both are removals, so `(-80)`'s floor does not apply.
+**THE GROWTH HALF IS TAKEN AND SHIPPED at `90a629a1` — `fixed` -0.0935 % /
+`cube` -0.0719 % / `sealed` -0.1281 %.** `attacker_infos` and the strike-back
+`dealing_blocker_ids` take inline storage (`(-71)`'s device); `resolve_combat`
+falls 2.77 -> 2.11 growths a call and ~1 of what is left is the deliberate
+`events.reserve(32)`. **The entry's own framing was the wrong test**: a row's
+growths-per-call decides whether a *reserve* pays, and neither of these was a
+reserve — the question for inline storage is whether the buffer escapes the
+frame. See the Log. **What remains open here is nothing**; the row is closed.
 
 **(-113) THE CHEAP HALF IS TAKEN at `9b3470a4`** — `fixed` -0.0458 % /
 `cube` -0.0791 % / `sealed` -0.0706 %, and the entry's mechanism for it was
