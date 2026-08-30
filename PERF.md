@@ -17018,6 +17018,38 @@ nothing is being replaced, only not repeated. Callers, `cube`:
 fields pays the same. `has_toxic`, `has_modular` and `is_indestructible` are
 the ones next to it.
 
+**(-116) TAKEN, 2026-08-30 — THE INNER EVENT LOOP ASKS ITS FOUR PURE GUARDS
+IN THE WRONG ORDER, AND THE CHEAPEST-LOOKING ONE IS FIRST.**
+`dispatch_triggers_for_events`' `for ev in events` body is four `continue`
+guards, all pure predicates of `(ev, spec)` and `&self`, so their order is
+free to choose. It asks `is_event_hardcoded` first — a `match` over the whole
+`GameEvent` enum, the largest named source line in the function — then two
+death exclusions, and only then `event_matches_spec`, which is the one that
+actually discriminates.
+
+```text
+cube, at 19f1d85b
+  game/mod.rs:23365  is_event_hardcoded's `match ev`   10,240,198
+  game/mod.rs:18431  its call site                      2,287,634
+  game/mod.rs:18434  the dies_suppressed guard          1,608,704
+  game/mod.rs:18448  the event_matches_spec call        4,041,204
+  event_matches_spec, self, 815,532 calls              24,509,772  (30.1 a call)
+```
+
+**Every one of those ~850 k triples pays ~15 Ir for `is_event_hardcoded`
+before the kind test that rejects most of them runs.** Six `GameEvent`
+discriminants out of ~50 can make it return `true`. Move the kind test to the
+front and the other three behind it, and the three run only on pairs that
+matched. Predicted ~-12 M on `cube` (~-0.45 %); the cost is +30 Ir on the
+~35 k triples `is_event_hardcoded` used to reject before `event_matches_spec`
+ran.
+
+**This is NOT the closed per-event gate** (`(-109)`-adjacent, pass 61 and pass
+106): nothing is tabulated, memoized or precomputed, and
+`is_event_hardcoded`'s body is untouched. Its line row stays exactly what it
+was per instruction — it just executes on fewer of them, which is the
+distinction the Standing rules' entry draws in its last sentence.
+
 **(-115) TAKEN, 2026-08-30 — `dispatch_triggers_for_events` IS 7.46 % OF
 `cube` IN *SELF* Ir, 2.3x THE NEXT ROW, AND NOTHING IN THIS FILE HAS EVER
 ASKED WHAT THAT SELF COST IS.** Read off `cg.cube` at `2b38c673`:
