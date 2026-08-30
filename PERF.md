@@ -9593,6 +9593,50 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourth pass (8) — the census's card half, and the invariant that caught the fix being wrong
+
+**`fixed` -0.000 % / `cube` +0.000 % / `sealed` +0.001 %** at `45c55cc3`, off
+`41b1423d`. Outcomes byte-identical on all three pools, golden traces unmoved:
+none of the twenty cards is in the four `fixed` archetypes, which is this
+file's standing "no anchor can price a correctness change" again.
+
+**Terminate destroyed any permanent.** A slot with no filter enumerates
+against `SelectionRequirement::Any` and is not re-checked at CR 608.2b either,
+so the printed noun was enforced *nowhere*. Twenty cards: Terminate, Feast of
+Worms' land, Dispatch, Sweep Away, Murk Strider, Crimson Wisps, Essence
+Infusion, Infuse with Vitality, Professor's Warning, The Wandering Emperor's
++1, Drix Fatemaker, Dwarven Weaponsmith, Greenbelt Guardian, Flash
+Conscription, Carrionette, Crooked Scales, Mogg Assassin, Phyrexian Splicer,
+Kelpie Guide, Toils of Night and Day, Blatant Thievery, Holistic Wisdom,
+Nissa Worldwaker's +1 and Brave the Wilds.
+
+**`every_declared_target_slot_is_answerable` failed on three of the edits, and
+that is the entry.** `CoinFlipDestroyLoop` and `MoveChosenKeyword` have no arm
+in `target_filter_for_slot`, so a filter declared on their slots is invisible
+to the CR 608.2b re-check — the fix would have been **silently narrower than
+intended**, aiming correctly and then re-checking against nothing. **When a
+catalog fix declares a filter on a slot, the slot walker has to have an arm
+for that effect, and only an invariant over the whole catalog will tell you.**
+Both have arms now; so does `CreateEmblem`'s player slot.
+
+### Hundred-and-fourth pass (7) — the CR 115.4 family completed, and eighteen more player slots
+
+**`fixed` -0.000 % / `cube` +0.000 % / `sealed` -0.001 %** at `41b1423d`, off
+`874d6e53`. `d0799d5c` gave `DealDamage` the any-target fallback and stopped
+there; five more damage variants and two prevention ones answered `None` and
+still offered a land (`DealDamageEqualToPower` — Captain Ripley Vance's "deals
+damage equal to its power to any target" — `EachDealsDamageEqualToPower`,
+`PayAnyEnergyDealDamage`, `DealDamageExcessToController`,
+`RevealUntilLandDamage`, `PreventNextDamage`, `PreventNextDamageAndGainLife`).
+`RedirectDamageToThisThisTurn` is excluded on purpose: its target is a damage
+**source**. `PreventCombatDamageByTargetThisTurn` (Guard Dogs) gets the pump
+family's creature filter for the same reason.
+
+**The rule the three instalments share:** an implicit filter belongs to the
+*field*, not to the card. Ask what the field is — a damage recipient, a player,
+a creature that deals damage — and the fallback follows; the per-card filter is
+only for the nouns narrower than the field's own type.
+
 ### Hundred-and-seventh pass (1) — the free-divider question is read, not scanned for
 
 **`fixed` -0.0458 % / `cube` -0.0791 % / `sealed` -0.0706 %** at `9b3470a4`,
