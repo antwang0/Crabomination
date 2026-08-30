@@ -53,7 +53,7 @@ CR 508.1d vs the attack tax). What is open is the pair of defects underneath
 them, neither of which the sweep can currently see because the thing that
 would surface them is gated off.
 
-### The target enumerator is zone-blind, and one gate stands in for a zone
+### ~~The target enumerator is zone-blind, and one gate stands in for a zone~~ — closed at the hundred-and-fourth pass
 
 `legal_targets_for_filter_inner` (`game/effects/targeting.rs`) walks the
 battlefield, then every graveyard, then exile, applying the *same*
@@ -68,19 +68,30 @@ Two consequences, one fixed and one open:
 * **Fixed** — a board-shaped filter's off-board matches used to be posed to
   the player as a `ChooseCards` modal whenever nothing on the board was
   legal. They are dropped now, and an empty legal set resolves targetless.
-* **Open** — an effect that genuinely reaches a graveyard *without saying so
-  in its filter* gets a battlefield cursor. Timeless Witness's ETB is `Move {
-  what: TargetFiltered { filter: Not(Player) }, to: Hand(You) }`;
-  `build_cube_state_seeded(62)` is that board.
+* **Closed at the hundred-and-fourth pass, and it took both halves the entry
+  named.** (a) *A zone argument to the enumerator*: `legal_targets_for_filter`
+  walked every graveyard and exile for any filter, so `Any` listed every card
+  in every zone (Cuombajj Witches) and a board-shaped `Destroy` offered an
+  exiled card. It takes the scope now
+  (`legal_targets_for_filter_scoped`), and `enumerate_legal_targets_xc` passes
+  the **same** `may_target_offboard_card || mentions_offboard_zone` question
+  the auto-picker was gated on at the eighty-sixth pass — the UI path and the
+  training path had been targeting different sets. (b) *A zone in the filter*:
+  **seventy-nine bodies** said "from your graveyard" in their oracle text and
+  nothing in their filter, so Zombify with an empty graveyard stole a
+  battlefield creature. `SelectionRequirement::from_your_graveyard` /
+  `from_any_graveyard` is the spelling, and
+  `core_rules::target_walkers::every_reanimating_move_says_which_zone_its_
+  target_is_in` is the invariant. Timeless Witness is one of the seventy-nine.
 
 **Do not fix it by widening the gate to `Effect::prefers_graveyard_target`.**
-That was tried in this pass and reverted: it is true for exactly this effect,
-and `Not(Player)` then matches every card in every graveyard *and in exile*,
-so the modal offers illegal candidates and the bot answers with none. Seed 62
-is in the smoke test to keep that from being re-added silently. The fix that
-would work is a zone in the filter (a `Not(Player)` that means "a card in a
-graveyard" should say so) or a zone argument to the enumerator; both are
-catalog-wide.
+That was tried at the eighty-fifth pass and reverted: it is true for exactly
+this effect, and `Not(Player)` then matches every card in every graveyard
+*and in exile*, so the modal offers illegal candidates and the bot answers
+with none. Seed 62 is in the smoke test to keep that from being re-added
+silently. **The filter is what fixed it** — `Not(Player).from_your_graveyard()`
+is `mentions_offboard_zone`, so the modal path opens for it without any change
+to that gate.
 
 ### ~~And the auto-picker has the same blindness with no gate at all~~ — fixed at the eighty-sixth pass
 
