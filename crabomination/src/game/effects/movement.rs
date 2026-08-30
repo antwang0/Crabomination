@@ -2574,7 +2574,7 @@ impl GameState {
                     if base > 0 {
                         // CR 614.16: counter replacement statics also apply
                         // to the "enters with N counters" replacement.
-                        let bf = self.battlefield.iter().find(|c| c.id == cid);
+                        let bf = self.battlefield.find_by_id(cid);
                         let n = bf
                             .map(|c| (c.controller, c.definition.is_creature()))
                             .map(|(ctrl, cre)| {

@@ -18034,7 +18034,7 @@ impl GameState {
                         _ => None,
                     });
                 let Some(src_id) = src_id else { return Ok(()); };
-                let Some(def) = self.battlefield.iter().find(|c| c.id == src_id).map(|c| c.definition.arc())
+                let Some(def) = self.battlefield.find_by_id(src_id).map(|c| c.definition.arc())
                 else { return Ok(()); };
                 for _ in 0..n {
                     let tid = self.mint_token_onto_battlefield(def.clone(), p, false, events);
@@ -31756,7 +31756,7 @@ impl GameState {
                     .exile
                     .iter()
                     .find(|c| c.id == src)
-                    .or_else(|| self.battlefield.iter().find(|c| c.id == src))
+                    .or_else(|| self.battlefield.find_by_id(src))
                     .map(|c| c.definition.arc())
                 else {
                     return Ok(());

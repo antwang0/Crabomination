@@ -934,7 +934,7 @@ impl GameState {
         for eq in &self.battlefield {
             let Some(host_id) = eq.attached_to else { continue };
             let Some(bonus) = &eq.definition.equipped_bonus else { continue };
-            let Some(host) = self.battlefield.iter().find(|c| c.id == host_id) else { continue };
+            let Some(host) = self.battlefield.find_by_id(host_id) else { continue };
             for t in &bonus.triggered_abilities {
                 if t.event.kind == kind && scope_matches(&t.event.scope, host.controller) {
                     let source = if bonus.triggers_on_equipment { eq.id } else { host_id };
@@ -1167,7 +1167,7 @@ impl GameState {
     /// a chosen number of lore counters (1..final chapter), firing only the
     /// chosen chapter. Non-read-ahead Sagas defer to [`saga_advance`].
     pub(crate) fn saga_enter_advance(&mut self, card_id: CardId) {
-        let Some(card) = self.battlefield.iter().find(|c| c.id == card_id) else {
+        let Some(card) = self.battlefield.find_by_id(card_id) else {
             return;
         };
         if card.definition.saga_chapters.is_empty() {
@@ -1558,7 +1558,7 @@ impl GameState {
         if after <= before {
             return;
         }
-        let Some(card) = self.battlefield.iter().find(|c| c.id == card_id) else {
+        let Some(card) = self.battlefield.find_by_id(card_id) else {
             return;
         };
         let controller = card.controller;
@@ -1952,7 +1952,7 @@ impl GameState {
                     // CR 310.6 — a cast Siege's controller chooses an opponent
                     // to protect it (the lone opponent in 2-player; multiplayer
                     // choice is a follow-up).
-                    if let Some(c) = self.battlefield.iter().find(|c| c.id == card_id)
+                    if let Some(c) = self.battlefield.find_by_id(card_id)
                         && c.definition.is_battle()
                         && c.protected_by.is_none()
                     {
@@ -5395,7 +5395,7 @@ impl GameState {
             // can introspect the dying card's printed types. Only a *creature*
             // dies (CR 700.4) — a legend-ruled planeswalker/artifact/enchant
             // leaves the battlefield without a CreatureDied event.
-            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+            if let Some(c) = self.battlefield.find_by_id(id) {
                 if c.definition.is_creature() {
                     events.push(GameEvent::CreatureDied { card_id: id });
                 }
@@ -5431,7 +5431,7 @@ impl GameState {
             }
         };
         for id in world_victims {
-            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+            if let Some(c) = self.battlefield.find_by_id(id) {
                 self.died_card_snapshots.insert(id, c.clone());
             }
             self.remove_from_battlefield_to_graveyard_raw(id);
@@ -5465,12 +5465,12 @@ impl GameState {
             .collect()
         };
         for id in saga_victims {
-            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+            if let Some(c) = self.battlefield.find_by_id(id) {
                 self.died_card_snapshots.insert(id, c.clone());
             }
             events.push(GameEvent::PermanentSacrificed {
                 card_id: id,
-                who: self.battlefield.iter().find(|c| c.id == id).map(|c| c.controller).unwrap_or(0),
+                who: self.battlefield.find_by_id(id).map(|c| c.controller).unwrap_or(0),
             });
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
@@ -5722,7 +5722,7 @@ impl GameState {
             // body reads its counter-boosted P/T (Goldvein Hydra). Removed
             // when the trigger resolves (`resolve_top_of_stack`).
             if !die_triggers.is_empty()
-                && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
+                && let Some(c) = self.battlefield.find_by_id(id)
             {
                 self.leaves_bf_lki.insert(id, c.clone());
             }
@@ -5895,7 +5895,7 @@ impl GameState {
             // enchanted creature dies" payoffs can count the Auras that were
             // on the dying host (Hateful Eidolon, Dawn Evangel). Only meaningful
             // when the lost host is gone (the common death case).
-            if let Some(aura) = self.battlefield.iter().find(|c| c.id == id)
+            if let Some(aura) = self.battlefield.find_by_id(id)
                 && let Some(host) = aura.attached_to
                 && !self.battlefield.iter().any(|b| b.id == host)
             {
@@ -6658,14 +6658,14 @@ impl GameState {
         if !self.creature_deaths_drain_toughness_this_turn {
             return;
         }
-        let Some(controller) = self.battlefield.iter().find(|c| c.id == id).map(|c| c.controller)
+        let Some(controller) = self.battlefield.find_by_id(id).map(|c| c.controller)
         else {
             return;
         };
         let toughness = self
             .computed_permanent(id)
             .map(|cp| cp.toughness)
-            .or_else(|| self.battlefield.iter().find(|c| c.id == id).map(|c| c.toughness()))
+            .or_else(|| self.battlefield.find_by_id(id).map(|c| c.toughness()))
             .unwrap_or(0);
         if toughness > 0 {
             self.adjust_life(controller, -toughness);
@@ -6848,7 +6848,7 @@ impl GameState {
         // its pre-removal state for selectors that read it (e.g. an Aura's
         // `AttachedTo(This)` → enchanted creature — Parallax Dementia).
         if (!leave_triggers.is_empty() || has_sac_self_trigger)
-            && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
+            && let Some(c) = self.battlefield.find_by_id(id)
         {
             self.died_card_snapshots.insert(id, c.clone());
             // CR 603.10 — keep a longer-lived LKI snapshot so a

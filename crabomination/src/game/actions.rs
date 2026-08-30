@@ -2685,7 +2685,7 @@ impl crate::game::GameState {
         {
             return;
         }
-        let Some(land) = self.battlefield.iter().find(|c| c.id == land_id) else { return };
+        let Some(land) = self.battlefield.find_by_id(land_id) else { return };
         if !land.definition.is_land() {
             return;
         }
@@ -3734,7 +3734,7 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::CounterType;
         let p = self.priority.player_with_priority;
-        let Some(creature) = self.battlefield.iter().find(|c| c.id == creature_id) else {
+        let Some(creature) = self.battlefield.find_by_id(creature_id) else {
             return Err(GameError::CardNotOnBattlefield(creature_id));
         };
         let prep_def = match creature.definition.prepare_spell.as_deref() {
@@ -13946,7 +13946,7 @@ impl GameState {
         // is the whole cost; waterbend helpers only reach the generic.
         let mut colored_pips: Vec<crate::mana::Color> = Vec::new();
         let generic_total = {
-            let Some(c) = self.battlefield.iter().find(|c| c.id == card_id) else {
+            let Some(c) = self.battlefield.find_by_id(card_id) else {
                 return Err(GameError::CardNotOnBattlefield(card_id));
             };
             let Some(ab) = c.definition.activated_abilities.get(ability_index) else {
@@ -14134,7 +14134,7 @@ impl GameState {
             () => {
                 match bf_pos.and_then(|i| self.battlefield.get(i)) {
                     Some(c) if c.id == card_id => Some(c),
-                    _ => self.battlefield.iter().find(|c| c.id == card_id),
+                    _ => self.battlefield.find_by_id(card_id),
                 }
             };
         }
@@ -16263,7 +16263,7 @@ impl GameState {
             // On an equipment-GRANTED ability (Blinding Powder, Shuriken) the
             // source is the equipped creature, so the cost detaches the granter
             // instead (CR 702.6e).
-            let detach = match self.battlefield.iter().find(|c| c.id == card_id) {
+            let detach = match self.battlefield.find_by_id(card_id) {
                 Some(c) if c.attached_to.is_some() => Some(card_id),
                 Some(_) => self
                     .battlefield

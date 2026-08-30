@@ -1812,18 +1812,18 @@ impl GameState {
             }
             Predicate::SourceAttackedThisTurn => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.attacked_this_turn)
                 .unwrap_or(false),
             Predicate::IsExtraTurn => self.current_turn_is_extra,
             Predicate::SourceIsMonstrous => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.monstrous)
                 .unwrap_or(false),
             Predicate::SourceIsRenowned => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.renowned)
                 .unwrap_or(false),
             Predicate::SourceIsEquipped => {
@@ -1831,12 +1831,12 @@ impl GameState {
             }
             Predicate::SourceIsSuspected => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.suspected)
                 .unwrap_or(false),
             Predicate::SourceIsBestowedAura => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.bestowed)
                 .unwrap_or(false),
             Predicate::SourceOnBattlefield => {
@@ -1870,17 +1870,17 @@ impl GameState {
                 .unwrap_or(false),
             Predicate::SourceSaddled => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.saddled)
                 .unwrap_or(false),
             Predicate::SourceCastFromEscape => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| c.cast_from_escape)
                 .unwrap_or(false),
             Predicate::SourceWasCast => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .map(|c| {
                     !c.is_token
                         && (c.cast_from_hand
@@ -1892,7 +1892,7 @@ impl GameState {
                 .unwrap_or(false),
             Predicate::SourceCastFromOwnersHand => ctx
                 .source
-                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .and_then(|cid| self.battlefield.find_by_id(cid))
                 .is_some_and(|c| !c.is_token && c.cast_from_hand),
             Predicate::SourceChampionedSomething => ctx.source.is_some_and(|cid| {
                 self.exile.iter().any(|c| c.exiled_by.as_ref().is_some_and(|l| l.source == cid))

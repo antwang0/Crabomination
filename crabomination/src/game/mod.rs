@@ -5555,7 +5555,7 @@ impl GameState {
         controller: usize,
     ) -> Vec<(crate::card::CounterType, u32)> {
         use crate::effect::StaticEffect;
-        let Some(ec) = self.battlefield.iter().find(|c| c.id == entering) else {
+        let Some(ec) = self.battlefield.find_by_id(entering) else {
             return vec![];
         };
         // Oath of Gideon's loyalty rider is the one spec that applies to a
@@ -7789,7 +7789,7 @@ impl GameState {
         // Mint-time type riders (embalm's "it's a Zombie in addition") are
         // re-layered on the copy: the delta vs the printed card survives.
         let minted_extra_types: Vec<crate::card::CreatureType> = {
-            let c = self.battlefield.iter().find(|c| c.id == id).unwrap();
+            let c = self.battlefield.find_by_id(id).unwrap();
             if c.definition.enters_as_copy.is_some() {
                 let printed = crabomination_base::registry::resolve_card(c.definition.name);
                 c.definition
@@ -7954,7 +7954,7 @@ impl GameState {
     /// creature died (Undead Sprinter's non-Zombie gate). Called from both
     /// death funnels while the permanent is still on the battlefield.
     pub(crate) fn note_creature_death(&mut self, id: CardId) {
-        if let Some(c) = self.battlefield.iter().find(|c| c.id == id).cloned() {
+        if let Some(c) = self.battlefield.find_by_id(id).cloned() {
             self.creature_deaths_this_turn.push(c);
         }
     }
@@ -9965,7 +9965,7 @@ impl GameState {
             let Some(bonus) = &card.definition.equipped_bonus else { continue };
             let Some(target) = card.attached_to else { continue };
             // Only apply while the target is still a creature on the bf.
-            let Some(host) = self.battlefield.iter().find(|c| c.id == target) else { continue };
+            let Some(host) = self.battlefield.find_by_id(target) else { continue };
             // Volrath's Curse — the host's controller bought a pass out of this
             // source's effect for the turn.
             if self.players[host.controller].statics_ignored_this_turn.contains(&card.id) {
@@ -10019,7 +10019,7 @@ impl GameState {
                 } else if scale.count_sharing_type_with_host {
                     // "+1/+1 for each other creature you control that shares a
                     // creature type with it" (Stoneforge Masterwork).
-                    let host = self.battlefield.iter().find(|c| c.id == target);
+                    let host = self.battlefield.find_by_id(target);
                     let host_types = host
                         .map(|c| c.definition.subtypes.creature_types.clone())
                         .unwrap_or_default();
@@ -13402,7 +13402,7 @@ impl GameState {
         if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed) {
             let card = match hint {
             Some(c) => c,
-            None => self.battlefield.iter().find(|c| c.id == id)?,
+            None => self.battlefield.find_by_id(id)?,
         };
             // CR 613.8 — the gather's condition-gated tail installs the
             // effects it has built so far, so a layer-7 condition can see a
@@ -13444,7 +13444,7 @@ impl GameState {
             if let Some((fx, gates)) = &st.memo {
                 let card = match hint {
                     Some(c) => c,
-                    None => self.battlefield.iter().find(|c| c.id == id)?,
+                    None => self.battlefield.find_by_id(id)?,
                 };
                 let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(
                     card, fx, *gates,
@@ -13456,7 +13456,7 @@ impl GameState {
         }
         let card = match hint {
             Some(c) => c,
-            None => self.battlefield.iter().find(|c| c.id == id)?,
+            None => self.battlefield.find_by_id(id)?,
         };
         if needs_gather {
             // The scope's first computed read: fill `memo` exactly as
@@ -13541,7 +13541,7 @@ impl GameState {
     }
 
     pub fn dying_snapshot(&self, id: CardId) -> Option<CardInstance> {
-        let mut snap = self.battlefield.iter().find(|c| c.id == id)?.clone();
+        let mut snap = self.battlefield.find_by_id(id)?.clone();
         // The doc's "only pays the layer cost when a grant is present" was a
         // claim, not code, until the presence gate existed: the read below is
         // a whole gather, taken once per dying permanent. `computed` can only
@@ -14827,7 +14827,7 @@ impl GameState {
         self.attacking
             .iter()
             .filter_map(|atk| {
-                let card = self.battlefield.iter().find(|c| c.id == atk.attacker)?;
+                let card = self.battlefield.find_by_id(atk.attacker)?;
                 let cp = self.computed_permanent(atk.attacker)?;
                 Some((card, cp))
             })
@@ -14839,7 +14839,7 @@ impl GameState {
         blocker_id: CardId,
         attackers: &[(&CardInstance, std::sync::Arc<ComputedPermanent>)],
     ) -> bool {
-        let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
+        let Some(blocker) = self.battlefield.find_by_id(blocker_id) else {
             return false;
         };
         // Only the blocker's and each attacker's computed views are needed —
@@ -14905,10 +14905,10 @@ impl GameState {
 
     /// True if `blocker_id` can legally block `attacker_id`.
     pub fn blocker_can_block_attacker(&self, blocker_id: CardId, attacker_id: CardId) -> bool {
-        let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
+        let Some(blocker) = self.battlefield.find_by_id(blocker_id) else {
             return false;
         };
-        let Some(attacker) = self.battlefield.iter().find(|c| c.id == attacker_id) else {
+        let Some(attacker) = self.battlefield.find_by_id(attacker_id) else {
             return false;
         };
         // Per-id computed views — see `can_block_any_attacker`.
@@ -17404,7 +17404,7 @@ impl GameState {
     /// Pilot). Folded into the crew / saddle power total, not real P/T.
     pub fn crew_saddle_power_bonus(&self, cid: crate::card::CardId) -> i32 {
         use crate::effect::StaticEffect;
-        let Some(target) = self.battlefield.iter().find(|c| c.id == cid) else { return 0 };
+        let Some(target) = self.battlefield.find_by_id(cid) else { return 0 };
         let mut bonus = 0;
         for src in &self.battlefield {
             for sa in &src.definition.static_abilities {
@@ -22666,7 +22666,7 @@ impl GameState {
         // CR 702.32 — an ETB/other trigger on a permanent reads the
         // source's `kicked` flag so "when ~ enters, if it was kicked, …"
         // riders (Goblin Bushwhacker) can branch on `SpellWasKicked`.
-        if let Some(src) = self.battlefield.iter().find(|c| c.id == source) {
+        if let Some(src) = self.battlefield.find_by_id(source) {
             ctx.kicked = src.kicked;
             ctx.kicked_options = src.kicked_options.clone();
             ctx.kick_count = src.kick_count;

@@ -4358,7 +4358,7 @@ impl GameState {
                     // CR 702.76 — Prowl window: record the damaging creature's
                     // types for its controller (Changeling counts as every
                     // type, recorded via the controller-side any flag).
-                    if let Some(c) = self.battlefield.iter().find(|c| c.id == atk.id) {
+                    if let Some(c) = self.battlefield.find_by_id(atk.id) {
                         let ctrl = c.controller;
                         if c.definition.keywords.has_kw(&Keyword::Changeling) {
                             self.players[ctrl].prowl_any_type_this_turn = true;

@@ -2966,7 +2966,7 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     // exploiter is one of several creatures so it can sacrifice the weakest (or
     // itself for a strong ETB payoff). Card advantage off a token is a clean win.
     if description.starts_with("Exploit") {
-        let ctrl = state.battlefield.iter().find(|c| c.id == source).map(|c| c.controller);
+        let ctrl = state.battlefield.find_by_id(source).map(|c| c.controller);
         if let Some(seat) = ctrl {
             let creatures: Vec<&crate::card::CardInstance> = state
                 .battlefield
@@ -9572,7 +9572,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // view was asked for by id and then the same card was found
             // anyway, so the miss paid two whole-battlefield walks for one
             // permanent.
-            let a = state.battlefield.iter().find(|c| c.id == atk.attacker)?;
+            let a = state.battlefield.find_by_id(atk.attacker)?;
             let cp = state.computed_permanent_on(a);
             Some(AttackerFacts {
                 id: atk.attacker,
@@ -9657,7 +9657,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         for atk in state.attacking() {
             if let AttackTarget::Planeswalker(pw) = atk.target
                 && state.battlefield_find(pw).map(|c| c.controller) == Some(seat)
-                && let Some(a) = state.battlefield.iter().find(|c| c.id == atk.attacker)
+                && let Some(a) = state.battlefield.find_by_id(atk.attacker)
             {
                 let e = pw_attackers.entry(pw).or_default();
                 e.0 += a.power().max(0) as u32;

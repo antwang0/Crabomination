@@ -589,7 +589,7 @@ impl GameState {
     /// hostile permanents below un-warded ones.
     pub(crate) fn has_hostile_ward(&self, cid: CardId, actor: usize) -> bool {
         use crate::card::Keyword;
-        let Some(c) = self.battlefield.iter().find(|c| c.id == cid) else { return false };
+        let Some(c) = self.battlefield.find_by_id(cid) else { return false };
         if c.controller == actor {
             return false;
         }
