@@ -37,10 +37,13 @@ use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 
-/// Decision variants the bot answers with its own policy. Everything else
-/// falls through to `AutoDecider`, whose answers are deliberately
-/// conservative defaults rather than play decisions — `CombatDamageOrder`,
-/// for instance, keeps the engine's declaration order no matter what dies.
+/// Decision variants the bot answers with its own policy **under the
+/// default profile**. Everything else falls through to `AutoDecider`,
+/// whose answers are deliberately conservative defaults rather than play
+/// decisions — `CombatDamageOrder`, for instance, keeps the engine's
+/// declaration order no matter what dies unless the `damage_order` flag
+/// (profile `dmgorder`, off by default) turns on the value-ordered
+/// policy.
 const BOT_HANDLED: &[&str] = &[
     "Mulligan",
     "SearchLibrary",

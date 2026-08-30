@@ -460,6 +460,31 @@ pub struct EvalWeights {
     /// until laddered ([`chump_blocks_on`](Self::chump_blocks_on),
     /// profile `chumpblocks`).
     pub chump_blocks: bool,
+    /// Value-ordered combat damage (CR 510.1c): order a multi-blocked
+    /// attacker's blockers (or a multi-blocking creature's attackers, the
+    /// 510.1e mirror) so the engine's lethal-to-each split kills what the
+    /// assigner most wants dead. `Decision::CombatDamageOrder` has no
+    /// policy arm at all — every gang block in this program's history
+    /// resolved in declaration (CardId) order, so "kill the better
+    /// blocker" was not expressible at any valuation: the same
+    /// missing-candidate shape as chump blocks (round 43, +0.9), one
+    /// step later in the same combat. The policy simulates the engine's
+    /// own default split per candidate order and keeps the best signed
+    /// outcome for the deciding seat — banding and Defensive Formation
+    /// hand the choice to the victims' controller, whose best order is
+    /// the reverse preference, and the sign handles both chairs. An
+    /// order whose outcome matches the default's answers empty, so games
+    /// where the choice cannot matter play (and pair) exactly as before.
+    ///
+    /// **Adopted 2026-08-30 (round 52)**: 50.4 % [50.2, 50.6] and
+    /// 50.3 % [50.1, 50.5] vs `gang`, seeds 43/97, 24 000 paired sealed
+    /// games, both intervals clear of 50 — the round-50 rare-class rule
+    /// (incidence ~0.12/game, `.ladder/r52_probe.txt`). The exact gate
+    /// re-runs as `dmgorder` vs `gang`: neither profile carries the
+    /// default's determinize/chump layers, so adoption did not consume
+    /// the control ([`damage_order_on`](Self::damage_order_on),
+    /// `.ladder/run_r52_dmgorder.sh`).
+    pub damage_order: bool,
     /// Walker chip attacks: the greedy pass attacks a planeswalker only
     /// when it can finish it, so a healthy walker sits unpressured to
     /// its ultimate (recorded: ten turns, a lost game). The flag adds
@@ -587,6 +612,7 @@ impl EvalWeights {
             buff_2for1: false,
             converge_lands: false,
             chump_blocks: false,
+            damage_order: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -661,6 +687,7 @@ impl EvalWeights {
             buff_2for1: false,
             converge_lands: false,
             chump_blocks: false,
+            damage_order: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -718,6 +745,7 @@ impl EvalWeights {
             buff_2for1: false,
             converge_lands: false,
             chump_blocks: false,
+            damage_order: false,
             walker_chip: false,
             ability_arms: false,
             impulse_draw: false,
@@ -1133,6 +1161,13 @@ impl EvalWeights {
         Self { chump_blocks: true, ..Self::block_gang_search() }
     }
 
+    /// The default plus value-ordered combat damage. The opt-in for
+    /// [`damage_order`](Self::damage_order); ladder as A against the
+    /// default (profile `dmgorder` vs `gang`).
+    pub const fn damage_order_on() -> Self {
+        Self { damage_order: true, ..Self::block_gang_search() }
+    }
+
     /// The attack-search profile plus the walker chip candidate. The
     /// opt-in for [`walker_chip`](Self::walker_chip); ladder as A
     /// against `atk-sim` (the same weights minus the flag).
@@ -1490,6 +1525,7 @@ impl Default for EvalWeights {
     /// | spell-casting combat sims | 54.4 % [53.0 %, 55.8 %] | 4 794 |
     /// | value gang-blocks | 51.3 % [50.7 %, 51.9 %] | 28 800 |
     /// | desperation chump blocks | 51.0 % / 50.8 % (two ladder seeds) | 24 000 |
+    /// | value-ordered combat damage | 50.4 % / 50.3 % (two ladder seeds, both intervals clear 50) | 24 000 |
     ///
     /// One adopted layer is *not* in this table because it is not in this
     /// profile: `target_arms` (round 46, 50.7 % / 51.2 %, 24 000 games)
@@ -1540,7 +1576,23 @@ impl Default for EvalWeights {
         // profitable-blocks-only menu never offered one). Measured on
         // the `gang` base; determinization rides on top exactly as the
         // adoption table's earlier layers do.
-        Self { determinize: 1, chump_blocks: true, ..Self::block_gang_search() }
+        // `damage_order` adopted 2026-08-30 (round 52): 50.4 % [50.2,
+        // 50.6] and 50.3 % [50.1, 50.5] against `gang` on ladder seeds
+        // 43/97, 24 000 paired sealed games total, both cell intervals
+        // clear of 50 (the round-50 rare-class rule — 5 817 of 6 000
+        // pairs split as exact mirrors, so the ~0.12-per-game decision
+        // measures at ±0.2). Found by the state/decision representation
+        // audit: `Decision::CombatDamageOrder` had no policy arm, so
+        // every gang block in the program's history dealt lethal in
+        // declaration order. Measured on the `gang` base like the layers
+        // above; the exact gate re-runs as `dmgorder` vs `gang`
+        // (.ladder/run_r52_dmgorder.sh).
+        Self {
+            determinize: 1,
+            chump_blocks: true,
+            damage_order: true,
+            ..Self::block_gang_search()
+        }
     }
 }
 
@@ -2094,8 +2146,130 @@ fn decide_pending_policy_inner(
                 state, seat, *num_modes, w,
             ))
         }
+        // CR 510.1c / 510.1e — combat-damage order for a multi-blocked
+        // attacker (or a creature blocking several attackers). AutoDecider
+        // keeps declaration order; under the flag the policy picks the
+        // order whose engine-default split kills the most value from the
+        // deciding seat's side of the table. The assignment sibling
+        // (`AssignCombatDamage`) deliberately stays on the engine default:
+        // lethal-to-each-then-trample is already the assigner's optimum in
+        // everything but the banding deny-trample corner, not worth an arm
+        // in a pool with no banding.
+        crate::decision::Decision::CombatDamageOrder { attacker, blockers }
+            if w.damage_order =>
+        {
+            decide_combat_damage_order(state, seat, *attacker, blockers, w)
+        }
         other => AutoDecider.decide(other),
     }
+}
+
+/// CR 510.1c — choose the damage order for `dealer`'s combat damage over
+/// `victims` (its blockers, or the attackers it blocks in the 510.1e
+/// mirror). The engine's split assigns each victim its lethal in this
+/// order until the power runs out, so the order alone decides who dies.
+/// Candidate orders are scored by simulating exactly that split and
+/// summing `permanent_value` over the dead — positive for the opponent's
+/// creatures, negative for `seat`'s own, which is what makes the same
+/// policy correct from either chair (banding and Defensive Formation
+/// hand the choice to the victims' controller). Exhaustive to five
+/// victims (120 walks of a five-entry list); a wider band falls back to
+/// one greedy order by value per point of lethal. Improvement is strict:
+/// an order that only ties the default answers empty, so a game where
+/// the choice cannot matter plays (and antithetically pairs) exactly as
+/// before the flag.
+fn decide_combat_damage_order(
+    state: &GameState,
+    seat: usize,
+    dealer: crate::card::CardId,
+    victims: &[(crate::card::CardId, String)],
+    w: &EvalWeights,
+) -> crate::decision::DecisionAnswer {
+    use crate::card::{Keyword, KeywordSlice};
+    let empty = crate::decision::DecisionAnswer::DamageOrder(vec![]);
+    let Some(d) = state.computed_permanent(dealer) else { return empty };
+    let power = d.power.max(0) as u32;
+    // Deathtouch makes any nonzero assignment lethal (CR 702.2c), which
+    // is how `combat_assignment_plan` prices it too.
+    let deathtouch = d.keywords().has_kw(&Keyword::Deathtouch);
+    // (id, lethal, value signed for `seat`), in the engine's default order.
+    let entries: Vec<(crate::card::CardId, u32, i32)> = victims
+        .iter()
+        .filter_map(|(id, _)| {
+            let inst = state.battlefield_find(*id)?;
+            let cp = state.computed_permanent_on(inst)?;
+            let lethal =
+                if deathtouch { 1 } else { (cp.toughness - inst.damage as i32).max(1) as u32 };
+            let v = permanent_value_with(state, *id, Some(inst), w);
+            Some((*id, lethal, if inst.controller == seat { -v } else { v }))
+        })
+        .collect();
+    let n = entries.len();
+    if n < 2 || power == 0 {
+        return empty;
+    }
+    // The engine's `default_damage_split`, in miniature: lethal to each in
+    // order while the power lasts; a victim dies exactly when its full
+    // lethal fit. (The no-trample excess dump lands on a victim that is
+    // already dead, so it never changes the outcome scored here.)
+    let dead_value = |order: &[usize]| -> i32 {
+        let mut remaining = power;
+        let mut total = 0i32;
+        for &i in order {
+            let (_, lethal, v) = entries[i];
+            let assigned = lethal.min(remaining);
+            remaining -= assigned;
+            if assigned >= lethal {
+                total += v;
+            }
+        }
+        total
+    };
+    let default_idx: Vec<usize> = (0..n).collect();
+    let default_score = dead_value(&default_idx);
+    let mut best_idx = default_idx.clone();
+    let mut best_score = default_score;
+    if n <= 5 {
+        fn perms(k: usize, idx: &mut Vec<usize>, visit: &mut dyn FnMut(&[usize])) {
+            if k == idx.len() {
+                visit(idx);
+                return;
+            }
+            for i in k..idx.len() {
+                idx.swap(k, i);
+                perms(k + 1, idx, visit);
+                idx.swap(k, i);
+            }
+        }
+        let mut idx = default_idx;
+        perms(0, &mut idx, &mut |order| {
+            let s = dead_value(order);
+            if s > best_score {
+                best_score = s;
+                best_idx = order.to_vec();
+            }
+        });
+    } else {
+        // A six-way-plus gang block: one greedy order, opponents' best
+        // trades first, own creatures last. Not optimal, but the case is
+        // rare enough that the exhaustive walk's cost isn't owed.
+        let mut idx = default_idx;
+        idx.sort_by_key(|&i| {
+            let (_, lethal, v) = entries[i];
+            std::cmp::Reverse(v.saturating_mul(64) / lethal.max(1) as i32)
+        });
+        let s = dead_value(&idx);
+        if s > best_score {
+            best_score = s;
+            best_idx = idx;
+        }
+    }
+    if best_score <= default_score {
+        return empty;
+    }
+    crate::decision::DecisionAnswer::DamageOrder(
+        best_idx.iter().map(|&i| entries[i].0).collect(),
+    )
 }
 
 /// The minimum legal attack declaration for the active player: only the
@@ -19546,4 +19720,93 @@ mod action_sampling_tests {
         set_jitter_seed(None);
     }
 
+}
+
+#[cfg(test)]
+mod damage_order_tests {
+    use super::*;
+    use crate::catalog;
+    use crate::game::{GameState, TurnStep};
+    use crate::player::Player;
+
+    fn two_player_game() -> GameState {
+        let players = vec![Player::new(0, "Alice"), Player::new(1, "Bob")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::PreCombatMain;
+        g
+    }
+
+    fn order_of(a: crate::decision::DecisionAnswer) -> Vec<crate::card::CardId> {
+        match a {
+            crate::decision::DecisionAnswer::DamageOrder(ids) => ids,
+            other => panic!("expected DamageOrder, got {other:?}"),
+        }
+    }
+
+    /// CR 510.1c — the order policy kills the most valuable victims the
+    /// power can pay for, and the signed value makes the same policy
+    /// correct from the defender's chair (banding / Defensive Formation
+    /// hand the decision to the victims' controller).
+    #[test]
+    fn damage_order_kills_by_value_from_either_chair() {
+        let mut g = two_player_game();
+        let dealer = g.add_card_to_battlefield(1, catalog::hill_giant());
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+        let w = EvalWeights::damage_order_on();
+        let victims = vec![(bears, String::new()), (giant, String::new())];
+
+        // The attacker's chair: three power pays for the 3/3, or for the
+        // 2/2 with a point to spare. Declaration order killed the 2/2;
+        // the policy takes the 3/3.
+        let ids = order_of(decide_combat_damage_order(&g, 1, dealer, &victims, &w));
+        assert_eq!(ids.first(), Some(&giant), "attacker kills the better blocker");
+
+        // The defender's chair: same decision, victims' controller
+        // deciding — feed the 2/2, keep the 3/3.
+        let victims_rev = vec![(giant, String::new()), (bears, String::new())];
+        let ids = order_of(decide_combat_damage_order(&g, 0, dealer, &victims_rev, &w));
+        assert_eq!(ids.first(), Some(&bears), "defender protects the better creature");
+    }
+
+    /// The strict-improvement rule: interchangeable victims mean no order
+    /// beats the default, the answer is empty, the engine keeps
+    /// declaration order — and an antithetic mirror pair stays a mirror.
+    #[test]
+    fn damage_order_answers_empty_without_a_strict_improvement() {
+        let mut g = two_player_game();
+        let dealer = g.add_card_to_battlefield(1, catalog::hill_giant());
+        let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let w = EvalWeights::damage_order_on();
+        let victims = vec![(b1, String::new()), (b2, String::new())];
+        let a = decide_combat_damage_order(&g, 1, dealer, &victims, &w);
+        assert!(order_of(a).is_empty(), "identical victims: keep the default");
+    }
+
+    /// CR 702.2c — deathtouch makes one point lethal, so a two-power
+    /// dealer picks WHICH two die rather than paying full toughness.
+    /// Discriminating: without the deathtouch lethal, two power could
+    /// never put the 3/3 first.
+    #[test]
+    fn damage_order_prices_deathtouch_lethal() {
+        use crate::card::Keyword;
+        let mut g = two_player_game();
+        let dealer = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let di = g.battlefield.iter().position(|c| c.id == dealer).unwrap();
+        g.battlefield[di].granted_keywords_eot.push(Keyword::Deathtouch);
+        let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+        let w = EvalWeights::damage_order_on();
+        let victims = vec![(b1, String::new()), (b2, String::new()), (giant, String::new())];
+        let ids = order_of(decide_combat_damage_order(&g, 1, dealer, &victims, &w));
+        // Two points, one lethal each: the first two in the order die.
+        // Any optimum kills the 3/3 plus one bear — the 3/3's position
+        // within the pair is a tie the policy may break either way.
+        assert!(
+            ids.iter().take(2).any(|id| *id == giant),
+            "deathtouch: the 3/3 is among the two that die, got {ids:?}"
+        );
+    }
 }

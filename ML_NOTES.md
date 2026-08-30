@@ -3178,3 +3178,50 @@ mismatch together. Re-gate the mcts profiles (and re-run
 `--feature-census` if sizing anything against occupancy) before quoting
 new numbers against pre-fix baselines. The heuristic-pilot ladder is
 unaffected (it never encodes).
+
+## Round 52 — value-ordered combat damage (CR 510.1c): ADOPTED
+
+The first cash-out of the state/decision representation audit's menu-hole
+list. `Decision::CombatDamageOrder` had no policy arm anywhere — not in
+`decide_pending_policy`, not in the search — so every multi-blocked
+attacker in the program's history dealt lethal in declaration (CardId)
+order, and the 510.1e mirror divided a multi-blocker's damage the same
+way. The same missing-candidate shape as chump blocks (r43, +0.9), one
+step later in the same combat.
+
+**The change** (`EvalWeights::damage_order`, profile `dmgorder`):
+`decide_combat_damage_order` simulates the engine's own
+`default_damage_split` per candidate order — exhaustive to five victims,
+one greedy order past that — and answers with the best signed
+`permanent_value` outcome for the deciding seat. Signed, because banding
+and Defensive Formation hand the decision to the victims' controller,
+whose best order is the reverse; one policy serves both chairs.
+Deathtouch prices lethal at one (CR 702.2c), as `combat_assignment_plan`
+does. Strict improvement only: an order that merely ties the default
+answers empty, so a game where the choice cannot matter plays — and
+antithetically pairs — exactly as before the flag. The
+`AssignCombatDamage` sibling deliberately keeps the engine default
+(lethal-to-each-then-trample is the assigner's optimum outside the
+banding deny-trample corner; the pool has no banding).
+
+**Incidence first (r50 discipline)**: 181 asks / 1500 SOS probe games =
+~0.12/game, 2.5 % of decisions (`.ladder/r52_probe.txt`) — rarer than
+r51's fetch (0.25/game), same class as r50's walker (~0.18/game).
+
+**The gate** (`.ladder/run_r52_dmgorder.sh`, pre-registered): `dmgorder`
+vs `gang`, sealed mirrors, seeds 43 and 97, 12 000 games each.
+**50.4 % [50.2, 50.6] and 50.3 % [50.1, 50.5]** — both cells' intervals
+clear 50, replicated, pooled 50.35. The measurement behaved exactly as
+the rare class predicts: 5 817 of 6 000 pairs split as exact mirrors
+(within-pair rho −0.939, 12 000 games carrying the precision of
+~197 000 independent ones), and the sweep asymmetry ran 115 A to 68 B.
+Adopted per the pre-registered r50 rule; `EvalWeights::default()` now
+carries `damage_order: true` with the dated comment, and the exact gate
+remains re-runnable because neither `dmgorder` nor `gang` carries the
+default's determinize/chump layers.
+
+Worth keeping for the next menu-hole round: the two heuristic-level
+levers this audit priced cheaply (this and the MCTS rollout-policy fix)
+both landed inside a week of the audit; the remaining list
+(mid-resolution ChooseTarget arms, ChooseModes, X-as-a-branch, Serum
+Powder) is in the audit memory and the ranked shortlist stands.
