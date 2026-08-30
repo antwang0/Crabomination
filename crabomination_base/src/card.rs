@@ -5535,7 +5535,7 @@ impl CardDefinition {
         use dispatch_bits as b;
         let mut m = 0u64;
         if let Some(bonus) = self.equipped_bonus.as_ref() {
-            if !bonus.triggers_on_equipment {
+            if !bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty() {
                 m |= b::EQUIP_TRIGGER_GRANT;
             }
             if bonus.remove_abilities {
@@ -6631,9 +6631,17 @@ pub mod layer4_bits {
 ///
 /// [`GRANT_TRIGGER`]: self::GRANT_TRIGGER
 pub mod dispatch_bits {
-    /// `equipped_bonus` exists and hands its triggered abilities to the host
-    /// (i.e. is not the Jitte-style `triggers_on_equipment` shape).
-    /// Attachment-gated.
+    /// `equipped_bonus` exists, carries at least one triggered ability, and
+    /// hands them to the host (i.e. is not the Jitte-style
+    /// `triggers_on_equipment` shape). Attachment-gated.
+    ///
+    /// **The non-empty check is load-bearing, not tidiness.** Without it every
+    /// plain buff Aura and Equipment set this bit, so
+    /// `dispatch_board_scan` pushed a `(host, &[])` into `equip_grants` and
+    /// `dispatch_triggers_for_events` read a non-empty grant list — losing its
+    /// member lane, its fast-path gate and a freeze scope for the rest of the
+    /// game. That was 100 % of the grant-live dispatches on `--decks fixed`
+    /// and `--decks cube` (PERF `(-120)`).
     pub const EQUIP_TRIGGER_GRANT: u64 = 1 << 36;
     /// `equipped_bonus.remove_abilities`. Attachment-gated; the other half of
     /// `card_can_strip_abilities`.

@@ -3586,7 +3586,9 @@ impl GameState {
             .filter_map(|eq| {
                 let host = eq.attached_to?;
                 let bonus = eq.definition.equipped_bonus.as_ref()?;
-                (!bonus.triggers_on_equipment)
+                // Same emptiness rule as `dispatch_board_scan`'s leg, which
+                // this function is the `debug_assert!` cross-check for.
+                (!bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty())
                     .then_some((host, bonus.triggered_abilities.as_slice()))
             })
             .collect()
@@ -3651,7 +3653,12 @@ impl GameState {
                     && bits & (db::EQUIP_TRIGGER_GRANT | db::STRIP_ATTACHED) != 0
                     && let Some(bonus) = card.definition.equipped_bonus.as_ref()
                 {
-                    if !bonus.triggers_on_equipment {
+                    // An attachment with no triggered abilities is not a
+                    // grant. The `STRIP_ATTACHED` half of the gate above lets
+                    // one in for its `remove_abilities`, so the emptiness has
+                    // to be re-asked here — see `EQUIP_TRIGGER_GRANT`'s doc
+                    // and PERF `(-120)`.
+                    if !bonus.triggers_on_equipment && !bonus.triggered_abilities.is_empty() {
                         scan.equip_grants.push((host, bonus.triggered_abilities.as_slice()));
                     }
                     scan.strip_on_battlefield |= bonus.remove_abilities;
