@@ -16244,6 +16244,31 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-110) THE Ir INSTRUMENT HAS NO NULL CONTROL, AND `(-109)` SAYS IT NEEDS
+ONE.** `ab_wall.py` ships a null control for the wall-clock instrument; the Ir
+instrument — which every Log row in this file is measured on — has never had
+one. `(-109)` established a ~0.7 % floor in `actions.rs` *incidentally*, off
+three builds spent on something else, and its rule 2 ("a change to that module
+worth less than that cannot be attributed on this instrument") is therefore
+resting on a by-product rather than a measurement.
+
+**The device: a change with provably ZERO executed instructions.** Add an
+uncalled `pub fn` to `actions.rs` — a lib crate keeps it, the bench never
+enters it, so the executed instruction stream is unchanged *by construction*
+and **any Ir delta the three pools report is pure instrument noise**. That is
+a floor reading that owes nothing to a judgement about what a diff "should"
+have cost. If it reads ~0, mass alone is not the mechanism and `(-109)`'s
+perturbation needs a real function body — which narrows the mechanism and is
+worth the same two builds.
+
+**Then the same null under `profiling-lto`**, which is the one instrument
+question `(-109)` leaves open: cgu 16 + thin LTO is buildable here where
+`profiling` is not, and if global inlining collapses the null the file gains a
+way to attribute sub-floor changes in the oversized modules — the alternative
+to splitting them.
+
+**TAKEN, 2026-08-30 — the hundred-and-fifth pass, null-control route.**
+
 **(-109) THE MEASUREMENT FLOOR IN `actions.rs` IS ~0.7 % OF `cube`, AND THIS
 ENTRY IS THREE BUILDS SPENT ESTABLISHING IT.** Two changes to the payment
 checkpoint were built and reverted, and the reason is the instrument rather
