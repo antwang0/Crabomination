@@ -8898,7 +8898,17 @@ impl GameState {
     /// hoisted, so every `kws` entry's tag is reloaded per board keyword —
     /// reads **-0.105 %**. Hoisting the short list once is the win.
     ///
+    /// **A third variant was built and reverted (PERF `(-119)`): deleting this
+    /// wrapper and letting each of the seven call sites pass its own
+    /// `matches!` closure to [`board_keyword_matching`] costs
+    /// `fixed` +0.098 / `cube` +0.070 / `sealed` +0.044 %.** The tag list and
+    /// the 69 Ir a call it costs are what keep `board_keyword_matching`'s
+    /// ~23-permanent three-list walk to **one** monomorphization — a
+    /// `&[Keyword]` is a value, a closure is a type — and seven copies of that
+    /// walk cost more than the scan they remove. Do not take it a fourth time.
+    ///
     /// [`compute_permanents`]: Self::compute_permanents
+    /// [`board_keyword_matching`]: Self::board_keyword_matching
     pub(crate) fn board_keyword_in_scope(&self, kws: &[Keyword]) -> bool {
         let tags: SmallVec<[std::mem::Discriminant<Keyword>; 8]> =
             kws.iter().map(std::mem::discriminant).collect();

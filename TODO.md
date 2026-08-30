@@ -40,9 +40,13 @@ sixty-seventh pass, so don't re-take that.
 3. **The rule this pass adds (`(-116)`, cube -0.465 %, no new state):** a chain of pure
    `continue` guards needs all of them, so the order is free — **rank by cost x rejection
    rate, not by which looks cheapest.** Look for the shape in other multi-guard loops.
-4. **Its counterweight (`(-117)`):** a `std` line row inside an inlined-to-death function
-   does not name the construct you can see from it — `vec/mod.rs:464` read as 10.5 M,
-   measured 1.5 M. Price a `std`-row candidate as a guess.
+4. **Two counterweights.** (`(-117)`) a `std` line row inside an inlined-to-death
+   function does not name the construct you can see from it — `vec/mod.rs:464` read as
+   10.5 M, measured 1.5 M; price a `std`-row candidate as a guess. (`(-119)`, built and
+   reverted at +0.098 / +0.070 / +0.044 %) **a shared walk behind a monomorphic VALUE
+   parameter is a code-size saving** — replacing `board_keyword_in_scope`'s runtime tag
+   list with seven `matches!` closures bought seven copies of a whole-board walk. Count
+   the call sites before turning a value parameter into a type one.
 5. **Do not retake:** the reserve lane `(-112)`; dispatch's per-event gate (pass 61 AND
    106); a **third** line profile of `dispatch_triggers_for_events` — its remainder is
    ~49 M of iteration, answered by `cg_calls.py` off a dump you already have.

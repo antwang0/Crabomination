@@ -17417,11 +17417,58 @@ the ones next to it.
 See the Log; the rule it adds is **rank a chain of pure guards by cost x
 rejection rate**, and the entry as claimed is kept there.
 
-**(-119) TAKEN, 2026-08-30 — `board_keyword_in_scope` BUILDS A `SmallVec` OF
+**(-119) BUILT, MEASURED AND REVERTED — `fixed` +0.0983 % / `cube` +0.0699 % /
+`sealed` +0.0440 %. THE RUNTIME TAG LIST IS BUYING ONE INSTANTIATION OF THE
+WALK, AND SEVEN `matches!` CLOSURES BUY SEVEN.** The arithmetic on the row
+itself was right and it is not where the answer lives:
+
+```text
+cube, base -> the seven-closure build
+  board_keyword_in_scope        14,906,578 ->          0   -14.91 M
+  board_keyword_matching                 0 ->  9,212,782    +9.21 M
+  SmallVec::Extend              15,130,078 -> 13,171,050    -1.96 M
+                    the helper and its tag list, net       -7.66 M
+  declare_attackers_banded      27,656,068 -> 31,574,748    +3.92 M
+  declare_blockers              27,047,108 -> 29,069,004    +2.02 M
+  a stack.rs row                   135,828 ->  2,252,048    +2.12 M
+  Arc::drop_slow                14,222,866 -> 16,768,658    +2.55 M
+  Vec::IntoIter::next              475,338 ->  1,878,335    +1.40 M
+  drop_in_place<PlayerData>      2,744,638 ->          0    -2.74 M
+                                              program net   +1.81 M
+```
+
+**`board_keyword_matching` is generic over `pred`, so a `matches!` closure at
+each of seven call sites is seven monomorphizations of a ~23-permanent
+three-list board walk.** The wrapper's `SmallVec<[Discriminant; 8]>` — the
+69 Ir a call this entry set out to remove — is exactly what keeps that walk to
+**one** copy: a `&[Keyword]` is a value, not a type. The drop rows moving
+(`PlayerData` to zero, `Arc::drop_slow` up 2.5 M, `IntoIter::next` up 1.4 M)
+are the same content coupling `(-109)`/`(-110)` name — the callers were
+re-laid-out around seven new inlined copies, and they grew by more than the
+helper shrank.
+
+**The rule, and it is the general form of the one this entry got backwards:
+a shared walk behind a monomorphic value parameter is a code-size *saving*,
+and turning the parameter into a type is a de-optimisation whatever it does to
+the parameter's own cost.** Before removing a runtime list in favour of a
+`matches!`, count the call sites; at seven copies of a whole-board walk the
+list is the cheap side. The doc comment on `board_keyword_in_scope` carries
+this now.
+
+**And the row's own history already said so** — the entry did not read it.
+That doc records the tag form measured at **-0.584 %** against
+`&& *w == k`'s -0.212 % and `has_kw`'s -0.105 %, i.e. three variants of this
+exact question were priced at the ninetieth pass and hoisting the short list
+*once* won all three. **`(-118)`'s lesson, twice in one session: grep the
+entry (and here the doc comment) before costing a row.**
+
+**The entry as it was claimed, kept for the sizing, which was right:**
+
+**(-119) `board_keyword_in_scope` BUILDS A `SmallVec` OF
 DISCRIMINANTS ON EVERY CALL AND THEN LINEAR-SCANS IT ONCE PER KEYWORD PER
 PERMANENT.** Read off `cg3.cube` at `172a40c8`: **28,510 calls / 14,906,578
 self Ir / 523 a call, 0.58 % of `cube`**, plus **1,959,028 Ir (69 a call) in
-`SmallVec::extend`** building the tag list — the second-largest callee it has.
+`SmallVec::extend`** building the tag list.
 
 ```text
 callers, cube                       calls    Ir (incl)
@@ -17436,23 +17483,11 @@ callees
   SmallVec::extend                 28,510    1,959,028   <- this entry
 ```
 
-**Every call site passes a compile-time-constant keyword set** (3-5 unit
-variants; seven sites, all payload-free), and the helper turns it into a
-runtime `SmallVec<[Discriminant<Keyword>; 8]>` and then asks
-`tags.contains(&discriminant(k))` for **every keyword on every permanent, in
-three lists** — a linear scan of 5 where a `matches!` is one jump. The
-predicate form the helper is built on, `board_keyword_matching`, already
-exists and is already public to these callers.
-
-**The change is to delete the set-taking wrapper and let each site pass its
-own `matches!` closure.** No new state, no memo, no gate — `(-87)` and
-`(-114)` do not reach it. Estimated ~2.0 M for the `SmallVec` plus most of
-the scan cost inside the 523.
-
 **What this is NOT**: `frozen_effects`' 33.5 M is the scope's first gather,
 which the `compute_permanents` after it would pay anyway — the ninety-first
-pass measured hoisting the gate past it at +0.30 % and the comment on
-`board_keyword_matching` says so. Leave it alone.
+pass measured hoisting the gate past it at +0.30 %. Leave it alone. **That
+half of the entry stands**: the 33.5 M is not addressable, and the remaining
+0.58 % is now known to be structural.
 
 **(-118) IS A RE-DERIVATION OF `(-52)`, WHICH CLOSED ACTOR SCALING FORTY-FIVE
 PASSES AGO — AND THE PROCESS FAILURE IS THE POINT.** The seed list's "actor
