@@ -9630,6 +9630,50 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-seventh pass (2) — four pure guards, and the one that discriminates was last
+
+**`fixed` -0.1185 % / `cube` -0.4652 % / `sealed` -0.3698 %** at `89917b05`,
+off `7c3fff56`. The pass's largest change, and it moves no state, adds no
+memo and touches no predicate's body — it reorders four `continue` guards.
+
+```text
+cube rows
+  dispatch_triggers_for_events   194,723,966 -> 173,580,180   -21,143,786
+  event_matches_spec              24,509,772 ->  33,383,316    +8,873,544
+                                                        net   -12,133,598
+  event_matches_spec calls           815,532 ->   1,087,784
+```
+
+`dispatch_triggers_for_events`' innermost loop is `is_event_hardcoded` (a
+`match` over the whole `GameEvent` enum, ~15 Ir), two death exclusions, and
+then `event_matches_spec` (the kind test, ~30 Ir). Every one of ~850 k
+(trigger, event) pairs paid the first three before the one that rejects most
+of them ran. Only six of ~50 `GameEvent` discriminants can make
+`is_event_hardcoded` return `true`.
+
+**The rule, and it is a scheduling rule, not a memo rule: rank a chain of pure
+guards by cost x rejection rate, not by how cheap each looks.** The body runs
+iff all of them pass, which is an intersection and therefore order-free, so
+the ordering is a pure choice and nothing about it needs to be argued for on
+correctness grounds. The cost of getting it wrong is the *whole* prefix paid
+on every rejected element.
+
+**Why this is not the per-event gate the Standing rules closed twice** (pass
+61, pass 106): nothing is tabulated, memoized or precomputed, and
+`is_event_hardcoded`'s body is byte-identical. Its line row is still what
+those instructions cost — it just executes on 24 % of the pairs it used to.
+**The pass-106 entry's own last paragraph is what says the two are different**
+("what this does NOT refute is not visiting the permanent at all"); the same
+distinction applies one level down, to not *asking* rather than to answering
+faster.
+
+**The price the entry predicted, paid and measured**: `event_matches_spec`
+now also runs on the ~272 k pairs `is_event_hardcoded` used to reject before
+it (`SpellCast` and `StepChanged` are hardcoded for *every* scope, and they
+are common events), at +8.87 M — a third of the saving. A guard that rejects
+25 % of the input is still worth demoting when it costs half of what it
+guards.
+
 ### Hundred-and-fourth pass (8) — the census's card half, and the invariant that caught the fix being wrong
 
 **`fixed` -0.000 % / `cube` +0.000 % / `sealed` +0.001 %** at `45c55cc3`, off
@@ -17055,39 +17099,38 @@ nothing is being replaced, only not repeated. Callers, `cube`:
 fields pays the same. `has_toxic`, `has_modular` and `is_indestructible` are
 the ones next to it.
 
-**(-116) TAKEN, 2026-08-30 — THE INNER EVENT LOOP ASKS ITS FOUR PURE GUARDS
-IN THE WRONG ORDER, AND THE CHEAPEST-LOOKING ONE IS FIRST.**
-`dispatch_triggers_for_events`' `for ev in events` body is four `continue`
-guards, all pure predicates of `(ev, spec)` and `&self`, so their order is
-free to choose. It asks `is_event_hardcoded` first — a `match` over the whole
-`GameEvent` enum, the largest named source line in the function — then two
-death exclusions, and only then `event_matches_spec`, which is the one that
-actually discriminates.
+**(-116) TAKEN at `89917b05` — `fixed` -0.1185 % / `cube` -0.4652 % /
+`sealed` -0.3698 %, the pass's largest change and it reorders four guards.**
+See the Log; the rule it adds is **rank a chain of pure guards by cost x
+rejection rate**, and the entry as claimed is kept there.
 
-```text
-cube, at 19f1d85b
-  game/mod.rs:23365  is_event_hardcoded's `match ev`   10,240,198
-  game/mod.rs:18431  its call site                      2,287,634
-  game/mod.rs:18434  the dies_suppressed guard          1,608,704
-  game/mod.rs:18448  the event_matches_spec call        4,041,204
-  event_matches_spec, self, 815,532 calls              24,509,772  (30.1 a call)
-```
+**(-115) ANSWERED — see the other session's reading below, which is the same
+`profiling-lines` build at the same tip (both dumps put dispatch's self at
+194,723,966 to the instruction). Two sessions paid ~12 min for it
+independently on the same afternoon; the claim line was pushed but the other
+half of the protocol — re-read the entry before spending the build — was not
+run. **Do not take a third line profile of this function.**
 
-**Every one of those ~850 k triples pays ~15 Ir for `is_event_hardcoded`
-before the kind test that rejects most of them runs.** Six `GameEvent`
-discriminants out of ~50 can make it return `true`. Move the kind test to the
-front and the other three behind it, and the three run only on pairs that
-matched. Predicted ~-12 M on `cube` (~-0.45 %); the cost is +30 Ir on the
-~35 k triples `is_event_hardcoded` used to reject before `event_matches_spec`
-ran.
+**Two things this session adds to that reading.** (a) **The diffuse shape is
+not a property of this function.** `activate_ability_inner` (44.4 M self,
+22,826 calls) and `declare_attackers_banded` (27.7 M, 6,538) were line-read
+off the same dump and both come out `ptr/non_null.rs` and `iter/macros.rs` to
+the top of their tables, with no engine line above 0.09 %. **A diffuse
+iteration profile is the normal shape for a whole-board walker here**, so it
+is `(-59)`'s "no hot line, the lever is fewer calls" and not a finding.
+(b) **The fast-path gate sub-lane is priced and not taken**: 18301 + 18302 +
+the station line are ~3.9 M, the two `is_empty()`s are `CardInstance` ->
+`Arc<CardData>` -> `Arc<CardDefinition>` -> ptr+len twice, and `CardMemo` has
+a free bit pair on the word `dispatch_scan_bits` already reads — so the gate
+becomes one word load and a mask, ~3-4 Ir off a visit that costs ~10.
+**That caps the per-card-bit version of the lane at ~2.5 M, 0.10 % of
+`cube`**, which is `(-114)`'s refutation territory. The `Battlefield`
+member-list version is the one that could take the iteration cost with it,
+and it is the one that needs new invalidation state.
 
-**This is NOT the closed per-event gate** (`(-109)`-adjacent, pass 61 and pass
-106): nothing is tabulated, memoized or precomputed, and
-`is_event_hardcoded`'s body is untouched. Its line row stays exactly what it
-was per instruction — it just executes on fewer of them, which is the
-distinction the Standing rules' entry draws in its last sentence.
+**The entry as it was claimed, kept for the sizing, which was right:**
 
-**(-115) TAKEN, 2026-08-30 — `dispatch_triggers_for_events` IS 7.46 % OF
+**(-115) `dispatch_triggers_for_events` IS 7.46 % OF
 `cube` IN *SELF* Ir, 2.3x THE NEXT ROW, AND NOTHING IN THIS FILE HAS EVER
 ASKED WHAT THAT SELF COST IS.** Read off `cg.cube` at `2b38c673`:
 **139,430 calls / 194,723,966 self Ir / 1,396 a call**, against
