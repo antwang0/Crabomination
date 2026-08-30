@@ -28,14 +28,15 @@ sixty-seventh pass, so don't re-take that.
    push code before tracker prose, rebase not force, **sequential builds
    only**, and **push a one-line "TAKEN, <date>" onto the PERF entry before
    you spend a build on it** (`d6a9b3d5` — one duplicated 35-minute A/B).
-   CLAIMED right now: `Overlay`'s `proj` field, PERF `(-92)`, the other
-   session. Nothing else is.
-2. **State at `b6218fad`** (the tracker commits above it are prose): suite
-   19,048 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
-   (30 cells / 33,120 games / 0 failures, 5 assertion strings), `--bench`
-   byte-identical (195,528 / 27.44 / 611.0 / 0 stalls, determinism +
-   thread_determinism ok). Ir anchor, the pass window and the `peak_rss_mib`
-   24.2 -> 26.8 the wider `CardInstance` costs are in PERF's Baseline.
+   CLAIMED right now: nothing.
+2. **State at `c92f3851`:** suite 19,049 / 0 / 5, clippy clean, golden traces
+   7/7 unmoved, grid green (30 cells / 33,120 games / 0 failures, 5 assertion
+   strings), `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
+   determinism + thread_determinism ok) — the last two taken one commit below
+   the anchor and **labelled with their sha rather than re-run**, which is how
+   to survive this branch's concurrency. Ir anchor, the pass window
+   (**-2.14 / -2.03 / -2.46 %** over `cfdf69f2 -> c92f3851`, both sessions)
+   and the `peak_rss_mib` 24.2 -> 26.8 -> 24.3 story are in PERF's Baseline.
    **Each change names its own base**; quote a `games_per_s` only with its
    `host_calib_ms` (it drifts 49-83 inside one session on this box).
 3. **READ PERF `(-100)` FIRST.** The hundred-and-first pass took `CardData`'s
@@ -60,7 +61,18 @@ sixty-seventh pass, so don't re-take that.
    1,392,312 allocations**, with its `grow_one` caller table filed.
    `dispatch_triggers_for_events` is 7.2-7.8 % and still has no hot line.
    `(-93)`'s lanes 11-16 are free but its consumer list is exhausted.
-5. **CARDS — the lane is open and it is not mined.** Buckets 4 and 10 of
+5. **ROBUSTNESS: the panic audit's bare population is 23 -> 3**, and the two
+   halves of that are both worth carrying. The fixes: nineteen sites became
+   the error their own guard implies (ENGINE_BACKLOG has the table; the three
+   that stay are deck construction, where a fallback deck would poison a
+   training run more quietly than a crash). The price: **`cube` +0.084 %, and
+   it is one function leaving its caller's inline budget, not the branches** —
+   four builds (branchless, macro, `#[inline]`, and one conversion reverted)
+   read within 0.002 % of each other. **At `codegen-units = 16` with no LTO an
+   edit anywhere in a 17 k-line module moves inline decisions in functions it
+   does not touch; price a correctness change on the program and do not spend
+   a third build hunting the site.**
+6. **CARDS — the lane is open and it is not mined.** Buckets 4 and 10 of
    INCOMPLETE_CARDS closed (five defects, one an invented card and one a class
    of 41), and every one was found by re-reading a tracker row against the
    oracle cache rather than trusting the row. Two new `scripts/audit_*`

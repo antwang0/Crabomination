@@ -2179,6 +2179,59 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-first pass, the second half — closing state at `c92f3851`
+
+Four commits from this session, all one family: `daf30ed1` + `be6ec1ec`
+(`CardData`'s **width** — 864 -> 568 bytes, sixteen fields into `CardCold`),
+`b2330629` (its **count** — six per-permanent flags onto the `CardInstance`
+handle) and `f18a58be` (nineteen bare panic sites, +0.09 %, priced in the Log
+and shipped under the standing rule's second clause). The other session's
+projection types, its `battlefield_find` sweep and four card fixes are
+interleaved; each row names its own base.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.10 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,049 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    30 cells, five pools x six seeds x 120 games — **33,120 games, 0
+        failures, 0 undecided**; 5 "memo is stale" strings in the audit
+        binary.                                        (taken at `088294dc`)
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 431.40 at 3 threads, host_calib_ms 52,
+        peak_rss_mib 24.3, bin_bytes 123,699,424, `release` + mimalloc.
+                                                       (taken at `088294dc`)
+
+Ir anchor at `c92f3851`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     890,239,048      cube 2,661,567,379      sealed 2,630,747,034
+
+  the whole pass, cfdf69f2 -> c92f3851 (both sessions; endpoints, not a
+  measurement):
+    fixed     909,660,984 ->   890,239,048   -2.135 %
+    cube    2,716,755,593 -> 2,661,567,379   -2.032 %
+    sealed  2,697,159,120 -> 2,630,747,034   -2.462 %
+
+  this session's four commits compose to -1.43 / -1.46 / -1.81 % of that.
+```
+
+**`peak_rss_mib` went 24.2 -> 26.8 -> 24.3 across the pass and none of it is
+noise.** The middle reading is the `CardInstance` handle going 8 -> 16 bytes
+(every card zone doubles) plus `CardCold` 528 -> 824 on the cards that carry
+one; the last is the other session's projection change handing it back. **The
+field is worth reading on a pass that moves a per-card struct** — an actor is
+~25 MiB and the box runs one per core, so this is a real number at a scale
+where nothing else in the file would have shown it.
+
+**The two readings taken one commit below the anchor are labelled rather than
+re-run.** `c92f3851` is a memo the other session measured itself and is
+behaviour-preserving by construction; re-taking a 20-minute `release` build
+and a 13-minute grid to move a label is the treadmill this branch's
+concurrency creates. Say which sha a reading came from and the next pass can
+use it.
+
 ### Hundred-and-first pass — closing state at `b6218fad`
 
 Three code commits, all `CardData`'s CoW deep copy: `daf30ed1` and
@@ -15450,17 +15503,30 @@ are it.
    **written once per cast** — moving it buys the 3.9 M and pays a
    `PlayerCold` unshare per `finalize_cast`; that is a near-wash, do not take
    it on the byte count alone.
-2. **`CardData`'s remaining width.** 568 bytes after the two commits. The
+2. **`CardData`'s remaining width, and it is worth HALF what it was.** The
+   count half took its copies **68,610 -> 32,630**, so a byte out of
+   `CardData` is now worth ~0.0011 % of `cube`, not 0.0023 %. Everything
+   below is priced at the new rate. 568 bytes after the two commits. The
    fattest block left is six `Option<usize>` at 16 bytes each
    (`attached_to_player`, `chosen_player`, `combat_damager_controller`,
    `regeneration_control_grant`, `detained_by`, `protected_by`) — 96 bytes
    for six seat indices. Narrowing the payload to `u32` halves them (48
-   bytes, ~0.11 % of `cube`) and costs a type change at every read; moving
-   the five rare ones to `CardCold` is 80 bytes for no type change and no new
-   cold write of any consequence. **`combat_damager_controller` is not one of
+   bytes, ~0.05 % of `cube` at the new rate) and costs a type change at every
+   read; moving the five rare ones to `CardCold` is 80 bytes for no type
+   change and no new cold write of any consequence — **and 0.04 %, which is
+   why it is written down rather than taken.** **`combat_damager_controller` is not one of
    the five** — it is written on combat damage, which is (2)'s counter-example
    again. After that it is ~30 cast-time rider bools, which a bitfield would
-   take from 30 bytes to 4: 0.06 %, and a large diff.
+   take from 30 bytes to 4: 0.03 % at the new rate, and a large diff.
+   **The copy table at the closing tip, for whoever prices the next one:**
+   `PlayerData` 22,032 copies / 19.03 M self (0.71 %) is now the largest,
+   `CardData` 32,630 / 16.36 M (0.61 %), `ColdState` 3,312 / 6.86 M (0.26 %),
+   `CardCold` 10,280 / 5.52 M (0.21 %) — the group grew by what left
+   `CardData`, exactly as intended. `PlayerData`'s copies are **not** the
+   handle-field shape: `cast_spell_with_convoke` is 11,290 `make_mut` calls at
+   897 Ir apiece (i.e. nearly all copy) and it writes the hand *and* four
+   per-turn counters in the same action, so moving the zones out only moves
+   the copy to `finalize_cast`. Width is the only lever left there.
 3. **`ColdState` at 2,192 bytes is the widest type in the program and the
    cheapest to leave alone**: 3,312 copies means a byte is worth 1,457 Ir over
    the whole run. Do not spend a pass on its width. Its *count* is `(-50)`'s
