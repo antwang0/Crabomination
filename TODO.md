@@ -28,10 +28,13 @@ sixty-seventh pass, so don't re-take that.
    **rebase not force**, **sequential builds only**, push "TAKEN, <date>" onto a PERF entry
    before spending a build — **and re-read the entry when you do**: both sessions paid a
    12-min `profiling-lines` build for `(-115)` on the same afternoon. **Nothing is claimed.**
-2. **Tip `172a40c8`, all gates re-run there:** suite 19,057 / 0 / 5, clippy clean, traces
-   7/7, `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls, determinism +
-   thread_determinism ok, `games_per_s` 305-315, `peak_rss` 24.5). Grid not re-run —
-   nothing changed behaviour. Window `2b38c673 ->` here: **-0.401 / -0.760 / -0.774 %**.
+2. **Gates re-run at `9ad6ceba`:** suite **19,070 / 0 / 5**, clippy clean (the
+   `VOCAB_SNAPSHOT` `large_const_arrays` warning is fixed), traces 7/7. `--bench` was
+   taken on the `172a40c8` binary — byte-identical (195,528 / 27.44 / 611.0 / 0 stalls,
+   determinism + thread_determinism ok, `games_per_s` 305-315, `peak_rss` 24.5,
+   this box is a 2.80 GHz Xeon and reads 25 % SLOWER than the 2.10 GHz one). Grid not
+   re-run — nothing since changed behaviour. Window `2b38c673 -> 172a40c8`:
+   **-0.401 / -0.760 / -0.774 %**.
    **The grid has an ACTOR leg and it is the only gate that reaches the encoder** —
    `bot_ladder` encodes no state on any pool, so the 30 cells cannot trip an encoder
    assertion. Run it for any `encode.rs` / `EncodedState` change: same `RUSTFLAGS`
