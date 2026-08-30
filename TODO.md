@@ -47,6 +47,34 @@ sixty-seventh pass, so don't re-take that.
 6. **Cards:** `scripts/audit_oracle_verbs.py`, 225 rows over 10,949 cards. Check three
    rows in the source before believing any class — the filter is the suspect, not the
    catalog (722 -> 254 -> 228 -> 225 on this one).
+7. **TARGETING IS CLOSED AND GATED (pass 104's other half, `13435f3e`..`9fec2a6f`).**
+   A slot with no filter enumerated against `Any` and was re-checked nowhere, so the
+   printed noun was enforced nowhere: **Terminate destroyed any permanent, Zombify with
+   an empty graveyard STOLE a creature, Banefire offered a Forest, "target player
+   discards" offered the board.** 79 reanimation filters, 20 per-card nouns, ~50 walker
+   arms; three invariants now gate it
+   (`every_reanimating_move_says_which_zone_its_target_is_in`,
+   `every_targeting_spell_or_ability_says_what_it_targets`, and the pre-existing
+   `every_declared_target_slot_is_answerable`). **Four rules, in order of reuse.**
+   (a) **The aim walker and the slot walker are a PAIR** — `primary_target_filter`
+   surfaces, `target_filter_for_slot` re-checks at CR 608.2b; a filter only one sees
+   aims right and re-checks against nothing, which is worse than none because it looks
+   fixed. Two invariants caught that twice in two commits. Add both arms.
+   (b) **An implicit filter belongs to the FIELD, not the card**
+   (`IMPLICIT_CREATURE_TARGET` / `IMPLICIT_ANY_TARGET` /
+   `implicit_player_if_bare_player_field`); a per-card filter is only for nouns narrower
+   than the field's own type.
+   (c) **Discover a class by joining a census against `scripts/.scryfall_cache.json`,
+   then gate it on a STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou`
+   / `OwnedByYou` / `ExiledWithSource`, which is what made the test an invariant instead
+   of a list of 79 names that goes stale on the next card.
+   (d) **Group a census by the nearest enclosing enum key**: 204 card rows were ~40 arms.
+   **Open, one shape:** Officious Interrogation / Jeska's Will / Tithe name their target
+   player only from inside a `Value` or a `Predicate`, which neither walker reaches.
+   **Checked, do not re-check:** the counterspells (target a spell `Target` cannot
+   express) and the ~25 reflexive "that creature" triggers (`combat.rs` stamps the slot
+   at push time); and there is **no `std::collections` default-hasher iteration in engine
+   or bot logic**, so cross-process determinism holds.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
