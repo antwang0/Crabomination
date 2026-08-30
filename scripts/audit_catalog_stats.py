@@ -76,40 +76,25 @@ def vec_after(body, i):
     return body[j + 5:k - 1]
 
 def toplevel_keywords(body):
-    cd = body.find("CardDefinition {")
-    if cd < 0: return None
-    depth, k = 1, cd + len("CardDefinition {")
-    while k < len(body) and depth:
-        ch = body[k]
-        if ch == "{": depth += 1
-        elif ch == "}": depth -= 1
-        elif depth == 1 and body.startswith("keywords:", k):
-            return vec_after(body, k)
-        k += 1
-    return None
+    """Same rule as `toplevel_cost_args`: the card's own literal, not a bound
+    one's."""
+    m = own_field(body, r"keywords:")
+    return vec_after(body, m.start()) if m else None
 
 def toplevel_cost_args(body):
-    """The depth-1 `cost: cost(&[...])` inner args of the CardDefinition literal,
-    never a nested cost (e.g. an ability cost in a preceding `let`). None if
-    absent / not in cost(&[...]) form."""
-    cd = body.find("CardDefinition {")
-    if cd < 0: return None
-    depth, k = 1, cd + len("CardDefinition {")
-    while k < len(body) and depth:
-        ch = body[k]
-        if ch == "{": depth += 1
-        elif ch == "}": depth -= 1
-        elif depth == 1 and body.startswith("cost:", k) and body[k-1] in " \t\n,{(":
-            m = re.match(r"cost:\s*cost\(&\[", body[k:])
-            if not m: return None
-            start, d, kk = k + m.end(), 1, k + m.end()
-            while kk < len(body) and d:
-                if body[kk] == "[": d += 1
-                elif body[kk] == "]": d -= 1
-                kk += 1
-            return body[start:kk-1]
-        k += 1
-    return None
+    """The depth-1 `cost: cost(&[...])` inner args of the card's own
+    `CardDefinition` literal — never a nested cost (an ability's) and never a
+    *bound* literal's (an MDFC back face in a preceding `let`). Goes through
+    `own_field`, which owns both of those rules."""
+    m = own_field(body, r"cost:\s*cost\(&\[")
+    if m is None:
+        return None
+    start, d, kk = m.end(), 1, m.end()
+    while kk < len(body) and d:
+        if body[kk] == "[": d += 1
+        elif body[kk] == "]": d -= 1
+        kk += 1
+    return body[start:kk-1]
 
 def face_for(card, name):
     """The `card_faces` entry whose name matches `name`, else None.
@@ -135,6 +120,42 @@ def creature_subtypes_ref(card, face=None):
                 raw = raw.replace(k, v)
             return set(raw.split())
     return None
+
+# CR 205.4 / 205.2a — the words left of the em dash, split into the two
+# groups the engine models as `Supertype` and `CardType`. `Tribal` is the
+# pre-2021 printing of `Kindred`. Anything outside these two sets (a Dungeon,
+# a Sticker, an Attraction's "Artifact Attraction" oddities) makes the line
+# unreadable for this audit and the card is SKIPPED, not flagged.
+REF_SUPERS = {"Basic", "Legendary", "Snow", "World", "Ongoing"}
+REF_TYPES = {
+    "Artifact", "Battle", "Creature", "Enchantment", "Instant", "Kindred",
+    "Tribal", "Land", "Planeswalker", "Sorcery", "Scheme", "Vanguard",
+    "Conspiracy", "Plane", "Phenomenon",
+}
+
+
+def type_line_ref(card, face=None):
+    """`(supertypes, card_types)` off the type line, or None when unreadable.
+
+    A split / MDFC line ("Creature — Human // Instant") describes two objects,
+    so without a matched face there is no single answer and this returns None
+    rather than a guess.
+    """
+    tl = (face or card).get("type_line") or ""
+    if not tl or (face is None and "//" in tl):
+        return None
+    left = tl.split("—", 1)[0].strip()
+    words = left.split()
+    supers, types = set(), set()
+    for w in words:
+        if w in REF_SUPERS:
+            supers.add(w)
+        elif w in REF_TYPES:
+            types.add("Kindred" if w == "Tribal" else w)
+        else:
+            return None
+    return (supers, types) if types else None
+
 
 def ref_keywords(card, face=None):
     # Scryfall lists flip-card keywords at the card level only, so a face with
@@ -185,6 +206,14 @@ def own_field(body, field):
     the CardDefinition literal and only accepts depth-1 hits.
     """
     for cm in re.finditer(r"\bCardDefinition\s*\{", body):
+        # Skip a literal that is BOUND rather than returned — `let aura_back =
+        # CardDefinition { … }`, `back_face: Some(CardDefinition { … })`. Both
+        # carry the same `name:` as the card, so the first-literal scan read
+        # Bronzehide Lion's Aura back face as the card itself and called a
+        # Creature an Enchantment (2026-08-30).
+        before = body[: cm.start()].rstrip()
+        if before[-1:] in ("=", "("):
+            continue
         depth, i = 1, cm.end()
         while i < len(body) and depth:
             ch = body[i]
@@ -258,6 +287,9 @@ def own_helper_fields(body, field_re):
         yield from pat.finditer(body)
         return
     for cm in re.finditer(r"\bCardDefinition\s*\{", body):
+        # Same bound-literal rule as `own_field`.
+        if body[: cm.start()].rstrip()[-1:] in ("=", "("):
+            continue
         stack, i = ["CardDefinition"], cm.end()
         while i < len(body) and stack:
             ch = body[i]
@@ -282,9 +314,43 @@ def own_helper_fields(body, field_re):
             i += 1
 
 
+VECFN = re.compile(
+    r"\nfn (\w+)\(\)\s*->\s*Vec<(Supertype|CardType)>\s*\{\s*vec!\[([^\]]*)\]", re.S
+)
+
+
+def vec_fn_table(text):
+    """`{fn_name: literal}` for a file-local `fn legendary() -> Vec<Supertype>`.
+
+    `chk2.rs` writes `supertypes: legendary()` on 26 cards. A reader that only
+    understands `vec![Supertype::Legendary]` sees an empty list there and
+    reports every one of them as a missing supertype — which is how this audit
+    first read 25 correct Kamigawa legends as defects (2026-08-30).
+    """
+    return {m.group(1): m.group(3) for m in VECFN.finditer(text)}
+
+
+def field_vec(body, field, vecfns):
+    """The `vec![…]` body for `field` at depth 1, resolving a `field: helper()`
+    indirection through `vecfns`. `None` when the field is absent."""
+    m = own_field(body, re.escape(field) + r":")
+    if m is None:
+        return None
+    v = vec_after(body, m.start())
+    if v is not None:
+        return v
+    call = re.match(re.escape(field) + r":\s*(\w+)\(\)", body[m.start():])
+    return vecfns.get(call.group(1)) if call else None
+
+
 def helper_table(text):
-    """`{helper_name: {field: positional_index}}` for one source file."""
-    out = {}
+    """`({helper_name: {field: positional_index}}, {helper_name: {field: literal}})`.
+
+    The second map is for the fields a helper sets to a *constant* rather than
+    from a parameter — `card_types`, `supertypes` — which is how every
+    `fn creature` / `fn sorcery` / `fn legend` in this catalog spells them.
+    """
+    out, consts = {}, {}
     for m in HELPER_DEF.finditer(text):
         params = [
             p.split(":")[0].strip()
@@ -319,9 +385,31 @@ def helper_table(text):
                 arg = split_args(call_args(body, base.group(1)))
                 if idx < len(arg) and arg[idx].strip() in params:
                     mapping.setdefault(field, params.index(arg[idx].strip()))
+        # `card_types` and `supertypes` are almost never a helper *parameter*
+        # — a `fn creature(...)` writes `card_types: vec![CardType::Creature]`
+        # as a literal, and a `fn legend(...)` adds
+        # `supertypes: vec![Supertype::Legendary]` on top of it. Record those
+        # so the two type columns can see the ~11 k cards built through a
+        # helper instead of skipping them.
+        for field in ("card_types", "supertypes"):
+            enum = "CardType" if field == "card_types" else "Supertype"
+            for mm in own_helper_fields(body, r"\b" + field + r":\s*vec!\["):
+                v = vec_after(body, mm.start())
+                # A *constant* is a plain list of `CardType::X`. `recent311`'s
+                # `spell` helper writes `vec![if sorcery { Sorcery } else
+                # { Instant }]`, which is a parameter wearing a literal's
+                # clothes — capturing it read 85 cards as both types at once.
+                if v is not None and re.fullmatch(
+                    r"\s*(?:" + enum + r"::\w+\s*,?\s*)+", v
+                ):
+                    consts.setdefault(m.group(1), {})[field] = v
+                break
+        if base and base.group(1) in consts:
+            for field, v in consts[base.group(1)].items():
+                consts.setdefault(m.group(1), {}).setdefault(field, v)
         if mapping:
             out[m.group(1)] = mapping
-    return out
+    return out, consts
 
 def call_args(body, fname):
     """The raw argument text of the first `fname(` call in `body`."""
@@ -350,12 +438,20 @@ def split_args(argtext):
         out.append(cur)
     return out
 
-def inline_helper_call(body, helpers):
-    """Rewrite `..helper(args)` into the fields the helper would have set.
+def inline_helper_call(body, helpers, consts=None):
+    """Splice a `..helper(args)` call's fields into the body's own literal.
 
     Returns `body` unchanged when it already carries its own `name:` field or
     uses no known helper — the field scans then behave exactly as before.
+
+    **Every spliced field is guarded on the body not already having one at
+    depth 1.** The splice is inserted at the *front* of the card's own
+    `CardDefinition { … }`, and a depth-1 scan takes the first hit, so an
+    unguarded splice would shadow a card that overrides the helper
+    (`CardDefinition { power: 3, ..creature("X", …, 2, 2) }`) and manufacture
+    the drift the audit is looking for.
     """
+    consts = consts or {}
     if card_def_name(body) is not None:
         return body
     m = re.search(r"\.\.(\w+)\(", body)
@@ -364,33 +460,48 @@ def inline_helper_call(body, helpers):
         # A bare `helper("Name", …)` tail with no struct wrapper.
         m2 = re.search(r"^\s*(\w+)\(", body, re.M)
         fname = m2.group(1) if m2 else None
-    if fname not in helpers:
+    if fname not in helpers and fname not in consts:
         return body
     args = split_args(call_args(body, fname))
     fields = []
-    for field, idx in helpers[fname].items():
+    for field, lit in consts.get(fname, {}).items():
+        if own_field(body, re.escape(field) + r":") is None:
+            fields.append(f"{field}: vec![{lit}],")
+    for field, idx in helpers.get(fname, {}).items():
         if idx >= len(args):
             continue
-        val = args[idx].strip()
-        if field == "creature_types":
-            fields.append(f"creature_types: {val},")
-        else:
-            fields.append(f"{field}: {val},")
+        if own_field(body, re.escape(field) + r":") is not None:
+            continue
+        fields.append(f"{field}: {args[idx].strip()},")
     if not fields:
         return body
-    return "CardDefinition {" + "".join(fields) + "}" + body
+    cd = body.find("CardDefinition {")
+    if cd < 0:
+        return "CardDefinition {" + "".join(fields) + "}" + body
+    at = cd + len("CardDefinition {")
+    return body[:at] + "".join(fields) + body[at:]
 
 def audit():
     per_set = {}      # set -> dict(checked, cost[], pt[], type[], kw[])
     for src in sorted(SETS.rglob("*.rs")):
         s = set_of(src)
-        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "kw": []})
+        d = per_set.setdefault(s, {"checked": 0, "cost": [], "pt": [], "type": [], "ct": [], "st": [], "kw": []})
         text = src.read_text()
-        helpers = helper_table(text)
+        helpers, hconsts = helper_table(text)
+        vecfns = vec_fn_table(text)
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end()); body = text[m.end():nxt.start() if nxt else len(text)]
+            # Stop at the next TOP-LEVEL `fn`, not only at the next `pub fn`:
+            # a private helper defined between two card factories is otherwise
+            # inside this card's body, and its own `CardDefinition { card_types:
+            # vec![CardType::Land] }` answered for the card above it. That read
+            # Dominaria's Judgment and Pay No Heed — both `instant(...)` one-liners
+            # — as Lands (2026-08-30).
+            cut = re.search(r"\nfn \w+", body)
+            if cut:
+                body = body[: cut.start()]
             body = strip_token_literals(body)
-            body = inline_helper_call(body, helpers)
+            body = inline_helper_call(body, helpers, hconsts)
             nm = card_def_name(body)
             if not nm: continue
             card = CACHE_LC.get(nm.group(1).lower())
@@ -419,13 +530,26 @@ def audit():
                 if (pm.group(1), tm.group(1)) != (str(ref_pt["power"]), str(ref_pt["toughness"])):
                     d["pt"].append((tag, f"{pm.group(1)}/{tm.group(1)}", f"{ref_pt['power']}/{ref_pt['toughness']}"))
             # creature subtypes
-            i = body.find("creature_types:")
-            ctv = vec_after(body, i) if i >= 0 else None
+            ctm = next(own_helper_fields(body, r"creature_types:"), None)
+            ctv = vec_after(body, ctm.start()) if ctm else None
             ref_ct = creature_subtypes_ref(card, face)
             if ctv is not None and ref_ct is not None:
                 code_ct = set(re.findall(r"CreatureType::(\w+)", ctv))
                 if code_ct and ref_ct and code_ct != ref_ct and not code_ct.issubset(ref_ct):
                     d["type"].append((tag, sorted(code_ct), sorted(ref_ct)))
+            # card types and supertypes (CR 205.2a / 205.4)
+            ref_tl = type_line_ref(card, face)
+            if ref_tl is not None:
+                ref_supers, ref_types = ref_tl
+                ctypes = field_vec(body, "card_types", vecfns)
+                if ctypes is not None:
+                    code_types = set(re.findall(r"CardType::(\w+)", ctypes))
+                    if code_types and code_types != ref_types:
+                        d["ct"].append((tag, sorted(code_types), sorted(ref_types)))
+                    stv = field_vec(body, "supertypes", vecfns) or ""
+                    code_supers = set(re.findall(r"Supertype::(\w+)", stv))
+                    if code_supers != ref_supers:
+                        d["st"].append((tag, sorted(code_supers), sorted(ref_supers)))
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
@@ -441,19 +565,20 @@ detail = sys.argv[1] if len(sys.argv) > 1 else None
 if detail:
     d = per_set.get(detail)
     if not d: sys.exit(f"no such set '{detail}' (have: {', '.join(sorted(per_set))})")
-    for dim in ("cost", "pt", "type", "kw"):
+    for dim in ("cost", "pt", "type", "ct", "st", "kw"):
         print(f"\n=== {dim.upper()} drift in {detail} ({len(d[dim])}) ===")
         for tag, got, ref in d[dim]:
             print(f"  {tag[0]}  ({tag[1]}::{tag[2]})\n    code={got}  scryfall={ref}")
 else:
-    print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'type':>6}{'kw':>6}")
-    print("-" * 44)
-    tot = {"checked": 0, "cost": 0, "pt": 0, "type": 0, "kw": 0}
-    for s in sorted(per_set, key=lambda s: -(len(per_set[s]["cost"]) + len(per_set[s]["pt"]) + len(per_set[s]["type"]) + len(per_set[s]["kw"]))):
+    dims = ("cost", "pt", "type", "ct", "st", "kw")
+    print(f"{'set':<12}{'checked':>8}{'cost':>6}{'P/T':>6}{'sub':>6}{'type':>6}{'super':>6}{'kw':>6}")
+    print("-" * 56)
+    tot = {"checked": 0, **{k: 0 for k in dims}}
+    for s in sorted(per_set, key=lambda s: -sum(len(per_set[s][k]) for k in dims)):
         d = per_set[s]
         if not d["checked"]: continue
         for k in tot: tot[k] += d["checked"] if k == "checked" else len(d[k])
-        print(f"{s:<12}{d['checked']:>8}{len(d['cost']):>6}{len(d['pt']):>6}{len(d['type']):>6}{len(d['kw']):>6}")
-    print("-" * 44)
-    print(f"{'TOTAL':<12}{tot['checked']:>8}{tot['cost']:>6}{tot['pt']:>6}{tot['type']:>6}{tot['kw']:>6}")
+        print(f"{s:<12}{d['checked']:>8}" + "".join(f"{len(d[k]):>6}" for k in dims))
+    print("-" * 56)
+    print(f"{'TOTAL':<12}{tot['checked']:>8}" + "".join(f"{tot[k]:>6}" for k in dims))
     print("\nDetail for a set:  python3 scripts/audit_catalog_stats.py <set>")
