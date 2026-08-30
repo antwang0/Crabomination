@@ -835,7 +835,7 @@ impl GameState {
             if !self.evaluate_predicate(&pred, &ctx) {
                 continue;
             }
-            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == id)
+            if let Some(card) = self.battlefield.find_by_id_mut(id)
                 && card.solve_case()
             {
                 solved_events.push(GameEvent::CaseSolved { case: id, controller: active });
@@ -1196,7 +1196,7 @@ impl GameState {
             crate::decision::DecisionAnswer::Amount(n) => n.clamp(1, final_ch),
             _ => 1,
         };
-        if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+        if let Some(card) = self.battlefield.find_by_id_mut(card_id) {
             card.add_counters(crate::card::CounterType::Lore, chosen);
         }
         let effects: Vec<Effect> = self
@@ -1234,7 +1234,7 @@ impl GameState {
     }
 
     pub fn saga_advance(&mut self, card_id: CardId) {
-        let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) else {
+        let Some(card) = self.battlefield.find_by_id_mut(card_id) else {
             return;
         };
         if card.definition.saga_chapters.is_empty() {
@@ -1762,8 +1762,7 @@ impl GameState {
                         incoming.mutate_onto = None;
                         let host = self
                             .battlefield
-                            .iter_mut()
-                            .find(|c| c.id == host_id)
+                            .find_by_id_mut(host_id)
                             .expect("legal_host verified");
                         host.apply_mutate(incoming, on_top);
                         events.push(GameEvent::Mutated { card_id: host_id });
@@ -1959,7 +1958,7 @@ impl GameState {
                         let ctrl = c.controller;
                         let protector = (0..self.players.len())
                             .find(|&pl| pl != ctrl && self.players[pl].is_alive());
-                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                        if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
                             c.protected_by = protector;
                         }
                     }
@@ -2047,7 +2046,7 @@ impl GameState {
                         .battlefield
                         .iter()
                         .any(|c| c.id == card_id && !c.pending_etb_counters.is_empty())
-                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && let Some(c) = self.battlefield.find_by_id_mut(card_id)
                     {
                         for (kind, n) in std::mem::take(&mut c.pending_etb_counters) {
                             counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
@@ -2108,7 +2107,7 @@ impl GameState {
                                 }
                             }
                             if let Some(card_mut) =
-                                self.battlefield.iter_mut().find(|c| c.id == card_id)
+                                self.battlefield.find_by_id_mut(card_id)
                             {
                                 card_mut.add_counters(kind, n);
                             }
@@ -2224,7 +2223,7 @@ impl GameState {
                     // CR 303.4a — "enchant player" Auras anchor to a seat.
                     if let Some(crate::game::types::Target::Player(seat)) = target
                         && let Some(aura) =
-                            self.battlefield.iter_mut().find(|c| c.id == card_id)
+                            self.battlefield.find_by_id_mut(card_id)
                         && aura.definition.is_aura()
                     {
                         aura.attached_to_player = Some(seat);
@@ -2236,7 +2235,7 @@ impl GameState {
                         && let Some(crate::game::types::Target::Permanent(tid)) = target
                         && self.battlefield.iter().any(|c| c.id == tid)
                         && let Some(aura) =
-                            self.battlefield.iter_mut().find(|c| c.id == card_id)
+                            self.battlefield.find_by_id_mut(card_id)
                     {
                         aura.attached_to = Some(tid);
                         // CR 303.4 — fire "an Aura you control became attached"
@@ -2326,7 +2325,7 @@ impl GameState {
                     // at the beginning of the next end step and may be recast
                     // from exile later for its full cost. Arm a delayed
                     // exile-then-grant-may-play; clear the flag once consumed.
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    if let Some(c) = self.battlefield.find_by_id_mut(card_id)
                         && c.warped
                     {
                         c.warped = false;
@@ -2359,7 +2358,7 @@ impl GameState {
                     // Suspend (CR 702.62f): a creature cast off its last time
                     // counter gains haste. The flag rode the instance from
                     // exile; clear it once consumed.
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    if let Some(c) = self.battlefield.find_by_id_mut(card_id)
                         && c.cast_from_suspend
                     {
                         c.cast_from_suspend = false;
@@ -2468,7 +2467,7 @@ impl GameState {
                     }
 
                     // CR 716.2 — a Class enters the battlefield at level 1.
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    if let Some(c) = self.battlefield.find_by_id_mut(card_id)
                         && c.definition.is_class()
                     {
                         c.class_level = 1;
@@ -5128,7 +5127,7 @@ impl GameState {
                     && let Some(def) = self.temporary_copies[pos].original_def()
                 {
                     self.temporary_copies.remove(pos);
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card) {
+                    if let Some(c) = self.battlefield.find_by_id_mut(card) {
                         c.set_definition(def);
                         reverted = true;
                     }
@@ -5868,7 +5867,7 @@ impl GameState {
             .collect()
         };
         for id in unbestowed {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+            if let Some(c) = self.battlefield.find_by_id_mut(id) {
                 c.bestowed = false;
                 c.attached_to = None;
             }
@@ -6052,7 +6051,7 @@ impl GameState {
             .collect()
         };
         for id in stale_equipment_links {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+            if let Some(c) = self.battlefield.find_by_id_mut(id) {
                 c.attached_to = None;
             }
         }

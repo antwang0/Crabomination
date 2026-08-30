@@ -1511,7 +1511,7 @@ impl GameState {
             || !spec.extra_card_types.is_empty()
             || spec.keep_name
             || spec.non_legendary)
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             let def = std::sync::Arc::make_mut(c.definition_mut());
             def.triggered_abilities
@@ -1623,7 +1623,7 @@ impl GameState {
                 .unwrap_or(0),
         };
         let mode = &modes[idx];
-        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+        if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
             let def = std::sync::Arc::make_mut(c.definition_mut());
             def.power = mode.power;
             def.toughness = mode.toughness;
@@ -1665,7 +1665,7 @@ impl GameState {
             DecisionAnswer::Mode(i) => i.min(modes.len() - 1),
             _ => 0,
         };
-        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        if let Some(c) = self.battlefield.find_by_id_mut(card_id)
             && let Some(def) = c.definition.with_mode_applied(idx)
         {
             c.set_definition(std::sync::Arc::new(def));
@@ -14110,7 +14110,7 @@ impl GameState {
                 let ret_ctx = EffectContext::for_ability(src, owner, None);
                 self.move_card_to(src, &dest, &ret_ctx, events);
                 // Strip the Creature type so it returns as an enchantment.
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
+                if let Some(c) = self.battlefield.find_by_id_mut(src) {
                     let def = std::sync::Arc::make_mut(c.definition_mut());
                     def.card_types.retain(|t| *t != CardType::Creature);
                 }
@@ -14127,7 +14127,7 @@ impl GameState {
                 let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(owner), tapped: true };
                 let ret_ctx = EffectContext::for_ability(src, owner, None);
                 self.move_card_to(src, &dest, &ret_ctx, events);
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
+                if let Some(c) = self.battlefield.find_by_id_mut(src) {
                     c.add_counters(*kind, *amount);
                 }
                 Ok(())
@@ -16198,7 +16198,7 @@ impl GameState {
                     return Ok(());
                 };
                 self.move_card_to(card_id, &crate::effect::ZoneDest::Exile, ctx, events);
-                let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) else {
+                let Some(c) = self.battlefield.find_by_id_mut(cid) else {
                     return Ok(());
                 };
                 let mut new_def = (*def).clone();
@@ -16857,7 +16857,7 @@ impl GameState {
                         events,
                     );
                     if cid != *host
-                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid)
+                        && let Some(c) = self.battlefield.find_by_id_mut(cid)
                     {
                         c.attached_to = Some(*host);
                     }
@@ -16885,7 +16885,7 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
+                if let Some(c) = self.battlefield.find_by_id_mut(src) {
                     c.attached_to = Some(new_host);
                 }
                 let mine: Vec<CardId> = self
@@ -16895,7 +16895,7 @@ impl GameState {
                     .map(|c| c.id)
                     .collect();
                 for cid in mine {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                    if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                         c.tapped = false;
                     }
                 }
@@ -17738,7 +17738,7 @@ impl GameState {
                     // declare-attackers timing/sickness gates, like Ninjutsu.
                     if self.battlefield.iter().any(|c| c.id == id) {
                         self.attacking.push(Attack { attacker: id, target });
-                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                        if let Some(c) = self.battlefield.find_by_id_mut(id) {
                             c.attacked_this_turn = true;
                         }
                         events.push(GameEvent::AttackerDeclared(id));
@@ -17779,7 +17779,7 @@ impl GameState {
                                 .map(AttackTarget::Player)
                         });
                     let Some(target) = target else { continue };
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                    if let Some(c) = self.battlefield.find_by_id_mut(id) {
                         c.tapped = true;
                         c.attacked_this_turn = true;
                     }
@@ -18091,7 +18091,7 @@ impl GameState {
                 // "when this Class becomes level N" triggers fire (the caller
                 // dispatches the returned events).
                 let Some(src) = ctx.source else { return Ok(()); };
-                let Some(card) = self.battlefield.iter_mut().find(|c| c.id == src) else {
+                let Some(card) = self.battlefield.find_by_id_mut(src) else {
                     return Ok(());
                 };
                 if !card.definition.is_class() {
@@ -19832,7 +19832,7 @@ impl GameState {
                 if let Some(target) = target
                     && !self.attacking.iter().any(|a| a.attacker == cid)
                 {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                    if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                         c.attacked_this_turn = true;
                     }
                     self.attacking.push(Attack { attacker: cid, target });
@@ -22622,7 +22622,7 @@ impl GameState {
                     &ZoneDest::Battlefield { controller: PlayerRef::Seat(ctx.controller), tapped: false },
                     ctx, events,
                 );
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                if let Some(c) = self.battlefield.find_by_id_mut(id) {
                     c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
                     // "…a black Zombie in addition to its other types."
                     let def = std::sync::Arc::make_mut(c.definition_mut());
@@ -25214,7 +25214,7 @@ impl GameState {
                     .collect();
                 let mut moved = 0u32;
                 for id in sources {
-                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                    if let Some(c) = self.battlefield.find_by_id_mut(id) {
                         let n = c.counter_count(*kind);
                         if n > 0 {
                             c.remove_counters(*kind, n);
@@ -25223,7 +25223,7 @@ impl GameState {
                     }
                 }
                 if moved > 0
-                    && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == dest)
+                    && let Some(c) = self.battlefield.find_by_id_mut(dest)
                 {
                     c.add_counters(*kind, moved);
                 }
@@ -27736,7 +27736,7 @@ impl GameState {
                 if let Some(src_def) = src_def {
                     for ent in self.resolve_selector(what, ctx) {
                         let Some(cid) = ent.as_permanent_id() else { continue };
-                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                        if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                             let mut new_def = (*src_def).clone();
                             for t in extra_creature_types {
                                 if !new_def.subtypes.creature_types.contains(t) {
@@ -27811,7 +27811,7 @@ impl GameState {
                     if Some(cid) == src {
                         continue;
                     }
-                    let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) else {
+                    let Some(c) = self.battlefield.find_by_id_mut(cid) else {
                         continue;
                     };
                     let original = std::mem::replace(c.definition_mut(), copy_def.clone());
@@ -31348,7 +31348,7 @@ impl GameState {
                 else {
                     return Ok(());
                 };
-                let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) else {
+                let Some(c) = self.battlefield.find_by_id_mut(cid) else {
                     return Ok(());
                 };
                 let mut new_def = (*def).clone();

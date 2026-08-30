@@ -2582,7 +2582,7 @@ impl GameState {
                             })
                             .unwrap_or(base as u32);
                         if let Some(card_mut) =
-                            self.battlefield.iter_mut().find(|c| c.id == cid)
+                            self.battlefield.find_by_id_mut(cid)
                         {
                             card_mut.add_counters(kind, n);
                         }

@@ -352,6 +352,33 @@ impl Battlefield {
         Some(c)
     }
 
+    /// The `&mut` twin of [`find_by_id`](Self::find_by_id), and the reason it
+    /// is not spelled `iter_mut().find(…)`: that form takes `&mut` at the
+    /// cards **before** it knows whether the id is here, so it pays a
+    /// [`CowBox`](crate::cow::CowBox) unshare — a deep copy of the whole zone
+    /// — even to answer `None`. Locating on the shared side and reaching for
+    /// `&mut` only on a hit costs a miss nothing, and puts the one-entry memo
+    /// on the write path that the read path has had since PERF `(-38)`.
+    ///
+    /// Same uniqueness premise as `find_by_id`, audited by the same
+    /// `debug_assert!` on the scan path.
+    #[inline]
+    pub fn find_by_id_mut(&mut self, id: crate::card::CardId) -> Option<&mut CardInstance> {
+        let hint = self.find_hint.load(Ordering::Relaxed) as usize;
+        let i = if self.cards.get(hint).is_some_and(|c| c.id == id) {
+            hint
+        } else {
+            let i = self.cards.iter().position(|c| c.id == id)?;
+            debug_assert!(
+                !self.cards[i + 1..].iter().any(|o| o.id == id),
+                "two battlefield permanents share a CardId: the find hint could name either",
+            );
+            self.find_hint.store(i as u32, Ordering::Relaxed);
+            i
+        };
+        self.cards_unchecked_mut().get_mut(i)
+    }
+
     /// True when some permanent here satisfies `walk` — the layer-4 land-type
     /// contributor test. Memoized; a miss walks the board once.
     #[inline]
@@ -874,6 +901,30 @@ mod tests {
         // An empty board answers `None` through the same path.
         b.pop();
         assert!(b.find_by_id(CardId(1)).is_none());
+    }
+
+    /// The `&mut` twin locates on the shared side: a miss answers `None`
+    /// without unsharing, where `iter_mut().find(…)` deep-copied the whole
+    /// zone first. A hit writes, so it unshares — and the snapshot doesn't
+    /// see the write.
+    #[test]
+    fn find_by_id_mut_misses_without_unsharing() {
+        let mut a = bf(vec![crate::catalog::grizzly_bears(), crate::catalog::blood_moon()]);
+        let b = a.clone();
+        assert!(a.shares_with(&b), "clone is a refcount bump");
+        assert!(a.find_by_id_mut(CardId(404)).is_none(), "not on this board");
+        assert!(a.shares_with(&b), "a miss must not pay the unshare");
+
+        a.find_by_id_mut(CardId(1)).expect("on this board").tapped = true;
+        assert!(!a.shares_with(&b), "a hit writes, so it unshares");
+        assert!(a[1].tapped);
+        assert!(!b[1].tapped, "the snapshot is untouched");
+
+        // Same hint contract as `find_by_id`: it is verified, not
+        // invalidated, so a board that shrinks under it still answers.
+        a.pop();
+        assert!(a.find_by_id_mut(CardId(1)).is_none(), "the card left");
+        assert_eq!(a.find_by_id_mut(CardId(0)).map(|c| c.id), Some(CardId(0)));
     }
 
     /// Blood Moon sets every nonbasic land's type line; Grizzly Bears does

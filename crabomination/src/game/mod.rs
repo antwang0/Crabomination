@@ -7808,7 +7808,7 @@ impl GameState {
             }
         };
         if self.apply_enters_as_copy(id, ctrl, events) && !minted_extra_types.is_empty()
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id)
+            && let Some(c) = self.battlefield.find_by_id_mut(id)
         {
             let mut def = (**c.definition).clone();
             for t in minted_extra_types {
@@ -7851,7 +7851,7 @@ impl GameState {
             }
         }
         if let Some(src) = self.token_minting_source
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id)
+            && let Some(c) = self.battlefield.find_by_id_mut(id)
         {
             c.created_by = Some(src);
         }
@@ -14182,7 +14182,7 @@ impl GameState {
     /// Jump: the later grant must survive). The layer walk dedups.
     pub(crate) fn grant_keyword_eot(&mut self, cid: CardId, kw: crate::card::Keyword) {
         let ts = self.next_timestamp();
-        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+        if let Some(c) = self.battlefield.find_by_id_mut(cid) {
             c.granted_keywords_eot.push(kw);
             c.granted_keywords_eot_ts.push(ts);
         }
@@ -14314,7 +14314,7 @@ impl GameState {
             }
             if which.contains(&tc.duration) {
                 if let Some(def) = tc.original_def()
-                    && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card)
+                    && let Some(c) = self.battlefield.find_by_id_mut(tc.card)
                 {
                     c.set_definition(def);
                 }
@@ -16146,7 +16146,7 @@ impl GameState {
         self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
         let mut events = vec![];
         self.discard_card(seat, card_id, &mut events);
-        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tid) {
+        if let Some(c) = self.battlefield.find_by_id_mut(tid) {
             c.add_counters(CounterType::PlusOnePlusOne, n);
         }
         Ok(events)
@@ -17314,7 +17314,7 @@ impl GameState {
         }
         // Attach. The sacrifice above may have shifted the battlefield, so
         // re-find the Equipment rather than reusing the stale index.
-        let Some(c) = self.battlefield.iter_mut().find(|c| c.id == equipment) else {
+        let Some(c) = self.battlefield.find_by_id_mut(equipment) else {
             return Err(GameError::CardNotOnBattlefield(equipment));
         };
         c.attached_to = Some(target);
@@ -17485,7 +17485,7 @@ impl GameState {
         // Tap the crew.
         let mut events = vec![];
         for &cid in crew_creatures {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+            if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                 c.tapped = true;
                 events.push(GameEvent::PermanentTapped { card_id: cid, actor: None, as_attacker: false });
             }
@@ -17505,7 +17505,7 @@ impl GameState {
         });
         // Remember the crew for "each creature that crewed it this turn"
         // payoffs (Luxurious Locomotive).
-        if let Some(v) = self.battlefield.iter_mut().find(|c| c.id == vehicle) {
+        if let Some(v) = self.battlefield.find_by_id_mut(vehicle) {
             for &cid in crew_creatures {
                 if !v.crewed_by.contains(&cid) {
                     v.crewed_by.push(cid);
@@ -17570,12 +17570,12 @@ impl GameState {
         }
         let mut events = vec![];
         for &cid in creatures {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+            if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                 c.tapped = true;
                 events.push(GameEvent::PermanentTapped { card_id: cid, actor: None, as_attacker: false });
             }
         }
-        if let Some(m) = self.battlefield.iter_mut().find(|c| c.id == mount) {
+        if let Some(m) = self.battlefield.find_by_id_mut(mount) {
             m.saddled = true;
             // CR 702.171 — remember the riders for "a creature that saddled it
             // this turn" payoffs (Fortune, Loyal Steed).
@@ -17662,7 +17662,7 @@ impl GameState {
         // attacking — bypassing the declare-attackers timing/sickness gates.
         if self.battlefield.iter().any(|c| c.id == ninja) {
             self.attacking.push(Attack { attacker: ninja, target: atk.target });
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == ninja) {
+            if let Some(c) = self.battlefield.find_by_id_mut(ninja) {
                 c.attacked_this_turn = true;
             }
             events.push(GameEvent::AttackerDeclared(ninja));
@@ -17705,10 +17705,10 @@ impl GameState {
             .map(|c| c.id)
             .min_by_key(|id| id.0);
         let Some(p) = partner else { return };
-        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == entered) {
+        if let Some(c) = self.battlefield.find_by_id_mut(entered) {
             c.soulbond_partner = Some(p);
         }
-        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == p) {
+        if let Some(c) = self.battlefield.find_by_id_mut(p) {
             c.soulbond_partner = Some(entered);
         }
     }
@@ -22842,8 +22842,12 @@ impl GameState {
         }
     }
 
+    /// The `&mut` twin of [`battlefield_find`](Self::battlefield_find), and
+    /// the single spelling for it: [`Battlefield::find_by_id_mut`] locates on
+    /// the shared side, so a miss costs no `CowBox` unshare and a hit skips
+    /// the scan through the same one-entry memo the read path uses.
     pub fn battlefield_find_mut(&mut self, id: CardId) -> Option<&mut CardInstance> {
-        self.battlefield.iter_mut().find(|c| c.id == id)
+        self.battlefield.find_by_id_mut(id)
     }
 
     /// Single funnel for on-battlefield control changes (steals, exchanges,
@@ -23154,7 +23158,7 @@ impl GameState {
         id: CardId,
     ) -> Option<&mut CardInstance> {
         if self.battlefield.iter().any(|c| c.id == id) {
-            return self.battlefield.iter_mut().find(|c| c.id == id);
+            return self.battlefield.find_by_id_mut(id);
         }
         // Locate first with shared borrows, then take the one `&mut`: `Player`
         // is a CoW handle, so an `iter_mut()` per zone would both borrow the

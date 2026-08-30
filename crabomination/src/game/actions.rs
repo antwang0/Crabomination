@@ -3789,7 +3789,7 @@ impl GameState {
                 let (_, creature_id) = self.pending_prepare_copies.remove(idx);
                 let mut events = result.unwrap_or_default();
                 // Casting the copy unprepares the creature.
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == creature_id)
+                if let Some(c) = self.battlefield.find_by_id_mut(creature_id)
                     && c.remove_counters(CounterType::Prepared, 1) > 0
                 {
                     events.push(GameEvent::CounterRemoved {
@@ -4793,7 +4793,7 @@ impl GameState {
         }
         // Tap both as the additional cost, then cast and copy once.
         for cid in [c0, c1] {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+            if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                 c.tapped = true;
             }
         }
@@ -5547,7 +5547,7 @@ impl GameState {
             if !self.try_pay_ward_cost(p, &wc, &ctx, &mut events) {
                 return Err(GameError::InvalidTarget);
             }
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+            if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
                 c.turn_face_up();
                 c.cast_x_value = x_value;
             }
@@ -5570,7 +5570,7 @@ impl GameState {
         let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
         let mut events = receipt.auto_events;
         self.pay_life_cost(p, receipt.side_effects.life_lost);
-        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+        if let Some(c) = self.battlefield.find_by_id_mut(card_id) {
             c.turn_face_up();
             c.cast_x_value = x_value;
             if megamorph {
@@ -7462,7 +7462,7 @@ impl GameState {
                 .computed_permanent(*cid)
                 .map(|cp| cp.colors.to_vec())
                 .unwrap_or_default();
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
+            if let Some(c) = self.battlefield.find_by_id_mut(*cid) {
                 c.tapped = true;
             }
             match colors
@@ -9435,7 +9435,7 @@ impl GameState {
 
         // CR 702.180b — tap the nominated creature as the cost is paid.
         if let Some(cid) = tap_creature
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid)
+            && let Some(c) = self.battlefield.find_by_id_mut(cid)
         {
             c.tapped = true;
         }
@@ -9740,7 +9740,7 @@ impl GameState {
         }
         // Pay the tap cost: tap every nominated creature.
         for cid in tap_creatures {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
+            if let Some(c) = self.battlefield.find_by_id_mut(*cid) {
                 c.tapped = true;
             }
         }
@@ -12482,7 +12482,7 @@ impl GameState {
         }
         let mut probe = self.clone();
         for id in &duals {
-            if let Some(c) = probe.battlefield.iter_mut().find(|c| c.id == *id) {
+            if let Some(c) = probe.battlefield.find_by_id_mut(*id) {
                 c.tapped = true;
             }
         }
@@ -14009,7 +14009,7 @@ impl GameState {
                 .battlefield_find(*cid)
                 .map(|c| c.definition.printed_colors())
                 .unwrap_or_default();
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
+            if let Some(c) = self.battlefield.find_by_id_mut(*cid) {
                 c.tapped = true;
             }
             // Prefer a colored pip this creature can actually cover; generic
@@ -16044,8 +16044,7 @@ impl GameState {
             }
             let perm = self
                 .battlefield
-                .iter_mut()
-                .find(|c| c.id == card_id)
+                .find_by_id_mut(card_id)
                 .ok_or(GameError::CardNotOnBattlefield(card_id))?;
             if perm.tapped {
                 return Err(GameError::CardIsTapped(card_id));
@@ -16059,8 +16058,7 @@ impl GameState {
             }
             let perm = self
                 .battlefield
-                .iter_mut()
-                .find(|c| c.id == card_id)
+                .find_by_id_mut(card_id)
                 .ok_or(GameError::CardNotOnBattlefield(card_id))?;
             if !perm.tapped {
                 return Err(GameError::CardIsTapped(card_id));
@@ -16095,12 +16093,12 @@ impl GameState {
                     // permanently locked out of Forum of Amity's surveil
                     // with the land stuck tapped (recorded 2026-08-19).
                     if ability.tap_cost
-                        && let Some(perm) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && let Some(perm) = self.battlefield.find_by_id_mut(card_id)
                     {
                         perm.tapped = false;
                     }
                     if ability.untap_self_cost
-                        && let Some(perm) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && let Some(perm) = self.battlefield.find_by_id_mut(card_id)
                     {
                         perm.tapped = true;
                     }
@@ -16200,7 +16198,7 @@ impl GameState {
         if (ability.once_per_turn || ability.max_activations_per_turn.is_some())
             && !source_in_gy
             && !source_in_hand
-            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(card) = self.battlefield.find_by_id_mut(card_id)
         {
             card.once_per_turn_used.push(ability_index);
         }
@@ -16232,7 +16230,7 @@ impl GameState {
         // CR 702.177 — record the exhaust activation (never cleared this game).
         if (ability.exhaust || ability.activate_once)
             && !source_in_gy
-            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(card) = self.battlefield.find_by_id_mut(card_id)
         {
             card.exhausted_abilities.push(ability_index);
         }
@@ -16285,7 +16283,7 @@ impl GameState {
                     .map(|c| c.id),
                 None => None,
             };
-            match detach.and_then(|id| self.battlefield.iter_mut().find(|c| c.id == id)) {
+            match detach.and_then(|id| self.battlefield.find_by_id_mut(id)) {
                 Some(c) => c.attached_to = None,
                 None => return Err(GameError::SelectionRequirementViolated),
             }
@@ -16564,7 +16562,7 @@ impl GameState {
         // gate). Walking Ballista's `Remove a +1/+1 counter from this: deal 1
         // damage` runs here before the ping resolves.
         if let Some((kind, count)) = ability.remove_counter_cost
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             let ctrl = c.controller;
             c.remove_counters(kind, count);
@@ -16577,7 +16575,7 @@ impl GameState {
         // body's `Value::CountersRemovedAsCost` can scale off it.
         self.counters_removed_as_cost = 0;
         if let Some(kind) = ability.remove_all_counters_cost
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             let had = c.counter_count(kind);
             c.remove_counters(kind, had);
@@ -16601,7 +16599,7 @@ impl GameState {
         // paid before the ability goes on the stack, so a body reading the
         // source's counters sees the new total. Yisan.
         if let Some((kind, count)) = ability.add_counter_cost
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             c.add_counters(kind, count);
             events.push(GameEvent::CounterAdded {
@@ -16626,7 +16624,7 @@ impl GameState {
 
         // Remove-X-counters-as-cost (Arcbound Javelineer): strip the paid X.
         if let Some(kind) = ability.remove_counter_x
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
             c.remove_counters(kind, x_value.unwrap_or(0));
         }
@@ -16649,7 +16647,7 @@ impl GameState {
             let mut left = count;
             for (cid, _) in picks {
                 if left == 0 { break; }
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                     // Drain each eligible kind in turn until the quota is met.
                     let present: Vec<_> = match kinds.as_deref() {
                         Some(ks) => ks.iter().copied().filter(|k| c.counter_count(*k) > 0).collect(),
@@ -16680,7 +16678,7 @@ impl GameState {
             let mut left = x_value.unwrap_or(0);
             for (cid, _) in picks {
                 if left == 0 { break; }
-                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                     let take = left.min(c.counter_count(kind));
                     c.remove_counters(kind, take);
                     left -= take;
@@ -16743,7 +16741,7 @@ impl GameState {
         // resolution via `Effect::WithTappedPower`.
         let mut tap_other_power: Option<i32> = None;
         if let Some(other_cid) = tap_other_pick
-            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid)
+            && let Some(c) = self.battlefield.find_by_id_mut(other_cid)
         {
             tap_other_power = Some(c.power());
             c.tapped = true;
@@ -16761,7 +16759,7 @@ impl GameState {
             self.tapped_for_cost = tap_n_picks.clone();
         }
         for other_cid in tap_n_picks {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid) {
+            if let Some(c) = self.battlefield.find_by_id_mut(other_cid) {
                 c.tapped = true;
             }
         }
