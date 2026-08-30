@@ -16298,6 +16298,8 @@ could separate. Naming the buffer needs source reading, not another dump.
 candidate** — they are the `Result<Vec<GameEvent>, GameError>` these two
 frames *return*. `(-104)` is what is left of them.
 
+**TAKEN, 2026-08-30 — the hundred-and-fourth pass, splice route.**
+
 **(-104) THE TWO REMAINING GROWTH LEADERS ARE A `Vec<GameEvent>` RETURN, NOT A
 MISSING RESERVE — 46,258 ALLOCATIONS, 3.3 % OF EVERY ALLOCATION THE PROGRAM
 MAKES.** `resolve_effect` (30,508 calls) and `activate_ability_inner` (22,876)
