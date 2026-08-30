@@ -17406,6 +17406,43 @@ the ones next to it.
 See the Log; the rule it adds is **rank a chain of pure guards by cost x
 rejection rate**, and the entry as claimed is kept there.
 
+**(-119) TAKEN, 2026-08-30 — `board_keyword_in_scope` BUILDS A `SmallVec` OF
+DISCRIMINANTS ON EVERY CALL AND THEN LINEAR-SCANS IT ONCE PER KEYWORD PER
+PERMANENT.** Read off `cg3.cube` at `172a40c8`: **28,510 calls / 14,906,578
+self Ir / 523 a call, 0.58 % of `cube`**, plus **1,959,028 Ir (69 a call) in
+`SmallVec::extend`** building the tag list — the second-largest callee it has.
+
+```text
+callers, cube                       calls    Ir (incl)
+  declare_attackers_banded          6,538   21,556,375
+  declare_blockers                  4,876   17,847,167
+  enforce_block_requirements        4,576    2,991,216
+  enforce_block_caps                4,576    2,675,400
+  pick_attacks_inner                4,526    2,890,126
+  do_phasing                        2,772    2,112,278
+callees
+  frozen_effects                   28,510   33,489,892   <- NOT this entry
+  SmallVec::extend                 28,510    1,959,028   <- this entry
+```
+
+**Every call site passes a compile-time-constant keyword set** (3-5 unit
+variants; seven sites, all payload-free), and the helper turns it into a
+runtime `SmallVec<[Discriminant<Keyword>; 8]>` and then asks
+`tags.contains(&discriminant(k))` for **every keyword on every permanent, in
+three lists** — a linear scan of 5 where a `matches!` is one jump. The
+predicate form the helper is built on, `board_keyword_matching`, already
+exists and is already public to these callers.
+
+**The change is to delete the set-taking wrapper and let each site pass its
+own `matches!` closure.** No new state, no memo, no gate — `(-87)` and
+`(-114)` do not reach it. Estimated ~2.0 M for the `SmallVec` plus most of
+the scan cost inside the 523.
+
+**What this is NOT**: `frozen_effects`' 33.5 M is the scope's first gather,
+which the `compute_permanents` after it would pay anyway — the ninety-first
+pass measured hoisting the gate past it at +0.30 % and the comment on
+`board_keyword_matching` says so. Leave it alone.
+
 **(-118) IS A RE-DERIVATION OF `(-52)`, WHICH CLOSED ACTOR SCALING FORTY-FIVE
 PASSES AGO — AND THE PROCESS FAILURE IS THE POINT.** The seed list's "actor
 scaling, find contention if sublinear" line was read as an open item off
