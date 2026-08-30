@@ -26,7 +26,11 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
-   the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
+   the PERF entry before you spend a build on it (`d6a9b3d5`).
+   **CLAIMED 2026-08-30: the four biggest `grow_one` rows** — combat's `events`
+   accumulator (`resolve_combat` 21,334 + `deal_combat_damage_to_target` 13,104 growths
+   are the same `Vec`), `pick_attacks_inner`'s two board-walk locals and
+   `mana_source_table`'s `out`. Nothing else is claimed.
 2. **State at `c92f3851`:** suite 19,049 / 0 / 5, clippy clean, golden traces 7/7, grid
    30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical (195,528 /
    27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok). Pass window
