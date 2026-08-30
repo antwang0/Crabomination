@@ -17468,6 +17468,36 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-120) TAKEN, 2026-08-30 — THE GRANT-LIVE HALF OF `(-115)`: FOUR GATES MAKE
+A DISPATCH GRANT-LIVE AND ONLY ONE OF THEM IS EVENT-KIND FILTERED.**
+`(-115)` left `cube`'s 17,000 grant-live dispatches (31 % of asks, 797,574 of
+its 1,479,052 visits, on boards twice the size of a no-grant one) as the one
+part of the walk nothing has touched. A lane cannot help them *while they are
+grant-live* — so the question is how many of them have to be.
+
+`no_grants` is the AND of four facts read at `game/mod.rs:18269-18273`:
+
+```text
+  trigger_grants            board GrantTriggeredAbility statics   FILTERED by
+                                                                  event kind
+  turn_granted_triggers     CR 611.2 turn-scoped watchers         not filtered
+  granted_triggers_eot      per-card EOT grants (id-keyed)        not filtered
+  equip_grants              equipped_bonus triggers (id-keyed)    not filtered
+```
+
+The first has carried an `event_kind_matches` retain since `(-83)`'s window and
+the note there says why: a grant whose ability no event in the batch could
+match contributes nothing, and finding that out costs one
+`SelectionRequirement` per (grant, permanent) pair. **The same argument applies
+verbatim to the other three and none of them makes it.** Two of the three are
+keyed by `CardId`, so they cannot reach a permanent the caller did not name —
+an over-approximating member mask can hold them.
+
+Sizing is unknown until the census says which gate fires; `trig_census` counts
+`no_grants` as one bit and cannot. **Step 1 is the reason mask on the census**
+(sixteen buckets, dispatches and visits), then the filter, then a mask that can
+carry the id-keyed pair. Do not price the fix before the census run.
+
 **(-114) BUILT, MEASURED AND REVERTED — THE COLD-GROUP DEREF IS ALREADY
 COMMON-SUBEXPRESSION-ELIMINATED, AND `has_keyword` IS **BYTE-IDENTICAL** WITH
 AND WITHOUT THE HOIST.** 18,593,922 self Ir over 410,892 calls on both sides,
