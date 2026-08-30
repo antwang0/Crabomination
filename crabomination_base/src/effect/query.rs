@@ -66,6 +66,54 @@ fn implicit_player_if_controlled_by_target(
     .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
+/// `Some(&Player)` when a `Value` reads something about a **target player**
+/// and the body names that slot nowhere a `Selector` walk can see it —
+/// Officious Interrogation counts what "target player" controls, Jeska's Will
+/// reads "target opponent"'s hand size, Tithe compares their land count. Both
+/// target walkers descend `Selector`s, not `Value`s, so without this the slot
+/// has no filter at all and the enumerator offers the whole board.
+fn implicit_player_in_value(v: &Value) -> Option<&'static SelectionRequirement> {
+    match v {
+        Value::HandSizeOf(who) => implicit_player_if_bare_player_ref(who),
+        Value::CountMatching { sel, .. } => match &**sel {
+            Selector::ControlledBy { who, .. } | Selector::CardsInZone { who, .. } => {
+                implicit_player_if_bare_player_ref(who)
+            }
+            _ => None,
+        },
+        Value::Sum(vs) => vs.iter().find_map(implicit_player_in_value),
+        _ => None,
+    }
+}
+
+/// [`implicit_player_in_value`] through a mana payload — Jeska's Will adds
+/// `{R}` per card in *target opponent's* hand, and that `Value` is the only
+/// place its slot is named.
+fn implicit_player_in_payload(p: &ManaPayload) -> Option<&'static SelectionRequirement> {
+    match p {
+        ManaPayload::Colorless(v)
+        | ManaPayload::OfColor(_, v)
+        | ManaPayload::AnyOneColor(v)
+        | ManaPayload::AnyColors(v) => implicit_player_in_value(v),
+        _ => None,
+    }
+}
+
+/// [`implicit_player_in_value`] through a condition — Tithe's slot is named
+/// only inside its `If`'s `Predicate::ValueAtLeast`.
+fn implicit_player_in_predicate(p: &Predicate) -> Option<&'static SelectionRequirement> {
+    match p {
+        Predicate::ValueAtLeast(a, b) => {
+            implicit_player_in_value(a).or_else(|| implicit_player_in_value(b))
+        }
+        Predicate::All(ps) | Predicate::Any(ps) => {
+            ps.iter().find_map(implicit_player_in_predicate)
+        }
+        Predicate::Not(inner) => implicit_player_in_predicate(inner),
+        _ => None,
+    }
+}
+
 /// CR 115.4's narrower cousin: "target player or planeswalker" — the recipient
 /// set of a damage effect that cannot hit a creature (Flaming Gambit).
 static IMPLICIT_PLAYER_OR_PLANESWALKER: std::sync::LazyLock<SelectionRequirement> =
@@ -2040,8 +2088,9 @@ impl Effect {
             // only slot is a player, so the UI target picker must offer
             // seats and *not* every permanent on the board — which is what
             // an unclassified effect falls back to (`Any`).
-            Effect::CreateToken { who, .. }
-            | Effect::CreateTokenAttacking { who, .. }
+            Effect::CreateToken { who, count, .. } => implicit_player_if_bare_player_ref(who)
+                .or_else(|| implicit_player_in_value(count)),
+            Effect::CreateTokenAttacking { who, .. }
             | Effect::Amass { who, .. }
             | Effect::Incubate { who, .. } => implicit_player_if_bare_player_ref(who),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => {
@@ -2255,7 +2304,7 @@ impl Effect {
             | Effect::LookAtTop { who, .. }
             | Effect::RearrangeTop { who, .. }
             | Effect::LookTopExileOneOfN { who, .. }
-            | Effect::AddMana { who, .. }
+
             | Effect::TakeExtraTurn { who, .. }
             | Effect::LoseGame { who }
             | Effect::RevealHand { who }
@@ -2284,6 +2333,8 @@ impl Effect {
                 implicit_player_if_bare_player_ref(who)
             }
             Effect::RedirectDrawsThisTurn { from } => implicit_player_if_bare_player_ref(from),
+            Effect::AddMana { who, pool } => implicit_player_if_bare_player_ref(who)
+                .or_else(|| implicit_player_in_payload(pool)),
             // "deals X damage to target player or planeswalker" — the slot has
             // no selector field at all, so the shape is the whole answer.
             Effect::DamageTargetPlayerMayRedirect { .. } => {
@@ -2338,9 +2389,11 @@ impl Effect {
             // `Seq` alongside a delayed exile trigger; the primary target
             // is still the Move's target.
             Effect::Seq(v) => v.iter().find_map(|e| e.primary_target_filter()),
-            Effect::If { then, else_, .. } => then
+            Effect::If { then, else_, cond } => then
                 .primary_target_filter()
-                .or_else(|| else_.primary_target_filter()),
+                .or_else(|| else_.primary_target_filter())
+                // Tithe names its target player only inside the condition.
+                .or_else(|| implicit_player_in_predicate(cond)),
             Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => {
                 body.primary_target_filter()
             }

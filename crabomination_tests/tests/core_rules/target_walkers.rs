@@ -229,6 +229,13 @@ fn a_target_player_effect_offers_no_permanent() {
 /// **The counterspell families are out of scope too**: their target is a
 /// spell on the stack, which `Target` cannot express, so the enumerator's
 /// list is not what aims them.
+///
+/// It has **no exceptions** otherwise. The last three — Officious
+/// Interrogation, Jeska's Will and Tithe, which name their target player only
+/// from inside a `Value` or a `Predicate` — are answered by
+/// `implicit_player_in_value` / `implicit_player_in_predicate` rather than
+/// listed here, because a name in a list goes stale on the next card and a
+/// walker does not.
 #[test]
 fn every_targeting_spell_or_ability_says_what_it_targets() {
     /// Effects whose slot is a spell or ability on the stack.
@@ -250,14 +257,6 @@ fn every_targeting_spell_or_ability_says_what_it_targets() {
         "CounterSpellExileMayPlayFree",
         "ChooseNewTargetsForSpell",
     ];
-    /// The slot is named only from inside a `Value` or a `Predicate`, and
-    /// both target walkers reach `Selector`s. All three are "target player":
-    /// Officious Interrogation counts what that player controls, Jeska's Will
-    /// reads their hand size, Tithe compares their land count. Reaching them
-    /// needs a `Value`/`Predicate` walker the engine does not have — the one
-    /// open shape this invariant knows about.
-    const VALUE_ONLY: [&str; 3] = ["Officious Interrogation", "Jeska's Will", "Tithe"];
-
     fn holds_spell_target(v: &Value) -> bool {
         match v {
             Value::Object(map) => map
@@ -284,7 +283,7 @@ fn every_targeting_spell_or_ability_says_what_it_targets() {
                 continue;
             }
             covered += 1;
-            if body.primary_target_filter().is_some() || VALUE_ONLY.contains(&def.name) {
+            if body.primary_target_filter().is_some() {
                 continue;
             }
             let json = serde_json::to_value(body).expect("Effect serializes");
