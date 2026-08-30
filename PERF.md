@@ -17166,6 +17166,11 @@ the cheapest untried thing in the function and it is not a tabulation**, so
 NEXT item 2 has been carrying "what dispatch's self cost actually is" as an
 open question for two passes; this closes the measurement half of it.
 
+**THE GROWTH HALF IS TAKEN, 2026-08-30 (the other session)** — the two
+never-escaping `Vec`s in `resolve_combat_damage_with_filter` (`attacker_infos`
+and the strike-back `dealing_blocker_ids`) to inline storage, `(-71)`'s device.
+Not a reserve: both are removals, so `(-80)`'s floor does not apply.
+
 **(-113) THE CHEAP HALF IS TAKEN at `9b3470a4`** — `fixed` -0.0458 % /
 `cube` -0.0791 % / `sealed` -0.0706 %, and the entry's mechanism for it was
 wrong (the `any()` short-circuits on `c.id == attacker`, so the cost was the
