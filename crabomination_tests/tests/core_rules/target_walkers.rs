@@ -317,6 +317,69 @@ mod offboard_gate {
             "a Move-to-your-hand is reanimation-shaped and keeps the walk"
         );
     }
+
+    /// The **enumerator** is scoped the same way the picker is.
+    ///
+    /// `legal_targets_for_filter` walked every graveyard and exile for any
+    /// filter, so `enumerate_legal_targets` — the client's clickable list and
+    /// the engine's own `ChooseTarget` sets — offered candidates the resolver
+    /// rejects. The picker was gated at the eighty-sixth pass and the
+    /// enumerator was not, so the UI path and the training path targeted
+    /// different sets for the same effect. See ENGINE_BACKLOG, "the target
+    /// enumerator is zone-blind".
+    #[test]
+    fn the_enumerator_and_the_picker_agree_on_which_zones_an_effect_reaches() {
+        let mut g = two_player_game();
+        let gy = g.add_card_to_graveyard(0, bear("Graveyard Bear"));
+        let ex = g.add_card_to_exile(1, bear("Exiled Bear"));
+        let live = g.add_card_to_battlefield(0, bear("Live Bear"));
+
+        let destroy = Effect::Destroy {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+        };
+        let legal = g.enumerate_legal_targets(&destroy, 0);
+        assert!(
+            legal.contains(&Target::Permanent(live)),
+            "the battlefield creature is still offered: {legal:?}"
+        );
+        assert!(
+            !legal.contains(&Target::Permanent(gy)) && !legal.contains(&Target::Permanent(ex)),
+            "a board-shaped destroy must not offer off-board cards: {legal:?}"
+        );
+
+        // The reanimation shape keeps both halves, exactly as the picker does.
+        let raise = Effect::Move {
+            what: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+            to: crabomination::effect::ZoneDest::Hand(crabomination::effect::PlayerRef::You),
+        };
+        let legal = g.enumerate_legal_targets(&raise, 0);
+        assert!(
+            legal.contains(&Target::Permanent(gy)),
+            "a Move-to-your-hand reaches the graveyard: {legal:?}"
+        );
+    }
+
+    /// `SelectionRequirement::Any` is the widest board-shaped filter there is,
+    /// and it used to match every card in every graveyard and in exile.
+    /// Cuombajj Witches ("1 damage to any target, chosen by an opponent") is
+    /// the shipped card that poses it.
+    #[test]
+    fn an_any_filter_offers_the_board_and_the_players_only() {
+        let mut g = two_player_game();
+        let gy = g.add_card_to_graveyard(0, bear("Graveyard Bear"));
+        let ex = g.add_card_to_exile(1, bear("Exiled Bear"));
+        let live = g.add_card_to_battlefield(1, bear("Live Bear"));
+        let legal = g.legal_targets_for_filter(&R::Any, true, 0, None);
+        assert!(
+            legal.contains(&Target::Player(0)) && legal.contains(&Target::Player(1)),
+            "both players are any-targets: {legal:?}"
+        );
+        assert!(legal.contains(&Target::Permanent(live)), "so is the board: {legal:?}");
+        assert!(
+            !legal.contains(&Target::Permanent(gy)) && !legal.contains(&Target::Permanent(ex)),
+            "a card in a graveyard or in exile is not an `any target`: {legal:?}"
+        );
+    }
 }
 
 /// The whole-catalog twin of [`every_declared_target_slot_is_answerable`], for

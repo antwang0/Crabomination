@@ -449,7 +449,17 @@ impl GameState {
         let req_owned =
             eff.primary_target_filter().map(|f| f.resolve_x(x).resolve_converge(converge));
         let req = req_owned.as_ref().unwrap_or(&any_filter);
-        self.legal_targets_for_filter(req, eff.accepts_player_target(), controller, source)
+        // Same scope gate as the auto-picker's off-board fallback, so the
+        // enumerated set and the picked target can't disagree about which
+        // zones the effect reaches.
+        let offboard = eff.may_target_offboard_card() || req.mentions_offboard_zone();
+        self.legal_targets_for_filter_scoped(
+            req,
+            eff.accepts_player_target(),
+            controller,
+            source,
+            offboard,
+        )
     }
 
     /// The graveyard / exile cards a `wants_ui` controller may pick for an
@@ -501,8 +511,33 @@ impl GameState {
         controller: usize,
         source: Option<CardId>,
     ) -> Vec<Target> {
+        let offboard = req.mentions_offboard_zone();
+        self.legal_targets_for_filter_scoped(req, accepts_player, controller, source, offboard)
+    }
+
+    /// [`legal_targets_for_filter`](Self::legal_targets_for_filter) with the
+    /// off-board walk decided by the caller.
+    ///
+    /// **The filter language has no zone predicate**, so a board-shaped
+    /// requirement ("target creature", a bare `Not(Player)`, `Any`) is
+    /// satisfied by a creature *card* in a graveyard or in exile. Walking
+    /// those zones unconditionally offered candidates the resolver then
+    /// rejects — Cuombajj Witches' "any target" listed every card in every
+    /// graveyard — and left every caller to separate the two by hand.
+    /// `offboard` is that question asked once, and the auto-picker asks it the
+    /// same way (`may_target_offboard_card || mentions_offboard_zone`): the
+    /// two walks must agree on scope or the UI path and the training path
+    /// target different sets.
+    pub fn legal_targets_for_filter_scoped(
+        &self,
+        req: &crate::card::SelectionRequirement,
+        accepts_player: bool,
+        controller: usize,
+        source: Option<CardId>,
+        offboard: bool,
+    ) -> Vec<Target> {
         self.with_frozen_layers(|s| {
-            s.legal_targets_for_filter_inner(req, accepts_player, controller, source)
+            s.legal_targets_for_filter_inner(req, accepts_player, controller, source, offboard)
         })
     }
 
@@ -512,6 +547,7 @@ impl GameState {
         accepts_player: bool,
         controller: usize,
         source: Option<CardId>,
+        offboard: bool,
     ) -> Vec<Target> {
         let is_legal = |t: &Target| -> bool {
             self.evaluate_requirement_static(req, t, controller, source)
@@ -541,6 +577,9 @@ impl GameState {
             if is_legal_bf(c) {
                 out.push(Target::Permanent(c.id));
             }
+        }
+        if !offboard {
+            return out;
         }
         // Graveyards: walk controller's first for graveyard-friendly
         // effects (Reanimate, Disentomb), then others.
