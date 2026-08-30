@@ -28845,10 +28845,28 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: 1,
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
+                // "Draw a card. At the beginning of the next end step, untap
+                // up to two lands." The delayed untap is the whole reason the
+                // card is played at instant speed on the opponent's turn; it
+                // was dropped. Narrowed to lands you control — the printed
+                // ability lets you choose any, but the chooser is always the
+                // controller and untapping an opponent's land is never right.
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::AtNextEndStep {
+                        body: Box::new(Effect::Untap {
+                            what: Selector::EachPermanent(
+                                SelectionRequirement::Land
+                                    .and(SelectionRequirement::ControlledByYou)
+                                    .and(SelectionRequirement::Tapped),
+                            ),
+                            up_to: Some(Value::Const(2)),
+                        }),
+                    },
+                ]),
             },
             LoyaltyAbility {
                 x_cost: false,
@@ -32603,16 +32621,39 @@ pub fn anticognition() -> CardDefinition {
         name: "Anticognition",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::CounterUnlessPaid {
-            what: target_filtered(
-                SelectionRequirement::IsSpellOnStack.and(
-                    SelectionRequirement::HasCardType(CardType::Creature)
-                        .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
-                ),
+        // "…unless its controller pays {2}. If an opponent has eight or more
+        // cards in their graveyard, INSTEAD counter that spell, then scry 2."
+        // The delirium-style rider was dropped, which made the card a plain
+        // Mana Leak in every game it was drawn late. Both branches spell the
+        // slot-0 filter out so the two target walkers answer the same thing
+        // about it whichever arm the classifier reaches first.
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::GraveyardSizeOf(PlayerRef::OpponentOf(Box::new(PlayerRef::You))),
+                Value::Const(8),
             ),
-            mana_cost: cost(&[generic(2)]),
-            exile: false,
-            extra_generic: None,
+            then: Box::new(Effect::Seq(vec![
+                Effect::CounterSpell {
+                    what: target_filtered(
+                        SelectionRequirement::IsSpellOnStack.and(
+                            SelectionRequirement::HasCardType(CardType::Creature)
+                                .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+                        ),
+                    ),
+                },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ])),
+            else_: Box::new(Effect::CounterUnlessPaid {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::HasCardType(CardType::Creature)
+                            .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
+                    ),
+                ),
+                mana_cost: cost(&[generic(2)]),
+                exile: false,
+                extra_generic: None,
+            }),
         },
         ..Default::default()
     }

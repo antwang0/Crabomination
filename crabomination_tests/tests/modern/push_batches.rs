@@ -888,6 +888,43 @@ fn teferi_hero_plus_one_draws() {
     assert_eq!(g.players[0].hand.len(), h + 1, "drew a card");
 }
 
+/// Teferi's +1 is "Draw a card. At the beginning of the next end step, untap
+/// up to two lands." The delayed untap was dropped from the catalog; this is
+/// what makes the card castable on the opponent's turn.
+#[test]
+fn teferi_hero_plus_one_untaps_two_lands_at_the_next_end_step() {
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_hero_of_dominaria());
+    g.add_card_to_library(0, catalog::island());
+    let lands: Vec<_> =
+        (0..3).map(|_| g.add_card_to_battlefield(0, catalog::island())).collect();
+    for id in &lands {
+        g.battlefield_find_mut(*id).expect("land").tapped = true;
+    }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: None,
+        card_id: teferi,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Teferi +1");
+    drain_stack(&mut g);
+    assert_eq!(
+        lands.iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count(),
+        3,
+        "nothing untaps on resolution — the untap is a delayed trigger"
+    );
+    g.step = TurnStep::End;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(
+        lands.iter().filter(|id| !g.battlefield_find(**id).unwrap().tapped).count(),
+        2,
+        "exactly two of the three untapped at the end step"
+    );
+}
+
 #[test]
 fn teferi_hero_minus_three_tucks_a_permanent() {
     use crabomination::game::types::Target;

@@ -1246,6 +1246,43 @@ fn anticognition_counters_creature_spell() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == spell), "countered (couldn't pay {{2}})");
 }
 
+/// "If an opponent has eight or more cards in their graveyard, instead counter
+/// that spell, then scry 2." The rider was dropped, so the card was a plain
+/// Mana Leak however long the game ran; here the {2} is available and payable
+/// and the spell is countered anyway.
+#[test]
+fn anticognition_hard_counters_off_a_full_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..8 {
+        g.add_card_to_graveyard(1, catalog::island());
+    }
+    let spell = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("opp casts bear");
+    let ac = g.add_card_to_hand(0, catalog::anticognition());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    let lib = g.players[0].library.len();
+    cast_at(&mut g, ac, Target::Permanent(spell));
+    assert!(
+        g.players[1].graveyard.iter().any(|c| c.id == spell),
+        "countered outright with {{2}} still in the pool"
+    );
+    assert_eq!(g.players[0].library.len(), lib, "scry 2 does not draw");
+}
+
 /// Pride of the Clouds grows for each other flyer on the battlefield.
 #[test]
 fn pride_of_the_clouds_scales_with_flyers() {
