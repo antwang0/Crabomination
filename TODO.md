@@ -27,11 +27,15 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
    the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
-2. **State at `0bda7d63`:** suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
+2. **State at `a019fee3`:** suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid
    30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical
    (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok,
-   `peak_rss_mib` 24.5). Anchor 885,996,416 / 2,640,804,402 / 2,619,514,623 and the
-   unexplained 141-ppm `fixed` cross-container gap in PERF's Baseline.
+   `peak_rss_mib` 24.5-24.7, `games_per_s` 332-334). Anchor 883,014,888 /
+   2,633,198,611 / 2,610,142,425; window `0367c09c -> a019fee3` **-0.476 / -0.826 /
+   -0.589 %**, and the **actor -3.20 %** over `c92f3851 -> a019fee3`. **A `peak_rss`
+   or `games_per_s` taken while the box is still building is not a reading** — the
+   first run at this tip read 26.8 MiB / 312 g/s and the next three read 24.5-24.7 /
+   332-334. Also in PERF's Baseline: the unexplained 141-ppm `fixed` cross-container gap.
    **The 107-card type commit is Ir-neutral at this sample**: `244e849b -> 0bda7d63`
    reads +372 / +148,548 / +34,702 Ir, i.e. **0.4 / 56 / 13 ppm**. Six games of `cube`
    barely deal those cards; over a training run they are 34 spells at the wrong speed and
@@ -62,7 +66,13 @@ sixty-seventh pass, so don't re-take that.
    Open there, `(-107)`: `encode_state`'s 66,485 reserve growths (2nd largest in the
    program, invisible to every pool) and `computed_permanent_hinted`'s 433,775 `Arc`s
    (12.8 % of every allocation the actor makes).
-7. **ROBUSTNESS: bare panics 23 -> 3** (deck construction, deliberately). No open
+7. **THE INSTRUMENT HAS A FLOOR AND `(-109)` IS THREE BUILDS SPENT FINDING IT.** At
+   `codegen-units = 16` with no LTO a ten-line edit in `actions.rs` moves `cube` by
+   **±0.7 %** through inlining alone — larger than several shipped changes in PERF's
+   Log. **Attribute a program number to a function row before believing it**; two of
+   the three readings there are explained by a row the change does not touch.
+   Splitting the oversized modules is a *measurement* lever, not only a build-time one.
+   ROBUSTNESS: bare panics 23 -> 3 (deck construction, deliberately). No open
    TODO/FIXME in `src`, no `#[ignore]`d tests.
 8. **CARDS: 118 defects closed, and every one came out of ONE script.**
    `audit_catalog_stats.py`'s new type-line columns are worked to **cost 0 / P/T 0 /

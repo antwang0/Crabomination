@@ -2217,7 +2217,54 @@ change did nothing** — it is evidence the workload did not reach it. (It is
 also the fourteenth cross-container anchor check, and the tightest yet on
 `fixed`: 0.4 ppm across two containers *and* a commit.)
 
-### Hundred-and-third pass, this session's half — closing state at `244e849b`
+### Hundred-and-third pass, this session's half — closing state at `a019fee3`
+
+Five code commits: `ed0e1361` (74 `&mut` battlefield scans join the find memo),
+`cfa883ae` (`compute_permanent_pass`'s `sorted` takes inline storage),
+`244e849b` (the by-value `SmallVec` loop, swept), `817b9736` (the recorder's
+de-dup key stops being a second copy of the pair — **actor only**) and
+`a019fee3` (`auto_tap_for_cost_inner`'s events reserve once). The other
+session's card work is interleaved and is Ir-neutral at this sample (its own
+block below).
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,050 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved across all five
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, **33,120 games, 0 failures,
+        0 undecided**; 5 assertion strings in the audit binary.  (at 244e849b)
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 332.54 / 333.49 / 334.47, host_calib_ms 47,
+        peak_rss_mib 24.5 / 24.7 / 24.7, bin_bytes 123,849,344,
+        `release` + mimalloc.
+
+Ir anchors, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  at a019fee3   fixed 883,014,888  cube 2,633,198,611  sealed 2,610,142,425
+  the window, ae429ae7 (= 0367c09c's code) -> a019fee3, one container,
+  every pair adjacent builds:
+    fixed     887,234,325 ->   883,014,888   -0.476 %
+    cube    2,655,120,084 -> 2,633,198,611   -0.826 %
+    sealed  2,625,608,126 -> 2,610,142,425   -0.589 %
+
+The ACTOR, `selfplay_train --actors 1 --games 120 --steps 1 --seed 7`:
+  6,113,733,616 (c92f3851)  ->  5,918,096,696   **-3.20 %**
+  of which -1.360 % is `817b9736` and -0.343 % is `a019fee3`; 11,899 rows
+  and 0 stalls at every reading in the window.
+```
+
+**A `peak_rss_mib` taken while the box is still busy is not a reading.** The
+first `--bench` at this tip read **26.8** — the value PERF once attributed to a
+`CardInstance` widening — and the same binary read 24.7 / 24.7 / 24.5 on the
+three runs after it, with `games_per_s` 312 against 332-334. The high RSS and
+the low throughput are the same fact: a release build had just finished. Take
+the column from a run whose `games_per_s` is in family, or it will read as a
+regression that is not there. The `auto_tap` reserve's own RSS cost, A/B'd on
+the two `profiling-fast` binaries, is **+0.3 MiB** (19.4 -> 19.7).
+
+### Hundred-and-third pass, this session's earlier half — closing state at `244e849b`
 
 Three code commits, one family — allocations and how a buffer is read:
 `ed0e1361` (74 `&mut` battlefield scans join the find memo), `cfa883ae`
@@ -16144,6 +16191,75 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-109) THE MEASUREMENT FLOOR IN `actions.rs` IS ~0.7 % OF `cube`, AND THIS
+ENTRY IS THREE BUILDS SPENT ESTABLISHING IT.** Two changes to the payment
+checkpoint were built and reverted, and the reason is the instrument rather
+than the code.
+
+**What was built.** (a) `snapshot_payment_state`'s `collect` over a `Filter`
+walks the 0->4->8->16 ladder — **17,838 `do_reserve_and_handle` growths over
+11,420 snapshots, 1.56 a call, the largest single context in `(-108)`'s
+table** — so `Vec::with_capacity(battlefield.len())` + `extend` replaces it
+with one allocation. (b) `restore_payment_state`'s two walks each ask the
+snapshot about every permanent through a linear `find`, i.e.
+O(board x snapshot): **2,036 Ir a call over 2,760 calls**. Sorting the owned
+snapshot once (2,760 sorts against 11,420 captures) makes both a binary
+search.
+
+**Both are real at the function level and neither survives the program.**
+
+```text
+base a019fee3, callgrind, profiling-fast --no-default-features
+                              fixed       cube      sealed
+  (a) + (b) together        -0.247 %   +0.226 %   -0.313 %
+  (b) alone                 +0.317 %   +0.689 %   +0.118 %
+
+  the function rows, (a)+(b), cube:
+    restore_payment_state    5,620,000 ->  3,879,746   -1.74 M  (the binary search)
+    snapshot_payment_state   1,257,020 ->  4,295,146   +3.04 M  } net -0.85 M,
+    Vec::from_iter (nested) 69,007,175 -> 65,119,141   -3.89 M  } the collect moving in
+    _int_malloc / realloc / _int_realloc            -6.30 M
+  and the row that decides the sign:
+    compute_permanent_pass  79,087,884 -> 69,289,222   -9.80 M
+    SmallVec::extend        14,210,326 -> 41,161,530  +26.95 M   <- OUTLINED
+```
+
+**The two halves are not additive and (b) alone is worse than (a)+(b) on
+every pool.** That is the tell: `compute_permanent_pass`'s
+`sorted.extend` — `(-106)`'s own shipped shape — is a separate `SmallVec`
+`Extend` monomorphization, and a ten-line edit *in another file* flipped the
+inliner's decision about it, worth **+17 M net on `cube`, 0.65 %**. The
+change's own content is ~2.6 M. **Six times the signal is the perturbation.**
+
+**The push-loop alternative was built too, and it is a genuine pool split
+rather than codegen** — the whole delta is `compute_permanent_pass`'s own row
+on all three:
+
+```text
+  sorted.extend(..) -> for e in .. { sorted.push(e) }
+    fixed  -0.028 %   cube  -0.158 %   sealed  +0.062 %
+    and the delta IS compute_permanent_pass: -0.12 M / -4.15 M / +1.56 M
+```
+
+`SmallVec::extend` fills to capacity through an unsafe loop with no
+per-element capacity check, which is worth more than the outlining risk on
+`sealed` and less on `cube`. **So there is no version of this that is a win on
+three pools, and the `extend` stays.**
+
+**The rules, and they are what the three builds bought.**
+1. **Attribute a program number to a function row before believing it.** Every
+   reading above is explained by one row; two of the three are explained by a
+   row the change does not touch.
+2. **At `codegen-units = 16` with no LTO, `actions.rs` has a ~0.7 % noise
+   floor on `cube`** — larger than several changes this file has *shipped*. A
+   change to that module worth less than that cannot be attributed on this
+   instrument. Splitting the module (TODO's build-time lever) would also be a
+   *measurement* lever.
+3. **A `SmallVec::extend` in a hot frame is a monomorphization the inliner can
+   move**, so `(-106)`'s shape carries a 17 M downside that nothing in the
+   source hints at. The push loop removes the risk and costs `sealed` 0.06 %;
+   priced, not taken.
 
 **(-108) `(-103)`'s DIVISION APPLIES TO EVERY TABLE THAT REACHES
 `finish_grow`, NOT JUST `grow_one` — AND THE SECOND TABLE HAD ONE ROW LEFT.
