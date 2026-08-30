@@ -2301,14 +2301,12 @@ impl Occupancy {
                 self.gl_sum[i] += v.abs() as f64;
             }
         }
-        for group in &s.groups {
-            for o in group {
-                self.objects += 1;
-                for (i, v) in o.feats.iter().enumerate() {
-                    if *v != 0.0 {
-                        self.obj_hits[i] += 1;
-                        self.obj_sum[i] += v.abs() as f64;
-                    }
+        for o in s.objects() {
+            self.objects += 1;
+            for (i, v) in o.feats.iter().enumerate() {
+                if *v != 0.0 {
+                    self.obj_hits[i] += 1;
+                    self.obj_sum[i] += v.abs() as f64;
                 }
             }
         }

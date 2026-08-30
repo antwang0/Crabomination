@@ -261,67 +261,73 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
         }
     }
 
-    // Every group's size is known before its loop, and an `EncodedObject` is
-    // ~190 bytes: pushing a battlefield of twenty into an empty `Vec` is five
-    // reallocations and four memcpys of the objects already written.
-    // `encode_state` took 19,909 `RawVec::grow_one` calls over twenty
-    // `selfplay_train` games — ten a state — for 9.7 M Ir, 0.75 % of an actor.
-    // The battlefield split is by controller, so both sides reserve its whole
-    // length rather than counting first; the surplus is one allocation's
-    // slack, not a second allocation.
-    let bf = g.battlefield.len();
-    s.groups[G_BF_SELF].reserve(bf);
-    s.groups[G_BF_OPP].reserve(bf);
-    for c in g.battlefield.iter() {
-        let group = if c.controller == seat { G_BF_SELF } else { G_BF_OPP };
-        // Push an empty object and fill it in place: see
-        // `encode_card_object_into` for what the by-value form cost.
-        let grp = &mut s.groups[group];
-        grp.push(EncodedObject::default());
-        let o = grp.last_mut().expect("just pushed");
-        encode_battlefield_object_into(g, c, vocab, o);
-        if !no_combat {
-            // An object is never both an attacker and a blocker in one
-            // combat, so one feature pair serves both endpoints.
-            let counterpart = blocker_sums.get(&c.id).copied().or_else(|| {
-                g.block_map.get(&c.id).map(|attackers| {
-                    attackers.iter().filter_map(|a| eff_pt(*a)).fold((0, 0), |acc, (p, t)| {
-                        (acc.0 + p, acc.1 + t)
+    // All eight groups share one buffer (PERF `(-107)`), so the whole state
+    // is one reserve and one allocation. Every group's size is known before
+    // its loop except the library's, which is deduplicated by name and so is
+    // *bounded* by the library's length; that surplus is the one allocation's
+    // slack, not a second allocation. Eight separately reserved `Vec`s were
+    // 66,485 `do_reserve_and_handle` growths over 12,660 encoded states —
+    // 5.25 apiece, 28.4 M Ir, 0.48 % of an actor.
+    s.reserve(
+        g.battlefield.len()
+            + g.players[seat].hand.len()
+            + g.players[seat].graveyard.len()
+            + g.players[opp].graveyard.len()
+            + if ablated(ABLATE_LIBRARY) { 0 } else { g.players[seat].library.len() }
+            + if no_rel { 0 } else { g.stack.len() },
+    );
+    // The buffer is laid out group by group, so the battlefield's controller
+    // split is two filtered passes rather than one interleaved one: the same
+    // cards are encoded, in the same within-group order, by the same code.
+    for (group, mine) in [(G_BF_SELF, true), (G_BF_OPP, false)] {
+        for c in g.battlefield.iter().filter(|c| (c.controller == seat) == mine) {
+            // Push an empty object and fill it in place: see
+            // `encode_card_object_into` for what the by-value form cost.
+            let o = s.push_default(group);
+            encode_battlefield_object_into(g, c, vocab, o);
+            if !no_combat {
+                // An object is never both an attacker and a blocker in one
+                // combat, so one feature pair serves both endpoints.
+                let counterpart = blocker_sums.get(&c.id).copied().or_else(|| {
+                    g.block_map.get(&c.id).map(|attackers| {
+                        attackers.iter().filter_map(|a| eff_pt(*a)).fold((0, 0), |acc, (p, t)| {
+                            (acc.0 + p, acc.1 + t)
+                        })
                     })
-                })
-            });
-            if let Some((p, t)) = counterpart {
-                o.feats[37] = p as f32 / 8.0;
-                o.feats[38] = t as f32 / 8.0;
-            }
-            if g.attacking.iter().any(|a| {
-                a.attacker == c.id
-                    && !matches!(a.target, crate::game::types::AttackTarget::Player(_))
-            }) {
-                o.feats[39] = 1.0;
-            }
-        }
-        if !no_rel {
-            if g.block_map.contains_key(&c.id) {
-                o.feats[28] = 1.0;
-            }
-            if g.block_map.values().any(|attackers| attackers.contains(&c.id)) {
-                o.feats[29] = 1.0;
-            }
-            if c.attached_to.is_some() {
-                o.feats[30] = 1.0;
-            }
-            for (host, attach_ctl) in &attachments {
-                if *host == c.id {
-                    if *attach_ctl == c.controller {
-                        o.feats[31] = 1.0;
-                    } else {
-                        o.feats[32] = 1.0;
-                    }
+                });
+                if let Some((p, t)) = counterpart {
+                    o.feats[37] = p as f32 / 8.0;
+                    o.feats[38] = t as f32 / 8.0;
+                }
+                if g.attacking.iter().any(|a| {
+                    a.attacker == c.id
+                        && !matches!(a.target, crate::game::types::AttackTarget::Player(_))
+                }) {
+                    o.feats[39] = 1.0;
                 }
             }
-            if targeted.contains(&c.id) {
-                o.feats[33] = 1.0;
+            if !no_rel {
+                if g.block_map.contains_key(&c.id) {
+                    o.feats[28] = 1.0;
+                }
+                if g.block_map.values().any(|attackers| attackers.contains(&c.id)) {
+                    o.feats[29] = 1.0;
+                }
+                if c.attached_to.is_some() {
+                    o.feats[30] = 1.0;
+                }
+                for (host, attach_ctl) in &attachments {
+                    if *host == c.id {
+                        if *attach_ctl == c.controller {
+                            o.feats[31] = 1.0;
+                        } else {
+                            o.feats[32] = 1.0;
+                        }
+                    }
+                }
+                if targeted.contains(&c.id) {
+                    o.feats[33] = 1.0;
+                }
             }
         }
     }
@@ -339,15 +345,12 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     } else {
         g.with_frozen_layers(|g| (g.untapped_mana_colors(seat), g.untapped_mana_colors(opp)))
     };
-    s.groups[G_HAND_SELF].reserve(g.players[seat].hand.len());
     // One mask cover for the whole hand — see `source_cover`.
     let n_sources = sources.len() as u32;
     let cover = source_cover(&sources);
     let cover_extra = cover_with_extra(&cover);
     for c in g.players[seat].hand.iter() {
-        let grp = &mut s.groups[G_HAND_SELF];
-        grp.push(EncodedObject::default());
-        let o = grp.last_mut().expect("just pushed");
+        let o = s.push_default(G_HAND_SELF);
         encode_card_object_into(c, vocab, o);
         if !no_cast && !c.definition.is_land() {
             o.feats[25] =
@@ -365,11 +368,8 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
         }
     }
     for (group, p) in [(G_GY_SELF, seat), (G_GY_OPP, opp)] {
-        s.groups[group].reserve(g.players[p].graveyard.len());
         for c in g.players[p].graveyard.iter() {
-            let grp = &mut s.groups[group];
-            grp.push(EncodedObject::default());
-            encode_card_object_into(c, vocab, grp.last_mut().expect("just pushed"));
+            encode_card_object_into(c, vocab, s.push_default(group));
         }
     }
     encode_library(&mut s, g, seat, vocab);
@@ -538,14 +538,11 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
         }
     }
     counts.sort_unstable_by_key(|e| e.0);
-    s.groups[G_LIB_SELF].reserve(counts.len());
     // By reference: this buffer is 32 x 24 bytes inline, so a by-value
     // `IntoIter` would move 768 bytes out of the frame on every encoded
     // state — PERF's hundred-and-third pass (3).
     for &(_, c, n) in &counts {
-        let grp = &mut s.groups[G_LIB_SELF];
-        grp.push(EncodedObject::default());
-        let o = grp.last_mut().expect("just pushed");
+        let o = s.push_default(G_LIB_SELF);
         encode_card_object_into(c, vocab, o);
         o.feats[27] = n as f32 / 4.0;
     }
@@ -560,24 +557,31 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
 fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
     use crate::game::types::StackItem;
     let n = g.stack.len();
-    s.groups[G_STACK_SELF].reserve(n);
-    s.groups[G_STACK_OPP].reserve(n);
-    for (i, item) in g.stack.iter().enumerate() {
-        let (mut o, controller) = match item {
-            StackItem::Spell { card, caster, .. } => (encode_card_object(card, vocab), *caster),
-            StackItem::Trigger { source, controller, .. } => (
-                g.battlefield
+    // Two filtered passes, like the battlefield: the shared buffer is laid
+    // out group by group, and `i` stays the item's index in the real stack
+    // so the depth feature is unchanged.
+    for (group, mine) in [(G_STACK_SELF, true), (G_STACK_OPP, false)] {
+        for (i, item) in g.stack.iter().enumerate() {
+            let controller = match item {
+                StackItem::Spell { caster, .. } => *caster,
+                StackItem::Trigger { controller, .. } => *controller,
+            };
+            if (controller == seat) != mine {
+                continue;
+            }
+            let mut o = match item {
+                StackItem::Spell { card, .. } => encode_card_object(card, vocab),
+                StackItem::Trigger { source, .. } => g
+                    .battlefield
                     .iter()
                     .find(|c| c.id == *source)
                     .map(|c| encode_card_object(c, vocab))
                     .unwrap_or_default(),
-                *controller,
-            ),
-        };
-        // The stack is a Vec used LIFO: the last element is the top.
-        o.feats[36] = (n - 1 - i) as f32 / 4.0;
-        let group = if controller == seat { G_STACK_SELF } else { G_STACK_OPP };
-        s.groups[group].push(o);
+            };
+            // The stack is a Vec used LIFO: the last element is the top.
+            o.feats[36] = (n - 1 - i) as f32 / 4.0;
+            s.push(group, o);
+        }
     }
 }
 
@@ -1229,15 +1233,15 @@ mod tests {
         g.players[0].graveyard.push(dead);
 
         let s0 = encode_state(&g, 0, &vocab);
-        assert_eq!(s0.groups[G_BF_SELF].len(), 0);
-        assert_eq!(s0.groups[G_BF_OPP].len(), 1);
-        assert_eq!(s0.groups[G_HAND_SELF].len(), 1);
-        assert_eq!(s0.groups[G_GY_SELF].len(), 1);
-        assert_eq!(s0.groups[G_GY_OPP].len(), 0);
+        assert_eq!(s0.group_len(G_BF_SELF), 0);
+        assert_eq!(s0.group_len(G_BF_OPP), 1);
+        assert_eq!(s0.group_len(G_HAND_SELF), 1);
+        assert_eq!(s0.group_len(G_GY_SELF), 1);
+        assert_eq!(s0.group_len(G_GY_OPP), 0);
         assert!((s0.global[0] - 12.0 / 20.0).abs() < 1e-6);
         assert!((s0.global[1] - 1.0).abs() < 1e-6);
         assert_eq!(s0.global[9], 0.0, "seat 0 is not the active player");
-        let opp_bear = &s0.groups[G_BF_OPP][0];
+        let opp_bear = &s0.group(G_BF_OPP)[0];
         assert_eq!(opp_bear.feats[6], 1.0, "tapped flag");
         assert!((opp_bear.feats[4] - 2.0 / 8.0).abs() < 1e-6, "2 power");
         // Grizzly Bears is off the SOS vocab — unknown index, features carry it.
@@ -1245,17 +1249,18 @@ mod tests {
 
         // The same position from the other seat mirrors every self/opp pair.
         let s1 = encode_state(&g, 1, &vocab);
-        assert_eq!(s1.groups[G_BF_SELF].len(), 1);
-        assert_eq!(s1.groups[G_BF_OPP].len(), 0);
-        assert_eq!(s1.groups[G_HAND_SELF].len(), 0, "opponent hand is hidden");
+        assert_eq!(s1.group_len(G_BF_SELF), 1);
+        assert_eq!(s1.group_len(G_BF_OPP), 0);
+        assert_eq!(s1.group_len(G_HAND_SELF), 0, "opponent hand is hidden");
         assert!((s1.global[0] - 1.0).abs() < 1e-6);
         assert!((s1.global[1] - 12.0 / 20.0).abs() < 1e-6);
         assert_eq!(s1.global[9], 1.0);
-        assert_eq!(s1.groups[G_GY_SELF].len(), 0);
-        assert_eq!(s1.groups[G_GY_OPP].len(), 1);
+        assert_eq!(s1.group_len(G_GY_SELF), 0);
+        assert_eq!(s1.group_len(G_GY_OPP), 1);
 
         // Empty groups exist but are empty, never dropped.
-        assert_eq!(s0.groups.len(), NUM_GROUPS);
+        assert_eq!(s0.groups().count(), NUM_GROUPS);
+        assert_eq!(s0.groups().map(|g| g.len()).sum::<usize>(), s0.len());
     }
 
     /// A land on the battlefield, `n` of them, controlled by `seat`.
@@ -1280,7 +1285,7 @@ mod tests {
             g.players[0].library.push(CardInstance::new(crate::card::CardId(700 + k as u32), f(), 0));
         }
         let s = encode_state(&g, 0, &vocab);
-        let lib = &s.groups[G_LIB_SELF];
+        let lib = &s.group(G_LIB_SELF);
         assert_eq!(lib.len(), 2, "four cards, two distinct names");
         // Sorted by vocabulary index, and the counts land in feat 27.
         let by_name: Vec<(u16, f32)> = lib.iter().map(|o| (o.card, o.feats[27])).collect();
@@ -1290,7 +1295,7 @@ mod tests {
         assert!((forest.1 - 3.0 / 4.0).abs() < 1e-6, "three Forests");
         assert!((island.1 - 1.0 / 4.0).abs() < 1e-6, "one Island");
         // The opponent's library is never encoded — only its size.
-        assert_eq!(encode_state(&g, 1, &vocab).groups[G_LIB_SELF].len(), 0);
+        assert_eq!(encode_state(&g, 1, &vocab).group_len(G_LIB_SELF), 0);
     }
 
     /// The library is a *set* to the net: the shuffle is hidden
@@ -1325,29 +1330,29 @@ mod tests {
 
         add_lands(&mut g, 0, catalog::forest, 1, 100);
         let one_forest = encode_state(&g, 0, &vocab);
-        assert_eq!(one_forest.groups[G_HAND_SELF][0].feats[25], 0.0, "one land, two-mana spell");
-        assert_eq!(one_forest.groups[G_HAND_SELF][0].feats[26], 1.0, "castable after a land drop");
+        assert_eq!(one_forest.group(G_HAND_SELF)[0].feats[25], 0.0, "one land, two-mana spell");
+        assert_eq!(one_forest.group(G_HAND_SELF)[0].feats[26], 1.0, "castable after a land drop");
 
         add_lands(&mut g, 0, catalog::island, 1, 200);
         let forest_island = encode_state(&g, 0, &vocab);
-        assert_eq!(forest_island.groups[G_HAND_SELF][0].feats[25], 1.0, "{{1}}{{G}} off Forest+Island");
+        assert_eq!(forest_island.group(G_HAND_SELF)[0].feats[25], 1.0, "{{1}}{{G}} off Forest+Island");
 
         let mut wrong = two_player_game();
         wrong.players[0].hand.push(bear());
         add_lands(&mut wrong, 0, catalog::island, 2, 300);
         let two_islands = encode_state(&wrong, 0, &vocab);
         assert_eq!(
-            two_islands.groups[G_HAND_SELF][0].feats[25], 0.0,
+            two_islands.group(G_HAND_SELF)[0].feats[25], 0.0,
             "two mana but no green source"
         );
         // Next turn it comes online: the assumed land drop is optimistic
         // about colour, so it covers the {G} and an Island pays the {1}.
         // That optimism is the documented approximation — a seat with no
         // green land left in its library will read as castable here.
-        assert_eq!(two_islands.groups[G_HAND_SELF][0].feats[26], 1.0);
+        assert_eq!(two_islands.group(G_HAND_SELF)[0].feats[26], 1.0);
 
         // Printed colour pips ride along on every object regardless of zone.
-        let g_pip = two_islands.groups[G_HAND_SELF][0].feats[20 + 4];
+        let g_pip = two_islands.group(G_HAND_SELF)[0].feats[20 + 4];
         assert!((g_pip - 0.5).abs() < 1e-6, "one green pip");
     }
 
@@ -1392,22 +1397,22 @@ mod tests {
         add_lands(&mut g, 0, catalog::forest, 2, 100);
 
         let full = encode_state(&g, 0, &vocab);
-        assert_eq!(full.groups[G_LIB_SELF].len(), 1);
-        assert_eq!(full.groups[G_HAND_SELF][0].feats[25], 1.0);
+        assert_eq!(full.group_len(G_LIB_SELF), 1);
+        assert_eq!(full.group(G_HAND_SELF)[0].feats[25], 1.0);
         assert!(full.global[24 + 4] > 0.0);
 
         off(&["lib"]);
         let no_lib = encode_state(&g, 0, &vocab);
-        assert_eq!(no_lib.groups[G_LIB_SELF].len(), 0, "library group is empty");
-        assert_eq!(no_lib.groups[G_HAND_SELF][0].feats[25], 1.0, "castability survives");
+        assert_eq!(no_lib.group_len(G_LIB_SELF), 0, "library group is empty");
+        assert_eq!(no_lib.group(G_HAND_SELF)[0].feats[25], 1.0, "castability survives");
         assert!(no_lib.global[24 + 4] > 0.0);
 
         off(&["cast"]);
         let no_cast = encode_state(&g, 0, &vocab);
-        assert_eq!(no_cast.groups[G_LIB_SELF].len(), 1, "library survives");
-        assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[25], 0.0, "castable-now zeroed");
-        assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[26], 0.0, "castable-next zeroed");
-        assert_eq!(no_cast.groups[G_HAND_SELF][0].feats[20 + 4], 0.0, "pips zeroed");
+        assert_eq!(no_cast.group_len(G_LIB_SELF), 1, "library survives");
+        assert_eq!(no_cast.group(G_HAND_SELF)[0].feats[25], 0.0, "castable-now zeroed");
+        assert_eq!(no_cast.group(G_HAND_SELF)[0].feats[26], 0.0, "castable-next zeroed");
+        assert_eq!(no_cast.group(G_HAND_SELF)[0].feats[20 + 4], 0.0, "pips zeroed");
         for i in 24..36 {
             assert_eq!(no_cast.global[i], 0.0, "available-mana global {i} zeroed");
         }
@@ -1424,12 +1429,12 @@ mod tests {
         g.block_map.insert(crate::card::CardId(101), smallvec::smallvec![crate::card::CardId(100)]);
         off(&[]);
         let with_rel = encode_state(&g, 0, &vocab);
-        assert!(with_rel.groups[G_BF_SELF].iter().any(|o| o.feats[29] == 1.0), "blocked flag on");
+        assert!(with_rel.group(G_BF_SELF).iter().any(|o| o.feats[29] == 1.0), "blocked flag on");
         off(&["rel"]);
         let no_rel = encode_state(&g, 0, &vocab);
-        assert!(no_rel.groups[G_BF_SELF].iter().all(|o| o.feats[29] == 0.0), "blocked flag off");
-        assert_eq!(no_rel.groups[G_LIB_SELF].len(), 1, "library survives rel ablation");
-        assert_eq!(no_rel.groups[G_HAND_SELF][0].feats[25], 1.0, "castability survives");
+        assert!(no_rel.group(G_BF_SELF).iter().all(|o| o.feats[29] == 0.0), "blocked flag off");
+        assert_eq!(no_rel.group_len(G_LIB_SELF), 1, "library survives rel ablation");
+        assert_eq!(no_rel.group(G_HAND_SELF)[0].feats[25], 1.0, "castability survives");
 
         // The combat bit blanks the round-28 combat structure and only
         // it. IDs 100/101 are the Forests above — power 0, so the
@@ -1441,9 +1446,9 @@ mod tests {
         off(&["combat"]);
         let no_combat = encode_state(&g, 0, &vocab);
         assert_eq!(no_combat.global[37], 0.0, "declare-blockers one-hot off");
-        assert_eq!(no_combat.groups[G_LIB_SELF].len(), 1, "library survives combat ablation");
+        assert_eq!(no_combat.group_len(G_LIB_SELF), 1, "library survives combat ablation");
         assert!(
-            no_combat.groups[G_BF_SELF].iter().any(|o| o.feats[29] == 1.0),
+            no_combat.group(G_BF_SELF).iter().any(|o| o.feats[29] == 1.0),
             "relation flags survive combat ablation"
         );
 
@@ -1474,7 +1479,7 @@ mod tests {
         pumped.add_counters(CounterType::Stun, 1);
         g.battlefield.push(pumped);
         let find = |s: &EncodedState| {
-            s.groups[G_BF_SELF].iter().find(|o| o.feats[1] == 1.0).cloned().expect("the creature")
+            s.group(G_BF_SELF).iter().find(|o| o.feats[1] == 1.0).cloned().expect("the creature")
         };
 
         off(&[]);
@@ -1573,7 +1578,7 @@ mod tests {
         let s = encode_state(&g, 0, &vocab);
         // Both creatures are off the SOS vocab (index 0), so objects are
         // told apart by their power feature, not the card index.
-        let giant = s.groups[G_BF_OPP]
+        let giant = s.group(G_BF_OPP)
             .iter()
             .find(|o| (o.feats[4] - 3.0 / 8.0).abs() < 1e-6)
             .expect("the 3/3 attacker encoded");
@@ -1584,7 +1589,7 @@ mod tests {
         // Each bear sees the 3/3 it blocks; the damage on one of them
         // changes its own row, not the counterpart sums.
         let bears: Vec<_> =
-            s.groups[G_BF_SELF].iter().filter(|o| o.feats[37] > 0.0).collect();
+            s.group(G_BF_SELF).iter().filter(|o| o.feats[37] > 0.0).collect();
         assert_eq!(bears.len(), 2, "both blockers carry counterpart sums");
         for b in &bears {
             assert!((b.feats[37] - 3.0 / 8.0).abs() < 1e-6);
@@ -1607,7 +1612,7 @@ mod tests {
         g.attacking[1].target =
             crate::game::types::AttackTarget::Planeswalker(crate::card::CardId(99));
         let s = encode_state(&g, 0, &vocab);
-        let attacker = s.groups[G_BF_OPP]
+        let attacker = s.group(G_BF_OPP)
             .iter()
             .find(|o| (o.feats[4] - 2.0 / 8.0).abs() < 1e-6)
             .expect("the attacking 2/2 encoded");
@@ -1631,7 +1636,8 @@ mod tests {
         c.granted_keywords_eot.push(Keyword::Shadow);
         g.battlefield.push(c);
 
-        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        let s = encode_state(&g, 0, &vocab);
+        let o = &s.group(G_BF_SELF)[0];
         assert_eq!(o.feats[40], 1.0, "haste");
         assert_eq!(o.feats[41], 1.0, "hexproof → hard to target");
         assert_eq!(o.feats[42], 0.0, "not indestructible");
@@ -1640,7 +1646,8 @@ mod tests {
 
         // A removed keyword no longer counts, exact-variant or class.
         g.battlefield[0].removed_keywords.push(Keyword::Hexproof);
-        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        let s = encode_state(&g, 0, &vocab);
+        let o = &s.group(G_BF_SELF)[0];
         assert_eq!(o.feats[41], 0.0, "removed hexproof does not flag");
         assert_eq!(o.feats[43], 1.0, "shadow unaffected");
     }
@@ -1662,13 +1669,15 @@ mod tests {
         c.keyword_counters.add(Keyword::Hexproof, 1);
         g.battlefield.push(c);
 
-        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        let s = encode_state(&g, 0, &vocab);
+        let o = &s.group(G_BF_SELF)[0];
         assert_eq!(o.feats[12], 1.0, "a Flying counter sets the exact flag");
         assert_eq!(o.feats[41], 0.0, "a Hexproof counter does not set the class flag");
 
         // A removed keyword beats a counter, same as `has_keyword`.
         g.battlefield[0].removed_keywords_eot.push(Keyword::Flying);
-        let o = &encode_state(&g, 0, &vocab).groups[G_BF_SELF][0];
+        let s = encode_state(&g, 0, &vocab);
+        let o = &s.group(G_BF_SELF)[0];
         assert_eq!(o.feats[12], 0.0, "removal beats the counter");
     }
 
@@ -1704,29 +1713,29 @@ mod tests {
         );
 
         let s = encode_state(&g, 0, &vocab);
-        let me = &s.groups[G_BF_SELF][0];
+        let me = &s.group(G_BF_SELF)[0];
         assert_eq!(me.feats[33], 1.0, "my bear is targeted by the stack");
         assert_eq!(me.feats[30], 0.0);
         let aura_obj =
-            s.groups[G_BF_SELF].iter().find(|o| o.feats[30] == 1.0).expect("aura is_attached");
+            s.group(G_BF_SELF).iter().find(|o| o.feats[30] == 1.0).expect("aura is_attached");
         assert_eq!(aura_obj.feats[35], 1.0, "printed aura type flag");
-        let host = &s.groups[G_BF_OPP][0];
+        let host = &s.group(G_BF_OPP)[0];
         assert_eq!(host.feats[32], 1.0, "their bear wears an opposing attachment");
         assert_eq!(host.feats[31], 0.0, "not an own attachment");
         // The trigger encodes its battlefield source into the opp stack
         // group, top of stack at depth 0.
-        assert_eq!(s.groups[G_STACK_OPP].len(), 1);
-        assert_eq!(s.groups[G_STACK_SELF].len(), 0);
-        assert_eq!(s.groups[G_STACK_OPP][0].card, vocab.index_of("Grizzly Bears"));
-        assert_eq!(s.groups[G_STACK_OPP][0].feats[36], 0.0);
+        assert_eq!(s.group_len(G_STACK_OPP), 1);
+        assert_eq!(s.group_len(G_STACK_SELF), 0);
+        assert_eq!(s.group(G_STACK_OPP)[0].card, vocab.index_of("Grizzly Bears"));
+        assert_eq!(s.group(G_STACK_OPP)[0].feats[36], 0.0);
 
         // Seat-relative like every other group: the same stack is "mine"
         // from seat 1.
         let s1 = encode_state(&g, 1, &vocab);
-        assert_eq!(s1.groups[G_STACK_SELF].len(), 1);
-        assert_eq!(s1.groups[G_STACK_OPP].len(), 0);
-        assert_eq!(s1.groups[G_BF_SELF][0].feats[31], 0.0);
-        assert_eq!(s1.groups[G_BF_SELF][0].feats[32], 1.0, "opposing aura from either view");
+        assert_eq!(s1.group_len(G_STACK_SELF), 1);
+        assert_eq!(s1.group_len(G_STACK_OPP), 0);
+        assert_eq!(s1.group(G_BF_SELF)[0].feats[31], 0.0);
+        assert_eq!(s1.group(G_BF_SELF)[0].feats[32], 1.0, "opposing aura from either view");
     }
 
     #[test]

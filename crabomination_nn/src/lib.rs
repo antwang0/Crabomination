@@ -227,17 +227,109 @@ pub struct EncodedObject {
 }
 
 /// A full observable position from one seat's perspective.
+///
+/// The objects of all [`NUM_GROUPS`] groups live in **one** buffer, laid
+/// out group by group in index order, with each group's length in
+/// `counts`. Eight separate `Vec`s cost 5.25 allocations per encoded
+/// state (66,485 `reserve` growths over 12,660 states, the actor's
+/// second-largest growth row — PERF `(-107)`); one buffer with one
+/// up-front reserve costs one. The emitted *values* are unchanged, so
+/// shards and trained nets are unaffected.
+///
+/// Objects must be appended in group order — [`EncodedState::push`] and
+/// [`EncodedState::push_default`] debug-assert it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EncodedState {
     pub global: [f32; GLOBAL_FEATS],
-    pub groups: [Vec<EncodedObject>; NUM_GROUPS],
+    objs: Vec<EncodedObject>,
+    counts: [u32; NUM_GROUPS],
 }
 
 // Hand-written rather than derived: `Default` for arrays stops at length
 // 32, and both feature counts have outgrown that.
 impl Default for EncodedState {
     fn default() -> Self {
-        Self { global: [0.0; GLOBAL_FEATS], groups: std::array::from_fn(|_| Vec::new()) }
+        Self { global: [0.0; GLOBAL_FEATS], objs: Vec::new(), counts: [0; NUM_GROUPS] }
+    }
+}
+
+impl EncodedState {
+    /// Reserve room for `n` objects across all groups. One call before the
+    /// first push is the whole point of the layout.
+    #[inline]
+    pub fn reserve(&mut self, n: usize) {
+        self.objs.reserve(n);
+    }
+
+    /// Every object, in group order.
+    #[inline]
+    pub fn objects(&self) -> &[EncodedObject] {
+        &self.objs
+    }
+
+    /// Every object, in group order, mutably. The group boundaries are
+    /// unchanged by anything this can do.
+    #[inline]
+    pub fn objects_mut(&mut self) -> &mut [EncodedObject] {
+        &mut self.objs
+    }
+
+    /// Total object count across all groups.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.objs.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.objs.is_empty()
+    }
+
+    #[inline]
+    pub fn group_len(&self, g: usize) -> usize {
+        self.counts[g] as usize
+    }
+
+    #[inline]
+    fn group_start(&self, g: usize) -> usize {
+        self.counts[..g].iter().map(|&c| c as usize).sum()
+    }
+
+    /// Group `g`'s objects.
+    #[inline]
+    pub fn group(&self, g: usize) -> &[EncodedObject] {
+        let start = self.group_start(g);
+        &self.objs[start..start + self.counts[g] as usize]
+    }
+
+    /// Each group's slice in index order, walking the buffer once.
+    pub fn groups(&self) -> impl Iterator<Item = &[EncodedObject]> {
+        let mut start = 0usize;
+        self.counts.iter().map(move |&c| {
+            let s = start;
+            start += c as usize;
+            &self.objs[s..start]
+        })
+    }
+
+    /// Append to group `g`. Groups must be filled in index order.
+    #[inline]
+    pub fn push(&mut self, g: usize, o: EncodedObject) {
+        debug_assert!(
+            self.counts[g + 1..].iter().all(|&c| c == 0),
+            "EncodedState groups must be filled in index order (pushing {g})"
+        );
+        self.objs.push(o);
+        self.counts[g] += 1;
+    }
+
+    /// Append a zeroed object to group `g` and hand back a handle to fill
+    /// in place — see `encode_card_object_into` for what the by-value form
+    /// cost. Groups must be filled in index order.
+    #[inline]
+    pub fn push_default(&mut self, g: usize) -> &mut EncodedObject {
+        self.push(g, EncodedObject::default());
+        self.objs.last_mut().expect("just pushed")
     }
 }
 
@@ -310,7 +402,7 @@ pub fn write_shard(rows: &[TrainRow]) -> Vec<u8> {
         for v in row.state.global {
             out.extend_from_slice(&v.to_le_bytes());
         }
-        for group in &row.state.groups {
+        for group in row.state.groups() {
             out.extend_from_slice(&(group.len() as u16).to_le_bytes());
             for o in group {
                 out.extend_from_slice(&o.card.to_le_bytes());
@@ -353,16 +445,16 @@ pub fn read_shard(bytes: &[u8]) -> Option<Vec<TrainRow>> {
         for g in state.global.iter_mut() {
             *g = r.f32()?;
         }
-        for group in state.groups.iter_mut() {
+        for g in 0..NUM_GROUPS {
             let len = r.u16()? as usize;
-            group.reserve(len);
+            state.reserve(len);
             for _ in 0..len {
                 let card = r.u16()?;
                 let mut feats = [0.0; OBJ_FEATS];
                 for f in feats.iter_mut() {
                     *f = r.f32()?;
                 }
-                group.push(EncodedObject { card, feats });
+                state.push(g, EncodedObject { card, feats });
             }
         }
         let win = r.f32()?;
@@ -1214,12 +1306,12 @@ impl PlayNet {
     /// across groups: `(hs [n, h_obj], group index per object)`.
     fn encode_objects(&self, s: &EncodedState, h_obj: usize) -> (Vec<f32>, Vec<usize>) {
         let emb_dim = self.emb.cols;
-        let n: usize = s.groups.iter().map(|g| g.len()).sum();
+        let n: usize = s.len();
         let mut hs = vec![0.0f32; n * h_obj];
         let mut owner = Vec::with_capacity(n);
         let mut x = vec![0.0f32; self.obj_w.cols];
         let mut i = 0;
-        for (gi, group) in s.groups.iter().enumerate() {
+        for (gi, group) in s.groups().enumerate() {
             for o in group {
                 // See `DeckNet::forward`: out of range is the unknown slot,
                 // not the last row.
@@ -1662,8 +1754,8 @@ mod tests {
         let mut feats = [0.0; OBJ_FEATS];
         feats[0] = 0.375;
         feats[OBJ_FEATS - 1] = 1.0;
-        state.groups[G_BF_SELF].push(EncodedObject { card: 7, feats });
-        state.groups[G_GY_OPP].push(EncodedObject { card: 0, feats: [0.25; OBJ_FEATS] });
+        state.push(G_BF_SELF, EncodedObject { card: 7, feats });
+        state.push(G_GY_OPP, EncodedObject { card: 0, feats: [0.25; OBJ_FEATS] });
         TrainRow {
             state,
             win: 1.0,
@@ -1721,7 +1813,7 @@ mod tests {
         // obj unit = relu(2.0 + 0.5) = 2.5 → group mean 2.5, max 2.5.
         let mut feats = [0.0; OBJ_FEATS];
         feats[0] = 0.5;
-        s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+        s.push(G_BF_SELF, EncodedObject { card: 1, feats });
         // Global contributes 0.25; trunk sums to 2.5 + 2.5 + 0.25 = 5.25.
         s.global[3] = 0.25;
         let want = 1.0 / (1.0 + (-5.25f32).exp());
@@ -1733,7 +1825,7 @@ mod tests {
         // mean = (2.5 + 1.5)/2 = 2.0, max = 2.5 → trunk 2.0+2.5+0.25 = 4.75.
         let mut feats2 = [0.0; OBJ_FEATS];
         feats2[0] = 1.5;
-        s.groups[G_BF_SELF].push(EncodedObject { card: 0, feats: feats2 });
+        s.push(G_BF_SELF, EncodedObject { card: 0, feats: feats2 });
         let want2 = 1.0 / (1.0 + (-4.75f32).exp());
         let got2 = net.forward(&s);
         assert!((got2 - want2).abs() < 1e-6, "got {got2}, want {want2}");
@@ -1769,7 +1861,7 @@ mod tests {
         let mut feats = [0.0; OBJ_FEATS];
         feats[0] = 0.5;
         let mut s = EncodedState::default();
-        s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+        s.push(G_BF_SELF, EncodedObject { card: 1, feats });
         s.global[3] = 0.25;
         let before = net.forward(&s);
 
@@ -1781,17 +1873,17 @@ mod tests {
         // exactly as card 0 (the reserved unknown slot) does.
         let mut unknown = EncodedState::default();
         unknown.global[3] = 0.25;
-        unknown.groups[G_BF_SELF].push(EncodedObject { card: 4, feats });
+        unknown.push(G_BF_SELF, EncodedObject { card: 4, feats });
         let mut slot_zero = EncodedState::default();
         slot_zero.global[3] = 0.25;
-        slot_zero.groups[G_BF_SELF].push(EncodedObject { card: 0, feats });
+        slot_zero.push(G_BF_SELF, EncodedObject { card: 0, feats });
         assert!((net.forward(&unknown) - net.forward(&slot_zero)).abs() < 1e-9);
 
         // An index past the table is the unknown slot too, not the last
         // row — the clamp used to hand it some unrelated card's embedding.
         let mut past = EncodedState::default();
         past.global[3] = 0.25;
-        past.groups[G_BF_SELF].push(EncodedObject { card: 99, feats });
+        past.push(G_BF_SELF, EncodedObject { card: 99, feats });
         assert!((net.forward(&past) - net.forward(&slot_zero)).abs() < 1e-9);
 
         // Narrowing is refused: the encoder would have no index for the
@@ -1837,7 +1929,7 @@ mod tests {
         let mut feats = [0.0; OBJ_FEATS];
         feats[0] = 0.5;
         let mut s = EncodedState::default();
-        s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+        s.push(G_BF_SELF, EncodedObject { card: 1, feats });
         s.global[3] = 0.25;
         // Win head is untouched by the extra tensors...
         let want_win = 1.0 / (1.0 + (-5.25f32).exp());
@@ -1894,7 +1986,7 @@ mod tests {
                 *f = 100.0;
             }
             let mut s = EncodedState::default();
-            s.groups[G_BF_SELF].push(EncodedObject { card: 1, feats });
+            s.push(G_BF_SELF, EncodedObject { card: 1, feats });
             s.global[3] = 0.25;
             for gl in s.global.iter_mut().skip(legacy_global) {
                 *gl = 100.0;

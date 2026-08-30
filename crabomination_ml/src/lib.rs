@@ -270,12 +270,12 @@ fn pack_states(
     let b = states.len();
     let (mut ids, mut feats, mut mask) = (Vec::new(), Vec::new(), Vec::new());
     for g in 0..NUM_GROUPS {
-        let n = states.iter().map(|s| s.groups[g].len()).max().unwrap_or(0).max(1);
+        let n = states.iter().map(|s| s.group_len(g)).max().unwrap_or(0).max(1);
         let mut id_v = vec![0u32; b * n];
         let mut ft_v = vec![0f32; b * n * OBJ_FEATS];
         let mut mk_v = vec![0f32; b * n];
         for (ri, s) in states.iter().enumerate() {
-            for (oi, o) in s.groups[g].iter().enumerate() {
+            for (oi, o) in s.group(g).iter().enumerate() {
                 id_v[ri * n + oi] = o.card as u32;
                 ft_v[(ri * n + oi) * OBJ_FEATS..][..OBJ_FEATS].copy_from_slice(&o.feats);
                 mk_v[ri * n + oi] = 1.0;
@@ -2040,14 +2040,14 @@ mod tests {
         for g in s.global.iter_mut() {
             *g = rng.random_range(-1.0..1.0);
         }
-        for group in s.groups.iter_mut() {
+        for g in 0..NUM_GROUPS {
             let n = rng.random_range(0..5);
             for _ in 0..n {
                 let mut feats = [0.0f32; OBJ_FEATS];
                 for f in feats.iter_mut() {
                     *f = rng.random_range(0.0..1.0);
                 }
-                group.push(EncodedObject { card: rng.random_range(0..vocab as u16), feats });
+                s.push(g, EncodedObject { card: rng.random_range(0..vocab as u16), feats });
             }
         }
         s
@@ -2204,11 +2204,9 @@ mod tests {
                 for gl in s.global.iter_mut().skip(legacy_global) {
                     *gl = 3.0;
                 }
-                for g in s.groups.iter_mut() {
-                    for o in g.iter_mut() {
-                        for f in o.feats.iter_mut().skip(legacy_obj) {
-                            *f = 3.0;
-                        }
+                for o in s.objects_mut() {
+                    for f in o.feats.iter_mut().skip(legacy_obj) {
+                        *f = 3.0;
                     }
                 }
                 let want = trainer.predict_win(&s).expect("candle win");
