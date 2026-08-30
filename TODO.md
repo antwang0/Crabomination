@@ -157,6 +157,30 @@ sixty-seventh pass, so don't re-take that.
    `IMPLICIT_ANY_TARGET` (damage, CR 115.4) and `implicit_player_if_bare_player_field`
    (player fields) are the same one line. When a walker answers `None` for a slot, ask
    what the *field* is before adding a per-card filter.
+   **Two whole groups of the residue are STRUCTURAL FALSE POSITIVES — checked, so
+   nobody re-checks them.** (a) The 32 counterspell rows: `CounterSpell { what:
+   Target(0) }` targets a *spell on the stack*, which `Target` cannot express, so the
+   enumerator's list never aims them. (b) The ~25 reflexive rows — `Whenever this
+   creature deals combat damage to a creature, tap that creature` (Orochi Ranger and
+   the whole Kashi/Matsu tribe, Mercurial Kite, Mephitic Ooze, Phage, the two
+   Basilisks) — spell "that creature" as `Selector::Target(0)`, and `combat.rs:5234`
+   **binds the damaged creature at push time**. The slot is stamped, never chosen, so
+   the absent filter costs nothing. What is genuinely left is ~23 cards whose printed
+   noun is narrower than `Any` (Terminate, Feast of Worms' land, Ashnod's
+   Transmogrant's *non*artifact creature, Sweep Away, Dispatch, …).
+   **ROBUSTNESS, checked this pass and worth not re-checking:** there is no
+   `std::collections` default-hasher iteration in engine or bot logic. Nine
+   `std::collections::Hash*` uses exist; the only two on a game path are a
+   `HashSet<usize>` in `bot.rs`'s belief redeal (membership only, never iterated) and
+   `wants_converge`'s L2 name cache (lookup only). Cross-process determinism holds and
+   `golden_trace::seeded_games_match_their_digests` is the standing check, since a test
+   process is a new process.
+   **AND ON `dispatch_triggers_for_events`, the largest self row (7.46 % of `cube`,
+   139,412 calls at 1,397 Ir):** its self cost is mostly the **per-event bookkeeping
+   switch** — entry timestamps, soulbond, land equilibrium, the per-turn tallies — not
+   the listener search. A listener index keyed on `EventKind` cannot reach the row's
+   whole share, which is what `(-90)`'s "mask ceiling 0.86 %" was already saying;
+   read the function before pricing an index for it.
 
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
