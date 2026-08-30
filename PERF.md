@@ -15160,6 +15160,52 @@ path and `CardInstance::has_keyword` (411,884 calls, 45.2 Ir) are the
 candidates; (c) the actor's own profile, which is where the workload actually
 is and which has been read once.
 
+**(-95, EXTENDED) THE LENS RUN ON ALL THREE POOLS AT `ca2bf1a6`, AND THE
+INSTRUMENT NEEDS ONE CORRECTION: THE PROGRAM'S OWN GROWTH IS POOL-SPECIFIC
+AND ONE POOL IS SUPERLINEAR.** `--games 6` -> `--games 12` doubles the games
+exactly (24 -> 48, 48 -> 96, 72 -> 144) and the program does not double:
+
+```text
+                        fixed           cube            sealed
+  program              x2.490          x1.666          x2.023
+  perform_action_inner  x2.32           x1.85           x1.97
+  dispatch_triggers..    x2.31           x1.84           x1.97
+  resolve_combat         x2.46           x1.82           x1.94
+  gather_..._inner       x2.34           x1.77           x1.93
+  compute_permanent_pass x2.62           x1.70           x2.05
+```
+
+**The engine rows move with the program, so this is the workload, not a fixed
+cost**: on `fixed` the second 24 games are *longer* than the first 24, on
+`cube` the second 48 are shorter. So `--games 6` and `--games 12` on one pool
+are the same *configuration* at two lengths but not the same workload per
+game, and the lens's threshold must be read against the pool's own engine
+growth (2.3 / 1.8 / 2.0), never against 2. At x1.0-1.15 the classification is
+unambiguous either way.
+
+**The saturating share, measured on all three for the first time:**
+
+```text
+  fixed    583 rows   2,520,782 Ir   0.28 % of the six-game run
+  cube     939 rows  15,195,643 Ir   0.56 %
+  sealed   788 rows   9,992,784 Ir   0.37 %
+```
+
+so the six-game workload's once-per-process contamination is **under 0.6 % on
+every pool**, and `cube` — the worst — is half what it read before the last
+two passes' levers landed. Every other row in the profile of record is a
+genuine per-game cost on every pool.
+
+**Two rows worth naming.** `String as fmt::Write::write_str` is 4.44 M /
+0.164 % of `cube` at **x1.13** — the `(-86)` / `wants_converge` family,
+confirmed saturating rather than argued to be. And **`recommend::rank_shape`
+is 684 calls at exactly x1.00 on `sealed`**: the ladder builds its sealed
+decks once per process, so its 3.3 M / 0.123 % there is a fixed cost — while
+`(-97)` prices the same function at **0.98 % of the actor**, which builds two
+decks a game. **A deck-builder row read off `bot_ladder` is a floor and a
+misleading one**; read it off `selfplay_train`. That is the one place "an
+engine percent is an actor percent" does not hold.
+
 **(-95) THE SIX-GAME WORKLOAD CHARGES EVERY ONCE-PER-PROCESS COST TO SIX
 GAMES. One row is big enough to matter, and it is REFUTED BY MEASUREMENT:
 `CardDefinition::wants_converge`'s `format!`, 0.459 % of `cube` and ~0 % of a

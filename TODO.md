@@ -52,7 +52,11 @@ sixty-seventh pass, so don't re-take that.
    free, but its consumer list is exhausted — and note that every lane after
    the third was found off the **self** table, not off that list, by reading
    `cg_edges.py --rows 40` for any `battlefield.iter()` walk whose per-card
-   body is a definition read. `(-89)`'s four remaining rows are 1.42 % of
+   body is a definition read. `(-95)`'s lens is now run on **all three** pools
+   (saturating share 0.28 / 0.56 / 0.37 %, so the six-game workload is clean
+   everywhere) and it came back with a correction to itself: the program's
+   growth for a doubled `--games` is **x2.49 / x1.67 / x2.02**, engine rows
+   move with it, so read the threshold against the pool's own growth. `(-89)`'s four remaining rows are 1.42 % of
    `cube` and the `_on` conversion on them is built and reverted; size them by
    line first. `(-38)` and `(-94)` are CLOSED —
    the find memo shipped and both its variants are refuted; do not re-derive.
