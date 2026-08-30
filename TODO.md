@@ -134,8 +134,16 @@ sixty-seventh pass, so don't re-take that.
    STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou` / `OwnedByYou` /
    `ExiledWithSource`, which is what makes the test an invariant instead of a list of 79
    names that goes stale on the next card.
-   **The unfiltered-slot census is CLOSED on the engine side and open on the catalog
-   side.** Slots reached by a bare `Selector::Target(n)` that no `TargetFiltered` filters:
+   **The unfiltered-slot census is CLOSED, both halves.** Four instalments:
+   `d0799d5c` (CR 115.4's any-target for `DealDamage`), `d2ce2cf8` (bare
+   `PlayerRef::Target(n)` in a player field), `41b1423d` (the rest of the damage and
+   prevention family, plus eighteen more player slots) and `45c55cc3` (**twenty cards
+   whose printed noun is narrower than the field's own type** — Terminate destroyed any
+   permanent). **The invariant caught the fourth instalment being silently wrong**:
+   `CoinFlipDestroyLoop` and `MoveChosenKeyword` had no arm in `target_filter_for_slot`,
+   so a filter declared on their slots aims correctly and re-checks against nothing —
+   **when a catalog fix declares a filter on a slot, check the slot walker has an arm
+   for that effect.** The original framing, kept because the numbers are the map: Slots reached by a bare `Selector::Target(n)` that no `TargetFiltered` filters:
    375 bodies, and the fallback both walkers take for them is `SelectionRequirement::Any`.
    Two instalments shipped — `d0799d5c` (CR 115.4: `Any` matched a **land**, so Banefire
    offered the opponent's Forest) and `d2ce2cf8` (a bare `PlayerRef::Target(n)` in a
