@@ -9918,6 +9918,49 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-ninth pass (2) — the equip gate gets the event-kind filter the board gate has had since (-83)
+
+**`cube` -1.9733 % / `fixed` -0.0141 % / `sealed` -0.0163 %** at `0c4d6ece`,
+off `dc829911`. Same instrument and workload as (1).
+
+```text
+                        base            candidate       delta
+  cube            2,580,810,007 ->  2,529,882,248     -1.9733 %
+  fixed             847,586,927 ->    847,467,414     -0.0141 %
+  sealed          2,573,046,534 ->  2,572,627,023     -0.0163 %
+
+  cube rows                          base ->    candidate        delta
+  dispatch_triggers_for_events 168,068,114 ->131,015,928   -37,052,186  -22.0 %
+  _int_malloc                   58,693,734 -> 55,450,356    -3,243,378
+  __memcpy_avx_unaligned_erms   71,952,193 -> 68,938,330    -3,013,863
+  event_matches_spec            33,383,316 -> 31,889,066    -1,494,250
+  TriggeredAbility::clone        1,281,280 ->    475,860      -805,420
+  freeze_layers_pop              1,431,306 ->    802,310      -628,996
+  the filter's own cost:  Vec::retain +1,936,690, event_kind_matches
+  +975,852, less the closure it replaces -772,836  =  net +2,139,706
+```
+
+**The two commits together, off `f2793cd5`: `fixed` -2.970 % / `cube`
+-2.585 % / `sealed` -0.016 %.**
+
+**The ordering is the finding, and it is a rule.** This retain was *declined*
+in `(-120)`'s entry three hours earlier, on the census that said not one
+grant-live dispatch survived the filter — correctly, at that tip, because the
+lists were empty and the structural fix was strictly cheaper. `(-120)` then
+removed the empty lists and the same census re-read `cube` at **11,506**
+grant-live dispatches still reading `filtered 0`: the survivors are real
+equip triggers whose event kind the batch never carries. **A filter measured
+worthless behind a defect is not measured at all — re-run the census after
+the fix that changes its population**, which is the cheapest step in this
+whole sequence and the one that turned a declined candidate into the pass's
+second-largest row.
+
+**And the pool split is the census, exactly.** `fixed` and `sealed` have no
+equip grants left after `(-120)`, so the retain never runs there and reads
+-0.014 / -0.016 % — the same noise floor `(-120)`'s null control priced.
+`cube` is where the census said the 411,802 visits were, and that is where
+the 37 M went.
+
 ### Hundred-and-ninth pass (1) — a buff Aura was holding the trigger dispatcher's two lanes open, for an empty list
 
 **`fixed` -2.9565 % / `cube` -0.6237 % / `sealed` -0.0000 %** at `dc829911`,
@@ -17580,6 +17623,17 @@ grant-live to **zero** on both pools that have it.
 on this workload it buys nothing the structural fix does not, and it would add
 a per-dispatch scan. It stays written down here for the day a pool carries a
 real equip trigger: the argument is `trigger_grants`' own, verbatim.
+
+**(-121) — AND THAT DAY WAS THE NEXT HOUR. TAKEN at `0c4d6ece`, `cube`
+-1.9733 %.** Re-running the census after `(-120)` landed reads `cube` at
+**11,506** grant-live dispatches (411,802 visits, 27.8 % of its walk), still
+`filtered 0` — but now the lists are *non-empty*: they are real equip
+triggers whose event kind the batch never carries. `fixed` and `sealed` are at
+zero and the retain never runs there. See the Log; the transferable half is
+**a filter measured worthless behind a defect is not measured at all.**
+The `turn_granted_triggers` and `granted_triggers_eot` gates are still
+unfiltered and still read *zero* dispatches on all three pools, so there is
+nothing to price on them — leave them until a census says otherwise.
 
 **(-114) BUILT, MEASURED AND REVERTED — THE COLD-GROUP DEREF IS ALREADY
 COMMON-SUBEXPRESSION-ELIMINATED, AND `has_keyword` IS **BYTE-IDENTICAL** WITH
