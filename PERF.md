@@ -17406,43 +17406,54 @@ the ones next to it.
 See the Log; the rule it adds is **rank a chain of pure guards by cost x
 rejection rate**, and the entry as claimed is kept there.
 
-**(-118) CLOSED WITHOUT A CHANGE — THE ACTOR FLEET SCALES LINEARLY TO THE
-CORE COUNT AND FLAT BEYOND IT. THERE IS NO CONTENTION TO FIND.** The seed
-list for this file has carried "actor scaling (games/sec at 1, half, full
-actor counts — find contention if sublinear)" since the section was created
-and nobody had run it. Measured at the hundred-and-seventh tip, `release` +
-mimalloc, 4-core box:
+**(-118) IS A RE-DERIVATION OF `(-52)`, WHICH CLOSED ACTOR SCALING FORTY-FIVE
+PASSES AGO — AND THE PROCESS FAILURE IS THE POINT.** The seed list's "actor
+scaling, find contention if sublinear" line was read as an open item off
+TODO's NEXT without grepping this file for it; `(-52)` had already run
+1/2/3/4/6 actors, found per-actor throughput flat, and written the planning
+rule (one actor per core; `--window` is the memory knob, not `--actors`).
+**This is the exact failure the Standing rules name for `cg_lines.py` rows,
+in a new place: the seed list at the top of this section is not a status,
+and an item on it may have been closed by an entry below.** Grep the entry
+numbers before spending a run on a seed-list line.
+
+**Three things the re-read does add**, `release` + mimalloc at the
+hundred-and-seventh tip, same 4-core 2.80 GHz Xeon:
 
 ```text
 RUST_MIN_STACK=33554432 CRAB_NO_JITTER=1 target/release/selfplay_train \
   --actors N --games 2000 --steps 1 --seed 7 --out /tmp/scale.N
 read the `actors:` line, not `done:` — `--steps` can outlast the actors.
 
-  actors   games/s        vs 1 actor    two runs
-     1     65.9 / 63.0        1.00x
-     2    135.1               2.09x
-     4    277.2 / 293.3       4.36x      <- 4 cores
-     8    280.6               4.35x      oversubscribed, flat
+  actors   games/s (two reps)   vs 1 actor    (-52), release-fast, 1200 games
+     1     65.9 / 63.0            1.00x        37.2 / 41.1
+     2    135.1                   2.09x        79.6 / 80.2
+     4    277.2 / 293.3           4.36x       165.2 / 156.2   <- 4 cores
+     8    280.6                   4.35x       169.8 / 160.0 at 6 actors
 ```
 
-**Two facts, and the second is the more useful one.** (a) 4.36x on four cores
-is linear inside the ~5 % run-to-run variance the repeats show (the 1-actor
-run is 30 s of wall and the 4-actor one 7 s, so they do not see the same
-thermal window; do not read the 0.36 as superlinearity). Eight actors on four
-cores is flat, not worse — the fleet does not thrash. **Nothing here is a
-candidate.** (b) **`rows` is 193,736 on every one of the eight runs, at 1, 2,
-4 and 8 actors.** The game index is a single `fetch_add` and every game's
-seed is a pure function of it, so the *set* of games is actor-count-
-independent by construction — and this measures that it is, which is the
-cross-process determinism filter applied to the fleet dimension rather than
-the thread one.
+(a) **The shape is unchanged and now holds past saturation**: eight actors on
+four cores is flat, not worse — the fleet does not thrash when
+oversubscribed, which `(-52)` stopped one step short of. (b) **`rows` is
+193,736 on every one of the eight runs, at 1, 2, 4 and 8 actors.** The game
+index is one `fetch_add` and each game's seed is a pure function of it, so
+the *set* of games is actor-count-independent by construction — this measures
+it, and it is the cross-process determinism filter applied to the fleet
+dimension rather than the thread one. Nothing else in the suite covers that
+axis. (c) **The absolute numbers are ~1.75x `(-52)`'s** at every actor count.
+**Do not read that as a throughput win**: the profiles differ (`release`
+here, `release-fast` there) and the pools and decks have moved over
+forty-five passes, so the two columns are not an A/B and nothing in this file
+should quote the ratio. It is recorded only so the next reader does not
+mistake the new column for a regression against the old one.
 
-**Size the run before trusting it.** The first attempt used `--games 120` and
-read 51.8 / 168.8 / 292.0 — **3.26x on two actors**, which is impossible, and
-the reason is that the 120-game run is 0.4-2.3 s and mostly one-time cost. At
-2,000 games the same three numbers are 65.9 / 135.1 / 277.2. **A scaling
-curve needs a workload long enough that the parallel section dominates; check
-the shape for a superlinear step before reading anything into it.**
+**And a sizing rule the run earned.** The first attempt used `--games 120`
+and read 51.8 / 168.8 / 292.0 — **3.26x on two actors**, which is impossible.
+At 0.4-2.3 s of wall the run is mostly one-time cost. **A scaling curve needs
+a workload long enough that the parallel section dominates; a superlinear
+step in the shape means the workload is too small, not that the code is
+fast.** `(-52)`'s own caution about `--bench --threads N` is the same rule on
+the other instrument.
 
 **(-117) TAKEN at `172a40c8` — `fixed` -0.0051 % / `cube` -0.0599 % /
 `sealed` -0.0839 %, and it REFUTES THE LINE ROW THAT NAMED IT.** The entry

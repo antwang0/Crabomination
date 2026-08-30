@@ -53,7 +53,10 @@ sixty-seventh pass, so don't re-take that.
    and the sixth buying +2.6 %, so plan one actor per core; the memory knob is
    `--window` (~1.3 KiB a row), not `--actors` (~6 MiB each). Do not spend a build
    re-deriving it, and do not size parallel efficiency off `--bench`, which is 1.5 s
-   of wall at four threads and mostly startup.
+   of wall at four threads and mostly startup. **`(-118)` re-derived it anyway, off
+   this file's older wording, and is kept only for the two facts it adds: eight
+   actors on four cores is flat rather than worse, and `rows` is identical at
+   1/2/4/8 — the determinism filter on the fleet axis, which no test covers.**
 7. **Cards:** `audit_oracle_verbs.py`, 219 rows / 10,949 cards; check three rows in the
    source before believing a class. **Inscription of Insight is not the card it is named
    after** — three wrong modes and a missing kicker; needs a dynamic-P/T token and a
