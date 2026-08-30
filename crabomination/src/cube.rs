@@ -362,6 +362,38 @@ pub fn lessons_sideboard() -> Vec<CardFactory> {
     ]
 }
 
+/// Every card the cube generator can ever deal, deduplicated by name and
+/// sorted by it — the enumeration the vocabulary freeze reads
+/// (`server::vocab_snapshot` / `Vocab::sos_sealed`). The per-pair pools
+/// gate entries on the pair (fetches, pair-matched picks), so the union
+/// has to walk all ten pairs through `color_pool`; `colorless_pool` is
+/// pair-free and the basics ride the deck builder directly (already
+/// frozen with the SOS seed). Not on any hot path — it calls every
+/// factory once — so it is for vocabulary construction and tests, not
+/// for dealing decks.
+pub fn cube_pool_all() -> Vec<CardFactory> {
+    const COLORS: [Color; 5] =
+        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+    let mut seen: std::collections::BTreeMap<&'static str, CardFactory> =
+        std::collections::BTreeMap::new();
+    let mut add = |fs: Vec<CardFactory>| {
+        for f in fs {
+            // `card_arc`, not `f()`: ~2,100 distinct factories at 8 KB a
+            // definition, and the memo table means repeat calls (every
+            // `Vocab` construction, every coverage test) build nothing.
+            seen.entry(card_arc(f).name).or_insert(f);
+        }
+    };
+    add(colorless_pool());
+    for (i, &a) in COLORS.iter().enumerate() {
+        for &b in COLORS.iter().skip(i + 1) {
+            add(color_pool(a, [a, b]));
+            add(color_pool(b, [a, b]));
+        }
+    }
+    seen.into_values().collect()
+}
+
 /// Pick two distinct colors uniformly at random from {W, U, B, R, G}.
 pub fn random_color_pair<R: Rng>(rng: &mut R) -> [Color; 2] {
     let colors = [

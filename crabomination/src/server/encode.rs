@@ -9,11 +9,16 @@
 //! enter the feature vector, so a net trained on these rows can't learn to
 //! peek.
 //!
-//! Scope is deliberately SOS sealed ([`Vocab::sos_sealed`]): one set's worth
-//! of names keeps the embedding table small and well-fed. Tokens and
-//! anything off-vocabulary encode as index 0 (unknown) and are represented
-//! by their object features alone — a Pest token is "an unknown 1/1" to the
-//! net, which is most of what it needs to know.
+//! Scope was deliberately SOS sealed through 2026-08-30 — one set's worth
+//! of names kept the embedding table small and well-fed. The vocabulary
+//! now also carries the modern cube pool ([`crate::cube::cube_pool_all`]),
+//! appended after the frozen SOS seed so no SOS index moved and every
+//! post-freeze net pads cleanly; a net *trained* before the append simply
+//! has zero rows for the cube names and reads them as unknown, exactly as
+//! it always did. Tokens and anything still off-vocabulary encode as
+//! index 0 (unknown) and are represented by their object features alone —
+//! a Pest token is "an unknown 1/1" to the net, which is most of what it
+//! needs to know.
 
 use crate::fxhash::HashMap;
 
@@ -64,9 +69,12 @@ pub struct Vocab {
 }
 
 impl Vocab {
-    /// The SOS sealed universe: every card in the draftable pool plus the
-    /// five basic lands the sealed builder adds, indexed against the frozen
-    /// snapshot.
+    /// The frozen-snapshot universe: every card in the SOS draftable pool,
+    /// the five basic lands the sealed builder adds, and — since
+    /// 2026-08-30 — the modern cube pool, indexed against the frozen
+    /// snapshot. The name predates the cube append and is kept for
+    /// call-site stability; there is one growing vocabulary, not one per
+    /// format, which is what lets a single net play every pool.
     pub fn sos_sealed() -> Vocab {
         let mut map: HashMap<&'static str, u16> = HashMap::default();
         for (i, name) in crate::server::vocab_snapshot::VOCAB_SNAPSHOT.iter().enumerate() {
@@ -75,9 +83,15 @@ impl Vocab {
             debug_assert!(!map.contains_key(name), "duplicate snapshot name {name}");
             map.insert(name, (i + 1) as u16);
         }
+        // The cube pool joined the vocabulary 2026-08-30 (the modern-pool
+        // track's first precondition): its names are frozen in the
+        // snapshot after the SOS seed, and this union is what the
+        // coverage tests below hold to the snapshot.
+        let cube = crate::cube::cube_pool_all();
         let mut fresh: std::collections::BTreeSet<&'static str> = crate::draft::sos_draft_pool()
             .iter()
             .map(|f| f().name)
+            .chain(cube.iter().map(|f| f().name))
             .filter(|n| !map.contains_key(n))
             .collect();
         for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
@@ -88,7 +102,7 @@ impl Vocab {
         for (next, name) in (map.len() as u16 + 1..).zip(fresh) {
             map.insert(name, next);
         }
-        // Key the cache on the *pool's* name pointers, not the snapshot's:
+        // Key the cache on the *pools'* name pointers, not the snapshot's:
         // the snapshot is its own array of literals and a card's definition
         // carries a different one, so a cache built from the snapshot would
         // miss every lookup.
@@ -96,6 +110,7 @@ impl Vocab {
         for name in crate::draft::sos_draft_pool()
             .iter()
             .map(|f| f().name)
+            .chain(cube.iter().map(|f| f().name))
             .chain(["Plains", "Island", "Swamp", "Mountain", "Forest"])
         {
             if let Some(&i) = map.get(name) {
@@ -1239,6 +1254,50 @@ mod tests {
         );
     }
 
+    /// The cube pool's names have frozen indices too (appended after the
+    /// SOS seed, 2026-08-30). Same defect class as the SOS sibling above:
+    /// an unsnapshotted name self-assigns from sorted order over the
+    /// *unsnapshotted* set, so the next append reshuffles it and a net
+    /// trained in between means the wrong card.
+    #[test]
+    fn vocab_covers_the_cube_pool() {
+        use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
+        let frozen: std::collections::BTreeSet<&str> = VOCAB_SNAPSHOT.iter().copied().collect();
+        let v = Vocab::sos_sealed();
+        let mut missing: Vec<(u16, &str)> = crate::cube::cube_pool_all()
+            .iter()
+            .map(|f| f().name)
+            .filter(|n| !frozen.contains(n))
+            .map(|n| (v.index_of(n), n))
+            .collect();
+        missing.sort_unstable();
+        missing.dedup();
+        assert!(
+            missing.is_empty(),
+            "these cube names have no frozen index: {:?}\n\
+             Append them to `server/vocab_snapshot.rs` in that order, at the END of the array \
+             — index k is the embedding row every trained net learned for that card.",
+            missing.iter().map(|(_, n)| *n).collect::<Vec<_>>(),
+        );
+    }
+
+    /// The freeze boundary itself: position 162 is the last pre-freeze
+    /// name, and `FROZEN_VOCAB_SIZE` is pinned to it as a literal. An
+    /// insertion anywhere in the seed segment moves this name and every
+    /// committed net with it — this is the loud version of that failure.
+    #[test]
+    fn the_freeze_boundary_is_pinned() {
+        use crate::server::vocab_snapshot::{FROZEN_VOCAB_SIZE, VOCAB_SNAPSHOT};
+        assert_eq!(FROZEN_VOCAB_SIZE, 164);
+        assert_eq!(
+            VOCAB_SNAPSHOT[FROZEN_VOCAB_SIZE - 2],
+            "Zimone's Experiment",
+            "the last pre-freeze name moved — an entry was inserted or removed \
+             in the seed segment, and every committed net's rows now mean \
+             different cards"
+        );
+    }
+
     /// The snapshot itself: no duplicate name, because two entries with the
     /// same name would alias two cards onto one embedding row and the later
     /// one would win silently.
@@ -1287,9 +1346,11 @@ mod tests {
     #[test]
     fn sos_vocab_is_substantial_and_stable() {
         let v = Vocab::sos_sealed();
-        // Sanity range, not an exact count: the set list may grow a card
-        // or two, but a collapse to near-zero means the pool wiring broke.
-        assert!(v.size() > 150 && v.size() < 500, "vocab size {}", v.size());
+        // Sanity range, not an exact count: the pools may grow a card or
+        // two, but a collapse means the pool wiring broke. The floor says
+        // both pools arrived (the SOS seed alone is 164, the cube append
+        // took it past 2,000); the ceiling catches a runaway enumeration.
+        assert!(v.size() > 2000 && v.size() < 5000, "vocab size {}", v.size());
         for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
             assert_ne!(v.index_of(basic), 0, "{basic} missing from vocab");
         }

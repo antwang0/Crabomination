@@ -3275,3 +3275,41 @@ bots, sims and humans' opponents alike. The `Decider` trait has no
 `&GameState` access, so these need per-site suspend plumbing
 (`ResumeContext`), not a policy change. That is the remaining
 ChooseTarget hole, and it is invisible to this round's gate.
+
+## The vocabulary grows to the cube pool (2026-08-30) — modern precondition 1 of 3
+
+The first precondition of the modern-pool track, landed while the pools
+still train on SOS sealed so nothing depends on it yet. `VOCAB_SNAPSHOT`
+grew from 163 to 2,272 names: the modern cube pool enumerated by the new
+`cube::cube_pool_all()` (union of `colorless_pool` + `color_pool` over
+all ten pairs — **2,109 distinct names, not the ~309 the stale cube.rs
+comment claims**; the catalog expansion poured straight into the pools)
+appended after the SOS seed in `Vocab::sos_sealed()` order, exactly the
+append-only contract the freeze was built for. No SOS index moved.
+
+**The one landmine, defused**: `FROZEN_VOCAB_SIZE` was derived as
+`VOCAB_SNAPSHOT.len() + 1`, so the append would have jumped the
+pre-freeze refusal floor from 164 to 2,273 and refused every committed
+net — champion first. It is now a pinned literal (164, the freeze
+*date's* size) with a compile-time guard, and
+`the_freeze_boundary_is_pinned` holds position 162 ("Zimone's
+Experiment") so a mid-seed insertion fails loudly.
+`vocab_covers_the_cube_pool` mirrors the SOS coverage test for the new
+segment.
+
+**Verified live**: `nets/champion.safetensors` (164 rows) loads,
+`vocab_fit(164, 2273)` passes, `pad_vocab` zero-extends, and the padded
+net plays (7-1 vs baseline over a smoke run). A pre-append net reads
+every cube card as unknown — exactly what it did before, via zero rows
+instead of index 0.
+
+What this does NOT do: cube cards still reach a pre-append net as
+unknowns, and no training run has fed the new rows. The next
+preconditions stand as written: (2) layer-aware encoding
+(`compute_battlefield` — keywords/types/colors, not just P/T; five raw
+`power()` sites), (3) the v8 feature block (artifact/enchantment type
+bits, Lore/Charge/Shield/Finality counters, land-drop global) under one
+ablation bit with SHARD_VERSION 9. Then a `--decks cube` leg and a
+training-pool flag, at which point the r53 `targeteval` re-run and the
+zero-incidence flags (walkerchip, buff2for1, convlands, impulse) all
+become live again.
