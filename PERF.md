@@ -2233,6 +2233,39 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-fourth pass, this session's close at `7557554a`
+
+Ten code commits, three families: the `Vec<GameEvent>` return (`da4a6ca2`
+`381fac97`, `(-104)` closed), the target enumerator's zone scope (`13435f3e`
+engine + `d9e6454d`, seventy-nine card filters) and the unfiltered-slot census
+(`d0799d5c` `d2ce2cf8` `41b1423d` `45c55cc3` `9fec2a6f` `eb13fa43`, closed by
+an invariant with no exceptions). `(-111)` and `(-114)` were built and reverted
+in the same window and are not in the tree. The tip also carries the other
+session's pass-105..107 commits.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,063 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved across all ten
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh, rebuilt at this tip — 30 cells, five
+        pools x six seeds x 120 games, **33,120 games, 0 failures,
+        0 undecided**; 5 assertion strings in the audit binary
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant across twenty-three runs over seven builds; determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 437.03 / 465.07 / 442.76,
+        host_calib_ms 37-41, peak_rss_mib 24.4-24.5,
+        bin_bytes 123,756,880, `release` + mimalloc.
+```
+
+**Six of the ten commits are correctness changes and four of those read
++/-0.001 % or less.** That is the expected shape and it is worth stating once:
+a filter that narrows an enumerated set removes candidates the picker was
+already ordering past, so it costs nothing measurable — except where the
+narrowing lets the walk *reject earlier*, which is `d9e6454d` (-0.5 %, the zone
+predicate first in the `And`), `9fec2a6f` (-0.08 %) and `eb13fa43` (-0.04 %).
+
+
 ### Hundred-and-seventh pass — this session's close at `172a40c8`
 
 Three code commits, all in the trigger and combat dispatch: `9b3470a4`
