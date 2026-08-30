@@ -477,13 +477,15 @@ pub fn woodweavers_puzzleknot() -> CardDefinition {
 /// and draw a card. {2}, Sacrifice: you get {E}{E} and draw a card.
 pub fn glassblowers_puzzleknot() -> CardDefinition {
     use crate::effect::shortcut::etb;
+    // "Scry 2, then you get {E}{E}" — it shipped drawing a card instead of
+    // scrying, which is a different card (2026-08-30).
     let payoff = || {
         Effect::Seq(vec![
-            Effect::AddEnergy(Value::Const(2)),
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
             },
+            Effect::AddEnergy(Value::Const(2)),
         ])
     };
     CardDefinition {
@@ -495,7 +497,7 @@ pub fn glassblowers_puzzleknot() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
-            mana_cost: cost(&[generic(2)]),
+            mana_cost: cost(&[generic(2), u()]),
             effect: payoff(),
             once_per_turn: false,
             sorcery_speed: false,

@@ -287,16 +287,18 @@ fn woodweavers_puzzleknot_etb_and_sac_payoff() {
 }
 
 #[test]
-fn glassblowers_puzzleknot_etb_energy_and_draw() {
+fn glassblowers_puzzleknot_etb_scries_and_gives_energy() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
     let id = g.add_card_to_hand(0, catalog::glassblowers_puzzleknot());
     g.players[0].mana_pool.add_colorless(2);
     let hand = g.players[0].hand.len();
     cast_creature(&mut g, id);
     assert_eq!(g.players[0].energy, 2);
-    // -1 cast + 1 ETB draw = net same.
-    assert_eq!(g.players[0].hand.len(), hand);
+    // "Scry 2, then you get {E}{E}" — it shipped drawing instead of scrying
+    // until 2026-08-30, so the hand is one card *smaller* now (the cast).
+    assert_eq!(g.players[0].hand.len(), hand - 1, "scry does not draw");
 }
 
 #[test]

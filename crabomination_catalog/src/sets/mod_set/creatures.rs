@@ -5068,7 +5068,16 @@ pub fn master_of_death() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![
+        // "When this creature enters, surveil 2." Missing until 2026-08-30.
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+        },
+        TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::FromYourGraveyard,

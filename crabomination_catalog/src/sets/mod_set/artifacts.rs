@@ -1066,6 +1066,18 @@ pub fn fountain_of_renewal() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
+        // "{3}, Sacrifice this artifact: Draw a card." Missing until
+        // 2026-08-30 — the card was a one-life-a-turn permanent with no
+        // way to cash itself in.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_cost: true,
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
