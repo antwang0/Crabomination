@@ -48,6 +48,24 @@ scripts/pgo_build.sh selfplay_train  # any other bin, with PGO_TRAIN set
 # if you need to attribute LTO'd code.)
 cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
   --no-default-features
+#
+# ⚠ CALLGRIND MERGES MONOMORPHIZATIONS. It demangles the symbol and keys the
+# function by the demangled name, so all eleven instances of
+# `Arc::clone_from_ref_in` land in ONE row and the question "which T is being
+# deep-copied" cannot be asked of a default dump. Add `--demangle=no` and they
+# separate by their legacy-mangling hash suffix (`…clone_from_ref_in17h<hash>E`);
+# `cg_edges.py --callers/--callees <hash>` then identifies each by the clone
+# helpers it calls (`CardMemo::clone` is `CardData`, `String::clone` is
+# `PlayerCold`, `RawTable::clone` + `SmallVec::extend` is `PlayerData`).
+# That reading is the hundred-and-first pass's entry point; `(-99)` had read
+# the same copies by *calling context* four times without it. `readelf -sW`
+# ranks the instances by code size first, which is a free pre-sort.
+#
+# ⚠ AND `cg_symbolize.py`'s PREMISE IS STALE for these builds: valgrind 3.22
+# in the current image *does* read `profiling-fast`'s symbol table, so the
+# dump already carries names and the script is a no-op on it (it reports
+# "2/43 addresses in a FUNC"). Harmless, but do not read that line as a
+# failure, and pass the dump straight to `cg_edges.py` when names are present.
 # THE WHOLE THREE-POOL A/B AS ONE SCRIPT, and on warm caches it is ~10
 # minutes, not the hour the per-step budgets imply. One tree, one target dir,
 # and the base's callgrind runs overlap the candidate's build:
@@ -2160,6 +2178,64 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### Hundred-and-first pass — closing state at `b6218fad`
+
+Three code commits, all `CardData`'s CoW deep copy: `daf30ed1` and
+`be6ec1ec` (its **width** — 864 -> 568 bytes, sixteen fields into the
+`CardCold` group) and `b2330629` (its **count** — six per-permanent flags
+onto the `CardInstance` handle, outside the `Arc`). A concurrent session's
+graveyard lanes and card fixes are interleaved; each row names its own base.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14), pinned in rust-toolchain.toml;
+        Intel Xeon @ 2.10 GHz, 4 cores (nproc 4, so --bench runs 3 threads)
+suite   19,048 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, five pools x six seeds x 120
+        games, **33,120 games, 0 failures, 0 undecided**; 5 "memo is stale"
+        strings in the audit binary. The gate that matters for this pass:
+        `Battlefield`'s and `Graveyard`'s lane audits walk the zone on every
+        ask under `-C debug-assertions=yes`, and the flags that left the
+        `Arc` are read by those walks.
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 422.37 at 3 threads, host_calib_ms 55, peak_rss_mib 26.8,
+        bin_bytes 123,710,368, `release` + mimalloc (default features).
+        **`peak_rss_mib` is up, 24.2 -> 26.8**, and that is expected and
+        priced: `CardInstance` is 8 -> 16 bytes so every card zone doubles,
+        and `CardCold` is 528 -> 824 on the cards that have one. 26.8 MiB an
+        actor is not a constraint; the row is here so the next reader does
+        not chase it.
+
+Ir anchor at `b6218fad`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     894,747,828      cube 2,673,703,848      sealed 2,644,737,719
+
+  the whole pass, cfdf69f2 -> b6218fad (three of this session's commits, the
+  other session's graveyard lanes and four card fixes; endpoints, not a
+  measurement):
+    fixed     909,660,984 ->   894,747,828   -1.640 %
+    cube    2,716,755,593 -> 2,673,703,848   -1.585 %
+    sealed  2,697,159,120 -> 2,644,737,719   -1.943 %
+```
+
+**Twelfth cross-session anchor check, and it is an identity for the third
+time running.** `b2330629` was measured at `cb73b867` and read
+894,746,071 / 2,673,712,419 / 2,644,718,035; two card-fix commits from the
+other session were then rebased *under* it, and the tip re-measured from a
+fresh build reads 894,747,828 / 2,673,703,848 / 2,644,737,719 — apart by
+**+1,757 / -8,571 / +19,684 Ir, i.e. 2.0 / 3.2 / 7.4 ppm**. Card fixes are
+Ir-neutral at this resolution, and a measurement taken before a rebase
+survives it.
+
+**Also re-taken at the original base, and both readings agree with the
+committed one to a millionth**: `cfdf69f2`'s three pools read
+909,660,984 / 2,716,755,593 / 2,697,159,120 here against the Baseline's
+909,660,888 / 2,716,754,586 / 2,697,162,109 — 0.1 / 0.4 / 1.1 ppm apart on a
+binary rebuilt in a different container weeks later. The anchor is a
+property of the source, not of the build.
 
 ### Hundredth pass, the third half — closing state at `6d30b1e6`
 
@@ -9048,6 +9124,184 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-first pass (3) — six per-permanent flags move OUT of the `Arc`, onto the handle
+
+**`fixed` -0.966 % / `cube` -0.949 % / `sealed` -1.236 %** off `cb73b867`.
+The largest single change in this file, and it is the *count* half of the
+`CardData` copy after (1) and (2) took the width half.
+
+`CardInstance` was `(Arc<CardData>)`. It is now a six-field handle:
+`tapped`, `summoning_sick`, `attacked_this_turn`, `attacked_own_turn`,
+`attacked_last_turn`, `blocked_this_turn` sit **outside** the `Arc`,
+alongside it. Field lookup finds a handle field before `Deref` does, so
+`card.tapped = true` compiles and reads exactly as before at all 2,210 call
+sites; the compiler's check is that `&mut CardData` can no longer see them,
+and **nothing outside `card.rs` names `CardData` at all** — the whole
+workspace compiled with zero errors on the first try.
+
+**Why these six.** `(-99)` read the deep copies by *calling context* and
+`(-51)(a)` priced the land tap, and between them the diagnosis was already
+written down: **100 % of `activate_ability_inner`'s 49,240 `make_mut` calls
+were deep copies** (19.95 M Ir, 405 a call), because a `{T}: add mana`
+activation writes `tapped` and nothing else on a card every probe clone still
+shares. A write of one byte cloned 568 bytes and 1.15 allocations. On the
+handle it is a byte in the zone vector the write had already unshared to
+reach the card.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base cb73b867
+  fixed     903,472,951 ->   894,746,071   -0.966 %
+  cube    2,699,320,380 -> 2,673,712,419   -0.949 %
+  sealed  2,677,826,043 -> 2,644,718,035   -1.236 %
+
+cube, the deep copies themselves
+  make_mut's copies      136,436 -> 100,016   -26.7 %
+  their Ir            101,479,338 -> 77,767,451   -23.7 M
+
+cube, the `make_mut` caller table (calls / Ir inclusive)
+  activate_ability_inner       49,240 / 19.95 M -> 27,678 /  4.87 M
+  declare_attackers_banded     77,656 / 14.90 M -> 38,988 /  7.13 M
+  do_untap                     77,974 /  7.43 M -> 62,776 /  1.84 M
+  resolve_top_of_stack_inner   71,200 /  5.72 M -> 67,036 /  5.55 M
+  declare_blockers             23,022 /  5.14 M ->  (out of the top eight)
+  resolve_combat              100,452 /  3.18 M -> 100,452 /  6.64 M
+```
+
+**`resolve_combat` is the one row that goes up, and it is the copy moving
+rather than a new one.** Its call count is unchanged to the unit; what
+changed is *who pays*. `declare_blockers` used to unshare the blocker for
+`blocked_this_turn` and the damage step then wrote a card that was already
+unshared; now the flag is free and the damage write — which still touches
+`damage_by_source_this_turn`, a `CopyVec` that stays in `CardData` — is the
+first write. Net over the program is -23.7 M. **Read a `make_mut` row's
+*delta* against the whole table, never alone**: this is (-50)'s "if the
+program moves by a fraction of the edge you removed, the copy has moved
+rather than gone", in the direction where the program moved by *more* than
+the edge.
+
+**The cost side, and it is why the handle stops at six bools.**
+`CardInstance` goes 8 -> 16 bytes, so every zone `Vec<CardInstance>` doubles
+in memory and its copy gains a byte-move per element (30,100 zone unshares a
+`cube` run). Ir cannot see the cache half of that, so it was read on the clock
+too:
+
+```text
+ab_wall.py --blocks 8 -- --a gang --b gang --games 2000 --decks fixed
+           --seed 11 --threads 4     (both sides profiling-fast)
+  mean B/A   -1.34 %    median -0.99 %    5/8 blocks B faster
+  95 % CI    -3.47 .. +0.80 %   FLAT — cannot resolve below +/-2.14 %
+  A spread 7.1 %, B spread 8.5 %, load 3.1-4.1 across the blocks
+```
+
+**The instrument was carrying the other session and could not resolve 1 %**
+— this workload reads `+/-0.34 %` quiet (see `ab_wall.py`'s calibration) and
+`+/-2.14 %` here. What it does settle is the question the widening asks: the
+point estimate agrees with Ir in sign and size, and the CI's upper bound
+(+0.80 %) rules out the cache regression the doubling could plausibly have
+cost. `damage: u32` was left in
+`CardData` deliberately: the damage path writes `damage_by_source_this_turn`
+in the same breath (`record_damage_from` pushes unconditionally), so moving
+`damage` out would not remove one copy and would push the handle to 24 bytes.
+
+### Hundred-and-first pass (2) — eight more `CardData` fields into the cold group, and four that look identical and are not
+
+**`fixed` -0.240 % / `cube` -0.276 % / `sealed` -0.277 %** off `81ffea56`.
+`CardData` 672 -> 568 bytes, `CardCold` 528 -> 824.
+
+Moved: the five `Option<Arc<CardDefinition>>` alternate faces (`front_face`,
+`prototype_printed`, `unflipped_def`, `face_up_def`, `licid_creature_def` —
+a branch, an atomic bump and a branch in the drop each, on a card that is not
+transformed, flipped or face down), `keyword_counters` (a `Vec` behind a
+newtype), `may_play_until` and `exiled_by` (16 and 24 bytes of `Copy` payload
+only a granted may-play or a linked exile writes).
+
+**The refuted half is the entry.** `damaged_by_this_turn`,
+`damaged_players_this_game`, `damaged_permanents_this_game` and
+`damage_by_source_name_this_turn` are four `Vec`s, 96 bytes, cleared per turn
+under the same `eot_wear_off!` guard as everything else in (1) — every
+syntactic test for membership passes. With them included the same commit
+reads:
+
+```text
+base 81ffea56, callgrind, profiling-fast --no-default-features
+  the eight, with the four damage vectors    without them (shipped)
+  fixed     -0.164 %                          -0.240 %
+  cube      +0.072 %                          -0.276 %
+  sealed    -0.027 %                          -0.277 %
+
+cube, why: resolve_combat's make_mut edge
+  100,452 calls / 3.32 M Ir  ->  113,206 / 16.29 M     (+12.97 M)
+  program deep copies 141,690 -> 153,934 (+12,244 CardCold unshares)
+```
+
+**A combat step writes them on every creature that deals or takes damage**,
+and `resolve_combat` is precisely where `CardData` copies are *cheapest*
+(33 Ir a `make_mut` call — the card is already unshared) and where a fresh
+cold unshare is dearest. **"Written rarely" is a measurement, not a reading
+of the field name**, and the tell is one row of the `make_mut` caller table
+before and after. `CardCold`'s doc comment now carries this as its
+counter-example.
+
+### Hundred-and-first pass (1) — the CoW deep copies, split by TYPE for the first time, and six riders leave `CardData`
+
+**`fixed` -0.356 % / `cube` -0.329 % / `sealed` -0.421 %** off `cfdf69f2`.
+
+`(-99)` attributed the 132,370 deep copies by *calling context* and stopped
+there; nobody had asked **which type is being copied**, and the reason is an
+instrument fact this file did not have: **callgrind demangles Rust symbols
+and merges every monomorphization of `Arc::clone_from_ref_in` into one row.**
+Run it with `--demangle=no` and the eleven instances separate. The whole
+table, `--decks cube`, at `cfdf69f2`:
+
+```text
+  copies      self Ir     share   T
+  68,610   50,746,290    1.87 %   CardData          (CardMemo::clone, 1/copy)
+  22,032   19,027,208    0.70 %   PlayerData        (RawTable + SmallVec, 1 each)
+  30,100    6,549,548    0.24 %   Vec<CardInstance> (the zones)
+   3,312    6,972,236    0.26 %   ColdState         (GameState::deref_mut)
+   7,568    3,044,656    0.11 %   CardCold
+   4,942      997,090    0.04 %   (CardInstance-rooted tail)
+   2,876      819,660    0.03 %   PlayerCold        (String::clone, the seat name)
+   1,682      692,424    0.03 %   CowBox<T>, the rest
+```
+
+**`CardData` is 48 % of every CoW copy in the program**, and its 739 Ir of
+self a copy is, to within the (-74) padding probe's 0.44 Ir/byte, exactly the
+field-by-field move of its 864 bytes. So **width is a lever on this one type
+and on nothing else**: the same byte taken out of `PlayerData` is worth a
+third as much (22,032 copies) and out of `ColdState` a twentieth (3,312).
+`(-74)`'s "the lever is fewer deep copies, not smaller ones" was right about
+*its* candidate (a second warm group for ~150 bytes of cast riders) and wrong
+as a general claim — 296 bytes came out of `CardData` over this and the next
+commit for -0.60 %.
+
+Six fields move into the `CardCold` group that already exists for exactly
+this: `granted_keywords_eot`, `granted_keywords_eot_ts`,
+`granted_flashback_eot`, `granted_harmonize_eot`, `granted_alt_cast_cost_eot`
+and `granted_cast_surcharge_eot` — 192 bytes, all `Vec`/`Option<ManaCost>`,
+and all six already in the `eot_wear_off!` list whose guard
+(`end_of_turn_effects_are_clear`) keeps the Cleanup sweep from writing them
+unless one is dirty. `CardData` 864 -> 672.
+
+```text
+base cfdf69f2, callgrind, profiling-fast --no-default-features
+  fixed     909,660,984 ->   906,422,097   -0.356 %
+  cube    2,716,755,593 -> 2,707,820,403   -0.329 %
+  sealed  2,697,159,120 -> 2,685,811,249   -0.421 %
+
+cube  deep copies    141,690 -> 142,042    (+352, the moved fields' own)
+      make_mut calls 865,758 -> 945,254    (+79,496 at 29 Ir — the Cleanup
+                                            sweep derefs the cold group once
+                                            per cleared field; see the queue)
+      allocations  1,426,336 -> 1,426,358
+```
+
+Mechanical: `CardData`'s `Deref`/`DerefMut` already forward to `CardCold`, so
+every `card.granted_*` read and write compiles unchanged, and
+`CardInstanceWire` round-trips through the same accessors — the serialized
+shape is byte-identical.
+
 ### Hundredth pass (8) — the graveyard memo becomes lanes, and packing the second one taxes the first
 
 **`fixed` -0.093 % / `cube` -0.043 % / `sealed` -0.026 %** off `cfdf69f2`.
@@ -13771,6 +14025,59 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE THREE POOLS RE-READ AT `b6218fad`, AFTER THE `CardData` PASS
+
+The copy family it took apart is no longer in the top ten of any pool:
+`Arc::clone_from_ref_in` was 3.28 % of `cube` and is **1.92 %**. What is
+left, self costs, with each row's status so nobody re-derives one:
+
+```text
+                      fixed     cube    sealed
+  dispatch_triggers..  7.33 %   7.19 %   7.84 %   (-59)/(-90): no hot line,
+                                                   mask ceiling 0.86 %
+  the allocator family 10.44 % 10.25 %  10.78 %   1,392 k allocs; UPPER BOUND
+   (malloc/_int_malloc/free/_int_free)             — callgrind runs the system
+                                                   allocator, the ship is mimalloc
+  gather_..._inner     3.15 %   3.09 %   2.64 %   (-81), closed door
+  check_state_based..  2.91 %   2.69 %   3.36 %   (-69)/(-88)
+  __memcpy             2.23 %   2.76 %   3.40 %   diffuse, ~355 callers
+  compute_permanent_p. 2.32 %   2.80 %   2.13 %   (-92) lead 2
+  Vec::from_iter       2.47 %   2.60 %   2.37 %   ~93 callers — DIFFUSE
+  clone_from_ref_in    2.51 %   1.92 %   2.40 %   (-100), both halves taken
+  computed_permanent_h  —       2.23 %   1.94 %   (-27)'s pool refuted
+  activate_ability_in.  —       1.69 %    —       the tap; (-51)(a)'s make_mut
+                                                   half is now gone from it
+```
+
+**The allocator is the largest family on every pool and it is where the next
+census belongs.** 1,392,000 allocations on `cube`, and `finish_grow` — a
+`Vec` that outgrew itself, i.e. a *re*allocation a reserve would remove
+outright rather than move — is **361,249 of them, 26 %**, 35.7 M Ir
+inclusive (1.34 %). Its `grow_one` callers at this tip:
+
+```text
+  60,974  Vec::push_mut          (out of line; the growths belong to ITS callers)
+  29,474  dispatch_board_scan
+  21,334  resolve_combat
+  13,604  mana_source_table
+  13,104  deal_combat_damage_to_target
+  12,996  bot::pick_attacks_inner
+  11,410  grant_scan
+  10,434  affected_from_requirement
+   9,146  effective_mana_abilities_into
+   8,286  granted_abilities_of_inner
+   8,262  CowBox<Vec<T>>::push
+```
+
+**Read `(-80)`'s row 2 before pricing any of these**: a first-push allocation
+is *moved* by a `with_capacity`, not removed, and only a *re*growth is
+removed. `grow_one` is the regrowth path, so this table is the right one —
+but `(-80)`'s other finding stands too (an allocation count is not a cost:
+84,558 allocations removed made the program slower). Rank by the Ir on the
+edge, size the reserve off the observed length, and expect a third of the
+row.
+
+
 ### THE WHOLE-PROGRAM LINE PROFILE, TAKEN FOR THE FIRST TIME (ninety-sixth pass, `cd0842e9`, `--decks cube`)
 
 Every earlier line profile in this file was `--in <function>` scoped, so
@@ -15058,6 +15365,85 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-100) THE CoW DEEP COPIES SPLIT BY TYPE — `CardData` IS 48 % OF THEM, AND
+BOTH HALVES OF ITS COST ARE NOW TAKEN. -0.60 % (width) + -0.95/-1.24 %
+(count) AT THE HUNDRED-AND-FIRST PASS; WHAT IS LEFT IS IN THE TABLE.**
+`(-99)` read this family by calling context four times and never by type,
+because a default callgrind dump cannot show it (see "How to measure":
+`--demangle=no`). The split at `cfdf69f2`, `--decks cube`:
+
+```text
+  copies      self Ir     share   T
+  68,610   50,746,290    1.87 %   CardData
+  22,032   19,027,208    0.70 %   PlayerData
+  30,100    6,549,548    0.24 %   Vec<CardInstance> (the zones)
+   3,312    6,972,236    0.26 %   ColdState
+   7,568    3,044,656    0.11 %   CardCold
+   2,876      819,660    0.03 %   PlayerCold
+   1,682      692,424    0.03 %   CowBox<T>, the rest
+```
+
+**Two rules fall out and both are general.** (a) **A deep copy is ~0.44 Ir a
+byte of `T` plus its per-field clone logic**, so *width is a lever in
+proportion to the copy count* — a byte out of `CardData` is worth 68,610
+copies, out of `PlayerData` a third of that and out of `ColdState` a
+twentieth. This is why `(-74)`'s padding probe read a real number and its
+conclusion ("the lever is fewer deep copies, not smaller ones") does not
+generalise: it was true of the ~150 bytes *it* could move. (b) **A field
+written on a card the writer changes nothing else on does not belong inside
+the group at all** — that is the count half, and `CardInstance`'s six flags
+are it.
+
+**What is left, in order.**
+1. **`PlayerData`, 1,016 bytes over 22,032 copies (0.70 % self, ~1.05 %
+   inclusive).** Same width lever at a third the rate: ~0.010 % of `cube` per
+   100 bytes moved. The plausible movers are `dungeon: Option<(String, u8)>`
+   (a `String` clone on every copy of a seat that has never entered a
+   dungeon — 32 bytes), `pending_creature_etb_counters`,
+   `prowl_types_this_turn`, `pending_is_discounts`, `pending_spell_discounts`,
+   `creatures_entered_last_turn` — ~150 bytes into `PlayerCold`, so ~0.06 %
+   of `cube`, **and the `resolve_combat` trap of (2) applies**: check the
+   write frequency of each against `PlayerCold`'s own copy count (2,876)
+   before moving it. `spells_cast_by_name_this_game` is the one `RawTable`
+   clone in the copy (176 Ir apiece, 3.9 M / 0.14 % of `cube`) and is
+   **written once per cast** — moving it buys the 3.9 M and pays a
+   `PlayerCold` unshare per `finalize_cast`; that is a near-wash, do not take
+   it on the byte count alone.
+2. **`CardData`'s remaining width.** 568 bytes after the two commits. The
+   fattest block left is six `Option<usize>` at 16 bytes each
+   (`attached_to_player`, `chosen_player`, `combat_damager_controller`,
+   `regeneration_control_grant`, `detained_by`, `protected_by`) — 96 bytes
+   for six seat indices. Narrowing the payload to `u32` halves them (48
+   bytes, ~0.11 % of `cube`) and costs a type change at every read; moving
+   the five rare ones to `CardCold` is 80 bytes for no type change and no new
+   cold write of any consequence. **`combat_damager_controller` is not one of
+   the five** — it is written on combat damage, which is (2)'s counter-example
+   again. After that it is ~30 cast-time rider bools, which a bitfield would
+   take from 30 bytes to 4: 0.06 %, and a large diff.
+3. **`ColdState` at 2,192 bytes is the widest type in the program and the
+   cheapest to leave alone**: 3,312 copies means a byte is worth 1,457 Ir over
+   the whole run. Do not spend a pass on its width. Its *count* is `(-50)`'s
+   closed vein.
+4. **The Cleanup sweep's own derefs.** Moving six fields into `CardCold` at
+   (1) added **79,496 `make_mut` calls at 29 Ir = 2.3 M Ir on `cube`**
+   (0.085 %): `clear_end_of_turn_effects` expands `eot_wear_off!` into one
+   `self.$f = …` per field and each cold field re-derefs the group. The fix
+   is to hoist one `&mut CardCold` for the cold arms, which means splitting
+   the macro's list in two — and the whole point of that macro is that the
+   clear and its guard cannot diverge, so a split has to keep generating both
+   from one source. Priced, not built.
+
+**(-99) IS CLOSED BY `(-100)`, AND THE WAY IT CLOSED IS THE LESSON: NEITHER
+OF ITS TWO DIRECTIONS WAS THE ANSWER.** The entry's warning ("do not open it
+without a day for it") was right about the family and wrong about the axis.
+Direction 1 (a no-op-write audit) it closed itself; direction 2 (a narrower
+probe clone) was never built and is now moot — the copies are not too many,
+they are of a *type*, and both halves of that type's cost came out with
+mechanical field moves once the dump was read with `--demangle=no`. **A
+family read four times by one lens is not mined; it is read four times by
+one lens.** Kept below in full because its context table is still the right
+map of *who* pays.
 
 **(-99) THE 132,370 CoW DEEP COPIES, ATTRIBUTED BY CALLING CONTEXT FOR THE
 FIRST TIME — TWO CONTEXTS ARE 42 % OF THEM.** `(-1)`/`(-14)` have been read
@@ -17352,6 +17738,16 @@ would instead have to unwind a shared buffer — which is a *rules* question
 with the `perform_action` checkpoint's contract in hand, one callee per
 commit, and keep the golden traces identical.
 
+**(-74)'s CONCLUSION IS NARROWED BY `(-100)`: the probe number is right and
+"the lever is fewer deep copies, not smaller ones" is true only of the ~150
+bytes this entry could see.** 296 bytes came out of `CardData` at the
+hundred-and-first pass for **-0.60 %** across three pools, moved into the
+`CardCold` group that already existed rather than into the second warm group
+this entry costed. Read the padding probe as what it is — a *marginal
+memcpy* rate for trailing bytes — and add the per-field clone logic (a `Vec`,
+an `Option<Arc>`, an `Option<ManaCost>` each cost more than their bytes) when
+pricing a real field.
+
 **(-74) THE `CardData` SIZE LEVER IS PRICED BY PROBE AND IT DOES NOT PAY —
 +64 BYTES IS `cube` **+0.058 %**, i.e. **0.00091 % A BYTE**, SO THE ~150
 BYTES OF MOVABLE CAST-TIME RIDERS ARE **0.14 %** AND A SECOND CoW GROUP IS
@@ -18784,6 +19180,15 @@ and is not: `--bench` is 320 games and 1.5 s of wall at four threads, so
 process startup and the main thread's aggregation are most of the gap. The
 actor sweep above runs 30 s at one actor and shows none of it. **Do not size
 parallel efficiency off `--bench`.**
+
+**(-51)(a)'s `make_mut` HALF IS TAKEN at the hundred-and-first pass.** The
+~1,055 Ir of deep copy this entry priced inside the tap is gone:
+`activate_ability_inner`'s `make_mut` edge on `cube` reads 49,240 calls /
+19.95 M Ir -> 27,678 / 4.87 M, because `tapped` now lives on the
+`CardInstance` handle rather than inside the `Arc` (Log, pass 101 (3)). What
+is left of (a) is `card_keyword_possible` (0.91 % of `cube`) and
+`card_type_change_unscoped` (0.40 %) — and the entry's warning against a
+parallel activation walker still stands.
 
 **(-51) A LAND TAP COSTS 7,555 Ir, AND A THIRD OF THE PAYMENTS ARE THROWN
 AWAY.** Sized at `ee376912` on `cube`; the two halves share a call path and
