@@ -27,20 +27,14 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
    the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
-2. **State at `09546495`** (`--bench` and the Ir anchor are `e64762b2`'s, labelled not
-   re-run — no card touched since is in the four `fixed` archetypes):
-   suite 19,050 / 0 / 5, clippy clean, golden traces 7/7, grid 30 cells / 33,120 games /
-   0 failures / **0 undecided on every cell** (re-taken at this tip, so it audits
-   `find_by_id_mut`'s hint on real boards), `--bench` byte-identical (195,528 / 27.44 /
-   611.0 / 0 stalls, determinism + thread_determinism ok, `peak_rss_mib` 24.3-24.7,
-   `games_per_s` 332-334). Anchor 883,043,038 / 2,632,744,205 / 2,610,137,238.
-   **Whole pass `cfdf69f2 -> e64762b2`: -2.93 / -3.09 / -3.23 %**, both sessions; the
-   engine half of this session is `0367c09c -> a019fee3` **-0.476 / -0.826 / -0.589 %**
-   and **the actor is -3.20 %** over `c92f3851 -> a019fee3`. Each change names its own
-   base; PERF's Baseline has all of it, plus the unexplained 141-ppm `fixed`
-   cross-container gap. **A `peak_rss` or `games_per_s` taken while the box is still
-   building is not a reading** — the first `--bench` after a release build read 26.8 MiB
-   / 312 g/s and the next three read 24.5-24.7 / 332-334.
+2. **State at `cecaccb4`+**, re-run at that tip rather than labelled forward: suite
+   19,050 / 0 / 5, clippy clean, golden traces 7/7, `--bench` byte-identical
+   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok,
+   `host_calib_ms` 50, `games_per_s` 363, **`peak_rss_mib` 18.8 against the 24.3-24.7
+   filed two passes ago — not attributed, and worth one look**). Ir anchor with the
+   pass's shipped half (a) in it: **876,247,675 / 2,612,930,886 / 2,591,254,100**. The
+   grid is `e64762b2`'s, not re-run since. **Each change names its own base**, and see
+   item 7 for what a cross-session re-read is and is not worth.
 3. **`games_per_s` does not transfer between containers and an Ir anchor does** — settle a
    suspected wall-clock regression with **one anchor run**, never a rebuild of the base.
 4. **The three devices this pass paid on, in order of reuse.** (a) A memo on a named

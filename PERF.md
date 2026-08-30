@@ -16576,6 +16576,21 @@ base 5ea962ac, callgrind, profiling-fast --no-default-features
           instantiates SmallVec<[&ContinuousEffect; 8]>::extend
 ```
 
+**The instrument now has all three of its noise levels in one place, and they
+span five orders of magnitude:**
+
+```text
+  same binary, run twice            105 Ir on `fixed`     ~0.1 ppm   ((-102))
+  rebuild, zero-content source edit  <=60 ppm, 3 pools    ~6-60 ppm  (here)
+  `(-109)`'s claimed ambient floor   7,000 ppm            REFUTED
+  wall clock, ab_wall.py quiet       +/-3,400 ppm at best
+```
+
+**The middle row is the one an A/B actually needs** and it is the one nobody
+had measured: a Log row is always a *rebuild*, never a re-run, so `(-102)`'s
+same-binary number was never the right bound to quote and `(-109)`'s guess was
+three orders too pessimistic.
+
 **Null 2 is the sharp one**: it is a second user of the *exact*
 monomorphization `(-109)` blames for the ±0.7 % swing, referenced from
 `actions.rs`, and it moves nothing. **So mass does not perturb this
