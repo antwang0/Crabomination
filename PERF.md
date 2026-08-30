@@ -2191,6 +2191,47 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-fourth pass, this session's close at `6a569981`
+
+Three code commits, two families: the `Vec<GameEvent>` return (`da4a6ca2`
+`381fac97`, `(-104)` closed) and the target enumerator's zone scope
+(`13435f3e` engine, `d9e6454d` seventy-nine card filters). `(-111)` was built
+and reverted in the same window and is not in the tree.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,053 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client) — +3 on the block below are the enumerator's
+        two scope tests and the reanimation-filter invariant;
+        golden traces 7/7 unmoved across all four commits
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh, rebuilt at this tip — 30 cells, five
+        pools x six seeds x 120 games, **33,120 games, 0 failures,
+        0 undecided**; 5 assertion strings in the audit binary
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant across four runs; determinism ok, thread_determinism ok
+        (3 vs 1). games_per_s 385.33 / 387.92 / 378.71, host_calib_ms 38-47,
+        peak_rss_mib 24.3-24.6, bin_bytes 123,729,176, `release` + mimalloc.
+
+Ir anchor at `6a569981`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     876,251,404      cube 2,610,031,911      sealed 2,589,705,322
+
+  the window, `9bf0411a`'s code -> this tip, one container, every pair
+  adjacent builds:
+    fixed     883,044,002 ->   876,251,404   -0.769 %
+    cube    2,632,744,583 -> 2,610,031,911   -0.863 %
+    sealed  2,610,134,584 -> 2,589,705,322   -0.783 %
+```
+
+**`peak_rss_mib` reads 24.3-24.6 here and the other session reads 18.8-19.1
+at a neighbouring tip.** Both are settled runs (`games_per_s` in family,
+`host_calib_ms` 38-47 against their 50), so this is the container difference
+this file's own rule predicts and not a change either pass made. **Compare an
+RSS column only against one taken in the same container**; the `--bench`
+invariant (decisions / turns / stalls) is the column that transfers.
+
+
 ### Hundred-and-third pass, the card half (3) — closing state at `09546495`
 
 Two more card commits: `a3a261d4` (the verb audit's tuning) and `09546495`
