@@ -6188,18 +6188,24 @@ pub fn kemuri_onna() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![
-            // "Target player discards a card" — modeled as each opponent (the
-            // only sensible target) so the ETB needs no resolution-time pick.
+            // CR 115.1 — "target player discards a card" is *targeted*, so it
+            // is a target slot rather than `EachOpponent`. The old shape was
+            // right about which player the bot would pick and wrong about
+            // everything else: it discarded from every opponent at once, and
+            // an ability that names no target is not stopped by a player who
+            // can't be targeted (Leyline of Sanctity, Aegis of the Gods).
             crate::effect::shortcut::etb(Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Player },
                 amount: Value::ONE,
                 random: false,
             }),
+            // "…to its **owner's** hand", not yours: a Kemuri-Onna you have
+            // taken control of goes home when it bounces.
             crate::effect::shortcut::spiritcraft(Effect::MayDo {
                 description: "Return Kemuri-Onna to its owner's hand".into(),
                 body: Box::new(Effect::Move {
                     what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::You),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 }),
             }),
         ],

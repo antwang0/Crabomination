@@ -1034,33 +1034,48 @@ pub fn verdant_pledgemage() -> CardDefinition {
 
 // ── Channeled Force (STX — base set Quandrix MDFC analog) ──────────────────
 
-/// Channeled Force — {2}{U}{R} Sorcery (Strixhaven base set). "Choose
-/// target opponent and target player. The chosen player draws cards
-/// equal to the difference between their hand size and the chosen
-/// opponent's hand size."
+/// Channeled Force — {2}{U}{R} Instant (Strixhaven). "As an additional cost
+/// to cast this spell, discard X cards. Target player draws X cards. Channeled
+/// Force deals X damage to up to one target creature or planeswalker."
 ///
-/// Both printed player choices are real cast-time slots: slot 0 = the
-/// chosen opponent (its only mention is inside the draw amount —
-/// `val_find` now descends player-ref `Value`s), slot 1 = the chosen
-/// player (the drawer). Draw = max(opponent's hand − chosen player's
-/// hand, 0). Residual: slot 0's implicit filter is "player" rather than
-/// "opponent" (the implicit-slot machinery can't carry a narrower
-/// filter); a self-pick simply zeroes the difference.
+/// **This replaces an invented card.** The shipped definition was a Sorcery
+/// whose effect was "the chosen player draws the difference between their hand
+/// size and the chosen opponent's", with no additional cost and no damage
+/// clause — a text that does not exist, checked against the oracle cache
+/// (2026-08-29). Nothing in it was salvageable.
+///
+/// CR 107.3d — X has no `{X}` in the mana cost here; the additional cost
+/// defines it. `AdditionalCastCost::DiscardXFromCost` reads the cast's chosen
+/// `x_value` rather than the cost's symbols, which is the same shape Sickening
+/// Dreams ({1}{B}) and Firestorm ({R}) already ship.
 pub fn channeled_force() -> CardDefinition {
     CardDefinition {
         name: "Channeled Force",
         cost: cost(&[generic(2), u(), r()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw {
-            who: Selector::TargetFiltered {
-                slot: 1,
-                filter: SelectionRequirement::Player,
+        card_types: vec![CardType::Instant],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::DiscardXFromCost],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Player,
+                },
+                amount: Value::XFromCost,
             },
-            amount: Value::NonNeg(Box::new(Value::Diff(
-                Box::new(Value::HandSizeOf(PlayerRef::Target(0))),
-                Box::new(Value::HandSizeOf(PlayerRef::Target(1))),
-            ))),
-        },
+            // "up to one target creature or planeswalker" — the damage half is
+            // optional on its own, so only it is wrapped.
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    },
+                    amount: Value::XFromCost,
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

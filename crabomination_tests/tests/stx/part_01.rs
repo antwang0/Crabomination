@@ -3908,40 +3908,56 @@ fn postmortem_lunge_value_equals_rejects_off_by_one_mana_value() {
     );
 }
 
-/// Channeled Force draws the difference between opp's hand size and
-/// yours, capped at the actual library size.
+/// Channeled Force discards X as an additional cost, draws the target player
+/// X, and deals X to the optional second target.
+///
+/// The test this replaces asserted the invented "draws the difference between
+/// the two chosen players' hand sizes" text the card used to carry; there is
+/// no such card. CR 107.3d — X is defined by the additional cost, not by the
+/// mana cost, which has no `{X}`.
 #[test]
-fn channeled_force_draws_hand_size_differential() {
+fn channeled_force_discards_x_to_draw_x_and_deal_x() {
     let mut g = two_player_game();
-    // Seed library so the draw isn't capped.
     for _ in 0..6 {
         g.add_card_to_library(0, catalog::island());
     }
-    // P1 has 5 cards in hand; P0 has 1 (just the cast).
-    for _ in 0..5 {
-        g.add_card_to_hand(1, catalog::mountain());
-    }
+    // Two spare cards to pay the additional cost with.
+    let pitch_a = g.add_card_to_hand(0, catalog::mountain());
+    let pitch_b = g.add_card_to_hand(0, catalog::mountain());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let cf = g.add_card_to_hand(0, catalog::channeled_force());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(_c, 20);
+    }
     g.players[0].mana_pool.add_colorless(20);
 
-    let p0_hand_before = g.players[0].hand.len();
-    // Slot 0: the chosen opponent (hand-size reference); slot 1: the
-    // chosen player who draws.
+    let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: cf,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![Target::Player(0)],
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
         mode: None,
-        x_value: None,
+        x_value: Some(2),
     })
-    .expect("Channeled Force castable for {1}{U}{R}");
+    .expect("Channeled Force castable for {2}{U}{R} plus two discards");
     drain_stack(&mut g);
-    // P0: -1 (cast) + diff(5, 1) = -1 + 4 = +3 net.
-    // P1 has 5; P0 had 1 (Channeled Force itself) before cast.
+
+    // -1 the spell, -2 the additional cost, +2 the draw.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before - 3 + 2,
+        "discarded X=2 as a cost and drew X=2",
+    );
     assert!(
-        g.players[0].hand.len() >= p0_hand_before,
-        "should have drawn at least the cast back"
+        [pitch_a, pitch_b]
+            .iter()
+            .all(|id| g.players[0].graveyard.iter().any(|c| c.id == *id)),
+        "the two discards are in the graveyard",
+    );
+    // X=2 kills a 2/2.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "X=2 damage killed the 2/2",
     );
 }
 

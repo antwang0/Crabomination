@@ -162,3 +162,42 @@ fn swirl_the_mists_rewrites_protection_color_words() {
     assert!(!kws.contains(&Keyword::Protection(Color::White)));
     assert!(!kws.contains(&Keyword::Protection(Color::Black)));
 }
+
+/// CR 115.1 — Kemuri-Onna's ETB is "target player discards a card", so it is a
+/// target slot and hits *one* player, not every opponent.
+///
+/// It was `Discard { who: EachOpponent }` with a comment calling that "the only
+/// sensible target". It is the pick the bot would make and it is not the same
+/// ability: an untargeted discard reaches every opponent at once, and no
+/// can't-be-targeted effect stops it.
+#[test]
+fn kemuri_onna_discards_from_one_targeted_player() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::grizzly_bears());
+    }
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let p0_before = g.players[0].hand.len();
+    let p1_before = g.players[1].hand.len();
+
+    let onna = g.add_card_to_hand(0, catalog::kemuri_onna());
+    g.players[0].mana_pool.add_colorless(20);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 20);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: onna,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Kemuri-Onna castable for {4}{B}");
+    drain_stack(&mut g);
+
+    // `p0_before` is the three bears; Kemuri-Onna was added after it and left
+    // the hand to resolve, so an untouched caster is exactly `p0_before`.
+    assert_eq!(g.players[0].hand.len(), p0_before, "the caster discarded nothing");
+    assert_eq!(g.players[1].hand.len(), p1_before - 1, "the targeted player discarded one");
+}

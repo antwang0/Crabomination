@@ -169,11 +169,32 @@ The "engine-wide ⏳" notes on these were stale. Status:
   not exist.
 
 ### 4. No "controller-of-target" / "that player" actor (forces each-opponent / you)
-~~Generous Gift~~ ✅ **FIXED** · ~~Hellrider~~ ✅ **FIXED** (now `Attacks/YourControl`
-→ `DealDamage { DefendingPlayer, 1 }`; was `SelfSource` → `EachOpponent`, doubly
-wrong — it should trigger on *any* creature you control attacking and hit the
-defending player) · Harsh Annotation · Kemuri-Onna · Emeritus of Truce // STP ·
-Channeled Force · several CHK Ninjas.
+**The primitive shipped long ago** (`PlayerRef::ControllerOf`, `OwnerOf`,
+`OwnerOfMoved`, and a plain `TargetFiltered { filter: Player }` slot); what was
+left here were rows nobody had re-read against the code.
+
+~~Generous Gift~~ ✅ · ~~Hellrider~~ ✅ (now `Attacks/YourControl` →
+`DealDamage { DefendingPlayer, 1 }`; was `SelfSource` → `EachOpponent`, doubly
+wrong) · ~~Harsh Annotation~~ ✅ — **the row was stale**, it has used
+`ControllerOf(Target(0))` for the token since it was written ·
+~~Kemuri-Onna~~ ✅ (2026-08-29) — the ETB was `Discard { EachOpponent }` under a
+comment calling that "the only sensible target"; CR 115.1 says it is a target
+slot, and the bounce now goes to `OwnerOfMoved` rather than `You` ·
+~~Channeled Force~~ ✅ (2026-08-29) — **not this bucket at all: the whole card
+was invented.** It shipped as a Sorcery whose effect was "the chosen player
+draws the difference between the two chosen players' hand sizes", with no
+additional cost and no damage clause. The real card is an Instant, "as an
+additional cost discard X cards; target player draws X; deal X to up to one
+target creature or planeswalker" — rebuilt on `AdditionalCastCost::
+DiscardXFromCost`, the shape Sickening Dreams and Firestorm already use, and
+the test that locked in the invented text is replaced.
+
+**Still open:** Emeritus of Truce // STP · several CHK Ninjas. **And the
+lesson the two closed rows share is a filter for the rest of this file:** a row
+here is a claim about code, and three of the five in this bucket were wrong
+about it in both directions — one card was already fixed, one was broken
+differently than the row said. Re-read the definition against the oracle cache
+before working a row; it costs a minute and it changed the answer twice.
 
 ### 5. No "first/Nth spell this turn" / "no card drawn this turn" gate (over-triggers)
 **Stale** — `Predicate::SpellsCastThisTurn{Equals,AtLeast}` + `EventSpec::
