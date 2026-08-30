@@ -232,6 +232,56 @@ FIELD_FROM_PARAM = {
     "creature_types": "creature_types",
 }
 
+# Literals that can legitimately carry a *printed* characteristic. Anything
+# else nested inside the helper's `CardDefinition { … }` — an `Effect`, a
+# `StaticAbility`, an `ActivatedAbility` — carries its own `cost:` / `power:`
+# and must not claim the helper's parameter of that name.
+PRINTED_NEST = ("CardDefinition", "Subtypes")
+LIT_NAME = re.compile(r"([A-Za-z_][A-Za-z_0-9]*)\s*$")
+
+
+def own_helper_fields(body, field_re):
+    """Every `field_re` match inside the helper's own `CardDefinition { … }`
+    whose enclosing literals are all in `PRINTED_NEST`.
+
+    `helper_table` used a flat `findall`, so `elder_dragon`'s
+    `SacrificeSourceUnlessPay { cost: upkeep_cost }` claimed the `cost`
+    mapping and the four Legends Elder Dragons read as cost drift against
+    their own upkeep (2026-08-30). `creature_types` genuinely sits one level
+    down inside `Subtypes { … }`, so this is a name check, not a depth cap.
+    """
+    pat = re.compile(field_re)
+    if not re.search(r"\bCardDefinition\s*\{", body):
+        # A helper that only forwards (`bfz::ally` -> `creature(name, …)`) has
+        # no literal to be inside of; the flat scan is the whole scan there,
+        # and it is what maps `name` for the 106 cards those helpers build.
+        yield from pat.finditer(body)
+        return
+    for cm in re.finditer(r"\bCardDefinition\s*\{", body):
+        stack, i = ["CardDefinition"], cm.end()
+        while i < len(body) and stack:
+            ch = body[i]
+            if ch == "{":
+                # A struct literal is `Name {`; anything else (`if cond {`, a
+                # bare block, a closure body) is transparent and inherits the
+                # frame it sits in — `tor2::dreams` builds its base through
+                # `..if sorcery_speed { sorcery(name, …) }`.
+                nm = LIT_NAME.search(body[:i])
+                lit = nm.group(1) if nm and nm.group(1)[:1].isupper() else stack[-1]
+                stack.append(lit)
+                i += 1
+                continue
+            if ch == "}":
+                stack.pop()
+                i += 1
+                continue
+            if all(n in PRINTED_NEST for n in stack):
+                m = pat.match(body, i)
+                if m:
+                    yield m
+            i += 1
+
+
 def helper_table(text):
     """`{helper_name: {field: positional_index}}` for one source file."""
     out = {}
@@ -252,9 +302,12 @@ def helper_table(text):
             # LAST assignment: a helper that also builds a DFC back face
             # (`vanilla_werewolf`) writes the back's fields first and returns
             # the front, so the first match would audit the wrong face.
-            hits = re.findall(r"\b" + field + r":\s*(\w+)\s*[,}]", body) or re.findall(
-                r"\b(" + field + r")\s*,", body
-            )
+            hits = [
+                m.group(1)
+                for m in own_helper_fields(body, r"\b" + field + r":\s*(\w+)\s*[,}]")
+            ] or [
+                m.group(1) for m in own_helper_fields(body, r"\b(" + field + r")\s*,")
+            ]
             hits = [h for h in hits if h in params]
             if hits:
                 mapping[field] = params.index(hits[-1])
