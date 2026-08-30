@@ -8,7 +8,8 @@ use crate::effect::{Duration, PlayerRef};
 use crate::game::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
-/// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
+/// Azorius First-Wing — {W}{U} 2/2 Griffin. Flying, protection from
+/// enchantments.
 pub fn azorius_first_wing() -> CardDefinition {
     CardDefinition {
         name: "Azorius First-Wing",
@@ -20,12 +21,16 @@ pub fn azorius_first_wing() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::ProtectionFromCardType(CardType::Enchantment),
+        ],
         ..Default::default()
     }
 }
 
-/// Aquastrand Spider — {1}{G/U} 0/0 Spider, Reach, Graft 2.
+/// Aquastrand Spider — {1}{G/U} 0/0 Spider Mutant, Graft 2. (No reach: the
+/// printed card has none.)
 pub fn aquastrand_spider() -> CardDefinition {
     CardDefinition {
         name: "Aquastrand Spider",
@@ -35,7 +40,6 @@ pub fn aquastrand_spider() -> CardDefinition {
             creature_types: vec![CreatureType::Spider],
             ..Default::default()
         },
-        keywords: vec![Keyword::Reach],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         triggered_abilities: vec![crate::effect::shortcut::graft()],
         ..Default::default()

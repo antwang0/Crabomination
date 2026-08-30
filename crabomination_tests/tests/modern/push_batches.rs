@@ -3290,7 +3290,9 @@ fn tempest_angler_etb_scries_two() {
     cast(&mut g, id);
     use crabomination::card::Keyword;
     let angler = g.battlefield_find(id).expect("Angler on bf");
-    assert!(angler.has_keyword(&Keyword::Flying));
+    // The printed Otter has no evasion (it shipped with Flying until
+    // 2026-08-30); the ETB scry is what this test is about.
+    assert!(!angler.has_keyword(&Keyword::Flying));
 }
 
 #[test]

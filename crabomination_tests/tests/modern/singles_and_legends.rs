@@ -513,8 +513,9 @@ fn singles_and_legends_printed_shapes() {
             cmc: None, pt: None, kws: &[Keyword::Trample], supers: &[],
             enters_with_counters: true, trigs: Some(1), acts: None },
         // 7/7, not the 2/1 the deleted test's *name* claimed; its asserts said 7/7.
+        // Menace, not flying — the printed keyword, corrected 2026-08-30.
         PrintedShape { def: catalog::moonshadow, name: "Moonshadow",
-            cmc: None, pt: Some((7, 7)), kws: &[Keyword::Flying], supers: &[],
+            cmc: None, pt: Some((7, 7)), kws: &[Keyword::Menace], supers: &[],
             enters_with_counters: false, trigs: Some(1), acts: None },
         PrintedShape { def: catalog::golos_tireless_pilgrim, name: "Golos, Tireless Pilgrim",
             cmc: None, pt: Some((3, 5)), kws: &[], supers: &[Supertype::Legendary],

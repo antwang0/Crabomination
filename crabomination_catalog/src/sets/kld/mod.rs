@@ -617,15 +617,21 @@ pub fn voltaic_brawler() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Trample, Keyword::Menace],
         triggered_abilities: vec![on_attack(Effect::PayEnergy {
-            amount: 2,
-            then: Box::new(Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            }),
+            amount: 1,
+            then: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
         })],
         ..Default::default()
     }

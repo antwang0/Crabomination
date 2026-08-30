@@ -81,7 +81,9 @@ fn aquastrand_spider_enters_with_two_counters() {
     cast(&mut g, id);
     let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
     assert_eq!((view.power, view.toughness), (2, 2), "Graft 2 → 0/0 + two counters");
-    assert!(view.keywords().contains(&Keyword::Reach));
+    // No reach: the printed Spider has none (it shipped with one until
+    // 2026-08-30).
+    assert!(!view.keywords().contains(&Keyword::Reach));
 }
 
 #[test]

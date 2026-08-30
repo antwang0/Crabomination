@@ -369,8 +369,13 @@ fn voltaic_brawler_attack_pays_energy_to_pump() {
     }])).expect("attack");
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
-    assert_eq!((c.power(), c.toughness()), (4, 3), "paid {{E}}{{E}} for +1/+1");
-    assert_eq!(g.players[0].energy, 0);
+    assert_eq!((c.power(), c.toughness()), (4, 3), "paid {{E}} for +1/+1");
+    // One {E}, not two, and the trample comes with the pump rather than being
+    // printed (it shipped as a static Trample + Menace until 2026-08-30).
+    assert_eq!(g.players[0].energy, 1);
+    let cp = g.computed_permanent(id).unwrap();
+    assert!(cp.keywords().contains(&Keyword::Trample), "the payment grants trample");
+    assert!(!cp.keywords().contains(&Keyword::Menace), "no printed menace");
 }
 
 /// CR 107.14 — "To pay {E}, a player removes one energy counter from

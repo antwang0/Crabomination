@@ -135,7 +135,7 @@ pub fn the_locust_god() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Haste],
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
             effect: Effect::CreateToken {

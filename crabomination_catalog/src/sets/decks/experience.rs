@@ -120,7 +120,6 @@ pub fn daxos_the_returned() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Indestructible],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {

@@ -47,7 +47,7 @@ fn burning_tree_emissary_castable_with_two_red() {
 }
 
 #[test]
-fn putrid_imp_discard_grants_menace_eot() {
+fn putrid_imp_discard_grants_flying_eot() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let imp = g.add_card_to_battlefield(0, catalog::putrid_imp());
@@ -63,8 +63,10 @@ fn putrid_imp_discard_grants_menace_eot() {
         "Discarded card should hit graveyard");
     let computed = g.compute_battlefield();
     let imp_view = computed.iter().find(|c| c.id == imp).unwrap();
-    assert!(imp_view.keywords().contains(&Keyword::Menace),
-        "Putrid Imp should have menace until end of turn");
+    // Printed as an activated grant of FLYING; the Imp shipped with a static
+    // Flying and a Menace grant until 2026-08-30.
+    assert!(imp_view.keywords().contains(&Keyword::Flying),
+        "Putrid Imp should have flying until end of turn");
 }
 
 // ── Madness (CR 702.35) ──────────────────────────────────────────────────────

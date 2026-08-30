@@ -4146,7 +4146,7 @@ pub fn kitesail_larcenist() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::generic(1))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Exile {
@@ -5212,7 +5212,7 @@ pub fn moonshadow() -> CardDefinition {
         },
         power: 7,
         toughness: 7,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Discard {

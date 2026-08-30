@@ -1542,16 +1542,14 @@ pub fn putrid_imp() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            // "Discard a card: This creature gains menace until end of turn."
-            // The classic Putrid Imp text grants madness-style discard plus
-            // a temporary menace; the discard outlet is the gameplay-critical
-            // half here. We grant Menace EOT for flavour.
+            // "Discard a card: This creature gains flying until end of turn."
+            // Printed as an activated grant, not a static keyword — it shipped
+            // with unconditional Flying *and* a Menace grant (2026-08-30).
             effect: Effect::Seq(vec![
                 Effect::Discard {
                     who: Selector::You,
@@ -1560,7 +1558,7 @@ pub fn putrid_imp() -> CardDefinition {
                 },
                 Effect::GrantKeyword {
                     what: Selector::This,
-                    keyword: Keyword::Menace,
+                    keyword: Keyword::Flying,
                     duration: Duration::EndOfTurn,
                 },
             ]),
@@ -18295,7 +18293,6 @@ pub fn tempest_angler() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![etb(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(2),
@@ -22364,7 +22361,6 @@ pub fn outcaster_trailblazer() -> CardDefinition {
         },
         power: 4,
         toughness: 2,
-        keywords: vec![Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
             effect: Effect::If {

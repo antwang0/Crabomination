@@ -536,7 +536,6 @@ pub fn feral_throwback() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Trample],
         enters_with_counters: amplify(2, CreatureType::Beast),
         ..Default::default()
     }

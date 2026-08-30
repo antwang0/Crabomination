@@ -42,6 +42,67 @@ KMAP = {
     "ProtectionFromSpells": "Protection",
 }
 
+# Keywords the engine spells with a payload Scryfall reports plainly.
+KMAP.update({
+    "HexproofFromColor": "Hexproof",
+    "HexproofFromMonocolored": "Hexproof",
+    "HexproofFromMulticolored": "Hexproof",
+    "HexproofFromAbilities": "Hexproof",
+    "ProtectionFromMatching": "Protection",
+    "ProtectionFromManaValueExcept": "Protection",
+    "ProtectionFromManaValueParity": "Protection",
+    "ProtectionFromOwnColors": "Protection",
+})
+
+KW_FN = re.compile(r"\nfn (\w+)\(\)\s*->\s*Keyword\s*\{\s*Keyword::(\w+)")
+
+
+def kw_fn_table(text):
+    """`{fn_name: variant}` for a file-local `fn ward_1() -> Keyword`."""
+    return {m.group(1): m.group(2) for m in KW_FN.finditer(text)}
+
+
+def top_level_items(vec_body):
+    """The comma-separated elements of a `vec![…]` body, at bracket depth 0."""
+    out, depth, cur = [], 0, ""
+    for ch in vec_body:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        if ch == "," and depth == 0:
+            out.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    if cur.strip():
+        out.append(cur)
+    return out
+
+
+def code_keywords(vec_body, kwfns):
+    """The PRINTED keyword of each top-level element.
+
+    A flat `Keyword::(\w+)` scan over the whole vector reads the keyword inside
+    a payload as if the card had it: `Keyword::CantBeBlockedExceptBy(Box::new(
+    R::HasKeyword(Keyword::Flying)))` made Treetop Scout, Treetop Rangers,
+    Elven Riders, Spire Tracer and Silhana Ledgewalker all read as fliers, and
+    every one of them was already correct (2026-08-30).
+    """
+    out = set()
+    for item in top_level_items(vec_body):
+        item = item.strip()
+        m = re.match(r"(?:\w+::)*Keyword::(\w+)", item)
+        if m:
+            out.add(KMAP.get(m.group(1), m.group(1)))
+            continue
+        m = re.match(r"(\w+)\(\)", item)
+        if m and m.group(1) in kwfns:
+            v = kwfns[m.group(1)]
+            out.add(KMAP.get(v, v))
+    return out & ENGINE_KW
+
+
 def sym(call):
     call = call.strip()
     m = re.match(r"generic\((\d+)\)", call)
@@ -497,6 +558,7 @@ def audit():
         text = src.read_text()
         helpers, hconsts = helper_table(text)
         vecfns = vec_fn_table(text)
+        kwfns = kw_fn_table(text)
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end()); body = text[m.end():nxt.start() if nxt else len(text)]
             # Stop at the next TOP-LEVEL `fn`, not only at the next `pub fn`:
@@ -568,7 +630,7 @@ def audit():
             # keywords (top-level only)
             kwv = toplevel_keywords(body)
             if kwv is not None:
-                code_kw = {KMAP.get(k, k) for k in re.findall(r"Keyword::(\w+)", kwv)} & ENGINE_KW
+                code_kw = code_keywords(kwv, kwfns)
                 rk = ref_keywords(card, face)
                 if rk is not None and code_kw != rk:
                     d["kw"].append((tag, sorted(code_kw), sorted(rk)))
