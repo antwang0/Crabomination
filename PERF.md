@@ -198,6 +198,17 @@ RUST_MIN_STACK=33554432 valgrind --tool=callgrind --dump-instr=yes \
 python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder
 python3 scripts/cg_lines.py cg.instr.out target/profiling-lines/bot_ladder \
   --in dispatch_triggers_for_events
+# THE CENSUSES — what a memo or a gate is worth *before* a build is spent on
+# it, and the only instrument that separates "the lane misses" from "the lane
+# cannot help this workload". `CRAB_SBA_CENSUS` and `CRAB_PAY_FAILS` are
+# runtime-gated; `trig-census` is a cargo feature because its tick sits in a
+# per-dispatch preamble where even a never-taken runtime gate costs 0.03-0.04 %
+# ((-115)). **A census that has to live inside a register-starved loop is a
+# compile-time feature, not an env var.**
+cargo build --profile release-fast -p crabomination --bin bot_ladder \
+  --features trig-census
+CRAB_TRIG_CENSUS=1 target/release-fast/bot_ladder --a gang --b gang \
+  --games 6 --threads 1 --seed 1 --decks cube
 # **The line profile was wrong until the fiftieth pass, and it was wrong in a
 # way that looked right.** `cg_lines.py` summed the instruction addresses of
 # *every* object the process mapped — libc, ld.so, libm, libgcc, valgrind's
@@ -2275,6 +2286,82 @@ a filter that narrows an enumerated set removes candidates the picker was
 already ordering past, so it costs nothing measurable — except where the
 narrowing lets the walk *reject earlier*, which is `d9e6454d` (-0.5 %, the zone
 predicate first in the `And`), `9fec2a6f` (-0.08 %) and `eb13fa43` (-0.04 %).
+
+### Hundred-and-eighth pass — this session's close at `ddb9e930`
+
+One code commit, `(-115)`'s member-list lane, on a base that already carried
+the other two sessions' work through `72d083c9`.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,067 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean,
+        and `-p crabomination --features trig-census`
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant. determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 390.58 / 389.91, host_calib_ms 52, peak_rss_mib 24.5,
+        bin_bytes 123,757,936, `release` + mimalloc.
+
+Ir, release-fast --no-default-features, --a gang --b gang --games 6
+--threads 1 --seed 1, `7557554a` -> `ddb9e930`:
+                       fixed          cube           sealed
+  (-115) member list  -0.3308 %      +0.0467 %      -0.1793 %
+```
+
+⚠ **Third box, third throughput level, and the calibration predicts none of
+them.** `games_per_s` 390 on the 2.10 GHz part here, against the 2.80 GHz
+box's 305-315 and this part's own earlier 408-465, at `host_calib_ms` 52
+against 37-41. Fourth confirmation of the file's rule: the columns that
+transfer between containers are `decisions` / `turns_per_game` /
+`decisions_per_game` / `stalls`, and all four are byte-identical to every
+reading on file.
+
+⚠ **The base moved between passes and no perf change did it.** `7557554a`
+reads `fixed` 877,318,380 / `cube` 2,597,809,908 / `sealed` 2,580,167,947
+against the hundred-and-seventh pass's close at `172a40c8` — **+0.44 / +0.29 /
++0.32 %** — over `1644bc5d`, `768f8024` and `eb13fa43`: two rules commits and
+a walker. Paying Ir to make a card do its printed thing is the trade working.
+**Measure a candidate against its own adjacent base**, never against the last
+block in this file.
+
+### Actor scaling — `(-52)` is right, its RSS-per-row is not
+
+**A third session measured actor scaling this afternoon, having read the same
+seed-list line, and `(-118)` above is the process rule.** The shape it found
+is confirmed on a third box (`release`, `--games 3000 --steps 1 --seed 7`,
+three reps, 4-core 2.10 GHz Xeon): 90.4 / 193.4 / 373.4 / 368.8 games/s at
+1 / 2 / 4 / 8 actors — **1.00 / 2.14 / 4.13 / 4.08x**, flat past saturation,
+per-actor 90.4 / 96.7 / 93.4 / 46.1. Nothing new; do not re-run it a fourth
+time. `scripts/actor_scaling.sh` is the recipe so that the next reader runs it
+in one line instead of re-deriving it.
+
+**What is new is a correction, and it is an order of magnitude.** `(-52)`
+reads "the replay window costs ~1.3 KiB a row" off a 600-game run — and 600
+games push ~58 k rows, so its `--window 250000` column measured a window that
+was **never filled**. Filled, on a 3,000-game run (~288 k rows pushed):
+
+```text
+                        peak RSS (VmHWM)   rows actually held
+  --window 250000          3,170 MiB            250,000
+  --window  25000            632 MiB             25,000
+  1 / 2 / 4 / 6 / 8 actors, --window 250000:
+      3,133 / 3,145 / 3,168 / 3,189 / 3,216 MiB
+```
+
+**~10.4 KiB a row over a ~370 MiB floor, not 1.3 KiB** — and flat in the
+actor count, which is `(-52)`'s conclusion and stands. A box sized off its
+805 MiB figure OOMs the moment the window fills, which on these rates is
+about forty seconds in. **A memory figure taken before the bounded thing is
+bounded is not a measurement of it**; run the window to its cap or do not
+quote a per-row cost.
+
+**And `(-52)`'s caution about `--bench --threads N` is confirmed by giving it
+the longer workload it asked for.** `--a gang --b gang --games 400 --decks
+fixed` (1,600 games, 11.8 s at one thread) reads 1 / 2 / 3 / 4 threads at
+11.8 / 6.1 / 4.1 / 3.1 s — **1.93 / 2.88 / 3.81x, 95-97 % of ideal**, against
+`--bench`'s 83 %. The game loop has no contention either; `--bench` is too
+short to say so.
 
 
 ### Hundred-and-seventh pass — this session's close at `172a40c8`
@@ -9828,6 +9915,42 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Hundred-and-eighth pass (1) — the dispatch walk gets a member list, and four shapes that lose to it
+
+**`fixed` -0.3308 % / `sealed` -0.1793 % / `cube` +0.0467 %** at `ddb9e930`,
+off `7557554a`. `(-115)`'s untaken half: `Battlefield::trigger_members` is the
+dispatch gate answered *positionally* — a `u64` of the indices whose
+definition carries a printed trigger or a Station band, on the same lane word
+`push` and `DerefMut` already clear, stamped with `definition_epoch` like the
+rest. `dispatch_triggers_for_events` reads it under `no_grants` and walks the
+members; a miss fills it from the walk it was making anyway.
+
+```text
+                        base            candidate       delta
+  fixed             877,318,380 ->    874,416,502     -0.3308 %
+  cube            2,597,809,908 ->  2,599,022,289     +0.0467 %
+  sealed          2,580,167,947 ->  2,575,540,952     -0.1793 %
+  the whole delta is the dispatch row and nothing else:
+  dispatch self     fixed -2,511,106   sealed -3,858,220   cube +2,006,148
+```
+
+**The census is the entry, not a footnote** — `CRAB_TRIG_CENSUS` (the
+`trig-census` feature) says the lane answers **86 %** of asks on every pool
+and takes the walk to 33 / 54 / 32 % of its visits, and that **36 % of
+`cube`'s walk is grant-live**, where a member list cannot help and the visit
+still pays the walk's one loop-invariant branch. The table is in `(-115)`.
+Hit rate is not the variable between the pools; the grant-live share is.
+
+**Four shapes built and measured on the way, each a rule** (numbers and the
+reasoning in `(-115)`): one bit walk for both paths, `cube` **+0.156 %**;
+hoisting the slice to fix that, another **+0.11 %**; a hand-rolled fill index
+instead of `enumerate()`, **+0.07 / +0.07 / +0.03 %**; and the census itself
+env-gated in the preamble, **+0.044 / +0.037 / +0.028 %** with the gate never
+taken. **Three of the four are the same failure**: a 280-line loop body is
+register-starved, so anything that adds a live value or a call across it is
+charged per visit, and the "obviously cheaper" hand-rolled form is the one
+that adds it.
 
 ### Hundred-and-fourth pass (10) — an exception list becomes a walker
 
@@ -17559,6 +17682,69 @@ trigger loop — a construction and a drop on every pair, for a dedupe set that
 `Blocks` / `BecomesBlocked` / `BlocksNOrMore` / `BecomesBlockedByNOrMore` are
 the only readers of. Hoist it above the battlefield walk and `clear()` per
 trigger, `(-71)`'s device.
+
+**(-115)'s MEMBER-LIST LANE IS TAKEN at `ddb9e930` — `fixed` -0.3308 % /
+`sealed` -0.1793 % / `cube` **+0.0467 %**, and the positive column is
+measured, not conceded.** `Battlefield` carries the dispatch gate's answer
+positionally (a `u64` of the indices whose definition has a printed trigger or
+a Station band, on the lane word every write path already clears), so a
+dispatch with no grant live visits the members instead of the board. Ladder
+output byte-identical on all three pools.
+
+**The instrument is the finding: `CRAB_TRIG_CENSUS` (the `trig-census`
+feature) prices the lane before and after any change to it.** At `7557554a`,
+six games, one thread:
+
+```text
+pool     asks    hits        grant-live (board)   board/ask  members/hit   visits left
+fixed   34,874  30,676 (87.96 %)  8,724 (21.19)     17.95        0.69      270,426/810,680   33.4 %
+cube    57,788  49,218 (85.17 %) 17,000 (31.09)     16.45        2.79      797,574/1,479,052  53.9 %
+sealed 103,016  88,364 (85.78 %)      0 ( 0.00)     15.49        3.52      517,614/1,595,290  32.5 %
+```
+
+**The lane answers 86 % of asks on every pool — the hit rate is not the
+variable.** What separates the pools is the *grant-live* column: 36 % of
+`cube`'s whole walk is dispatches with a grant in play, where no member list
+can help and the visit still pays the walk's one loop-invariant branch.
+`fixed` is 33 % of dispatches but only 23 % of visits; `sealed` is zero.
+**So the rule is: a member list is worth its branch in proportion to the
+share of the walk that can use it, and that share is a census question, not a
+hit-rate question.**
+
+**Four shapes were built and measured on the way to it. Each is a refutation
+with a number; do not rebuild them.**
+
+* **One bit walk for both paths — index the miss path too — reads `cube`
+  +0.156 %.** It is the obvious simplification (no per-element branch) and it
+  loses: random access costs a bounds check and a live index where a slice
+  iterator costs neither, and the miss path is where most of the visits are.
+* **Hoisting the slice out of the zone to kill that (`let cards: &[_] =
+  board;`) makes it worse again**, ~+0.11 % on `cube` on top. LLVM already
+  sinks the `Battlefield` -> `CowBox` -> `Vec` deref out of the loop; what the
+  hoist adds is a live `(ptr, len)` pair spilling across a 280-line body.
+  **A hoist is only a win if the thing hoisted was actually being recomputed.**
+* **Carrying the fill's index by hand instead of `enumerate()`** — so a
+  grant-live visit does not advance a counter it never reads — reads `fixed`
+  +0.069 / `cube` +0.071 / `sealed` +0.028 %. A hand-rolled counter inside a
+  conditional is a loop-carried dependency; the iterator's is not.
+* **The census, env-gated in the dispatch preamble with the gate never
+  taken, is not free**: `fixed` +0.044 / `cube` +0.037 / `sealed` +0.028 %.
+  An out-of-line call makes every value the loop keeps live spill around it.
+  Moving it past the walk did **not** fix it; compile-time gating did.
+  **A never-taken runtime gate in front of a call is not a zero-cost
+  instrument in a register-starved loop.**
+
+**And it is not the forty-eighth pass's refuted trigger-carrier mask
+(+0.58 %).** That one rebuilt the same bits inside `dispatch_board_scan` on
+every dispatch, so the loads it added to one walk paid for the loads it
+removed from another — the fusion rule. These bits outlive the dispatch, and
+the fill rides the walk a miss was making anyway.
+
+**What is left of the entry: the `cube` column.** The 528 k grant-live visits
+are the only part of the walk nothing has touched, they are 36 % of it, and
+their board is *twice* the size of a no-grant one (31.09 against 16.45). A
+lane cannot help them; what could is the question that makes them grant-live
+in the first place — see `(-107)`'s `statics_granted_triggers_on` path.
 
 **(-115) ANSWERED — see the other session's reading below, which is the same
 `profiling-lines` build at the same tip (both dumps put dispatch's self at

@@ -44,8 +44,13 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
 # On by default: mimalloc is worth +21.9 % on the committed bench and more as
-# actors scale (+31 % at 24), for a flat ~1.5-1.7x RSS that is 179 MiB at 24
-# actors. See PERF.md. Build with `--no-default-features` to get the system
+# actors scale (+31 % at 24), for a flat ~1.5-1.7x RSS. **The "179 MiB at 24
+# actors" this line used to carry is stale by an order of magnitude** — the
+# hundred-and-eighth pass measured `selfplay_train` at 3.1 GiB, and that is the
+# replay window rather than the actors: 250 k rows is 3,170 MiB and 25 k rows
+# is 632 MiB, both flat from 1 to 8 actors. The *ratio* is the allocator's and
+# stands; the absolute is `--window`'s. See PERF's actor-scaling block and
+# `scripts/actor_scaling.sh`. Build with `--no-default-features` to get the system
 # allocator back for an A/B. The `#[global_allocator]` itself lives in the
 # binaries, so a library consumer only pays the (unused) dependency.
 default = ["mimalloc"]
