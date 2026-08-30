@@ -2179,6 +2179,34 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-third pass (1) — closing state at `0367c09c`
+
+One code commit past the block below: `0367c09c`, four `Vec`s reserved or
+given inline storage (`fixed` -0.323 / `cube` -0.242 / `sealed` -0.195 %).
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,049 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    scripts/robustness_grid.sh — 30 cells, 33,120 games, **0 failures,
+        0 undecided**; 5 assertion strings in the audit binary
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant; determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 308.19, host_calib_ms 45, peak_rss_mib 24.6,
+        bin_bytes 123,841,776, `release` + mimalloc.
+
+Ir anchor at `0367c09c`, callgrind, profiling-fast --no-default-features,
+--a gang --b gang --games 6 --threads 1 --seed 1:
+  fixed     887,359,427      cube 2,655,120,652      sealed 2,625,608,912
+```
+
+**`peak_rss_mib` does not move (24.6 both sides) and `games_per_s` cannot see
+the change** (308.19 against 311.08 before it, inside this box's ~2 % spread
+over four runs). A -0.24 % Ir win is four orders of magnitude above the
+anchor's noise and an order of magnitude *below* the wall clock's; that is the
+whole reason this file is written in instructions.
+
 ### Hundred-and-first pass, the second half — closing state at `c92f3851`
 
 Four commits from this session, all one family: `daf30ed1` + `be6ec1ec`
@@ -9233,6 +9261,19 @@ and all four are taken here; `dispatch_board_scan` (0.37) and the rest of the
 table are first allocations and stay.
 
 ```text
+  row                            growths   calls   per call
+  resolve_combat                  21,334   6,036     3.53   <- TAKEN
+  pick_attacks_inner              12,996   4,524     2.87   <- TAKEN
+  deal_combat_damage_to_target    13,104   7,108     1.84   <- TAKEN (same Vec)
+  mana_source_table               13,604   8,478     1.60   <- TAKEN
+  grant_scan                      11,410  26,546     0.43
+  dispatch_board_scan             29,474  80,230     0.37   <- the largest row
+  affected_from_requirement       10,434  44,788     0.23      and not a lever
+  effective_mana_abilities_into    9,146  82,398     0.11
+  granted_abilities_of_inner       8,286  93,770     0.09
+```
+
+```text
 callgrind, profiling-fast --no-default-features, --a gang --b gang
 --games 6 --threads 1 --seed 1.  base c92f3851
   fixed     890,239,062 ->   887,359,427   -0.323 %
@@ -15723,6 +15764,68 @@ stack and zero allocations where a reserve still costs one, and the price is
 `SmallVec`'s inline-or-spilled branch per deref (+0.47 M on `cube`, against
 the allocator's -6.4 M). That is the rule `(-71)`'s sweep found and this pass
 confirms on a *bot* local rather than an engine one.
+
+**The residue, read with `--separate-callers=4` at `0367c09c`** (277,950
+growths), which answers follow-on (a) as far as this instrument can: the two
+contexts still under `resolve_combat` are `<- advance_step <- pass_priority`
+(10,342) and `<- submit_decision <- perform_action_inner` (6,208), i.e. the
+same function on two entry paths, not two different `Vec`s a caller table
+could separate. Naming the buffer needs source reading, not another dump.
+
+```text
+  23,454  push_mut <- activate_ability_inner <- activate_ability
+                   <- auto_tap_for_cost_inner        1.03 a call
+  22,804  push_mut <- run_effect <- resolve_effect
+                   <- continue_ability_resolution_x  0.75 a call
+  19,562  dispatch_board_scan <- dispatch_triggers_for_events   0.37
+  10,434  affected_from_requirement <- selector_to_affected     0.23
+  10,342  resolve_combat <- advance_step <- pass_priority
+```
+
+**Both leaders are one allocation per call and neither is a reserve
+candidate** — they are the `Result<Vec<GameEvent>, GameError>` these two
+frames *return*. `(-104)` is what is left of them.
+
+**(-104) THE TWO REMAINING GROWTH LEADERS ARE A `Vec<GameEvent>` RETURN, NOT A
+MISSING RESERVE — 46,258 ALLOCATIONS, 3.3 % OF EVERY ALLOCATION THE PROGRAM
+MAKES.** `resolve_effect` (30,508 calls) and `activate_ability_inner` (22,876)
+each open a `Vec<GameEvent>`, hand it up as `Result<Vec<GameEvent>, GameError>`
+and have it appended into the caller's buffer and freed. **`run_effect` is
+*already* the `&mut Vec<GameEvent>` shape** — the `push_mut <- run_effect`
+context is `resolve_effect`'s vector, one frame out, which is why the row
+reads 0.75 growths a call. At ~217 Ir an allocate/free pair the ceiling is
+**~10 M Ir, 0.38 % of `cube`**, plus the append's `memcpy`.
+
+**Read this before taking it: an out-parameter only *removes* the allocation
+where the caller already has an accumulator to append into.** Where the caller
+would have to open a fresh `Vec` to pass down, the allocation has *moved*,
+which is `(-80)`'s whole lesson in the other direction. So the entry is a
+census first: `resolve_effect` has **25** call sites and `activate_ability`
+**8**, and the question for each is whether it appends into something it
+already holds. The two halves are independent; `check_state_based_actions_into`
+and `effective_mana_abilities_into` are the same conversion already shipped and
+are the shape to copy. Take it as its own commit with the suite green either
+side, or not at all.
+
+**The census is done for the dominant path and it says the allocation is
+genuinely removable, three frames down.** 23,474 of `resolve_effect`'s 30,552
+calls come through one chain, and its consumer already holds a buffer:
+
+```text
+  resolve_effect                                  30,552 calls
+    <- continue_ability_resolution_x  23,474   (forwards the Vec unchanged)
+         <- activate_ability_inner    21,434   `events.append(&mut resolved)`
+    <- continue_trigger_resolution_with_source     4,632
+    <- continue_spell_resolution                   2,446
+```
+
+**And the one friction to plan for**: `activate_ability_inner` reads the
+resolved events *before* appending them —
+`resolve_extra_mana_on_land_tap(card_id, p, &resolved, &mut events)` — so an
+out-parameter makes that an `&events[mark..]` beside an `&mut events` and the
+borrow checker will refuse it. Pass the `mark` index instead, or `split_at_mut`
+at it. That is the whole design question; everything else is threading one
+`&mut Vec<GameEvent>` through two frames.
 
 **(-101) A STORED `fn` POINTER WHOSE VALUE IS FIXED PER FIELD IS TWO COSTS,
 AND THE SECOND ONE HAD NEVER BEEN PRICED HERE. TAKEN ON `ComputedPermanent`

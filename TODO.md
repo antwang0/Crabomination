@@ -26,16 +26,13 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
    rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
-   the PERF entry before you spend a build on it (`d6a9b3d5`).
-   **CLAIMED 2026-08-30: the four biggest `grow_one` rows** — combat's `events`
-   accumulator (`resolve_combat` 21,334 + `deal_combat_damage_to_target` 13,104 growths
-   are the same `Vec`), `pick_attacks_inner`'s two board-walk locals and
-   `mana_source_table`'s `out`. Nothing else is claimed.
-2. **State at `c92f3851`:** suite 19,049 / 0 / 5, clippy clean, golden traces 7/7, grid
+   the PERF entry before you spend a build on it (`d6a9b3d5`). **Nothing is claimed now.**
+2. **State at `0367c09c`:** suite 19,049 / 0 / 5, clippy clean, golden traces 7/7, grid
    30 cells / 33,120 games / 0 failures / 0 undecided, `--bench` byte-identical (195,528 /
    27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok). Pass window
-   **-2.14 / -2.03 / -2.46 %** (`cfdf69f2 -> c92f3851`, both sessions); anchors, the
-   `peak_rss_mib` 24.2 -> 26.8 -> 24.3 story and each change's own base in PERF's Baseline.
+   **-2.45 / -2.27 / -2.65 %** (`cfdf69f2 -> 0367c09c`, both sessions); anchors, the
+   `peak_rss_mib` 24.2 -> 26.8 -> 24.3 -> 24.6 story and each change's own base in PERF's
+   Baseline.
 3. **Ir transfers between containers; `games_per_s` does not, with or without its calib.**
    Both sessions read `c92f3851` independently: **anchors 0.02-0.07 ppm apart, wall clocks
    28 % apart** (431 vs ~308), with calib pointing the wrong way. When a wall-clock reading
@@ -47,14 +44,20 @@ sixty-seventh pass, so don't re-take that.
    (`--demangle=no`), then take a type's *width* and the fields **written on an object
    whose writer changes nothing else on it**. Trap: a field is not cold because its name
    says so — four damage vectors read +0.072 % and the tell was one `make_mut` caller row.
-5. **The profile has no head; the allocator is the largest family (10.2-10.8 %).** Rank a
-   `grow_one` row by **growths per call**: only `resolve_combat` (3.5), `pick_attacks_inner`
-   (2.9) and `mana_source_table` (1.6) are re-growths a reserve removes; `dispatch_board_scan`
-   (0.37) and the rest are first allocations it only moves. `dispatch_triggers_for_events`
-   is 7.2 % with no hot line, fan-out refuted. `(-93)`'s lanes 11-16 free, consumers spent.
-   Two devices that paid this pass, PERF `(-101)`/`(-102)`: a stored `fn` pointer whose
-   value is fixed per field costs width *and* an indirect read; and when a memo lands on a
-   named helper, **grep for the query's longhand** — fifty sites still scanned past it.
+5. **The profile has no head; the allocator is the largest family (10.2-10.8 %) and its
+   reserve half is now CLOSED** — PERF `(-103)`: divide the `grow_one` table by each
+   caller's own call count, above 1.5 there were exactly four rows and all four shipped
+   (-0.32 / -0.24 / -0.20 %). Everything left is ~1 growth a call, i.e. a *first*
+   allocation a reserve only moves — including the single largest row
+   (`dispatch_board_scan`, 29,474 at 0.37). **What is left of the family is `(-104)`**: the
+   `Vec<GameEvent>` that `resolve_effect` and `activate_ability_inner` *return*, 46,258
+   allocations (3.3 % of the program), ceiling ~0.38 % of `cube`, census done down to the
+   one borrow-checker friction. `dispatch_triggers_for_events` is 7.2 % with no hot line.
+   Three devices that paid this pass, PERF `(-101)`/`(-102)`/`(-103)`: a stored `fn`
+   pointer whose value is fixed per field costs width *and* an indirect read; when a memo
+   lands on a named helper, **grep for the query's longhand**; and a filtered board-walk
+   **local** wants inline storage, not a reserve — `(-76)`'s read-count test is about
+   fields and does not apply to a frame.
 6. **ROBUSTNESS: the panic audit's bare population is 23 -> 3.** The three that stay are
    deck construction, where a fallback deck poisons a training run more quietly than a
    crash. Price: `cube` +0.084 %, and it is one function leaving its caller's inline budget
