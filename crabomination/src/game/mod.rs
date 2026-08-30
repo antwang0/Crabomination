@@ -18262,7 +18262,26 @@ impl GameState {
                 })
             });
         }
-        let equip_grants = scan.equip_grants;
+        // The same question, on the gate that holds the dispatcher's member
+        // lane open most often once `(-120)` removed the empty lists: a
+        // Jitte-shaped-inverse attachment whose triggers no event in this
+        // batch can match still made `any_equip_grant` true, and with it the
+        // whole-board walk. The census at `dc829911` reads 11,506 such
+        // dispatches on `cube` (411,802 visits, 27.8 % of its walk) and
+        // **none** of them keeps a single ability. Retained per attachment,
+        // not per ability: the slice is borrowed from the definition, so a
+        // subset would have to be allocated, and an entry whose abilities all
+        // fail contributes nothing at all. PERF `(-121)`.
+        let mut equip_grants = scan.equip_grants;
+        if !equip_grants.is_empty() {
+            equip_grants.retain(|(_, abilities)| {
+                abilities.iter().any(|ab| {
+                    events.iter().any(|ev| {
+                        crate::game::effects::events::event_kind_matches(self, ev, &ab.event, None)
+                    })
+                })
+            });
+        }
         // CR 603.3d — keys for `once_per_turn` triggers that fire in this
         // batch; merged into the turn-scoped set after the battlefield walk
         // (deferred so we don't mutate `self` mid-immutable-borrow).
