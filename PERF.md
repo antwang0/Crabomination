@@ -9698,6 +9698,41 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-seventh pass (3) — one dedupe Vec a dispatch, and the line row that named it is refuted
+
+**`fixed` -0.0051 % / `cube` -0.0599 % / `sealed` -0.0839 %** at `172a40c8`,
+off the tip carrying the other session's `90a629a1` and `a8d5bdd8`.
+`block_sides_seen` — the CR 509.3a/c per-creature dedupe set, written by four
+`EventKind`s and nobody else — was constructed and dropped once per
+(permanent, trigger) pair. One `Vec` a dispatch, `clear()` per trigger.
+
+```text
+cube   dispatch_triggers_for_events   173,580,180 -> 172,034,370   -1,545,810
+```
+
+**The finding is the refutation, not the win.** `(-115)`'s line reading put
+`vec/mod.rs:464` at **10,533,512 Ir** inside this function and read it as this
+`Vec::new()`; removing the construction *and* the drop measures
+**1,545,810** — a seventh of that row — and `fixed`, whose four archetypes
+carry almost no block triggers, moves by one part in 20,000. The row is
+something else.
+
+**Which is the same rule the Standing rules already carry, in its third
+instance and its second direction**: pass 61 and pass 106 measured "a line
+profile's row is not what removing the line would save" on the *high* side
+(the line cost more to replace than it cost to keep); this measures it on the
+*attribution* side — **a `std` line row inside an inlined-to-death function
+does not belong to whichever construct in the source you can see from it.**
+`cg_lines.py` gives a file and a line in `alloc`, not a call site; the only
+way to name the construct is to remove it and re-measure, which is a build.
+**Price a `std`-row candidate as if the attribution is a guess, because it
+is.**
+
+Kept rather than reverted: the win is ~9x the instrument's floor on two pools
+and the code is simpler (one `Vec` where there were ~140 k a run). The lane
+above it — `(-115)`'s ~49 M of slice iteration — is untouched and stays where
+that entry left it.
+
 ### Hundred-and-fourth pass (9) — the targeting invariant, and the two see-throughs it needed
 
 **`fixed` -0.039 % / `cube` -0.078 % / `sealed` -0.070 %** at `9fec2a6f`, off
@@ -17234,7 +17269,19 @@ the ones next to it.
 See the Log; the rule it adds is **rank a chain of pure guards by cost x
 rejection rate**, and the entry as claimed is kept there.
 
-**(-117) TAKEN, 2026-08-30 — `block_sides_seen` IS CONSTRUCTED AND DROPPED
+**(-117) TAKEN at `172a40c8` — `fixed` -0.0051 % / `cube` -0.0599 % /
+`sealed` -0.0839 %, and it REFUTES THE LINE ROW THAT NAMED IT.** The entry
+below priced `block_sides_seen`'s per-(permanent, trigger) construction off
+`(-115)`'s `vec/mod.rs:464` row (10,533,512 Ir, 0.40 % of `cube`); removing
+the construction and the drop moves `dispatch_triggers_for_events` by
+**1,545,810** — a seventh of it. See the Log. **The rule: a `std` line row
+inside an inlined-to-death function does not belong to whichever construct in
+the source you can see from it.** `vec/mod.rs:464`'s remaining ~9 M is
+unattributed and is not a candidate until something names it by removal.
+
+**The entry as it was claimed, kept for the mechanism, which was right:**
+
+**(-117) `block_sides_seen` IS CONSTRUCTED AND DROPPED
 ONCE PER (PERMANENT, TRIGGER) AND ONLY FOUR `EventKind`s EVER PUSH TO IT.**
 `(-115)`'s reading, item (b): `vec/mod.rs:464` is 10,533,512 Ir (0.40 % of
 `cube`) inside `dispatch_triggers_for_events`, and it is
@@ -17242,9 +17289,7 @@ ONCE PER (PERMANENT, TRIGGER) AND ONLY FOUR `EventKind`s EVER PUSH TO IT.**
 trigger loop — a construction and a drop on every pair, for a dedupe set that
 `Blocks` / `BecomesBlocked` / `BlocksNOrMore` / `BecomesBlockedByNOrMore` are
 the only readers of. Hoist it above the battlefield walk and `clear()` per
-trigger, `(-71)`'s device: one `Vec` per dispatch, capacity kept, and the
-drop glue runs once. Not a tabulation and not a memo, so pass 61's and pass
-106's refutations do not reach it.
+trigger, `(-71)`'s device.
 
 **(-115) ANSWERED — see the other session's reading below, which is the same
 `profiling-lines` build at the same tip (both dumps put dispatch's self at
