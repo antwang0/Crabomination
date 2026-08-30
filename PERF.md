@@ -16795,6 +16795,41 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-114) `CardInstance::has_keyword` IS 410,892 CALLS AT 45.3 Ir AND IT
+DEREFERENCES THE COLD GROUP FOUR TIMES. TAKEN, 2026-08-30 — the
+hundred-and-fourth pass, hoist route.**
+
+Read off `cg.cube` at `874d6e53`: **410,892 calls / 18,593,922 self Ir /
+45.3 a call, 0.71 % of `cube`**, plus `Keyword::eq` at 343,075 calls / 4.47 M
+— and the eq count says the *scan* is not the cost. Fewer than one comparison
+per call means the lists are empty or match on the first element; the 45 Ir is
+the walk to reach them.
+
+```rust
+if self.removed_keywords_eot.has_kw(kw) || self.removed_keywords.has_kw(kw) { … }
+self.definition.keywords.has_kw(kw)
+    || self.granted_keywords_eot.has_kw(kw)
+    || self.keyword_counters.get(kw).…
+```
+
+**Four of those five fields are `CardCold`**, and `CardInstance` reaches them
+through `Arc<CardData>` -> `CowBox<CardCold>` -> `Arc<CardCold>` — a chain
+walked once *per field*. This is `(-100)` note (4) exactly, on the read side:
+that note priced the *write* version at 2.3 M Ir over 79,496 `make_mut` calls
+and said "hoist one `&mut CardCold`". The read version is five times the call
+count.
+
+**The fix is two `let`s, no new state and no memo**, so `(-87)`'s refutation
+(a presence bit that costs as much as the walk it replaces) does not apply —
+nothing is being replaced, only not repeated. Callers, `cube`:
+`evaluate_requirement_static_hinted` 133,214 / a closure 116,216 /
+`pick_attacks_inner` 44,202 / `is_indestructible` 42,454 /
+`pick_blocks_inner` 42,398.
+
+**And the shape is a family**: any `&self` method reading three or more cold
+fields pays the same. `has_toxic`, `has_modular` and `is_indestructible` are
+the ones next to it.
+
 **(-113) `resolve_combat` IS NOW THE ACTOR'S LARGEST REAL GROWTH ROW —
 22,366 GROWTHS OVER 7,465 CALLS, 3.00 A CALL, ~12.0 M Ir (0.38 %).** Read off
 `cg_growth.py` on the actor dump at `d402e5da`, after `(-107)`'s buffer took
