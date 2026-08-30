@@ -31,11 +31,14 @@ sixty-seventh pass, so don't re-take that.
    built before the rebase is linked after it and the error names the wrong file
    (`GLOBAL_FEATS == 57` failing while the source said 57). And **kill orphaned `rustc`**
    after killing a cargo (`ps -o ppid` = 1): one stole 60 % of four cores for 25 minutes.
-2. **Gates at `96b85558`:** suite **19,075 / 0 / 5**, clippy clean (also `--features
-   trig-census`), traces **7/7 unmoved**, `--bench` 195,528 / 27.44 / 611.0 / 0 stalls
-   byte-identical to the invariant, determinism + thread_determinism green. Grid not re-run —
-   behaviour unmoved; **its ACTOR leg is the only gate that reaches the encoder**, so run that
-   leg for any `encode.rs` / `EncodedState` change (the other session moved both, v8).
+2. **All five gates re-run at `c899d865`:** suite **19,076 / 0 / 5**, clippy clean (also
+   `--features trig-census`), traces **7/7 unmoved**, `--bench` 195,528 / 27.44 / 611.0 / 0
+   stalls byte-identical to the invariant, determinism + thread_determinism green, **grid
+   33,120 games / 0 failures** and **its ACTOR leg 6,000 games / 574,149 rows / 0 stalls**
+   (the leg is the only gate that reaches the encoder, and v8 moved it).
+   ⚠ `peak_rss_mib` reads **26.7** here against the 24.4-24.7 every block before it. Not
+   investigated; the vocabulary went 164 -> 2,273 in the same window, which is the obvious
+   suspect and is a static table rather than a leak. Confirm before quoting 24.5 again.
 3. **`(-120)`+`(-121)` TAKEN — `fixed` -2.970 % / `cube` -2.585 % / `sealed` -0.016 %**, the
    largest pass in PERF. `EQUIP_TRIGGER_GRANT` was set for any `equipped_bonus`, empty
    ability list or not, so a Rancor cost the dispatcher its member lane, its gate and a
@@ -62,6 +65,14 @@ sixty-seventh pass, so don't re-take that.
    **Inscription of Insight and All-Out Assault are primitive jobs**, not card fixes.
 7. **Targeting is CLOSED and gated**; its four transferable rules live in ENGINE_BACKLOG's
    "Targeting — the four rules pass 104 closed on".
+8. **Robustness: `audit_panics.py` is at 0 bare sites** (was 3, all three on the actor's
+   deck-building path). **Both gates re-run at `f2f7d58c`** and both green: the grid at
+   **33,120 games / 0 failures / 0 undecided**, and its ACTOR leg at 6,000 games /
+   574,149 rows / 0 stalls — the first real audit `(-115)`'s member-list invalidation has
+   had, since a positional memo drops a trigger silently where a presence bit costs a walk.
+   **The rule: an empty pool and `n == 0` are legal inputs, not invariants**, so the
+   degradation is a return and not a `debug_assert!` — an assertion puts it out of the
+   suite's reach, which is the only place a regression test for it can live.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
