@@ -9593,6 +9593,36 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-seventh pass (1) — the free-divider question is read, not scanned for
+
+**`fixed` -0.0458 % / `cube` -0.0791 % / `sealed` -0.0706 %** at `9b3470a4`,
+off `2b38c673`. `(-113)`'s cheap half, and the entry had the mechanism wrong:
+it read the walk as "a whole-board scan for a keyword no deck has", but the
+`any()`'s first operand is `c.id == attacker`, so the keyword test runs once
+and **the cost is the linear find of the attacker**, not the keyword.
+
+```text
+cube, callees of resolve_combat
+  free_division_targets   29,186 calls   2,613,538 Ir   89.5 a call
+  (whole-program row)                    2,785,920 ->   405,210
+```
+
+All three callers already hold the attacker's `ComputedPermanent`: two reach
+it through `AttackerInfo` (which exists only for an attacker found in
+`computed`, so the flag *is* the `any()`), and `apply_combat_decision_answer`
+through the `atk_cp` it just found for deathtouch and trample. The bit becomes
+a field and an argument; the helper's body is unchanged below its first line.
+
+**The device, and it is `(-105)`(a)'s in a new place**: a predicate a helper
+recomputes is often one its caller has already answered — check the caller's
+locals before memoizing anything. Nothing new is stored and no gate is added,
+so `(-87)`'s refutation does not apply.
+
+**And the sizing rule that survives**: 89.5 Ir a call over 29,186 calls is
+0.107 % of `cube`, and the measured delta is 0.079 % — a removed row does not
+return its full inclusive cost, because the call site keeps the branch that
+replaces it. Predict from *self* Ir and discount.
+
 ### Hundred-and-fourth pass (6) — the unfiltered-slot census's player half, and a comment that guarded the wrong thing
 
 **`fixed` +0.000 % / `cube` +0.000 % / `sealed` +0.002 %** at `d2ce2cf8`, off
@@ -16943,6 +16973,48 @@ nothing is being replaced, only not repeated. Callers, `cube`:
 **And the shape is a family**: any `&self` method reading three or more cold
 fields pays the same. `has_toxic`, `has_modular` and `is_indestructible` are
 the ones next to it.
+
+**(-115) TAKEN, 2026-08-30 — `dispatch_triggers_for_events` IS 7.46 % OF
+`cube` IN *SELF* Ir, 2.3x THE NEXT ROW, AND NOTHING IN THIS FILE HAS EVER
+ASKED WHAT THAT SELF COST IS.** Read off `cg.cube` at `2b38c673`:
+**139,430 calls / 194,723,966 self Ir / 1,396 a call**, against
+`gather_continuous_effects_inner`'s 83.2 M (3.19 %) in second place. Its
+callee table sums to ~110 M inclusive, so the self number is the function's
+own body — and the body's one loop is `for card in &self.battlefield`, which
+every dispatch runs whole.
+
+```text
+cube, callers of dispatch_triggers_for_events   139,430 calls
+  114,822  perform_action_inner
+    6,986  finalize_cast
+    2,106  do_untap
+    2,074  submit_decision
+```
+
+**The arithmetic that makes it a candidate**: ~139 k dispatches x a ~15-card
+board is ~2.1 M loop bodies at ~93 Ir apiece, which is the whole self cost to
+within the estimate's precision. The loop already has a fast-path `continue`
+(`no_grants && no printed trigger && no station`), so most of that is the
+*iteration and the two definition loads*, not work the card needed — and
+`Battlefield` already carries the shape that answers it (`dispatch_scan_bits`,
+`LANE_LISTENER`), as a presence bit rather than a member list.
+
+**Do not design off this paragraph.** The 93 Ir is an estimate from a board
+size nobody has measured on this pool, and `(-110)`'s rule is that a program
+number is worth nothing until it is attributed to rows. The first move is
+`cg_lines.py --in dispatch_triggers_for_events` off a `profiling-lines`
+build — the one instrument that can say whether the cost is the walk, the
+`dispatch_board_scan` prologue, or the per-event match — and only then a
+shape. NEXT item 2 has been carrying "what dispatch's self cost actually is"
+as an open question for two passes.
+
+**(-113) THE CHEAP HALF IS TAKEN at `9b3470a4`** — `fixed` -0.0458 % /
+`cube` -0.0791 % / `sealed` -0.0706 %, and the entry's mechanism for it was
+wrong (the `any()` short-circuits on `c.id == attacker`, so the cost was the
+find, not the keyword scan). See the Log. **The growth half below is still
+open**, and note before taking it that ~1 of the 3.62 growths a call is the
+deliberate `events.reserve(32)` from `0367c09c`, which the division folds in
+and must not be counted as slack.
 
 **(-113) `resolve_combat` IS NOW THE ACTOR'S LARGEST REAL GROWTH ROW —
 22,366 GROWTHS OVER 7,465 CALLS, 3.00 A CALL, ~12.0 M Ir (0.38 %).** Read off
