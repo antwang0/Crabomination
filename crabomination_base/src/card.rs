@@ -238,6 +238,10 @@ pub enum CreatureType {
     Bringer, Pincher,
     // Coldsnap (the Aurochs herd).
     Aurochs,
+    // Legends (Elder Spawn) and the Eldrazi Spawn tokens.
+    Spawn,
+    // Unfinity (Quick Fixer).
+    Azra, Employee,
 }
 
 /// Land subtypes (basic land types + others).

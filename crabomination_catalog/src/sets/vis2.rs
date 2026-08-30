@@ -1003,7 +1003,7 @@ pub fn elkin_lair() -> CardDefinition {
 pub fn ogre_enforcer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::SurvivesSplitLethalDamage],
-        ..creature("Ogre Enforcer", cost(&[generic(3), r()]), vec![CreatureType::Ogre], 4, 4)
+        ..creature("Ogre Enforcer", cost(&[generic(3), r(), r()]), vec![CreatureType::Ogre], 4, 4)
     }
 }
 

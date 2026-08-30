@@ -228,27 +228,42 @@ fn lorehold_apprentice_magecraft_grants_spirits_a_tap_ping() {
 // ── New cube creature tests ───────────────────────────────────────────────
 
 #[test]
-fn descendant_of_storms_dies_creates_spirit_token() {
+fn descendant_of_storms_endures_when_it_attacks_and_the_cost_is_paid() {
+    // Real card: {W} 2/1 Human Soldier, "Whenever this creature attacks, you
+    // may pay {1}{W}. If you do, it endures 1." It shipped as a 2/2 flying
+    // Spirit with a dies-trigger token — a different card (2026-08-30).
     let mut g = two_player_game();
     let desc = g.add_card_to_battlefield(0, catalog::descendant_of_storms());
-    // P0 kills their own creature with a bolt.
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    let d = g.battlefield_find(desc).unwrap();
+    assert_eq!((d.definition.power, d.definition.toughness), (2, 1));
+    assert!(!d.definition.keywords.contains(&Keyword::Flying), "no flying");
+    assert!(
+        d.definition.subtypes.creature_types
+            == vec![crabomination::card::CreatureType::Human,
+                    crabomination::card::CreatureType::Soldier],
+        "Human Soldier",
+    );
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(desc)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("bolt castable");
+    // Yes to the may-pay, no to the token half of endure — so it takes the
+    // +1/+1 counter.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(false),
+    ]));
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.clear_sickness(desc);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: desc,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
     drain_stack(&mut g);
-
-    // Descendant should be dead, Spirit token should exist.
-    assert!(!g.battlefield.iter().any(|c| c.id == desc));
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"),
-        "should create a Spirit token on death");
+    assert_eq!(
+        g.battlefield_find(desc).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "endure 1 put a +1/+1 counter on it",
+    );
 }
 
 // ── Additional card shape tests ───────────────────────────────────────────

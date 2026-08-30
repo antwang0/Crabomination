@@ -350,7 +350,7 @@ pub fn pikemen() -> CardDefinition {
             cost(&[generic(1), w()]),
             vec![CreatureType::Human, CreatureType::Soldier],
             1,
-            2,
+            1,
         )
     }
 }

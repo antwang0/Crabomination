@@ -1097,7 +1097,9 @@ fn sphinx_of_the_steel_wind_has_its_keyword_suite() {
     let id = g.add_card_to_battlefield(0, catalog::sphinx_of_the_steel_wind());
     let cp = g.compute_battlefield();
     let s = cp.iter().find(|c| c.id == id).unwrap();
-    for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink,
+    // Vigilance was missing until 2026-08-30 — the catalog stat audit's keyword
+    // column against the oracle cache found it.
+    for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Vigilance, Keyword::Lifelink,
                Keyword::Protection(Color::Red), Keyword::Protection(Color::Green)] {
         assert!(s.keywords().contains(&kw), "missing {kw:?}");
     }

@@ -400,81 +400,83 @@ fn plot_vault_plunderer_etb_draw_on_free_cast() {
 // ── Saddle (CR 702.171) ──────────────────────────────────────────────────────
 
 /// Saddling taps the saddlers and marks the Mount saddled; the attack trigger
-/// only fires once the Mount is saddled.
+/// only fires once the Mount is saddled. (Brightfield Glider: Saddle 3, and
+/// "whenever this attacks while saddled, it gets +1/+2 and gains flying".)
 #[test]
-fn saddle_stingerback_attack_trigger_gated_on_saddled() {
+fn saddle_attack_trigger_gated_on_saddled() {
     let mut g = two_player_game();
-    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
-    g.clear_sickness(terror);
+    let glider = g.add_card_to_battlefield(0, catalog::brightfield_glider());
+    g.clear_sickness(glider);
     let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
     let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 -> total 4 >= 3
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     // Saddle 3: tap two 2-power bears.
     g.perform_action(GameAction::Saddle {
-        mount: terror, creatures: vec![b1, b2],
+        mount: glider, creatures: vec![b1, b2],
     }).expect("saddle");
-    assert!(g.battlefield_find(terror).unwrap().saddled, "Mount is saddled");
+    assert!(g.battlefield_find(glider).unwrap().saddled, "Mount is saddled");
     assert!(g.battlefield_find(b1).unwrap().tapped && g.battlefield_find(b2).unwrap().tapped,
         "saddlers tapped");
-    // Attack while saddled — each opponent loses half their life, rounded up.
-    let life = g.players[1].life;
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: terror, target: AttackTarget::Player(1),
+        attacker: glider, target: AttackTarget::Player(1),
     }])).unwrap();
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life - (life + 1) / 2,
-        "saddled attack drains half the opponent's life, rounded up");
-}
-
-/// Half-life drain rounds up on an odd total (7 → loses 4).
-#[test]
-fn stingerback_half_life_rounds_up() {
-    let mut g = two_player_game();
-    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
-    g.clear_sickness(terror);
-    g.battlefield_find_mut(terror).unwrap().saddled = true;
-    g.players[1].life = 7;
-    g.priority.player_with_priority = 0;
-    g.active_player_idx = 0;
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: terror, target: AttackTarget::Player(1),
-    }])).unwrap();
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 3, "7 → loses 4 (rounded up)");
+    let cp = g.computed_permanent(glider).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "saddled attack pumps +1/+2");
+    assert!(cp.keywords().contains(&Keyword::Flying), "and grants flying");
 }
 
 /// Without saddling, the attack trigger does not fire.
 #[test]
 fn saddle_unsaddled_attack_no_trigger() {
     let mut g = two_player_game();
-    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
-    g.clear_sickness(terror);
+    let glider = g.add_card_to_battlefield(0, catalog::brightfield_glider());
+    g.clear_sickness(glider);
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
-    let life = g.players[1].life;
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: terror, target: AttackTarget::Player(1),
+        attacker: glider, target: AttackTarget::Player(1),
     }])).unwrap();
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life, "no saddle, no drain trigger");
+    let cp = g.computed_permanent(glider).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "no saddle, no pump");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "no saddle, no flying");
 }
 
 /// Saddle is rejected when the tapped creatures' total power is below N.
 #[test]
 fn saddle_insufficient_power_rejected() {
     let mut g = two_player_game();
-    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
+    let glider = g.add_card_to_battlefield(0, catalog::brightfield_glider());
     let weenie = g.add_card_to_battlefield(0, catalog::elvish_mystic()); // power 1 < 3
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     assert!(g.perform_action(GameAction::Saddle {
-        mount: terror, creatures: vec![weenie],
+        mount: glider, creatures: vec![weenie],
     }).is_err(), "1 power can't pay Saddle 3");
-    assert!(!g.battlefield_find(terror).unwrap().saddled, "not saddled");
+    assert!(!g.battlefield_find(glider).unwrap().saddled, "not saddled");
+}
+
+/// Stingerback Terror shrinks by its controller's hand size and plots for
+/// {2}{R}. It shipped as an invented Insect Mount (2026-08-30).
+#[test]
+fn stingerback_terror_shrinks_with_your_hand() {
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
+    let cp = g.computed_permanent(terror).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "empty hand: full 7/7");
+    assert!(cp.keywords().contains(&Keyword::Flying) && cp.keywords().contains(&Keyword::Trample));
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::mountain()); }
+    let cp = g.computed_permanent(terror).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "-1/-1 per card in hand");
+    assert_eq!(
+        catalog::stingerback_terror().plot_cost.map(|c| c.cmc()),
+        Some(3),
+        "Plot 2R costs three mana",
+    );
 }
 
 // ── Casualty (CR 702.153) ────────────────────────────────────────────────────

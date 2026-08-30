@@ -371,7 +371,7 @@ pub fn quick_fixer() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie],
+            creature_types: vec![CreatureType::Azra, CreatureType::Employee],
             ..Default::default()
         },
         power: 2,

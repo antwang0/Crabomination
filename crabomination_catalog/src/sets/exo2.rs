@@ -12,7 +12,7 @@ use crate::effect::{
     ZoneDest,
 };
 use crate::game::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w, x};
 
 fn creature(
     name: &'static str,
@@ -788,7 +788,7 @@ pub fn aether_tide() -> CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::DiscardXFromCost],
         ..instant(
             "Aether Tide",
-            cost(&[generic(0), u()]),
+            cost(&[x(), u()]),
             Effect::CapTargetsAtX {
                 body: Box::new(Effect::ApplyToTargets {
                     max_targets: 8,

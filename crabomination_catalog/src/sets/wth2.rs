@@ -970,7 +970,7 @@ pub fn thran_forge() -> CardDefinition {
 pub fn jabaris_banner() -> CardDefinition {
     artifact(
         "Jabari's Banner",
-        cost(&[generic(1)]),
+        cost(&[generic(2)]),
         vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,

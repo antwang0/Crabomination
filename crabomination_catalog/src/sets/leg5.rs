@@ -194,7 +194,7 @@ pub fn elder_spawn() -> CardDefinition {
                 ])),
             },
         }],
-        ..creature("Elder Spawn", cost(&[generic(4), u(), u(), u()]), vec![CreatureType::Horror], 6, 6)
+        ..creature("Elder Spawn", cost(&[generic(4), u(), u(), u()]), vec![CreatureType::Spawn], 6, 6)
     }
 }
 

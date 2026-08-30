@@ -2397,7 +2397,7 @@ pub fn myr_superion() -> CardDefinition {
 pub fn bludgeon_brawl() -> CardDefinition {
     CardDefinition {
         name: "Bludgeon Brawl",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Each noncreature, non-Equipment artifact is an Equipment with \

@@ -5339,46 +5339,29 @@ pub fn ramos_dragon_engine() -> CardDefinition {
 
 // ── Descendant of Storms ──────────────────────────────────────────────────
 
-/// Descendant of Storms — {2}{W}, 2/2 Spirit. Flying. When this creature
-/// dies, create a 1/1 white Spirit token with flying.
+/// Descendant of Storms — {W} 2/1 Human Soldier. Whenever it attacks, you may
+/// pay {1}{W}; if you do, it endures 1 (CR 701.63).
 pub fn descendant_of_storms() -> CardDefinition {
-    use crate::card::TokenDefinition;
-    use crate::mana::Color;
-    let spirit_token = TokenDefinition {
-        name: "Spirit".into(),
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-
-        static_abilities: vec![],
-        ..Default::default()
-    };
     CardDefinition {
         name: "Descendant of Storms",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
             ..Default::default()
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(spirit_token),
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayPay {
+                description: "Pay {1}{W} to endure 1?".into(),
+                mana_cost: cost(&[generic(1), w()]),
+                body: Box::new(Effect::Endure {
+                    target: Selector::This,
+                    n: Value::ONE,
+                }),
+                else_: None,
             },
         }],
         ..Default::default()
@@ -6080,7 +6063,7 @@ pub fn consuls_lieutenant() -> CardDefinition {
 
 // ── Bloodthirst (CR 702.54) ───────────────────────────────────────────────
 
-/// Scab-Clan Mauler — {1}{R} 2/2 Human Warrior, Bloodthirst 2.
+/// Scab-Clan Mauler — {R}{G} 1/1 Human Berserker. Bloodthirst 2, trample.
 pub fn scab_clan_mauler() -> CardDefinition {
     CardDefinition {
         name: "Scab-Clan Mauler",
@@ -6092,7 +6075,7 @@ pub fn scab_clan_mauler() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Bloodthirst(2)],
+        keywords: vec![Keyword::Trample, Keyword::Bloodthirst(2)],
         triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
         ..Default::default()
     }

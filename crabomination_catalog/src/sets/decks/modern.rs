@@ -13411,7 +13411,7 @@ pub fn bannerhide_krushok() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        keywords: vec![Keyword::Reinforce(2, cost(&[generic(1), g()]))],
+        keywords: vec![Keyword::Trample, Keyword::Reinforce(2, cost(&[generic(1), g()]))],
         ..Default::default()
     }
 }
@@ -21669,15 +21669,16 @@ pub fn cut_of_the_profits() -> CardDefinition {
     }
 }
 
-/// Stingerback Terror — {3}{B}{B} Legendary Creature — Insect Mount 5/5,
-/// Menace, Ward—Pay 3 life. Whenever it attacks while saddled, each opponent
-/// loses half their life, rounded up. Saddle 3 (CR 702.171).
+/// Stingerback Terror — {2}{R}{R} 7/7 Scorpion Dragon. Flying, trample; gets
+/// -1/-1 for each card in your hand. Plot {2}{R} (CR 702.170).
+///
+/// It shipped as an invented Insect Mount (5/5, menace, ward—3 life, saddle 3,
+/// "attacks while saddled: each opponent loses half their life") — a card that
+/// does not exist. Found by the catalog stat audit's keyword column, 2026-08-30.
 pub fn stingerback_terror() -> CardDefinition {
-    use crate::effect::shortcut::attacks_while_saddled;
     CardDefinition {
         name: "Stingerback Terror",
         cost: cost(&[generic(2), r(), r()]),
-        supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Scorpion, CreatureType::Dragon],
@@ -21685,15 +21686,16 @@ pub fn stingerback_terror() -> CardDefinition {
         },
         power: 7,
         toughness: 7,
-        keywords: vec![
-            Keyword::Menace,
-            Keyword::Ward(WardCost::Life(3)),
-            Keyword::Saddle(3),
-        ],
-        triggered_abilities: vec![attacks_while_saddled(Effect::LoseHalfLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            rounded_up: true,
-        })],
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "This creature gets -1/-1 for each card in your hand.",
+            effect: StaticEffect::PumpSelfByValue {
+                amount: Value::HandSizeOf(PlayerRef::You),
+                per_power: -1,
+                per_toughness: -1,
+            },
+        }],
+        plot_cost: Some(cost(&[generic(2), r()])),
         ..Default::default()
     }
 }
@@ -39024,6 +39026,7 @@ pub fn sphinx_of_the_steel_wind() -> CardDefinition {
         keywords: vec![
             Keyword::Flying,
             Keyword::FirstStrike,
+            Keyword::Vigilance,
             Keyword::Lifelink,
             Keyword::Protection(Color::Red),
             Keyword::Protection(Color::Green),
