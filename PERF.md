@@ -9124,6 +9124,46 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-first pass (4) — nineteen bare panic sites converted, and the +0.09 % is one function de-inlining
+
+**`fixed` +0.126 % / `cube` +0.084 % / `sealed` +0.118 %** off `b6218fad`, and
+it ships anyway: this is the standing rule's second clause — a correctness
+change with its cost measured — not a win.
+
+`scripts/audit_panics.py` had read **112 sites / 23 bare** since the
+ninety-first pass, which read all 23 and cleared each one. Every clearance was
+a *proof at a distance*, and this pass had just edited two of those functions
+for unrelated reasons. Nineteen became the error their own guard implies
+(**112 / 23 -> 83 / 3**); ENGINE_BACKLOG's entry has the per-site table.
+
+**Four builds, and the branches are not the cost.** The variants were: a
+`usize` `source_owner` with no branch at any of the fourteen reads; a
+`src_owner!()` macro with fourteen `return Err`s; `#[inline]` on the function
+that de-inlined; and the shipped form with the one conversion *inside* the
+de-inlined caller reverted. **All four read within 0.002 % of each other.**
+
+```text
+base b6218fad, callgrind, profiling-fast --no-default-features, --decks cube
+  the whole delta, by row
+    <IntoIter as Iterator>::try_fold                       +1,363,573
+    player_cant_cast_permanent_spells                      +1,161,146
+    cast_spell_with_convoke                                -1,143,678
+    FlattenCompat::iter_fold                                 +526,130
+    drop_in_place<[(CardId, Effect)]>                        +305,838
+    activate_ability_inner                                   +219,098
+    pay_census::in_probe                                     -322,864
+```
+
+**`player_cant_cast_permanent_spells` left `cast_spell_with_convoke` and took
+its iterator adapters with it.** At `codegen-units = 16` with no LTO an edit
+anywhere in a 17 k-line module can move an inline decision in a function it
+does not touch, and `#[inline]` does not buy it back — 141 Ir of difference on
+`fixed`, i.e. nothing. **Price a correctness change on the program, not on the
+functions it edits, and do not spend a third build hunting the site**: the
+second and third already said it was not there. (A `bf_pos.and_then(get)` form
+of the one added read, skipping a macro's dead re-`find`, was also built and is
+15-42 k Ir *worse* on all three pools. Kept as measured.)
+
 ### Hundred-and-first pass (3) — six per-permanent flags move OUT of the `Arc`, onto the handle
 
 **`fixed` -0.966 % / `cube` -0.949 % / `sealed` -1.236 %** off `cb73b867`.
