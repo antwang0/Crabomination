@@ -9247,6 +9247,68 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-third pass (3) — the layer pass's effect list leaves the heap, and one `&` is half of it
+
+**`fixed` -0.018 % / `cube` -0.341 % / `sealed` +0.019 %** off `ed0e1361`
+(`cfa883ae`), closing `(-106)`.
+
+`compute_permanent_pass`'s `sorted` was **the program's single largest
+allocation context**: 61,518 of a six-game `cube` run's 1,384,794 allocations,
+4.4 % of every malloc, all of them `do_reserve_and_handle` under its two
+`extend`s. The list is a pure local, ~2 elements long, consumed by the loop
+directly below it, and it reached the heap on 23 % of the 270,078 passes.
+`SmallVec<[&ContinuousEffect; 8]>` removes them.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base ed0e1361
+  fixed     886,182,938 ->   886,020,418   -0.018 %
+  cube    2,649,944,503 -> 2,640,903,973   -0.341 %
+  sealed  2,619,473,675 -> 2,619,977,727   +0.019 %
+
+cube's ledger — the allocator pays, the function collects
+  _int_free            88,058,006 -> 84,670,474   -3.39 M
+  malloc               66,372,239 -> 63,474,329   -2.90 M
+  finish_grow          17,508,400 -> 15,047,680   -2.46 M
+  free                 53,994,439 -> 51,595,237   -2.40 M
+  do_reserve_and_handle 5,741,352 ->  3,526,704   -2.21 M
+  compute_permanent_pass 73,238,392 -> 79,071,232 +5.83 M
+                                                   net -9.04 M
+```
+
+**THE TRANSFERABLE HALF IS ONE CHARACTER, AND IT IS THE DIFFERENCE BETWEEN A
+SHIPPED CHANGE AND A REVERT.** The first build iterated the list *by value*
+and read:
+
+```text
+  fixed   +0.167 %    cube  -0.118 %    sealed  +0.196 %
+```
+
+a pool split the standing rule would have reverted, with
+`compute_permanent_pass` up **+11.7 M** on `cube` against the allocator's
+-14.5 M. `SmallVec`'s by-value `IntoIter` **carries the inline buffer**, so
+`for effect in sorted` moved 72 bytes on every pass, empty or not.
+`for effect in &sorted` alone is worth **-0.185 / -0.223 / -0.176 %** and
+turns the whole change positive. **An inline buffer is only as cheap as the
+way it is read** — a `Vec`'s `IntoIter` is three words whatever the length, a
+`SmallVec`'s is the array. Every `SmallVec` in a hot frame wants this check;
+`(-103)`'s two bot locals are already by-reference and so were never exposed
+to it.
+
+The residue is ~21 Ir a pass of inline-or-spilled branch inside the function,
+which is why `sealed` — where the list allocates far less often than on
+`cube` — still reads +0.019 %. The `cube` win is 18x that, and `cube` is the
+pool that exercises the grant and layer paths a training actor's decks do.
+
+`(-56b)` had refuted four ways of not building this list and named this one as
+the fifth ("a stack-backed `Extend` target, which is a dependency decision,
+not a code one"). **Its own reason not to had expired**: it measured against a
+`collect()`, whose `Vec::from_iter` takes the internal-iteration path, and the
+function has since moved to two `extend`s — `extend_desugared`, external
+iteration already — so the swap moves the buffer and nothing else. **A
+refutation names the conditions it holds under; re-read them before treating
+it as closed.**
+
 ### Hundred-and-third pass (2) — the `&mut` twin of the find memo, and 74 sites that never had one
 
 **`fixed` -0.119 % / `cube` -0.195 % / `sealed` -0.234 %** off `ae429ae7`.
@@ -15815,7 +15877,12 @@ path. Refuted without a build; do not re-open it on the sharp edge alone.
 
 **(-106) `compute_permanent_pass`'s `sorted` IS THE PROGRAM'S SINGLE LARGEST
 ALLOCATION CONTEXT — 61,518 OF 1,384,794 (4.4 %) ON `cube`.**
-**TAKEN, 2026-08-30 (this session, base `ed0e1361`).** Read off
+**CLOSED at `cfa883ae` for -0.018 / -0.341 / +0.019 %** — the Log entry has
+the ledger and the one-character finding (`SmallVec`'s by-value `IntoIter`
+carries the inline buffer, and reading the list by value inverts the sign on
+two pools). What is left is ~21 Ir a pass of inline-or-spilled branch, which
+is what `sealed`'s +0.019 % is; it is not worth a narrower buffer, because
+the cost is the branch rather than the width. Read off
 `--separate-callers=3` at `ae429ae7`: `finish_grow <- do_reserve_and_handle
 <- compute_permanent_pass`, and the only `extend` in that function is
 `sorted`. At ~209 Ir a malloc/free round trip on this pool (1,384,794
