@@ -17104,6 +17104,18 @@ the ones next to it.
 See the Log; the rule it adds is **rank a chain of pure guards by cost x
 rejection rate**, and the entry as claimed is kept there.
 
+**(-117) TAKEN, 2026-08-30 — `block_sides_seen` IS CONSTRUCTED AND DROPPED
+ONCE PER (PERMANENT, TRIGGER) AND ONLY FOUR `EventKind`s EVER PUSH TO IT.**
+`(-115)`'s reading, item (b): `vec/mod.rs:464` is 10,533,512 Ir (0.40 % of
+`cube`) inside `dispatch_triggers_for_events`, and it is
+`let mut block_sides_seen: Vec<CardId> = Vec::new();` at the top of the
+trigger loop — a construction and a drop on every pair, for a dedupe set that
+`Blocks` / `BecomesBlocked` / `BlocksNOrMore` / `BecomesBlockedByNOrMore` are
+the only readers of. Hoist it above the battlefield walk and `clear()` per
+trigger, `(-71)`'s device: one `Vec` per dispatch, capacity kept, and the
+drop glue runs once. Not a tabulation and not a memo, so pass 61's and pass
+106's refutations do not reach it.
+
 **(-115) ANSWERED — see the other session's reading below, which is the same
 `profiling-lines` build at the same tip (both dumps put dispatch's self at
 194,723,966 to the instruction). Two sessions paid ~12 min for it
