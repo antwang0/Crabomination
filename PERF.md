@@ -16795,9 +16795,43 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-114) BUILT, MEASURED AND REVERTED — THE COLD-GROUP DEREF IS ALREADY
+COMMON-SUBEXPRESSION-ELIMINATED, AND `has_keyword` IS **BYTE-IDENTICAL** WITH
+AND WITHOUT THE HOIST.** 18,593,922 self Ir over 410,892 calls on both sides,
+to the instruction; the whole three-pool delta is **-0.000 %** and every row in
+it is libc startup (`__vfscanf_internal`, `strtoul`). At `opt-level = 3` LLVM
+sees through `Arc<CardData>` -> `CowBox<CardCold>` -> `Arc<CardCold>` when
+nothing between the reads can invalidate it, which on a `&self` method is
+always.
+
+**So `(-100)` note (4) does not generalise to the read side, and the reason is
+worth keeping**: that note's 2.3 M Ir over 79,496 calls was `make_mut`, one per
+cold field written — the *unshare check*, not the deref. A read has no
+unshare, so hoisting it saves nothing. **Before hoisting a repeated projection,
+ask whether the repetition is a load or a call**: a load is the optimiser's
+problem and it has already solved it.
+
+**What the 45.3 Ir actually is, since the deref is not it**: five presence
+questions — `removed_keywords_eot`, `removed_keywords`,
+`definition.keywords`, `granted_keywords_eot`, `keyword_counters` — each a
+pointer+length load and a not-taken branch, and `Keyword::eq` runs only
+343,075 times across all 410,892 calls, so the *scans* are not it either.
+**The only shape left is a presence bit that says "this instance has no
+keyword modification at all"**, letting the function fall straight to
+`definition.keywords`. That is four length-checks replaced by one, on the
+*instance* rather than the definition — so `CardMemo` cannot hold it and every
+write to those four lists has to maintain it. Priced at ~0.3 % of `cube`,
+written down rather than taken: `(-87)`'s refutation is precisely about a bit
+whose read costs what the walk it replaces did, and four not-taken branches is
+the cheapest walk that rule has ever been applied to. **The other lever is the
+call count** — 133,214 of them are `evaluate_requirement_static_hinted`
+answering a `HasKeyword` requirement, and 116,216 are one closure.
+
+**The entry as it was claimed, kept for the sizing that was right and the
+mechanism that was wrong:**
+
 **(-114) `CardInstance::has_keyword` IS 410,892 CALLS AT 45.3 Ir AND IT
-DEREFERENCES THE COLD GROUP FOUR TIMES. TAKEN, 2026-08-30 — the
-hundred-and-fourth pass, hoist route.**
+DEREFERENCES THE COLD GROUP FOUR TIMES.**
 
 Read off `cg.cube` at `874d6e53`: **410,892 calls / 18,593,922 self Ir /
 45.3 a call, 0.71 % of `cube`**, plus `Keyword::eq` at 343,075 calls / 4.47 M
