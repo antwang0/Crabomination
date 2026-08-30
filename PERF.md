@@ -265,6 +265,10 @@ pass because they are measurement rules, not handoff.**
   `target/debug/incremental` is 7-15 GB and is the first thing to delete
   (`rm -rf target/debug/incremental`) — it costs the next debug build its
   incremental cache and nothing else.
+  **The symptom names neither the disk nor the linker: a `release` link dies
+  with a Bus error.** That directory reached 19 GB of a 30 GB allowance at the
+  hundred-and-fifth pass and 14 GB at the hundred-and-sixth; delete it first
+  and re-run before believing anything else about the failure.
 * ⚠ **Two cargo builds at once take ~1.5x each on four cores**, and a cold
   `release` of this workspace is ~25 min on its own. Start the one whose
   result gates the next step first.
@@ -881,6 +885,38 @@ per run, not ten. Callgrind on six games takes about three minutes and is
 contention-immune, which makes it the better first look.
 
 ## Standing rules for a perf pass
+
+**Census / catalog-audit rules, moved verbatim from `TODO.md`'s NEXT at the
+hundred-and-sixth pass when that section passed its ~15-line budget. They come
+off the targeting lane (`13435f3e` / `d9e6454d` / `d0799d5c` / `45c55cc3`).**
+
+- **Discover a class by joining the census against
+  `scripts/.scryfall_cache.json`, then gate it on a STRUCTURAL predicate** —
+  all 38 blink bodies name `ControlledByYou` / `OwnedByYou` /
+  `ExiledWithSource`, which is what makes the test an invariant instead of a
+  list of 79 names that goes stale on the next card.
+- **An implicit filter belongs to the FIELD, not the card.**
+  `IMPLICIT_CREATURE_TARGET` (pump), `IMPLICIT_ANY_TARGET` (damage, CR 115.4)
+  and `implicit_player_if_bare_player_field` are one line each; the per-card
+  filter is only for nouns narrower than the field's own type (twenty of
+  those, `45c55cc3`).
+- **When a catalog fix declares a filter on a slot, check the slot walker has
+  an arm for that effect** — `every_declared_target_slot_is_answerable` caught
+  `CoinFlipDestroyLoop` and `MoveChosenKeyword` mid-pass, where the fix would
+  have aimed correctly and re-checked against nothing.
+- **Group a census by the nearest enclosing enum key**, not by card: 204 card
+  rows were ~40 match arms.
+- **Two groups in that census are structural false positives — checked, so
+  nobody re-checks them:** the counterspells (`CounterSpell { what: Target(0) }`
+  targets a *spell*, which `Target` cannot express) and the ~25 reflexive
+  triggers ("whenever this deals combat damage to a creature, tap that
+  creature"), whose slot `combat.rs:5234` **stamps from the event**.
+- **`dispatch_triggers_for_events`' self cost is mostly the per-event
+  bookkeeping switch** — entry timestamps, soulbond, land equilibrium, the
+  per-turn tallies — **not the listener search.** A listener index keyed on
+  `EventKind` cannot reach the row's whole share, which is what `(-90)`'s
+  "mask ceiling 0.86 %" was already saying; read the function before pricing
+  an index for it. `(-115)` carries the line profile.
 
 Durable, not per-run. Every refutation named here is written up in **PERF**'s
 Log with its numbers; read the entry before re-proposing any of them.
@@ -2196,6 +2232,38 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### Hundred-and-sixth pass (3) — this session's close at `785b50d5`+
+
+Three code commits this session — `(-107)`'s single buffer (`d402e5da`), the
+counter walk (`71e55636`), `(-113)`'s growth half (`90a629a1`) — plus the
+other session's targeting lane in the same window. The per-event gate was
+built, measured and reverted and is not in the tree.
+
+```text
+suite   18,801 / 0 / 5 (crabomination + crabomination_tests + crabomination_nn)
+        crabomination_ml 45 / 0
+golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    30 cells, 33,120 games, 0 failures, 0 undecided
+grid, ACTOR leg   6,000 games, 577,283 rows, 0 stalls, rc 0
+--bench 195,528 decisions / 27.44 turns / 611.0 per game / 0 stalls
+        — byte-identical to the `e64762b2` block, across two sessions'
+        rules changes. determinism ok, thread_determinism ok (3 vs 1).
+        games_per_s 407.64 / 424.85 on two runs, host_calib_ms 51 / 60,
+        peak_rss_mib 24.4 both, bin_bytes 123,874,768, `release` + mimalloc.
+
+Three-pool Ir at `90a629a1`, callgrind, profiling-fast
+-p crabomination --no-default-features:
+  fixed 875,791,350   cube 2,606,284,270   sealed 2,586,715,468
+
+Actor anchor, profiling-fast -p crabomination_ml --no-default-features,
+--actors 1 --games 60 --steps 1 --seed 7:
+  f7d6a036  3,151,613,051
+  d402e5da  3,134,987,026   -0.5275 %   (-107)'s buffer
+  71e55636  3,127,014,641   -0.2543 %   the counter walk
+                            -0.7804 %   over the encoder half
+```
 
 ### Hundred-and-sixth pass (2) — the encoder half's closing state, and the ACTOR leg of the grid
 

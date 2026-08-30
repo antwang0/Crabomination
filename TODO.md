@@ -21,143 +21,32 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT — the handoff. Eight items; every number under them lives in PERF.
+## NEXT — the handoff. Rewritten each run; ≤15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
-   rebase not force, **sequential builds only**, and push a one-line "TAKEN, <date>" onto
-   the PERF entry before you spend a build on it (`d6a9b3d5`). **`(-107)`'s
-   single-backing-buffer half is claimed at `f7d6a036`; nothing else is.**
-   **AND: `rm -rf target/debug/incremental` when a `release` link dies with a Bus
-   error** — it is the disk, not the linker; that directory reached 19 GB of a 30 GB
-   allowance here and the memcg-style failure it produces names neither.
-2. **State at `cecaccb4`+**, re-run at that tip rather than labelled forward: suite
-   19,050 / 0 / 5, clippy clean, golden traces 7/7, `--bench` byte-identical
-   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok,
-   `host_calib_ms` 50, `games_per_s` 363, `peak_rss_mib` 18.8-19.1). **The `peak_rss`
-   drop from the filed 24.3-24.7 is NOT this pass's** — checked against a binary built
-   before it, which reads 19.6 on the same box, so it is the container or an earlier
-   tip; this pass moves it 19.6 -> 19.1. One `--bench` on the base is the whole control
-   and it costs two minutes. Ir anchor with the
-   pass's shipped half (a) in it: **876,247,675 / 2,612,930,886 / 2,591,254,100**.
-   The grid is `2e0450f4`'s — 30 cells, 33,120 games, **0 failures and 0 undecided on
-   every cell**, rebuilt and re-run there so it audits `find_by_id_mut`'s hint on real
-   boards. **The ACTOR is -3.58 %** over `c92f3851 -> 2e0450f4`, and two of the three
-   commits behind that are invisible to every `--bench` pool. **Each change names its
-   own base**, and see item 7 for what a cross-session re-read is and is not worth.
-   **Within one container, a `peak_rss` or `games_per_s` taken while the box is still
-   building is not a reading**: the first `--bench` after each of two release builds
-   read 26.8 MiB / 312 g/s and 24.7 / 314, and the settled runs read 24.5-24.7 at
-   332-340 — the high RSS and the low throughput are the same fact.
-3. **`games_per_s` does not transfer between containers and an Ir anchor does** — settle a
-   suspected wall-clock regression with **one anchor run**, never a rebuild of the base.
-4. **The three devices this pass paid on, in order of reuse.** (a) A memo on a named
-   helper has a `_mut` twin — `(-102)` swept fifty read sites and left 74 write ones
-   (`(-105)`, -0.12 / -0.20 / -0.23 %). (b) **A `SmallVec`'s by-value `IntoIter` carries
-   the inline buffer**; `for x in v` vs `for &x in &v` was worth -0.19 / -0.22 / -0.18 %
-   on one 72-byte site and inverted the sign of `(-106)`. (c) Rank an allocation by its
-   `--separate-callers=3` **context**, not its function.
-5. **THE RESERVE LANE IS CLOSED — `(-112)`.** `(-103)`'s division applied to every
-   remaining leader at this pass's tip: nothing is above **1.3 growths a call** except
-   `deal_combat_damage_to_target` at 1.21, and that is 8,608 growths, a third of what
-   `snapshot_payment_state` was worth before `8a59e648` took it. Below 1.0 a reserve
-   *moves* the allocation rather than removing it (`(-80)`) and charges the majority of
-   calls that never grew. **The mass that is left is FIRST allocations**, which only a
-   different buffer (`(-107)`, `EncodedState`'s eight groups, 66,485 -> 12,660) or fewer
-   objects can reach — and the by-value form of the latter is built and reverted at
-   `(-111)`. Do not re-sweep this table. **The division is `scripts/cg_growth.py`**
-   (`eabe2425`) — it folds *both* growth paths (`grow_one`, the push side, and
-   `do_reserve_and_handle`, the `reserve`/`extend`/`append` side) and joins each
-   caller's own call count, which is what `(-103)` and `(-108)` each did by hand for
-   one table and then closed with "no row left".
-6. **THE ACTOR IS WHERE THE LARGEST WINS OF THE PASS WERE, AND `--bench` CANNOT SEE
-   THEM — write the script before trusting the rule.** `cg_growth.py`'s first run put
-   the recorder's four parallel accumulators at **75.15 growths a call**, fifty times
-   the next row, and one `with_capacity` apiece shipped at **-0.391 %** (`2e0450f4`) —
-   a row both earlier passes of the same rule had walked past, because each applied it
-   to whichever table and pool it was already looking at. Run it on every dump.
-   Actor profile re-read at `bb67895a` (Profile of record); `rank_shape` is
-   byte-identical to the `c92f3851` reading, so the deck half of the workload is a
-   control and the totals compare, not just the shares. The recorder's de-dup key was a
-   second copy of the pair it had just pushed — **-1.360 %** (`817b9736`), against
-   `cube`'s -0.341 % for the pass's largest engine change.
-   Open there, `(-107)`: `encode_state`'s 66,485 reserve growths (2nd largest in the
-   program, invisible to every pool) and `computed_permanent_hinted`'s 433,775 `Arc`s
-   (12.8 % of every allocation the actor makes).
-7. **THE INSTRUMENT HAS NO FLOOR — `(-109)`'s HEADLINE IS REFUTED AND IT COST A REAL
-   WIN.** `(-110)` measured it with two null controls (uncalled `pub fn`s in
-   `actions.rs`, zero executed instructions, one of them instantiating the very
-   `SmallVec::extend` monomorphization `(-109)` blamed): **+0.006 % at worst on three
-   pools**, i.e. ~1 part in 15,000. There is nothing to subtract from an `actions.rs`
-   reading, and **splitting the oversized modules is a build-time question only**.
-   What `(-109)` saw was content coupling from its half (b) — whose `+0.689 %` on `cube`
-   is therefore a **real regression**, not an unattributable one. Its rule 1 stands and
-   is the whole lesson: **attribute a program number to rows before believing it.**
-   **The rule this pass adds: never revert a bundle on a program number — split it and
-   read the halves.** `(-109)` measured (a)+(b) and (b), never (a); (a) alone is
-   **-0.565 / -0.453 / -0.420 %** and shipped at `8a59e648`. **A cross-session check is
-   only an identity when what landed under it was prose** — the re-read over `2a1de9ac`
-   drifted +396 / -799 / -473 ppm, which is that commit's own content.
-   ROBUSTNESS: bare panics 23 -> 3 (deck construction, deliberately). No open
-   TODO/FIXME in `src`, no `#[ignore]`d tests.
-8. **CARDS: the printed characteristics are DONE; what a card DOES is the open lane.**
-   `audit_catalog_stats.py` reads **cost 0 / P/T 0 / type 0 / supertype 0 / subtype 2 /
-   keyword 23** over 17,229 cards, and every survivor is a modelling choice with its
-   reason in INCOMPLETE_CARDS. 118 defects closed getting there — 34 spells at the wrong
-   speed, 23 permanents outside the legend rule, 5 affinity creatures counting themselves
-   as artifacts, and eight cards that were not the card they are named after.
-   **The queue for the next run is `scripts/audit_oracle_verbs.py`: 225 rows over 10,949
-   cards, "the oracle names a verb and the effect tree has no primitive for it".** Six
-   classes are spot-checked and the real-finding rate is high — Codespell Cleric is a
-   body-only stub, Baral drops the trigger that draws, Crawl from the Cellar drops its
-   Zombie counter, Teferi drops "untap up to two lands". `counter_spell`'s five are the
-   documented ward-shaped approximation. **The standing lesson, now three times over: a
-   class of findings too large to be true is the FILTER, not the catalog** — check three
-   of its rows in the source before believing it (722 -> 254 -> 228 -> 225 on this one).
-   Also open: INCOMPLETE_CARDS buckets 6 / 7 / 8, 3 dead primitives, and
-   `audit_dropped_may`'s 327 rows, still noise until someone teaches it the shapes.
-
-
-9. **THE TARGETING LANE IS CLOSED — one engine gate, 79 reanimation filters, and a
-   four-instalment census. Eight commits, `d0799d5c`..`45c55cc3` plus `13435f3e`
-   `d9e6454d`; PERF's Log has every ledger.** What it fixed, so nobody re-finds it:
-   `legal_targets_for_filter` walked every graveyard and exile for **any** filter, so
-   the UI path and the training path targeted different sets; **79 bodies said "from
-   your graveyard" in their oracle and nothing in their filter**, so Zombify with an
-   empty graveyard STOLE a battlefield creature; `Any` matched a **land**, so Banefire
-   offered the opponent's Forest and Terminate destroyed any permanent; and a bare
-   `PlayerRef::Target(n)` made "target player discards" offer the whole board.
-   **Four transferable rules.**
-   (a) **Discover a class by joining the census against `scripts/.scryfall_cache.json`,
-   then gate it on a STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou`
-   / `OwnedByYou` / `ExiledWithSource`, which is what makes the test an invariant
-   instead of a list of 79 names that goes stale on the next card.
-   (b) **An implicit filter belongs to the FIELD, not the card.** `IMPLICIT_CREATURE_
-   TARGET` (pump), `IMPLICIT_ANY_TARGET` (damage, CR 115.4) and
-   `implicit_player_if_bare_player_field` are one line each; the per-card filter is only
-   for nouns narrower than the field's own type (twenty of those, `45c55cc3`).
-   (c) **When a catalog fix declares a filter on a slot, check the slot walker has an
-   arm for that effect** — `every_declared_target_slot_is_answerable` caught
-   `CoinFlipDestroyLoop` and `MoveChosenKeyword` mid-pass, where the fix would have
-   aimed correctly and re-checked against nothing.
-   (d) **Group a census by the nearest enclosing enum key**, not by card: 204 card rows
-   were ~40 match arms.
-   **Two groups are structural false positives — checked, so nobody re-checks them:**
-   the counterspells (`CounterSpell { what: Target(0) }` targets a *spell*, which
-   `Target` cannot express) and the ~25 reflexive triggers ("whenever this deals combat
-   damage to a creature, tap that creature"), whose slot `combat.rs:5234` **stamps from
-   the event**.
-   **ROBUSTNESS, checked this pass:** no `std::collections` default-hasher iteration in
-   engine or bot logic — nine uses exist, the only two on a game path are membership-only
-   (`bot.rs`'s belief redeal) and lookup-only (`wants_converge`'s L2 cache). Cross-process
-   determinism holds; `golden_trace::seeded_games_match_their_digests` is the check,
-   since a test process is a new process.
-   **AND ON `dispatch_triggers_for_events`, the largest self row (7.46 % of `cube`,
-   139,412 calls at 1,397 Ir):** its self cost is mostly the **per-event bookkeeping
-   switch** — entry timestamps, soulbond, land equilibrium, the per-turn tallies — not
-   the listener search. A listener index keyed on `EventKind` cannot reach the row's
-   whole share, which is what `(-90)`'s "mask ceiling 0.86 %" was already saying; read
-   the function before pricing an index for it.
+   **rebase not force**, **sequential builds only**, and push a one-line "TAKEN, <date>"
+   onto the PERF entry before spending a build on it. **Nothing is claimed now.**
+2. **Tip state, all gates re-run there:** suite 18,801 / 0 / 5 (+ `crabomination_ml`
+   45 / 0), clippy clean, golden traces 7/7, grid 30 cells / 33,120 games / 0 failures,
+   **the grid's ACTOR leg** 6,000 games / 577,283 rows / 0 stalls, `--bench` byte-identical
+   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok, peak_rss 24.4).
+3. **`--bench` sees no encoder on any pool** — an encoder change is measured on the actor
+   (`selfplay_train --actors 1 --games 60 --steps 1 --seed 7` under callgrind) and audited
+   by the grid's actor leg, not by the 30 cells. Pass 106 moved the actor **-0.78 %** there.
+4. **Read the Standing rules for the function's name before costing a `cg_lines.py` row.**
+   Pass 106 re-derived pass 61's refuted `is_event_hardcoded` candidate off a fresh line
+   profile and paid four builds; a line row on an inlined callee is where its instructions
+   execute, **not** a deletion ceiling. `dispatch_triggers_for_events`' per-event gate is
+   CLOSED twice over; `(-115)` now carries the line profile it was asking for.
+5. **Open, in order:** `(-115)`'s remaining leads — the battlefield/event *iteration*
+   (~35 M on `cube`) and `block_sides_seen`'s per-(permanent, trigger) `Vec::new` at
+   10.5 M, which is not a tabulation and so escapes pass 61's refutation; then `(-107)`'s
+   third row (`computed_permanent_hinted`'s 433,775 `Arc`s, 12.8 % of the actor's
+   allocations — `(-111)` refuted the by-value form, so it needs a different shape).
+6. **Cards:** `scripts/audit_oracle_verbs.py`, 225 rows over 10,949 cards. Check three
+   rows in the source before believing any class — the filter is the suspect, not the
+   catalog (722 -> 254 -> 228 -> 225 on this one).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

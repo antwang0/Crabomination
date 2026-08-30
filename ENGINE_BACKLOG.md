@@ -973,6 +973,21 @@ sweep hunted and why it is closed, kept so nobody re-derives one.*
 
 ### Robustness filters (the determinism entry itself closed 2026-08-11, `841dd40b`)
 
+**Re-checked at the hundred-and-sixth pass, and moved here verbatim from
+`TODO.md`'s NEXT when that section passed its ~15-line budget:** no
+`std::collections` default-hasher iteration in engine or bot logic — nine uses
+exist, the only two on a game path are membership-only (`bot.rs`'s belief
+redeal) and lookup-only (`wants_converge`'s L2 cache). Cross-process
+determinism holds; `golden_trace::seeded_games_match_their_digests` is the
+check, since a test process is a new process.
+
+**And the encoder leg of the `-C debug-assertions=yes` grid, which had never
+been run:** `bot_ladder` encodes no state on any pool, so the 30-cell grid
+cannot reach an assertion that only the encoder trips. The actor leg is
+`target-audit/overflow/selfplay_train --actors 3 --steps 2 --games N --seed S`
+after the same `RUSTFLAGS` build, and 6,000 games / 577,283 rows came back
+clean at the hundred-and-sixth pass (PERF's Baseline has the numbers).
+
 The cube pool's fixed-seed nondeterminism is fixed and the whole class is
 shut: `crate::fxhash::HashMap` / `HashSet` (rustc's seedless FxHasher)
 replace `std`'s across the engine, so no map's walk order can differ
