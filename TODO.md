@@ -33,6 +33,16 @@ sixty-seventh pass, so don't re-take that.
    that costs a build, push a one-line "TAKEN by this session, <date>" onto
    the entry you are pulling. A push costs seconds; a duplicated A/B costs an
    hour of one core.
+1b. **CLAIMED, 2026-08-30, this session: `CardData`'s WIDTH.** `CardData` is
+   deep-copied 68,610 times a six-game `cube` run — 48 % of every CoW copy in
+   the program, 2.55 % inclusive — and the copy is the field-by-field move of
+   its bytes, so a byte out of it is ~0.44 Ir a copy. Two instalments landed
+   (`daf30ed1`, `be6ec1ec`): 864 -> 568 bytes, **-0.596 / -0.605 / -0.696 %**
+   over the two. **Next, and claimed: `tapped` and the four combat flags move
+   OUT of the `Arc<CardData>` onto the `CardInstance` handle** — that is the
+   copy-*count* half, worth the ~21,700 copies `activate_ability_inner` makes
+   (100 % of its `make_mut` calls copy; they are the land taps of `(-51)(a)`).
+   Do not take either half concurrently.
 2. **State at `6d30b1e6`**, the combined tip of both sessions: suite
    19,044 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
    (30 cells / 33,120 games / 0 failures, 5 assertion strings), `--bench`
