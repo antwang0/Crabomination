@@ -18333,14 +18333,13 @@ impl GameState {
             }
             if own {
                 reason |= tc::GRANT_OWN;
-                if self.granted_triggers_eot.values().flatten().any(|ab| batch_can_match(ab)) {
+                if self.granted_triggers_eot.values().flatten().any(batch_can_match) {
                     filtered |= tc::GRANT_OWN;
                 }
             }
             if equip {
                 reason |= tc::GRANT_EQUIP;
-                if equip_grants.iter().flat_map(|(_, abs)| abs.iter()).any(|ab| batch_can_match(ab))
-                {
+                if equip_grants.iter().flat_map(|(_, abs)| abs.iter()).any(batch_can_match) {
                     filtered |= tc::GRANT_EQUIP;
                 }
             }
