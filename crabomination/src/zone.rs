@@ -11,16 +11,23 @@ use crate::cow::CowBox;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU8, Ordering};
 
-/// Memo states for [`Graveyard::has_anthem`].
+/// Memo states, shared by both zones' lanes.
 const UNKNOWN: u8 = 0;
 const ABSENT: u8 = 1;
 const PRESENT: u8 = 2;
 
-/// A player's graveyard: the CoW card list, plus the one question two hot
+/// Two-bit lanes on [`Graveyard`], packed exactly as [`Battlefield`]'s are so
+/// one store on the write path clears every lane. A `u8` takes four.
+const GY_LANE_ANTHEM: u32 = 0;
+const GY_LANE_ACT_GRANT: u32 = 2;
+
+/// A player's graveyard: the CoW card list, plus the whole-zone questions hot
 /// walkers ask of it — "does any card here carry a
 /// [`StaticEffect::GraveyardAnthem`](crate::effect::StaticEffect::GraveyardAnthem)?"
 /// (the Incarnation cycle's "as long as this card is in your graveyard and you
-/// control a [Land subtype] …").
+/// control a [Land subtype] …") and the `GrantActivatedAbilityFromGraveyard`
+/// twin `grant_scan` asks (Riftstone Portal). One lane per question; see the
+/// `GY_LANE_*` constants.
 ///
 /// `gather_continuous_effects_inner`'s anthem pass and
 /// `keyword_grant_in_scope`'s off-battlefield tail are both ungated
@@ -34,7 +41,8 @@ const PRESENT: u8 = 2;
 #[derive(Debug, Default)]
 pub struct Graveyard {
     cards: CowBox<Vec<CardInstance>>,
-    anthem: AtomicU8,
+    /// Two-bit lanes; see the `GY_LANE_*` constants.
+    lanes: AtomicU8,
 }
 
 /// Does this card carry a `GraveyardAnthem` static? The per-card half of
@@ -44,6 +52,19 @@ fn card_has_anthem(c: &CardInstance) -> bool {
         .static_abilities
         .iter()
         .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::GraveyardAnthem { .. }))
+}
+
+/// Does this card grant an activated ability from the graveyard (Riftstone
+/// Portal)? The [`GY_LANE_ACT_GRANT`] predicate — the same bare match
+/// `grant_scan`'s walk makes, so the lane is exact rather than an
+/// over-approximation.
+fn card_has_gy_activated_grant(c: &CardInstance) -> bool {
+    c.definition.static_abilities.iter().any(|sa| {
+        matches!(
+            sa.effect,
+            crate::effect::StaticEffect::GrantActivatedAbilityFromGraveyard { .. }
+        )
+    })
 }
 
 impl Graveyard {
@@ -56,18 +77,33 @@ impl Graveyard {
     /// far more interesting graveyards than 18,793 tests do — into a check
     /// that no write path ever reached the cards without clearing it.
     pub fn has_anthem(&self) -> bool {
+        self.lane(GY_LANE_ANTHEM, card_has_anthem, "anthem")
+    }
+
+    /// CR 611 — true when some card here grants an activated ability from the
+    /// graveyard (Riftstone Portal), the leg `grant_scan` walks both
+    /// graveyards for on every call. Memoized on the same word.
+    pub fn has_activated_grant(&self) -> bool {
+        self.lane(GY_LANE_ACT_GRANT, card_has_gy_activated_grant, "activated-grant")
+    }
+
+    /// One lane's answer: a word load and two mask tests on a hit, the zone
+    /// walk plus one store on a miss. `what` names the lane in the audit.
+    #[inline]
+    fn lane(&self, shift: u32, walk: fn(&CardInstance) -> bool, what: &str) -> bool {
+        let cur = (self.lanes.load(Ordering::Relaxed) >> shift) & 0b11;
         debug_assert!(
-            self.anthem.load(Ordering::Relaxed) == UNKNOWN
-                || (self.anthem.load(Ordering::Relaxed) == PRESENT)
-                    == self.cards.iter().any(card_has_anthem),
-            "graveyard anthem memo is stale: a write reached the cards without clearing it",
+            cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(walk),
+            "graveyard {what} memo is stale: a write reached the cards without clearing it",
         );
-        match self.anthem.load(Ordering::Relaxed) {
+        match cur {
             ABSENT => false,
             PRESENT => true,
             _ => {
-                let found = self.cards.iter().any(card_has_anthem);
-                self.anthem.store(if found { PRESENT } else { ABSENT }, Ordering::Relaxed);
+                let found = self.cards.iter().any(walk);
+                let word = self.lanes.load(Ordering::Relaxed);
+                let bits = if found { PRESENT } else { ABSENT };
+                self.lanes.store((word & !(0b11 << shift)) | (bits << shift), Ordering::Relaxed);
                 found
             }
         }
@@ -77,7 +113,7 @@ impl Graveyard {
     /// with room for the card. Inherent, so it shadows the `Deref`'d
     /// `Vec::push`; the memo is invalidated exactly as `DerefMut` would.
     pub fn push(&mut self, card: CardInstance) {
-        self.anthem.store(UNKNOWN, Ordering::Relaxed);
+        self.lanes.store(0, Ordering::Relaxed);
         self.cards.push(card);
     }
 
@@ -87,15 +123,21 @@ impl Graveyard {
         self.cards.shares_with(&other.cards)
     }
 
-    /// The memo's current state, for the invalidation tests: `None` while
+    /// One lane's current state, for the invalidation tests: `None` while
     /// unknown.
     #[cfg(test)]
-    fn memo(&self) -> Option<bool> {
-        match self.anthem.load(Ordering::Relaxed) {
+    fn memo_lane(&self, shift: u32) -> Option<bool> {
+        match (self.lanes.load(Ordering::Relaxed) >> shift) & 0b11 {
             ABSENT => Some(false),
             PRESENT => Some(true),
             _ => None,
         }
+    }
+
+    /// The anthem lane, for the tests that predate the second one.
+    #[cfg(test)]
+    fn memo(&self) -> Option<bool> {
+        self.memo_lane(GY_LANE_ANTHEM)
     }
 }
 
@@ -105,7 +147,7 @@ impl Clone for Graveyard {
     fn clone(&self) -> Self {
         Self {
             cards: self.cards.clone(),
-            anthem: AtomicU8::new(self.anthem.load(Ordering::Relaxed)),
+            lanes: AtomicU8::new(self.lanes.load(Ordering::Relaxed)),
         }
     }
 }
@@ -119,20 +161,20 @@ impl Deref for Graveyard {
 
 impl DerefMut for Graveyard {
     fn deref_mut(&mut self) -> &mut Vec<CardInstance> {
-        self.anthem.store(UNKNOWN, Ordering::Relaxed);
+        self.lanes.store(0, Ordering::Relaxed);
         &mut self.cards
     }
 }
 
 impl From<Vec<CardInstance>> for Graveyard {
     fn from(cards: Vec<CardInstance>) -> Self {
-        Self { cards: cards.into(), anthem: AtomicU8::new(UNKNOWN) }
+        Self { cards: cards.into(), lanes: AtomicU8::new(0) }
     }
 }
 
 impl From<CowBox<Vec<CardInstance>>> for Graveyard {
     fn from(cards: CowBox<Vec<CardInstance>>) -> Self {
-        Self { cards, anthem: AtomicU8::new(UNKNOWN) }
+        Self { cards, lanes: AtomicU8::new(0) }
     }
 }
 

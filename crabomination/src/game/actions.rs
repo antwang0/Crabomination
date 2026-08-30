@@ -13481,6 +13481,12 @@ impl GameState {
         // lands you control have '…'". The grant is live from the graveyard,
         // scoped to the owning seat's permanents.
         for (seat, pl) in self.players.iter().enumerate() {
+            // A graveyard grows all game and carries one of these on almost no
+            // board, so the zone answers "is there one here" off its own lane
+            // rather than being walked twice a `grant_scan` call.
+            if !pl.graveyard.has_activated_grant() {
+                continue;
+            }
             for src in pl.graveyard.iter() {
                 for sa in &src.definition.static_abilities {
                     let StaticEffect::GrantActivatedAbilityFromGraveyard { applies_to, ability } =

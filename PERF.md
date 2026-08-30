@@ -9030,6 +9030,44 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundredth pass (8) — the graveyard memo becomes lanes, and packing the second one taxes the first
+
+**`fixed` -0.093 % / `cube` -0.043 % / `sealed` -0.026 %** off `cfdf69f2`.
+
+`grant_scan` walks **both** graveyards on every call — 11,672 / 26,546 /
+30,536 of them — looking for `GrantActivatedAbilityFromGraveyard` (Riftstone
+Portal, and nothing else in the catalog reaches it). A graveyard grows all
+game, so that walk gets more expensive as the game goes on while its answer
+stays `false`. `Graveyard`'s single `anthem: AtomicU8` becomes the same packed
+two-bit lane word `Battlefield` carries, with the second lane holding that
+question; `DerefMut` and `push` clear the word exactly as they cleared the
+byte, so the invalidation argument is unchanged.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base cfdf69f2
+  fixed     909,660,888 ->   908,813,370   -0.093 %
+  cube    2,716,754,586 -> 2,715,598,253   -0.043 %
+  sealed  2,697,162,109 -> 2,696,452,688   -0.026 %
+
+grant_scan self, Ir per call (calls unchanged):
+  fixed   445.9 -> 350.4   -21.4 %      cube 528.7 -> 458.6   -13.3 %
+  sealed  363.5 -> 318.6   -12.4 %
+
+Graveyard::has_anthem, the lane that was already there (calls unchanged):
+  fixed   6.4 -> 8.5 Ir    cube 6.2 -> 8.2    sealed 5.2 -> 7.2
+```
+
+**Packing a second question onto a one-question memo costs the first question
+about 2 Ir a call**, and that is the whole delta: a bare `match load()` becomes
+`match (load() >> shift) & 0b11`. At `has_anthem`'s 49,724 / 142,860 / 140,200
+calls that is +103 k / +295 k / +284 k Ir, against the graveyard walk's
+-950 k / -1,451 k / -993 k — so the pack pays back about a fifth to a third of
+the win on the pool where the first question is hottest. **Price the incumbent
+before you pack**: two separate bytes would trade that tax for a second store
+on every invalidation, and which side wins depends on the read/write ratio of
+the zone, not on taste.
+
 ### Hundredth pass (7) — `grant_scan`'s battlefield walk gets a lane, and its visitor's last caller inlines it
 
 **`fixed` -0.151 % / `cube` -0.035 % / `sealed` -0.105 %** off `5be9908c`.
