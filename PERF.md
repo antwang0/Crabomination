@@ -17493,10 +17493,39 @@ verbatim to the other three and none of them makes it.** Two of the three are
 keyed by `CardId`, so they cannot reach a permanent the caller did not name —
 an over-approximating member mask can hold them.
 
-Sizing is unknown until the census says which gate fires; `trig_census` counts
-`no_grants` as one bit and cannot. **Step 1 is the reason mask on the census**
-(sixteen buckets, dispatches and visits), then the filter, then a mask that can
-carry the id-keyed pair. Do not price the fix before the census run.
+**THE CENSUS ANSWERED IT IN ONE RUN AND THE ANSWER IS NOT A FILTER — IT IS A
+DEFECT.** `trig-census`' reason mask at `06e4e878`, six games, one thread:
+
+```text
+pool     bucket   dispatches      visits     under the event-kind filter
+fixed    none         34,874      85,600     43,598 / 270,426
+fixed    equip         8,724     184,826          0 /       0
+cube     none         57,788     269,066     74,788 / 797,574
+cube     equip        17,000     528,508          0 /       0
+sealed   none        103,016     517,614    103,016 / 517,614
+```
+
+**Every grant-live dispatch on every pool is the `equip` gate alone**, and not
+one of them survives the filter — which is what pointed at the cause.
+`EQUIP_TRIGGER_GRANT` is set for *any* `equipped_bonus` that is not
+Jitte-shaped, **whether or not it carries a triggered ability**. So a plain
+buff Aura or Equipment — a Rancor, a Bonesplitter — pushes `(host, &[])` into
+`equip_grants`, `any_equip_grant` reads true, and every dispatch for the rest
+of the game gives up its member lane, its fast-path gate and a freeze
+push/pop **for an empty list**. `dispatch_board_scan` and
+`equip_granted_trigger_sources` both push it, so the `debug_assert!` that
+cross-checks them agrees on the wrong answer.
+
+**The fix is the bit, not a filter**: require `!triggered_abilities.is_empty()`
+in `dispatch_scan_bits`, and re-ask it at both push sites (the
+`STRIP_ATTACHED` half of the scan's gate lets an attachment in for its
+`remove_abilities`). No event scan per dispatch, and by the census it takes
+grant-live to **zero** on both pools that have it.
+
+**The event-kind retain on the other three gates is therefore NOT taken** —
+on this workload it buys nothing the structural fix does not, and it would add
+a per-dispatch scan. It stays written down here for the day a pool carries a
+real equip trigger: the argument is `trigger_grants`' own, verbatim.
 
 **(-114) BUILT, MEASURED AND REVERTED — THE COLD-GROUP DEREF IS ALREADY
 COMMON-SUBEXPRESSION-ELIMINATED, AND `has_keyword` IS **BYTE-IDENTICAL** WITH
