@@ -2191,6 +2191,35 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-sixth pass (1) — closing state at `d402e5da`
+
+`(-107)`'s single buffer, plus the other session's CR 115.4 row (`d0799d5c`)
+in the same window.
+
+```text
+suite   18,797 / 0 / 5 (crabomination + crabomination_tests + crabomination_nn)
+        crabomination_ml 45 / 0
+golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 decisions / 27.44 turns / 611.0 decisions per game / 0 stalls
+        — byte-identical to the `e64762b2` block. determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 393.27 / 363.93 on two
+        runs, host_calib_ms 73 / 53, peak_rss_mib 24.5 / 24.6,
+        bin_bytes 123,870,368, `release` + mimalloc.
+
+Actor anchor at `d402e5da`, callgrind, profiling-fast -p crabomination_ml
+--no-default-features, --actors 1 --games 60 --steps 1 --seed 7:
+  3,134,987,026   against f7d6a036's 3,151,613,051   -0.5275 %
+```
+
+⚠ **This box is not the one the `e64762b2` block was taken on**: `host_calib_ms`
+reads 53-73 against that block's 44, and `games_per_s` reads *higher*
+(363-393 vs 319) on the slower calibration. That is the "`games_per_s` does
+not transfer between containers" rule with both halves visible in one
+reading — the `--bench` invariants (`decisions`, `turns_per_game`,
+`decisions_per_game`, stalls) are what carries across, and they are identical.
+The actor anchor above is a same-box A/B and is the number to quote.
+
 ### Hundred-and-fourth pass, this session's close at `d0799d5c`
 
 Four code commits, three families: the `Vec<GameEvent>` return (`da4a6ca2`
@@ -9552,6 +9581,61 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixth pass (1) — `(-107)`'s single buffer, and the growth ladder's other half
+
+**actor -0.5275 %** at `d402e5da`, off `f7d6a036`. `EncodedState` held
+`[Vec<EncodedObject>; NUM_GROUPS]`; it is now one `Vec<EncodedObject>` laid
+out group by group plus a `[u32; NUM_GROUPS]` of lengths, reserved **once**
+for the whole state. Suite 18,797 / 0 / 5 (+ `crabomination_ml` 45 / 0),
+golden traces 7/7 unmoved, clippy clean.
+
+```text
+actor, callgrind, profiling-fast -p crabomination_ml --no-default-features,
+--actors 1 --games 60 --steps 1 --seed 7, 0 libmimalloc frames both sides:
+
+  3,151,613,051 -> 3,134,987,026   -0.5275 %
+
+every mover, and the whole program delta is -16,626,025:
+  __memcpy_avx_unaligned_erms       152,753,685 -> 149,367,225   -3,386,460
+  _int_malloc                        77,862,640 ->  74,497,392   -3,365,248
+  _int_free_merge_chunk              12,741,040 ->  10,473,099   -2,267,941
+  malloc                             81,936,847 ->  80,128,799   -1,808,048
+  _int_free                         105,482,819 -> 103,767,635   -1,715,184
+  RawVecInner::finish_grow           15,219,720 ->  14,137,480   -1,082,240
+  free                               66,222,162 ->  65,166,978   -1,055,184
+  _int_free_maybe_consolidate         5,054,973 ->   4,035,419   -1,019,554
+  do_reserve_and_handle               4,081,788 ->   3,107,772     -974,016
+  drop_in_place<TrainRow>               323,312 ->           0     -323,312
+  __rustc::__rdl_alloc               15,255,630 ->  15,012,126     -243,504
+  EncodedState::default                 217,260 ->           0     -217,260
+  encode_state (self)                47,248,778 ->  47,970,872     +722,094
+```
+
+**The entry predicted -0.39 % off the allocation count alone and the win is
+a third larger, for two reasons it did not price.** (a) A `reserve` ladder
+does not only allocate — it **copies**, and `__memcpy` is the single largest
+row in the table at -3.4 M. Eight `Vec`s reserved separately is eight
+independent 0->n growths; one buffer is one. (b) **Drop glue counts as much
+as construction**: `EncodedState::default` (eight empty `Vec`s) and
+`drop_in_place<TrainRow>` (eight `Vec` drops a row) both leave the profile
+entirely, -540 k between them, and neither is an allocation.
+
+**The +722 k on `encode_state`'s self is the price of the layout and it is
+named**: the battlefield's and the stack's controller splits are two filtered
+passes each instead of one interleaved one, plus the per-push `counts`
+bookkeeping. A quarter of the win pays for the shape that makes the rest of
+it possible.
+
+**No retrain, and the shard format is untouched.** Group boundaries,
+within-group order and every emitted value are identical; only the buffers
+under them changed. `push`/`push_default` `debug_assert!` the group-ordered
+fill, so `-C debug-assertions=yes` audits the invariant on real boards
+rather than only in the suite.
+
+**What `(-107)` still has open is its third row**, `computed_permanent_hinted`'s
+433,775 `Arc`s (12.8 % of every allocation the actor makes) — and `(-111)`
+built and reverted the by-value form of exactly that.
+
 ### Hundred-and-fourth pass (5) — CR 115.4, and a correctness row that COSTS Ir
 
 **`fixed` +0.087 % / `cube` +0.007 % / `sealed` +0.082 %** at `d0799d5c`, off
@@ -16628,6 +16712,59 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-113) `resolve_combat` IS NOW THE ACTOR'S LARGEST REAL GROWTH ROW —
+22,366 GROWTHS OVER 7,465 CALLS, 3.00 A CALL, ~12.0 M Ir (0.38 %).** Read off
+`cg_growth.py` on the actor dump at `d402e5da`, after `(-107)`'s buffer took
+`encode_state` from 5.23 growths a call to **exactly 1.00** (33,446 -> 6,390,
+and total program growths 386,320 -> 359,264). Every row above
+`resolve_combat` in the division is a once-per-process or once-per-game
+caller; it is the top row that runs thousands of times.
+
+```text
+  actor, --actors 1 --games 60 --steps 1 --seed 7, d402e5da
+    growths  calls  per call  name
+      2,865     60     47.75  play_recorded_game_mcts   (60 calls — a game)
+     22,366  7,465      3.00  resolve_combat            <- this entry
+      1,628    585      2.78  deal_damage_to_from
+      2,311    881      2.62  mint_token_onto_battlefield
+     20,931 13,929      1.50  auto_tap_for_cost_inner   ((-108), still 1.50)
+      9,218  6,904      1.34  Iterator::partition       (a generic row)
+     10,519  8,768      1.20  deal_combat_damage_to_target
+      6,390  6,390      1.00  encode_state              (at its floor)
+
+  split: 16,678 grow_one (3.31 M Ir) + 5,688 do_reserve_and_handle (8.66 M)
+```
+
+**`(-112)` listed `resolve_combat` as "reserved (`(-103)`)" and closed the
+lane — but it never divided that row by its call count**, and on the actor it
+is 3.00, well above the 1.0 floor `(-80)` sets. **The lane is closed for the
+rows `(-112)` divided, not for the two it took on trust.** `auto_tap_for_cost_inner`
+is the other one, still 1.50 after `(-108)`.
+
+**Where to look first, from the callee table** (the body is thin — the
+growths are inlined out of `resolve_combat_damage_with_filter`):
+
+```text
+  callees of resolve_combat            calls        Ir (incl)
+   98,929   6,063,958  Arc::make_mut                  the CoW unshare
+   39,107   4,090,045  __rust_dealloc
+   32,210   4,548,475  blockers_of                    141 Ir a call
+   32,210   2,507,077  free_division_targets          78 Ir a call, and it
+                                                      whole-board scans for a
+                                                      keyword no deck has
+   24,318  12,338,863  Vec::from_iter
+   16,678   3,306,045  grow_one
+```
+
+`combat_damage_computed()` returns a `Vec<ComputedPermanent>` per call and
+`drop_in_place<ComputedPermanent>` is 37,044 of the callees, so the per-call
+board snapshot is a candidate in its own right. **`free_division_targets` is
+the cheap half and the obvious one**: it walks the whole computed board asking
+whether anything has `DividesCombatDamageAmongDefenders` (Butcher Orgg), 32,210
+times, and returns `vec![]` — a `PresenceGate` slot answers it once a freeze
+scope. Price it against `(-87)`'s refutation first: the walk is a keyword test
+per card, not a length check, so it is on the paying side of that rule.
+
 **(-111) BUILT, MEASURED AND REVERTED — `computed_permanent` BY VALUE IS
 `fixed` +0.335 % / `cube` +0.654 % / `sealed` +0.163 %, AND THE REASON IS A
 RULE ABOUT WHAT AN `Arc` IS FOR.** The allocation half of the arithmetic below
@@ -16919,8 +17056,19 @@ and on the actor `encode_state`'s 66,485 is second only to `Vec::from_iter` —
 that one is `(-107)`, and it is a first allocation per group rather than a
 re-growth, so a reserve moves it and only a different buffer removes it.
 
-**TAKEN, 2026-08-30 — the single-backing-buffer half (`EncodedState`'s eight
-group `Vec`s -> one `Vec<EncodedObject>` + `[u32; NUM_GROUPS]` counts).**
+**THE SINGLE-BACKING-BUFFER HALF IS TAKEN AT `d402e5da` — actor
+-0.5275 %, a third larger than this entry predicted.** `EncodedState`'s eight
+group `Vec`s are one `Vec<EncodedObject>` + `[u32; NUM_GROUPS]` counts,
+reserved once. The Log has the row table; the two costs this entry did not
+price are **the growth ladder's `__memcpy`** (-3.4 M, the largest single row)
+and **drop glue** (`EncodedState::default` + `drop_in_place<TrainRow>`, -540 k,
+neither an allocation). **The rule: an allocation-count estimate is a lower
+bound on what removing a per-object `Vec` is worth** — count the copy and the
+drop as well.
+
+**What is still open here is the THIRD row below**, the `Arc` census —
+`(-111)` built and reverted the by-value form of it, so a different shape is
+needed, not another attempt at that one.
 
 **(-107) THE ACTOR HAS TWO ALLOCATION ROWS `--bench` CANNOT SEE, AND ONE OF
 THEM IS THE SECOND-LARGEST `reserve` GROWER IN THE PROGRAM.** Read off the
