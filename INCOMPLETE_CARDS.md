@@ -32,6 +32,15 @@ It has two independent passes:
    8,092 — the catalog has roughly tripled since, and the *rate* is flat at
    ~4 %).
 
+3b. **Oracle cross-reference** (`scripts/audit_bottom_random.py`,
+   `scripts/audit_target_walkers.py`; no build): the passes above read the
+   *code*, so neither can see a card whose tree is well-formed and says
+   something the printed card does not. These read a field out of the source
+   and compare it against the committed scryfall cache. **Both were written
+   after a tracker row turned out to be a claim about code that nobody had
+   re-read** — the pattern is worth repeating for any field whose default is
+   the wrong answer.
+
 3. **Variant coverage** (`scripts/audit_variant_coverage.py`, comment-free,
    no build): the two passes above look *inside* one card's effect tree, so
    neither can see a card whose tree is fine and whose *engine* arm is a
@@ -247,10 +256,31 @@ Lorehold Reclamation (Spirit-typing) · Fractal-token color/type riders ·
 type-gated `CardMatch` lords.
 
 ### 10. "Rest on bottom of library" approximated as "leave on top" / "to graveyard"
-**Stale** — `LookPickToHand { rest_to_graveyard: false }` already bottoms the
-rest. Augur of Bolas ✅ (also got its instant/sorcery filter) and Sea Gate Oracle
-✅ verified + de-stale-commented. Remaining to spot-check: Geometer's Arthropod ·
-Paradox Surveyor · Conjurer's Bauble.
+**Stale as written** — `LookPickToHand { rest_to_graveyard: false }` already
+bottoms the rest. Augur of Bolas ✅ and Sea Gate Oracle ✅ verified.
+
+**But the spot-check found a different defect underneath it, and it was a
+class of 41** (2026-08-29). The rest reaches the bottom; it reaches it **in the
+order it was revealed**. `LookPick::rest_bottom_random` is what shuffles the
+batch, it is `false` by default, and 38 of the catalog's 135 `LookPick` cards
+print "…on the bottom of your library in a random order" without it — Memory
+Deluge, Vivien Reid, Ellywick Tumblestrum, Narset, Militia Bugler, Carth the
+Lion and 32 more. Three had it and should not (Sleight of Hand and Stress Dream
+bottom exactly one card, so the shuffle is a no-op that still draws game RNG;
+Flow State prints "in any order", which is a choice, not chance). All 41 fixed.
+
+**Why it matters more here than on paper:** the player has just seen those
+cards, so a deterministic bottom leaves their order as known information in
+the state the encoder observes, and a self-play net can learn it. The printed
+rule exists to destroy exactly that information.
+
+`scripts/audit_bottom_random.py` keeps it closed — it cross-references each
+factory's `name:` against the committed scryfall cache in both directions;
+129 checked, 0 findings. Geometer's Arthropod and Conjurer's Bauble were the
+two spot-check rows that came back clean (Bauble's "up to one **target**
+card" is a `Selector::one_of` chosen card rather than a target slot, which is
+the Kemuri-Onna shape in bucket 4 and is left as the one open residual here);
+Paradox Surveyor was one of the 38.
 
 ---
 
