@@ -24,57 +24,34 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; ≤15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
-   origin/claude/modern_decks`. Two sessions run at once: push code before tracker prose,
-   **rebase not force**, **sequential builds only**, and push a one-line "TAKEN, <date>"
-   onto the PERF entry before spending a build on it. **Nothing is claimed now.**
-2. **Tip state, all gates re-run there:** suite 18,801 / 0 / 5 (+ `crabomination_ml`
-   45 / 0), clippy clean, golden traces 7/7, grid 30 cells / 33,120 games / 0 failures,
-   **the grid's ACTOR leg** 6,000 games / 577,283 rows / 0 stalls, `--bench` byte-identical
-   (195,528 / 27.44 / 611.0 / 0 stalls, determinism + thread_determinism ok, peak_rss 24.4).
-3. **`--bench` sees no encoder on any pool** — an encoder change is measured on the actor
-   (`selfplay_train --actors 1 --games 60 --steps 1 --seed 7` under callgrind) and audited
-   by the grid's actor leg, not by the 30 cells. Pass 106 moved the actor **-0.78 %** there.
-4. **Read the Standing rules for the function's name before costing a `cg_lines.py` row.**
-   Pass 106 re-derived pass 61's refuted `is_event_hardcoded` candidate off a fresh line
-   profile and paid four builds; a line row on an inlined callee is where its instructions
-   execute, **not** a deletion ceiling. `dispatch_triggers_for_events`' per-event gate is
-   CLOSED twice over; `(-115)` now carries the line profile it was asking for.
-5. **Open, in order:** `(-115)`'s remaining leads — the battlefield/event *iteration*
-   (~35 M on `cube`) and `block_sides_seen`'s per-(permanent, trigger) `Vec::new` at
-   10.5 M, which is not a tabulation and so escapes pass 61's refutation; then `(-107)`'s
-   third row (`computed_permanent_hinted`'s 433,775 `Arc`s, 12.8 % of the actor's
-   allocations — `(-111)` refuted the by-value form, so it needs a different shape).
-6. **Cards:** `scripts/audit_oracle_verbs.py`, 225 rows over 10,949 cards. Check three
-   rows in the source before believing any class — the filter is the suspect, not the
-   catalog (722 -> 254 -> 228 -> 225 on this one).
-7. **TARGETING IS CLOSED AND GATED (pass 104's other half, `13435f3e`..`9fec2a6f`).**
-   A slot with no filter enumerated against `Any` and was re-checked nowhere, so the
-   printed noun was enforced nowhere: **Terminate destroyed any permanent, Zombify with
-   an empty graveyard STOLE a creature, Banefire offered a Forest, "target player
-   discards" offered the board.** 79 reanimation filters, 20 per-card nouns, ~50 walker
-   arms; three invariants now gate it
-   (`every_reanimating_move_says_which_zone_its_target_is_in`,
-   `every_targeting_spell_or_ability_says_what_it_targets`, and the pre-existing
-   `every_declared_target_slot_is_answerable`). **Four rules, in order of reuse.**
-   (a) **The aim walker and the slot walker are a PAIR** — `primary_target_filter`
-   surfaces, `target_filter_for_slot` re-checks at CR 608.2b; a filter only one sees
-   aims right and re-checks against nothing, which is worse than none because it looks
-   fixed. Two invariants caught that twice in two commits. Add both arms.
-   (b) **An implicit filter belongs to the FIELD, not the card**
-   (`IMPLICIT_CREATURE_TARGET` / `IMPLICIT_ANY_TARGET` /
-   `implicit_player_if_bare_player_field`); a per-card filter is only for nouns narrower
-   than the field's own type.
-   (c) **Discover a class by joining a census against `scripts/.scryfall_cache.json`,
-   then gate it on a STRUCTURAL predicate** — all 38 blink bodies name `ControlledByYou`
-   / `OwnedByYou` / `ExiledWithSource`, which is what made the test an invariant instead
-   of a list of 79 names that goes stale on the next card.
-   (d) **Group a census by the nearest enclosing enum key**: 204 card rows were ~40 arms.
-   **Open, one shape:** Officious Interrogation / Jeska's Will / Tithe name their target
-   player only from inside a `Value` or a `Predicate`, which neither walker reaches.
-   **Checked, do not re-check:** the counterspells (target a spell `Target` cannot
-   express) and the ~25 reflexive "that creature" triggers (`combat.rs` stamps the slot
-   at push time); and there is **no `std::collections` default-hasher iteration in engine
-   or bot logic**, so cross-process determinism holds.
+   origin/claude/modern_decks`. Two sessions run at once: code before tracker prose,
+   **rebase not force**, **sequential builds only**, push "TAKEN, <date>" onto a PERF entry
+   before spending a build — **and re-read the entry when you do**: both sessions paid a
+   12-min `profiling-lines` build for `(-115)` on the same afternoon. **Nothing is claimed.**
+2. **Tip `172a40c8`, all gates re-run there:** suite 19,057 / 0 / 5, clippy clean, traces
+   7/7, `--bench` byte-identical (195,528 / 27.44 / 611.0 / 0 stalls, determinism +
+   thread_determinism ok, `games_per_s` 305-315, `peak_rss` 24.5). Grid not re-run —
+   nothing changed behaviour. Window `2b38c673 ->` here: **-0.401 / -0.760 / -0.774 %**.
+3. **The rule this pass adds (`(-116)`, cube -0.465 %, no new state):** a chain of pure
+   `continue` guards needs all of them, so the order is free — **rank by cost x rejection
+   rate, not by which looks cheapest.** Look for the shape in other multi-guard loops.
+4. **Its counterweight (`(-117)`):** a `std` line row inside an inlined-to-death function
+   does not name the construct you can see from it — `vec/mod.rs:464` read as 10.5 M,
+   measured 1.5 M. Price a `std`-row candidate as a guess.
+5. **Do not retake:** the reserve lane `(-112)`; dispatch's per-event gate (pass 61 AND
+   106); a **third** line profile of `dispatch_triggers_for_events` — its remainder is
+   ~49 M of iteration, answered by `cg_calls.py` off a dump you already have.
+6. **Open, in order:** `(-115)`'s `Battlefield` member-list lane (the per-card-bit form is
+   priced at 0.10 % and refuted by `(-114)`); `(-107)`'s `computed_permanent_hinted` `Arc`s
+   on the actor; **actor scaling at 1 / half / full actor counts, never measured.**
+7. **Cards:** `audit_oracle_verbs.py`, 223 rows / 10,949 cards; check three rows in the
+   source before believing a class. **Inscription of Insight is not the card it is named
+   after** — three wrong modes and a missing kicker; needs a dynamic-P/T token and a
+   kicked-dependent `ChooseN`, so it is a primitive job.
+8. **Targeting is CLOSED and gated (pass 104's other half).** Its four transferable
+   rules moved verbatim to ENGINE_BACKLOG's "Targeting — the four rules pass 104
+   closed on"; the open residue there is the three cards that name a target player
+   only from inside a `Value` or a `Predicate`, which neither walker reaches.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

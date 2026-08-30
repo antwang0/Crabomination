@@ -2233,6 +2233,51 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-seventh pass — this session's close at `172a40c8`
+
+Three code commits, all in the trigger and combat dispatch: `9b3470a4`
+(`(-113)`'s free-divider read), `89917b05` (`(-116)`, the guard reorder — the
+pass's largest) and `172a40c8` (`(-117)`, one dedupe `Vec` a dispatch). The
+other session's `41b1423d`, `45c55cc3`, `90a629a1` and `a8d5bdd8` land in the
+same window.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,057 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces 7/7 unmoved across all three
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench 195,528 / 27.44 / 611.0 / 0 stalls — byte-identical to the committed
+        invariant over six runs across two release builds; determinism ok,
+        thread_determinism ok (3 vs 1). games_per_s 315.11 / 307.49 / 305.64,
+        host_calib_ms 44-46, peak_rss_mib 24.5, bin_bytes 123,893,400,
+        `release` + mimalloc.
+
+Ir anchor, profiling-fast --no-default-features, --a gang --b gang --games 6
+--threads 1 --seed 1. **Each change against its own adjacent base**, one
+container, because the other session landed engine commits between them:
+                    fixed          cube           sealed
+  (-113)          -0.0458 %      -0.0791 %      -0.0706 %
+  (-116)          -0.1185 %      -0.4652 %      -0.3698 %
+  (-117)          -0.0051 %      -0.0599 %      -0.0839 %
+
+  the window, `2b38c673` -> `172a40c8` (both sessions' code in it):
+    fixed     877,013,866 ->   873,495,437   -0.401 %
+    cube    2,610,224,160 -> 2,590,390,322   -0.760 %
+    sealed  2,591,843,796 -> 2,571,777,933   -0.774 %
+```
+
+⚠ **This box is a third one again — `Intel Xeon @ 2.80 GHz` where the
+hundred-and-fourth block reads 2.10 GHz — and `games_per_s` is LOWER on the
+nominally faster part** (305-315 against that block's 408-427) at
+`host_calib_ms` 44-46 against its 39-42. The calibration says the two boxes
+are within ~10 % and the throughput differs by 25 %, so **the calibration does
+not predict the throughput either**, and this is the third independent
+confirmation of the file's own rule: the columns that transfer between
+containers are `decisions` / `turns_per_game` / `decisions_per_game` /
+`stalls`, and they are byte-identical here to every reading on file.
+`peak_rss_mib` 24.5 is in the 24.4-24.7 family, not the neighbouring
+session's 18.8-19.1 — same split, same rule.
+
 ### Hundred-and-sixth pass (3) — this session's close at `785b50d5`+
 
 Three code commits this session — `(-107)`'s single buffer (`d402e5da`), the
