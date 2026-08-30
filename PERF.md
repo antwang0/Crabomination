@@ -9219,6 +9219,64 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-third pass (1) — the four `grow_one` rows above 1.5 growths a call
+
+**`fixed` -0.323 % / `cube` -0.242 % / `sealed` -0.195 %** off `c92f3851`
+(`0367c09c`).
+
+**The discriminator is growths per CALL, not growths.** The Profile of record
+ranks `RawVec::grow_one`'s callers by growth count, and a row read that way
+mixes two different things: a *first* push, which a reserve only **moves**
+into the reserve, and a *re-growth* through `finish_grow`, which a reserve
+**removes**. At this tip only four caller rows are above 1.5 growths a call,
+and all four are taken here; `dispatch_board_scan` (0.37) and the rest of the
+table are first allocations and stay.
+
+```text
+callgrind, profiling-fast --no-default-features, --a gang --b gang
+--games 6 --threads 1 --seed 1.  base c92f3851
+  fixed     890,239,062 ->   887,359,427   -0.323 %
+  cube    2,661,567,567 -> 2,655,120,652   -0.242 %
+  sealed  2,630,746,910 -> 2,625,608,912   -0.195 %
+
+cube's ledger, and it is the allocator paying
+  grow_one calls      315,606 -> 278,230   -11.8 %
+  __rust_alloc      1,392,312 -> 1,384,794
+  realloc              -1.44 M    _int_free        -1.34 M
+  _int_realloc         -1.00 M    finish_grow      -0.97 M
+  grow_one             -0.90 M    __memcpy         -0.64 M
+  _int_malloc          -0.56 M    merge_chunk      -0.55 M
+  do_reserve_and_handle +0.47 M   pick_attacks_inner +0.47 M
+  malloc_consolidate    +0.57 M   mana_source_table  +0.31 M
+                                                  net -6.4 M
+```
+
+- `resolve_combat` / `deal_combat_damage_to_target` — 3.5 and 1.8 a call, and
+  **they are the same `Vec`**: the combat-damage batch's `events` accumulator,
+  opened by `resolve_combat_damage_with_filter`, appended through by
+  `deal_combat_damage_to_target` and appended after by
+  `check_state_based_actions_into`. One `reserve(32)` past the early returns;
+  the batch always emits at least one event, so it is never wasted.
+- `mana_source_table` — 1.6 a call. `out.reserve(16)` on the first source
+  found, guarded on emptiness so a seat with nothing untapped allocates none.
+- `pick_attacks_inner` — 2.9 a call over its two board-walk locals, which are
+  pure locals of `&CardInstance` and so take **inline storage** rather than a
+  reserve: `SmallVec<[_; 16]>` is 136 bytes of stack and *zero* allocations
+  where a reserve would still have been one. `attacks` and `remaining` are
+  sized off `attackers.len()` exactly.
+
+**The three rising rows are the cost side and they are all where the change
+is**: `do_reserve_and_handle` is the reserves themselves, `mana_source_table`'s
+is its `is_empty` guard, and `pick_attacks_inner`'s is `SmallVec`'s
+inline-or-spilled branch on every deref. The allocator gives back more than
+three times that. `mana_source_table` and `pick_attacks_inner` leave the
+caller table entirely (13,604 and 12,996 growths -> below the top eight);
+combat's pair falls 34,438 -> 25,812, so a `reserve(32)` does not reach every
+batch and the residue is *other* `Vec`s inlined into `resolve_combat`.
+
+Behaviour-preserving: three pools play identical ladders, suite 19,049 / 0 /
+5, golden traces unmoved, clippy clean.
+
 ### Hundred-and-second pass (2) — fifty raw battlefield id scans join the index memo
 
 **`fixed` -0.047 % / `cube` -0.078 % / `sealed` -0.057 %** off `de350c5c`.
@@ -15645,6 +15703,26 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-103) RANK A `grow_one` ROW BY GROWTHS PER **CALL**, NOT BY GROWTHS —
+TAKEN AT `0367c09c` FOR -0.323 / -0.242 / -0.195 %, AND THE FOUR ROWS THAT
+QUALIFIED ARE SPENT.** The Profile of record's caller table is ranked by
+growth count, which mixes a *first* push (a reserve **moves** it) with a
+*re-growth* through `finish_grow` (a reserve **removes** it). Divide the row
+by its call count and only `resolve_combat` (3.5), `pick_attacks_inner` (2.9)
+and `mana_source_table` (1.6) were above 1.5 at that tip; `dispatch_board_scan`
+(0.37) and the rest of the table are first allocations. Log has the ledger.
+
+**Two follow-ons, and the second is the general one.** (a) Combat's pair only
+fell 34,438 -> 25,812 growths, so a `reserve(32)` does not reach every batch
+and the residue is *other* `Vec`s inlined into `resolve_combat` — a
+`--separate-callers` read would name them, but at ~9 k growths it is worth
+~0.02 % and is written down rather than taken. (b) **A pure local of
+references takes inline storage, not a reserve**: `SmallVec<[&T; 16]>` costs
+stack and zero allocations where a reserve still costs one, and the price is
+`SmallVec`'s inline-or-spilled branch per deref (+0.47 M on `cube`, against
+the allocator's -6.4 M). That is the rule `(-71)`'s sweep found and this pass
+confirms on a *bot* local rather than an engine one.
 
 **(-101) A STORED `fn` POINTER WHOSE VALUE IS FIXED PER FIELD IS TWO COSTS,
 AND THE SECOND ONE HAD NEVER BEEN PRICED HERE. TAKEN ON `ComputedPermanent`
