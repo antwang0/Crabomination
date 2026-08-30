@@ -33,16 +33,20 @@ sixty-seventh pass, so don't re-take that.
    that costs a build, push a one-line "TAKEN by this session, <date>" onto
    the entry you are pulling. A push costs seconds; a duplicated A/B costs an
    hour of one core.
-1b. **CLAIMED, 2026-08-30, this session: `CardData`'s WIDTH.** `CardData` is
-   deep-copied 68,610 times a six-game `cube` run — 48 % of every CoW copy in
-   the program, 2.55 % inclusive — and the copy is the field-by-field move of
-   its bytes, so a byte out of it is ~0.44 Ir a copy. Two instalments landed
-   (`daf30ed1`, `be6ec1ec`): 864 -> 568 bytes, **-0.596 / -0.605 / -0.696 %**
-   over the two. **Next, and claimed: `tapped` and the four combat flags move
-   OUT of the `Arc<CardData>` onto the `CardInstance` handle** — that is the
-   copy-*count* half, worth the ~21,700 copies `activate_ability_inner` makes
-   (100 % of its `make_mut` calls copy; they are the land taps of `(-51)(a)`).
-   Do not take either half concurrently.
+1b. **`CardData`'s WIDTH is DONE, both halves.** Three instalments landed:
+   `daf30ed1` + `be6ec1ec` took 864 -> 568 bytes (**-0.596 / -0.605 /
+   -0.696 %**), and `b2330629` moved `tapped` and five per-turn flags out of
+   the `Arc` onto the `CardInstance` handle (**-0.966 / -0.949 / -1.236 %**,
+   deep copies 136,436 -> 100,016 on `cube`). Nothing here is left to claim.
+1c. **CLAIMED, 2026-08-30, this session: `Overlay`'s `proj` FIELD.**
+   `ComputedPermanent`'s four characteristics each store a
+   `fn(&CardDefinition) -> &T` that is a compile-time constant per field — 32
+   bytes on a struct built 289,098 times and `Arc`-allocated 201,780 times a
+   six-game `cube` run, and an indirect call on the printed-side read, which
+   is the common one. A type parameter makes it a field offset. Sized against
+   the eighty-fourth pass's padding probe (+8 bytes = `fixed` +0.040 % /
+   `cube` +0.058 %) the width alone is ~-0.16 / -0.23 %; the read side is what
+   the A/B is for. Contained in `layers.rs`.
 2. **State at `6d30b1e6`**, the combined tip of both sessions: suite
    19,044 / 0 / 5, clippy clean, golden traces 7/7 unmoved, grid green
    (30 cells / 33,120 games / 0 failures, 5 assertion strings), `--bench`
