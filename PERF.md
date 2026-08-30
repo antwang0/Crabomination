@@ -16324,9 +16324,51 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-111) BUILT, MEASURED AND REVERTED — `computed_permanent` BY VALUE IS
+`fixed` +0.335 % / `cube` +0.654 % / `sealed` +0.163 %, AND THE REASON IS A
+RULE ABOUT WHAT AN `Arc` IS FOR.** The allocation half of the arithmetic below
+was right — the allocator family falls **-34.0 M** and `Arc::drop_slow`
+another **-7.1 M**, i.e. -41 M against the -42.2 M predicted. Every other
+line was wrong.
+
+```text
+cube, 381fac97 -> the by-value build
+  ComputedPermanent::clone                      0 -> 20,616,270   +20.6 M
+  drop_in_place<ComputedPermanent>      3,593,712 -> 22,055,048   +18.5 M
+  computed_permanent_hinted            57,159,722 -> 62,444,342    +5.3 M
+  Box<[T]>::clone                               0 ->  4,751,512    +4.8 M
+  __memcpy                             71,930,348 -> 76,326,556    +4.4 M
+  Keyword::clone + its drop + into_boxed_slice                     +3.3 M
+  the allocator family + Arc::drop_slow                           -41.1 M
+                                                            net   +17.2 M
+```
+
+**The rule: an `Arc`'s point is that the drop glue runs ONCE, and a by-value
+handle moves a five-field clone *and* a five-field drop onto every read.**
+`ComputedPermanent` is 72 bytes but it is not nine words of `memcpy` — it is
+`Arc<CardDefinition>` plus four `Option<Box<..>>` overlays, so a clone is a
+refcount pair and four branches (and a `Box<[Keyword]>` deep copy whenever an
+overlay is set), and the drop is the same again. Measured: **~58 Ir a clone
+and ~52 Ir a drop, over 355,838 reads**, against an allocation that was ~203 Ir
+on the **57 %** of reads that miss the memo and ~10 Ir on the rest. 0.567 x 203
+= 115 Ir a read for the `Arc`; 160 Ir a read for the value. The handle loses on
+the hits, which is exactly where a shared handle is supposed to win.
+
+**Two corollaries, so nobody re-derives them.** (a) `(-100)`'s "a deep copy is
+~0.44 Ir a byte" prices a *flat* type; for a type whose fields are handles the
+per-field logic dominates and the byte count is not the estimator — the
+prediction here was off by 6x because it used one. (b) The overlay rate is
+higher than the 17 % the `PrintedList::push` census implies: `Box<[T]>::clone`
++ `Keyword::clone` come to ~+8 M, i.e. ~23 k box copies over 356 k reads *on
+top of* the store side. **`(-27)`'s pool is refuted, `(-92)` lead 2 is priced
+at nearly nothing, and the by-value route is refuted here — the row is closed
+as a shape and only a change to how often a scope MISSES can move it
+(`(-91)`'s vein).**
+
+**The entry as it was claimed, kept for the arithmetic that failed:**
+
 **(-111) `computed_permanent`'s `Arc` IS 201,820 OF `cube`'s 1,296,530
-ALLOCATIONS (15.6 %) AND THE HANDLE IS 72 BYTES. TAKEN, 2026-08-30 — the
-hundred-and-fourth pass, by-value route.**
+ALLOCATIONS (15.6 %) AND THE HANDLE IS 72 BYTES.**
 
 Read off `cg.cube` at `381fac97`: `computed_permanent_hinted` is **355,838
 calls / 57.16 M self Ir / 160.6 Ir a call**, and **201,820 of those calls go
