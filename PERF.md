@@ -17822,6 +17822,31 @@ The `turn_granted_triggers` and `granted_triggers_eot` gates are still
 unfiltered and still read *zero* dispatches on all three pools, so there is
 nothing to price on them — leave them until a census says otherwise.
 
+**(-120)/(-121) FOOTNOTE — THE HOST-UNION WAS BUILT AND MEASURED AND IS
+SUPERSEDED, AND WHICH OF TWO FIXES WINS IS THE RULE.** A third session, working
+the same traffic from `(-115)`'s side, unioned the equip grants' **hosts** into
+the member word: an equipment grant is keyed by `CardId`, so its reachable set
+is a list and the walk can stay a member walk while the dispatch is grant-live.
+It works — `cube` **-1.0912 %** against `dc829911`, `fixed` -0.0505, `sealed`
+-0.0399, ladder byte-identical, and it took `cube`'s surviving 11,506 equip
+dispatches to an 85.7 % lane hit — and it is **not in the tree**, because
+`(-121)` then took the same 411,802 visits to *zero* by a more general route.
+
+**The rule: a fix that deletes the cause beats a fix that routes around it, and
+the second one is dead code the moment the first lands.** The union only ever
+pays where a grant is live *and* id-keyed, and grant-live is now zero on every
+pool. Do not rebuild it unless the census shows grant-live dispatches again —
+at which point the patch is in this branch's history and the entry above says
+what it measured.
+
+**It also corrected `(-120)`'s own closing claim, which is worth keeping.** That
+entry read "by the census it takes grant-live to zero on both pools that have
+it". It did on `fixed`; on `cube` **11,506 dispatches and 411,802 visits
+survived**, real equipment triggers rather than the empty lists the bug pushed.
+The census column that predicted zero was the *event-kind filter*'s, not the
+structural fix's — two different changes, one table. **Re-run a census after
+the fix, not only before it.**
+
 **(-114) BUILT, MEASURED AND REVERTED — THE COLD-GROUP DEREF IS ALREADY
 COMMON-SUBEXPRESSION-ELIMINATED, AND `has_keyword` IS **BYTE-IDENTICAL** WITH
 AND WITHOUT THE HOIST.** 18,593,922 self Ir over 410,892 calls on both sides,
