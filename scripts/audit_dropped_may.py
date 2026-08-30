@@ -38,6 +38,15 @@ OPTIONAL = (
     "MayDo", "MayDoBy", "MayDoElse", "MayPay", "MayTap", "MayDiscard",
     "MayCast", "MayPayOrElse", "MayReveal", "MaySacrifice", "Optional",
     "ChooseMode", "ChooseN", "Escalate", "TapOrUntap", "may_", "_may",
+    # Optionality the engine spells as a *shape* rather than a `May…` name.
+    # Every one of these was a false positive on a card that was already
+    # correct when the list was audited by hand (2026-08-30): Devouring Greed
+    # and Plumb the Forbidden are `SacrificeAnyNumber`, Voltage Surge's
+    # "you may sacrifice an artifact" is its `kicker_action_cost`, and a
+    # "you may put … from among them" is a `LookPick` with `up_to: true` or a
+    # `Selector::one_of` the picker may decline.
+    "AnyNumber", "up_to", "kicker_action_cost", "one_of", "OneOf",
+    "SacrificeOrPayLife", "min_targets: 0",
 )
 
 # "you may" phrasings that are not a resolution choice the effect tree owns.

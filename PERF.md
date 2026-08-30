@@ -2232,6 +2232,48 @@ and a 13-minute grid to move a label is the treadmill this branch's
 concurrency creates. Say which sha a reading came from and the next pass can
 use it.
 
+**THE SAME TIP, MEASURED IN TWO CONTAINERS, AND THE TWO INSTRUMENTS DISAGREE
+ABOUT WHICH BOX IS FASTER.** The other session read `c92f3851` independently
+on a box reporting `host_cpu` **2.80 GHz** and `host_calib_ms` **44-45**:
+
+```text
+  Ir anchor   fixed 890,239,062   cube 2,661,567,567   sealed 2,630,746,910
+              (against the block above: apart by 14 / 188 / -124 Ir,
+               i.e. 0.02 / 0.07 / 0.05 PARTS PER MILLION)
+  --bench     195,528 / 27.44 / 611.0 / 0 stalls, byte-identical;
+              determinism ok, thread_determinism ok
+              games_per_s 300.9 / 307.3 / 311.1 / 314.6 over four runs
+              host_calib_ms 44-45, peak_rss_mib 24.6, bin_bytes 123,840,272
+```
+
+**The Ir anchors agree to five hundredths of a part per million and the
+wall clocks differ by 28 %** — 431.40 there against ~308 here — and the calib
+probe points the *wrong way*: 44-45 here against 52 there says this box is
+~15 % faster single-threaded. It is not load (load average 0.36) and it is
+not thread scaling: the same 320-game workload runs **2.74 / 1.45 / 1.06 /
+0.86 s at 1 / 2 / 3 / 4 threads**, 3.19x on four cores. **The calib probe is
+a tight arithmetic loop and this workload is allocator- and memory-bound, so
+it normalizes the wrong thing.** The historical spread of the `games_per_s`
+column — 222 / 232 / ~308 / 353 / 422 / 431 across six containers — is the
+container, not the program.
+
+**So: an Ir number in this file transfers between containers exactly; a
+`games_per_s` does not, with or without its calib.** Quote the column only
+against another reading from the same container in the same sitting, and when
+a wall-clock reading looks like a regression, **settle it with one anchor run
+rather than a rebuild of the base** — that is what this pair cost, and it is
+also the twelfth and thirteenth cross-session anchor checks on this branch.
+The other one this session: the base run at `2b8d2b33` (`b6218fad` plus
+eleven card-data fixes) read 894,746,979 / 2,673,687,600 / 2,644,755,518
+against the committed `b6218fad` anchor's 894,747,828 / 2,673,703,848 /
+2,644,737,719 — **1 / 6 / 7 ppm apart**, which also says the card fixes are
+Ir-neutral at this workload.
+
+**`peak_rss_mib` reads 24.6 here against 24.3 there**, so the 26.8 -> 24.3
+fall the block above attributes to the projection change reproduces in a
+second container at a different absolute.
+
+
 ### Hundred-and-first pass — closing state at `b6218fad`
 
 Three code commits, all `CardData`'s CoW deep copy: `daf30ed1` and
@@ -9177,6 +9219,107 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-second pass (2) — fifty raw battlefield id scans join the index memo
+
+**`fixed` -0.047 % / `cube` -0.078 % / `sealed` -0.057 %** off `de350c5c`.
+Small, and the point is the class rather than the size.
+
+`(-38)`'s one-entry validated memo shipped at the hundredth pass as
+`Battlefield::find_by_id`, and `GameState::battlefield_find` — 556
+always-inlined sites — was routed through it. **Fifty other sites in the
+engine still spelled the same question longhand**, `self.battlefield.iter()
+.find(|c| c.id == x)`, and scanned the board every time. Same question, same
+answer, no memo; only the spelling kept them apart. Every site whose closure
+is exactly that id equality is converted, mechanically, nothing else touched.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base de350c5c
+  fixed     890,442,178 ->   890,025,461   -0.047 %
+  cube    2,663,166,096 -> 2,661,083,247   -0.078 %
+  sealed  2,631,620,288 -> 2,630,120,082   -0.057 %
+
+cube, the self rows it came off
+  computed_permanent_hinted      58,300,908 -> 57,154,898   -1.15 M
+  note_creature_death             1,351,178 ->    387,134   -0.96 M
+  targeting::has_host             1,510,164 ->    798,756   -0.71 M
+  apply_enters_under_...            988,892 ->    378,450   -0.61 M
+  chosen_type_etb_counter_specs   3,500,120 ->  2,905,062   -0.60 M
+  deal_combat_damage_to_target    5,554,674 ->  4,977,386   -0.58 M
+```
+
+**A 0.05 % Ir delta is worth quoting here and a 0.05 % wall-clock delta is
+not, and this pass measured the difference rather than assuming it.** The
+same binary re-run on `fixed` reads **890,025,356 against 890,025,461 — 105
+Ir of spread**, i.e. run-to-run noise is four orders of magnitude below the
+deltas above. `ab_wall.py` on this box cannot resolve better than +/-0.34 %
+quiet.
+
+**The risk the three pools measure away is hint thrashing.** One hint serves
+the whole zone, so fifty new writers could have cost the callers already
+hitting it more than the converted ones gained. All three pools fall, so they
+do not — and `computed_permanent_hinted`, whose own doc-comment named "one
+linear find per `perms` miss" as its cost, is the largest single row.
+
+`view.rs:1432` is the one site left alone: it takes a `&[CardInstance]`, not
+the zone, so there is no hint to consult.
+
+### Hundred-and-second pass (1) — `ComputedPermanent`'s four projections become types
+
+**`fixed` -0.481 % / `cube` -0.394 % / `sealed` -0.497 %** off `2b8d2b33`.
+
+`(-70)` collapsed `ComputedPermanent`'s four `Arc<CardDefinition>` handles
+into one by making each characteristic an `Overlay { proj, over }` — a
+`fn(&CardDefinition) -> &T` beside an `Option<Box<T>>`. **The projection is a
+compile-time constant per field** (`card_types`, `supertypes`, `subtypes`,
+`keywords`, one each, forever), so storing it cost 8 bytes per overlay *and*
+made the printed-side read — the overwhelmingly common one — an indirect call
+the optimizer cannot see through once the struct is behind an `Arc`.
+
+A `DefProj` / `DefProjList` type parameter carries it instead:
+`Overlay<CardTypesOf>` **is** its `Option<Box<Vec<CardType>>>`, and
+`Overlay::get` is a field offset. The struct goes **104 -> 72 bytes**, built
+289,098 times and `Arc`-allocated 201,780 times a six-game `cube` run.
+Nothing outside `layers.rs` names `Overlay`, `Printed` or their list
+siblings, so the diff is one file and the workspace compiled first try.
+
+```text
+callgrind, profiling-fast --no-default-features, --games 6 --threads 1 --seed 1
+base 2b8d2b33
+  fixed     894,746,979 ->   890,442,178   -0.481 %
+  cube    2,673,687,600 -> 2,663,166,096   -0.394 %
+  sealed  2,644,755,518 -> 2,631,620,288   -0.497 %
+
+cube, the self rows — READERS, not the writer
+  compute_permanent_pass          74,917,446 -> 73,238,392   -1.68 M
+  computed_permanent_hinted       59,684,668 -> 58,300,908   -1.38 M
+  bot::pick_blocks_inner::{closure} 4,201,360 ->  (inlined away)
+  attacker_self_block              2,795,064 ->  2,029,412   -0.77 M
+  blocker_self_block              10,435,480 ->  9,872,338   -0.56 M
+  blocker_pair_block              14,225,208 -> 13,729,400   -0.50 M
+  can_block_attacker_computed      5,416,546 ->  5,061,160   -0.36 M
+  tap_ability_summoning_sick       4,558,142 ->  4,226,686   -0.33 M
+  the allocator family                        +2.6 M  (a 72-byte
+                                              Arc<ComputedPermanent> lands
+                                              in a different size class)
+  net                                        -10.5 M
+```
+
+**The split between the two halves is priced, not argued.** The
+eighty-fourth pass's padding probe reads 8 bytes on this struct at `fixed`
++0.040 % / `cube` +0.058 %, so the 32 bytes are ~0.16 / 0.23 % — **the direct
+read is the larger half on both pools**, and the self table says where it
+landed: every `cp.keywords()` / `cp.card_types()` caller in the block loop,
+not the function that builds the struct.
+
+**The transferable rule: a stored `fn` pointer whose value is fixed per field
+is two costs, not one** — the width, which a padding probe prices, and an
+indirect call at every read, which nothing in this file had priced before.
+Look for the shape wherever a struct carries a "how to read me" alongside
+"what I hold".
+`core_rules::card_instance::computed_permanent_carries_no_projection_pointers`
+pins the 72 bytes.
+
 ### Hundred-and-first pass (4) — nineteen bare panic sites converted, and the +0.09 % is one function de-inlining
 
 **`fixed` +0.126 % / `cube` +0.084 % / `sealed` +0.118 %** off `b6218fad`, and
@@ -15502,6 +15645,40 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-101) A STORED `fn` POINTER WHOSE VALUE IS FIXED PER FIELD IS TWO COSTS,
+AND THE SECOND ONE HAD NEVER BEEN PRICED HERE. TAKEN ON `ComputedPermanent`
+AT `de350c5c` FOR -0.481 / -0.394 / -0.497 %; THE DEVICE IS THE ENTRY.**
+`Overlay { proj, over }` — `(-70)`'s own fix — stored a
+`fn(&CardDefinition) -> &T` per characteristic. Four of them: 32 bytes on a
+struct built 289,098 times a `cube` run, **and** an indirect call on every
+printed-side read, which is the common one and which nothing in this file had
+costed. A `DefProj` type parameter makes the projection a compile-time
+constant: the struct is 104 -> 72 bytes and the read is a field offset. The
+padding probe splits it — 32 bytes is ~0.16 / 0.23 %, so **the read side was
+the larger half on both pools**, and the self table says the fall landed on
+the *readers* (`attacker_self_block`, `blocker_pair_block`,
+`can_block_attacker_computed`, `pick_blocks_inner`'s closure), not on
+`compute_permanent_pass`. Log has the table.
+
+**Where to look for the same shape**: a struct that carries a "how to read
+me" alongside "what I hold", where the "how" is fixed at every construction
+site. Grep for `: fn(` in a struct definition; the engine has none left on a
+hot type after this one, so this is a *rule* for the next struct rather than
+an open lead.
+
+**(-102) FIFTY SITES SPELLING `battlefield_find` LONGHAND — TAKEN AT
+`c92f3851` FOR -0.047 / -0.078 / -0.057 %, AND THE READING TO KEEP IS THE
+NOISE FLOOR.** `(-38)`'s memo shipped on `Battlefield::find_by_id` and the
+556 `battlefield_find` sites went through it; fifty others still wrote
+`self.battlefield.iter().find(|c| c.id == x)` and scanned. **A repeat run of
+the same binary reads 105 Ir apart on `fixed`** (890,025,461 vs 890,025,356),
+so a 0.05 % Ir delta is four orders of magnitude above the instrument's own
+noise and is worth quoting — which a 0.05 % *wall-clock* delta on this box
+never is (`ab_wall.py` resolves +/-0.34 % quiet at best). **The generalisable
+half: when a memo lands on a named helper, grep for the query's longhand
+before closing the entry.** The same question spelled two ways is two code
+paths, and only one of them gets the memo.
 
 **(-100) THE CoW DEEP COPIES SPLIT BY TYPE — `CardData` IS 48 % OF THEM, AND
 BOTH HALVES OF ITS COST ARE NOW TAKEN. -0.60 % (width) + -0.95/-1.24 %

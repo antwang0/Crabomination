@@ -374,6 +374,17 @@ more serious defect and the easier one to confirm.
 | ~~Witherbloom Necromancer~~ ✅ **FIXED** | witherbloom.rs:10706 | now `on_other_dies(MayPay { {1} → Move(TriggerSource → battlefield) })` — real reanimate-the-just-died-creature (was Drain 1), same mechanism as Minion's Return |
 | ~~Echocasting Symposium~~ ✅ | sos/sorceries.rs | already on `CreateTokenCopyOf` (doc was stale) |
 | ~~Rush of Knowledge~~ ✅ | stx/mono.rs | `Value::HighestManaValueAmong` (was hardcoded draw 4) |
+| ~~Stingerback Terror~~ ✅ **FIXED** 2026-08-30 | decks/modern.rs | shipped as an **invented card**: a {2}{R}{R} *Legendary* 7/7 Scorpion Dragon with menace, ward—pay 3 life and saddle 3, whose saddled attack drained half of each opponent's life. No such card exists and the cache holds no Mount with that text. Now the printed one — flying, trample, `PumpSelfByValue { HandSizeOf(You), -1/-1 }`, `plot_cost` {2}{R} — all four primitives already shipped. Its three saddle-mechanics tests moved to Brightfield Glider. |
+| ~~Descendant of Storms~~ ✅ **FIXED** 2026-08-30 | mod_set/creatures.rs | shipped as a 2/2 flying **Spirit** with a dies-trigger that made a Human Soldier token — the card's own types and its token's, swapped, plus a keyword and a trigger it does not have. Now the printed {W} 2/1 Human Soldier with "whenever it attacks, you may pay {1}{W}; if you do, it endures 1" (`MayPay` + `Effect::Endure`, both shipped). |
+
+**Both were found by the same instrument and neither was on any tracker row**:
+`scripts/audit_catalog_stats.py`'s type and keyword columns, read against the
+committed scryfall cache after that script's own cost column was fixed (it had
+been reading an ability's `cost:` as the card's, which reported the four
+Legends Elder Dragons as drift against their own upkeep). **Audit the audit
+before believing its silence**: the cost column read 8 findings and 0 of them
+were real; after the fix it reads 0 findings, and the eight real defects were
+in the columns nobody had disbelieved.
 
 Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 **synthesized** fabricated-name cards (only `_b###` factories exist), so the
