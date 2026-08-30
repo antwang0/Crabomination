@@ -303,6 +303,50 @@ fn izoni_collects_evidence_for_spiders() {
     assert_eq!(spiders, 2, "collected evidence → two Spider tokens");
 }
 
+/// Izoni's second ability — "Sacrifice four tokens: Surveil 2, then draw two
+/// cards. You gain 2 life." — was absent from the definition entirely
+/// (`audit_oracle_verbs.py`'s `surveil` class).
+#[test]
+fn izoni_sacrifices_four_tokens_to_surveil_and_draw() {
+    let mut g = two_player_game();
+    let izoni = g.add_card_to_battlefield(0, catalog::izoni_center_of_the_web());
+    let spider = crabomination::card::TokenDefinition {
+        name: "Spider".into(),
+        power: 2,
+        toughness: 1,
+        card_types: vec![crabomination::card::CardType::Creature],
+        ..Default::default()
+    };
+    for _ in 0..4 {
+        g.add_token_to_battlefield(0, &spider);
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    // Surveil 2 is left to the default decider (it keeps everything on top),
+    // so the two draws below come off a library of known size.
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: izoni,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("sacrifice four tokens");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.is_token).count(),
+        0,
+        "all four tokens went to the cost"
+    );
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew two");
+    assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
+    assert!(g.battlefield_find(izoni).is_some(), "Izoni itself is not a token");
+}
+
 /// Trumpeting Carnosaur is a 7/6 trampler that discovers 5 on enter.
 #[test]
 fn trumpeting_carnosaur_discovers_five() {

@@ -44,7 +44,7 @@ sixty-seventh pass, so don't re-take that.
 6. **Open, in order:** `(-115)`'s `Battlefield` member-list lane (the per-card-bit form is
    priced at 0.10 % and refuted by `(-114)`); `(-107)`'s `computed_permanent_hinted` `Arc`s
    on the actor; **actor scaling at 1 / half / full actor counts, never measured.**
-7. **Cards:** `audit_oracle_verbs.py`, 223 rows / 10,949 cards; check three rows in the
+7. **Cards:** `audit_oracle_verbs.py`, 219 rows / 10,949 cards; check three rows in the
    source before believing a class. **Inscription of Insight is not the card it is named
    after** — three wrong modes and a missing kicker; needs a dynamic-P/T token and a
    kicked-dependent `ChooseN`, so it is a primitive job.

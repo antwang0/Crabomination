@@ -181,7 +181,7 @@ pub fn novice_inspector() -> CardDefinition {
 /// Izoni, Center of the Web — {4}{B}{G} 5/4 Legendary Elf Detective with
 /// menace. "Whenever Izoni enters or attacks, you may collect evidence 4. If
 /// you do, create two 2/1 black and green Spider tokens with menace and reach."
-/// (The sacrifice-four-tokens activated ability is omitted.)
+/// "Sacrifice four tokens: Surveil 2, then draw two cards. You gain 2 life."
 pub fn izoni_center_of_the_web() -> CardDefinition {
     let spider = || TokenDefinition {
         name: "Spider".into(),
@@ -217,6 +217,17 @@ pub fn izoni_center_of_the_web() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![etb(collect()), on_attack(collect())],
+        // "Sacrifice four tokens: Surveil 2, then draw two cards. You gain
+        // 2 life." — the whole ability was absent.
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::IsToken, 4)),
+            effect: Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
