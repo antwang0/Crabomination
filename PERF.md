@@ -2197,6 +2197,41 @@ a box whose state moves.
 
 ## Baseline
 
+### Hundred-and-sixth pass (2) — the encoder half's closing state, and the ACTOR leg of the grid
+
+Two code commits this session: `(-107)`'s single buffer (`d402e5da`) and the
+counter walk (`71e55636`). The per-event gate was built, measured and reverted
+and is not in the tree.
+
+```text
+suite   18,798 / 0 / 5 (crabomination + crabomination_tests + crabomination_nn)
+        crabomination_ml 45 / 0
+golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    30 cells, 33,120 games, 0 failures, 0 undecided
+        (`scripts/robustness_grid.sh`, -C debug-assertions=yes)
+grid, ACTOR leg — the one that reaches the encoder, and the gate for this
+        pass's `EncodedState::push` group-order `debug_assert!`:
+        target-audit/overflow/selfplay_train --actors 3 --steps 2
+          --games 120, seeds 1 / 7 / 23   360 games,  0 stalls, rc 0
+          --games 6000, seed 41         6,000 games, 577,283 rows,
+                                        0 stalls, rc 0, 155.7 games/s
+        The binary carries the new assertion string (checked with `strings`,
+        the grid script's own "check the binary, not the flags" rule), so the
+        6,000-game run really did audit the invariant on real boards.
+
+Actor anchor, callgrind, profiling-fast -p crabomination_ml
+--no-default-features, --actors 1 --games 60 --steps 1 --seed 7:
+  f7d6a036  3,151,613,051
+  d402e5da  3,134,987,026   -0.5275 %   (-107)'s buffer
+  71e55636  3,127,014,641   -0.2543 %   the counter walk
+                            -0.7804 %   over the pass
+```
+
+**The actor leg had never been run in this file's Baseline blocks**, and it is
+the only gate that reaches the encoder: `bot_ladder` encodes no state on any
+pool, so the 30-cell grid above cannot see an encoder assertion at all.
+
 ### Hundred-and-sixth pass (1) — closing state at `d402e5da`
 
 `(-107)`'s single buffer, plus the other session's CR 115.4 row (`d0799d5c`)
@@ -17077,12 +17112,59 @@ within the estimate's precision. The loop already has a fast-path `continue`
 
 **Do not design off this paragraph.** The 93 Ir is an estimate from a board
 size nobody has measured on this pool, and `(-110)`'s rule is that a program
-number is worth nothing until it is attributed to rows. The first move is
-`cg_lines.py --in dispatch_triggers_for_events` off a `profiling-lines`
-build — the one instrument that can say whether the cost is the walk, the
-`dispatch_board_scan` prologue, or the per-event match — and only then a
-shape. NEXT item 2 has been carrying "what dispatch's self cost actually is"
-as an open question for two passes.
+number is worth nothing until it is attributed to rows.
+
+**THE `profiling-lines` READING THIS ENTRY ASKS FOR IS DONE — the other
+session took it at the same tip (its dispatch self reads 194,723,966 to the
+instruction, so the two readings are the same workload).** Do not spend the
+build again.
+
+```text
+cg_lines.py --in dispatch_triggers_for_events, cube, 6 games, at this tip
+  18,219,494  game/mod.rs:?          the function's unattributed remainder
+  10,615,652  iter/macros.rs:?       }  the `for ev in events` iteration
+   6,856,802  iter/macros.rs:180     }  and its inner adapter
+  10,533,512  vec/mod.rs:464         `block_sides_seen`'s per-trigger Vec::new
+  10,240,198  game/mod.rs:23365      is_event_hardcoded's `match ev`   REFUTED
+    8,308,440  ptr/non_null.rs:1720  }
+    7,498,218  ptr/non_null.rs:444   }  slice/Vec pointer machinery
+    6,705,280  ptr/mut_ptr.rs:?      }
+    5,284,716  src/alloc.rs:115      }
+    5,089,866  raw_vec/mod.rs:612    }  allocation inside the walk
+    4,041,104  game/mod.rs:18449     event_subject
+    3,198,948  game/mod.rs:18448     event_matches_spec's call setup
+    3,182,554  game/mod.rs:3610      }  dispatch_board_scan, inlined
+    1,375,632  game/mod.rs:3487      }
+    2,429,028  game/mod.rs:18302     }  the `for e in events` prologue match
+    1,478,768  game/mod.rs:18301     }
+    2,287,634  game/mod.rs:18431     the `for ev in events` loop head
+    2,063,370  game/mod.rs:18315     PermanentEntered's timestamp block
+    2,028,064  game/mod.rs:18368     the trigger_grants retain
+    1,608,704  game/mod.rs:18434     the dies_suppressed test
+```
+
+**AND THE LARGEST NAMED LINE IN IT IS A TRAP — line 23365 IS CLOSED.**
+Tabulating `is_event_hardcoded` per event moved the function's own self cost
+by **-58,324 Ir** and cost **+0.555 / +0.438 / +0.634 %** in `SmallVec`;
+pass 61 had already built and reverted the same idea. See the Log
+(hundred-and-sixth pass (3)) and the Standing rules bullet, which now names
+the function. **A `cg_lines.py` row on an inlined callee is where its
+instructions execute, not a deletion ceiling** — that is the reading this
+entry needed and it cuts the other way from the one it expected.
+
+**What the table leaves standing**, in order: (a) the *iteration itself* —
+`iter/macros.rs` + the `ptr` rows are ~35 M between them and they are the
+`for card in &self.battlefield` and `for ev in events` walks, which is
+exactly this entry's thesis; (b) **`vec/mod.rs:464` at 10.5 M, which is
+`block_sides_seen: Vec<CardId> = Vec::new()` constructed and dropped once per
+(permanent, trigger)** even though only four `EventKind`s ever push to it —
+hoist it out of the trigger loop and `clear()` per trigger, or build it only
+for those kinds; (c) the `dispatch_board_scan` prologue at ~4.6 M. **(b) is
+the cheapest untried thing in the function and it is not a tabulation**, so
+`(-110)`'s and pass 61's refutations do not reach it.
+
+NEXT item 2 has been carrying "what dispatch's self cost actually is" as an
+open question for two passes; this closes the measurement half of it.
 
 **(-113) THE CHEAP HALF IS TAKEN at `9b3470a4`** — `fixed` -0.0458 % /
 `cube` -0.0791 % / `sealed` -0.0706 %, and the entry's mechanism for it was
