@@ -1336,12 +1336,18 @@ here if it ever needs compacting.
   not it can fire. `cg_edges.py --callers SpecFromIterNested` **ranked by
   calls, not Ir** is the table that finds them; PERF's (-44) has the rest.
 - **A line profile's row is what that source construct's instructions cost,
-  not what removing it would save** (pass 61, +0.12 % and reverted).
-  `cg_lines.py` put `is_event_hardcoded`'s `match ev` at 0.38 % of `sos`
-  inside the biggest engine row; replacing it with per-event bitmasks made
-  the function 1.9 M Ir *slower* and moved nothing else in the program,
-  because the loop still had to branch per event. **Ask what the loop still
-  does when the line is gone** before costing the row.
+  not what removing it would save** (pass 61, +0.12 % and reverted; **pass 106
+  re-derived the identical candidate off a fresh line profile and paid four
+  builds for +0.555 / +0.438 / +0.634 %** — see the Log). `cg_lines.py` put
+  `is_event_hardcoded`'s `match ev` at 0.38 % of `sos` (10,240,198 Ir, 0.46 %
+  of `cube` at the later tip) inside the biggest engine row; tabulating it
+  per event moved the function's own self cost by **-58 k** and added 7.9 M of
+  `SmallVec::Extend`. **Ask what the loop still does when the line is gone**
+  before costing the row — a three-way match on a class byte is the same
+  load-and-branch the enum match was. **`is_event_hardcoded` /
+  `dispatch_triggers_for_events`' per-event gate is CLOSED; do not take it a
+  third time.** Its line row will keep looking like the largest in the
+  function, because that is where those instructions execute.
 - **A presence bit belongs in a shared scan only when the question has no
   early exit of its own** (pass 59, +0.29 % on `fixed` and reverted). Folding
   `card_type_change_unscoped`'s battlefield leg into `sba_board_scan` cost
@@ -9628,6 +9634,80 @@ player is ever offered there and the over-match is within permanents only,
 i.e. a card that wrote "destroy target creature" without its filter. The other
 residue is the counterspells, which target a spell the `Target` enum cannot
 express and which the enumerator's list never aims.
+
+### Hundred-and-sixth pass (3) — BUILT, MEASURED AND REVERTED, AND PASS 61 HAD ALREADY REVERTED IT
+
+**This is the same candidate pass 61 built and reverted — `is_event_hardcoded`'s
+`match ev`, replaced by a per-event table — re-derived from a fresh
+`cg_lines.py` reading forty-five passes later, at four builds.** The standing
+rule that forbids it is in this file, three lines long, and was not read first.
+The entry is kept because the *numbers* are new and much larger than pass 61's,
+and because the failure mode is a process one worth naming: **a line profile
+hands you a candidate that the Standing rules have already closed, and the
+line total is the bait.** Grep the rules for the function's name before
+costing one of its rows.
+
+**Both halves lose, split and read as the standing rule requires:**
+
+```text
+base = the tip before the change, callgrind, profiling-fast
+       -p crabomination --bin bot_ladder --no-default-features
+                        fixed        cube       sealed
+  (a)+(b) the bundle   +0.910 %    +0.464 %    +0.698 %
+  (a) alone            +0.555 %    +0.438 %    +0.634 %
+  (b) by difference    +0.355 %    +0.026 %    +0.064 %
+```
+
+**What was built.** `dispatch_triggers_for_events` asks two questions about
+each event inside its (permanent, trigger, event) triple loop, and neither
+depends on the trigger: (a) `is_event_hardcoded`, whose event half is a match
+on the `GameEvent` enum, and (b) `death_was_replaced`, which walks both
+graveyards, exile and both libraries. Both were tabulated once per batch into
+a `SmallVec<[_; 8]>` and read by `zip`.
+
+**Half (b) is the ordinary refutation and its rule is already on file**
+(`(-84)(b)`): the loop only reaches `death_was_replaced` on a permanent that
+*has* a trigger, which is the minority, so hoisting it past that guard runs it
+on dispatches that would never have asked. **A hoist is only free when the
+thing hoisted is cheaper than the guard that was keeping it from running.**
+
+**Half (a) is the interesting one, and it refutes the instrument.**
+`cg_lines.py --in dispatch_triggers_for_events` put **10,240,198 Ir (0.46 % of
+`cube`)** on `game/mod.rs:23365` — `is_event_hardcoded`'s match, the largest
+named source line in the function. Removing that evaluation from the inner
+loop moved the function's own self cost by **-58,324 Ir**. The whole +0.438 %
+is the table:
+
+```text
+cube, base -> half (a), every mover:
+  SmallVec::Extend               14,208,530 -> 22,130,490   +7,921,960
+  the allocator family                                       +2,700,000
+  SmallVec::try_grow                289,448 ->    660,536     +371,088
+  dispatch_triggers_for_events  194,723,966 -> 194,665,642      -58,324
+```
+
+**The rule was already on file and this is its second measurement**: "a line
+profile's row is what that source construct's instructions cost, not what
+removing it would save" (Standing rules, pass 61, +0.12 % of `sos`). At this
+tip the same replacement costs **3.6x that**, so the rule has not weakened with
+the code. `cg_sites.py`'s docstring says its number is a *floor*; a
+`cg_lines.py` row on an inlined callee is the other end of the same caution and
+the larger error of the two. A three-way `match` on a tabulated class byte plus
+the scope compare is the same load-and-branch the enum match was, so the
+replacement costs what the original cost and the table is pure addition — the
+`(-87)` refutation in a new dress ("the memo read is a word load, a valid test
+and a mask against the same deref, i.e. the same instructions plus a
+recompute").
+
+**Corollary, and the reason the batch is bigger than it looks:**
+`SmallVec::try_grow` fires, so trigger batches routinely carry **more than
+eight events**. Anything sized `[_; 8]` per batch in this function will spill.
+
+**What this does NOT refute** is not visiting the permanent at all. The
+battlefield loop's `no_grants` fast path still touches every permanent to ask
+its definition two `is_empty()` questions; only a list of the trigger-bearing
+ids (a `Battlefield` lane in `(-93)`'s shape, not a `CardMemo` bit — see
+`(-87)`) can skip that, and it is untouched by this refutation.
 
 ### Hundred-and-sixth pass (2) — seven scans of one `Vec` become one walk
 
