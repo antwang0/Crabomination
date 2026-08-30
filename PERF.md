@@ -16840,6 +16840,9 @@ and on the actor `encode_state`'s 66,485 is second only to `Vec::from_iter` —
 that one is `(-107)`, and it is a first allocation per group rather than a
 re-growth, so a reserve moves it and only a different buffer removes it.
 
+**TAKEN, 2026-08-30 — the single-backing-buffer half (`EncodedState`'s eight
+group `Vec`s -> one `Vec<EncodedObject>` + `[u32; NUM_GROUPS]` counts).**
+
 **(-107) THE ACTOR HAS TWO ALLOCATION ROWS `--bench` CANNOT SEE, AND ONE OF
 THEM IS THE SECOND-LARGEST `reserve` GROWER IN THE PROGRAM.** Read off the
 actor profile at `bb67895a` (Profile of record). `encode_state` is **66,485
