@@ -48,12 +48,15 @@ sixty-seventh pass, so don't re-take that.
    a loop and LLVM cannot shrink-wrap into one. ⚠ **The frame column is a floor on a private
    function and an estimate on a `pub` one** — `(-136)` measured 2.3x its prediction because
    three of the five stopped being functions once the fast path got small.
-4. **Perf queue is thin and both remaining entries are priced as losses or soundness burdens**
-   (`(-128)` sweep body, `(-133)`). **Replenish from a fresh dump, and the unmined one is the
-   ACTOR** — PERF's profile of record for `selfplay_train` is 15 passes stale, `rank_shape` and
-   the encoder live on no `bot_ladder` pool, and this run's attempt was abandoned to a full
-   disk, not to a finding. ⚠ Read `(-110)`'s null-control warning first: the actor's codegen
-   band is ±0.2 %.
+4. **Perf queue is thin, and the ACTOR was re-read this run and is NOT the answer.** Fresh
+   profile of record at `ec1bb132`: 3,056,559,076 Ir, **every row within 0.1 points of its
+   fifteen-pass-old value**, and `cg_ratio.py` against `cube` shows nothing above 1.30x below
+   `__memcpy`'s 2.25x. Three rows read and ruled out there (memcpy is diffuse at 5.7 % top
+   caller; the `{:?}` traffic is `wants_converge` and does not scale; `rank_shape` is one deck
+   build a game with no hot line). What is left is `(-107)`'s third row — 17.4 % of every
+   allocation is `computed_permanent_hinted`, 30 % of its calls the encoder — and `(-111)`
+   already built and reverted the by-value form. **A new device, not a new profile, is what
+   that needs.** Still open elsewhere: `(-128)`'s 2,397 Ir sweep body, `(-133)`.
 5. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices *and* the pending-stack rewrite
    (+1.218 %); `(-127)`'s wrap; `(-122)`'s mask; `(-128)`'s skip gate; `(-129)`'s four devices;
    `(-132)`'s two non-shapes; `(-135)`'s line profile; **actor scaling** (`(-52)`); an

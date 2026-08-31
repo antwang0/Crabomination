@@ -16690,6 +16690,71 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE ACTOR RE-READ AT `ec1bb132` — the shape has not moved in fifteen more passes, and that is the finding
+
+Same recipe as the `d0243e89` entry below (`profiling-fast -p crabomination_ml
+--no-default-features`, `CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60
+--steps 1 --seed 7`, callgrind). **3,056,559,076 Ir** against that entry's
+3,102,072,633 — **-1.5 % over fifteen passes** — and `nm | grep -cE " (T|t)
+(_)?mi_"` reads 0, so this is the system allocator.
+
+```text
+            now     then   row
+  6.23 %   6.14 %   __memcpy_avx_unaligned_erms
+  5.52 %   5.44 %   dispatch_triggers_for_events
+  2.60 %   2.56 %   check_state_based_actions_into
+  2.35 %   2.29 %   computed_permanent_hinted
+  2.33 %   2.30 %   compute_permanent_pass
+  2.32 %   2.28 %   gather_continuous_effects_inner
+  2.15 %   2.12 %   Arc::clone_from_ref_in
+  1.84 %   1.81 %   encode_state_inner   } the encoder, 3.51 % (was 3.46 %)
+  1.67 %   1.65 %   encode_card_object_into
+  1.37 %   1.35 %   rand_distr Normal::sample  <- net init, once per process
+  1.08 %   1.06 %   recommend::rank_shape      <- the deck builder
+  allocator cluster 10.88 % (was 10.71): _int_free 3.48 malloc 2.68
+                                         _int_malloc 2.55 free 2.17
+```
+
+**Every row is within 0.1 points of its fifteen-pass-old value.** The actor is
+not drifting, and a candidate found here will still be there next pass.
+
+**The two entries the old reading left open are both still open and both still
+priced.** `computed_permanent_hinted` is the largest `__rust_alloc` caller at
+**297,560 of 1,712,673 (17.4 %)**, and **145,476 of its 491,057 calls are
+`encode_state_inner`** — unchanged shares. That is `(-107)`'s third row, and
+`(-111)` built and reverted the by-value form of exactly it. Nothing new to
+say without a different device.
+
+**Three rows read this pass and ruled out, so nobody re-reads them:**
+
+* **`__memcpy` is still diffuse.** 1,741,124 calls over the whole program; the
+  largest single caller is `GameState::clone` at 10.8 M of 190 M — **5.7 %**.
+  `(-92)`'s "stop looking for a hot line" holds.
+* **The `{:?}` formatting traffic is `wants_converge`, and it does not scale.**
+  `core::fmt::write` reads 10,746,402 Ir inclusive (0.35 %) with
+  `DebugStruct::field` the dominant caller; `wants_converge` alone is
+  **9,643,168 inclusive (0.32 %)**, i.e. essentially all of it. It is once per
+  distinct card name per *process* — charged in full to a 60-game dump and
+  ~nothing to a 30 k-game run, exactly as the "How to measure" warning says.
+  **A change that moved it would read as a third of a percent no real run ever
+  sees.**
+* **`rank_shape` is 1.08 % and it is one deck build a game**, 6,840 calls of
+  which 6,720 come from `lattice` — 112 shapes ranked per game, which is the
+  lattice doing its job. Its own callees are `static_build_score` (0.27 %) and
+  its allocations; there is no hot line under it and no memo, because every
+  shape is a different `(colors, splash, spells)`.
+
+**The ratio device against `cube` at the same tip** (`cg_ratio.py actor
+cube --floor 0.45`; the totals do not compare, the shares do): **below
+`__memcpy`'s 2.25x nothing exceeds 1.30x**, and the 89x
+`small_sort_general_with_scratch` row of the old reading is gone — it was
+taken. `effective_mana_abilities_into` 1.30, `finalize_cast` 1.19,
+`event_matches_spec` 1.14, then the allocator cluster at 1.09-1.14. **The
+actor and `cube` now agree to within 30 % on every row but one**, which is
+the strongest form of the old entry's finding: there is no actor-only
+candidate left above the floor except the encoder and the deck builder, and
+both are priced above.
+
 ### THE ACTOR RE-READ AT `d0243e89` — fifteen passes on from `bb67895a`, and the encoder is now the largest caller of the largest allocation row
 
 `(-123)`. `profiling-fast -p crabomination_ml --no-default-features`,
