@@ -48,6 +48,54 @@ macro_rules! retain_cold {
     };
 }
 
+/// The [`ResolutionScratch`] twin of [`clear_cold`], and load-bearing rather
+/// than merely tidy.
+///
+/// A `CowBox` group is priced by mutable *reaches* per clone, not by how often
+/// its value changes: `(-143)` measured the same group unguarded at **+2.15 %
+/// on `fixed`** because the reaches ran **437 k against 10.7 k clones** — 41:1
+/// — and nearly all of them wrote nothing (two `mem::take`s of an empty `Vec`
+/// on every trigger dispatch, fourteen `clear()`s of empty ones at every
+/// resolution root). Reads go through `Deref` and are free; asking first is
+/// the whole fix.
+macro_rules! clear_scratch {
+    ($self:ident . $f:ident) => {
+        if !$self.scratch.$f.is_empty() {
+            $self.scratch.$f.clear();
+        }
+    };
+}
+
+/// `std::mem::take(&mut self.scratch.<f>)` behind the same read — see
+/// [`clear_scratch`]. An empty container's `take` hands back an empty one
+/// either way, so the guard is value-identical.
+macro_rules! take_scratch {
+    ($self:ident . $f:ident) => {
+        if $self.scratch.$f.is_empty() {
+            Default::default()
+        } else {
+            std::mem::take(&mut $self.scratch.$f)
+        }
+    };
+}
+
+/// `self.scratch.<f>.take()` on an `Option` behind the same read — see
+/// [`clear_scratch`].
+macro_rules! take_opt_scratch {
+    ($self:ident . $f:ident) => {
+        if $self.scratch.$f.is_none() { None } else { $self.scratch.$f.take() }
+    };
+}
+
+/// `self.scratch.<f> = None` behind the same read — see [`clear_scratch`].
+macro_rules! clear_opt_scratch {
+    ($self:ident . $f:ident) => {
+        if $self.scratch.$f.is_some() {
+            $self.scratch.$f = None;
+        }
+    };
+}
+
 // Internal engine modules. `pub` (but hidden from docs) rather than
 // `pub(crate)` so the out-of-crate test suite (`crabomination_tests`) can
 // reach items like `effects::EffectContext`; not part of the supported API.
@@ -1064,6 +1112,269 @@ fn serde_true() -> bool {
     true
 }
 
+/// The resolution-scratch collection group: the `Vec`/map/`Option<Vec>`
+/// fields that only mean anything *inside* an effect resolution, held behind
+/// one CoW handle so a probe that clones at priority and never writes them
+/// pays one `Arc` bump instead of ~29 container clones. The wide ~100-field
+/// scratch group is deliberately NOT this struct: `(-138)`'s census says two
+/// probes in three write *something* in it (`finalize_cast` stamps
+/// `pending_cast_*`, `perform_action_inner` bumps a counter), while four in
+/// five never touch a collection.
+///
+/// Reached as `state.scratch.<field>`; a `&mut` reach through `DerefMut`
+/// unshares the whole group once, so the `clear_cold!` trap applies here
+/// too — guard a `clear()`/`retain()`/`mem::take` with the matching read.
+/// `(-143)` measured what happens when you do not: +2.15 % on `fixed`.
+#[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct ResolutionScratch {
+    /// Transient: per-colour mana spent paying the activation currently
+    /// resolving, stamped into `EffectContext.mana_spent_by_color`
+    /// (Protective Sphere's "shares a color with the mana spent").
+    #[serde(skip)]
+    pub(crate) activation_mana_colors_scratch: Vec<(crate::mana::Color, u32)>,
+    /// Transient: the targets chosen for each slot of the cast / activation
+    /// currently being validated, so a cross-slot filter
+    /// (`SameControllerAsTargetSlot` — Barrin's Spite) can see its sibling.
+    #[serde(skip)]
+    pub(crate) target_slots_scratch: Vec<Option<Target>>,
+    /// Transient: ids of all tokens created within the current effect
+    /// resolution. Set by `Effect::CreateToken`
+    /// alongside `last_created_token` and read by
+    /// `Selector::LastCreatedTokens` (plural) so a follow-up `AddCounter`
+    /// in the same resolution can fan over every freshly-minted token
+    /// (Fractal Spawning, Mascot Exhibition-style printed Oracles). Cleared
+    /// at every resolution root start (see `reset_effect_scratch`).
+    #[serde(skip)]
+    pub(crate) last_created_tokens: Vec<CardId>,
+    /// Transient: ids of every card moved within the current effect
+    /// resolution. Populated by `Effect::Move` (and the mill/exile
+    /// helpers) and read by `Selector::LastMoved` so a follow-up
+    /// `GrantMayPlay` in the same `Effect::Seq` can target exactly the
+    /// card(s) that were just lifted to exile/graveyard (Practiced
+    /// Scrollsmith, Suspend Aggression, Tablet of Discovery, etc.).
+    /// Cleared between resolutions.
+    #[serde(skip)]
+    pub(crate) last_moved_cards: Vec<CardId>,
+    /// Transient: per-player count of cards discarded within the current
+    /// effect resolution, indexed by player seat. Bumped alongside the
+    /// flat `cards_discarded_this_resolution` whenever a discard event
+    /// fires, so a follow-up step in the same `Effect::Seq` can read the
+    /// *greatest* count across players. Used by Windfall's printed
+    /// "draws cards equal to the greatest number of cards a player
+    /// discarded this way" via `Value::MaxCardsDiscardedThisEffectByAnyPlayer`.
+    /// Reset to empty between independent resolutions.
+    #[serde(skip)]
+    pub(crate) cards_discarded_per_player_this_resolution: crate::fxhash::HashMap<usize, u32>,
+    /// Transient: per-player count of *nonland* cards discarded within the
+    /// current effect resolution. Read by `Predicate::DiscardedNonlandThisEffect`
+    /// — Kroxa's "each opponent who didn't discard a nonland card this way
+    /// loses 3 life." Reset to empty between independent resolutions.
+    #[serde(skip)]
+    pub(crate) nonland_cards_discarded_per_player_this_resolution:
+        crate::fxhash::HashMap<usize, u32>,
+    /// CR 702.55 — Haunt. Set by `Effect::HauntCreature` while an instant/
+    /// sorcery resolves to the creature it should haunt plus the haunt body;
+    /// the post-resolution routing exiles the spell card (instead of the
+    /// graveyard) and registers the `WhenHauntedCreatureDies` delayed trigger.
+    /// Cleared once consumed. (Creature haunt is handled inline since the card
+    /// is already in the graveyard when its dies-trigger resolves.)
+    #[serde(skip)]
+    pub(crate) haunt_pending: Option<(CardId, crate::effect::Effect)>,
+    /// Transient: the `CardId`s of cards discarded within the current
+    /// effect resolution. Populated alongside the count fields above. Used
+    /// by Mind Roots's "Put up to one land card discarded this way onto
+    /// the battlefield tapped" rider — the engine walks this list at
+    /// resolution time, finds the first Land card, and moves it onto the
+    /// battlefield via `Effect::MoveDiscardedLandToBattlefield`. Reset
+    /// to empty between independent resolutions.
+    #[serde(skip)]
+    pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
+    /// Transient: set when a `wants_ui` caster answers an optional extra-
+    /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
+    /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,
+    /// and the extra-target prompt block skips a cast matching this record
+    /// so declining ends target selection ("up to N targets" — targets fill
+    /// left-to-right).
+    ///
+    /// It matches on the whole cast shape, not just the card, because the
+    /// decline has to outlive *several* replays: a hand-paying caster's
+    /// cast bounces with `ManualTapRequired` and the client re-submits the
+    /// same action on every mana tap (see `NetOutbox::last_cast`). A
+    /// card-only flag was consumed by the first replay, so the second tap
+    /// re-posed the slot the player had just declined. Cleared once the
+    /// cast actually reaches the stack, and at every step change.
+    #[serde(skip)]
+    pub(crate) suppress_extra_target_prompts: Option<DeclinedExtraTargets>,
+    /// Transient: the `CardId`s of cards put into exile within the current
+    /// effect resolution (any source zone, via `place_card_in_dest`). Powers
+    /// `Selector::ExiledThisResolution` — "if you exiled a [type] card this
+    /// way" payoffs (Bonehoard Dracosaur). Reset between resolutions.
+    #[serde(skip)]
+    pub(crate) exiled_card_ids_this_resolution: Vec<CardId>,
+    /// Transient: the card ids destroyed by `Effect::Destroy` within the
+    /// current resolution, in destruction order. Read by
+    /// `Selector::DestroyedThisResolution` so a follow-up step can name the
+    /// cards it just killed (Cleansing Meditation's Threshold rebuild).
+    #[serde(skip)]
+    pub(crate) destroyed_this_resolution: Vec<CardId>,
+    /// Permanents the resolution currently underway is targeting, so the
+    /// damage funnel can tell "damage from a spell or ability that targets
+    /// this" apart from incidental damage (CR 615 — Bronze Horse, Silhouette).
+    /// Saved and restored around each nested `resolve_effect`.
+    #[serde(skip)]
+    pub(crate) resolution_targets: Vec<CardId>,
+    /// Transient: the permanents sacrificed to pay the activation currently
+    /// on the stack, so its body can exile them (Sword of the Ages). Stamped
+    /// by `activate_ability`, consumed by `Effect::ExileCostSacrificedBatch`.
+    #[serde(skip)]
+    pub cost_sacrificed_batch: Vec<CardId>,
+    /// Transient: entities (creatures + players) that actually took damage
+    /// during the current resolution. Powers `Selector::DamagedThisResolution`
+    /// — "tap each creature damaged this way / those players can't cast
+    /// noncreature spells" (Aurelia's Fury). Recorded in `deal_damage_to_from`
+    /// only where damage lands (prevented/shield-countered hits don't count);
+    /// reset between resolutions.
+    #[serde(skip)]
+    pub damaged_this_resolution: Vec<crate::game::effects::EntityRef>,
+    /// Transient: seats that sacrificed at least one permanent during the
+    /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
+    /// so a follow-up step can gate on "if you sacrificed a permanent this way"
+    /// (Deadly Brew). Reset between independent resolutions.
+    #[serde(skip)]
+    pub(crate) players_sacrificed_this_resolution: crate::game::types::IdSet<usize>,
+    /// The cards sacrificed during the current resolution, read by
+    /// `SelectionRequirement::NotSacrificedThisResolution` so an "another
+    /// permanent card" clause can't pick back what it just ate (Deadly Brew).
+    #[serde(default)]
+    pub(crate) cards_sacrificed_this_resolution: Vec<CardId>,
+    /// The creature types named by an `EachPlayerChoosesCreatureTypeThen`
+    /// resolution, read by `SelectionRequirement::IsTypeChosenThisWay`
+    /// (Harsh Mercy, Patriarch's Bidding). Cleared when the body finishes.
+    #[serde(default)]
+    pub(crate) chosen_creature_types_scratch: Vec<crate::card::CreatureType>,
+    /// Transient: the card name chosen by an `Effect::NameCard` within the
+    /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
+    /// reveal-until-the-named-card chain (Spoils of the Vault) can match even
+    /// when the naming source is a resolving spell held off to the side.
+    /// Reset between independent resolutions.
+    #[serde(skip)]
+    pub(crate) named_card_this_resolution: Option<String>,
+    /// Transient: per-seat card names chosen by `Effect::EachPlayerNamesCard`
+    /// within the current resolution, read back by
+    /// `Effect::EachPlayerRevealTopKeepIfNamed` (Conundrum Sphinx). Reset
+    /// between independent resolutions.
+    #[serde(skip)]
+    pub(crate) names_this_resolution: crate::game::types::IdMap<usize, String>,
+    /// Transient: the permanents a `wants_ui` caster picked to satisfy a
+    /// "sacrifice a permanent" additional cast cost (CR 601.2b). Set by
+    /// `submit_decision`'s `CastSacrifice` resume just before it re-invokes
+    /// the cast, and consumed (taken) by `pay_additional_costs` in lieu of
+    /// the auto-pick. `None` for the auto-pick path (bots/tests, or a single
+    /// legal choice). Never needs to survive a snapshot — it lives only
+    /// across the synchronous resume → cast call.
+    #[serde(skip, default)]
+    pub pending_cast_sacrifices: Option<Vec<CardId>>,
+    /// Transient sibling of [`pending_cast_sacrifices`] for a spell's
+    /// "as an additional cost, discard a card" requirement
+    /// (`AdditionalCastCost::Discard` — Big Score, Illuminate History). The
+    /// cards a `wants_ui` caster picked to discard; consumed by
+    /// `pay_additional_costs` in lieu of the first-N auto-pick. Never snapshots.
+    #[serde(skip, default)]
+    pub(crate) pending_cast_discards: Option<Vec<CardId>>,
+    /// Transient: the Spree mode indices chosen for the current cast (CR
+    /// 702.172). Set by `cast_spell_spree` just before it invokes the shared
+    /// cast path, consumed there to fold the chosen modes' mana into the cost
+    /// and stamp them onto the resolving `CardInstance.spree_modes`. Never
+    /// snapshots — it lives only across the synchronous cast call.
+    #[serde(skip, default)]
+    pub(crate) pending_spree_modes: Option<Vec<u8>>,
+    /// SOS Prepare — copies materialized by `cast_prepare_spell` whose cast
+    /// hasn't finished yet, as `(copy_id, source_creature_id)`. Registered
+    /// before the copy enters the cast pipeline and settled by
+    /// `settle_prepare_after_cast` once the copy reaches the stack (flag it
+    /// `is_token`, unprepare the creature) or the cast fails
+    /// (unmaterialize the copy). Unlike its transient `pending_cast_*`
+    /// siblings this must survive a snapshot: a mid-cast suspension
+    /// (float-spend confirm, additional-cost pick) parks the copy in the
+    /// caster's hand across a client round-trip.
+    #[serde(default)]
+    pub pending_prepare_copies: Vec<(CardId, CardId)>,
+    /// Transient sibling of [`pending_ability_sac_other`] for an activated
+    /// ability's "Exile N cards from your graveyard" cost (`exile_other_filter`).
+    /// Carries the full chosen set (the cost can exile several — Grim
+    /// Lavamancer exiles two). Set by the `ActivateAbilityChoice` resume,
+    /// consumed by `activate_ability`.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_exile_other: Option<Vec<CardId>>,
+    /// Transient sibling of [`pending_ability_sac_other`] for an activated
+    /// ability's "…and any number of [filter] you control" cost
+    /// (`sac_any_number_filter` — Sword of the Ages). Carries the chosen
+    /// subset, which may legally be empty.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_sac_any: Option<Vec<CardId>>,
+    /// One-shot validated answer for a resolution-time choice whose suspend
+    /// re-queues the originating effect as its continuation (`ChooseN`,
+    /// `Escalate`, `MayDo`, `DealDamageDivided`, `ChooseAmount` payers, and
+    /// deferred trigger `ChooseMode`s). `apply_pending_effect_answer` stashes
+    /// the sanitised answer here; the re-run effect `take()`s it instead of
+    /// asking the decider again. Always consumed within the same
+    /// `submit_decision` call, so it never crosses a serialization boundary.
+    #[serde(skip, default)]
+    pub(crate) stashed_resolution_answer: Option<DecisionAnswer>,
+    /// Replay log for multi-question resolution effects (Clash,
+    /// `PlayersMayAccept`, `TemptingOffer`, `UnlessPlayerPays`, `MayPay`):
+    /// each suspend re-queues the *originating effect*, whose re-run replays
+    /// the logged answers in ask order (via a local cursor) before reaching
+    /// the next unanswered question. `apply_pending_effect_answer` appends
+    /// the validated answer; the effect clears the log on every completing
+    /// path (`ask_bool_logged` / `clear_answer_log`). Serialized so a
+    /// snapshot taken between two questions of the same effect round-trips.
+    #[serde(default)]
+    pub(crate) resolution_answer_log: Vec<DecisionAnswer>,
+    /// Life-payment events (Phyrexian pips, "pay N life" costs) queued by
+    /// `pay_receipt_life` mid-cast and drained into the action's event batch
+    /// at the end of `perform_action`, so paid life fires life-loss triggers
+    /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e).
+    #[serde(skip, default)]
+    pub(crate) pending_cost_events: Vec<GameEvent>,
+    /// CR 700.4 — permanents that hit a graveyard from the battlefield since
+    /// the last trigger dispatch: `(card_id, last_controller, is_creature,
+    /// is_artifact, causer)`. `causer` is the `resolution_causer` at the time
+    /// of death, replayed over the dispatch so
+    /// `Predicate::CausedByOpponentSpellOrAbility` sees it (Sacred Ground).
+    /// Populated at the single raw removal chokepoint
+    /// (`remove_from_battlefield_to_graveyard_raw`); drained by
+    /// `dispatch_triggers_for_events` into `GameEvent::PermanentDied` so
+    /// "whenever a creature or artifact you control dies" triggers
+    /// (Judge Magister Gabranth, G'raha Tia) fire on non-creature deaths that
+    /// no `CreatureDied` event covers.
+    #[serde(skip, default)]
+    pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool, Option<usize>)>,
+    /// Control changes since the last trigger dispatch: `(card_id, from, to)`.
+    /// Recorded at the single `change_control` chokepoint and drained by
+    /// `dispatch_triggers_for_events` into `GameEvent::ControlChanged`, so
+    /// "when you gain control of this permanent" triggers (Risky Move) fire
+    /// however control moved.
+    #[serde(skip, default)]
+    pub(crate) pending_control_changes: Vec<(CardId, usize, usize)>,
+    /// Identity of the spell currently resolving — (card id, caster, printed
+    /// colors). Stamped around `resolve_effect` in spell resolution so
+    /// source-aware damage replacements (Torbran) can read the controller and
+    /// colors of a card that's in no visible zone mid-resolution. Transient.
+    #[serde(skip)]
+    pub(crate) resolving_source:
+        Option<(CardId, usize, Vec<crate::mana::Color>, Vec<crate::card::CardType>)>,
+    /// CR 706 — the spell currently resolving, kept so a mid-resolution copy
+    /// rider (`Effect::MayCopyThisSpell` — the Onslaught Chain cycle) can still
+    /// mint a copy after `resolve_stack_item` popped the stack entry. Set at
+    /// the top of each spell resolution, cleared at the top of the next one.
+    #[serde(skip)]
+    /// `Arc`, not `Box`: it is written once per resolution and never mutated,
+    /// and `GameState::clone` runs 22,684 times a `cube` run — a `Box` deep-
+    /// copied its `Vec<Target>` on 94.5 % of them.
+    pub(crate) resolving_spell_snapshot: Option<std::sync::Arc<ResolvingSpell>>,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -1368,16 +1679,6 @@ pub struct GameState {
     /// Firedancer).
     #[serde(skip)]
     pub(crate) trigger_event_player_scratch: Option<usize>,
-    /// Transient: per-colour mana spent paying the activation currently
-    /// resolving, stamped into `EffectContext.mana_spent_by_color`
-    /// (Protective Sphere's "shares a color with the mana spent").
-    #[serde(skip)]
-    pub(crate) activation_mana_colors_scratch: Vec<(crate::mana::Color, u32)>,
-    /// Transient: the targets chosen for each slot of the cast / activation
-    /// currently being validated, so a cross-slot filter
-    /// (`SameControllerAsTargetSlot` — Barrin's Spite) can see its sibling.
-    #[serde(skip)]
-    pub(crate) target_slots_scratch: Vec<Option<Target>>,
     /// Transient: id of the most-recently-created token within the current
     /// effect resolution. Set by `Effect::CreateToken` and read by
     /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
@@ -1408,24 +1709,6 @@ pub struct GameState {
     /// Aftershocks reads "the number of times that spell was kicked").
     #[serde(skip)]
     pub(crate) cast_kick_count: u32,
-    /// Transient: ids of all tokens created within the current effect
-    /// resolution. Set by `Effect::CreateToken`
-    /// alongside `last_created_token` and read by
-    /// `Selector::LastCreatedTokens` (plural) so a follow-up `AddCounter`
-    /// in the same resolution can fan over every freshly-minted token
-    /// (Fractal Spawning, Mascot Exhibition-style printed Oracles). Cleared
-    /// at every resolution root start (see `reset_effect_scratch`).
-    #[serde(skip)]
-    pub(crate) last_created_tokens: Vec<CardId>,
-    /// Transient: ids of every card moved within the current effect
-    /// resolution. Populated by `Effect::Move` (and the mill/exile
-    /// helpers) and read by `Selector::LastMoved` so a follow-up
-    /// `GrantMayPlay` in the same `Effect::Seq` can target exactly the
-    /// card(s) that were just lifted to exile/graveyard (Practiced
-    /// Scrollsmith, Suspend Aggression, Tablet of Discovery, etc.).
-    /// Cleared between resolutions.
-    #[serde(skip)]
-    pub(crate) last_moved_cards: Vec<CardId>,
     /// Transient: count of cards discarded within the current effect
     /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
     /// inside `Effect::Discard` / `Effect::DiscardChosen` (random and
@@ -1478,23 +1761,6 @@ pub struct GameState {
     /// to 0 between independent resolutions.
     #[serde(skip)]
     pub(crate) greatest_discarded_mv_this_resolution: u32,
-    /// Transient: per-player count of cards discarded within the current
-    /// effect resolution, indexed by player seat. Bumped alongside the
-    /// flat `cards_discarded_this_resolution` whenever a discard event
-    /// fires, so a follow-up step in the same `Effect::Seq` can read the
-    /// *greatest* count across players. Used by Windfall's printed
-    /// "draws cards equal to the greatest number of cards a player
-    /// discarded this way" via `Value::MaxCardsDiscardedThisEffectByAnyPlayer`.
-    /// Reset to empty between independent resolutions.
-    #[serde(skip)]
-    pub(crate) cards_discarded_per_player_this_resolution: crate::fxhash::HashMap<usize, u32>,
-    /// Transient: per-player count of *nonland* cards discarded within the
-    /// current effect resolution. Read by `Predicate::DiscardedNonlandThisEffect`
-    /// — Kroxa's "each opponent who didn't discard a nonland card this way
-    /// loses 3 life." Reset to empty between independent resolutions.
-    #[serde(skip)]
-    pub(crate) nonland_cards_discarded_per_player_this_resolution:
-        crate::fxhash::HashMap<usize, u32>,
     /// Transient: set by `Effect::ShuffleSelfIntoLibrary` during spell
     /// resolution; the post-resolution routing reads it to send the
     /// resolving spell to its owner's library (shuffled) instead of the
@@ -1528,45 +1794,6 @@ pub struct GameState {
     /// instead of the graveyard. Cleared once consumed.
     #[serde(skip)]
     pub(crate) cipher_encode_pending: Option<CardId>,
-    /// CR 702.55 — Haunt. Set by `Effect::HauntCreature` while an instant/
-    /// sorcery resolves to the creature it should haunt plus the haunt body;
-    /// the post-resolution routing exiles the spell card (instead of the
-    /// graveyard) and registers the `WhenHauntedCreatureDies` delayed trigger.
-    /// Cleared once consumed. (Creature haunt is handled inline since the card
-    /// is already in the graveyard when its dies-trigger resolves.)
-    #[serde(skip)]
-    pub(crate) haunt_pending: Option<(CardId, crate::effect::Effect)>,
-    /// Transient: the `CardId`s of cards discarded within the current
-    /// effect resolution. Populated alongside the count fields above. Used
-    /// by Mind Roots's "Put up to one land card discarded this way onto
-    /// the battlefield tapped" rider — the engine walks this list at
-    /// resolution time, finds the first Land card, and moves it onto the
-    /// battlefield via `Effect::MoveDiscardedLandToBattlefield`. Reset
-    /// to empty between independent resolutions.
-    #[serde(skip)]
-    pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
-    /// Transient: set when a `wants_ui` caster answers an optional extra-
-    /// target prompt with `DecisionAnswer::DeclineTarget`. The cast replay
-    /// (`ResumeContext::CastExtraTargetPick`) re-enters `perform_action`,
-    /// and the extra-target prompt block skips a cast matching this record
-    /// so declining ends target selection ("up to N targets" — targets fill
-    /// left-to-right).
-    ///
-    /// It matches on the whole cast shape, not just the card, because the
-    /// decline has to outlive *several* replays: a hand-paying caster's
-    /// cast bounces with `ManualTapRequired` and the client re-submits the
-    /// same action on every mana tap (see `NetOutbox::last_cast`). A
-    /// card-only flag was consumed by the first replay, so the second tap
-    /// re-posed the slot the player had just declined. Cleared once the
-    /// cast actually reaches the stack, and at every step change.
-    #[serde(skip)]
-    pub(crate) suppress_extra_target_prompts: Option<DeclinedExtraTargets>,
-    /// Transient: the `CardId`s of cards put into exile within the current
-    /// effect resolution (any source zone, via `place_card_in_dest`). Powers
-    /// `Selector::ExiledThisResolution` — "if you exiled a [type] card this
-    /// way" payoffs (Bonehoard Dracosaur). Reset between resolutions.
-    #[serde(skip)]
-    pub(crate) exiled_card_ids_this_resolution: Vec<CardId>,
     /// Transient: count of permanents destroyed by `Effect::Destroy` within
     /// the current resolution. Read by `Value::PermanentsDestroyedThisResolution`
     /// so a follow-up `Effect::Seq` step can scale off the kill count
@@ -1576,12 +1803,6 @@ pub struct GameState {
     /// between independent resolutions.
     #[serde(skip)]
     pub(crate) permanents_destroyed_this_resolution: u32,
-    /// Transient: the card ids destroyed by `Effect::Destroy` within the
-    /// current resolution, in destruction order. Read by
-    /// `Selector::DestroyedThisResolution` so a follow-up step can name the
-    /// cards it just killed (Cleansing Meditation's Threshold rebuild).
-    #[serde(skip)]
-    pub(crate) destroyed_this_resolution: Vec<CardId>,
     /// Transient: total excess damage (CR 120.10) dealt during the current
     /// resolution — for each creature/planeswalker/battle, damage beyond what
     /// would be lethal/its loyalty/its defense. Read by
@@ -1598,25 +1819,6 @@ pub struct GameState {
     /// that must survive nested resolutions is reset once at the top.
     #[serde(skip)]
     pub(crate) resolution_depth: u32,
-    /// Permanents the resolution currently underway is targeting, so the
-    /// damage funnel can tell "damage from a spell or ability that targets
-    /// this" apart from incidental damage (CR 615 — Bronze Horse, Silhouette).
-    /// Saved and restored around each nested `resolve_effect`.
-    #[serde(skip)]
-    pub(crate) resolution_targets: Vec<CardId>,
-    /// Transient: the permanents sacrificed to pay the activation currently
-    /// on the stack, so its body can exile them (Sword of the Ages). Stamped
-    /// by `activate_ability`, consumed by `Effect::ExileCostSacrificedBatch`.
-    #[serde(skip)]
-    pub cost_sacrificed_batch: Vec<CardId>,
-    /// Transient: entities (creatures + players) that actually took damage
-    /// during the current resolution. Powers `Selector::DamagedThisResolution`
-    /// — "tap each creature damaged this way / those players can't cast
-    /// noncreature spells" (Aurelia's Fury). Recorded in `deal_damage_to_from`
-    /// only where damage lands (prevented/shield-countered hits don't count);
-    /// reset between resolutions.
-    #[serde(skip)]
-    pub damaged_this_resolution: Vec<crate::game::effects::EntityRef>,
     /// Transient: total damage that actually landed during the current
     /// resolution, for "gain life equal to the damage dealt this way" riders
     /// (Brightflame). Read by `Value::DamageDealtThisResolution`; reset
@@ -1683,41 +1885,12 @@ pub struct GameState {
     /// at resolution by `Value::CountersRemovedAsCost` (Essence Bottle).
     #[serde(skip)]
     pub counters_removed_as_cost: u32,
-    /// Transient: seats that sacrificed at least one permanent during the
-    /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
-    /// so a follow-up step can gate on "if you sacrificed a permanent this way"
-    /// (Deadly Brew). Reset between independent resolutions.
-    #[serde(skip)]
-    pub(crate) players_sacrificed_this_resolution: crate::game::types::IdSet<usize>,
-    /// The cards sacrificed during the current resolution, read by
-    /// `SelectionRequirement::NotSacrificedThisResolution` so an "another
-    /// permanent card" clause can't pick back what it just ate (Deadly Brew).
-    #[serde(default)]
-    pub(crate) cards_sacrificed_this_resolution: Vec<CardId>,
     /// The creature type an `Effect::NameCreatureType` picked during the
     /// current resolution, for sources that aren't battlefield permanents (an
     /// instant/sorcery is off the stack by the time its body runs — Outbreak).
     /// Read as a fallback by `IsSourceChosenCreatureType`.
     #[serde(skip)]
     pub(crate) chosen_creature_type_scratch: Option<crate::card::CreatureType>,
-    /// The creature types named by an `EachPlayerChoosesCreatureTypeThen`
-    /// resolution, read by `SelectionRequirement::IsTypeChosenThisWay`
-    /// (Harsh Mercy, Patriarch's Bidding). Cleared when the body finishes.
-    #[serde(default)]
-    pub(crate) chosen_creature_types_scratch: Vec<crate::card::CreatureType>,
-    /// Transient: the card name chosen by an `Effect::NameCard` within the
-    /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
-    /// reveal-until-the-named-card chain (Spoils of the Vault) can match even
-    /// when the naming source is a resolving spell held off to the side.
-    /// Reset between independent resolutions.
-    #[serde(skip)]
-    pub(crate) named_card_this_resolution: Option<String>,
-    /// Transient: per-seat card names chosen by `Effect::EachPlayerNamesCard`
-    /// within the current resolution, read back by
-    /// `Effect::EachPlayerRevealTopKeepIfNamed` (Conundrum Sphinx). Reset
-    /// between independent resolutions.
-    #[serde(skip)]
-    pub(crate) names_this_resolution: crate::game::types::IdMap<usize, String>,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -1725,29 +1898,6 @@ pub struct GameState {
     /// distinguish a back-face MDFC cast from a normal hand cast.
     #[serde(skip, default)]
     pub(crate) pending_cast_face: CastFace,
-    /// Transient: the permanents a `wants_ui` caster picked to satisfy a
-    /// "sacrifice a permanent" additional cast cost (CR 601.2b). Set by
-    /// `submit_decision`'s `CastSacrifice` resume just before it re-invokes
-    /// the cast, and consumed (taken) by `pay_additional_costs` in lieu of
-    /// the auto-pick. `None` for the auto-pick path (bots/tests, or a single
-    /// legal choice). Never needs to survive a snapshot — it lives only
-    /// across the synchronous resume → cast call.
-    #[serde(skip, default)]
-    pub pending_cast_sacrifices: Option<Vec<CardId>>,
-    /// Transient sibling of [`pending_cast_sacrifices`] for a spell's
-    /// "as an additional cost, discard a card" requirement
-    /// (`AdditionalCastCost::Discard` — Big Score, Illuminate History). The
-    /// cards a `wants_ui` caster picked to discard; consumed by
-    /// `pay_additional_costs` in lieu of the first-N auto-pick. Never snapshots.
-    #[serde(skip, default)]
-    pub(crate) pending_cast_discards: Option<Vec<CardId>>,
-    /// Transient: the Spree mode indices chosen for the current cast (CR
-    /// 702.172). Set by `cast_spell_spree` just before it invokes the shared
-    /// cast path, consumed there to fold the chosen modes' mana into the cost
-    /// and stamp them onto the resolving `CardInstance.spree_modes`. Never
-    /// snapshots — it lives only across the synchronous cast call.
-    #[serde(skip, default)]
-    pub(crate) pending_spree_modes: Option<Vec<u8>>,
     /// Transient: the answer to a "spend your floating mana, or tap lands
     /// instead?" confirmation (CR 601.2g — the player chooses their mana
     /// sources). `Some(true)` = spend the pre-existing float; `Some(false)` =
@@ -1756,17 +1906,6 @@ pub struct GameState {
     /// top of the cast. Never snapshots.
     #[serde(skip, default)]
     pub(crate) pending_cast_spend_float: Option<bool>,
-    /// SOS Prepare — copies materialized by `cast_prepare_spell` whose cast
-    /// hasn't finished yet, as `(copy_id, source_creature_id)`. Registered
-    /// before the copy enters the cast pipeline and settled by
-    /// `settle_prepare_after_cast` once the copy reaches the stack (flag it
-    /// `is_token`, unprepare the creature) or the cast fails
-    /// (unmaterialize the copy). Unlike its transient `pending_cast_*`
-    /// siblings this must survive a snapshot: a mid-cast suspension
-    /// (float-spend confirm, additional-cost pick) parks the copy in the
-    /// caster's hand across a client round-trip.
-    #[serde(default)]
-    pub pending_prepare_copies: Vec<(CardId, CardId)>,
     /// Transient: the library card a `wants_ui` cycler picked for a
     /// landcycling / typecycling fetch (CR 702.29e). Set by the
     /// `ActionSearchPick` resume just before it replays the Landcycle
@@ -1787,19 +1926,6 @@ pub struct GameState {
     /// Set by the `ActivateAbilityChoice` resume, consumed by `activate_ability`.
     #[serde(skip, default)]
     pub(crate) pending_ability_tap_other: Option<CardId>,
-    /// Transient sibling of [`pending_ability_sac_other`] for an activated
-    /// ability's "Exile N cards from your graveyard" cost (`exile_other_filter`).
-    /// Carries the full chosen set (the cost can exile several — Grim
-    /// Lavamancer exiles two). Set by the `ActivateAbilityChoice` resume,
-    /// consumed by `activate_ability`.
-    #[serde(skip, default)]
-    pub(crate) pending_ability_exile_other: Option<Vec<CardId>>,
-    /// Transient sibling of [`pending_ability_sac_other`] for an activated
-    /// ability's "…and any number of [filter] you control" cost
-    /// (`sac_any_number_filter` — Sword of the Ages). Carries the chosen
-    /// subset, which may legally be empty.
-    #[serde(skip, default)]
-    pub(crate) pending_ability_sac_any: Option<Vec<CardId>>,
     /// Resolves player choices encountered during effect resolution. Used for
     /// *non-suspending* decisions (e.g. `AddManaAnyColor` auto-picks a color).
     /// Suspending decisions (currently Scry) surface through `pending_decision`
@@ -1819,51 +1945,6 @@ pub struct GameState {
     /// `remaining` carries any sibling effects still queued behind the one that
     /// suspended (e.g. `Draw` after `Scry` in a Seq).
     pub(crate) suspend_signal: Option<(Decision, PendingEffectState, Effect)>,
-    /// One-shot validated answer for a resolution-time choice whose suspend
-    /// re-queues the originating effect as its continuation (`ChooseN`,
-    /// `Escalate`, `MayDo`, `DealDamageDivided`, `ChooseAmount` payers, and
-    /// deferred trigger `ChooseMode`s). `apply_pending_effect_answer` stashes
-    /// the sanitised answer here; the re-run effect `take()`s it instead of
-    /// asking the decider again. Always consumed within the same
-    /// `submit_decision` call, so it never crosses a serialization boundary.
-    #[serde(skip, default)]
-    pub(crate) stashed_resolution_answer: Option<DecisionAnswer>,
-    /// Replay log for multi-question resolution effects (Clash,
-    /// `PlayersMayAccept`, `TemptingOffer`, `UnlessPlayerPays`, `MayPay`):
-    /// each suspend re-queues the *originating effect*, whose re-run replays
-    /// the logged answers in ask order (via a local cursor) before reaching
-    /// the next unanswered question. `apply_pending_effect_answer` appends
-    /// the validated answer; the effect clears the log on every completing
-    /// path (`ask_bool_logged` / `clear_answer_log`). Serialized so a
-    /// snapshot taken between two questions of the same effect round-trips.
-    #[serde(default)]
-    pub(crate) resolution_answer_log: Vec<DecisionAnswer>,
-    /// Life-payment events (Phyrexian pips, "pay N life" costs) queued by
-    /// `pay_receipt_life` mid-cast and drained into the action's event batch
-    /// at the end of `perform_action`, so paid life fires life-loss triggers
-    /// (CR 118.8 / 119.3c) after the cast completes (CR 601.3e).
-    #[serde(skip, default)]
-    pub(crate) pending_cost_events: Vec<GameEvent>,
-    /// CR 700.4 — permanents that hit a graveyard from the battlefield since
-    /// the last trigger dispatch: `(card_id, last_controller, is_creature,
-    /// is_artifact, causer)`. `causer` is the `resolution_causer` at the time
-    /// of death, replayed over the dispatch so
-    /// `Predicate::CausedByOpponentSpellOrAbility` sees it (Sacred Ground).
-    /// Populated at the single raw removal chokepoint
-    /// (`remove_from_battlefield_to_graveyard_raw`); drained by
-    /// `dispatch_triggers_for_events` into `GameEvent::PermanentDied` so
-    /// "whenever a creature or artifact you control dies" triggers
-    /// (Judge Magister Gabranth, G'raha Tia) fire on non-creature deaths that
-    /// no `CreatureDied` event covers.
-    #[serde(skip, default)]
-    pub(crate) pending_permanent_deaths: Vec<(CardId, usize, bool, bool, Option<usize>)>,
-    /// Control changes since the last trigger dispatch: `(card_id, from, to)`.
-    /// Recorded at the single `change_control` chokepoint and drained by
-    /// `dispatch_triggers_for_events` into `GameEvent::ControlChanged`, so
-    /// "when you gain control of this permanent" triggers (Risky Move) fire
-    /// however control moved.
-    #[serde(skip, default)]
-    pub(crate) pending_control_changes: Vec<(CardId, usize, usize)>,
     /// True when an effect has flagged "prevent all combat damage this turn"
     /// (CR 615 — damage prevention as a replacement effect). Wired by
     /// Owlin Shieldmage's ETB trigger, Holy Day, Hallowed Burial-adjacent
@@ -1887,13 +1968,6 @@ pub struct GameState {
     /// by it. 0 (serde default) reads as 1×.
     #[serde(default)]
     pub(crate) mana_production_multiplier: u32,
-    /// Identity of the spell currently resolving — (card id, caster, printed
-    /// colors). Stamped around `resolve_effect` in spell resolution so
-    /// source-aware damage replacements (Torbran) can read the controller and
-    /// colors of a card that's in no visible zone mid-resolution. Transient.
-    #[serde(skip)]
-    pub(crate) resolving_source:
-        Option<(CardId, usize, Vec<crate::mana::Color>, Vec<crate::card::CardType>)>,
     /// Reentrancy guard: true while `gather_continuous_effects` runs, so
     /// layer-aware type filters (`evaluate_requirement_static`) fall back to
     /// printed types instead of recursing through `computed_permanent`.
@@ -2114,15 +2188,6 @@ pub struct GameState {
     /// `EventKind::YourInstantOrSorceryDealtDamage` (Blaze Commando). Transient.
     #[serde(skip)]
     pub(crate) resolving_spell_caster: Option<usize>,
-    /// CR 706 — the spell currently resolving, kept so a mid-resolution copy
-    /// rider (`Effect::MayCopyThisSpell` — the Onslaught Chain cycle) can still
-    /// mint a copy after `resolve_stack_item` popped the stack entry. Set at
-    /// the top of each spell resolution, cleared at the top of the next one.
-    #[serde(skip)]
-    /// `Arc`, not `Box`: it is written once per resolution and never mutated,
-    /// and `GameState::clone` runs 22,684 times a `cube` run — a `Box` deep-
-    /// copied its `Vec<Target>` on 94.5 % of them.
-    pub(crate) resolving_spell_snapshot: Option<std::sync::Arc<ResolvingSpell>>,
     /// Seat whose resolving instant/sorcery has deathtouch (Pestilent Spirit —
     /// `YourISSpellsHaveDeathtouch`). Stamped around the spell's resolution and
     /// cleared after; read in `deal_damage_to_from`. Transient.
@@ -2194,6 +2259,11 @@ pub struct GameState {
     /// The sector picked by the `Effect::ChooseSector` currently resolving.
     #[serde(skip)]
     pub(crate) chosen_sector: Option<crate::card::Sector>,
+    /// The resolution-scratch collections — see [`ResolutionScratch`].
+    /// One CoW handle so a dry-run probe's clone bumps a refcount instead
+    /// of deep-copying 29 mostly-empty containers.
+    #[serde(flatten)]
+    pub scratch: CowBox<ResolutionScratch>,
     /// The rarely-written tail of the state: per-turn and end-of-turn
     /// registries, format bookkeeping, and cost/vote scratch. Held behind
     /// one CoW handle so a checkpoint clone bumps a refcount instead of
@@ -2686,47 +2756,16 @@ impl Clone for GameState {
             blocked_attackers: self.blocked_attackers.clone(),
             blocks_declared_this_turn: self.blocks_declared_this_turn.clone(),
             delayed_triggers: self.delayed_triggers.clone(),
-            activation_mana_colors_scratch: self.activation_mana_colors_scratch.clone(),
-            target_slots_scratch: self.target_slots_scratch.clone(),
-            last_created_tokens: self.last_created_tokens.clone(),
-            last_moved_cards: self.last_moved_cards.clone(),
-            cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
-            nonland_cards_discarded_per_player_this_resolution: self.nonland_cards_discarded_per_player_this_resolution.clone(),
-            haunt_pending: self.haunt_pending.clone(),
-            discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
-            suppress_extra_target_prompts: self.suppress_extra_target_prompts.clone(),
-            exiled_card_ids_this_resolution: self.exiled_card_ids_this_resolution.clone(),
-            destroyed_this_resolution: self.destroyed_this_resolution.clone(),
-            resolution_targets: self.resolution_targets.clone(),
-            cost_sacrificed_batch: self.cost_sacrificed_batch.clone(),
-            damaged_this_resolution: self.damaged_this_resolution.clone(),
-            players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
-            cards_sacrificed_this_resolution: self.cards_sacrificed_this_resolution.clone(),
-            chosen_creature_types_scratch: self.chosen_creature_types_scratch.clone(),
-            named_card_this_resolution: self.named_card_this_resolution.clone(),
-            names_this_resolution: self.names_this_resolution.clone(),
-            pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
-            pending_cast_discards: self.pending_cast_discards.clone(),
-            pending_spree_modes: self.pending_spree_modes.clone(),
-            pending_prepare_copies: self.pending_prepare_copies.clone(),
-            pending_ability_exile_other: self.pending_ability_exile_other.clone(),
-            pending_ability_sac_any: self.pending_ability_sac_any.clone(),
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
-            stashed_resolution_answer: self.stashed_resolution_answer.clone(),
-            resolution_answer_log: self.resolution_answer_log.clone(),
-            pending_cost_events: self.pending_cost_events.clone(),
-            pending_permanent_deaths: self.pending_permanent_deaths.clone(),
-            pending_control_changes: self.pending_control_changes.clone(),
-            resolving_source: self.resolving_source.clone(),
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
             event_scratch: Vec::new(),
             controlled_by: self.controlled_by.clone(),
             died_card_snapshots: self.died_card_snapshots.clone(),
             leaves_bf_lki: self.leaves_bf_lki.clone(),
-            resolving_spell_snapshot: self.resolving_spell_snapshot.clone(),
+            scratch: self.scratch.clone(),
             cold: self.cold.clone(),
             attack_option: self.attack_option,
             range_of_influence: self.range_of_influence,
@@ -2980,15 +3019,11 @@ impl GameState {
             life_gain_punish_this_turn: 0,
             trigger_event_amount_scratch: 0,
             trigger_event_player_scratch: None,
-            activation_mana_colors_scratch: Vec::new(),
-            target_slots_scratch: Vec::new(),
             last_created_token: None,
             last_die_roll: 0,
             extra_cast_reduction: 0,
             cast_paid_uncounterable: false,
             cast_kick_count: 0,
-            last_created_tokens: Vec::new(),
-            last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
             cards_drawn_this_resolution: 0,
             energy_paid_this_resolution: 0,
@@ -2997,8 +3032,6 @@ impl GameState {
             cards_revealed_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             greatest_discarded_mv_this_resolution: 0,
-            cards_discarded_per_player_this_resolution: HashMap::default(),
-            nonland_cards_discarded_per_player_this_resolution: HashMap::default(),
             shuffle_resolving_spell_into_library: false,
             return_resolving_spell_to_hand: false,
             exile_resolving_spell: false,
@@ -3006,19 +3039,11 @@ impl GameState {
             resolving_spell_to_battlefield_transformed: None,
             end_turn_requested: false,
             cipher_encode_pending: None,
-            haunt_pending: None,
-            discarded_card_ids_this_resolution: Vec::new(),
-            suppress_extra_target_prompts: None,
-            exiled_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             excess_damage_this_resolution: 0,
             creatures_died_this_resolution: 0,
             resolution_depth: 0,
-            resolution_targets: Vec::new(),
-            cost_sacrificed_batch: Vec::new(),
             damage_dealt_this_resolution: 0,
-            damaged_this_resolution: Vec::new(),
-            destroyed_this_resolution: Vec::new(),
             countered_spell_mana_spent: 0,
             countered_spell_mana_value: 0,
             chosen_number_this_resolution: 0,
@@ -3032,35 +3057,18 @@ impl GameState {
             permanents_enter_tapped_this_turn: false,
             counters_removed_this_effect: 0,
             counters_removed_as_cost: 0,
-            players_sacrificed_this_resolution: Default::default(),
-            cards_sacrificed_this_resolution: Vec::new(),
             chosen_creature_type_scratch: None,
-            chosen_creature_types_scratch: Vec::new(),
-            named_card_this_resolution: None,
-            names_this_resolution: Default::default(),
             pending_cast_face: CastFace::Front,
-            pending_cast_sacrifices: None,
-            pending_cast_discards: None,
-            pending_spree_modes: None,
             pending_cast_spend_float: None,
-            pending_prepare_copies: Vec::new(),
             pending_landcycle_pick: None,
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
-            pending_ability_exile_other: None,
-            pending_ability_sac_any: None,
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
-            stashed_resolution_answer: None,
-            resolution_answer_log: Vec::new(),
-            pending_cost_events: Vec::new(),
-            pending_permanent_deaths: Vec::new(),
-            pending_control_changes: Vec::new(),
             prevent_combat_damage_this_turn: false,
             nonland_permanent_left_bf_this_turn: false,
             mana_production_multiplier: 1,
-            resolving_source: None,
             in_layer_gather: std::sync::atomic::AtomicBool::new(false),
             layer_freeze: LayerFreeze::default(),
             event_scratch: Vec::new(),
@@ -3097,7 +3105,6 @@ impl GameState {
             subgame_depth: 0,
             resolving_spell_lifelink_seat: None,
             resolving_spell_caster: None,
-            resolving_spell_snapshot: None,
             resolving_spell_deathtouch_seat: None,
             spell_damage_trigger_fired: false,
             in_draw_double: false,
@@ -3114,6 +3121,7 @@ impl GameState {
             current_turn_is_extra: false,
             sector_block_lock_turn: None,
             chosen_sector: None,
+            scratch: CowBox::default(),
             cold: CowBox::new(ColdState { teams, ..Default::default() }),
         }
     }
@@ -6358,7 +6366,7 @@ impl GameState {
         if let Some(cp) = self.computed_permanent(src) {
             return cp.card_types().contains(&Artifact);
         }
-        if let Some((id, _, _, types)) = self.resolving_source.as_ref()
+        if let Some((id, _, _, types)) = self.scratch.resolving_source.as_ref()
             && *id == src
         {
             return types.contains(&Artifact);
@@ -6578,7 +6586,7 @@ impl GameState {
         // resolving spell stamped by `resolve_spell`).
         let Some(src_ctrl) = source.and_then(|s| {
             self.computed_permanent(s).map(|cp| cp.controller).or_else(|| {
-                match &self.resolving_source {
+                match &self.scratch.resolving_source {
                     Some((id, caster, _, _)) if *id == s => Some(*caster),
                     _ => None,
                 }
@@ -6627,7 +6635,7 @@ impl GameState {
         use crate::game::effects::EntityRef;
         let Some(src_ctrl) = source.and_then(|s| {
             self.computed_permanent(s).map(|cp| cp.controller).or_else(|| {
-                match &self.resolving_source {
+                match &self.scratch.resolving_source {
                     Some((id, caster, _, _)) if *id == s => Some(*caster),
                     _ => None,
                 }
@@ -7058,7 +7066,7 @@ impl GameState {
             source_cp
                 .as_ref()
                 .map(|cp| (cp.controller, cp.colors.to_vec()))
-                .or_else(|| match &self.resolving_source {
+                .or_else(|| match &self.scratch.resolving_source {
                     Some((id, caster, colors, _)) if *id == s => {
                         Some((*caster, colors.clone()))
                     }
@@ -7190,7 +7198,7 @@ impl GameState {
                                 && *src_ctrl == c.controller
                                 && src_colors.contains(color)
                                 && matches!(
-                                    &self.resolving_source,
+                                    &self.scratch.resolving_source,
                                     Some((id, _, _, types))
                                         if Some(*id) == source
                                             && (types.contains(&crate::card::CardType::Instant)
@@ -7497,7 +7505,7 @@ impl GameState {
     /// else the caster of the spell currently resolving under that id.
     pub(crate) fn damage_source_controller(&self, id: crate::card::CardId) -> Option<usize> {
         self.computed_permanent(id).map(|cp| cp.controller).or_else(|| {
-            match &self.resolving_source {
+            match &self.scratch.resolving_source {
                 Some((sid, caster, _, _)) if *sid == id => Some(*caster),
                 _ => None,
             }
@@ -7874,7 +7882,7 @@ impl GameState {
         events.push(crate::game::GameEvent::TokenCreated { card_id: id });
         events.push(crate::game::GameEvent::PermanentEntered { card_id: id });
         self.last_created_token = Some(id);
-        self.last_created_tokens.push(id);
+        self.scratch.last_created_tokens.push(id);
         self.fire_self_etb_triggers(id, ctrl);
         // CR 614 — Academy Manufactor: a Clue/Food/Treasure mint becomes one
         // of each. The extra mints aren't re-replaced (CR 614.5).
@@ -13978,7 +13986,7 @@ impl GameState {
         let src = source?;
         // The spell is in no visible zone mid-resolution, so read its caster,
         // colours and types off `resolving_source` when it's the one running.
-        let (caster, colors, types) = match &self.resolving_source {
+        let (caster, colors, types) = match &self.scratch.resolving_source {
             Some((id, caster, colors, types)) if *id == src => {
                 (*caster, colors.clone(), types.clone())
             }
@@ -15317,10 +15325,10 @@ impl GameState {
     /// including the `ManualTapRequired` bounces, so the record has to survive
     /// those.
     fn clear_stale_target_suppression(&mut self) {
-        if let Some(declined) = &self.suppress_extra_target_prompts
+        if let Some(declined) = &self.scratch.suppress_extra_target_prompts
             && !self.players[declined.caster].hand.iter().any(|c| c.id == declined.card_id)
         {
-            self.suppress_extra_target_prompts = None;
+            self.scratch.suppress_extra_target_prompts = None;
         }
     }
 
@@ -15829,7 +15837,9 @@ impl GameState {
         let mut events = events;
         // CR 119.3c — life paid as a cost (Phyrexian pips, life costs) is a
         // life-loss event; surface it after the action so loss triggers fire.
-        events.extend(std::mem::take(&mut self.pending_cost_events));
+        if !self.scratch.pending_cost_events.is_empty() {
+            events.extend(std::mem::take(&mut self.scratch.pending_cost_events));
+        }
         self.dispatch_triggers_for_events(&events);
         Ok(events)
     }
@@ -15912,16 +15922,16 @@ impl GameState {
         self.last_discarded_was_multicolored = Some(card.definition.cost.distinct_colors() >= 2);
         self.last_discarded_colors = card.definition.cost.colors();
         *self
-            .cards_discarded_per_player_this_resolution
+            .scratch.cards_discarded_per_player_this_resolution
             .entry(p)
             .or_insert(0) += 1;
-        self.discarded_card_ids_this_resolution.push(card_id);
+        self.scratch.discarded_card_ids_this_resolution.push(card_id);
         if was_creature {
             self.creature_cards_discarded_this_resolution += 1;
         }
         if was_nonland {
             *self
-                .nonland_cards_discarded_per_player_this_resolution
+                .scratch.nonland_cards_discarded_per_player_this_resolution
                 .entry(p)
                 .or_insert(0) += 1;
         }
@@ -18073,18 +18083,18 @@ impl GameState {
         // Cost-payment events (paid life) queued since the last dispatch —
         // fold them in so resumed-decision paths that bypass
         // `perform_action`'s drain still fire their triggers.
-        if !self.pending_cost_events.is_empty() {
-            let pending = std::mem::take(&mut self.pending_cost_events);
+        if !self.scratch.pending_cost_events.is_empty() {
+            let pending = std::mem::take(&mut self.scratch.pending_cost_events);
             self.dispatch_triggers_for_events(&pending);
         }
         // CR 700.4 — fold in `PermanentDied` events synthesized from the deaths
         // recorded at the raw removal chokepoint since the last dispatch, so
         // non-creature deaths (which emit no `CreatureDied`) still reach
         // "creature or artifact you control dies" triggers.
-        let deaths = std::mem::take(&mut self.pending_permanent_deaths);
+        let deaths: Vec<_> = take_scratch!(self.pending_permanent_deaths);
         // CR 800.4 — control changes recorded at the `change_control`
         // chokepoint since the last dispatch (Risky Move's hand-off).
-        let control_changes = std::mem::take(&mut self.pending_control_changes);
+        let control_changes: Vec<_> = take_scratch!(self.pending_control_changes);
         // Nothing to fire and nothing to synthesize. The two takes above are
         // all the state this call has touched by here, so this leaves exactly
         // what the `events.is_empty()` return below leaves — without the
@@ -20939,13 +20949,13 @@ impl GameState {
                     DecisionAnswer::Target(Target::Permanent(id))
                         if self.cast_sacrifice_choice_is_legal(caster, card_id, *id) =>
                     {
-                        self.pending_cast_sacrifices = Some(vec![*id]);
+                        self.scratch.pending_cast_sacrifices = Some(vec![*id]);
                     }
                     DecisionAnswer::Discard(ids) => {
                         // Trust the option list that was posed (the caster's
                         // hand minus the card being cast); the apply path in
                         // `pay_additional_costs` re-checks each id is in hand.
-                        self.pending_cast_discards = Some(ids.clone());
+                        self.scratch.pending_cast_discards = Some(ids.clone());
                     }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
@@ -20994,7 +21004,7 @@ impl GameState {
                     // selection ends here — and keep it suppressed for the
                     // manual-tap replays of this same cast.
                     DecisionAnswer::DeclineTarget => {
-                        self.suppress_extra_target_prompts = Some(DeclinedExtraTargets {
+                        self.scratch.suppress_extra_target_prompts = Some(DeclinedExtraTargets {
                             caster,
                             card_id: *card_id,
                             target: target.clone(),
@@ -21108,7 +21118,7 @@ impl GameState {
                         // Trust the posed option list (the activator's graveyard
                         // minus the source); `activate_ability` re-checks each id
                         // is still in the graveyard and matches the filter.
-                        self.pending_ability_exile_other = Some(ids);
+                        self.scratch.pending_ability_exile_other = Some(ids);
                     }
                     K::SacAnyNumber => {
                         let DecisionAnswer::Cards(ids) = answer else {
@@ -21116,7 +21126,7 @@ impl GameState {
                         };
                         // May legally be empty; `activate_ability` re-checks
                         // each id is still a controlled, matching permanent.
-                        self.pending_ability_sac_any = Some(ids);
+                        self.scratch.pending_ability_sac_any = Some(ids);
                     }
                     K::XValue => {
                         let DecisionAnswer::Amount(n) = answer else {
@@ -21460,7 +21470,7 @@ impl GameState {
                             }
                             // Surface the found card so a downstream `Selector::LastMoved`
                             // can inspect its type (Oriq Loremage's "if instant/sorcery").
-                            self.last_moved_cards.push(*card_id);
+                            self.scratch.last_moved_cards.push(*card_id);
                         }
                     }
                 }
@@ -21896,7 +21906,7 @@ impl GameState {
                 // Publish the batch on `Selector::LastMoved` so a follow-up
                 // effect in the same Seq can act on what was exiled (Psychic
                 // Theft's may-play grant + end-step return).
-                self.last_moved_cards.clear();
+                self.scratch.last_moved_cards.clear();
                 for cid in card_ids {
                     if let Some(mut card) = Self::take_card(&mut self.players[target_player].hand, *cid)
                     {
@@ -21905,7 +21915,7 @@ impl GameState {
                         card.exiled_with = link_source;
                         card.face_down = face_down;
                         self.exile.push(card);
-                        self.last_moved_cards.push(*cid);
+                        self.scratch.last_moved_cards.push(*cid);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     }
                 }
@@ -22098,7 +22108,7 @@ impl GameState {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.names_this_resolution.insert(player, name.clone());
+                self.scratch.names_this_resolution.insert(player, name.clone());
                 Ok(vec![])
             }
             PendingEffectState::NameRevealTopPending { player, count } => {
@@ -22143,7 +22153,7 @@ impl GameState {
                     // Also record on the per-resolution scratchpad so a
                     // following `NamedBySource` reveal can match even when the
                     // naming source is a resolving spell held off-zone.
-                    self.named_card_this_resolution = Some(name.clone());
+                    self.scratch.named_card_this_resolution = Some(name.clone());
                 }
                 Ok(Vec::new())
             }
@@ -22163,14 +22173,14 @@ impl GameState {
             // These five suspend with the *originating effect* re-queued as
             // the continuation; the apply step only validates/sanitises the
             // answer and stashes it for the re-run to consume (see
-            // `GameState.stashed_resolution_answer`).
+            // `GameState.scratch.stashed_resolution_answer`).
             PendingEffectState::ModesAnswerPending { num_modes } => {
                 let DecisionAnswer::Modes(v) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let sane: Vec<u8> =
                     v.iter().copied().filter(|&i| (i as usize) < num_modes).collect();
-                self.stashed_resolution_answer = Some(DecisionAnswer::Modes(sane));
+                self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Modes(sane));
                 Ok(Vec::new())
             }
             PendingEffectState::ModeAnswerPending { num_modes } => {
@@ -22178,35 +22188,35 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let sane = (*i).min(num_modes.saturating_sub(1));
-                self.stashed_resolution_answer = Some(DecisionAnswer::Mode(sane));
+                self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Mode(sane));
                 Ok(Vec::new())
             }
             PendingEffectState::AmountAnswerPending { max } => {
                 let DecisionAnswer::Amount(n) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.stashed_resolution_answer = Some(DecisionAnswer::Amount((*n).min(max)));
+                self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Amount((*n).min(max)));
                 Ok(Vec::new())
             }
             PendingEffectState::SeatAmountAnswerPending { max, .. } => {
                 let DecisionAnswer::Amount(n) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.resolution_answer_log.push(DecisionAnswer::Amount((*n).min(max)));
+                self.scratch.resolution_answer_log.push(DecisionAnswer::Amount((*n).min(max)));
                 Ok(Vec::new())
             }
             PendingEffectState::MayDoAnswerPending => {
                 let DecisionAnswer::Bool(b) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.stashed_resolution_answer = Some(DecisionAnswer::Bool(*b));
+                self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Bool(*b));
                 Ok(Vec::new())
             }
             PendingEffectState::SeatBoolAnswerPending { .. } => {
                 let DecisionAnswer::Bool(b) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.resolution_answer_log.push(DecisionAnswer::Bool(*b));
+                self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(*b));
                 Ok(Vec::new())
             }
             PendingEffectState::DivisionAnswerPending => {
@@ -22214,7 +22224,7 @@ impl GameState {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 // Raw stash — the re-run renormalises wrong length/sum.
-                self.stashed_resolution_answer =
+                self.scratch.stashed_resolution_answer =
                     Some(DecisionAnswer::DamageDivision(v.clone()));
                 Ok(Vec::new())
             }
@@ -22222,7 +22232,7 @@ impl GameState {
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                self.stashed_resolution_answer = Some(DecisionAnswer::CreatureType(*ct));
+                self.scratch.stashed_resolution_answer = Some(DecisionAnswer::CreatureType(*ct));
                 Ok(Vec::new())
             }
             PendingEffectState::CardsAnswerPending { .. } => {
@@ -22231,7 +22241,7 @@ impl GameState {
                 };
                 // Raw stash — the re-run filters against its own candidate
                 // set and enforces min/max, so no sanitisation here.
-                self.stashed_resolution_answer = Some(DecisionAnswer::Cards(ids.clone()));
+                self.scratch.stashed_resolution_answer = Some(DecisionAnswer::Cards(ids.clone()));
                 Ok(Vec::new())
             }
             PendingEffectState::SeatCardsAnswerPending { .. } => {
@@ -22240,7 +22250,7 @@ impl GameState {
                 };
                 // Logged (not stashed) so the re-run can ask further
                 // questions after replaying this one.
-                self.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
+                self.scratch.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
                 Ok(Vec::new())
             }
             PendingEffectState::MayCastExiledPending { player, card, decline } => {
@@ -22545,14 +22555,14 @@ impl GameState {
         // Stamp the resolving spell's identity so source-aware damage
         // replacements (Torbran) can read its controller/colors while the
         // card is in no visible zone.
-        let prev_src = self.resolving_source.replace((
+        let prev_src = self.scratch.resolving_source.replace((
             card.id,
             caster,
             card.definition.printed_colors(),
             card.definition.card_types.clone(),
         ));
         let res = self.resolve_effect(effect, &ctx);
-        self.resolving_source = prev_src;
+        self.scratch.resolving_source = prev_src;
         let mut events = res?;
         // CR 702.165 — a promised gift is given as the spell resolves its
         // gifted effect. Emit once on the initial pass so "whenever you give a
@@ -22756,7 +22766,7 @@ impl GameState {
         // CR 702.55 — Haunt. `Effect::HauntCreature` set `haunt_pending` to the
         // creature this resolving instant/sorcery should haunt. Exile the spell
         // card (not the graveyard) and register the death-watch delayed trigger.
-        if let Some((haunted, body)) = self.haunt_pending.take() {
+        if let Some((haunted, body)) = take_opt_scratch!(self.haunt_pending) {
             use crate::game::types::{DelayedKind, DelayedTrigger};
             let src = card.id;
             self.exile.push(card);
@@ -22978,7 +22988,7 @@ impl GameState {
         ctx.targets.extend(additional_targets.iter().cloned());
         ctx.x_value = x_value;
         ctx.converged_value = converged_value;
-        ctx.mana_spent_by_color = std::mem::take(&mut self.activation_mana_colors_scratch);
+        ctx.mana_spent_by_color = take_scratch!(self.activation_mana_colors_scratch);
         // CR 702.32 — an ETB/other trigger on a permanent reads the
         // source's `kicked` flag so "when ~ enters, if it was kicked, …"
         // riders (Goblin Bushwhacker) can branch on `SpellWasKicked`.
@@ -23176,7 +23186,7 @@ impl GameState {
         c.controller = new_ctrl;
         c.summoning_sick = true;
         c.echo_paid = false;
-        self.pending_control_changes.push((id, prev, new_ctrl));
+        self.scratch.pending_control_changes.push((id, prev, new_ctrl));
         // CR 506.4 — a permanent is removed from combat when its controller
         // changes, so a mid-combat steal stops it attacking or blocking.
         self.remove_from_combat(id);

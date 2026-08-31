@@ -1748,7 +1748,7 @@ impl GameState {
                 // CR 706 — stash the copy-relevant fields before anything else
                 // runs; a "copy this spell" rider resolves after the stack
                 // entry is already popped (the Chain cycle).
-                self.resolving_spell_snapshot =
+                self.scratch.resolving_spell_snapshot =
                     Some(std::sync::Arc::new(crate::game::ResolvingSpell {
                         definition: card.definition.arc(),
                         target: target.clone(),
@@ -2569,7 +2569,7 @@ impl GameState {
                 trigger_player,
                 mana_spent_by_color,
             } => {
-                self.activation_mana_colors_scratch = mana_spent_by_color;
+                self.scratch.activation_mana_colors_scratch = mana_spent_by_color;
                 // CR 603.4 — re-check the intervening 'if' clause as the
                 // ability resolves. "If the condition isn't true at that
                 // time, the ability is removed from the stack and does
@@ -6408,7 +6408,7 @@ impl GameState {
                 // synthesis (dispatch drains this into "creature or artifact
                 // you control dies" triggers). CreatureDied already covers
                 // creatures at every site; this backfills non-creature deaths.
-                self.pending_permanent_deaths.push((
+                self.scratch.pending_permanent_deaths.push((
                     id,
                     card.controller,
                     card.definition.is_creature(),

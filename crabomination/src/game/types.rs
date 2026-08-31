@@ -1693,7 +1693,7 @@ pub enum PendingEffectState {
     /// (matching name → hand, rest → graveyard).
     NameRevealTopPending { player: usize, count: usize },
     /// Conundrum Sphinx: stash `player`'s named card in
-    /// `GameState.names_this_resolution` for the later reveal step.
+    /// `GameState.scratch.names_this_resolution` for the later reveal step.
     StashNamePending { player: usize },
     /// CR 701.45 — suspended on a `Decision::Learn`. The resume step reads
     /// `DecisionAnswer::Learn(choice)` and reveals a Lesson into `player`'s
@@ -1891,7 +1891,7 @@ pub enum PendingEffectState {
     /// Suspended on a `ChooseModes` for a resolution-time "choose N" /
     /// Escalate effect. The apply step validates the answer shape, drops
     /// out-of-range indices, and stashes it in
-    /// `GameState.stashed_resolution_answer`; the re-queued originating
+    /// `GameState.scratch.stashed_resolution_answer`; the re-queued originating
     /// effect consumes the stash instead of re-asking its decider.
     ModesAnswerPending { num_modes: usize },
     /// Suspended on a `ChooseMode` for a modal trigger whose pick was
@@ -1910,7 +1910,7 @@ pub enum PendingEffectState {
     /// Suspended on a yes/no question routed to `player` (who may differ
     /// from the resolving controller — rhystic taxes, Tempting Offer,
     /// Browbeat, Clash). The validated answer is *appended* to
-    /// `GameState.resolution_answer_log`; the re-run replays the log in
+    /// `GameState.scratch.resolution_answer_log`; the re-run replays the log in
     /// ask order to reach the next unanswered question.
     SeatBoolAnswerPending { player: usize },
     /// Suspended on a `DivideDamage` split. The raw division is stashed;
@@ -1930,7 +1930,7 @@ pub enum PendingEffectState {
     /// of their permanents to bounce).
     CardsAnswerPending { player: usize },
     /// As `CardsAnswerPending`, but the answer is *appended* to
-    /// `GameState.resolution_answer_log` so the arm can ask more questions
+    /// `GameState.scratch.resolution_answer_log` so the arm can ask more questions
     /// after it (`ask_seat_cards_logged` — the pile split's pick-then-choose).
     SeatCardsAnswerPending { player: usize },
     /// Suspended on a "cast the exiled card without paying?" offer after a

@@ -2602,7 +2602,7 @@ fn prepare_spell_survives_float_spend_suspension() {
         "only the Bear was added to hand — the copy is gone");
     assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Regrowth"),
         "the copy never reaches the graveyard");
-    assert!(g.pending_prepare_copies.is_empty(), "registration settled");
+    assert!(g.scratch.pending_prepare_copies.is_empty(), "registration settled");
 }
 
 // CR 707.10a — a countered prepare copy ceases to exist without ever

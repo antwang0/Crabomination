@@ -3794,7 +3794,7 @@ impl GameState {
         // resume via a plain `CastSpell` replay, so the bookkeeping (token
         // flag + unprepare) is settled by `settle_prepare_after_cast` wherever
         // the cast actually completes, not here.
-        self.pending_prepare_copies.push((copy_id, creature_id));
+        self.scratch.pending_prepare_copies.push((copy_id, creature_id));
         let result = self.cast_spell(copy_id, target, additional_targets, mode, x_value);
         self.settle_prepare_after_cast(copy_id, result)
     }
@@ -3816,7 +3816,7 @@ impl GameState {
         result: Result<Vec<GameEvent>, GameError>,
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::CounterType;
-        let Some(idx) = self.pending_prepare_copies.iter().position(|(c, _)| *c == copy_id)
+        let Some(idx) = self.scratch.pending_prepare_copies.iter().position(|(c, _)| *c == copy_id)
         else {
             return result;
         };
@@ -3827,7 +3827,7 @@ impl GameState {
             });
             if let Some(card) = on_stack {
                 card.is_token = true;
-                let (_, creature_id) = self.pending_prepare_copies.remove(idx);
+                let (_, creature_id) = self.scratch.pending_prepare_copies.remove(idx);
                 let mut events = result.unwrap_or_default();
                 // Casting the copy unprepares the creature.
                 if let Some(c) = self.battlefield.find_by_id_mut(creature_id)
@@ -3849,7 +3849,7 @@ impl GameState {
         }
         // The cast failed (rejected casts push the copy back into the hand)
         // — unmaterialize it.
-        self.pending_prepare_copies.remove(idx);
+        self.scratch.pending_prepare_copies.remove(idx);
         for player in &mut self.players {
             player.hand.retain(|c| c.id != copy_id);
         }
@@ -4022,7 +4022,7 @@ impl GameState {
             // selection. Matched (not consumed): a hand-paying caster's cast
             // is replayed once per mana tap, and every one of those replays
             // is the same declined decision.
-            let suppressed = self.suppress_extra_target_prompts.as_ref().is_some_and(|d| {
+            let suppressed = self.scratch.suppress_extra_target_prompts.as_ref().is_some_and(|d| {
                 d.caster == self.priority.player_with_priority
                     && d.card_id == card_id
                     && d.target == target
@@ -5182,10 +5182,10 @@ impl GameState {
             }
         }
         self.cast_atomically(|g| {
-            g.pending_spree_modes = Some(chosen.clone());
+            g.scratch.pending_spree_modes = Some(chosen.clone());
             let cast =
                 g.cast_spell(card_id, target.clone(), additional_targets.clone(), None, x_value);
-            g.pending_spree_modes = None;
+            g.scratch.pending_spree_modes = None;
             cast
         })
     }
@@ -6491,7 +6491,7 @@ impl GameState {
                 for cost in &costs {
                     match cost {
                         crate::card::AdditionalCastCost::SacrificePermanent { filter, count }
-                            if *count == 1 && self.pending_cast_sacrifices.is_none() =>
+                            if *count == 1 && self.scratch.pending_cast_sacrifices.is_none() =>
                         {
                             let legal: Vec<Target> = self
                                 .battlefield
@@ -6531,7 +6531,7 @@ impl GameState {
                             }
                         }
                         crate::card::AdditionalCastCost::ExilePermanent { filter, count }
-                            if *count == 1 && self.pending_cast_sacrifices.is_none() =>
+                            if *count == 1 && self.scratch.pending_cast_sacrifices.is_none() =>
                         {
                             let legal: Vec<Target> = self
                                 .battlefield
@@ -6571,7 +6571,7 @@ impl GameState {
                             }
                         }
                         crate::card::AdditionalCastCost::Discard { count, filter }
-                            if *count >= 1 && self.pending_cast_discards.is_none() =>
+                            if *count >= 1 && self.scratch.pending_cast_discards.is_none() =>
                         {
                             // The card being cast is still in hand here but is
                             // moving to the stack — exclude it as a discard
@@ -6618,8 +6618,8 @@ impl GameState {
         // Consume any additional-cost picks from a `CastAdditionalCost` resume
         // now, so they're applied to *this* cast only — a later failure
         // (timing, mana) can't leak them onto the next cast.
-        let chosen_sacrifices = self.pending_cast_sacrifices.take();
-        let chosen_discards = self.pending_cast_discards.take();
+        let chosen_sacrifices = take_opt_scratch!(self.pending_cast_sacrifices);
+        let chosen_discards = take_opt_scratch!(self.pending_cast_discards);
         // CR 601.2g float-spend confirmation answer (None until the player
         // has answered the prompt). Taken up front so a later failure can't
         // leak it onto the next cast.
@@ -6669,7 +6669,7 @@ impl GameState {
         // CR 702.172 — Spree: stamp the chosen modes so `Effect::Spree` runs
         // exactly those at resolution. Their mana costs fold into the total
         // cost below.
-        let spree_modes = self.pending_spree_modes.take().unwrap_or_default();
+        let spree_modes = take_opt_scratch!(self.pending_spree_modes).unwrap_or_default();
         card.spree_modes = spree_modes.clone();
         // CR 702.41 — opt-in Entwine; only sticks when the card has it (either
         // a mana cost or a non-mana one — "Entwine—Sacrifice two lands").
@@ -7140,7 +7140,7 @@ impl GameState {
         // `card`) so a rejected cast can move the card back to hand.
         // Cross-slot filters (Barrin's Spite's "controlled by the same player")
         // read the whole chosen slot vector, not just their own target.
-        self.target_slots_scratch = std::iter::once(target.clone())
+        self.scratch.target_slots_scratch = std::iter::once(target.clone())
             .chain(additional_targets.iter().cloned().map(Some))
             .collect();
         let filter_violation = {
@@ -7164,7 +7164,7 @@ impl GameState {
                     .enumerate()
                     .any(|(idx, tgt)| slot_bad((idx + 1) as u8, tgt))
         };
-        self.target_slots_scratch.clear();
+        clear_scratch!(self.target_slots_scratch);
         if filter_violation {
             self.players[p].hand.push(card);
             return Err(GameError::SelectionRequirementViolated);
@@ -14198,8 +14198,8 @@ impl GameState {
 
         let chosen_sac_other = self.pending_ability_sac_other.take();
         let chosen_tap_other = self.pending_ability_tap_other.take();
-        let chosen_exile_other = self.pending_ability_exile_other.take();
-        let chosen_sac_any = self.pending_ability_sac_any.take();
+        let chosen_exile_other = take_opt_scratch!(self.pending_ability_exile_other);
+        let chosen_sac_any = take_opt_scratch!(self.pending_ability_sac_any);
         // CR 601.2g float-spend choice (None until answered; consumed up front
         // so a failure can't leak it onto a later activation).
         let spend_float = self.pending_cast_spend_float.take();
@@ -16606,8 +16606,16 @@ impl GameState {
         // in but this activation's does.
         self.sacrificed_count = cost_sac_count;
         self.sacrificed_total_power = cost_sac_total_power;
-        self.cost_sacrificed_batch = if ability.sac_cost { vec![card_id] } else { Vec::new() };
-        self.cost_sacrificed_batch.extend(sac_other_picks.iter().copied());
+        // Skipped whole when there is nothing to record and nothing recorded:
+        // the `&mut` reach alone would unshare the scratch group.
+        if ability.sac_cost
+            || !sac_other_picks.is_empty()
+            || !self.scratch.cost_sacrificed_batch.is_empty()
+        {
+            self.scratch.cost_sacrificed_batch =
+                if ability.sac_cost { vec![card_id] } else { Vec::new() };
+            self.scratch.cost_sacrificed_batch.extend(sac_other_picks.iter().copied());
+        }
         for other_cid in sac_other_picks {
             let sac_power = self.battlefield_find(other_cid).map(|c| c.power()).unwrap_or(0);
             self.sacrificed_count += 1;
@@ -17198,11 +17206,11 @@ impl GameState {
         }
         // CR 118.8 — "whenever you pay life" (Font of Agonies) sees the amount
         // paid, whether or not the life reduction was itself replaced.
-        self.pending_cost_events
+        self.scratch.pending_cost_events
             .push(GameEvent::PaidLife { player: p, amount: life });
         let applied = self.adjust_life_applied(p, -(life as i32));
         if applied < 0 {
-            self.pending_cost_events
+            self.scratch.pending_cost_events
                 .push(GameEvent::LifeLost { player: p, amount: (-applied) as u32 });
         }
     }

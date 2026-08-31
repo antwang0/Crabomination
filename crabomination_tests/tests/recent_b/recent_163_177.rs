@@ -1273,7 +1273,7 @@ mod recent168 {
         g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
         g.priority.player_with_priority = 0;
         let hand_before = g.players[0].hand.len();
-        g.pending_cast_sacrifices = Some(vec![vehicle]);
+        g.scratch.pending_cast_sacrifices = Some(vec![vehicle]);
         g.perform_action(GameAction::CastSpell {
             card_id: spell,
             target: Some(Target::Permanent(victim)),

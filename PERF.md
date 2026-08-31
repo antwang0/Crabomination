@@ -10536,6 +10536,99 @@ would rebuild the engine), and read the first pointer argument's attributes.
 folds identical bodies into aliases of the first one, so five types under test
 come back wearing the attributes of whichever one it kept. Give each probe a
 distinct body.
+### Hundred-and-sixteenth pass (5) — `(-143)`, and a CoW group is priced by its *reaches*
+
+**`cube` -1.274 % / `fixed` -1.373 % / `sealed` -0.926 %** at the guarded tip,
+retaken against the rebased base `1a783e04` (`profiling-fast
+--no-default-features`, callgrind, six games, one thread, seed 1, `--a gang
+--b gang`). **The largest single row in this Log**, and it stacks with
+`(-140)`/`(-141)`/`(-142)` rather than overlapping them: those grouped the
+clone's *scalar* copies, this one removes its *container* copies.
+
+```text
+  pool    base 1a783e04    (-143)          delta
+  cube    2,503,859,452   2,471,954,386   -1.2742 %
+  fixed     927,366,593     914,635,420   -1.3728 %
+  sealed  2,525,788,534   2,502,403,614   -0.9258 %
+```
+
+`(-138)`'s device, built as filed: the 32 resolution-scratch **collection**
+fields (`last_moved_cards`, the four `*_card_ids_this_resolution`, the two
+per-player discard maps, `resolution_targets`, the `pending_*` group,
+`resolving_source`, …) move off `GameState` into
+`scratch: CowBox<ResolutionScratch>`. Purely mechanical — 424 access sites
+rewritten to `state.scratch.<field>`, the compiler checking both directions,
+`#[serde(flatten)]` so the wire shape does not move — and the suite stayed
+green with the golden traces unmoved at every step.
+
+```text
+  fixed                     base 1a783e04    (-143)
+  GameState::clone self       12,822,808     6,137,744    -52.1 %
+    per clone (11,280)             1,137           544    -593 Ir
+  SmallVec                     9,759,048     4,356,596
+  __memcpy_avx_unaligned      21,298,984    18,882,081
+  Arc::clone_from_ref_in      23,331,836    26,593,232
+  Arc::make_mut CALLS            367,270       390,046    +22,776
+```
+
+**The first build was a REGRESSION, and that is the entry.** Unguarded, off
+the pre-rebase base `0e6ed414`, it read **`cube` +1.125 % / `fixed`
++2.154 %** — it lost twice what the whole clone could pay. The dump says why
+in one row: `Arc::make_mut` went **341,710 -> 778,538 calls on `fixed`**,
+**437 k new mutable reaches against 10.7 k clones, 41:1**, and nearly none of
+them wrote anything:
+
+```text
+  reaches added, unguarded (fixed, six games)
+  171,394  dispatch_triggers_for_events   two mem::take of an empty Vec, EVERY call
+  146,272  resolve_effect_into            fourteen clear() at every resolution root
+   65,844  perform_action_inner
+   36,964  activate_ability_inner         two .take() on a None
+   16,860  cast_spell_with_convoke        three .take() on a None
+```
+
+A plain field write does not care that it wrote nothing. A `CowBox` write
+does: it deep-copies the group.
+
+**The fix is `clear_cold!`'s discipline, one group out.** Four macros next to
+it — `clear_scratch!`, `take_scratch!`, `take_opt_scratch!`,
+`clear_opt_scratch!` — each a read that skips a no-op write, plus three
+hand-written guards (`resolution_targets`' swap/restore pair, the two discard
+maps' drop-the-table assignment behind a `capacity() > 0`,
+`cost_sacrificed_batch`'s build-and-extend). They took the added reaches from
+**+436,828 to +22,776 on `fixed`** and **+994,724 to +58,246 on `cube`** —
+95 % of them gone — and the sign with them. Every guard is value-identical:
+`mem::take` of an empty container hands back an empty container either way.
+
+**THE TRANSFERABLE RULE, AND IT IS ARITHMETIC.** A `CowBox` group pays
+`reaches x cost(make_mut)` to save `clones x cost(the fields' clone)`. Both
+sides are readable off a dump *before* the group exists:
+
+```text
+  saved per clone   593 Ir   (1,137 -> 544 self Ir a clone)
+  cost per reach     29 Ir   (base make_mut self 10,641,518 / 367,270 calls)
+  break-even         ~20 mutable reaches per clone
+  unguarded            41    LOSES
+  guarded             2.0    WINS
+```
+
+**So the pre-check for the next proposed CoW group is a reach count, not an
+unchanged-probe rate**, and `(-138)`'s census measured the wrong thing: it
+fingerprinted the group's *value* before and after a probe, so a `clear()` on
+an empty `Vec`, a `mem::take` of one, a `.take()` on a `None` and an
+assignment of an equal value all read as "never wrote the group". They are
+nearly free today and they are a deep copy under a `CowBox`. The census's own
+⚠ said it biased towards the device; it did, by 19x, and the direction was
+right while the size was not. `cg_edges.py --callers make_mut` on the
+*existing* binary gives the denominator for free — the engine's four existing
+groups run 367,270 reaches on 11,280 clones and each saves far more than
+593 Ir a clone.
+
+**What is left on `GameState::clone`.** 544 Ir a clone, 6.1 M on `fixed` and
+15.0 M on `cube`, and it is now ~160 scalar fields copied unconditionally —
+a struct memcpy with no container calls left in it. The remaining lever there
+is the struct's *size*, not its container count; nothing in this pass measured
+it. See `(-144)`.
 
 ### Hundred-and-fifteenth pass — `(-137)`, and the frame class is now empty
 
@@ -18799,6 +18892,27 @@ system allocator in this workload (score allocation trades with it), and the
 60-second IR probe recipe is in the Log.
 
 **(-138) THE QUEUE WAS RE-PROFILED FROM SCRATCH AT `bda1a69d` AND THE HONEST
+**(-144) `GameState::clone` IS STILL 544 Ir A CLONE AND WHAT IS LEFT IS THE
+STRUCT'S SIZE.** `(-143)` took the container half — 1,137 -> 544 self Ir a
+clone, and the callee table's eight `Vec::clone`s and three `RawTable::clone`s
+went with it; `(-140)`/`(-141)` had already taken the scalar-grouping half.
+What remains is ~160 scalar fields copied unconditionally, i.e. a struct
+memcpy: 15.0 M Ir on `cube` (0.61 %) over 22,556 calls, 6,137,744 on `fixed`
+(0.67 %) over 11,280. **Nobody has measured
+`size_of::<GameState>()` or ranked its fields by size.** The shape to look for
+is a large *inline* payload that is almost always the empty variant —
+`suspend_signal: Option<(Decision, PendingEffectState, Effect)>` is the
+obvious suspect (`Effect` is the engine's widest enum and the field is `None`
+on essentially every clone), and boxing one costs a pointer chase on a field
+read ~85 times in the tree and nothing per clone. **Measure first**: print
+`size_of` for the struct and for each candidate field, and only then decide
+whether a box pays. ⚠ This is the *opposite* trade from `(-143)`: a box costs
+per **read**, so the pre-check is a read count, not a reach count.
+
+
+**(-138) TAKEN BY `(-143)` FOR ITS `GameState::clone` HALF (`cube` -1.274 %
+/ `fixed` -1.373 % / `sealed` -0.926 %) — the rest of the re-profile stands.
+THE QUEUE WAS RE-PROFILED FROM SCRATCH AT `bda1a69d` AND THE HONEST
 HEADLINE IS THAT NOTHING NEW IS BIG.** Fresh `--dump-instr=yes` dumps, both
 pools, six games, one thread, seed 1, `profiling-fast --no-default-features`:
 `cube` **2,489,474,925**, `fixed` **838,570,681**. (The `cube` figure is
@@ -18894,6 +19008,16 @@ group, landed fully green or reverted — **never left half-threaded.**
 fingerprint is `{:?}` over the group, but the two `fxhash` maps and the
 `IdSet` are read by `len()` because their `Debug` order is not stable, so a
 probe that swaps a key without changing the count reads as unchanged.
+
+⚠⚠ **AND IT OVER-REPORTED BY 17x FOR A SECOND REASON THE BUILD FOUND — see
+`(-143)`.** A value fingerprint cannot see a *reach*: `clear()` on an empty
+`Vec`, `mem::take` of one, `.take()` on a `None`, an assignment of an equal
+value are all "never wrote the group" to this census and all a deep copy
+under a `CowBox`. The device is priced by `reaches x cost(make_mut)`, and the
+unguarded build read 437 k reaches on `fixed` against the 10.7 k clones it
+saves. Guard every no-op write (`clear_scratch!` and friends) or do not build
+the group; and take the denominator off `cg_edges.py --callers make_mut` on
+the existing binary before proposing the next one.
 
 **Refuted here without a build: `controlled_by`.** It reads as an obvious
 per-clone allocation (`Vec<Option<usize>>`, one entry a seat) and it is not —

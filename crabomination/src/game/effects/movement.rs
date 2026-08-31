@@ -304,7 +304,7 @@ impl GameState {
         // (Silhouette's turn shield, Bronze Horse's static). The resolution's
         // own target list is the discriminator.
         if let (EntityRef::Permanent(tgt), Some(_)) = (ent, source)
-            && self.resolution_targets.contains(&tgt)
+            && self.scratch.resolution_targets.contains(&tgt)
         {
             let shielded = self.targeting_damage_prevented_this_turn.contains(&tgt)
                 || (statics & prevent_static::TARGETING_SHIELD != 0
@@ -929,7 +929,7 @@ impl GameState {
         let from_controller = source.and_then(|s| {
             self.battlefield_find(s)
                 .map(|c| c.controller)
-                .or_else(|| match &self.resolving_source {
+                .or_else(|| match &self.scratch.resolving_source {
                     Some((id, caster, _, _)) if *id == s => Some(*caster),
                     _ => None,
                 })
@@ -1260,7 +1260,7 @@ impl GameState {
             }
         }
         // Backdraft — tally the damage each sorcery spell deals as it resolves.
-        let sorcery_caster = self.resolving_source.as_ref().and_then(|(rid, caster, _, types)| {
+        let sorcery_caster = self.scratch.resolving_source.as_ref().and_then(|(rid, caster, _, types)| {
             (Some(*rid) == source && types.contains(&crate::card::CardType::Sorcery))
                 .then_some((*rid, *caster))
         });
@@ -1290,7 +1290,7 @@ impl GameState {
         // `resolve_top_of_stack`; damage from that same spell is deathtouch.
         if !source_has_deathtouch
             && self.resolving_spell_deathtouch_seat.is_some()
-            && match (source, &self.resolving_source) {
+            && match (source, &self.scratch.resolving_source) {
                 (Some(s), Some((rid, _, _, _))) => *rid == s,
                 _ => false,
             }
@@ -1673,13 +1673,13 @@ impl GameState {
         // truly took damage. Planeswalkers/battles are excluded (only combat-
         // relevant creatures + players are ever queried).
         match ent {
-            EntityRef::Player(_) => self.damaged_this_resolution.push(ent),
+            EntityRef::Player(_) => self.scratch.damaged_this_resolution.push(ent),
             EntityRef::Permanent(cid)
                 if self
                     .battlefield_find(cid)
                     .is_some_and(|c| c.definition.is_creature()) =>
             {
-                self.damaged_this_resolution.push(ent)
+                self.scratch.damaged_this_resolution.push(ent)
             }
             _ => {}
         }
@@ -1730,7 +1730,7 @@ impl GameState {
             return;
         }
         let Some(seat) = self.resolving_spell_caster else { return };
-        if let (Some(src), Some((res_id, _, _, _))) = (source, &self.resolving_source)
+        if let (Some(src), Some((res_id, _, _, _))) = (source, &self.scratch.resolving_source)
             && src != *res_id
         {
             return;
@@ -1780,7 +1780,7 @@ impl GameState {
         }
         let Some(seat) = self.resolving_spell_caster else { return };
         // The damage must be dealt by the resolving spell itself.
-        if let (Some(src), Some((res_id, _, _, _))) = (source, &self.resolving_source)
+        if let (Some(src), Some((res_id, _, _, _))) = (source, &self.scratch.resolving_source)
             && src != *res_id
         {
             return;
@@ -2413,7 +2413,7 @@ impl GameState {
                 self.exile.push(card);
                 // Record for `Selector::ExiledThisResolution` ("if you exiled
                 // a [type] card this way" — Bonehoard Dracosaur).
-                self.exiled_card_ids_this_resolution.push(cid);
+                self.scratch.exiled_card_ids_this_resolution.push(cid);
                 // Bump the controller-of-the-exile-effect's per-turn
                 // exile tally for Strixhaven "if one or more cards were
                 // put into exile this turn" payoffs (Ennis the Debate

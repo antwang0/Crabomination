@@ -39,6 +39,17 @@ type AbilityProbe = (bool, Option<Effect>);
 /// a probe that replaces a key without changing the count reads as unchanged.
 /// That biases the answer *towards* the device, which is the direction to
 /// distrust.
+///
+/// ⚠⚠ **AND IT MEASURES THE WRONG QUANTITY — `(-143)` built the device and
+/// found out.** A `CowBox` group is priced by mutable *reaches*, not by value
+/// changes: `clear()` on an empty `Vec`, `mem::take` of one, `.take()` on a
+/// `None`, an assignment of an equal value all read as "never wrote the group"
+/// here and are all a deep copy through `Arc::make_mut`. The unguarded build
+/// read **437 k reaches on `fixed` against 10.7 k clones** and cost +2.15 %;
+/// the guards (`clear_scratch!` and friends) took that to 22.8 k and the pass
+/// to -1.37 %. The reach count for a *proposed* group is free off the existing
+/// binary — `cg_edges.py --callers make_mut` — and that is the number to take
+/// next time, not this one.
 pub mod scratch_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 
@@ -89,40 +100,40 @@ impl GameState {
         let _ = write!(
             s,
             "{}|{}|{}|",
-            self.cards_discarded_per_player_this_resolution.len(),
-            self.nonland_cards_discarded_per_player_this_resolution.len(),
-            self.players_sacrificed_this_resolution.len(),
+            self.scratch.cards_discarded_per_player_this_resolution.len(),
+            self.scratch.nonland_cards_discarded_per_player_this_resolution.len(),
+            self.scratch.players_sacrificed_this_resolution.len(),
         );
-        let _ = write!(s, "{}|", self.names_this_resolution.len());
-        let _ = write!(s, "{:?}|", self.activation_mana_colors_scratch);
-        let _ = write!(s, "{:?}|", self.target_slots_scratch);
-        let _ = write!(s, "{:?}|", self.last_created_tokens);
-        let _ = write!(s, "{:?}|", self.last_moved_cards);
-        let _ = write!(s, "{:?}|", self.discarded_card_ids_this_resolution);
-        let _ = write!(s, "{:?}|", self.exiled_card_ids_this_resolution);
-        let _ = write!(s, "{:?}|", self.destroyed_this_resolution);
-        let _ = write!(s, "{:?}|", self.resolution_targets);
-        let _ = write!(s, "{:?}|", self.cost_sacrificed_batch);
-        let _ = write!(s, "{:?}|", self.damaged_this_resolution);
-        let _ = write!(s, "{:?}|", self.cards_sacrificed_this_resolution);
-        let _ = write!(s, "{:?}|", self.chosen_creature_types_scratch);
-        let _ = write!(s, "{:?}|", self.pending_cast_sacrifices);
-        let _ = write!(s, "{:?}|", self.pending_cast_discards);
-        let _ = write!(s, "{:?}|", self.pending_spree_modes);
-        let _ = write!(s, "{:?}|", self.pending_prepare_copies);
-        let _ = write!(s, "{:?}|", self.pending_ability_exile_other);
-        let _ = write!(s, "{:?}|", self.pending_ability_sac_any);
-        let _ = write!(s, "{:?}|", self.resolution_answer_log);
-        let _ = write!(s, "{:?}|", self.pending_cost_events);
-        let _ = write!(s, "{:?}|", self.pending_permanent_deaths);
-        let _ = write!(s, "{:?}|", self.pending_control_changes);
-        let _ = write!(s, "{:?}|", self.named_card_this_resolution);
-        let _ = write!(s, "{:?}|", self.resolving_source);
-        let _ = write!(s, "{:?}|", self.suppress_extra_target_prompts);
-        let _ = write!(s, "{:?}|", self.haunt_pending);
+        let _ = write!(s, "{}|", self.scratch.names_this_resolution.len());
+        let _ = write!(s, "{:?}|", self.scratch.activation_mana_colors_scratch);
+        let _ = write!(s, "{:?}|", self.scratch.target_slots_scratch);
+        let _ = write!(s, "{:?}|", self.scratch.last_created_tokens);
+        let _ = write!(s, "{:?}|", self.scratch.last_moved_cards);
+        let _ = write!(s, "{:?}|", self.scratch.discarded_card_ids_this_resolution);
+        let _ = write!(s, "{:?}|", self.scratch.exiled_card_ids_this_resolution);
+        let _ = write!(s, "{:?}|", self.scratch.destroyed_this_resolution);
+        let _ = write!(s, "{:?}|", self.scratch.resolution_targets);
+        let _ = write!(s, "{:?}|", self.scratch.cost_sacrificed_batch);
+        let _ = write!(s, "{:?}|", self.scratch.damaged_this_resolution);
+        let _ = write!(s, "{:?}|", self.scratch.cards_sacrificed_this_resolution);
+        let _ = write!(s, "{:?}|", self.scratch.chosen_creature_types_scratch);
+        let _ = write!(s, "{:?}|", self.scratch.pending_cast_sacrifices);
+        let _ = write!(s, "{:?}|", self.scratch.pending_cast_discards);
+        let _ = write!(s, "{:?}|", self.scratch.pending_spree_modes);
+        let _ = write!(s, "{:?}|", self.scratch.pending_prepare_copies);
+        let _ = write!(s, "{:?}|", self.scratch.pending_ability_exile_other);
+        let _ = write!(s, "{:?}|", self.scratch.pending_ability_sac_any);
+        let _ = write!(s, "{:?}|", self.scratch.resolution_answer_log);
+        let _ = write!(s, "{:?}|", self.scratch.pending_cost_events);
+        let _ = write!(s, "{:?}|", self.scratch.pending_permanent_deaths);
+        let _ = write!(s, "{:?}|", self.scratch.pending_control_changes);
+        let _ = write!(s, "{:?}|", self.scratch.named_card_this_resolution);
+        let _ = write!(s, "{:?}|", self.scratch.resolving_source);
+        let _ = write!(s, "{:?}|", self.scratch.suppress_extra_target_prompts);
+        let _ = write!(s, "{:?}|", self.scratch.haunt_pending);
         let _ = write!(s, "{:?}|", self.suspend_signal);
-        let _ = write!(s, "{:?}|", self.stashed_resolution_answer);
-        let _ = write!(s, "{:?}|", self.resolving_spell_snapshot);
+        let _ = write!(s, "{:?}|", self.scratch.stashed_resolution_answer);
+        let _ = write!(s, "{:?}|", self.scratch.resolving_spell_snapshot);
         let coll = h(&s);
         let _ = write!(s, "{:?}|", self.sacrificed_power);
         let _ = write!(s, "{:?}|", self.revealed_for_cost_power);

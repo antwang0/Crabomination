@@ -828,13 +828,13 @@ impl GameState {
             Value::PermanentsTappedThisEffect => self.permanents_tapped_this_resolution as i32,
             Value::CardsRevealedThisEffect => self.cards_revealed_this_resolution as i32,
             Value::LastExiledManaValue => self
-                .exiled_card_ids_this_resolution
+                .scratch.exiled_card_ids_this_resolution
                 .last()
                 .and_then(|id| self.find_card_anywhere(*id))
                 .map(|c| c.definition.cost.cmc() as i32)
                 .unwrap_or(0),
             Value::MaxCardsDiscardedThisEffectByAnyPlayer => self
-                .cards_discarded_per_player_this_resolution
+                .scratch.cards_discarded_per_player_this_resolution
                 .values()
                 .copied()
                 .max()
@@ -846,7 +846,7 @@ impl GameState {
                 self.greatest_discarded_mv_this_resolution as i32
             }
             Value::CardsMilledThisEffectMatching { filter } => self
-                .last_moved_cards
+                .scratch.last_moved_cards
                 .iter()
                 .filter(|&&cid| {
                     self.players.iter().enumerate().any(|(seat, p)| {
@@ -857,7 +857,7 @@ impl GameState {
                 })
                 .count() as i32,
             Value::CreatureCardsMilledThisEffect => self
-                .last_moved_cards
+                .scratch.last_moved_cards
                 .iter()
                 .filter(|&&cid| {
                     self.players.iter().any(|p| {
@@ -1594,7 +1594,7 @@ impl GameState {
             }
             Predicate::PlayerSacrificedThisResolution(pref) => self
                 .resolve_player(pref, ctx)
-                .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),
+                .is_some_and(|p| self.scratch.players_sacrificed_this_resolution.contains(&p)),
             Predicate::ExcessDamageDealtThisResolution => self.excess_damage_this_resolution > 0,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
             Predicate::SamePlayer(a, b) => {
@@ -2001,7 +2001,7 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| {
-                    self.nonland_cards_discarded_per_player_this_resolution
+                    self.scratch.nonland_cards_discarded_per_player_this_resolution
                         .get(&p)
                         .copied()
                         .unwrap_or(0)
@@ -2014,7 +2014,7 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| {
-                    self.cards_discarded_per_player_this_resolution
+                    self.scratch.cards_discarded_per_player_this_resolution
                         .get(&p)
                         .copied()
                         .unwrap_or(0)
@@ -3287,7 +3287,7 @@ impl GameState {
                     },
                     Target::Player(p) => Some(*p),
                 };
-                match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
+                match self.scratch.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => ctrl_of(other).is_some() && ctrl_of(other) == ctrl_of(target),
                     None => true,
                 }
@@ -4095,7 +4095,7 @@ impl GameState {
                         .is_none_or(|chosen| *cid != chosen),
                     R::IsSource => source == Some(*cid),
                     R::NotSacrificedThisResolution => {
-                        !self.cards_sacrificed_this_resolution.contains(cid)
+                        !self.scratch.cards_sacrificed_this_resolution.contains(cid)
                     }
                     R::ManaValueAtMostCastManaSpent => source
                         .and_then(|s| self.battlefield_find(s))
@@ -4220,7 +4220,7 @@ impl GameState {
                     }
                     R::HasBackFace => card.definition.back_face.is_some(),
                     R::HasPrepareSpell => card.definition.prepare_spell.is_some(),
-                    R::NameDiffersFromLastMoved => !self.last_moved_cards.iter().any(|id| {
+                    R::NameDiffersFromLastMoved => !self.scratch.last_moved_cards.iter().any(|id| {
                         self.find_card_anywhere(*id)
                             .is_some_and(|c| c.definition.name == card.definition.name)
                     }),
@@ -4229,7 +4229,7 @@ impl GameState {
                         .and_then(|s| s.named_card.as_deref())
                         // A resolving spell that named a card is off-zone, so
                         // fall back to the per-resolution scratchpad (Predict).
-                        .or(self.named_card_this_resolution.as_deref())
+                        .or(self.scratch.named_card_this_resolution.as_deref())
                         .is_some_and(|n| n == card.definition.name),
                     R::NamedByEitherAgendaOfSource => source
                         .and_then(|sid| self.static_source(sid))
@@ -4628,7 +4628,7 @@ impl GameState {
             R::IsTypeChosenThisWay => {
                 card.definition.keywords.has_kw(&crate::card::Keyword::Changeling)
                     || self
-                        .chosen_creature_types_scratch
+                        .scratch.chosen_creature_types_scratch
                         .iter()
                         .any(|t| card.definition.subtypes.creature_types.contains(t))
             }
@@ -4816,7 +4816,7 @@ impl GameState {
             // A card in another zone is never the battlefield source.
             R::IsSource => false,
             R::NotSacrificedThisResolution => {
-                !self.cards_sacrificed_this_resolution.contains(&card.id)
+                !self.scratch.cards_sacrificed_this_resolution.contains(&card.id)
             }
             R::InGraveyard => self
                 .players
@@ -4849,7 +4849,7 @@ impl GameState {
             // No source context here; the per-resolution scratchpad is the
             // only readable stamp (Predict's milled-card check).
             R::NamedBySource => self
-                .named_card_this_resolution
+                .scratch.named_card_this_resolution
                 .as_deref()
                 .is_some_and(|n| n == card.definition.name),
             R::IsSourceChosenCardType => false,
@@ -4893,7 +4893,7 @@ impl GameState {
             }
             // "With different names" — excludes anything sharing a name with
             // a card already moved this resolution (Saheeli Rai -7).
-            R::NameDiffersFromLastMoved => !self.last_moved_cards.iter().any(|id| {
+            R::NameDiffersFromLastMoved => !self.scratch.last_moved_cards.iter().any(|id| {
                 self.find_card_anywhere(*id)
                     .is_some_and(|c| c.definition.name == card.definition.name)
             }),

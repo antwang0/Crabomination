@@ -660,7 +660,7 @@ impl GameState {
         effect: &Effect,
     ) -> Option<bool> {
         use crate::decision::{Decision, DecisionAnswer};
-        if let Some(a) = self.resolution_answer_log.get(*cursor) {
+        if let Some(a) = self.scratch.resolution_answer_log.get(*cursor) {
             *cursor += 1;
             return Some(matches!(a, DecisionAnswer::Bool(true)));
         }
@@ -676,7 +676,7 @@ impl GameState {
         let b = matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true));
         // Log synchronous answers too, so a later suspend's re-run replays
         // them instead of re-asking the decider.
-        self.resolution_answer_log.push(DecisionAnswer::Bool(b));
+        self.scratch.resolution_answer_log.push(DecisionAnswer::Bool(b));
         *cursor += 1;
         Some(b)
     }
@@ -821,7 +821,7 @@ impl GameState {
         effect: &Effect,
     ) -> Option<u32> {
         use crate::decision::{Decision, DecisionAnswer};
-        if let Some(DecisionAnswer::Amount(n)) = self.resolution_answer_log.get(*cursor) {
+        if let Some(DecisionAnswer::Amount(n)) = self.scratch.resolution_answer_log.get(*cursor) {
             let n = (*n).min(max);
             *cursor += 1;
             return Some(n);
@@ -839,7 +839,7 @@ impl GameState {
             DecisionAnswer::Amount(n) => n.min(max),
             _ => 0,
         };
-        self.resolution_answer_log.push(DecisionAnswer::Amount(n));
+        self.scratch.resolution_answer_log.push(DecisionAnswer::Amount(n));
         *cursor += 1;
         Some(n)
     }
@@ -859,7 +859,7 @@ impl GameState {
     ) -> Option<usize> {
         use crate::decision::{Decision, DecisionAnswer};
         let last = options.len().saturating_sub(1);
-        if let Some(DecisionAnswer::Amount(n)) = self.resolution_answer_log.get(*cursor) {
+        if let Some(DecisionAnswer::Amount(n)) = self.scratch.resolution_answer_log.get(*cursor) {
             let n = (*n as usize).min(last);
             *cursor += 1;
             return Some(n);
@@ -877,7 +877,7 @@ impl GameState {
             DecisionAnswer::Amount(n) => (n as usize).min(last),
             _ => 0,
         };
-        self.resolution_answer_log.push(DecisionAnswer::Amount(n as u32));
+        self.scratch.resolution_answer_log.push(DecisionAnswer::Amount(n as u32));
         *cursor += 1;
         Some(n)
     }
@@ -902,7 +902,7 @@ impl GameState {
         effect: &Effect,
     ) -> Option<Vec<CardId>> {
         use crate::decision::{Decision, DecisionAnswer};
-        let answer = match self.stashed_resolution_answer.take() {
+        let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
             Some(a) => a,
             None => {
                 let decision = Decision::ChooseCards {
@@ -1000,7 +1000,7 @@ impl GameState {
                 .take(max as usize)
                 .collect()
         };
-        if let Some(DecisionAnswer::Cards(v)) = self.resolution_answer_log.get(*cursor) {
+        if let Some(DecisionAnswer::Cards(v)) = self.scratch.resolution_answer_log.get(*cursor) {
             let v = sane(v);
             *cursor += 1;
             return Some(v);
@@ -1022,7 +1022,7 @@ impl GameState {
                 _ => Vec::new(),
             }
         };
-        self.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
+        self.scratch.resolution_answer_log.push(DecisionAnswer::Cards(ids.clone()));
         *cursor += 1;
         Some(ids)
     }
@@ -1112,7 +1112,7 @@ impl GameState {
     /// Drop the multi-question replay log — call when a log-using effect
     /// reaches any completing path (see `ask_seat_bool`).
     pub(crate) fn clear_answer_log(&mut self) {
-        self.resolution_answer_log.clear();
+        clear_scratch!(self.resolution_answer_log);
     }
 
     /// CR 707.10 — push `n` copies of the spell `cid` (if it's on the
@@ -1847,7 +1847,7 @@ impl GameState {
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
         // to tokens created by *this* resolution.
         self.last_created_token = None;
-        self.last_created_tokens.clear();
+        clear_scratch!(self.last_created_tokens);
         // "Tokens created with this permanent" (Saproling Burst) — stamp the
         // resolving source on every token this resolution mints.
         self.token_minting_source = ctx.source;
@@ -1856,7 +1856,7 @@ impl GameState {
         // refers to cards moved by *this* resolution (Practiced
         // Scrollsmith's ETB chains Move → GrantMayPlay on the same
         // moved card via this scratch).
-        self.last_moved_cards.clear();
+        clear_scratch!(self.last_moved_cards);
         // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
         // only counts discards from *this* resolution (Borrowed Knowledge
         // mode 1's "draw cards equal to the number discarded this way").
@@ -1873,12 +1873,16 @@ impl GameState {
         // checkpoint and probe for the rest of the game. Assigning an empty
         // map costs two stores when it is already empty (hashbrown's `new`
         // does not allocate) and the next discard rebuilds the table.
-        self.cards_discarded_per_player_this_resolution = Default::default();
-        self.nonland_cards_discarded_per_player_this_resolution = Default::default();
-        self.discarded_card_ids_this_resolution.clear();
-        self.exiled_card_ids_this_resolution.clear();
+        if self.scratch.cards_discarded_per_player_this_resolution.capacity() > 0 {
+            self.scratch.cards_discarded_per_player_this_resolution = Default::default();
+        }
+        if self.scratch.nonland_cards_discarded_per_player_this_resolution.capacity() > 0 {
+            self.scratch.nonland_cards_discarded_per_player_this_resolution = Default::default();
+        }
+        clear_scratch!(self.discarded_card_ids_this_resolution);
+        clear_scratch!(self.exiled_card_ids_this_resolution);
         self.permanents_destroyed_this_resolution = 0;
-        self.destroyed_this_resolution.clear();
+        clear_scratch!(self.destroyed_this_resolution);
         self.excess_damage_this_resolution = 0;
         // Deaths caused by this resolution are tallied for the OUTERMOST
         // resolution only — a sweeper's own kills can re-enter `resolve_effect`
@@ -1889,15 +1893,15 @@ impl GameState {
         }
         self.resolution_depth += 1;
         self.damage_dealt_this_resolution = 0;
-        self.damaged_this_resolution.clear();
+        clear_scratch!(self.damaged_this_resolution);
         self.countered_spell_mana_spent = 0;
         self.countered_spell_controller = None;
         self.counters_removed_this_effect = 0;
         self.countered_spell_mana_value = 0;
-        self.players_sacrificed_this_resolution.clear();
-        self.cards_sacrificed_this_resolution.clear();
-        self.named_card_this_resolution = None;
-        self.names_this_resolution.clear();
+        clear_scratch!(self.players_sacrificed_this_resolution);
+        clear_scratch!(self.cards_sacrificed_this_resolution);
+        clear_opt_scratch!(self.named_card_this_resolution);
+        clear_scratch!(self.names_this_resolution);
         // Most resolutions target nothing, and an empty `collect()` is still
         // a `Vec::from_iter` call with its size-hint dance — see PERF's (-45).
         let new_targets: Vec<CardId> = if ctx.targets.is_empty() {
@@ -1911,9 +1915,19 @@ impl GameState {
                 })
                 .collect()
         };
-        let prev_targets = std::mem::replace(&mut self.resolution_targets, new_targets);
+        // Both empty is the common case and the swap is then value-identical
+        // to leaving the field alone — but a `&mut` reach unshares the scratch
+        // group, so the no-op swap costs a deep copy. See [`clear_scratch`].
+        let swap_targets = !new_targets.is_empty() || !self.scratch.resolution_targets.is_empty();
+        let prev_targets = if swap_targets {
+            std::mem::replace(&mut self.scratch.resolution_targets, new_targets)
+        } else {
+            Vec::new()
+        };
         let ran = self.run_effect(effect, ctx, &mut events);
-        self.resolution_targets = prev_targets;
+        if swap_targets {
+            self.scratch.resolution_targets = prev_targets;
+        }
         self.resolution_depth = self.resolution_depth.saturating_sub(1);
         // Events outside a resolution (CR 514.3 cleanup discards, cost
         // payments) have no causing spell or ability.
@@ -1932,11 +1946,11 @@ impl GameState {
         // Nothing minted, nothing to ride along — and the walk below opens
         // with a `collect()` that is empty on every resolution that created
         // no token, which is nearly all of them.
-        let minted_for: Vec<usize> = if self.last_created_tokens.is_empty() {
+        let minted_for: Vec<usize> = if self.scratch.last_created_tokens.is_empty() {
             Vec::new()
         } else {
             let mut v: Vec<usize> = self
-                .last_created_tokens
+                .scratch.last_created_tokens
                 .iter()
                 .filter_map(|id| self.battlefield_find(*id).map(|c| c.controller))
                 .collect();
@@ -1948,7 +1962,7 @@ impl GameState {
             // Chatterfang scales by the tokens this resolution minted for
             // `p`; count before the riders mint their own.
             let minted_count = self
-                .last_created_tokens
+                .scratch.last_created_tokens
                 .iter()
                 .filter(|id| {
                     self.battlefield_find(**id).is_some_and(|c| c.controller == p)
@@ -1982,9 +1996,9 @@ impl GameState {
         }
         // CR 701.9 — emit a single "discarded one or more cards" batch per
         // player who discarded during this resolution (Magmakin Artillerist).
-        if !self.cards_discarded_per_player_this_resolution.is_empty() {
+        if !self.scratch.cards_discarded_per_player_this_resolution.is_empty() {
             let mut batches: Vec<(usize, u32)> = self
-                .cards_discarded_per_player_this_resolution
+                .scratch.cards_discarded_per_player_this_resolution
                 .iter()
                 .filter(|(_, n)| **n > 0)
                 .map(|(p, n)| (*p, *n))
@@ -2035,8 +2049,8 @@ impl GameState {
             events.push(GameEvent::CreatureDied { card_id: id });
         }
         events.push(GameEvent::PermanentSacrificed { card_id: id, who });
-        self.players_sacrificed_this_resolution.insert(who);
-        self.cards_sacrificed_this_resolution.push(id);
+        self.scratch.players_sacrificed_this_resolution.insert(who);
+        self.scratch.cards_sacrificed_this_resolution.push(id);
         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
         events.append(&mut die_evs);
     }
@@ -2181,7 +2195,7 @@ impl GameState {
         events.append(&mut dies);
         self.permanents_destroyed_this_resolution =
             self.permanents_destroyed_this_resolution.saturating_add(1);
-        self.destroyed_this_resolution.push(cid);
+        self.scratch.destroyed_this_resolution.push(cid);
         true
     }
 
@@ -3125,7 +3139,7 @@ impl GameState {
                 // The land is already off the battlefield when the ability
                 // resolves, so read its types off the death snapshot.
                 let types: Vec<crate::card::LandType> = self
-                    .cost_sacrificed_batch
+                    .scratch.cost_sacrificed_batch
                     .iter()
 
                     .filter_map(|id| {
@@ -3898,7 +3912,7 @@ impl GameState {
                     ctx,
                     events,
                 )?;
-                let minted = std::mem::take(&mut self.last_created_tokens);
+                let minted: Vec<_> = take_scratch!(self.last_created_tokens);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for tid in minted {
                     self.delayed_triggers.push(DelayedTrigger {
@@ -4382,7 +4396,7 @@ impl GameState {
                 for id in picked {
                     if let Some(card) = Self::take_card(&mut self.players[me].hand, id) {
                         self.place_card_in_dest(card, me, &dest, events);
-                        self.last_moved_cards.push(id);
+                        self.scratch.last_moved_cards.push(id);
                     }
                 }
                 Ok(())
@@ -4657,7 +4671,7 @@ impl GameState {
                     prompt: "Flip how many coins?".into(),
                     max: *max,
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[me].wants_ui => {
                         self.suspend_signal = Some((
@@ -5022,7 +5036,7 @@ impl GameState {
                         num_modes: modes.len(),
                         mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
                     };
-                    match self.stashed_resolution_answer.take() {
+                    match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(DecisionAnswer::Mode(i)) => i.min(modes.len().saturating_sub(1)),
                         Some(_) => 0,
                         None if self.players[ctx.controller].wants_ui => {
@@ -5070,7 +5084,7 @@ impl GameState {
                 // Stash-and-rerun suspend: a `wants_ui` controller answers
                 // through the client modal; the resume re-runs this effect
                 // with the sanitised answer stashed.
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -5159,7 +5173,7 @@ impl GameState {
                     default: default.clone(),
                     mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -5209,7 +5223,7 @@ impl GameState {
                     default: vec![base],
                     mode_texts: modes.iter().map(|m| m.effect_short_text()).collect(),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -5440,7 +5454,7 @@ impl GameState {
                     source,
                     description: description.clone(),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -5639,7 +5653,7 @@ impl GameState {
                     prompt: description.clone(),
                     max: pool_max,
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -5723,7 +5737,7 @@ impl GameState {
                 };
                 // Suspend for wants_ui seats; the bare AutoDecider ask paid
                 // 0 for everyone, making every "you may pay {X}" a no-op.
-                let paid = match self.stashed_resolution_answer.take() {
+                let paid = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(DecisionAnswer::Amount(n)) => n.min(cap),
                     Some(_) => 0,
                     None if self.seat_suspends(ctx.controller) => {
@@ -6158,7 +6172,7 @@ impl GameState {
                     targets: targets.clone(),
                     noun: "damage".into(),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -6238,7 +6252,7 @@ impl GameState {
                     targets: targets.clone(),
                     noun: "prevention".into(),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -6395,7 +6409,7 @@ impl GameState {
                     targets: targets.clone(),
                     noun: counter_noun(counter).into(),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -6734,7 +6748,7 @@ impl GameState {
                         if !self.route_to_graveyard(card, events) {
                             events.push(GameEvent::CardMilled { player: p, card_id: cid });
                         }
-                        self.last_moved_cards.push(cid);
+                        self.scratch.last_moved_cards.push(cid);
                     }
                 }
                 Ok(())
@@ -7048,7 +7062,7 @@ impl GameState {
                 let pay = if avail == 0 {
                     0
                 } else {
-                    match self.stashed_resolution_answer.take() {
+                    match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(DecisionAnswer::Amount(n)) => n.min(avail),
                         Some(_) => 0,
                         None if self.seat_suspends(p) => {
@@ -7919,7 +7933,7 @@ impl GameState {
                             };
                             let card = self.players[p].hand.remove(0);
                             self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
-                            self.last_moved_cards.push(cid);
+                            self.scratch.last_moved_cards.push(cid);
                         }
                     }
                 }
@@ -7943,7 +7957,7 @@ impl GameState {
                             // target the milled card (Tablet of
                             // Discovery, Ark of Hunger's "you may play
                             // that card this turn" rider).
-                            self.last_moved_cards.push(cid);
+                            self.scratch.last_moved_cards.push(cid);
                         }
                     }
                 }
@@ -7962,7 +7976,7 @@ impl GameState {
                     if !self.route_to_graveyard(card, events) {
                         events.push(GameEvent::CardMilled { player: p, card_id: cid });
                     }
-                    self.last_moved_cards.push(cid);
+                    self.scratch.last_moved_cards.push(cid);
                     Some(if is_land { land } else if is_creature { creature } else { noncreature })
                 };
                 if let Some(sub) = branch {
@@ -7992,7 +8006,7 @@ impl GameState {
                             if !self.route_to_graveyard(card, events) {
                                 events.push(GameEvent::CardMilled { player: p, card_id: cid });
                             }
-                            self.last_moved_cards.push(cid);
+                            self.scratch.last_moved_cards.push(cid);
                         }
                     }
                 }
@@ -8127,7 +8141,7 @@ impl GameState {
                             let card = self.players[p].library.remove(0);
                             let cid = card.id;
                             self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
-                            self.last_moved_cards.push(cid);
+                            self.scratch.last_moved_cards.push(cid);
                             if (*link_to_source || *face_down)
                                 && let Some(c) = self.exile.iter_mut().find(|c| c.id == cid)
                             {
@@ -8343,7 +8357,7 @@ impl GameState {
             Effect::ExileCostSacrificedBatch => {
                 // Sword of the Ages — the batch is already in graveyards; move
                 // each card on to exile from wherever it landed.
-                for cid in std::mem::take(&mut self.cost_sacrificed_batch) {
+                for cid in take_scratch!(self.cost_sacrificed_batch) as Vec<_> {
                     self.move_card_to(cid, &crate::effect::ZoneDest::Exile, ctx, events);
                 }
                 Ok(())
@@ -8590,7 +8604,7 @@ impl GameState {
                     );
                     let cid = card.id;
                     self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
-                    self.last_moved_cards.push(cid);
+                    self.scratch.last_moved_cards.push(cid);
                     if is_creature && let Some(c) = self.battlefield_find_mut(src) {
                         c.power_bonus += pow;
                         c.toughness_bonus += tou;
@@ -10514,7 +10528,7 @@ impl GameState {
                     ManaPayload::AnyTypeSacrificedLandProduces => {
                         use crate::card::LandType;
                         let mut legal: Vec<Color> = Vec::new();
-                        let sacrificed: Vec<CardId> = self.cost_sacrificed_batch.clone();
+                        let sacrificed: Vec<CardId> = self.scratch.cost_sacrificed_batch.clone();
                         for id in sacrificed {
                             let Some(card) = self
                                 .died_card_snapshots
@@ -10815,7 +10829,7 @@ impl GameState {
                 // unconditional symmetric wrath, the worst possible answer.
                 // Headless fallback: the number sparing the most of the
                 // controller's own board while still hitting something.
-                let n = match self.stashed_resolution_answer.take() {
+                let n = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
                     Some(_) => 0,
                     None if self.seat_suspends(ctx.controller) => {
@@ -11297,7 +11311,7 @@ impl GameState {
                         expires_after_turn: None,
                     });
                 } else {
-                    self.haunt_pending = Some((haunted, (**body).clone()));
+                    self.scratch.haunt_pending = Some((haunted, (**body).clone()));
                 }
                 Ok(())
             }
@@ -11435,10 +11449,10 @@ impl GameState {
                 }
                 // Reflexive "when you do": pin the exiled cards to
                 // `Selector::LastMoved` for the count, then run `then`.
-                self.last_moved_cards.clear();
+                self.scratch.last_moved_cards.clear();
                 for cid in &chosen {
                     self.move_card_to(*cid, &ZoneDest::Exile, ctx, events);
-                    self.last_moved_cards.push(*cid);
+                    self.scratch.last_moved_cards.push(*cid);
                 }
                 self.run_effect(then, ctx, events)
             }
@@ -11538,7 +11552,7 @@ impl GameState {
                         self.exile.push(card);
                         // Record for `Selector::ExiledThisResolution` and
                         // Haunting Echoes' "for each card exiled this way".
-                        self.exiled_card_ids_this_resolution.push(cid);
+                        self.scratch.exiled_card_ids_this_resolution.push(cid);
                         events.push(GameEvent::PermanentExiled { card_id: cid });
                         self.note_left_graveyard(p, cid, events);
                     }
@@ -11750,7 +11764,7 @@ impl GameState {
                         .map(|c| c.id);
                     if let Some(id) = pick {
                         self.move_card_to(id, &ZoneDest::Exile, ctx, events);
-                        self.last_moved_cards.push(id);
+                        self.scratch.last_moved_cards.push(id);
                     }
                 }
                 Ok(())
@@ -11816,7 +11830,7 @@ impl GameState {
                     }
                     // Chainable: a follow-up `GrantMayPlay(LastMoved)` lets
                     // the controller cast the exiled card (Hostage Taker).
-                    self.last_moved_cards.push(cid);
+                    self.scratch.last_moved_cards.push(cid);
                 }
                 Ok(())
             }
@@ -14211,7 +14225,7 @@ impl GameState {
                     // Chainable: a follow-up `GrantKeyword(LastMoved)` /
                     // `ExileAtNextEndStep(LastMoved)` in the same Seq sees the
                     // reanimated creature (Shallow Grave).
-                    self.last_moved_cards.push(id);
+                    self.scratch.last_moved_cards.push(id);
                 }
                 Ok(())
             }
@@ -16057,7 +16071,7 @@ impl GameState {
                     return Ok(());
                 };
                 let name = self
-                    .named_card_this_resolution
+                    .scratch.named_card_this_resolution
                     .clone()
                     .or_else(|| {
                         ctx.source
@@ -16556,7 +16570,7 @@ impl GameState {
                 // name with something exiled earlier in this resolution goes
                 // too, then the searched player shuffles.
                 let names: crate::fxhash::HashSet<&'static str> = self
-                    .exiled_card_ids_this_resolution
+                    .scratch.exiled_card_ids_this_resolution
                     .iter()
                     .filter_map(|cid| self.exile.iter().find(|c| c.id == *cid))
                     .map(|c| c.definition.name)
@@ -17330,7 +17344,7 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let p = ctx.controller;
                 let name = self
-                    .named_card_this_resolution
+                    .scratch.named_card_this_resolution
                     .clone()
                     .or_else(|| {
                         ctx.source
@@ -19613,7 +19627,7 @@ impl GameState {
                     // `Selector::LastMoved` in the same Seq can target
                     // it (Practiced Scrollsmith's Move → GrantMayPlay
                     // chain).
-                    self.last_moved_cards.push(cid);
+                    self.scratch.last_moved_cards.push(cid);
                 }
                 Ok(())
             }
@@ -19695,7 +19709,7 @@ impl GameState {
                     self.move_card_to(cid, &dest, ctx, events);
                     // Expose the entrant on `Selector::LastMoved` so the
                     // "if you do" rider can reach it (Oviya's counters).
-                    self.last_moved_cards.push(cid);
+                    self.scratch.last_moved_cards.push(cid);
                     put_any = true;
                     if *haste {
                         self.grant_keyword_eot(cid, Keyword::Haste);
@@ -20193,7 +20207,7 @@ impl GameState {
                     self.manifest_card(top_id, p, ctx, events);
                     cloaked.push(top_id);
                 }
-                self.last_moved_cards = cloaked;
+                self.scratch.last_moved_cards = cloaked;
                 Ok(())
             }
 
@@ -20242,7 +20256,7 @@ impl GameState {
                 // Expose the manifested creature on `Selector::LastMoved` so a
                 // chained "then put a +1/+1 counter on that creature" rider
                 // (Slimy Aquarium, Weight Room) can reference it.
-                self.last_moved_cards = vec![chosen];
+                self.scratch.last_moved_cards = vec![chosen];
                 Ok(())
             }
 
@@ -20251,14 +20265,14 @@ impl GameState {
                 let mut manifested: Vec<CardId> = Vec::new();
                 for _ in 0..n {
                     self.run_effect(&Effect::ManifestDread { who: PlayerRef::You }, ctx, events)?;
-                    if let Some(&id) = self.last_moved_cards.first() {
+                    if let Some(&id) = self.scratch.last_moved_cards.first() {
                         manifested.push(id);
                     }
                 }
                 if !manifested.is_empty() {
                     // Reuse the AddCounter path (doublers, events) by pointing
                     // `LastMoved` at the whole manifested set.
-                    self.last_moved_cards = manifested;
+                    self.scratch.last_moved_cards = manifested;
                     self.run_effect(
                         &Effect::AddCounter {
                             what: Selector::LastMoved,
@@ -20506,7 +20520,7 @@ impl GameState {
                         && let Some(card) = Self::take_card(&mut self.players[p].library, id)
                     {
                         self.place_card_in_dest(card, p, &dest, events);
-                        self.last_moved_cards.push(id);
+                        self.scratch.last_moved_cards.push(id);
                     }
                 }
                 self.shuffle_library(p, events);
@@ -20552,7 +20566,7 @@ impl GameState {
                 for id in picked {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
                         self.place_card_in_dest(card, p, to, events);
-                        self.last_moved_cards.push(id);
+                        self.scratch.last_moved_cards.push(id);
                     }
                 }
                 // CR 701.19c — the library is shuffled even on an empty pick.
@@ -20659,7 +20673,7 @@ impl GameState {
                     let Some(card) = Self::take_card(&mut self.players[p].library, pick)
                     else { break };
                     self.place_card_in_dest(card, p, to, events);
-                    self.last_moved_cards.push(pick);
+                    self.scratch.last_moved_cards.push(pick);
                 }
                 Ok(())
             }
@@ -20680,7 +20694,7 @@ impl GameState {
                     let Some(card) = Self::take_card(&mut self.players[p].graveyard, pick)
                     else { break };
                     self.players[p].hand.push(card);
-                    self.last_moved_cards.push(pick);
+                    self.scratch.last_moved_cards.push(pick);
                 }
                 Ok(())
             }
@@ -20703,10 +20717,10 @@ impl GameState {
                         ctx,
                         events,
                     );
-                    self.last_moved_cards.push(pick);
+                    self.scratch.last_moved_cards.push(pick);
                 } else {
                     self.move_card_to(pick, miss, ctx, events);
-                    self.last_moved_cards.push(pick);
+                    self.scratch.last_moved_cards.push(pick);
                 }
                 Ok(())
             }
@@ -22021,7 +22035,7 @@ impl GameState {
                         continue;
                     };
                     let hit = self
-                        .names_this_resolution
+                        .scratch.names_this_resolution
                         .get(&p)
                         .is_some_and(|n| n == card.definition.name);
                     events.push(GameEvent::TopCardRevealed {
@@ -23140,7 +23154,7 @@ impl GameState {
                         source,
                         description: "Reveal the top card and put it into your hand?".to_string(),
                     };
-                    let answer = match self.stashed_resolution_answer.take() {
+                    let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(a) => a,
                         None if self.players[p].wants_ui => {
                             self.suspend_signal = Some((
@@ -23210,7 +23224,7 @@ impl GameState {
                 for id in &picks {
                     self.move_card_to(*id, &dest, ctx, events);
                     if self.battlefield.iter().any(|c| c.id == *id) {
-                        self.last_moved_cards.push(*id);
+                        self.scratch.last_moved_cards.push(*id);
                     }
                 }
                 use rand::seq::SliceRandom;
@@ -23863,7 +23877,7 @@ impl GameState {
                 // then the even split is both fair and the strongest
                 // default. Follow-up tracked in TODO.md.)
                 let tokens: Vec<CardId> = self
-                    .last_created_tokens
+                    .scratch.last_created_tokens
                     .iter()
                     .copied()
                     .filter(|id| self.battlefield_find(*id).is_some())
@@ -26003,7 +26017,7 @@ impl GameState {
                     prompt: "Sacrifice how many?".to_string(),
                     max,
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[p].wants_ui => {
                         self.suspend_signal = Some((
@@ -26051,7 +26065,7 @@ impl GameState {
                     prompt: "Pay how much life? (draw that many)".to_string(),
                     max: life,
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[p].wants_ui => {
                         self.suspend_signal = Some((
@@ -26453,7 +26467,7 @@ impl GameState {
                     source: ctx.source.unwrap_or(CardId(0)),
                     suggestions: self.creature_type_suggestions(chooser),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[chooser].wants_ui => {
                         self.suspend_signal = Some((
@@ -26474,7 +26488,7 @@ impl GameState {
                     card.chosen_creature_type = Some(ct);
                 }
                 self.chosen_creature_type_scratch = Some(ct);
-                self.chosen_creature_types_scratch = vec![ct];
+                self.scratch.chosen_creature_types_scratch = vec![ct];
                 self.run_effect(then, ctx, events)
             }
 
@@ -26497,9 +26511,9 @@ impl GameState {
                         chosen.push(ct);
                     }
                 }
-                self.chosen_creature_types_scratch = chosen;
+                self.scratch.chosen_creature_types_scratch = chosen;
                 let r = self.run_effect(then, ctx, events);
-                self.chosen_creature_types_scratch.clear();
+                self.scratch.chosen_creature_types_scratch.clear();
                 r
             }
 
@@ -26514,7 +26528,7 @@ impl GameState {
                     prompt: "Pay how much life?".to_string(),
                     max: life,
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[p].wants_ui => {
                         self.suspend_signal = Some((
@@ -26567,7 +26581,7 @@ impl GameState {
                     prompt: "Pay how much life?".to_string(),
                     max: life,
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[payer].wants_ui => {
                         self.suspend_signal = Some((
@@ -27419,7 +27433,7 @@ impl GameState {
             Effect::ExileLastCreatedTokensAtNextEndStep => {
                 // One NextEndStep exile per token minted this resolution;
                 // `Selector::This` re-finds each by the trigger's source slot.
-                for tok in self.last_created_tokens.clone() {
+                for tok in self.scratch.last_created_tokens.clone() {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source: tok,
@@ -27436,7 +27450,7 @@ impl GameState {
             }
 
             Effect::ExileLastCreatedTokensAtNextCleanup => {
-                for tok in self.last_created_tokens.clone() {
+                for tok in self.scratch.last_created_tokens.clone() {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source: tok,
@@ -27453,7 +27467,7 @@ impl GameState {
             }
 
             Effect::SacrificeLastCreatedTokensAtNextEndStep => {
-                for tok in self.last_created_tokens.clone() {
+                for tok in self.scratch.last_created_tokens.clone() {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source: tok,
@@ -27568,7 +27582,7 @@ impl GameState {
                 // via `Effect::NameCard` (Spoils of the Vault). Resolve it to
                 // a concrete `HasName` once, up front.
                 let dynamic_find = if matches!(find, SelectionRequirement::NamedBySource) {
-                    match self.named_card_this_resolution.clone()
+                    match self.scratch.named_card_this_resolution.clone()
                         .or_else(|| ctx.source.and_then(|s| self.find_card_anywhere(s))
                             .and_then(|c| c.named_card.clone()))
                     {
@@ -27641,7 +27655,7 @@ impl GameState {
                         crate::effect::RevealMissDest::WithFind => {
                             let cid = card.id;
                             self.place_card_in_dest(card, p, &resolved_dest, events);
-                            self.last_moved_cards.push(cid);
+                            self.scratch.last_moved_cards.push(cid);
                         }
                     }
                 }
@@ -27655,7 +27669,7 @@ impl GameState {
                     let card = self.players[p].library.remove(0);
                     let cid = card.id;
                     self.place_card_in_dest(card, p, &resolved_dest, events);
-                    self.last_moved_cards.push(cid);
+                    self.scratch.last_moved_cards.push(cid);
                 }
                 // Bottom the batched misses in a genuinely random order.
                 if !bottom_random.is_empty() {
@@ -28202,7 +28216,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 // The stack entry is already popped by the time a spell's own
                 // effect runs, so copy from the resolution snapshot.
-                let Some(snap) = self.resolving_spell_snapshot.clone() else { return Ok(()) };
+                let Some(snap) = self.scratch.resolving_spell_snapshot.clone() else { return Ok(()) };
                 let payable = match cost {
                     ChainCopyCost::Free => true,
                     ChainCopyCost::SacrificeLand => {
@@ -28703,7 +28717,7 @@ impl GameState {
                     prompt: "Choose a number".to_string(),
                     max: *max,
                 };
-                let n = match self.stashed_resolution_answer.take() {
+                let n = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
                     Some(_) => 0,
                     None if self.seat_suspends(ctx.controller) => {
@@ -30977,7 +30991,7 @@ impl GameState {
                     source: source_id,
                     suggestions: self.creature_type_suggestions(ctx.controller),
                 };
-                let answer = match self.stashed_resolution_answer.take() {
+                let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -31487,7 +31501,7 @@ impl GameState {
                 )?;
                 // Watch the token we just minted; when it dies the source card
                 // comes back from wherever the activation put it (exile).
-                if let Some(&token) = self.last_created_tokens.last() {
+                if let Some(&token) = self.scratch.last_created_tokens.last() {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
                         source,
@@ -33228,7 +33242,7 @@ impl GameState {
                     source,
                     description: format!("Cast a copy of {}?", def.name),
                 };
-                let take = match self.stashed_resolution_answer.take() {
+                let take = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => matches!(a, DecisionAnswer::Bool(true)),
                     None if self.players[ctx.controller].wants_ui => {
                         self.suspend_signal = Some((
@@ -34033,7 +34047,7 @@ impl GameState {
                 .into_iter()
                 .collect(),
             Selector::LastCreatedTokens => self
-                .last_created_tokens
+                .scratch.last_created_tokens
                 .iter()
                 .copied()
                 .filter(|id| self.battlefield.iter().any(|c| c.id == *id))
@@ -34088,7 +34102,7 @@ impl GameState {
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
             Selector::LastMoved => self
-                .last_moved_cards
+                .scratch.last_moved_cards
                 .iter()
                 .copied()
                 // A card moved onto the battlefield (Search/reveal → bf) is now
@@ -34590,7 +34604,7 @@ impl GameState {
                 // `Effect::Discard` moves them). Filter via the card-level
                 // evaluator since the discarded cards aren't on the
                 // battlefield.
-                let ids = self.discarded_card_ids_this_resolution.clone();
+                let ids = self.scratch.discarded_card_ids_this_resolution.clone();
                 let mut out: Vec<EntityRef> = Vec::new();
                 for cid in ids {
                     let card = self.players.iter()
@@ -34608,7 +34622,7 @@ impl GameState {
                 // Walk the IDs captured in `exiled_card_ids_this_resolution` and
                 // look them up in the exile zone, filtering via the card-level
                 // evaluator (the cards aren't on the battlefield).
-                let ids = self.exiled_card_ids_this_resolution.clone();
+                let ids = self.scratch.exiled_card_ids_this_resolution.clone();
                 let mut out: Vec<EntityRef> = Vec::new();
                 for cid in ids {
                     if let Some(c) = self.exile.iter().find(|c| c.id == cid)
@@ -34626,7 +34640,7 @@ impl GameState {
                 // gated by `filter` (creatures for the tap rider). Dedup so a
                 // target damaged twice isn't tapped/flagged redundantly.
                 let mut out: Vec<EntityRef> = Vec::new();
-                for ent in self.damaged_this_resolution.clone() {
+                for ent in self.scratch.damaged_this_resolution.clone() {
                     if out.contains(&ent) {
                         continue;
                     }
@@ -34650,7 +34664,7 @@ impl GameState {
             }
 
             Selector::DestroyedThisResolution { filter } => self
-                .destroyed_this_resolution
+                .scratch.destroyed_this_resolution
                 .iter()
                 .filter(|cid| {
                     // The card has already left the battlefield, so match it
@@ -34909,7 +34923,7 @@ impl GameState {
             // The owner of the card this resolution last moved (Metamorphose's
             // "that opponent may put a permanent from their hand …").
             PlayerRef::OwnerOfMoved => self
-                .last_moved_cards
+                .scratch.last_moved_cards
                 .last()
                 .and_then(|id| self.find_card_anywhere(*id))
                 .map(|c| c.owner),
@@ -35396,7 +35410,7 @@ impl GameState {
                             if !self.route_to_graveyard(card, events) {
                                 events.push(GameEvent::CardMilled { player: p, card_id: cid });
                             }
-                            self.last_moved_cards.push(cid);
+                            self.scratch.last_moved_cards.push(cid);
                         }
                     }
                 }
@@ -35653,7 +35667,7 @@ impl GameState {
             // Exiled cards land on `Selector::LastMoved` so a follow-up can
             // gate on "if a creature card was exiled this way" (Soul-Shackled
             // Zombie) via `EntityMatchesAny`.
-            self.last_moved_cards.clear();
+            self.scratch.last_moved_cards.clear();
             let mut lock: Option<usize> = None;
             for cid in ids.into_iter().take(n as usize) {
                 let Some((_, _, owner)) = candidates.iter().find(|(c, _, _)| *c == cid) else {
@@ -35663,7 +35677,7 @@ impl GameState {
                     continue;
                 }
                 self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
-                self.last_moved_cards.push(cid);
+                self.scratch.last_moved_cards.push(cid);
             }
         }
         Ok(())
@@ -35723,7 +35737,7 @@ impl GameState {
             }
             let cid = card.id;
             self.place_card_in_dest(card, victim, &ZoneDest::Exile, events);
-            self.last_moved_cards.push(cid);
+            self.scratch.last_moved_cards.push(cid);
         }
         if matches > 0 {
             self.run_effect(

@@ -1079,7 +1079,7 @@ pub fn mind_roots() -> CardDefinition {
         effect: Effect::Seq(vec![
             // Target player discards 2 cards. The Discard handler stamps
             // every discarded card's id onto
-            // `state.discarded_card_ids_this_resolution`.
+            // `state.scratch.discarded_card_ids_this_resolution`.
             Effect::Discard {
                 who: target_filtered(SelectionRequirement::Player),
                 amount: Value::Const(2),

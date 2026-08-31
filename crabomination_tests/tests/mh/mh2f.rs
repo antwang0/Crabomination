@@ -94,7 +94,7 @@ fn foundry_helix_artifact_rider() {
     let my_life = g.players[0].life;
     let opp_life = g.players[1].life;
     g.priority.player_with_priority = 0;
-    g.pending_cast_sacrifices = Some(vec![relic]);
+    g.scratch.pending_cast_sacrifices = Some(vec![relic]);
     g.perform_action(GameAction::CastSpell {
         card_id: helix,
         target: Some(Target::Player(1)),
@@ -114,7 +114,7 @@ fn foundry_helix_artifact_rider() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     let my_life = g.players[0].life;
-    g.pending_cast_sacrifices = Some(vec![bear]);
+    g.scratch.pending_cast_sacrifices = Some(vec![bear]);
     g.perform_action(GameAction::CastSpell {
         card_id: helix2,
         target: Some(Target::Player(1)),

@@ -416,7 +416,7 @@ pub enum Selector {
 
     /// Cards discarded earlier in this same resolution (across all players)
     /// matching `filter`. Backed by
-    /// `GameState.discarded_card_ids_this_resolution`. Used by Mind Roots's
+    /// `GameState.scratch.discarded_card_ids_this_resolution`. Used by Mind Roots's
     /// "Put up to one land card discarded this way onto the battlefield
     /// tapped under your control" rider — at resolution time the discarded
     /// cards have already moved into their owner's graveyard, and this
@@ -425,21 +425,21 @@ pub enum Selector {
     DiscardedThisResolution { filter: SelectionRequirement },
 
     /// Cards put into exile earlier in this same resolution matching `filter`.
-    /// Backed by `GameState.exiled_card_ids_this_resolution`; looked up in the
+    /// Backed by `GameState.scratch.exiled_card_ids_this_resolution`; looked up in the
     /// exile zone. "If you exiled a land/nonland card this way" (Bonehoard
     /// Dracosaur).
     ExiledThisResolution { filter: SelectionRequirement },
 
     /// Entities damaged earlier in this same resolution: players (always) plus
     /// permanents matching `filter`. Backed by
-    /// `GameState.damaged_this_resolution`. "Tap each creature damaged this
+    /// `GameState.scratch.damaged_this_resolution`. "Tap each creature damaged this
     /// way / those players can't cast noncreature spells" (Aurelia's Fury) —
     /// `Effect::Tap` reads the creatures, `CantCastNoncreatureThisTurn` reads
     /// the players.
     DamagedThisResolution { filter: SelectionRequirement },
 
     /// Cards destroyed earlier in this same resolution that match `filter`,
-    /// read from `GameState.destroyed_this_resolution` (wherever they ended
+    /// read from `GameState.scratch.destroyed_this_resolution` (wherever they ended
     /// up). "Destroy all enchantments, then return all enchantment cards put
     /// into graveyards this way to the battlefield" — Cleansing Meditation's
     /// Threshold half.
@@ -914,7 +914,7 @@ pub enum Value {
     EnergyPaidThisEffect,
     /// Maximum, across all players, of cards discarded so far within
     /// the current effect resolution. Reads from
-    /// `state.cards_discarded_per_player_this_resolution`. Used by
+    /// `state.scratch.cards_discarded_per_player_this_resolution`. Used by
     /// Windfall's printed "draws cards equal to the greatest number of
     /// cards a player discarded this way" — a `Seq([Discard(EachPlayer,
     /// 100), Draw(EachPlayer, MaxCardsDiscardedThisEffectByAnyPlayer)])`
@@ -1589,14 +1589,14 @@ pub enum Predicate {
     NoncreaturePermanentDestroyedByOpponentThisTurn { who: PlayerRef },
     /// True if any player `who` resolves to discarded a *nonland* card within
     /// the current effect resolution. Backed by
-    /// `GameState.nonland_cards_discarded_per_player_this_resolution`. Gates
+    /// `GameState.scratch.nonland_cards_discarded_per_player_this_resolution`. Gates
     /// Kroxa's "each opponent who didn't discard a nonland card this way loses
     /// 3 life" — pair `Not(DiscardedNonlandThisEffect { Triggerer })` with a
     /// per-opponent `ForEach` so each opponent is judged independently.
     DiscardedNonlandThisEffect { who: PlayerRef },
     /// True if `who` discarded at least one card (any type) within the current
     /// effect resolution. Backed by
-    /// `GameState.cards_discarded_per_player_this_resolution`. Gates "if you
+    /// `GameState.scratch.cards_discarded_per_player_this_resolution`. Gates "if you
     /// discarded a card this way, …" riders (Fanatic of the Harrowing).
     DiscardedThisEffect { who: PlayerRef },
     /// The most recently discarded card (cost or effect) had this creature
@@ -3822,7 +3822,7 @@ pub enum Effect {
     /// (Ranger-Captain of Eos). Cleared at the next untap.
     CantCastNoncreatureThisTurn { who: Selector },
     /// "Each player names a card" — one `NameCard` decision per resolved seat
-    /// in APNAP order, stashed in `GameState.names_this_resolution` for a
+    /// in APNAP order, stashed in `GameState.scratch.names_this_resolution` for a
     /// later step in the same resolution to read (Conundrum Sphinx).
     EachPlayerNamesCard { who: PlayerRef },
     /// "Each player reveals the top card of their library. If it's the card
@@ -5067,7 +5067,7 @@ pub enum Effect {
     /// post-resolution routing the same way `ShuffleSelfIntoLibrary` does.
     ReturnResolvingSpellToHand,
     /// "Distribute `total` counters of `kind` among the permanents created
-    /// earlier in THIS resolution" (`GameState.last_created_tokens`) — the
+    /// earlier in THIS resolution" (`GameState.scratch.last_created_tokens`) — the
     /// resolution-time sibling of the cast-time `DistributeCounters`
     /// (fresh tokens can't be cast-time targets, CR 601.2d). A UI
     /// controller picks each token's share via `ChooseAmount` (the last
