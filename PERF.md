@@ -61,6 +61,25 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 # the same copies by *calling context* four times without it. `readelf -sW`
 # ranks the instances by code size first, which is a free pre-sort.
 #
+# ⚠ **THE `--games 6` DUMP IS NOT SIX GAMES' WORTH OF WORK, AND ~0.5 % OF IT
+# NEVER SCALES.** Measured at `43844faf` on `cube`, one thread, seed 1:
+#   --games 1   (paired mode plays 0)      1,337,263 Ir   <- true startup
+#   --games 6                          2,502,898,733 Ir
+#   --games 18                         5,961,254,552 Ir
+# Startup proper is 0.053 % and can be ignored. What cannot is the class of
+# cost that is **once per distinct card name per process**:
+# `CardDefinition::wants_converge` scans the definition's `{:?}` rendering
+# for `ConvergedValue` behind a two-level cache, and that is **217 calls /
+# 12,426,187 Ir on `--games 6` against 262 / 14,968,576 on `--games 18`** —
+# 0.50 % of the six-game baseline, 0.25 % of the eighteen-game one, and
+# ~nothing in the 10-30k-game gate runs the engine actually serves. It is not
+# a defect (see its doc comment: the string scan is deliberately the ONE
+# oracle for converge, and a hand-written variant walker is the rot this
+# codebase has been bitten by) — but a change that moved it would read as a
+# 0.5 % win that no real run will ever see. Ask whether a row saturates
+# before ranking it: run the dump at two game counts and compare the row, not
+# the total.
+#
 # WHICH HOT FUNCTIONS PAY A FRAME THEY ALMOST NEVER USE — the instrument for
 # `(-129)`'s rule. Joins the dump's call counts against the binary's
 # disassembly and ranks by `calls x prologue instructions`, with the body's
