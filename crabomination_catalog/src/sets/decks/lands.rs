@@ -481,7 +481,20 @@ pub fn cephalid_coliseum() -> CardDefinition {
         name: "Cephalid Coliseum",
         card_types: vec![CardType::Land],
         activated_abilities: vec![
-            tap_add(Color::Blue),
+            // "{T}: Add {U}. This land deals 1 damage to you." The pain half
+            // was missing (`audit_oracle_verbs.py`, `damage` class); it is
+            // damage from the land, spelled the way `painland` spells it.
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::Colors(vec![Color::Blue]),
+                    },
+                    Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+                ]),
+                ..Default::default()
+            },
             ActivatedAbility {
                 energy_cost: 0,
                 discard_cost: None,

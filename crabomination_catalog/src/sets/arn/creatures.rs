@@ -23,10 +23,10 @@ pub fn juzam_djinn() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // "This creature deals 1 damage to you" — damage from the Djinn,
+            // not life loss (CR 120.3), so it is preventable and it fires
+            // damage watchers.
+            effect: Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
         }],
         ..Default::default()
     }

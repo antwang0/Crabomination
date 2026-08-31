@@ -16,7 +16,7 @@ not a semantics one — "draws a card" against `Effect::Draw` — so it cannot s
 a card that draws the wrong number or draws for the wrong player. It can see a
 card that does not draw at all.
 
-**Standing at 182 rows over 17,028 cards with oracle text (2026-08-31), and
+**Standing at 172 rows over 17,028 cards with oracle text (2026-08-31), and
 the rate of real findings is high.** Six classes were spot-checked in the
 source: Codespell Cleric is a body-only stub (its whole ETB counter ability is
 absent), Fountain of Renewal drops its sac-for-a-card, Baral drops the trigger
@@ -69,6 +69,12 @@ own triggered ability is the verb: twenty-odd STX cards mint
 `stx_pest_token()`, whose "when this token dies, you gain 1 life" is a
 `TriggeredAbility` inside that function and invisible to a scan of the set
 file. Both files feed the helper table now — `gain_life` 27 -> 19.
+
+**AND A HELPER DOES NOT HAVE TO LIVE IN THE CALLER'S FILE.** `painland()` is
+in `crabomination_catalog/src/sets/mod.rs` and every set with a `shared.rs`
+puts its cycle builders there, but the table below was built **per file**.
+There is now a global one over every set file as well — worth 10 rows across
+five verbs, and it is why a run takes ~4.5 min rather than ~1.
 
 **Worked example of what that is worth: `return_to_hand` went 31 rows -> 5,
 and all five of the survivors are real** (2026-08-31). The 26 that went were
@@ -349,13 +355,23 @@ def audit():
     shortcuts = helper_variants(
         (BASE / "effect" / "shortcut.rs").read_text() + "\n" + (BASE / "tokens.rs").read_text()
     )
+    # **And a helper does not have to live in the caller's file.** `painland()`
+    # (five Tempest lands + the whole cycle elsewhere) is in
+    # `crabomination_catalog/src/sets/mod.rs`, and every set with a `shared.rs`
+    # puts its cycle builders there. The per-file table below cannot see either,
+    # so build one global table over every set file as well. A name collision
+    # between two sets' private helpers over-attributes, which costs a false
+    # negative — the trade this file states it wants.
+    catalog_wide = helper_variants(
+        "\n".join(p.read_text() for p in sorted(SETS.rglob("*.rs")))
+    )
     prims = primitive_bodies()
     findings = {v: [] for v in VERBS}
     checked = 0
     for src in sorted(SETS.rglob("*.rs")):
         text = src.read_text()
         local = helper_variants(text)
-        table = close_helpers([shortcuts, local])
+        table = close_helpers([shortcuts, catalog_wide, local])
         # `..creature("Viashino Sandswimmer", …)` carries the card's *name* in
         # a positional argument, so `card_def_name` read nothing and the card
         # was skipped outright — most of the classic sets. `audit_catalog_stats`

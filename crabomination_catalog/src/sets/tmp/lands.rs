@@ -68,9 +68,11 @@ pub fn salt_flats() -> CardDefinition {
     tapped_painland("Salt Flats", Color::White, Color::Black)
 }
 
-/// Skyshroud Forest — {G}/{U} slow dual.
+/// Skyshroud Forest — {G}/{U} damage tapland. Shipped as a `slow_dual`
+/// (skip-next-untap), which is a different card entirely; found by
+/// `audit_oracle_verbs.py`'s `damage` class.
 pub fn skyshroud_forest() -> CardDefinition {
-    slow_dual("Skyshroud Forest", Color::Green, Color::Blue)
+    tapped_painland("Skyshroud Forest", Color::Green, Color::Blue)
 }
 
 /// Scabland — {R}/{W} damage tapland.

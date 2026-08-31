@@ -4079,6 +4079,41 @@ fn pristine_talisman_mana_and_life() {
     assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
 }
 
+/// CR 120.3 — "This artifact deals 1 damage to you" is **damage**, not life
+/// loss. All ten Talismans shipped it as `Effect::LoseLife`, which walks past
+/// every prevention effect; a shield is the only assertion that tells the two
+/// apart (`audit_oracle_verbs.py`'s `damage` class).
+#[test]
+fn talisman_colored_tap_deals_preventable_damage() {
+    /// Tap a fresh Talisman for its first colored mana; return the life delta.
+    fn tap_colored(shielded: bool) -> i32 {
+        let mut g = two_player_game();
+        let tal = g.add_card_to_battlefield(0, catalog::talisman_of_progress());
+        if shielded {
+            let salve = g.add_card_to_hand(0, catalog::healing_salve());
+            g.players[0].mana_pool.add(Color::White, 1);
+            // Mode 1 is the prevention half; take it on yourself.
+            g.perform_action(GameAction::CastSpell {
+                card_id: salve, target: Some(Target::Player(0)),
+                additional_targets: vec![], mode: Some(1), x_value: None,
+            }).expect("Healing Salve castable for {W}");
+            drain_stack(&mut g);
+        }
+        let life = g.players[0].life;
+        // Ability 0 is the {C} tap; 1 and 2 are the two colored ones.
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: tal, ability_index: 1, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("tap for the first colored mana");
+        drain_stack(&mut g);
+        assert!(g.players[0].mana_pool.total() >= 1, "produced a mana either way");
+        g.players[0].life - life
+    }
+
+    assert_eq!(tap_colored(false), -1, "the artifact deals its 1 damage");
+    assert_eq!(tap_colored(true), 0, "and a prevention shield stops it");
+}
+
 /// Ram Through: your creature deals its power to a target you don't control.
 #[test]
 fn ram_through_one_sided_fight() {

@@ -183,6 +183,39 @@ delayed/conditional bounce the body approximates.
 | Spinewoods Paladin | no ETB, plot {2}{G} | + "when this creature enters, you gain 3 life", plot {3}{G} |
 | Boggart Mischief | the blight ETB only | + "whenever a Goblin creature you control dies, each opponent loses 1 life and you gain 1 life" |
 
+**AN EIGHTH FALSE CLASS, AND IT IS THE LAST STRUCTURAL ONE: a helper does not
+have to live in the caller's file.** `painland()` is in
+`crabomination_catalog/src/sets/mod.rs` and every set with a `shared.rs` puts
+its cycle builders there, but the auditor built its helper table **per file**.
+It now also builds one global table over every set file. Worth 10 rows across
+five verbs (`damage` 23 -> 19, `scry` 7 -> 2, `gain_life` 16 -> 13,
+`lose_life` 13 -> 12, `destroy` unchanged); the whole file is **215 -> 172**
+over the eight classes. ⚠ The global table makes a run take ~4.5 min instead
+of ~1.
+
+**`damage` worked, and it found a bug class rather than a card: 23 rows -> 6,
+and every one of the 13 that went was "deals 1 damage to you" shipped as
+`Effect::LoseLife`.** CR 120.3 — damage is not life loss: a shield stops one
+and not the other, and only damage fires a damage watcher. `painland()` had
+the identical clause right all along, which is what made the class visible.
+
+| card(s) | shipped | printed |
+|---|---|---|
+| the ten Talismans | `LoseLife` on each colored tap | "this artifact deals 1 damage to you" |
+| Juzám Djinn | `LoseLife` at upkeep | "this creature deals 1 damage to you" |
+| Cephalid Coliseum | `{T}: Add {U}`, no pain at all | "…This land deals 1 damage to you." |
+| Skyshroud Forest | a `slow_dual` (skip-next-untap) | a tapped **painland** — a different card |
+
+Progress and Dominance were also hand-written duplicates of `talisman_cycle`
+and now call it, so the cycle cannot drift again.
+
+**Still open in `damage` (6), all real and all needing a primitive or a
+target shape:** Biotech Specialist (sacrifice-an-artifact watcher), Bronze
+Bombshell (an owner-vs-controller sacrifice trigger), Skirk Marauder
+(turned-face-up damage), Spitting Spider (sacrifice-a-land cost),
+Trumpeting Carnosaur (a discard-cost activated ability from hand), Takklemaggot
+(the whole re-attach clause).
+
 **Still open in `gain_life`, read and triaged — three of them are wholly
 wrong abilities, not missing riders:**
 

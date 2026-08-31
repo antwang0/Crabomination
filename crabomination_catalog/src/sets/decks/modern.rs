@@ -2955,150 +2955,16 @@ pub fn coldsteel_heart() -> CardDefinition {
     }
 }
 
-/// Talisman of Progress — {2} Artifact. "{T}: Add {C}." "{T}: Add {W} or
-/// {U}. Talisman of Progress deals 1 damage to you."
-///
-/// Two-color mana rock. The colored ability deals 1 damage to the
-/// controller as part of the activation; we fold the damage into the
-/// resolved effect's first step (cost-as-first-step approximation).
-/// The color choice is exposed via `AnyOneColor` constrained to
-/// {W,U} — but the engine's `AnyOneColor` allows any color, so we
-/// model it as two separate {T} abilities (one per color) to keep the
-/// color choice explicit. The first ability is the colorless tap.
+/// Talisman of Progress — {2} Artifact. `{T}: Add {C}` plus `{T}: Add {W} or
+/// {U}. This artifact deals 1 damage to you.`
 pub fn talisman_of_progress() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    let make_color = |color: Color| ActivatedAbility {
-        energy_cost: 0,
-        discard_cost: None,
-        tap_cost: true,
-        mana_cost: ManaCost::default(),
-        effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![color]),
-            },
-        ]),
-        once_per_turn: false,
-        sorcery_speed: false,
-        sac_cost: false,
-        condition: None,
-        life_cost: 0,
-        from_graveyard: false,
-        exile_self_cost: false,
-        exile_other_filter: None,
-        self_counter_cost_reduction: None,
-        sac_other_filter: None,
-        tap_other_filter: None,
-        from_hand: false,
-        ..Default::default()
-    };
-    CardDefinition {
-        name: "Talisman of Progress",
-        cost: cost(&[generic(2)]),
-        card_types: vec![CardType::Artifact],
-        activated_abilities: vec![
-            // {T}: Add {C}.
-            ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-                self_counter_cost_reduction: None,
-                sac_other_filter: None,
-                tap_other_filter: None,
-                from_hand: false,
-                ..Default::default()
-            },
-            make_color(Color::White),
-            make_color(Color::Blue),
-        ],
-        ..Default::default()
-    }
+    talisman_cycle("Talisman of Progress", Color::White, Color::Blue)
 }
 
-/// Talisman of Dominance — {2} Artifact. UB mirror of Talisman of
-/// Progress: `{T}: Add {C}` plus `{T}: Add {U} or {B}, deals 1 damage
-/// to you`.
+/// Talisman of Dominance — {2} Artifact. `{T}: Add {C}` plus `{T}: Add {U} or
+/// {B}. This artifact deals 1 damage to you.`
 pub fn talisman_of_dominance() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    let make_color = |color: Color| ActivatedAbility {
-        energy_cost: 0,
-        discard_cost: None,
-        tap_cost: true,
-        mana_cost: ManaCost::default(),
-        effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![color]),
-            },
-        ]),
-        once_per_turn: false,
-        sorcery_speed: false,
-        sac_cost: false,
-        condition: None,
-        life_cost: 0,
-        from_graveyard: false,
-        exile_self_cost: false,
-        exile_other_filter: None,
-        self_counter_cost_reduction: None,
-        sac_other_filter: None,
-        tap_other_filter: None,
-        from_hand: false,
-        ..Default::default()
-    };
-    CardDefinition {
-        name: "Talisman of Dominance",
-        cost: cost(&[generic(2)]),
-        card_types: vec![CardType::Artifact],
-        activated_abilities: vec![
-            ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                tap_cost: true,
-                mana_cost: ManaCost::default(),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::Const(1)),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-                self_counter_cost_reduction: None,
-                sac_other_filter: None,
-                tap_other_filter: None,
-                from_hand: false,
-                ..Default::default()
-            },
-            make_color(Color::Blue),
-            make_color(Color::Black),
-        ],
-        ..Default::default()
-    }
+    talisman_cycle("Talisman of Dominance", Color::Blue, Color::Black)
 }
 
 /// Fireblast — {4}{R}{R} Instant. "Fireblast deals 4 damage to any target."
@@ -3127,37 +2993,25 @@ pub fn fireblast() -> CardDefinition {
 
 // ── Talisman cycle (RW / UR / GU) ────────────────────────────────────────────
 
-/// Internal helper: build a `{2}` artifact with `{T}: Add {C}` and two
-/// 1-life-pip color taps for a given color pair (Talisman cycle shape).
+/// The Talisman cycle (MRD/BRO): `{T}: Add {C}` plus `{T}: Add {c1} or {c2}.
+/// This artifact deals 1 damage to you.`
+///
+/// The pain is **damage dealt by the artifact**, not life loss — CR 120.3, so
+/// it is preventable, redirectable and it fires damage watchers. All ten
+/// shipped it as `Effect::LoseLife`; `painland()` in `sets/mod.rs` already
+/// spelled the identical clause correctly, which is how
+/// `audit_oracle_verbs.py`'s `damage` class found it.
 fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
     use crate::card::ActivatedAbility;
     let make_color = |color: Color| ActivatedAbility {
-        energy_cost: 0,
-        discard_cost: None,
         tap_cost: true,
-        mana_cost: ManaCost::default(),
         effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
             Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::Colors(vec![color]),
             },
+            Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
         ]),
-        once_per_turn: false,
-        sorcery_speed: false,
-        sac_cost: false,
-        condition: None,
-        life_cost: 0,
-        from_graveyard: false,
-        exile_self_cost: false,
-        exile_other_filter: None,
-        self_counter_cost_reduction: None,
-        sac_other_filter: None,
-        tap_other_filter: None,
-        from_hand: false,
         ..Default::default()
     };
     CardDefinition {
@@ -3166,26 +3020,11 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![
             ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
                 tap_cost: true,
-                mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colorless(Value::Const(1)),
                 },
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-                self_counter_cost_reduction: None,
-                sac_other_filter: None,
-                tap_other_filter: None,
-                from_hand: false,
                 ..Default::default()
             },
             make_color(c1),
@@ -3195,9 +3034,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
     }
 }
 
-/// Talisman of Conviction — {2} Artifact. RW mirror of Talisman of Progress
-/// (`{T}: Add {C}` plus `{T}: Add {R} or {W}`, each colored ability dealing 1
-/// damage to you / costing 1 life).
+/// Talisman of Conviction — {2} Artifact. RW mirror of Talisman of Progress.
 pub fn talisman_of_conviction() -> CardDefinition {
     talisman_cycle("Talisman of Conviction", Color::Red, Color::White)
 }
