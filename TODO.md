@@ -26,51 +26,52 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Several sessions at once: code before tracker prose, **rebase
    not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
-   build **and re-read it then**. Do not rebase while a build runs; kill orphaned `rustc`
-   (`ps -o ppid` = 1). ⚠ **The routine container sleeps between tool calls** — a background
-   build makes no progress until the next foreground command, so run builds in the
-   foreground. ⚠ Disk is a fixed allowance: `target/debug/incremental` was 18 GB and
+   build **and re-read it then**. ⚠ **The routine container sleeps between tool calls** — a
+   background build makes no progress until the next foreground command, so run builds in the
+   foreground. ⚠ Disk is a fixed allowance: `target/debug/incremental` reached 18 GB and
    deleting it was the difference between a linker Bus error and a green suite.
-2. **All five gates at `ccec52ac`:** suite **19,089 / 0 / 5**, clippy clean (also
-   `--features trig-census`), traces in the suite unmoved, `--bench` **195,528 / 27.44 /
-   611.0 / 0 stalls byte-identical to the invariant** with determinism + thread_determinism
-   green. Grid not re-run: the engine lines added are `cfg`-gated censuses and one CR 605.1a
-   rider, and the callgrind base moved 495 Ir in 2.53 G (0.00002 %). ⚠ `games_per_s` read
-   269-283 across three runs of the *same* binary on this host — **wall clock here is ±5 %,
-   Ir is not; do not read a throughput delta off `--bench`.** `peak_rss_mib` 28.1 is
-   `release-fast` on a 2.80 GHz host, not the 24.4-24.8 `release` family.
-3. **Three candidates answered, none in the tree.** `(-122)` refuted by census (the mask
-   costs **2.86x** the walk; two pools have no walk at all). `(-127)` built and reverted
-   (`cube` **+0.727 %** — 82.5 % of clones write `players`, so the CoW gate is paid per
-   `&mut` reach, seventeen per writing clone). `(-126)` closed: the flattened `All`/`Any`
-   serves only **139,406** of `cube`'s calls (~0.16 %), and splitting the leaves out of line
-   was built and reverted at **+0.940 %**. **Three rules, all about populations:** a gate in
-   front of a walk is part of the walk's cost model; a CoW wrap's gate is per reach, not per
-   clone; a split pays by the share of calls taking the *small* half (42 %, not the 65 % of
-   recursive edges). Three censuses are in the tree (`grant_census`, `req_census`, and
-   `trig_census` before them) — **the census answered every one of the three for one build.**
-4. **Open, in order: `(-128)` then `(-129)`.** `(-128)` is SBA — 3.78 % of `cube` and
-   **4.19 % of `fixed`**, the only top row bigger on the smaller pool, which is what says it
-   is per-sweep overhead and not board size; the epoch memo is already in `zone::Battlefield`
-   and PERF says to count the memoizable share first. `(-129)` is `event_matches_spec`,
-   1,028,014 calls on `cube` against 103,082 on `fixed` — open it with `cg_contexts.py`
-   (which now prints inclusive Ir per context), **not** a line profile.
-5. **Do not retake:** `(-112)`; `(-124)`; `(-126)`'s two devices; the `players` wrap; the
-   `(-122)` mask; dispatch's per-event gate (61 AND 106); a third line profile of
+2. **All five gates at `9d836cbd`:** suite **19,089 / 0 / 5**, clippy clean (also
+   `--features trig-census`), traces unmoved, `--bench` **195,528 / 27.44 / 611.0 / 0 stalls
+   byte-identical to the invariant** with determinism + thread_determinism green, and the
+   `cube` callgrind base moved **+0.00094 %** with the three censuses compiled out. Grid not
+   re-run — every engine line added is `cfg`-gated bar one CR 605.1a rider the suite covers.
+   ⚠ **`games_per_s` read 269-283 across three runs of the same binary: wall clock here is
+   ±5 %, Ir is not.**
+3. **Four candidates answered, none in the tree, and the census answered every one for at
+   most one build.** `(-122)`: the mask costs **2.86x** the walk, two pools have no walk.
+   `(-127)`: `cube` **+0.727 %** — 82.5 % of clones write `players`. `(-126)`: the flattened
+   `All`/`Any` serves 139,406 of `cube`'s calls (~0.16 %) and the leaf split measured
+   **+0.940 %**. `(-128)`: a sound skip gate is **0.45 %** and has to be maintained by hand at
+   every player-side write, where a miss is a *wrong game*. **Five rules, all about the shape
+   of a claim rather than its size:** a gate in front of a walk is part of the walk's cost
+   model; a CoW gate is paid per `&mut` reach, not per clone; a split pays by the share taking
+   the *small* half; **look for the memo one level down before proposing it** (`sba_scan_bits`
+   was already memoized on the definition); and **price a hand-maintained gate's soundness
+   burden as part of the candidate**.
+4. **Open: `(-129)` only** — `event_matches_spec`, 1,028,014 calls on `cube` against 103,082
+   on `fixed`, 1.26 % / 0.39 %, the dispatcher body NEXT has pointed at since the lane closed.
+   Open it with `cg_contexts.py --separate-callers=3` (it now prints inclusive Ir per
+   context), **not** a line profile — pass 91 already established there is no hot line there.
+   Also unsplit and never measured: the **2,397 Ir of SBA sweep body** left after `(-128)`'s
+   scan, of which the CR 704.5f/g/h death sweep is an obligation and the rest is gate
+   evaluation. **The queue has nothing else — replenish from fresh dumps rather than picking
+   the next-largest row.**
+5. **Do not retake:** `(-112)`; `(-124)`; `(-126)`'s two devices; `(-127)`'s wrap; `(-122)`'s
+   mask; `(-128)`'s skip gate; dispatch's per-event gate (61 AND 106); a third line profile of
    `dispatch_triggers_for_events` or of the gather; **actor scaling** (`(-52)`); the
    `turn_granted_triggers` / `granted_triggers_eot` retains.
-6. **Measurement traps, all in PERF:** `grep mimalloc` is not the allocator check;
-   `(-110)`'s null control does not transfer to the actor; a census must be re-run *after* a
-   fix that moves what it counts; and `--demangle=no` is how you learn whether a repeated row
-   is one function at several depths (the requirement walker) or several instantiations.
+6. **Measurement traps, all in PERF:** `grep mimalloc` is not the allocator check; `(-110)`'s
+   null control does not transfer to the actor; a census must be re-run *after* a fix that
+   moves what it counts; and `--demangle=no` is how you learn whether a repeated row is one
+   function at several depths (the requirement walker) or several instantiations.
 7. **Robustness:** `audit_panics.py` at 0 bare sites; grid last full at 33,120 games / 0
    failures at `f2f7d58c`. An empty pool and `n == 0` are legal *inputs*, so the degradation
    is a return, not a `debug_assert!`.
 8. **Cards: `draw` and `counters` worked, 214 -> 203; `return_to_hand` (31) and `token` (26)
-   are next and unexamined.** Eleven cards fixed, all of two shapes, both in CARD_BACKLOG's
+   are next and unexamined.** Eleven fixed, all of two shapes, both in CARD_BACKLOG's
    "Oracle-verb audit" section with the primitive jobs they surfaced (`LookPick`-with-else
-   unblocks **four** cards, Parley five). **The doc comment above a body is the tell** —
-   three of four wrong-shape cards still described the card the body used to be, and
+   unblocks **four** cards, Parley five). **The doc comment above a body is the tell** — three
+   of four wrong-shape cards still described the card the body used to be, and
    `audit_catalog_stats` reads zero on all of them because the characteristics were corrected
    against Scryfall and the ability was not.
 9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.

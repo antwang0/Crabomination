@@ -2277,38 +2277,35 @@ a box whose state moves.
 
 ## Baseline
 
-### `(-122)` and `(-127)`, closing state at `f4847f46`
+### `(-122)`, `(-126)`, `(-127)`, `(-128)` — closing state at `9d836cbd`
 
-Two candidates answered and neither is in the tree: `(-122)` refuted by a
-census before a build, `(-127)` built, measured and reverted. The engine code
-this session leaves behind is `zone::grant_census`
-(`#[cfg(feature = "trig-census")]`, absent from a default build) and one CR
-605.1a rider in `is_mana_ability`; the rest is eleven card fixes from
-`audit_oracle_verbs.py` and their tests.
+Four candidates answered and **none of them is in the tree**: two refuted by
+census before a build, one built and reverted, one recommended against on
+soundness. The engine code this session leaves behind is three
+`#[cfg(feature = "trig-census")]` censuses (`grant_census`, `req_census`,
+`BATTLEFIELD_REACHES`), one CR 605.1a rider in `is_mana_ability`, and eleven
+card fixes from `audit_oracle_verbs.py` with their tests.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
-suite   19,080 / 0 / 5 (cargo nextest --workspace --exclude
+suite   19,089 / 0 / 5 (cargo nextest --workspace --exclude
         crabomination_client); golden traces in it, unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
         -p crabomination --features trig-census --all-targets      clean
-suite   19,089 / 0 / 5 after the eleven card fixes
 --bench release-fast: 195,528 decisions / 27.44 turns / 611.0 per game /
-        0 stalls — **byte-identical to the invariant**, re-run *after* the
-        card fixes as well as before; determinism ok, thread_determinism ok
-        (3 vs 1 threads identical). None of the eleven cards is in a `fixed`
-        archetype, and the run proves it rather than assuming it.
-grid    NOT re-run and cannot move: every line this session adds to the
-        engine is inside a `#[cfg(feature = "trig-census")]` block, so the
-        default binary the grid builds has no new instruction in it.
+        0 stalls — **byte-identical to the invariant**, re-run after the card
+        fixes and again after the censuses; determinism ok,
+        thread_determinism ok (3 vs 1 threads identical)
+callgrind `cube` base 2,529,860,411 -> 2,529,884,222 with all three censuses
+        compiled out: **+0.00094 %**, i.e. the instruments are free by default
+grid    NOT re-run: every engine line added is inside a `trig-census` `cfg`
+        except the CR 605.1a rider, which the suite covers.
 ```
 
-⚠ **`peak_rss_mib` reads 28.3 here and it is not comparable to the 24.4-24.8
-family.** That family is `release` on the 2.10 GHz host; this is `release-fast`
-on a 2.80 GHz one, a different binary (142.3 MB) on different hardware.
-`games_per_s` (283.13) is not comparable for the same reason and is not filed.
-The play line is the part that *is* comparable across profiles, and it matches
-to the decision.
+⚠ **`games_per_s` read 269-283 across three runs of the same binary on this
+host.** Wall clock here is ±5 %; Ir is not. Do not read a throughput delta off
+`--bench` — that is what the callgrind line above is for. `peak_rss_mib` 28.1-28.8
+is `release-fast` on a 2.80 GHz host and is not the 24.4-24.8 `release` family.
 
 ### The `draw` class's first three rows, closing state at `d89decca`
 
