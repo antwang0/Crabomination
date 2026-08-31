@@ -345,7 +345,10 @@ def main():
         shown += 1
         pct = 100.0 * ir / total_entries if total_entries else 0.0
         flag = " (epilogue?)" if ir == total_entries else ""
-        print(f"  {ir:>12,}  {pct:6.2f}%  {t:#x}{flag}  {' | '.join(ns)}")
+        # A merged group can carry 170 names; printing them all buries the
+        # table it is a row of.
+        label = " | ".join(ns[:4]) + (f" | ... +{len(ns) - 4} merged" if len(ns) > 4 else "")
+        print(f"  {ir:>12,}  {pct:6.2f}%  {t:#x}{flag}  {label}")
     dropped = sum(ir for ir, _, _ in rows[shown:])
     cold = sum(1 for ir, _, _ in rows if ir == 0)
     print(f"  ... {dropped:,} entries in rows past the cap; {cold} arms never taken")
