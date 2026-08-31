@@ -611,7 +611,7 @@ pub fn monument_to_endurance() -> CardDefinition {
     }
 }
 
-/// Contagion Clasp — {4} Artifact. ETB: put a -1/-1 counter on target
+/// Contagion Clasp — {2} Artifact. ETB: put a -1/-1 counter on target
 /// creature. `{4}, {T}: Proliferate.`
 pub fn contagion_clasp() -> CardDefinition {
     use crate::card::CounterType;

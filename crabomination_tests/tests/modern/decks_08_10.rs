@@ -1207,11 +1207,12 @@ fn ghost_vacuum_exiles_target_card_from_graveyard() {
     // Seed P1's graveyard with a Bear directly.
     let bear_id = g.add_card_to_graveyard(1, catalog::grizzly_bears());
     let vac = g.add_card_to_battlefield(0, catalog::ghost_vacuum());
-    g.players[0].mana_pool.add_colorless(2);
+    // No mana added on purpose: the printed ability is `{T}:` alone. It
+    // shipped charging {2} on top of the tap, which is a strictly worse card.
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: vac, ability_index: 0, target: Some(Target::Permanent(bear_id)), additional_targets: Vec::new(), x_value: None , mode: None})
-    .expect("Ghost Vacuum activated for {{2}}, {{T}}");
+    .expect("Ghost Vacuum activated for {T} alone");
     drain_stack(&mut g);
 
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear_id),

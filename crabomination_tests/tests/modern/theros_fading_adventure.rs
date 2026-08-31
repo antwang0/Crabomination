@@ -1,5 +1,5 @@
 #![allow(unused_imports)]
-use crabomination::card::{CardType, CounterType};
+use crabomination::card::{CardType, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::*;
@@ -932,12 +932,13 @@ fn ball_lightning_is_six_one_and_self_sacrifices() {
     assert!(g.battlefield_find(id).is_none(), "sacrificed at end step");
 }
 
-/// Hellspark Elemental prints **Unearth**, not Flashback, and the engine has
-/// no Unearth: the recursion it shipped with recast the card from the
-/// graveyard with no exile clause, which is a different card
-/// (`audit_keyword_drift.py`). Until Unearth exists it recurs not at all.
+/// Hellspark Elemental prints **Unearth {1}{R}** (CR 702.84), not Flashback.
+/// It shipped with the Flashback — which recasts the card as a spell with no
+/// exile clause, a strictly different card (`audit_keyword_drift.py`) — and
+/// then with nothing at all. Both halves are pinned here: casting it out of
+/// the graveyard is still an error, and unearthing it returns it hasty.
 #[test]
-fn hellspark_elemental_has_no_flashback() {
+fn hellspark_elemental_unearths_and_has_no_flashback() {
     let mut g = two_player_game();
     let id = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -948,6 +949,18 @@ fn hellspark_elemental_has_no_flashback() {
         })
         .is_err(),
         "no printed Flashback",
+    );
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: vec![],
+        x_value: None, mode: None,
+    })
+    .expect("Unearth {1}{R} from the graveyard");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("unearthed onto the battlefield");
+    assert_eq!((c.power(), c.toughness()), (3, 1));
+    assert!(
+        g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Haste),
+        "unearth grants haste",
     );
 }
 

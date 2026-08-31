@@ -1871,31 +1871,46 @@ fn chandras_pyrohelix_divides_two_among_two_players() {
     assert_eq!(g.players[0].life, 19);
 }
 
-/// Merfolk Skydiver's `{1}{U}: Adapt 1` makes it 2/2 and proliferates —
-/// a co-counter on another creature ticks up too.
+/// Merfolk Skydiver puts a +1/+1 counter on target creature you control when
+/// it enters, and its `{3}{G}{U}: Proliferate` is a repeatable ability rather
+/// than a rider.
+///
+/// It shipped as `{1}{U}: Adapt 1 and proliferate` — a card that does not
+/// exist. Nothing on the printed Skydiver adapts, the counter goes on
+/// *another* creature, and the proliferate can be bought any number of times.
 #[test]
-fn merfolk_skydiver_adapts_and_proliferates() {
+fn merfolk_skydiver_counters_on_entry_then_proliferates_for_five() {
     use crabomination::card::CounterType;
     let mut g = two_player_game();
-    let diver = g.add_card_to_battlefield(0, catalog::merfolk_skydiver());
     let ally = g.add_card_to_battlefield(0, catalog::pteramander());
-    // Seed a +1/+1 counter on the ally so proliferate has something to grow.
-    if let Some(c) = g.battlefield_find_mut(ally) {
-        c.add_counters(CounterType::PlusOnePlusOne, 1);
-    }
+    let diver = g.add_card_to_hand(0, catalog::merfolk_skydiver());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
     g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: diver, target: Some(Target::Permanent(ally)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{G}{U} creature");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "the enter trigger's counter went on the targeted ally, not on the Skydiver",
+    );
+    assert_eq!(
+        g.battlefield_find(diver).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "nothing adapts",
+    );
+
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
         card_id: diver, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Adapt activatable");
+    }).expect("{3}{G}{U}: Proliferate");
     drain_stack(&mut g);
-    // Adapt 1 → one counter, then proliferate adds another to the diver
-    // itself (and to the ally) → 3/3.
-    let d = g.battlefield_find(diver).unwrap();
-    assert_eq!((d.power(), d.toughness()), (3, 3), "adapt 1 then proliferate-self → 3/3");
-    let a = g.battlefield_find(ally).unwrap();
-    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 2,
-        "proliferate added a second +1/+1 to the ally");
+    assert_eq!(
+        g.battlefield_find(ally).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferate ticked the ally's counter",
+    );
 }
 
 /// Pteramander's `{7}: Adapt 4` puts four +1/+1 counters on it (1/1 → 5/5)

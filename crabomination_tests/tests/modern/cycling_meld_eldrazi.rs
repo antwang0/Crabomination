@@ -1202,14 +1202,20 @@ fn rule_of_law_blocks_second_spell() {
         mode: None, x_value: None,
     });
     assert!(matches!(second, Err(GameError::SpellLimitReached)));
-    // graveyard recasts are spells too
-    let hellspark = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    assert!(g.perform_action(GameAction::CastFlashback {
-        card_id: hellspark, target: None, additional_targets: vec![],
-        mode: None, x_value: None,
-    }).is_err());
+    // Graveyard recasts are spells too. ⚠ This used Hellspark Elemental,
+    // which never had a printed Flashback — so once its invented one came
+    // off the assertion held for the wrong reason and proved nothing about
+    // the spell limit. Conflagrate prints Flashback {R}{R} plus a discard.
+    let conflagrate = g.add_card_to_graveyard(0, catalog::conflagrate());
+    g.add_card_to_hand(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    assert!(matches!(
+        g.perform_action(GameAction::CastFlashback {
+            card_id: conflagrate, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: Some(1),
+        }),
+        Err(GameError::SpellLimitReached)
+    ));
 }
 
 /// Archon of Emeria makes an opponent's nonbasic land enter tapped; the

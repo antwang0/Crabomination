@@ -3398,13 +3398,12 @@ pub fn tormenting_voice() -> CardDefinition {
     }
 }
 
-/// Wild Guess — {2}{R} Sorcery. Discard a card, then draw two cards.
+/// Wild Guess — {R}{R} Sorcery. Discard a card, then draw two cards.
 ///
-/// Mechanically identical to Tormenting Voice at +1 mana cost (the original
-/// card had `{1}{R}, discard a card` as an additional cost in older
-/// templating; modern Oracle is "discard then draw"). We model it the same
-/// way as Tormenting Voice but charge {2}{R} since both cards exist in the
-/// pool and tournaments care about cost differences.
+/// Printed as "as an additional cost to cast this spell, discard a card. Draw
+/// two cards", which the engine models the same way it models Tormenting
+/// Voice: a `Seq` of discard-then-draw at resolution. The difference from a
+/// true additional cost is that an empty hand does not stop the cast.
 pub fn wild_guess() -> CardDefinition {
     CardDefinition {
         name: "Wild Guess",
@@ -6995,14 +6994,18 @@ pub fn elegant_parlor() -> CardDefinition {
     )
 }
 
-/// Ghost Vacuum — {2} Artifact. {2}, {T}: Exile target card from a graveyard.
+/// Ghost Vacuum — {1} Artifact. {T}: Exile target card from a graveyard.
 ///
 /// Targeted graveyard hate. The card filter is `Any` since the effect
 /// names "a card" — any zone match, but `Effect::Move` from graveyards
 /// already routes through `move_card_to(.., ZoneDest::Exile, ..)` thanks
-/// to the modern_decks-1 plumbing. The "draw a card whenever a card is
-/// put into your graveyard" rider on later printings is omitted (not
-/// printed on the original Ghost Vacuum anyway).
+/// to the modern_decks-1 plumbing.
+///
+/// 🟡 The second ability — `{6}, {T}, Sacrifice this artifact:` put each
+/// creature card **exiled with this artifact** onto the battlefield under
+/// your control — is not modelled: nothing tracks exile linked to a source.
+/// A Ghost Vacuum that also charged {2} to activate the first ability was
+/// the shipped card until now, which is a strictly worse one.
 pub fn ghost_vacuum() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -7013,7 +7016,7 @@ pub fn ghost_vacuum() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            mana_cost: cost(&[generic(2)]),
+            mana_cost: ManaCost::default(),
             effect: Effect::Move {
                 what: Selector::TargetFiltered {
                     slot: 0,
@@ -18836,7 +18839,7 @@ pub fn corpse_dance() -> CardDefinition {
     }
 }
 
-/// Basking Rootwalla — {1}{G} Creature — Lizard. 1/1.
+/// Basking Rootwalla — {G} Creature — Lizard. 1/1.
 /// "{1}{G}: Basking Rootwalla gets +2/+2 until end of turn. Activate
 /// only once each turn." Madness {0}.
 ///
@@ -22158,10 +22161,13 @@ pub fn ball_lightning() -> CardDefinition {
     }
 }
 
-/// Hellspark Elemental — {R} Creature — Elemental 3/1, Trample, Haste.
-/// At the beginning of the end step, sacrifice it. Its **Unearth {1}{R}** is
-/// unimplemented (no `Keyword::Unearth`); it shipped as a Flashback, which
-/// recurs the card with no exile clause and is a strictly different card.
+/// Hellspark Elemental — {1}{R} Creature — Elemental 3/1, Trample, Haste.
+/// At the beginning of the end step, sacrifice it. Unearth {1}{R}.
+///
+/// The Flashback it shipped with was an invented keyword (`audit_keyword_drift.py`)
+/// and came off; the Unearth the card actually prints goes on here, as
+/// `shortcut::unearth` — the sorcery-speed graveyard ability whose end-step
+/// exile is the same approximation Goryo's Vengeance uses.
 pub fn hellspark_elemental() -> CardDefinition {
     CardDefinition {
         name: "Hellspark Elemental",
@@ -22178,6 +22184,7 @@ pub fn hellspark_elemental() -> CardDefinition {
             Keyword::Haste,
         ],
         triggered_abilities: vec![sacrifice_at_end_step()],
+        activated_abilities: vec![crate::effect::shortcut::unearth(cost(&[generic(1), r()]))],
         ..Default::default()
     }
 }
@@ -44752,7 +44759,7 @@ pub fn kroxa_titan_of_deaths_hunger() -> CardDefinition {
     }
 }
 
-/// Uro, Titan of Nature's Wrath — {G}{U} 6/6 Legendary Elder Giant.
+/// Uro, Titan of Nature's Wrath — {1}{G}{U} 6/6 Legendary Elder Giant.
 /// On enter or attack: gain 3, draw, may drop a hand land. Sacrificed unless
 /// it escaped. Escape {G}{G}{U}{U}, exile five.
 pub fn uro_titan_of_natures_wrath() -> CardDefinition {

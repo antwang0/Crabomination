@@ -542,7 +542,9 @@ pub fn metathran_aerostat() -> CardDefinition {
     }
 }
 
-/// Atalya, Samite Master — {X} of prevention or {X} of life, X paid in white.
+/// Atalya, Samite Master — {3}{W}{W} 2/3 Legendary Human Cleric. `{X}, {T}:`
+/// choose one — prevent the next {X} damage to target creature, or gain {X}
+/// life. X is paid in white mana either way (`x_mana_color`).
 pub fn atalya_samite_master() -> CardDefinition {
     CardDefinition {
         name: "Atalya, Samite Master",

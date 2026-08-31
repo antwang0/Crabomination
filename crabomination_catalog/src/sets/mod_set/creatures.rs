@@ -209,43 +209,37 @@ pub fn benthic_biomancer() -> CardDefinition {
     }
 }
 
-/// Merfolk Skydiver — {1}{U}, 1/1 Merfolk with Flying. `{1}{U}: Adapt 1`
-/// (CR 702.108); "whenever this adapts, proliferate." Since Adapt only puts
-/// a counter on when there are none, the proliferate rides the same
-/// `If(no +1/+1 counter)` branch as the adapt.
+/// Merfolk Skydiver — {G}{U} 1/1 Merfolk Mutant with Flying. When it enters,
+/// put a +1/+1 counter on target creature you control. `{3}{G}{U}: Proliferate.`
+///
+/// It shipped as a different card: {1}{U}-to-Adapt-1-and-proliferate, with no
+/// enter trigger and no Mutant. Nothing on the printed card adapts, and the
+/// proliferate is an ability anyone can activate any number of times rather
+/// than a rider on a one-shot counter. Found by reading the doc comment
+/// against the oracle after `audit_doc_drift.py` put the cost disagreement
+/// ({1}{U} in the doc, {G}{U} in the body) on the list.
 pub fn merfolk_skydiver() -> CardDefinition {
     CardDefinition {
         name: "Merfolk Skydiver",
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Mutant],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            mana_cost: cost(&[generic(1), u()]),
-            effect: Effect::If {
-                cond: crate::card::Predicate::Not(Box::new(
-                    crate::card::Predicate::EntityMatches {
-                        what: Selector::This,
-                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
-                    },
-                )),
-                then: Box::new(Effect::Seq(vec![
-                    Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
-                    },
-                    Effect::Proliferate,
-                ])),
-                else_: Box::new(Effect::Noop),
-            },
+            mana_cost: cost(&[generic(3), g(), u()]),
+            effect: Effect::Proliferate,
             ..Default::default()
         }],
         ..Default::default()
@@ -8317,7 +8311,7 @@ pub fn looter_il_kor() -> CardDefinition {
     }
 }
 
-/// Ninja of the Deep Hours — {1}{U} Creature — Human Ninja 2/2 with
+/// Ninja of the Deep Hours — {3}{U} Creature — Human Ninja 2/2 with
 /// Ninjutsu {1}{U}. "Whenever this deals combat damage to a player, you may
 /// draw a card." (BOK)
 pub fn ninja_of_the_deep_hours() -> CardDefinition {

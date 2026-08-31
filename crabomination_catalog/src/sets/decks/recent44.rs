@@ -122,7 +122,7 @@ pub fn manglehorn() -> CardDefinition {
     }
 }
 
-/// Viridian Zealot — {1}{G} 2/2 Elf Warrior. {1}{G}, Sacrifice: Destroy
+/// Viridian Zealot — {G}{G} 2/1 Elf Warrior. {1}{G}, Sacrifice: Destroy
 /// target artifact or enchantment.
 pub fn viridian_zealot() -> CardDefinition {
     CardDefinition {

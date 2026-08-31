@@ -410,14 +410,15 @@ pub fn goryos_vengeance() -> CardDefinition {
     }
 }
 
-/// Prismatic Ending — {W} Sorcery — Convoke. Exile target nonland permanent
-/// with mana value less than or equal to the spell's converged value.
+/// Prismatic Ending — {X}{W} Sorcery. Converge — exile target nonland
+/// permanent with mana value less than or equal to the number of colors of
+/// mana spent to cast it.
 ///
 /// Targeted; the cast-time filter is just `Permanent ∧ Nonland` (no CMC
 /// constraint, since converged value is only known after paying). At
 /// resolution, `If(ManaValueOf(Target) ≤ ConvergedValue, Exile, Noop)`
-/// gates the exile. Caster pays {W} for converge=1; convoke + non-white
-/// generic payments raise converge.
+/// gates the exile. Paying the {X} with one white source is converge=1;
+/// paying it with other colors raises converge.
 pub fn prismatic_ending() -> CardDefinition {
     CardDefinition {
         name: "Prismatic Ending",

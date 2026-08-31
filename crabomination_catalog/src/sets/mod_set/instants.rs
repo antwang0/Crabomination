@@ -808,13 +808,12 @@ pub fn dig_through_time() -> CardDefinition {
     }
 }
 
-/// Lose Focus — {U} Instant. Delve. Counter target spell unless its
-/// controller pays {2}.
+/// Lose Focus — {1}{U} Instant. Replicate {U}. Counter target spell unless
+/// its controller pays {2}.
 ///
-/// Delve (CR 702.66) is now wired via `Keyword::Delve`. The printed cost is
-/// just {U}, so Delve has no generic to reduce on Lose Focus itself — but
-/// the keyword is present for correctness (and for future graveyard-hate
-/// payoffs that read it). Reuses `Effect::CounterUnlessPaid`.
+/// Replicate (CR 702.55), not the Delve this shipped with — an invented
+/// keyword `audit_keyword_drift.py` found and took off. Reuses
+/// `Effect::CounterUnlessPaid`.
 pub fn lose_focus() -> CardDefinition {
     CardDefinition {
         name: "Lose Focus",
