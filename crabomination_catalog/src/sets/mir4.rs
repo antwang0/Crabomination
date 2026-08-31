@@ -313,14 +313,26 @@ pub fn kukemssa_serpent() -> CardDefinition {
 }
 
 /// Sand Golem — {5} 3/3 that comes back bigger if they made you pitch it.
+/// "…return this card from your graveyard to the battlefield **with a +1/+1
+/// counter on it** at the beginning of the next end step." The counter rides
+/// `Selector::LastMoved`, the idiom for "the thing this effect just put
+/// there" — the printed "bigger" was in the doc comment and nowhere in the
+/// tree (`audit_oracle_verbs` `counters`).
 pub fn sand_golem() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         triggered_abilities: vec![on_forced_discard(Effect::AtNextEndStep {
-            body: Box::new(Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            }),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::AddCounter {
+                    what: Selector::LastMoved,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ])),
         })],
         ..creature("Sand Golem", cost(&[generic(5)]), vec![CreatureType::Golem], 3, 3)
     }

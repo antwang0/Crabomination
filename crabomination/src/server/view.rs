@@ -2269,7 +2269,7 @@ fn project_abilities_with_granted(
             // A source-level lock (Interdict, Hand to Hand, Pithing Needle)
             // rejects every non-mana activation, so grey the row the same way
             // a failed printed gate does — clicking it would only bounce.
-            if !is_mana_ability(&a.effect)
+            if !crate::game::actions::is_mana_ability(&a.effect)
                 && let Some(st) = state
                 && (st.abilities_locked_this_turn.contains(&card.id)
                     || st.combat_spell_lock_active())
@@ -2301,7 +2301,7 @@ fn project_abilities_with_granted(
                 cost_label: ability_cost_label(a),
                 effect_label: ability_effect_text(&a.effect),
                 needs_target: cursor_needs_target(&a.effect),
-                is_mana: is_mana_ability(&a.effect),
+                is_mana: is_auto_handled_mana_ability(&a.effect),
                 once_per_turn_used: a.once_per_turn && card.once_per_turn_used.contains(&i),
                 spent: (a.exhaust && card.exhausted_abilities.contains(&i))
                     || a.max_activations_per_turn.is_some_and(|cap| {
@@ -3120,7 +3120,14 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
 /// menu (auto-tap activates them on the user's behalf). Choice-bearing mana
 /// abilities like Black Lotus (`AnyOneColor`) ARE shown in the menu so the
 /// player can pick a specific color before casting an off-color spell.
-fn is_mana_ability(effect: &Effect) -> bool {
+///
+/// **Not the engine's `is_mana_ability`, and no longer named as if it were.**
+/// This is a narrower, view-only question: CR 605.1a's rule (could add mana,
+/// doesn't target) says Black Lotus IS a mana ability, and this says it is
+/// not *auto-handled*. While the two shared a name the ability-lock gate
+/// below read the wrong one and greyed out a Black Lotus under a Pithing
+/// Needle the engine would have let through.
+fn is_auto_handled_mana_ability(effect: &Effect) -> bool {
     use crate::effect::ManaPayload;
     fn no_choice_payload(pool: &ManaPayload) -> bool {
         match pool {
@@ -3138,10 +3145,12 @@ fn is_mana_ability(effect: &Effect) -> bool {
     }
     match effect {
         Effect::AddMana { pool, .. } => no_choice_payload(pool),
-        Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability),
+        Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_auto_handled_mana_ability),
         // Conditional fixed-output mana (Ilysian Caryatid, Raucous Audience):
         // a mana source whenever both branches are no-choice mana abilities.
-        Effect::If { then, else_, .. } => is_mana_ability(then) && is_mana_ability(else_),
+        Effect::If { then, else_, .. } => {
+            is_auto_handled_mana_ability(then) && is_auto_handled_mana_ability(else_)
+        }
         _ => false,
     }
 }

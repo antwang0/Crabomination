@@ -633,7 +633,31 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   `core_rules::cr_recent16::cr_104_3c_decked_opponent_still_seen_by_the_same_resolution`
   and `::cr_800_4a_decked_players_permanents_leave_with_them`.
 
-**P2 has no open correctness entries.**
+- 🟡 **Sand Golem's "return this card with a +1/+1 counter" could not be shown
+  to fire, and the reason is unestablished.** The counter itself was missing
+  from the tree and is fixed; the trigger under it is the open half.
+  `on_forced_discard` (Mangara's Blessing, Sand Golem) is
+  `EventKind::OpponentCausedYouToDiscard` + `EventScope::SelfSource`, and
+  neither half of that reads as reachable: `event_matches_spec`'s SelfSource
+  arm is an explicit `matches!` chain over ~40 events that **does not name
+  `OpponentCausedYouToDiscard`**, and the dispatcher's graveyard walk
+  (`mod.rs`, "Also walk every player's graveyard") admits a `SelfSource`
+  trigger only for `CardCycled` / `CardMilled` / `CardDiscarded` /
+  `PutIntoGraveyard`. Pure Intentions' idiom — `CardDiscarded` + `SelfSource`
+  + `Predicate::CausedByOpponentSpellOrAbility` — is the one that demonstrably
+  works, and **swapping Sand Golem onto it did not make the trigger fire in a
+  Mind Rot test either**, so the blocker is not (only) the event kind.
+
+  What *was* established, and is the reason this is filed rather than fixed:
+  `sok3::pure_intentions_returns_opponent_forced_discards` is **not** vacuous
+  (probed: Pure Intentions reaches the graveyard, and the Forest added beside
+  the Bear is discarded and returned, `hand 2 / gy 1`), so the family works
+  for a card that was already in the graveyard before the discard. Sand Golem
+  is the case where the source **is** the discarded card, and that is the
+  distinction to test next. It is not a dead *arm*, so `audit_incomplete`
+  cannot see it and neither can `audit_oracle_verbs`.
+
+**P2 has no other open correctness entries.**
 
 ### P2 — performance
 
