@@ -193,6 +193,26 @@ five verbs (`damage` 23 -> 19, `scry` 7 -> 2, `gain_life` 16 -> 13,
 over the eight classes. ⚠ The global table makes a run take ~4.5 min instead
 of ~1.
 
+**A NINTH, AND ITS LESSON IS THE CAPS RATHER THAN THE CLASS: a `StaticEffect`
+variant is an engine primitive too.** `primitive_bodies()` reads `Effect::X =>
+{` arms under `game/effects/`; a static's handling is not under that root
+(Ironscale Hydra's whole body is
+`StaticEffect::PreventCombatDamageToSelfAndGrow` and the "+1/+1 counter" it
+prints is `add_counters` in `combat.rs`). `static_bodies()` attributes a
+handler function's tokens to every static it matches on.
+
+**It is worth exactly one row, and the interesting half is why it is not worth
+twenty-four.** Attributing whole enclosing bodies with no caps read 182 -> 158
+— and **22 of those 24 removals were real findings**, the ten Talismans among
+them. Two static arms sit in `run_effect` (1.4 MB) and four in
+`gather_continuous_effects_inner` (185 KB), so an uncapped pass gave
+`GrantKeyword` 502 tokens and `ModularBonusCounters` 1,684 and handed every
+card naming a common static every verb in the program. Capped at 8,000 bytes
+of body / 4 static arms / no `server/` (the bot matches on statics to *score*
+them, which is not an implementation of one), it removes Ironscale Hydra and
+nothing else. **A filter fix that deletes rows in bulk is a filter deletion
+until you have read the rows it deleted.**
+
 **`damage` worked, and it found a bug class rather than a card: 23 rows -> 6,
 and every one of the 13 that went was "deals 1 damage to you" shipped as
 `Effect::LoseLife`.** CR 120.3 — damage is not life loss: a shield stops one
