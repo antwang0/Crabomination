@@ -16,7 +16,7 @@ not a semantics one — "draws a card" against `Effect::Draw` — so it cannot s
 a card that draws the wrong number or draws for the wrong player. It can see a
 card that does not draw at all.
 
-**Standing at 163 rows over 10,949 cards with oracle text (2026-08-31), and
+**Standing at 196 rows over 17,028 cards with oracle text (2026-08-31), and
 the rate of real findings is high.** Six classes were spot-checked in the
 source: Codespell Cleric is a body-only stub (its whole ETB counter ability is
 absent), Fountain of Renewal drops its sac-for-a-card, Baral drops the trigger
@@ -53,6 +53,15 @@ because the engine spells some verbs as a `GameState` flag rather than an
 effect. **A destination is not an `Effect` variant either**: `Effect::Move {
 to: ZoneDest::Hand(..) }` recorded only `Move`, so `DEST` now collects
 `ZoneDest::` / `Zone::` / `CounteredSpellZone::` names in both tables.
+
+**AND MOST OFTEN IT SPELLS THE VERB AS A `GameState` METHOD.** `Effect::Parley`'s
+arm ends in `self.draw_one(p, events)` for every seat and names no `Effect::`
+variant at all, so all five Parley cards read as missing the draw their oracle
+prints. Every `self.<method>(` an arm calls is now attributed to the variant,
+and the verb table names the lowercase engine spellings it cares about
+(`draw_one`, `gain_life`, `deal_damage`, `destroy_target`, …). Worth 15 rows
+across five verbs: `draw` 32 -> 23, `gain_life` 30 -> 27, `damage` 25 -> 23,
+`untap` 3 -> 2.
 
 **Worked example of what that is worth: `return_to_hand` went 31 rows -> 5,
 and all five of the survivors are real** (2026-08-31). The 26 that went were
@@ -107,23 +116,23 @@ BASE = Path(__file__).resolve().parent.parent / "crabomination_base" / "src"
 VERBS = {
     "draw": (
         r"\bdraws? (?:a card|\w+ cards|that many cards|cards equal)",
-        r"Draw|Miracle",
+        r"Draw|Miracle|draw_one|draw_cards",
     ),
     "gain_life": (
         r"\bgains? (?:\d+|X|that much|twice) life\b",
-        r"GainLife|Drain|SetLife|Lifelink|LifeGain",
+        r"GainLife|Drain|SetLife|Lifelink|LifeGain|gain_life",
     ),
     "lose_life": (
         r"\bloses? (?:\d+|X|that much) life\b",
-        r"LoseLife|LoseHalfLife|Drain|SetLife|PayLife|DealDamage",
+        r"LoseLife|LoseHalfLife|Drain|SetLife|PayLife|DealDamage|lose_life",
     ),
     "damage": (
         r"\bdeals \d+ damage\b|\bdeals X damage\b|\bdeals that much damage\b",
-        r"Damage|Fight",
+        r"Damage|Fight|deal_damage",
     ),
     "destroy": (
         r"\bdestroys? (?:target|all|each|up to|that)\b",
-        r"Destroy|Sacrifice|Exile",
+        r"Destroy|Sacrifice|Exile|destroy_permanent|destroy_target",
     ),
     "counter_spell": (
         r"\bcounters? (?:target|that) spell\b",
@@ -131,7 +140,7 @@ VERBS = {
     ),
     "token": (
         r"\bcreates? (?:a|an|two|three|four|five|X|\d+)\b[^.]{0,80}\btoken",
-        r"Token",
+        r"Token|create_token",
     ),
     "scry": (r"\bscry \d", r"Scry"),
     "surveil": (r"\bsurveil \d", r"Surveil"),
@@ -180,7 +189,7 @@ VERBS = {
     ),
     "untap": (
         r"\buntaps? (?:target|all|each|up to)\b",
-        r"Untap",
+        r"Untap|untap_permanent",
     ),
 }
 
@@ -232,6 +241,16 @@ def primitive_bodies():
                 # than an effect (`return_resolving_spell_to_hand`), so the
                 # bare identifiers count too.
                 | set(re.findall(r"\b(?:self\.)?(\w*(?:to_hand|to_graveyard)\w*)\b", body))
+                # **And most of them it spells as a `GameState` METHOD**, which
+                # is the same blindness one step further out: `Effect::Parley`'s
+                # arm ends in `self.draw_one(p, events)` for every seat and
+                # names no `Effect::` variant at all, so all five Parley cards
+                # read as missing the draw their oracle prints. Take every
+                # method the arm calls; the verb table's own regexes decide
+                # which of them mean anything, and nearly all of those are
+                # capitalised so a lowercase method name is inert unless a
+                # verb asks for it by name.
+                | set(re.findall(r"\bself\.(\w+)\s*\(", body))
             )
     return out
 
