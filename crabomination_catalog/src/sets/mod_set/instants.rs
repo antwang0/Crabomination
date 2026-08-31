@@ -874,7 +874,7 @@ pub fn memory_lapse() -> CardDefinition {
     }
 }
 
-/// Vines of Vastwood — {G} Instant, Kicker {G}{G}. Target creature gains
+/// Vines of Vastwood — {G} Instant, Kicker {G}. Target creature gains
 /// hexproof until end of turn (can't be targeted by opponents); if kicked,
 /// it also gets +4/+4 EOT (CR 702.32).
 pub fn vines_of_vastwood() -> CardDefinition {
@@ -882,7 +882,7 @@ pub fn vines_of_vastwood() -> CardDefinition {
         name: "Vines of Vastwood",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Kicker(cost(&[g(), g()]))],
+        keywords: vec![Keyword::Kicker(cost(&[g()]))],
         effect: Effect::Seq(vec![
             Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),

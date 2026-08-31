@@ -10667,7 +10667,8 @@ mod recent8 {
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let staff = g.add_card_to_battlefield(0, catalog::glider_staff());
-        g.players[0].mana_pool.add_colorless(1);
+        // Equip {2}; it shipped at {1} (`audit_keyword_value.py`).
+        g.players[0].mana_pool.add_colorless(2);
         g.step = crabomination::game::TurnStep::PreCombatMain;
         g.perform_action(GameAction::Equip { equipment: staff, target: bear }).expect("equip");
         assert!(g.permanent_has_keyword(bear, &Keyword::Flying), "equipped creature flies");

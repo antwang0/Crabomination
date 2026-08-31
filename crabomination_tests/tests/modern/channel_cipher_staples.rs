@@ -146,8 +146,9 @@ fn restless_spire_animates_first_strike() {
 }
 
 /// Morph: Ainok Survivalist is cast face down for {3} as a 2/2, then turned up
-/// for its Megamorph {G} — entering a +1/+1 counter (3/2) and firing its
-/// turn-face-up trigger to destroy an opponent's artifact.
+/// for its Megamorph {1}{G} — entering a +1/+1 counter (3/2) and firing its
+/// turn-face-up trigger to destroy an opponent's artifact. The megamorph cost
+/// shipped as {G}, a mana light (`audit_keyword_value.py`).
 #[test]
 fn ainok_survivalist_morph_cast_and_megamorph_turn_up() {
     let mut g = two_player_game();
@@ -161,9 +162,14 @@ fn ainok_survivalist_morph_cast_and_megamorph_turn_up() {
     let fd = g.battlefield_find(id).expect("on battlefield");
     assert!(fd.face_down, "entered face down");
     assert_eq!((fd.power(), fd.toughness()), (2, 2), "face-down 2/2");
-    // Turn it up via Megamorph {G}.
+    // Turn it up via Megamorph {1}{G}; one green alone must not do it.
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {G}");
+    assert!(
+        g.perform_action(GameAction::TurnFaceUp { card_id: id }).is_err(),
+        "megamorph is one green plus one generic",
+    );
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for one green and one generic");
     drain_stack(&mut g);
     let up = g.battlefield_find(id).expect("still here");
     assert!(!up.face_down);

@@ -1009,7 +1009,7 @@ pub fn rangers_firebrand() -> CardDefinition {
 
 /// Andúril, Flame of the West — {3} Legendary Equipment. Equipped creature gets
 /// +3/+1. Whenever it attacks, create two tapped 1/1 white Spirit tokens with
-/// flying. (The legendary-equipped vigilance upgrade is dropped — minor.)
+/// flying. Equip {2}. (The legendary-equipped vigilance upgrade is dropped — minor.)
 pub fn anduril_flame_of_the_west() -> CardDefinition {
     use crate::card::{ArtifactSubtype, EquipBonus, TokenDefinition};
     use crate::mana::Color;
@@ -1036,7 +1036,7 @@ pub fn anduril_flame_of_the_west() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 3,
             toughness: 1,

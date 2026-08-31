@@ -1023,21 +1023,21 @@ pub fn magmatic_sinkhole() -> CardDefinition {
 /// Commander 2019). "Return target permanent card with mana value 3 or
 /// less from your graveyard to the battlefield. If this spell was cast
 /// from a graveyard, copy it twice. You may choose new targets for the
-/// copies. / Flashback {5}{W}."
+/// copies. / Flashback {4}{W}."
 ///
 /// ✅ Body: `Move target permanent card (MV ≤ 3, gy → battlefield)`
 /// with the "if cast from a graveyard, copy twice" rider wired via the
 /// `Predicate::CastFromGraveyard` primitive (push: modern_decks).
-/// Auto-target picks the highest-MV qualifying card; the copy-twice
+/// Auto-target picks the highest-MV qualifying card; the copy
 /// branch fires only when the spell was cast from the graveyard (i.e.
 /// via its Flashback cost), in which case 2 additional copies of the
-/// spell go on the stack. Flashback {5}{W} wired via `Keyword::Flashback`.
+/// spell go on the stack. Flashback {4}{W} wired via `Keyword::Flashback`.
 pub fn sevinnes_reclamation() -> CardDefinition {
     CardDefinition {
         name: "Sevinne's Reclamation",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::Flashback(cost(&[generic(5), w()]))],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), w()]))],
         effect: Effect::Seq(vec![
             // Mainline: reanimate a ≤3-MV permanent card from your gy.
             Effect::Move {
@@ -1050,14 +1050,17 @@ pub fn sevinnes_reclamation() -> CardDefinition {
                     tapped: false,
                 },
             },
-            // "If this spell was cast from a graveyard, copy it twice."
+            // "If this spell was cast from a graveyard, you may copy this
+            // spell and may choose a new target for the copy." — **one**
+            // copy. It shipped as two, which is the Commander 2019 printing
+            // nobody plays; the Oracle text is one.
             // (Predicate::CastFromGraveyard reads `EffectContext.cast_from_hand`,
-            // which is false for Flashback casts → graveyard cast → copy twice.)
+            // which is false for Flashback casts → graveyard cast → copy.)
             Effect::If {
                 cond: Predicate::CastFromGraveyard,
                 then: Box::new(Effect::CopySpell {
                     what: Selector::This,
-                    count: Value::Const(2),
+                    count: Value::Const(1),
                 }),
                 else_: Box::new(Effect::Noop),
             },

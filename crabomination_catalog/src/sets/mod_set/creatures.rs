@@ -1462,7 +1462,7 @@ pub fn lilianas_specter() -> CardDefinition {
     }
 }
 
-/// Bone Shredder — {2}{B}, 1/1 Flying. Echo {1}{B}. "When this enters,
+/// Bone Shredder — {2}{B}, 1/1 Flying. Echo {2}{B}. "When this enters,
 /// destroy target nonartifact, nonblack creature." (UDS)
 pub fn bone_shredder() -> CardDefinition {
     CardDefinition {
@@ -1475,7 +1475,7 @@ pub fn bone_shredder() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Flying, Keyword::Echo(cost(&[generic(1), b()]))],
+        keywords: vec![Keyword::Flying, Keyword::Echo(cost(&[generic(2), b()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Destroy {
@@ -5548,7 +5548,7 @@ pub fn trygon_predator() -> CardDefinition {
     }
 }
 
-/// Ainok Survivalist — {1}{G} 2/1 Human Warrior. Megamorph {G} (CR 702.36e).
+/// Ainok Survivalist — {1}{G} 2/1 Dog Shaman. Megamorph {1}{G} (CR 702.36e).
 /// When it's turned face up, destroy target artifact or enchantment an opponent
 /// controls.
 pub fn ainok_survivalist() -> CardDefinition {
@@ -5564,7 +5564,7 @@ pub fn ainok_survivalist() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Megamorph(cost(&[g()]))],
+        keywords: vec![Keyword::Megamorph(cost(&[generic(1), g()]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
             effect: Effect::Destroy {

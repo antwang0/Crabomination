@@ -508,7 +508,10 @@ fn stingerback_terror_shrinks_with_your_hand() {
 #[test]
 fn casualty_cut_of_the_profits_copies_spell() {
     let mut g = two_player_game();
-    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 >= 1
+    // Casualty **3**, so the fodder must be power 3 or greater. It shipped
+    // as Casualty 1 (`audit_keyword_value.py`), which a Bear satisfied.
+    let weak = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 — too small
+    let fodder = g.add_card_to_battlefield(0, catalog::hill_giant()); // power 3
     for _ in 0..6 { g.add_card_to_library(0, catalog::mountain()); }
     let id = g.add_card_to_hand(0, catalog::cut_of_the_profits());
     // {X=2}{B}{B}.
@@ -516,6 +519,13 @@ fn casualty_cut_of_the_profits_copies_spell() {
     g.players[0].mana_pool.add_colorless(2);
     let life = g.players[0].life;
     let hand_before = g.players[0].hand.len();
+    assert!(
+        g.perform_action(GameAction::CastSpellCasualty {
+            card_id: id, sacrifice: weak, target: None,
+            additional_targets: vec![], mode: None, x_value: Some(2),
+        }).is_err(),
+        "a power-2 creature does not pay Casualty 3",
+    );
     g.perform_action(GameAction::CastSpellCasualty {
         card_id: id, sacrifice: fodder, target: None,
         additional_targets: vec![], mode: None, x_value: Some(2),

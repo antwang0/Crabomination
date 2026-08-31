@@ -127,9 +127,16 @@ fn trusty_machete_grants_plus_two_plus_one() {
     let mut g = two_player_game();
     let eq = g.add_card_to_battlefield(0, catalog::trusty_machete());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Equip {2}, not {1} — the shipped cost was a mana light
+    // (`audit_keyword_value.py`), so one colorless must not be enough.
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(
+        g.perform_action(GameAction::Equip { equipment: eq, target: bear }).is_err(),
+        "equip costs two generic",
+    );
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::Equip { equipment: eq, target: bear })
-        .expect("equip for {1}");
+        .expect("equip for two generic");
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (4, 3), "2/2 + 2/1");
 }

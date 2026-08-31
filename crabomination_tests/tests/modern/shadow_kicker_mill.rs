@@ -280,8 +280,8 @@ fn aven_riftwatcher_gains_life_on_entry_and_exit() {
     assert_eq!(g.players[0].life, life + 2, "ETB gain");
     assert_eq!(
         g.battlefield_find(aven).unwrap().counter_count(crabomination::card::CounterType::Time),
-        2,
-        "vanishing 2"
+        3,
+        "vanishing 3 — it shipped as 2 (`audit_keyword_value.py`)"
     );
     let mut events = Vec::new();
     g.sacrifice_one(aven, 0, &mut events);

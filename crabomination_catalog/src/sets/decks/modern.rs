@@ -21629,13 +21629,13 @@ pub fn vault_plunderer() -> CardDefinition {
 }
 
 /// Cut of the Profits — {X}{B}{B} Sorcery. Draw X cards and lose X life.
-/// Casualty 1 (CR 702.153): sacrificing a power-1+ creature copies the spell.
+/// Casualty 3 (CR 702.153): sacrificing a power-3+ creature copies the spell.
 pub fn cut_of_the_profits() -> CardDefinition {
     CardDefinition {
         name: "Cut of the Profits",
         cost: cost(&[x(), b(), b()]),
         card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::Casualty(1)],
+        keywords: vec![Keyword::Casualty(3)],
         effect: Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -23713,7 +23713,7 @@ pub fn penumbra_wurm() -> CardDefinition {
 }
 
 /// Trusty Machete — {1} Artifact — Equipment. "Equipped creature gets +2/+1.
-/// Equip {1}."
+/// Equip {2}."
 pub fn trusty_machete() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -23724,7 +23724,7 @@ pub fn trusty_machete() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 1,
@@ -23738,7 +23738,7 @@ pub fn trusty_machete() -> CardDefinition {
 }
 
 /// Darksteel Axe — {1} Artifact — Equipment. Indestructible. "Equipped
-/// creature gets +2/+0. Equip {1}."
+/// creature gets +2/+0. Equip {2}."
 pub fn darksteel_axe() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -23749,7 +23749,7 @@ pub fn darksteel_axe() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        keywords: vec![Keyword::Indestructible, Keyword::Equip(cost(&[generic(1)]))],
+        keywords: vec![Keyword::Indestructible, Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 0,
@@ -50533,7 +50533,7 @@ pub fn chord_of_calling() -> CardDefinition {
 
 /// Shadowspear — {1} Legendary Equipment. +1/+1, trample, lifelink; {1}:
 /// creatures your opponents control lose hexproof and indestructible until
-/// end of turn. Equip {3}.
+/// end of turn. Equip {2}.
 pub fn shadowspear() -> CardDefinition {
     use crate::card::EquipBonus;
     let opp_creatures = || {
@@ -50550,7 +50550,7 @@ pub fn shadowspear() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
@@ -51238,7 +51238,7 @@ pub fn jin_gitaxias_core_augur() -> CardDefinition {
     }
 }
 
-/// Aven Riftwatcher — {2}{W} 2/3 Bird Rebel Soldier. Flying, Vanishing 2;
+/// Aven Riftwatcher — {2}{W} 2/3 Bird Rebel Soldier. Flying, Vanishing 3;
 /// gains you 2 life on entry and on leaving the battlefield.
 pub fn aven_riftwatcher() -> CardDefinition {
     use crate::effect::shortcut::etb;
@@ -51260,7 +51260,7 @@ pub fn aven_riftwatcher() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        keywords: vec![Keyword::Flying, Keyword::Vanishing(2)],
+        keywords: vec![Keyword::Flying, Keyword::Vanishing(3)],
         triggered_abilities: vec![
             etb(gain()),
             TriggeredAbility {

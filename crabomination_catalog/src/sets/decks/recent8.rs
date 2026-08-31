@@ -386,7 +386,7 @@ pub fn whirlwind_technique() -> CardDefinition {
 }
 
 /// Glider Staff — {2}{W} Equipment. ETB airbend up to one target creature.
-/// Equipped creature gets +1/+1 and has flying. Equip {1}.
+/// Equipped creature gets +1/+1 and has flying. Equip {2}.
 pub fn glider_staff() -> CardDefinition {
     CardDefinition {
         name: "Glider Staff",
@@ -396,7 +396,7 @@ pub fn glider_staff() -> CardDefinition {
             artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
