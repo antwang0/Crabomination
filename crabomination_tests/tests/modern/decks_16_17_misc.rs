@@ -296,8 +296,11 @@ fn bloodbraid_elf_has_haste_and_cascades() {
         "Bloodbraid Elf carries a cascade trigger");
 }
 
+/// Oko's +2 is "Create a Food token", not "gain 3 life" — the Food's own
+/// sacrifice ability is what gains the life, and only if it is spent.
+/// Shipped as a bare `GainLife 3` until the `token` oracle-verb class.
 #[test]
-fn oko_plus_two_gains_three_life() {
+fn oko_plus_two_creates_a_food_token() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::oko_thief_of_crowns());
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -320,7 +323,33 @@ fn oko_plus_two_gains_three_life() {
     }).expect("+2 activation");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, life_before + 3, "Oko +2 gains 3 life");
+    let food = g.battlefield.iter().find(|c| c.definition.name == "Food")
+        .expect("Oko +2 mints a Food token");
+    assert!(food.definition.subtypes.artifact_subtypes
+        .contains(&crabomination::card::ArtifactSubtype::Food), "it is a Food");
+    assert_eq!(g.players[0].life, life_before, "the token is not the life — sacrificing the Food is what gains it");
+}
+
+/// Oko's −5 is an *exchange* of control, not a one-way steal, and the
+/// opponent's side is capped at power 3. Shipped as a plain `GainControl` of
+/// any permanent until the `token` oracle-verb class re-read the card.
+#[test]
+fn oko_minus_five_exchanges_control_both_ways() {
+    let mut g = two_player_game();
+    let oko = g.add_card_to_battlefield(0, catalog::oko_thief_of_crowns());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(oko).unwrap().counters.insert(
+        crabomination::card::CounterType::Loyalty, 5);
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        x_value: None,
+        card_id: oko, ability_index: 2, target: Some(Target::Permanent(mine)),
+    }).expect("-5 activation");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1, "mine went across");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "theirs came back");
 }
 
 #[test]
@@ -1444,6 +1473,30 @@ fn inquisitive_puppet_etb_scrys_one() {
     let puppet = g.battlefield.iter().find(|c| c.id == id).expect("puppet on bf");
     assert_eq!(puppet.definition.power, 0);
     assert_eq!(puppet.definition.toughness, 2);
+}
+
+/// "Exile this creature: Create a 1/1 white Human creature token." The whole
+/// activated ability was absent until the `token` oracle-verb class; the card
+/// shipped as an ETB scry and a 0/2 body.
+#[test]
+fn inquisitive_puppet_exiles_itself_for_a_human() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inquisitive_puppet());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("exile-self activates with no mana and no tap");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(id).is_none(), "the Puppet exiled itself as the cost");
+    let human = g.battlefield.iter().find(|c| c.definition.name == "Human")
+        .expect("a Human token");
+    assert_eq!((human.definition.power, human.definition.toughness), (1, 1));
 }
 
 

@@ -182,7 +182,7 @@ fn cr_702_142_boast_rejected_before_attacking() {
     let id = g.add_card_to_battlefield(0, catalog::dragonkin_berserker());
     g.clear_sickness(id);
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(4);
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     });
@@ -199,15 +199,19 @@ fn cr_702_142_boast_succeeds_after_attacking() {
         attacker: id, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    // Now boast: {3}{R} put a +1/+1 counter on it.
+    // Now boast: {4}{R} create a 5/5 red Dragon with flying. (Shipped as a
+    // +1/+1 counter at {3}{R} until the `token` oracle-verb class.)
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("Boast activatable after attacking");
     drain_stack(&mut g);
-    let s = g.battlefield_find(id).unwrap();
-    assert_eq!((s.power(), s.toughness()), (3, 3), "Boast adds a +1/+1 counter");
+    let dragon = g.battlefield.iter().find(|c| c.definition.name == "Dragon")
+        .expect("Boast mints a Dragon");
+    assert_eq!((dragon.definition.power, dragon.definition.toughness), (5, 5));
+    assert!(dragon.definition.keywords.contains(&crabomination::card::Keyword::Flying),
+        "the Dragon flies");
 }
 
 #[test]
@@ -216,7 +220,7 @@ fn cr_702_142_boast_only_once_per_turn() {
     let id = g.add_card_to_battlefield(0, catalog::dragonkin_berserker());
     g.battlefield_find_mut(id).unwrap().attacked_this_turn = true;
     g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(6);
+    g.players[0].mana_pool.add_colorless(8);
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("first boast");

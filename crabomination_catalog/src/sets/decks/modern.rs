@@ -12863,9 +12863,10 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: 2,
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(3),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(crabomination_base::tokens::food_token()),
                 },
             },
             LoyaltyAbility {
@@ -12884,10 +12885,19 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
             LoyaltyAbility {
                 x_cost: false,
                 loyalty_cost: -5,
-                effect: Effect::GainControl {
-                    what: target_filtered(SelectionRequirement::Permanent),
-                    to: None,
-                    duration: Duration::Permanent,
+                effect: Effect::ExchangeControl {
+                    a: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    b: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent)
+                            .and(SelectionRequirement::PowerAtMost(3)),
+                    },
                 },
             },
         ],
@@ -22800,6 +22810,26 @@ pub fn inquisitive_puppet() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::Const(1),
             },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            exile_self_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(TokenDefinition {
+                    name: "Human".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Human],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

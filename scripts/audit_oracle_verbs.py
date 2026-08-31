@@ -161,7 +161,13 @@ VERBS = {
     ),
     "token": (
         r"\bcreates? (?:a|an|two|three|four|five|X|\d+)\b[^.]{0,80}\btoken",
-        r"Token|create_token",
+        # `Mints` is the tenth false class and it is one variant wide: the
+        # engine spells "creates a token" as `Token` everywhere except
+        # `StaticEffect::ClueFoodTreasureMintsOneOfEach` (Academy Manufactor),
+        # whose handler is over `HANDLER_BYTES` so `static_bodies()` cannot
+        # reach it. Widen the *name* side by the one word rather than the caps
+        # — an unbounded `static_bodies()` deletes 23 real rows.
+        r"Token|create_token|Mints",
     ),
     "scry": (r"\bscry \d", r"Scry"),
     "surveil": (r"\bsurveil \d", r"Surveil"),

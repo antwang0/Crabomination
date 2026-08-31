@@ -123,6 +123,39 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 # Open
 
+## Oracle-verb audit — the `token` class, and the tenth false class
+
+**`token` 21 -> 17, five of six rows read in the source were real, and the
+sixth is a one-word filter fix.** Six read against the oracle (not the body —
+the doc comment lies as often as it tells the truth):
+
+| Card | What the tree shipped | Verdict |
+|---|---|---|
+| Academy Manufactor | `StaticEffect::ClueFoodTreasureMintsOneOfEach` | **false** — the tenth class |
+| Oko, Thief of Crowns | `+2` was `GainLife 3`; `−5` was a one-way `GainControl` of any permanent | **real, two defects** |
+| Inquisitive Puppet | the whole "Exile this creature: create a 1/1 white Human" ability absent | **real** |
+| Dragonkin Berserker | Boast was `{3}{R}` + a `+1/+1` counter for a printed `{4}{R}` + a 5/5 flying Dragon | **real, two defects** |
+| Complaints Clerk | "whenever you roll a 1" — no die-roll event in the engine | real, wants a primitive |
+| Magmatic Galleon | the excess-noncombat-damage Treasure trigger absent | real, wants a primitive |
+
+**The tenth false class: a `StaticEffect` variant can name the verb in its own
+NAME while its handler is over `HANDLER_BYTES`.** `static_bodies()` attributes
+the handler's tokens and caps the body size, which is right — an uncapped
+version deletes 23 real rows — so the fix is the *name* side, one word wide:
+`Mints` joins `Token|create_token`. It is the only variant in the enum that
+spells minting without the word "Token".
+
+**Fixed with a test apiece** (`613f20dc`+): Oko's Food token and its real
+two-way exchange (the `−5` targets an artifact-or-creature you control and a
+power-3-or-less creature an opponent controls), the Puppet's exile-self token
+ability, and the Berserker's boast. ⚠ **The three change bot play on
+`cube`/`sealed`** — an Ir reading across that commit is not comparable.
+
+**Still open in the class and both want an engine primitive, not a card fix**:
+Complaints Clerk's "whenever you roll a 1" (no die-roll event) and Magmatic
+Galleon's "creatures your opponents control are dealt excess noncombat damage"
+(the engine tracks `excess_damage_this_resolution` but has no event for it).
+
 ## Oracle-verb audit — the `draw` and `counters` classes
 
 `scripts/audit_oracle_verbs.py` asks the cheapest question that catches a

@@ -236,7 +236,6 @@ Vicious Rivalry.
 - **Delve** → cast at full cost (Tasigur, Magmatic Sinkhole).
 - **Splice onto Arcane** → omitted (Desperate Ritual).
 - **Awaken / sac-Spawn alt-cast** → omitted (Birthing Hulk, Hand of Emrakul, OGW Eldrazi).
-- **Boast payoff** → omitted (Dragonkin Berserker).
 - **Channel land cost-reductions / land-search** → dropped (decks/lands.rs cluster).
 - **Free-with-commander alt-cost / color-identity** → dropped (Fierce Guardianship, Deflecting Swat, Command Tower, Jeska's Will).
 - **Wish (cast from outside the game)** → omitted (Spawnsire of Ulamog).
@@ -459,7 +458,6 @@ Note: Silverquill Penkeeper/Wordweaver and Witherbloom Necromancer above are
 ### Verified-but-overrated (real gaps, but 1v1-equivalent or strictly-better — MED, not HIGH)
 | Card | Location | Note |
 |---|---|---|
-| Oko, Thief of Crowns ✓ | modern.rs:12238 | +2 Food→gain 3 life; −5 exchange→one-way gain control |
 | Spell Queller ✓ | modern.rs:15114 | counters instead of exile-until-LTB (opponent can't recast) |
 | Generous Gift ✓ | modern.rs:8226 | victim gets no 3/3 Elephant (strictly stronger) |
 

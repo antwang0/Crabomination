@@ -5,7 +5,7 @@
 //! used once each turn and only if the creature attacked this turn.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, Selector, Subtypes, Value,
+    CardDefinition, CardType, CreatureType, Effect, Subtypes, Value,
 };
 use crate::effect::shortcut::boast;
 use crate::mana::{cost, generic, r};
@@ -25,11 +25,23 @@ pub fn dragonkin_berserker() -> CardDefinition {
         power: 2,
         toughness: 2,
         activated_abilities: vec![boast(
-            cost(&[generic(3), r()]),
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+            cost(&[generic(4), r()]),
+            Effect::CreateToken {
+                who: crate::effect::PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(crate::card::TokenDefinition {
+                    name: "Dragon".into(),
+                    power: 5,
+                    toughness: 5,
+                    keywords: vec![crate::card::Keyword::Flying],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Dragon],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
             },
         )],
         ..Default::default()
