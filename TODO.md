@@ -62,10 +62,13 @@ sixty-seventh pass, so don't re-take that.
    degradation is a return, not a `debug_assert!` — an assertion puts it out of the suite's
    reach, which is the only place its regression test can live.
 8. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
-   class. untap / scry / surveil CLOSED; next `draw` (38) and `counters` (33), unexamined.
-   **Inscription of Insight and All-Out Assault are primitive jobs.** `audit_incomplete`,
-   `audit_stubs` and `audit_variant_coverage` are all clean bar two dead primitives, both
-   triaged in the script's own docstring.
+   class — **and check a row OUT in the source too**: Territorial Kavu was dismissed off
+   the audit output and turned out to share only a name and a cost with the printed card.
+   untap / scry / surveil CLOSED. `draw`: first three rows done (Baral's loot, Rielle's
+   first-discard draw, the Kavu rewrite + `DynamicPt::DomainCount`), **34 left**;
+   `counters` (33) unexamined. **Inscription of Insight and All-Out Assault are primitive
+   jobs.** `audit_incomplete`, `audit_stubs` and `audit_variant_coverage` are all clean
+   bar two dead primitives, both triaged in the script's own docstring.
 9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
