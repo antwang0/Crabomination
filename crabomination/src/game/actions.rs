@@ -249,6 +249,13 @@ pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
             Effect::AddMana { .. } | Effect::Noop => true,
             // Incidental you-only life gain (Altar of the Pantheon).
             Effect::GainLife { who: crate::effect::Selector::You, .. } => true,
+            // Incidental you-only draw (Sungrass Egg's "Add {G}{W}. Draw a
+            // card."). CR 605.1a has no exclusion for it: the ability could
+            // add mana, targets nothing and is not a loyalty ability, so it
+            // is a mana ability and must resolve during cost payment. Read as
+            // a non-mana ability it would go on the stack and the mana would
+            // arrive too late to pay for the spell it was tapped for.
+            Effect::Draw { who: crate::effect::Selector::You, .. } => true,
             // Incidental non-targeting self-counter (Twitching Doll's "put a
             // nest counter on this creature") — CR 605.1a rider, no stack use.
             Effect::AddCounter { what: crate::effect::Selector::This, .. } => true,

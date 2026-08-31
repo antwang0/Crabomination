@@ -4284,12 +4284,17 @@ fn elvish_visionary_draws_on_etb() {
 
 // ── Sungrass Egg ───────────────────────────────────────────────────────────
 
+/// Sungrass Egg's printed ability: "{2}, {T}, Sacrifice this artifact: Add
+/// {G}{W}. Draw a card." The draw is a CR 605.1a rider on a mana ability, not
+/// a second ability, so it resolves with the mana rather than on the stack.
 #[test]
-fn sungrass_egg_sac_adds_two_mana_of_one_color() {
+fn sungrass_egg_sac_adds_gw_and_draws() {
     let mut g = two_player_game();
     let egg = g.add_card_to_battlefield(0, catalog::sungrass_egg());
     g.clear_sickness(egg);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: egg,
@@ -4297,15 +4302,11 @@ fn sungrass_egg_sac_adds_two_mana_of_one_color() {
         target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Egg activation");
     drain_stack(&mut g);
 
-    // Egg sacrificed off the battlefield.
     assert!(!g.battlefield.iter().any(|c| c.id == egg), "egg sacrificed");
-    // 2 mana of any one color in pool (auto-decider picks white).
-    let total = g.players[0].mana_pool.amount(Color::White)
-        + g.players[0].mana_pool.amount(Color::Blue)
-        + g.players[0].mana_pool.amount(Color::Black)
-        + g.players[0].mana_pool.amount(Color::Red)
-        + g.players[0].mana_pool.amount(Color::Green);
-    assert_eq!(total, 2, "added 2 colored mana of one color");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added {{G}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1, "added {{W}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0, "no other color");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
 }
 
 // ── Mascot Summoning ───────────────────────────────────────────────────────

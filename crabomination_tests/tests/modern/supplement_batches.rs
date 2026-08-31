@@ -2059,9 +2059,11 @@ fn ichorid_stays_in_graveyard_without_black_fodder() {
         "Ichorid still sits in p0's graveyard");
 }
 
-#[test]
-fn silversmote_ghoul_returns_from_graveyard_on_lifegain() {
-    let mut g = two_player_game();
+/// Silversmote Ghoul (MID): "At the beginning of your end step, if you gained
+/// 3 or more life this turn, return this card from your graveyard to the
+/// battlefield **tapped**." It shipped returning on any life gain, at once and
+/// untapped; this pins all three halves of the printed trigger.
+fn ghoul_in_graveyard(g: &mut crabomination::game::GameState) -> crabomination::card::CardId {
     let id = g.add_card_to_library(0, catalog::silversmote_ghoul());
     let card = g.players[0]
         .library
@@ -2070,19 +2072,53 @@ fn silversmote_ghoul_returns_from_graveyard_on_lifegain() {
         .map(|pos| g.players[0].library.remove(pos))
         .unwrap();
     g.players[0].graveyard.push(card);
+    id
+}
 
-    // Cast Faithful Mending (mode 2 = Discard 0) to gain 2 life.
-    let mending = g.add_card_to_hand(0, catalog::faithful_mending());
-    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: mending, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Faithful Mending castable for {W}{U}");
+#[test]
+fn silversmote_ghoul_returns_tapped_at_your_end_step_after_three_life() {
+    let mut g = two_player_game();
+    let id = ghoul_in_graveyard(&mut g);
+    g.players[0].life_gained_this_turn = 3;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crabomination::TurnStep::End);
     drain_stack(&mut g);
 
-    assert!(g.battlefield.iter().any(|c| c.id == id),
-        "Silversmote Ghoul should return when its controller gains life");
+    let back = g.battlefield.iter().find(|c| c.id == id).expect("Ghoul returned");
+    assert!(back.tapped, "CR: it returns tapped");
+}
+
+#[test]
+fn silversmote_ghoul_stays_in_the_graveyard_under_three_life() {
+    let mut g = two_player_game();
+    let id = ghoul_in_graveyard(&mut g);
+    g.players[0].life_gained_this_turn = 2;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crabomination::TurnStep::End);
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "2 life is not 3");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "still in the graveyard");
+}
+
+#[test]
+fn silversmote_ghoul_sacrifices_itself_to_draw() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::silversmote_ghoul());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("{1}{B}, Sacrifice this creature: Draw a card");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
 }
 
 #[test]

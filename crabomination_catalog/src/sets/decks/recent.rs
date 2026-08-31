@@ -7072,6 +7072,19 @@ pub fn lunar_convocation() -> CardDefinition {
                 },
             },
         ],
+        // "{1}{B}, Pay 2 life: Draw a card." The third ability, absent until
+        // `audit_oracle_verbs.py` named the verb; it is also what makes the
+        // two end-step triggers reachable, since the life loss it pays is the
+        // Bat trigger's own condition.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            life_cost: 2,
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

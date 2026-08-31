@@ -1965,17 +1965,17 @@ pub fn elvish_visionary() -> CardDefinition {
     }
 }
 
-// ── Sungrass Egg (synthesised STX Quandrix flavor) ─────────────────────────
+// ── Sungrass Egg ───────────────────────────────────────────────────────────
 
-/// Sungrass Egg — {1} Artifact (synthesised STX Quandrix flavor).
-/// "{1}, {T}, Sacrifice this artifact: Add two mana of any one color."
+/// Sungrass Egg — {1} Artifact. "{2}, {T}, Sacrifice this artifact:
+/// Add {G}{W}. Draw a card." (BLB)
 ///
-/// Push (modern_decks, NEW, `stx::extras`): A two-mana ramp rock that
-/// trades itself for a ritual on a key turn — same template as Sky
-/// Diamond at a more flexible payoff. Wired via a `sac_cost: true`
-/// activation with `Effect::AddMana { pool: AnyOneColor(2) }`. Tests:
-/// `sungrass_egg_sac_adds_two_mana_of_one_color`,
-/// `sungrass_egg_is_a_two_mana_artifact`.
+/// Shipped as a synthesised "{1}, {T}, Sac: Add two of any one color" under a
+/// printed card's name and cost; `audit_oracle_verbs.py` saw the missing
+/// draw. **The draw is a CR 605.1a rider, not a separate ability** — the
+/// activation could add mana, targets nothing and is not a loyalty ability,
+/// so it is a mana ability and resolves during cost payment without the
+/// stack. `is_mana_ability`'s rider list carries the self-draw for it.
 pub fn sungrass_egg() -> CardDefinition {
     CardDefinition {
         name: "Sungrass Egg",
@@ -1985,11 +1985,17 @@ pub fn sungrass_egg() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             tap_cost: true,
-            mana_cost: cost(&[generic(1)]),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(2)),
-            },
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Green, Color::White]),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: true,
@@ -2111,16 +2117,15 @@ pub fn cunning_rhetoric() -> CardDefinition {
     }
 }
 
-// ── Library Larcenist (synthesised STX Witherbloom flavor) ─────────────────
+// ── Library Larcenist ──────────────────────────────────────────────────────
 
-/// Library Larcenist — {2}{U} Creature — Pest Rogue, 1/2
-/// (synthesised STX Witherbloom flavor). "Whenever this creature deals
-/// combat damage to a player, that player mills two cards."
+/// Library Larcenist — {2}{U} Creature — Merfolk Rogue, 1/2. "Whenever this
+/// creature attacks, draw a card." (BLB)
 ///
-/// A combat-damage mill body — pairs with Witherbloom Apprentice /
-/// Sedgemoor Witch's gy-build engines. `DealsCombatDamageToPlayer /
-/// SelfSource` trigger + `Effect::Mill { who: DefendingPlayer }` (mills
-/// the damaged player, not the controller).
+/// Shipped for eight months as a synthesised Witherbloom body — a
+/// combat-damage mill — under a printed card's name, cost, types and P/T.
+/// `audit_oracle_verbs.py` found it by the verb its oracle names and its tree
+/// did not have.
 pub fn library_larcenist() -> CardDefinition {
     CardDefinition {
         name: "Library Larcenist",
@@ -2133,10 +2138,10 @@ pub fn library_larcenist() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Mill {
-                who: Selector::Player(PlayerRef::DefendingPlayer),
-                amount: Value::Const(2),
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
             },
         }],
         ..Default::default()

@@ -3841,34 +3841,56 @@ pub fn ichorid() -> CardDefinition {
     }
 }
 
-/// Silversmote Ghoul — {2}{B}, 3/1 Zombie. "Whenever you gain life,
-/// return Silversmote Ghoul from your graveyard to the battlefield."
+/// Silversmote Ghoul — {2}{B}, 3/1 Zombie Vampire. "At the beginning of your
+/// end step, if you gained 3 or more life this turn, return this card from
+/// your graveyard to the battlefield tapped." / "{1}{B}, Sacrifice this
+/// creature: Draw a card." (MID)
 ///
-/// Wired as a `LifeGained` + `YourControl` triggered ability whose
-/// effect returns every creature in your graveyard to the battlefield.
-/// Same simplification as Bloodghast: in practice the trigger only
-/// fires off the Silversmote Ghoul copy, and your reanimator-shell
-/// graveyard is loaded with the right targets.
+/// Shipped for months as a bare `LifeGained` return: it came back on *any*
+/// life gain, immediately rather than at the end step, untapped rather than
+/// tapped, and the sacrifice-to-draw half was absent — which is what
+/// `audit_oracle_verbs.py` saw. `FromYourGraveyard` already pins the end-step
+/// trigger to the owner's own turn (the scope requires the event's actor to
+/// be the source's owner), so "your end step" needs no extra gate.
 pub fn silversmote_ghoul() -> CardDefinition {
     CardDefinition {
         name: "Silversmote Ghoul",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie],
+            creature_types: vec![CreatureType::Zombie, CreatureType::Vampire],
             ..Default::default()
         },
         power: 3,
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LifeGained, EventScope::FromYourGraveyard),
-            effect: Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::If {
+                cond: crate::card::Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(3),
                 },
+                then: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
             },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sac_cost: true,
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

@@ -287,16 +287,17 @@ fn lorehold_tomb_robber_copies_gy_creature_with_haste_then_exiles_both() {
     );
 }
 
-/// Library Larcenist mills the *defending* player two on combat damage
-/// (regression: the mill targets the damaged player, not the controller).
+/// Library Larcenist draws on attack (BLB). The card shipped as a synthesised
+/// combat-damage mill under the printed name; the mill regression this test
+/// used to guard is gone with the ability it guarded.
 #[test]
-fn library_larcenist_mills_defending_player() {
+fn library_larcenist_draws_on_attack() {
     use crabomination::game::types::{Attack, AttackTarget};
     let mut g = two_player_game();
     let lar = g.add_card_to_battlefield(0, catalog::library_larcenist());
     g.clear_sickness(lar);
-    for _ in 0..4 { g.add_card_to_library(1, catalog::grizzly_bears()); }
-    let before = g.players[1].graveyard.len();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let before = g.players[0].hand.len();
     g.active_player_idx = 0;
     g.step = TurnStep::DeclareAttackers;
     g.priority.player_with_priority = 0;
@@ -304,11 +305,5 @@ fn library_larcenist_mills_defending_player() {
         attacker: lar, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    let mut guard = 0;
-    while g.step != TurnStep::PostCombatMain && guard < 40 {
-        g.perform_action(GameAction::PassPriority).expect("pass");
-        guard += 1;
-    }
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].graveyard.len(), before + 2, "defending player milled two");
+    assert_eq!(g.players[0].hand.len(), before + 1, "attacking drew a card");
 }

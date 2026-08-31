@@ -2231,6 +2231,27 @@ mod recent {
         assert_eq!(g.players[1].life, opp - 1, "each opponent lost 1 after lifegain");
     }
 
+    /// Lunar Convocation's third ability — "{1}{B}, Pay 2 life: Draw a card."
+    /// Absent until `audit_oracle_verbs.py` named the missing verb.
+    #[test]
+    fn lunar_convocation_pays_two_life_to_draw() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, catalog::lunar_convocation());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.add_card_to_library(0, catalog::island());
+        let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("{1}{B}, Pay 2 life: Draw a card");
+        drain_stack(&mut g);
+
+        assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+        assert_eq!(g.players[0].life, life - 2, "paid 2 life");
+    }
+
     /// Dazzling Denial counters a spell whose controller can't pay the {2} tax.
     #[test]
     fn dazzling_denial_counters_when_unpaid() {
