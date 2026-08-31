@@ -1677,6 +1677,16 @@ fn main() {
                 names[i], reason[i], reason_visits[i], filtered[i], filtered_visits[i],
             );
         }
+        // PERF (-122): the activated-grant walk against the board-wide mask
+        // that would replace it.
+        let [scans, grant_scans, mask_evals, walk_evals] =
+            crabomination::zone::grant_census::snapshot();
+        println!(
+            "  grant_census {grant_scans}/{scans} scans carry an EachPermanent grant; \
+             mask would evaluate {mask_evals}, the walk evaluates {walk_evals} \
+             ({:.2}x)",
+            if walk_evals == 0 { 0.0 } else { mask_evals as f64 / walk_evals as f64 },
+        );
     }
     // PERF (-51)(b): what the simulator's payments cost when they fail, split
     // by *why*. Off unless `CRAB_PAY_FAILS` is set.

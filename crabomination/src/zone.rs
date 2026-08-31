@@ -420,6 +420,60 @@ pub mod trig_census {
     }
 }
 
+/// `CRAB_TRIG_CENSUS` — the **activated**-grant walk's census, PERF `(-122)`.
+///
+/// The candidate there is to evaluate each `Selector::EachPermanent` grant's
+/// requirement once over the board into an index mask at `grant_scan` time,
+/// so `granted_abilities_of_inner`'s per-permanent ask becomes a bit test.
+/// Whether that wins is one comparison and no callgrind row carries either
+/// side: the mask would cost `grants x board` evaluations per scan, and the
+/// walk costs one per (permanent that reaches `_inner`) x grant. Gated on the
+/// same variable as the trigger census above.
+#[cfg(feature = "trig-census")]
+pub mod grant_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `grant_scan` calls.
+    pub static SCANS: AtomicU64 = AtomicU64::new(0);
+    /// …of which carried at least one `EachPermanent` activated grant.
+    pub static GRANT_SCANS: AtomicU64 = AtomicU64::new(0);
+    /// What a board-wide mask would cost: `grants x battlefield.len()`
+    /// requirement evaluations, summed over those scans.
+    pub static MASK_EVALS: AtomicU64 = AtomicU64::new(0);
+    /// What the walk actually costs: one evaluation per (asking permanent x
+    /// grant), counted at the two `evaluate_requirement_static_on` sites in
+    /// `granted_abilities_of_inner`.
+    pub static WALK_EVALS: AtomicU64 = AtomicU64::new(0);
+
+    /// One `grant_scan`: how many `EachPermanent` grants it found and how big
+    /// the board was.
+    #[cold]
+    #[inline(never)]
+    pub fn scan(grants: usize, board: usize) {
+        SCANS.fetch_add(1, Relaxed);
+        if grants > 0 {
+            GRANT_SCANS.fetch_add(1, Relaxed);
+            MASK_EVALS.fetch_add((grants * board) as u64, Relaxed);
+        }
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub fn walk(evals: usize) {
+        WALK_EVALS.fetch_add(evals as u64, Relaxed);
+    }
+
+    /// `(scans, grant_scans, mask_evals, walk_evals)`.
+    pub fn snapshot() -> [u64; 4] {
+        [
+            SCANS.load(Relaxed),
+            GRANT_SCANS.load(Relaxed),
+            MASK_EVALS.load(Relaxed),
+            WALK_EVALS.load(Relaxed),
+        ]
+    }
+}
+
 /// The battlefield: the CoW card list, plus the whole-board questions asked of
 /// it often enough to want a memo — the two layer-4 type gates ("can any
 /// permanent here contribute an `AddLandType` / `SetLandTypes` /

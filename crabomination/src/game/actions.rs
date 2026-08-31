@@ -13552,6 +13552,18 @@ impl GameState {
                 scan.equipment.push(src);
             }
         }
+        #[cfg(feature = "trig-census")]
+        if crate::zone::trig_census::on() {
+            use crate::effect::Selector;
+            let grants = scan
+                .statics
+                .iter()
+                .filter(|(a, _, _)| matches!(a, Selector::EachPermanent(_)))
+                .count()
+                + scan.graveyard.len();
+            crate::zone::grant_census::scan(grants, self.battlefield.len());
+        }
+
         scan
     }
 
@@ -13741,6 +13753,16 @@ impl GameState {
         }
         // CR 315.5 — battlefield and command-zone `GrantActivatedAbility`
         // statics that are already known live (see `grant_scan`).
+        #[cfg(feature = "trig-census")]
+        if crate::zone::trig_census::on() {
+            let n = scan
+                .statics
+                .iter()
+                .filter(|(a, _, _)| matches!(a, Selector::EachPermanent(_)))
+                .count()
+                + scan.graveyard.len();
+            crate::zone::grant_census::walk(n);
+        }
         for (applies_to, ability, src) in &scan.statics {
             match applies_to {
                 Selector::EachPermanent(req) => {
