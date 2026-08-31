@@ -36,10 +36,12 @@ sixty-seventh pass, so don't re-take that.
    an earlier reading of 26.7 in the same window did **not** reproduce, so it was a one-off
    and not a step. **The actor leg is the only gate that reaches the encoder.**
 3. **Open, in order:** `(-122)` (the activated-grant walk — the dispatcher's twin, none of
-   the four devices applied); then **`(-124)`**, `(-107)`'s `Arc` row sized on the actor and
-   given a mechanism — 17.4 % of every allocation, **29.6 % of it the encoder**, and inside
-   the encoder's one scope per state nothing asks twice, so the `Arc` *and* the cache are
-   paid for sharing that never happens.
+   the four devices applied). **`(-124)` is REFUTED by the dump that proposed it** — the
+   encoder's asks miss only 54 %, within a point of the 57 % `(-111)` priced, so a `_into`
+   form buys the misses and loses the hits. `computed_permanent_hinted` stays the largest
+   allocation caller and `(-111)` stays its close: only a change to how often a scope
+   *misses* can move it. Unexplained and worth one look: `permanent_value_with` makes
+   66,524 allocations on 51,543 calls — **more than one apiece.**
 4. **Do not retake:** `(-112)`; dispatch's per-event gate (61 AND 106); a third line profile
    of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since);
    the `turn_granted_triggers` / `granted_triggers_eot` retains (census: zero on all pools).
