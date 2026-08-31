@@ -86,6 +86,23 @@ fn bastion_of_remembrance_drains_when_your_creature_dies() {
     assert_eq!(g.players[0].life, p0 + 1, "you gained 1 (bolt didn't hit you)");
 }
 
+/// "When this enchantment enters, create a 1/1 white Human Soldier creature
+/// token." The ETB was missing entirely (`audit_oracle_verbs.py`'s `token`
+/// class) — the drain half above had shipped without it.
+#[test]
+fn bastion_of_remembrance_etb_mints_a_human_soldier() {
+    let mut g = two_player_game();
+    g.move_card_to_battlefield_for_test(0, catalog::bastion_of_remembrance());
+    drain_stack(&mut g);
+    let tok = g
+        .battlefield
+        .iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Human Soldier")
+        .expect("ETB minted the token");
+    assert_eq!((tok.power(), tok.toughness()), (1, 1));
+    assert!(tok.is_token, "and it is a token");
+}
+
 #[test]
 fn dictate_of_erebos_forces_opponent_sacrifice_on_your_death() {
     use crabomination::game::types::Target;

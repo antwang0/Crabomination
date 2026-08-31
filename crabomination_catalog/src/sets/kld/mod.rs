@@ -517,10 +517,25 @@ pub fn glassblowers_puzzleknot() -> CardDefinition {
     }
 }
 
+/// 1/1 colorless Servo artifact creature token (KLD).
+fn servo_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Servo".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Servo],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
 /// Aether Poisoner — {1}{B} 1/1 Rogue with Deathtouch. When it enters, you
 /// get {E}. Whenever it deals combat damage to a player, you get {E}.
 pub fn aether_poisoner() -> CardDefinition {
-    use crate::effect::shortcut::etb;
+    use crate::effect::shortcut::{etb, on_attack};
     CardDefinition {
         name: "Aether Poisoner",
         cost: cost(&[generic(1), b()]),
@@ -532,12 +547,21 @@ pub fn aether_poisoner() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
+        // "When this creature enters, you get {E}{E}. Whenever this creature
+        // attacks, you may pay {E}{E}. If you do, create a 1/1 colorless Servo
+        // artifact creature token." Shipped one energy on ETB and a
+        // combat-damage energy trigger the card does not print
+        // (`audit_oracle_verbs.py`, `token`).
         triggered_abilities: vec![
-            etb(Effect::AddEnergy(Value::Const(1))),
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::AddEnergy(Value::Const(1)),
-            },
+            etb(Effect::AddEnergy(Value::Const(2))),
+            on_attack(Effect::PayEnergy {
+                amount: 2,
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(servo_token()),
+                }),
+            }),
         ],
         ..Default::default()
     }
@@ -726,11 +750,10 @@ pub fn greenbelt_rampager() -> CardDefinition {
     }
 }
 
-/// Thriving Rhino — {3}{G} 3/3 Rhino. Whenever it attacks, you may pay
-/// {E}{E}; if you do, it gets +2/+2 until end of turn.
+/// Thriving Rhino — {2}{G} 2/3 Rhino. ETB you get {E}{E}; whenever it
+/// attacks, you may pay {E}{E} to put a +1/+1 counter on it.
 pub fn thriving_rhino() -> CardDefinition {
-    use crate::effect::Duration;
-    use crate::effect::shortcut::on_attack;
+    use crate::effect::shortcut::{etb, on_attack};
     CardDefinition {
         name: "Thriving Rhino",
         cost: cost(&[generic(2), g()]),
@@ -741,15 +764,20 @@ pub fn thriving_rhino() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
-        triggered_abilities: vec![on_attack(Effect::PayEnergy {
-            amount: 2,
-            then: Box::new(Effect::PumpPT {
-                what: Selector::This,
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
+        // "Whenever this creature attacks, you may pay {E}{E}. If you do, put
+        // a +1/+1 counter on it." Shipped as an end-of-turn +2/+2 pump — wrong
+        // size and wrong permanence (`audit_oracle_verbs.py`, `counters`).
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            on_attack(Effect::PayEnergy {
+                amount: 2,
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
             }),
-        })],
+        ],
         ..Default::default()
     }
 }

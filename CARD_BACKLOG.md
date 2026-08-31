@@ -216,6 +216,20 @@ Bombshell (an owner-vs-controller sacrifice trigger), Skirk Marauder
 Trumpeting Carnosaur (a discard-cost activated ability from hand), Takklemaggot
 (the whole re-attach clause).
 
+**`counters` and `token`, first three rows read — all three real, and two of
+them are the synthesised-card shape again:**
+
+| card | shipped | printed |
+|---|---|---|
+| Thriving Rhino | `{E}{E}` for +2/+2 until end of turn | `{E}{E}` for a **+1/+1 counter**, and the ETB `{E}{E}` was missing |
+| Aether Poisoner | one `{E}` on ETB and a combat-damage energy trigger it does not print | `{E}{E}` on ETB, and an attack trigger that pays `{E}{E}` for a 1/1 Servo |
+| Bastion of Remembrance | the drain half only | + "when this enchantment enters, create a 1/1 white Human Soldier" |
+
+Aether Swooper sits four hundred lines above Aether Poisoner in the same file
+with the identical printed shape and had it right — **the same-file sibling is
+the cheapest oracle there is, and neither card's doc comment mentioned the
+other.**
+
 **Still open in `gain_life`, read and triaged — three of them are wholly
 wrong abilities, not missing riders:**
 

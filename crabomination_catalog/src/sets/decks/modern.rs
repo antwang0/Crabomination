@@ -23755,14 +23755,35 @@ pub fn bastion_of_remembrance() -> CardDefinition {
         name: "Bastion of Remembrance",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(1),
+        triggered_abilities: vec![
+            // "When this enchantment enters, create a 1/1 white Human Soldier
+            // creature token." The ETB was missing entirely
+            // (`audit_oracle_verbs.py`, `token` class).
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(TokenDefinition {
+                    name: "Human Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
-        }],
+        ],
         ..Default::default()
     }
 }

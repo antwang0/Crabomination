@@ -26,7 +26,7 @@ drops its ETB surveil 2, Teferi drops "untap up to two lands". The
 and are the only class checked that was not real.
 
     python3 scripts/audit_oracle_verbs.py             # per-verb summary
-    python3 scripts/audit_oracle_verbs.py draw        # the rows for one verb
+    python3 scripts/audit_oracle_verbs.py draw token  # the rows for one or more
     python3 scripts/audit_oracle_verbs.py --check     # exit 1 on any finding
 
 **Reminder text is stripped before the oracle is read.** Every keyword's
@@ -418,12 +418,15 @@ def main():
     check = "--check" in sys.argv
     findings, checked = audit()
     if args:
-        v = args[0]
-        if v not in findings:
-            sys.exit(f"no such verb '{v}' (have: {', '.join(sorted(findings))})")
-        print(f"=== {v}: oracle says it, no primitive in the tree ({len(findings[v])})")
-        for name, fname, fn, st in sorted(findings[v]):
-            print(f"  {name:38} [{st}] {fname}::{fn}")
+        # Several verbs in one run: the global helper table below costs ~4.5
+        # minutes to build and re-running it per verb is that cost again.
+        for v in args:
+            if v not in findings:
+                sys.exit(f"no such verb '{v}' (have: {', '.join(sorted(findings))})")
+        for v in args:
+            print(f"=== {v}: oracle says it, no primitive in the tree ({len(findings[v])})")
+            for name, fname, fn, st in sorted(findings[v]):
+                print(f"  {name:38} [{st}] {fname}::{fn}")
     else:
         print(f"{'verb':<16}{'missing':>9}")
         print("-" * 25)

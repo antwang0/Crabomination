@@ -301,14 +301,20 @@ fn glassblowers_puzzleknot_etb_scries_and_gives_energy() {
     assert_eq!(g.players[0].hand.len(), hand - 1, "scry does not draw");
 }
 
+/// Printed: "When this creature enters, you get {E}{E}. Whenever this creature
+/// attacks, you may pay {E}{E}. If you do, create a 1/1 colorless Servo
+/// artifact creature token." It shipped one energy on ETB and a
+/// combat-damage energy trigger the card does not print
+/// (`audit_oracle_verbs.py`'s `token` class); `aether_swooper` beside it in
+/// the same file had the shape right all along.
 #[test]
-fn aether_poisoner_etb_and_combat_energy() {
+fn aether_poisoner_etb_energy_and_attack_servo() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::aether_poisoner());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
     cast_creature(&mut g, id);
-    assert_eq!(g.players[0].energy, 1, "ETB {{E}}");
+    assert_eq!(g.players[0].energy, 2, "ETB {{E}}{{E}}");
     g.clear_sickness(id);
     while g.step != crabomination::game::types::TurnStep::DeclareAttackers {
         g.perform_action(GameAction::PassPriority).expect("pass");
@@ -317,12 +323,11 @@ fn aether_poisoner_etb_and_combat_energy() {
         attacker: id, target: AttackTarget::Player(1),
     }])).expect("attack");
     drain_stack(&mut g);
-    while g.step != crabomination::game::types::TurnStep::CombatDamage {
-        g.perform_action(GameAction::PassPriority).expect("pass");
-    }
-    g.resolve_combat().expect("combat");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].energy, 2, "combat damage gives another {{E}}");
+    assert_eq!(g.players[0].energy, 0, "the attack trigger spent both");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Servo"),
+        "and minted a Servo"
+    );
 }
 
 #[test]
@@ -512,7 +517,7 @@ fn greenbelt_rampager_stays_when_energy_recycled() {
 }
 
 #[test]
-fn thriving_rhino_pumps_when_energy_paid_on_attack() {
+fn thriving_rhino_counters_when_energy_paid_on_attack() {
     let mut g = two_player_game();
     let r = g.add_card_to_battlefield(0, catalog::thriving_rhino());
     g.clear_sickness(r);
@@ -525,7 +530,14 @@ fn thriving_rhino_pumps_when_energy_paid_on_attack() {
     }])).expect("attack");
     drain_stack(&mut g);
     let rhino = g.battlefield_find(r).unwrap();
-    assert_eq!(rhino.power(), 4, "paid {{E}}{{E}} for +2/+2");
+    // Printed: "put a +1/+1 counter on it" — it shipped an end-of-turn +2/+2
+    // pump, wrong size and wrong permanence (`audit_oracle_verbs.py`,
+    // `counters` class).
+    assert_eq!(
+        rhino.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1,
+        "paid {{E}}{{E}} for a +1/+1 counter"
+    );
+    assert_eq!(rhino.power(), 3, "2/3 base plus the counter");
     assert_eq!(g.players[0].energy, 0);
 }
 
