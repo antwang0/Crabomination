@@ -208,14 +208,93 @@ def dump_costs(dump, fn_needle):
     return costs, {names[k]: v[1] for k, v in contexts.items()}
 
 
+def sweep(dump, rows):
+    """Rank every function by its *fixed* per-call cost.
+
+    An instruction whose execution count equals the function's call count runs
+    on every call: the prologue, the dispatch, the shared epilogue. Summed,
+    that is what a caller pays before the body does anything, and it is the
+    one component only *fewer calls* can move. Nothing else in this directory
+    measures it.
+
+    The entry instruction is taken to be the lowest address in the block, and
+    its Ir to be the call count; a function whose cold blocks are laid out
+    below its entry would read low, not high.
+    """
+    per = collections.defaultdict(collections.Counter)
+    names, cur, addr, skip = {}, None, 0, False
+    total = 0
+    for line in open(dump, errors="replace"):
+        line = line.rstrip("\n")
+        if line.startswith("summary:") or line.startswith("totals:"):
+            total = max(total, int(line.split(":", 1)[1].split()[0]))
+            continue
+        m = re.match(r"c?fn=\((\d+)\)(?:\s+(.*))?", line)
+        if m:
+            if m.group(2):
+                names.setdefault(m.group(1), m.group(2))
+            if line.startswith("fn="):
+                cur, addr, skip = m.group(1), 0, False
+            continue
+        if line.startswith("calls="):
+            skip = True
+            continue
+        if line.startswith(("cfn=", "cfi=", "cfl=", "fi=", "fe=", "fl=", "ob=", "cob=")):
+            continue
+        if cur is None or not line or line[0] not in "0x+-*123456789":
+            continue
+        m = re.match(r"(0x[0-9a-f]+|\+\d+|-\d+|\*)\s+\S+\s+(\d+)", line)
+        if not m:
+            continue
+        pos = m.group(1)
+        if pos.startswith("0x"):
+            addr = int(pos, 16)
+        elif pos != "*":
+            addr += int(pos)
+        if skip:
+            skip = False
+            continue
+        per[cur][addr] += int(m.group(2))
+    out = []
+    for fid, costs in per.items():
+        if not costs:
+            continue
+        calls = costs[min(costs)]
+        if calls < 1000:
+            continue
+        fixed = [v for v in costs.values() if v == calls]
+        out.append((sum(fixed), len(fixed), calls, sum(costs.values()), names.get(fid, fid)))
+    out.sort(reverse=True)
+    print(f"# fixed per-call cost, {total:,} Ir total run")
+    print(f"  {'fixed Ir':>13} {'share':>7} {'n':>4} {'calls':>11} {'self Ir':>13} {'of self':>8}  name")
+    for fixed, n, calls, self_ir, name in out[:rows]:
+        print(
+            f"  {fixed:>13,} {100.0 * fixed / total:6.3f}% {n:>4} {calls:>11,} "
+            f"{self_ir:>13,} {100.0 * fixed / self_ir:7.1f}%  {name[:70]}"
+        )
+    rest = out[rows:]
+    print(f"# ... {len(rest):,} more functions, {sum(r[0] for r in rest):,} fixed Ir between them")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dump")
-    ap.add_argument("binary")
-    ap.add_argument("function")
+    ap.add_argument("binary", nargs="?")
+    ap.add_argument("function", nargs="?")
     ap.add_argument("--variants", help="path.rs:EnumName for arm labels")
     ap.add_argument("--rows", type=int, default=40, help="0 for all")
+    ap.add_argument(
+        "--sweep",
+        action="store_true",
+        help="rank every function by fixed per-call cost instead of reading one match",
+    )
     args = ap.parse_args()
+
+    if args.sweep:
+        sweep(args.dump, args.rows or 10**9)
+        return
+    if not args.binary or not args.function:
+        sys.exit("need BINARY and FUNCTION unless --sweep")
 
     start, end, name = symbol_range(args.binary, args.function)
     table, n = find_table(args.binary, start, end)
