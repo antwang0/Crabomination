@@ -212,10 +212,17 @@ def sweep(dump, rows):
     """Rank every function by its *fixed* per-call cost.
 
     An instruction whose execution count equals the function's call count runs
-    on every call: the prologue, the dispatch, the shared epilogue. Summed,
-    that is what a caller pays before the body does anything, and it is the
-    one component only *fewer calls* can move. Nothing else in this directory
-    measures it.
+    on every call: the prologue, the dispatch, the unconditional head of the
+    body, the shared epilogue. Nothing else in this directory measures it.
+
+    **This is the unconditional path, NOT "overhead", and the difference is
+    where a wrong reading lives.** For a predicate that matches on a
+    discriminant the unconditional path is mostly the predicate itself —
+    `event_matches_spec` reads 24 of its 31 Ir a call fixed, and those 24 are
+    the inlined kind test it exists to run, which is why PERF calls that row
+    "near the floor". The row worth acting on is the one at **100 % of self**
+    with a small instruction count: a thin forwarding wrapper that a `#[inline]`
+    would erase. Check what the instructions *are* before pricing a change.
 
     The entry instruction is taken to be the lowest address in the block, and
     its Ir to be the call count; a function whose cold blocks are laid out

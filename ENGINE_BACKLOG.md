@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [Open — what the seeded cube smoke test left behind (eighty-fifth pass)](#open--what-the-seeded-cube-smoke-test-left-behind-eighty-fifth-pass) | 66 |
+| Bugs & robustness | [CLOSED — what the seeded cube smoke test left behind (eighty-fifth pass)](#closed--what-the-seeded-cube-smoke-test-left-behind-eighty-fifth-pass) | 72 |
 | Bugs & robustness | [Engine correctness audit — 2026-06-11](#engine-correctness-audit--2026-06-11) | 83 |
 | Bugs & robustness | [Engine — Robustness / defects: the closed audits and the twenty-three filters](#engine--robustness--defects-the-closed-audits-and-the-twenty-three-filters) | 238 |
 | Bugs & robustness | [Decision-plumbing audit (2026-07): bare `decider.decide` sites](#decision-plumbing-audit-2026-07-bare-deciderdecide-sites) | 91 |
@@ -73,7 +73,12 @@ express) and the ~25 reflexive "that creature" triggers (`combat.rs` stamps the 
 at push time); and there is **no `std::collections` default-hasher iteration in engine
 or bot logic**, so cross-process determinism holds.
 
-## Open — what the seeded cube smoke test left behind (eighty-fifth pass)
+## CLOSED — what the seeded cube smoke test left behind (eighty-fifth pass)
+
+Both defects are fixed; the section stays for the **method** — the 4,000-seed
+sweep and `bot_rejection_count()` are how a targeting change is checked, and
+the reverted `prefers_graveyard_target` widening is a trap worth not
+re-entering.
 
 `server::tests::bot_vs_bot_random_cube_decks_terminate` draws from
 `crate::cube::build_cube_state_seeded(seed)`, which pins the decks, the
@@ -155,11 +160,13 @@ carried and it did not. Three tests in `core_rules::target_walkers::
 offboard_gate`; the `--bench` invariant and the golden traces are unmoved, so
 the defect does not fire on `--decks fixed`.
 
-**What it does not fix is the enumerator itself.** The zone predicate the
-filter language is missing is still missing, so `legal_targets_for_filter`
-still applies a board-shaped requirement to every graveyard and to exile and
-the callers still separate the results by hand. This closes the *picker*'s
-half; the catalog-wide fix above is still the fix.
+~~**What it does not fix is the enumerator itself.**~~ — stale, and closed by
+the entry above at the hundred-and-fourth pass. The enumerator takes a scope
+(`legal_targets_for_filter_scoped`, `targeting.rs:531`) and the filter
+language has the zone predicate (`SelectionRequirement::from_your_graveyard` /
+`from_any_graveyard`, `card.rs:2881`), so neither half of this paragraph is
+true any more. Left in place struck through because it was the *plan* the
+hundred-and-fourth pass executed.
 
 ### The gate's own wrappers — audited at the ninety-ninth pass (three cards fixed), the walkers' invariants closed at the hundredth
 
@@ -1294,7 +1301,8 @@ the count does not matter.**
 > by whether its own statement region carries one of the plumbing markers —
 > `seat_suspends` + `suspend_signal`, `stashed_resolution_answer`,
 > `pending_decision`/`wants_ui` (the action-time suspension), or an explicit
-> `DeciderKind` branch. Reading: **195 sites, 97 plumbed, 98 bare.**
+> `DeciderKind` branch. Reading, re-run 2026-08-31: **195 sites, 99 plumbed,
+> 96 bare** (was 97/98 on 2026-08-28 — two more plumbed since).
 >
 > **Every effect the classes below name by name is plumbed now** — Cascade,
 > Madness, Dredge, Ripple, Cipher, Forage, Collect Evidence, Discover, the

@@ -45,8 +45,8 @@ It has two independent passes:
    no build): the two passes above look *inside* one card's effect tree, so
    neither can see a card whose tree is fine and whose *engine* arm is a
    no-op. This one cross-references each capability enum against the catalog
-   and the engine both ways. **2026-08-29 (and unchanged since 2026-08-27): 0 dead
-   capabilities over 1,695 variants; 3 dead primitives.** See "The other direction" below.
+   and the engine both ways. **2026-08-31: 0 dead
+   capabilities over 1,695 variants; 2 dead primitives.** See "The other direction" below.
 
 The tables below are a human triage of those 470 + the structural findings,
 grouped by the **missing engine primitive** so each cluster is one work-item.
@@ -119,14 +119,14 @@ arm outside a no-op**, including all 441 statics the layer pass explicitly
 declines to turn into continuous effects. The filter is cheap (~40 s, no
 build) and it gates on this half only.
 
-**Three dead primitives fell out of the other direction** — implemented
+**Two dead primitives fall out of the other direction** — implemented
 effects nothing constructs, i.e. capability waiting for the card that wanted
-it, at no engine cost:
+it, at no engine cost. (`ExileTopAndMayCastUpToMv` was a third and is
+constructed now.)
 
 | Primitive | Resolver | The card shape it is for |
 |---|---|---|
 | `Effect::AddRadCounters { who, amount }` | `effects/mod.rs` | rad counters (Fallout) |
-| `Effect::ExileTopAndMayCastUpToMv { who, amount, max_mv }` | `effects/mod.rs` | "exile the top N, you may cast those with mana value ≤ X" |
 | `Effect::GrantCastBackFromGraveyard { what }` | `effects/mod.rs` | "you may cast it from your graveyard" |
 
 **Check the encoding caution in TODO before adding a card for one**: whether a
