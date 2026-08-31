@@ -45,9 +45,17 @@ def contexts(path, needle):
     names = {}
     cur = None
     pending = 0
+    # See `cg_edges.parse`: `positions: instr line` puts two position columns
+    # ahead of the counts, and the first of them can be `*` or `+n`, neither
+    # of which `str.isdigit` accepts. Reading column 1 as the cost, or gating
+    # the line on a leading digit, drops the edge and leaves `pending` armed.
+    positions = 1
     with open(path) as fh:
         for line in fh:
             line = line.rstrip("\n")
+            if line.startswith("positions:"):
+                positions = len(line.split(":", 1)[1].split()) or 1
+                continue
             m = re.match(r"^cfn=\((\d+)\)(?: (.*))?$", line)
             if m:
                 if m.group(2):
@@ -64,12 +72,19 @@ def contexts(path, needle):
             # hundred-and-thirteenth pass. It then left `pending` armed and
             # charged the call to whichever later line happened to start with
             # a digit, under-counting `event_matches_spec` by 28x.
+            #
+            # And the cost is column `positions`, not column 1: an instruction
+            # dump has *two* position columns, so column 1 there is the second
+            # position, not a count.
             if pending and cur and line and (line[0].isdigit() or line[0] in "+-*"):
                 parts = line.split()
-                if len(parts) > 1 and needle in cur.split("'", 1)[0]:
+                if len(parts) > positions and needle in cur.split("'", 1)[0]:
                     ctx = cur.split("'", 1)[1] if "'" in cur else "(no context)"
                     calls[ctx] += pending
-                    ir[ctx] += int(parts[1])
+                    try:
+                        ir[ctx] += int(parts[positions])
+                    except ValueError:
+                        pass
                 pending = 0
                 continue
             m = re.match(r"^fn=\((\d+)\)(?: (.*))?$", line)

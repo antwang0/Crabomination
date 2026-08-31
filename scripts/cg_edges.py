@@ -46,7 +46,16 @@ def parse(path):
     pend = None
     pend_calls = 0
     total = 0
+    # How many *position* columns precede the event counts. `positions: line`
+    # is one; `positions: instr line` (what `--dump-instr=yes` writes) is two,
+    # and reading the cost out of column 1 there picks up the second position
+    # instead. That silently dropped 92 % of an instruction dump's cost — and
+    # left `pend` armed, so the next real self line was booked as a call edge.
+    positions = 1
     for line in open(path, errors="replace"):
+        if line.startswith("positions:"):
+            positions = len(line.split(":", 1)[1].split()) or 1
+            continue
         if line.startswith("fn="):
             m = re.match(r"fn=\((\d+)\)(?:\s+(.*))?", line.rstrip("\n"))
             if m:
@@ -67,11 +76,16 @@ def parse(path):
             continue
         if line and (line[0].isdigit() or line[0] in "+-*"):
             parts = line.split()
-            if len(parts) < 2:
-                continue
-            try:
-                cost = int(parts[1])
-            except ValueError:
+            cost = None
+            if len(parts) > positions:
+                try:
+                    cost = int(parts[positions])
+                except ValueError:
+                    cost = None
+            if cost is None:
+                # Still consume the pending edge: an unread cost line is not a
+                # reason to charge the *next* line to the callee.
+                pend = None
                 continue
             if pend is not None:
                 # A call edge: `cost` is the callee's whole subtree, so it
