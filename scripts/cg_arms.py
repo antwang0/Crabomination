@@ -131,6 +131,12 @@ def find_table(binary, start, end):
 
 
 def read_table(binary, sections, table_vaddr, n):
+    if not n:
+        sys.exit(
+            f"found a jump table at {table_vaddr:#x} but not the `cmp $N` that bounds it — "
+            "the dispatch does not range-check here (a match with no unreachable "
+            "discriminants), so pass --entries N with the enum's variant count"
+        )
     off = vaddr_to_off(sections, table_vaddr)
     if off is None:
         sys.exit(f"jump table vaddr {table_vaddr:#x} is in no section")
@@ -290,6 +296,7 @@ def main():
     ap.add_argument("function", nargs="?")
     ap.add_argument("--variants", help="path.rs:EnumName for arm labels")
     ap.add_argument("--rows", type=int, default=40, help="0 for all")
+    ap.add_argument("--entries", type=int, help="jump-table entry count, when the dispatch has no `cmp $N`")
     ap.add_argument(
         "--sweep",
         action="store_true",
@@ -308,7 +315,8 @@ def main():
     if table is None:
         sys.exit("no jump-table dispatch found in the first 512 bytes of the function")
     sections = section_map(args.binary)
-    targets = read_table(args.binary, sections, table, n)
+    targets = read_table(args.binary, sections, table, args.entries or n)
+    n = args.entries or n
     labels = variant_names(args.variants) if args.variants else [str(i) for i in range(n)]
     costs, contexts = dump_costs(args.dump, args.function)
 

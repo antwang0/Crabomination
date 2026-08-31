@@ -48,13 +48,16 @@ sixty-seventh pass, so don't re-take that.
    (compute_permanent_gated, -0.26 % all pools) and `(-130)` (three filter walkers -> one)
    came out beside it. ⚠ `cg_contexts.py` was under-reading Ir by **28x** until `00b17a18` —
    any pre-fix inclusive-Ir figure from it is wrong.
-4. **Open, and thin — replenish from fresh dumps, do not pick the next-largest row.** `(-132)`
-   the frame class: `cg_frames.py`'s rows with **1-3 body calls** are the shape (can_grant_keyword,
-   effect_produced_colors, can_block_attacker_computed); **`has_keyword` is the biggest row and
-   is NOT it** — its frame is four scan loops, read before building. Whole table ~0.7 %, take as
-   a sweep or not at all. `(-133)` `requirement_mentions_power`, the fourth copy of `(-130)`'s
-   walk — establish it shares `extract_power_gate`'s tree before folding. `(-128)`'s 2,397 Ir SBA
-   sweep body still unsplit. ⚠ Before ranking a dump row, run it at two game counts:
+4. **Open, and now genuinely thin — the queue needs fresh dumps, not the next-largest row.**
+   `(-132)` **CLOSED without a build**: filtered on its own 1-3-body-call criterion the frame
+   class is 4.3 M Ir / **0.172 %** with every frame removed outright, and its two biggest rows
+   are the two that are not the shape (`has_keyword` measured at +0.35 %,
+   `computed_permanent_hinted`'s pushes hold values across 83 calls). `(-135)` **CLOSED before
+   it opened**: `compute_permanent_pass` is the fixed-cost sweep's top row on both pools
+   (1.777 % `cube` / 1.885 % `fixed`) and a `profiling-lines` profile resolves 102 lines with
+   **none above 0.22 %** — the third diffuse row in the file after the dispatcher and the
+   gather. Still open: `(-133)` `requirement_mentions_power` (0.104 %, establish it shares
+   `extract_power_gate`'s tree before folding) and `(-128)`'s 2,397 Ir SBA sweep body. ⚠ Before ranking a dump row, run it at two game counts:
    `wants_converge`'s once-per-name `{:?}` scan is 0.5 % of a six-game dump and ~nothing at gate
    length (measured, `e1de0e0f`).
 5. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices; `(-127)`'s wrap; `(-122)`'s

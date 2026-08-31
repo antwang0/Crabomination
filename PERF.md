@@ -18236,6 +18236,89 @@ Note also that the scan is retaken up to three times *inside* a single sweep
 (shapeshifter sync, sector assignment, flip legs), and those retakes are
 already inside the 1,167 Ir.
 
+**(-135) CLOSED BEFORE IT WAS OPENED — `compute_permanent_pass` IS THE FIXED-
+COST SWEEP'S TOP ROW ON BOTH POOLS AND IT HAS NO HOT LINE.**
+
+`cg_arms.py --sweep` ranks it first at the tip: **165 instructions on every one
+of its 269,492 `cube` calls = 44,466,180 Ir, 1.777 % of the run and 56.3 % of
+its own self cost** (`fixed`: 182 instructions x 87,750 calls, 1.885 %, 74.9 %).
+That is the largest single "paid on every call" figure in the program, so it
+was worth the cold `profiling-lines` build the sweep's note asks for before
+anything is proposed.
+
+The line profile (`cg_lines.py --in compute_permanent_pass`, same workload)
+resolves 102 lines and **not one is above 0.22 % of the run**:
+
+```text
+   4,702,442  0.22 %  iter/macros.rs:?     the filter walk over `effects`
+   4,372,076  0.20 %  layers.rs:1117       `affects` -> affected_includes_gated
+   3,556,684  0.17 %  iter/macros.rs:180
+   3,503,396  0.16 %  layers.rs:764        the prologue         13 Ir/call
+   3,503,396  0.16 %  layers.rs:1082       `ComputedPermanent { .. }`  13 Ir/call
+   1,347,460  0.06 %  layers.rs:1073/1074  the 7c P/T arithmetic  5 Ir/call each
+   1,077,968  0.05 %  layers.rs:378/1059/1078   `Printed::new`, set_pt, counters
+```
+
+**The 165 are obligatory, and they are four groups**: entering (13), the
+per-effect filter walk (~1.9 effects examined per card, and its cost is the
+call to `affected_includes_gated`, not the walk), the layer-7 arithmetic that
+every permanent needs, and constructing the return value (13). There is no
+lazily-skippable arm here — this is the third row in this file, after
+`dispatch_triggers_for_events` and the gather, to read as *diffuse* under a
+line profile.
+
+**The rule, and it is the sweep's own note earned the hard way: a high fixed
+share is a shape question, not a size one.** 100 % of self with a small
+instruction count is a frame to delete; 56 % of self across 165 instructions
+is a function whose body is straight-line, and straight-line body is the one
+thing neither outlining nor inlining touches. **Do not re-open this on the
+1.777 %.**
+
+**(-132) CLOSED WITHOUT A BUILD — THE CLASS IS EXHAUSTED. THE TWO ROWS OVER
+0.2 % ARE BOTH REFUTED AND EVERY ROW THAT IS ACTUALLY THE SHAPE IS UNDER
+0.06 %.** Re-read at the tip (`cube` 2,502,879,696 Ir) after `(-129)`/`(-131)`
+landed, filtering the table below on its own criterion — 1-3 body calls, i.e.
+something cold to outline:
+
+```text
+                                   ~Ir in frame   share   body calls
+  has_keyword                         5,752,488  0.230 %      5   REFUTED, built
+  computed_permanent_hinted           4,966,136  0.198 %     83   the frame IS the calls
+  ability_strip_off_battlefield       1,463,728  0.058 %      3
+  can_grant_keyword                   1,215,536  0.049 %      2
+  can_block_attacker_computed           857,332  0.034 %      4
+  effect_produced_colors                777,440  0.031 %      2
+  CardInstance::toughness               636,720  0.025 %      0   nothing to outline
+                                   ------------
+  the four that are the shape         4,314,036  0.172 %   if the frame vanished entirely
+```
+
+**0.172 % is the ceiling with every frame removed outright, and none of the
+four can reach it** — each fast path still needs some of what the prologue
+saves. `has_keyword` was built and cost +0.35 % (see the addendum below), and
+`computed_permanent_hinted`'s seven pushes hold live values across 83 calls.
+**The remaining ~0.7 % in the table is the rows with dozens or hundreds of
+body calls** (`dispatch_triggers_for_events` 384, `perform_action_inner` 139,
+`static_effect_to_effects` 86), where the frame is the code and there is
+nothing cold to move.
+
+**Two things worth keeping from the read.** `effect_produced_colors` has no
+jump table at all — LLVM turned its `Seq` recursion into a loop over the tail
+and dispatches the rest as a compare chain, so its "2 body calls" are one
+self-call in an already-optimal shape. And `CardInstance::toughness` has
+**zero** body calls with a four-instruction prologue: LLVM wanted the
+callee-saved registers for its own arithmetic, which is the column's
+`0 means nothing to outline` note, confirmed.
+
+**The rule: filter a class table by its own criterion before quoting its
+total.** This one's headline was ~17 M Ir / 0.7 %; the part that matches the
+shape it was built to find is 4.3 M / 0.17 %, and the two biggest rows in it
+are the two that are not the shape.
+
+---
+
+**The original entry.**
+
 **(-132) THE FRAME CLASS — `cg_frames.py`'S REMAINING ROWS, AND WHICH OF THEM
 ARE ACTUALLY THE SHAPE.** `(-129)`/`(-131)` established that a cold path
 needing a frame charges every hot call for it, and the instrument that finds
