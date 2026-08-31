@@ -2310,7 +2310,7 @@ a box whose state moves.
 
 ## Baseline
 
-### The clone-shape pass — closing state at `b1838df2`
+### The clone-shape pass — closing state at `33955a1f`
 
 Three perf commits on one device — **group a hot struct's plain field copies
 away from the ones that call something** — plus a `counters`-class card batch
@@ -2326,20 +2326,30 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
         0 stalls — **a NEW invariant, see the warning below**; determinism
         ok, thread_determinism ok (3 vs 1 threads identical)
 callgrind (profiling-fast --no-default-features, six games, one thread,
-        seed 1, `--a gang --b gang`), base `bc2a38f5`:
-  pool    base            (-140)          (-141)          (-142)      perf total
-  cube    2,490,817,192   2,488,440,645   2,486,989,586   2,485,040,761  -0.2319 %
-  fixed     838,864,887     837,728,304     837,039,558     836,284,314  -0.3076 %
-  tip after the card batch:  cube 2,484,902,445   fixed 923,198,446
+        seed 1, `--a gang --b gang`), **retaken on the rebased base
+        `0e6ed414` after the concurrent session landed**:
+  pool    0e6ed414        perf tip babadb2e   run tip 33955a1f
+  cube    2,509,983,333   2,504,010,258       2,503,861,524
+                            -0.2380 %           -0.2439 %
+  fixed     841,725,144     839,127,159         927,368,664
+                            -0.3087 %          +10.1748 %  <- the card batch
 grid    NOT re-run: the three perf commits are pure statement/declaration
         order and the card batch is gated by 19,113 tests.
 ```
 
+⚠ **The perf numbers were first taken against `bc2a38f5` and read -0.2319 % /
+-0.3076 %; retaken against `0e6ed414` they read -0.2380 % / -0.3087 %.** The
+standing rule ("a concurrent push invalidates a MEASUREMENT, not a
+candidate") cost three builds and moved the headline by 0.006 points — inside
+`(-110)`'s null band. **The device is base-independent; the retake is what
+says so.** Both the per-commit tables in the Log below are the `bc2a38f5`
+series and are internally consistent.
+
 ⚠ **THE `fixed` POOL GOT ~5 % HEAVIER AND IT IS THE CARD BATCH, NOT THE
-ENGINE. A `fixed` Ir READING FROM BEFORE `b1838df2` IS NOT COMPARABLE TO ONE
+ENGINE. A `fixed` Ir READING FROM BEFORE `fcb5a987` IS NOT COMPARABLE TO ONE
 AFTER IT.** Sengir Vampire is in two of the four `--decks fixed` archetypes
 (golgari midrange x1, dimir control x2) and it stopped being a vanilla 4/4.
-Three seeds, `precards` (`81acdd45`) against the tip:
+Three seeds, `precards` (`81acdd45`, the pre-rebase hash) against the tip:
 
 ```text
   seed 1    836,284,314 -> 923,198,446   +10.39 %

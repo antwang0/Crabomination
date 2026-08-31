@@ -33,7 +33,7 @@ sixty-seventh pass, so don't re-take that.
    ~9 min, warm ~3; `release-fast` ~7:30; two `--games 6` valgrinds in parallel are free.
    ⚠ **Run a grid build with nothing else compiling** — two rustc on the engine at once is a
    memcg OOM (`signal: 9`) that cargo reports as a compile failure.
-2. **All gates at the tip:** suite **19,181 / 0 / 5**, **golden traces unmoved across every
+2. **All gates at the tip:** suite **19,113 / 0 / 5**, **golden traces unmoved across every
    commit of both sessions**; clippy clean `--all-targets`; determinism + thread_determinism
    green; **grid 30 cells / 33,120 games / 0 failures / 0 undecided, run TWICE** last run
    (delete `target-audit/` after, 715 MB). `games_per_s` read 225-407 across the day on
@@ -49,7 +49,9 @@ sixty-seventh pass, so don't re-take that.
    class for `cube` -0.53 % cumulative; `cg_frames.py` now prints **`out/call`** and is a
    *confirmation, not a queue* — every remaining row is "the frame IS the calls" or under
    0.06 %. (b) `(-140)`/`(-141)`/`(-142)`: **group a hot struct's plain field copies away from
-   the ones that call something**, `cube` **-0.232 %** / `fixed` **-0.308 %**. `&self` is not
+   the ones that call something**, `cube` **-0.238 %** / `fixed` **-0.309 %** (retaken against
+   the rebased base `0e6ed414`; the first reading off `bc2a38f5` was -0.232/-0.308, so the
+   retake the standing rule demands moved the headline by 0.006 points and confirmed it). `&self` is not
    `noalias`, so LLVM may not move a load across a call and every interleaved scalar was its
    own fenced load/store pair. **Copies LAST, not first.** For a `#[derive(Clone)]` type the
    order is the *declaration* order, which also moves the layout tie-breaks — measure it.
