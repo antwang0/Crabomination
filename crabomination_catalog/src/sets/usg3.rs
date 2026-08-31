@@ -492,7 +492,13 @@ pub fn viashino_sandswimmer() -> CardDefinition {
             mana_cost: cost(&[r()]),
             effect: Effect::FlipCoin {
                 count: Value::ONE,
-                on_heads: Box::new(Effect::ReturnSelf),
+                // "return this creature to its owner's hand" — from the
+                // battlefield. `ReturnSelf` is a graveyard reanimate and a
+                // no-op here (audit_oracle_verbs, 2026-08-31).
+                on_heads: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
                 on_tails: Box::new(Effect::SacrificeSource),
             },
             ..Default::default()

@@ -789,7 +789,13 @@ pub fn field_of_reality() -> CardDefinition {
         }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), u()]),
-            effect: Effect::ReturnSelf,
+            // "Return this Aura to its owner's hand" — from the battlefield.
+            // `Effect::ReturnSelf` is a graveyard->battlefield reanimate and a
+            // no-op here (found by audit_oracle_verbs, 2026-08-31).
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+            },
             ..Default::default()
         }],
         ..Default::default()

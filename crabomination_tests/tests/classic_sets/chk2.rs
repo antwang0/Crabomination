@@ -647,3 +647,17 @@ fn nezumi_shortfang_flips_on_an_empty_hand() {
         "flipped once the opponent ran dry"
     );
 }
+
+/// Field of Reality's {1}{U} returns the Aura to hand from the battlefield.
+/// Its ability was `Effect::ReturnSelf`, a graveyard reanimate that no-ops
+/// while the Aura is in play (audit_oracle_verbs, 2026-08-31).
+#[test]
+fn field_of_reality_bounces_itself_to_hand() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_battlefield(0, catalog::field_of_reality());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    act!(g, aura, 0, None);
+    assert!(g.battlefield_find(aura).is_none(), "left the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "back in hand");
+}

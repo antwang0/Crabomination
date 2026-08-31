@@ -918,3 +918,21 @@ fn diabolic_servitude_returns_to_hand_when_its_tenant_dies() {
     assert!(g.exile.iter().any(|c| c.id == corpse), "exiled, not binned");
     assert!(g.players[0].hand.iter().any(|c| c.id == servitude), "the rental came back");
 }
+
+/// Viashino Sandswimmer's coin-flip win returns it to hand from the
+/// battlefield — its `on_heads` was `Effect::ReturnSelf`, a graveyard
+/// reanimate that no-ops on a permanent still in play (audit_oracle_verbs,
+/// 2026-08-31).
+#[test]
+fn viashino_sandswimmer_wins_the_flip_back_to_hand() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let swimmer = g.add_card_to_battlefield(0, catalog::viashino_sandswimmer());
+    g.clear_sickness(swimmer);
+    mana(&mut g, 0);
+    // Heads = win the flip = return to hand.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, swimmer, 0, None);
+    assert!(g.battlefield_find(swimmer).is_none(), "left the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == swimmer), "back in hand");
+}
