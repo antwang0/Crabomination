@@ -31,14 +31,15 @@ sixty-seventh pass, so don't re-take that.
    -sSLf https://get.nexte.st/latest/linux | tar zx -C ~/.cargo/bin`. Background builds do
    progress unattended (cold `profiling-fast` ~10 min, `release-fast` ~8:30, three valgrinds in
    parallel on 4 cores is free).
-2. **All gates at `e5ac66b6`:** suite **19,105 / 0 / 5**, **golden traces unmoved across every
+2. **All gates at `5e4ebf44`:** suite **19,105 / 0 / 5**, **golden traces unmoved across every
    commit of both sessions**; clippy clean `--all-targets`; `--bench` **195,528 / 27.44 / 611.0
    / 0 stalls byte-identical to the invariant**; determinism + thread_determinism green;
-   **grid 30 cells / 33,120 games / 0 failures / 0 undecided**, re-run a second time for the
-   CR 605.1a *rule* rewrite in (8a) (delete `target-audit/` after, 715 MB). ⚠ **Run the grid
-   build with nothing else compiling** — two rustc on the engine at once is a memcg OOM
-   (`signal: 9`) and cargo reports it as a compile failure. `games_per_s` read 297-374 across
-   the day on `host_calib_ms` 56-66 — that is the host, Ir is the signal.
+   **grid 30 cells / 33,120 games / 0 failures / 0 undecided, run TWICE** — once for the
+   CR 605.1a *rule* rewrite in (8a) and once for the target-field fixes in (9), because both
+   change what the bot does on `cube`/`sealed` (delete `target-audit/` after, 715 MB).
+   ⚠ **Run the grid build with nothing else compiling** — two rustc on the engine at once is a
+   memcg OOM (`signal: 9`) and cargo reports it as a compile failure. `games_per_s` read
+   297-374 across the day on `host_calib_ms` 56-66 — that is the host, Ir is the signal.
 3. **Perf, cumulative `cube` -0.53 % this run** (Baseline). The rule `(-134)`/`(-136)` found is
    a correction to `(-132)`'s: **a frame-heavy function can still go frameless when the answer
    it usually gives needs a cheaper body than the answer it is written for.** `cg_frames.py`

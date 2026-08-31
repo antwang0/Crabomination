@@ -2310,7 +2310,7 @@ a box whose state moves.
 
 ## Baseline
 
-### The CR 605.1a pass — closing state at `48257733`
+### The CR 605.1a pass — closing state at `5e4ebf44`
 
 One perf commit (`(-137)`, the last frame-class row), one rules fix that
 changes real bot play on `cube`/`sealed` and nothing at all on `fixed`, and
@@ -2318,7 +2318,7 @@ a re-profile that replenished the candidate queue from scratch.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,102 / 0 / 5 (cargo nextest --workspace --exclude
+suite   19,105 / 0 / 5 (cargo nextest --workspace --exclude
         crabomination_client); golden traces in it, **unmoved**
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench release-fast: 195,528 decisions / 27.44 turns / 611.0 per game /
@@ -2326,9 +2326,15 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
         thread_determinism ok (3 vs 1 threads identical)
 callgrind cube 2,489,474,925 -> 2,487,955,748 (-0.061 %),
         fixed 838,570,681 -> 837,680,468 (-0.106 %), base `bda1a69d`
-grid    NOT re-run: `(-137)` is pure code motion and the rules fix is gated
-        by 19,102 tests including four new regressions.
+grid    30 cells / 33,120 games / 0 failures / 0 undecided, **twice** — once
+        for the CR 605.1a rule rewrite and once for the target-field fixes,
+        because both change what the bot does on `cube`/`sealed`.
 ```
+
+⚠ **Run the grid build with nothing else compiling.** Two rustc on the engine
+at once peaks over the container's memcg and the loser dies with `signal: 9`,
+which cargo reports as `error: could not compile` — a compile failure that is
+not one. The build is ~10 min alone and the 30 cells are ~4.
 
 ⚠ **The rules fix is invisible to every number in this file and that is a
 fact about `--decks fixed`, not about the fix.** `is_mana_ability` now reads
