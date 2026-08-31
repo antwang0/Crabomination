@@ -56,7 +56,7 @@ sixty-seventh pass, so don't re-take that.
    `noalias`, so LLVM may not move a load across a call and every interleaved scalar was its
    own fenced load/store pair. **Copies LAST, not first.** For a `#[derive(Clone)]` type the
    order is the *declaration* order, which also moves the layout tie-breaks — measure it.
-3a. **The third device, and it is the run's biggest: `(-143)`/`(-144)`/`(-145)`, `cube`
+3a. **The third device, and it is the run's biggest: `(-146)`/`(-147)`/`(-148)`, `cube`
    -1.080 % / `fixed` -0.872 %. A map whose size is bounded by the board, the batch or the
    seat count is a `Vec`.** Twelve `hashbrown` tables became `IdMap`/`IdSet`: `block_map`,
    eight per-call locals in `declare_blockers`/`pick_blocks_inner`, two in

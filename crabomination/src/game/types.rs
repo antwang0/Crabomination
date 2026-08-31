@@ -300,7 +300,7 @@ mod id_set_tests {
 
     /// `IdMap` keeps the `HashMap` wire shape — a map — so a field swapped
     /// from one to the other round-trips existing snapshots. `block_map` is
-    /// the swap that needed it (PERF `(-143)`).
+    /// the swap that needed it (PERF `(-146)`).
     #[test]
     fn id_map_serializes_as_a_map() {
         let mut m: super::IdMap<u32, Vec<u32>> = super::IdMap::default();

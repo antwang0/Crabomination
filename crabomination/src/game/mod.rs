@@ -1475,7 +1475,7 @@ pub struct GameState {
     /// below and for the same reason: it holds one entry per *blocking*
     /// creature, so a linear scan beats hashing, and building a `hashbrown`
     /// table from empty on every block declaration was **0.23 % of `cube`**
-    /// in `reserve_rehash` alone. See PERF `(-143)`.
+    /// in `reserve_rehash` alone. See PERF `(-146)`.
     pub block_map: crate::game::types::IdMap<CardId, SmallVec<[CardId; 4]>>,
     /// CR 510.1c — the active player's chosen blocker order for each attacker
     /// that has multiple blockers, gathered (and cached) before combat damage

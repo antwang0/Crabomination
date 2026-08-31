@@ -2323,7 +2323,7 @@ had already filed.
   0e6ed414   2,509,983,333   the rebased base
   babadb2e   2,504,010,258   -0.238 %   (-140)/(-141)/(-142), the clone shape
   33955a1f   2,503,861,524   -0.006 %   the card batch
-  3efd6d45   2,476,827,927   -1.080 %   (-143)/(-144)/(-145), the small tables
+  3efd6d45   2,476,827,927   -1.080 %   (-146)/(-147)/(-148), the small tables
   ---------------------------------------------------------------------------
   whole run                  **-1.321 %**
 ```
@@ -10319,19 +10319,19 @@ the table above is safe to compress:
 
 ## Log
 
-### Hundred-and-sixteenth pass (7) — `(-145)`: the last five, and where the sweep stops
+### Hundred-and-sixteenth pass (8) — `(-148)`: the last five, and where the sweep stops
 
-**`cube` -0.178 % / `fixed` -0.207 %** against `(-144)`, i.e. **-1.080 % /
+**`cube` -0.178 % / `fixed` -0.207 %** against `(-147)`, i.e. **-1.080 % /
 -0.872 % cumulative** against the run tip `33955a1f`. `--bench` still reads
 195,806 / 27.49 / 611.9 / 0 stalls.
 
 ```text
-  pool    tip 33955a1f    (-143)          (-144)          (-145)      cumulative
+  pool    tip 33955a1f    (-146)          (-147)          (-148)      cumulative
   cube    2,503,861,524   2,501,137,861   2,481,232,541   2,476,827,927  -1.0797 %
   fixed     927,368,664     925,804,066     921,192,718     919,283,529  -0.8718 %
 ```
 
-What `cg_edges.py --callers` still named after `(-144)`:
+What `cg_edges.py --callers` still named after `(-147)`:
 
 ```text
   declare_attackers_banded   seen: HashSet<CardId>        25,768 inserts, 4.10 M incl
@@ -10354,21 +10354,21 @@ a 41-Ir clone for a linear *lookup* that could be long. **The rule the sweep
 ends on: swap a map for a `Vec` when its size is bounded by the board, the
 batch or the seat count — not when it is bounded by the game.**
 
-### Hundred-and-sixteenth pass (6) — `(-144)`: the eight per-call tables in the blocking path, and the device is now proved
+### Hundred-and-sixteenth pass (7) — `(-147)`: the eight per-call tables in the blocking path, and the device is now proved
 
-**`cube` -0.796 % / `fixed` -0.498 %** against `(-143)`, i.e. **-0.904 % /
+**`cube` -0.796 % / `fixed` -0.498 %** against `(-146)`, i.e. **-0.904 % /
 -0.666 % cumulative** against the run tip `33955a1f`. Same instrument, same
 workload — `--bench` reads **195,806 / 27.49 / 611.9 / 0 stalls**,
 byte-identical, so the games are the same and this is work removed rather
 than a workload that shrank.
 
 ```text
-  pool    tip 33955a1f    (-143)          (-144)          cumulative
+  pool    tip 33955a1f    (-146)          (-147)          cumulative
   cube    2,503,861,524   2,501,137,861   2,481,232,541   -0.9038 %
   fixed     927,368,664     925,804,066     921,192,718   -0.6660 %
 ```
 
-`(-143)` swapped the one `block_map` field. This is the rest of the same
+`(-146)` swapped the one `block_map` field. This is the rest of the same
 shape: **eight `fxhash` maps and sets built from empty on every call** in the
 two functions the `reserve_rehash` table named, all of them holding a handful
 of entries.
@@ -10389,9 +10389,9 @@ of entries.
 and dropped on every block declaration.
 
 ⚠ **The per-commit split of the -0.904 % is not readable off the row diff,
-and the reason is worth knowing.** Between `(-143)` and `(-144)`,
+and the reason is worth knowing.** Between `(-146)` and `(-147)`,
 `SmallVec::extend` moves 39.7 M -> 14.2 M and `compute_permanent_pass` moves
-69.1 M -> 79.0 M — the exact reverse of what they did across `(-143)`. At
+69.1 M -> 79.0 M — the exact reverse of what they did across `(-146)`. At
 `codegen-units = 16` a change that shrinks `declare_blockers` moves inlining
 decisions in the same unit, and callgrind attributes the *same* work to a
 different row. **The hashbrown rows are the honest part of the diff**
@@ -10407,13 +10407,13 @@ uses them); what it had not done is sweep the *locals*. `cg_edges.py
 this pass the list is `rank_library_search`, `discard_card` and
 `block_candidates_for_mcts` — 0.01 % between them.
 
-### Hundred-and-sixteenth pass (5) — `(-143)`: `block_map` was the last `hashbrown` table in combat
+### Hundred-and-sixteenth pass (6) — `(-146)`: `block_map` was the last `hashbrown` table in combat
 
 **`cube` -0.109 % / `fixed` -0.169 %** off the run tip (`33955a1f`), same
 instrument and workload.
 
 ```text
-  pool    tip             (-143)          delta
+  pool    tip             (-146)          delta
   cube    2,503,861,524   2,501,137,861   -0.1088 %
   fixed     927,368,664     925,804,066   -0.1687 %
 ```
@@ -19068,7 +19068,7 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-143)/(-144)/(-145) CLOSED — THE SMALL-TABLE SWEEP IS DONE, `cube`
+**(-146)/(-147)/(-148) CLOSED — THE SMALL-TABLE SWEEP IS DONE, `cube`
 -1.080 % / `fixed` -0.872 %.** Twelve `hashbrown` tables whose size is bounded
 by the board, the batch or the seat count became `IdMap`/`IdSet` (a
 `Vec<(K, V)>` with linear scans): `GameState::block_map`, eight per-call

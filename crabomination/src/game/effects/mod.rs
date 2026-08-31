@@ -1873,7 +1873,7 @@ impl GameState {
         // checkpoint and probe for the rest of the game. Assigning an empty
         // map costs two stores when it is already empty (neither hashbrown's
         // nor `Vec`'s `new` allocates) and the next discard rebuilds it.
-        // Both are `IdMap`s now (PERF `(-147)`), so the buffer is a `Vec`.
+        // Both are `IdMap`s now (PERF `(-148)`), so the buffer is a `Vec`.
         if self.scratch.cards_discarded_per_player_this_resolution.capacity() > 0 {
             self.scratch.cards_discarded_per_player_this_resolution = Default::default();
         }
