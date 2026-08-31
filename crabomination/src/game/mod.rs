@@ -9026,16 +9026,6 @@ impl GameState {
         &self,
         strip_on_battlefield: bool,
     ) -> Vec<CardId> {
-        fn strip(state: &GameState, fx: &[ContinuousEffect]) -> Vec<CardId> {
-            if !fx.iter().any(|e| matches!(e.modification, Modification::RemoveAllAbilities)) {
-                return Vec::new();
-            }
-            crate::game::layers::apply_layers(&state.battlefield, fx)
-                .into_iter()
-                .filter(|c| c.lost_all_abilities)
-                .map(|c| c.id)
-                .collect()
-        }
         // The presence gate before *either* effect-set read. `false` is
         // authoritative whether or not a scope is open, so a board with no
         // strip source answers without asking `frozen_effects` — which on
@@ -9056,6 +9046,28 @@ impl GameState {
                 "the ability-strip presence gate missed a RemoveAllAbilities source",
             );
             return Vec::new();
+        }
+        self.permanents_with_abilities_removed_cold()
+    }
+
+    /// The effect-set read behind
+    /// [`permanents_with_abilities_removed`](Self::permanents_with_abilities_removed)'s
+    /// presence gate. `#[inline(never)]` for `(-136)`'s reason: the gate
+    /// answers 99 % of asks and is call-free, so with the cold half out of
+    /// line the outer function keeps no stack frame at all — the fresh dump
+    /// reads `body calls 21 / out per call 0.01`, i.e. 80,222 invocations
+    /// paying a 7-instruction prologue for a call 99 % of them never make.
+    #[inline(never)]
+    fn permanents_with_abilities_removed_cold(&self) -> Vec<CardId> {
+        fn strip(state: &GameState, fx: &[ContinuousEffect]) -> Vec<CardId> {
+            if !fx.iter().any(|e| matches!(e.modification, Modification::RemoveAllAbilities)) {
+                return Vec::new();
+            }
+            crate::game::layers::apply_layers(&state.battlefield, fx)
+                .into_iter()
+                .filter(|c| c.lost_all_abilities)
+                .map(|c| c.id)
+                .collect()
         }
         if let Some(fx) = self.frozen_effects() {
             return strip(self, &fx);
