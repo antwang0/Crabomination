@@ -338,6 +338,32 @@ before opening the next class.**
    with N +1/+1 counter(s) on it". Escape shipped on all three; the rider on
    none. One line of oracle text, three cards, one omission repeated.
 
+**`audit_keyword_drift.py` — the mechanic-keyword population, both
+directions, filed 2026-08-31.** `audit_catalog_stats` compares only the ~20
+evergreen keywords and only what sits in `CardDefinition.keywords`, so every
+*mechanic* keyword and every mechanic stored in its own field
+(`foretell_cost`, `plot_cost`, `affinity_filter`, `mutate`, …) was unaudited
+in both directions. Over the 10,744 single-faced cards the cache adjudicates:
+
+- **INVENTED: 0.** Ten were fixed in the pass that wrote the auditor (see the
+  commit); thirteen more are allowlisted in the script as deliberate
+  modellings, each with its reason. **A regression here is a wrong card in
+  play, so this number staying 0 is the ratchet.**
+- **MISSING: 369**, and this one is a reading list rather than a proof — the
+  auditor cannot see a mechanic spelled as a bespoke trigger. Largest buckets:
+  `spree` 21, `cycling` 20, `splice` 18, `soulshift` 18, `prototype` 15,
+  `evolve` 15, `channel` 15, `buyback` 15, `extort` 13, `entwine` 13,
+  `cipher` 13, `bloodrush` 13. **Four of them — `spree`, `soulshift`,
+  `channel`, `evolve` — have no `Keyword::` variant and no field at all**, so
+  those 69 rows are one primitive each rather than 69 card jobs.
+
+**`audit_doc_drift.py` — 340 stale doc comments, 0 body bugs.** The bodies are
+oracle-clean (`audit_catalog_stats` reads 0 cost and 0 P/T drift), so every
+row is a comment describing a different card than the body builds — which is
+this file's own "the doc comment above the body is the tell". **56 of them
+disagree on cost AND P/T**; a five-card sample of that subset found four with
+real ability defects, so it is the subset to read first.
+
 **Primitive jobs the two classes surfaced, none taken.** Each is filed here
 rather than fixed because it needs an engine primitive, and the count beside
 it is how many cards it unblocks.

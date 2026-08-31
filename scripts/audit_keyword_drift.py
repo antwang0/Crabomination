@@ -24,6 +24,17 @@ Foretell the card does not print.
 creature reads as missing Flying ("can block creatures with flying").
 ⚠ Multi-face cards are skipped: the body splits over `back_face` and the
 comparison would need to follow it.
+
+**The two directions are not equally strong.** INVENTED is a proof — the
+engine carries a mechanic the printed card does not have, which is a wrong
+card in play — and it reads **0** after the pass that closed it. MISSING is a
+*reading list*: it cannot see a mechanic spelled as a bespoke triggered
+ability instead of a keyword, so a row is a card to read against its oracle,
+not a proven gap. Spot-checked, the big buckets are real (Gibbering Kami has
+no Soulshift 3 at all; Scurry Oak's own doc says "Evolve" and its body has
+only the counter trigger) — and four of them, `spree` / `soulshift` /
+`channel` / `evolve`, have **no `Keyword::` variant and no field in the
+engine**, so those are missing-mechanic work rather than missing-card work.
 """
 import argparse
 import json
@@ -73,13 +84,41 @@ KW_WORD = {
     "Riot": "riot", "Mentor": "mentor", "Afterlife": "afterlife",
     "Spectacle": "spectacle", "Adamant": "adamant", "Foretell": "foretell",
 }
-# The same question for the mechanics stored outside `keywords`.
+# The same question for the mechanics stored outside `keywords`. ⚠ Every
+# mechanic with its own field has to be listed here or the *missing* direction
+# reports it on every card that has it — `affinity_filter` alone was 39 rows.
 FIELD_WORD = {
     "foretell_cost": "foretell",
     "plot_cost": "plot",
     "buyback_additional_cost": "buyback",
     "entwine_additional_cost": "entwine",
     "splice_extra_cost": "splice",
+    "affinity_filter": "affinity",
+    "affinity_graveyard_filter": "affinity",
+    "mutate": "mutate",
+    "bestow": "bestow",
+    "adventure": "adventure",
+    "companion": "companion",
+    "omen": "omen",
+    "gift": "gift",
+    "station": "station",
+    "saga_chapters": "saga",
+    "room": "room",
+    "case": "case",
+    "soulbond_bonus": "soulbond",
+    "kicker_action_cost": "kicker",
+    "flashback_additional_cost": "flashback",
+    "prototype": "prototype",
+    "impending": "impending",
+    "warp_cost": "warp",
+    "spree_modes": "spree",
+    "overload_cost": "overload",
+    "channel_abilities": "channel",
+    "evoke_cost": "evoke",
+    "escape_cost": "escape",
+    "disturb_cost": "disturb",
+    "madness_cost": "madness",
+    "cycling_cost": "cycling",
 }
 
 # Deliberate modellings, checked once so they do not have to be re-checked.
@@ -97,6 +136,43 @@ ALLOWED = {
     # player, that player gets a poison counter". Poisonous is combat-only, so
     # this is an approximation and not an equivalence.
     ("pit_scorpion", "poisonous"),
+    # `affinity_filter` is the engine's cost-reduction primitive, and these
+    # cards spell the reduction out instead of printing the keyword ("costs
+    # {1} less to cast for each creature on the battlefield").
+    ("carapace_forger", "affinity"),
+    ("temur_battlecrier", "affinity"),
+    ("spectral_denial", "affinity"),
+    ("rowdy_research", "affinity"),
+    ("static_snare", "affinity"),
+    ("gargantuan_leech", "affinity"),
+    ("blasphemous_act", "affinity"),
+    ("vanquish_the_horde", "affinity"),
+    ("sea_gods_scorn", "affinity"),
+}
+
+# ⚠ Some of those fields are *implementation vehicles* rather than the printed
+# keyword: `affinity_graveyard_filter` is how "costs {1} less for each instant
+# in your graveyard" is modelled and no such card prints "Affinity", and
+# `kicker_action_cost` / `flashback_additional_cost` are riders on cards whose
+# printed keyword is spelled some other way. They answer the MISSING question
+# and must not answer the INVENTED one.
+FIELD_ONLY_MISSING = {
+    "affinity_graveyard_filter", "kicker_action_cost", "flashback_additional_cost",
+    "saga_chapters", "room", "case", "station", "gift", "soulbond_bonus",
+}
+
+# ⚠ `alternative_cost: Some(..)` is the engine's one vehicle for the whole
+# alternative-cost family, so a card that has it may be carrying any of these
+# without a `Keyword::` of its own — Ondu Rising's Awaken is
+# `alternative_cost: Some(awaken(..))`. Suppress the family for such a card in
+# the MISSING direction rather than report every one of them.
+ALT_FAMILY = {
+    "awaken", "evoke", "madness", "prowl", "spectacle", "surge", "emerge",
+    "escape", "dash", "blitz", "disturb", "overload", "warp", "impending",
+    "plot", "prototype", "mutate", "bestow", "cleave", "casualty", "spree",
+    "channel", "adapt", "foretell", "miracle", "morph", "megamorph",
+    "disguise", "embalm", "eternalize", "unearth", "flashback", "retrace",
+    "jump-start", "boast", "forecast", "ninjutsu",
 }
 
 FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> CardDefinition \{", re.M)
@@ -195,14 +271,18 @@ def scan():
             body = card_literal(body, bn.start())
             checked += 1
             have = {KW_WORD[k] for k in top_level_keywords(body) if k in KW_WORD}
+            strict = set(have)
             for field, word in FIELD_WORD.items():
-                if re.search(rf"^ {{8}}{field}: Some", body, re.M):
+                if re.search(rf"^ {{8}}{field}: (Some|vec!\[[^\]]|&\[)", body, re.M):
                     have.add(word)
-            for word in sorted(have):
+                    if field not in FIELD_ONLY_MISSING:
+                        strict.add(word)
+            for word in sorted(strict):
                 if word not in words and (m.group(1), word) not in ALLOWED:
                     invented.append((m.group(1), path.relative_to(ROOT), word))
+            has_alt = re.search(r"^ {8}alternative_cost: Some", body, re.M) is not None
             for word in sorted(set(KW_WORD.values()) | set(FIELD_WORD.values())):
-                if word in have:
+                if word in have or (has_alt and word in ALT_FAMILY):
                     continue
                 # The printed keyword line starts the ability, so require the
                 # word at a line start or after a separator — "escape" inside
