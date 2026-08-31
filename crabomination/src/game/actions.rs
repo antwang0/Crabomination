@@ -276,6 +276,16 @@ pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
             // "This land doesn't untap during your next untap step" (the CHK
             // slow duals) — another non-targeting CR 605.1a rider.
             Effect::SkipNextUntap { what: crate::effect::Selector::This } => true,
+            // **"This land deals 1 damage to you"** — the painland cycles,
+            // City of Brass, Cephalid Coliseum and the ten Talismans. It adds
+            // mana, targets nothing and is not a loyalty ability, so CR 605.1a
+            // makes it a mana ability; the pain is an incidental rider exactly
+            // like Altar of the Pantheon's life gain. Read as a *non*-mana
+            // ability the whole class stopped being auto-tappable for its
+            // colours and the mana arrived a stack resolution too late to pay
+            // for the spell it was tapped for — the same failure the `Draw`
+            // arm above is written for.
+            Effect::DealDamage { to: crate::effect::Selector::You, .. } => true,
             // CR 605.1a/603.7 — a reflexive "when you do" rider triggers OFF
             // the mana ability; it goes on the stack itself but doesn't stop
             // the ability being a mana ability (Rubble Rouser's "Add {R}.

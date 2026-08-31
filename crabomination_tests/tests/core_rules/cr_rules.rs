@@ -3347,6 +3347,37 @@ fn cr_605_conditional_mana_ability_pays_a_spell() {
     assert!(g.battlefield_find(spell).is_some(), "bear cast off the dork's mana");
 }
 
+/// CR 605.1a — "This land deals 1 damage to you" is an incidental rider, not a
+/// disqualifier: the ability adds mana, targets nothing and is not a loyalty
+/// ability, so it is a mana ability and resolves without the stack.
+///
+/// It had been reading as a *non*-mana ability, which cost the whole painland
+/// class (City of Brass, both Tempest cycles, Cephalid Coliseum, the ten
+/// Talismans) its colored mana at the moment it was needed — the mana arrived
+/// a stack resolution after the spell that tapped for it.
+#[test]
+fn cr_605_1a_painland_damage_rider_is_still_a_mana_ability() {
+    let mut g = two_player_game();
+    let city = g.add_card_to_battlefield(0, catalog::city_of_brass());
+    let spell = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Color(Color::Green),
+    ]));
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: city, ability_index: 0, target: None,
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("mana ability (no stack)");
+    assert!(g.stack.is_empty(), "mana abilities don't use the stack (CR 605.3a)");
+    assert_eq!(g.players[0].life, life - 1, "and the rider still deals its damage");
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("the floated mana pays {1}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(spell).is_some(), "bear cast off the painland's mana");
+}
+
 // ── CR 701.19 — Searching (multi-card) ────────────────────────────────────────
 /// Deathbellow War Cry searches for up to four Minotaurs; the count-search
 /// chains single picks, and a non-matching card is never offered.
