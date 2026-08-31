@@ -12147,6 +12147,17 @@ impl GameState {
                     let n = self.players[card.controller].graveyard.len() as i32;
                     (n, n)
                 }
+                crate::card::DynamicPt::DomainCount => {
+                    let mut ctx = crate::game::effects::EffectContext::for_spell(
+                        card.controller, None, 0, 0,
+                    );
+                    ctx.source = Some(card.id);
+                    let n = self.evaluate_value(
+                        &crate::effect::Value::DomainCount(crate::effect::PlayerRef::You),
+                        &ctx,
+                    );
+                    (n, n)
+                }
                 crate::card::DynamicPt::BasePlusUnspentColorMana { base_p, base_t, color } => {
                     let n = self.players[card.controller].mana_pool.amount(color) as i32;
                     (base_p + n, base_t + n)

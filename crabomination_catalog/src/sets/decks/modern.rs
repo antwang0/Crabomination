@@ -14483,7 +14483,9 @@ pub fn master_of_cruelties() -> CardDefinition {
 /// `LandPlayed`, so the trigger catches every fresh land that lands on
 /// the opponent's side.
 pub fn territorial_kavu() -> CardDefinition {
-    use crate::card::CounterType;
+    // This was not the card it is named after: it shipped as a 3/2 that grew
+    // when an OPPONENT played a land. The printed card is a Domain */* with a
+    // modal attack trigger and no land trigger at all.
     CardDefinition {
         name: "Territorial Kavu",
         cost: cost(&[r(), g()]),
@@ -14492,14 +14494,39 @@ pub fn territorial_kavu() -> CardDefinition {
             creature_types: vec![CreatureType::Kavu],
             ..Default::default()
         },
-        power: 3,
-        toughness: 2,
+        power: 0,
+        toughness: 0,
+        dynamic_pt: Some(DynamicPt::DomainCount),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LandPlayed, EventScope::OpponentControl),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ChooseN {
+                picks: vec![0],
+                modes: vec![
+                    // "Discard a card. If you do, draw a card." The discard is
+                    // mandatory, so the only way it fails is an empty hand —
+                    // which is exactly what the guard tests.
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::HandSizeOf(PlayerRef::You),
+                            Value::Const(1),
+                        ),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::Discard {
+                                who: Selector::You,
+                                amount: Value::Const(1),
+                                random: false,
+                            },
+                            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    },
+                    // "Exile up to one target card from a graveyard."
+                    Effect::ExileUpToNFromGraveyards {
+                        count: Value::Const(1),
+                        of: None,
+                        single: true,
+                    },
+                ],
             },
         }],
         ..Default::default()

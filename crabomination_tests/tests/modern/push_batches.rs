@@ -2117,25 +2117,40 @@ fn master_of_cruelties_attack_sets_opp_life_to_one() {
     assert_eq!(g.players[1].life, 1, "Opp's life set to 1");
 }
 
+/// CR 702.43 Domain — the Kavu's P/T is the number of distinct basic land
+/// types among lands you control. It shipped as a 3/2 that grew off an
+/// *opponent's* land drop, which is not this card in any part.
 #[test]
-fn territorial_kavu_grows_when_opponent_plays_a_land() {
-    use crabomination::card::CounterType;
+fn territorial_kavu_is_a_domain_star_star() {
     let mut g = two_player_game();
     let kavu = g.add_card_to_battlefield(0, catalog::territorial_kavu());
-    g.clear_sickness(kavu);
+    let cp = g.computed_permanent(kavu).expect("Kavu alive");
+    assert_eq!((cp.power, cp.toughness), (0, 0), "no lands: 0/0");
 
-    // Opponent plays a land.
-    let land = g.add_card_to_hand(1, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest()); // a second Forest is the same type
+    let cp = g.computed_permanent(kavu).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "one distinct basic type");
+
+    g.add_card_to_battlefield(0, catalog::mountain());
+    g.add_card_to_battlefield(0, catalog::island());
+    let cp = g.computed_permanent(kavu).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "three distinct basic types");
+
+    // And the land trigger it used to carry is gone: an opponent's land drop
+    // moves nothing.
+    let before = g.computed_permanent(kavu).unwrap().power;
+    let land = g.add_card_to_hand(1, catalog::swamp());
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.step = crabomination::game::types::TurnStep::PreCombatMain;
-    g.perform_action(GameAction::PlayLand(land))
-        .expect("Opp plays a forest");
+    g.perform_action(GameAction::PlayLand(land)).expect("Opp plays a swamp");
     drain_stack(&mut g);
-
-    let k = g.battlefield_find(kavu).expect("Kavu alive");
-    assert_eq!(k.counter_count(CounterType::PlusOnePlusOne), 1,
-        "Kavu grew off opp's land entering");
+    assert_eq!(
+        g.computed_permanent(kavu).unwrap().power,
+        before,
+        "domain counts YOUR lands — an opponent's Swamp is not one"
+    );
 }
 
 #[test]

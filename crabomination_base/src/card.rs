@@ -4805,6 +4805,11 @@ pub enum DynamicPt {
     /// Power = toughness = size of the controller's graveyard. Cruel
     /// Somnophage.
     ControllerGraveyardSize,
+    /// CR 702.43 Domain — power = toughness = the number of distinct basic
+    /// land types among lands the controller controls (0-5). Territorial
+    /// Kavu. Defers to [`crate::effect::Value::DomainCount`], which is the
+    /// same count the domain spells and Leyline Binding read.
+    DomainCount,
     /// Power = toughness = `base` + the number of creature cards in the
     /// controller's graveyard. Fiend Artisan (base 1/1).
     BasePlusCreaturesInControllerGraveyard { base: i32 },
