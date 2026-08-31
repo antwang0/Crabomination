@@ -2341,9 +2341,9 @@ row do not add; re-read the second one against the first.**
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,115 / 0 / 5 (cargo nextest --workspace --exclude
-        crabomination_client); golden traces in it, **unmoved across every
-        commit**
+suite   19,116 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client) at the merged tip; golden traces in it,
+        **unmoved across every commit of both sessions**
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench release-fast: 195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls — **a NEW invariant, see the warning below**; determinism

@@ -33,7 +33,7 @@ sixty-seventh pass, so don't re-take that.
    ~9 min, warm ~3; `release-fast` ~7:30; two `--games 6` valgrinds in parallel are free.
    ⚠ **Run a grid build with nothing else compiling** — two rustc on the engine at once is a
    memcg OOM (`signal: 9`) that cargo reports as a compile failure.
-2. **All gates at the tip:** suite **19,113 / 0 / 5**, **golden traces unmoved across every
+2. **All gates at the tip:** suite **19,116 / 0 / 5**, **golden traces unmoved across every
    commit of both sessions**; clippy clean `--all-targets`; determinism + thread_determinism
    green; **grid 30 cells / 33,120 games / 0 failures / 0 undecided, run TWICE** last run
    (delete `target-audit/` after, 715 MB). `games_per_s` read 225-407 across the day on
