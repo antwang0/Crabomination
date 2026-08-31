@@ -27,55 +27,53 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Several sessions at once: code before tracker prose, **rebase
    not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
    build **and re-read it then**. Do not rebase while a build runs; kill orphaned `rustc`
-   (`ps -o ppid` = 1). ⚠ **This container sleeps between tool calls** — a build launched in
-   the background makes no progress until the next foreground command; run builds in the
-   foreground.
-2. **All five gates at `f4847f46`:** suite **19,089 / 0 / 5**, clippy clean (also
+   (`ps -o ppid` = 1). ⚠ **The routine container sleeps between tool calls** — a background
+   build makes no progress until the next foreground command, so run builds in the
+   foreground. ⚠ Disk is a fixed allowance: `target/debug/incremental` was 18 GB and
+   deleting it was the difference between a linker Bus error and a green suite.
+2. **All five gates at `ccec52ac`:** suite **19,089 / 0 / 5**, clippy clean (also
    `--features trig-census`), traces in the suite unmoved, `--bench` **195,528 / 27.44 /
-   611.0 / 0 stalls byte-identical to the invariant** — re-run *after* the eleven card
-   fixes, not just before — with determinism + thread_determinism green. Grid not re-run:
-   the engine lines added are a `trig-census` `cfg` block and one CR 605.1a rider.
-   `peak_rss_mib` 28.8 is `release-fast` on a 2.80 GHz host and is **not** the 24.4-24.8
-   `release` family — do not read it as a step.
-3. **`(-122)` CLOSED, refuted by census before a build**: the board-wide mask costs **2.86x**
-   the walk on `cube` (301,516 vs 105,436 evaluations) and `fixed`/`sealed` carry **no**
-   `EachPermanent` activated grant at all. The rule: **a gate in front of a walk is part of
-   the walk's cost model** — `granted_abilities_of`'s ten checks already turn 65 % of the
-   board away, so a precompute covering the whole board loses. `zone::grant_census` is in
-   the tree and is how it was answered.
-4. **`(-127)` BUILT AND REVERTED, `cube` +0.727 % / `fixed` +0.994 %.** `players` is the one
-   `GameState` zone that is not `CowBox` because **82.5 % of clones write it** (18,606 deep
-   copies against 22,558 clones); `make_mut` rose 313,404 calls for 18,606 copies, i.e. the
-   CoW gate is paid **per `&mut` reach, not per clone**. Two lines to write, which is why it
-   needed the entry.
-5. **Open: `(-126)` only** — the requirement walker, **3.81 % of `cube`** folded, the largest
-   engine function with nothing filed against it, **65 % of its calls its own recursion**.
-   Fewer *asks* is not the lever (`(-122)` just refuted the precompute in front of its
-   second-largest caller, and the caller table has nineteen entries). Size the recursive
-   edge with `--separate-callers` + `--demangle=no` before proposing an `All`/`Any` slice
-   variant of `SelectionRequirement`; PERF says why the prologue number does not point at
-   the signature. **The queue has nothing else in it — a run that does not take `(-126)`
-   should replenish from fresh dumps rather than pick the next-largest row.**
-6. **Do not retake:** `(-112)`; `(-124)`; dispatch's per-event gate (61 AND 106); a third
-   line profile of `dispatch_triggers_for_events` or of the gather (pass 91: no hot line in
-   either); **actor scaling** (`(-52)`); the `turn_granted_triggers` / `granted_triggers_eot`
-   retains; the `players` wrap above.
-7. **Measurement traps, all in PERF:** `grep mimalloc` is not the allocator check;
+   611.0 / 0 stalls byte-identical to the invariant** with determinism + thread_determinism
+   green. Grid not re-run: the engine lines added are `cfg`-gated censuses and one CR 605.1a
+   rider, and the callgrind base moved 495 Ir in 2.53 G (0.00002 %). ⚠ `games_per_s` read
+   269-283 across three runs of the *same* binary on this host — **wall clock here is ±5 %,
+   Ir is not; do not read a throughput delta off `--bench`.** `peak_rss_mib` 28.1 is
+   `release-fast` on a 2.80 GHz host, not the 24.4-24.8 `release` family.
+3. **Three candidates answered, none in the tree.** `(-122)` refuted by census (the mask
+   costs **2.86x** the walk; two pools have no walk at all). `(-127)` built and reverted
+   (`cube` **+0.727 %** — 82.5 % of clones write `players`, so the CoW gate is paid per
+   `&mut` reach, seventeen per writing clone). `(-126)` closed: the flattened `All`/`Any`
+   serves only **139,406** of `cube`'s calls (~0.16 %), and splitting the leaves out of line
+   was built and reverted at **+0.940 %**. **Three rules, all about populations:** a gate in
+   front of a walk is part of the walk's cost model; a CoW wrap's gate is per reach, not per
+   clone; a split pays by the share of calls taking the *small* half (42 %, not the 65 % of
+   recursive edges). Three censuses are in the tree (`grant_census`, `req_census`, and
+   `trig_census` before them) — **the census answered every one of the three for one build.**
+4. **Open, in order: `(-128)` then `(-129)`.** `(-128)` is SBA — 3.78 % of `cube` and
+   **4.19 % of `fixed`**, the only top row bigger on the smaller pool, which is what says it
+   is per-sweep overhead and not board size; the epoch memo is already in `zone::Battlefield`
+   and PERF says to count the memoizable share first. `(-129)` is `event_matches_spec`,
+   1,028,014 calls on `cube` against 103,082 on `fixed` — open it with `cg_contexts.py`
+   (which now prints inclusive Ir per context), **not** a line profile.
+5. **Do not retake:** `(-112)`; `(-124)`; `(-126)`'s two devices; the `players` wrap; the
+   `(-122)` mask; dispatch's per-event gate (61 AND 106); a third line profile of
+   `dispatch_triggers_for_events` or of the gather; **actor scaling** (`(-52)`); the
+   `turn_granted_triggers` / `granted_triggers_eot` retains.
+6. **Measurement traps, all in PERF:** `grep mimalloc` is not the allocator check;
    `(-110)`'s null control does not transfer to the actor; a census must be re-run *after* a
-   fix that moves what it counts; a never-taken runtime gate is not free in a register-
-   starved loop; and **`cg_contexts.py` now prints inclusive Ir per context**, which is what
-   a ceiling is read off — it printed call counts only until this session.
-8. **Robustness:** `audit_panics.py` at 0 bare sites; the grid's last full run was 33,120
-   games / 0 failures / 0 undecided at `f2f7d58c`. An empty pool and `n == 0` are legal
-   *inputs*, so the degradation is a return, not a `debug_assert!`.
-9. **Cards: `draw` and `counters` are worked, 214 -> 203; `return_to_hand` (31) and `token`
-   (26) are next and unexamined.** Eleven cards fixed, all of one of two shapes, both in
-   CARD_BACKLOG's "Oracle-verb audit" section with the primitive jobs they surfaced (the
-   `LookPick`-with-else conditional unblocks **four** cards, Parley five). **The doc comment
-   above a body is the tell** — three of four wrong-shape cards still described the card the
-   body used to be, and `audit_catalog_stats` reads zero on all of them because the
-   characteristics were corrected against Scryfall and the ability was not.
-10. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
+   fix that moves what it counts; and `--demangle=no` is how you learn whether a repeated row
+   is one function at several depths (the requirement walker) or several instantiations.
+7. **Robustness:** `audit_panics.py` at 0 bare sites; grid last full at 33,120 games / 0
+   failures at `f2f7d58c`. An empty pool and `n == 0` are legal *inputs*, so the degradation
+   is a return, not a `debug_assert!`.
+8. **Cards: `draw` and `counters` worked, 214 -> 203; `return_to_hand` (31) and `token` (26)
+   are next and unexamined.** Eleven cards fixed, all of two shapes, both in CARD_BACKLOG's
+   "Oracle-verb audit" section with the primitive jobs they surfaced (`LookPick`-with-else
+   unblocks **four** cards, Parley five). **The doc comment above a body is the tell** —
+   three of four wrong-shape cards still described the card the body used to be, and
+   `audit_catalog_stats` reads zero on all of them because the characteristics were corrected
+   against Scryfall and the ability was not.
+9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
