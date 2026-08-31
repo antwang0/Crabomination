@@ -125,6 +125,25 @@ sixty-seventh pass, so don't re-take that.
    about the tree; check it before quoting it** — three of CARD_BACKLOG's turned out to be one
    `if`, one field, and one already-shipped primitive. Next by size: `token` 21, `draw` 19,
    `search_library` 18, `destroy` 15.
+12a. **TWO NEW CARD AUDITORS, AND ONE OF THEM IS A RATCHET AT ZERO.**
+   `audit_keyword_drift.py` asks whether a card carries exactly the *mechanic* keywords it
+   prints — `audit_catalog_stats` compares only the ~20 evergreen ones and only what sits in
+   `keywords`, so Morph / Flashback / Cycling / Foretell and every mechanic with its own field
+   were unaudited both ways. **Ten cards carried a mechanic they do not print**: Hellspark
+   Elemental Flashback-for-Unearth, Skirk Marauder landcycling-for-Morph, Lose Focus
+   Delve-for-Replicate, Plunge into Darkness Kicker-for-Entwine, Bloodfray Giant
+   Bloodthirst-for-Unleash, Pest Control Convoke-for-Cycling, Resurgent Belief
+   Flashback-for-Suspend, and three that print nothing at all — each one a different card in
+   play. It reads **0 invented / 369 missing**; **keep the 0**, and read MISSING as a list,
+   not a proof (it cannot see a mechanic spelled as a bespoke trigger).
+   `audit_doc_drift.py` is the other half: **340 doc comments that describe a different card
+   than the body builds**, of which **56 disagree on cost AND P/T** — a five-card sample of
+   that subset found four with real ability defects, so it is the subset to read first.
+   ⚠ **Both needed four false classes gated before their totals meant anything**: end a
+   factory at its own closing brace (a helper with arguments does not match `pub fn …`), read
+   the card's own literal and not the token one a factory mints first, require `name: "X",`
+   over `name: "X".into()`, and drop the cache entries that spell two faces into one string.
+   Each write-up is in its script; CARD_BACKLOG carries the numbers.
 13. **Targeting is CLOSED and gated** for both the *wrapper* and the *field* question; the
    four rules live in ENGINE_BACKLOG and `scripts/audit_target_fields.py` is the instrument.
    ⚠ An arm for a chooser placed above a shared `body` arm **shadows** it; clippy's
