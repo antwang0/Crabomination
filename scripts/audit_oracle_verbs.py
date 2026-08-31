@@ -145,8 +145,9 @@ VERBS = {
     # not `ReturnSelf` (Field of Reality), not `ReturnEachUnlessPays` (Cut the
     # Tethers), and none of the **cost** spellings — `bounce_other_filter`
     # (the six Soratami, Quirion Ranger, Wirewood Symbiote),
-    # `return_self_cost` (Chthonian Nightmare), the alternative-cost
-    # `return_to_hand` (Daze, Gush). Returning something to hand as the price
+    # `return_self_cost` (Chthonian Nightmare), `return_permanent_cost` (the
+    # Tempest "return this enchantment: do X" cyclers — Attunement, Broken
+    # Fall), the alternative-cost `return_to_hand` (Daze, Gush). Returning something to hand as the price
     # of an ability is what the oracle sentence says, so a card that spells it
     # in a cost field is not missing the verb. **`ReturnSelf` is NOT on the
     # list** — the whole `ReturnSelf*` family returns from the GRAVEYARD to the
@@ -160,7 +161,8 @@ VERBS = {
         r"To\w{0,12}Hand|ReturnEachUnlessPays|Bounce|bounce_"
         r"|ZoneDest::Hand|Zone::Hand|CounteredSpellZone::OwnerHand"
         r"|ExileReturnZone::Hand"
-        r"|return_self_cost|_to_hand|return_to_hand|return_eot",
+        r"|return_self_cost|_to_hand|return_to_hand|return_eot"
+        r"|return_permanent_cost",
     ),
     "counters": (
         r"\+1/\+1 counter|\-1/\-1 counter",

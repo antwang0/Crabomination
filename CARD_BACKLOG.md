@@ -127,10 +127,33 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 `scripts/audit_oracle_verbs.py` asks the cheapest question that catches a
 wrong-shape card: **the oracle names a verb and the effect tree has no
-primitive for it.** Standing **214 -> 203** over 10,949 cards; `draw` 34 -> 27
-and `counters` 33 -> 26, eleven cards fixed. `untap` / `scry` / `surveil` are
-closed. **`return_to_hand` (31) and `token` (26) are unexamined** — that is
-where the next run starts.
+primitive for it.** `surveil` and `tap_target` read zero; `untap` (3) and
+`scry` (7) reopened only because the corpus grew — those rows are cards the
+audit could not previously see, not regressions.
+
+**The instrument reads 6,000 more cards as of `c43c376d`.** It now inlines
+`..creature("Name", …)`-style helper spreads (most of the classic sets were
+skipped entirely because the card's *name* sat in a positional argument), and
+it expands engine primitives and `ZoneDest`/`CounteredSpellZone`/
+`ExileReturnZone` destinations the way it already expands catalog helpers.
+Corpus 10,949 -> **17,028**; totals are not comparable across that jump.
+
+**`return_to_hand` worked, and its false-positive classes are the lesson.**
+It went 31 rows -> **4 real ones** through four distinct false classes — cost
+spellings (`bounce_other_filter`, `return_self_cost`, alternative-cost
+`return_to_hand`), destinations hidden in a helper, engine primitives, and
+variants the old regex simply did not name. **The one real bug it turned up:
+`Effect::ReturnSelf` is a graveyard->battlefield reanimate, and Field of
+Reality and Viashino Sandswimmer both used it for a battlefield bounce that
+therefore no-opped** (fixed `fdd248ba`). Rule for the next class: **read six
+rows in the source and fix the filter before working any of them** — a false
+positive's class is shared, so six rows find nearly all of them.
+
+**Open rows after the corpus grew (2026-08-31):** `draw` 32, `gain_life` 30,
+`counters`/`damage` 25, `token` 24, `search_library` 21 — over the larger
+corpus, so unexamined rather than regressed. `return_to_hand`'s four
+survivors (Corpses of the Lost, Intimidation Campaign, Rambling Possum, The
+Locust God) are each a delayed/conditional bounce the body approximates.
 
 **Two shapes account for every one of the eleven, and both are worth knowing
 before opening the next class.**
