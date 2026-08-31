@@ -3373,21 +3373,39 @@ fn mai_scornful_striker_drains_opp_on_attack() {
     assert_eq!(g.players[1].life, life1_before - 1, "opp -1 life on attack");
 }
 
+/// Tempest Angler grows on each noncreature spell you cast — it shipped with
+/// an ETB scry 2 instead, which is a different card. (It also shipped with
+/// Flying until 2026-08-30; the printed Otter has no evasion.)
 #[test]
-fn tempest_angler_etb_scries_two() {
+fn tempest_angler_grows_on_noncreature_casts() {
+    use crabomination::card::{CounterType, Keyword};
     let mut g = two_player_game();
-    for _ in 0..3 {
-        g.add_card_to_library(0, catalog::island());
-    }
-    let id = g.add_card_to_hand(0, catalog::tempest_angler());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    cast(&mut g, id);
-    use crabomination::card::Keyword;
-    let angler = g.battlefield_find(id).expect("Angler on bf");
-    // The printed Otter has no evasion (it shipped with Flying until
-    // 2026-08-30); the ETB scry is what this test is about.
-    assert!(!angler.has_keyword(&Keyword::Flying));
+    let id = g.add_card_to_battlefield(0, catalog::tempest_angler());
+    assert!(!g.battlefield_find(id).unwrap().has_keyword(&Keyword::Flying));
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "a noncreature spell grew it",
+    );
+
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Grizzly Bears");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "a creature spell did not",
+    );
 }
 
 #[test]

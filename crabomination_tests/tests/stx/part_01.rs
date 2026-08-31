@@ -2237,11 +2237,11 @@ fn wandering_archaic_copies_when_opp_cannot_afford_two() {
 
 // ── New STX cards (claude/modern_decks push) ────────────────────────────────
 
-/// Take Up the Shield: target creature gets +0/+3 and gains
-/// indestructible until end of turn. A 2/2 bear becomes a 2/5 that
-/// survives a Wrath / Lava Coil.
+/// Take Up the Shield: a +1/+1 **counter** on target creature, plus lifelink
+/// and indestructible until end of turn. It shipped as a +0/+3 end-of-turn
+/// pump with no lifelink; `audit_oracle_verbs.py` found the missing counter.
 #[test]
-fn take_up_the_shield_buffs_toughness_and_grants_indestructible() {
+fn take_up_the_shield_counters_and_grants_lifelink_indestructible() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
@@ -2261,12 +2261,18 @@ fn take_up_the_shield_buffs_toughness_and_grants_indestructible() {
     drain_stack(&mut g);
 
     let comp = g.computed_permanent(bear).unwrap();
-    assert_eq!(comp.power, 2, "bear power unchanged");
-    assert_eq!(comp.toughness, 5, "bear at 2+3=5 toughness");
+    assert_eq!((comp.power, comp.toughness), (3, 3), "2/2 plus a +1/+1 counter");
+    assert_eq!(
+        g.battlefield_find(bear).unwrap()
+            .counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        1,
+        "a counter, not a pump",
+    );
     assert!(
         comp.keywords().contains(&Keyword::Indestructible),
         "should grant indestructible EOT"
     );
+    assert!(comp.keywords().contains(&Keyword::Lifelink), "and lifelink EOT");
 }
 
 /// Star Pupil's Papers activated ability: {2}, sacrifice this artifact:

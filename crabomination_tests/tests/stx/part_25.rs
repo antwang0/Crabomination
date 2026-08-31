@@ -1372,3 +1372,41 @@ fn mila_loyalty_only_on_planeswalker_attacks() {
     assert_eq!(g.battlefield_find(onyx).unwrap().counter_count(CounterType::Loyalty),
         before + 1, "each planeswalker you control gets a loyalty counter");
 }
+
+/// Codespell Cleric's whole ability — "when this creature enters, **if it was
+/// the second spell you cast this turn**, put a +1/+1 counter on target
+/// creature" — was absent; it shipped as a body-only stub.
+///
+/// The intervening-if is exact, not a threshold: the Cleric's own cast is
+/// already counted when its ETB trigger resolves, so "the second spell" is
+/// `spells_cast_this_turn == 2`. Both sides are pinned here because the
+/// off-by-one between "second" and "at least two" is invisible in play until
+/// the third spell of a turn.
+#[test]
+fn codespell_cleric_counters_only_on_the_second_spell() {
+    let cast_nth = |nth: usize| {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..nth.saturating_sub(1) {
+            let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+            g.players[0].mana_pool.add(Color::Red, 1);
+            g.perform_action(GameAction::CastSpell {
+                card_id: bolt, target: Some(Target::Player(1)),
+                additional_targets: vec![], mode: None, x_value: None,
+            }).expect("cast Bolt");
+            drain_stack(&mut g);
+        }
+        let id = g.add_card_to_hand(0, catalog::codespell_cleric());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Codespell Cleric");
+        drain_stack(&mut g);
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+
+    assert_eq!(cast_nth(1), 0, "first spell of the turn: no counter");
+    assert_eq!(cast_nth(2), 1, "second spell of the turn: a counter");
+    assert_eq!(cast_nth(3), 0, "third spell: 'the second', not 'at least two'");
+}

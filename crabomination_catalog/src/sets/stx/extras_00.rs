@@ -1835,6 +1835,24 @@ pub fn codespell_cleric() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Vigilance],
+        // "When this creature enters, if it was the second spell you cast this
+        // turn, put a +1/+1 counter on target creature." The whole ability was
+        // absent — a body-only stub, and one of the six the audit's docstring
+        // spot-checked. The intervening-if is `ValueEquals(spells cast this
+        // turn, 2)`: the Cleric's own cast is already counted by the time its
+        // ETB trigger resolves, so "the second spell" is exactly two.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::ValueEquals(
+                    Value::SpellsCastThisTurn(PlayerRef::You),
+                    Value::Const(2),
+                )),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
         ..Default::default()
     }
 }

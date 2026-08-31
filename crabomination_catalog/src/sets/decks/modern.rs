@@ -18347,7 +18347,6 @@ pub fn mai_scornful_striker() -> CardDefinition {
 /// Synthesised body for the ⏳ cube row. A flying scry tempo creature
 /// in U shells.
 pub fn tempest_angler() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Tempest Angler",
         cost: cost(&[
@@ -18362,10 +18361,20 @@ pub fn tempest_angler() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Scry {
-            who: PlayerRef::You,
-            amount: Value::Const(2),
-        })],
+        // "Whenever you cast a noncreature spell, put a +1/+1 counter on this
+        // creature." It shipped as an ETB scry 2 — a different card entirely,
+        // and one of the two wrong-shape finds that motivated
+        // `audit_oracle_verbs.py`.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
         ..Default::default()
     }
 }

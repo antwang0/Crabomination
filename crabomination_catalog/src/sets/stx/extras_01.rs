@@ -47,10 +47,15 @@ pub fn take_up_the_shield() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::PumpPT {
+            // A +1/+1 **counter**, not a +0/+3 pump — it stays after the turn.
+            Effect::AddCounter {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(0),
-                toughness: Value::Const(3),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
