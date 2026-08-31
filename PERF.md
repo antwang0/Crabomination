@@ -18321,7 +18321,123 @@ different questions about a card and not a shape with a device. Do not re-open
 it on the call count.
 
 The instrument is `zone::req_census`, on the `trig-census` feature beside the
-other two; `bot_ladder` prints a `req_census` line. The original entry follows.
+other two; `bot_ladder` prints a `req_census` line. A **second** device was
+built against this same entry by a concurrent session and also reverted — it
+follows, and the original entry after it.
+
+**(-126), THE SECOND DEVICE — THE WHOLE SPINE WALKED IN ONE FRAME. BUILT AND
+REVERTED, `cube` **+1.218 %** / `fixed` **+1.171 %**. IT REMOVED EXACTLY THE
+CALLS IT AIMED AT AND LOST ANYWAY, AND THE MECHANISM IS A RULE THIS FILE DID
+NOT HAVE.**
+
+Measured concurrently with the entry above and against the same base
+(`7244e86d`); the two sessions priced different devices and both reverted.
+
+The entry asked for the recursive edge to be sized before an `All`/`Any`
+slice variant was proposed. It was sized — with a new instrument — and the
+answer moved the candidate somewhere else entirely, so the slice was never
+built and should not be.
+
+**What the arm census says (`scripts/cg_arms.py`, new at `9ab0798c`;
+`profiling-fast --no-default-features`, `--games 6 --threads 1 --seed 1`).**
+A 205-arm jump-table `match` has one line region and one caller, so no
+existing script could say which arms run. This reads the table out of the
+binary and the Ir at each target out of a `--dump-instr=yes` dump — an
+instruction's Ir *is* its execution count, so the count at an arm's first
+instruction is how often that arm was taken.
+
+```text
+evaluate_requirement_static_hinted, cube            entries     share
+  outermost                                         497,024
+  its own recursion ('2)                            533,788     51.8 %
+                                                  ---------
+  total calls                                     1,030,812
+
+  the second-level dispatch (170 variants merged)    542,592     52.6 %
+  And                                                427,428     41.5 %
+  ControlledByYou                                     42,196      4.1 %
+  Or / Not / ControlledByOpponent / Player            11,246      1.1 %
+
+  fixed per call: 27 instructions run on EVERY call = 27,831,924 Ir
+                  = 42.0 % of the function's 66,234,946 self Ir
+                  = 1.100 % of the whole cube run
+```
+
+**The 27 are the whole prologue and the whole epilogue** — six `push`es, a
+408-byte frame, four argument moves, the bounds check and the indirect jump,
+then one shared `add`/six `pop`/`ret`. Every one of the function's twenty-seven
+hottest *instructions* is one of them. The body is 14,856 bytes; entering and
+leaving it is the largest single component of its cost, and **no arm-level
+change can touch it — only calling it less often can.**
+
+**So the candidate was rewritten to remove the calls, not the arms.** The
+combinator spine was walked in one frame: an explicit `SmallVec` of pending
+right-operands, `And`/`Or`/`Not` consumed by a loop, and the 205-arm body
+split into `evaluate_requirement_leaf` marked `#[inline(always)]` so the
+leaves stay in the same frame. Short-circuiting is identical by construction.
+`#[inline(always)]` is load-bearing: out of line the leaves keep paying the 27
+and the spine adds a *second* call, which prices at +0.9 M Ir on these counts.
+
+**It did exactly what it was designed to do and lost anyway.**
+
+```text
+                        base 7244e86d        walked in-frame       delta
+  cube total           2,529,863,533          2,560,664,786      +1.218 %
+  fixed total            847,230,007            857,154,183      +1.171 %
+
+  walker calls             1,030,812                497,024      -533,788
+  walker self Ir          66,234,946            106,797,856      +40,562,910
+  Ir per call                   64.3                  214.9        x3.34
+  its closures (unchanged)   394,254 calls @ 30,158,832 Ir — byte-identical
+```
+
+**The 533,788 calls went away exactly as predicted and the per-call cost
+tripled.** The closure rows are untouched, so the whole delta is the walker's
+own frame. Its new prologue is the reason: with the body inlined into a loop,
+everything loop-invariant is **hoisted to the function entry**, and the
+entry now precomputes the target discriminant, the target's card id, three
+`same_team`-shaped comparisons and their negations, and spills them — work
+that used to be done lazily by the one arm that needed it, now done by every
+call whether or not that arm runs.
+
+**THE RULE, and it is new here: inlining a large `match` body into a loop
+converts per-arm lazy work into unconditional per-call work.** The saving is
+`(calls removed) x (fixed per call)` and is bounded and knowable — 14.4 M Ir
+here. The cost is `(calls kept) x (whatever LLVM finds loop-invariant across
+205 arms)` and is neither. **Price the first before the build and treat the
+second as unbounded**: a body worth inlining into a loop is one whose arms
+share their prologue, and a 205-arm dispatch is the opposite of that.
+
+**Two corrections to this entry's own premises, both from the disassembly.**
+
+(a) The ninety-first pass read the prologue as "13,769,886 Ir / 0.47 % of
+`cube`" and called it "the body's callee-saved traffic". It is 19
+instructions — six `push`es, the frame, four argument moves, eight of
+dispatch — and with the epilogue it is 27 and 1.100 %, not 0.47 %. A prologue
+number taken off a line profile is the `push` block only; the dispatch and the
+shared epilogue are attributed elsewhere and belong in the same total.
+
+(b) "Six arguments still fit the SysV registers, so bundling the signature
+will not move it" is wrong. `Option<CardId>` is passed as *two* 32-bit
+registers, so `hint` is the seventh slot and arrives on the stack
+(`mov 0x1d0(%rsp),%r13` is the first thing the function does). A bundled
+`&Ctx` would remove that load and three spills — **3 Ir of the 27, 0.122 % of
+`cube`** — against an unknown number of added loads inside the arms that
+currently read those values out of registers. That is not worth a build at
+this file's band, and it is the only unexhausted line left on this function.
+
+**What is NOT worth retaking**: the `All`/`Any` slice variant. It removes only
+combinator nodes nested under another combinator — 138,444 of the 1,030,812
+calls on `cube`, and 78 % of `And` nodes short-circuit on their left operand
+so the deep spines are rarely walked to the end. At 27 Ir a call that is
+0.148 % *before* the hoisting cost above, for a `SelectionRequirement` shape
+change across the catalog and ~25 hand-written walkers of the same tree.
+
+**And a pool note.** The walker is a `cube` cost: 1,030,812 calls there
+against **165,760** on `fixed`, where `And` is 5.85 % of calls and the
+recursion 8.4 %. CLAUDE.md already says a walker change needs a `cube`
+reading; this is the size of that difference.
+
 
 **(-126) THE REQUIREMENT WALKER IS THE LARGEST ENGINE
 FUNCTION IN THE FILE WITH NOTHING FILED AGAINST IT, AND 65 % OF ITS CALLS ARE
