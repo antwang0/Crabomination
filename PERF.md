@@ -17874,11 +17874,40 @@ usually refute it, and it costs one run with `--separate-callers=2`.**
 
 **What survives**: `computed_permanent_hinted` is still 297,560 allocations
 and the largest single caller of `__rust_alloc`, and `(-111)` closed the shape
-— "only a change to how often a scope MISSES can move it". The two contexts
-worth that question are the encoder's 54 % and `permanent_value_with`'s
-66,524-on-51,543 (which is **more than one allocation per call** and is
-unexplained). The rest of the allocation table's top is `grow_one` and the CoW
-unshare, both of which have their own entries.
+— "only a change to how often a scope MISSES can move it". The rest of the
+allocation table's top is `grow_one` and the CoW unshare, both of which have
+their own entries.
+
+**AND `permanent_value_with`'s "more than one allocation per call" IS
+EXPLAINED, off the same dumps and with no build spent — it is not that
+function's row at all.** `permanent_value_with` has exactly three callees, and
+two of them allocate nothing:
+
+```text
+callees of permanent_value_with (actor, --separate-callers=3)
+  64,481   1,827,137  ManaCost::cmc                  walks a Vec, allocates 0
+  60,856     709,625  CardInstance::counter_count    scans a Vec, allocates 0
+  60,083  42,578,519  computed_permanent_hinted      <- every allocation
+
+__rust_alloc by context, and ONE context reaches this function:
+  64,168  computed_permanent_hinted <- permanent_value_with <- eval_material_inner
+```
+
+So the ratio is `computed_permanent_hinted`'s, seen through one caller, and
+the excess over 1.0 is **the memo's overlay `Box`**: a miss allocates the
+`Arc` *and*, whenever the permanent has a modified characteristic,
+`PrintedList::push` allocates the overlay — 4,702 pushes with 4,702
+`Keyword::clone`s beside them under `compute_permanent_pass`, against a gap of
+~4,085 here. Consistent, and the same overlay `(-111)` priced at "~23 k box
+copies over 356 k reads *on top of* the store side".
+
+**The rule, and it is `(-82)`'s and this entry's own restated once more: a
+caller's allocation count is its callees', and a function whose callees are
+enumerable is refuted by reading them, not by sizing it from the outside.**
+Three callees took one `cg_edges.py --callees` and one `cg_contexts.py` on
+dumps that already existed. **Nothing here is a candidate**: the row is
+`computed_permanent_hinted`'s, `(-111)` closed its shape, and the overlay half
+is a *characteristic-modifying board*, not a fixable allocation.
 
 **(-123) TAKEN, 2026-08-31 — THE ACTOR'S PROFILE OF RECORD IS STALE BY
 FIFTEEN PASSES AND EVERY CANDIDATE FOR THAT PATH IS READ OFF IT.** The actor

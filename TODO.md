@@ -40,8 +40,11 @@ sixty-seventh pass, so don't re-take that.
    encoder's asks miss only 54 %, within a point of the 57 % `(-111)` priced, so a `_into`
    form buys the misses and loses the hits. `computed_permanent_hinted` stays the largest
    allocation caller and `(-111)` stays its close: only a change to how often a scope
-   *misses* can move it. Unexplained and worth one look: `permanent_value_with` makes
-   66,524 allocations on 51,543 calls — **more than one apiece.**
+   *misses* can move it. **`permanent_value_with`'s "more than one apiece" is EXPLAINED
+   and is not a candidate** — its three callees are `cmc`, `counter_count` and
+   `computed_permanent_hinted`, the first two allocate nothing, and one context reaches
+   it; the excess over 1.0 is the memo's overlay `Box`. Answered off dumps that already
+   existed, no build. **The allocation lane has nothing open in it.**
 4. **Do not retake:** `(-112)`; dispatch's per-event gate (61 AND 106); a third line profile
    of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since);
    the `turn_granted_triggers` / `granted_triggers_eot` retains (census: zero on all pools).
