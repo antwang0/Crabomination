@@ -17835,45 +17835,50 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-124) `computed_permanent_hinted`'s `Arc` IS THE PROGRAM'S LARGEST
-ALLOCATION ROW AND THE ENCODER IS 29.6 % OF IT — AND INSIDE THE ENCODER THE
-`Arc` AND THE PER-SCOPE CACHE ARE BOTH PURE OVERHEAD.** `(-123)`'s dump, actor,
-60 games:
+**(-124) REFUTED BEFORE A BUILD WAS SPENT ON IT, BY THE DUMP THAT PROPOSED IT
+— AND THE MISTAKE IS `(-82)`'s RULE, VERBATIM.** The entry claimed the encoder
+was a caller whose reads are never shared, so that the `Arc` and the freeze
+scope's `perms` cache were both pure overhead there and a `_into` form reusing
+one buffer would take 145,476 allocations to ~6,282. The reasoning was
+arithmetic on a callee table — 23.2 computed permanents a state on a board of
+about that many, "so each is asked once" — and it is wrong.
+
+`--separate-callers=2` on the same dump answers it directly:
 
 ```text
-  __rust_alloc callers      1,712,610 total
-    297,560  17.4 %   computed_permanent_hinted   <- largest single caller
-    259,039  15.1 %   RawVecInner::finish_grow
-    175,128  10.2 %   Arc::clone_from_ref_in
-
-  computed_permanent_hinted callers   491,057 calls
-    145,476  29.6 %   encode_state_inner          <- on NO bot_ladder pool
-     58,154           bot::permanent_value_with
-     46,980           bot::legal_blockers
-     45,498           damage_prevented_by_protection
+__rust_alloc by calling context (1,712,610 total)
+  213,180  finish_grow <- grow_one                     12.4 %
+  161,598  Arc::clone_from_ref_in <- Arc::make_mut      9.4 %   the CoW unshare
+   78,900  computed_permanent_hinted <- encode_state_inner
+   66,524  computed_permanent_hinted <- bot::permanent_value_with
+   44,587  computed_permanent_hinted <- bot::legal_blockers
+   33,797  gather_continuous_effects_inner <- computed_permanent_hinted
 ```
 
-**The mechanism this entry adds, and it is not `(-92)` lead 2 or `(-111)`.**
-`encode_state_inner` opens **one** freeze scope per encoded state and then asks
-for **23.2 computed permanents inside it — one per battlefield permanent, each
-asked exactly once**. So in that scope the `layer_freeze.perms` cache never
-hits (nothing asks twice), and the `Arc` it hands back is read for a few fields
-by `encode_card_object_into` and dropped before the next ask. The refcount, the
-allocation and the `perms` push are all paid for sharing that never happens.
+**78,900 allocations on 145,476 calls is a 54 % miss rate, not 100 %.** The
+encoder asks through four separate loops (`encode.rs` 278 / 428 / 536 / 1159)
+and the scope's memo serves 46 % of them — which is what the comment at
+`encode.rs:229` already said and what this entry did not read. So `(-111)`'s
+refutation applies here almost exactly: it measured a 57 % miss rate and
+priced the `Arc` at 115 Ir a read against 160 for a value handle, and **54 %
+is within a point of 57 %**. A `_into` form would buy the misses and lose the
+hits, which is the trade `(-111)` already measured and reverted.
 
-**What that prices**: a `_into` form writing into a caller-owned
-`ComputedPermanent` the encoder reuses across the state's permanents would take
-its 145,476 allocations to ~6,282 (one a state) — **8.5 % of every allocation
-the actor makes**, against an allocator cluster that is 10.71 % of the actor.
-The inner `Vec`s (types, keywords) are the second half and want `clear()`
-rather than reallocation, which is where a second census should look before
-anyone builds it.
+**The rule, and it is `(-82)`'s with a new example: "is this already shared?"
+is a question for `--separate-callers`, not for arithmetic on a callee count.**
+A callee table gives calls; only a context split gives *allocations per
+context*, and the ratio between them is the whole answer. `(-82)` sized a
+function from outside and got the conclusion backwards; this sized a caller
+from outside and did the same. **The dump that suggests a candidate can
+usually refute it, and it costs one run with `--separate-callers=2`.**
 
-**Two things that must be respected**: `(-111)` measured `computed_permanent`
-*by value* and reverted it — the `Arc` is load-bearing for every caller that
-*does* share through `perms`, and those are the other 70 % — so this is an
-additional path, not a replacement. And `(-95)`'s rule: 60 games is a short
-workload, so re-read the counts before sizing an implementation off them.
+**What survives**: `computed_permanent_hinted` is still 297,560 allocations
+and the largest single caller of `__rust_alloc`, and `(-111)` closed the shape
+— "only a change to how often a scope MISSES can move it". The two contexts
+worth that question are the encoder's 54 % and `permanent_value_with`'s
+66,524-on-51,543 (which is **more than one allocation per call** and is
+unexplained). The rest of the allocation table's top is `grow_one` and the CoW
+unshare, both of which have their own entries.
 
 **(-123) TAKEN, 2026-08-31 — THE ACTOR'S PROFILE OF RECORD IS STALE BY
 FIFTEEN PASSES AND EVERY CANDIDATE FOR THAT PATH IS READ OFF IT.** The actor
