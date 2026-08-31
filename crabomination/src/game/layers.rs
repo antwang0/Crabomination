@@ -738,9 +738,24 @@ fn compute_permanent_gated(
     // (Turn to Frog into a Frog lord, Arcane Adaptation, etc.) gets the buff.
     // Only re-run when both a type-changer and a type lord are present.
     let has_type_gated = gates.type_changer && gates.type_lord;
-    if !gates.power && !has_type_gated {
-        return compute_permanent_pass(card, effects, None, None);
+    if gates.power || has_type_gated {
+        return compute_permanent_second_pass(card, effects, has_type_gated);
     }
+    compute_permanent_pass(card, effects, None, None)
+}
+
+/// The CR 613.8 re-run, out of line. `compute_permanent_gated` is 269,492
+/// calls on a `cube` run and **none of them takes this path** — but keeping
+/// it inline put `pass1`'s buffer and six callee-saved pushes in the entry
+/// block of all 269,492, 29 Ir of dispatch in front of a 293 Ir callee.
+/// PERF `(-131)`, and the rule is `(-129)`'s.
+#[cold]
+#[inline(never)]
+fn compute_permanent_second_pass(
+    card: &crate::card::CardInstance,
+    effects: &[ContinuousEffect],
+    has_type_gated: bool,
+) -> ComputedPermanent {
     let pass1 = compute_permanent_pass(card, effects, None, None);
     let gate_types = has_type_gated.then(|| pass1.subtypes().creature_types.clone());
     compute_permanent_pass(card, effects, Some(pass1.power), gate_types.as_deref())
