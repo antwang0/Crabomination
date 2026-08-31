@@ -84,6 +84,8 @@ from audit_catalog_stats import (  # noqa: E402
     SETS,
     card_def_name,
     face_for,
+    helper_table,
+    inline_helper_call,
     set_of,
     strip_token_literals,
 )
@@ -146,12 +148,18 @@ VERBS = {
     # `return_self_cost` (Chthonian Nightmare), the alternative-cost
     # `return_to_hand` (Daze, Gush). Returning something to hand as the price
     # of an ability is what the oracle sentence says, so a card that spells it
-    # in a cost field is not missing the verb. `ReturnSelf\b` on purpose:
-    # `ReturnSelfTapped` and the rest of that family go to the battlefield.
+    # in a cost field is not missing the verb. **`ReturnSelf` is NOT on the
+    # list** — the whole `ReturnSelf*` family returns from the GRAVEYARD to the
+    # BATTLEFIELD, and putting it here on the strength of its name hid the
+    # bug it was covering for (Field of Reality's `{1}{U}` bounce was
+    # `Effect::ReturnSelf`, a no-op for a permanent that is not in a
+    # graveyard). `ReturnEachUnlessPays` is on it because its arm delegates to
+    # `run_each_unless_pays(.., sacrifice: false)`, which bounces.
     "return_to_hand": (
         r"\breturns? [^.]{0,60}\bto (?:its|their) owner'?s? hand\b",
-        r"To\w{0,12}Hand|ReturnSelf\b|ReturnEachUnlessPays|Bounce|bounce_"
+        r"To\w{0,12}Hand|ReturnEachUnlessPays|Bounce|bounce_"
         r"|ZoneDest::Hand|Zone::Hand|CounteredSpellZone::OwnerHand"
+        r"|ExileReturnZone::Hand"
         r"|return_self_cost|_to_hand|return_to_hand|return_eot",
     ),
     "counters": (
@@ -181,8 +189,11 @@ STATIC = re.compile(r"\bStaticEffect::(\w+)")
 # `Effect::Move { to: ZoneDest::Hand(..) }` recorded only `Move`, so
 # `return_target_creature_to_hand` (Sweep Away) and `returns_to_hand`
 # (Spreading Algae) answered nothing for the bounce verb and both read as
-# missing it. Qualified, so a code regex still has to say which zone.
-DEST = re.compile(r"\b((?:ZoneDest|CounteredSpellZone|Zone)::\w+)")
+# missing it. `ExileReturnZone` is the same thing one step later: Ashiok's
+# Erasure stamps the exile with `return_to: ExileReturnZone::Hand` and the
+# leaves-the-battlefield return is the engine's, not the card's. Qualified,
+# so a code regex still has to say which zone.
+DEST = re.compile(r"\b((?:ZoneDest|CounteredSpellZone|ExileReturnZone|Zone)::\w+)")
 
 
 ENGINE = (
@@ -301,6 +312,11 @@ def audit():
         text = src.read_text()
         local = helper_variants(text)
         table = close_helpers([shortcuts, local])
+        # `..creature("Viashino Sandswimmer", …)` carries the card's *name* in
+        # a positional argument, so `card_def_name` read nothing and the card
+        # was skipped outright — most of the classic sets. `audit_catalog_stats`
+        # already solves this; use its splice rather than a second one.
+        helpers, hconsts = helper_table(text)
         for m in FUNC.finditer(text):
             nxt = FUNC.search(text, m.end())
             body = text[m.end() : nxt.start() if nxt else len(text)]
@@ -309,6 +325,7 @@ def audit():
                 body = body[: cut.start()]
             raw = body
             body = strip_token_literals(body)
+            body = inline_helper_call(body, helpers, hconsts)
             nm = card_def_name(body)
             if not nm:
                 continue
