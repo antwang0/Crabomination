@@ -13,7 +13,7 @@ use crate::effect::shortcut::{
     count, deal, draw, etb, etb_loot, gain_life, mint_treasures, on_attack, on_dies, on_other_dies,
     on_you_attack, prowess, target_filtered,
 };
-use crate::effect::{LookPick, Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{Duration, LibraryPosition, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, mono_hybrid, r, u, w};
 
@@ -30,13 +30,18 @@ pub fn ainok_wayfarer() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
-            who: PlayerRef::You,
-            count: Value::Const(3),
-            rest_to_graveyard: true,
-            pick_filter: Some(SelectionRequirement::Land),
-    ..Default::default()
-})))],
+        // Same printed text as Ostrich-Horse, so the same shape: the card
+        // MILLS three and retrieves from among them, which is not what a
+        // look-then-bin does to "cards put into your graveyard this turn".
+        triggered_abilities: vec![etb(Effect::MillThenToHand {
+            amount: Value::Const(3),
+            filter: SelectionRequirement::Land,
+            otherwise: Some(Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            })),
+        })],
         ..Default::default()
     }
 }

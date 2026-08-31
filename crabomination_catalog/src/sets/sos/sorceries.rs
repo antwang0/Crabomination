@@ -1524,6 +1524,7 @@ pub fn steal_the_show() -> CardDefinition {
                     Effect::DiscardAnyNumber {
                         who: target_filtered(SelectionRequirement::Player),
                         filter: SelectionRequirement::Any,
+                        max: None,
                     },
                     Effect::Draw {
                         who: Selector::Target(0),

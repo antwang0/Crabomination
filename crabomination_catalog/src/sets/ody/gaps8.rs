@@ -316,7 +316,7 @@ pub fn sacred_rites() -> CardDefinition {
         "Sacred Rites",
         cost(&[w()]),
         Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any , max: None},
             Effect::PumpPT {
                 what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                 power: Value::Const(0),

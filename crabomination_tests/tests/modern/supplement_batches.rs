@@ -1691,20 +1691,6 @@ fn fanatic_of_rhonas_taps_for_green() {
     assert!(g.battlefield_find(id).unwrap().tapped, "Tap cost taps the source");
 }
 
-/// Greasewrench Goblin: vanilla 2/2 haste body.
-#[test]
-fn greasewrench_goblin_enters_with_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::greasewrench_goblin());
-    let card = g.battlefield_find(id).expect("on battlefield");
-    assert_eq!(card.power(), 2);
-    assert_eq!(card.toughness(), 1);
-    assert!(card.has_keyword(&crabomination::card::Keyword::Haste),
-        "Greasewrench Goblin should have Haste");
-    // Haste lets it attack on the turn it enters.
-    assert!(card.can_attack(),
-        "Haste creature can attack the turn it enters");
-}
 
 /// Orcish Lumberjack: {T}, sacrifice a Forest → add {G}{G}{G}. The
 /// Forest sacrifice is folded into the resolved effect's first step, so

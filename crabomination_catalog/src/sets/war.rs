@@ -5070,7 +5070,7 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
 pub fn neheb_dreadhorde_champion() -> CardDefinition {
     let body = || {
         Effect::Seq(vec![
-            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any },
+            Effect::DiscardAnyNumber { who: Selector::You, filter: crate::card::SelectionRequirement::Any , max: None},
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::CardsDiscardedThisEffect,

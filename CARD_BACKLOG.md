@@ -318,8 +318,8 @@ triaged:**
 - **Serum Powder** (mulligan-time exile-and-redraw), **Lich's Mirror** (a
   replacement for losing the game) and **Chains of Mephistopheles** (a draw
   replacement) are each a real primitive, not a rider.
-- Adventure Awaits, Greasewrench Goblin and Tannuk keep their existing
-  primitive-job entries below.
+- Tannuk keeps its existing primitive-job entry below; Adventure Awaits and
+  Greasewrench Goblin are shipped.
 
 **Two shapes account for every one of the eleven, and both are worth knowing
 before opening the next class.**
@@ -342,25 +342,26 @@ before opening the next class.**
 rather than fixed because it needs an engine primitive, and the count beside
 it is how many cards it unblocks.
 
-- **"If you didn't put a card into your hand this way, …" (3 cards + 1
-  already filed).** Adventure Awaits, Rosecot Knight, Ainok Wayfarer, and the
-  Blossom Prancer entry TODO already carries. `LookPick` has no else-branch,
-  so the whole conditional half is dropped. **Four cards on one primitive is
-  the best ratio in either class.**
+- ~~**"If you didn't put a card into your hand this way, …"**~~ **DONE.**
+  `LookPick::then_if_not_picked` is the else-branch; `MillThenToHand` already
+  had `otherwise` and two of the cards belonged in that shape. Shipped on
+  Adventure Awaits, Rosecot Knight, Ainok Wayfarer, Ostrich-Horse and Pulsar
+  Squadron Ace. **Blossom Prancer is still unimplemented** — a new card, not a
+  defect, and its "you gain 4 life" consolation now has a home.
 - ~~**Parley (5 cards).**~~ **Not a job — the auditor was wrong.**
   `Effect::Parley`'s arm already draws for every seat (`self.draw_one`); the
   rows were the method-spelling false class above. All five cards ship the
   whole ability.
-- **Damage-provenance deaths (1, but it is Sengir Vampire).** "Whenever a
-  creature dealt damage by this creature this turn dies, put a +1/+1 counter
-  on this creature." Nothing links a death event back to what damaged the
-  creature earlier in the turn. A body-only stub since LEA.
-- **A capped "up to N" discard (1).** Greasewrench Goblin's exhaust is
-  "discard up to two cards, then draw that many". `Effect::DiscardAnyNumber`
-  has no cap; AutoDecider picks 0 so bot play would not notice, but a
-  scripted or UI decider could discard a whole hand — an uncapped ship is a
-  real deviation, not a rounding. The card **also** carries a Haste it does
-  not print (`audit_catalog_stats`' KW drift list).
+- ~~**Damage-provenance deaths (Sengir Vampire).**~~ **DONE, and it needed no
+  primitive** — `SelectionRequirement::DamagedBySourceThisTurn` has existed
+  since Soul Collector and reads the death snapshot, so the trigger is four
+  lines. The lesson is the entry: *a filed primitive job is a claim about the
+  tree, and this one was never checked against it.*
+- ~~**A capped "up to N" discard.**~~ **DONE.** `Effect::DiscardAnyNumber`
+  takes `max: Option<Value>`, enforced on the *answer* as well as the prompt
+  so an over-long pick from a UI seat is truncated. Greasewrench Goblin now
+  ships its exhaust — and the Haste and the on-death Treasure trigger it
+  never printed are gone with it (both had tests asserting them).
 - **"The Nth time this ability has resolved this turn" (1).** Tannuk,
   Memorial Ensign. `GameState.ability_resolutions_this_turn` exists; no
   `Value` or `Predicate` reads it.
@@ -2818,8 +2819,6 @@ New: `SelectionRequirement::WithAnyCounter` ("a creature with a counter on it");
 
 Per-card riders dropped (faithful headline shipped; complete when the engine
 gains the missing piece):
-- **Ainok Wayfarer** — "+1/+1 counter if you don't take a land" needs
-  `LookPickToHand` to report whether a card was actually taken.
 - **Iridescent Tiger** — "if you cast it" gate on the WUBRG ETB burst.
 - **Embermouth Sentinel** — the "if you control a Dragon, onto the battlefield
   tapped instead" branch (conditional search destination).

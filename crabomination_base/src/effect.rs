@@ -3971,6 +3971,13 @@ pub enum Effect {
         /// wording.
         #[serde(default = "SelectionRequirement::any")]
         filter: SelectionRequirement,
+        /// The printed cap on "discard **up to N** cards, then …"
+        /// (Greasewrench Goblin's exhaust). `None` is the uncapped "any
+        /// number" wording. Enforced on the answer, not just on the prompt,
+        /// so an over-long pick from a UI seat is truncated rather than
+        /// honoured.
+        #[serde(default)]
+        max: Option<Value>,
     },
     /// Set `Player.max_hand_size = None` on each resolved player, for the
     /// rest of the game. Used by Wisdom of Ages ("You have no maximum hand
@@ -9608,6 +9615,12 @@ pub struct LookPick {
     /// after the picks land (Sidequest: Catch a Fish's Food + transform).
     #[serde(default)]
     pub then_if_picked: Option<Box<Effect>>,
+    /// The mirror: "If you didn't put a card into your hand this way,
+    /// [effect]" (Rosecot Knight, Pulsar Squadron Ace, Ainok Wayfarer and
+    /// Ostrich-Horse all print it as a +1/+1 counter consolation). Runs once,
+    /// on the same `source`, when the pick set came back empty.
+    #[serde(default)]
+    pub then_if_not_picked: Option<Box<Effect>>,
     /// Typed routing (Zimone's Experiment): picked LAND cards go onto
     /// the battlefield tapped while other picks go to hand.
     #[serde(default)]
@@ -9645,6 +9658,7 @@ impl Default for LookPick {
             gain_life_greatest_power_rest: false,
             optional: false,
             then_if_picked: None,
+            then_if_not_picked: None,
             picked_lands_to_battlefield: false,
             rest_bottom_random: false,
             rest_to_exile: false,

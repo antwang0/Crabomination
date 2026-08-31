@@ -1757,6 +1757,9 @@ pub enum PendingEffectState {
         /// effect's source so `Selector::This` reaches the card that asked.
         #[serde(default)]
         then_if_picked: Option<Box<crate::effect::Effect>>,
+        /// The mirror rider, run when the pick set came back empty.
+        #[serde(default)]
+        then_if_not_picked: Option<Box<crate::effect::Effect>>,
         /// Picks matching this filter route to the battlefield (Break Out).
         #[serde(default)]
         picked_matching_to_battlefield: Option<crate::card::SelectionRequirement>,
@@ -1811,7 +1814,12 @@ pub enum PendingEffectState {
     /// Suspended on a `DiscardChosen` decision (Inquisition of Kozilek,
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.
-    DiscardChosenPending { target_player: usize },
+    DiscardChosenPending {
+        target_player: usize,
+        /// `DiscardAnyNumber`'s "up to N" cap, applied to the answer.
+        #[serde(default)]
+        max: Option<u32>,
+    },
     /// Suspended on a `BottomChosenFromHandAndDraw` decision (Vendilion
     /// Clique). The caster picks cards from `target_player`'s hand; the apply
     /// step bottoms each chosen card and has `target_player` draw a

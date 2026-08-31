@@ -9950,6 +9950,74 @@ mod recent6 {
         assert_eq!(g.players[1].life, l1 - 1, "opponent pinged");
     }
 
+    /// Spawn of Mayhem's upkeep ping also grows it at 10 or less life.
+    #[test]
+    fn spawn_of_mayhem_grows_at_ten_or_less_life() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, catalog::spawn_of_mayhem());
+        g.players[0].life = 11; // the ping takes it to 10
+        g.active_player_idx = 0;
+        g.step = TurnStep::Untap;
+        advance_to(&mut g, TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(
+            g.battlefield_find(id).expect("spawn").counter_count(CounterType::PlusOnePlusOne),
+            1,
+            "the check reads the life the ping just took off",
+        );
+    }
+
+    /// …and stays flat above ten.
+    #[test]
+    fn spawn_of_mayhem_stays_flat_above_ten_life() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, catalog::spawn_of_mayhem());
+        g.players[0].life = 20;
+        g.active_player_idx = 0;
+        g.step = TurnStep::Untap;
+        advance_to(&mut g, TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(
+            g.battlefield_find(id).expect("spawn").counter_count(CounterType::PlusOnePlusOne),
+            0,
+        );
+    }
+
+    /// Falkenrath Aristocrat grows only when the sacrifice was a Human.
+    #[test]
+    fn falkenrath_aristocrat_grows_off_a_human_sacrifice() {
+        type Factory = fn() -> crabomination::card::CardDefinition;
+        for (fodder, want) in [
+            (catalog::white_knight as Factory, 1), // Human Knight
+            (catalog::grizzly_bears as Factory, 0), // Bear
+        ] {
+            let mut g = two_player_game();
+            let aristocrat = g.add_card_to_battlefield(0, catalog::falkenrath_aristocrat());
+            let victim = g.add_card_to_battlefield(0, fodder());
+            let is_human = g
+                .battlefield_find(victim)
+                .is_some_and(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Human));
+            assert_eq!(is_human, want == 1, "fixture must match what the rider reads");
+            g.perform_action(GameAction::ActivateAbility {
+                card_id: aristocrat,
+                ability_index: 0,
+                target: None,
+                additional_targets: vec![],
+                x_value: None,
+                mode: None,
+            })
+            .expect("sacrifice a creature");
+            drain_stack(&mut g);
+            assert_eq!(
+                g.battlefield_find(aristocrat)
+                    .expect("aristocrat")
+                    .counter_count(CounterType::PlusOnePlusOne),
+                want,
+                "counter only when the sacrificed creature was a Human",
+            );
+        }
+    }
+
     /// Magus of the Coffers taps for {B} per Swamp you control.
     #[test]
     fn magus_of_the_coffers_mana_per_swamp() {

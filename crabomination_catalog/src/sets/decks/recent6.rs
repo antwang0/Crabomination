@@ -555,10 +555,24 @@ pub fn spawn_of_mayhem() -> CardDefinition {
                 EventScope::SelfSource,
             )
             .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
-            effect: Effect::DealDamage {
-                amount: Value::ONE,
-                to: Selector::Player(PlayerRef::EachPlayer),
-            },
+            // "Then if you have 10 or less life" — the check is made on
+            // resolution, after the damage, so it reads the life the same
+            // trigger just took off (CR 603.1).
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    amount: Value::ONE,
+                    to: Selector::Player(PlayerRef::EachPlayer),
+                },
+                Effect::If {
+                    cond: Predicate::PlayerLifeAtMost { who: PlayerRef::You, life: 10 },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
         }],
         ..Default::default()
     }

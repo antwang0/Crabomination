@@ -159,8 +159,10 @@ pub fn hypnotic_specter() -> CardDefinition {
     }
 }
 
-/// Sengir Vampire — {3}{B}{B} 4/4 Flying
+/// Sengir Vampire — {3}{B}{B} 4/4 Flying. Whenever a creature dealt damage by
+/// it this turn dies, put a +1/+1 counter on it.
 pub fn sengir_vampire() -> CardDefinition {
+    use crate::card::{CounterType, Predicate};
     CardDefinition {
         name: "Sengir Vampire",
         cost: cost(&[generic(3), b(), b()]),
@@ -172,6 +174,19 @@ pub fn sengir_vampire() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::DamagedBySourceThisTurn,
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+        }],
         ..Default::default()
     }
 }

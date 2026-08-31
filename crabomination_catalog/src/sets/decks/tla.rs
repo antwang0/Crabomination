@@ -1613,6 +1613,16 @@ pub fn hog_monkey() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(5)]),
+            exhaust: true,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -4195,7 +4205,7 @@ pub fn sokka_bold_boomeranger() -> CardDefinition {
         triggered_abilities: vec![
             // "Discard up to two" approximated as discard any number, draw that many.
             etb(Effect::Seq(vec![
-                Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any },
+                Effect::DiscardAnyNumber { who: Selector::You, filter: SelectionRequirement::Any , max: None},
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::CardsDiscardedThisEffect,

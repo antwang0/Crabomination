@@ -792,3 +792,108 @@ fn cr_122_counter_bag_order_is_insertion_order() {
     let kinds: Vec<CounterType> = c.counters.iter().map(|(k, _)| *k).collect();
     assert_eq!(kinds, vec![CounterType::Charge, CounterType::Shield]);
 }
+
+// ── The "consolation" +1/+1 counter riders ───────────────────────────────────
+
+/// Sengir Vampire grows off anything it damaged that dies. Shipped as a
+/// vanilla 4/4 flier until the oracle-verb audit found the missing trigger.
+#[test]
+fn sengir_vampire_grows_off_its_kills() {
+    let mut g = two_player_game();
+    let vamp = g.add_card_to_battlefield(0, catalog::sengir_vampire());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().damaged_by_this_turn.push(vamp);
+    let mut events = vec![];
+    g.destroy_permanent(victim, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(vamp).expect("vampire").counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "+1/+1 counter off the kill",
+    );
+}
+
+/// Sengir only grows off creatures *it* damaged.
+#[test]
+fn sengir_vampire_ignores_a_death_it_did_not_cause() {
+    let mut g = two_player_game();
+    let vamp = g.add_card_to_battlefield(0, catalog::sengir_vampire());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut events = vec![];
+    g.destroy_permanent(victim, false, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(vamp).expect("vampire").counter_count(CounterType::PlusOnePlusOne),
+        0,
+    );
+}
+
+/// "If you didn't put a card into your hand this way, put a +1/+1 counter on
+/// this creature" — `LookPick::then_if_not_picked` and
+/// `MillThenToHand::otherwise`. All four print the rider and none carried it;
+/// the library here holds nothing any of them can find.
+#[test]
+fn look_and_mill_consolation_counters_land_when_nothing_matches() {
+    type Factory = fn() -> crabomination::card::CardDefinition;
+    for (name, factory) in [
+        ("Ainok Wayfarer", catalog::ainok_wayfarer as Factory),
+        ("Ostrich-Horse", catalog::ostrich_horse as Factory),
+        ("Rosecot Knight", catalog::rosecot_knight as Factory),
+        ("Pulsar Squadron Ace", catalog::pulsar_squadron_ace as Factory),
+    ] {
+        let mut g = two_player_game();
+        for _ in 0..8 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            g.players[0].mana_pool.add(c, 6);
+        }
+        let id = g.add_card_to_hand(0, factory());
+        cast(&mut g, id);
+        assert_eq!(
+            g.battlefield_find(id)
+                .unwrap_or_else(|| panic!("{name} on the battlefield"))
+                .counter_count(CounterType::PlusOnePlusOne),
+            1,
+            "{name}: consolation counter",
+        );
+    }
+}
+
+/// The same rider on the two cards whose consolation is not a counter:
+/// Adventure Awaits draws instead.
+#[test]
+fn adventure_awaits_draws_when_the_dig_whiffs() {
+    let mut g = two_player_game();
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let id = g.add_card_to_hand(0, catalog::adventure_awaits());
+    let hand = g.players[0].hand.len();
+    cast(&mut g, id);
+    // -1 for the sorcery itself, +1 for the consolation draw.
+    assert_eq!(g.players[0].hand.len(), hand, "drew on the whiff");
+}
+
+/// …and it does not fire when the pick lands. Rosecot Knight is the fixture
+/// with an existing dig test, so this one takes Ainok Wayfarer's mill half.
+#[test]
+fn the_consolation_counter_stays_off_when_the_pick_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    g.players[0].mana_pool.add(Color::Green, 3);
+    let id = g.add_card_to_hand(0, catalog::ainok_wayfarer());
+    cast(&mut g, id);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "land taken");
+    assert_eq!(
+        g.battlefield_find(id).expect("wayfarer").counter_count(CounterType::PlusOnePlusOne),
+        0,
+        "no consolation when the pick landed",
+    );
+}

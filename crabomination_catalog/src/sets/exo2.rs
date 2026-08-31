@@ -827,7 +827,7 @@ pub fn mind_maggots() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::DiscardAnyNumber { who: Selector::You, filter: R::Creature },
+                Effect::DiscardAnyNumber { who: Selector::You, filter: R::Creature , max: None},
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,

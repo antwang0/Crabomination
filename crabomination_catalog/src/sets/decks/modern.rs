@@ -2748,14 +2748,16 @@ pub fn fanatic_of_rhonas() -> CardDefinition {
     }
 }
 
-/// Greasewrench Goblin — {1}{R} Creature — Goblin Mercenary. 2/2 Haste.
-/// "When this creature dies, create a Treasure token."
+/// Greasewrench Goblin — {R} Creature — Goblin Artificer. 2/1.
+/// "Exhaust — {2}{R}: Discard up to two cards, then draw that many cards.
+/// Put a +1/+1 counter on this creature."
 ///
-/// Approximation: 2/2 Haste body + on-death Treasure trigger. Treasure
-/// tokens are wired via the shared `treasure_token()` helper (1-mana-of-any-
-/// color, sacrifice on tap). The full Oracle's "this can't block" rider is
-/// collapsed (no per-attacker block-restriction primitive yet).
+/// The cost and the P/T were corrected to the printed card at some point and
+/// the abilities were not: it shipped with Haste and an on-death Treasure
+/// trigger, neither of which is on it, and without the exhaust ability that
+/// is the whole card.
 pub fn greasewrench_goblin() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
         name: "Greasewrench Goblin",
         cost: cost(&[r()]),
@@ -2766,14 +2768,26 @@ pub fn greasewrench_goblin() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(crate::game::effects::treasure_token()),
-            },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            exhaust: true,
+            effect: Effect::Seq(vec![
+                Effect::DiscardAnyNumber {
+                    who: Selector::You,
+                    filter: SelectionRequirement::Any,
+                    max: Some(Value::Const(2)),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::CardsDiscardedThisEffect,
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -32374,6 +32388,11 @@ pub fn adventure_awaits() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(5),
             pick_filter: Some(SelectionRequirement::Creature),
+            optional: true,
+            then_if_not_picked: Some(Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::ONE,
+            })),
     ..Default::default()
 })),
         ..Default::default()

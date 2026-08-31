@@ -5693,6 +5693,11 @@ pub fn pulsar_squadron_ace() -> CardDefinition {
                 ArtifactSubtype::Spacecraft,
             )),
             optional: true,
+            then_if_not_picked: Some(Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            })),
     ..Default::default()
 })))],
         ..Default::default()

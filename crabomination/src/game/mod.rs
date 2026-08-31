@@ -21466,7 +21466,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked, picked_matching_to_battlefield, battlefield_haste, source } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take, to_battlefield, tapped, keep_on_top, gain_life_if_pick, gain_life_greatest_power_rest, optional, picked_lands_to_battlefield, rest_bottom_random, rest_to_exile, then_if_picked, then_if_not_picked, picked_matching_to_battlefield, battlefield_haste, source } => {
                 // `None` eligible means "any revealed card" (no filter).
                 let is_eligible = |id: &CardId| match &eligible {
                     None => true,
@@ -21621,6 +21621,21 @@ impl GameState {
                 // fires once, only when at least one card was actually taken.
                 if let Some(then) = then_if_picked
                     && !picks.is_empty()
+                {
+                    let ctx = crate::game::effects::EffectContext {
+                        controller: player,
+                        source,
+                        ..Default::default()
+                    };
+                    if let Ok(mut evs) = self.resolve_effect(&then, &ctx) {
+                        events.append(&mut evs);
+                    }
+                }
+                // …and its mirror, for the cards that print a consolation
+                // instead ("If you didn't put a card into your hand this
+                // way, put a +1/+1 counter on this creature").
+                if let Some(then) = then_if_not_picked
+                    && picks.is_empty()
                 {
                     let ctx = crate::game::effects::EffectContext {
                         controller: player,
@@ -21798,12 +21813,13 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::DiscardChosenPending { target_player } => {
+            PendingEffectState::DiscardChosenPending { target_player, max } => {
                 let DecisionAnswer::Discard(card_ids) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = Vec::with_capacity(card_ids.len());
-                for cid in card_ids {
+                let cap = max.unwrap_or(u32::MAX) as usize;
+                for cid in card_ids.iter().take(cap) {
                     // The zone move + CardDiscarded + discard-matters
                     // counters + Madness replacement (CR 702.35) are all
                     // centralized in `discard_card`.

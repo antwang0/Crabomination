@@ -1391,6 +1391,12 @@ pub fn rosecot_knight() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(6),
             pick_filter: Some(R::Artifact.or(R::Enchantment)),
+            optional: true,
+            then_if_not_picked: Some(Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            })),
     ..Default::default()
 })))],
         ..Default::default()

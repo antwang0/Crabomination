@@ -849,6 +849,30 @@ fn hog_monkey_grants_menace_to_counter_creature() {
     assert!(g.computed_permanent(buff).unwrap().keywords().contains(&Keyword::Menace), "got menace at combat");
 }
 
+/// Hog-Monkey's exhaust half — CR 702.177, once per game.
+#[test]
+fn hog_monkey_exhaust_adds_two_counters() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::hog_monkey());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("exhaust activates");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(id).expect("hog-monkey").counter_count(CounterType::PlusOnePlusOne),
+        2,
+    );
+}
+
 /// `legal_attackers` excludes Tiger-Dillo when it's the only power-4 creature
 /// (the "another" gate, exclude_self) — keeps the bot/UI from offering an
 /// illegal swing.

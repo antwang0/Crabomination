@@ -631,7 +631,9 @@ fn dacks_duplicate_copies_with_haste_and_dethrone() {
     assert_eq!((cp.power, cp.toughness), (4, 4), "copied the Vampire");
     assert!(cp.keywords().contains(&Keyword::Haste));
     let card = g.battlefield_find(id).expect("duplicate").clone();
-    assert_eq!(card.definition.triggered_abilities.len(), 1, "dethrone bolted on");
+    // Sengir Vampire brings its own "a creature it damaged died" trigger, so
+    // the copy carries that plus the bolted-on dethrone.
+    assert_eq!(card.definition.triggered_abilities.len(), 2, "dethrone bolted on");
 }
 
 /// Extract from Darkness mills, then reanimates.

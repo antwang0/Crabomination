@@ -2125,28 +2125,47 @@ fn balefire_dragon_sweep_scales_with_its_power() {
         "a 7-power Balefire deals 7 → the 7-toughness Wurm dies");
 }
 
+/// Greasewrench Goblin's exhaust loots and grows it. The shipped card used to
+/// carry Haste and an on-death Treasure trigger, neither of which is printed
+/// on it; the exhaust ability is the whole card.
 #[test]
-fn greasewrench_goblin_creates_treasure_on_death() {
+fn greasewrench_goblin_exhaust_loots_and_grows() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::greasewrench_goblin());
-    let bf_before = g.battlefield.len();
-    // Kill the goblin via direct removal (Lightning Bolt).
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.clear_sickness(id);
+    let card = g.battlefield_find(id).expect("on battlefield");
+    assert!(!card.has_keyword(&crabomination::card::Keyword::Haste), "no printed Haste");
+    assert!(card.definition.triggered_abilities.is_empty(), "no printed trigger");
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(id)),
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
         additional_targets: vec![],
-        mode: None, x_value: None,
-    }).expect("Bolt castable for {R}");
+        x_value: None,
+        mode: None,
+    })
+    .expect("exhaust activates");
     drain_stack(&mut g);
-
-    // Goblin died; a Treasure token appeared.
-    assert!(g.battlefield_find(id).is_none(), "Goblin died");
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
-        "Treasure token appeared on death");
-    // BF: -1 (goblin gone) +1 (treasure) = unchanged in count.
-    assert_eq!(g.battlefield.len(), bf_before);
+    assert_eq!(
+        g.battlefield_find(id).expect("still here").counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "+1/+1 counter from the exhaust"
+    );
+    // CR 702.177 — once only.
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .is_err(),
+        "exhaust is once per game"
+    );
 }
 
 #[test]

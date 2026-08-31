@@ -7836,7 +7836,7 @@ impl GameState {
                         count,
                         hand: candidates,
                     };
-                    let pending = PendingEffectState::DiscardChosenPending { target_player: p };
+                    let pending = PendingEffectState::DiscardChosenPending { target_player: p, max: None };
                     if self.players[p].wants_ui {
                         // Suspend for this seat; the continuation re-runs
                         // the discard for every seat not yet processed so a
@@ -9148,7 +9148,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::DiscardAnyNumber { who, filter } => {
+            Effect::DiscardAnyNumber { who, filter, max } => {
                 use crate::decision::Decision;
                 let seats: Vec<usize> = self
                     .resolve_selector(who, ctx)
@@ -9175,8 +9175,11 @@ impl GameState {
                     // surfacing `count: 0` with the full hand). For UI seats
                     // the full hand is surfaced so the player can pick any
                     // subset.
+                    let cap = max
+                        .as_ref()
+                        .map(|v| self.evaluate_value(v, ctx).max(0) as u32);
                     let count = if self.players[p].wants_ui {
-                        candidates.len() as u32
+                        cap.unwrap_or(u32::MAX).min(candidates.len() as u32)
                     } else {
                         0
                     };
@@ -9185,12 +9188,14 @@ impl GameState {
                         count,
                         hand: candidates,
                     };
-                    let pending = PendingEffectState::DiscardChosenPending { target_player: p };
+                    let pending =
+                        PendingEffectState::DiscardChosenPending { target_player: p, max: cap };
                     if self.players[p].wants_ui {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::DiscardAnyNumber {
                                 who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                                 filter: filter.clone(),
+                                max: max.clone(),
                             }
                         });
                         self.suspend_signal = Some((decision, pending, rest));
@@ -21039,6 +21044,7 @@ impl GameState {
                     rest_bottom_random,
                     rest_to_exile,
                     then_if_picked,
+                    then_if_not_picked,
                     picked_matching_to_battlefield,
                     battlefield_haste,
                 } = &**lp;
@@ -21122,6 +21128,7 @@ impl GameState {
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *rest_to_exile,
                     then_if_picked: then_if_picked.clone(),
+                    then_if_not_picked: then_if_not_picked.clone(),
                     picked_matching_to_battlefield: picked_matching_to_battlefield.clone(),
                     battlefield_haste: *battlefield_haste,
                     source: ctx.source,
@@ -21191,6 +21198,7 @@ impl GameState {
                     rest_bottom_random: false,
                     rest_to_exile: false,
                     then_if_picked: None,
+                    then_if_not_picked: None,
                     picked_matching_to_battlefield: None,
                     battlefield_haste: false,
                     source: ctx.source,
@@ -21243,6 +21251,7 @@ impl GameState {
                     rest_bottom_random: *rest_bottom_random,
                     rest_to_exile: *exile_rest,
                     then_if_picked: None,
+                    then_if_not_picked: None,
                     picked_matching_to_battlefield: None,
                     battlefield_haste: false,
                     source: ctx.source,
@@ -25613,7 +25622,7 @@ impl GameState {
                         count: n as u32,
                         hand: candidates,
                     };
-                    let pending = PendingEffectState::DiscardChosenPending { target_player };
+                    let pending = PendingEffectState::DiscardChosenPending { target_player, max: None };
 
                     if self.players[picker].wants_ui {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| Effect::DiscardChosen {
@@ -25662,7 +25671,7 @@ impl GameState {
                         continue;
                     }
                     let decision = Decision::Discard { player: picker, count: 1, hand: candidates };
-                    let pending = PendingEffectState::DiscardChosenPending { target_player };
+                    let pending = PendingEffectState::DiscardChosenPending { target_player, max: None };
                     if self.players[picker].wants_ui {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::DiscardChosenFromRevealed {

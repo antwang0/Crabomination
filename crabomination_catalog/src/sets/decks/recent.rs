@@ -12496,11 +12496,28 @@ pub fn falkenrath_aristocrat() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::GrantKeyword {
-                what: Selector::This,
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            },
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+                // "If the sacrificed creature was a Human" — the cost's
+                // victim, read off `Selector::SacrificedCard`, which resolves
+                // it wherever it now is.
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::SacrificedCard,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
+                    },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

@@ -88,7 +88,11 @@ pub fn ostrich_horse() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::MillThenToHand {
             amount: Value::Const(3),
             filter: SelectionRequirement::Land,
-            otherwise: None,
+            otherwise: Some(Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            })),
         })],
         ..Default::default()
     }
