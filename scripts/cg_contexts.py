@@ -33,9 +33,15 @@ import sys
 
 
 def contexts(path, needle):
-    """(context, calls, ir) for every calling context of `needle`."""
+    """(calls, ir, program_total) for every calling context of `needle`.
+
+    `ir` is the *inclusive* cost callgrind charges to the call, so a context's
+    row is what removing that call site would remove — which is the number a
+    candidate's ceiling is read off.
+    """
     calls = collections.Counter()
     ir = collections.Counter()
+    total = 0
     names = {}
     cur = None
     pending = 0
@@ -63,7 +69,11 @@ def contexts(path, needle):
             m = re.match(r"^fn=\((\d+)\)(?: (.*))?$", line)
             if m and m.group(2):
                 names[m.group(1)] = m.group(2)
-    return calls, ir
+                continue
+            m = re.match(r"^summary: (\d+)", line)
+            if m:
+                total = int(m.group(1))
+    return calls, ir, total
 
 
 def short(ctx):
@@ -85,19 +95,30 @@ def main():
         sys.exit(__doc__)
     path, needle = sys.argv[1], sys.argv[2]
     rows = int(sys.argv[3]) if len(sys.argv) > 3 else 25
-    calls, _ = contexts(path, needle)
+    calls, ir, program = contexts(path, needle)
     if not calls:
         sys.exit(
             f"no calls to *{needle}* with a context — was the dump taken with "
             "--separate-callers=N, and symbolized?"
         )
     total = sum(calls.values())
-    print(f"# {total:,} calls to *{needle}*, by calling context")
-    for ctx, n in calls.most_common(rows):
-        print(f"{n:8,d}  {short(ctx)}")
-    shown = sum(n for _, n in calls.most_common(rows))
-    if shown < total:
-        print(f"# {total - shown:,} calls in {len(calls) - rows} further contexts")
+    total_ir = sum(ir.values())
+    pct = f" = {100 * total_ir / program:.2f} % of the program" if program else ""
+    print(
+        f"# {total:,} calls to *{needle}*, {total_ir:,} inclusive Ir{pct}, "
+        "by calling context (ranked by Ir)"
+    )
+    ranked = sorted(ir.items(), key=lambda kv: -kv[1])[:rows]
+    for ctx, cost in ranked:
+        share = f"{100 * cost / program:5.2f} %" if program else "      "
+        print(f"{calls[ctx]:8,d}  {cost:12,d}  {share}  {short(ctx)}")
+    shown_calls = sum(calls[c] for c, _ in ranked)
+    if shown_calls < total:
+        print(
+            f"# {total - shown_calls:,} calls / "
+            f"{total_ir - sum(c for _, c in ranked):,} Ir "
+            f"in {len(calls) - len(ranked)} further contexts"
+        )
 
 
 if __name__ == "__main__":
