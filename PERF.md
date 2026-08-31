@@ -17900,8 +17900,53 @@ edge's own cost with `--separate-callers` and `--demangle=no` (the three rows
 are one instantiation at three depths, not three monomorphizations — see the
 ninety-second pass's correction) before touching the enum.
 
-**(-127) TAKEN, 2026-08-31 — `GameState.players` IS THE ONE ZONE THAT IS NOT
-`CowBox`.** The ninety-first pass's line table has
+**(-127) BUILT, MEASURED AND REVERTED — `cube` +0.727 % / `fixed` +0.994 %.
+`players` IS THE ONE ZONE THAT IS NOT `CowBox` BECAUSE 82.5 % OF THE CLONES
+WRITE IT, AND THAT IS THE HIGHEST SHARE OF ANY ZONE IN THE STATE.**
+
+```text
+                                    base 9f06d76a      wrapped        delta
+  cube total                       2,529,866,528  2,548,260,472    +0.727 %
+  fixed total                        847,225,763    855,648,798    +0.994 %
+
+  GameState::clone       calls          22,558         22,558            0
+                         self Ir    28,965,990     28,069,712     -896,278
+  Arc::make_mut          calls         846,772      1,160,176     +313,404
+                         self Ir    24,502,124     32,362,326   +7,860,202
+  Arc::clone_from_ref_in calls         107,874        126,480      +18,606
+  __rust_alloc           calls       1,268,320      1,282,990      +14,670
+```
+
+**The census the entry asked for is in the delta, and it is decisive.**
+`clone_from_ref_in` rises by **18,606** against 22,558 `GameState` clones:
+**82.5 % of clones reach `&mut players` and deep-copy it anyway**, so the
+eager `malloc` is deferred rather than removed on all but 3,952 of them. The
+clone itself did get 896,278 Ir cheaper — the field's own row behaved exactly
+as predicted — and every other row went the other way by twenty times as much.
+
+**Two rules, both general and both about the shape of the cost rather than
+this field.**
+
+(a) **A CoW wrap is worth `(clones that never write) x (the eager copy)` minus
+`(reaches) x (the gate)`, and the second term is counted per *reach*, not per
+clone.** `make_mut` rose by 313,404 against 18,606 copies — **seventeen `&mut
+players` reaches per clone that writes one**, each paying an `Arc::get_mut`
+refcount load that a bare `Vec` does not have. At ~28 Ir apiece that gate is
+7.9 M Ir, 0.31 % of `cube` on its own and more than four times the saving. The
+zones this device already wraps are reached once or twice per clone; `players`
+is indexed by nearly every arm of `perform_action`.
+
+(b) **"Every other zone is wrapped" is an argument about the code, not about
+the population.** The uniformity read as an oversight; it is the measurement.
+`players` was the field left bare because it is the one every action touches,
+and pass 91's line table — which is where this entry came from — could see the
+472 Ir a clone and could not see the 82.5 %.
+
+The change itself is two lines (`CowBox<Vec<Player>>` plus one `CowBox::new`
+at the reseat in `assign_teams`); `Deref`/`DerefMut` covered all 1,000-odd
+call sites and the workspace compiled with no other edit. **Do not rebuild it
+to check** — it is cheap to write and that is exactly why it needs this entry.
+ The ninety-first pass's line table has
 the number and nothing has been filed against it since: `players:
 self.players.clone()` is **472 Ir a clone over 34,522 clones = 16,294,384 Ir,
 0.55 % of `cube` and 35 % of `GameState::clone`'s whole inline group.** Every
