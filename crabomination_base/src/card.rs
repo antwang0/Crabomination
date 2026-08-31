@@ -7926,6 +7926,13 @@ impl CardInstance {
         self.damage as i32 >= self.toughness()
     }
 
+    /// **Do not put `#[inline]` on this.** It was built and measured under
+    /// PERF `(-132)` and cost `cube` **+0.35 %**: LLVM still declined to
+    /// inline the function at its sixteen call sites (410,736 calls,
+    /// unmoved), and the attribute instead flipped the inlining of its
+    /// *callee* — `KeywordCounters::get` came out of line and grew
+    /// **+9,809,688 Ir** against the 1,057,680 this row saved. The frame the
+    /// sweeps rank here is real; it is not reachable this way.
     pub fn has_keyword(&self, kw: &Keyword) -> bool {
         // Printed keyword, EOT-granted, or keyword counter (CR 122.1b)
         // all qualify. The keyword-counter check requires at least one

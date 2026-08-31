@@ -18230,6 +18230,50 @@ Ceiling: the whole table is ~17 M Ir, 0.7 % of `cube`, and no single row is
 worth more than 0.2 %. **Take it as a sweep or not at all**, and re-run the
 instrument after any of them lands — outlining changes what gets inlined.
 
+
+**ADDENDUM, MEASURED — `has_keyword` WAS BUILT ANYWAY AND THE READING ABOVE IS
+RIGHT, WITH A MECHANISM IT DID NOT NAME.** A concurrent session put `#[inline]`
+on it off its own sweep and measured `cube` **+0.35 %** (`2,532,782,307`
+against `2,529,863,533` at `7244e86d`, in a build that also carried
+`(-131)`'s -0.25 %; the two were separated by rebuilding without this half).
+Two things happened, neither of them the intended one:
+
+```text
+  has_keyword                 410,736 calls — UNMOVED, LLVM still declined it
+  has_keyword self Ir          -1,057,680
+  KeywordCounters::get         +9,809,688   came OUT of line
+```
+
+**`#[inline]` is a request about a function's callers and an unasked-for
+decision about its callees.** Making a body available across codegen units
+re-runs the inliner on everything inside it, and a callee that was folded in
+at one call site is a separate function once there are sixteen. Price an
+`#[inline]` on the *callee table*, not on the frame you want to delete. Note
+also that measuring two `#[inline]`s in one build read **+0.115 %** and would
+have buried `(-131)`'s real -0.249 %: one attribute per build.
+
+**AND THE `release-fast`-ARTIFACT RULE DOES NOT COVER THIS CLASS.** "How to
+measure" says a non-generic `crabomination_base` callee reading a million
+calls is a profile artifact because `release`'s thin LTO inlines it and
+`release-fast` does not. `profiling-lto` — this file's instrument for exactly
+that question — leaves `has_keyword`, `compute_permanent_gated` and
+`event_matches_spec` **out of line with identical call counts and identical
+fixed instruction counts**. Thin LTO declines them. Check the rule per callee.
+That run also prices thin LTO itself for the first time: `profiling-lto` runs
+`cube` in **2,468,606,469** Ir against `profiling-fast`'s **2,529,863,533**,
+**-2.42 %**, both at `7244e86d`.
+
+**A second instrument for the same class**: `cg_arms.py --sweep` ranks every
+function by the instructions whose *execution count equals its call count* —
+the measured counterpart to `cg_frames.py`'s static prologue count, and it
+includes the shared epilogue and the body's unconditional head, which the
+disassembly scan does not. Use `cg_frames.py` to find the shape and `--sweep`
+to price it, and read a row for what its instructions *are*: 100 % of self
+with a small `n` is a frame to delete, a high share on a discriminant
+predicate is the predicate (`event_matches_spec`, 24 of 31 Ir a call, is the
+kind test it exists to run).
+
+
 **(-133) `requirement_mentions_power` IS THE FOURTH COPY OF `(-130)`'S WALK,
 AT A DIFFERENT CALL SITE.** 44,690 calls at depth 1 and 53,136 at depth 2,
 2,638,842 Ir / 0.104 % of `cube`. `(-130)` folded three of these walkers into
@@ -18330,102 +18374,15 @@ REVERTED, `cube` **+1.218 %** / `fixed` **+1.171 %**. IT REMOVED EXACTLY THE
 CALLS IT AIMED AT AND LOST ANYWAY, AND THE MECHANISM IS A RULE THIS FILE DID
 NOT HAVE.**
 
-Measured concurrently with the entry above and against the same base
-(`7244e86d`); the two sessions priced different devices and both reverted.
-
-**(-132) OPEN — THE FORWARDING-FRAME CLASS, TOP OF THE QUEUE — THE FORWARDING-FRAME CLASS. `#[inline]`
-ON THREE SMALL HELPERS THAT NEITHER `release-fast` NOR THIN LTO INLINES, WORTH
-**1.16 % of `cube`** IF ALL OF IT LANDS.**
-
-Found by `cg_arms.py --sweep` (new at `73c63206`), which ranks every function
-by the instructions whose execution count equals its call count — what a
-caller pays before the body branches. Nothing in this file had measured that
-dimension; `(-126)` needed it and computed it by hand. It is the *measured* counterpart
-to `cg_frames.py`, which ranks the same shape off the disassembly: that one
-counts prologue instructions statically and reports how many `call` sites the
-body has, this one counts what actually executed on every call. Use
-`cg_frames.py` to find the shape and this to price it.
-
-```text
-cube, profiling-lto, --games 6 --threads 1 --seed 1   (2,468,606,469 Ir)
-                                fixed Ir   share   n     calls   of self
-  CardInstance::has_keyword    11,915,868  0.483 %  29   410,892   64.1 %
-  layers::affected_includes_gated 8,855,062 0.359 % 17   520,886   34.1 %
-  layers::compute_permanent_gated 7,815,268 0.317 % 29   269,492  100.0 %
-```
-
-**`compute_permanent_gated` is the pure case and it is the proof of the
-class**: 100 % of its self cost is unconditional, it is called 269,492 times,
-and it calls `compute_permanent_pass` **exactly 269,492 times** — the CR 613.8
-second pass never fires in this workload, so the whole function is six
-`push`es, a frame, an argument shuffle, a two-bool test that always answers
-"no", and an epilogue. `has_keyword` is seven `push`es and eight of epilogue
-around a keyword scan, reached from **sixteen** call sites of which six are
-96 % of the traffic.
-
-**The calibration that makes this a candidate and not an artifact, and it
-CORRECTS A RULE IN THIS FILE.** "How to measure" says a non-generic
-`crabomination_base` callee reading a million calls is a *profile artifact*
-because "`release`'s thin LTO inlines it and `release-fast` does not", and
-names `CardDefinition::is_creature`. That is not true of these three:
-`profiling-lto` (= `release-fast` + thin LTO, the instrument this file keeps
-for exactly this question) leaves all three as out-of-line symbols with **the
-same call counts and the same fixed instruction counts** as `profiling-fast`.
-Thin LTO declines them. So check the rule per callee before dismissing a row
-under it — and `#[inline]`, unlike the profile, makes the answer the same in
-every profile.
-
-Two things the number is not. It is `n` instructions per call, of which only
-the frame (`push`/`sub` + `add`/`pop`/`ret`, plus the caller's `call`)
-actually disappears — roughly 15-16 of the 29 for `has_keyword`, most of the
-29 for the pure wrapper — so **price it at half the fixed column, ~0.6 % of
-`cube`, and treat 1.16 % as the ceiling.** And `n` is the *unconditional path*,
-not overhead: `event_matches_spec` heads the same table at 0.999 % with 24
-instructions a call, and those 24 are the inlined kind test it exists to run,
-which is why this file already calls that row near the floor.
-
-**`profiling-lto` is 2,468,606,469 Ir against `profiling-fast`'s
-2,529,863,533 — thin LTO alone is -2.42 % on `cube`**, measured here for the
-first time. Both readings are at `7244e86d`.
-
-**(-133) NOT A CANDIDATE — `wants_converge`'s `format!("{self:?}")` IS
-**0.50 % of the `cube` reading** AND ZERO OF A TRAINING RUN, AND THAT
-DIFFERENCE IS THE ENTRY.**
-
-`alloc::fmt::format`'s caller table has one row that matters:
-`CardDefinition::wants_converge`, **217 calls for 12,359,698 Ir** — 57 k Ir
-apiece, because it Debug-renders a whole `CardDefinition` (8,232 bytes and
-every `Vec` in it) and substring-searches the rendering for `ConvergedValue`
-and `ManaValueAtMostConverged`. It is 0.50 % of the six-game `cube` run and
-the single largest formatting cost in the program.
-
-**It is also memoized process-wide** (`OnceLock<RwLock<HashMap<String, bool>>>`
-behind a thread-local direct-mapped L1), so those 217 renders are *once per
-card name per process*. A `selfplay_train` actor pool is one process running
-millions of games: the cost is bounded by the catalog and amortizes to zero.
-A six-game bench run is nearly all warm-up by comparison, which is why it
-reads half a percent there.
-
-**Two rules.** (a) **A row whose call count is bounded by the catalog rather
-than by the games is warm-up, and `--games 6` prices warm-up at ~4,000x its
-weight in a training run.** Check `calls` against the game count before
-ranking a row; a fixed 217 is not a rate. (b) **Do not "fix" it.** The Debug
-scan is deliberate and the doc comment says why — the effect tree is a deep
-recursive enum with no generic walker, and the hand-written walker this
-replaced *had already rotted in both directions*. Warm-up that costs nothing
-in the workload the engine exists for is not worth reintroducing that.
-
-
-**(-126) CLOSED, BUILT AND REVERTED — `cube` **+1.218 %** / `fixed`
-**+1.171 %**. THE RECURSION IS REAL AND REMOVING IT IS A LOSS, AND THE
-MECHANISM IS A RULE THIS FILE DID NOT HAVE.**
+Measured by a concurrent session against the same base (`7244e86d`) as the
+entry above; the two priced different devices and both reverted.
 
 The entry asked for the recursive edge to be sized before an `All`/`Any`
 slice variant was proposed. It was sized — with a new instrument — and the
 answer moved the candidate somewhere else entirely, so the slice was never
 built and should not be.
 
-**What the arm census says (`scripts/cg_arms.py`, new at `9ab0798c`;
+**What the arm census says (`scripts/cg_arms.py`, new this session;
 `profiling-fast --no-default-features`, `--games 6 --threads 1 --seed 1`).**
 A 205-arm jump-table `match` has one line region and one caller, so no
 existing script could say which arms run. This reads the table out of the
@@ -18568,6 +18525,34 @@ spilling, and bundling the signature will not move it. Get the recursive
 edge's own cost with `--separate-callers` and `--demangle=no` (the three rows
 are one instantiation at three depths, not three monomorphizations — see the
 ninety-second pass's correction) before touching the enum.
+
+**(-134) NOT A CANDIDATE — `wants_converge`'s `format!("{self:?}")` IS
+**0.50 % of the `cube` reading** AND ZERO OF A TRAINING RUN, AND THAT
+DIFFERENCE IS THE ENTRY.**
+
+`alloc::fmt::format`'s caller table has one row that matters:
+`CardDefinition::wants_converge`, **217 calls for 12,359,698 Ir** — 57 k Ir
+apiece, because it Debug-renders a whole `CardDefinition` (8,232 bytes and
+every `Vec` in it) and substring-searches the rendering for `ConvergedValue`
+and `ManaValueAtMostConverged`. It is 0.50 % of the six-game `cube` run and
+the single largest formatting cost in the program.
+
+**It is also memoized process-wide** (`OnceLock<RwLock<HashMap<String, bool>>>`
+behind a thread-local direct-mapped L1), so those 217 renders are *once per
+card name per process*. A `selfplay_train` actor pool is one process running
+millions of games: the cost is bounded by the catalog and amortizes to zero.
+A six-game bench run is nearly all warm-up by comparison, which is why it
+reads half a percent there.
+
+**Two rules.** (a) **A row whose call count is bounded by the catalog rather
+than by the games is warm-up, and `--games 6` prices warm-up at ~4,000x its
+weight in a training run.** Check `calls` against the game count before
+ranking a row; a fixed 217 is not a rate. (b) **Do not "fix" it.** The Debug
+scan is deliberate and the doc comment says why — the effect tree is a deep
+recursive enum with no generic walker, and the hand-written walker this
+replaced *had already rotted in both directions*. Warm-up that costs nothing
+in the workload the engine exists for is not worth reintroducing that.
+
 
 **(-127) BUILT, MEASURED AND REVERTED — `cube` +0.727 % / `fixed` +0.994 %.
 `players` IS THE ONE ZONE THAT IS NOT `CowBox` BECAUSE 82.5 % OF THE CLONES
