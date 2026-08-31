@@ -43423,6 +43423,25 @@ pub fn baral_chief_of_compliance() -> CardDefinition {
                 amount: 1,
             },
         }],
+        // "Whenever a spell or ability you control counters a spell, you may
+        // draw a card. If you do, discard a card." The half of the card that
+        // makes it a build-around was absent; `EventKind::SpellCountered`'s
+        // actor is the player who controlled the countering spell, which is
+        // exactly what `YourControl` reads here.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCountered, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Baral: draw a card, then discard a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                ])),
+            },
+        }],
         ..Default::default()
     }
 }

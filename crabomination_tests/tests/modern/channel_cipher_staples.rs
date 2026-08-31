@@ -1114,6 +1114,42 @@ fn baral_reduces_instant_sorcery_cost() {
     assert_eq!(cost_reduction_for_spell(&g, 0, &bear, None), 0, "creatures unaffected");
 }
 
+/// "Whenever a spell or ability you control counters a spell, you may draw a
+/// card. If you do, discard a card." The trigger was absent — Baral shipped as
+/// a cost reducer with no payoff half.
+#[test]
+fn baral_loots_when_you_counter_a_spell() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::baral_chief_of_compliance());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_hand(0, catalog::island()); // something to pitch
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bear");
+    let counterspell = g.add_card_to_hand(0, catalog::counterspell());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: counterspell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter the bear");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "the bear was countered");
+    // Cast the Counterspell (-1), draw (+1), discard (-1).
+    assert_eq!(g.players[0].hand.len(), hand - 1, "drew one and pitched one");
+    assert!(g.players[0].graveyard.len() > gy, "the discard reached the graveyard");
+}
+
 /// Lightning Mauler grants haste to its soulbond partner.
 #[test]
 fn lightning_mauler_soulbond_grants_haste() {

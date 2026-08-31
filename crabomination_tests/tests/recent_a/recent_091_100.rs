@@ -376,6 +376,40 @@ mod recent93 {
         assert_eq!((cp.power, cp.toughness), (2, 3), "+1/+0 per instant/sorcery in graveyard");
         assert!(g.players[0].graveyard.iter().any(|c| c.definition.card_types.contains(&CardType::Creature)));
     }
+
+    /// "Whenever you discard one or more cards for the first time each turn,
+    /// draw that many cards." The trigger was absent — Rielle was a vanilla
+    /// dynamic-P/T body. `once_per_turn` is the "first time each turn" half,
+    /// so a second discard in the same turn draws nothing.
+    #[test]
+    fn rielle_draws_for_the_first_discard_batch_each_turn() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::rielle_the_everwise());
+        for _ in 0..8 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        for _ in 0..4 {
+            g.add_card_to_hand(0, catalog::island());
+        }
+        let discard = |n: i32| crabomination::effect::Effect::Discard {
+            who: crabomination::effect::Selector::You,
+            amount: crabomination::effect::Value::Const(n),
+            random: false,
+        };
+        let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+
+        let hand = g.players[0].hand.len();
+        let ev = g.resolve_effect(&discard(2), &ctx).unwrap();
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand - 2 + 2, "discarded two, drew two");
+
+        let hand = g.players[0].hand.len();
+        let ev2 = g.resolve_effect(&discard(1), &ctx).unwrap();
+        g.dispatch_triggers_for_events(&ev2);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand - 1, "second batch this turn draws nothing");
+    }
 }
 
 mod recent94 {

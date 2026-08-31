@@ -120,6 +120,16 @@ pub fn rielle_the_everwise() -> CardDefinition {
         power: 0,
         toughness: 3,
         dynamic_pt: Some(DynamicPt::InstantsSorceriesInControllerGraveyard { base_t: 3 }),
+        // "Whenever you discard one or more cards for the first time each
+        // turn, draw that many cards." Absent; the card was a vanilla
+        // dynamic-P/T body. `DiscardedOneOrMore` fires once per resolution
+        // and carries the count, and `once_per_turn` is the "first time each
+        // turn" clause.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DiscardedOneOrMore, EventScope::YourControl)
+                .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::TriggerEventAmount },
+        }],
         ..Default::default()
     }
 }
