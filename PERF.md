@@ -17854,8 +17854,9 @@ the actor lane's queue current.
 
 Recipe is in "How to measure" (the `crabomination_ml` flag is load-bearing).
 
-**(-122) THE ACTIVATED-GRANT WALK IS THE TRIGGER DISPATCHER'S TWIN AND IT HAS
-HAD NONE OF THE FOUR DEVICES THE TRIGGER SIDE GOT.** Read off `p.cube` at
+**(-122) TAKEN, 2026-08-31 — THE ACTIVATED-GRANT WALK IS THE TRIGGER
+DISPATCHER'S TWIN AND IT HAS HAD NONE OF THE FOUR DEVICES THE TRIGGER SIDE
+GOT.** Read off `p.cube` at
 `cab8d5d7` with the ratio device (`cg_ratio.py cube fixed --floor 0.45`),
 which ranks it 4th at **2.69x**:
 
