@@ -1308,7 +1308,26 @@ fn loathsome_chimera_escapes() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("escape Loathsome Chimera for {4}{G} + exile three");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(chimera).is_some(), "escaped onto the battlefield");
+    let c = g.battlefield_find(chimera).expect("escaped onto the battlefield");
+    assert_eq!(
+        c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1,
+        "CR 702.139 — it escapes with a +1/+1 counter on it",
+    );
+}
+
+/// …and enters with none when it is cast normally from hand.
+#[test]
+fn loathsome_chimera_cast_from_hand_has_no_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::loathsome_chimera());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for {2}{G}");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("on the battlefield");
+    assert_eq!(c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0);
 }
 
 // ── THB batch 5 — Omens, devotion, escape, blue tempo ────────────────────────

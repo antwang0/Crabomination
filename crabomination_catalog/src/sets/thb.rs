@@ -800,6 +800,19 @@ pub fn phoenix_of_ash() -> CardDefinition {
             Keyword::Haste,
             Keyword::Escape(cost(&[generic(2), r(), r()]), 3),
         ],
+        // CR 702.139 — "This creature escapes with a +1/+1 counter on
+        // it." Modeled as a printed enters-with-counters spec whose count is
+        // gated on the escape cast itself, so an ordinary cast enters with
+        // none and the CR 614.16 counter replacements (Hardened Scales,
+        // Solemnity) see it as the enters-with-counters event it is.
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastFromEscape),
+                then: Box::new(Value::Const(1)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), r()]),
             effect: Effect::PumpPT {
@@ -2036,6 +2049,19 @@ pub fn loathsome_chimera() -> CardDefinition {
         power: 4,
         toughness: 1,
         keywords: vec![Keyword::Escape(cost(&[generic(4), g()]), 3)],
+        // CR 702.139 — "This creature escapes with a +1/+1 counter on
+        // it." Modeled as a printed enters-with-counters spec whose count is
+        // gated on the escape cast itself, so an ordinary cast enters with
+        // none and the CR 614.16 counter replacements (Hardened Scales,
+        // Solemnity) see it as the enters-with-counters event it is.
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastFromEscape),
+                then: Box::new(Value::Const(1)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
         ..Default::default()
     }
 }

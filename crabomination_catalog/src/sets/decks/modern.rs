@@ -11091,11 +11091,16 @@ pub fn snakeskin_veil() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
+            // A +1/+1 **counter**, not an end-of-turn pump: it stays after the
+            // turn, and Hardened Scales / Solemnity see it. The card shipped
+            // as `PumpPT { duration: EndOfTurn }` on any creature; the printed
+            // target is one **you control**.
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
@@ -42929,6 +42934,20 @@ pub fn ribbons_of_night() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(4),
             },
+            // "If {U} was spent to cast this spell, draw a card." Read off the
+            // resolving spell's own `mana_spent_by_color` stamp, which is what
+            // `ManaSpentOfColorAtLeast` consults.
+            Effect::If {
+                cond: Predicate::ManaSpentOfColorAtLeast {
+                    color: crate::mana::Color::Blue,
+                    at_least: 1,
+                },
+                then: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
         ]),
         ..Default::default()
     }
@@ -57313,6 +57332,19 @@ pub fn woe_strider() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Escape(cost(&[generic(3), b(), b()]), 4)],
+        // CR 702.139 — "This creature escapes with two +1/+1 counters on
+        // it." Modeled as a printed enters-with-counters spec whose count is
+        // gated on the escape cast itself, so an ordinary cast enters with
+        // none and the CR 614.16 counter replacements (Hardened Scales,
+        // Solemnity) see it as the enters-with-counters event it is.
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfPred {
+                pred: Box::new(Predicate::SourceCastFromEscape),
+                then: Box::new(Value::Const(2)),
+                else_: Box::new(Value::ZERO),
+            },
+        )),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),

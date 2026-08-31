@@ -372,8 +372,10 @@ fn power_word_kill_spares_dragons() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "ordinary creature dies");
 }
 
+/// Snakeskin Veil puts a real +1/+1 **counter** (it shipped as an
+/// end-of-turn pump) on a creature **you control**, and grants hexproof.
 #[test]
-fn snakeskin_veil_pumps_and_grants_hexproof() {
+fn snakeskin_veil_counters_and_grants_hexproof() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::snakeskin_veil());
@@ -385,7 +387,27 @@ fn snakeskin_veil_pumps_and_grants_hexproof() {
     drain_stack(&mut g);
     let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((c.power(), c.toughness()), (3, 3), "+1/+1");
+    assert_eq!(
+        c.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1,
+        "a counter, not a pump — it outlives the turn",
+    );
     assert!(c.has_keyword(&Keyword::Hexproof), "gains hexproof");
+}
+
+/// …and it cannot target an opponent's creature.
+#[test]
+fn snakeskin_veil_only_targets_your_own() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::snakeskin_veil());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: Some(Target::Permanent(theirs)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).is_err(),
+        "target creature you control",
+    );
 }
 
 #[test]

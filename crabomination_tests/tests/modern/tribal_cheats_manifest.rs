@@ -1337,6 +1337,25 @@ fn ribbons_of_night_kills_and_gains() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).is_none(), "2/2 dies to 4 damage");
     assert_eq!(g.players[0].life, life + 4, "gained 4");
+    assert_eq!(g.players[0].hand.len(), 0, "no {{U}} spent, so no draw");
+}
+
+/// …and draws when {U} paid part of the generic cost. The rider was absent
+/// until `audit_oracle_verbs.py` named the missing draw.
+#[test]
+fn ribbons_of_night_draws_when_blue_was_spent() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ribbons_of_night());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ribbons of Night on blue mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "{{U}} was spent, so it drew");
 }
 
 /// Phelia's attack trigger blinks a nonland permanent (returns at end step) and
