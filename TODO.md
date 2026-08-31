@@ -67,11 +67,13 @@ sixty-seventh pass, so don't re-take that.
 8. **Robustness:** `audit_panics.py` at 0 bare sites; the grid's last full run was 33,120
    games / 0 failures / 0 undecided at `f2f7d58c`. An empty pool and `n == 0` are legal
    *inputs*, so the degradation is a return, not a `debug_assert!`.
-9. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
-   class. untap / scry / surveil CLOSED; next `draw` (38) and `counters` (33), unexamined.
-   **Inscription of Insight and All-Out Assault are primitive jobs.** `audit_incomplete`,
-   `audit_stubs` and `audit_variant_coverage` clean bar two dead primitives, triaged in the
-   script's docstring.
+9. **Cards: `draw` and `counters` are worked, 214 -> 203; `return_to_hand` (31) and `token`
+   (26) are next and unexamined.** Eleven cards fixed, all of one of two shapes, both in
+   CARD_BACKLOG's "Oracle-verb audit" section with the primitive jobs they surfaced (the
+   `LookPick`-with-else conditional unblocks **four** cards, Parley five). **The doc comment
+   above a body is the tell** — three of four wrong-shape cards still described the card the
+   body used to be, and `audit_catalog_stats` reads zero on all of them because the
+   characteristics were corrected against Scryfall and the ability was not.
 10. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or

@@ -19,6 +19,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 | Set / topic | Status | Lines |
 | --- | --- | --- |
+| [Oracle-verb audit — the `draw` and `counters` classes](#oracle-verb-audit--the-draw-and-counters-classes) | open | 60 |
 | [Tier 4 — remaining SOS/SOA audit simplifications (2026-07)](#tier-4--remaining-sossoa-audit-simplifications-2026-07) | open | 608 |
 | [New TODO suggestions (push modern_decks)](#new-todo-suggestions-push-moderndecks) | open | 188 |
 | [Edge of Eternities (`sets::eoe`)](#edge-of-eternities-setseoe) | open | 112 |
@@ -121,6 +122,63 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | [Weatherlight closed](#weatherlight-closed) | closed — residuals only | 35 |
 
 # Open
+
+## Oracle-verb audit — the `draw` and `counters` classes
+
+`scripts/audit_oracle_verbs.py` asks the cheapest question that catches a
+wrong-shape card: **the oracle names a verb and the effect tree has no
+primitive for it.** Standing **214 -> 203** over 10,949 cards; `draw` 34 -> 27
+and `counters` 33 -> 26, eleven cards fixed. `untap` / `scry` / `surveil` are
+closed. **`return_to_hand` (31) and `token` (26) are unexamined** — that is
+where the next run starts.
+
+**Two shapes account for every one of the eleven, and both are worth knowing
+before opening the next class.**
+
+1. **A synthesised card wearing a printed card's name.** Library Larcenist,
+   Sungrass Egg, Tempest Angler and Loot, the Pathfinder each carried a
+   printed name, cost, types and P/T with an invented ability underneath —
+   which is exactly why `audit_catalog_stats` reads zero on all four: the
+   *characteristics* were corrected against Scryfall at some point and the
+   ability was not. **The doc comment above the body is the tell.** Three of
+   the four still described the card the body used to be — Loot's said
+   "{1}{G}{W} Otter Scout 2/3" over a {2}{G}{U}{R} Beast Noble 2/4. Read the
+   comment and the body against the oracle, not against each other.
+2. **A keyword implemented and the rider printed beside it not.** Phoenix of
+   Ash, Loathsome Chimera and Woe Strider all print "this creature escapes
+   with N +1/+1 counter(s) on it". Escape shipped on all three; the rider on
+   none. One line of oracle text, three cards, one omission repeated.
+
+**Primitive jobs the two classes surfaced, none taken.** Each is filed here
+rather than fixed because it needs an engine primitive, and the count beside
+it is how many cards it unblocks.
+
+- **"If you didn't put a card into your hand this way, …" (3 cards + 1
+  already filed).** Adventure Awaits, Rosecot Knight, Ainok Wayfarer, and the
+  Blossom Prancer entry TODO already carries. `LookPick` has no else-branch,
+  so the whole conditional half is dropped. **Four cards on one primitive is
+  the best ratio in either class.**
+- **Parley (5 cards).** Rousing of Souls, Selvala's Charge, Selvala's
+  Enforcer, Selvala, Explorer Returned, Woodvine Elemental — "each player
+  reveals the top card of their library; for each nonland revealed this way,
+  … Then each player draws a card."
+- **Damage-provenance deaths (1, but it is Sengir Vampire).** "Whenever a
+  creature dealt damage by this creature this turn dies, put a +1/+1 counter
+  on this creature." Nothing links a death event back to what damaged the
+  creature earlier in the turn. A body-only stub since LEA.
+- **A capped "up to N" discard (1).** Greasewrench Goblin's exhaust is
+  "discard up to two cards, then draw that many". `Effect::DiscardAnyNumber`
+  has no cap; AutoDecider picks 0 so bot play would not notice, but a
+  scripted or UI decider could discard a whole hand — an uncapped ship is a
+  real deviation, not a rounding. The card **also** carries a Haste it does
+  not print (`audit_catalog_stats`' KW drift list).
+- **"The Nth time this ability has resolved this turn" (1).** Tannuk,
+  Memorial Ensign. `GameState.ability_resolutions_this_turn` exists; no
+  `Value` or `Predicate` reads it.
+
+**Deliberately not "fixed": `counter_spell`.** The audit's own docstring
+already says those five rows are the ward-shaped approximation this catalog
+documents, and re-checking them is re-doing a triage.
 
 ## Tier 4 — remaining SOS/SOA audit simplifications (2026-07)
 
