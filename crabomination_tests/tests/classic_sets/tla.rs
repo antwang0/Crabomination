@@ -1342,6 +1342,8 @@ fn jets_brainwashing_kicked_steals() {
     }).expect("cast");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(foe).unwrap().controller, 1, "still opponent's");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"),
+        "the Clue is unconditional");
 
     // Kicked: steal it.
     let mut g = two_player_game();
@@ -1356,6 +1358,10 @@ fn jets_brainwashing_kicked_steals() {
     }).expect("cast kicked");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(foe).unwrap().controller, 0, "stolen");
+    // The Clue is printed on the card, not on the kicker rider — it was
+    // dropped entirely until the `token` oracle-verb class.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"),
+        "and a Clue token either way");
 }
 
 /// Meteor Sword destroys a permanent on ETB and buffs its wielder.

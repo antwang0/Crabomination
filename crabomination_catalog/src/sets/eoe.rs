@@ -7150,7 +7150,12 @@ pub fn divert_disaster() -> CardDefinition {
             mana_cost: cost(&[generic(2)]),
             exile: false,
             extra_generic: None,
-            if_paid: None,
+            // "If they do, you create a Lander token" — the consolation half.
+            if_paid: Some(Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(crabomination_base::tokens::lander_token()),
+            })),
         },
         ..Default::default()
     }

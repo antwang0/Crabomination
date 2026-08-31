@@ -2675,6 +2675,36 @@ fn divert_disaster_counters_when_unpaid() {
     }).expect("cast Divert Disaster");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, 20, "Bolt countered (unpaid), no damage");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Lander"),
+        "no Lander when the tax goes unpaid");
+}
+
+/// The other half of Divert Disaster: "If they do, you create a Lander token."
+/// The consolation half was `if_paid: None` until the `token` oracle-verb
+/// class.
+#[test]
+fn divert_disaster_pays_a_lander_when_the_tax_is_met() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(2); // spare for the {2}
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    let divert = g.add_card_to_hand(0, catalog::divert_disaster());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: divert, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Divert Disaster");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "the Bolt was paid for and resolved");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Lander"),
+        "and the caster gets a Lander");
 }
 
 /// Mightform Harmonizer's landfall doubles a creature's power until end of turn.

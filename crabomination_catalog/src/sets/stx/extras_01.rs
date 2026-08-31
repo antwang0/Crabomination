@@ -1128,33 +1128,68 @@ pub fn stonebound_mentor() -> CardDefinition {
 /// available for future mode-pick UI. AutoDecider picks the +1/+1
 /// counters mode by default. The "one or more" mode-count picker is
 /// engine-wide ⏳; auto-picks one mode at cast time.
+/// Inscription of Insight — {3}{U} Sorcery, Kicker {2}{U}{U}.
+///
+/// "Choose one. If this spell was kicked, choose any number instead. •
+/// Return up to two target creatures to their owners' hands. • Scry 2, then
+/// draw two cards. • Target player creates an X/X blue Illusion creature
+/// token, where X is the number of cards in their hand."
+///
+/// Shipped as an entirely different card — three `XFromCost` modes on a spell
+/// with no `{X}` in its cost — until the `token` oracle-verb class read it.
+/// Two named approximations remain, both in `Effect::ChooseN`'s known
+/// limitation (cast-time mode selection is a TODO): the bounce is one target
+/// rather than "up to two", and the Illusion's controller is you rather than
+/// a targeted player. Kicker is carried so the cost is right; "choose any
+/// number instead" is the same TODO.
 pub fn inscription_of_insight() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Inscription of Insight",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![crate::card::Keyword::Kicker(cost(&[generic(2), u(), u()]))],
         effect: Effect::ChooseN {
             picks: vec![0],
             modes: vec![
-                // Mode 0: Put X +1/+1 counters on target creature.
-                Effect::AddCounter {
+                // Mode 0: return target creature to its owner's hand.
+                Effect::Move {
                     what: target_filtered(SelectionRequirement::Creature),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::XFromCost,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 },
-                // Mode 1: Target player draws a card for each 1/1 creature.
-                // Auto-decider: draw X cards (approximated to X — engine has
-                // no "per 1/1 creature" reader yet).
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::XFromCost,
-                },
-                // Mode 2: Untap up to X target permanents.
-                Effect::Untap {
-                    what: target_filtered(SelectionRequirement::Any),
-                    up_to: Some(Value::XFromCost),
-                },
+                // Mode 1: scry 2, then draw two.
+                Effect::Seq(vec![
+                    Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ]),
+                // Mode 2: an X/X blue Illusion, X = cards in hand. Minted 0/0
+                // and grown by counters, the `Wild Hypothesis` idiom.
+                Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: Box::new(crate::card::TokenDefinition {
+                            name: "Illusion".into(),
+                            power: 0,
+                            toughness: 0,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![crate::mana::Color::Blue],
+                            subtypes: crate::card::Subtypes {
+                                creature_types: vec![crate::card::CreatureType::Illusion],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::LastCreatedToken,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::CardsInHandMatching {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::Any,
+                        },
+                    },
+                ]),
             ],
         },
         ..Default::default()

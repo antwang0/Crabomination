@@ -4034,33 +4034,29 @@ fn verdant_pledgemage_gains_two_life_on_etb() {
     );
 }
 
-/// Inscription of Insight at X=2 puts two +1/+1 counters on a target
-/// creature (default auto-picked mode 0).
+/// Inscription of Insight's default mode returns a creature to its owner's
+/// hand. The card shipped as three `XFromCost` modes — an entirely different
+/// spell, and on a cost with no `{X}` in it — until the `token` oracle-verb
+/// class read it against the oracle.
 #[test]
-fn inscription_of_insight_x_two_lands_two_counters() {
-    use crabomination::card::CounterType;
+fn inscription_of_insight_default_mode_bounces_a_creature() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let io = g.add_card_to_hand(0, catalog::inscription_of_insight());
-    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: io,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
-        x_value: Some(2),
+        x_value: None,
     })
-    .expect("Inscription of Insight castable for {X=2}{G}{U}");
+    .expect("Inscription of Insight castable for {3}{U}");
     drain_stack(&mut g);
-    let bf_bear = g.battlefield_find(bear).expect("bear alive");
-    let plus_one_count = bf_bear
-        .counters
-        .get(&CounterType::PlusOnePlusOne)
-        .copied()
-        .unwrap_or(0);
-    assert_eq!(plus_one_count, 2, "two +1/+1 counters at X=2");
+    assert!(g.battlefield_find(bear).is_none(), "the creature was bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "to its OWNER's hand, not the caster's");
 }
 
 /// Memory Lapse — after the new `CounterSpellToZone` wiring, the

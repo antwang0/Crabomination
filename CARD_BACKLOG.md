@@ -172,6 +172,25 @@ sibling of `modes_chosen`** (cleared at cleanup) plus a `reset_each_turn` flag
 on the variant — one field on `CardInstance`, which is `CardData`-sized and
 CoW'd, so price it before taking it for one card.
 
+**Third batch, three more, and one of them was a whole different spell:**
+
+| Card | What the tree shipped | Fix |
+|---|---|---|
+| Jet's Brainwashing | the can't-block and the kicker steal, no Clue | the printed **unconditional** "Create a Clue token" tail — it is not part of the kicker rider |
+| Divert Disaster | `CounterUnlessPaid { if_paid: None }` | "If they do, you create a Lander token" — the field was already there and empty |
+| Inscription of Insight | three `XFromCost` modes **on a spell with no `{X}` in its cost** | the printed bounce / scry-2-draw-2 / X-X blue Illusion, plus the Kicker keyword |
+
+⚠ **Inscription keeps two approximations, both `Effect::ChooseN`'s documented
+cast-time-mode-selection limitation**: the bounce is one target rather than "up
+to two", and the Illusion's controller is you rather than a targeted player.
+"Choose any number instead when kicked" is the same TODO. The X/X body uses the
+`wild_hypothesis` idiom — mint 0/0, then `AddCounter` with
+`Value::CardsInHandMatching`.
+
+⚠ **`if_paid: None` is a shape worth grepping for.** Divert Disaster's whole
+missing half was an `Option` field left `None` on a variant that already had
+it; nothing in the audit reads "the field exists and is empty".
+
 **Still open in the class and both want an engine primitive, not a card fix**:
 Complaints Clerk's "whenever you roll a 1" (no die-roll event) and Magmatic
 Galleon's "creatures your opponents control are dealt excess noncombat damage"
@@ -179,7 +198,8 @@ Galleon's "creatures your opponents control are dealt excess noncombat damage"
 Pinnacle Starcage keeps its ETB exile and still drops the `{6}{W}{W}`
 "graveyard them all, then a Robot for each"; Sequence Engine ships an
 unrelated `RevealUntilFind` for a printed `{X}, {T}` graveyard-exile Fractal
-and wants an X-cost exile-from-graveyard shape. `token` 21 -> **14**.
+and wants an X-cost exile-from-graveyard shape. `token` 21 -> **11**, whole
+audit 138 -> **125**.
 
 ## Oracle-verb audit — the `draw` and `counters` classes
 

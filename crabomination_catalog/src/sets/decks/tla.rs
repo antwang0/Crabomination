@@ -2398,6 +2398,12 @@ pub fn jets_brainwashing() -> CardDefinition {
                 ])),
                 else_: Box::new(Effect::Noop),
             },
+            // Unconditional tail — it is not part of the kicker rider.
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(crabomination_base::tokens::clue_token()),
+            },
         ]),
         ..Default::default()
     }
