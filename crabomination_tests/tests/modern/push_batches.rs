@@ -3190,21 +3190,64 @@ fn lonis_x_exceeding_clues_is_rejected() {
     );
 }
 
+/// Loot, the Pathfinder's three Exhaust abilities (CR 702.177 — once per game
+/// apiece). It shipped with a Map-token ETB belonging to a different Loot and
+/// none of these; the draw is what `audit_oracle_verbs.py` saw missing.
 #[test]
-fn loot_the_pathfinder_etb_creates_map_token() {
-    use crabomination::card::ArtifactSubtype;
+fn loot_the_pathfinder_draws_three_once_per_game() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::loot_the_pathfinder());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    cast(&mut g, id);
-    let maps: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Map))
-        .collect();
-    assert_eq!(maps.len(), 1, "Loot mints a Map token on ETB");
-    // The Map sacrifices for {1},{T} to explore a creature you control.
-    assert!(maps[0].definition.activated_abilities.iter().any(|a| a.sac_cost && a.sorcery_speed),
-        "Map has a sorcery-speed sacrifice-to-explore ability");
+    let id = g.add_card_to_battlefield(0, catalog::loot_the_pathfinder());
+    g.clear_sickness(id);
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let hand = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("Exhaust — {U}, {T}: Draw three cards");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
+
+    // Exhaust is once per game: untapping does not refresh it.
+    if let Some(c) = g.battlefield_find_mut(id) { c.tapped = false; }
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 1, target: None,
+            additional_targets: vec![], x_value: None, mode: None,
+        }).is_err(),
+        "an exhaust ability activates only once per game"
+    );
+}
+
+/// The other two halves: a three-mana ritual and a three-damage burn, each on
+/// its own exhaust.
+#[test]
+fn loot_the_pathfinder_ramps_and_burns() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::loot_the_pathfinder());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("Exhaust — {G}, {T}: Add three mana of any one color");
+    drain_stack(&mut g);
+    let added: u32 = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+        .iter()
+        .map(|c| g.players[0].mana_pool.amount(*c))
+        .sum();
+    assert_eq!(added, 3, "three mana of one color");
+
+    if let Some(c) = g.battlefield_find_mut(id) { c.tapped = false; }
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: Some(Target::Player(1)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("Exhaust — {R}, {T}: 3 damage to any target");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "burned for three");
 }
 
 #[test]

@@ -18158,12 +18158,25 @@ pub fn imprisoned_in_the_moon() -> CardDefinition {
     }
 }
 
-/// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
-/// 2/3 with Vigilance. "When this creature enters, create a Map token."
+/// Loot, the Pathfinder — {2}{G}{U}{R} Legendary Creature — Beast Noble 2/4.
+/// Double strike, vigilance, haste, and three Exhaust abilities: "{G}, {T}:
+/// Add three mana of any one color", "{U}, {T}: Draw three cards", "{R}, {T}:
+/// Loot deals 3 damage to any target". (DFT)
+///
+/// The body carried a Map-token ETB from a different Loot — the doc comment
+/// still described that card's cost, types and P/T — while the printed card
+/// has no ETB at all. `audit_oracle_verbs.py` found it by the missing draw.
 pub fn loot_the_pathfinder() -> CardDefinition {
-    use crate::card::Supertype;
-    use crate::effect::shortcut::etb;
-    use crate::game::effects::map_token;
+    use crate::card::{ActivatedAbility, Supertype};
+    use crate::effect::shortcut::target_any;
+    // "Exhaust — [cost], {T}: …" (CR 702.177) — once per game apiece.
+    let exhaust = |mana, effect| ActivatedAbility {
+        mana_cost: mana,
+        tap_cost: true,
+        exhaust: true,
+        effect,
+        ..Default::default()
+    };
     CardDefinition {
         name: "Loot, the Pathfinder",
         cost: cost(&[generic(2), g(), u(), r()]),
@@ -18176,11 +18189,29 @@ pub fn loot_the_pathfinder() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::DoubleStrike, Keyword::Haste, Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: Box::new(map_token()),
-        })],
+        activated_abilities: vec![
+            exhaust(
+                cost(&[g()]),
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(3)),
+                },
+            ),
+            exhaust(
+                cost(&[u()]),
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+            ),
+            exhaust(
+                cost(&[r()]),
+                Effect::DealDamage {
+                    to: target_any(),
+                    amount: Value::Const(3),
+                },
+            ),
+        ],
         ..Default::default()
     }
 }

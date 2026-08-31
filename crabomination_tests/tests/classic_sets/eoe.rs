@@ -111,6 +111,31 @@ fn void_active_decode_transmissions_opponent_loses_life() {
     assert_eq!(g.players[1].life, life1 - 2, "opponent loses 2 with Void on");
 }
 
+/// Biomechan Engineer's second half — "{8}: Draw two cards and create a 2/2
+/// colorless Robot artifact creature token." Absent until
+/// `audit_oracle_verbs.py` named the missing draw.
+#[test]
+fn biomechan_engineer_eight_draws_two_and_mints_a_robot() {
+    let mut g = two_player_game();
+    let eng = g.add_card_to_battlefield(0, catalog::biomechan_engineer());
+    g.clear_sickness(eng);
+    for _ in 0..4 { g.add_card_to_library(0, catalog::plains()); }
+    g.players[0].mana_pool.add_colorless(8);
+    let hand = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eng, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("{8}: Draw two cards and create a Robot");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
+    let robots = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Robot" && c.controller == 0)
+        .count();
+    assert_eq!(robots, 1, "minted one Robot");
+}
+
 /// Lander: Biomechan Engineer's ETB mints a Lander; sacrificing it for {2} fetches
 /// a basic land onto the battlefield tapped.
 #[test]
