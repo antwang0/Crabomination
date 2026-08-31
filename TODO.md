@@ -21,55 +21,58 @@ sixty-seventh pass, so don't re-take that.
 - `PERF.md` — the perf record: how to measure, **the standing rules**,
   baseline, log, profile of record, candidates.
 
-## NEXT — the handoff. Rewritten each run; ≤ 15 lines. Every number lives in PERF.
+## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
-   origin/claude/modern_decks`. Three sessions at once: code before tracker prose, **rebase
+   origin/claude/modern_decks`. Several sessions at once: code before tracker prose, **rebase
    not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
-   build **and re-read it then**. A seed-list line is not a status. **Nothing is claimed.**
-   ⚠ Do not rebase while a build runs (cargo fixes its plan at start), and kill orphaned
-   `rustc` after killing a cargo (`ps -o ppid` = 1).
-2. **All five gates re-run at `7ebb032b`:** suite **19,078 / 0 / 5**, clippy clean (also
-   `--features trig-census`), traces 7/7, `--bench` byte-identical to the invariant with
-   determinism + thread_determinism green, grid **33,120 games / 0 failures**, actor leg
-   6,000 games / 574,149 rows / 0 stalls. `peak_rss_mib` 24.8, in the 24.4-24.7 family —
-   an earlier reading of 26.7 in the same window did **not** reproduce, so it was a one-off
-   and not a step. **The actor leg is the only gate that reaches the encoder.**
-3. **Open, in order:** `(-122)` (the activated-grant walk — the dispatcher's twin, none of
-   the four devices applied). **`(-124)` is REFUTED by the dump that proposed it** — the
-   encoder's asks miss only 54 %, within a point of the 57 % `(-111)` priced, so a `_into`
-   form buys the misses and loses the hits. `computed_permanent_hinted` stays the largest
-   allocation caller and `(-111)` stays its close: only a change to how often a scope
-   *misses* can move it. **`permanent_value_with`'s "more than one apiece" is EXPLAINED
-   and is not a candidate** — its three callees are `cmc`, `counter_count` and
-   `computed_permanent_hinted`, the first two allocate nothing, and one context reaches
-   it; the excess over 1.0 is the memo's overlay `Box`. Answered off dumps that already
-   existed, no build. **The allocation lane has nothing open in it.**
-4. **Do not retake:** `(-112)`; dispatch's per-event gate (61 AND 106); a third line profile
-   of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since);
-   the `turn_granted_triggers` / `granted_triggers_eot` retains (census: zero on all pools).
-5. **Four measurement traps this window, all in PERF:** `grep mimalloc` is not the allocator
-   check; `(-110)`'s null control does **not** transfer to the actor (cgu-16, so a
-   semantics-free edit moved it 0.18 % — attribute to rows before believing a total); a
-   census must be re-run *after* a fix that moves what it counts; and a never-taken runtime
-   gate in front of a call is not free in a register-starved loop.
-6. **The dispatch lane is CLOSED** (`(-115)` + `(-120)`/`(-121)`): grant-live is zero on
-   every pool and the walk is at 15.5 / 28.3 / 32.5 % of its visits. What is left is the
-   *body*. The actor's profile is current at `(-123)`; it is `cube` plus an encoder, a deck
-   builder and a determinizer, and those three are the only places the bench cannot price.
-7. **Robustness: `audit_panics.py` is at 0 bare sites** (was 3, all on the actor's
-   deck-building path). The rule: an empty pool and `n == 0` are legal *inputs*, so the
-   degradation is a return, not a `debug_assert!` — an assertion puts it out of the suite's
-   reach, which is the only place its regression test can live.
-8. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
-   class — **and check a row OUT in the source too**: Territorial Kavu was dismissed off
-   the audit output and turned out to share only a name and a cost with the printed card.
-   untap / scry / surveil CLOSED. `draw`: first three rows done (Baral's loot, Rielle's
-   first-discard draw, the Kavu rewrite + `DynamicPt::DomainCount`), **34 left**;
-   `counters` (33) unexamined. **Inscription of Insight and All-Out Assault are primitive
-   jobs.** `audit_incomplete`, `audit_stubs` and `audit_variant_coverage` are all clean
-   bar two dead primitives, both triaged in the script's own docstring.
-9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
+   build **and re-read it then**. Do not rebase while a build runs; kill orphaned `rustc`
+   (`ps -o ppid` = 1). ⚠ **This container sleeps between tool calls** — a build launched in
+   the background makes no progress until the next foreground command; run builds in the
+   foreground.
+2. **All five gates at `2a9e70e3`:** suite **19,080 / 0 / 5**, clippy clean (also
+   `--features trig-census`), traces in the suite unmoved, `--bench` **195,528 / 27.44 /
+   611.0 / 0 stalls byte-identical to the invariant** with determinism + thread_determinism
+   green. Grid not re-run: this session's only engine lines are inside a `trig-census`
+   `cfg`. `peak_rss_mib` 28.3 is `release-fast` on a 2.80 GHz host and is **not** the
+   24.4-24.8 `release` family — do not read it as a step.
+3. **`(-122)` CLOSED, refuted by census before a build**: the board-wide mask costs **2.86x**
+   the walk on `cube` (301,516 vs 105,436 evaluations) and `fixed`/`sealed` carry **no**
+   `EachPermanent` activated grant at all. The rule: **a gate in front of a walk is part of
+   the walk's cost model** — `granted_abilities_of`'s ten checks already turn 65 % of the
+   board away, so a precompute covering the whole board loses. `zone::grant_census` is in
+   the tree and is how it was answered.
+4. **`(-127)` BUILT AND REVERTED, `cube` +0.727 % / `fixed` +0.994 %.** `players` is the one
+   `GameState` zone that is not `CowBox` because **82.5 % of clones write it** (18,606 deep
+   copies against 22,558 clones); `make_mut` rose 313,404 calls for 18,606 copies, i.e. the
+   CoW gate is paid **per `&mut` reach, not per clone**. Two lines to write, which is why it
+   needed the entry.
+5. **Open: `(-126)` only** — the requirement walker, **3.81 % of `cube`** folded, the largest
+   engine function with nothing filed against it, **65 % of its calls its own recursion**.
+   Fewer *asks* is not the lever (`(-122)` just refuted the precompute in front of its
+   second-largest caller, and the caller table has nineteen entries). Size the recursive
+   edge with `--separate-callers` + `--demangle=no` before proposing an `All`/`Any` slice
+   variant of `SelectionRequirement`; PERF says why the prologue number does not point at
+   the signature. **The queue has nothing else in it — a run that does not take `(-126)`
+   should replenish from fresh dumps rather than pick the next-largest row.**
+6. **Do not retake:** `(-112)`; `(-124)`; dispatch's per-event gate (61 AND 106); a third
+   line profile of `dispatch_triggers_for_events` or of the gather (pass 91: no hot line in
+   either); **actor scaling** (`(-52)`); the `turn_granted_triggers` / `granted_triggers_eot`
+   retains; the `players` wrap above.
+7. **Measurement traps, all in PERF:** `grep mimalloc` is not the allocator check;
+   `(-110)`'s null control does not transfer to the actor; a census must be re-run *after* a
+   fix that moves what it counts; a never-taken runtime gate is not free in a register-
+   starved loop; and **`cg_contexts.py` now prints inclusive Ir per context**, which is what
+   a ceiling is read off — it printed call counts only until this session.
+8. **Robustness:** `audit_panics.py` at 0 bare sites; the grid's last full run was 33,120
+   games / 0 failures / 0 undecided at `f2f7d58c`. An empty pool and `n == 0` are legal
+   *inputs*, so the degradation is a return, not a `debug_assert!`.
+9. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
+   class. untap / scry / surveil CLOSED; next `draw` (38) and `counters` (33), unexamined.
+   **Inscription of Insight and All-Out Assault are primitive jobs.** `audit_incomplete`,
+   `audit_stubs` and `audit_variant_coverage` clean bar two dead primitives, triaged in the
+   script's docstring.
+10. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
