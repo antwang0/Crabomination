@@ -353,6 +353,37 @@ fn sticky_fingers_grants_menace_and_mints_treasure_on_combat_damage() {
         "combat damage to a player mints a Treasure");
 }
 
+/// "When enchanted creature dies, draw a card." The rider was missing until
+/// `audit_oracle_verbs.py`'s `draw` class turned it up; the card goes to the
+/// **Aura's** controller, so the Aura owns the trigger rather than granting
+/// it to the creature.
+#[test]
+fn sticky_fingers_draws_for_its_controller_when_the_enchanted_creature_dies() {
+    let mut g = two_player_game();
+    stock_libraries(&mut g, 4);
+    // Seat 1's creature, so a granted trigger would draw for the wrong seat.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::sticky_fingers());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("aura castable on any creature");
+    drain_stack(&mut g);
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(
+        crabomination::game::effects::EntityRef::Permanent(bear), 2, None, &mut evs,
+    );
+    g.dispatch_triggers_for_events(&evs);
+    let death = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&death);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "enchanted creature died");
+    assert_eq!(g.players[0].hand.len(), h0 + 1, "the Aura's controller draws");
+    assert_eq!(g.players[1].hand.len(), h1, "the creature's controller does not");
+}
+
 #[test]
 fn exponential_growth_doubles_power_x_times() {
     let mut g = two_player_game();

@@ -2709,25 +2709,43 @@ fn master_symmetrist_doubles_counters_on_friendlies() {
 
 // ── Stinging Cave Crawler ───────────────────────────────────────────────────
 
+/// Printed oracle: "Deathtouch / Descend 4 — Whenever this creature attacks,
+/// if there are four or more permanent cards in your graveyard, you draw a
+/// card and you lose 1 life."
+///
+/// The card shipped as a synthesised Insect with an ETB scry 2 and an attack
+/// drain, none of which it prints (`audit_oracle_verbs.py`, `draw` class).
+/// Both halves of the descend gate are pinned here because the payoff is
+/// conditional and a wrong gate reads as "no trigger" either way.
 #[test]
-fn stinging_cave_crawler_etb_scrys_two() {
-    let mut g = two_player_game();
-    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
-    let id = g.add_card_to_hand(0, catalog::stinging_cave_crawler());
+fn stinging_cave_crawler_draws_and_loses_one_only_at_descend_four() {
+    fn attack_with_graveyard(permanents: usize) -> (usize, i32) {
+        let mut g = two_player_game();
+        stock_libraries(&mut g, 4);
+        let id = g.add_card_to_battlefield(0, catalog::stinging_cave_crawler());
+        assert!(
+            g.battlefield_find(id).unwrap().has_keyword(&Keyword::Deathtouch),
+            "printed deathtouch"
+        );
+        for _ in 0..permanents {
+            g.add_card_to_graveyard(0, catalog::grizzly_bears());
+        }
+        g.clear_sickness(id);
+        g.active_player_idx = 0;
+        g.step = crabomination::game::types::TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: id,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("declare attackers");
+        drain_stack(&mut g);
+        (g.players[0].hand.len() - hand, g.players[0].life - life)
+    }
 
-    g.players[0].mana_pool.add(Color::Black, 2);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Stinging Cave Crawler castable for {3}{B}{B}");
-    drain_stack(&mut g);
-
-    assert!(g.battlefield_find(id).is_some(), "Crawler resolved");
+    assert_eq!(attack_with_graveyard(3), (0, 0), "three permanent cards is not descend 4");
+    assert_eq!(attack_with_graveyard(4), (1, -1), "four is: draw a card, lose 1 life");
 }
 
 // ── Cogwork Archivist ───────────────────────────────────────────────────────

@@ -850,6 +850,29 @@ fn vampirism_feeds_on_your_own_board() {
     assert_eq!(g.computed_permanent(other).unwrap().power, 1);
 }
 
+/// "When this Aura enters, draw a card at the beginning of the next turn's
+/// upkeep." The delayed half was missing entirely (`audit_oracle_verbs.py`'s
+/// `draw` class); assert the watcher is armed rather than walking a turn, so
+/// the test pins the card and not the delayed-trigger machinery CR 603.7c
+/// already covers.
+#[test]
+fn vampirism_arms_a_next_upkeep_cantrip() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::vampirism());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, aura, Some(Target::Permanent(host))).expect("cast");
+    drain_stack(&mut g);
+    assert!(
+        g.delayed_triggers.iter().any(|d| {
+            matches!(d.kind, crabomination::game::types::DelayedKind::NextUpkeep { .. })
+                && d.controller == 0
+        }),
+        "the Aura's ETB arms a next-upkeep draw for its controller"
+    );
+}
+
 /// Knight of the Mists destroys a Knight when its {U} goes unpaid — the target
 /// lives in the `PayManaOrElse` fallback arm, so the trigger must reach it.
 #[test]

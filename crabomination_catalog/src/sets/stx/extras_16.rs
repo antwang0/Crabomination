@@ -770,7 +770,11 @@ pub fn detention_vortex() -> CardDefinition {
 
 /// Sticky Fingers — {R} Aura. Enchant creature. The enchanted creature has
 /// menace and "Whenever this creature deals combat damage to a player, create
-/// a Treasure token."
+/// a Treasure token." When enchanted creature dies, draw a card.
+///
+/// The death rider was missing until `audit_oracle_verbs.py`'s `draw` class
+/// turned it up; it is the Aura's own trigger (`EnchantedBySource`), so the
+/// card goes to the Aura's controller and not the creature's.
 pub fn sticky_fingers() -> CardDefinition {
     use crate::card::{EnchantmentSubtype, EquipBonus};
     CardDefinition {
@@ -785,6 +789,10 @@ pub fn sticky_fingers() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(SelectionRequirement::Creature),
         },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::Menace],
             triggered_abilities: vec![TriggeredAbility {

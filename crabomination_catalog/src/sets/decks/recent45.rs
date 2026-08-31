@@ -3,8 +3,8 @@
 //! `tests/recent45.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement as R, Selector,
-    Subtypes, TokenDefinition, Value,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, Predicate,
+    SelectionRequirement as R, Selector, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::PlayerRef;
 use crate::effect::shortcut::target_filtered;
@@ -50,15 +50,37 @@ pub fn rebuke() -> CardDefinition {
     }
 }
 
-/// Depopulate — {2}{W}{W} Sorcery. Destroy all nontoken creatures.
+/// Depopulate — {2}{W}{W} Sorcery. "Each player who controls a multicolored
+/// creature draws a card. Then destroy all creatures."
+///
+/// Was "destroy all nontoken creatures" with no draw at all — two deviations
+/// in one line, both found by `audit_oracle_verbs.py`'s `draw` class. The
+/// draw is per player in APNAP order, so `EachPlayerDoes` runs the gate with
+/// that player as the controller.
 pub fn depopulate() -> CardDefinition {
     CardDefinition {
         name: "Depopulate",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Destroy {
-            what: Selector::EachPermanent(R::Creature.and(R::IsToken.negate())),
-        },
+        effect: Effect::Seq(vec![
+            Effect::EachPlayerDoes {
+                who: PlayerRef::EachPlayer,
+                body: Box::new(Effect::If {
+                    cond: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            R::Creature.and(R::ControlledByYou).and(R::Multicolored),
+                        ),
+                        n: Value::Const(1),
+                    },
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+            Effect::Destroy { what: Selector::EachPermanent(R::Creature) },
+        ]),
         ..Default::default()
     }
 }

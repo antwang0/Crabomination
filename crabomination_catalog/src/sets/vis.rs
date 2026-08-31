@@ -1736,6 +1736,12 @@ pub fn brood_of_cockroaches() -> CardDefinition {
 /// the rest of your team shrinks. (The delayed ETB draw is dropped.)
 pub fn vampirism() -> CardDefinition {
     CardDefinition {
+        // "When this Aura enters, draw a card at the beginning of the next
+        // turn's upkeep." The delayed half was missing until
+        // `audit_oracle_verbs.py`'s `draw` class turned it up.
+        triggered_abilities: vec![etb(Effect::AtNextTurnsUpkeep {
+            body: Box::new(draw(1)),
+        })],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control get -1/-1.",
             effect: StaticEffect::PumpPT {

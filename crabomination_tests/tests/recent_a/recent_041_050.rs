@@ -417,11 +417,17 @@ mod recent45 {
         assert!(g.battlefield_find(atk).is_none(), "attacking creature destroyed");
     }
 
+    /// Printed: "Each player who controls a multicolored creature draws a
+    /// card. Then destroy all creatures." The card shipped as a nontoken-only
+    /// wipe with no draw; this pins both halves (`audit_oracle_verbs.py`'s
+    /// `draw` class).
     #[test]
-    fn depopulate_spares_tokens() {
+    fn depopulate_wipes_tokens_too_and_draws_only_for_multicolored() {
         let mut g = two_player_game();
-        let real = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        // A token survives the nontoken-only wipe.
+        stock_libraries(&mut g, 4);
+        let mono = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        // Seat 1 controls a gold creature, so only seat 1 draws.
+        let gold = g.add_card_to_battlefield(1, catalog::watchwolf());
         let bear_token = crabomination::card::TokenDefinition {
             name: "Bear".into(),
             power: 2,
@@ -430,11 +436,15 @@ mod recent45 {
             ..Default::default()
         };
         let tok = g.add_token_to_battlefield(0, &bear_token);
+        let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
         let ctx = EffectContext::for_spell(0, None, 0, 0);
         g.resolve_effect(&catalog::depopulate().effect, &ctx).unwrap();
         drain_stack(&mut g);
-        assert!(g.battlefield_find(real).is_none(), "nontoken creature destroyed");
-        assert!(g.battlefield_find(tok).is_some(), "token survives");
+        assert!(g.battlefield_find(mono).is_none(), "nontoken creature destroyed");
+        assert!(g.battlefield_find(gold).is_none(), "the gold creature dies too");
+        assert!(g.battlefield_find(tok).is_none(), "tokens are creatures — they die");
+        assert_eq!(g.players[0].hand.len(), h0, "mono-green board draws nothing");
+        assert_eq!(g.players[1].hand.len(), h1 + 1, "the gold board draws one");
     }
 
     #[test]

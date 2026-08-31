@@ -149,11 +149,51 @@ therefore no-opped** (fixed `fdd248ba`). Rule for the next class: **read six
 rows in the source and fix the filter before working any of them** — a false
 positive's class is shared, so six rows find nearly all of them.
 
-**Open rows after the corpus grew (2026-08-31):** `draw` 32, `gain_life` 30,
-`counters`/`damage` 25, `token` 24, `search_library` 21 — over the larger
-corpus, so unexamined rather than regressed. `return_to_hand`'s four
-survivors (Corpses of the Lost, Intimidation Campaign, Rambling Possum, The
-Locust God) are each a delayed/conditional bounce the body approximates.
+**A FIFTH FALSE CLASS, AND IT WAS THE BIGGEST ONE LEFT: the engine spells most
+verbs as a `GameState` METHOD, not an `Effect` variant.** `Effect::Parley`'s
+arm ends in `self.draw_one(p, events)` for every seat and names no `Effect::`
+anywhere, so all five Parley cards — the "Parley (5 cards)" primitive job this
+section used to file below — read as missing the draw they print. **There was
+no primitive job; the five cards were correct all along.** The auditor now
+attributes every `self.<method>(` an arm calls and the verb table names the
+lowercase spellings (`draw_one`, `gain_life`, `deal_damage`, `destroy_target`,
+…). Worth 15 rows across five verbs.
+
+**Open rows at 2026-08-31, after that fix and the four `draw` fixes below:**
+`gain_life` 27, `counters` 25, `token` 24, `damage` 23, `draw` 19,
+`search_library` 21. `return_to_hand`'s four survivors (Corpses of the Lost,
+Intimidation Campaign, Rambling Possum, The Locust God) are each a
+delayed/conditional bounce the body approximates.
+
+**The `draw` class worked: 32 rows -> 19, nine of them the Parley/method class
+and four of them real defects, all four fixed with a regression test apiece.**
+
+| card | shipped | printed |
+|---|---|---|
+| Stinging Cave Crawler | Insect, no deathtouch, ETB scry 2 + attack drain | Insect Horror, deathtouch, Descend 4 attack draw + lose 1 |
+| Depopulate | destroy all **nontoken** creatures, no draw | multicolored-controller draw, then destroy **all** creatures |
+| Vampirism | the two P/T halves only | + "when this Aura enters, draw a card at the next turn's upkeep" |
+| Sticky Fingers | menace + treasure-on-damage | + "when enchanted creature dies, draw a card" |
+
+Two of the four are the **synthesised-card** shape (a printed name over an
+invented body) and two are the **missing-rider** shape, which is exactly the
+split the `return_to_hand` pass found. **Still open in `draw`, read and
+triaged:**
+
+- **Skywarp Skaab is a whole wrong card** — it ships "discard a card to bounce
+  target creature" against a printed "you may exile two creature cards from
+  your graveyard; if you do, draw a card". Not fixed here because
+  `MayExileFromYourGraveyard` exiles *one or more*, so exactly-two is not
+  expressible; either a count field on that variant or a
+  `MayExileNFromYourGraveyard` unblocks it.
+- **Sunpearl Kirin** drops "if it was a token, draw a card" — the bounced
+  permanent is gone by the time the rider reads it, so this needs a
+  was-a-token memory on `LastMoved`.
+- **Serum Powder** (mulligan-time exile-and-redraw), **Lich's Mirror** (a
+  replacement for losing the game) and **Chains of Mephistopheles** (a draw
+  replacement) are each a real primitive, not a rider.
+- Adventure Awaits, Greasewrench Goblin and Tannuk keep their existing
+  primitive-job entries below.
 
 **Two shapes account for every one of the eleven, and both are worth knowing
 before opening the next class.**
@@ -181,10 +221,10 @@ it is how many cards it unblocks.
   Blossom Prancer entry TODO already carries. `LookPick` has no else-branch,
   so the whole conditional half is dropped. **Four cards on one primitive is
   the best ratio in either class.**
-- **Parley (5 cards).** Rousing of Souls, Selvala's Charge, Selvala's
-  Enforcer, Selvala, Explorer Returned, Woodvine Elemental — "each player
-  reveals the top card of their library; for each nonland revealed this way,
-  … Then each player draws a card."
+- ~~**Parley (5 cards).**~~ **Not a job — the auditor was wrong.**
+  `Effect::Parley`'s arm already draws for every seat (`self.draw_one`); the
+  rows were the method-spelling false class above. All five cards ship the
+  whole ability.
 - **Damage-provenance deaths (1, but it is Sengir Vampire).** "Whenever a
   creature dealt damage by this creature this turn dies, put a +1/+1 counter
   on this creature." Nothing links a death event back to what damaged the

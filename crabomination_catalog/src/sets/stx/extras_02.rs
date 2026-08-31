@@ -2087,49 +2087,44 @@ pub fn master_symmetrist() -> CardDefinition {
 
 // ── Stinging Cave Crawler (STX 2021) ────────────────────────────────────────
 
-/// Stinging Cave Crawler — {2}{B}, 1/3 Insect (STX 2021).
+/// Stinging Cave Crawler — {2}{B}, 1/3 Insect Horror (LCI 2023).
 ///
-/// "When this creature enters, scry 2. / Whenever this creature attacks,
-/// target opponent loses 1 life and you gain 1 life."
+/// "Deathtouch. / Descend 4 — Whenever this creature attacks, if there are
+/// four or more permanent cards in your graveyard, you draw a card and you
+/// lose 1 life."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Solid mid-curve body in
-/// any black aggro / midrange shell. ETB scry smooths draws; attack-
-/// drain rider is consistent reach. Both halves are vanilla engine
-/// primitives.
+/// Was a synthesised card wearing the printed name: an Insect with no
+/// deathtouch, an ETB scry 2 and an attack drain, none of which the card
+/// prints. Found by `audit_oracle_verbs.py`'s `draw` class.
 pub fn stinging_cave_crawler() -> CardDefinition {
-    use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Stinging Cave Crawler",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Insect],
+            creature_types: vec![CreatureType::Insect, CreatureType::Horror],
             ..Default::default()
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::Scry {
-                    who: PR::You,
-                    amount: Value::Const(2),
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Seq(vec![
-                    Effect::LoseLife {
-                        who: Selector::Player(PR::EachOpponent),
-                        amount: Value::Const(1),
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::PermanentCard,
                     },
-                    Effect::GainLife {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                ]),
+                    Value::Const(4),
+                ),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                ])),
+                else_: Box::new(Effect::Noop),
             },
-        ],
+        }],
         ..Default::default()
     }
 }
