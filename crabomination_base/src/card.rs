@@ -1037,6 +1037,14 @@ impl KeywordCounters {
     pub fn get(&self, kw: &Keyword) -> Option<&u32> {
         self.0.iter().find(|(k, _)| k == kw).map(|(_, n)| n)
     }
+    /// `get(kw).is_some()` over-approximated by tag alone — no `Keyword::eq`
+    /// call, so a caller can stay call-free. Sound as a negative test only:
+    /// no zero-valued entry is ever stored (see `add`/`remove_up_to`), so a
+    /// tag that is absent here means the keyword is absent here.
+    #[inline]
+    pub fn has_tag(&self, want: std::mem::Discriminant<Keyword>) -> bool {
+        self.0.iter().any(|(k, _)| std::mem::discriminant(k) == want)
+    }
     /// Add `n` counters of `kw`, creating the entry at 0 first.
     pub fn add(&mut self, kw: Keyword, n: u32) {
         match self.0.iter_mut().find(|(k, _)| *k == kw) {
@@ -6340,6 +6348,11 @@ pub struct CardCold {
 /// at the forty-seventh tip.
 pub trait KeywordSlice {
     fn has_kw(&self, k: &Keyword) -> bool;
+    /// `has_kw`'s tag half on its own — an over-approximation with no
+    /// `Keyword::eq` call in it, so a caller that only needs "could this
+    /// slice hold that keyword" stays call-free. See `CardInstance::
+    /// has_keyword`, which is the reason this exists.
+    fn has_kw_tag(&self, want: std::mem::Discriminant<Keyword>) -> bool;
 }
 
 impl KeywordSlice for [Keyword] {
@@ -6347,6 +6360,10 @@ impl KeywordSlice for [Keyword] {
     fn has_kw(&self, k: &Keyword) -> bool {
         let want = std::mem::discriminant(k);
         self.iter().any(|x| std::mem::discriminant(x) == want && x == k)
+    }
+    #[inline]
+    fn has_kw_tag(&self, want: std::mem::Discriminant<Keyword>) -> bool {
+        self.iter().any(|x| std::mem::discriminant(x) == want)
     }
 }
 
@@ -7926,17 +7943,39 @@ impl CardInstance {
         self.damage as i32 >= self.toughness()
     }
 
-    /// **Do not put `#[inline]` on this.** It was built and measured under
-    /// PERF `(-132)` and cost `cube` **+0.35 %**: LLVM still declined to
-    /// inline the function at its sixteen call sites (410,736 calls,
-    /// unmoved), and the attribute instead flipped the inlining of its
-    /// *callee* — `KeywordCounters::get` came out of line and grew
-    /// **+9,809,688 Ir** against the 1,057,680 this row saved. The frame the
-    /// sweeps rank here is real; it is not reachable this way.
+    /// Printed keyword, EOT-granted, or keyword counter (CR 122.1b) all
+    /// qualify, and a removal (EOT or permanent) beats all three.
+    ///
+    /// Split so the common answer costs no stack frame. None of the three
+    /// *positive* sources holding the asked tag settles the whole question as
+    /// `false` whatever the removal lists say, and a tag test needs no
+    /// `Keyword::eq` — so the fast half here holds no live value across a
+    /// call, LLVM gives it no callee-saved registers, and the prologue and
+    /// epilogue the 410 k-call-a-`cube`-run function used to pay on every ask
+    /// move onto the ~4 % that reach [`Self::has_keyword_exact`]. Left out of
+    /// line deliberately: the row is how the change is attributed.
+    ///
+    /// **Do not put `#[inline]` on this** without measuring. It was tried on
+    /// the pre-split body and cost `cube` **+0.35 %**: LLVM still declined to
+    /// inline at all sixteen call sites (410,736 calls, unmoved), and the
+    /// attribute instead flipped the inlining of its *callee* —
+    /// `KeywordCounters::get` came out of line and grew **+9,809,688 Ir**
+    /// against the 1,057,680 the row saved. The split above is what reached
+    /// the frame; the attribute did not.
     pub fn has_keyword(&self, kw: &Keyword) -> bool {
-        // Printed keyword, EOT-granted, or keyword counter (CR 122.1b)
-        // all qualify. The keyword-counter check requires at least one
-        // counter of the matching type to be present.
+        let want = std::mem::discriminant(kw);
+        if !self.definition.keywords.has_kw_tag(want)
+            && !self.granted_keywords_eot.has_kw_tag(want)
+            && !self.keyword_counters.has_tag(want)
+        {
+            return false;
+        }
+        self.has_keyword_exact(kw)
+    }
+
+    /// `has_keyword`'s exact half — reached only once a tag matched.
+    #[inline(never)]
+    fn has_keyword_exact(&self, kw: &Keyword) -> bool {
         if self.removed_keywords_eot.has_kw(kw) || self.removed_keywords.has_kw(kw) {
             return false;
         }

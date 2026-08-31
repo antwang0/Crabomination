@@ -10157,6 +10157,74 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourteenth pass — `(-134)` `has_keyword`: the frame came off, and the device is the negative answer
+
+`(-132)`'s table ranked `has_keyword` first and its own text said the row was
+**not** the shape — "the frame *is* the code", four scan loops whose induction
+variables are what the callee-saved registers hold. That reading is right about
+the *old* body and wrong about the function, because it never asked what the
+four scans are for. Base `7134751b`, callgrind, `--a gang --b gang --games 6
+--threads 1 --seed 1`, `profiling-fast --no-default-features`:
+
+```text
+                       base 7134751b        candidate         delta
+  cube                2,502,878,729     2,497,494,820     -0.215 %
+  fixed                 843,554,517       842,358,952     -0.142 %
+  sealed              2,542,618,280     2,538,640,693     -0.156 %
+
+  has_keyword self       18,593,922        11,516,656
+  has_keyword_exact               —           788,682
+  the two together       18,593,922        12,305,338    -6,288,584
+  calls                     410,892           386,530    (24,362 inlined away)
+  Keyword::eq self        4,466,258         4,466,258     unchanged
+```
+
+**The reading that found it.** `has_keyword` answers
+
+```text
+  !(removed_eot ∪ removed).has(kw) && (def.has(kw) ‖ granted_eot.has(kw) ‖ counters[kw] > 0)
+```
+
+and the *negative* half of that needs no exact comparison at all: if none of
+the three positive sources holds the asked **tag**, the answer is `false`
+whatever the two removal lists say. A tag test is `cmp (%rcx,%r8,1),%al` —
+no `Keyword::eq`, so a function that only does tag tests holds no value across
+a call, LLVM gives it no callee-saved registers, and the prologue and epilogue
+disappear. The exact half moved to `has_keyword_exact` (`#[inline(never)]`),
+reached on ~4 % of asks and entered by a **tail call**, so it costs one `jmp`.
+
+```text
+  before   7 push … 4 scans with 4 `call Keyword::eq` sites … 7 pop, ret
+  after    3 tag scans, `xor %eax,%eax; ret`   |   jmp has_keyword_exact
+```
+
+`cg_frames.py` priced the frame at 5,752,488 Ir (0.23 % of `cube`); the
+measured `cube` delta is 0.215 %. **The instrument was right to within 7 %,
+which is the second time it has predicted a delta before the build.**
+
+**The transferable rule, and it is `(-132)`'s row-reading rule corrected: a
+frame-heavy function whose loops need callee-saved registers can still be made
+frameless, if the *answer it usually gives* needs a cheaper loop than the
+answer it is written for.** `has_keyword`'s four scans exist for the exact
+comparison; 96 % of asks never need one. Ask what the common answer costs, not
+what the function costs.
+
+Two riders worth keeping:
+
+* **The call count fell by 24,362 without an `#[inline]`.** The fast body is
+  ~25 instructions, so LLVM inlined it into the intra-crate callers
+  (`is_dead`, `is_indestructible`, `has_protection_from`) that the 124-instruction
+  version was too big for. Cross-crate callers still see a call —
+  `release-fast` is `lto = false` and the function is deliberately *not*
+  `#[inline]`, so the row stays in the profile and the change stays
+  attributable.
+* **`Keyword::eq`'s self cost is byte-identical across the A/B** (4,466,258
+  both sides), which is the check that the tag pre-filter changed no
+  comparison the old body made — it removed asks that never reached one.
+
+Gates: `--bench` 195,528 / 27.44 / 611.0 / 0 stalls, byte-identical to the
+invariant; determinism ok; `thread_determinism ok (3 vs 1 threads identical)`.
+
 ### Hundred-and-thirteenth pass — `(-129)` closed, and the rule it found closed two more
 
 Four commits, one rule, and it is not the one `(-129)` was opened on.
@@ -18336,13 +18404,17 @@ ranked by `calls x prologue Ir`:
        777,440      77,744     5           2    381  actions::effect_produced_colors
 ```
 
-**`has_keyword` is the largest row and it is NOT the shape** — read before
-spending a build: its 124 instructions are four linear scans over keyword
-lists at a 0x28 stride, calling `Keyword::eq` on every discriminant match,
-and the callee-saved registers hold the loop's own induction variables.
-There is nothing cold to outline; the frame *is* the code. Its 44.9 Ir/call
-is a different candidate (a 40-byte `Keyword` scanned linearly four times)
-and wants a different device.
+**`has_keyword` WAS the largest row and this entry said it was not the shape.
+That was wrong, and `(-134)` took it — `cube` -0.215 %, and the row's frame is
+gone.** The reasoning here (124 instructions of four linear scans at a 0x28
+stride, callee-saved registers holding the loops' induction variables, nothing
+cold to outline) is a correct description of the *old body* and never asked
+what the scans were for: the exact `Keyword::eq` comparison they exist for is
+needed on 4 % of asks, and the other 96 % are answered by a tag test that needs
+no call and therefore no frame. See the hundred-and-fourteenth pass. **Read a
+frame row as "what does the common *answer* cost", not "what does this function
+cost".** What remains of the 40-byte `Keyword` scanned linearly is a separate
+candidate and is now much smaller.
 
 The rows worth opening are the ones with **1-3 body calls and a large
 `Ir/call` gap to their callees** — `can_grant_keyword` (52.9 Ir, 2 calls),
