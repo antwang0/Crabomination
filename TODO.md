@@ -51,11 +51,17 @@ sixty-seventh pass, so don't re-take that.
    (out/call 1.8-10.2) or under 0.06 %, and `(-133)` reads 0.54. **`(-138)` re-profiled both
    pools from scratch and the honest headline is that nothing new is big**: diffuse rows,
    the allocator (10.35 % over 1.27 M allocations, both ranking tables long tails), and
-   **`GameState::clone` — 1,175 instructions on every call, 91.5 % of self, ~40 collection
-   fields of which 2.4 allocate.** Its `CowBox<ResolutionScratch>` device is priced in PERF and
-   **its first build is a census, not the refactor**. `controlled_by` refuted there without a
-   build; `dispatch_board_scan`'s grant lists priced at ~0.2 % behind `(-106)`'s hazard. The
-   ACTOR was re-read and is not the answer either.
+   **`GameState::clone` — 1,175 instructions on every call, 91.5 % of self, 101 of the
+   struct's 194 fields resolution scratch.** Its census is **built and run**
+   (`CRAB_SCRATCH_CENSUS`) and it picks a different group than the entry proposed: the wide
+   group is written by two probes in three (30/32/42 % clean), the **29 collection fields by
+   only one in five** (93/81/88 % clean), and those are where the eight `Vec::clone`s, the
+   three `RawTable::clone`s and most of the 2.4 allocations a clone makes live. **That is the
+   next perf build**: 474 references over 13 files, 377 in `game/mod.rs` +
+   `game/effects/mod.rs`, `suspend_signal`'s 85 are control flow — one commit per field group,
+   fully green or reverted, never half-threaded. `controlled_by` refuted without a build;
+   `dispatch_board_scan`'s grant lists priced at ~0.2 % behind `(-106)`'s hazard. The ACTOR
+   was re-read and is not the answer either.
 5. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices and the pending-stack rewrite;
    `(-127)`; `(-122)`'s mask; `(-128)`'s skip gate; `(-129)`'s four devices; `(-132)`'s two
    non-shapes; `(-135)`'s line profile; actor scaling `(-52)`; `#[inline]` on `has_keyword`;
