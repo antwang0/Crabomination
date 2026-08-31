@@ -87,6 +87,11 @@ KW_WORD = {
 # The same question for the mechanics stored outside `keywords`. ⚠ Every
 # mechanic with its own field has to be listed here or the *missing* direction
 # reports it on every card that has it — `affinity_filter` alone was 39 rows.
+# ⚠ Every key must be a real `CardDefinition` field. Ten of these were not
+# (`cycling_cost`, `escape_cost`, `madness_cost`, `evoke_cost`, `disturb_cost`,
+# `overload_cost`, `warp_cost`, `impending`, `spree_modes`, `channel_abilities`)
+# — those mechanics carry their cost on the `Keyword::` variant itself — and a
+# key that names no field is a check that silently never runs.
 FIELD_WORD = {
     "foretell_cost": "foretell",
     "plot_cost": "plot",
@@ -109,16 +114,6 @@ FIELD_WORD = {
     "kicker_action_cost": "kicker",
     "flashback_additional_cost": "flashback",
     "prototype": "prototype",
-    "impending": "impending",
-    "warp_cost": "warp",
-    "spree_modes": "spree",
-    "overload_cost": "overload",
-    "channel_abilities": "channel",
-    "evoke_cost": "evoke",
-    "escape_cost": "escape",
-    "disturb_cost": "disturb",
-    "madness_cost": "madness",
-    "cycling_cost": "cycling",
 }
 
 # Deliberate modellings, checked once so they do not have to be re-checked.
@@ -148,6 +143,7 @@ ALLOWED = {
     ("blasphemous_act", "affinity"),
     ("vanquish_the_horde", "affinity"),
     ("sea_gods_scorn", "affinity"),
+    ("stone_idol_trap", "affinity"),
 }
 
 # ⚠ Some of those fields are *implementation vehicles* rather than the printed
@@ -175,7 +171,10 @@ ALT_FAMILY = {
     "jump-start", "boast", "forecast", "ninjutsu",
 }
 
-FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> CardDefinition \{", re.M)
+# ⚠ The return type is spelled two ways in the tree — bare `CardDefinition`
+# and the fully-qualified `crate::card::CardDefinition`. Requiring the bare
+# form skipped 6,895 factories, Stone Idol Trap among them.
+FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> (?:[A-Za-z_]+::)*CardDefinition \{", re.M)
 # `name: "X",` and not `name: "X".into(),` — the latter is a
 # `TokenDefinition`, and a factory that mints a token first would
 # otherwise answer for the card (Magitek Armor's Hero token did).

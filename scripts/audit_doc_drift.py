@@ -27,7 +27,10 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "crabomination_catalog" / "src"
 
-FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> CardDefinition \{", re.M)
+# ⚠ The return type is spelled two ways in the tree — bare `CardDefinition`
+# and the fully-qualified `crate::card::CardDefinition`. Requiring the bare
+# form skipped 6,895 factories, Stone Idol Trap among them.
+FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> (?:[A-Za-z_]+::)*CardDefinition \{", re.M)
 # `/// Name — {2}{R} 3/3 …`; the em dash is the codebase's separator.
 DOC_COST = re.compile(r"—\s*((?:\{[^}]{1,7}\})+)")
 DOC_PT = re.compile(r"\b(\d{1,2})/(\d{1,2})\b")
