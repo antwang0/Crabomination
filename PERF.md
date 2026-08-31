@@ -10238,6 +10238,99 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass — `(-139)` BUILT AND REVERTED: `noalias` on `&GameState` is worth nothing, and a malloc/free pair costs 183 Ir
+
+**`cube` +0.656 % / `fixed` +0.656 %** at the experiment, off `bc2a38f5`
+(`profiling-fast --no-default-features`, callgrind, six games, one thread,
+seed 1, `--a gang --b gang`). Reverted.
+
+```text
+  pool    base            boxed           delta
+  cube    2,490,817,192   2,507,149,257   +0.6557 %
+  fixed     838,864,887     844,367,395   +0.6560 %
+```
+
+**The premise, and it was correct.** rustc gives a `&T` parameter
+`noalias readonly` (and `dereferenceable`) only when `T` holds no `UnsafeCell`
+in its **own layout** — inline only; behind a `Box`, `Arc`, `Vec` or a raw
+pointer the cell does not count. `GameState` held three inline groups —
+`rng: GameRng(AtomicU64)`, `in_layer_gather: AtomicBool`, `layer_freeze`
+(`AtomicU32` + `[AtomicU8; 4]` + `Mutex`) — and `battlefield: Battlefield`
+held four more (`type_gates`, `def_epoch`, `find_hint`, `trig_members`). So
+**every `&GameState` and `&Battlefield` in the engine was compiled without
+`noalias`**, i.e. LLVM had to assume any call could write through an alias and
+reload after it. Both sides are proved, not argued:
+
+```text
+  base   ptr noundef nonnull readonly align 8 captures(none) %g
+  boxed  ptr noalias noundef readonly align 8 captures(none) dereferenceable(4096) %g
+```
+
+**The device**: one `Box<Interior>` on `GameState` (rng + the two freeze
+members) and one `Box<BfMemo>` on `Battlefield`. Two allocations a clone,
+every access one load deeper, and both types `Freeze` again.
+
+**The result is that the attribute buys nothing here, and the shape of the
+state is the reason.** The two rows that should have moved did not:
+
+```text
+                          base          boxed         delta
+  GameState::clone      28,963,416    28,945,206     -0.06 %   200-field literal
+  compute_permanent_pass 78,968,478    78,968,478     0.00 %   byte-identical
+```
+
+`compute_permanent_pass` came out **byte-identical over 269,492 calls** with
+the attribute restored. **`noalias` protects a struct's own bytes, and this
+state has almost none worth protecting** — `players`, `battlefield`, `exile`,
+`stack`, `continuous_effects`, `cold` are all `Vec`/`Arc`/`CowBox`, so the
+loads a hot function repeats are *through a heap pointer*, which the attribute
+on the outer reference says nothing about. It would have paid off in a state
+whose hot fields are scalars inline; ours are one indirection down by design.
+
+**The transferable rule: price `noalias` by how much of the type is inline.**
+`dereferenceable(4096)` says `GameState` is 4 KB of header — and essentially
+all of the *work* is behind the pointers in it.
+
+**The by-product is the number worth keeping.** The whole regression
+decomposes, and the allocator half divides exactly:
+
+```text
+  malloc + _int_malloc + free + _int_free      +8.25 M   of  +16.33 M
+  added allocations   22,558 clones x 2 pairs = 45,116
+  => 183 Ir per malloc+free pair (system allocator, this workload)
+```
+
+**183 Ir a pair is the price any candidate that trades allocations should be
+scored at**, and it is a *system-allocator* price: the profiling binary is
+`--no-default-features`, so a production `release-fast` run pays mimalloc's
+number instead, which is lower. The other +8 M is the indirection itself —
+139,280 battlefield reaches and ~550 k freeze-scope asks, each one load
+deeper.
+
+⚠ **The probe, because it costs 60 seconds and settles the question.** A
+six-line `crabomination/src/bin/freeze_probe.rs` (not committed — a `[[bin]]`
+is link cost the tree does not need for a settled question):
+
+```rust
+use crabomination::game::GameState;
+#[unsafe(no_mangle)]
+pub fn __probe_gs(g: &GameState) -> u32 { g.turn_number + 1 }
+fn main() {}
+```
+
+```sh
+cargo rustc --profile profiling-fast -p crabomination --bin freeze_probe \
+  --no-default-features -- --emit=llvm-ir -C codegen-units=1
+grep -h "^define.*@__probe" target/profiling-fast/deps/freeze_probe*.ll
+```
+
+Build it inside the engine crate (a downstream crate's own features differ and
+would rebuild the engine), and read the first pointer argument's attributes.
+⚠ **Do not read this off a scratch crate with `#[no_mangle]` stubs**: LLVM
+folds identical bodies into aliases of the first one, so five types under test
+come back wearing the attributes of whichever one it kept. Give each probe a
+distinct body.
+
 ### Hundred-and-fifteenth pass — `(-137)`, and the frame class is now empty
 
 **`cube` -0.061 % / `fixed` -0.106 %** at `ca1834cd`, off `bda1a69d`
@@ -18469,6 +18562,21 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-139) CLOSED — DO NOT RETAKE. `noalias` ON `&GameState` IS WORTH NOTHING.**
+Seven inline atomics (`rng`, `in_layer_gather`, `layer_freeze`, and
+`Battlefield`'s four lanes) cost every `&GameState` and `&Battlefield` in the
+engine their `noalias readonly`; boxing all of them restored the attribute —
+proved on both sides with the IR probe in the Log — and measured **+0.656 % on
+both pools**. `compute_permanent_pass` came out *byte-identical*. The state's
+hot data is all behind `Vec`/`Arc`/`CowBox`, so the attribute has almost
+nothing to protect. **The same argument closes `&CardData`** (`Definition`
+holds `CardMemo`'s two `AtomicU64` inline, so `&CardData` has no `noalias`
+either): same shape, same payload-behind-a-pointer, and it would cost an
+allocation per CoW unshare. Not worth a build.
+**Two numbers to keep from it**: a malloc+free pair is **183 Ir** under the
+system allocator in this workload (score allocation trades with it), and the
+60-second IR probe recipe is in the Log.
 
 **(-138) THE QUEUE WAS RE-PROFILED FROM SCRATCH AT `bda1a69d` AND THE HONEST
 HEADLINE IS THAT NOTHING NEW IS BIG.** Fresh `--dump-instr=yes` dumps, both
