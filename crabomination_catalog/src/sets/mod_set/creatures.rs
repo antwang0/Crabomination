@@ -6135,7 +6135,8 @@ pub fn gorehorn_minotaurs() -> CardDefinition {
     }
 }
 
-/// Bloodfray Giant — {3}{R} 3/2 Giant Warrior with Trample, Bloodthirst 1.
+/// Bloodfray Giant — {2}{R}{R} 4/3 Giant with Trample and **Unleash**; it
+/// shipped Bloodthirst 1, which is a different mechanic.
 pub fn bloodfray_giant() -> CardDefinition {
     CardDefinition {
         name: "Bloodfray Giant",
@@ -6147,7 +6148,7 @@ pub fn bloodfray_giant() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        keywords: vec![Keyword::Trample, Keyword::Bloodthirst(1)],
+        keywords: vec![Keyword::Trample, Keyword::Unleash],
         triggered_abilities: vec![crate::effect::shortcut::bloodthirst(1)],
         ..Default::default()
     }

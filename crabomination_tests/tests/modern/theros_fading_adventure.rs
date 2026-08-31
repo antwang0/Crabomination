@@ -395,23 +395,28 @@ fn spinewoods_paladin_etb_gains_three_life() {
 }
 
 /// Vault Plunderer's ETB still fires when it's cast from a plot.
+/// Plot exiles the card and the later free cast still fires its ETB. The
+/// fixture used to be Vault Plunderer, which prints no Plot at all
+/// (`audit_keyword_drift.py`); Irascible Wolverine is a real Plot creature.
 #[test]
-fn plot_vault_plunderer_etb_draw_on_free_cast() {
+fn plot_irascible_wolverine_etb_fires_on_the_free_cast() {
     let mut g = two_player_game();
     let lib_id = g.next_id();
     g.players[0].library.push(CardInstance::new(lib_id, catalog::grizzly_bears(), 0));
-    let id = g.add_card_to_hand(0, catalog::vault_plunderer());
-    g.players[0].mana_pool.add(Color::Black, 1);
+    let id = g.add_card_to_hand(0, catalog::irascible_wolverine());
+    g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::Plot { card_id: id }).expect("plot");
     g.plotted_this_turn.clear();
-    let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastPlotted {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast plotted");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(id).is_some(), "Plunderer entered");
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB drew a card");
+    assert!(g.battlefield_find(id).is_some(), "Wolverine entered off the plotted cast");
+    assert!(
+        g.exile.iter().any(|c| c.id == lib_id),
+        "the ETB exiled the top card of the library",
+    );
 }
 
 // ── Saddle (CR 702.171) ──────────────────────────────────────────────────────
@@ -927,18 +932,23 @@ fn ball_lightning_is_six_one_and_self_sacrifices() {
     assert!(g.battlefield_find(id).is_none(), "sacrificed at end step");
 }
 
-/// Hellspark Elemental can be recast from the graveyard via Flashback.
+/// Hellspark Elemental prints **Unearth**, not Flashback, and the engine has
+/// no Unearth: the recursion it shipped with recast the card from the
+/// graveyard with no exile clause, which is a different card
+/// (`audit_keyword_drift.py`). Until Unearth exists it recurs not at all.
 #[test]
-fn hellspark_elemental_has_flashback() {
+fn hellspark_elemental_has_no_flashback() {
     let mut g = two_player_game();
     let id = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastFlashback {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("flashback cast");
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(id).is_some(), "Hellspark on the battlefield via flashback");
+    assert!(
+        g.perform_action(GameAction::CastFlashback {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .is_err(),
+        "no printed Flashback",
+    );
 }
 
 /// Isamaru is a {W} legendary 2/2.

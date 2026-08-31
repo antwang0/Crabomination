@@ -406,7 +406,8 @@ pub fn resurgent_belief() -> CardDefinition {
         }],
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::Flashback(cost(&[generic(4), w()]))],
+        // Suspend 2—{1}{W}, not Flashback (`audit_keyword_drift.py`).
+        keywords: vec![Keyword::Suspend(2, cost(&[generic(1), w()]))],
         effect: Effect::Move {
             what: Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -942,7 +943,7 @@ pub fn shore_up() -> CardDefinition {
         name: "Shore Up",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Flashback(cost(&[generic(3), u()]))],
+        // Shore Up prints no Flashback (`audit_keyword_drift.py`).
         effect: Effect::Seq(vec![
             Effect::Untap {
                 what: target_filtered(SelectionRequirement::Permanent),

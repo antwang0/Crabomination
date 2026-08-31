@@ -60,7 +60,9 @@ pub fn plunge_into_darkness() -> CardDefinition {
         name: "Plunge into Darkness",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Kicker(cost(&[b()]))],
+        // Entwine {B}, not a kicker — the card prints "choose both if you
+        // pay the entwine cost" (`audit_keyword_drift.py`).
+        keywords: vec![Keyword::Entwine(cost(&[b()]))],
         effect: Effect::If {
             cond: crate::effect::Predicate::SpellWasKicked,
             then: Box::new(Effect::Seq(vec![mode0.clone(), mode1.clone()])),
@@ -595,7 +597,8 @@ pub fn pest_control() -> CardDefinition {
         name: "Pest Control",
         cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::Convoke],
+        // Cycling {2}, not Convoke (`audit_keyword_drift.py`).
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Nonland),
             body: Box::new(Effect::If {
@@ -622,12 +625,11 @@ pub fn pest_control() -> CardDefinition {
 /// permanent's CMC. Convoke now lets the caster tap creatures to pay
 /// generic mana toward the X cost.
 pub fn wrath_of_the_skies() -> CardDefinition {
-    use crate::card::Keyword;
     CardDefinition {
         name: "Wrath of the Skies",
         cost: cost(&[x(), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::Convoke],
+        // No Convoke on the printed card (`audit_keyword_drift.py`).
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Nonland),
             body: Box::new(Effect::If {

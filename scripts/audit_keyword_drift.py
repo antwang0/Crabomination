@@ -82,15 +82,38 @@ FIELD_WORD = {
     "splice_extra_cost": "splice",
 }
 
+# Deliberate modellings, checked once so they do not have to be re-checked.
+# The card does not print the keyword; the engine's keyword is the closest
+# primitive to what it does print.
+ALLOWED = {
+    # "you may pay {N} any number of times" (Adversary cycle) is multikicker
+    # in everything but name.
+    ("intrepid_adversary", "kicker"),
+    ("bloodthirsty_adversary", "kicker"),
+    # "cast from your graveyard by paying {3}{R} and exiling four other cards"
+    # is Escape 4 spelled out.
+    ("squee_dubious_monarch", "escape"),
+    # Pit Scorpion predates the keyword: "whenever this deals damage to a
+    # player, that player gets a poison counter". Poisonous is combat-only, so
+    # this is an approximation and not an equivalence.
+    ("pit_scorpion", "poisonous"),
+}
+
 FN = re.compile(r"^pub fn ([a-z0-9_]+)\(\) -> CardDefinition \{", re.M)
-BODY_NAME = re.compile(r'^ {8}name: "([^"]*)"', re.M)
+# `name: "X",` and not `name: "X".into(),` — the latter is a
+# `TokenDefinition`, and a factory that mints a token first would
+# otherwise answer for the card (Magitek Armor's Hero token did).
+BODY_NAME = re.compile(r'^ {8}name: "([^"]*)",$', re.M)
 REMINDER = re.compile(r"\([^)]*\)")
 
 
 def oracle_words(name: str):
     """Printed text, reminder text stripped, or None when uncheckable."""
     c = CACHE_LC.get(name.lower())
-    if not c or c.get("card_faces"):
+    # ⚠ Not every two-faced entry carries `card_faces`; some spell both halves
+    # into one string, and the body only builds the front.
+    if not c or c.get("card_faces") or " // " in (c.get("type_line") or "") \
+            or " // " in (c.get("mana_cost") or ""):
         return None
     txt = (c.get("oracle_text") or "") + " " + (c.get("type_line") or "")
     return REMINDER.sub(" ", txt).lower()
@@ -114,26 +137,69 @@ def top_level_keywords(body: str):
     return re.findall(r"Keyword::([A-Za-z]+)", body[i : j + 1])
 
 
+def factory_body(src: str, open_brace_end: int) -> str:
+    """The factory's text, ending at its own closing brace.
+
+    ⚠ "to the next `pub fn … -> CardDefinition`" is wrong and was wrong here:
+    a helper with arguments does not match, so the body ran on into the next
+    two or three factories and lent them each other's fields. Three "invented
+    Cycling" findings were that bug.
+    """
+    depth, j = 1, open_brace_end
+    while j < len(src) and depth:
+        ch = src[j]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        j += 1
+    return src[open_brace_end:j]
+
+
+def card_literal(body: str, name_pos: int) -> str:
+    """The `CardDefinition { … }` the matched `name:` belongs to.
+
+    ⚠ A factory that mints a TOKEN first puts that token's `power:` and
+    `toughness:` at the same eight spaces as the card's, and the first match
+    wins. Seven "BODY WRONG" findings were Cat, Bird, Fox, Mutagen, Dragon
+    Illusion and Elemental tokens answering for their makers.
+    """
+    start = body.rfind("CardDefinition {", 0, name_pos)
+    if start < 0:
+        return body
+    i = body.index("{", start)
+    depth, j = 0, i
+    while j < len(body):
+        if body[j] == "{":
+            depth += 1
+        elif body[j] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        j += 1
+    return body[i : j + 1]
+
+
 def scan():
     invented, missing, checked = [], [], 0
     for path in sorted(CATALOG.rglob("*.rs")):
         src = path.read_text(encoding="utf-8")
         for m in FN.finditer(src):
-            nxt = FN.search(src, m.end())
-            body = src[m.end() : nxt.start() if nxt else len(src)]
+            body = factory_body(src, m.end())
             bn = BODY_NAME.search(body)
             if not bn:
                 continue
             words = oracle_words(bn.group(1))
             if words is None:
                 continue
+            body = card_literal(body, bn.start())
             checked += 1
             have = {KW_WORD[k] for k in top_level_keywords(body) if k in KW_WORD}
             for field, word in FIELD_WORD.items():
                 if re.search(rf"^ {{8}}{field}: Some", body, re.M):
                     have.add(word)
             for word in sorted(have):
-                if word not in words:
+                if word not in words and (m.group(1), word) not in ALLOWED:
                     invented.append((m.group(1), path.relative_to(ROOT), word))
             for word in sorted(set(KW_WORD.values()) | set(FIELD_WORD.values())):
                 if word in have:

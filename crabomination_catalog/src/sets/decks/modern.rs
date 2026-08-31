@@ -21576,7 +21576,8 @@ pub fn spinewoods_paladin() -> CardDefinition {
 }
 
 /// Vault Plunderer — {3}{B} Creature — Human Rogue 2/3. When it enters, draw
-/// a card. Plot {2}{B} (CR 702.170).
+/// a card. It prints **no** Plot — the body carried one until
+/// `audit_keyword_drift.py` (`{2}{B}`, which is a different card).
 pub fn vault_plunderer() -> CardDefinition {
     CardDefinition {
         name: "Vault Plunderer",
@@ -21592,7 +21593,6 @@ pub fn vault_plunderer() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        plot_cost: Some(cost(&[generic(2), b()])),
         ..Default::default()
     }
 }
@@ -22131,7 +22131,9 @@ pub fn ball_lightning() -> CardDefinition {
 }
 
 /// Hellspark Elemental — {R} Creature — Elemental 3/1, Trample, Haste.
-/// At the beginning of the end step, sacrifice it. Flashback {1}{R}.
+/// At the beginning of the end step, sacrifice it. Its **Unearth {1}{R}** is
+/// unimplemented (no `Keyword::Unearth`); it shipped as a Flashback, which
+/// recurs the card with no exile clause and is a strictly different card.
 pub fn hellspark_elemental() -> CardDefinition {
     CardDefinition {
         name: "Hellspark Elemental",
@@ -22146,7 +22148,6 @@ pub fn hellspark_elemental() -> CardDefinition {
         keywords: vec![
             Keyword::Trample,
             Keyword::Haste,
-            Keyword::Flashback(cost(&[generic(1), r()])),
         ],
         triggered_abilities: vec![sacrifice_at_end_step()],
         ..Default::default()
@@ -30389,8 +30390,9 @@ pub fn daru_lancer() -> CardDefinition {
     }
 }
 
-/// Skirk Marauder — {3}{R} 2/1 Goblin. Mountaincycling {2}. (Onslaught's
-/// morph rider is dropped; the body + Mountaincycling are faithful.)
+/// Skirk Marauder — {1}{R} 2/1 Goblin with Morph {2}{R}. (The turn-face-up
+/// "deals 2 damage to any target" rider is still dropped; the Mountaincycling
+/// it shipped with is not on the card at all.)
 pub fn skirk_marauder() -> CardDefinition {
     CardDefinition {
         name: "Skirk Marauder",
@@ -30402,10 +30404,7 @@ pub fn skirk_marauder() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![Keyword::Landcycling(
-            cost(&[generic(2)]),
-            LandType::Mountain,
-        )],
+        keywords: vec![Keyword::Morph(cost(&[generic(2), r()]))],
         ..Default::default()
     }
 }

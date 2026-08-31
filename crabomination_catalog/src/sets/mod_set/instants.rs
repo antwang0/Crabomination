@@ -820,7 +820,8 @@ pub fn lose_focus() -> CardDefinition {
         name: "Lose Focus",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        keywords: vec![Keyword::Delve],
+        // Replicate {U}, not Delve (`audit_keyword_drift.py`).
+        keywords: vec![Keyword::Replicate(cost(&[u()]))],
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),

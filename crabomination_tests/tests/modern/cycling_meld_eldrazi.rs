@@ -968,21 +968,13 @@ fn lightning_skelemental_discards_and_sacrifices() {
     assert!(g.battlefield_find(skel).is_none(), "sacrificed at end step");
 }
 
-/// The bot recasts a graveyard Flashback card when it's the only play.
-#[test]
-fn bot_offers_flashback_recast() {
-    use crabomination::server::bot::{Bot, HeuristicBot};
-    let mut g = two_player_game();
-    let id = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.step = TurnStep::PreCombatMain;
-    g.priority.player_with_priority = 0;
-    g.active_player_idx = 0;
-    let action = HeuristicBot::new().next_action(&g, 0);
-    assert!(matches!(action, Some(GameAction::CastFlashback { card_id, .. }) if card_id == id),
-        "bot flashbacks Hellspark Elemental: {action:?}");
-}
+// `bot_offers_flashback_recast` lived here and is deleted rather than
+// re-fixtured. Its premise was a *creature* recast from the graveyard by
+// Flashback, which only worked because Hellspark Elemental shipped a
+// Flashback it does not print (`audit_keyword_drift.py`) — no real creature
+// has Flashback, and the heuristic does not take the sorcery-speed flashbacks
+// that do exist from an empty board. The `gated_block!(GY_LOOP)` path it
+// covered is the same one `bot_offers_disturb_recast` below exercises.
 
 /// The bot disturb-casts a graveyard DFC when it's the only play.
 #[test]

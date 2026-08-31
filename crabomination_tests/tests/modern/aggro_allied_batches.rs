@@ -776,7 +776,9 @@ fn landcycling_fetches_the_named_basic_land() {
         (catalog::noble_templar as Factory, catalog::plains as Factory, "Plains"),
         (catalog::shoreline_ranger as Factory, catalog::island as Factory, "Island"),
         (catalog::twisted_abomination as Factory, catalog::swamp as Factory, "Swamp"),
-        (catalog::skirk_marauder as Factory, catalog::mountain as Factory, "Mountain"),
+        // Skirk Marauder prints Morph, not Mountaincycling
+        // (`audit_keyword_drift.py`); Chartooth Cougar is a real Mountaincycler.
+        (catalog::chartooth_cougar as Factory, catalog::mountain as Factory, "Mountain"),
     ];
     for &(cycler, land, land_name) in cases {
         let mut g = two_player_game();

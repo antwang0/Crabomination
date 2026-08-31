@@ -3399,47 +3399,46 @@ fn quantum_riddler_on_cast_draws_even_if_countered() {
 
 #[test]
 fn convoke_taps_creature_to_pay_one_generic() {
-    // Wrath of the Skies costs {X}{W}{W}. With X=2 + 1 convoked creature,
-    // the player only needs {1}{W}{W} from real mana — the convoke tap
-    // contributes the missing {1}. The same X=2 wrath then sweeps both
-    // 2-CMC nonland permanents (including the just-tapped convoke
-    // creature, which is itself a 2-CMC bear).
+    // Chord of Calling costs {X}{G}{G}{G}. With X=1 and one convoked
+    // creature, the player only needs {G}{G}{G} from real mana — the convoke
+    // tap contributes the missing {1}.
+    //
+    // The fixture used to be Wrath of the Skies, which prints no Convoke;
+    // `audit_keyword_drift.py` took it off the card.
     let mut g = two_player_game();
     let mascot = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(mascot);
-    // Only enough real mana for {1}{W}{W} — short by {1} for X=2.
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(1);
+    let target = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2… too big
+    let small = g.add_card_to_library(0, catalog::savannah_lions()); // MV 1
+    let _ = target;
+    g.players[0].mana_pool.add(Color::Green, 3);
 
-    let wrath = g.add_card_to_hand(0, catalog::wrath_of_the_skies());
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-
-    // Without convoke, the cast fails (mana shortfall).
-    let try_no_convoke = g.perform_action(GameAction::CastSpell {
-        card_id: wrath, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
-    });
-    assert!(try_no_convoke.is_err(),
-        "Wrath at X=2 should be unaffordable without convoke help");
-
-    // With convoke, the tap contributes the missing {1}.
+    let chord = g.add_card_to_hand(0, catalog::chord_of_calling());
+    // Without convoke, X=1 is unaffordable on three green mana.
+    assert!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: chord, target: None, additional_targets: vec![],
+            mode: None, x_value: Some(1),
+        })
+        .is_err(),
+        "Chord at X=1 needs one more generic than the pool holds",
+    );
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(small))]));
     g.perform_action(GameAction::CastSpellConvoke {
-        card_id: wrath,
+        card_id: chord,
         target: None,
         additional_targets: vec![],
         mode: None,
-        x_value: Some(2),
+        x_value: Some(1),
         convoke_creatures: vec![mascot],
     })
-    .expect("Wrath should be castable with convoke topping up the X cost");
+    .expect("the convoke tap tops up the X cost");
     drain_stack(&mut g);
-
-    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
-        "Wrath at X=2 destroys the 2-CMC opp creature");
-    // The convoked creature itself is also 2-CMC and gets swept by its own
-    // wrath. Either way it's no longer on battlefield (graveyarded).
-    assert!(!g.battlefield.iter().any(|c| c.id == mascot));
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == mascot),
-        "Convoked creature was tapped, then destroyed by Wrath, ending in graveyard");
+    assert!(
+        g.battlefield_find(mascot).expect("still here").tapped,
+        "the convoked creature is tapped",
+    );
+    assert!(g.battlefield.iter().any(|c| c.id == small), "fetched the MV-1 creature");
 }
 
 #[test]
@@ -4419,13 +4418,14 @@ fn plunge_into_darkness_entwine_runs_both_modes() {
         DecisionAnswer::Search(Some(bolt)), // take Bolt
     ]));
     assert!(catalog::plunge_into_darkness().keywords.iter()
-        .any(|k| matches!(k, Keyword::Kicker(_))), "entwine modeled as kicker");
+        .any(|k| matches!(k, Keyword::Entwine(_))),
+        "Entwine, not the Kicker it shipped with (`audit_keyword_drift.py`)");
 
     let plunge = g.add_card_to_hand(0, catalog::plunge_into_darkness());
     g.players[0].mana_pool.add_colorless(1);
     g.players[0].mana_pool.add(Color::Black, 2); // {1}{B} + entwine {B}
     let life_before = g.players[0].life;
-    g.perform_action(GameAction::CastSpellKicked {
+    g.perform_action(GameAction::CastSpellEntwine {
         card_id: plunge, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Plunge castable entwined");
     drain_stack(&mut g);

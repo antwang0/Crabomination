@@ -4427,36 +4427,28 @@ fn frostpyre_arcanist_only_once_each_turn() {
     assert_eq!(returned, 1, "second Magecraft this turn suppressed");
 }
 
-/// Resurgent Belief's flashback exiles a card from your graveyard as the
-/// printed additional cost — and never the flashback card itself.
+// Resurgent Belief's two flashback tests are deleted: the card prints
+// **Suspend 2—{1}{W}**, not Flashback (`audit_keyword_drift.py`), so the
+// name-keyed `flashback_additional_costs` rider they exercised has to be
+// asserted on a card that actually has a flashback. Fourteen other catalog
+// cards set `flashback_additional_cost`, and `core_rules` covers the rider
+// itself.
+
+/// Resurgent Belief prints Suspend 2—{1}{W} and no Flashback.
 #[test]
-fn resurgent_belief_flashback_exiles_a_graveyard_card() {
-    let mut g = two_player_game();
-    let belief = g.add_card_to_graveyard(0, catalog::resurgent_belief());
-    let fodder = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    g.perform_action(GameAction::CastFlashback {
-        card_id: belief, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("flashback for {4}{W} + exile a gy card");
-    drain_stack(&mut g);
-    assert!(g.exile.iter().any(|c| c.id == fodder), "gy card exiled as the cost");
-    assert!(g.exile.iter().any(|c| c.id == belief), "Belief itself exiled after flashback");
+fn resurgent_belief_is_suspended_not_flashed_back() {
+    use crabomination::card::Keyword;
+    let def = catalog::resurgent_belief();
+    assert!(
+        def.keywords.iter().any(|k| matches!(k, Keyword::Suspend(2, _))),
+        "Suspend 2",
+    );
+    assert!(
+        !def.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
+        "no Flashback",
+    );
 }
 
-/// Resurgent Belief's flashback is unannounceable with an empty graveyard
-/// (no card to exile for the additional cost).
-#[test]
-fn resurgent_belief_flashback_needs_an_exile_target() {
-    let mut g = two_player_game();
-    let belief = g.add_card_to_graveyard(0, catalog::resurgent_belief());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    assert!(g.perform_action(GameAction::CastFlashback {
-        card_id: belief, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).is_err(), "no other gy card to exile - flashback rejected");
-}
 
 /// Final Payment's additional cost: pays 5 life when no token is up.
 #[test]
