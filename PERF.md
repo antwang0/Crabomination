@@ -61,6 +61,20 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 # the same copies by *calling context* four times without it. `readelf -sW`
 # ranks the instances by code size first, which is a free pre-sort.
 #
+# WHICH HOT FUNCTIONS PAY A FRAME THEY ALMOST NEVER USE — the instrument for
+# `(-129)`'s rule. Joins the dump's call counts against the binary's
+# disassembly and ranks by `calls x prologue instructions`, with the body's
+# `call` count beside each row. **A row is a candidate, not a finding**: 0
+# body calls means the frame is the code (`has_keyword`'s four scan loops),
+# 1-3 with a hot caller is the shape. Needs the same binary the dump came
+# from.
+#   python3 scripts/cg_frames.py cg.out target/profiling-fast/bot_ladder
+#
+# ⚠ AND `cg_contexts.py` UNDER-READ ITS Ir COLUMN BY 28x until `00b17a18` —
+# it took only a cost line whose position starts with a digit, and callgrind
+# subposition-compresses those to `*`, `+2`, `-96`. Any inclusive-Ir figure
+# quoted from that script before that commit is wrong; its *call* counts were
+# always right.
 # ⚠ AND `cg_symbolize.py`'s PREMISE IS STALE for these builds: valgrind 3.22
 # in the current image *does* read `profiling-fast`'s symbol table, so the
 # dump already carries names and the script is a no-op on it (it reports
@@ -10045,6 +10059,122 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-thirteenth pass — `(-129)` closed, and the rule it found closed two more
+
+Four commits, one rule, and it is not the one `(-129)` was opened on.
+Cumulative against `ca49d2e7`, callgrind, `--a gang --b gang --games 6
+--threads 1 --seed 1`, `profiling-fast --no-default-features`:
+
+```text
+                base ca49d2e7      tip 43844faf       delta
+  cube          2,529,884,442     2,502,898,933     -1.067 %
+  fixed           847,226,858       843,554,289     -0.434 %
+  sealed        2,572,246,891     2,542,620,153     -1.152 %
+```
+
+**The census first, because it decided the shape.** `ems_census`
+(`trig-census`) counts what `event_matches_spec`'s call count is the product
+of:
+
+```text
+  pool     dispatches  events/d  pairs/d      calls  dead pairs  dead calls  kinds/d
+  fixed        43,598      2.66     0.96    103,082     92.44 %     91.32 %     0.47
+  cube         74,788      3.34     3.71  1,021,728     93.04 %     92.52 %     2.15
+  sealed      103,016      3.08     4.70  1,540,720     93.92 %     90.39 %     2.62
+```
+
+`fixed`'s 103,082 is the entry's own figure to the unit. The 10x ratio
+between the pools is the **(permanent, trigger) pairs** — 3.86x — not the
+batch, which is 1.26x. And 93 % of pairs are dead: no event in the batch can
+match the trigger's kind.
+
+**That killed the obvious device before a build.** A per-pair gate in front
+of the event loop *is* the event loop — a dead pair has to scan the whole
+batch to learn it is dead. And a per-dispatch memo keyed on the kind is
+priced by `kinds/d` against `pairs/d`: 2.15 against 3.71 is a 42 % saving on
+a *sound* memo, and the sound part is not free either, since `CounterAdded(k)`
+and `StepBegins(s)` answer per payload and share a discriminant. So the cost
+had to come off the call itself.
+
+**Two commits did that and the second was worth three times the first.**
+
+```text
+                                          cube        fixed       sealed
+  87c8c840  riders out of line        -0.1238 %    -0.0359 %    -0.1776 %
+  16dd491d  Taii Wakeen arm out       -0.4836 %    -0.1448 %    -0.7194 %
+  event_matches_spec self/call   31.0 -> 26.7 -> 14.7 Ir over 1,028,014 calls
+```
+
+The split (`event_matches_spec_rest`, `#[inline(never)]`, identical
+signature so the survivor is a tail `jmp`) is the shape `(-126)`'s Device 2
+failed at, and it works here for the reason that entry gives: the share
+taking the small half is 93 %, not 42 %. Only **2.35 %** of calls reach the
+riders at all — the kind test rejects, then the scope check inside the
+riders rejects most of what is left.
+
+But the split alone recovered a third of what the shape predicts, and the
+disassembly said why: the fast path still entered through
+`push r15/r14/r12/rbx; sub $0x28`. **`event_kind_matches` had exactly one
+`call` left in it** — Taii Wakeen's arm asking `computed_permanent` for the
+victim's toughness — and LLVM will not shrink-wrap a prologue past the
+indirect branch of a 0x70-way jump table. Moving that arm to a `#[cold]
+#[inline(never)]` helper left an entry block of seven instructions and no
+frame at all.
+
+**THE TRANSFERABLE RULE: ONE CALL IN A JUMP-TABLE MATCH COSTS THE FRAME ON
+EVERY ARM.** The hot arms pay for the cold one, and no amount of reordering
+or `#[inline]` reaches it — the fix is to give the cold arm its own
+function. It was 12 of 26.7 Ir a call here.
+
+**And the rule is mechanical, so `scripts/cg_frames.py` now finds it**: join
+a dump's call counts against the binary's disassembly, rank by
+`calls x prologue instructions`, print how many `call` sites the body has. A
+row with 0 body calls is LLVM wanting registers for its own arithmetic and
+there is nothing to outline; a row with 1-3 and a hot caller is this shape.
+
+Its top row that *was* this shape closed as `(-131)`:
+
+```text
+                                          cube        fixed       sealed
+  43844faf  compute_permanent_gated   -0.2624 %    -0.2521 %    -0.2583 %
+```
+
+`compute_permanent_gated` is a two-line dispatcher in front of a 293 Ir
+callee and it cost **29 Ir a call**, because the CR 613.8 second pass needs
+`pass1`'s buffer and six callee-saved registers. On `cube` it is 269,492
+calls against 269,492 calls to `compute_permanent_pass` — **the second pass
+is never taken**. With the re-run `#[cold] #[inline(never)]` the dispatcher
+is small enough that the compiler inlines it into its callers entirely and
+its symbol is gone from the binary. Flat across all three pools, which is
+what a per-call frame does.
+
+`(-130)` is the same session's other commit and a different rule —
+`requirement_needs_live_resolution` walked one filter tree three times
+because `mentions_modified`, `_attacking` and `_equipped` were three copies
+of one recursion with one leaf arm apiece. The `||` short-circuits only on a
+tree that *has* a live leaf and almost none does:
+
+```text
+                                          cube        fixed       sealed
+  6fe82ac0  requirement_live_leaves   -0.2008 %    -0.0013 %    -0.0002 %
+  mentions_modified 2,638,842 + _attacking 2,638,842 + _equipped 2,255,984
+    -> live_leaves 2,806,696                              -4,726,972 Ir
+```
+
+`fixed` and `sealed` are flat to five figures because neither pool's decks
+carry a `GrantKeyword`/`PumpPT` static over a live filter at all. Read that
+against "Which pool a change moves": a three-pool A/B is what says this is
+`cube`'s path rather than a wash.
+
+**One instrument was wrong and had been for a pass.** `cg_contexts.py` read
+only a cost line whose position column starts with a digit, and callgrind
+subposition-compresses those to `*`, `+2`, `-96` — those rows were skipped
+with `pending` still armed, so the call was charged to whichever later line
+started with a digit. `event_matches_spec` read **1,095,020** inclusive Ir
+where it is **32,137,994**, a factor of 28, and the entry that quoted 1.26 %
+had it from `cg_edges.py`. **Two instruments disagreed by 28x and nothing
+had put them side by side.** Fixed at `00b17a18`.
+
 ### Hundred-and-eighth pass (2) — the three bare panics on the actor's path, and both robustness gates re-run
 
 `scripts/audit_panics.py` had **79 sites / 3 bare**, and all three bare ones
@@ -18008,18 +18138,78 @@ Note also that the scan is retaken up to three times *inside* a single sweep
 (shapeshifter sync, sector assignment, flip legs), and those retakes are
 already inside the 1,167 Ir.
 
-**(-129) `event_matches_spec` IS 1,028,014 CALLS ON `cube` AND 103,082 ON
-`fixed` — A 10x RATIO ON A FUNCTION THAT COSTS 31 Ir A CALL.** 1.26 % of
-`cube`, 0.39 % of `fixed`. This is the dispatcher *body* NEXT points at after
-`(-115)`/`(-120)`/`(-121)` closed the lane, and nothing is filed against it.
+**(-132) THE FRAME CLASS — `cg_frames.py`'S REMAINING ROWS, AND WHICH OF THEM
+ARE ACTUALLY THE SHAPE.** `(-129)`/`(-131)` established that a cold path
+needing a frame charges every hot call for it, and the instrument that finds
+it is committed. The table at `43844faf` (`cube`, six games, one thread),
+ranked by `calls x prologue Ir`:
 
-Ten times the calls for roughly twice the board is not a board-size curve; it
-is the (events x specs) product, so the question is which factor grows. **Do
-not open this with a line profile** — pass 91 already established that
-`dispatch_triggers_for_events` has no hot line, and 31 Ir a call says the same
-about its callee. Open it with `cg_contexts.py --separate-callers=3` (which
-now prints inclusive Ir per context) to find which caller multiplies, then a
-census of batch size against spec count if the contexts do not separate.
+```text
+  ~Ir in frame       calls  prol  body calls  insns  function
+     5,752,488     410,892     7           5    124  CardInstance::has_keyword
+     4,966,136     354,724     7          83   1018  computed_permanent_hinted
+     1,463,728     104,552     7           3    125  ability_strip_off_battlefield
+     1,330,140      95,010     7          17    153  recycle_events
+     1,215,536      86,824     7           2    253  CardDefinition::can_grant_keyword
+       857,332      61,238     7           4    354  can_block_attacker_computed
+       777,440      77,744     5           2    381  actions::effect_produced_colors
+```
+
+**`has_keyword` is the largest row and it is NOT the shape** — read before
+spending a build: its 124 instructions are four linear scans over keyword
+lists at a 0x28 stride, calling `Keyword::eq` on every discriminant match,
+and the callee-saved registers hold the loop's own induction variables.
+There is nothing cold to outline; the frame *is* the code. Its 44.9 Ir/call
+is a different candidate (a 40-byte `Keyword` scanned linearly four times)
+and wants a different device.
+
+The rows worth opening are the ones with **1-3 body calls and a large
+`Ir/call` gap to their callees** — `can_grant_keyword` (52.9 Ir, 2 calls),
+`effect_produced_colors` (2 calls), `can_block_attacker_computed` (4 calls),
+`ability_strip_off_battlefield` (65.2 Ir, 3 calls, but its three are
+iterator chains and may well be the `has_keyword` case). Read each one's
+disassembly before building: the question is whether the calls are on a path
+the hot case skips.
+
+Ceiling: the whole table is ~17 M Ir, 0.7 % of `cube`, and no single row is
+worth more than 0.2 %. **Take it as a sweep or not at all**, and re-run the
+instrument after any of them lands — outlining changes what gets inlined.
+
+**(-133) `requirement_mentions_power` IS THE FOURTH COPY OF `(-130)`'S WALK,
+AT A DIFFERENT CALL SITE.** 44,690 calls at depth 1 and 53,136 at depth 2,
+2,638,842 Ir / 0.104 % of `cube`. `(-130)` folded three of these walkers into
+`requirement_live_leaves`; this one survives because its caller is
+`extract_power_gate`, not `requirement_needs_live_resolution`. The two call
+counts are 44,690 and 44,084 — **near enough that they are plausibly walking
+the same tree in the same pass**, and if they are, one walk returning a
+four-bit mask serves both. Establish that they are the same trees before
+building anything: a `--separate-callers=3` context table over both is the
+cheap way, and if the callers are unrelated the candidate is worth 0.05 % at
+most and should be closed.
+
+**(-129) CLOSED — THE COST WAS THE FRAME, NOT THE MATCH, AND THE CENSUS SAID
+SO BEFORE A BUILD.** 31.0 -> 14.7 Ir a call over 1,028,014 calls; `cube`
+-0.607 %, `sealed` -0.896 %, `fixed` -0.181 % across `87c8c840` and
+`16dd491d`. Full working in the Log's hundred-and-thirteenth pass. What that
+entry establishes and this list should not re-take:
+
+* The 10x pool ratio is the **(permanent, trigger) pairs** (3.86x), not the
+  batch (1.26x). `ems_census` on `trig-census` prints both.
+* **93 % of pairs are dead** — no event in the batch can match the trigger's
+  kind — but a per-pair gate in front of the event loop *is* the loop, since
+  a dead pair scans the whole batch to find out. Do not re-propose it.
+* A per-dispatch memo keyed on the `EventKind` **discriminant** is worth 42 %
+  of the kind evaluations (2.15 distinct kinds a dispatch against 3.71
+  pairs), and it is *unsound* as written: `CounterAdded(k)`, `StepBegins(s)`,
+  `CounterRemoved(k)` and the two `NOrMore` kinds answer per payload and
+  share a discriminant. A hand-kept exclusion list for those is `(-128)`'s
+  soundness burden again. Closed.
+* A static `EventKind -> GameEvent`-variant mask would remove the whole
+  93 %, and it is a second hand-written copy of a 150-arm match that must
+  agree with the first. Not without a `debug_assert!` audit against the real
+  matcher on every call, and at that point price the audit.
+* What is left on the function is 14.7 Ir a call of jump table and compare,
+  which is the match doing its job.
 
 **(-126) CLOSED — BOTH DEVICES PRICED AND NEITHER IS IN THE TREE. THE
 RECURSION IS 42 % OF THE WALKER'S CALLS AND ALMOST NONE OF IT IS REMOVABLE.**
