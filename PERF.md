@@ -15,6 +15,19 @@ A number from a debug build describes `opt-level = 0`, not the code.
 # or `profiling-fast` reading cannot be filed as a `release` one by mistake.
 cargo run --release --bin bot_ladder -- --bench
 
+# WALL CLOCK, AND IT CAN BE READ AFTER ALL — but only paired. One run of each
+# side cannot resolve anything here (`games_per_s` reads 212-407 across a day
+# on the same binary), so alternate the two binaries A/B/A/B... and take the
+# median of the per-pair ratios: every drift the host has lands on both sides
+# in the same proportion. Measured at the hundred-and-sixteenth pass, 16 pairs
+# resolved a -2.011 % Ir change as **+2.62 % median games/s** (paired mean
+# +1.47 %, per-pair sd 4.6 points) against a single-run spread of 237-276.
+#   python3 scripts/bench_ab.py /tmp/base_bl /tmp/cand_bl 16
+# ⚠ It separates ~2 % from zero and does NOT separate 0.3 % from zero. **Ir
+# stays the signal**; this is the confirmation that an Ir win is a wall-clock
+# win, not a replacement for the Ir reading. Both binaries must be the same
+# profile and feature set.
+
 # determinism across thread counts (opt-in; doubles the run, so off the
 # throughput reading above). Replays the identical --bench workload at a
 # contrasting thread count and asserts the order-independent outcome matches
@@ -2340,6 +2353,12 @@ grid    25 cells under `overflow` + `-C debug-assertions=yes`, five pools
         same seed reads the same 2 on the pre-change binary.
 clone   `GameState::clone` self 1,307 -> 544 Ir a call; `size_of::<GameState>()`
         3,008 -> 1,424 bytes; call counts identical on both pools.
+wall    **+2.62 % median games/s**, 16 paired `--bench` runs alternating the
+        two binaries (`scripts/bench_ab.py`; paired mean +1.47 %, per-pair sd
+        4.6 points, single-run spread 237-276). Ir predicted +2.05 % on this
+        pool. **This is the first wall-clock confirmation of an Ir win in this
+        file** — see "How to measure" for what the design can and cannot
+        resolve.
 ```
 
 ⚠ **Every number here is a `--no-default-features` (system-allocator)
