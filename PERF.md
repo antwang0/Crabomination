@@ -17877,8 +17877,8 @@ edge's own cost with `--separate-callers` and `--demangle=no` (the three rows
 are one instantiation at three depths, not three monomorphizations — see the
 ninety-second pass's correction) before touching the enum.
 
-**(-127) `GameState.players` IS THE ONE ZONE THAT IS NOT `CowBox`, AND IT
-NEEDS A CENSUS RATHER THAN A BUILD.** The ninety-first pass's line table has
+**(-127) TAKEN, 2026-08-31 — `GameState.players` IS THE ONE ZONE THAT IS NOT
+`CowBox`.** The ninety-first pass's line table has
 the number and nothing has been filed against it since: `players:
 self.players.clone()` is **472 Ir a clone over 34,522 clones = 16,294,384 Ir,
 0.55 % of `cube` and 35 % of `GameState::clone`'s whole inline group.** Every
