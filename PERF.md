@@ -10238,6 +10238,49 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass (3) — `(-141)`: the copies go LAST, not first, and a microbenchmark is what says so
+
+**`cube` -0.058 % / `fixed` -0.082 %** against `(-140)`, i.e. **-0.154 % /
+-0.218 % cumulative** off `bc2a38f5`. Same instrument, same workload.
+
+```text
+  pool    base            (-140)          (-141)          cumulative
+  cube    2,490,817,192   2,488,440,645   2,486,989,586   -0.1537 %
+  fixed     838,864,887     837,728,304     837,039,558   -0.2176 %
+  cube GameState::clone   26,561,572      25,104,792      -1,456,780
+                                                          (program -1,451,059)
+```
+
+`(-140)` grouped the 141 plain copies **ahead** of the 57 calls. Putting them
+**after** is worth another 65 Ir a clone — 171 of `(-138)`'s 1,175 fixed
+instructions in total, 15 %.
+
+**The instrument is a 40-line scratch crate, and it cost two minutes.** 150
+fields (120 scalars, 20 `Vec`s) interleaved in a `#[derive(Clone)]`, then the
+same fields as a hand-written literal in each order, then as a `Copy`
+sub-struct; static instruction counts off `objdump`:
+
+```text
+  A  derive, interleaved                 1,279
+  B  literal, copies first               1,181   -7.7 %
+  D  literal, copies last                1,140  -10.9 %
+  C  Copy sub-struct for the 120 scalars 1,095  -14.4 %
+```
+
+**Two findings, and the second is the one that saves a week.** The order
+question is settled by B vs D — copies last, because nothing after them
+fences the loads and LLVM can sink the stores. And **C is only 45
+instructions better than D**, so *the* structural version of this
+optimization — hoist every scalar field of `GameState` / `PlayerData` /
+`CardData` into a `#[derive(Clone, Copy)]` sub-struct, a thousand-site
+refactor with a `serde` schema change and a `Deref` chain — is worth **a
+third of what the free reorder already got**. The collections are the cost,
+not the scalars, and no field grouping touches them.
+
+**The transferable rule: when a refactor's prize is a codegen shape, build
+the shape in a scratch crate first.** Three variants, one `objdump`, and the
+big refactor was refuted before a single engine file was touched.
+
 ### Hundred-and-sixteenth pass (2) — `(-140)`, and `(-139)`'s refutation is what pays for it
 
 **`cube` -0.095 % / `fixed` -0.136 %** at `(-140)`, off `bc2a38f5`
