@@ -771,7 +771,9 @@ fn heartless_act_mode_one_removes_counters() {
 fn landcycling_fetches_the_named_basic_land() {
     let cases: &[(Factory, Factory, &str)] = &[
         (catalog::wirewood_guardian as Factory, catalog::forest as Factory, "Forest"),
-        (catalog::daru_lancer as Factory, catalog::plains as Factory, "Plains"),
+        // Noble Templar, not Daru Lancer: the latter prints Morph, and the
+        // Plainscycling it used to carry here was invented.
+        (catalog::noble_templar as Factory, catalog::plains as Factory, "Plains"),
         (catalog::shoreline_ranger as Factory, catalog::island as Factory, "Island"),
         (catalog::twisted_abomination as Factory, catalog::swamp as Factory, "Swamp"),
         (catalog::skirk_marauder as Factory, catalog::mountain as Factory, "Mountain"),
@@ -1666,9 +1668,10 @@ fn aggro_allied_printed_shapes() {
         // later singles
         PrintedShape { def: catalog::glistener_elf, name: "glistener_elf",
             pt: Some((1, 1)), kws: &[Keyword::Infect] },
-        // 3/1, not the 2/3 the deleted test's doc comment claimed.
+        // 3/1, not the 2/3 the deleted test's doc comment claimed — and it
+        // blocks fliers rather than nothing (`audit_doc_drift.py`).
         PrintedShape { def: catalog::rishadan_airship, name: "rishadan_airship",
-            pt: Some((3, 1)), kws: &[Keyword::Flying, Keyword::CantBlock] },
+            pt: Some((3, 1)), kws: &[Keyword::Flying, Keyword::CanBlockOnlyFlying] },
         PrintedShape { def: catalog::dragons_eye_sentry, name: "dragons_eye_sentry",
             pt: Some((1, 3)), kws: &[Keyword::Defender, Keyword::FirstStrike] },
         PrintedShape { def: catalog::vampire_cutthroat, name: "vampire_cutthroat",

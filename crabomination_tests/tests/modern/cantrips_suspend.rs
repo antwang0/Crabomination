@@ -539,17 +539,22 @@ fn goldhound_sac_for_mana() {
     assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
 }
 
-/// Beskir Shieldmate leaves two 1/1 tokens behind when it dies.
+/// Beskir Shieldmate leaves **one** 1/1 token behind when it dies, and prints
+/// no Foretell — it shipped with both wrong (`audit_doc_drift.py`).
 #[test]
-fn beskir_shieldmate_dies_into_two_tokens() {
+fn beskir_shieldmate_dies_into_one_token() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::beskir_shieldmate());
+    assert!(
+        g.battlefield_find(id).expect("on bf").definition.foretell_cost.is_none(),
+        "no printed Foretell",
+    );
     // Kill it via lethal damage + SBA.
     g.battlefield_find_mut(id).unwrap().damage = 5;
     g.check_state_based_actions();
     drain_stack(&mut g);
     let tokens = g.battlefield.iter().filter(|c| c.definition.name == "Human Warrior").count();
-    assert_eq!(tokens, 2, "two 1/1 Human Warriors on death");
+    assert_eq!(tokens, 1, "one 1/1 Human Warrior on death");
 }
 
 /// Sarulf's Packmate cantrips on ETB when cast from its foretold exile.
@@ -590,43 +595,47 @@ fn foretell_dwarven_reinforcements_makes_two_tokens() {
     assert_eq!(tokens, 2, "two 2/1 Dwarf Berserkers");
 }
 
-/// Mistwalker can be foretold and cast for {U} as a 2/1 flyer.
+/// Mistwalker is a {2}{U} 1/4 changeling flyer with `{1}{U}: +1/-1`, and it
+/// prints no Foretell — the body carried one and dropped the pump.
 #[test]
-fn foretell_mistwalker_resolves_as_flyer() {
+fn mistwalker_pumps_and_has_no_foretell() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::mistwalker());
-    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
-    g.players[0].mana_pool.add_colorless(20);
-    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
-    g.foretold_this_turn.clear();
-    g.players[0].mana_pool.add(Color::Blue, 1); // {U}
-    g.perform_action(GameAction::CastForetold {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast foretold Mistwalker");
-    drain_stack(&mut g);
+    let id = g.add_card_to_battlefield(0, catalog::mistwalker());
     let m = g.battlefield_find(id).expect("on battlefield");
     assert_eq!((m.power(), m.toughness()), (1, 4));
     assert!(m.definition.keywords.contains(&Keyword::Flying));
+    assert!(m.definition.foretell_cost.is_none(), "no printed Foretell");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("{1}{U} pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).expect("computed");
+    assert_eq!((cp.power, cp.toughness), (2, 3), "+1/-1 until end of turn");
 }
 
-/// Ravenous Lindwurm's ETB gains 4 life when cast from its foretold exile.
+/// Ravenous Lindwurm is a {4}{G}{G} 6/6 whose ETB gains 4 life — and it
+/// prints **no** Foretell, which the body carried until `audit_doc_drift.py`.
 #[test]
-fn foretell_ravenous_lindwurm_gains_life() {
+fn ravenous_lindwurm_gains_four_and_has_no_foretell() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::ravenous_lindwurm());
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
-    g.foretold_this_turn.clear();
+    assert!(
+        g.players[0].hand.iter().find(|c| c.id == id).expect("in hand")
+            .definition.foretell_cost.is_none(),
+        "no printed Foretell",
+    );
     let life_before = g.players[0].life;
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(3); // {3}{G}
-    g.perform_action(GameAction::CastForetold {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast foretold Lindwurm");
-    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, id);
     assert_eq!(g.players[0].life, life_before + 4, "ETB gains 4 life");
-    assert!(g.battlefield.iter().any(|c| c.id == id), "4/4 on the battlefield");
+    let c = g.battlefield_find(id).expect("6/6 on the battlefield");
+    assert_eq!((c.power(), c.toughness()), (6, 6));
 }
 
 /// Demon Bolt deals 4 to a creature when cast from its foretold exile.

@@ -1604,21 +1604,36 @@ fn make_disappear_counters_unpaid_spell() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
 }
 
-/// Heartfire Immolator sacrifices itself to deal 3 damage to any target.
+/// Heartfire Immolator sacrifices itself to deal damage **equal to its power**
+/// to a creature or planeswalker — no tap in the cost, and not "any target".
+/// All three shipped wrong (`audit_doc_drift.py`).
 #[test]
-fn heartfire_immolator_sac_deals_three() {
+fn heartfire_immolator_sac_deals_its_power_to_a_creature() {
     let mut g = two_player_game();
     g.step = TurnStep::PreCombatMain;
     let id = g.add_card_to_battlefield(0, catalog::heartfire_immolator());
-    g.clear_sickness(id);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.players[0].mana_pool.add(Color::Red, 1);
     g.priority.player_with_priority = 0;
+    // Summoning-sick on purpose: the ability has no tap in its cost.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activate Heartfire Immolator");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 17, "dealt 3 to opponent");
     assert!(g.battlefield_find(id).is_none(), "sacrificed itself");
+    assert!(g.battlefield_find(victim).is_none(), "2 damage from a 2/2 kills the bear");
+    // A player is not a legal target for it.
+    let id2 = g.add_card_to_battlefield(0, catalog::heartfire_immolator());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id2, ability_index: 0, target: Some(Target::Player(1)),
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .is_err(),
+        "a player is not a creature or planeswalker",
+    );
 }
 
 /// Cenote Scout explores on entry (lands → hand, else +1/+1 counter).

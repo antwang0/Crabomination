@@ -426,7 +426,10 @@ pub fn augury_raven() -> CardDefinition {
     }
 }
 
-/// Mistwalker — {1}{U} 2/1 Flying. Foretell {U} (CR 702.143).
+/// Mistwalker — {2}{U} 1/4 Shapeshifter. Changeling, flying,
+/// `{1}{U}: this gets +1/-1 until end of turn`. It does **not** print
+/// Foretell; the body carried one until `audit_doc_drift.py` read the
+/// comment against it.
 pub fn mistwalker() -> CardDefinition {
     CardDefinition {
         name: "Mistwalker",
@@ -439,12 +442,21 @@ pub fn mistwalker() -> CardDefinition {
         power: 1,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Changeling],
-        foretell_cost: Some(cost(&[u()])),
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
 
-/// Ravenous Lindwurm — {4}{G} 4/4. ETB: gain 4 life. Foretell {3}{G}.
+/// Ravenous Lindwurm — {4}{G}{G} 6/6. ETB: gain 4 life. No Foretell.
 pub fn ravenous_lindwurm() -> CardDefinition {
     CardDefinition {
         name: "Ravenous Lindwurm",
@@ -460,7 +472,6 @@ pub fn ravenous_lindwurm() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(4),
         })],
-        foretell_cost: Some(cost(&[generic(3), g()])),
         ..Default::default()
     }
 }
@@ -536,8 +547,9 @@ pub fn deep_sea_kraken() -> CardDefinition {
     }
 }
 
-/// Beskir Shieldmate — {1}{W} 2/1. When this dies, create two 1/1 white Human
-/// Warrior creature tokens. Foretell {W}.
+/// Beskir Shieldmate — {1}{W} 2/1. When this dies, create **a** 1/1 white
+/// Human Warrior creature token. It prints no Foretell; the body carried one,
+/// and made two tokens, until `audit_doc_drift.py` read the comment.
 pub fn beskir_shieldmate() -> CardDefinition {
     CardDefinition {
         name: "Beskir Shieldmate",
@@ -551,7 +563,7 @@ pub fn beskir_shieldmate() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
             who: PlayerRef::You,
-            count: Value::Const(2),
+            count: Value::ONE,
             definition: Box::new(TokenDefinition {
                 name: "Human Warrior".into(),
                 power: 1,
@@ -565,7 +577,6 @@ pub fn beskir_shieldmate() -> CardDefinition {
                 ..Default::default()
             }),
         })],
-        foretell_cost: Some(cost(&[w()])),
         ..Default::default()
     }
 }
@@ -30356,7 +30367,7 @@ pub fn wirewood_guardian() -> CardDefinition {
     }
 }
 
-/// Daru Lancer — {4}{W} 3/3 Human Soldier with first strike. Plainscycling {2}.
+/// Daru Lancer — {4}{W}{W} 3/4 Human Soldier with first strike. Morph {2}{W}{W}.
 pub fn daru_lancer() -> CardDefinition {
     CardDefinition {
         name: "Daru Lancer",
@@ -30368,9 +30379,11 @@ pub fn daru_lancer() -> CardDefinition {
         },
         power: 3,
         toughness: 4,
+        // Morph {2}{W}{W}, not a Plains landcycle — the body carried the
+        // latter until `audit_doc_drift.py` read its comment against it.
         keywords: vec![
             Keyword::FirstStrike,
-            Keyword::Landcycling(cost(&[generic(2)]), LandType::Plains),
+            Keyword::Morph(cost(&[generic(2), w(), w()])),
         ],
         ..Default::default()
     }
@@ -30542,7 +30555,8 @@ pub fn coral_barrier() -> CardDefinition {
     }
 }
 
-/// Rishadan Airship — {3}{U} 2/3 flyer that can't block.
+/// Rishadan Airship — {2}{U} 3/1 flyer that can block **only** creatures
+/// with flying (it shipped as `CantBlock`, which is a different card).
 pub fn rishadan_airship() -> CardDefinition {
     CardDefinition {
         name: "Rishadan Airship",
@@ -30550,7 +30564,7 @@ pub fn rishadan_airship() -> CardDefinition {
         card_types: vec![CardType::Creature],
         power: 3,
         toughness: 1,
-        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
         ..Default::default()
     }
 }
@@ -39573,10 +39587,10 @@ pub fn make_disappear() -> CardDefinition {
     }
 }
 
-/// Heartfire Immolator — {R} 2/1 with Prowess. "{R}, {T}, Sacrifice this: It
-/// deals 3 damage to any target."
+/// Heartfire Immolator — {1}{R} 2/2 with Prowess. "{R}, Sacrifice this
+/// creature: It deals damage equal to its power to target creature or
+/// planeswalker."
 pub fn heartfire_immolator() -> CardDefinition {
-    use crate::effect::shortcut::deal;
     CardDefinition {
         name: "Heartfire Immolator",
         cost: cost(&[generic(1), r()]),
@@ -39588,11 +39602,19 @@ pub fn heartfire_immolator() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Prowess],
+        // "{R}, Sacrifice this creature: It deals damage equal to its power
+        // to target creature or planeswalker." No tap in the cost, the
+        // amount is its power rather than a flat 3, and the target is not
+        // "any" — all three shipped wrong.
         activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
             sac_cost: true,
             mana_cost: cost(&[r()]),
-            effect: deal(3, target_filtered(SelectionRequirement::Any)),
+            effect: Effect::DealDamage {
+                amount: Value::PowerOf(Box::new(Selector::This)),
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
             ..Default::default()
         }],
         ..Default::default()
