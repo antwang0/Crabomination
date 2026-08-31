@@ -502,7 +502,7 @@ pub fn drown_in_ichor() -> CardDefinition {
     }
 }
 
-/// Paradoxical Outcome — {3}{U}{U} Instant. Return any number of non-land
+/// Paradoxical Outcome — {3}{U} Instant. Return any number of non-land
 /// permanents you control to their owners' hands. Draw a card for each
 /// card returned this way.
 ///
@@ -1387,7 +1387,7 @@ pub fn force_of_vigor() -> CardDefinition {
     }
 }
 
-/// Trumpet Blast — {1}{R} Instant. "Attacking creatures get +2/+0 until end
+/// Trumpet Blast — {2}{R} Instant. "Attacking creatures get +2/+0 until end
 /// of turn." (various)
 pub fn trumpet_blast() -> CardDefinition {
     CardDefinition {
@@ -1774,7 +1774,7 @@ pub fn teferis_protection() -> CardDefinition {
     }
 }
 
-/// Comeuppance — {2}{W} Instant. "The next time a source of an opponent's choice
+/// Comeuppance — {3}{W} Instant. "The next time a source of an opponent's choice
 /// would deal damage to you or a permanent you control this turn, prevent it;
 /// that source's controller takes that much." The redirection is not modeled;
 /// approximated as preventing all damage to you this turn.

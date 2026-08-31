@@ -105,7 +105,7 @@ fn daxos_spirit_token() -> TokenDefinition {
     }
 }
 
-/// Daxos the Returned — {2}{W}{B} 2/2 Legendary Enchantment Creature — God.
+/// Daxos the Returned — {1}{W}{B} 2/2 Legendary Enchantment Creature — God.
 /// Cast an enchantment → get an experience counter. {1}{W}{B}: create a Spirit
 /// token with power/toughness each equal to your experience.
 pub fn daxos_the_returned() -> CardDefinition {
@@ -191,7 +191,7 @@ pub fn meren_of_clan_nel_toth() -> CardDefinition {
     }
 }
 
-/// Kalemne, Disciple of Iroas — {3}{W}{W} 2/4 Legendary Giant Soldier,
+/// Kalemne, Disciple of Iroas — {2}{R}{W} 3/3 Legendary Giant Soldier,
 /// vigilance. Cast a creature spell with mana value 5+ → get an experience
 /// counter. Kalemne gets +1/+1 for each experience counter you have.
 pub fn kalemne_disciple_of_iroas() -> CardDefinition {

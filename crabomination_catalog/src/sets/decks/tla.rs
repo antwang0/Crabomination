@@ -5769,7 +5769,7 @@ pub fn appa_steadfast_guardian() -> CardDefinition {
     }
 }
 
-/// Redirect Lightning — {2}{R} Instant — Lesson. Change the target of target
+/// Redirect Lightning — {R} Instant — Lesson. Change the target of target
 /// spell. (The printed "pay 5 life or {2}" alternative additional cost is
 /// collapsed into a flat {2}; the "or ability" half is approximated to spells.)
 pub fn redirect_lightning() -> CardDefinition {

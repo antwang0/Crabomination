@@ -114,7 +114,7 @@ pub fn longtusk_cub() -> CardDefinition {
     }
 }
 
-/// Bristling Hydra — {2}{R}{G} 4/3 Hydra. When this enters, you get
+/// Bristling Hydra — {2}{G}{G} 4/3 Hydra. When this enters, you get
 /// {E}{E}{E}. {E}{E}{E}: put a +1/+1 counter on this and it gains hexproof
 /// until end of turn.
 pub fn bristling_hydra() -> CardDefinition {
@@ -151,7 +151,7 @@ pub fn bristling_hydra() -> CardDefinition {
     }
 }
 
-/// Glint-Sleeve Siphoner — {1}{B} 1/2 Vampire Rogue with Menace. Whenever
+/// Glint-Sleeve Siphoner — {1}{B} 2/1 Vampire Rogue with Menace. Whenever
 /// it attacks, you get {E}. At the beginning of your upkeep, you may pay
 /// {E}{E}; if you do, draw a card and lose 1 life.
 pub fn glint_sleeve_siphoner() -> CardDefinition {
@@ -346,7 +346,7 @@ pub fn aether_swooper() -> CardDefinition {
     }
 }
 
-/// Sage of Shaila's Claim — {1}{G} 1/3 Elf Druid. When it enters, you get
+/// Sage of Shaila's Claim — {1}{G} 2/1 Elf Druid. When it enters, you get
 /// {E}{E}{E}.
 pub fn sage_of_shailas_claim() -> CardDefinition {
     use crate::effect::shortcut::etb;
@@ -365,7 +365,7 @@ pub fn sage_of_shailas_claim() -> CardDefinition {
     }
 }
 
-/// Live Fast — {1}{B} Sorcery. You draw two cards, you lose 2 life, and you
+/// Live Fast — {2}{B} Sorcery. You draw two cards, you lose 2 life, and you
 /// get {E}{E}.
 pub fn live_fast() -> CardDefinition {
     CardDefinition {
@@ -567,7 +567,7 @@ pub fn aether_poisoner() -> CardDefinition {
     }
 }
 
-/// Aetherstream Leopard — {3}{G} 4/3 Cat. When it enters, you get {E}{E}.
+/// Aetherstream Leopard — {2}{G} 2/3 Cat. When it enters, you get {E}{E}.
 /// {E}{E}{E}{E}: this creature can't be blocked this turn.
 pub fn aetherstream_leopard() -> CardDefinition {
     use crate::effect::Duration;
@@ -597,7 +597,7 @@ pub fn aetherstream_leopard() -> CardDefinition {
     }
 }
 
-/// Riparian Tiger — {3}{G} 5/4 Cat. When it enters, you get {E}{E}. {E}{E}:
+/// Riparian Tiger — {3}{G}{G} 4/4 Cat. When it enters, you get {E}{E}. {E}{E}:
 /// this creature gains hexproof until end of turn.
 pub fn riparian_tiger() -> CardDefinition {
     use crate::effect::Duration;
@@ -627,7 +627,7 @@ pub fn riparian_tiger() -> CardDefinition {
     }
 }
 
-/// Voltaic Brawler — {R}{G} 3/1 Human Warrior with Trample and Menace.
+/// Voltaic Brawler — {R}{G} 3/2 Human Warrior with Trample and Menace.
 /// Whenever it attacks, you may pay {E}{E}; if you do, it gets +1/+1 until
 /// end of turn.
 pub fn voltaic_brawler() -> CardDefinition {
@@ -663,7 +663,7 @@ pub fn voltaic_brawler() -> CardDefinition {
     }
 }
 
-/// Aetherborn Marauder — {3}{B} 2/3 Aetherborn. Whenever you get one or more
+/// Aetherborn Marauder — {3}{B} 2/2 Aetherborn. Whenever you get one or more
 /// {E}, put two +1/+1 counters on it (`EventKind::EnergyGained`, CR 107.16).
 pub fn aetherborn_marauder() -> CardDefinition {
     CardDefinition {

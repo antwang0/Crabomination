@@ -24,7 +24,7 @@ fn destroy_artifact_target() -> Effect {
     }
 }
 
-/// Energy Flux — {1}{U} Enchantment. All artifacts have "At the beginning of
+/// Energy Flux — {2}{U} Enchantment. All artifacts have "At the beginning of
 /// your upkeep, sacrifice this artifact unless you pay {2}."
 pub fn energy_flux() -> CardDefinition {
     CardDefinition {
@@ -70,7 +70,7 @@ pub fn uktabi_orangutan() -> CardDefinition {
     }
 }
 
-/// Ingot Chewer — {4}{R} 3/2 Elemental. ETB destroy target artifact. Evoke {R}.
+/// Ingot Chewer — {4}{R} 3/3 Elemental. ETB destroy target artifact. Evoke {R}.
 pub fn ingot_chewer() -> CardDefinition {
     CardDefinition {
         name: "Ingot Chewer",
@@ -93,7 +93,7 @@ pub fn ingot_chewer() -> CardDefinition {
     }
 }
 
-/// Manglehorn — {1}{G}{G} 2/2 Beast. ETB destroy target artifact. Artifacts your
+/// Manglehorn — {2}{G} 2/2 Beast. ETB destroy target artifact. Artifacts your
 /// opponents control enter the battlefield tapped.
 pub fn manglehorn() -> CardDefinition {
     CardDefinition {
@@ -166,7 +166,7 @@ pub fn sundering_growth() -> CardDefinition {
     }
 }
 
-/// Glowrider — {1}{W} 1/1 Cleric. Noncreature spells cost {1} more to cast.
+/// Glowrider — {2}{W} 2/1 Cleric. Noncreature spells cost {1} more to cast.
 pub fn glowrider() -> CardDefinition {
     CardDefinition {
         name: "Glowrider",
@@ -190,7 +190,7 @@ pub fn glowrider() -> CardDefinition {
     }
 }
 
-/// Harsh Mentor — {1}{W} 2/2 Human Cleric. Whenever an opponent activates a
+/// Harsh Mentor — {1}{R} 2/2 Human Cleric. Whenever an opponent activates a
 /// non-mana, non-loyalty ability, deal 2 damage to that player.
 pub fn harsh_mentor() -> CardDefinition {
     CardDefinition {

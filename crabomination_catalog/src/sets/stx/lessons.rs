@@ -95,7 +95,7 @@ pub fn brilliant_plan() -> CardDefinition {
 
 // ── Fortifying Draught ──────────────────────────────────────────────────────
 
-/// Fortifying Draught — {2}{G} Instant (Witherbloom).
+/// Fortifying Draught — {G} Instant (Witherbloom).
 ///
 /// "You gain 2 life. Target creature gets +X/+X until end of turn,
 /// where X is the amount of life you gained this turn."
@@ -158,7 +158,7 @@ pub fn guiding_voice() -> CardDefinition {
 
 // ── Expanded Anatomy ────────────────────────────────────────────────────────
 
-/// Expanded Anatomy — {2}{W} Sorcery — Lesson.
+/// Expanded Anatomy — {3} Sorcery — Lesson.
 ///
 /// "Put two +1/+1 counters on target creature. It gains vigilance
 /// until end of turn."

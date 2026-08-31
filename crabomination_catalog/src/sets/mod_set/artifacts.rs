@@ -20,7 +20,7 @@ pub fn ornithopter() -> CardDefinition {
     }
 }
 
-/// Ornithopter of Paradise — {1}{G} Artifact Creature 0/2 with Flying. {T}: Add
+/// Ornithopter of Paradise — {2} Artifact Creature 0/2 with Flying. {T}: Add
 /// one mana of any color. Reuses `ManaPayload::AnyOneColor` so the engine
 /// surfaces the color choice via the `ChooseColor` decision.
 pub fn ornithopter_of_paradise() -> CardDefinition {
@@ -639,7 +639,7 @@ pub fn contagion_clasp() -> CardDefinition {
     }
 }
 
-/// Throne of Geth — {1} Artifact. `{T}, Sacrifice this artifact: Proliferate.`
+/// Throne of Geth — {2} Artifact. `{T}, Sacrifice this artifact: Proliferate.`
 pub fn throne_of_geth() -> CardDefinition {
     CardDefinition {
         name: "Throne of Geth",

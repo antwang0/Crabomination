@@ -501,7 +501,7 @@ pub fn skrelv_defector_mite() -> CardDefinition {
     }
 }
 
-/// Soul's Majesty — {3}{G}{G} Sorcery. Draw cards equal to the power of target
+/// Soul's Majesty — {4}{G} Sorcery. Draw cards equal to the power of target
 /// creature you control.
 pub fn souls_majesty() -> CardDefinition {
     CardDefinition {
@@ -519,7 +519,7 @@ pub fn souls_majesty() -> CardDefinition {
     }
 }
 
-/// Momentous Fall — {1}{G}{G} Instant. As an additional cost, sacrifice a
+/// Momentous Fall — {2}{G}{G} Instant. As an additional cost, sacrifice a
 /// creature. Draw cards equal to its power, then gain life equal to its
 /// toughness.
 pub fn momentous_fall() -> CardDefinition {

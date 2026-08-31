@@ -145,7 +145,7 @@ pub fn reyav_master_smith() -> CardDefinition {
     }
 }
 
-/// Wyleth, Soul of Steel — {2}{R}{W} 4/4 Human Warrior, trample. Whenever Wyleth
+/// Wyleth, Soul of Steel — {1}{R}{W} 2/2 Human Warrior, trample. Whenever Wyleth
 /// attacks, draw a card for each Aura and Equipment attached to it.
 pub fn wyleth_soul_of_steel() -> CardDefinition {
     CardDefinition {

@@ -135,7 +135,7 @@ pub fn augury_owl() -> CardDefinition {
     }
 }
 
-/// Cloudkin Seer — {2}{U}, 2/2 Elemental with Flying. "When this enters,
+/// Cloudkin Seer — {2}{U}, 2/1 Elemental with Flying. "When this enters,
 /// draw a card."
 pub fn cloudkin_seer() -> CardDefinition {
     CardDefinition {
@@ -592,7 +592,7 @@ pub fn cathar_commando() -> CardDefinition {
     }
 }
 
-/// Haywire Mite — {G}, 1/1 Artifact Creature — Insect. {2}, Sacrifice this
+/// Haywire Mite — {1}, 1/1 Artifact Creature — Insect. {2}, Sacrifice this
 /// artifact: Destroy target artifact, enchantment, or planeswalker. You
 /// gain 1 life.
 pub fn haywire_mite() -> CardDefinition {
@@ -643,7 +643,7 @@ pub fn haywire_mite() -> CardDefinition {
     }
 }
 
-/// Voldaren Epicure — {R}{B}, 1/1 Vampire. ETB: create a Blood token and
+/// Voldaren Epicure — {R}, 1/1 Vampire. ETB: create a Blood token and
 /// deal 1 damage to each opponent.
 ///
 /// Blood tokens carry their canonical loot ability via
@@ -721,7 +721,7 @@ pub fn goldspan_dragon() -> CardDefinition {
     }
 }
 
-/// Tireless Tracker — {1}{G}{G}, 3/2 Human Scout. Whenever a land enters
+/// Tireless Tracker — {2}{G}, 3/2 Human Scout. Whenever a land enters
 /// under your control, investigate (create a Clue token).
 ///
 /// Wired via the new trigger-filter enforcement: scope is
@@ -775,7 +775,7 @@ pub fn tireless_tracker() -> CardDefinition {
     }
 }
 
-/// Bloodtithe Harvester — {1}{B}{R}, 3/2 Vampire Rogue. Whenever this
+/// Bloodtithe Harvester — {B}{R}, 3/2 Vampire Rogue. Whenever this
 /// enters or attacks, create a Blood token.
 ///
 /// The activated ability `{1}, Sacrifice a Blood: deals 2 damage to any
@@ -915,7 +915,7 @@ pub fn up_the_beanstalk() -> CardDefinition {
     }
 }
 
-/// Tishana's Tidebinder — {1}{U}{U}, 3/2 Merfolk Wizard with Flash. ETB:
+/// Tishana's Tidebinder — {2}{U}, 3/2 Merfolk Wizard with Flash. ETB:
 /// counter target activated or triggered ability of an artifact, creature,
 /// enchantment, or planeswalker (a "nonland permanent" — Battles aren't
 /// modeled).
@@ -1318,7 +1318,7 @@ pub fn steel_leaf_champion() -> CardDefinition {
 
 // ── modern_decks batch: high-confidence value bodies ────────────────────────
 
-/// Cloudblazer — {3}{U}{U}, 2/2 Flying. "When this enters, you draw two
+/// Cloudblazer — {3}{W}{U}, 2/2 Flying. "When this enters, you draw two
 /// cards and you gain two life." (KLD)
 pub fn cloudblazer() -> CardDefinition {
     CardDefinition {
@@ -1367,7 +1367,7 @@ pub fn invisible_stalker() -> CardDefinition {
     }
 }
 
-/// Slither Blade — {1}{U}, 1/1. "Slither Blade can't be blocked." (AKH)
+/// Slither Blade — {U}, 1/2. "Slither Blade can't be blocked." (AKH)
 pub fn slither_blade() -> CardDefinition {
     CardDefinition {
         name: "Slither Blade",
@@ -1401,7 +1401,7 @@ pub fn mistral_charger() -> CardDefinition {
     }
 }
 
-/// Vorstclaw — {4}{G}{G}, 6/4 Elemental. Vanilla green top-end. (AVR)
+/// Vorstclaw — {4}{G}{G}, 7/7 Elemental. Vanilla green top-end. (AVR)
 pub fn vorstclaw() -> CardDefinition {
     CardDefinition {
         name: "Vorstclaw",
@@ -1442,7 +1442,7 @@ pub fn shadowmage_infiltrator() -> CardDefinition {
     }
 }
 
-/// Liliana's Specter — {2}{B}{B}, 2/1 Flying. "When this enters, each
+/// Liliana's Specter — {1}{B}{B}, 2/1 Flying. "When this enters, each
 /// opponent discards a card." (M11)
 pub fn lilianas_specter() -> CardDefinition {
     CardDefinition {
@@ -1707,7 +1707,7 @@ pub fn aerial_responder() -> CardDefinition {
     }
 }
 
-/// Knight of Meadowgrain — {1}{W}, 2/2 Kithkin Knight. First strike,
+/// Knight of Meadowgrain — {W}{W}, 2/2 Kithkin Knight. First strike,
 /// Lifelink. (LRW)
 pub fn knight_of_meadowgrain() -> CardDefinition {
     CardDefinition {
@@ -1725,7 +1725,7 @@ pub fn knight_of_meadowgrain() -> CardDefinition {
     }
 }
 
-/// Skyhunter Patrol — {2}{W}, 2/2 Cat Knight. Flying, First strike. (MRD)
+/// Skyhunter Patrol — {2}{W}{W}, 2/3 Cat Knight. Flying, First strike. (MRD)
 pub fn skyhunter_patrol() -> CardDefinition {
     CardDefinition {
         name: "Skyhunter Patrol",
@@ -1742,7 +1742,7 @@ pub fn skyhunter_patrol() -> CardDefinition {
     }
 }
 
-/// Veteran Armorer — {1}{W}, 2/3 Human Soldier. "Other creatures you control
+/// Veteran Armorer — {1}{W}, 2/2 Human Soldier. "Other creatures you control
 /// get +0/+1." (M10)
 pub fn veteran_armorer() -> CardDefinition {
     CardDefinition {
@@ -1842,7 +1842,7 @@ pub fn kor_hookmaster() -> CardDefinition {
     }
 }
 
-/// Dusk Legion Zealot — {B}{B}, 1/1 Vampire Soldier. "When this enters, you
+/// Dusk Legion Zealot — {1}{B}, 1/1 Vampire Soldier. "When this enters, you
 /// draw a card and you lose 1 life." (RIX)
 pub fn dusk_legion_zealot() -> CardDefinition {
     CardDefinition {
@@ -2393,7 +2393,7 @@ pub fn sea_gate_oracle() -> CardDefinition {
     }
 }
 
-/// Fertilid — {2}{G}, 1/1 Elemental that enters with two +1/+1 counters.
+/// Fertilid — {2}{G}, 0/0 Elemental that enters with two +1/+1 counters.
 /// "{1}{G}, Remove a +1/+1 counter from this: Search your library for a
 /// basic land card, put it onto the battlefield tapped, then shuffle."
 pub fn fertilid() -> CardDefinition {
@@ -2441,7 +2441,7 @@ pub fn fertilid() -> CardDefinition {
     }
 }
 
-/// Inexorable Tide — {3}{U} Enchantment. "Whenever you cast a spell,
+/// Inexorable Tide — {3}{U}{U} Enchantment. "Whenever you cast a spell,
 /// proliferate."
 pub fn inexorable_tide() -> CardDefinition {
     CardDefinition {
@@ -2478,7 +2478,7 @@ pub fn thrummingbird() -> CardDefinition {
     }
 }
 
-/// Spike Feeder — {2}{G}, 0/0 Spike that enters with two +1/+1 counters.
+/// Spike Feeder — {1}{G}{G}, 0/0 Spike that enters with two +1/+1 counters.
 /// "Remove a +1/+1 counter from this: you gain 2 life."
 pub fn spike_feeder() -> CardDefinition {
     use crate::card::CounterType;
@@ -2584,7 +2584,7 @@ pub fn phyrexian_metamorph() -> CardDefinition {
     }
 }
 
-/// Mirror Image — {1}{U}, 0/0 Shapeshifter. "You may have Mirror Image
+/// Mirror Image — {2}{U}, 0/0 Shapeshifter. "You may have Mirror Image
 /// enter the battlefield as a copy of a creature you control, except it's
 /// not legendary."
 pub fn mirror_image() -> CardDefinition {
@@ -2630,7 +2630,7 @@ pub fn stunt_double() -> CardDefinition {
     }
 }
 
-/// Phantasmal Image — {U}, 0/0 Illusion. Enters as a copy of any creature,
+/// Phantasmal Image — {1}{U}, 0/0 Illusion. Enters as a copy of any creature,
 /// except it's an Illusion in addition to its types and gains "When this
 /// becomes the target of a spell or ability, sacrifice it." Both the
 /// extra type and the sacrifice rider ride on the `enters_as_copy` hook.
@@ -2660,7 +2660,7 @@ pub fn phantasmal_image() -> CardDefinition {
     }
 }
 
-/// Mockingbird — {1}{U}, 0/0 Shapeshifter. Flash. May enter as a copy of a
+/// Mockingbird — {X}{U}, 0/0 Shapeshifter. Flash. May enter as a copy of a
 /// creature you control, except its name stays "Mockingbird" (CR 707.2
 /// name-retention via `EntersAsCopy.keep_name`).
 pub fn mockingbird() -> CardDefinition {
@@ -2744,7 +2744,7 @@ pub fn eternal_witness() -> CardDefinition {
     }
 }
 
-/// Heliod, Sun-Crowned — {1}{W}{W}, Legendary Enchantment Creature — God.
+/// Heliod, Sun-Crowned — {2}{W}, Legendary Enchantment Creature — God.
 /// 5/5. Indestructible. (Heliod, Sun-Crowned has no devotion clause —
 /// it's always a creature.) {1}{W}: target creature gains lifelink until
 /// end of turn. Whenever you gain life, put a +1/+1 counter on target
@@ -2854,7 +2854,7 @@ pub fn indulgent_tormentor() -> CardDefinition {
     }
 }
 
-/// Basilica Screecher — {2}{B} 1/2 Bat. Flying, Extort (CR 702.99).
+/// Basilica Screecher — {1}{B} 1/2 Bat. Flying, Extort (CR 702.99).
 pub fn basilica_screecher() -> CardDefinition {
     CardDefinition {
         name: "Basilica Screecher",
@@ -2890,7 +2890,7 @@ pub fn zhur_taa_goblin() -> CardDefinition {
     }
 }
 
-/// Syndic of Tithes — {1}{W} 2/3 Human Cleric with Extort.
+/// Syndic of Tithes — {1}{W} 2/2 Human Cleric with Extort.
 pub fn syndic_of_tithes() -> CardDefinition {
     CardDefinition {
         name: "Syndic of Tithes",
@@ -2907,7 +2907,7 @@ pub fn syndic_of_tithes() -> CardDefinition {
     }
 }
 
-/// Tithe Drinker — {W}{B} 1/2 Vampire Cleric with Lifelink and Extort.
+/// Tithe Drinker — {W}{B} 2/1 Vampire Cleric with Lifelink and Extort.
 pub fn tithe_drinker() -> CardDefinition {
     CardDefinition {
         name: "Tithe Drinker",
@@ -2943,7 +2943,7 @@ pub fn kingpins_pet() -> CardDefinition {
     }
 }
 
-/// Frenzied Arynx — {4}{R}{G} 4/3 Cat Beast with Riot. {3}{R}{G}: it gets
+/// Frenzied Arynx — {2}{R}{G} 3/3 Cat Beast with Riot. {3}{R}{G}: it gets
 /// +2/+2 until end of turn.
 pub fn frenzied_arynx() -> CardDefinition {
     CardDefinition {
@@ -2973,7 +2973,7 @@ pub fn frenzied_arynx() -> CardDefinition {
     }
 }
 
-/// Fleshbag Marauder — {2}{B} 2/2 Zombie. ETB: each player sacrifices a
+/// Fleshbag Marauder — {2}{B} 3/1 Zombie. ETB: each player sacrifices a
 /// creature.
 pub fn fleshbag_marauder() -> CardDefinition {
     CardDefinition {
@@ -3160,7 +3160,7 @@ pub fn lightning_elemental() -> CardDefinition {
     }
 }
 
-/// Filigree Familiar — {2} 1/1 artifact Fox. ETB gain 2 life; when it
+/// Filigree Familiar — {3} 2/2 artifact Fox. ETB gain 2 life; when it
 /// dies, draw a card.
 pub fn filigree_familiar() -> CardDefinition {
     use crate::effect::shortcut::{etb, on_dies};
@@ -3222,7 +3222,7 @@ pub fn deadly_recluse() -> CardDefinition {
     }
 }
 
-/// Sporemound — {4}{G} 3/3 Elemental. Landfall — whenever a land enters
+/// Sporemound — {3}{G}{G} 3/3 Elemental. Landfall — whenever a land enters
 /// under your control, create a 1/1 green Saproling creature token.
 pub fn sporemound() -> CardDefinition {
     CardDefinition {
@@ -3424,7 +3424,7 @@ pub fn suntail_hawk() -> CardDefinition {
     }
 }
 
-/// Thundering Giant — {3}{R} 4/3 Giant with Haste.
+/// Thundering Giant — {3}{R}{R} 4/3 Giant with Haste.
 pub fn thundering_giant() -> CardDefinition {
     CardDefinition {
         name: "Thundering Giant",
@@ -3457,7 +3457,7 @@ pub fn pillarfield_ox() -> CardDefinition {
     }
 }
 
-/// Thieving Magpie — {2}{U} 1/3 Bird, Flying. Whenever it deals combat
+/// Thieving Magpie — {2}{U}{U} 1/3 Bird, Flying. Whenever it deals combat
 /// damage to a player, draw a card.
 pub fn thieving_magpie() -> CardDefinition {
     CardDefinition {
@@ -3567,7 +3567,7 @@ pub fn whitemane_lion() -> CardDefinition {
     }
 }
 
-/// Penumbra Spider — {3}{G} 2/4 Spider, Reach. When it dies, create a
+/// Penumbra Spider — {2}{G}{G} 2/4 Spider, Reach. When it dies, create a
 /// 2/4 black Spider creature token with Reach.
 pub fn penumbra_spider() -> CardDefinition {
     CardDefinition {
@@ -3607,7 +3607,7 @@ pub fn penumbra_spider() -> CardDefinition {
     }
 }
 
-/// Ember Hauler — {1}{R} 2/2 Goblin. {2}, Sacrifice this: deal 2 damage to
+/// Ember Hauler — {R}{R} 2/2 Goblin. {2}, Sacrifice this: deal 2 damage to
 /// any target.
 pub fn ember_hauler() -> CardDefinition {
     use crate::effect::shortcut::target_any;
@@ -3896,7 +3896,7 @@ pub fn silversmote_ghoul() -> CardDefinition {
     }
 }
 
-/// Bitterbloom Bearer — {1}{B}, 1/1 Faerie Wizard with Flash and Flying. "When this
+/// Bitterbloom Bearer — {B}{B}, 1/1 Faerie Wizard with Flash and Flying. "When this
 /// creature enters, create a 1/1 black Faerie creature token with flying."
 pub fn bitterbloom_bearer() -> CardDefinition {
     use crate::card::TokenDefinition;
@@ -3940,7 +3940,7 @@ pub fn bitterbloom_bearer() -> CardDefinition {
     }
 }
 
-/// Dandân — {2}{U}, 4/1 Fish. "Dandân can attack only if defending
+/// Dandân — {U}{U}, 4/1 Fish. "Dandân can attack only if defending
 /// player controls an Island. When you control no Islands, sacrifice
 /// Dandân."
 pub fn dandan() -> CardDefinition {
@@ -5008,7 +5008,7 @@ pub fn candelabra_of_tawnos() -> CardDefinition {
 
 // ── Guardian Scalelord ──────────────────────────────────────────────────────
 
-/// Guardian Scalelord — {3}{W}{W}, 4/4 Dragon with Flying.
+/// Guardian Scalelord — {4}{W}, 3/4 Dragon with Flying.
 ///
 /// Oracle: "Flying. Whenever this creature attacks, you may have target
 /// creature you control gain flying until end of turn."
@@ -5182,7 +5182,7 @@ pub fn basking_broodscale() -> CardDefinition {
     }
 }
 
-/// Sowing Mycospawn — {4}{G} Creature — Eldrazi Fungus 4/4.
+/// Sowing Mycospawn — {3}{G} Creature — Eldrazi Fungus 3/3.
 /// ETB search land -> BF tapped.
 pub fn sowing_mycospawn() -> CardDefinition {
     CardDefinition {
@@ -5210,7 +5210,7 @@ pub fn sowing_mycospawn() -> CardDefinition {
     }
 }
 
-/// Ursine Monstrosity — {3}{G}{G} Creature — Bear 0/0.
+/// Ursine Monstrosity — {2}{G} Creature — Bear 0/0.
 /// Enters with 5 +1/+1 counters, Trample, ETB draw 1.
 pub fn ursine_monstrosity() -> CardDefinition {
     use crate::card::CounterType;
@@ -5235,7 +5235,7 @@ pub fn ursine_monstrosity() -> CardDefinition {
     }
 }
 
-/// Moonshadow — {1}{B} Creature — Faerie Rogue 2/1 Flying.
+/// Moonshadow — {B} Creature — Faerie Rogue 7/7 Flying.
 /// Combat damage to player -> that player discards.
 pub fn moonshadow() -> CardDefinition {
     CardDefinition {
@@ -5404,7 +5404,7 @@ pub fn descendant_of_storms() -> CardDefinition {
     }
 }
 
-/// Elite Spellbinder — {1}{W}{W} 3/1 Human Cleric. Flash, Flying. ETB: look at
+/// Elite Spellbinder — {2}{W} 3/1 Human Cleric. Flash, Flying. ETB: look at
 /// target opponent's hand, exile a nonland card; its owner may play it and it
 /// costs {2} more while exiled. (The "for as long as exiled" window is modeled
 /// as a may-play grant through the owner's next turn.)
@@ -5625,7 +5625,7 @@ pub fn experiment_one() -> CardDefinition {
     }
 }
 
-/// Fathom Mage — {1}{G}{U}, 1/1 Human Wizard. "Evolve. Whenever a +1/+1
+/// Fathom Mage — {2}{G}{U}, 1/1 Human Wizard. "Evolve. Whenever a +1/+1
 /// counter is placed on Fathom Mage, draw a card."
 pub fn fathom_mage() -> CardDefinition {
     use crate::effect::shortcut::evolve;
@@ -5917,7 +5917,7 @@ pub fn topan_freeblade() -> CardDefinition {
     }
 }
 
-/// Stalwart Aven — {2}{W} 2/2 Bird Soldier with Flying, Renown 1.
+/// Stalwart Aven — {2}{W} 1/3 Bird Soldier with Flying, Renown 1.
 pub fn stalwart_aven() -> CardDefinition {
     CardDefinition {
         name: "Stalwart Aven",
@@ -5935,7 +5935,7 @@ pub fn stalwart_aven() -> CardDefinition {
     }
 }
 
-/// Skyraker Giant — {4}{R} 4/4 Giant Warrior with Reach, Renown 4.
+/// Skyraker Giant — {2}{R}{R} 4/3 Giant Warrior with Reach, Renown 4.
 pub fn skyraker_giant() -> CardDefinition {
     CardDefinition {
         name: "Skyraker Giant",
@@ -5974,7 +5974,7 @@ fn counter_anthem(keyword: Keyword, description: &'static str) -> StaticAbility 
     }
 }
 
-/// Ainok Bond-Kin — {1}{W} 2/2 Hound Soldier, Outlast {1}{W}. Creatures you
+/// Ainok Bond-Kin — {1}{W} 2/1 Hound Soldier, Outlast {1}{W}. Creatures you
 /// control with a +1/+1 counter have first strike.
 pub fn ainok_bond_kin() -> CardDefinition {
     CardDefinition {
@@ -5996,7 +5996,7 @@ pub fn ainok_bond_kin() -> CardDefinition {
     }
 }
 
-/// Tuskguard Captain — {2}{G} 2/2 Human Warrior, Outlast {1}{G}. Creatures
+/// Tuskguard Captain — {2}{G} 2/3 Human Warrior, Outlast {1}{G}. Creatures
 /// you control with a +1/+1 counter have trample.
 pub fn tuskguard_captain() -> CardDefinition {
     CardDefinition {
@@ -6062,7 +6062,7 @@ pub fn mer_ek_nightblade() -> CardDefinition {
     }
 }
 
-/// Knight of the Pilgrim's Road — {1}{W} 2/2 Human Knight, Renown 1.
+/// Knight of the Pilgrim's Road — {2}{W} 3/2 Human Knight, Renown 1.
 pub fn knight_of_the_pilgrims_road() -> CardDefinition {
     CardDefinition {
         name: "Knight of the Pilgrim's Road",
@@ -6079,7 +6079,7 @@ pub fn knight_of_the_pilgrims_road() -> CardDefinition {
     }
 }
 
-/// Consul's Lieutenant — {1}{W} 2/1 Human Soldier, First Strike, Renown 1.
+/// Consul's Lieutenant — {W}{W} 2/1 Human Soldier, First Strike, Renown 1.
 pub fn consuls_lieutenant() -> CardDefinition {
     CardDefinition {
         name: "Consul's Lieutenant",
@@ -6117,7 +6117,7 @@ pub fn scab_clan_mauler() -> CardDefinition {
     }
 }
 
-/// Gorehorn Minotaurs — {2}{R} 3/3 Minotaur Warrior, Bloodthirst 2.
+/// Gorehorn Minotaurs — {2}{R}{R} 3/3 Minotaur Warrior, Bloodthirst 2.
 pub fn gorehorn_minotaurs() -> CardDefinition {
     CardDefinition {
         name: "Gorehorn Minotaurs",
@@ -6176,7 +6176,7 @@ pub fn abzan_battle_priest() -> CardDefinition {
     }
 }
 
-/// Disowned Ancestor — {1}{B} 1/4 Spirit Warrior, Renown 1.
+/// Disowned Ancestor — {B} 0/4 Spirit Warrior, Renown 1.
 pub fn disowned_ancestor() -> CardDefinition {
     CardDefinition {
         name: "Disowned Ancestor",
@@ -6193,7 +6193,7 @@ pub fn disowned_ancestor() -> CardDefinition {
     }
 }
 
-/// Citadel Castellan — {1}{G}{W} 2/4 Human Knight, Renown 3.
+/// Citadel Castellan — {1}{G}{W} 2/3 Human Knight, Renown 3.
 pub fn citadel_castellan() -> CardDefinition {
     CardDefinition {
         name: "Citadel Castellan",
@@ -6346,7 +6346,7 @@ pub fn bitterblossom() -> CardDefinition {
     }
 }
 
-/// Brineborn Cutthroat — {1}{U} Creature — Merfolk Pirate 1/2, Flash. "Whenever
+/// Brineborn Cutthroat — {1}{U} Creature — Merfolk Pirate 2/1, Flash. "Whenever
 /// you cast a spell during an opponent's turn, put a +1/+1 counter on Brineborn
 /// Cutthroat." (M20)
 pub fn brineborn_cutthroat() -> CardDefinition {
@@ -6376,7 +6376,7 @@ pub fn brineborn_cutthroat() -> CardDefinition {
     }
 }
 
-/// Rotting Regisaur — {1}{B}{B} Creature — Zombie Dinosaur 7/6. "At the
+/// Rotting Regisaur — {2}{B} Creature — Zombie Dinosaur 7/6. "At the
 /// beginning of your upkeep, discard a card." (M20)
 pub fn rotting_regisaur() -> CardDefinition {
     CardDefinition {
@@ -7329,7 +7329,7 @@ pub fn intangible_virtue() -> CardDefinition {
     }
 }
 
-/// Always Watching — {2}{W} Enchantment. "Nontoken creatures you control get
+/// Always Watching — {1}{W}{W} Enchantment. "Nontoken creatures you control get
 /// +1/+1 and have vigilance." (SOI)
 pub fn always_watching() -> CardDefinition {
     CardDefinition {
@@ -7406,7 +7406,7 @@ pub fn viscera_seer() -> CardDefinition {
     }
 }
 
-/// Thalia's Lieutenant — {1}{W}{W} Creature — Human Soldier 2/2. "When this
+/// Thalia's Lieutenant — {1}{W} Creature — Human Soldier 1/1. "When this
 /// enters, put a +1/+1 counter on each other Human you control. Whenever
 /// another Human enters under your control, put a +1/+1 counter on this." (EMN)
 pub fn thalias_lieutenant() -> CardDefinition {
@@ -8364,7 +8364,7 @@ pub fn kalonian_tusker() -> CardDefinition {
     }
 }
 
-/// Leatherback Baloth — {G}{G}{G} Creature — Beast 4/4 (vanilla). (ZEN)
+/// Leatherback Baloth — {G}{G}{G} Creature — Beast 4/5 (vanilla). (ZEN)
 pub fn leatherback_baloth() -> CardDefinition {
     CardDefinition {
         name: "Leatherback Baloth",
@@ -8380,7 +8380,7 @@ pub fn leatherback_baloth() -> CardDefinition {
     }
 }
 
-/// Garruk's Companion — {1}{G} Creature — Beast 3/2 with Trample. (M11)
+/// Garruk's Companion — {G}{G} Creature — Beast 3/2 with Trample. (M11)
 pub fn garruks_companion() -> CardDefinition {
     CardDefinition {
         name: "Garruk's Companion",
@@ -8419,7 +8419,7 @@ pub fn river_boa() -> CardDefinition {
 
 // ── French-vanilla filler ────────────────────────────────────────────────────
 
-/// Razorfoot Griffin — {2}{W} Creature — Griffin 2/2 with Flying and First
+/// Razorfoot Griffin — {3}{W} Creature — Griffin 2/2 with Flying and First
 /// strike. (7ED)
 pub fn razorfoot_griffin() -> CardDefinition {
     CardDefinition {
@@ -9304,7 +9304,7 @@ pub fn ajanis_welcome() -> CardDefinition {
     }
 }
 
-/// Impassioned Orator — {1}{W} 1/3 Human Cleric. Whenever another creature
+/// Impassioned Orator — {1}{W} 2/2 Human Cleric. Whenever another creature
 /// enters under your control, you gain 1 life.
 pub fn impassioned_orator() -> CardDefinition {
     use crate::card::Predicate;
@@ -9572,7 +9572,7 @@ pub fn dauthi_voidwalker() -> CardDefinition {
     }
 }
 
-/// Kodama of the West Tree — {2}{G} Legendary Creature — Spirit 1/1, Reach.
+/// Kodama of the West Tree — {2}{G} Legendary Creature — Spirit 3/3, Reach.
 /// Modified creatures you control have trample (CR 700.9). Whenever a
 /// modified creature you control deals combat damage to a player, search
 /// your library for a basic land, put it onto the battlefield tapped.

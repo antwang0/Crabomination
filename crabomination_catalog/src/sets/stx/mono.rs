@@ -195,7 +195,7 @@ pub fn frost_trickster() -> CardDefinition {
 
 // ── Body of Research ────────────────────────────────────────────────────────
 
-/// Body of Research — {4}{G}{U} Sorcery. "Create a 0/0 green and blue
+/// Body of Research — {G}{G}{G}{U}{U}{U} Sorcery. "Create a 0/0 green and blue
 /// Fractal creature token. Put a +1/+1 counter on it for each card in your
 /// library."
 ///

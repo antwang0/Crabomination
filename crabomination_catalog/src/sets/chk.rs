@@ -1698,7 +1698,7 @@ fn honden_upkeep(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// Honden of Cleansing Fire — {2}{W} Legendary Enchantment — Shrine. At the
+/// Honden of Cleansing Fire — {3}{W} Legendary Enchantment — Shrine. At the
 /// beginning of your upkeep, you gain 2 life for each Shrine you control.
 pub fn honden_of_cleansing_fire() -> CardDefinition {
     CardDefinition {
@@ -1715,7 +1715,7 @@ pub fn honden_of_cleansing_fire() -> CardDefinition {
     }
 }
 
-/// Honden of Life's Web — {2}{G} Legendary Enchantment — Shrine. At the
+/// Honden of Life's Web — {4}{G} Legendary Enchantment — Shrine. At the
 /// beginning of your upkeep, create a 1/1 colorless Spirit creature token for
 /// each Shrine you control.
 pub fn honden_of_lifes_web() -> CardDefinition {
@@ -1742,7 +1742,7 @@ pub fn honden_of_lifes_web() -> CardDefinition {
     }
 }
 
-/// Honden of Night's Reach — {2}{B} Legendary Enchantment — Shrine. At the
+/// Honden of Night's Reach — {3}{B} Legendary Enchantment — Shrine. At the
 /// beginning of your upkeep, each opponent discards a card for each Shrine you
 /// control.
 pub fn honden_of_nights_reach() -> CardDefinition {
@@ -1798,7 +1798,7 @@ pub fn honden_of_seeing_winds() -> CardDefinition {
 
 // ── Aggro odds & ends ────────────────────────────────────────────────────────
 
-/// Battle-Mad Ronin — {1}{R} Human Samurai 3/1. Bushido 1; attacks each combat
+/// Battle-Mad Ronin — {1}{R} Human Samurai 1/1. Bushido 1; attacks each combat
 /// if able.
 pub fn battle_mad_ronin() -> CardDefinition {
     CardDefinition {

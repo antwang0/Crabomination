@@ -49,7 +49,7 @@ pub fn mourning_thrull() -> CardDefinition {
     }
 }
 
-/// Absolver Thrull — {2}{W} 2/2 Thrull. Haunt. When it enters or the creature
+/// Absolver Thrull — {3}{W} 2/3 Thrull. Haunt. When it enters or the creature
 /// it haunts dies, destroy target enchantment.
 pub fn absolver_thrull() -> CardDefinition {
     let destroy = Effect::Destroy {

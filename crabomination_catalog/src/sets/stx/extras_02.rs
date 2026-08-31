@@ -1609,7 +1609,7 @@ pub fn valor() -> CardDefinition {
 
 // ── Pigment Storm (STX 2021) ────────────────────────────────────────────────
 
-/// Pigment Storm — {4}{R} Sorcery (STX 2021).
+/// Pigment Storm — {3}{R}{R} Sorcery (STX 2021).
 ///
 /// ✅ Real Oracle: "Pigment Storm deals 5 damage to target creature.
 /// Excess damage is dealt to that creature's controller instead."

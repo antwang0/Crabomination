@@ -23,7 +23,7 @@ fn drone(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> CardDe
     }
 }
 
-/// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste Prowess
+/// Stormchaser Mage — {U}{R} 1/3 Flying Haste Prowess
 pub fn stormchaser_mage() -> CardDefinition {
     CardDefinition {
         name: "Stormchaser Mage",

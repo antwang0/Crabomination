@@ -3737,7 +3737,7 @@ pub fn rufus_shinra() -> CardDefinition {
     }
 }
 
-/// Shambling Cie'th — {2}{B} 3/2 Mutant Horror that enters tapped. Whenever you
+/// Shambling Cie'th — {2}{B} 3/3 Mutant Horror that enters tapped. Whenever you
 /// cast a noncreature spell, you may pay {B}; if you do, return this card from
 /// your graveyard to your hand.
 pub fn shambling_cieth() -> CardDefinition {

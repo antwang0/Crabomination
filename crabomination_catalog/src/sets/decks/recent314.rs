@@ -210,7 +210,7 @@ pub fn thought_dissector() -> CardDefinition {
 
 // ── Creatures ──
 
-/// Synod Artificer — {X}, {T}: tap or untap X target noncreature artifacts.
+/// Synod Artificer — {2}{U}, {T}: tap or untap X target noncreature artifacts.
 pub fn synod_artificer() -> CardDefinition {
     let x_artifacts = |effect: Effect| ActivatedAbility {
         mana_cost: cost(&[crate::mana::x()]),

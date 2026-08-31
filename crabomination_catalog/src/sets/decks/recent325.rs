@@ -217,7 +217,7 @@ pub fn unidentified_hovership() -> CardDefinition {
     }
 }
 
-/// Leyline of Mutation — {W}{U}{B}{R}{G} pays for anything, from turn zero.
+/// Leyline of Mutation — {2}{G}{G} pays for anything, from turn zero.
 pub fn leyline_of_mutation() -> CardDefinition {
     CardDefinition {
         name: "Leyline of Mutation",

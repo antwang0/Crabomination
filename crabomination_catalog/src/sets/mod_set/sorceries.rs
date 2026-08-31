@@ -226,7 +226,7 @@ pub fn fell() -> CardDefinition {
     }
 }
 
-/// Blasphemous Edict — {4}{B} Sorcery. Each player sacrifices a creature.
+/// Blasphemous Edict — {3}{B}{B} Sorcery. Each player sacrifices a creature.
 /// Reuses `Effect::Sacrifice` with `Selector::Player(EachPlayer)`; the
 /// resolver iterates each alive seat and forces one creature sacrifice
 /// per player matching the filter.
@@ -442,7 +442,7 @@ pub fn reckless_charge() -> CardDefinition {
     }
 }
 
-/// Boil — {2}{R} Sorcery. Destroy all Islands.
+/// Boil — {3}{R} Sorcery. Destroy all Islands.
 ///
 /// `ForEach(EachPermanent(HasLandType(Island))) → Destroy(TriggerSource)`.
 /// Hits every Island on the battlefield, regardless of controller.
@@ -500,7 +500,7 @@ pub fn demolish() -> CardDefinition {
     }
 }
 
-/// Mind Sculpt — {2}{U} Sorcery. Target opponent mills seven cards.
+/// Mind Sculpt — {1}{U} Sorcery. Target opponent mills seven cards.
 pub fn mind_sculpt() -> CardDefinition {
     CardDefinition {
         name: "Mind Sculpt",
@@ -531,7 +531,7 @@ pub fn cabal_therapy() -> CardDefinition {
     }
 }
 
-/// Wear Down — {1}{W} Sorcery. Destroy target artifact and target
+/// Wear Down — {1}{G} Sorcery. Destroy target artifact and target
 /// enchantment. (Renamed from real "Wear // Tear"; condensed to a single
 /// half — modal-double-targeted sorceries are still future work.)
 ///
@@ -670,7 +670,7 @@ pub fn awaken_the_honored_dead() -> CardDefinition {
 
 // ── Explore ───────────────────────────────────────────────────────────────
 
-/// Explore — {G} Sorcery. "You may play an additional land this turn.
+/// Explore — {1}{G} Sorcery. "You may play an additional land this turn.
 /// Draw a card."
 pub fn explore() -> CardDefinition {
     use crate::effect::{PlayerRef, Value};
@@ -1071,7 +1071,7 @@ pub fn flame_sweep() -> CardDefinition {
     }
 }
 
-/// Tidings — {4}{U} Sorcery. Draw four cards.
+/// Tidings — {3}{U}{U} Sorcery. Draw four cards.
 pub fn tidings() -> CardDefinition {
     CardDefinition {
         name: "Tidings",
@@ -1099,7 +1099,7 @@ pub fn mind_spring() -> CardDefinition {
     }
 }
 
-/// Foresee — {2}{U} Sorcery. Scry 4, then draw two cards.
+/// Foresee — {3}{U} Sorcery. Scry 4, then draw two cards.
 pub fn foresee() -> CardDefinition {
     CardDefinition {
         name: "Foresee",
@@ -1132,7 +1132,7 @@ pub fn final_judgment() -> CardDefinition {
     }
 }
 
-/// Planar Cleansing — {3}{W}{W} Sorcery. Destroy all nonland permanents.
+/// Planar Cleansing — {3}{W}{W}{W} Sorcery. Destroy all nonland permanents.
 pub fn planar_cleansing() -> CardDefinition {
     CardDefinition {
         name: "Planar Cleansing",
@@ -1188,7 +1188,7 @@ pub fn fumigate() -> CardDefinition {
     }
 }
 
-/// Terminus — {4}{W} Sorcery. Put all creatures on the bottom of their
+/// Terminus — {4}{W}{W} Sorcery. Put all creatures on the bottom of their
 /// owners' libraries.
 pub fn terminus() -> CardDefinition {
     use crate::effect::LibraryPosition;
@@ -1207,7 +1207,7 @@ pub fn terminus() -> CardDefinition {
     }
 }
 
-/// Gerrard's Wisdom — {3}{W} Sorcery. You gain 2 life for each card in your
+/// Gerrard's Wisdom — {2}{W}{W} Sorcery. You gain 2 life for each card in your
 /// hand.
 pub fn gerrards_wisdom() -> CardDefinition {
     CardDefinition {
@@ -1340,7 +1340,7 @@ pub fn austere_command() -> CardDefinition {
     }
 }
 
-/// Jeska's Will — {3}{R} Sorcery. Choose one — Add {R}{R}{R}; or exile the top
+/// Jeska's Will — {2}{R} Sorcery. Choose one — Add {R}{R}{R}; or exile the top
 /// three cards of your library, you may play them this turn. (Printed: the
 /// ritual scales with an opponent's hand size and you may choose both with a
 /// commander; both are simplified — fixed {R}{R}{R}, single mode.)
@@ -1390,7 +1390,7 @@ pub fn jeskas_will() -> CardDefinition {
     }
 }
 
-/// Conflagrate — {X}{R} Sorcery. Deals X damage divided as you choose among
+/// Conflagrate — {X}{X}{R} Sorcery. Deals X damage divided as you choose among
 /// any number of targets. Flashback—{R}{R}, Discard X cards
 /// (`AdditionalCastCost::DiscardXFromCost` supplies the variable discard).
 pub fn conflagrate() -> CardDefinition {

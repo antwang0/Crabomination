@@ -78,7 +78,7 @@ pub fn corpse_blockade() -> CardDefinition {
     }
 }
 
-/// Vulturous Zombie — {4}{B}{G} 5/5 Zombie with Flying. Whenever another
+/// Vulturous Zombie — {3}{B}{G} 3/3 Zombie with Flying. Whenever another
 /// creature dies, put a +1/+1 counter on this creature.
 pub fn vulturous_zombie() -> CardDefinition {
     CardDefinition {

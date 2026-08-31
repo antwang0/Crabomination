@@ -13,7 +13,7 @@ use crate::effect::shortcut::{dash, etb, on_attack, raid_etb, target_any, target
 use crate::effect::{Duration, PlayerRef, Value};
 use crate::mana::{b, cost, generic, r, u, w};
 
-/// Screamreach Brawler — {2}{R} 3/3 Orc Berserker. Dash {1}{R}.
+/// Screamreach Brawler — {2}{R} 2/3 Orc Berserker. Dash {1}{R}.
 pub fn screamreach_brawler() -> CardDefinition {
     CardDefinition {
         name: "Screamreach Brawler",
@@ -30,7 +30,7 @@ pub fn screamreach_brawler() -> CardDefinition {
     }
 }
 
-/// Mardu Scout — {2}{R} 3/1 Human Warrior. Dash {R}.
+/// Mardu Scout — {R}{R} 3/1 Human Warrior. Dash {R}.
 pub fn mardu_scout() -> CardDefinition {
     CardDefinition {
         name: "Mardu Scout",
@@ -90,7 +90,7 @@ pub fn goblin_heelcutter() -> CardDefinition {
     }
 }
 
-/// Ponyback Brigade — {3}{B}{R} 2/2 Goblin. When this enters, create three
+/// Ponyback Brigade — {3}{R}{W}{B} 2/2 Goblin. When this enters, create three
 /// 1/1 red Goblin creature tokens. Dash {4}{B}{R}.
 pub fn ponyback_brigade() -> CardDefinition {
     let goblin = TokenDefinition {
@@ -237,7 +237,7 @@ pub fn seeker_of_the_way() -> CardDefinition {
     }
 }
 
-/// Jeskai Elder — {1}{U} 2/1 Human Monk with Prowess. Whenever this deals
+/// Jeskai Elder — {1}{U} 1/2 Human Monk with Prowess. Whenever this deals
 /// combat damage to a player, you may loot (draw a card, then discard one).
 pub fn jeskai_elder() -> CardDefinition {
     CardDefinition {
@@ -272,7 +272,7 @@ pub fn jeskai_elder() -> CardDefinition {
     }
 }
 
-/// Bloodsoaked Champion — {R} 1/1 Human Warrior. This can't block. Raid —
+/// Bloodsoaked Champion — {B} 2/1 Human Warrior. This can't block. Raid —
 /// {1}{B}: Return Bloodsoaked Champion from your graveyard to the battlefield.
 /// Activate only if you attacked this turn.
 pub fn bloodsoaked_champion() -> CardDefinition {
@@ -310,7 +310,7 @@ pub fn bloodsoaked_champion() -> CardDefinition {
     }
 }
 
-/// Mardu Heart-Piercer — {3}{R} 3/2 Human Warrior. Raid — When this enters,
+/// Mardu Heart-Piercer — {3}{R} 2/3 Human Warrior. Raid — When this enters,
 /// if you attacked this turn, it deals 2 damage to any target.
 pub fn mardu_heart_piercer() -> CardDefinition {
     CardDefinition {

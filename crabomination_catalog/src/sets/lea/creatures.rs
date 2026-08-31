@@ -313,7 +313,7 @@ pub fn craw_wurm() -> CardDefinition {
     }
 }
 
-/// Samite Healer — {2}{W} 1/1 Human Cleric. "{T}: Prevent the next 1
+/// Samite Healer — {1}{W} 1/1 Human Cleric. "{T}: Prevent the next 1
 /// damage that would be dealt to any target this turn." (CR 615.7)
 pub fn samite_healer() -> CardDefinition {
     CardDefinition {
@@ -409,7 +409,7 @@ pub fn spined_wurm() -> CardDefinition {
     }
 }
 
-/// Trained Armodon — {2}{G} 3/3 Elephant.
+/// Trained Armodon — {1}{G}{G} 3/3 Elephant.
 pub fn trained_armodon() -> CardDefinition {
     CardDefinition {
         name: "Trained Armodon",
@@ -718,7 +718,7 @@ pub fn wall_of_fire() -> CardDefinition {
     }
 }
 
-/// Flame Spirit — {2}{R} 2/2 Spirit. "{R}: +1/+0 until EOT."
+/// Flame Spirit — {4}{R} 2/3 Spirit. "{R}: +1/+0 until EOT."
 pub fn flame_spirit() -> CardDefinition {
     CardDefinition {
         name: "Flame Spirit",

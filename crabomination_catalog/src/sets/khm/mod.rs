@@ -10,7 +10,7 @@ use crate::card::{
 use crate::effect::shortcut::boast;
 use crate::mana::{cost, generic, r};
 
-/// Dragonkin Berserker — {2}{R} 2/2 Dragon Berserker. Boast — {3}{R}: Put a
+/// Dragonkin Berserker — {1}{R} 2/2 Dragon Berserker. Boast — {3}{R}: Put a
 /// +1/+1 counter on this. (The "whenever you boast, make a Dragon token if
 /// you control no other Dragon" payoff rider is omitted.)
 pub fn dragonkin_berserker() -> CardDefinition {

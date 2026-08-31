@@ -630,7 +630,7 @@ pub fn thirst_for_meaning() -> CardDefinition {
     }
 }
 
-/// Shatter the Sky — {2}{W} Sorcery. Each player with a power-4+ creature
+/// Shatter the Sky — {2}{W}{W} Sorcery. Each player with a power-4+ creature
 /// draws a card; then destroy all creatures.
 pub fn shatter_the_sky() -> CardDefinition {
     CardDefinition {
@@ -3023,7 +3023,7 @@ pub fn dreadful_apathy() -> CardDefinition {
     }
 }
 
-/// Sea God's Scorn — {3}{U} Instant. Costs {1} less for each enchantment you
+/// Sea God's Scorn — {4}{U}{U} Instant. Costs {1} less for each enchantment you
 /// control. Return up to three target creatures to their owners' hands.
 pub fn sea_gods_scorn() -> CardDefinition {
     CardDefinition {
@@ -3046,7 +3046,7 @@ pub fn sea_gods_scorn() -> CardDefinition {
     }
 }
 
-/// Wrap in Flames — {2}{R} Sorcery. Deals 1 damage to each of up to three
+/// Wrap in Flames — {3}{R} Sorcery. Deals 1 damage to each of up to three
 /// target creatures. Those creatures can't block this turn.
 pub fn wrap_in_flames() -> CardDefinition {
     CardDefinition {

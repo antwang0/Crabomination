@@ -2790,7 +2790,7 @@ fn devotee_mana(colors: Vec<Color>) -> ActivatedAbility {
     }
 }
 
-/// Abzan Devotee — {1}{B} 2/2 Dog Cleric. {1}: add W/B/G (once each turn).
+/// Abzan Devotee — {1}{B} 2/1 Dog Cleric. {1}: add W/B/G (once each turn).
 /// {2}{B}: return this from your graveyard to your hand.
 pub fn abzan_devotee() -> CardDefinition {
     CardDefinition {
@@ -2819,7 +2819,7 @@ pub fn abzan_devotee() -> CardDefinition {
     }
 }
 
-/// Temur Devotee — {1}{U} 2/2 Defender. {1}: add G/U/R (once each turn).
+/// Temur Devotee — {1}{U} 3/3 Defender. {1}: add G/U/R (once each turn).
 pub fn temur_devotee() -> CardDefinition {
     CardDefinition {
         name: "Temur Devotee",
@@ -2837,7 +2837,7 @@ pub fn temur_devotee() -> CardDefinition {
     }
 }
 
-/// Sultai Devotee — {1}{G} 2/2 Deathtouch. {1}: add B/G/U (once each turn).
+/// Sultai Devotee — {1}{G} 2/1 Deathtouch. {1}: add B/G/U (once each turn).
 pub fn sultai_devotee() -> CardDefinition {
     CardDefinition {
         name: "Sultai Devotee",
@@ -3017,7 +3017,7 @@ pub fn yathan_tombguard() -> CardDefinition {
     }
 }
 
-/// Kishla Trawlers — {2}{U} 2/3 Human Citizen. ETB: you may exile a creature
+/// Kishla Trawlers — {2}{U} 3/2 Human Citizen. ETB: you may exile a creature
 /// card from your graveyard; when you do, return target instant or sorcery card
 /// from your graveyard to your hand.
 pub fn kishla_trawlers() -> CardDefinition {

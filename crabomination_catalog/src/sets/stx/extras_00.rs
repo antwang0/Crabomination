@@ -1259,7 +1259,7 @@ pub fn manifestation_sage() -> CardDefinition {
     }
 }
 
-/// Crackle with Power — {X}{R}{R}{R}{R}{R} Sorcery. Real oracle:
+/// Crackle with Power — {X}{X}{X}{R}{R} Sorcery. Real oracle:
 /// "Crackle with Power deals five times X damage to each of up to X
 /// targets."
 ///

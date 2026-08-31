@@ -57,7 +57,7 @@ pub fn yoked_ox() -> CardDefinition {
     }
 }
 
-/// Two-Headed Cerberus — {2}{R} Creature — Dog 2/2. Double strike.
+/// Two-Headed Cerberus — {1}{R}{R} Creature — Dog 1/2. Double strike.
 pub fn two_headed_cerberus() -> CardDefinition {
     CardDefinition {
         name: "Two-Headed Cerberus",
@@ -160,7 +160,7 @@ pub fn nessian_courser() -> CardDefinition {
     }
 }
 
-/// Vulpine Goliath — {5}{G} Creature — Fox 4/4. Trample.
+/// Vulpine Goliath — {4}{G}{G} Creature — Fox 6/5. Trample.
 pub fn vulpine_goliath() -> CardDefinition {
     CardDefinition {
         name: "Vulpine Goliath",
@@ -177,7 +177,7 @@ pub fn vulpine_goliath() -> CardDefinition {
     }
 }
 
-/// Felhide Minotaur — {2}{R} Creature — Minotaur 3/2.
+/// Felhide Minotaur — {2}{B} Creature — Minotaur 2/3.
 pub fn felhide_minotaur() -> CardDefinition {
     CardDefinition {
         name: "Felhide Minotaur",
@@ -193,7 +193,7 @@ pub fn felhide_minotaur() -> CardDefinition {
     }
 }
 
-/// Griptide — {2}{U} Instant. Put target creature on top of its owner's
+/// Griptide — {3}{U} Instant. Put target creature on top of its owner's
 /// library.
 pub fn griptide() -> CardDefinition {
     use crate::effect::LibraryPosition;
@@ -230,7 +230,7 @@ pub fn lash_of_the_whip() -> CardDefinition {
     }
 }
 
-/// Pharika's Cure — {1}{B} Instant. Deal 2 damage to target creature and
+/// Pharika's Cure — {B}{B} Instant. Deal 2 damage to target creature and
 /// you gain 2 life.
 pub fn pharikas_cure() -> CardDefinition {
     CardDefinition {
@@ -264,7 +264,7 @@ pub fn fade_into_antiquity() -> CardDefinition {
     }
 }
 
-/// Nylea's Disciple — {3}{G} Creature — Centaur Shaman 2/3. ETB: you gain
+/// Nylea's Disciple — {2}{G}{G} Creature — Centaur Shaman 3/3. ETB: you gain
 /// life equal to your devotion to green (CR 700.5).
 pub fn nyleas_disciple() -> CardDefinition {
     CardDefinition {
@@ -285,7 +285,7 @@ pub fn nyleas_disciple() -> CardDefinition {
     }
 }
 
-/// Traveling Philosopher — {2}{W} Creature — Human Advisor 1/4.
+/// Traveling Philosopher — {1}{W} Creature — Human Advisor 2/2.
 pub fn traveling_philosopher() -> CardDefinition {
     CardDefinition {
         name: "Traveling Philosopher",
@@ -346,7 +346,7 @@ pub fn mnemonic_wall() -> CardDefinition {
     }
 }
 
-/// Horizon Scholar — {4}{U} Creature — Sphinx 4/4. Flying. ETB: scry 2.
+/// Horizon Scholar — {5}{U} Creature — Sphinx 4/4. Flying. ETB: scry 2.
 pub fn horizon_scholar() -> CardDefinition {
     CardDefinition {
         name: "Horizon Scholar",
@@ -367,7 +367,7 @@ pub fn horizon_scholar() -> CardDefinition {
     }
 }
 
-/// Anvilwrought Raptor — {4} Artifact Creature — Bird 2/2. Flying, first strike.
+/// Anvilwrought Raptor — {4} Artifact Creature — Bird 2/1. Flying, first strike.
 pub fn anvilwrought_raptor() -> CardDefinition {
     CardDefinition {
         name: "Anvilwrought Raptor",
@@ -416,7 +416,7 @@ pub fn guardians_of_meletis() -> CardDefinition {
     }
 }
 
-/// Opaline Unicorn — {3} Artifact Creature — Unicorn 2/2. {T}: Add one mana
+/// Opaline Unicorn — {3} Artifact Creature — Unicorn 1/2. {T}: Add one mana
 /// of any color.
 pub fn opaline_unicorn() -> CardDefinition {
     CardDefinition {
@@ -434,7 +434,7 @@ pub fn opaline_unicorn() -> CardDefinition {
     }
 }
 
-/// Borderland Minotaur — {3}{R} Creature — Minotaur Warrior 3/3.
+/// Borderland Minotaur — {2}{R}{R} Creature — Minotaur Warrior 4/3.
 pub fn borderland_minotaur() -> CardDefinition {
     CardDefinition {
         name: "Borderland Minotaur",
@@ -450,7 +450,7 @@ pub fn borderland_minotaur() -> CardDefinition {
     }
 }
 
-/// Deathbellow Raider — {1}{R} Creature — Minotaur Berserker 3/1.
+/// Deathbellow Raider — {1}{R} Creature — Minotaur Berserker 2/3.
 pub fn deathbellow_raider() -> CardDefinition {
     CardDefinition {
         name: "Deathbellow Raider",
@@ -466,7 +466,7 @@ pub fn deathbellow_raider() -> CardDefinition {
     }
 }
 
-/// Asphodel Wanderer — {1}{B} Creature — Zombie 1/1.
+/// Asphodel Wanderer — {B} Creature — Zombie 1/1.
 pub fn asphodel_wanderer() -> CardDefinition {
     CardDefinition {
         name: "Asphodel Wanderer",
@@ -482,7 +482,7 @@ pub fn asphodel_wanderer() -> CardDefinition {
     }
 }
 
-/// Returned Centaur — {3}{B} Creature — Zombie Centaur 3/3. ETB: put the
+/// Returned Centaur — {3}{B} Creature — Zombie Centaur 2/4. ETB: put the
 /// top four cards of your library into your graveyard.
 pub fn returned_centaur() -> CardDefinition {
     CardDefinition {
@@ -503,7 +503,7 @@ pub fn returned_centaur() -> CardDefinition {
     }
 }
 
-/// Baleful Eidolon — {2}{B} Enchantment Creature — Zombie 1/1. Deathtouch.
+/// Baleful Eidolon — {1}{B} Enchantment Creature — Zombie 1/1. Deathtouch.
 /// Bestow {4}{B} (CR 702.103): cast as an Aura granting +1/+1 and deathtouch.
 pub fn baleful_eidolon() -> CardDefinition {
     use crate::card::EquipBonus;

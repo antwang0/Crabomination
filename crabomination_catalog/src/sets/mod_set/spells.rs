@@ -200,7 +200,7 @@ pub fn propaganda() -> CardDefinition {
     }
 }
 
-/// Sphere of Safety — {3}{W} Enchantment. "Creatures can't attack you or a
+/// Sphere of Safety — {4}{W} Enchantment. "Creatures can't attack you or a
 /// planeswalker you control unless their controller pays {X} for each of those
 /// creatures, where X is the number of enchantments you control." The dynamic
 /// tax uses `Value::count(enchantments you control)` (which counts Sphere
@@ -224,7 +224,7 @@ pub fn sphere_of_safety() -> CardDefinition {
     }
 }
 
-/// Beastmaster Ascension — {1}{G} Enchantment. "Whenever a creature you control
+/// Beastmaster Ascension — {2}{G} Enchantment. "Whenever a creature you control
 /// attacks, put a quest counter on Beastmaster Ascension. As long as it has
 /// seven or more quest counters, creatures you control get +5/+5." The anthem
 /// is a `StaticEffect::PumpTeamIf` gated on the quest-counter threshold.
@@ -268,7 +268,7 @@ pub fn beastmaster_ascension() -> CardDefinition {
     }
 }
 
-/// Aura Shards — {G}{W} Enchantment. "Whenever a creature you control enters,
+/// Aura Shards — {1}{G}{W} Enchantment. "Whenever a creature you control enters,
 /// you may destroy target artifact or enchantment." The optional clause is
 /// collapsed to a mandatory destroy-if-a-legal-target-exists (matching
 /// Reclamation Sage's ETB), and auto-targeting prefers an opponent's permanent.

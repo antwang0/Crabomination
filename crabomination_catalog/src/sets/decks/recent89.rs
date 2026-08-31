@@ -63,7 +63,7 @@ pub fn inferno() -> CardDefinition {
     }
 }
 
-/// Crater Hellion — {4}{R}{R} 5/5 Beast. Echo {4}{R}{R}. When it enters, it
+/// Crater Hellion — {4}{R}{R} 6/6 Beast. Echo {4}{R}{R}. When it enters, it
 /// deals 4 damage to each other creature.
 pub fn crater_hellion() -> CardDefinition {
     CardDefinition {

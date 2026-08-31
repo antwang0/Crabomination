@@ -208,7 +208,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
 
 // ── Devastating Mastery ─────────────────────────────────────────────────────
 
-/// Devastating Mastery — {4}{W}{W} Sorcery.
+/// Devastating Mastery — {2}{W}{W}{W}{W} Sorcery.
 /// "You may pay {2}{W}{W} rather than pay this spell's mana cost.
 /// If the {2}{W}{W} cost was paid, an opponent chooses up to two nonland
 /// permanents they control and returns them to their owner's hand.

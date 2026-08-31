@@ -9,7 +9,7 @@ use crate::effect::shortcut::{deal, target};
 use crate::effect::{Effect, Selector, Value};
 use crate::mana::{cost, g, generic, r, x};
 
-/// Searing Wind — {4}{R}{R} Sorcery. Deals 5 damage to any target.
+/// Searing Wind — {8}{R} Sorcery. Deals 5 damage to any target.
 pub fn searing_wind() -> CardDefinition {
     CardDefinition {
         name: "Searing Wind",
@@ -55,7 +55,7 @@ pub fn jagged_lightning() -> CardDefinition {
     }
 }
 
-/// Rain of Embers — {2}{R} Sorcery. Deals 1 damage to each creature without
+/// Rain of Embers — {1}{R} Sorcery. Deals 1 damage to each creature without
 /// flying.
 pub fn rain_of_embers() -> CardDefinition {
     CardDefinition {
@@ -75,7 +75,7 @@ pub fn rain_of_embers() -> CardDefinition {
     }
 }
 
-/// Thunderfoot Baloth — {3}{G}{G} 5/5 Beast. Other creatures you control get
+/// Thunderfoot Baloth — {4}{G}{G} 5/5 Beast. Other creatures you control get
 /// +2/+2 and have trample.
 pub fn thunderfoot_baloth() -> CardDefinition {
     let others =

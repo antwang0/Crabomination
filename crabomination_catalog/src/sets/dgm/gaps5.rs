@@ -156,7 +156,7 @@ pub fn catch_release() -> CardDefinition {
     }
 }
 
-/// Lairwatch Giant — {5}{W} 4/4 Giant Warrior (LRW). Blocks an additional
+/// Lairwatch Giant — {5}{W} 5/3 Giant Warrior (LRW). Blocks an additional
 /// creature each combat; when it blocks two or more creatures it gains first
 /// strike (CR 509.3e). Filed with the multi-block cluster.
 pub fn lairwatch_giant() -> CardDefinition {

@@ -32,7 +32,7 @@ pub use crabomination_base::tokens::lorehold_spirit_token;
 
 // ── Lorehold Apprentice ─────────────────────────────────────────────────────
 
-/// Lorehold Apprentice — {1}{R}, 2/2 Human Cleric.
+/// Lorehold Apprentice — {R}{W}, 2/2 Human Cleric.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// until end of turn, Spirit creatures you control gain '{T}: This
 /// creature deals 1 damage to each opponent.'"

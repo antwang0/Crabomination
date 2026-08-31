@@ -26,7 +26,7 @@ pub fn glorious_anthem() -> CardDefinition {
     }
 }
 
-/// Smoke — {1}{R} Enchantment (LEA). "Creatures don't untap during their
+/// Smoke — {R}{R} Enchantment (LEA). "Creatures don't untap during their
 /// controllers' untap steps." Modeled as a global `PreventUntap` keyed on the
 /// `Creature` filter, which `do_untap` (CR 502.3) intersects against the
 /// untapping player's permanents every untap step — so it applies symmetrically

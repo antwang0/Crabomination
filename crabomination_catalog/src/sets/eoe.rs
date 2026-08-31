@@ -1336,7 +1336,7 @@ pub fn bombard() -> CardDefinition {
     }
 }
 
-/// Cloudsculpt Technician — {2}{U} Creature — Jellyfish Artificer 2/2, flying. As
+/// Cloudsculpt Technician — {2}{U} Creature — Jellyfish Artificer 1/4, flying. As
 /// long as you control an artifact, this creature gets +1/+0.
 pub fn cloudsculpt_technician() -> CardDefinition {
     use crate::effect::StaticEffect;
@@ -1369,7 +1369,7 @@ pub fn cloudsculpt_technician() -> CardDefinition {
     }
 }
 
-/// Brightspear Zealot — {2}{W} Creature — Human Soldier 2/2, vigilance. Gets
+/// Brightspear Zealot — {2}{W} Creature — Human Soldier 2/4, vigilance. Gets
 /// +2/+0 as long as you've cast two or more spells this turn.
 pub fn brightspear_zealot() -> CardDefinition {
     use crate::effect::StaticEffect;
@@ -1400,7 +1400,7 @@ pub fn brightspear_zealot() -> CardDefinition {
     }
 }
 
-/// Eumidian Terrabotanist — {1}{G} Creature — Insect Druid 2/1. Landfall —
+/// Eumidian Terrabotanist — {1}{G} Creature — Insect Druid 2/3. Landfall —
 /// whenever a land you control enters, you gain 1 life.
 pub fn eumidian_terrabotanist() -> CardDefinition {
     use crate::effect::shortcut::gain_life;
@@ -1509,7 +1509,7 @@ pub fn dual_sun_technique() -> CardDefinition {
     }
 }
 
-/// Exosuit Savior — {2}{W} Creature — Human Soldier 2/3, flying. ETB: return
+/// Exosuit Savior — {2}{W} Creature — Human Soldier 2/2, flying. ETB: return
 /// another target permanent you control to its owner's hand. (The "up to one"
 /// optional rider is modeled as a plain target.)
 pub fn exosuit_savior() -> CardDefinition {

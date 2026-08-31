@@ -40,7 +40,7 @@ pub fn callous_sell_sword() -> CardDefinition {
     }
 }
 
-/// Chancellor of the Tangle — {5}{G}, 6/7 Avatar Incarnation. "You may reveal
+/// Chancellor of the Tangle — {4}{G}{G}{G}, 6/7 Avatar Incarnation. "You may reveal
 /// this card from your opening hand. If you do, at the beginning of your
 /// first main phase, add {G}."
 ///
@@ -139,7 +139,7 @@ pub fn devourer_of_destiny() -> CardDefinition {
 
 // ── Goryo's creatures ────────────────────────────────────────────────────────
 
-/// Atraxa, Grand Unifier — {3}{W}{U}{B}{R}{G}, 7/7 Legendary Phyrexian
+/// Atraxa, Grand Unifier — {3}{G}{W}{U}{B}, 7/7 Legendary Phyrexian
 /// Praetor. Flying, vigilance, deathtouch, lifelink. ETB reveals the top
 /// ten cards of your library, you may put up to one of each card type
 /// into your hand, the rest on the bottom.
@@ -300,7 +300,7 @@ pub fn psychic_frog() -> CardDefinition {
     }
 }
 
-/// Quantum Riddler — {3}{U}{B}, 4/6 Sphinx with flying. "When you cast
+/// Quantum Riddler — {3}{U}{U}, 4/6 Sphinx with flying. "When you cast
 /// Quantum Riddler, draw a card." Wired as a real on-cast trigger via
 /// `SpellCast` + `SelfSource`, so the cantrip fires (and the card resolves)
 /// even if Quantum Riddler itself is countered.
@@ -387,7 +387,7 @@ pub fn solitude() -> CardDefinition {
     }
 }
 
-/// Grief — {1}{B}{B} Creature — Elemental Incarnation, 3/2, Menace.
+/// Grief — {2}{B}{B} Creature — Elemental Incarnation, 3/2, Menace.
 /// Evoke—exile a black card from hand. ETB: target opponent discards a
 /// nonland card you choose (Thoughtseize-on-ETB). (Reveal-hand step
 /// collapses to the engine's `DiscardChosen`.)
@@ -636,7 +636,7 @@ pub fn torch_courier() -> CardDefinition {
 
 // ── Sideboard creatures ──────────────────────────────────────────────────────
 
-/// Chancellor of the Annex — {4}{W}{W}, 5/6 Avatar. Flying. "You may reveal
+/// Chancellor of the Annex — {4}{W}{W}{W}, 5/6 Avatar. Flying. "You may reveal
 /// this from your opening hand. If you do, the first spell an opponent casts
 /// next turn doesn't resolve unless they pay {1}."
 ///
@@ -676,7 +676,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
     }
 }
 
-/// Elesh Norn, Mother of Machines — {3}{W}{W}, 4/7 Legendary Phyrexian
+/// Elesh Norn, Mother of Machines — {4}{W}, 4/7 Legendary Phyrexian
 /// Praetor. Vigilance. "If a permanent entering the battlefield causes a
 /// triggered ability of a permanent you control to trigger, that ability
 /// triggers an additional time. Permanents entering the battlefield don't

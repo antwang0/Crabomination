@@ -31,7 +31,7 @@ pub fn nightmare() -> CardDefinition {
     }
 }
 
-/// Rukh Egg — {2}{R} 0/3 Bird. When it dies, create a 4/4 red Bird with flying.
+/// Rukh Egg — {3}{R} 0/3 Bird. When it dies, create a 4/4 red Bird with flying.
 pub fn rukh_egg() -> CardDefinition {
     let rukh = TokenDefinition {
         name: "Bird".into(),
@@ -78,7 +78,7 @@ pub fn sabertooth_tiger() -> CardDefinition {
     }
 }
 
-/// Ironroot Treefolk — {3}{G} 3/5 Treefolk (vanilla).
+/// Ironroot Treefolk — {4}{G} 3/5 Treefolk (vanilla).
 pub fn ironroot_treefolk() -> CardDefinition {
     CardDefinition {
         name: "Ironroot Treefolk",
@@ -110,7 +110,7 @@ pub fn fire_elemental() -> CardDefinition {
     }
 }
 
-/// Dross Crocodile — {5}{B} 5/1 Zombie Crocodile (vanilla).
+/// Dross Crocodile — {3}{B} 5/1 Zombie Crocodile (vanilla).
 pub fn dross_crocodile() -> CardDefinition {
     CardDefinition {
         name: "Dross Crocodile",
@@ -126,7 +126,7 @@ pub fn dross_crocodile() -> CardDefinition {
     }
 }
 
-/// Segovian Leviathan — {3}{U} 3/3 Leviathan. Islandwalk.
+/// Segovian Leviathan — {4}{U} 3/3 Leviathan. Islandwalk.
 pub fn segovian_leviathan() -> CardDefinition {
     CardDefinition {
         name: "Segovian Leviathan",
@@ -143,7 +143,7 @@ pub fn segovian_leviathan() -> CardDefinition {
     }
 }
 
-/// Vampire Bats — {1}{B} 1/1 Bat. Flying. {B}: gets +1/+0 until end of turn.
+/// Vampire Bats — {B} 0/1 Bat. Flying. {B}: gets +1/+0 until end of turn.
 /// Activate only once each turn.
 pub fn vampire_bats() -> CardDefinition {
     CardDefinition {
@@ -172,7 +172,7 @@ pub fn vampire_bats() -> CardDefinition {
     }
 }
 
-/// Durkwood Boars — {4}{G} 5/5 Boar (vanilla).
+/// Durkwood Boars — {4}{G} 4/4 Boar (vanilla).
 pub fn durkwood_boars() -> CardDefinition {
     CardDefinition {
         name: "Durkwood Boars",
@@ -188,7 +188,7 @@ pub fn durkwood_boars() -> CardDefinition {
     }
 }
 
-/// Wall of Spears — {2} 2/3 Artifact Creature — Wall. Defender, first strike.
+/// Wall of Spears — {3} 2/3 Artifact Creature — Wall. Defender, first strike.
 pub fn wall_of_spears() -> CardDefinition {
     CardDefinition {
         name: "Wall of Spears",

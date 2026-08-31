@@ -7969,7 +7969,7 @@ pub fn surging_might() -> CardDefinition {
     }
 }
 
-/// Surging Sentinels — {3}{W} 3/1 Spirit. Ripple 4. (Its "gains protection from
+/// Surging Sentinels — {2}{W} 2/1 Spirit. Ripple 4. (Its "gains protection from
 /// black when you cast a white spell" rider is omitted.)
 pub fn surging_sentinels() -> CardDefinition {
     use crate::effect::shortcut::ripple;
@@ -8176,7 +8176,7 @@ pub fn mistral_charge() -> CardDefinition {
     }
 }
 
-/// Run Amok — {2}{R} Instant. Target attacking creature gets +3/+3 and gains
+/// Run Amok — {1}{R} Instant. Target attacking creature gets +3/+3 and gains
 /// trample until end of turn. (The "attacking" target restriction is relaxed
 /// to any creature.)
 pub fn run_amok() -> CardDefinition {
@@ -8206,7 +8206,7 @@ pub fn run_amok() -> CardDefinition {
 // `shortcut::unearth(cost)` builds the sorcery-speed graveyard ability that
 // returns the card with haste and schedules an end-step exile.
 
-/// Viscera Dragger — {4}{B} 3/2 Zombie Warrior. Unearth {1}{B}.
+/// Viscera Dragger — {3}{B} 3/3 Zombie Warrior. Unearth {1}{B}.
 pub fn viscera_dragger() -> CardDefinition {
     use crate::effect::shortcut::unearth;
     CardDefinition {
@@ -8224,7 +8224,7 @@ pub fn viscera_dragger() -> CardDefinition {
     }
 }
 
-/// Skeletal Kathari — {3}{B} 2/1 Bird Skeleton. Flying. Unearth {2}{B}.
+/// Skeletal Kathari — {4}{B} 3/2 Bird Skeleton. Flying. Unearth {2}{B}.
 pub fn skeletal_kathari() -> CardDefinition {
     use crate::effect::shortcut::unearth;
     CardDefinition {
@@ -13251,7 +13251,7 @@ pub fn scorching_dragonfire() -> CardDefinition {
     }
 }
 
-/// Slaying Fire — {1}{R}{R} sorcery. 3 damage to any target; Adamant —
+/// Slaying Fire — {2}{R} sorcery. 3 damage to any target; Adamant —
 /// 4 instead if at least three red mana was spent (CR 702.137).
 pub fn slaying_fire() -> CardDefinition {
     CardDefinition {

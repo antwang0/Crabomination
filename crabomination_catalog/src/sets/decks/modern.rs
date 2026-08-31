@@ -323,7 +323,7 @@ pub fn search_for_tomorrow() -> CardDefinition {
     }
 }
 
-/// Errant Ephemeron — {6}{U} 6/4 Flying. Suspend 4—{1}{U}.
+/// Errant Ephemeron — {6}{U} 4/4 Flying. Suspend 4—{1}{U}.
 pub fn errant_ephemeron() -> CardDefinition {
     CardDefinition {
         name: "Errant Ephemeron",
@@ -343,7 +343,7 @@ pub fn errant_ephemeron() -> CardDefinition {
     }
 }
 
-/// Riftwing Cloudskate — {3}{U} 2/2 Flying. ETB: return target permanent to
+/// Riftwing Cloudskate — {3}{U}{U} 2/2 Flying. ETB: return target permanent to
 /// its owner's hand. Suspend 3—{1}{U}.
 pub fn riftwing_cloudskate() -> CardDefinition {
     CardDefinition {
@@ -390,7 +390,7 @@ pub fn behold_the_multiverse() -> CardDefinition {
     }
 }
 
-/// Demon Bolt — {1}{R} Instant. Deal 4 damage to target creature or
+/// Demon Bolt — {2}{R} Instant. Deal 4 damage to target creature or
 /// planeswalker. Foretell {R} (CR 702.143).
 pub fn demon_bolt() -> CardDefinition {
     CardDefinition {
@@ -408,7 +408,7 @@ pub fn demon_bolt() -> CardDefinition {
     }
 }
 
-/// Augury Raven — {3}{U} 2/3 Flying. Foretell {2}{U} (CR 702.143).
+/// Augury Raven — {3}{U} 3/3 Flying. Foretell {2}{U} (CR 702.143).
 pub fn augury_raven() -> CardDefinition {
     CardDefinition {
         name: "Augury Raven",
@@ -497,7 +497,7 @@ pub fn sarulfs_packmate() -> CardDefinition {
     }
 }
 
-/// Dwarven Reinforcements — {4}{R} Sorcery. Create two 2/1 red Dwarf Berserker
+/// Dwarven Reinforcements — {3}{R} Sorcery. Create two 2/1 red Dwarf Berserker
 /// creature tokens. Foretell {1}{R}.
 pub fn dwarven_reinforcements() -> CardDefinition {
     CardDefinition {
@@ -525,7 +525,7 @@ pub fn dwarven_reinforcements() -> CardDefinition {
     }
 }
 
-/// Deep-Sea Kraken — {8}{U} 6/6 Kraken that can't be countered. Suspend 9—{1}{U}.
+/// Deep-Sea Kraken — {7}{U}{U}{U} 6/6 Kraken that can't be countered. Suspend 9—{1}{U}.
 /// While suspended, an opponent's spell removes a time counter (accelerant).
 pub fn deep_sea_kraken() -> CardDefinition {
     CardDefinition {
@@ -581,7 +581,7 @@ pub fn beskir_shieldmate() -> CardDefinition {
     }
 }
 
-/// Durkwood Baloth — {5}{G} 5/5. Suspend 5—{G} (CR 702.62).
+/// Durkwood Baloth — {4}{G}{G} 5/5. Suspend 5—{G} (CR 702.62).
 pub fn durkwood_baloth() -> CardDefinition {
     CardDefinition {
         name: "Durkwood Baloth",
@@ -617,7 +617,7 @@ pub fn keldon_halberdier() -> CardDefinition {
 
 // ── Blitz (CR 702.152) ───────────────────────────────────────────────────────
 
-/// Tenacious Underdog — {1}{B} 3/1 Human Warrior that can't block. Blitz {2}{B}.
+/// Tenacious Underdog — {1}{B} 3/2 Human Warrior that can't block. Blitz {2}{B}.
 /// (The drew-two-cards graveyard recursion is omitted.)
 pub fn tenacious_underdog() -> CardDefinition {
     CardDefinition {
@@ -767,7 +767,7 @@ pub fn light_up_the_stage() -> CardDefinition {
 
 // ── Spell-matters aggro ──────────────────────────────────────────────────────
 
-/// Firebrand Archer — {1}{R} 1/2 Human Wizard. Whenever you cast a noncreature
+/// Firebrand Archer — {1}{R} 2/1 Human Wizard. Whenever you cast a noncreature
 /// spell, deal 1 damage to each opponent.
 pub fn firebrand_archer() -> CardDefinition {
     use crate::effect::shortcut::{cast_is_noncreature, each_opponent};
@@ -856,7 +856,7 @@ pub fn abbot_of_keral_keep() -> CardDefinition {
     }
 }
 
-/// Eidolon of the Great Revel — {R}{R} 1/4 Enchantment Creature — Spirit.
+/// Eidolon of the Great Revel — {R}{R} 2/2 Enchantment Creature — Spirit.
 /// Whenever a player casts a spell with mana value 3 or less, deal 2 damage to
 /// that player.
 pub fn eidolon_of_the_great_revel() -> CardDefinition {
@@ -1021,7 +1021,7 @@ pub fn kessig_flamebreather() -> CardDefinition {
     }
 }
 
-/// Doomskar Titan — {3}{R} 4/4 Giant Warrior. Boast {1}{R}: creatures you
+/// Doomskar Titan — {4}{R}{R} 4/4 Giant Warrior. Boast {1}{R}: creatures you
 /// control get +1/+0 until end of turn. Foretell {2}{R}.
 pub fn doomskar_titan() -> CardDefinition {
     use crate::effect::shortcut::boast;
@@ -1162,7 +1162,7 @@ pub fn merfolk_trickster() -> CardDefinition {
     }
 }
 
-/// Vampire Lacerator — {B} 2/1 Vampire. At the beginning of your upkeep, you
+/// Vampire Lacerator — {B} 2/2 Vampire. At the beginning of your upkeep, you
 /// lose 1 life unless an opponent has 10 or less life.
 pub fn vampire_lacerator() -> CardDefinition {
     CardDefinition {
@@ -1335,7 +1335,7 @@ pub fn archons_glory() -> CardDefinition {
     }
 }
 
-/// Wrangle — {2}{R} Sorcery. Gain control of target creature until end of turn,
+/// Wrangle — {1}{R} Sorcery. Gain control of target creature until end of turn,
 /// untap it, and it gains haste.
 pub fn wrangle() -> CardDefinition {
     CardDefinition {
@@ -1362,7 +1362,7 @@ pub fn wrangle() -> CardDefinition {
     }
 }
 
-/// Ravenform — {1}{U} Sorcery. Destroy target artifact or creature; its
+/// Ravenform — {2}{U} Sorcery. Destroy target artifact or creature; its
 /// controller creates a 1/1 blue Bird Illusion with flying. Foretell {U}.
 pub fn ravenform() -> CardDefinition {
     CardDefinition {
@@ -1403,7 +1403,7 @@ pub fn ravenform() -> CardDefinition {
 
 // ── Reanimation / graveyard package ──────────────────────────────────────────
 
-/// Unburial Rites — {3}{B} Sorcery. Return target creature card from a
+/// Unburial Rites — {4}{B} Sorcery. Return target creature card from a
 /// graveyard to the battlefield under your control. Flashback {W}{B}.
 pub fn unburial_rites() -> CardDefinition {
     let flashback_cost = ManaCost {
@@ -2857,7 +2857,7 @@ pub fn orcish_lumberjack() -> CardDefinition {
     }
 }
 
-/// Mine Collapse — {2}{R} Sorcery. As an additional cost, sacrifice a
+/// Mine Collapse — {3}{R} Sorcery. As an additional cost, sacrifice a
 /// Mountain. Mine Collapse deals 4 damage to any target.
 ///
 /// "Sacrifice a Mountain" is folded into the resolved effect's first
@@ -3191,7 +3191,7 @@ pub fn diabolic_edict() -> CardDefinition {
     }
 }
 
-/// Geth's Verdict — {1}{B} Instant. Target player sacrifices a creature
+/// Geth's Verdict — {B}{B} Instant. Target player sacrifices a creature
 /// and loses 1 life.
 ///
 /// Same shape as Diabolic Edict with an extra `LoseLife 1` against the
@@ -3468,7 +3468,7 @@ pub fn volcanic_hammer() -> CardDefinition {
     }
 }
 
-/// Slagstorm — {2}{R} Sorcery. Choose one — Slagstorm deals 3 damage to
+/// Slagstorm — {1}{R}{R} Sorcery. Choose one — Slagstorm deals 3 damage to
 /// each creature; or Slagstorm deals 3 damage to each player.
 ///
 /// Modal sweeper — modeled as `ChooseMode` over the two `ForEach` halves.
@@ -3884,7 +3884,7 @@ pub fn repeal() -> CardDefinition {
 
 // ── Convoke burn ─────────────────────────────────────────────────────────────
 
-/// Stoke the Flames — {4}{R} Instant. Convoke. Stoke the Flames deals 4
+/// Stoke the Flames — {2}{R}{R} Instant. Convoke. Stoke the Flames deals 4
 /// damage to any target.
 ///
 /// Convoke-mode burn — reuses the existing convoke wiring (each tapped
@@ -4308,7 +4308,7 @@ pub fn tishanas_wayfinder() -> CardDefinition {
     }
 }
 
-/// Emperor's Vanguard — {2}{G} 3/2 Human Scout. Whenever it attacks, it
+/// Emperor's Vanguard — {3}{G} 4/3 Human Scout. Whenever it attacks, it
 /// explores.
 pub fn emperors_vanguard() -> CardDefinition {
     use crate::effect::shortcut::on_attack;
@@ -4327,7 +4327,7 @@ pub fn emperors_vanguard() -> CardDefinition {
     }
 }
 
-/// Path of Discovery — {2}{G} Enchantment. Whenever a creature you control
+/// Path of Discovery — {3}{G} Enchantment. Whenever a creature you control
 /// enters, it explores.
 pub fn path_of_discovery() -> CardDefinition {
     CardDefinition {
@@ -4350,7 +4350,7 @@ pub fn path_of_discovery() -> CardDefinition {
 
 // ── Monstrosity (CR 701.31) ─────────────────────────────────────────────────
 
-/// Nessian Wilds Ravager — {4}{G} 6/6 Hydra. {6}{G}{G}: Monstrosity 5. When
+/// Nessian Wilds Ravager — {4}{G}{G} 6/6 Hydra. {6}{G}{G}: Monstrosity 5. When
 /// it becomes monstrous, you may have it fight target creature you don't
 /// control.
 pub fn nessian_wilds_ravager() -> CardDefinition {
@@ -4379,7 +4379,7 @@ pub fn nessian_wilds_ravager() -> CardDefinition {
     }
 }
 
-/// Ember Swallower — {2}{R} 4/4 Elemental. {3}{R}{R}: Monstrosity 3. When it
+/// Ember Swallower — {2}{R}{R} 4/5 Elemental. {3}{R}{R}: Monstrosity 3. When it
 /// becomes monstrous, each player sacrifices three lands.
 pub fn ember_swallower() -> CardDefinition {
     use crate::effect::shortcut::{monstrosity, on_becomes_monstrous};
@@ -4403,7 +4403,7 @@ pub fn ember_swallower() -> CardDefinition {
     }
 }
 
-/// Arbor Colossus — {4}{G} 6/6 Reach. {6}{G}: Monstrosity 3. When it becomes
+/// Arbor Colossus — {2}{G}{G}{G} 6/6 Reach. {6}{G}: Monstrosity 3. When it becomes
 /// monstrous, destroy target creature with flying.
 pub fn arbor_colossus() -> CardDefinition {
     use crate::effect::shortcut::{monstrosity, on_becomes_monstrous};
@@ -4429,7 +4429,7 @@ pub fn arbor_colossus() -> CardDefinition {
     }
 }
 
-/// Ill-Tempered Cyclops — {2}{R}{R} 3/3 Cyclops with trample.
+/// Ill-Tempered Cyclops — {3}{R} 3/3 Cyclops with trample.
 /// {3}{R}: Monstrosity 2.
 pub fn ill_tempered_cyclops() -> CardDefinition {
     use crate::effect::shortcut::monstrosity;
@@ -4451,7 +4451,7 @@ pub fn ill_tempered_cyclops() -> CardDefinition {
 
 // ── Ixalan dinosaurs / green value (existing primitives) ─────────────────────
 
-/// Charging Monstrosaur — {3}{R}{R} 5/5 Dinosaur with trample and haste.
+/// Charging Monstrosaur — {4}{R} 5/5 Dinosaur with trample and haste.
 pub fn charging_monstrosaur() -> CardDefinition {
     CardDefinition {
         name: "Charging Monstrosaur",
@@ -4600,7 +4600,7 @@ pub fn pounce() -> CardDefinition {
     }
 }
 
-/// Atzocan Archer — {1}{G} 1/4 Human Archer with reach. ETB: you may have it
+/// Atzocan Archer — {2}{G} 1/4 Human Archer with reach. ETB: you may have it
 /// fight target creature you don't control.
 pub fn atzocan_archer() -> CardDefinition {
     CardDefinition {
@@ -4627,7 +4627,7 @@ pub fn atzocan_archer() -> CardDefinition {
     }
 }
 
-/// Ranging Raptors — {2}{G} 3/3 Dinosaur. Enrage — whenever it's dealt
+/// Ranging Raptors — {2}{G} 2/3 Dinosaur. Enrage — whenever it's dealt
 /// damage, search your library for a basic land and put it onto the
 /// battlefield tapped.
 pub fn ranging_raptors() -> CardDefinition {
@@ -4656,7 +4656,7 @@ pub fn ranging_raptors() -> CardDefinition {
     }
 }
 
-/// Otepec Huntmaster — {1}{R} 2/2 Human Shaman with haste. Dinosaur spells
+/// Otepec Huntmaster — {1}{R} 1/2 Human Shaman with haste. Dinosaur spells
 /// you cast cost {1} less to cast.
 pub fn otepec_huntmaster() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -4683,7 +4683,7 @@ pub fn otepec_huntmaster() -> CardDefinition {
     }
 }
 
-/// Kinjalli's Caller — {W} 1/1 Bird Cleric. Dinosaur spells you cast cost
+/// Kinjalli's Caller — {W} 0/3 Bird Cleric. Dinosaur spells you cast cost
 /// {1} less to cast.
 pub fn kinjallis_caller() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -4709,7 +4709,7 @@ pub fn kinjallis_caller() -> CardDefinition {
     }
 }
 
-/// Territorial Hammerskull — {2}{W} 3/3 Dinosaur. Whenever it attacks, tap
+/// Territorial Hammerskull — {2}{W} 2/3 Dinosaur. Whenever it attacks, tap
 /// target creature defending player controls.
 pub fn territorial_hammerskull() -> CardDefinition {
     use crate::effect::shortcut::on_attack;
@@ -4732,7 +4732,7 @@ pub fn territorial_hammerskull() -> CardDefinition {
     }
 }
 
-/// Grazing Whiptail — {4}{G} 3/4 Dinosaur with reach.
+/// Grazing Whiptail — {2}{G}{G} 3/4 Dinosaur with reach.
 pub fn grazing_whiptail() -> CardDefinition {
     CardDefinition {
         name: "Grazing Whiptail",
@@ -4749,7 +4749,7 @@ pub fn grazing_whiptail() -> CardDefinition {
     }
 }
 
-/// Frilled Deathspitter — {1}{R} 2/2 Dinosaur. Enrage — whenever it's dealt
+/// Frilled Deathspitter — {2}{R} 3/2 Dinosaur. Enrage — whenever it's dealt
 /// damage, it deals 2 damage to each opponent.
 pub fn frilled_deathspitter() -> CardDefinition {
     CardDefinition {
@@ -4843,7 +4843,7 @@ pub fn farhaven_elf() -> CardDefinition {
 
 // ── Goad (CR 701.38) ────────────────────────────────────────────────────────
 
-/// Disrupt Decorum — {3}{R}{R} Sorcery. Goad all creatures you don't control.
+/// Disrupt Decorum — {2}{R}{R} Sorcery. Goad all creatures you don't control.
 pub fn disrupt_decorum() -> CardDefinition {
     CardDefinition {
         name: "Disrupt Decorum",
@@ -5167,7 +5167,7 @@ pub fn final_reward() -> CardDefinition {
     }
 }
 
-/// Holy Light — {W} Instant. All creatures get -1/-1 until end of turn.
+/// Holy Light — {2}{W} Instant. All creatures get -1/-1 until end of turn.
 ///
 /// Sweep small creatures (1-toughness ones die) for one mana. Modeled as
 /// `ForEach(Creature) + PumpPT(-1/-1 EOT)`. The "nonwhite" Oracle filter
@@ -5270,7 +5270,7 @@ pub fn circuitous_route() -> CardDefinition {
     }
 }
 
-/// Skyshroud Claim — {3}{G}{G} Sorcery. Search your library for two Forest
+/// Skyshroud Claim — {3}{G} Sorcery. Search your library for two Forest
 /// cards, put them onto the battlefield untapped, then shuffle.
 pub fn skyshroud_claim() -> CardDefinition {
     use crate::card::LandType;
@@ -5724,7 +5724,7 @@ pub fn ambitions_cost() -> CardDefinition {
     }
 }
 
-/// Path of Peace — {2}{W} Sorcery. Destroy target creature. Its
+/// Path of Peace — {3}{W} Sorcery. Destroy target creature. Its
 /// controller gains 4 life.
 ///
 /// Sorcery-speed creature kill that gives the opp 4 life. Lifegain
@@ -6464,7 +6464,7 @@ pub fn blood_artist() -> CardDefinition {
     }
 }
 
-/// Carrion Feeder — {1}{B} Creature — Zombie, 1/1, can't block.
+/// Carrion Feeder — {B} Creature — Zombie, 1/1, can't block.
 /// "Sacrifice a creature: Put a +1/+1 counter on this."
 pub fn carrion_feeder() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -6494,7 +6494,7 @@ pub fn carrion_feeder() -> CardDefinition {
     }
 }
 
-/// Zulaport Cutthroat — {2}{B} 1/1 Human Rogue. Whenever another creature
+/// Zulaport Cutthroat — {1}{B} 1/1 Human Rogue. Whenever another creature
 /// you control dies, each opponent loses 1 life and you gain 1. (Its own
 /// death isn't caught — no "this-or-another-you-control" death scope yet.)
 pub fn zulaport_cutthroat() -> CardDefinition {
@@ -7390,7 +7390,7 @@ pub fn endless_one() -> CardDefinition {
     }
 }
 
-/// Cruel Celebrant — {W}{B} 1/1 Creature — Vampire. Whenever this or another
+/// Cruel Celebrant — {W}{B} 1/2 Creature — Vampire. Whenever this or another
 /// creature you control dies, each opponent loses 1 life and you gain 1 life.
 pub fn cruel_celebrant() -> CardDefinition {
     CardDefinition {
@@ -7417,7 +7417,7 @@ pub fn cruel_celebrant() -> CardDefinition {
     }
 }
 
-/// Mayhem Devil — {B}{R} 3/3 Creature — Devil. Whenever a player sacrifices a
+/// Mayhem Devil — {1}{B}{R} 3/3 Creature — Devil. Whenever a player sacrifices a
 /// permanent, deal 1 damage to any target.
 pub fn mayhem_devil() -> CardDefinition {
     CardDefinition {
@@ -7467,7 +7467,7 @@ pub fn boreal_druid() -> CardDefinition {
     }
 }
 
-/// Avacyn's Pilgrim — {1}{W} 1/1 Creature — Human Monk Cleric. {T}: Add {W}.
+/// Avacyn's Pilgrim — {G} 1/1 Creature — Human Monk Cleric. {T}: Add {W}.
 pub fn avacyns_pilgrim() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -7606,7 +7606,7 @@ pub fn goblin_grenade() -> CardDefinition {
     }
 }
 
-/// Groundbreaker — {1}{G}{G} Creature — Elemental 6/1, Trample, Haste. Sacrifice
+/// Groundbreaker — {G}{G}{G} Creature — Elemental 6/1, Trample, Haste. Sacrifice
 /// it at the beginning of the end step.
 pub fn groundbreaker() -> CardDefinition {
     CardDefinition {
@@ -7964,7 +7964,7 @@ pub fn lumra_bellow_of_the_woods() -> CardDefinition {
     }
 }
 
-/// Crabomination — {2}{U}{B} Legendary Creature — Crab Horror. 3/4. When
+/// Crabomination — {4}{B}{B} Legendary Creature — Crab Horror. 5/5. When
 /// this enters, each opponent mills three cards. Whenever a creature card
 /// is put into an opponent's graveyard, you scry 1.
 ///
@@ -8035,7 +8035,7 @@ pub fn chaos_warp() -> CardDefinition {
     }
 }
 
-/// Elvish Reclaimer — {1}{G} Creature — Human Druid. 1/2.
+/// Elvish Reclaimer — {G} Creature — Human Druid. 1/2.
 /// {T}, Sacrifice a land: Search your library for a land card and put it
 /// onto the battlefield.
 ///
@@ -8910,7 +8910,7 @@ pub fn seasoned_pyromancer() -> CardDefinition {
     }
 }
 
-/// Aether Figment — {1}{U} Creature — Illusion, 2/2, can't be blocked.
+/// Aether Figment — {1}{U} Creature — Illusion, 1/1, can't be blocked.
 /// Kicker {3}: enters with a +1/+1 counter if it was kicked (CR 702.32 +
 /// ETB-kicked context).
 pub fn aether_figment() -> CardDefinition {
@@ -8976,7 +8976,7 @@ pub fn forbidden_alchemy() -> CardDefinition {
     }
 }
 
-/// Pilgrim's Eye — {2} Artifact Creature — Thopter, 1/1, Flying. ETB:
+/// Pilgrim's Eye — {3} Artifact Creature — Thopter, 1/1, Flying. ETB:
 /// search your library for a basic land, reveal it, put it into your hand,
 /// then shuffle.
 pub fn pilgrims_eye() -> CardDefinition {
@@ -9142,7 +9142,7 @@ pub fn goblin_instigator() -> CardDefinition {
     }
 }
 
-/// Goblin Trashmaster — {1}{R}{R} 2/2 Goblin. Other Goblins you control get
+/// Goblin Trashmaster — {2}{R}{R} 3/3 Goblin. Other Goblins you control get
 /// +1/+1. {T}, Sacrifice a Goblin: Destroy target artifact.
 pub fn goblin_trashmaster() -> CardDefinition {
     use crate::card::{ActivatedAbility, StaticAbility, StaticEffect};
@@ -9185,7 +9185,7 @@ pub fn goblin_trashmaster() -> CardDefinition {
     }
 }
 
-/// Beetleback Chief — {3}{R} 2/2 Goblin Warrior. When this enters, create
+/// Beetleback Chief — {2}{R}{R} 2/2 Goblin Warrior. When this enters, create
 /// two 1/1 red Goblin creature tokens.
 pub fn beetleback_chief() -> CardDefinition {
     use crate::effect::shortcut::etb;
@@ -9276,7 +9276,7 @@ pub fn skirk_prospector() -> CardDefinition {
     }
 }
 
-/// Midnight Haunting — {1}{W} Instant. Create two 1/1 white Spirit creature
+/// Midnight Haunting — {2}{W} Instant. Create two 1/1 white Spirit creature
 /// tokens with flying.
 pub fn midnight_haunting() -> CardDefinition {
     CardDefinition {
@@ -9304,7 +9304,7 @@ pub fn midnight_haunting() -> CardDefinition {
     }
 }
 
-/// Gather the Townsfolk — {2}{W} Sorcery. Create two 1/1 white Human creature
+/// Gather the Townsfolk — {1}{W} Sorcery. Create two 1/1 white Human creature
 /// tokens. (Fateful hour — "five instead if you have ≤5 life" — collapses to
 /// the base two.)
 pub fn gather_the_townsfolk() -> CardDefinition {
@@ -9457,7 +9457,7 @@ pub fn goblin_sledder() -> CardDefinition {
     }
 }
 
-/// Mogg Raider — {1}{R} 1/1 Goblin. Sacrifice a creature: Mogg Raider gets
+/// Mogg Raider — {R} 1/1 Goblin. Sacrifice a creature: Mogg Raider gets
 /// +1/+1 until end of turn.
 pub fn mogg_raider() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -9642,7 +9642,7 @@ pub fn goblin_electromancer() -> CardDefinition {
     }
 }
 
-/// Wee Dragonauts — {1}{U}{R} Creature — Faerie Wizard, 1/4, Flying.
+/// Wee Dragonauts — {1}{U}{R} Creature — Faerie Wizard, 1/3, Flying.
 /// "Whenever you cast an instant or sorcery spell, this gets +2/+0 until
 /// end of turn."
 pub fn wee_dragonauts() -> CardDefinition {
@@ -9846,7 +9846,7 @@ pub fn glint_nest_crane() -> CardDefinition {
     }
 }
 
-/// Thraben Inspector — {W} Creature — Human Soldier, 1/1. ETB: investigate
+/// Thraben Inspector — {W} Creature — Human Soldier, 1/2. ETB: investigate
 /// (create a Clue token; CR 701.13).
 pub fn thraben_inspector() -> CardDefinition {
     CardDefinition {
@@ -10025,7 +10025,7 @@ pub fn despark() -> CardDefinition {
     }
 }
 
-/// Crumble to Dust — {2}{R}{R} Sorcery. Exile target nonbasic land, then
+/// Crumble to Dust — {3}{R} Sorcery. Exile target nonbasic land, then
 /// search its owner's library, graveyard, and hand for any number of cards
 /// with the same name and exile them; that player shuffles. Wired via
 /// `Effect::ExileSameNameAsTarget` — the full same-name sweep.
@@ -10371,7 +10371,7 @@ pub fn ahn_crop_crasher() -> CardDefinition {
     }
 }
 
-/// Servant of Tymaret — {1}{B}, 2/1 Zombie with Inspired (CR 702.108):
+/// Servant of Tymaret — {2}{B}, 1/3 Zombie with Inspired (CR 702.108):
 /// whenever it becomes untapped, each opponent loses 1 life.
 pub fn servant_of_tymaret() -> CardDefinition {
     CardDefinition {
@@ -10777,7 +10777,7 @@ pub fn mutagenic_growth() -> CardDefinition {
     }
 }
 
-/// Brute Force — {G} Instant. Target creature gets +3/+3 until end of turn.
+/// Brute Force — {R} Instant. Target creature gets +3/+3 until end of turn.
 pub fn brute_force() -> CardDefinition {
     CardDefinition {
         name: "Brute Force",
@@ -11394,7 +11394,7 @@ pub fn brain_maggot() -> CardDefinition {
     }
 }
 
-/// Bond of Discipline — {3}{W} Sorcery. Tap all creatures your opponents
+/// Bond of Discipline — {4}{W} Sorcery. Tap all creatures your opponents
 /// control. Creatures you control gain lifelink until end of turn.
 ///
 /// Tempo / lifegain swing. `Seq([ForEach(opp creatures) → Tap, ForEach(your
@@ -11721,7 +11721,7 @@ pub fn wall_of_omens() -> CardDefinition {
     }
 }
 
-/// Toxic Deluge — {2}{B}{B} Sorcery. "As an additional cost to cast
+/// Toxic Deluge — {2}{B} Sorcery. "As an additional cost to cast
 /// this spell, pay X life. All creatures get -X/-X until end of turn."
 ///
 /// Approximation: the cost-as-life payment is folded into resolution
@@ -11917,7 +11917,7 @@ pub fn channel() -> CardDefinition {
     }
 }
 
-/// Phyrexian Reclamation — {B}{B} Enchantment. "{1}{B}, Pay 2 life:
+/// Phyrexian Reclamation — {B} Enchantment. "{1}{B}, Pay 2 life:
 /// Return target creature card from your graveyard to your hand."
 ///
 /// Pure activated reanimator engine. The `life_cost: 2` field handles
@@ -12241,7 +12241,7 @@ pub fn white_suns_zenith() -> CardDefinition {
     }
 }
 
-/// Black Sun's Zenith — {X}{B} Sorcery. "Put X -1/-1 counters on each
+/// Black Sun's Zenith — {X}{B}{B} Sorcery. "Put X -1/-1 counters on each
 /// creature. Shuffle this card into its owner's library."
 ///
 /// Wired via `ForEach + AddCounter(MinusOneMinusOne, X)`. The
@@ -12648,7 +12648,7 @@ pub fn collective_brutality() -> CardDefinition {
     }
 }
 
-/// Geyadrone Dihada — {2}{B}{R} Legendary Planeswalker — Dihada.
+/// Geyadrone Dihada — {1}{U}{B}{R} Legendary Planeswalker — Dihada.
 /// 3 loyalty.
 /// **+1**: Each opponent loses 1 life and you draw a card. Then if you
 /// have less life than an opponent, this PW's loyalty is reset to its
@@ -12785,7 +12785,7 @@ pub fn korvold_fae_cursed_king() -> CardDefinition {
     }
 }
 
-/// Lord Xander, the Collector — {3}{U}{B}{R} Legendary Creature — Vampire
+/// Lord Xander, the Collector — {4}{U}{B}{R} Legendary Creature — Vampire
 /// Demon Noble. 6/6 Flying.
 /// **When this enters**: Target opponent discards half the cards in their
 /// hand, rounded down.
@@ -14302,7 +14302,7 @@ pub fn zealous_conscripts() -> CardDefinition {
     }
 }
 
-/// Master of Cruelties — {2}{B}{R} Legendary Creature — Demon. 1/4 First
+/// Master of Cruelties — {3}{B}{R} Legendary Creature — Demon. 1/4 First
 /// Strike, Deathtouch. "Master of Cruelties can attack only alone.
 /// Whenever Master of Cruelties attacks a player, that player's life
 /// total becomes 1. Master of Cruelties deals no combat damage this
@@ -14348,7 +14348,7 @@ pub fn master_of_cruelties() -> CardDefinition {
     }
 }
 
-/// Territorial Kavu — {2}{R}{G} Creature — Kavu. 3/2. "Whenever a land
+/// Territorial Kavu — {R}{G} Creature — Kavu. 3/2. "Whenever a land
 /// enters the battlefield under an opponent's control, put a +1/+1
 /// counter on Territorial Kavu."
 ///
@@ -15738,7 +15738,7 @@ pub fn become_immense() -> CardDefinition {
     }
 }
 
-/// Severed Legion — {2}{B} Creature — Zombie. 2/2 with Fear (CR 702.36):
+/// Severed Legion — {1}{B}{B} Creature — Zombie. 2/2 with Fear (CR 702.36):
 /// can't be blocked except by artifact and/or black creatures.
 pub fn severed_legion() -> CardDefinition {
     CardDefinition {
@@ -15842,7 +15842,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
     }
 }
 
-/// Glaring Fleshraker — {3} Artifact Creature — Construct. 3/3. "When
+/// Glaring Fleshraker — {2}{C} Artifact Creature — Construct. 2/2. "When
 /// this creature enters, it deals 2 damage to any target."
 ///
 /// Synthesised body for the ⏳ cube row. Colorless artifact body with
@@ -15959,7 +15959,7 @@ pub fn spell_queller() -> CardDefinition {
     }
 }
 
-/// Lonis, Genetics Expert — {1}{G}{U} Legendary 2/2 Otter Detective.
+/// Lonis, Genetics Expert — {1}{G}{U} Legendary 1/2 Otter Detective.
 /// Whenever a creature you control enters, investigate. {T}, Sacrifice X
 /// Clues: target opponent reveals top X; put a nonland permanent MV ≤ X
 /// among them onto the battlefield under your control; they shuffle.
@@ -16258,7 +16258,7 @@ pub fn breezekeeper() -> CardDefinition {
     }
 }
 
-/// Sandbar Crocodile — {4}{U} 5/6 Crocodile. Phasing (CR 702.26).
+/// Sandbar Crocodile — {4}{U} 6/5 Crocodile. Phasing (CR 702.26).
 pub fn sandbar_crocodile() -> CardDefinition {
     CardDefinition {
         name: "Sandbar Crocodile",
@@ -16387,7 +16387,7 @@ pub fn meekstone() -> CardDefinition {
     }
 }
 
-/// Aether Flash — {2}{R} Enchantment. "Whenever a creature enters, Aether
+/// Aether Flash — {2}{R}{R} Enchantment. "Whenever a creature enters, Aether
 /// Flash deals 2 damage to it."
 pub fn aether_flash() -> CardDefinition {
     use crate::card::Predicate;
@@ -16432,7 +16432,7 @@ pub fn spitting_earth() -> CardDefinition {
     }
 }
 
-/// Carbonize — {1}{R}{R} Instant. "Deals 3 damage to any target. If a
+/// Carbonize — {2}{R} Instant. "Deals 3 damage to any target. If a
 /// creature dealt damage this way would die this turn, exile it instead."
 pub fn carbonize() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
@@ -16566,7 +16566,7 @@ pub fn apex_devastator() -> CardDefinition {
     }
 }
 
-/// Life from the Loam — {1}{B}{G} Sorcery. "Return up to three target land
+/// Life from the Loam — {1}{G} Sorcery. "Return up to three target land
 /// cards from your graveyard to your hand. Dredge 3." (CR 702.52)
 ///
 /// The "up to three target land cards" pick is approximated as a
@@ -16655,7 +16655,7 @@ pub fn shardless_agent() -> CardDefinition {
     }
 }
 
-/// Enlisted Wurm — {5}{G}{W} Creature — Wurm. 5/5. Cascade.
+/// Enlisted Wurm — {4}{G}{W} Creature — Wurm. 5/5. Cascade.
 pub fn enlisted_wurm() -> CardDefinition {
     use crate::effect::shortcut::cascade;
     CardDefinition {
@@ -16708,7 +16708,7 @@ pub fn maelstrom_wanderer() -> CardDefinition {
     }
 }
 
-/// Stinkweed Imp — {1}{B} Creature — Imp. 1/2, Flying. Dredge 5.
+/// Stinkweed Imp — {2}{B} Creature — Imp. 1/2, Flying. Dredge 5.
 /// "Whenever this deals combat damage to a creature, destroy that
 /// creature." Modeled with `Keyword::Deathtouch` (gameplay-equivalent for
 /// combat damage to creatures) + `Keyword::Dredge(5)`.
@@ -16754,7 +16754,7 @@ pub fn golgari_brownscale() -> CardDefinition {
     }
 }
 
-/// Golgari Grave-Troll — {X}{B}{B} Creature — Skeleton Troll. 0/0, enters
+/// Golgari Grave-Troll — {4}{G} Creature — Skeleton Troll. 0/0, enters
 /// with X +1/+1 counters. Dredge 6. `{T}`, remove four +1/+1 counters:
 /// regenerate this creature.
 pub fn golgari_grave_troll() -> CardDefinition {
@@ -16882,7 +16882,7 @@ pub fn violent_outburst() -> CardDefinition {
     }
 }
 
-/// Ardent Plea — {1}{W} Enchantment. "Exalted (CR 702.83). Cascade
+/// Ardent Plea — {1}{W}{U} Enchantment. "Exalted (CR 702.83). Cascade
 /// (CR 702.85)." Cascade fires when the enchantment is cast.
 pub fn ardent_plea() -> CardDefinition {
     use crate::effect::shortcut::{cascade, exalted};
@@ -17396,7 +17396,7 @@ pub fn wing_splicer() -> CardDefinition {
     }
 }
 
-/// Rejuvenate — {2}{G} Instant. You gain 5 life.
+/// Rejuvenate — {3}{G} Instant. You gain 5 life.
 pub fn rejuvenate() -> CardDefinition {
     CardDefinition {
         name: "Rejuvenate",
@@ -18203,7 +18203,7 @@ pub fn chainers_edict() -> CardDefinition {
     }
 }
 
-/// Mai, Scornful Striker — {1}{B} Creature — Human Rogue. 2/1 with
+/// Mai, Scornful Striker — {1}{B} Creature — Human Rogue. 2/2 with
 /// Menace. "Whenever this creature attacks, each opponent loses 1
 /// life."
 ///
@@ -18305,7 +18305,7 @@ pub fn decree_of_justice() -> CardDefinition {
     }
 }
 
-/// Carnage Interpreter — {1}{B/R}{B/R} Creature — Vampire. 4/3.
+/// Carnage Interpreter — {1}{B/R}{B/R} Creature — Vampire. 3/3.
 /// ETB: discard your hand, then investigate four times. As long as you have
 /// one or fewer cards in hand, it gets +2/+2 and has menace.
 pub fn carnage_interpreter() -> CardDefinition {
@@ -18647,7 +18647,7 @@ pub fn sinkhole() -> CardDefinition {
     }
 }
 
-/// Keen-Eyed Curator — {G}{G} 2/2 Elf Druid. `{1}: Exile target card from a
+/// Keen-Eyed Curator — {G}{G} 3/3 Elf Druid. `{1}: Exile target card from a
 /// graveyard.` As long as four+ card types are among cards exiled with it,
 /// it gets +4/+4 and has trample.
 pub fn keen_eyed_curator() -> CardDefinition {
@@ -18691,7 +18691,7 @@ pub fn keen_eyed_curator() -> CardDefinition {
 
 // ── Cube expansion: body-only stubs ─────────────────────────────────────────
 
-/// Enduring Innocence — {W}{W}{W} Enchantment Creature — Glimmer. 2/1
+/// Enduring Innocence — {1}{W}{W} Enchantment Creature — Glimmer. 2/1
 /// Lifelink. Draw a card when a nontoken creature you control enters; when it
 /// dies it returns as a noncreature enchantment (`ReturnSelfAsEnchantment`).
 pub fn enduring_innocence() -> CardDefinition {
@@ -18796,7 +18796,7 @@ pub fn thundertrap_trainer() -> CardDefinition {
     }
 }
 
-/// Corpse Dance — {1}{B}{B} Instant. Buyback {2} (CR 702.27).
+/// Corpse Dance — {2}{B} Instant. Buyback {2} (CR 702.27).
 /// "Put the top creature card of your graveyard onto the battlefield
 /// under your control. Sacrifice it at the beginning of the next end
 /// step." Buyback returns the spell to hand instead of the graveyard.
@@ -18924,7 +18924,7 @@ pub fn blazing_rootwalla() -> CardDefinition {
     }
 }
 
-/// Anje's Ravager — {2}{R}{R} Legendary Creature — Vampire Berserker. 3/3.
+/// Anje's Ravager — {2}{R} Legendary Creature — Vampire Berserker. 3/3.
 /// Trample. Madness {1}{R}. "Whenever Anje's Ravager attacks, discard your
 /// hand, then draw three cards."
 pub fn anjes_ravager() -> CardDefinition {
@@ -18977,7 +18977,7 @@ pub fn wind_drake() -> CardDefinition {
     }
 }
 
-/// Cunning Sparkmage — {1}{R} Creature — Human Shaman. 1/1. Haste.
+/// Cunning Sparkmage — {2}{R} Creature — Human Shaman. 0/1. Haste.
 /// "{T}: This creature deals 1 damage to any target."
 pub fn cunning_sparkmage() -> CardDefinition {
     use crate::card::{ActivatedAbility, Keyword};
@@ -19022,7 +19022,7 @@ pub fn hill_giant() -> CardDefinition {
     }
 }
 
-/// Reckless Wurm — {3}{R} Creature — Wurm. 5/4. Trample. Madness {1}{R}.
+/// Reckless Wurm — {3}{R}{R} Creature — Wurm. 4/4. Trample. Madness {1}{R}.
 pub fn reckless_wurm() -> CardDefinition {
     use crate::card::Keyword;
     CardDefinition {
@@ -19115,7 +19115,7 @@ pub fn nekrataal() -> CardDefinition {
     }
 }
 
-/// Skinrender — {3}{B} Creature — Phyrexian Horror. 3/3. "When this creature
+/// Skinrender — {2}{B}{B} Creature — Phyrexian Horror. 3/3. "When this creature
 /// enters, put three -1/-1 counters on target creature."
 pub fn skinrender() -> CardDefinition {
     use crate::card::{
@@ -19187,7 +19187,7 @@ pub fn sentinel_spider() -> CardDefinition {
     }
 }
 
-/// Brindle Boar — {2}{G} Creature — Boar. 3/3. "Sacrifice Brindle Boar: You
+/// Brindle Boar — {2}{G} Creature — Boar. 2/2. "Sacrifice Brindle Boar: You
 /// gain 4 life."
 pub fn brindle_boar() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -19273,7 +19273,7 @@ pub fn cloudgoat_ranger() -> CardDefinition {
     }
 }
 
-/// Pelakka Wurm — {5}{G}{G} Creature — Wurm. 7/7. Trample. "When this
+/// Pelakka Wurm — {4}{G}{G}{G} Creature — Wurm. 7/7. Trample. "When this
 /// creature enters, you gain 7 life. When this creature dies, draw a card."
 pub fn pelakka_wurm() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
@@ -19418,7 +19418,7 @@ pub fn arrogant_wurm() -> CardDefinition {
     }
 }
 
-/// Big Game Hunter — {2}{B} Creature — Human Mercenary. 1/1. Madness {B}.
+/// Big Game Hunter — {1}{B}{B} Creature — Human Mercenary. 1/1. Madness {B}.
 /// "When this creature enters, destroy target creature with power 4 or
 /// greater. It can't be regenerated."
 pub fn big_game_hunter() -> CardDefinition {
@@ -19498,7 +19498,7 @@ pub fn dreadhorde_arcanist() -> CardDefinition {
     }
 }
 
-/// Parallax Nexus — {1}{B}{B} Enchantment. Fading 5 (CR 702.32). "{0}: Exile
+/// Parallax Nexus — {2}{B} Enchantment. Fading 5 (CR 702.32). "{0}: Exile
 /// target card from an opponent's hand."
 ///
 /// The opponent-discard activated ability ({0}, no tap) is the closest engine
@@ -19524,7 +19524,7 @@ pub fn parallax_nexus() -> CardDefinition {
     }
 }
 
-/// Parallax Tide — {2}{U} Enchantment. Fading 5 (CR 702.32). "{0}: Exile
+/// Parallax Tide — {2}{U}{U} Enchantment. Fading 5 (CR 702.32). "{0}: Exile
 /// target land." When Parallax Tide leaves the battlefield, the exiled lands
 /// return tapped under their owners' control (CR 603.6e linked exile).
 pub fn parallax_tide() -> CardDefinition {
@@ -19702,7 +19702,7 @@ pub fn monastery_swiftspear() -> CardDefinition {
     }
 }
 
-/// Omnath, Locus of Rage — {3}{R}{G} Legendary 5/5 Elemental.
+/// Omnath, Locus of Rage — {3}{R}{R}{G}{G} Legendary 5/5 Elemental.
 /// Landfall: create a 5/5 Elemental token (dies → 3 dmg to each opp).
 pub fn omnath_locus_of_rage() -> CardDefinition {
     use crate::card::TokenDefinition;
@@ -20388,7 +20388,7 @@ pub fn collective_defiance() -> CardDefinition {
     }
 }
 
-/// Kozilek's Command — {X} Instant. "Choose two" (CR 700.2d) via
+/// Kozilek's Command — {X}{C}{C} Instant. "Choose two" (CR 700.2d) via
 /// `Effect::ChooseN`; the auto-decider takes the two non-targeting modes
 /// (Scions + Draw X), leaving the -X/-X mode for the mode-pick UI.
 pub fn kozileks_command() -> CardDefinition {
@@ -20457,7 +20457,7 @@ pub fn char() -> CardDefinition {
     }
 }
 
-/// Eldrazi Confluence — {4} Instant. "Choose three. You may choose the
+/// Eldrazi Confluence — {2}{C}{C} Instant. "Choose three. You may choose the
 /// same mode more than once." (CR 700.2d) — `Effect::ChooseN` defaults to
 /// the non-targeting Scion mode thrice; the -3/-3 and bounce modes stay
 /// available to the mode-pick UI.
@@ -20936,7 +20936,7 @@ pub fn pithing_needle() -> CardDefinition {
     }
 }
 
-/// Wight of the Reliquary — {1}{B}{G} Creature — Zombie Knight 1/1.
+/// Wight of the Reliquary — {B}{G} Creature — Zombie Knight 2/2.
 /// Gets +1/+1 for each land card in your graveyard (dynamic P/T via
 /// `DynamicPt::BasePlusLandsInControllerGraveyard`). {T}, Sacrifice a
 /// land: Search your library for a land card onto the battlefield tapped.
@@ -21247,7 +21247,7 @@ pub fn fanatical_firebrand() -> CardDefinition {
     }
 }
 
-/// Goblin Wardriver — {1}{R} 2/2 Goblin Warrior with Battle Cry.
+/// Goblin Wardriver — {R}{R} 2/2 Goblin Warrior with Battle Cry.
 /// "Battle cry (Whenever this creature attacks, each other attacking
 /// creature gets +1/+0 until end of turn.)"
 pub fn goblin_wardriver() -> CardDefinition {
@@ -21603,7 +21603,7 @@ pub fn spinewoods_paladin() -> CardDefinition {
     }
 }
 
-/// Vault Plunderer — {3}{B} Creature — Human Rogue 2/3. When it enters, draw
+/// Vault Plunderer — {2}{B} Creature — Human Rogue 3/1. When it enters, draw
 /// a card. It prints **no** Plot — the body carried one until
 /// `audit_keyword_drift.py` (`{2}{B}`, which is a different card).
 pub fn vault_plunderer() -> CardDefinition {
@@ -21925,7 +21925,7 @@ pub fn nivix_cyclops() -> CardDefinition {
     }
 }
 
-/// Festival Crasher — {1}{R} Creature — Elemental 2/2. Magecraft — whenever
+/// Festival Crasher — {1}{R} Creature — Elemental 1/3. Magecraft — whenever
 /// you cast or copy an instant or sorcery, put a +1/+1 counter on it.
 pub fn festival_crasher() -> CardDefinition {
     use crate::effect::shortcut::magecraft;
@@ -21966,7 +21966,7 @@ pub fn vampire_of_the_dire_moon() -> CardDefinition {
     }
 }
 
-/// Accorder Paladin — {1}{W} Creature — Human Knight 2/1, Battle Cry.
+/// Accorder Paladin — {1}{W} Creature — Human Knight 3/1, Battle Cry.
 pub fn accorder_paladin() -> CardDefinition {
     use crate::effect::shortcut::battle_cry;
     CardDefinition {
@@ -21984,7 +21984,7 @@ pub fn accorder_paladin() -> CardDefinition {
     }
 }
 
-/// Precinct Captain — {1}{W} Creature — Human Soldier 2/2, First Strike.
+/// Precinct Captain — {W}{W} Creature — Human Soldier 2/2, First Strike.
 /// Whenever it deals combat damage to a player, create a 1/1 white Soldier.
 pub fn precinct_captain() -> CardDefinition {
     CardDefinition {
@@ -22182,7 +22182,7 @@ pub fn hellspark_elemental() -> CardDefinition {
     }
 }
 
-/// Keldon Marauders — {1}{R} Creature — Human Warrior 3/1, Vanishing 2.
+/// Keldon Marauders — {1}{R} Creature — Human Warrior 3/3, Vanishing 2.
 /// When it enters and when it leaves, deal 1 damage to each opponent.
 pub fn keldon_marauders() -> CardDefinition {
     use crate::effect::shortcut::{each_opponent, on_dies};
@@ -22282,7 +22282,7 @@ pub fn monastery_mentor() -> CardDefinition {
     }
 }
 
-/// Pillar of Flame — {1}{R} Sorcery. Deal 2 damage to any target; if a
+/// Pillar of Flame — {R} Sorcery. Deal 2 damage to any target; if a
 /// creature dealt damage this way would die this turn, exile it instead.
 pub fn pillar_of_flame() -> CardDefinition {
     CardDefinition {
@@ -22327,7 +22327,7 @@ pub fn merfolk_secretkeeper() -> CardDefinition {
     }
 }
 
-/// Outcaster Trailblazer — {3}{G} Creature — Elf Druid Scout 4/3, Reach.
+/// Outcaster Trailblazer — {2}{G} Creature — Elf Druid Scout 4/2, Reach.
 /// Whenever you cast a spell with mana value 5 or greater, draw a card and
 /// create a Treasure token. Plot {2}{G} (CR 702.170).
 pub fn outcaster_trailblazer() -> CardDefinition {
@@ -22412,7 +22412,7 @@ pub fn lovestruck_beast() -> CardDefinition {
     }
 }
 
-/// Slickshot Show-Off — {1}{R} Creature — Bird Wizard 1/1, Flying, Haste.
+/// Slickshot Show-Off — {1}{R} Creature — Bird Wizard 1/2, Flying, Haste.
 /// Whenever you cast a noncreature spell, it gets +2/+0 until end of turn and
 /// you draw a card. Plot {R} (CR 702.170).
 pub fn slickshot_show_off() -> CardDefinition {
@@ -23464,7 +23464,7 @@ pub fn inspiration() -> CardDefinition {
     }
 }
 
-/// Opportunity — {5}{U} Instant. "Target player draws four cards."
+/// Opportunity — {4}{U}{U} Instant. "Target player draws four cards."
 pub fn opportunity() -> CardDefinition {
     CardDefinition {
         name: "Opportunity",
@@ -23478,7 +23478,7 @@ pub fn opportunity() -> CardDefinition {
     }
 }
 
-/// Jace's Ingenuity — {4}{U} Instant. "Draw three cards."
+/// Jace's Ingenuity — {3}{U}{U} Instant. "Draw three cards."
 pub fn jaces_ingenuity() -> CardDefinition {
     CardDefinition {
         name: "Jace's Ingenuity",
@@ -24203,7 +24203,7 @@ pub fn crucible_of_worlds() -> CardDefinition {
     }
 }
 
-/// Solemnity — {1}{W} Enchantment. "Counters can't be put on permanents or
+/// Solemnity — {2}{W} Enchantment. "Counters can't be put on permanents or
 /// players." (CR 122.1 — enables the persist / Phyrexian Unlife combos.)
 pub fn solemnity() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -25406,7 +25406,7 @@ pub fn ultimate_price() -> CardDefinition {
     }
 }
 
-/// Walk the Plank — {1}{B} Sorcery. "Destroy target non-Merfolk creature."
+/// Walk the Plank — {B}{B} Sorcery. "Destroy target non-Merfolk creature."
 pub fn walk_the_plank() -> CardDefinition {
     CardDefinition {
         name: "Walk the Plank",
@@ -25469,7 +25469,7 @@ pub fn oust() -> CardDefinition {
     }
 }
 
-/// Soul Snare — {1}{W} Enchantment. "{1}, Sacrifice Soul Snare: Exile target
+/// Soul Snare — {W} Enchantment. "{1}, Sacrifice Soul Snare: Exile target
 /// attacking or blocking creature."
 pub fn soul_snare() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -27651,7 +27651,7 @@ pub fn weaponcraft_enthusiast() -> CardDefinition {
     }
 }
 
-/// Tandem Lookout — {2}{U} 1/1 Human Wizard. Soulbond; while paired, both
+/// Tandem Lookout — {2}{U} 2/1 Human Wizard. Soulbond; while paired, both
 /// creatures have "Whenever this creature deals combat damage to a player,
 /// draw a card" (CR 702.95; the printed "may" is auto-taken).
 pub fn tandem_lookout() -> CardDefinition {
@@ -30398,7 +30398,7 @@ pub fn heartless_act() -> CardDefinition {
     }
 }
 
-/// Wirewood Guardian — {5}{G} 5/4 Elf Giant. Forestcycling {2} (CR 702.29e:
+/// Wirewood Guardian — {5}{G}{G} 6/6 Elf Giant. Forestcycling {2} (CR 702.29e:
 /// {2}, discard this card: search for a Forest, reveal it, put it into hand).
 pub fn wirewood_guardian() -> CardDefinition {
     CardDefinition {
@@ -30544,7 +30544,7 @@ pub fn demystify() -> CardDefinition {
     }
 }
 
-/// Befuddle — {1}{U} Instant. Target creature gets -4/-0 until end of turn.
+/// Befuddle — {2}{U} Instant. Target creature gets -4/-0 until end of turn.
 /// Draw a card.
 pub fn befuddle() -> CardDefinition {
     CardDefinition {
@@ -30632,7 +30632,7 @@ pub fn lay_of_the_land() -> CardDefinition {
     }
 }
 
-/// Tranquility — {2}{G}{G} Sorcery. Destroy all enchantments.
+/// Tranquility — {2}{G} Sorcery. Destroy all enchantments.
 pub fn tranquility() -> CardDefinition {
     CardDefinition {
         name: "Tranquility",
@@ -30680,7 +30680,7 @@ pub fn coral_merfolk() -> CardDefinition {
     }
 }
 
-/// Crush — {1}{R} Instant. Destroy target artifact.
+/// Crush — {R} Instant. Destroy target artifact.
 pub fn crush() -> CardDefinition {
     CardDefinition {
         name: "Crush",
@@ -30693,7 +30693,7 @@ pub fn crush() -> CardDefinition {
     }
 }
 
-/// Smash to Smithereens — {2}{R} Instant. Destroy target artifact; deal 3
+/// Smash to Smithereens — {1}{R} Instant. Destroy target artifact; deal 3
 /// damage to its controller.
 pub fn smash_to_smithereens() -> CardDefinition {
     CardDefinition {
@@ -38952,7 +38952,7 @@ pub fn temporal_mastery() -> CardDefinition {
     }
 }
 
-/// Reforge the Soul — {4}{R}{R} Sorcery. Miracle {1}{R}. Each player discards
+/// Reforge the Soul — {3}{R}{R} Sorcery. Miracle {1}{R}. Each player discards
 /// their hand, then draws seven cards.
 pub fn reforge_the_soul() -> CardDefinition {
     CardDefinition {
@@ -38977,7 +38977,7 @@ pub fn reforge_the_soul() -> CardDefinition {
 
 // ── Cube expansion: value creatures (existing primitives) ────────────────────
 
-/// Murderous Redcap — {2}{B}{R} 1/1 Goblin Assassin. Persist. When it enters,
+/// Murderous Redcap — {2}{B}{R} 2/2 Goblin Assassin. Persist. When it enters,
 /// it deals damage equal to its power to any target.
 pub fn murderous_redcap() -> CardDefinition {
     use crate::effect::shortcut::etb;
@@ -39105,7 +39105,7 @@ pub fn consecrated_sphinx() -> CardDefinition {
     }
 }
 
-/// Sphinx of the Steel Wind — {5}{W}{B}{B} 6/6 Sphinx. Flying, first strike,
+/// Sphinx of the Steel Wind — {5}{W}{U}{B} 6/6 Sphinx. Flying, first strike,
 /// lifelink, protection from red and from green.
 pub fn sphinx_of_the_steel_wind() -> CardDefinition {
     CardDefinition {
@@ -39357,7 +39357,7 @@ pub fn phyrexian_crusader() -> CardDefinition {
     }
 }
 
-/// Spirit of the Labyrinth — {W}{W} 3/1 Spirit. Each player can't draw more
+/// Spirit of the Labyrinth — {1}{W} 3/1 Spirit. Each player can't draw more
 /// than one card each turn (CR 121 — `CapDrawsPerTurn` over every player).
 pub fn spirit_of_the_labyrinth() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -39589,7 +39589,7 @@ pub fn overlord_of_the_hauntwoods() -> CardDefinition {
 
 // ── Misc modern staples ──────────────────────────────────────────────────────
 
-/// Get Lost — {1}{B} Instant. Destroy target creature or planeswalker. Its
+/// Get Lost — {1}{W} Instant. Destroy target creature or planeswalker. Its
 /// owner creates two Map tokens. (Uses owner; differs from "controller" only
 /// under control-stealing.)
 pub fn get_lost() -> CardDefinition {
@@ -40526,7 +40526,7 @@ pub fn sicarian_infiltrator() -> CardDefinition {
 
 // ── modern_decks: put-creature-from-hand cheats (Effect::PutFromHandOntoBattlefield) ──
 
-/// Sneak Attack — {2}{R} Enchantment. "{R}: You may put a creature card from
+/// Sneak Attack — {3}{R} Enchantment. "{R}: You may put a creature card from
 /// your hand onto the battlefield. That creature gains haste. Sacrifice it at
 /// the beginning of the next end step."
 pub fn sneak_attack() -> CardDefinition {
@@ -40552,7 +40552,7 @@ pub fn sneak_attack() -> CardDefinition {
     }
 }
 
-/// Through the Breach — {2}{R}{R} Instant. "You may put a creature card from
+/// Through the Breach — {4}{R} Instant. "You may put a creature card from
 /// your hand onto the battlefield. That creature gains haste. Sacrifice it at
 /// the beginning of the next end step." (Splice onto Arcane dropped.)
 pub fn through_the_breach() -> CardDefinition {
@@ -40574,7 +40574,7 @@ pub fn through_the_breach() -> CardDefinition {
     }
 }
 
-/// Elvish Piper — {3}{G}{G} 1/1 Elf Shaman. "{G}, {T}: You may put a creature
+/// Elvish Piper — {3}{G} 1/1 Elf Shaman. "{G}, {T}: You may put a creature
 /// card from your hand onto the battlefield."
 pub fn elvish_piper() -> CardDefinition {
     CardDefinition {
@@ -40681,7 +40681,7 @@ pub fn goblin_lackey() -> CardDefinition {
     }
 }
 
-/// Warren Instigator — {R} 1/1 Goblin Berserker. Double strike. "Whenever
+/// Warren Instigator — {R}{R} 1/1 Goblin Berserker. Double strike. "Whenever
 /// Warren Instigator deals combat damage to a player, you may put a Goblin
 /// creature card from your hand onto the battlefield."
 pub fn warren_instigator() -> CardDefinition {
@@ -40796,7 +40796,7 @@ pub fn master_of_the_pearl_trident() -> CardDefinition {
     }
 }
 
-/// Merfolk Mistbinder — {1}{U} 2/2 Merfolk Wizard. Other Merfolk you control
+/// Merfolk Mistbinder — {G}{U} 2/2 Merfolk Wizard. Other Merfolk you control
 /// get +1/+1.
 pub fn merfolk_mistbinder() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -40965,7 +40965,7 @@ pub fn heart_sliver() -> CardDefinition {
     }
 }
 
-/// Crystalline Sliver — {1}{U} 2/2 Sliver. All Slivers have shroud.
+/// Crystalline Sliver — {W}{U} 2/2 Sliver. All Slivers have shroud.
 pub fn crystalline_sliver() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -40992,7 +40992,7 @@ pub fn crystalline_sliver() -> CardDefinition {
     }
 }
 
-/// Lymph Sliver — {3}{W} 1/1 Sliver. All Sliver creatures have absorb 1.
+/// Lymph Sliver — {4}{W} 3/3 Sliver. All Sliver creatures have absorb 1.
 pub fn lymph_sliver() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -41107,7 +41107,7 @@ pub fn dwynen_gilt_leaf_daen() -> CardDefinition {
     }
 }
 
-/// Legion Lieutenant — {B}{R} 2/2 Vampire Soldier. Other Vampires you control
+/// Legion Lieutenant — {W}{B} 2/2 Vampire Soldier. Other Vampires you control
 /// get +1/+1.
 pub fn legion_lieutenant() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41227,7 +41227,7 @@ pub fn lord_of_the_undead() -> CardDefinition {
 
 // ── modern_decks: Affinity for artifacts (CR 702.41) ──────────────────────────
 
-/// Somber Hoverguard — {5}{U} 3/3 Artifact Creature — Drone. Flying. Affinity
+/// Somber Hoverguard — {5}{U} 3/2 Artifact Creature — Drone. Flying. Affinity
 /// for artifacts.
 pub fn somber_hoverguard() -> CardDefinition {
     CardDefinition {
@@ -41246,7 +41246,7 @@ pub fn somber_hoverguard() -> CardDefinition {
     }
 }
 
-/// Broodstar — {6}{U}{U} */* Artifact Creature — Beast. Flying. Affinity for
+/// Broodstar — {8}{U}{U} */* Artifact Creature — Beast. Flying. Affinity for
 /// artifacts. Power/toughness each equal to the number of artifacts you control.
 pub fn broodstar() -> CardDefinition {
     // P/T is a characteristic-defining ability resolved by `dynamic_pt_for_name`
@@ -41266,7 +41266,7 @@ pub fn broodstar() -> CardDefinition {
     }
 }
 
-/// Sojourner's Companion — {6} 3/3 Artifact Creature — Phyrexian Horror.
+/// Sojourner's Companion — {7} 4/4 Artifact Creature — Phyrexian Horror.
 /// Affinity for artifacts. Landcycling {2}.
 pub fn sojourners_companion() -> CardDefinition {
     CardDefinition {
@@ -41285,7 +41285,7 @@ pub fn sojourners_companion() -> CardDefinition {
     }
 }
 
-/// Carapace Forger — {2}{G} 2/2 Artifact Creature — Insect. Affinity for
+/// Carapace Forger — {1}{G} 2/2 Artifact Creature — Insect. Affinity for
 /// artifacts. As long as you control three or more artifacts, this gets +1/+1.
 pub fn carapace_forger() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41319,7 +41319,7 @@ pub fn carapace_forger() -> CardDefinition {
     }
 }
 
-/// Qumulox — {7}{U} 4/4 Artifact Creature — Beast. Flying. Affinity for
+/// Qumulox — {6}{U}{U} 5/4 Artifact Creature — Beast. Flying. Affinity for
 /// artifacts.
 pub fn qumulox() -> CardDefinition {
     CardDefinition {
@@ -41364,7 +41364,7 @@ pub fn heliods_pilgrim() -> CardDefinition {
     }
 }
 
-/// Field Marshal — {2}{W}{W} 2/2 Human Soldier. Other Soldier creatures get
+/// Field Marshal — {1}{W}{W} 2/2 Human Soldier. Other Soldier creatures get
 /// +1/+1 and have first strike.
 pub fn field_marshal() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41406,7 +41406,7 @@ pub fn field_marshal() -> CardDefinition {
     }
 }
 
-/// Daru Warchief — {3}{W} 1/1 Human Soldier. Soldier spells you cast cost {1}
+/// Daru Warchief — {2}{W}{W} 1/1 Human Soldier. Soldier spells you cast cost {1}
 /// less to cast. Soldiers you control get +1/+2.
 pub fn daru_warchief() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41445,7 +41445,7 @@ pub fn daru_warchief() -> CardDefinition {
     }
 }
 
-/// Catapult Master — {4}{W}{W} 3/3 Human Soldier. "Tap five untapped Soldiers
+/// Catapult Master — {3}{W}{W} 3/3 Human Soldier. "Tap five untapped Soldiers
 /// you control: Exile target creature."
 pub fn catapult_master() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -41506,7 +41506,7 @@ pub fn supreme_phantom() -> CardDefinition {
     }
 }
 
-/// Empyrean Eagle — {1}{W}{U} 2/2 Spirit Bird. Flying. Other creatures you
+/// Empyrean Eagle — {1}{W}{U} 2/3 Spirit Bird. Flying. Other creatures you
 /// control with flying get +1/+1.
 pub fn empyrean_eagle() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41538,7 +41538,7 @@ pub fn empyrean_eagle() -> CardDefinition {
     }
 }
 
-/// Kinsbaile Cavalier — {2}{W}{W} 2/2 Kithkin Knight. Other Knight creatures
+/// Kinsbaile Cavalier — {3}{W} 2/2 Kithkin Knight. Other Knight creatures
 /// you control have double strike.
 pub fn kinsbaile_cavalier() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41682,7 +41682,7 @@ pub fn aqueous_form() -> CardDefinition {
 
 // ── modern_decks: more tribal payoffs ─────────────────────────────────────────
 
-/// Obelisk of Urd — {4}{4} Artifact (Convoke). As it enters, choose a creature
+/// Obelisk of Urd — {6} Artifact (Convoke). As it enters, choose a creature
 /// type. Creatures you control of the chosen type get +2/+2. (Printed symmetry
 /// — "creatures of the chosen type" — is scoped to your own board here.)
 pub fn obelisk_of_urd() -> CardDefinition {
@@ -41711,7 +41711,7 @@ pub fn obelisk_of_urd() -> CardDefinition {
     }
 }
 
-/// Wizened Cenn — {1}{W} 2/2 Kithkin Soldier. Other Kithkin creatures you
+/// Wizened Cenn — {W}{W} 2/2 Kithkin Soldier. Other Kithkin creatures you
 /// control get +1/+1.
 pub fn wizened_cenn() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41742,7 +41742,7 @@ pub fn wizened_cenn() -> CardDefinition {
     }
 }
 
-/// Stonybrook Banneret — {1}{U} 1/3 Merfolk Wizard. Merfolk and Wizard spells
+/// Stonybrook Banneret — {1}{U} 1/1 Merfolk Wizard. Merfolk and Wizard spells
 /// you cast cost {1} less to cast.
 pub fn stonybrook_banneret() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -41769,7 +41769,7 @@ pub fn stonybrook_banneret() -> CardDefinition {
     }
 }
 
-/// Skymarcher Aspirant — {W} 1/1 Vampire Soldier. Has menace as long as you
+/// Skymarcher Aspirant — {W} 2/1 Vampire Soldier. Has menace as long as you
 /// have the city's blessing.
 pub fn skymarcher_aspirant() -> CardDefinition {
     use crate::card::StaticAbility;
@@ -43410,7 +43410,7 @@ pub fn niv_mizzet_parun() -> CardDefinition {
     }
 }
 
-/// Aria of Flame — {1}{R}{R} Enchantment. ETB gain 10 life. Whenever you cast an
+/// Aria of Flame — {2}{R} Enchantment. ETB gain 10 life. Whenever you cast an
 /// instant or sorcery, put a verse counter on this, then deal damage equal to
 /// the number of verse counters on it to any target.
 pub fn aria_of_flame() -> CardDefinition {
@@ -43570,7 +43570,7 @@ pub fn voracious_hydra() -> CardDefinition {
     }
 }
 
-/// Archangel of Tithes — {1}{W}{W} 3/3 flying. While untapped, creatures can't
+/// Archangel of Tithes — {1}{W}{W}{W} 3/5 flying. While untapped, creatures can't
 /// attack you/your planeswalkers without paying {1} each (CR 508.1g); while
 /// attacking, creatures can't block without paying {1} each (CR 509.1d). (The
 /// attack-tax's untapped gate is approximated as always-on.)
@@ -43644,7 +43644,7 @@ pub fn last_thoughts() -> CardDefinition {
     }
 }
 
-/// Hidden Strings — {U} Sorcery. You may tap or untap target permanent, then
+/// Hidden Strings — {1}{U} Sorcery. You may tap or untap target permanent, then
 /// you may tap or untap another target permanent. Cipher (CR 702.46).
 /// Encoded as a 4-way `ChooseMode` (tap/untap × slot 0/slot 1), each half
 /// individually declinable via `MayDo`.
@@ -44283,7 +44283,7 @@ pub fn thought_reflection() -> CardDefinition {
     }
 }
 
-/// Palisade Giant — {4}{W}{W} 1/12 Giant Soldier. All damage that would be
+/// Palisade Giant — {4}{W}{W} 2/7 Giant Soldier. All damage that would be
 /// dealt to you or another permanent you control is dealt to this instead
 /// (CR 614.9 via `RedirectDamageToSelf`).
 pub fn palisade_giant() -> CardDefinition {
@@ -44939,7 +44939,7 @@ pub fn thrun_the_last_troll() -> CardDefinition {
     }
 }
 
-/// Containment Construct — {1} 1/2 Construct. Whenever you discard a card,
+/// Containment Construct — {2} 2/1 Construct. Whenever you discard a card,
 /// exile it from your graveyard instead — you may play it this turn.
 pub fn containment_construct() -> CardDefinition {
     use crate::card::MayPlayDuration;
@@ -48145,7 +48145,7 @@ pub fn street_wraith() -> CardDefinition {
     }
 }
 
-/// Ghosts of the Innocent — {5}{W}{W} 4/4 Spirit. All damage to permanents
+/// Ghosts of the Innocent — {5}{W}{W} 4/5 Spirit. All damage to permanents
 /// and players is halved, rounded down (CR 614.5).
 pub fn ghosts_of_the_innocent() -> CardDefinition {
     CardDefinition {
@@ -49761,7 +49761,7 @@ pub fn laboratory_maniac() -> CardDefinition {
     }
 }
 
-/// Jace, Wielder of Mysteries — {2}{U}{U} Planeswalker, loyalty 4.
+/// Jace, Wielder of Mysteries — {1}{U}{U}{U} Planeswalker, loyalty 4.
 /// Empty-draw win static; +1 mill-two a player; -8 draw seven.
 pub fn jace_wielder_of_mysteries() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
@@ -51434,7 +51434,7 @@ pub fn tashas_hideous_laughter() -> CardDefinition {
     }
 }
 
-/// Court of Cunning — {1}{U} Enchantment. ETB: become the monarch. At your
+/// Court of Cunning — {1}{U}{U} Enchantment. ETB: become the monarch. At your
 /// upkeep, each opponent mills two — or ten while you're the monarch.
 pub fn court_of_cunning() -> CardDefinition {
     use crate::effect::shortcut::etb;
@@ -64067,7 +64067,7 @@ pub fn luminous_broodmoth() -> CardDefinition {
     }
 }
 
-/// Quartzwood Crasher — {3}{R}{G} 5/5 Dinosaur Beast with trample. Whenever it
+/// Quartzwood Crasher — {2}{R}{R}{G} 6/6 Dinosaur Beast with trample. Whenever it
 /// deals combat damage to a player, create an X/X green Dinosaur Beast with
 /// trample, where X is that damage. (The "any trampler you control" batch
 /// clause is narrowed to the Crasher's own combat damage.)
@@ -64502,7 +64502,7 @@ pub fn ominous_seas() -> CardDefinition {
     }
 }
 
-/// Extinction Event — {4}{B} Sorcery. Choose odd or even, then exile each
+/// Extinction Event — {3}{B} Sorcery. Choose odd or even, then exile each
 /// creature with mana value of the chosen parity. (AutoDecider picks odd.)
 pub fn extinction_event() -> CardDefinition {
     CardDefinition {
