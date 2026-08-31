@@ -17911,23 +17911,39 @@ the shape a memo answers and a board-size optimization does not. Sweeps are
 already gated: 20,210 of them against 121,802 `perform_action_inner` calls on
 `cube`, one per six or seven actions.
 
-**The device is `(-115)`'s, and the machinery is already in the tree.**
-`sba_board_scan`'s own comment calls it "one pass answering which of the rare
-SBAs can fire on this board" — a whole-battlefield walk producing a handful of
-bits, recomputed from scratch on every sweep. `zone::Battlefield` already
-memoizes board predicates against an epoch (`act_grant_lane` /
-`store_act_grant`), and the scan is a strictly larger version of the same
-question. Ceiling is the whole 0.94 % / 1.10 %, times the share of sweeps whose
-battlefield epoch is unchanged since the last one.
+**⚠ THE OBVIOUS DEVICE IS ALREADY IN THE TREE ONE LEVEL DOWN — DO NOT SPEND A
+BUILD REDISCOVERING IT.** The first shape this invites is `(-115)`'s: the scan
+is a whole-battlefield walk producing a handful of bits, `zone::Battlefield`
+already memoizes board predicates against `definition_epoch`, so cache the
+scan on the lane. **That is wrong twice.** `CardInstance::sba_scan_bits` is
+*already* a single relaxed load off `CardDefinition.memo` — the per-card
+definition work the lane would have cached is one atomic load and has been
+since the memo landed. And the scan reads instance state the lanes
+deliberately survive: `flipped`, `controller != owner`, `attached_to`,
+`bestowed`, `soulbond_partner`, `sector`, and a `counters` probe. A counter
+lands on a permanent constantly, so a lane-epoch memo of the whole scan would
+be both unsound and near-always cold.
 
-**Size that share before building it**, with a counter beside the other three
-(`zone::grant_census` is the pattern, and `(-122)` and `(-126)` were both
-answered by one): sweeps, and sweeps whose battlefield epoch equals the
-previous sweep's. `check_state_based_actions_into` already has an `sba_census`
-hook to hang it on. **A sweep that follows a board change cannot be memoized
-and the scan is retaken three times inside the sweep itself** (shapeshifter
-sync, sector assignment, flip legs) — count those too, because they are
-already inside the 1,167 Ir.
+**The transferable rule: before proposing a memo, look for it one level down.**
+The bits this entry first proposed to cache on the zone were already cached on
+the definition, and the note above cost nothing only because it was checked
+before the build.
+
+**What the 3,564 Ir a sweep actually is, and where the lever must be.** 1,167
+is the scan — a board walk plus seven instance reads a card, with the
+definition half already free. The other 2,397 is the body, and a large part of
+it is the CR 704.5f/g/h death sweep, which is the rules' own per-sweep
+obligation and not overhead. **So the lever is not making a sweep cheaper; it
+is running fewer of them.** 20,210 sweeps against 121,802 `perform_action_inner`
+calls on `cube` says the engine already gates them; nobody has measured how
+many of the survivors follow an action that changed nothing an SBA can read.
+
+**Size that before building anything** — a counter beside the other three
+(`zone::grant_census` is the pattern; `(-122)` and `(-126)` were each answered
+by one build): sweeps, and sweeps in which no SBA fired *and* nothing
+SBA-relevant changed since the previous one. Note the scan is retaken up to
+three times *inside* a single sweep (shapeshifter sync, sector assignment, flip
+legs), and those retakes are already inside the 1,167 Ir.
 
 **(-129) `event_matches_spec` IS 1,028,014 CALLS ON `cube` AND 103,082 ON
 `fixed` — A 10x RATIO ON A FUNCTION THAT COSTS 31 Ir A CALL.** 1.26 % of
