@@ -2277,6 +2277,29 @@ a box whose state moves.
 
 ## Baseline
 
+### The `draw` class's first three rows, closing state at `d89decca`
+
+```text
+suite   18,824 / 0 / 5;  golden traces 7/7 unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+grid    30 cells, 33,120 games, 0 failures, 0 undecided — re-run because
+        Territorial Kavu is in `cube.rs`'s pool and its rewrite adds a real
+        new death path there (a domain-0 Kavu is a 0/0 and dies to SBA on
+        the spot). All six `cube` seeds clean.
+--bench NOT re-run and cannot move: none of Baral / Rielle / Territorial Kavu
+        is in one of the four `fixed` archetypes.
+```
+
+**The lesson is a process one and it cost a wrong commit message.** The row
+for Territorial Kavu was dismissed from the *audit output* — "its draw is
+inside a mode that is present" — without opening the factory. The factory
+shares a name, a cost and a creature type with the printed card and nothing
+else: a 3/2 with an opponent-land-drop counter trigger against a Domain `*/*`
+with a modal attack trigger. **The audit's row was right and the reading of
+it was wrong**, which is the mirror of the standing "check three rows in the
+source before believing a class" rule — checking a row *out* needs the source
+just as much as checking one *in*.
+
 ### Hundred-and-fourth pass, this session's close at `7557554a`
 
 Ten code commits, three families: the `Vec<GameEvent>` return (`da4a6ca2`
