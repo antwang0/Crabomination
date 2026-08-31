@@ -82,21 +82,16 @@ pub(crate) fn event_kind_matches(
         // Taii Wakeen — a source the watcher controls dealt exactly lethal
         // noncombat damage to a creature (CR 120: measured against the
         // creature's computed toughness at damage time).
+        //
+        // Out of line, and the pattern is widened to the bare variant on
+        // purpose: this is the only arm this `EventKind` has, so the narrow
+        // shapes fall through to `_ => false` either way, and keeping the
+        // `computed_permanent` call inside this match is what makes the whole
+        // function need a frame. See the helper's doc comment.
         (
             EventKind::YourSourceDealtNoncombatDamageEqualToToughness,
-            GameEvent::DamageDealt {
-                amount,
-                to_card: Some(victim),
-                combat: false,
-                from_controller: Some(dealer),
-                ..
-            },
-        ) => source.is_none_or(|src| {
-            *dealer == src.controller
-                && state
-                    .computed_permanent(*victim)
-                    .is_some_and(|cp| cp.toughness > 0 && cp.toughness as u32 == *amount)
-        }),
+            GameEvent::DamageDealt { .. },
+        ) => lethal_noncombat_from_your_source(state, event, source),
         // Any damage to a player, combat or not (Quest for Pure Flame).
         (EventKind::PlayerDamaged, GameEvent::DamageDealt { to_player: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
@@ -202,6 +197,40 @@ pub(crate) fn event_kind_matches(
         }
         _ => false,
     }
+}
+
+/// Taii Wakeen — "whenever a source you control deals noncombat damage equal
+/// to a creature's toughness" (CR 120, measured against the *computed*
+/// toughness at damage time).
+///
+/// Out of line and `#[cold]` because it is the only `call` in
+/// [`event_kind_matches`], and one call in a 0x70-way jump table is what put
+/// `push r15/r14/r12/rbx; sub $0x28` in the entry block of every one of
+/// `event_matches_spec`'s million calls — LLVM does not shrink-wrap past the
+/// indirect branch. PERF `(-129)`.
+#[cold]
+#[inline(never)]
+fn lethal_noncombat_from_your_source(
+    state: &GameState,
+    event: &GameEvent,
+    source: Option<&CardInstance>,
+) -> bool {
+    let GameEvent::DamageDealt {
+        amount,
+        to_card: Some(victim),
+        combat: false,
+        from_controller: Some(dealer),
+        ..
+    } = event
+    else {
+        return false;
+    };
+    source.is_none_or(|src| {
+        *dealer == src.controller
+            && state
+                .computed_permanent(*victim)
+                .is_some_and(|cp| cp.toughness > 0 && cp.toughness as u32 == *amount)
+    })
 }
 
 /// Returns true if `event` matches the `EventSpec` on `source` (a permanent
