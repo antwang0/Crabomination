@@ -25461,30 +25461,24 @@ fn static_effect_to_effects(
 /// Translate a selector into a `layers::AffectedPermanents` description for
 /// those `StaticEffect` variants that express broad "lord-like" scope. Returns
 /// `None` if the selector shape isn't representable in the layer system yet.
-/// True if the filter tree contains `IsModified` (CR 700.9) — such filters
-/// are resolved live in `gather_continuous_effects`, not through the static
-/// `AffectedPermanents` decomposition.
-fn requirement_mentions_modified(req: &SelectionRequirement) -> bool {
+/// Which live-battlefield leaves a filter tree mentions — `IsModified`
+/// (CR 700.9), the two attachment-count leaves, and `IsAttacking`. Such
+/// filters are resolved live in `gather_continuous_effects`, not through the
+/// state-blind `AffectedPermanents` decomposition.
+///
+/// One walk, three questions. It was three walkers with identical recursion
+/// and one leaf arm apiece, and `requirement_needs_live_resolution` ran all
+/// three back to back — the `||` short-circuits, but only on a tree that has
+/// a live leaf, and almost none does. PERF `(-130)`.
+fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
     use SelectionRequirement as R;
     match req {
-        R::IsModified => true,
-        R::And(a, b) | R::Or(a, b) => {
-            requirement_mentions_modified(a) || requirement_mentions_modified(b)
-        }
-        R::Not(inner) => requirement_mentions_modified(inner),
-        _ => false,
-    }
-}
-
-fn requirement_mentions_equipped(req: &SelectionRequirement) -> bool {
-    use SelectionRequirement as R;
-    match req {
-        R::IsEquipped | R::EquippedByAtLeast(_) => true,
-        R::And(a, b) | R::Or(a, b) => {
-            requirement_mentions_equipped(a) || requirement_mentions_equipped(b)
-        }
-        R::Not(inner) => requirement_mentions_equipped(inner),
-        _ => false,
+        R::IsModified => 1,
+        R::IsEquipped | R::EquippedByAtLeast(_) => 2,
+        R::IsAttacking => 4,
+        R::And(a, b) | R::Or(a, b) => requirement_live_leaves(a) | requirement_live_leaves(b),
+        R::Not(inner) => requirement_live_leaves(inner),
+        _ => 0,
     }
 }
 
@@ -25493,24 +25487,7 @@ fn requirement_mentions_equipped(req: &SelectionRequirement) -> bool {
 /// resolved into a `Specific` id list on every layer recompute instead of
 /// routing through the state-blind `CardMatch` path.
 fn requirement_needs_live_resolution(req: &SelectionRequirement) -> bool {
-    requirement_mentions_modified(req)
-        || requirement_mentions_attacking(req)
-        || requirement_mentions_equipped(req)
-}
-
-/// Whether `req` references the live combat state (`IsAttacking`), so a
-/// `GrantKeyword` static over it must recompute its affected set per layer
-/// pass rather than route through the printed-characteristics walker.
-fn requirement_mentions_attacking(req: &SelectionRequirement) -> bool {
-    use SelectionRequirement as R;
-    match req {
-        R::IsAttacking => true,
-        R::And(a, b) | R::Or(a, b) => {
-            requirement_mentions_attacking(a) || requirement_mentions_attacking(b)
-        }
-        R::Not(inner) => requirement_mentions_attacking(inner),
-        _ => false,
-    }
+    requirement_live_leaves(req) != 0
 }
 
 pub(crate) fn selector_to_affected(
