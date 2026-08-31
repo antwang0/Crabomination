@@ -16220,6 +16220,97 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE ACTOR RE-READ AT `d0243e89` — fifteen passes on from `bb67895a`, and the encoder is now the largest caller of the largest allocation row
+
+`(-123)`. `profiling-fast -p crabomination_ml --no-default-features`,
+`CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60 --steps 1 --seed 7`,
+callgrind. **3,102,072,633 Ir**, and `grep -c "mi_\|_mi_"` on the dump reads
+0, so this is the system allocator and not mimalloc under valgrind.
+
+```text
+  6.14 %  __memcpy_avx_unaligned_erms          <- the largest row on the actor
+  5.44 %  dispatch_triggers_for_events         (5.18 % of cube, after (-121))
+  3.42 %  _int_free  } the allocator cluster: 10.71 %, against cube's 9.68
+  2.64 %  malloc     }
+  2.51 %  _int_malloc}
+  2.14 %  free       }
+  2.56 %  check_state_based_actions_into
+  2.30 %  compute_permanent_pass
+  2.29 %  computed_permanent_hinted
+  2.28 %  gather_continuous_effects_inner
+  2.12 %  Arc::clone_from_ref_in
+  1.81 %  encode_state_inner        } the encoder, 3.46 %, and `bot_ladder`
+  1.65 %  encode_card_object_into   } runs it on NO pool
+  1.35 %  rand_distr Normal::sample <- candle's net init, see below
+  1.06 %  recommend::rank_shape     <- the deck builder, one build per game
+```
+
+**`(-107)`'s remaining half is PROMOTED, and the promotion is a number.** The
+allocation table (1,712,610 `__rust_alloc` calls over 60 games) is topped by
+`computed_permanent_hinted` at **297,560 — 17.4 % of every allocation the
+actor makes**, against 12.83 % when `(-107)` filed it. Total allocations are
+flat over the same window (1,712,610 against `bb67895a`'s 1,690,418 per 60
+games, +1.3 %), so the share moved because the row grew **+37 %** in absolute
+terms. It is the largest single allocation caller in the program.
+
+**And its caller table says why, in a way the old entry could not**: of its
+491,057 calls, **145,476 (29.6 %) are `encode_state_inner`** — a caller that
+exists on no `bot_ladder` pool. The next four are `permanent_value_with`
+58,154, `legal_blockers` 46,980, `damage_prevented_by_protection` 45,498,
+`pick_blocks_inner` 28,181. **Anyone sizing `(-107)` off a `cube` dump is
+sizing 70 % of it.**
+
+**`(-107)`'s encoder-growth half is CONFIRMED CLOSED by the same dump.** The
+single backing buffer at `d402e5da` was priced at ~5.25 `do_reserve_and_handle`
+growths per encoded state; it now reads **6,282 growths over 6,282 states =
+1.00**. `encode_state_inner`'s callee table, per state: 35.6
+`encode_card_object_into`, 23.2 `computed_permanent_hinted`, 5.6
+`affordable_covered`, 2.0 `can_player_play_land`, 1.0 `with_frozen_layers`,
+1.0 growth.
+
+**Two rows that look like leads and are not.**
+* **`candle`'s `rand_normal` (1.35 % self, 58.4 M inclusive over 859,200
+  samples) is the net's weight *initialisation*** — once per process, charged
+  here to 60 games. `(-95)`'s rule exactly: a short workload charges every
+  once-per-process cost to it. A real run plays millions of games and this
+  vanishes. **Do not optimise it.**
+* **`__memcpy` is the largest row and it is diffuse.** 1,743,449 calls over
+  **2,319 callers**, of which 43.6 % are below the listing's cut; the top row
+  is `GameState::clone` at 10.8 M of 190 M. `(-92)`'s "stop looking for a hot
+  line" applies.
+
+**The ratio device against `cube` at the same tip** (`cg_ratio.py actor cube
+--floor 0.45`; the two totals do not compare, the shares do):
+
+```text
+  actor%  cube%      x   row
+   0.46    0.01   88.98  small_sort_general_with_scratch   <- TAKEN, see the Log
+   6.14    2.72    2.25  __memcpy_avx_unaligned_erms
+   0.62    0.48    1.30  effective_mana_abilities_into
+   ...nothing else above 1.2x...
+  five rows with NO cube cost at all:
+   1.81  encode_state_inner      1.65  encode_card_object_into
+   1.35  candle rand_normal      1.06  recommend::rank_shape
+   0.49  rand_chacha refill_wide
+```
+
+**The table is the finding: below the top two rows the actor and `cube` agree
+to within 30 %.** The actor is not a different program — it is `cube` plus an
+encoder, a deck builder and a determinizer, and those three are the only
+places a candidate can live that the bench cannot price. The 89x row was one
+of them and is taken; `rank_shape` and the encoder are what is left.
+
+⚠ **THE ACTOR'S AMBIENT CODEGEN BAND IS MUCH WIDER THAN `bot_ladder`'s, AND
+`(-110)`'s NULL CONTROL DOES NOT TRANSFER.** That control read +0.006 % for a
+no-op on three `bot_ladder` pools. Here, extracting four identical statements
+into a named helper — a change with *no* release-side semantics — moved
+`compute_permanent_pass` and a `FilterMap` by +3.6 M and the total by
+**+0.18 %**. `crabomination_ml` builds at `codegen-units = 16`, so any edit to
+a hot file can repartition it. **Attribute an actor change to its own rows
+before believing its total**; a whole-program delta under ~0.2 % on this
+workload is not a measurement on its own.
+
+
 ### ALL THREE POOLS RE-READ AT `cab8d5d7`, AFTER `(-120)`/`(-121)`
 
 `release-fast --no-default-features`, callgrind, six games, one thread,
