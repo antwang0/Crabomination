@@ -9504,6 +9504,29 @@ fn gang_block_candidates(
 /// paths deliberately: this is a redeal of hidden information before the
 /// simulation starts, not a game action, and routing it through
 /// `move_card` would fire zone-change triggers that never happened.
+/// The premise `determinize_hidden`'s canonicalising sort rests on: `CardId`s
+/// come off a global monotonic counter, so sorting a hidden zone by id is a
+/// *total* order with no ties. A duplicate would leave the order between the
+/// duplicates unspecified, and an unspecified order inside the
+/// canonicalisation is exactly the hidden-information leak the sort exists to
+/// prevent — the redeal would depend on how the zone happened to arrive.
+///
+/// **`#[cfg(debug_assertions)]`, so this function is not in a release binary
+/// at all.** That is not tidiness: the first version of this change put the
+/// sort itself behind a named helper, and adding one function to `bot.rs`
+/// moved `compute_permanent_pass` and a `FilterMap` by +3.6 M Ir through
+/// inlining alone — **+0.18 % of the actor, three times what the change
+/// saved** (PERF `(-123)`). A release-side helper next to four hot call sites
+/// is not free here.
+#[cfg(debug_assertions)]
+fn assert_canonical_by_id(cards: &[crate::card::CardInstance]) {
+    assert!(
+        cards.windows(2).all(|w| w[0].id.0 < w[1].id.0),
+        "determinize canonicalisation needs unique CardIds — a tie makes the redeal \
+         depend on the order the hidden zone arrived in",
+    );
+}
+
 pub(crate) fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
     use rand::seq::SliceRandom;
     let mut rng = StdRng::seed_from_u64(
@@ -9514,7 +9537,9 @@ pub(crate) fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
             // Our own library order is unknown to us too — a search that
             // plans around the card it is about to draw is cheating just
             // as much as one that reads the opponent's hand.
-            g.players[p].library.sort_by_key(|c| c.id.0);
+            g.players[p].library.sort_unstable_by_key(|c| c.id.0);
+            #[cfg(debug_assertions)]
+            assert_canonical_by_id(&g.players[p].library);
             g.players[p].library.shuffle(&mut rng);
             continue;
         }
@@ -9531,7 +9556,9 @@ pub(crate) fn determinize_hidden(g: &mut GameState, seat: usize, salt: u64) {
         // alone tested. Sorting by card id makes the redeal a function
         // of the information set: which cards are unseen, and how many
         // of them are in hand (a public number), and nothing else.
-        g.players[p].library.sort_by_key(|c| c.id.0);
+        g.players[p].library.sort_unstable_by_key(|c| c.id.0);
+            #[cfg(debug_assertions)]
+            assert_canonical_by_id(&g.players[p].library);
         g.players[p].library.shuffle(&mut rng);
         let split = g.players[p].library.len().saturating_sub(n);
         let redrawn: Vec<_> = g.players[p].library.split_off(split);
@@ -9570,14 +9597,18 @@ pub(crate) fn determinize_hidden_belief(
     let vocab = super::net_eval::vocab();
     for p in 0..g.players.len() {
         if p == seat {
-            g.players[p].library.sort_by_key(|c| c.id.0);
+            g.players[p].library.sort_unstable_by_key(|c| c.id.0);
+            #[cfg(debug_assertions)]
+            assert_canonical_by_id(&g.players[p].library);
             g.players[p].library.shuffle(&mut rng);
             continue;
         }
         let n = g.players[p].hand.len();
         let returned: Vec<_> = g.players[p].hand.drain(..).collect();
         g.players[p].library.extend(returned);
-        g.players[p].library.sort_by_key(|c| c.id.0);
+        g.players[p].library.sort_unstable_by_key(|c| c.id.0);
+            #[cfg(debug_assertions)]
+            assert_canonical_by_id(&g.players[p].library);
         let mut keyed: Vec<(f64, usize)> = g.players[p]
             .library
             .iter()
