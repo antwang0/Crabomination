@@ -171,8 +171,66 @@ impl<K, V> IdMap<K, V> {
     pub fn values(&self) -> impl Iterator<Item = &V> {
         self.0.iter().map(|(_, v)| v)
     }
+    pub fn keys(&self) -> impl Iterator<Item = &K> {
+        self.0.iter().map(|(k, _)| k)
+    }
     pub fn iter(&self) -> impl Iterator<Item = (&K, &V)> {
         self.0.iter().map(|(k, v)| (k, v))
+    }
+    /// `HashMap::retain`'s contract, in insertion order.
+    pub fn retain(&mut self, mut f: impl FnMut(&K, &mut V) -> bool) {
+        self.0.retain_mut(|(k, v)| f(k, v));
+    }
+}
+
+impl<K: PartialEq, V: Default> IdMap<K, V> {
+    /// `entry(k).or_default()` without the `Entry` machinery.
+    pub fn entry_or_default(&mut self, k: K) -> &mut V {
+        if let Some(i) = self.0.iter().position(|(x, _)| *x == k) {
+            return &mut self.0[i].1;
+        }
+        self.0.push((k, V::default()));
+        &mut self.0.last_mut().expect("just pushed").1
+    }
+}
+
+/// Serialized as a **map**, so swapping a `HashMap` field for an `IdMap` one
+/// leaves the wire shape alone (`IdSet` does the same for a sequence).
+impl<K: serde::Serialize, V: serde::Serialize> serde::Serialize for IdMap<K, V> {
+    fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut m = ser.serialize_map(Some(self.0.len()))?;
+        for (k, v) in &self.0 {
+            m.serialize_entry(k, v)?;
+        }
+        m.end()
+    }
+}
+
+impl<'de, K: serde::Deserialize<'de>, V: serde::Deserialize<'de>> serde::Deserialize<'de>
+    for IdMap<K, V>
+{
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        struct Vis<K, V>(std::marker::PhantomData<(K, V)>);
+        impl<'de, K: serde::Deserialize<'de>, V: serde::Deserialize<'de>> serde::de::Visitor<'de>
+            for Vis<K, V>
+        {
+            type Value = IdMap<K, V>;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a map")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut a: A,
+            ) -> Result<Self::Value, A::Error> {
+                let mut out = Vec::with_capacity(a.size_hint().unwrap_or(0));
+                while let Some((k, v)) = a.next_entry()? {
+                    out.push((k, v));
+                }
+                Ok(IdMap(out))
+            }
+        }
+        de.deserialize_map(Vis(std::marker::PhantomData))
     }
 }
 
@@ -215,6 +273,39 @@ mod id_set_tests {
         assert_eq!(m.get(&2), Some(&"b"));
         assert_eq!(m.remove(&9), Some("a2"));
         assert!(!m.contains_key(&9) && m.len() == 1);
+    }
+
+    /// `IdMap` keeps the `HashMap` wire shape — a map — so a field swapped
+    /// from one to the other round-trips existing snapshots. `block_map` is
+    /// the swap that needed it (PERF `(-143)`).
+    #[test]
+    fn id_map_serializes_as_a_map() {
+        let mut m: super::IdMap<u32, Vec<u32>> = super::IdMap::default();
+        m.insert(9, vec![1]);
+        m.insert(2, vec![]);
+        let json = serde_json::to_string(&m).unwrap();
+        assert_eq!(json, r#"{"9":[1],"2":[]}"#);
+        let back: super::IdMap<u32, Vec<u32>> = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.keys().copied().collect::<Vec<_>>(), vec![9, 2], "order survives");
+        assert_eq!(back.get(&9), Some(&vec![1]));
+    }
+
+    /// `entry_or_default` and `retain`, the two `HashMap` methods the
+    /// `block_map` swap needed.
+    #[test]
+    fn id_map_entry_or_default_and_retain() {
+        let mut m: super::IdMap<u32, Vec<u32>> = super::IdMap::default();
+        m.entry_or_default(5).push(1);
+        m.entry_or_default(5).push(2);
+        m.entry_or_default(6).push(3);
+        assert_eq!(m.get(&5), Some(&vec![1, 2]), "second call reuses the slot");
+        m.retain(|_, v| {
+            v.retain(|x| *x != 1);
+            !v.is_empty()
+        });
+        assert_eq!(m.keys().copied().collect::<Vec<_>>(), vec![5, 6]);
+        m.retain(|k, _| *k != 5);
+        assert_eq!(m.keys().copied().collect::<Vec<_>>(), vec![6]);
     }
 
     /// Same wire shape as the `HashSet` it replaces — a sequence — so

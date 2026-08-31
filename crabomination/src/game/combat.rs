@@ -1849,8 +1849,9 @@ impl GameState {
                 want(attacker);
             }
             g.attacking.iter().for_each(|a| want(a.attacker));
-            // `block_map`'s key order is a `HashMap`'s, but it only decides
-            // which permanents get computed; every reader looks up by id.
+            // `block_map` is an `IdMap`, so its key order is declaration
+            // order; it only decides which permanents get computed anyway,
+            // and every reader looks up by id.
             g.block_map.keys().for_each(|&b| want(b));
             (g.compute_permanents(&ids), requirement)
         });
@@ -2540,9 +2541,10 @@ impl GameState {
                 ids.push(atk.attacker);
             }
         }
-        // `block_map`'s key order is a `HashMap`'s, but it only decides which
-        // permanents get computed; every reader looks up by id, and the one
-        // that collects (`free_division_targets`) sorts.
+        // `block_map` is an `IdMap`, so its key order is declaration order;
+        // it only decides which permanents get computed anyway, every reader
+        // looks up by id, and the one that collects (`free_division_targets`)
+        // sorts.
         for &bid in self.block_map.keys() {
             if !ids.contains(&bid) {
                 ids.push(bid);

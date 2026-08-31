@@ -1470,7 +1470,13 @@ pub struct GameState {
     /// entry; a creature with `CanBlockAdditional`/`CanBlockAnyNumber` blocks
     /// several. Declaration order within the Vec is the defending player's
     /// damage-assignment default (CR 509.2).
-    pub block_map: HashMap<CardId, SmallVec<[CardId; 4]>>,
+    ///
+    /// An [`IdMap`](crate::game::types::IdMap), like its two combat siblings
+    /// below and for the same reason: it holds one entry per *blocking*
+    /// creature, so a linear scan beats hashing, and building a `hashbrown`
+    /// table from empty on every block declaration was **0.23 % of `cube`**
+    /// in `reserve_rehash` alone. See PERF `(-143)`.
+    pub block_map: crate::game::types::IdMap<CardId, SmallVec<[CardId; 4]>>,
     /// CR 510.1c — the active player's chosen blocker order for each attacker
     /// that has multiple blockers, gathered (and cached) before combat damage
     /// is applied so the choice can suspend for a `wants_ui` player. Read by
@@ -2982,7 +2988,7 @@ impl GameState {
             next_effect_timestamp: 1,
             next_id: 1,
             attacking: Vec::new(),
-            block_map: HashMap::default(),
+            block_map: Default::default(),
             combat_damage_order: Default::default(),
             combat_damage_assignment: Default::default(),
             combat_damage_plan_step: None,
@@ -14764,7 +14770,7 @@ impl GameState {
     // restore otherwise-private fields. They aren't intended for general
     // callers; the snapshot module guards round-trip correctness with tests.
 
-    pub fn block_map(&self) -> &HashMap<CardId, SmallVec<[CardId; 4]>> {
+    pub fn block_map(&self) -> &crate::game::types::IdMap<CardId, SmallVec<[CardId; 4]>> {
         &self.block_map
     }
 
@@ -14821,7 +14827,7 @@ impl GameState {
 
     /// Record `blocker` as blocking `attacker` (idempotent, order-preserving).
     pub(crate) fn add_block(&mut self, blocker: CardId, attacker: CardId) {
-        let entry = self.block_map.entry(blocker).or_default();
+        let entry = self.block_map.entry_or_default(blocker);
         if !entry.contains(&attacker) {
             entry.push(attacker);
         }

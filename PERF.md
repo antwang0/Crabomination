@@ -10305,6 +10305,57 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass (5) — `(-143)`: `block_map` was the last `hashbrown` table in combat
+
+**`cube` -0.109 % / `fixed` -0.169 %** off the run tip (`33955a1f`), same
+instrument and workload.
+
+```text
+  pool    tip             (-143)          delta
+  cube    2,503,861,524   2,501,137,861   -0.1088 %
+  fixed     927,368,664     925,804,066   -0.1687 %
+```
+
+`GameState::block_map` was the one combat collection still a
+`std::collections::HashMap`; its two siblings on the very next lines
+(`combat_damage_order`, `combat_damage_assignment`) have been `IdMap` — a
+`Vec<(K, V)>` with linear scans — since they were written. It holds **one
+entry per blocking creature**, so a `hashbrown` table was being built from
+empty and rehashed on every block declaration:
+
+```text
+  reserve_rehash callers          calls    inclusive
+    declare_blockers             12,094    2,918,252
+    pick_blocks_inner             7,244    1,939,565
+    add_block                     3,458      931,699
+                                          ---------
+                                           5,789,516   0.233 % of cube
+```
+
+The rows that vanish are the ones the swap targets — `HashMap::retain`
+-1,473,140 to **zero**, `RawTable::remove_entry` -391,556 to **zero**,
+`RawTable::clone` -569,918, `reserve_rehash` -342,001, `add_block` inlined
+away -733,520 — against `Vec::retain_mut` +1,369,588 and a large
+*reattribution* between `compute_permanent_pass` (-9.8 M) and
+`SmallVec::extend` (+26.3 M) that is an inlining shift, not work.
+
+**Measured at less than half the 0.233 % the `reserve_rehash` table
+predicted**, and that is the useful correction: the table's *inclusive* cost
+includes the `malloc` the `IdMap` still pays when its `Vec` first grows. **A
+container swap does not remove the allocation, only the table.**
+
+**Two things it is not.** It is **not** a determinism fix: all four sites
+that iterate `block_map`'s keys were already audited — `block_map_snapshot`
+sorts, the bot's two `keys().collect()` build membership sets, and combat's
+two walks only pick which permanents to compute (their comments said so, and
+now say `IdMap`). And `SipHash` was never the cost: the whole
+`core::hash::sip` row is **83,995 Ir, 0.003 %**, so **the "hash choice for
+internal maps" candidate is closed** — what a small `HashMap` costs here is
+the table, not the hash.
+
+**`IdMap` gained `keys`, `retain`, `entry_or_default` and a `Serialize` /
+`Deserialize` pair that writes a MAP**, so a field swapped from `HashMap` to
+`IdMap` keeps its wire shape; three unit tests in `game::types` pin all of it.
 ### Hundred-and-sixteenth pass (6) — `(-144)`: `GameState` was 3,008 bytes and two `None`s were half of it
 
 **`cube` -0.340 % / `fixed` -0.647 % / `sealed` -0.493 %** off the `(-143)`

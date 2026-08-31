@@ -16519,7 +16519,7 @@ impl GameState {
                     events,
                 );
                 if self.battlefield_find(cid).is_some() {
-                    self.block_map.entry(cid).or_default().push(attacker);
+                    self.block_map.entry_or_default(cid).push(attacker);
                     if !self.blocked_attackers.contains(&attacker) {
                         self.blocked_attackers.push(attacker);
                     }
