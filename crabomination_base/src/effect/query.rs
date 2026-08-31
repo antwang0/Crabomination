@@ -1634,8 +1634,19 @@ impl Effect {
             Effect::LiarsPendulum => true,
             // Targets slot 0 (a creature) but reads it straight off ctx.
             Effect::PreventNextDamageByTargetMintMites => true,
-            Effect::GainControl { what, .. }
-            | Effect::GainControlWhileSourceRemains { what }
+            // `to` is a target too — "**target opponent** gains control of
+            // this creature" (Witch Engine, Wishclaw Talisman, Risky Move) is
+            // spelled `to: Some(PlayerRef::Target(n))`, and `to: None` is
+            // "you". Reading only `what` said Witch Engine's `{T}: Add
+            // {B}{B}{B}{B}. Target opponent gains control of this creature`
+            // targets nothing, which under CR 605.1a made it a mana ability
+            // resolving with no target chosen. `IMPLICIT_OPPONENT_TARGET`
+            // above is the filter this same slot gets from the enumerator, so
+            // the two halves now agree.
+            Effect::GainControl { what, to, .. } => {
+                sel_has_target(what) || to.as_ref().is_some_and(player_has_target)
+            }
+            Effect::GainControlWhileSourceRemains { what }
             | Effect::GainControlWhileSourceTapped { what }
             | Effect::CounterAbilityAndDestroySource { what }
             | Effect::WeldArtifacts { what } => sel_has_target(what),

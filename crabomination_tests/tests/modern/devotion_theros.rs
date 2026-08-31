@@ -592,6 +592,35 @@ fn pithing_needle_naming_a_different_card_leaves_ability_usable() {
         .expect("an unrelated name doesn't suppress the Crypt");
 }
 
+/// CR 201.3 — a permanent that names a card **for some other reason** is not
+/// a Pithing Needle.
+///
+/// The suppression used to be implicit in carrying a `named_card` at all, and
+/// eleven shipped cards stamp one for something else: Meddling Mage and
+/// Nevermore lock casting, Disruptor Flute bumps a cast cost, Alpine Moon
+/// neutralizes lands, Skyseer's Chariot taxes activations, Cursed Scroll and
+/// Wood Sage name a card as part of their own resolution. Every one of them
+/// also shut the named card's activated abilities off, silently and nowhere
+/// in its printed text. `NamedSourcesAbilitiesCantBeActivated` is what the
+/// gate reads now.
+#[test]
+fn a_namer_without_the_lock_static_does_not_suppress() {
+    let mut g = two_player_game();
+    let crypt = g.add_card_to_battlefield(0, catalog::tormods_crypt());
+    let mage = g.add_card_to_battlefield(0, catalog::meddling_mage());
+    g.battlefield_find_mut(mage).unwrap().named_card = Some("Tormod's Crypt".into());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crypt,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("Meddling Mage locks casting, not activated abilities");
+}
+
 #[test]
 fn phyrexian_revoker_is_a_two_one_construct_that_names_and_suppresses() {
     // Body + ETB-name path: cast it, name Tormod's Crypt, then the Crypt's

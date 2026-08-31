@@ -1700,6 +1700,10 @@ fn indentured_oaf_spares_red_creatures() {
 }
 
 /// Spectral Searchlight adds a mana of any color to a chosen player's pool.
+///
+/// CR 605.1a — it **targets**, so it is not a mana ability and it uses the
+/// stack. The assert drains it for that reason; before the CR 605.1a rewrite
+/// of `is_mana_ability` the engine resolved it inline like a Forest.
 #[test]
 fn spectral_searchlight_ramps_a_chosen_player() {
     use crabomination::game::types::Target;
@@ -1711,6 +1715,7 @@ fn spectral_searchlight_ramps_a_chosen_player() {
         card_id: light, ability_index: 0, target: Some(Target::Player(1)),
         additional_targets: vec![], x_value: None, mode: None,
     }).expect("tap for a chosen player's mana");
+    drain_stack(&mut g);
     assert_eq!(g.players[1].mana_pool.total(), 1, "the chosen player got a mana");
 }
 

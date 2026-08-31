@@ -244,9 +244,11 @@ pub fn skycoach_waypoint() -> CardDefinition {
 /// - ETB `Effect::NameCard` restricted to land names (CR 201.4a) stamps
 ///   the chosen name.
 /// - The lock-out ("activated abilities of sources with the chosen name
-///   can't be activated unless they're mana abilities") is the engine's
-///   global `named_card` suppression — the same CR 201.3 rail Pithing
-///   Needle rides.
+///   can't be activated unless they're mana abilities") is
+///   `StaticEffect::NamedSourcesAbilitiesCantBeActivated`, the same CR 201.3
+///   rail Pithing Needle rides. It used to be implicit in carrying a
+///   `named_card` at all, which made a Pithing Needle of every card that
+///   names one for some other reason.
 /// - "Lands with the chosen name have '{T}: Add {C}'" via
 ///   `GrantActivatedAbility { EachPermanent(Land ∧ NamedBySource) }`.
 /// - The printed `{T}: Add {C}` via the shared `tap_add_colorless`.
@@ -264,16 +266,23 @@ pub fn petrified_hamlet() -> CardDefinition {
                 restrict_to: Some(SelectionRequirement::Land),
             },
         }],
-        static_abilities: vec![StaticAbility {
-            description: "Lands with the chosen name have \"{T}: Add {C}.\"",
-            effect: StaticEffect::GrantActivatedAbility {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Land.and(SelectionRequirement::NamedBySource),
-                ),
-                ability: tap_add_colorless(),
-                condition: None,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Lands with the chosen name have \"{T}: Add {C}.\"",
+                effect: StaticEffect::GrantActivatedAbility {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::NamedBySource),
+                    ),
+                    ability: tap_add_colorless(),
+                    condition: None,
+                },
             },
-        }],
+            StaticAbility {
+                description: "Activated abilities of sources with the chosen name can't be \
+                              activated unless they're mana abilities.",
+                effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
+            },
+        ],
         activated_abilities: vec![tap_add_colorless()],
         ..Default::default()
     }

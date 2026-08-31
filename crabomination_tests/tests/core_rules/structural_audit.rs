@@ -204,3 +204,81 @@ fn a_clear_any_grant_bit_is_authoritative_for_every_predicate() {
     assert!(with_bit > 100, "only {with_bit} of {total} definitions can grant a keyword");
     assert!(total - with_bit > 1_000, "the gate excludes almost nothing");
 }
+
+/// CR 605.1a — an activated ability that **could add mana**, doesn't target
+/// and isn't a loyalty ability *is* a mana ability, whatever else it does
+/// alongside. `is_mana_ability` is that rule verbatim now, so what this
+/// audits is the *catalog* side of it: a shipped ability that adds mana and
+/// targets.
+///
+/// **Why the pair is worth a whole-catalog test.** The rule used to be an
+/// allowlist of permitted riders, and a rider nobody had thought of turned
+/// the whole ability into a stack ability — silently. The mana then lands
+/// after the cost it was tapped for is being paid, so
+/// `effective_mana_abilities_into` never offers the source and the bot never
+/// taps it. 83 abilities across 55 cards were on the wrong side: every
+/// painland, City of Brass, Ancient Tomb, the ten Talismans, Wall of Roots,
+/// Gemstone Mine, Krark-Clan Ironworks.
+///
+/// The three survivors target, and targeting is CR 605.1a's own first
+/// criterion. They are listed rather than excused in bulk, in both
+/// directions, for [`every_dead_mode_is_one_a_reviewer_signed_off`]'s reason:
+/// an entry whose card stops targeting is an entry that would go on
+/// licensing the next one.
+#[test]
+fn every_ability_that_could_add_mana_is_a_mana_ability() {
+    use crabomination::game::actions::{effect_could_add_mana, is_mana_ability_public};
+    /// Mana-adding abilities that legitimately are NOT mana abilities,
+    /// because they target (CR 605.1a). Deathrite Shaman exiles target land
+    /// card from a graveyard; Priest of Forgotten Gods makes target players
+    /// lose life; Witch Engine folds its "target opponent gains control"
+    /// trigger onto the ability. Radiant Lotus and Spectral Searchlight add
+    /// the mana to a *target player's* pool, which is the textbook example
+    /// of a mana-adding ability that is not a mana ability.
+    const REVIEWED_TARGETING_MANA: &[&str] = &[
+        "Deathrite Shaman",
+        "Priest of Forgotten Gods",
+        "Radiant Lotus",
+        "Spectral Searchlight",
+        "Witch Engine",
+    ];
+
+    let mut seen: HashSet<&'static str> = HashSet::new();
+    let mut bad: Vec<String> = Vec::new();
+    let mut hit: HashSet<&'static str> = HashSet::new();
+    for factory in all_known_factories() {
+        let def = factory();
+        if !seen.insert(def.name) {
+            continue;
+        }
+        for (i, a) in def.activated_abilities.iter().enumerate() {
+            if !effect_could_add_mana(&a.effect) || is_mana_ability_public(&a.effect) {
+                continue;
+            }
+            if REVIEWED_TARGETING_MANA.contains(&def.name) {
+                hit.insert(def.name);
+                continue;
+            }
+            bad.push(format!("{} [ability {i}]", def.name));
+        }
+    }
+    bad.sort();
+    assert!(
+        bad.is_empty(),
+        "{} ability/ies could add mana but are not mana abilities. Under CR \
+         605.1a the only reason for that is a target, so either the card's \
+         target is a modelling error or it belongs on \
+         REVIEWED_TARGETING_MANA:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+    let stale: Vec<&str> =
+        REVIEWED_TARGETING_MANA.iter().copied().filter(|n| !hit.contains(n)).collect();
+    assert!(
+        stale.is_empty(),
+        "REVIEWED_TARGETING_MANA names {} card(s) whose mana ability no longer \
+         targets — drop the entry rather than let it excuse the next one: {:?}",
+        stale.len(),
+        stale,
+    );
+}

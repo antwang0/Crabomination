@@ -1492,3 +1492,64 @@ fn smite_the_monstrous_only_hits_power_four_or_more() {
     }).is_err(), "can't target a 2/2");
 }
 
+
+/// CR 605.1a — a painland's colored ability is a **mana ability**, so
+/// auto-tap can spend it on a spell in the same action.
+///
+/// This is the regression for the whole class: `is_mana_ability` used to be
+/// an allowlist of riders that had never been shown a "deals 1 damage to
+/// you", so every painland's colored ability was a stack ability. The mana
+/// arrived after the cost it was tapped for, `effective_mana_abilities_into`
+/// never listed the source, and the caster could not spend the land's colour
+/// at all — 83 abilities across 55 cards, the ten painlands, City of Brass,
+/// Ancient Tomb and the ten Talismans among them. Casting through the land is
+/// the only assert that fails on the old rule; tapping it by hand did not.
+#[test]
+fn a_painlands_color_pays_for_a_spell() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let land = g.add_card_to_battlefield(0, catalog::adarkar_wastes());
+        g.clear_sickness(land);
+    }
+    let bolt = g.add_card_to_hand(0, catalog::counterspell());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("{U}{U} paid off two painlands");
+    assert_eq!(
+        g.players[0].life,
+        life - 2,
+        "one point of pain per painland tapped for a colour",
+    );
+    assert!(
+        g.battlefield.iter().filter(|c| c.tapped).count() == 2,
+        "both lands tapped for the cast",
+    );
+}
+
+/// The Talismans are the same class one card type over — and their pain is
+/// printed as damage, not life loss.
+#[test]
+fn a_talismans_color_pays_for_a_spell() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let rock = g.add_card_to_battlefield(0, catalog::talisman_of_progress());
+        g.clear_sickness(rock);
+    }
+    let spell = g.add_card_to_hand(0, catalog::counterspell());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("{U}{U} paid off two Talismans");
+    assert_eq!(g.players[0].life, life - 2, "one point of pain per Talisman tapped for a colour");
+}

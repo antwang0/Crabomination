@@ -20867,6 +20867,11 @@ pub fn pithing_needle() -> CardDefinition {
         name: "Pithing Needle",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of sources with the chosen name can't be \
+                          activated unless they're mana abilities.",
+            effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::NameCard {
@@ -22684,6 +22689,11 @@ pub fn phyrexian_revoker() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of sources with the chosen name can't be \
+                          activated unless they're mana abilities.",
+            effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::NameCard {
@@ -53255,10 +53265,17 @@ pub fn disruptor_flute() -> CardDefinition {
             what: Selector::This,
             restrict_to: None,
         })],
-        static_abilities: vec![StaticAbility {
-            description: "Spells with the chosen name cost {3} more to cast.",
-            effect: StaticEffect::NamedSpellTax { amount: 3 },
-        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spells with the chosen name cost {3} more to cast.",
+                effect: StaticEffect::NamedSpellTax { amount: 3 },
+            },
+            StaticAbility {
+                description: "Activated abilities of sources with the chosen name can't be \
+                              activated unless they're mana abilities.",
+                effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
+            },
+        ],
         ..Default::default()
     }
 }

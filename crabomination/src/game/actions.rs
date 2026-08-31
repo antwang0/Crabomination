@@ -244,63 +244,60 @@ pub fn is_mana_ability_public(effect: &Effect) -> bool {
     is_mana_ability(effect)
 }
 
-/// True when the effect is purely a mana ability — it adds mana and uses no
-/// targets, so it resolves immediately without using the stack.
+/// CR 605.1a — an activated ability is a mana ability when it could add mana
+/// to a player's pool, doesn't require a target, and isn't a loyalty ability.
+/// A mana ability resolves immediately, without the stack and without a
+/// priority round.
+///
+/// **The rule, not a list of riders.** This used to be
+/// `could_add_mana && mana_compatible`, where `mana_compatible` was an
+/// allowlist of the things allowed to sit beside the `AddMana` — you-only
+/// `GainLife`, you-only `Draw`, a self-`AddCounter`, `SkipNextUntap`,
+/// `ReflexiveTrigger`. CR 605.1a has no such list: **anything** may sit
+/// beside the mana as long as the ability doesn't target. Every rider nobody
+/// had thought of turned its whole ability into a stack ability, which is
+/// silent and expensive: the mana lands after the cost it was tapped for is
+/// already being paid, `effective_mana_abilities_into` never offers the
+/// source, and the bot simply never taps that permanent for that colour.
+///
+/// **83 abilities across 55 shipped cards were on the wrong side of it** —
+/// every painland (`{T}: Add {U} or {B}. This land deals 1 damage to you`),
+/// City of Brass, Ancient Tomb, Grand Coliseum, Tarnished Citadel, the ten
+/// Talismans, Grove of the Burnwillows, Gemstone Mine, Wall of Roots,
+/// Undiscovered Paradise, the five Mirage/Tempest depletion lands, Millikin,
+/// Elves of Deep Shadow, Pentad Prism, Krark-Clan Ironworks — a cube's whole
+/// painful-mana axis, producing colours no caster could spend.
+///
+/// The five that stay non-mana under the rule are the five that **target**
+/// (Deathrite Shaman's "exile target land card from a graveyard", Priest of
+/// Forgotten Gods, Witch Engine, and Radiant Lotus and Spectral Searchlight,
+/// which add the mana to a *target player's* pool), which is CR 605.1a's own
+/// first criterion and not a judgement. `core_rules::structural_audit`
+/// re-asks the whole catalog every run, with those five as the reviewed list.
+///
+/// Loyalty abilities live in their own `CardDefinition` field and never reach
+/// this, so the third criterion needs no test here.
 pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
-    // CR 605.1a — a mana ability could add mana, isn't a loyalty ability,
-    // doesn't target, and doesn't have an illegal trigger. It may still carry
-    // incidental non-stack riders (Altar of the Pantheon's "gain 1 life").
-    fn produces_mana(e: &Effect) -> bool {
-        match e {
-            Effect::AddMana { .. } => true,
-            Effect::Seq(steps) => steps.iter().any(produces_mana),
-            Effect::If { then, else_, .. } => produces_mana(then) || produces_mana(else_),
-            _ => false,
+    effect_could_add_mana(effect) && !effect.requires_target()
+}
+
+/// CR 605.1a's first criterion on its own: could this effect add mana to a
+/// player's pool when it resolves?
+///
+/// Split out of [`is_mana_ability`] rather than written twice: the two are
+/// each half of the same rule and the suite's whole-catalog audit
+/// (`core_rules::mana_abilities`) asks exactly "could it add mana, yet the
+/// engine says it is not a mana ability" — a question that needs *this*
+/// predicate, not a second copy of it that can drift.
+pub fn effect_could_add_mana(e: &Effect) -> bool {
+    match e {
+        Effect::AddMana { .. } => true,
+        Effect::Seq(steps) => steps.iter().any(effect_could_add_mana),
+        Effect::If { then, else_, .. } => {
+            effect_could_add_mana(then) || effect_could_add_mana(else_)
         }
+        _ => false,
     }
-    fn mana_compatible(e: &Effect) -> bool {
-        match e {
-            Effect::AddMana { .. } | Effect::Noop => true,
-            // Incidental you-only life gain (Altar of the Pantheon).
-            Effect::GainLife { who: crate::effect::Selector::You, .. } => true,
-            // Incidental you-only draw (Sungrass Egg's "Add {G}{W}. Draw a
-            // card."). CR 605.1a has no exclusion for it: the ability could
-            // add mana, targets nothing and is not a loyalty ability, so it
-            // is a mana ability and must resolve during cost payment. Read as
-            // a non-mana ability it would go on the stack and the mana would
-            // arrive too late to pay for the spell it was tapped for.
-            Effect::Draw { who: crate::effect::Selector::You, .. } => true,
-            // Incidental non-targeting self-counter (Twitching Doll's "put a
-            // nest counter on this creature") — CR 605.1a rider, no stack use.
-            Effect::AddCounter { what: crate::effect::Selector::This, .. } => true,
-            // "This land doesn't untap during your next untap step" (the CHK
-            // slow duals) — another non-targeting CR 605.1a rider.
-            Effect::SkipNextUntap { what: crate::effect::Selector::This } => true,
-            // **"This land deals 1 damage to you"** — the painland cycles,
-            // City of Brass, Cephalid Coliseum and the ten Talismans. It adds
-            // mana, targets nothing and is not a loyalty ability, so CR 605.1a
-            // makes it a mana ability; the pain is an incidental rider exactly
-            // like Altar of the Pantheon's life gain. Read as a *non*-mana
-            // ability the whole class stopped being auto-tappable for its
-            // colours and the mana arrived a stack resolution too late to pay
-            // for the spell it was tapped for — the same failure the `Draw`
-            // arm above is written for.
-            Effect::DealDamage { to: crate::effect::Selector::You, .. } => true,
-            // CR 605.1a/603.7 — a reflexive "when you do" rider triggers OFF
-            // the mana ability; it goes on the stack itself but doesn't stop
-            // the ability being a mana ability (Rubble Rouser's "Add {R}.
-            // When you do, deal 1 to each opponent").
-            Effect::ReflexiveTrigger { .. } => true,
-            Effect::Seq(steps) => steps.iter().all(mana_compatible),
-            // A board-state-conditional that only ever adds mana on both
-            // branches is still a mana ability (Ilysian Caryatid's "add one
-            // of any color; add two instead if you control a power-4+
-            // creature").
-            Effect::If { then, else_, .. } => mana_compatible(then) && mana_compatible(else_),
-            _ => false,
-        }
-    }
-    produces_mana(effect) && mana_compatible(effect)
 }
 
 /// The set of colours `card`'s untapped mana abilities can produce, in
@@ -14538,11 +14535,22 @@ impl GameState {
             }
         }
 
-        // CR 201.3 — Pithing Needle / Phyrexian Revoker: a permanent that
-        // named this source's card name shuts off its activated abilities
-        // unless they're mana abilities. The suppression is global (affects
-        // every player's matching sources), so we scan the whole battlefield
-        // for a `named_card` matching this source's printed name.
+        // CR 201.3 — Pithing Needle / Phyrexian Revoker / Sorcerous Spyglass:
+        // a permanent that named this source's card name shuts off its
+        // activated abilities unless they're mana abilities. The suppression
+        // is global (affects every player's matching sources), so we scan the
+        // whole battlefield for a `named_card` matching this source's printed
+        // name.
+        //
+        // **And for the static that means it.** `named_card` alone is not a
+        // Pithing Needle: thirteen shipped cards stamp one for something else
+        // entirely — Skyseer's Chariot taxes, Disruptor Flute bumps a cast
+        // cost, Meddling Mage and Nevermore lock casting, Alpine Moon
+        // neutralizes lands — and reading the field bare made every one of
+        // them a Pithing Needle as well. It stayed invisible because the one
+        // test that crosses the two (Skyseer's Chariot naming Radiant Lotus)
+        // named a card whose only ability was wrongly a mana ability and so
+        // never reached this gate.
         if !ability_is_mana {
             let source_name = if source_in_gy {
                 self.players[source_owner].graveyard.iter()
@@ -14552,7 +14560,15 @@ impl GameState {
                 bf_src!().map(|c| c.definition.name)
             };
             if let Some(name) = source_name
-                && self.battlefield.iter().any(|c| c.named_card.as_deref() == Some(name))
+                && self.battlefield.iter().any(|c| {
+                    c.named_card.as_deref() == Some(name)
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(
+                                sa.effect,
+                                crate::effect::StaticEffect::NamedSourcesAbilitiesCantBeActivated
+                            )
+                        })
+                })
             {
                 return Err(GameError::AbilitySuppressedByNamedCard);
             }

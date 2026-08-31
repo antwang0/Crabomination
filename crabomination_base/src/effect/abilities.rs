@@ -1626,6 +1626,20 @@ pub enum StaticEffect {
     /// `named_card` (CR 201.3, stamped by `Effect::NameCard`); mana abilities
     /// are taxed too, matching the printed wording's lack of an exclusion.
     NamedSourcesActivationTax { amount: u32 },
+    /// CR 201.3 — "Activated abilities of sources with the chosen name can't
+    /// be activated unless they're mana abilities" (Pithing Needle, Phyrexian
+    /// Revoker, Sorcerous Spyglass). The name comes from the static source's
+    /// `named_card`, exactly as [`Self::NamedSourcesActivationTax`]'s does.
+    ///
+    /// The suppression used to be *implicit* — any battlefield permanent
+    /// whose `named_card` matched shut the source's abilities off — and
+    /// `named_card` is not a Pithing Needle flag: thirteen shipped cards
+    /// stamp one for a tax (Skyseer's Chariot), a cast lock (Meddling Mage,
+    /// Nevermore), a cost bump (Disruptor Flute) or a land neutralization
+    /// (Alpine Moon), and every one of them silently suppressed the named
+    /// card's whole activated-ability set as well. Naming the effect is what
+    /// keeps the two apart.
+    NamedSourcesAbilitiesCantBeActivated,
     /// CR 602.5 / 614 — "Activated abilities of enchanted/equipped creature
     /// cost {N} more to activate" (Oppressive Rays). Applies only to
     /// activations whose source is the permanent this Aura is attached to.

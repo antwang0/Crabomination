@@ -25218,6 +25218,9 @@ fn static_effect_to_effects(
             | StaticEffect::YourISSpellsCostLessPerTargetCreature { .. }
             | StaticEffect::ActivationTax { .. }
             | StaticEffect::NamedSourcesActivationTax { .. }
+            // Pithing Needle's lock — consulted in `activate_ability`
+            // against the source's `named_card`; no layer effect.
+            | StaticEffect::NamedSourcesAbilitiesCantBeActivated
             // AttachedActivationTax (Oppressive Rays) — same funnel, scoped
             // to the Aura's host.
             | StaticEffect::AttachedActivationTax { .. }

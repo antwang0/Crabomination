@@ -4157,6 +4157,11 @@ pub fn sorcerous_spyglass() -> CardDefinition {
         name: "Sorcerous Spyglass",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of sources with the chosen name can't be \
+                          activated unless they're mana abilities.",
+            effect: StaticEffect::NamedSourcesAbilitiesCantBeActivated,
+        }],
         triggered_abilities: vec![etb(Effect::NameCard {
             what: Selector::This,
             restrict_to: None,
