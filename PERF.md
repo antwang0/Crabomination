@@ -17954,9 +17954,56 @@ the actor lane's queue current.
 
 Recipe is in "How to measure" (the `crabomination_ml` flag is load-bearing).
 
-**(-122) TAKEN, 2026-08-31 — THE ACTIVATED-GRANT WALK IS THE TRIGGER
-DISPATCHER'S TWIN AND IT HAS HAD NONE OF THE FOUR DEVICES THE TRIGGER SIDE
-GOT.** Read off `p.cube` at
+**(-122) CLOSED, REFUTED BY CENSUS AT `9f06d76a` — THE MASK COSTS 2.86x THE
+WALK IT WOULD REPLACE, AND ON TWO OF THREE POOLS THE WALK DOES NOT EXIST.**
+`CRAB_TRIG_CENSUS=1`, six games, one thread, `grant_census` (below):
+
+```text
+pool     scans with an EachPermanent grant   mask would evaluate   the walk does
+fixed         0 / 11,672                                    0               0
+cube      5,030 / 26,540                             301,516         105,436
+sealed        0 / 30,536                                    0               0
+```
+
+**The cross-check is exact**: the census's 105,436 is callgrind's
+`granted_abilities_of_inner -> evaluate_requirement_static_hinted` edge to the
+call, 31,641,022 Ir = **1.25 % of `cube`** — so the ceiling this entry asked
+to be sized is confirmed at 1.25 %, on one pool of three, and the device
+proposed to collect it *spends* 2.86x that.
+
+**Why the premise was wrong, and it is the transferable half.** The entry read
+the body — "`for (applies_to, ability, src) in &scan.statics` with an
+evaluation per pair, and its own comment says it runs for every untapped
+permanent" — and inferred O(permanents x grants). The comment is accurate
+about the *sweep*; it is not accurate about what reaches the loop.
+`granted_abilities_of`'s ten-check grants-nothing gate stands in front of it
+and turns ~65 % of the board away: **21.0 asks per grant-carrying scan against
+the 59.9 board slots a mask has to fill anyway.** A board-wide precompute can
+only win against a walk that visits the whole board; this one already does
+not. **A gate in front of a walk is part of the walk's cost model** — read the
+caller's population, not the loop's shape, before pricing a precompute that
+covers everything the loop might have been asked.
+
+The `(-115)` device was the right family for a walk with no event kind to
+filter on. It is the population, not the device, that refutes it.
+
+**What is left on this traffic is the price per evaluation, not the count.**
+31,641,022 Ir over 105,436 evaluations is **300.1 Ir apiece** for what is
+usually a type test, and `evaluate_requirement_static_hinted`'s recursive
+instance is the top row of the ratio table (1.47 % of `cube` against 0.13 % of
+`fixed`, 11.68x). That is a candidate about the *walker*, reached from
+nineteen callers of which this is one — not about the grant scan. Nothing is
+filed for it yet: it needs its own contexts dump, because the ratio row is the
+merged monomorphization and `--demangle=no` is what separates the three.
+
+The census that answered this is `zone::grant_census`, on the existing
+`trig-census` feature and gated on the same variable; `bot_ladder` prints a
+`grant_census` line beside `trig_census`. It is four counters and it cost one
+build. **Re-run it before believing this closure on a pool whose card set has
+changed** — `fixed` and `sealed` carry no `GrantActivatedAbility` with an
+`EachPermanent` selector *today*.
+
+The original entry, for the record. Read off `p.cube` at
 `cab8d5d7` with the ratio device (`cg_ratio.py cube fixed --floor 0.45`),
 which ranks it 4th at **2.69x**:
 
