@@ -2310,15 +2310,27 @@ a box whose state moves.
 
 ## Baseline
 
-### The clone-shape pass — closing state at `33955a1f`
+### The clone-shape and small-table pass — closing state at `3efd6d45`
 
-Three perf commits on one device — **group a hot struct's plain field copies
-away from the ones that call something** — plus a `counters`-class card batch
-that takes three primitive jobs `CARD_BACKLOG` had already filed.
+Six perf commits on two devices — **group a hot struct's plain field copies
+away from the ones that call something**, and **a map whose size is bounded
+by the board, the batch or the seat count is a `Vec`** — plus a
+`counters`-class card batch that takes three primitive jobs `CARD_BACKLOG`
+had already filed.
+
+```text
+  cube, `profiling-fast --no-default-features`, six games, one thread, seed 1
+  0e6ed414   2,509,983,333   the rebased base
+  babadb2e   2,504,010,258   -0.238 %   (-140)/(-141)/(-142), the clone shape
+  33955a1f   2,503,861,524   -0.006 %   the card batch
+  3efd6d45   2,476,827,927   -1.080 %   (-143)/(-144)/(-145), the small tables
+  ---------------------------------------------------------------------------
+  whole run                  **-1.321 %**
+```
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,113 / 0 / 5 (cargo nextest --workspace --exclude
+suite   19,115 / 0 / 5 (cargo nextest --workspace --exclude
         crabomination_client); golden traces in it, **unmoved across every
         commit**
 clippy  --workspace --exclude crabomination_client --all-targets   clean
@@ -2328,13 +2340,15 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 callgrind (profiling-fast --no-default-features, six games, one thread,
         seed 1, `--a gang --b gang`), **retaken on the rebased base
         `0e6ed414` after the concurrent session landed**:
-  pool    0e6ed414        perf tip babadb2e   run tip 33955a1f
-  cube    2,509,983,333   2,504,010,258       2,503,861,524
-                            -0.2380 %           -0.2439 %
-  fixed     841,725,144     839,127,159         927,368,664
-                            -0.3087 %          +10.1748 %  <- the card batch
-grid    NOT re-run: the three perf commits are pure statement/declaration
-        order and the card batch is gated by 19,113 tests.
+  pool    0e6ed414        babadb2e        33955a1f        3efd6d45
+  cube    2,509,983,333   2,504,010,258   2,503,861,524   2,476,827,927
+                            -0.2380 %       -0.2439 %       -1.3209 %
+  fixed     841,725,144     839,127,159     927,368,664     919,283,529
+                            -0.3087 %      +10.1748 %       +9.2141 %
+                                            ^ the card batch, see below
+grid    NOT re-run: the six perf commits are order changes and container
+        swaps with the suite and a byte-identical `--bench` behind them, and
+        the card batch is gated by 19,115 tests.
 ```
 
 ⚠ **The perf numbers were first taken against `bc2a38f5` and read -0.2319 % /
@@ -19053,6 +19067,25 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-143)/(-144)/(-145) CLOSED — THE SMALL-TABLE SWEEP IS DONE, `cube`
+-1.080 % / `fixed` -0.872 %.** Twelve `hashbrown` tables whose size is bounded
+by the board, the batch or the seat count became `IdMap`/`IdSet` (a
+`Vec<(K, V)>` with linear scans): `GameState::block_map`, eight per-call
+locals in `declare_blockers` / `pick_blocks_inner`, two in
+`declare_attackers_banded`, one in `simulate_attack_outcome_once`, and the two
+per-seat discard maps that were **exactly two `RawTable::clone` calls on every
+`GameState` clone**. The cluster is 17 M -> 4.59 M. **What is left is the
+cold-group deep copies, and it stops there**: `cycled_counts` is keyed by card
+name and grows all game, so a `Vec` would trade a 41-Ir clone for an unbounded
+lookup. ⚠ **`SipHash` was never the cost** (`core::hash::sip` is 0.003 % of
+the run), which also closes the standing "hash choice for internal maps"
+candidate — what a small map costs here is the *table*, not the hash.
+⚠ **And deck construction is not a lever either**: `--decks sealed --games 1`
+builds twelve sealed decks for 11.3 M Ir total, ~0.9 M a deck against a
+~415 M-Ir game, so the two decks a `selfplay_train` actor builds per game are
+**0.4 % of it**. `rank_shape` is 29 % of that 0.9 M and PERF already called it
+hot-line-free.
 
 **(-140)/(-141)/(-142) CLOSED — THE CLONE-GROUPING DEVICE IS EXHAUSTED.**
 Grouping a hot struct's plain field copies *after* the ones that call

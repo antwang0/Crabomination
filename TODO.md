@@ -45,7 +45,8 @@ sixty-seventh pass, so don't re-take that.
    lengthen, the boards got bigger. `cube` moved -0.006 %, so the training pools are untouched.
    **A card in the `--bench` archetypes is bench infrastructure — price the fix before taking
    it.** Same warning already stands on `cube`/`sealed` across the CR 605.1a commit in (8a).
-3. **Perf this run, two independent devices.** (a) `(-134)`/`(-136)`/`(-137)` closed the frame
+3. **Perf this run, `cube` -1.32 % / `fixed` -0.31 % (the `fixed` figure is perf-only; the card
+   batch adds +9.2 % of *workload* on top — see (2)). Three devices.** (a) `(-134)`/`(-136)`/`(-137)` closed the frame
    class for `cube` -0.53 % cumulative; `cg_frames.py` now prints **`out/call`** and is a
    *confirmation, not a queue* — every remaining row is "the frame IS the calls" or under
    0.06 %. (b) `(-140)`/`(-141)`/`(-142)`: **group a hot struct's plain field copies away from
@@ -55,6 +56,21 @@ sixty-seventh pass, so don't re-take that.
    `noalias`, so LLVM may not move a load across a call and every interleaved scalar was its
    own fenced load/store pair. **Copies LAST, not first.** For a `#[derive(Clone)]` type the
    order is the *declaration* order, which also moves the layout tie-breaks — measure it.
+3a. **The third device, and it is the run's biggest: `(-143)`/`(-144)`/`(-145)`, `cube`
+   -1.080 % / `fixed` -0.872 %. A map whose size is bounded by the board, the batch or the
+   seat count is a `Vec`.** Twelve `hashbrown` tables became `IdMap`/`IdSet`: `block_map`,
+   eight per-call locals in `declare_blockers`/`pick_blocks_inner`, two in
+   `declare_attackers_banded`, one in `simulate_attack_outcome_once`, and the two per-seat
+   discard maps that were **exactly two `RawTable::clone` calls on every `GameState` clone**.
+   `cg_edges.py --callers reserve_rehash` is the instrument; the cluster is 17 M -> 4.59 M and
+   **the sweep is finished** — what is left is the cold-group copies, whose maps are bounded by
+   the *game* (`cycled_counts` by card name), where a `Vec` trades a 41-Ir clone for an
+   unbounded lookup. ⚠ Two candidates die with it: **SipHash was never the cost** (0.003 % of
+   the run) and **deck construction is not a lever** (~0.9 M Ir a deck, 0.4 % of a game).
+   ⚠ At `codegen-units = 16` these swaps move inlining decisions, and callgrind reattributed
+   25 M between `SmallVec::extend` and `compute_permanent_pass` across two of the three
+   commits — **read a container swap's per-commit split with suspicion and the total as the
+   number.**
 4. **THE NEXT PERF BUILD IS `(-138)`'s COLLECTION GROUP, AND ITS CENSUS IS ALREADY RUN.**
    `GameState::clone` is 1,175 instructions on every call, 91.5 % of self, 101 of 194 fields
    resolution scratch. `CRAB_SCRATCH_CENSUS` picks a different group than the entry proposed:
