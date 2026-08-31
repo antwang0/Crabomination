@@ -1697,6 +1697,21 @@ fn main() {
              combinator ({:.1} % nested)",
             if children == 0 { 0.0 } else { 100.0 * nested_children as f64 / children as f64 },
         );
+        // PERF (-129): which factor of (pairs x batch) the dispatcher's
+        // innermost loop multiplies, and the share of it a pair no event in
+        // the batch can match contributes.
+        let [disp, batch, kinds, pairs, dead_pairs, calls, dead_calls] =
+            crabomination::zone::ems_census::snapshot();
+        println!(
+            "  ems_census {disp} dispatches x {:.2} events x {:.2} pairs = {calls} calls; \
+             dead {dead_pairs}/{pairs} pairs ({:.2} %) / {dead_calls} calls ({:.2} %); \
+             distinct kinds/dispatch {:.2}",
+            if disp == 0 { 0.0 } else { batch as f64 / disp as f64 },
+            if disp == 0 { 0.0 } else { pairs as f64 / disp as f64 },
+            if pairs == 0 { 0.0 } else { 100.0 * dead_pairs as f64 / pairs as f64 },
+            if calls == 0 { 0.0 } else { 100.0 * dead_calls as f64 / calls as f64 },
+            if disp == 0 { 0.0 } else { kinds as f64 / disp as f64 },
+        );
     }
     // PERF (-51)(b): what the simulator's payments cost when they fail, split
     // by *why*. Off unless `CRAB_PAY_FAILS` is set.

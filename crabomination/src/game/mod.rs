@@ -18438,6 +18438,11 @@ impl GameState {
         // because the hand-rolled counter is a loop-carried dependency through
         // a conditional where the iterator's is not. Measured, reverted.
         let mut walk = board.iter().enumerate();
+        // PERF `(-129)`: the distinct `EventKind` discriminants this walk
+        // presents, which is what a per-dispatch memo would have to evaluate
+        // against the batch. Linear `contains` on purpose — census-only.
+        #[cfg(feature = "trig-census")]
+        let mut census_kinds: Vec<std::mem::Discriminant<crate::effect::EventKind>> = Vec::new();
         loop {
             let (i, card) = match members {
                 None => match walk.next() {
@@ -18590,6 +18595,26 @@ impl GameState {
                 // partner set via `Selector::BlockedAttacker` /
                 // `BlockingCreatures`, so one trigger instance still covers all.
                 block_sides_seen.clear();
+                // PERF `(-129)`: is this pair's whole event loop dead? The
+                // `source: None` over-approximation is the same one the two
+                // grant pre-filters above use, so a "dead" here is a pair the
+                // exact check below rejects on every event.
+                #[cfg(feature = "trig-census")]
+                if crate::zone::trig_census::on() {
+                    let d = std::mem::discriminant(&ta.event.kind);
+                    if !census_kinds.contains(&d) {
+                        census_kinds.push(d);
+                    }
+                    let dead = !events.iter().any(|ev| {
+                        crate::game::effects::events::event_kind_matches(
+                            self,
+                            ev,
+                            &ta.event,
+                            None,
+                        )
+                    });
+                    crate::zone::ems_census::pair(events.len() as u64, dead);
+                }
                 for ev in events {
                     // **The kind test goes first and the three exclusions
                     // after it, and that ordering is the measurement.** All
@@ -18739,6 +18764,10 @@ impl GameState {
                     }
                 }
             }
+        }
+        #[cfg(feature = "trig-census")]
+        if crate::zone::trig_census::on() {
+            crate::zone::ems_census::dispatch(events.len() as u64, census_kinds.len() as u64);
         }
         if let Some((epoch, bits)) = fill {
             self.battlefield.store_trigger_members(epoch, bits);

@@ -562,6 +562,68 @@ pub mod req_census {
     }
 }
 
+/// PERF `(-129)`: what the trigger dispatcher's innermost loop actually
+/// multiplies. `event_matches_spec` is 1,028,014 calls on `cube` against
+/// 103,082 on `fixed` for roughly twice the board, so the question is which
+/// factor of (pairs x batch) carries the ratio — and how many of those calls
+/// are made by a (permanent, trigger) pair no event in the batch could ever
+/// match, which is the population a per-pair kind gate would remove.
+///
+/// On `trig-census` beside the other three; the counters live outside the
+/// `for ev in events` loop so the census itself cannot be what is measured.
+#[cfg(feature = "trig-census")]
+pub mod ems_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// Dispatches that reached the battlefield walk, and the events they
+    /// carried — the mean batch size is the ratio.
+    pub static DISPATCHES: AtomicU64 = AtomicU64::new(0);
+    pub static BATCH: AtomicU64 = AtomicU64::new(0);
+    /// Distinct `EventKind` discriminants a dispatch's triggers presented,
+    /// summed — what a per-dispatch memo on the kind would have to evaluate
+    /// against the batch, against `PAIRS` which is what it would serve.
+    pub static KINDS: AtomicU64 = AtomicU64::new(0);
+    /// (permanent, trigger) pairs that reached the `for ev in events` loop.
+    pub static PAIRS: AtomicU64 = AtomicU64::new(0);
+    /// …of which no event in the batch could match, by the same `source:
+    /// None` over-approximation the grant pre-filters use.
+    pub static DEAD_PAIRS: AtomicU64 = AtomicU64::new(0);
+    /// `event_matches_spec` calls the loop made, and the share of them a dead
+    /// pair made — the ceiling on the gate.
+    pub static CALLS: AtomicU64 = AtomicU64::new(0);
+    pub static DEAD_CALLS: AtomicU64 = AtomicU64::new(0);
+
+    /// One dispatch: its batch size and the distinct kinds its walk presented.
+    pub fn dispatch(batch: u64, kinds: u64) {
+        DISPATCHES.fetch_add(1, Relaxed);
+        BATCH.fetch_add(batch, Relaxed);
+        KINDS.fetch_add(kinds, Relaxed);
+    }
+
+    /// One (permanent, trigger) pair about to run the event loop.
+    pub fn pair(batch: u64, dead: bool) {
+        PAIRS.fetch_add(1, Relaxed);
+        CALLS.fetch_add(batch, Relaxed);
+        if dead {
+            DEAD_PAIRS.fetch_add(1, Relaxed);
+            DEAD_CALLS.fetch_add(batch, Relaxed);
+        }
+    }
+
+    /// `(dispatches, batch, kinds, pairs, dead_pairs, calls, dead_calls)`.
+    pub fn snapshot() -> [u64; 7] {
+        [
+            DISPATCHES.load(Relaxed),
+            BATCH.load(Relaxed),
+            KINDS.load(Relaxed),
+            PAIRS.load(Relaxed),
+            DEAD_PAIRS.load(Relaxed),
+            CALLS.load(Relaxed),
+            DEAD_CALLS.load(Relaxed),
+        ]
+    }
+}
+
 /// The battlefield: the CoW card list, plus the whole-board questions asked of
 /// it often enough to want a memo — the two layer-4 type gates ("can any
 /// permanent here contribute an `AddLandType` / `SetLandTypes` /
