@@ -17938,12 +17938,45 @@ is running fewer of them.** 20,210 sweeps against 121,802 `perform_action_inner`
 calls on `cube` says the engine already gates them; nobody has measured how
 many of the survivors follow an action that changed nothing an SBA can read.
 
-**Size that before building anything** — a counter beside the other three
-(`zone::grant_census` is the pattern; `(-122)` and `(-126)` were each answered
-by one build): sweeps, and sweeps in which no SBA fired *and* nothing
-SBA-relevant changed since the previous one. Note the scan is retaken up to
-three times *inside* a single sweep (shapeshifter sync, sector assignment, flip
-legs), and those retakes are already inside the 1,167 Ir.
+**AND THAT NUMBER ALREADY EXISTS — `CRAB_SBA_CENSUS` HAS BEEN IN THE TREE
+SINCE `6e44ce7c` AND NOTHING HAD RUN IT AGAINST THIS QUESTION.** It fingerprints
+every SBA-relevant field on the board (definition pointer, controller, owner,
+tapped, flipped, bestowed, attached_to, sector, damage, both toughness bonuses,
+deathtouch flag, soulbond partner, every counter) and counts sweeps whose
+fingerprint equals the previous sweep's. Six games, one thread:
+
+```text
+  fixed    1,736 / 9,146  repeats  18.98 %
+  cube     3,633 / 20,210 repeats  17.98 %
+  sealed   5,594 / 31,452 repeats  17.79 %
+```
+
+**So the ceiling on "skip a sweep whose inputs did not change" is ~18 % of the
+whole 3.78 % / 4.19 % cluster — 0.68 % of `cube` and 0.80 % of `fixed`**, and
+it is the entire sweep, not just the scan. That is a better ceiling than most
+of the rows in the Log.
+
+**The open problem is the gate, and it is the whole difficulty.** The
+fingerprint that measured this is a board walk hashing twelve fields a card —
+far more than the sweep it would skip, so it cannot *be* the gate. The obvious
+cheap gate is a dirty counter on `zone::Battlefield`'s three `&mut` chokepoints
+(`deref_mut` / `iter_mut` / `get_mut`, which the type's own doc says is where
+every tap, damage, counter and untap write goes) — sound, because it
+over-approximates, but **over-approximating is exactly the risk**: those
+accessors fire on any mutable *reach*, not on an SBA-relevant *write*, and the
+same doc counts 139,280 of them a `cube` run against 20,210 sweeps. Seven
+reaches a sweep against an 18 % unchanged rate says most of those reaches
+change nothing the sweep reads.
+
+**So the next measurement is one counter, not a device:** sweeps that saw zero
+`&mut` reaches on the battlefield since the previous sweep. If that tracks the
+18 %, the dirty bit is the device and it is nearly free; if it is near zero,
+the gate has to discriminate writes from reaches and the ceiling is out of
+reach at any sane cost. Do not build the skip before that number exists.
+
+Note also that the scan is retaken up to three times *inside* a single sweep
+(shapeshifter sync, sector assignment, flip legs), and those retakes are
+already inside the 1,167 Ir.
 
 **(-129) `event_matches_spec` IS 1,028,014 CALLS ON `cube` AND 103,082 ON
 `fixed` — A 10x RATIO ON A FUNCTION THAT COSTS 31 Ir A CALL.** 1.26 % of
