@@ -2310,6 +2310,63 @@ a box whose state moves.
 
 ## Baseline
 
+### The clone-shape pass — closing state at `b1838df2`
+
+Three perf commits on one device — **group a hot struct's plain field copies
+away from the ones that call something** — plus a `counters`-class card batch
+that takes three primitive jobs `CARD_BACKLOG` had already filed.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,113 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces in it, **unmoved across every
+        commit**
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release-fast: 195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls — **a NEW invariant, see the warning below**; determinism
+        ok, thread_determinism ok (3 vs 1 threads identical)
+callgrind (profiling-fast --no-default-features, six games, one thread,
+        seed 1, `--a gang --b gang`), base `bc2a38f5`:
+  pool    base            (-140)          (-141)          (-142)      perf total
+  cube    2,490,817,192   2,488,440,645   2,486,989,586   2,485,040,761  -0.2319 %
+  fixed     838,864,887     837,728,304     837,039,558     836,284,314  -0.3076 %
+  tip after the card batch:  cube 2,484,902,445   fixed 923,198,446
+grid    NOT re-run: the three perf commits are pure statement/declaration
+        order and the card batch is gated by 19,113 tests.
+```
+
+⚠ **THE `fixed` POOL GOT ~5 % HEAVIER AND IT IS THE CARD BATCH, NOT THE
+ENGINE. A `fixed` Ir READING FROM BEFORE `b1838df2` IS NOT COMPARABLE TO ONE
+AFTER IT.** Sengir Vampire is in two of the four `--decks fixed` archetypes
+(golgari midrange x1, dimir control x2) and it stopped being a vanilla 4/4.
+Three seeds, `precards` (`81acdd45`) against the tip:
+
+```text
+  seed 1    836,284,314 -> 923,198,446   +10.39 %
+  seed 2  1,856,178,232 -> 1,891,225,743  +1.89 %
+  seed 3  2,525,704,841 -> 2,676,862,813  +5.98 %
+  weighted                                +5.23 %
+```
+
+**And the shape of it is the interesting half: `--bench`'s decision count
+moved +0.14 % (195,528 -> 195,806) and turns +0.18 %, so the games are the
+same length and each decision costs more.** The profile diff is *diffuse and
+proportional* — `dispatch_triggers_for_events` +19 %, `compute_permanent_pass`
++18 %, `gather_continuous_effects_inner` +13 %, the SBA sweep +12 %, the
+allocator +10 % — which is not "a new listener costs something" (that would
+be one row) but **bigger boards**: a Sengir that grows survives combats it
+used to lose, and every per-decision board walk is over more permanents.
+
+⚠ `cube` moved **-0.0056 %** across the same batch, so **the training pools
+are untouched** — `selfplay_train` and the 10-30k-game gates run `cube` /
+`sealed`. What changed is the micro-bench.
+
+**The rule this leaves: a card in the `--bench` archetypes is bench
+infrastructure.** Before fixing one, price it — the fix is usually still
+right (this one is: a LEA staple had shipped as a body since forever), but it
+costs the `fixed` series its continuity and the next run needs to be told.
+
+### The CR 605.1a pass — closing state at `48257733`
 ### The CR 605.1a pass — closing state at `5e4ebf44`
 
 One perf commit (`(-137)`, the last frame-class row), one rules fix that
@@ -18701,6 +18758,20 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-140)/(-141)/(-142) CLOSED — THE CLONE-GROUPING DEVICE IS EXHAUSTED.**
+Grouping a hot struct's plain field copies *after* the ones that call
+something took `cube` **-0.232 %** / `fixed` **-0.308 %** across `GameState`
+(a literal), `PlayerData` and `CardData` (declaration order, since they
+derive). **What is left is not worth taking**: `PlayerCold`'s 15 fields are
+all collections and `ColdState`'s 83 of 84 are, so neither has a run to
+group; `CardCold` is 29/7 and is the 0.28 % row's *fourth* contributor. And
+`(-141)`'s microbenchmark prices the structural version — hoisting every
+scalar into a `#[derive(Clone, Copy)]` sub-struct — at **45 static
+instructions over the free reorder** on a 150-field fixture, i.e. a
+thousand-site refactor with a `serde` schema change for a third of what the
+reorder already got. **The collections are the cost of these clones, and the
+only thing that touches them is `(-138)`'s CoW grouping.**
 
 **(-139) CLOSED — DO NOT RETAKE. `noalias` ON `&GameState` IS WORTH NOTHING.**
 Seven inline atomics (`rng`, `in_layer_gather`, `layer_freeze`, and
