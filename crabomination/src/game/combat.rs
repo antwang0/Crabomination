@@ -1885,15 +1885,15 @@ impl GameState {
         // block more (`CanBlockAdditional` / `CanBlockAnyNumber`); count the
         // merged set (already-declared blocks plus this batch) against the
         // allowance, and reject a repeat of the same pair.
-        let mut batch_blocks: crate::fxhash::HashMap<CardId, SmallVec<[CardId; 4]>> =
-            crate::fxhash::HashMap::default();
+        let mut batch_blocks: crate::game::types::IdMap<CardId, SmallVec<[CardId; 4]>> =
+            Default::default();
         // CR 509.1b — Silent Arbiter: "No more than N creatures can block each
         // combat." Count distinct blockers across already-declared blocks and
         // this batch.
         if let Some(cap) = self.combat_participation_cap(true)
             && let Some(&(first, _)) = assignments.first()
         {
-            let mut distinct: crate::fxhash::HashSet<CardId> =
+            let mut distinct: crate::game::types::IdSet<CardId> =
                 self.block_map.keys().copied().collect();
             distinct.extend(assignments.iter().map(|(b, _)| *b));
             if distinct.len() > cap as usize {
@@ -1901,7 +1901,7 @@ impl GameState {
             }
         }
         for &(blocker_id, attacker_id) in &assignments {
-            let taken = batch_blocks.entry(blocker_id).or_default();
+            let taken = batch_blocks.entry_or_default(blocker_id);
             if taken.contains(&attacker_id) || self.blocks(blocker_id, attacker_id) {
                 return Err(block_reject(line!(), GameError::CannotBlock(blocker_id)));
             }
@@ -1959,7 +1959,7 @@ impl GameState {
         // only creature blocking this combat; count the merged block set
         // (this batch plus any earlier-declared blockers).
         {
-            let mut all_blockers: crate::fxhash::HashSet<CardId> =
+            let mut all_blockers: crate::game::types::IdSet<CardId> =
                 self.block_map.keys().copied().collect();
             all_blockers.extend(assignments.iter().map(|(b, _)| *b));
             if all_blockers.len() == 1 {
@@ -1996,15 +1996,15 @@ impl GameState {
         // life rather than mana.
         // The spend is deferred to after every block-legality check so a
         // rejected declaration never costs mana (CR 601.2h-style atomicity).
-        let mut block_tax_by_controller: crate::fxhash::HashMap<usize, (u32, u32)> =
-            crate::fxhash::HashMap::default();
+        let mut block_tax_by_controller: crate::game::types::IdMap<usize, (u32, u32)> =
+            Default::default();
         for &(blocker_id, _) in &assignments {
             let (mana, life) = self.block_tax_for(blocker_id);
             if mana == 0 && life == 0 {
                 continue;
             }
             if let Some(b) = self.battlefield_find(blocker_id) {
-                let e = block_tax_by_controller.entry(b.controller).or_insert((0, 0));
+                let e = block_tax_by_controller.entry_or_default(b.controller);
                 e.0 += mana;
                 e.1 += life;
             }
@@ -2032,12 +2032,12 @@ impl GameState {
         // (Oppressive Rays). Charged once per declared blocker, paid from
         // that blocker's controller's pool with auto-tap for the shortfall.
         {
-            let mut owed: crate::fxhash::HashMap<usize, u32> = Default::default();
+            let mut owed: crate::game::types::IdMap<usize, u32> = Default::default();
             for &(blocker_id, _) in &assignments {
                 let Some(seat) = self.battlefield_find(blocker_id).map(|c| c.controller) else {
                     continue;
                 };
-                *owed.entry(seat).or_default() +=
+                *owed.entry_or_default(seat) +=
                     self.attack_block_keyword_tax(blocker_id, kws_of(blocker_id), false);
             }
             for (seat, amount) in owed {
@@ -2320,9 +2320,9 @@ impl GameState {
             kws.iter().filter_map(pick).sum()
         };
         let mut pt_deltas: SmallVec<[(CardId, i32); 8]> = SmallVec::new();
-        let mut blocked: crate::fxhash::HashMap<CardId, usize> = crate::fxhash::HashMap::default();
+        let mut blocked: crate::game::types::IdMap<CardId, usize> = Default::default();
         for &(b, a) in &assignments {
-            *blocked.entry(a).or_insert(0) += 1;
+            *blocked.entry_or_default(a) += 1;
             let bk = kws_for(b);
             let ak = kws_for(a);
             // Flanking: nonflanking blocker shrinks once per flanking instance.

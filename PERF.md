@@ -10305,6 +10305,59 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass (6) — `(-144)`: the eight per-call tables in the blocking path, and the device is now proved
+
+**`cube` -0.796 % / `fixed` -0.498 %** against `(-143)`, i.e. **-0.904 % /
+-0.666 % cumulative** against the run tip `33955a1f`. Same instrument, same
+workload — `--bench` reads **195,806 / 27.49 / 611.9 / 0 stalls**,
+byte-identical, so the games are the same and this is work removed rather
+than a workload that shrank.
+
+```text
+  pool    tip 33955a1f    (-143)          (-144)          cumulative
+  cube    2,503,861,524   2,501,137,861   2,481,232,541   -0.9038 %
+  fixed     927,368,664     925,804,066     921,192,718   -0.6660 %
+```
+
+`(-143)` swapped the one `block_map` field. This is the rest of the same
+shape: **eight `fxhash` maps and sets built from empty on every call** in the
+two functions the `reserve_rehash` table named, all of them holding a handful
+of entries.
+
+```text
+  declare_blockers   batch_blocks              IdMap<CardId, SmallVec<[CardId; 4]>>
+                     distinct / all_blockers   IdSet<CardId>
+                     block_tax_by_controller   IdMap<usize, (u32, u32)>   <- keyed by SEAT
+                     owed                      IdMap<usize, u32>          <- keyed by SEAT
+                     blocked                   IdMap<CardId, usize>
+  pick_blocks_inner  pw_attackers              IdMap<CardId, (u32, Vec<CardId>)>
+                     defend_attackers / used   IdSet<CardId>
+                     attacker_damage_taken     IdMap<CardId, i32>
+                     attacker_block_count      IdMap<CardId, i32>
+```
+
+**Two of them are keyed by seat** — a two-entry `hashbrown` table, allocated
+and dropped on every block declaration.
+
+⚠ **The per-commit split of the -0.904 % is not readable off the row diff,
+and the reason is worth knowing.** Between `(-143)` and `(-144)`,
+`SmallVec::extend` moves 39.7 M -> 14.2 M and `compute_permanent_pass` moves
+69.1 M -> 79.0 M — the exact reverse of what they did across `(-143)`. At
+`codegen-units = 16` a change that shrinks `declare_blockers` moves inlining
+decisions in the same unit, and callgrind attributes the *same* work to a
+different row. **The hashbrown rows are the honest part of the diff**
+(`reserve_rehash` -1.5 M, `fallible_with_capacity` -1.6 M, `HashMap::insert`
+-0.8 M, `RawTable::drop` -0.3 M) and they do not add up to the win. **Read
+the two commits as one device and the total as the number.**
+
+**The transferable rule: a small map is a `Vec`, and "small" here means what
+combat holds — one entry per blocker, one per attacker, one per seat.** The
+codebase already knew this (`IdMap`/`IdSet` exist and `combat_damage_order`
+uses them); what it had not done is sweep the *locals*. `cg_edges.py
+--callers reserve_rehash` names every function still building one, and after
+this pass the list is `rank_library_search`, `discard_card` and
+`block_candidates_for_mcts` — 0.01 % between them.
+
 ### Hundred-and-sixteenth pass (5) — `(-143)`: `block_map` was the last `hashbrown` table in combat
 
 **`cube` -0.109 % / `fixed` -0.169 %** off the run tip (`33955a1f`), same

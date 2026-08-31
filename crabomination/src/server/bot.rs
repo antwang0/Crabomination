@@ -10070,21 +10070,21 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // is being attacked, if the attackers aimed at it would deal lethal
     // (total power ≥ its loyalty), mark those attackers so the chump-block
     // pass will trade idle blockers to save the walker.
-    let defend_attackers: crate::fxhash::HashSet<CardId> = {
+    let defend_attackers: crate::game::types::IdSet<CardId> = {
         use crate::card::CounterType;
-        let mut pw_attackers: crate::fxhash::HashMap<CardId, (u32, Vec<CardId>)> =
-            crate::fxhash::HashMap::default();
+        let mut pw_attackers: crate::game::types::IdMap<CardId, (u32, Vec<CardId>)> =
+            Default::default();
         for atk in state.attacking() {
             if let AttackTarget::Planeswalker(pw) = atk.target
                 && state.battlefield_find(pw).map(|c| c.controller) == Some(seat)
                 && let Some(a) = state.battlefield.find_by_id(atk.attacker)
             {
-                let e = pw_attackers.entry(pw).or_default();
+                let e = pw_attackers.entry_or_default(pw);
                 e.0 += a.power().max(0) as u32;
                 e.1.push(atk.attacker);
             }
         }
-        let mut set = crate::fxhash::HashSet::default();
+        let mut set: crate::game::types::IdSet<CardId> = Default::default();
         for (pw, (incoming, atkrs)) in pw_attackers {
             let loyalty = state
                 .battlefield_find(pw)
@@ -10139,12 +10139,12 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // assigned blockers — if blocker total toughness >= attacker
     // power, additional blockers on the same attacker are wasteful
     // unless they bring deathtouch / first strike.
-    let mut attacker_damage_taken: crate::fxhash::HashMap<CardId, i32> =
-        crate::fxhash::HashMap::default();
+    let mut attacker_damage_taken: crate::game::types::IdMap<CardId, i32> =
+        Default::default();
     // Blockers already committed to each attacker — folds Rampage (CR 702.23)
     // into the trade math for the second-and-later blocker.
-    let mut attacker_block_count: crate::fxhash::HashMap<CardId, i32> =
-        crate::fxhash::HashMap::default();
+    let mut attacker_block_count: crate::game::types::IdMap<CardId, i32> =
+        Default::default();
     let mut assignments: Vec<(CardId, CardId)> = Vec::new();
 
     for (b_id, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
@@ -10263,8 +10263,8 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             assignments.push((b_id, a_id));
             // Mark the damage queued so subsequent blockers can pile on
             // attackers that aren't fully covered yet.
-            *attacker_damage_taken.entry(a_id).or_insert(0) += b_tough;
-            *attacker_block_count.entry(a_id).or_insert(0) += 1;
+            *attacker_damage_taken.entry_or_default(a_id) += b_tough;
+            *attacker_block_count.entry_or_default(a_id) += 1;
         }
     }
     // Gang-block-to-kill when our life is threatened. The greedy single-
@@ -10276,7 +10276,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // combined power reaches the attacker's toughness, then commit only if
     // the gang actually kills it.
     if life_threatened {
-        let mut used: crate::fxhash::HashSet<CardId> =
+        let mut used: crate::game::types::IdSet<CardId> =
             assignments.iter().map(|(b, _)| *b).collect();
         // Same computed reads as the main pass's `blockers`, same reason.
         let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = may_block

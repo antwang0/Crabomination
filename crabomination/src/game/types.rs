@@ -194,6 +194,24 @@ impl<K: PartialEq, V: Default> IdMap<K, V> {
     }
 }
 
+impl<K, V> IntoIterator for IdMap<K, V> {
+    type Item = (K, V);
+    type IntoIter = std::vec::IntoIter<(K, V)>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<K: PartialEq, V> FromIterator<(K, V)> for IdMap<K, V> {
+    fn from_iter<I: IntoIterator<Item = (K, V)>>(it: I) -> Self {
+        let mut out = Self::default();
+        for (k, v) in it {
+            out.insert(k, v);
+        }
+        out
+    }
+}
+
 /// Serialized as a **map**, so swapping a `HashMap` field for an `IdMap` one
 /// leaves the wire shape alone (`IdSet` does the same for a sequence).
 impl<K: serde::Serialize, V: serde::Serialize> serde::Serialize for IdMap<K, V> {
