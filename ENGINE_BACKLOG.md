@@ -33,6 +33,34 @@ the handoff.
 
 # Bugs & robustness
 
+## Targeting — a fifth rule, from the field question rather than the wrapper one
+
+`audit_target_walkers.py` asks whether a walker recurses into a **wrapper**.
+`audit_target_fields.py` (new, hundred-and-fifteenth pass) asks the other half:
+inside one arm, does `requires_target` read every field that can *hold* a
+target? It found 21 (variant, field) pairs a shipped card aims and the walker
+never looks at; twenty are fixed, one allowlisted, and six were a wrong
+*answer* rather than an unread field — Autumn Willow, Questing Phelddagrif,
+Guiding Spirit, Wand of Denial, Carrion Beetles, Rapid Decay.
+
+**Rule 5: a variant joins a shared arm for the field it has, and the arm never
+grows the field it doesn't.** Four of the five variants behind those six sat
+in one `| … => false` group. `GainControl { what, to }` — the case that
+started this — is the same shape one arm over.
+
+**Rule 5a: `requires_target` and the two filter walkers are one answer, not
+two.** Making `requires_target` honest for those six failed
+`core_rules::target_walkers::every_targeting_spell_or_ability_says_what_it_targets`
+in the same run: a body that needs a target and gives slot 0 no filter is
+offered `SelectionRequirement::Any` — every permanent *and* a player. Any fix
+to one walker is a fix to all three, through `IMPLICIT_PLAYER_TARGET`.
+
+**Rule 5b: an arm for a chooser above a shared `body` arm shadows it.**
+`MayDoBy { who }` placed above `MayDo { body } | MayDoBy { body }` silently
+takes the body's filter away. Clippy's `unreachable_pattern` catches it; merge
+into the existing arm (`who` first, body as the fallback) rather than adding
+one above.
+
 ## Targeting — the four rules pass 104 closed on
 
 Moved verbatim from TODO's NEXT (which is capped at ~15 lines) at the

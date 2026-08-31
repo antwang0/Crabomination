@@ -92,7 +92,18 @@ sixty-seventh pass, so don't re-take that.
 8b. **One lead in ENGINE_BACKLOG P2: Sand Golem's trigger cannot be driven from a test** on
    either its own spec or Pure Intentions' working idiom; that test was probed and is **not**
    vacuous. The untested distinction is that Sand Golem's source *is* the discarded card.
-9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
+9. **Targeting is CLOSED and gated** for the *wrapper* question; its four rules live in
+   ENGINE_BACKLOG. The **field** question is new and now gated too:
+   `scripts/audit_target_fields.py` asks whether a `requires_target` arm reads every field
+   that can hold a target, joined against the catalog so only fields a shipped card actually
+   aims are printed. It found 21, twenty are fixed, one is allowlisted, and **six were a wrong
+   answer** — Autumn Willow's whole ability is `WaiveShroudForPlayerThisTurn { player:
+   Target(0) }` and the arm it sat in was `| … => false`. ⚠ **The fix is only half the work:**
+   making `requires_target` honest immediately failed
+   `core_rules::target_walkers` because a body that targets with no slot-0 filter is offered
+   `Any`; the two filter walkers had to learn the same five player refs through
+   `IMPLICIT_PLAYER_TARGET`. ⚠ And an arm for a chooser placed above a shared `body` arm
+   **shadows** it — clippy's `unreachable_pattern` is what caught that.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
