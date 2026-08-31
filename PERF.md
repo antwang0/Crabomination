@@ -17835,6 +17835,46 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-124) `computed_permanent_hinted`'s `Arc` IS THE PROGRAM'S LARGEST
+ALLOCATION ROW AND THE ENCODER IS 29.6 % OF IT — AND INSIDE THE ENCODER THE
+`Arc` AND THE PER-SCOPE CACHE ARE BOTH PURE OVERHEAD.** `(-123)`'s dump, actor,
+60 games:
+
+```text
+  __rust_alloc callers      1,712,610 total
+    297,560  17.4 %   computed_permanent_hinted   <- largest single caller
+    259,039  15.1 %   RawVecInner::finish_grow
+    175,128  10.2 %   Arc::clone_from_ref_in
+
+  computed_permanent_hinted callers   491,057 calls
+    145,476  29.6 %   encode_state_inner          <- on NO bot_ladder pool
+     58,154           bot::permanent_value_with
+     46,980           bot::legal_blockers
+     45,498           damage_prevented_by_protection
+```
+
+**The mechanism this entry adds, and it is not `(-92)` lead 2 or `(-111)`.**
+`encode_state_inner` opens **one** freeze scope per encoded state and then asks
+for **23.2 computed permanents inside it — one per battlefield permanent, each
+asked exactly once**. So in that scope the `layer_freeze.perms` cache never
+hits (nothing asks twice), and the `Arc` it hands back is read for a few fields
+by `encode_card_object_into` and dropped before the next ask. The refcount, the
+allocation and the `perms` push are all paid for sharing that never happens.
+
+**What that prices**: a `_into` form writing into a caller-owned
+`ComputedPermanent` the encoder reuses across the state's permanents would take
+its 145,476 allocations to ~6,282 (one a state) — **8.5 % of every allocation
+the actor makes**, against an allocator cluster that is 10.71 % of the actor.
+The inner `Vec`s (types, keywords) are the second half and want `clear()`
+rather than reallocation, which is where a second census should look before
+anyone builds it.
+
+**Two things that must be respected**: `(-111)` measured `computed_permanent`
+*by value* and reverted it — the `Arc` is load-bearing for every caller that
+*does* share through `perms`, and those are the other 70 % — so this is an
+additional path, not a replacement. And `(-95)`'s rule: 60 games is a short
+workload, so re-read the counts before sizing an implementation off them.
+
 **(-123) TAKEN, 2026-08-31 — THE ACTOR'S PROFILE OF RECORD IS STALE BY
 FIFTEEN PASSES AND EVERY CANDIDATE FOR THAT PATH IS READ OFF IT.** The actor
 block in "Profile of record" is `bb67895a`. Since then: `(-115)`'s member-list

@@ -27,52 +27,41 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. Three sessions at once: code before tracker prose, **rebase
    not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
    build **and re-read it then**. A seed-list line is not a status. **Nothing is claimed.**
-   ⚠ **Do not rebase while a build runs** — cargo fixes its plan at start, so a dep rlib
-   built before the rebase is linked after it and the error names the wrong file
-   (`GLOBAL_FEATS == 57` failing while the source said 57). And **kill orphaned `rustc`**
-   after killing a cargo (`ps -o ppid` = 1): one stole 60 % of four cores for 25 minutes.
-2. **All five gates re-run at `c899d865`:** suite **19,076 / 0 / 5**, clippy clean (also
-   `--features trig-census`), traces **7/7 unmoved**, `--bench` 195,528 / 27.44 / 611.0 / 0
-   stalls byte-identical to the invariant, determinism + thread_determinism green, **grid
-   33,120 games / 0 failures** and **its ACTOR leg 6,000 games / 574,149 rows / 0 stalls**
-   (the leg is the only gate that reaches the encoder, and v8 moved it).
-   ⚠ `peak_rss_mib` reads **26.7** here against the 24.4-24.7 every block before it. Not
-   investigated; the vocabulary went 164 -> 2,273 in the same window, which is the obvious
-   suspect and is a static table rather than a leak. Confirm before quoting 24.5 again.
-3. **`(-120)`+`(-121)` TAKEN — `fixed` -2.970 % / `cube` -2.585 % / `sealed` -0.016 %**, the
-   largest pass in PERF. `EQUIP_TRIGGER_GRANT` was set for any `equipped_bonus`, empty
-   ability list or not, so a Rancor cost the dispatcher its member lane, its gate and a
-   freeze scope all game. **Two rules, both general: a presence bit named for what a field
-   *is* must be gated on the field being non-empty — and a cross-check between two
-   hand-written walkers audits drift, never a premise they share** (the `debug_assert!` here
-   agreed on the wrong answer for both). Third: **a filter measured worthless behind a defect
-   is not measured at all** — `(-121)` was correctly declined, then won 2 % once `(-120)`
-   changed its population. Re-run the census after a fix that moves what it counts.
+   ⚠ Do not rebase while a build runs (cargo fixes its plan at start), and kill orphaned
+   `rustc` after killing a cargo (`ps -o ppid` = 1).
+2. **All five gates re-run at `7ebb032b`:** suite **19,078 / 0 / 5**, clippy clean (also
+   `--features trig-census`), traces 7/7, `--bench` byte-identical to the invariant with
+   determinism + thread_determinism green, grid **33,120 games / 0 failures**, actor leg
+   6,000 games / 574,149 rows / 0 stalls. `peak_rss_mib` 24.8, in the 24.4-24.7 family —
+   an earlier reading of 26.7 in the same window did **not** reproduce, so it was a one-off
+   and not a step. **The actor leg is the only gate that reaches the encoder.**
+3. **Open, in order:** `(-122)` (the activated-grant walk — the dispatcher's twin, none of
+   the four devices applied); then **`(-124)`**, `(-107)`'s `Arc` row sized on the actor and
+   given a mechanism — 17.4 % of every allocation, **29.6 % of it the encoder**, and inside
+   the encoder's one scope per state nothing asks twice, so the `Arc` *and* the cache are
+   paid for sharing that never happens.
 4. **Do not retake:** `(-112)`; dispatch's per-event gate (61 AND 106); a third line profile
    of `dispatch_triggers_for_events`; **actor scaling** (`(-52)`, confirmed twice since);
    the `turn_granted_triggers` / `granted_triggers_eot` retains (census: zero on all pools).
-5. **Open, in order: `(-122)` first** — the activated-grant walk is the trigger dispatcher's
-   twin (O(permanents x grants) requirement evaluations on the mana sweep, top of the ratio
-   table at 11.68x) and it has had none of the four devices the trigger side got; PERF says
-   which one fits and to size it with `cg_contexts.py` first. Then `(-107)`'s
-   `computed_permanent_hinted` `Arc`s — **the allocator is now the largest cluster on every
-   pool, 9.7-10.5 %**. Grant-live is zero everywhere, so `(-115)`'s leftover is closed and
-   what is left in dispatch is the *body*; `sealed` is now where it costs most (7.09 %).
-   ⚠ **`grep mimalloc` is not the allocator check** — it returns zero either way and cost
-   this pass a profile. PERF's "How to measure" now carries the positive test.
-6. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
-   class. untap / scry / surveil are CLOSED; next `draw` (38) and `counters` (33), unexamined.
-   **Inscription of Insight and All-Out Assault are primitive jobs**, not card fixes.
-7. **Targeting is CLOSED and gated**; its four transferable rules live in ENGINE_BACKLOG's
-   "Targeting — the four rules pass 104 closed on".
-8. **Robustness: `audit_panics.py` is at 0 bare sites** (was 3, all three on the actor's
-   deck-building path). **Both gates re-run at `f2f7d58c`** and both green: the grid at
-   **33,120 games / 0 failures / 0 undecided**, and its ACTOR leg at 6,000 games /
-   574,149 rows / 0 stalls — the first real audit `(-115)`'s member-list invalidation has
-   had, since a positional memo drops a trigger silently where a presence bit costs a walk.
-   **The rule: an empty pool and `n == 0` are legal inputs, not invariants**, so the
-   degradation is a return and not a `debug_assert!` — an assertion puts it out of the
-   suite's reach, which is the only place a regression test for it can live.
+5. **Four measurement traps this window, all in PERF:** `grep mimalloc` is not the allocator
+   check; `(-110)`'s null control does **not** transfer to the actor (cgu-16, so a
+   semantics-free edit moved it 0.18 % — attribute to rows before believing a total); a
+   census must be re-run *after* a fix that moves what it counts; and a never-taken runtime
+   gate in front of a call is not free in a register-starved loop.
+6. **The dispatch lane is CLOSED** (`(-115)` + `(-120)`/`(-121)`): grant-live is zero on
+   every pool and the walk is at 15.5 / 28.3 / 32.5 % of its visits. What is left is the
+   *body*. The actor's profile is current at `(-123)`; it is `cube` plus an encoder, a deck
+   builder and a determinizer, and those three are the only places the bench cannot price.
+7. **Robustness: `audit_panics.py` is at 0 bare sites** (was 3, all on the actor's
+   deck-building path). The rule: an empty pool and `n == 0` are legal *inputs*, so the
+   degradation is a return, not a `debug_assert!` — an assertion puts it out of the suite's
+   reach, which is the only place its regression test can live.
+8. **Cards:** `audit_oracle_verbs.py`; check three rows in the source before believing a
+   class. untap / scry / surveil CLOSED; next `draw` (38) and `counters` (33), unexamined.
+   **Inscription of Insight and All-Out Assault are primitive jobs.** `audit_incomplete`,
+   `audit_stubs` and `audit_variant_coverage` are all clean bar two dead primitives, both
+   triaged in the script's own docstring.
+9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
