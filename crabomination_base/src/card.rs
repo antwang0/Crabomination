@@ -6980,7 +6980,11 @@ fn bump_definition_epoch() {
 /// [`CardInstance`], which owns it behind an `Arc` — see that type for why.
 #[derive(Debug, Clone)]
 pub struct CardData {
-    pub id: CardId,
+    // Fields whose clone calls something come first; the plain ones follow
+    // as one run. **Declaration order is the derived `Clone`'s statement
+    // order** and `&self` is not `noalias` (PERF `(-139)`), so a scalar
+    // between two collections is its own fenced load/store pair. PERF
+    // `(-142)`; the microbenchmark that ranks the orders is in `(-141)`.
     /// Static blueprint, shared behind an `Arc` so materializing a
     /// `CardData` (which the CoW handle does only for a card actually being
     /// written) doesn't deep-copy the definition's ~two dozen `Vec` fields.
@@ -6990,17 +6994,6 @@ pub struct CardData {
     /// keyword grants) go through `Arc::make_mut`, which clones lazily only
     /// when the `Arc` is actually shared.
     pub definition: Definition,
-    pub owner: usize,
-    pub controller: usize,
-    pub damage: u32,
-    pub power_bonus: i32,
-    pub toughness_bonus: i32,
-    /// Permanent-duration P/T deltas (`Effect::PumpPT { duration: Permanent }`,
-    /// e.g. Wall of Roots's -0/-1). Unlike `power_bonus`/`toughness_bonus`,
-    /// these survive Cleanup and clear only when the permanent leaves the
-    /// battlefield (new object, CR 400.7).
-    pub perm_power_bonus: i32,
-    pub perm_toughness_bonus: i32,
     pub counters: CounterBag,
     /// Sources that have dealt damage to this creature this turn. Powers
     /// "When a creature dealt damage by this creature this turn dies"
@@ -7015,6 +7008,20 @@ pub struct CardData {
     /// source's *name* (Blazing Effigy's "other sources named Blazing
     /// Effigy"). Reset at cleanup; in-memory only.
     pub damage_by_source_name_this_turn: Vec<(&'static str, u32)>,
+    /// The rarely-written tail — see [`CardCold`].
+    pub cold: crate::cow::CowBox<CardCold>,
+    pub id: CardId,
+    pub owner: usize,
+    pub controller: usize,
+    pub damage: u32,
+    pub power_bonus: i32,
+    pub toughness_bonus: i32,
+    /// Permanent-duration P/T deltas (`Effect::PumpPT { duration: Permanent }`,
+    /// e.g. Wall of Roots's -0/-1). Unlike `power_bonus`/`toughness_bonus`,
+    /// these survive Cleanup and clear only when the permanent leaves the
+    /// battlefield (new object, CR 400.7).
+    pub perm_power_bonus: i32,
+    pub perm_toughness_bonus: i32,
     pub attached_to: Option<CardId>,
     /// CR 303.4a — the seat this Aura enchants, for "enchant player" Auras
     /// (the Curse cycle, Psychic Possession). Mutually exclusive with
@@ -7418,8 +7425,6 @@ pub struct CardData {
     /// next-end-step sacrifice. `None` for ordinary cards/copies.
     /// Round-trips via `CardInstanceWire` with `#[serde(default)]`.
     pub resolve_riders: Option<(bool, bool)>,
-    /// The rarely-written tail — see [`CardCold`].
-    pub cold: crate::cow::CowBox<CardCold>,
 }
 
 /// Field access on the cold group reads like a `CardData` field.

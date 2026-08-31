@@ -10238,6 +10238,55 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass (4) — `(-142)`: the same grouping on the CoW deep copies, where the order is the DECLARATION
+
+**`cube` -0.078 % / `fixed` -0.090 %** against `(-141)`, i.e. **-0.232 % /
+-0.308 % cumulative** off `bc2a38f5`. Same instrument, same workload.
+
+```text
+  pool    base            (-141)          (-142)          cumulative
+  cube    2,490,817,192   2,486,989,586   2,485,040,761   -0.2319 %
+  fixed     838,864,887     837,039,558     836,284,314   -0.3076 %
+```
+
+`PlayerData` and `CardData` are `#[derive(Clone)]`, so **their statement order
+is their declaration order** and there is no literal to reorder — the fields
+themselves move. 23 call fields ahead of 127 plain ones on `PlayerData`, 7
+ahead of 100 on `CardData`.
+
+**Which monomorphizations, and how the dump was made to say so.**
+`Arc::clone_from_ref_in` is one 2.06 % row because callgrind keys functions by
+their *demangled* name; `--demangle=no` splits it and the callee table names
+each instance (PERF's "How to measure" carries the trick):
+
+```text
+  hefebc5ff…  19,052,058  0.77%   22,060 clones   RawTable::clone + SmallVec::extend  -> PlayerData   864 Ir/clone
+  h0e09b1ba…  16,319,776  0.66%   32,562 clones   CardMemo::clone                     -> CardData     501 Ir/clone
+  hec169bfd…   6,878,374  0.28%    3,322 clones
+  h104cdeac…   5,530,168  0.22%   10,300 clones
+```
+
+The row is the change on both pools:
+
+```text
+                        (-141)       (-142)       row delta    program delta
+  cube clone_from_ref_in 51,298,338  49,309,644   -1,988,694   -1,948,825
+  fixed                  22,488,068  21,527,508     -960,560     -755,244
+```
+
+⚠ **`fixed`'s row moves further than its program does, and that is the cost
+of this variant**: moving *declarations* also moves the layout tie-breaks
+(Rust sorts fields by alignment and breaks ties in declaration order), so
+~205 k Ir came back somewhere else. It is a net win on both pools and the
+suite is green, but a declaration reorder is not the free lunch a literal
+reorder is — **measure it, do not assume it**.
+
+**Also refuted here without a build**: `PlayerCold`'s 15 fields are *all*
+collections, so it has nothing to group. And `CopyVec` belongs with the plain
+fields, not the collections — its `Clone` is a memcpy by construction — which
+the first pass of the classifier got wrong because `CopyVec<…>` contains the
+substring `Vec<`.
+
 ### Hundred-and-sixteenth pass (3) — `(-141)`: the copies go LAST, not first, and a microbenchmark is what says so
 
 **`cube` -0.058 % / `fixed` -0.082 %** against `(-140)`, i.e. **-0.154 % /

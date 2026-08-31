@@ -172,14 +172,11 @@ pub struct PlayerCold {
 /// behind an `Arc` — see that type for why.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerData {
-    pub id: PlayerId,
-    pub life: i32,
-    /// The life total this player began the game with (CR 103.4). Set by
-    /// `apply_format`; drives "N more/less than your starting life total"
-    /// thresholds (Righteous Valkyrie, Speaker of the Heavens). `#[serde(default
-    /// = "default_starting_life")]` for snapshot back-compat.
-    #[serde(default = "default_starting_life")]
-    pub starting_life: i32,
+    // Fields whose clone calls something come first; the plain ones follow
+    // as one run. **Declaration order is the derived `Clone`'s statement
+    // order** and `&self` is not `noalias` (PERF `(-139)`), so a scalar
+    // between two collections is its own fenced load/store pair. PERF
+    // `(-142)`; the microbenchmark that ranks the orders is in `(-141)`.
     pub mana_pool: ManaPool,
     /// Top of library is `library[0]`.
     ///
@@ -202,10 +199,6 @@ pub struct PlayerData {
     /// existed deserialize cleanly as empty.
     #[serde(default)]
     pub command: CowBox<Vec<CardInstance>>,
-    /// CR 609.4b — "you may spend mana as though it were mana of any type"
-    /// for the rest of this turn (North Star). Cleared at cleanup.
-    #[serde(default)]
-    pub may_spend_any_color_this_turn: bool,
     /// CR 407 — cards this player owns in the ante zone. Only ever non-empty
     /// while `GameState.playing_for_ante`; the winner takes all of it
     /// (CR 407.2). `#[serde(default)]` for snapshot back-compat.
@@ -232,11 +225,6 @@ pub struct PlayerData {
     /// have gone anywhere but the battlefield, exile, or the command zone.
     #[serde(default)]
     pub attraction_junkyard: CowBox<Vec<CardInstance>>,
-    /// CR 901.9 — how many times this player has taken the roll-the-planar-die
-    /// special action this turn; the next roll costs that much generic mana.
-    /// Reset at the turn boundary.
-    #[serde(default)]
-    pub planar_die_rolls_this_turn: u32,
     /// CR 406 / 701.45 — the Lessons "sideboard" (cards owned from outside
     /// the game). A Learn ability may reveal a Lesson card here and put it
     /// into hand. Populated by deck construction; empty by default (in
@@ -244,6 +232,91 @@ pub struct PlayerData {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub sideboard: CowBox<Vec<CardInstance>>,
+    /// Creatures that entered the battlefield under this player's control
+    /// this turn (stamped at the shared ETB funnels). Rotated into
+    /// `creatures_entered_last_turn` at end of turn — Ephara, God of the
+    /// Polis reads the previous turn's entries at each upkeep.
+    #[serde(default)]
+    pub creatures_entered_this_turn: Vec<crate::card::CardId>,
+    /// Last turn's `creatures_entered_this_turn` (see above).
+    #[serde(default)]
+    pub creatures_entered_last_turn: Vec<crate::card::CardId>,
+    /// CR 309 — the dungeon this player is currently in: (name, room index).
+    /// `None` between dungeons; venturing with `None` enters a new dungeon.
+    #[serde(default)]
+    pub dungeon: Option<(String, u8)>,
+    /// CR 603.7e — pending "your next creature spell this turn enters with N
+    /// extra counters of this kind" riders (the FIN "Summon" saga chapters —
+    /// Fenrir II "Heavenward Howl", Brynhildr). Each entry is drained onto the
+    /// *next* creature spell this player casts (all pending riders stack onto
+    /// the same creature); the list clears at cleanup so an unused rider
+    /// expires with the turn. `#[serde(default)]`.
+    #[serde(default)]
+    pub pending_creature_etb_counters: Vec<(crate::card::CounterType, u32)>,
+    /// Card ids of creatures that have dealt damage to this player so far
+    /// this turn (combat or non-combat). Reset for all players at the
+    /// active player's `do_untap`. Powers "destroy target creature that
+    /// dealt damage to you this turn" (Spear of Heliod, CR uses
+    /// `SelectionRequirement::DealtDamageToControllerThisTurn`). Defaults
+    /// empty for snapshot back-compat.
+    #[serde(default)]
+    pub creatures_that_damaged_me_this_turn: Vec<crate::card::CardId>,
+    /// Creature types among this player's creatures that dealt combat damage
+    /// to a player this turn (CR 702.76 Prowl). Stamped at the combat-damage
+    /// funnels, cleared at the turn boundary. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub prowl_types_this_turn: Vec<crate::card::CreatureType>,
+    /// Ids of the cards that reached this graveyard from anywhere this turn.
+    /// Backs `SelectionRequirement::PutIntoGraveyardThisTurn` (Reenact the
+    /// Crime).
+    #[serde(default)]
+    pub graveyard_ids_this_turn: crate::game::types::IdSet<CardId>,
+    /// One-shot "next instant/sorcery you cast this turn costs {N} less"
+    /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
+    /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
+    /// time; the discount applies only while the tally still equals it.
+    /// Cleared each turn alongside the tally.
+    #[serde(default)]
+    pub pending_is_discounts: Vec<(u32, u32)>,
+    /// Like `pending_is_discounts` but for *any* next spell this turn
+    /// (Mutated Cultist): `(amount, spells_cast_this_turn at grant)`.
+    #[serde(default)]
+    pub pending_spell_discounts: Vec<(u32, u32)>,
+    /// CR 500.4 exception — mana added by an effect that says "you don't lose
+    /// this mana as steps and phases end" (Savage Ventmaw's attack trigger).
+    /// Re-seeded into the pool by `empty_mana_pools` on every step/phase empty
+    /// and cleared at cleanup, so the mana survives the turn but not past it.
+    /// `#[serde(default)]`.
+    #[serde(default)]
+    pub kept_mana_this_turn: ManaPool,
+    /// Colors + card types of each spell this player cast this turn, in cast
+    /// order. Stamped in `finalize_cast` and cleared alongside
+    /// `cast_blue_or_black_this_turn`; read by
+    /// `Predicate::CastSpellThisTurnWith` — the Trap alternative costs
+    /// ("if an opponent cast a blue spell this turn", Ricochet Trap).
+    #[serde(default)]
+    pub spell_casts_this_turn: smallvec::SmallVec<[crate::game::types::CastProfile; 1]>,
+    /// The rarely-written tail — see [`PlayerCold`].
+    #[serde(flatten)]
+    pub cold: crate::cow::CowBox<PlayerCold>,
+    pub id: PlayerId,
+    pub life: i32,
+    /// The life total this player began the game with (CR 103.4). Set by
+    /// `apply_format`; drives "N more/less than your starting life total"
+    /// thresholds (Righteous Valkyrie, Speaker of the Heavens). `#[serde(default
+    /// = "default_starting_life")]` for snapshot back-compat.
+    #[serde(default = "default_starting_life")]
+    pub starting_life: i32,
+    /// CR 609.4b — "you may spend mana as though it were mana of any type"
+    /// for the rest of this turn (North Star). Cleared at cleanup.
+    #[serde(default)]
+    pub may_spend_any_color_this_turn: bool,
+    /// CR 901.9 — how many times this player has taken the roll-the-planar-die
+    /// special action this turn; the next roll costs that much generic mana.
+    /// Reset at the turn boundary.
+    #[serde(default)]
+    pub planar_die_rolls_this_turn: u32,
     /// How many lands this player has played on their current turn.
     pub lands_played_this_turn: u32,
     /// CR 605 — this player tapped a land for mana this turn (Desolation).
@@ -349,15 +422,6 @@ pub struct PlayerData {
     /// Zubera that died this turn" death triggers. `#[serde(default)]`.
     #[serde(default)]
     pub zuberas_died_this_turn: u32,
-    /// Creatures that entered the battlefield under this player's control
-    /// this turn (stamped at the shared ETB funnels). Rotated into
-    /// `creatures_entered_last_turn` at end of turn — Ephara, God of the
-    /// Polis reads the previous turn's entries at each upkeep.
-    #[serde(default)]
-    pub creatures_entered_this_turn: Vec<crate::card::CardId>,
-    /// Last turn's `creatures_entered_this_turn` (see above).
-    #[serde(default)]
-    pub creatures_entered_last_turn: Vec<crate::card::CardId>,
     /// CR 603 — count of artifacts that entered under this player's control
     /// this turn. Drives "if an artifact entered the battlefield under your
     /// control this turn" intervening-`if` gates (Akal Pakal). Reset at the
@@ -394,21 +458,9 @@ pub struct PlayerData {
     /// converts life into the shortfall on demand. Reset at cleanup.
     #[serde(default)]
     pub channel_life_for_mana: bool,
-    /// CR 309 — the dungeon this player is currently in: (name, room index).
-    /// `None` between dungeons; venturing with `None` enters a new dungeon.
-    #[serde(default)]
-    pub dungeon: Option<(String, u8)>,
     /// CR 701.49d — dungeons this player has completed this game.
     #[serde(default)]
     pub dungeons_completed: u32,
-    /// CR 603.7e — pending "your next creature spell this turn enters with N
-    /// extra counters of this kind" riders (the FIN "Summon" saga chapters —
-    /// Fenrir II "Heavenward Howl", Brynhildr). Each entry is drained onto the
-    /// *next* creature spell this player casts (all pending riders stack onto
-    /// the same creature); the list clears at cleanup so an unused rider
-    /// expires with the turn. `#[serde(default)]`.
-    #[serde(default)]
-    pub pending_creature_etb_counters: Vec<(crate::card::CounterType, u32)>,
     /// CR 702.139 — true if a permanent left the battlefield under this
     /// player's control so far this turn (Revolt). Set from the battlefield-
     /// removal funnels keyed off the leaving permanent's controller; reset at
@@ -448,14 +500,6 @@ pub struct PlayerData {
     /// (Spinerock Knoll's "an opponent lost 7 or more life" gate).
     #[serde(default)]
     pub life_lost_this_turn: u32,
-    /// Card ids of creatures that have dealt damage to this player so far
-    /// this turn (combat or non-combat). Reset for all players at the
-    /// active player's `do_untap`. Powers "destroy target creature that
-    /// dealt damage to you this turn" (Spear of Heliod, CR uses
-    /// `SelectionRequirement::DealtDamageToControllerThisTurn`). Defaults
-    /// empty for snapshot back-compat.
-    #[serde(default)]
-    pub creatures_that_damaged_me_this_turn: Vec<crate::card::CardId>,
     /// Lands that entered the battlefield under this player's control this
     /// turn, played or otherwise. Cleared at the turn boundary; read by
     /// `Predicate::LandsEnteredThisTurnAtLeast` (Lavaball Trap).
@@ -471,12 +515,6 @@ pub struct PlayerData {
     /// the destroy funnel, cleared at the turn boundary.
     #[serde(default)]
     pub noncreature_destroyed_by_opponent_this_turn: bool,
-    /// Creature types among this player's creatures that dealt combat damage
-    /// to a player this turn (CR 702.76 Prowl). Stamped at the combat-damage
-    /// funnels, cleared at the turn boundary. `#[serde(default)]` for
-    /// snapshot back-compat.
-    #[serde(default)]
-    pub prowl_types_this_turn: Vec<crate::card::CreatureType>,
     /// A Changeling of this player's dealt combat damage to a player this
     /// turn — it counts as every creature type for the prowl window.
     #[serde(default)]
@@ -592,11 +630,6 @@ pub struct PlayerData {
     /// (Case of the Gorgon's Kiss).
     #[serde(default)]
     pub creature_cards_to_graveyard_this_turn: u32,
-    /// Ids of the cards that reached this graveyard from anywhere this turn.
-    /// Backs `SelectionRequirement::PutIntoGraveyardThisTurn` (Reenact the
-    /// Crime).
-    #[serde(default)]
-    pub graveyard_ids_this_turn: crate::game::types::IdSet<CardId>,
     /// CR 700.11 — true if a *permanent* card was put into this player's
     /// graveyard from anywhere this turn ("you descended this turn"). Set in
     /// `send_to_graveyard`, reset at untap. Gates "if you descended this turn"
@@ -635,17 +668,6 @@ pub struct PlayerData {
     /// amplifies counters *placed*, Hardened-Scales style).
     #[serde(default)]
     pub extra_etb_p1p1_counters_this_turn: u32,
-    /// One-shot "next instant/sorcery you cast this turn costs {N} less"
-    /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
-    /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
-    /// time; the discount applies only while the tally still equals it.
-    /// Cleared each turn alongside the tally.
-    #[serde(default)]
-    pub pending_is_discounts: Vec<(u32, u32)>,
-    /// Like `pending_is_discounts` but for *any* next spell this turn
-    /// (Mutated Cultist): `(amount, spells_cast_this_turn at grant)`.
-    #[serde(default)]
-    pub pending_spell_discounts: Vec<(u32, u32)>,
     /// Cards this player discarded this turn (Hollow One's cost reduction).
     /// Bumped in `discard_card`; reset in `do_untap`.
     #[serde(default)]
@@ -875,13 +897,6 @@ pub struct PlayerData {
     /// combat. `#[serde(default)]`.
     #[serde(default)]
     pub firebending_kept_red: u32,
-    /// CR 500.4 exception — mana added by an effect that says "you don't lose
-    /// this mana as steps and phases end" (Savage Ventmaw's attack trigger).
-    /// Re-seeded into the pool by `empty_mana_pools` on every step/phase empty
-    /// and cleared at cleanup, so the mana survives the turn but not past it.
-    /// `#[serde(default)]`.
-    #[serde(default)]
-    pub kept_mana_this_turn: ManaPool,
     /// CR 500.7 — extra turns this player will take. When `advance_turn`
     /// would pass the turn, an active player with `extra_turns > 0`
     /// decrements it and keeps the turn instead (Time Walk, Ral Zarek's
@@ -931,13 +946,6 @@ pub struct PlayerData {
     /// snapshot back-compat.
     #[serde(default)]
     pub cast_blue_or_black_this_turn: bool,
-    /// Colors + card types of each spell this player cast this turn, in cast
-    /// order. Stamped in `finalize_cast` and cleared alongside
-    /// `cast_blue_or_black_this_turn`; read by
-    /// `Predicate::CastSpellThisTurnWith` — the Trap alternative costs
-    /// ("if an opponent cast a blue spell this turn", Ricochet Trap).
-    #[serde(default)]
-    pub spell_casts_this_turn: smallvec::SmallVec<[crate::game::types::CastProfile; 1]>,
     /// True while this player has hexproof until the start of their next
     /// turn (Blossoming Calm). Set by `Effect::GainHexproofUntilYourNextTurn`;
     /// cleared at this player's `do_untap`. `#[serde(default)]`.
@@ -1015,9 +1023,6 @@ pub struct PlayerData {
     /// the value directly via the Thumb card body).
     #[serde(default)]
     pub coin_flip_advantage: u32,
-    /// The rarely-written tail — see [`PlayerCold`].
-    #[serde(flatten)]
-    pub cold: crate::cow::CowBox<PlayerCold>,
 }
 
 /// A seat: a copy-on-write handle around [`PlayerData`].
