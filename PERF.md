@@ -17835,6 +17835,72 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-126) THE REQUIREMENT WALKER IS THE LARGEST ENGINE FUNCTION IN THE FILE
+WITH NOTHING FILED AGAINST IT, AND 65 % OF ITS CALLS ARE ITS OWN RECURSION.**
+Fresh dumps at `9f06d76a` (`--games 6 --threads 1 --seed 1`, `profiling-fast
+--no-default-features`), folding the three rows as the ninety-second pass's
+correction requires:
+
+```text
+                                    cube                    fixed
+  evaluate_requirement_static_hinted  3.81 %  1,425,066 c    1.44 %+
+    of which self-recursive           65.1 %    927,234 c    (And / Or / Not)
+  its callees
+    bf_hint_or_find                 578,888 c @  17.1 Ir     (the hint hits)
+    has_keyword                     136,530 c @  44.9 Ir
+    requirement_card_off_battlefield 22,654 c @  91.8 Ir
+```
+
+Ranked by folded self cost it is behind only `dispatch_triggers_for_events`
+(5.12 %) and the gather (3.29 %), and both of those are worked out: the
+dispatch lane is closed and what is left there is a body with no hot line
+(pass 91 says so and says not to re-profile it), and the gather's line profile
+reads the same.
+
+**What is not the lever: fewer asks.** `(-122)` just refuted a precompute in
+front of the second-largest caller, and the caller table has nineteen entries
+with a long tail — no single one is worth a device.
+
+**What might be: the 927,234 recursive calls.** `And`/`Or`/`Not` are binary,
+so a three-term requirement is two extra calls and two extra dispatches
+through a jump table over a large enum. A slice-shaped `All`/`Any` variant
+would collapse them, but it is a `SelectionRequirement` shape change across
+the catalog and must not be proposed on the call count alone.
+
+**Size the recursion's per-call overhead first, and the instrument matters
+twice here.** The prologue alone read **13,769,886 Ir / 0.47 % of `cube`** in
+the ninety-first pass's line profile, which is what a six-argument function
+with a large body costs to enter — but six arguments still fit the SysV
+registers, so that number is the body's callee-saved traffic and not argument
+spilling, and bundling the signature will not move it. Get the recursive
+edge's own cost with `--separate-callers` and `--demangle=no` (the three rows
+are one instantiation at three depths, not three monomorphizations — see the
+ninety-second pass's correction) before touching the enum.
+
+**(-127) `GameState.players` IS THE ONE ZONE THAT IS NOT `CowBox`, AND IT
+NEEDS A CENSUS RATHER THAN A BUILD.** The ninety-first pass's line table has
+the number and nothing has been filed against it since: `players:
+self.players.clone()` is **472 Ir a clone over 34,522 clones = 16,294,384 Ir,
+0.55 % of `cube` and 35 % of `GameState::clone`'s whole inline group.** Every
+other zone in `GameState` is `CowBox`-wrapped and clones for a refcount bump;
+`players` is a bare `Vec<Player>` and clones for a `malloc` plus two `Arc`
+bumps per seat.
+
+The wrap is precedented and mechanical (`CowBox`'s `Deref`/`DerefMut` cover
+the call sites, as they did for every other zone). **It is also only a win on
+the clones that never write a player, and a loss on the rest** — a clone that
+does write pays the refcount bump *and* the unshare's `malloc`, where today it
+pays one `malloc`. Almost every action touches a mana pool, a life total or a
+hand, so the population is the whole question and the Ir table cannot answer
+it: this is allocation-shaped, and pass 54's rule says Ir overstates
+allocation under mimalloc.
+
+**Decide it with a counter, not a build.** Two numbers settle it — `GameState`
+clones, and how many of them reach `&mut players` before they are dropped —
+and `zone::grant_census` is the pattern (four atomics on the `trig-census`
+feature, one build, and `(-122)` was answered outright). Do not build the wrap
+until the census says the never-writes share is large.
+
 **(-125) NOT A CANDIDATE — A NOTE ON `perms`, AND THE RULE THAT KEPT IT FROM
 BECOMING ONE.** `LayerFreezeState::perms` is a
 `SmallVec<[(CardId, Arc<ComputedPermanent>); 8]>`, and the encoder's scope
