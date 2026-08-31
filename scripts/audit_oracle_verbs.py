@@ -16,7 +16,7 @@ not a semantics one — "draws a card" against `Effect::Draw` — so it cannot s
 a card that draws the wrong number or draws for the wrong player. It can see a
 card that does not draw at all.
 
-**Standing at 228 rows over 10,949 cards with oracle text (2026-08-30), and
+**Standing at 163 rows over 10,949 cards with oracle text (2026-08-31), and
 the rate of real findings is high.** Six classes were spot-checked in the
 source: Codespell Cleric is a body-only stub (its whole ETB counter ability is
 absent), Fountain of Renewal drops its sac-for-a-card, Baral drops the trigger
@@ -41,6 +41,31 @@ has its own; a card that calls `deal(2, target_any())` names no
 `Effect::DealDamage` anywhere in its own body. The tables below are built by
 scanning each helper's body for the variants it constructs, then attributing
 those to any card that calls it.
+
+**AND SO DOES AN ENGINE PRIMITIVE, WHICH IS WHERE MOST OF THE NOISE WAS.** A
+one-card `Effect` variant is a helper on the far side of the crate boundary:
+`Effect::MillDeployCreaturesUntilEndStep` (Random Encounter) and
+`Effect::UnexpectedResults` both return a card to its owner's hand, and both
+say so only inside `run_effect`. `primitive_bodies()` brace-matches the 933
+`Effect::X => {` arms under `crabomination/src/game/effects/` and attributes
+what each names — including bare `*_to_hand` / `*_to_graveyard` identifiers,
+because the engine spells some verbs as a `GameState` flag rather than an
+effect. **A destination is not an `Effect` variant either**: `Effect::Move {
+to: ZoneDest::Hand(..) }` recorded only `Move`, so `DEST` now collects
+`ZoneDest::` / `Zone::` / `CounteredSpellZone::` names in both tables.
+
+**Worked example of what that is worth: `return_to_hand` went 31 rows -> 5,
+and all five of the survivors are real** (2026-08-31). The 26 that went were
+four distinct false classes — the cost spellings (`bounce_other_filter`,
+`return_self_cost`, the alternative-cost `return_to_hand`: the six Soratami,
+Quirion Ranger, Wirewood Symbiote, Daze, Gush, Chthonian Nightmare), the
+destination-in-a-helper class, the engine-primitive class, and the variants
+the old `ReturnToHand|Bounce|Hand\b` regex simply did not name
+(`ReturnSelf`, `ReturnEachUnlessPays`, `CounteredSpellZone::OwnerHand`,
+`StaticEffect::DiesToOwnersHandInstead`). **Before working a verb, read six
+of its rows in the source and fix the filter first** — the class of a false
+positive is shared, so six rows find nearly all of them, and the same three
+mechanisms took the whole file from 199 rows to 163.
 
 The reading of a card (its body, its name, which `CardDefinition` literal is
 the card's) is `audit_catalog_stats`'s, imported rather than re-derived —
@@ -113,9 +138,21 @@ VERBS = {
         r"\bsearch(?:es)? (?:your|their) library\b",
         r"Search|Tutor|Fetch|Zone::Library",
     ),
+    # `Hand\b` was the whole variant side and it matched almost nothing a
+    # bounce card actually writes: the nine `Return…Hand` variants, yes, but
+    # not `ReturnSelf` (Field of Reality), not `ReturnEachUnlessPays` (Cut the
+    # Tethers), and none of the **cost** spellings — `bounce_other_filter`
+    # (the six Soratami, Quirion Ranger, Wirewood Symbiote),
+    # `return_self_cost` (Chthonian Nightmare), the alternative-cost
+    # `return_to_hand` (Daze, Gush). Returning something to hand as the price
+    # of an ability is what the oracle sentence says, so a card that spells it
+    # in a cost field is not missing the verb. `ReturnSelf\b` on purpose:
+    # `ReturnSelfTapped` and the rest of that family go to the battlefield.
     "return_to_hand": (
         r"\breturns? [^.]{0,60}\bto (?:its|their) owner'?s? hand\b",
-        r"ReturnToHand|Bounce|Hand\b|ZoneDest::Hand",
+        r"To\w{0,12}Hand|ReturnSelf\b|ReturnEachUnlessPays|Bounce|bounce_"
+        r"|ZoneDest::Hand|Zone::Hand|CounteredSpellZone::OwnerHand"
+        r"|return_self_cost|_to_hand|return_to_hand|return_eot",
     ),
     "counters": (
         r"\+1/\+1 counter|\-1/\-1 counter",
@@ -140,6 +177,50 @@ VERBS = {
 # `Effect::Foo` — the constructed variant, not a `match` arm or a doc mention.
 CTOR = re.compile(r"\bEffect::(\w+)")
 STATIC = re.compile(r"\bStaticEffect::(\w+)")
+# A helper that *moves* a card names its destination, not an `Effect` variant:
+# `Effect::Move { to: ZoneDest::Hand(..) }` recorded only `Move`, so
+# `return_target_creature_to_hand` (Sweep Away) and `returns_to_hand`
+# (Spreading Algae) answered nothing for the bounce verb and both read as
+# missing it. Qualified, so a code regex still has to say which zone.
+DEST = re.compile(r"\b((?:ZoneDest|CounteredSpellZone|Zone)::\w+)")
+
+
+ENGINE = (
+    Path(__file__).resolve().parent.parent / "crabomination" / "src" / "game" / "effects"
+)
+ARM = re.compile(r"\n\s+Effect::(\w+)[^\n]*=>\s*\{")
+
+
+def primitive_bodies():
+    """`{variant: {tokens its `run_effect` arm names}}`.
+
+    A one-card `Effect` variant is a helper the catalog cannot see into:
+    `MillDeployCreaturesUntilEndStep` (Random Encounter) and
+    `UnexpectedResults` both return a card to its owner's hand, and both said
+    so only in the engine. Same brace-match as `helper_variants`, over the
+    arms of `run_effect`; a variant with several arms gets their union.
+    """
+    out = {}
+    for src in sorted(ENGINE.rglob("*.rs")):
+        text = src.read_text()
+        for m in ARM.finditer(text):
+            i = text.rindex("{", m.start(), m.end())
+            depth, j = 1, i + 1
+            while j < len(text) and depth:
+                if text[j] == "{":
+                    depth += 1
+                elif text[j] == "}":
+                    depth -= 1
+                j += 1
+            body = text[i:j]
+            out.setdefault(m.group(1), set()).update(
+                set(CTOR.findall(body)) | set(STATIC.findall(body)) | set(DEST.findall(body))
+                # The engine spells some verbs as a `GameState` flag rather
+                # than an effect (`return_resolving_spell_to_hand`), so the
+                # bare identifiers count too.
+                | set(re.findall(r"\b(?:self\.)?(\w*(?:to_hand|to_graveyard)\w*)\b", body))
+            )
+    return out
 
 
 def helper_variants(text):
@@ -162,7 +243,9 @@ def helper_variants(text):
                 depth -= 1
             j += 1
         body = text[i:j]
-        out[name] = set(CTOR.findall(body)) | set(STATIC.findall(body)) | {
+        out[name] = set(CTOR.findall(body)) | set(STATIC.findall(body)) | set(
+            DEST.findall(body)
+        ) | {
             f"@{c}" for c in re.findall(r"\b(\w+)\s*\(", body)
         }
     return out
@@ -211,6 +294,7 @@ def oracle_text(card, face):
 
 def audit():
     shortcuts = helper_variants((BASE / "effect" / "shortcut.rs").read_text())
+    prims = primitive_bodies()
     findings = {v: [] for v in VERBS}
     checked = 0
     for src in sorted(SETS.rglob("*.rs")):
@@ -241,6 +325,8 @@ def audit():
             have = set()
             for call in re.findall(r"\b(\w+)\s*\(", raw):
                 have |= table.get(call, set())
+            for v in set(CTOR.findall(raw)) | have:
+                have |= prims.get(v, set())
             hay = raw + " " + " ".join(sorted(have))
             for verb, (pat, code) in VERBS.items():
                 if re.search(pat, txt) and not re.search(code, hay):
