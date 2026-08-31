@@ -17891,8 +17891,9 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-126) THE REQUIREMENT WALKER IS THE LARGEST ENGINE FUNCTION IN THE FILE
-WITH NOTHING FILED AGAINST IT, AND 65 % OF ITS CALLS ARE ITS OWN RECURSION.**
+**(-126) TAKEN, 2026-08-31 — THE REQUIREMENT WALKER IS THE LARGEST ENGINE
+FUNCTION IN THE FILE WITH NOTHING FILED AGAINST IT, AND 65 % OF ITS CALLS ARE
+ITS OWN RECURSION.**
 Fresh dumps at `9f06d76a` (`--games 6 --threads 1 --seed 1`, `profiling-fast
 --no-default-features`), folding the three rows as the ninety-second pass's
 correction requires:
