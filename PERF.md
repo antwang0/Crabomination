@@ -2310,6 +2310,42 @@ a box whose state moves.
 
 ## Baseline
 
+### `(-129)`/`(-130)`/`(-131)` — closing state at `67ff74e5`
+
+Four perf commits (`cube` -1.067 % cumulative), one instrument fix, one new
+instrument, two card-defect fixes with tests, and an audit-tooling pass that
+grew the oracle-verb corpus by 6,000 cards. Engine changes are
+behaviour-preserving: the bench invariant is byte-identical and the suite
+grew by exactly the two regression tests.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon, 4 cores
+suite   19,091 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client) — +2 vs 9d836cbd (the two bounce regressions),
+        golden traces in it, unmoved
+clippy  -p crabomination -p crabomination_base -p crabomination_catalog
+        -p crabomination_tests --all-targets              clean
+        --workspace --exclude crabomination_client        clean (pre-perf tip)
+        -p crabomination --features trig-census           clean (pre-perf tip)
+--bench release-fast: 195,528 decisions / 27.44 turns / 611.0 per game /
+        0 stalls — **byte-identical to the invariant**; determinism ok,
+        thread_determinism ok (3 vs 1 threads identical)
+callgrind cube 2,529,884,442 -> 2,502,898,933 (**-1.067 %**), fixed -0.434 %,
+        sealed -1.152 %, over the four perf commits. Each commit's three-pool
+        row is in the hundred-and-thirteenth-pass Log entry.
+grid    NOT re-run: the four perf commits are behaviour-preserving (bench
+        invariant byte-identical, suite green), and the two card fixes are in
+        the `cube`/classic pools with a regression test apiece, not a new
+        self-play death path the grid would exercise.
+```
+
+⚠ **`games_per_s` read 307.8 here against 269-283 and 384.9 elsewhere this
+session — the wall clock swings with whatever host the container lands on
+(the `--bench` header's `host_cpu` read 2.10 GHz here, 2.80 GHz at
+`9d836cbd`). Ir is the signal; the decision/turn/stall invariant is the
+behaviour check.** `peak_rss_mib` 28.1 is `release-fast`, not the `release`
+family's 24.
+
 ### `(-122)`, `(-126)`, `(-127)`, `(-128)` — closing state at `9d836cbd`
 
 Four candidates answered and **none of them is in the tree**: two refuted by

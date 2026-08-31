@@ -30,50 +30,50 @@ sixty-seventh pass, so don't re-take that.
    background build makes no progress until the next foreground command, so run builds in the
    foreground. ⚠ Disk is a fixed allowance: `target/debug/incremental` reached 18 GB and
    deleting it was the difference between a linker Bus error and a green suite.
-2. **All five gates at `9d836cbd`:** suite **19,089 / 0 / 5**, clippy clean (also
-   `--features trig-census`), traces unmoved, `--bench` **195,528 / 27.44 / 611.0 / 0 stalls
-   byte-identical to the invariant** with determinism + thread_determinism green, and the
-   `cube` callgrind base moved **+0.00094 %** with the three censuses compiled out. Grid not
-   re-run — every engine line added is `cfg`-gated bar one CR 605.1a rider the suite covers.
-   ⚠ **`games_per_s` read 269-283 across three runs of the same binary: wall clock here is
-   ±5 %, Ir is not.**
-3. **Four candidates answered, none in the tree, and the census answered every one for at
-   most one build.** `(-122)`: the mask costs **2.86x** the walk, two pools have no walk.
-   `(-127)`: `cube` **+0.727 %** — 82.5 % of clones write `players`. `(-126)`: the flattened
-   `All`/`Any` serves 139,406 of `cube`'s calls (~0.16 %) and the leaf split measured
-   **+0.940 %**. `(-128)`: a sound skip gate is **0.45 %** and has to be maintained by hand at
-   every player-side write, where a miss is a *wrong game*. **Five rules, all about the shape
-   of a claim rather than its size:** a gate in front of a walk is part of the walk's cost
-   model; a CoW gate is paid per `&mut` reach, not per clone; a split pays by the share taking
-   the *small* half; **look for the memo one level down before proposing it** (`sba_scan_bits`
-   was already memoized on the definition); and **price a hand-maintained gate's soundness
-   burden as part of the candidate**.
-4. **Open: `(-129)` only** — `event_matches_spec`, 1,028,014 calls on `cube` against 103,082
-   on `fixed`, 1.26 % / 0.39 %, the dispatcher body NEXT has pointed at since the lane closed.
-   Open it with `cg_contexts.py --separate-callers=3` (it now prints inclusive Ir per
-   context), **not** a line profile — pass 91 already established there is no hot line there.
-   Also unsplit and never measured: the **2,397 Ir of SBA sweep body** left after `(-128)`'s
-   scan, of which the CR 704.5f/g/h death sweep is an obligation and the rest is gate
-   evaluation. **The queue has nothing else — replenish from fresh dumps rather than picking
-   the next-largest row.**
-5. **Do not retake:** `(-112)`; `(-124)`; `(-126)`'s two devices; `(-127)`'s wrap; `(-122)`'s
-   mask; `(-128)`'s skip gate; dispatch's per-event gate (61 AND 106); a third line profile of
-   `dispatch_triggers_for_events` or of the gather; **actor scaling** (`(-52)`); the
-   `turn_granted_triggers` / `granted_triggers_eot` retains.
+2. **All gates at `67ff74e5`:** suite **19,091 / 0 / 5** (the two new bounce regressions),
+   clippy clean on all four crates `--all-targets`, traces unmoved, `--bench` **195,528 /
+   27.44 / 611.0 / 0 stalls byte-identical to the invariant**, determinism + thread_determinism
+   green. Grid not re-run — the four perf commits are behaviour-preserving and the two card
+   fixes carry a regression test apiece. ⚠ **`games_per_s` read 307.8 / 269-283 / 384.9 across
+   this session — the container's host CPU varies (2.10 vs 2.80 GHz in the `--bench` header).
+   Ir is the signal; the decision/turn/stall invariant is the behaviour check.**
+3. **`(-129)` CLOSED — cube -1.067 % over four commits, and the rule was not the one it opened
+   on.** `event_matches_spec` was 31 -> 14.7 Ir a call: 93 % of its 1 M calls are pairs no
+   event can match, so the split (`event_matches_spec_rest` out of line) and then the frame
+   removal (Taii Wakeen's one `call` moved out of the jump table) took it. **THE RULE: one call
+   in a jump-table match costs the frame on every arm** — LLVM won't shrink-wrap past the
+   indirect branch. `scripts/cg_frames.py` is that rule as an instrument; it closed `(-131)`
+   (compute_permanent_gated, -0.26 % all pools) and `(-130)` (three filter walkers -> one)
+   came out beside it. ⚠ `cg_contexts.py` was under-reading Ir by **28x** until `00b17a18` —
+   any pre-fix inclusive-Ir figure from it is wrong.
+4. **Open, and thin — replenish from fresh dumps, do not pick the next-largest row.** `(-132)`
+   the frame class: `cg_frames.py`'s rows with **1-3 body calls** are the shape (can_grant_keyword,
+   effect_produced_colors, can_block_attacker_computed); **`has_keyword` is the biggest row and
+   is NOT it** — its frame is four scan loops, read before building. Whole table ~0.7 %, take as
+   a sweep or not at all. `(-133)` `requirement_mentions_power`, the fourth copy of `(-130)`'s
+   walk — establish it shares `extract_power_gate`'s tree before folding. `(-128)`'s 2,397 Ir SBA
+   sweep body still unsplit. ⚠ Before ranking a dump row, run it at two game counts:
+   `wants_converge`'s once-per-name `{:?}` scan is 0.5 % of a six-game dump and ~nothing at gate
+   length (measured, `e1de0e0f`).
+5. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices; `(-127)`'s wrap; `(-122)`'s
+   mask; `(-128)`'s skip gate; `(-129)`'s four devices (per-pair gate IS the loop; discriminant
+   memo is unsound on payload-carrying kinds; static variant mask needs a per-call audit against
+   the real matcher); dispatch's per-event gate; a third line profile of the dispatcher or the
+   gather; **actor scaling** (`(-52)`); the `turn_granted_triggers` / `granted_triggers_eot`
+   retains.
 6. **Measurement traps, all in PERF:** `grep mimalloc` is not the allocator check; `(-110)`'s
    null control does not transfer to the actor; a census must be re-run *after* a fix that
-   moves what it counts; and `--demangle=no` is how you learn whether a repeated row is one
-   function at several depths (the requirement walker) or several instantiations.
+   moves what it counts; `--demangle=no` separates one recursive function from several
+   monomorphizations; and `cg_frames.py` needs the same binary the dump came from.
 7. **Robustness:** `audit_panics.py` at 0 bare sites; grid last full at 33,120 games / 0
    failures at `f2f7d58c`. An empty pool and `n == 0` are legal *inputs*, so the degradation
    is a return, not a `debug_assert!`.
-8. **Cards: `draw` and `counters` worked, 214 -> 203; `return_to_hand` (31) and `token` (26)
-   are next and unexamined.** Eleven fixed, all of two shapes, both in CARD_BACKLOG's
-   "Oracle-verb audit" section with the primitive jobs they surfaced (`LookPick`-with-else
-   unblocks **four** cards, Parley five). **The doc comment above a body is the tell** — three
-   of four wrong-shape cards still described the card the body used to be, and
-   `audit_catalog_stats` reads zero on all of them because the characteristics were corrected
-   against Scryfall and the ability was not.
+8. **Cards: `audit_oracle_verbs` now reads 17,028 cards (was 10,949) — it inlines helper
+   spreads and expands engine primitives/destinations.** `return_to_hand` worked, 31 -> 4 real
+   rows, one real bug fixed (`ReturnSelf`-as-bounce: Field of Reality, Viashino Sandswimmer).
+   **The four false classes it taught are in CARD_BACKLOG; read six rows before working a
+   class.** Open next by size: `draw` 32, `gain_life` 30, `damage`/`counters` 25 — but over the
+   larger corpus, so unexamined not regressed. `token` (24) and `damage` were untouched.
 9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
