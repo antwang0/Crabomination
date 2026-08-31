@@ -58,12 +58,18 @@ def contexts(path, needle):
             if m:
                 pending = int(m.group(1))
                 continue
-            if pending and cur and line and line[0].isdigit():
-                if cur.split("'", 1)[0].endswith(needle) or needle in cur.split("'", 1)[0]:
-                    parts = line.split()
+            # A `calls=` line is always followed by exactly one cost line, and
+            # its position column is `N`, `*`, `+N` or `-N` — subposition
+            # compression, which this read as "not a cost line" until the
+            # hundred-and-thirteenth pass. It then left `pending` armed and
+            # charged the call to whichever later line happened to start with
+            # a digit, under-counting `event_matches_spec` by 28x.
+            if pending and cur and line and (line[0].isdigit() or line[0] in "+-*"):
+                parts = line.split()
+                if len(parts) > 1 and needle in cur.split("'", 1)[0]:
                     ctx = cur.split("'", 1)[1] if "'" in cur else "(no context)"
                     calls[ctx] += pending
-                    ir[ctx] += int(parts[1]) if len(parts) > 1 else 0
+                    ir[ctx] += int(parts[1])
                 pending = 0
                 continue
             m = re.match(r"^fn=\((\d+)\)(?: (.*))?$", line)
