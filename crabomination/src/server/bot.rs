@@ -4243,9 +4243,16 @@ fn decide_optional_by_outcome(state: &GameState, seat: usize, w: &EvalWeights) -
 fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
     match eff {
         Effect::AddMana { pool, .. } => accumulate_payload_colors(pool, set),
-        Effect::Seq(v) => v.iter().for_each(|e| accumulate_mana_colors(e, set)),
+        // The recursion is the only `call` site and it fires on 1 % of asks;
+        // out of line the rest pay no frame. See `(-135)`.
+        Effect::Seq(v) => accumulate_mana_colors_seq(v, set),
         _ => {}
     }
+}
+
+#[inline(never)]
+fn accumulate_mana_colors_seq(v: &[Effect], set: &mut crate::mana::ColorSet) {
+    v.iter().for_each(|e| accumulate_mana_colors(e, set));
 }
 
 fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet) {

@@ -8800,13 +8800,20 @@ impl GameState {
     /// pending decision, and when the game-over transition fires with a
     /// decision already up.
     pub(crate) fn drop_pending_choices_if_game_over(&mut self) -> bool {
-        if self.game_over.is_some() {
-            self.suspend_signal = None;
-            self.pending_decision = None;
-            true
-        } else {
-            false
+        // The two drops are ten `call` sites of drop glue, and the game is
+        // over on none of the 31 k asks a `cube` run makes. Out of line they
+        // take the frame with them; see `(-135)`.
+        if self.game_over.is_none() {
+            return false;
         }
+        self.drop_pending_choices();
+        true
+    }
+
+    #[inline(never)]
+    fn drop_pending_choices(&mut self) {
+        self.suspend_signal = None;
+        self.pending_decision = None;
     }
 
     /// Give priority to the active player and reset consecutive passes.
@@ -9077,17 +9084,34 @@ impl GameState {
     /// debug-only cross-check in `permanents_with_abilities_removed` re-runs
     /// the gather whenever this says `false`, so the whole suite audits it.
     fn ability_strip_off_battlefield(&self) -> bool {
-        self.continuous_effects
+        if self
+            .continuous_effects
             .iter()
             .any(|e| matches!(e.modification, Modification::RemoveAllAbilities))
-            || self.players.iter().any(|p| {
-                p.command
-                    .iter()
-                    .any(|c| c.command_zone_abilities_active() && card_can_strip_abilities(c))
-                    || p.emblems.iter().any(|em| {
-                        em.statics.iter().any(|sa| static_effect_strips_abilities(&sa.effect))
-                    })
-            })
+        {
+            return true;
+        }
+        // Every remaining route needs a card in a command zone or an emblem,
+        // and the ask is 104 k a `cube` run against zero of either. The
+        // emptiness test is call-free, so this half holds no callee-saved
+        // register and pays no frame; see `(-135)`.
+        if self.players.iter().all(|p| p.command.is_empty() && p.emblems.is_empty()) {
+            return false;
+        }
+        self.ability_strip_off_command_zone()
+    }
+
+    /// [`Self::ability_strip_off_battlefield`]'s command-zone and emblem half.
+    #[inline(never)]
+    fn ability_strip_off_command_zone(&self) -> bool {
+        self.players.iter().any(|p| {
+            p.command
+                .iter()
+                .any(|c| c.command_zone_abilities_active() && card_can_strip_abilities(c))
+                || p.emblems.iter().any(|em| {
+                    em.statics.iter().any(|sa| static_effect_strips_abilities(&sa.effect))
+                })
+        })
     }
 
     /// The same device for the layer-4 *card-type* family: a cheap

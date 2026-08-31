@@ -192,6 +192,20 @@ impl GameState {
 fn counter_drain_cost(
     ability: &crate::effect::ActivatedAbility,
 ) -> Option<(Option<Vec<crate::card::CounterType>>, u32, crate::card::SelectionRequirement)> {
+    // Both fields are `None` on every ability a `cube` run activates, and the
+    // two clone paths are what the eleven `call` sites and the frame are for.
+    // See `(-135)`.
+    if ability.remove_counter_among_filter.is_none() && ability.remove_counter_among_kinds.is_none()
+    {
+        return None;
+    }
+    counter_drain_cost_slow(ability)
+}
+
+#[inline(never)]
+fn counter_drain_cost_slow(
+    ability: &crate::effect::ActivatedAbility,
+) -> Option<(Option<Vec<crate::card::CounterType>>, u32, crate::card::SelectionRequirement)> {
     if let Some((kind, count, filter)) = ability.remove_counter_among_filter.as_ref() {
         return Some((kind.map(|k| vec![k]), *count, filter.clone()));
     }
@@ -2923,6 +2937,19 @@ pub(crate) fn effect_produced_colors(effect: &Effect) -> crate::mana::ColorSet {
             // exiled card), so not auto-tapped; tapped deliberately.
             ManaPayload::ImprintedCardColor => ColorSet::empty(),
         },
+        // The two recursive arms are this function's only `call` sites and
+        // they fire on 20 % of asks; out of line the other 80 % pay no frame.
+        // See `(-135)`.
+        Effect::Seq(_) | Effect::If { .. } => effect_produced_colors_nested(effect),
+        _ => ColorSet::empty(),
+    }
+}
+
+/// [`effect_produced_colors`]'s recursive arms.
+#[inline(never)]
+fn effect_produced_colors_nested(effect: &Effect) -> crate::mana::ColorSet {
+    use crate::mana::ColorSet;
+    match effect {
         Effect::Seq(steps) => steps
             .iter()
             .fold(ColorSet::empty(), |acc, s| acc.union(effect_produced_colors(s))),

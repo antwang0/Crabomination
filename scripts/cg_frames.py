@@ -14,12 +14,23 @@ dump's call counts against the binary's disassembly and rank by
 
     python3 scripts/cg_frames.py cg.out target/profiling-fast/bot_ladder
 
-**A row is a candidate, not a finding.** The prologue is only removable if
-the calls are genuinely cold — a body whose every path calls something needs
-the frame, and outlining there just moves it. Read the `calls-in-body`
-column: 0 means LLVM wanted callee-saved registers for its own arithmetic
-(nothing to outline, the frame is the code); 1-3 with a large `Ir/call`
-gap between this function and its callees is the `(-129)` shape.
+**A row is a candidate, not a finding — except when `out/call` is ~0.** Two
+columns decide it, and the second is the one that turns a guess into a
+measurement:
+
+* `body calls` is *static*: how many `call` sites the disassembly has. 0 means
+  LLVM wanted callee-saved registers for its own arithmetic — nothing to
+  outline, the frame **is** the code (`CardInstance::toughness`).
+* `out/call` is *dynamic*: how many calls the function actually made per
+  invocation on this workload. **`body calls` > 0 with `out/call` ~ 0 is the
+  shape, proved rather than suspected** — every one of those invocations paid
+  a prologue for a call it never made, and outlining the calling paths behind
+  an `#[inline(never)]` half removes it. `ability_strip_off_battlefield` reads
+  3 / 0.00 (`(-135)`); `can_grant_keyword` reads 2 / 0.88 and is *not* the
+  shape, which cost nothing to learn because the column said so.
+* A recursive callee counts in `out/call`, honestly: recursion needs the frame
+  too. `requirement_live_leaves` reads 0.54 and `(-126)`'s rule prices the
+  split as a likely loss at that share.
 
 `--min-calls` (default 50,000) and `--rows` (default 30) bound the report.
 """
@@ -35,9 +46,11 @@ HEADER = re.compile(r"^[0-9a-f]+ <(.+)>:$")
 
 
 def call_counts(path):
-    """Incoming calls per function name, folded over calling contexts."""
+    """(incoming, outgoing) calls per function name, folded over contexts."""
     counts = collections.Counter()
+    out = collections.Counter()
     names = {}
+    cur = None
     pend = None
     for line in open(path, errors="replace"):
         line = line.rstrip("\n")
@@ -51,11 +64,15 @@ def call_counts(path):
         if m:
             if m.group(2):
                 names[m.group(1)] = m.group(2)
+            cur = names.get(m.group(1), "").split("'", 1)[0]
             continue
         if line.startswith("calls=") and pend:
-            counts[pend.split("'", 1)[0]] += int(line.split("=", 1)[1].split()[0])
+            n = int(line.split("=", 1)[1].split()[0])
+            counts[pend.split("'", 1)[0]] += n
+            if cur:
+                out[cur] += n
             pend = None
-    return counts
+    return counts, out
 
 
 def frames(binary):
@@ -120,7 +137,7 @@ def main():
             rows = int(a.split("=", 1)[1])
         elif a.startswith("--min-calls="):
             min_calls = int(a.split("=", 1)[1])
-    counts = call_counts(dump)
+    counts, outgoing = call_counts(dump)
     info = frames(binary)
     # The dump carries demangled names; the disassembly carries mangled ones.
     by_name = {}
@@ -136,16 +153,17 @@ def main():
         prologue, calls, size = max(hit, key=lambda v: v[2])
         if prologue == 0:
             continue
-        ranked.append((n * prologue * 2, n, prologue, calls, size, name))
+        ranked.append((n * prologue * 2, n, prologue, calls, size, outgoing[name] / n, name))
     ranked.sort(reverse=True)
     print(
         f"# {len(ranked)} functions with >= {min_calls:,} calls and a prologue, "
         "ranked by calls x prologue Ir (push+pop, so x2)"
     )
     print(f"{'~Ir in frame':>13}  {'calls':>10}  {'prol':>4}  {'body calls':>10}  "
-          f"{'insns':>6}  function")
-    for cost, n, prologue, calls, size, name in ranked[:rows]:
-        print(f"{cost:13,d}  {n:10,d}  {prologue:4d}  {calls:10d}  {size:6d}  {name}")
+          f"{'out/call':>8}  {'insns':>6}  function")
+    for cost, n, prologue, calls, size, per, name in ranked[:rows]:
+        print(f"{cost:13,d}  {n:10,d}  {prologue:4d}  {calls:10d}  {per:8.2f}  "
+              f"{size:6d}  {name}")
 
 
 if __name__ == "__main__":

@@ -10157,6 +10157,87 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-fourteenth pass (2) — `(-135)`, and the column that turned `cg_frames.py` from advisory into decisive
+
+`(-134)` came off `cg_frames.py`'s top row *against* that row's own text, so
+the first thing this pass did was ask why the instrument could not tell. It
+had one column where it needed two:
+
+* `body calls` is **static** — how many `call` sites the disassembly holds.
+* `out/call` is **dynamic** — how many calls the function actually made per
+  invocation on this workload, folded out of the dump's own edge records.
+
+**`body calls > 0` with `out/call` ~ 0 is the shape, proved rather than
+suspected**: every one of those invocations paid a prologue for a call it
+never made. The column is four lines of `cg_frames.py` (`(-135)`'s first
+commit) and it re-ranked the table immediately:
+
+```text
+  ~Ir in frame     calls  prol  body  out/call  insns  function
+     1,463,728   104,552     7     3      0.00    125  ability_strip_off_battlefield
+       857,332    61,238     7     4      0.00    354  can_block_attacker_computed
+       777,440    77,744     5     2      0.20    381  effect_produced_colors
+       674,520    48,180     7     4      0.00    101  active_static
+       673,624    48,116     7    11      0.00    127  counter_drain_cost
+       331,140    55,190     3     1      0.01    230  accumulate_mana_colors
+       310,740    31,074     5    10      0.00     58  drop_pending_choices_if_game_over
+       ...
+     1,215,536    86,824     7     2      0.88    253  can_grant_keyword     <- NOT the shape
+       586,956    97,826     3     1      0.54     50  requirement_live_leaves <- NOT the shape
+```
+
+**`can_grant_keyword` is the entry that pays for the column.** It sat one row
+below `has_keyword` in the old table with the perfect static signature — 2 body
+calls, 253 instructions — and `out/call` 0.88 says 67,406 of its 86,824 asks
+*do* reach `static_effect_grants_keyword`. Splitting it would have moved the
+frame, not removed it. `(-126)`'s rule ("a split pays in proportion to the
+share of calls taking the small half") is exactly what this column measures,
+and it now costs a `grep` instead of a build. Same for
+`requirement_live_leaves` / `requirement_mentions_power` at 0.54 — the
+recursion needs the frame, so `(-133)`'s split is priced as a likely loss
+before anyone builds it.
+
+**Five functions taken, one device.** Gate on the call-free question, put the
+calling half behind `#[inline(never)]`. Base `af27cb83`:
+
+```text
+                       base af27cb83        candidate         delta
+  cube                2,497,494,820     2,489,486,435     -0.321 %
+  fixed                 842,358,952       838,571,686     -0.450 %
+  sealed              2,538,640,693     2,529,384,438     -0.365 %
+
+  self cost, cube                base        candidate
+  ability_strip_off_battlefield  6,813,604   inlined away
+  accumulate_mana_colors         2,623,388         56,226
+  effect_produced_colors         2,744,822      1,548,200
+  counter_drain_cost             1,251,016   inlined away
+  drop_pending_choices_..        502,170     inlined away
+```
+
+**The frame table predicted 3,556,972 Ir (0.142 %) and the measured delta is
+8,008,385 (0.321 %) — 2.3x the prediction, and the reason is worth keeping.**
+Three of the five stopped being functions. Once the fast path is a handful of
+instructions, LLVM inlines the whole thing into its callers, so the saving is
+the frame *plus* the call, the return, and the argument setup at every site.
+**The frame column is a floor on a private function and an estimate on a `pub`
+one** — `(-134)`'s cross-crate `has_keyword` landed at 0.215 % against a
+0.23 % prediction because it stayed a call; these did not.
+
+Two rows the column flags and this pass did **not** take, with the reason:
+
+* `can_block_attacker_computed` (4 / 0.00, 857,332 Ir). All four sites are in
+  cold arms of two `for k in … { match k … }` loops, and LLVM cannot
+  shrink-wrap a prologue into a loop body — the induction variables have to
+  survive the call whether it runs or not. **`out/call` ~ 0 is necessary and
+  not sufficient: the cold call also has to be outside a loop, or be the
+  whole tail.**
+* `active_static` (4 / 0.00, 674,520 Ir) is the same shape — its calls are in
+  the `WhileCondition` arm of a `loop`.
+
+Gates: suite 19,091 / 0 / 5, golden traces in it and unmoved; `--bench`
+195,528 / 27.44 / 611.0 / 0 stalls byte-identical to the invariant;
+determinism ok; thread_determinism ok.
+
 ### Hundred-and-fourteenth pass — `(-134)` `has_keyword`: the frame came off, and the device is the negative answer
 
 `(-132)`'s table ranked `has_keyword` first and its own text said the row was
@@ -18416,17 +18497,32 @@ frame row as "what does the common *answer* cost", not "what does this function
 cost".** What remains of the 40-byte `Keyword` scanned linearly is a separate
 candidate and is now much smaller.
 
-The rows worth opening are the ones with **1-3 body calls and a large
-`Ir/call` gap to their callees** — `can_grant_keyword` (52.9 Ir, 2 calls),
-`effect_produced_colors` (2 calls), `can_block_attacker_computed` (4 calls),
-`ability_strip_off_battlefield` (65.2 Ir, 3 calls, but its three are
-iterator chains and may well be the `has_keyword` case). Read each one's
-disassembly before building: the question is whether the calls are on a path
-the hot case skips.
+**CLOSED at the hundred-and-fourteenth pass — `(-134)` + `(-135)` took `cube`
+-0.536 % between them, and the entry's ranking question is now a column rather
+than a reading.** `cg_frames.py` prints `out/call` (calls actually made per
+invocation, out of the dump's edge records); **`body calls` > 0 with
+`out/call` ~ 0 is the shape, proved.** That column immediately settled the two
+rows this entry recommended and should not have: `can_grant_keyword` reads
+0.88 (67,406 of its 86,824 asks do reach `static_effect_grants_keyword`, so a
+split moves the frame rather than removing it) and
+`requirement_live_leaves`/`requirement_mentions_power` read 0.54.
 
-Ceiling: the whole table is ~17 M Ir, 0.7 % of `cube`, and no single row is
-worth more than 0.2 %. **Take it as a sweep or not at all**, and re-run the
-instrument after any of them lands — outlining changes what gets inlined.
+What is left on the table, and why neither was taken:
+
+* `can_block_attacker_computed` (4 body calls / 0.00 out, 857,332 Ir) and
+  `active_static` (4 / 0.00, 674,520 Ir). **`out/call` ~ 0 is necessary and
+  not sufficient** — both put their cold calls inside a `for`/`loop` body, and
+  LLVM cannot shrink-wrap a prologue into a loop: the induction variables have
+  to survive the call whether it runs or not. A device here has to hoist the
+  cold arms out of the loop, which is a rewrite of the matcher, not an
+  outlining.
+* `ActivatedAbility::is_free` (83 / 0.01, 344,932 Ir) and the four
+  `pick_*_response` rows (15-25 / 0.00-0.28, ~1.46 M between them) have their
+  calls spread over too many arms for one gate; worth ~0.06 % as a group and
+  only if a single early-out turns up.
+
+**Re-run the instrument after anything lands — outlining changes what gets
+inlined**, and three of `(-135)`'s five stopped being functions at all.
 
 
 **ADDENDUM, MEASURED — `has_keyword` WAS BUILT ANYWAY AND THE READING ABOVE IS
