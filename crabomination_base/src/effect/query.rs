@@ -724,7 +724,6 @@ impl Effect {
             | Effect::PlotSpellOnResolve { .. }
             | Effect::PutLandsFromHandOntoBattlefieldTapped { .. }
             | Effect::MayCastPermanentFromHandFree { .. }
-            | Effect::ExileTopAndMayCastUpToMv { .. }
             | Effect::PreventNextDamageToYouFromChosenSourceWithRider { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }
             | Effect::SacrificeSourceUnlessCost { .. }

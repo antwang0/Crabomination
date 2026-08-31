@@ -4091,11 +4091,6 @@ pub enum Effect {
         #[serde(default)]
         face_down: bool,
     },
-    /// "Exile the top `amount` cards of `who`'s library. You may cast any
-    /// number of spells with mana value `max_mv` or less from among them
-    /// without paying their mana costs" (Kotis, the Fangkeeper). The
-    /// permission lasts for the turn and exiles the card once cast.
-    ExileTopAndMayCastUpToMv { who: Selector, amount: Value, max_mv: Value },
     /// "If a source you control would deal noncombat damage to a permanent or
     /// player this turn, it deals that much damage plus `amount` instead"
     /// (Taii Wakeen, Perfect Shot). Turn-scoped, stacking across activations.

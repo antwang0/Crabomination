@@ -21,9 +21,35 @@ the filter stronger than the compiler — exhaustiveness is satisfied by exactly
 those arms.
 
 Reading at 2026-08-28, over 471 + 987 + 237 = 1,695 variants: **zero dead
-capabilities**, and three dead primitives (`Effect::AddRadCounters`,
-`ExileTopAndMayCastUpToMv`, `GrantCastBackFromGraveyard`) — each an
-implemented effect waiting for the card that wanted it.
+capabilities**, and three dead primitives — each an implemented effect waiting
+for the card that wanted it.
+
+**Triaged 2026-08-30, so the next reader does not repeat the archaeology.**
+"Waiting for the card that wanted it" was right for two of the three and
+wrong — dangerously so — for the third.
+
+* `Effect::AddRadCounters` — genuinely waiting. Rad counters are a printed
+  mechanic and **no implemented card mentions one** (0 hits joining the
+  catalog's names against `.scryfall_cache.json`), so nothing has regressed.
+* `Effect::GrantCastBackFromGraveyard` — waiting for a card that **does not
+  exist**. It was built for a Pestilent Cauldron whose oracle text was
+  fabricated ("If Pestilent Cauldron is in your graveyard, you may cast it
+  transformed"); the STX audit at `2ca109bc` replaced it with the printed
+  card, which has no such line. Its lane (`may_cast_back_from_graveyard`,
+  `GameAction::CastSpellBack`) is kept: it is a capability, and deleting a
+  `CardInstance` field is a `CardData`-size change, not a tidy-up.
+* `Effect::ExileTopAndMayCastUpToMv` — **DELETED**, because it was not
+  waiting for a card, it was a second and *wrong* implementation of one.
+  Its own doc named Kotis, the Fangkeeper, which ships on
+  `ExileTopAndGrantMayPlay` after the dedupe at `3b81ce97`. The two disagree:
+  Kotis casts **free** and **while exiled**, and the dead one granted a
+  may-play that **pays the card's cost** and expires **end of turn**. A
+  future card picking the dead variant by its name would have got the wrong
+  rules with no test to catch it.
+
+**The rule this adds to the reading: a dead primitive is informational only
+until you ask whether some *other* variant already does its job.** A duplicate
+is not a card-in-waiting, it is drift with a name.
 
 **The bit bridge** (see `bit_bridge`) is the third way a variant can be
 implemented, added the same day because the filter cried wolf without it: an

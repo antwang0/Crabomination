@@ -8146,42 +8146,6 @@ impl GameState {
             // free-cast permission on the ones cheap enough. The MV gate is
             // applied here rather than in the selector because both bounds
             // come from the same trigger amount.
-            Effect::ExileTopAndMayCastUpToMv { who, amount, max_mv } => {
-                let n = self.evaluate_value(amount, ctx).max(0) as usize;
-                let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
-                let mut exiled: Vec<CardId> = Vec::new();
-                for ent in self.resolve_selector(who, ctx) {
-                    if let EntityRef::Player(p) = ent {
-                        for _ in 0..n {
-                            if self.players[p].library.is_empty() {
-                                break;
-                            }
-                            let card = self.players[p].library.remove(0);
-                            let cid = card.id;
-                            let within = card.definition.cost.cmc() <= cap;
-                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
-                            self.last_moved_cards.push(cid);
-                            if within {
-                                exiled.push(cid);
-                            }
-                        }
-                    }
-                }
-                let granted_turn = self.turn_number;
-                for cid in exiled {
-                    if let Some(card) = self.find_card_anywhere_mut(cid) {
-                        card.may_play_until = Some(crate::card::MayPlayPermission {
-                            player: ctx.controller,
-                            granted_turn,
-                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                            exile_after: false,
-                            miracle: false,
-                        });
-                    }
-                }
-                Ok(())
-            }
-
             Effect::LookTopEachPayLifeOrBin { count, life } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let p = ctx.controller;
