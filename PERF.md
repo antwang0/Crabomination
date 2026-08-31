@@ -2310,6 +2310,44 @@ a box whose state moves.
 
 ## Baseline
 
+### The state-shape pass — closing state at `613f20dc`
+
+Two perf commits on one subject: **what a `GameState` clone actually copies.**
+`(-143)` removed its containers, `(-144)` halved what was left. Cumulative off
+`1a783e04`:
+
+```text
+  pool    base 1a783e04   (-143)          (-144)          cumulative
+  cube    2,503,859,452   2,471,954,386   2,463,560,588   **-1.610 %**
+  fixed     927,366,593     914,635,420     908,721,694   **-2.011 %**
+  sealed  2,525,788,534   2,502,403,614   2,490,073,836   **-1.414 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,114 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); +1 is `cow::tests::game_state_stays_small`;
+        golden traces in it and **unmoved across both commits**
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: 195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls — **byte-identical to the invariant** after both commits;
+        determinism ok, thread_determinism ok (3 vs 1 threads identical)
+grid    25 cells under `overflow` + `-C debug-assertions=yes`, five pools
+        (fixed/cube/sos/sealed/all) x five seeds, 120 games/archetype:
+        **no panic, no assertion, no overflow**; 15 counted cells are
+        15,958 games with **2 undecided, and `undecided_by` says
+        `cap 0 / stuck 0 / draw 2`** — a rules outcome, not a stall. The
+        same seed reads the same 2 on the pre-change binary.
+clone   `GameState::clone` self 1,307 -> 544 Ir a call; `size_of::<GameState>()`
+        3,008 -> 1,424 bytes; call counts identical on both pools.
+```
+
+⚠ **Every number here is a `--no-default-features` (system-allocator)
+`profiling-fast` reading**, and `fixed`'s base moved 838 M -> 927 M across the
+concurrent session's card batch — a `fixed` Ir figure from before `33955a1f`
+is not comparable to one after it. See the `--bench` invariant note in the
+clone-shape pass below.
+
 ### The clone-shape and small-table pass — closing state at `3efd6d45`
 
 Six perf commits on two devices — **group a hot struct's plain field copies
@@ -19111,8 +19149,63 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-146)/(-147)/(-148) CLOSED — THE SMALL-TABLE SWEEP IS DONE, `cube`
--1.080 % / `fixed` -0.872 %.** Twelve `hashbrown` tables whose size is bounded
+**(-145) `Arc::make_mut` IS 29 Ir A CALL AND 905,060 OF THEM ARE THE ENGINE'S
+CoW WRITE BARRIER — `cube` 26,238,578 self = 1.07 %.** After `(-143)` the
+engine has five `CowBox` groups (the card zones, `PlayerData`, `CardData`,
+`ColdState`, `ResolutionScratch`) and every `&mut` reach through one pays
+`Arc::make_mut`'s uniqueness check as an out-of-line call. The check itself is
+std's weak-count dance — `weak.compare_exchange(1, usize::MAX, Acquire, …)`,
+the strong load, the release store back — plus call and return. **The engine
+never constructs a `Weak` to any of them**, so most of that is a check for a
+hazard that cannot occur here.
+
+```text
+  cube    make_mut calls   905,060     self 26,238,578    29.0 Ir/call
+  fixed   make_mut calls   390,046     self 11,318,472    29.0 Ir/call
+  top callers (cube, calls / inclusive Ir)
+    131,364  40,056,297  cast_spell_with_convoke      <- 1.63 % of the run
+    100,280   6,449,795  resolve_combat
+     77,054  10,825,627  resolve_top_of_stack_inner
+     62,592   1,836,180  do_untap
+     47,372   1,501,452  CardInstance::clear_end_of_turn_effects
+```
+
+**Ceiling: a weak-free refcount box brings the check to ~5 instructions, so
+~20 Ir x 905 k = 18 M = 0.73 % of `cube`.** That is one of the largest single
+numbers left in the profile.
+
+⚠ **AND IT IS DELIBERATELY NOT TAKEN HERE.** The only way to get it is a
+hand-rolled `Arc` (`NonNull<Inner<T>>` + `AtomicUsize`, no weak count) or
+`Arc::get_mut_unchecked` (unstable): ~60 lines of `unsafe` on the write
+barrier of every zone in the engine, where the failure mode is a
+use-after-free at game 400 k rather than a slow game. The standing robustness
+goal outranks 0.73 %. **Take it only with**: the box behind one type with its
+own `#[test]` battery including a Miri run, landed alone, and an explicit
+decision that the trade is wanted. `triomphe::Arc` is the same device as a
+dependency and would need the same review.
+
+**Refuted here without a build — the deck builder is not a lever, and
+`StaticEffect`'s 2,232 bytes are not either.** `size_of` ranks
+`CardDefinition` at **8,232** bytes, `StaticEffect` at **2,232** (one variant,
+`GrantActivatedAbility { ability: ActivatedAbility }`, and `ActivatedAbility`
+alone is 1,960 — its own sibling `GrantActivatedAbilityFromGraveyard` already
+boxes it), `ActivatedAbility` 1,960, `PlayerData` 1,016, `TriggeredAbility`
+736. Boxing the fat variant would cut the `Vec<StaticAbility>` stride ~4x. But
+the whole of deck construction — `--decks sealed --games 1`, which plays no
+games — is **11,275,137 Ir**, i.e. **0.45 % of a six-game `sealed` run** and
+~2.7 % of one `selfplay_train` game (two decks a game), and `__memcpy` is
+15.6 % of *that*. The ceiling on the whole angle is ~0.07 % of a training
+game, against 105 call sites, 66 of them in the catalog. **Definitions are
+`Arc`d and built once; their size is a cache fact, and Ir cannot see it.**
+(`rank_shape` is 29.4 % of those 11.3 M if anyone ever needs the builder to be
+faster.)
+
+**(-146)/(-147)/(-148) CLOSED — THE SMALL-TABLE SWEEP IS DONE.** `cube`
+**-0.255 %** / `fixed` **-0.307 %** retaken on `0d7aa507`; the -1.080 % /
+-0.872 % first reading was against the pre-rebase base, and two of the twelve
+tables are inside the group `(-143)` put behind a `CowBox`, so that share of
+the win belongs to the other device. **Two devices aimed at the same row do
+not add.** Twelve `hashbrown` tables whose size is bounded
 by the board, the batch or the seat count became `IdMap`/`IdSet` (a
 `Vec<(K, V)>` with linear scans): `GameState::block_map`, eight per-call
 locals in `declare_blockers` / `pick_blocks_inner`, two in

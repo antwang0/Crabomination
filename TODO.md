@@ -25,116 +25,113 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions at once: **rebase not force**, code before tracker
-   prose, **check a candidate number is free before spending it**, and expect to merge two
-   NEXTs. ⚠ `rm -rf target/*/incremental` between builds — `target/debug` reaches 22 GB and it
-   hit "No space left on device" mid-suite; delete a copied 216-MB `profiling-fast` binary the
-   moment its dumps exist. ⚠ `cargo-nextest` is not in the image: `curl -sSLf
+   prose, **check a candidate number is free before spending it** (this run had to renumber
+   `(-139)`->`(-143)` mid-rebase), and expect to merge two NEXTs. ⚠ `rm -rf target/*/incremental`
+   between builds. ⚠ `cargo-nextest` is not in the image: `curl -sSLf
    https://get.nexte.st/latest/linux | tar zx -C ~/.cargo/bin`. Cold `profiling-fast` engine
-   ~9 min, warm ~3; `release-fast` ~7:30; two `--games 6` valgrinds in parallel are free.
-   ⚠ **Run a grid build with nothing else compiling** — two rustc on the engine at once is a
-   memcg OOM (`signal: 9`) that cargo reports as a compile failure.
+   ~9 min, warm ~3; `release-fast` ~7:30; two `--games 6` valgrinds in parallel are free, and
+   a third fits on 4 cores.
+   ⚠ **Run a grid/overflow build with nothing else compiling** — two rustc on the engine at
+   once is a memcg OOM (`signal: 9`) that cargo reports as a compile failure.
 2. **All gates at the tip:** suite **19,116 / 0 / 5**, **golden traces unmoved across every
    commit of both sessions**; clippy clean `--all-targets`; determinism + thread_determinism
-   green; **grid 30 cells / 33,120 games / 0 failures / 0 undecided, run TWICE** last run
-   (delete `target-audit/` after, 715 MB). `games_per_s` read 225-407 across the day on
-   `host_calib_ms` 75-84 — that is the host; **Ir is the signal**.
-   ⚠ **`--bench` HAS A NEW INVARIANT — 195,806 / 27.49 / 611.9 / 0 stalls** — and **a `fixed`
-   Ir reading from before the card batch is not comparable to one after it**. Sengir Vampire
-   is in two of the four `--bench` archetypes and stopped being a vanilla 4/4: three seeds put
-   the pool **+5.2 % heavier at the same decision count** (+0.14 %), so the games did not
-   lengthen, the boards got bigger. `cube` moved -0.006 %, so the training pools are untouched.
-   **A card in the `--bench` archetypes is bench infrastructure — price the fix before taking
-   it.** Same warning already stands on `cube`/`sealed` across the CR 605.1a commit in (8a).
-3. **Perf this run, `cube` -1.32 % / `fixed` -0.31 % (the `fixed` figure is perf-only; the card
-   batch adds +9.2 % of *workload* on top — see (2)). Three devices.** (a) `(-134)`/`(-136)`/`(-137)` closed the frame
-   class for `cube` -0.53 % cumulative; `cg_frames.py` now prints **`out/call`** and is a
-   *confirmation, not a queue* — every remaining row is "the frame IS the calls" or under
-   0.06 %. (b) `(-140)`/`(-141)`/`(-142)`: **group a hot struct's plain field copies away from
-   the ones that call something**, `cube` **-0.238 %** / `fixed` **-0.309 %** (retaken against
-   the rebased base `0e6ed414`; the first reading off `bc2a38f5` was -0.232/-0.308, so the
-   retake the standing rule demands moved the headline by 0.006 points and confirmed it). `&self` is not
-   `noalias`, so LLVM may not move a load across a call and every interleaved scalar was its
-   own fenced load/store pair. **Copies LAST, not first.** For a `#[derive(Clone)]` type the
-   order is the *declaration* order, which also moves the layout tie-breaks — measure it.
-3a. **The third device: `(-146)`/`(-147)`/`(-148)`, `cube` -0.255 % / `fixed` -0.307 %
-   retaken on `0d7aa507`. A map whose size is bounded by the board, the batch or the seat
-   count is a `Vec`.** ⚠ It read **-1.080 %** against the pre-rebase base and a *factor of
-   four* less after: two of its twelve tables are in the group the concurrent session's
-   `(-143)` put behind a `CowBox`, so that share of the win is theirs. **Two devices aimed at
-   the same row do not add — re-read the second against the first.** Twelve `hashbrown` tables became `IdMap`/`IdSet`: `block_map`,
-   eight per-call locals in `declare_blockers`/`pick_blocks_inner`, two in
-   `declare_attackers_banded`, one in `simulate_attack_outcome_once`, and the two per-seat
-   discard maps that were **exactly two `RawTable::clone` calls on every `GameState` clone**.
-   `cg_edges.py --callers reserve_rehash` is the instrument; the cluster is 17 M -> 4.59 M and
-   **the sweep is finished** — what is left is the cold-group copies, whose maps are bounded by
-   the *game* (`cycled_counts` by card name), where a `Vec` trades a 41-Ir clone for an
-   unbounded lookup. ⚠ Two candidates die with it: **SipHash was never the cost** (0.003 % of
-   the run) and **deck construction is not a lever** (~0.9 M Ir a deck, 0.4 % of a game).
-   ⚠ At `codegen-units = 16` these swaps move inlining decisions, and callgrind reattributed
-   25 M between `SmallVec::extend` and `compute_permanent_pass` across two of the three
-   commits — **read a container swap's per-commit split with suspicion and the total as the
-   number.**
-4. **THE NEXT PERF BUILD IS `(-138)`'s COLLECTION GROUP, AND ITS CENSUS IS ALREADY RUN.**
-   `GameState::clone` is 1,175 instructions on every call, 91.5 % of self, 101 of 194 fields
-   resolution scratch. `CRAB_SCRATCH_CENSUS` picks a different group than the entry proposed:
-   the wide group is written by two probes in three (30/32/42 % clean), the **29 collection
-   fields by only one in five** (93/81/88 % clean), and those hold the eight `Vec::clone`s, the
-   three `RawTable::clone`s and most of the 2.4 allocations a clone makes. 474 references over
-   13 files, 377 in `game/mod.rs` + `game/effects/mod.rs`, `suspend_signal`'s 85 are control
-   flow — **one commit per field group, fully green or reverted, never half-threaded.**
-   `(-140/141/142)` already took the *free* half of this row and the clone-grouping device is
-   exhausted: `PlayerCold`/`ColdState` are all-collections, and a `Copy` sub-struct for the
-   scalars prices at **45 static instructions** over the free reorder. The collections are the
-   cost, and only this CoW grouping touches them.
-5. **`(-139)` is the run's other result and it is a refutation with a mechanism.** Seven inline
-   atomics made `GameState`/`Battlefield` non-`Freeze`, so every `&GameState` in the engine
-   compiled without `noalias readonly`. Restoring it — proved both sides with a 60-second
-   LLVM-IR probe whose recipe is in the Log — measured **+0.656 % on both pools**, and
-   `compute_permanent_pass` came out *byte-identical*. The hot data is all behind
-   `Vec`/`Arc`/`CowBox`. **The same argument closes `&CardData` without a build.** Keep the
+   green; **grid 25 cells under `overflow` + `-C debug-assertions=yes`, five pools x five
+   seeds — no panic, no assertion, no overflow** (delete `target-audit/` after, 715 MB). The
+   only undecided games are **draws**: `undecided_by cap 0 / stuck 0 / draw 2` on `all`, and
+   the pre-change binary reads the same 2 — the previous run's `undecided_by` line answered
+   that without a rebuild. `games_per_s` read 212-407 across the day on `host_calib_ms`
+   47-84 — that is the host; **Ir is the signal**.
+   ⚠ **`--bench`'s INVARIANT IS 195,806 / 27.49 / 611.9 / 0 stalls** — and **a `fixed` Ir
+   reading from before the card batch is not comparable to one after it**. Sengir Vampire is
+   in two of the four `--bench` archetypes and stopped being a vanilla 4/4: the pool is
+   **+5.2 % heavier at the same decision count**, so the games did not lengthen, the boards
+   got bigger (`fixed`'s base moved 838 M -> 927 M). `cube` moved -0.006 %, so the training
+   pools are untouched. **A card in the `--bench` archetypes is bench infrastructure — price
+   the fix before taking it.** Same warning stands on `cube`/`sealed` across CR 605.1a.
+3. **Perf, four devices across two sessions.** (a) `(-134)`/`(-136)`/`(-137)` closed the frame
+   class, `cube` -0.53 % cumulative; `cg_frames.py` now prints **`out/call`** and is a
+   *confirmation, not a queue*. (b) `(-140)`/`(-141)`/`(-142)`: **group a hot struct's plain
+   field copies away from the ones that call something**, `cube` -0.238 % / `fixed` -0.309 %.
+   `&self` is not `noalias`, so LLVM may not move a load across a call. **Copies LAST, not
+   first**; for a `#[derive(Clone)]` type the order is the *declaration* order, which also
+   moves the layout tie-breaks — measure it. (c) `(-146)`/`(-147)`/`(-148)` (3a). (d) the
+   state-shape pass (4).
+3a. **`(-146)`/`(-147)`/`(-148)`: a map whose size is bounded by the board, the batch or the
+   seat count is a `Vec`.** `cube` -0.255 % / `fixed` -0.307 % retaken on `0d7aa507`. ⚠ It
+   read **-1.080 %** against the pre-rebase base and a *factor of four* less after: two of its
+   twelve tables are in the group `(-143)` put behind a `CowBox`, so that share of the win is
+   the other device's. **Two devices aimed at the same row do not add — re-read the second
+   against the first.** Twelve `hashbrown` tables became `IdMap`/`IdSet`; `cg_edges.py
+   --callers reserve_rehash` is the instrument and **the sweep is finished** — what is left is
+   the cold-group maps, bounded by the *game*, where a `Vec` trades a 41-Ir clone for an
+   unbounded lookup. ⚠ Two candidates die with it: **SipHash was never the cost** (0.003 %)
+   and **deck construction is not a lever**. ⚠ At `codegen-units = 16` these swaps move
+   inlining decisions and callgrind reattributed 25 M between `SmallVec::extend` and
+   `compute_permanent_pass` — **read a container swap's per-commit split with suspicion and
+   the total as the number.**
+4. **The state-shape pass: `(-143)` + `(-144)`, one subject — what a `GameState` clone copies.
+   `cube` -1.610 % / `fixed` -2.011 % / `sealed` -1.414 % cumulative off `1a783e04`**, the two
+   largest rows in the Log. `(-143)` put the 32 resolution-scratch **collection** fields behind
+   `scratch: CowBox<ResolutionScratch>`; `(-144)` boxed `pending_decision` (856 B) and
+   `suspend_signal` (744 B), taking `size_of::<GameState>()` **3,008 -> 1,424** and `__memcpy`
+   -29 % on `fixed`. `GameState::clone` self is now **544 Ir a call**, down from 1,307.
+5. **THE RULE `(-143)` COST A BUILD TO LEARN, AND IT GENERALISES.** The first build of the CoW
+   group was a **+2.15 % REGRESSION**: a `CowBox` group is priced by mutable **reaches** per
+   clone, not by how often its value changes. 437 k reaches against 10.7 k clones, and nearly
+   all of them wrote nothing (`mem::take` of an empty `Vec`, `clear()` on one, `.take()` on a
+   `None`). Guards (`clear_scratch!` / `take_scratch!` / `take_opt_scratch!` /
+   `clear_opt_scratch!`, next to `clear_cold!`) took the reaches to 22.8 k and flipped the
+   sign. **Break-even is ~20 reaches per clone** (593 Ir saved a clone / 29 Ir a reach), and
+   the denominator is free off the *existing* binary: `cg_edges.py --callers make_mut`.
+   `(-138)`'s value-fingerprint census over-reported by 19x and cannot see a reach.
+6. **`size_of` is now a first-class instrument and `crate::cow::game_state_stays_small` is its
+   guard** (cap 1,536 B, raise only with a reading). Sizes worth knowing: `ColdState` 2,192,
+   `ResolutionScratch` 1,296, `CardDefinition` **8,232**, `StaticEffect` **2,232**,
+   `ActivatedAbility` 1,960, `PlayerData` 1,016, `StackItem` 328.
+7. **Next perf candidate is `(-145)`, filed WITH a recommendation against taking it as
+   written.** `Arc::make_mut` is 905,060 calls / 29 Ir each / **1.07 % of `cube`**, and the
+   engine never builds a `Weak`, so a weak-free refcount box is worth ~0.73 % — but it is
+   ~60 lines of `unsafe` on every zone's write barrier. **Robustness outranks it**; take it
+   only behind its own Miri'd test battery, landed alone. Refuted in the same entry: the
+   **deck builder is not a lever** (`--decks sealed --games 1` is 11,275,137 Ir in total,
+   0.45 % of a six-game run — the same conclusion (3a) reached independently), so
+   `StaticEffect`'s 2,232 bytes are a cache fact Ir cannot see, not worth 105 call sites.
+8. **`(-139)` is a refutation with a mechanism.** Seven inline atomics made
+   `GameState`/`Battlefield` non-`Freeze`, so every `&GameState` compiled without `noalias
+   readonly`. Restoring it — proved both sides with a 60-second LLVM-IR probe whose recipe is
+   in the Log — measured **+0.656 % on both pools**, and `compute_permanent_pass` came out
+   *byte-identical*. **The same argument closes `&CardData` without a build.** Keep the
    by-product: **a malloc+free pair is 183 Ir** under the system allocator in this workload.
-6. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices and the pending-stack rewrite;
+9. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices and the pending-stack rewrite;
    `(-127)`; `(-122)`'s mask; `(-128)`'s skip gate; `(-129)`'s four devices; `(-132)`'s two
    non-shapes; `(-135)`'s line profile; actor scaling `(-52)`; `#[inline]` on `has_keyword`;
-   `cg_frames.py` until something changes the call graph; `(-139)`; the `Copy` sub-struct.
-7. **Measurement traps are all in PERF's "How to measure"** — `grep mimalloc` is not the
+   `cg_frames.py` until something changes the call graph; `(-139)`'s `noalias`; the `Copy`
+   sub-struct; `(-140/141/142)`'s grouping (exhausted); the size angle without a fresh
+   `size_of` reading — after `(-144)` there is no second `Option` of that size on `GameState`.
+10. **Measurement traps are all in PERF's "How to measure"** — `grep mimalloc` is not the
    allocator check, `(-110)`'s null control does not transfer to the actor, a census must be
    re-run after a fix that moves what it counts, and both `cg_contexts.py` and `cg_edges.py`
-   had cost-column bugs, so any pre-fix number off an instruction dump is suspect.
-8. **Robustness all green:** `audit_panics.py` 75 sites / **0 bare**; `audit_variant_coverage.py`
-   0 dead capabilities / **2** dead primitives (`AddRadCounters`, `GrantCastBackFromGraveyard`
-   — both want a card, not a fix); `audit_incomplete` 1 triaged finding; grid as in (2).
-8a. **The biggest defect of the two runs, and the `damage` class reached the engine to find
-   it:** `is_mana_ability` was `could_add_mana && <allowlist of riders>` where CR 605.1a is
-   `could_add_mana && !requires_target` — **83 abilities across 55 cards the bot could not
-   spend**. Two inseparable defects fell out: `requires_target` did not read
-   `GainControl { to }`, and **CR 201.3's suppression was implicit in carrying a `named_card`
-   at all**, so eleven cards that name one for a tax / a cast lock / a cost bump were also
-   Pithing Needles. ⚠ **Invisible to `--decks fixed`** — a `cube`/`sealed` reading from before
-   that commit is not comparable to one after it.
-8b. **One lead in ENGINE_BACKLOG P2: Sand Golem's trigger cannot be driven from a test** on
+   had cost-column bugs, so any pre-fix number off an instruction dump is suspect. ⚠ **And Ir
+   is blind to cache effects** — a size win that does not also remove instructions will not
+   show up in a callgrind total at all.
+11. **Robustness all green at this tip:** `audit_panics.py` 75 sites / **0 bare**;
+   `audit_variant_coverage.py` 0 dead capabilities / **2** dead primitives
+   (`AddRadCounters`, `GrantCastBackFromGraveyard` — both want a card, not a fix);
+   `audit_target_fields.py` 147 unread fields, **0 aimed by a shipped card**;
+   `audit_target_walkers.py` clean; grid as in (2).
+12. **Cards: `audit_oracle_verbs.py` ~140 rows over nine false classes.** **Read six rows and
+   fix the filter before working a class**, **read the same-file sibling**, and ⚠ **read the
+   doc comment against the ORACLE, not against the body**. **A filed primitive job is a claim
+   about the tree; check it before quoting it** — three of CARD_BACKLOG's turned out to be one
+   `if`, one field, and one already-shipped primitive. Next by size: `token` 21, `draw` 19,
+   `search_library` 18, `destroy` 15.
+13. **Targeting is CLOSED and gated** for both the *wrapper* and the *field* question; the
+   four rules live in ENGINE_BACKLOG and `scripts/audit_target_fields.py` is the instrument.
+   ⚠ An arm for a chooser placed above a shared `body` arm **shadows** it; clippy's
+   `unreachable_pattern` is what catches that.
+14. **One lead in ENGINE_BACKLOG P2: Sand Golem's trigger cannot be driven from a test** on
    either its own spec or Pure Intentions' working idiom; that test was probed and is **not**
    vacuous. The untested distinction is that Sand Golem's source *is* the discarded card.
-9. **Cards: `audit_oracle_verbs.py` 215 -> ~140 rows over nine false classes; 34 defects fixed
-   with a test apiece**, all written up in CARD_BACKLOG. **Read six rows and fix the filter
-   before working a class** (it held again — all six `counters` rows were real), and **read the
-   same-file sibling**. ⚠ **Read the doc comment against the ORACLE, not against the body**:
-   Greasewrench Goblin shipped a Haste and an on-death Treasure it does not print, with tests
-   asserting both. Three of CARD_BACKLOG's filed "primitive jobs, none taken" turned out to be
-   this class — one was one `if` (`LookPick::then_if_not_picked`, four cards), one was one
-   field (`DiscardAnyNumber { max }`), and **one needed no primitive at all** (Sengir Vampire's
-   "damage provenance" was `DamagedBySourceThisTurn`, in the tree since Soul Collector).
-   **A filed primitive job is a claim about the tree; check it before quoting it.** Next by
-   size: `token` 21, `draw` 19, `search_library` 18, `destroy` 15.
-10. **Targeting is CLOSED and gated** for the *wrapper* question; its four rules live in
-   ENGINE_BACKLOG. The **field** question is new and gated too:
-   `scripts/audit_target_fields.py` asks whether a `requires_target` arm reads every field
-   that can hold a target, joined against the catalog so only fields a shipped card aims are
-   printed. It found 21, twenty fixed, one allowlisted, **six a wrong answer**. ⚠ **The fix is
-   only half the work** — making `requires_target` honest failed `core_rules::target_walkers`,
-   and the two filter walkers had to learn the same five player refs through
-   `IMPLICIT_PLAYER_TARGET`. ⚠ An arm for a chooser placed above a shared `body` arm
-   **shadows** it; clippy's `unreachable_pattern` is what caught that.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
