@@ -63,20 +63,25 @@ sixty-seventh pass, so don't re-take that.
    moves what it counts; `cg_frames.py` needs the same binary the dump came from; and both
    `cg_contexts.py` (`00b17a18`) and `cg_edges.py` had cost-column bugs — any pre-fix number
    off an instruction dump is suspect.
-7. **Robustness:** `audit_panics.py` 0 bare sites; `audit_variant_coverage.py` 0 dead
-   capabilities / **2** dead primitives (was 3); `audit_incomplete` 1 triaged finding. Grid last
-   full at 33,120 games / 0 failures at `f2f7d58c` — **not re-run this run**, and the CR 605.1a
-   change is the one commit that would justify it.
+7. **Robustness: all green.** `audit_panics.py` 0 bare sites; `audit_variant_coverage.py` 0
+   dead capabilities / **2** dead primitives (was 3); `audit_incomplete` 1 triaged finding; and
+   the **grid was re-run for the CR 605.1a commit — 30 cells, 33,120 games, 0 failures,
+   0 undecided**, the first full grid since `f2f7d58c`. It costs ~9 min of build into
+   `target-audit/` plus ~4 min of run; delete that dir afterwards, it is 715 MB.
 8. **Cards: `audit_oracle_verbs.py` went 215 -> 172 rows over FOUR new false classes this run**
    — engine arms spell verbs as `self.<method>()`; `tokens.rs` is a helper file too;
    `AlternativeCost.opponent_gains_life` is a cost spelling; **and a helper does not have to
    live in the caller's file** (there is a global set-file table now; a run costs ~4.5 min).
-   19 real defects fixed with a test apiece across `draw` / `gain_life` / `damage`. **The
+   22 real defects fixed with a test apiece across `draw` / `gain_life` / `damage` /
+   `counters` / `token`. **The
    `damage` class found an ENGINE bug through a card: "deals 1 damage to you" was
    `Effect::LoseLife` on 13 cards, and fixing it exposed that `is_mana_ability` rejected the
    whole painland class** (CR 605.1a, `0da5456e`). Next by size: `counters` 25, `token` 24,
-   `search_library` 21 — **read six rows and fix the filter before working any of them**; that
-   is what every one of the eight false classes came from.
+   `search_library` 21, `counters` 22, `token` 21 — **read six rows and fix the filter before
+   working any of them**; that is what every one of the eight false classes came from. ⚠ And
+   **read the same-file sibling**: Aether Swooper sits four hundred lines above Aether Poisoner
+   with the identical printed shape and had it right, which would have settled the row in
+   thirty seconds.
 9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
