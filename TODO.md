@@ -26,10 +26,12 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Several sessions at once: code before tracker prose, **rebase
    not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
-   build **and re-read it then**. ⚠ **The routine container sleeps between tool calls** — a
-   background build makes no progress until the next foreground command, so run builds in the
-   foreground. ⚠ Disk is a fixed allowance: `target/debug/incremental` reached 18 GB and
-   deleting it was the difference between a linker Bus error and a green suite.
+   build **and re-read it then**. ⚠ Disk is a fixed allowance: `target/debug/incremental`
+   reached 18 GB and deleting it was the difference between a linker Bus error and a green
+   suite. ⚠ **`cargo-nextest` is not always in the routine image** — `curl -sSL
+   https://get.nexte.st/latest/linux | tar zxf - -C ~/.cargo/bin` (10 s) before claiming a
+   suite gate. Background builds *did* make progress unattended in this container (a cold
+   `profiling-fast` engine is ~11 min, warm ~3 min); check before assuming either way.
 2. **All gates at `67ff74e5`:** suite **19,091 / 0 / 5** (the two new bounce regressions),
    clippy clean on all four crates `--all-targets`, traces unmoved, `--bench` **195,528 /
    27.44 / 611.0 / 0 stalls byte-identical to the invariant**, determinism + thread_determinism
@@ -74,7 +76,32 @@ sixty-seventh pass, so don't re-take that.
    **The four false classes it taught are in CARD_BACKLOG; read six rows before working a
    class.** Open next by size: `draw` 32, `gain_life` 30, `damage`/`counters` 25 — but over the
    larger corpus, so unexamined not regressed. `token` (24) and `damage` were untouched.
-9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
+9. **`(-126)`'s second device, built and reverted here: `cube` +1.218 % / `fixed` +1.171 %.**
+   The whole And/Or/Not spine walked in one frame off a pending stack, the 205-arm body
+   `#[inline(always)]` behind it. It removed **exactly** the 533,788 recursive calls it aimed
+   at and the per-call cost went **64.3 -> 214.9 Ir**. **THE RULE: inlining a large `match`
+   body into a loop turns per-arm lazy work into unconditional per-call work** — the saving is
+   countable, the cost is not. The walker's floor is 27 instructions of prologue+epilogue on
+   all 1,030,812 calls, **42.0 % of its self cost**; nothing arm-level reaches it.
+10. **`(-132)`'s `has_keyword` half was built and lost, `cube` +0.35 %**, and not for the row's
+   reason: LLVM still declined to inline it (410,736 calls, unmoved) and the attribute
+   **outlined its callee**, `KeywordCounters::get`, for +9,809,688 Ir. **An `#[inline]` is a
+   request about callers and an unasked-for decision about callees** — price it on the callee
+   table, **one attribute per build** (the two halves together read +0.115 % and would have
+   buried `(-131)`'s real -0.249 %). And the "`crabomination_base` callee is a `release-fast`
+   artifact" rule is **false** for `has_keyword` / `compute_permanent_gated` /
+   `event_matches_spec`: `profiling-lto` leaves all three out of line with identical counts.
+   Thin LTO alone is **-2.42 %** on `cube`, measured for the first time.
+11. **Instruments.** `scripts/cg_arms.py` is new — per-`match`-arm execution counts off the
+   jump table (how `(-126)` was sized), plus `--sweep`, the *measured* counterpart to
+   `cg_frames.py`'s static prologue count (it includes the epilogue and the body's
+   unconditional head). Read a row for what its instructions **are**: 100 % of self with a
+   small `n` is a frame, a high share on a discriminant predicate is the predicate. ⚠
+   `cg_edges.py` was reading the cost out of **position 1**, the second position column on any
+   `--dump-instr=yes` dump: it booked 8.7 % of the run and mis-charged self lines as call
+   edges. **Any pre-fix number off an instruction dump is suspect** — same bug, different line,
+   as `cg_contexts.py`'s at `00b17a18`.
+13. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

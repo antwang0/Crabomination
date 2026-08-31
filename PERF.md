@@ -2310,6 +2310,49 @@ a box whose state moves.
 
 ## Baseline
 
+### The instrument pass — closing state at the rebased tip
+
+**No engine instruction changes here.** Both devices this session built were
+reverted (`(-126)`'s single-frame spine, `(-132)`'s `has_keyword` inline), and
+the `compute_permanent_gated` win it also measured is already in the tree as a
+concurrent session's `(-131)` — the duplicate was dropped on the rebase rather
+than landed twice. What lands is `scripts/cg_arms.py`, two callgrind-parser
+fixes, a `#[inline]`-don't on `has_keyword`, and tracker prose.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,091 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces in it, unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench NOT re-run at this tip and cannot move: **no engine instruction
+        differs from `7134751b`**, whose gate reads 195,528 / 27.44 / 611.0 /
+        0 stalls byte-identical to the invariant. This session did run the
+        invariant on its own (reverted) tree and read the same four numbers
+        with determinism and thread_determinism green — see the note below.
+grid    NOT re-run, same reason.
+```
+
+⚠ **`--bench` runs cleanly on a `profiling-fast --no-default-features` binary
+and the invariant transfers, but nothing else in its output does.** This
+session read 195,528 / 27.44 / 611.0 / 0 stalls (determinism ok,
+thread_determinism ok, 3 vs 1) off one — and alongside them `games_per_s`
+194.96, `peak_rss_mib` 18.6, `bin_bytes` 216,568,488, which are the *system*
+allocator and a debuginfo build and belong to no row in this file. Useful
+trick, since that binary already exists after a profiling pass; quote only the
+play line from it.
+
+**Ir readings this session filed, all `profiling-fast --no-default-features`,
+`--a gang --b gang --games 6 --threads 1 --seed 1`, base `7244e86d`
+(`cube` 2,529,863,533 / `fixed` 847,230,007):**
+
+```text
+  (-126) second device, the in-frame spine    cube +1.218 %  fixed +1.171 %
+  (-132) has_keyword `#[inline]`              cube +0.35  %
+  (-131)-equivalent, measured independently   cube -0.249 %  fixed -0.241 %
+  both `#[inline]`s in one build              cube +0.115 %  fixed +0.015 %
+  profiling-lto vs profiling-fast, no change  cube -2.42  %
+```
+
 ### `(-129)`/`(-130)`/`(-131)` — closing state at `67ff74e5`
 
 Four perf commits (`cube` -1.067 % cumulative), one instrument fix, one new
@@ -18525,34 +18568,6 @@ spilling, and bundling the signature will not move it. Get the recursive
 edge's own cost with `--separate-callers` and `--demangle=no` (the three rows
 are one instantiation at three depths, not three monomorphizations — see the
 ninety-second pass's correction) before touching the enum.
-
-**(-134) NOT A CANDIDATE — `wants_converge`'s `format!("{self:?}")` IS
-**0.50 % of the `cube` reading** AND ZERO OF A TRAINING RUN, AND THAT
-DIFFERENCE IS THE ENTRY.**
-
-`alloc::fmt::format`'s caller table has one row that matters:
-`CardDefinition::wants_converge`, **217 calls for 12,359,698 Ir** — 57 k Ir
-apiece, because it Debug-renders a whole `CardDefinition` (8,232 bytes and
-every `Vec` in it) and substring-searches the rendering for `ConvergedValue`
-and `ManaValueAtMostConverged`. It is 0.50 % of the six-game `cube` run and
-the single largest formatting cost in the program.
-
-**It is also memoized process-wide** (`OnceLock<RwLock<HashMap<String, bool>>>`
-behind a thread-local direct-mapped L1), so those 217 renders are *once per
-card name per process*. A `selfplay_train` actor pool is one process running
-millions of games: the cost is bounded by the catalog and amortizes to zero.
-A six-game bench run is nearly all warm-up by comparison, which is why it
-reads half a percent there.
-
-**Two rules.** (a) **A row whose call count is bounded by the catalog rather
-than by the games is warm-up, and `--games 6` prices warm-up at ~4,000x its
-weight in a training run.** Check `calls` against the game count before
-ranking a row; a fixed 217 is not a rate. (b) **Do not "fix" it.** The Debug
-scan is deliberate and the doc comment says why — the effect tree is a deep
-recursive enum with no generic walker, and the hand-written walker this
-replaced *had already rotted in both directions*. Warm-up that costs nothing
-in the workload the engine exists for is not worth reintroducing that.
-
 
 **(-127) BUILT, MEASURED AND REVERTED — `cube` +0.727 % / `fixed` +0.994 %.
 `players` IS THE ONE ZONE THAT IS NOT `CowBox` BECAUSE 82.5 % OF THE CLONES
