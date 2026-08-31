@@ -1687,6 +1687,15 @@ fn main() {
              ({:.2}x)",
             if walk_evals == 0 { 0.0 } else { mask_evals as f64 / walk_evals as f64 },
         );
+        // PERF (-126): the requirement walker's recursion, by child shape.
+        let [rcalls, comb, children, leaf_children, nested_children] =
+            crabomination::zone::req_census::snapshot();
+        println!(
+            "  req_census {rcalls} calls, {comb} combinator arms making {children} \
+             recursive calls: {leaf_children} to a leaf, {nested_children} to another \
+             combinator ({:.1} % nested)",
+            if children == 0 { 0.0 } else { 100.0 * nested_children as f64 / children as f64 },
+        );
     }
     // PERF (-51)(b): what the simulator's payments cost when they fail, split
     // by *why*. Off unless `CRAB_PAY_FAILS` is set.

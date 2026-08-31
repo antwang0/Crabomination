@@ -474,6 +474,70 @@ pub mod grant_census {
     }
 }
 
+/// `CRAB_TRIG_CENSUS` — the requirement walker's recursion census, PERF
+/// `(-126)`.
+///
+/// 65 % of `evaluate_requirement_static_hinted`'s calls are its own recursion
+/// through `And` / `Or` / `Not`, and the only devices that could remove them
+/// need to know *what shape* the children are: flattening the combinators into
+/// a slice variant only helps chains of three or more, and evaluating a leaf
+/// child without a call only helps children that are leaves. Neither number is
+/// on any callgrind row — a recursive edge is one row whatever the callee's
+/// discriminant. Gated on the same variable as the censuses above.
+#[cfg(feature = "trig-census")]
+pub mod req_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// Entries to the walker, all depths.
+    pub static CALLS: AtomicU64 = AtomicU64::new(0);
+    /// …of which took an `And` / `Or` / `Not` arm.
+    pub static COMBINATORS: AtomicU64 = AtomicU64::new(0);
+    /// Recursive calls those arms actually made (short-circuits excluded).
+    pub static CHILD_CALLS: AtomicU64 = AtomicU64::new(0);
+    /// …of which had a leaf child — the population an inline leaf fast path
+    /// in the combinator arms could serve.
+    pub static LEAF_CHILD_CALLS: AtomicU64 = AtomicU64::new(0);
+    /// Combinator arms whose child is *itself* a combinator — the population a
+    /// flattened `All`/`Any` slice variant could collapse.
+    pub static NESTED_CHILD_CALLS: AtomicU64 = AtomicU64::new(0);
+
+    #[cold]
+    #[inline(never)]
+    pub fn call() {
+        CALLS.fetch_add(1, Relaxed);
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub fn combinator() {
+        COMBINATORS.fetch_add(1, Relaxed);
+    }
+
+    /// One recursive call about to be made, tagged by whether the child is
+    /// itself a combinator.
+    #[cold]
+    #[inline(never)]
+    pub fn child(nested: bool) {
+        CHILD_CALLS.fetch_add(1, Relaxed);
+        if nested {
+            NESTED_CHILD_CALLS.fetch_add(1, Relaxed);
+        } else {
+            LEAF_CHILD_CALLS.fetch_add(1, Relaxed);
+        }
+    }
+
+    /// `(calls, combinators, child_calls, leaf_children, nested_children)`.
+    pub fn snapshot() -> [u64; 5] {
+        [
+            CALLS.load(Relaxed),
+            COMBINATORS.load(Relaxed),
+            CHILD_CALLS.load(Relaxed),
+            LEAF_CHILD_CALLS.load(Relaxed),
+            NESTED_CHILD_CALLS.load(Relaxed),
+        ]
+    }
+}
+
 /// The battlefield: the CoW card list, plus the whole-board questions asked of
 /// it often enough to want a memo — the two layer-4 type gates ("can any
 /// permanent here contribute an `AddLandType` / `SetLandTypes` /

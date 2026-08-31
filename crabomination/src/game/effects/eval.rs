@@ -3195,6 +3195,25 @@ impl GameState {
         hint: Option<&'a CardInstance>,
     ) -> bool {
         use SelectionRequirement as R;
+        #[cfg(feature = "trig-census")]
+        if crate::zone::trig_census::on() {
+            crate::zone::req_census::call();
+            if matches!(req, R::And(..) | R::Or(..) | R::Not(..)) {
+                crate::zone::req_census::combinator();
+            }
+        }
+        // PERF (-126): tag each recursive call by whether the child is itself
+        // a combinator. `nested` is what a flattened `All`/`Any` could
+        // collapse; its complement is what an inline leaf path could serve.
+        let tick = |_child: &SelectionRequirement| {
+            #[cfg(feature = "trig-census")]
+            if crate::zone::trig_census::on() {
+                crate::zone::req_census::child(matches!(
+                    _child,
+                    R::And(..) | R::Or(..) | R::Not(..)
+                ));
+            }
+        };
         match req {
             R::Any => true,
             R::Player => matches!(target, Target::Player(_)),
@@ -3218,11 +3237,24 @@ impl GameState {
                 };
                 diff >= *by as i64
             }
-            R::And(a, b) => self.evaluate_requirement_static_hinted(a, target, controller, source, hint)
-                && self.evaluate_requirement_static_hinted(b, target, controller, source, hint),
-            R::Or(a, b) => self.evaluate_requirement_static_hinted(a, target, controller, source, hint)
-                || self.evaluate_requirement_static_hinted(b, target, controller, source, hint),
-            R::Not(inner) => !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint),
+            R::And(a, b) => {
+                tick(a);
+                self.evaluate_requirement_static_hinted(a, target, controller, source, hint) && {
+                    tick(b);
+                    self.evaluate_requirement_static_hinted(b, target, controller, source, hint)
+                }
+            }
+            R::Or(a, b) => {
+                tick(a);
+                self.evaluate_requirement_static_hinted(a, target, controller, source, hint) || {
+                    tick(b);
+                    self.evaluate_requirement_static_hinted(b, target, controller, source, hint)
+                }
+            }
+            R::Not(inner) => {
+                tick(inner);
+                !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint)
+            }
             R::ControlledByYou => match target {
                 // A `Target::Permanent` can also address a spell on the stack
                 // (a "copy target spell you control" ability); its caster is

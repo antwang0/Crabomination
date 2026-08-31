@@ -17891,7 +17891,64 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-126) TAKEN, 2026-08-31 — THE REQUIREMENT WALKER IS THE LARGEST ENGINE
+**(-126) CLOSED — BOTH DEVICES PRICED AND NEITHER IS IN THE TREE. THE
+RECURSION IS 42 % OF THE WALKER'S CALLS AND ALMOST NONE OF IT IS REMOVABLE.**
+
+First, the question the entry asked is settled: `--demangle=no` on `cube`
+gives **one** hash (`…34evaluate_requirement_static_hinted17he4084a869c4209edE
+.llvm.11086542593442499384`) across every context, so the three demangled rows
+are one function at three depths and there is no monomorphization to separate.
+The ninety-second pass's correction stands and nothing further needs it.
+
+`req_census` (below), six games, one thread:
+
+```text
+pool     calls   combinator arms   recursive calls   to a leaf   to a combinator
+fixed   165,760      11,864 ( 7.2%)        13,938      12,042      1,896 (13.6%)
+cube  1,030,812     437,960 (42.5%)       532,980     393,574    139,406 (26.2%)
+sealed  870,956     376,300 (43.2%)       421,718     391,588     30,130 ( 7.1%)
+```
+
+**Device 1, a flattened `All`/`Any` slice variant: refuted on ratio without a
+build.** It collapses only a combinator whose *child* is another combinator —
+**139,406 calls on `cube`, 30,130 on `sealed`, 1,896 on `fixed`.** At the
+~25-30 Ir a removed call is worth that is **~0.16 % of `cube`** and under
+0.05 % elsewhere, for a `SelectionRequirement` shape change across a
+619 k-line catalog and every filter in it. The count that made the device look
+attractive (65 % of calls are recursion) is not the count it can serve.
+
+**Device 2, splitting the leaves out of line so the combinator arms stop
+paying a hundred-arm prologue: BUILT, MEASURED AND REVERTED.**
+
+```text
+                 base 8e2d5df9     leaves out of line      delta
+  cube          2,529,860,411          2,553,645,862     +0.940 %
+  fixed           847,241,596            853,792,111     +0.773 %
+  sealed        2,572,254,610          2,593,298,357     +0.818 %
+```
+
+The reasoning was sound and the arithmetic was not. Combinator arms did stop
+paying the big prologue — 437,960 of them on `cube` — but **the leaves are the
+majority and every one of them now pays a second call**: 592,852 entries on
+`cube` reach a leaf, and each goes outer-call, three-arm dispatch, inner-call,
+where before it went call, dispatch. The saved prologue is smaller than the
+added call because the outer function still carries six arguments and the same
+`&self`, so its own frame is not free.
+
+**The transferable rule: a split pays in proportion to the share of calls that
+take the *small* half, and here that share is 42 %, not 65 %.** The 65 % figure
+counts recursive *edges*; the 42 % counts the nodes that would have benefited.
+Read the population of the half you are making cheaper, not the population of
+the traffic you noticed.
+
+**What is left on this function is the leaf work itself**, which is a hundred
+different questions about a card and not a shape with a device. Do not re-open
+it on the call count.
+
+The instrument is `zone::req_census`, on the `trig-census` feature beside the
+other two; `bot_ladder` prints a `req_census` line. The original entry follows.
+
+**(-126) THE REQUIREMENT WALKER IS THE LARGEST ENGINE
 FUNCTION IN THE FILE WITH NOTHING FILED AGAINST IT, AND 65 % OF ITS CALLS ARE
 ITS OWN RECURSION.**
 Fresh dumps at `9f06d76a` (`--games 6 --threads 1 --seed 1`, `profiling-fast
