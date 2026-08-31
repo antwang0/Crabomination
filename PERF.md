@@ -17744,6 +17744,25 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-123) TAKEN, 2026-08-31 — THE ACTOR'S PROFILE OF RECORD IS STALE BY
+FIFTEEN PASSES AND EVERY CANDIDATE FOR THAT PATH IS READ OFF IT.** The actor
+block in "Profile of record" is `bb67895a`. Since then: `(-115)`'s member-list
+lane, `(-120)`/`(-121)` (the largest pass in the file), the encoder's v8
+rewrite and a vocabulary that went 164 -> 2,273 entries — four changes that all
+land on the actor, none of them measured there. `(-107)`'s rows (the encoder's
+growths, `computed_permanent_hinted`'s 433,775 `Arc`s) are quoted from that
+stale block and are the next candidate in NEXT, so the number they would be
+sized against is fifteen passes old.
+
+**`bot_ladder` cannot stand in for it and the file has said so since the
+fifty-third pass**: the bench builds its decks once where an actor builds two
+per game, and it runs the encoder on no pool at all. This is a re-read, not a
+lead — the deliverable is the callee/growth/allocation tables at the current
+tip and whatever they promote or refute, which is the only thing that makes
+the actor lane's queue current.
+
+Recipe is in "How to measure" (the `crabomination_ml` flag is load-bearing).
+
 **(-122) THE ACTIVATED-GRANT WALK IS THE TRIGGER DISPATCHER'S TWIN AND IT HAS
 HAD NONE OF THE FOUR DEVICES THE TRIGGER SIDE GOT.** Read off `p.cube` at
 `cab8d5d7` with the ratio device (`cg_ratio.py cube fixed --floor 0.45`),
