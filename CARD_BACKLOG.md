@@ -230,6 +230,25 @@ with the identical printed shape and had it right — **the same-file sibling is
 the cheapest oracle there is, and neither card's doc comment mentioned the
 other.**
 
+**`search_library`: the three "destroy a land, then replace it" lands all
+dropped the replacement**, and two of them dropped the target filter's
+"an opponent controls" half with it.
+
+| card | shipped | printed |
+|---|---|---|
+| Ghost Quarter | destroy target land | + "its controller **may** search their library for a basic land" |
+| Field of Ruin | destroy target nonbasic land | + "an opponent controls", + **each player** searches |
+| Volatile Fault | destroy target opponent nonbasic | + "that player may search", + "you create a Treasure" |
+
+**The trap in the shape, and it cost a build:** `Effect::Search { who:
+EachPlayer, to: ZoneDest::Battlefield { controller: PlayerRef::You } }` puts
+*everyone's* fetched basic onto the **activator's** battlefield — the
+destination's `controller` is the effect's controller, not the searcher.
+`Effect::EachPlayerDoes { who: EachPlayer, body: … }` re-seats "you" per
+player and is the primitive for every symmetric rider. `MayDoBy { who:
+ControllerOf(Target(0)) }` is the one-sided form, and it resolves correctly
+*after* the target has been destroyed in the same resolution.
+
 **Still open in `gain_life`, read and triaged — three of them are wholly
 wrong abilities, not missing riders:**
 

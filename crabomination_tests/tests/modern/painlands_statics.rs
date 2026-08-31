@@ -87,6 +87,34 @@ fn ghost_quarter_destroys_target_land() {
     assert!(g.battlefield.iter().all(|c| c.id != gq), "Ghost Quarter sacrificed");
 }
 
+/// "Its controller may search their library for a basic land card, put it
+/// onto the battlefield, then shuffle." The rider was omitted
+/// (`audit_oracle_verbs.py`'s `search_library` class), and it is **the
+/// victim's** search, not yours — the test seats the basic in seat 1's
+/// library so a wrong `who` finds nothing.
+#[test]
+fn ghost_quarter_lets_the_victim_replace_the_land() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let gq = g.add_card_to_battlefield(0, catalog::ghost_quarter());
+    let victim = g.add_card_to_battlefield(1, catalog::reliquary_tower());
+    g.add_card_to_library(1, catalog::forest());
+    g.clear_sickness(gq);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gq, ability_index: 1, target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("activate sac-destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "target land destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Forest"),
+        "its controller fetched a basic onto their own battlefield"
+    );
+}
+
 /// Thran Dynamo / Ur-Golem's Eye / Dreamstone Hedron tap for colorless burst.
 #[test]
 fn colorless_rocks_tap_for_burst() {

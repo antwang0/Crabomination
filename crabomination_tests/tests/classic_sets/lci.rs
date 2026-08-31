@@ -317,6 +317,38 @@ fn volatile_fault_destroys_opponent_nonbasic_land() {
     assert!(g.battlefield_find(fault).is_none(), "Volatile Fault sacrificed as a cost");
 }
 
+/// "That player may search their library for a basic land card, put it onto
+/// the battlefield, then shuffle. You create a Treasure token." Both riders
+/// were omitted (`audit_oracle_verbs.py`'s `search_library` class); the
+/// search belongs to the *victim*, so their basic sits in their library.
+#[test]
+fn volatile_fault_replaces_the_land_and_mints_a_treasure() {
+    let mut g = two_player_game();
+    let fault = g.add_card_to_battlefield(0, catalog::volatile_fault());
+    let victim = g.add_card_to_battlefield(1, catalog::captivating_cave());
+    g.add_card_to_library(1, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fault, ability_index: 1, target: Some(Target::Permanent(victim)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("activate sac ability");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Island"),
+        "the victim fetched a basic onto their own battlefield"
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
+        "and you get the Treasure"
+    );
+}
+
 /// Spelunking makes lands you control enter untapped, overriding an
 /// enters-tapped static.
 #[test]

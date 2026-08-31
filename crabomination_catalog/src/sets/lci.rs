@@ -1530,12 +1530,35 @@ pub fn volatile_fault() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 mana_cost: cost(&[generic(1)]),
-                effect: Effect::Destroy {
-                    what: target_filtered(
-                        SelectionRequirement::IsNonbasicLand
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Destroy {
+                        what: target_filtered(
+                            SelectionRequirement::IsNonbasicLand
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                    },
+                    // "That player may search their library for a basic land
+                    // card, put it onto the battlefield, then shuffle. You
+                    // create a Treasure token." Both riders were omitted
+                    // (`audit_oracle_verbs.py`, `search_library` class).
+                    Effect::MayDoBy {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        description: "Search for a basic land?".into(),
+                        body: Box::new(Effect::Search {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::IsBasicLand,
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
+                        }),
+                    },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: Box::new(crate::game::effects::treasure_token()),
+                    },
+                ]),
                 ..Default::default()
             },
         ],

@@ -1550,9 +1550,27 @@ pub fn ghost_quarter() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 sac_cost: true,
-                effect: Effect::Destroy {
-                    what: crate::effect::shortcut::target_filtered(SelectionRequirement::Land),
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Destroy {
+                        what: crate::effect::shortcut::target_filtered(SelectionRequirement::Land),
+                    },
+                    // "Its controller may search their library for a basic
+                    // land card, put it onto the battlefield, then shuffle."
+                    // The rider was omitted (`audit_oracle_verbs.py`,
+                    // `search_library` class).
+                    Effect::MayDoBy {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        description: "Search for a basic land?".into(),
+                        body: Box::new(Effect::Search {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::IsBasicLand,
+                            to: crate::effect::ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
+                        }),
+                    },
+                ]),
                 ..Default::default()
             },
         ],
@@ -1561,8 +1579,9 @@ pub fn ghost_quarter() -> CardDefinition {
 }
 
 /// Field of Ruin — Land. "{T}: Add {C}." "{2}, {T}, Sacrifice this: Destroy
-/// target nonbasic land." (The symmetric "each player searches for a basic
-/// land" rider is omitted.)
+/// target nonbasic land an opponent controls. Each player searches their
+/// library for a basic land card, puts it onto the battlefield, then
+/// shuffles."
 pub fn field_of_ruin() -> CardDefinition {
     use crate::card::SelectionRequirement;
     CardDefinition {
@@ -1574,11 +1593,35 @@ pub fn field_of_ruin() -> CardDefinition {
                 tap_cost: true,
                 sac_cost: true,
                 mana_cost: crate::mana::cost(&[crate::mana::generic(2)]),
-                effect: Effect::Destroy {
-                    what: crate::effect::shortcut::target_filtered(
-                        SelectionRequirement::IsNonbasicLand,
-                    ),
-                },
+                effect: Effect::Seq(vec![
+                    Effect::Destroy {
+                        what: crate::effect::shortcut::target_filtered(
+                            SelectionRequirement::IsNonbasicLand
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                    },
+                    // "Each player searches their library for a basic land
+                    // card, puts it onto the battlefield, then shuffles."
+                    // Symmetric and not optional; the rider was omitted and
+                    // the target filter was missing its opponent half
+                    // (`audit_oracle_verbs.py`, `search_library` class).
+                    // `EachPlayerDoes` rather than `Search { who: EachPlayer }`:
+                    // the destination's `controller` is the *effect's*
+                    // controller, so a bare symmetric search puts everyone's
+                    // basic onto the activator's battlefield. `EachPlayerDoes`
+                    // re-seats "you" per player, in APNAP order.
+                    Effect::EachPlayerDoes {
+                        who: PlayerRef::EachPlayer,
+                        body: Box::new(Effect::Search {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::IsBasicLand,
+                            to: crate::effect::ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: false,
+                            },
+                        }),
+                    },
+                ]),
                 ..Default::default()
             },
         ],

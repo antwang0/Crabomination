@@ -418,6 +418,35 @@ fn field_of_ruin_destroys_a_nonbasic_land() {
     assert!(g.battlefield_find(target).is_none(), "nonbasic land destroyed");
 }
 
+/// "Each player searches their library for a basic land card, puts it onto
+/// the battlefield, then shuffles." The symmetric rider was omitted, and so
+/// was the target filter's "an opponent controls" half
+/// (`audit_oracle_verbs.py`'s `search_library` class).
+#[test]
+fn field_of_ruin_replaces_the_land_for_both_players() {
+    let mut g = two_player_game();
+    let field = g.add_card_to_battlefield(0, catalog::field_of_ruin());
+    g.clear_sickness(field);
+    let target = g.add_card_to_battlefield(1, catalog::reliquary_tower());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(1, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: field, ability_index: 1, target: Some(Target::Permanent(target)),
+        additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("activate Field of Ruin's destroy ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "nonbasic land destroyed");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Forest"),
+        "you fetch a basic too — the rider is symmetric"
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Island"),
+        "and so does the player whose land died"
+    );
+}
+
 /// Aura of Silence taxes artifact/enchantment spells and can sac to destroy one.
 #[test]
 fn aura_of_silence_taxes_and_destroys() {
