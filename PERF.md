@@ -2277,12 +2277,14 @@ a box whose state moves.
 
 ## Baseline
 
-### `(-122)` and `(-127)`, closing state at `2a9e70e3`
+### `(-122)` and `(-127)`, closing state at `f4847f46`
 
 Two candidates answered and neither is in the tree: `(-122)` refuted by a
-census before a build, `(-127)` built, measured and reverted. The only code
-this session leaves behind is `zone::grant_census`, which is
-`#[cfg(feature = "trig-census")]` and absent from a default build.
+census before a build, `(-127)` built, measured and reverted. The engine code
+this session leaves behind is `zone::grant_census`
+(`#[cfg(feature = "trig-census")]`, absent from a default build) and one CR
+605.1a rider in `is_mana_ability`; the rest is eleven card fixes from
+`audit_oracle_verbs.py` and their tests.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
@@ -2290,9 +2292,12 @@ suite   19,080 / 0 / 5 (cargo nextest --workspace --exclude
         crabomination_client); golden traces in it, unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
         -p crabomination --features trig-census --all-targets      clean
+suite   19,089 / 0 / 5 after the eleven card fixes
 --bench release-fast: 195,528 decisions / 27.44 turns / 611.0 per game /
-        0 stalls — **byte-identical to the invariant**; determinism ok,
-        thread_determinism ok (3 vs 1 threads identical)
+        0 stalls — **byte-identical to the invariant**, re-run *after* the
+        card fixes as well as before; determinism ok, thread_determinism ok
+        (3 vs 1 threads identical). None of the eleven cards is in a `fixed`
+        archetype, and the run proves it rather than assuming it.
 grid    NOT re-run and cannot move: every line this session adds to the
         engine is inside a `#[cfg(feature = "trig-census")]` block, so the
         default binary the grid builds has no new instruction in it.

@@ -30,12 +30,13 @@ sixty-seventh pass, so don't re-take that.
    (`ps -o ppid` = 1). ⚠ **This container sleeps between tool calls** — a build launched in
    the background makes no progress until the next foreground command; run builds in the
    foreground.
-2. **All five gates at `2a9e70e3`:** suite **19,080 / 0 / 5**, clippy clean (also
+2. **All five gates at `f4847f46`:** suite **19,089 / 0 / 5**, clippy clean (also
    `--features trig-census`), traces in the suite unmoved, `--bench` **195,528 / 27.44 /
-   611.0 / 0 stalls byte-identical to the invariant** with determinism + thread_determinism
-   green. Grid not re-run: this session's only engine lines are inside a `trig-census`
-   `cfg`. `peak_rss_mib` 28.3 is `release-fast` on a 2.80 GHz host and is **not** the
-   24.4-24.8 `release` family — do not read it as a step.
+   611.0 / 0 stalls byte-identical to the invariant** — re-run *after* the eleven card
+   fixes, not just before — with determinism + thread_determinism green. Grid not re-run:
+   the engine lines added are a `trig-census` `cfg` block and one CR 605.1a rider.
+   `peak_rss_mib` 28.8 is `release-fast` on a 2.80 GHz host and is **not** the 24.4-24.8
+   `release` family — do not read it as a step.
 3. **`(-122)` CLOSED, refuted by census before a build**: the board-wide mask costs **2.86x**
    the walk on `cube` (301,516 vs 105,436 evaluations) and `fixed`/`sealed` carry **no**
    `EachPermanent` activated grant at all. The rule: **a gate in front of a walk is part of
