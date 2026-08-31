@@ -233,6 +233,26 @@ ENGINE = (
 )
 ARM = re.compile(r"\n\s+Effect::(\w+)[^\n]*=>\s*\{")
 
+# The whole engine crate, for the `StaticEffect` half below: a static's
+# handling is not under `game/effects/` — Ironscale Hydra's grow is in
+# `combat.rs`, the layer statics are in `layers.rs`, the cast locks in
+# `actions.rs`.
+ENGINE_CRATE = Path(__file__).resolve().parent.parent / "crabomination" / "src"
+FN_DEF = re.compile(r"\n\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn (\w+)")
+# `StaticEffect::X` / `SE::X` in **match-arm position** — the variant, an
+# optional destructuring, an optional `|`-chain, then `=>`. A mention that is
+# a construction or a doc reference does not match.
+ARM_STATIC = re.compile(
+    r"\b(?:StaticEffect|SE)::(\w+)"
+    r"(?:\s*\{[^{}]*\}|\s*\([^()]*\))?"
+    r"(?:\s*\|\s*(?:StaticEffect|SE)::\w+(?:\s*\{[^{}]*\}|\s*\([^()]*\))?)*"
+    r"\s*(?:if [^\n=]{0,80})?=>"
+)
+# The two caps that keep `static_bodies` a filter rather than a hole; see its
+# docstring for the numbers an uncapped version produced.
+HANDLER_BYTES = 8_000
+HANDLER_ARMS = 4
+
 
 def primitive_bodies():
     """`{variant: {tokens its `run_effect` arm names}}`.
@@ -273,6 +293,71 @@ def primitive_bodies():
                 # verb asks for it by name.
                 | set(re.findall(r"\bself\.(\w+)\s*\(", body))
             )
+    return out
+
+
+def static_bodies():
+    """`{StaticEffect variant: tokens of the function that HANDLES it}`.
+
+    The eighth false class, and it is `primitive_bodies`' rule one enum over:
+    **a `StaticEffect` variant is an engine primitive too**, and the verb it
+    performs is spelled where the engine consumes it, never on the card.
+    Ironscale Hydra's whole body is
+    `StaticEffect::PreventCombatDamageToSelfAndGrow` and the `+1/+1 counter`
+    it prints is `c.add_counters(CounterType::PlusOnePlusOne, 1)` in
+    `combat.rs` — outside `primitive_bodies`' `game/effects/` root and not an
+    `Effect::` arm, so neither half of that pass could see it.
+
+    Attribution is the *enclosing function*, not the arm: the arm is usually
+    `SE::X => flag = true` and the work is under `if flag` further down.
+
+    **And that is why it is bounded three ways — an unbounded version of this
+    is not a filter fix, it is a filter deletion.** Attributing whole enclosing
+    bodies with no cap gave `GrantKeyword` 502 tokens and `ModularBonusCounters`
+    1,684, because two of the arms sit in `run_effect` (1.4 MB) and
+    `gather_continuous_effects_inner` (185 KB); every one of the thousands of
+    cards naming a common static would have inherited every verb in the
+    program and the audit would have read zero. The caps:
+
+    * **body <= `HANDLER_BYTES`** — a dedicated handler is small
+      (`ironscale_replace` is 2.8 KB); a dispatcher is not.
+    * **<= `HANDLER_ARMS` static arms** — same question from the other side.
+    * **`server/` and `bin/` excluded** — the bot's `available_mana` and
+      `static_rewards_prepared` match on statics to *score* them. A heuristic
+      that reads a static is not an implementation of it.
+    """
+    out = {}
+    for src in sorted(ENGINE_CRATE.rglob("*.rs")):
+        if "/server/" in src.as_posix() or "/bin/" in src.as_posix():
+            continue
+        text = src.read_text()
+        for m in FN_DEF.finditer(text):
+            i = text.find("{", m.end())
+            if i < 0:
+                continue
+            depth, j = 1, i + 1
+            while j < len(text) and depth:
+                if text[j] == "{":
+                    depth += 1
+                elif text[j] == "}":
+                    depth -= 1
+                j += 1
+            body = text[i:j]
+            if len(body) > HANDLER_BYTES:
+                continue
+            names = set(ARM_STATIC.findall(body))
+            if not names or len(names) > HANDLER_ARMS:
+                continue
+            toks = (
+                set(CTOR.findall(body))
+                | set(STATIC.findall(body))
+                | set(DEST.findall(body))
+                | set(re.findall(r"\bCounterType::(\w+)", body))
+                | set(re.findall(r"\bself\.(\w+)\s*\(", body))
+                | set(re.findall(r"\b(\w*(?:to_hand|to_graveyard|counters?)\w*)\s*\(", body))
+            )
+            for n in names:
+                out.setdefault(n, set()).update(toks)
     return out
 
 
@@ -366,6 +451,7 @@ def audit():
         "\n".join(p.read_text() for p in sorted(SETS.rglob("*.rs")))
     )
     prims = primitive_bodies()
+    statics = static_bodies()
     findings = {v: [] for v in VERBS}
     checked = 0
     for src in sorted(SETS.rglob("*.rs")):
@@ -404,6 +490,8 @@ def audit():
                 have |= table.get(call, set())
             for v in set(CTOR.findall(raw)) | have:
                 have |= prims.get(v, set())
+            for v in set(STATIC.findall(raw)) | {x for x in have}:
+                have |= statics.get(v, set())
             hay = raw + " " + " ".join(sorted(have))
             for verb, (pat, code) in VERBS.items():
                 if re.search(pat, txt) and not re.search(code, hay):
