@@ -216,6 +216,30 @@ const LANE_DISPATCH: u32 = 10;
 const LANE_SHIELD: u32 = 12;
 const LANE_GRANT: u32 = 14;
 const LANE_LISTENER: u32 = 16;
+/// PERF `(-128)`: how many times anything took `&mut` at the battlefield —
+/// the three chokepoints `Battlefield`'s own doc names as where every tap,
+/// damage, counter and untap write goes. Read by `sba_census` to ask how many
+/// state-based-action sweeps follow *no* mutable reach at all, which is the
+/// population a dirty-bit gate could actually serve (the 18 % of sweeps whose
+/// board fingerprint is unchanged is the ceiling; this is the reachable part
+/// of it). Global rather than per-zone because the census runs one thread.
+#[cfg(feature = "trig-census")]
+pub static BATTLEFIELD_REACHES: std::sync::atomic::AtomicU64 =
+    std::sync::atomic::AtomicU64::new(0);
+
+/// One `&mut` reach at the battlefield.
+#[cfg(feature = "trig-census")]
+#[inline]
+pub fn note_battlefield_reach() {
+    if trig_census::on() {
+        BATTLEFIELD_REACHES.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+#[cfg(not(feature = "trig-census"))]
+#[inline(always)]
+pub fn note_battlefield_reach() {}
+
 const LANE_ACT_GRANT: u32 = 18;
 /// Not a presence lane: `PRESENT` here means "the member list beside it is
 /// computed", and the list is what the caller reads. It shares the word so
@@ -788,6 +812,7 @@ impl Battlefield {
     /// [`DerefMut`], which clears.
     #[inline]
     fn cards_unchecked_mut(&mut self) -> &mut Vec<CardInstance> {
+        note_battlefield_reach();
         &mut self.cards
     }
 
@@ -978,6 +1003,7 @@ impl Battlefield {
     /// room for the card (PERF `(-76)`). Inherent, so it shadows the `Deref`'d
     /// `Vec::push`; the memo is invalidated exactly as `DerefMut` would.
     pub fn push(&mut self, card: CardInstance) {
+        note_battlefield_reach();
         self.type_gates.store(0, Ordering::Relaxed);
         self.cards.push(card);
     }
@@ -1031,6 +1057,7 @@ impl Deref for Battlefield {
 
 impl DerefMut for Battlefield {
     fn deref_mut(&mut self) -> &mut Vec<CardInstance> {
+        note_battlefield_reach();
         self.type_gates.store(0, Ordering::Relaxed);
         &mut self.cards
     }

@@ -17968,11 +17968,44 @@ same doc counts 139,280 of them a `cube` run against 20,210 sweeps. Seven
 reaches a sweep against an 18 % unchanged rate says most of those reaches
 change nothing the sweep reads.
 
-**So the next measurement is one counter, not a device:** sweeps that saw zero
-`&mut` reaches on the battlefield since the previous sweep. If that tracks the
-18 %, the dirty bit is the device and it is nearly free; if it is near zero,
-the gate has to discriminate writes from reaches and the ceiling is out of
-reach at any sane cost. Do not build the skip before that number exists.
+**THAT COUNTER IS NOW IN THE TREE AND IT KILLED THE DEVICE — NOT ON SIZE, ON
+SOUNDNESS.** `zone::BATTLEFIELD_REACHES` (the three chokepoints, `trig-census`)
+against the same census:
+
+```text
+  pool     sweeps   fingerprint unchanged      after no &mut reach
+  fixed     9,146    1,736  18.98 %             946  10.34 %
+  cube     20,210    3,633  17.98 %           2,564  12.69 %
+  sealed   31,452    5,594  17.79 %           6,036  19.19 %
+```
+
+**`sealed`'s no-reach count is LARGER than its unchanged count, and that is the
+whole answer.** The two would nest if the battlefield were the only SBA input;
+6,036 > 5,594 says 442 sweeps on `sealed` changed SBA-relevant state *with zero
+battlefield reaches*. They are the player-side inputs — life totals, poison,
+empty-library draws, the Ring's temptations — and the stack (schemes and
+phenomena). **A dirty bit on the battlefield alone would skip the sweep that
+notices a player at zero life**, which is the one SBA that must never be
+skipped.
+
+So a sound gate has to cover battlefield writes *and* every player-side and
+stack input, as a new global invariant maintained by hand across the whole
+engine, where **missing one write path silently produces a wrong game** rather
+than a slow one. For ~12 % of 3.78 % on `cube` — **0.45 %, and 0.43 % on
+`fixed`** — against an obligation of that shape. **Recommended against, and
+this entry is the reason rather than the arithmetic.**
+
+**The transferable rule: when a candidate's gate has to be maintained by hand
+at every write site, price the soundness burden as part of the candidate.** A
+0.45 % win that can silently produce a wrong game is not a 0.45 % win. The
+`(-115)` lane is the counter-example and the contrast is the point — it is
+sound *by construction* because `zone::Battlefield` owns the only routes to a
+write, and the reason this one is not is precisely that the SBA reads state
+those routes do not cover.
+
+**What is still open here is the 2,397 Ir of sweep body**, of which the CR
+704.5f/g/h death sweep is an obligation and the rest is gate evaluation. That
+has never been split out. Nothing else in this entry is worth retaking.
 
 Note also that the scan is retaken up to three times *inside* a single sweep
 (shapeshifter sync, sector assignment, flip legs), and those retakes are

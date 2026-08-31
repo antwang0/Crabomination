@@ -38,9 +38,16 @@ pub mod sba_census {
 
     pub static SWEEPS: AtomicU64 = AtomicU64::new(0);
     pub static REPEATS: AtomicU64 = AtomicU64::new(0);
+    /// PERF `(-128)`: sweeps that followed **no `&mut` reach at the
+    /// battlefield** since the previous sweep — the population a dirty-bit
+    /// gate could serve, against `REPEATS`' ceiling of sweeps whose board is
+    /// genuinely unchanged. Needs the `trig-census` feature for the counter
+    /// (`zone::BATTLEFIELD_REACHES`); zero without it.
+    pub static NO_REACH: AtomicU64 = AtomicU64::new(0);
 
     thread_local! {
         static PREV: Cell<u64> = const { Cell::new(u64::MAX) };
+        static PREV_REACHES: Cell<u64> = const { Cell::new(u64::MAX) };
     }
 
     pub fn on() -> bool {
@@ -56,11 +63,18 @@ pub mod sba_census {
         if PREV.with(|p| p.replace(fingerprint)) == fingerprint {
             REPEATS.fetch_add(1, Relaxed);
         }
+        #[cfg(feature = "trig-census")]
+        {
+            let now = crate::zone::BATTLEFIELD_REACHES.load(Relaxed);
+            if PREV_REACHES.with(|p| p.replace(now)) == now {
+                NO_REACH.fetch_add(1, Relaxed);
+            }
+        }
     }
 
-    /// `(sweeps, repeats)` for a caller that wants to print.
-    pub fn snapshot() -> (u64, u64) {
-        (SWEEPS.load(Relaxed), REPEATS.load(Relaxed))
+    /// `(sweeps, repeats, no_reach)` for a caller that wants to print.
+    pub fn snapshot() -> (u64, u64, u64) {
+        (SWEEPS.load(Relaxed), REPEATS.load(Relaxed), NO_REACH.load(Relaxed))
     }
 }
 

@@ -1639,9 +1639,10 @@ fn main() {
     // previous sweep on the thread already saw. Off unless `CRAB_SBA_CENSUS`
     // is set.
     if crabomination::game::stack::sba_census::on() {
-        let (sweeps, repeats) = crabomination::game::stack::sba_census::snapshot();
+        let (sweeps, repeats, no_reach) = crabomination::game::stack::sba_census::snapshot();
         println!(
-            "  sba_census {repeats}/{sweeps} repeats ({:.2} %)",
+            "  sba_census {repeats}/{sweeps} repeats ({:.2} %), {no_reach} after no \
+             &mut reach",
             if sweeps == 0 { 0.0 } else { 100.0 * repeats as f64 / sweeps as f64 },
         );
     }
