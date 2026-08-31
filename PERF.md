@@ -10238,6 +10238,53 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass (2) — `(-140)`, and `(-139)`'s refutation is what pays for it
+
+**`cube` -0.095 % / `fixed` -0.136 %** at `(-140)`, off `bc2a38f5`
+(`profiling-fast --no-default-features`, callgrind, six games, one thread,
+seed 1, `--a gang --b gang`).
+
+```text
+  pool    base            (-140)          delta
+  cube    2,490,817,192   2,488,440,645   -0.0954 %
+  fixed     838,864,887     837,728,304   -0.1355 %
+```
+
+**The change is a field REORDER inside `impl Clone for GameState`'s struct
+literal and nothing else.** 198 fields, of which 141 are a plain `self.x`
+copy and 57 call something (`Vec`/`HashMap`/`IdMap`/`CowBox`/`Arc` clones,
+plus the four that reset). They were interleaved in declaration order; they
+are now the 141 copies, then the 57 calls.
+
+**Why that is worth 106 Ir on every clone.** `&self` is **not** `noalias` —
+that is `(-139)`'s finding, and this is its dividend — so LLVM may not move a
+load of `self` across a call. Interleaved, each scalar was its own
+load/store pair boxed in between two calls; grouped ahead of the first call
+they merge into one contiguous copy.
+
+The whole program delta *is* the row, on both pools:
+
+```text
+                          base          (-140)        delta        row delta / program delta
+  cube  GameState::clone  28,963,416    26,561,572    -2,401,844    2,401,844 / 2,376,547
+  fixed GameState::clone  13,726,430    12,581,170    -1,145,260    1,145,260 / 1,136,583
+```
+
+22,558 `cube` clones -> **106 Ir a clone** off `(-138)`'s 1,175 fixed, i.e.
+9 % of the fixed cost for a mechanical reorder and no behaviour change
+(golden traces unmoved). `fixed` moves further because its clone row is a
+larger share (1.64 % against 1.16 %) — the same pools-differ-by-share
+inversion `(-128)` reads on the SBA sweep.
+
+⚠ **The comment in the literal is load-bearing** — the split reads like
+untidiness and reverting it to declaration order gives the 106 Ir back.
+
+**The transferable rule: when a hot struct literal mixes plain copies with
+calls, the copies are worth grouping**, and the size of the prize is set by
+whether the source reference is `noalias`. `(-139)` says this one never will
+be, so the grouping is not a workaround for a missing attribute — it is the
+only form of the optimization available here.
+
 ### Hundred-and-sixteenth pass — `(-139)` BUILT AND REVERTED: `noalias` on `&GameState` is worth nothing, and a malloc/free pair costs 183 Ir
 
 **`cube` +0.656 % / `fixed` +0.656 %** at the experiment, off `bc2a38f5`
