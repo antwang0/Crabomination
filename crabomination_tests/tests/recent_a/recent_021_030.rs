@@ -298,6 +298,55 @@ mod recent22 {
         assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "firebending 2 added {{R}}{{R}}");
     }
 
+    /// Ran and Shaw's `{3}{R}` pumps every Dragon you control, not just
+    /// itself. The ability was absent until the `token` oracle-verb class.
+    #[test]
+    fn ran_and_shaw_pumps_your_dragons() {
+        let mut g = two_player_game();
+        let rs = g.add_card_to_battlefield(0, catalog::ran_and_shaw());
+        let other = g.add_card_to_battlefield(0, catalog::shivan_dragon());
+        let theirs = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: rs, ability_index: 0, target: None,
+            additional_targets: vec![], x_value: None, mode: None,
+        }).expect("activate the Dragon pump");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(rs).unwrap().power, 6, "the source is a Dragon too");
+        assert_eq!(g.computed_permanent(other).unwrap().power, 7, "and every other Dragon");
+        assert_eq!(g.computed_permanent(theirs).unwrap().power, 5, "not the opponent's");
+    }
+
+    /// "…if you cast them and there are three or more Dragon and/or Lesson
+    /// cards in your graveyard, create a token that's a copy of Ran and Shaw,
+    /// except it's not legendary." Both halves were absent.
+    #[test]
+    fn ran_and_shaw_copies_itself_off_a_stocked_graveyard() {
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            let d = g.add_card_to_hand(0, catalog::shivan_dragon());
+            let mut evs = Vec::new();
+            g.discard_card(0, d, &mut evs);
+        }
+        let rs = g.add_card_to_hand(0, catalog::ran_and_shaw());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: rs, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Ran and Shaw");
+        drain_stack(&mut g);
+        let copies = g.battlefield.iter().filter(|c| c.definition.name == "Ran and Shaw").count();
+        assert_eq!(copies, 2, "the cast makes a copy off three Dragons in the yard");
+        let token = g.battlefield.iter()
+            .find(|c| c.definition.name == "Ran and Shaw" && c.is_token)
+            .expect("one of them is the token");
+        assert!(token.definition.supertypes.is_empty(), "…and it is not legendary");
+    }
+
     /// Jennika's Technique deals 2 damage to each creature.
     #[test]
     fn jennikas_technique_sweeps_two() {

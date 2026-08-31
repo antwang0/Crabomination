@@ -207,6 +207,16 @@ way `genku_makes_a_token_on_permanent_leaving` already did it. Three builds went
 into believing the engine was missing something because the harness call was
 the wrong one.
 
+**Fifth: Ran and Shaw shipped as a vanilla 4/4 flier with firebending** — both
+printed abilities absent. Every piece was already in the tree:
+`Predicate::SourceWasCast` for "if you cast them",
+`Predicate::ValueAtLeast(Value::CardsInGraveyardMatching{…}, 3)` for the
+graveyard count over `HasCreatureType(Dragon).or(HasSpellSubtype(Lesson))`,
+and `Effect::CreateTokenCopyOf { non_legendary: true }` for "except it's not
+legendary". The `{3}{R}` Dragon anthem is a plain `PumpPT` over
+`EachPermanent`. ⚠ `Effect::CreateTokenCopyOf` is an **enum variant**, so
+`..Default::default()` does not apply — all ten fields have to be written out.
+
 **Still open in the class and both want an engine primitive, not a card fix**:
 Complaints Clerk's "whenever you roll a 1" (no die-roll event) and Magmatic
 Galleon's "creatures your opponents control are dealt excess noncombat damage"
@@ -214,8 +224,12 @@ Galleon's "creatures your opponents control are dealt excess noncombat damage"
 Pinnacle Starcage keeps its ETB exile and still drops the `{6}{W}{W}`
 "graveyard them all, then a Robot for each"; Sequence Engine ships an
 unrelated `RevealUntilFind` for a printed `{X}, {T}` graveyard-exile Fractal
-and wants an X-cost exile-from-graveyard shape. `token` 21 -> **10**, whole
-audit 138 -> **124**.
+and wants an X-cost exile-from-graveyard shape. `token` 21 -> **9**, whole
+audit 138 -> **123**. Also open: Zidane, Tantalus Thief's "whenever an
+opponent gains control of a permanent from you" Treasure (the engine has
+`EventKind::LostControlOfThis` but only in a self scope), Calix's
+once-a-turn combat-damage enchantment copy, Aang's experience-counter
+upkeep Allies, and Dyadrine's optional two-counter attack trigger.
 
 ## Oracle-verb audit — the `draw` and `counters` classes
 

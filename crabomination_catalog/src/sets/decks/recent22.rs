@@ -64,6 +64,8 @@ pub fn jeong_jeong_the_deserter() -> CardDefinition {
 /// (The cast-ETB "copy if 3+ Dragons/Lessons in your graveyard" rider is
 /// dropped.)
 pub fn ran_and_shaw() -> CardDefinition {
+    let dragon_or_lesson = SelectionRequirement::HasCreatureType(CreatureType::Dragon)
+        .or(SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson));
     CardDefinition {
         name: "Ran and Shaw",
         cost: cost(&[generic(3), r(), r()]),
@@ -76,6 +78,49 @@ pub fn ran_and_shaw() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Firebending(2)],
+        // "When Ran and Shaw enter, if you cast them and there are three or
+        // more Dragon and/or Lesson cards in your graveyard, create a token
+        // that's a copy of Ran and Shaw, except it's not legendary."
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::If {
+            cond: Predicate::All(vec![
+                Predicate::SourceWasCast,
+                Predicate::ValueAtLeast(
+                    Value::CardsInGraveyardMatching {
+                        who: crate::effect::PlayerRef::You,
+                        filter: dragon_or_lesson,
+                    },
+                    Value::Const(3),
+                ),
+            ]),
+            then: Box::new(Effect::CreateTokenCopyOf {
+                who: crate::effect::PlayerRef::You,
+                count: Value::Const(1),
+                source: Selector::This,
+                extra_creature_types: Vec::new(),
+                extra_card_types: Vec::new(),
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: false,
+                non_legendary: true,
+                legendary: false,
+                extra_keywords: Vec::new(),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        // "{3}{R}: Dragons you control get +2/+0 until end of turn."
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Dragon)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
