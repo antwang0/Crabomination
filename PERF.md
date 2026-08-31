@@ -2310,6 +2310,41 @@ a box whose state moves.
 
 ## Baseline
 
+### The CR 605.1a pass — closing state at `48257733`
+
+One perf commit (`(-137)`, the last frame-class row), one rules fix that
+changes real bot play on `cube`/`sealed` and nothing at all on `fixed`, and
+a re-profile that replenished the candidate queue from scratch.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,102 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces in it, **unmoved**
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release-fast: 195,528 decisions / 27.44 turns / 611.0 per game /
+        0 stalls — **byte-identical to the invariant**; determinism ok,
+        thread_determinism ok (3 vs 1 threads identical)
+callgrind cube 2,489,474,925 -> 2,487,955,748 (-0.061 %),
+        fixed 838,570,681 -> 837,680,468 (-0.106 %), base `bda1a69d`
+grid    NOT re-run: `(-137)` is pure code motion and the rules fix is gated
+        by 19,102 tests including four new regressions.
+```
+
+⚠ **The rules fix is invisible to every number in this file and that is a
+fact about `--decks fixed`, not about the fix.** `is_mana_ability` now reads
+CR 605.1a rather than an allowlist of riders, which makes 83 abilities across
+55 cards auto-tappable that were not — every painland, City of Brass, Ancient
+Tomb, the ten Talismans. The four bench archetypes play none of them, so the
+decision/turn/stall invariant is byte-identical and the golden traces do not
+move. **A `--decks cube` or `--decks sealed` reading taken after this commit
+is not comparable to one taken before it**: the bot has mana it did not have.
+
+⚠ `games_per_s` read **373.6** before the change and **354.5** after, on the
+same `host_cpu` string, with `host_calib_ms` moving 56 -> 66. That is the
+container, not the engine: the calibration moved 18 % in the same direction.
+Ir is the signal.
+
+
 ### `(-134)`/`(-136)` and the oracle-verb pass — closing state at `0da5456e`
 
 Two perf commits, one instrument column, four auditor false classes, nineteen
@@ -10196,6 +10231,65 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Hundred-and-fifteenth pass — `(-137)`, and the frame class is now empty
+
+**`cube` -0.061 % / `fixed` -0.106 %** at `ca1834cd`, off `bda1a69d`
+(`profiling-fast --no-default-features`, callgrind, six games, one thread,
+seed 1, `--a gang --b gang`).
+
+```text
+  pool    base            (-137)          delta
+  cube    2,489,474,925   2,487,955,748   -0.0610 %
+  fixed     838,570,681     837,680,468   -0.1062 %
+```
+
+`permanents_with_abilities_removed` was the last row in `cg_frames.py`'s
+table reading the shape `(-136)` proved — `body calls 21 / out per call
+0.01`, i.e. 80,222 invocations paying a 7-instruction prologue for a call 99 %
+of them never make. Its presence gate is call-free (two `iter().any`/`all`
+walks), so moving the effect-set read behind an `#[inline(never)]` half took
+the frame off the hot path.
+
+**Predicted 1,123,108 Ir on `cube`; measured 1,519,177.** The excess is the
+call, the return and the argument setup at the two call sites — `(-136)`'s
+correction — but at the *low* end of it, because the cold half still has
+callers and stayed a function rather than being inlined away. `fixed` moves
+nearly twice as far as `cube`: the gate is per trigger dispatch and `fixed`
+dispatches more per instruction, the same inversion `(-128)` reads on the SBA
+sweep.
+
+**And that closes the class.** Re-ranked at the tip, `cg_frames.py`'s
+remaining rows are all refuted or under 0.06 %:
+
+```text
+  ~Ir in frame     calls  prol  body  out/call  function                       verdict
+     4,966,136   354,724     7    83     1.80   computed_permanent_hinted      frame IS the calls
+     1,952,020   139,430     7   384    10.19   dispatch_triggers_for_events   same
+     1,705,228   121,802     7   139     2.89   perform_action_inner           same
+     1,561,896   111,564     7    86     1.02   static_effect_to_effects       same
+     1,388,856    99,204     7    65     1.15   drain_trigger_queue            same
+     1,330,140    95,010     7    17     1.24   recycle_events                 same
+     1,215,536    86,824     7     2     0.88   can_grant_keyword              refuted (-132)
+     1,123,108    80,222     7    21     0.01   permanents_with_abilities_...  TAKEN, this row
+     1,123,108    80,222     7    25     0.46   dispatch_board_scan            not the shape
+       857,332    61,238     7     4     0.00   can_block_attacker_computed    cold calls in a loop
+       636,720    79,590     4     0     0.00   CardInstance::toughness        nothing to outline
+       613,740    61,374     5    38     2.92   bot::sim_step                  frame IS the calls
+       586,956    97,826     3     1     0.54   requirement_live_leaves        not the shape
+       586,956    97,826     3     1     0.54   requirement_mentions_power     not the shape
+       524,100    52,410     5    55     1.29   clear_end_of_turn_effects      frame IS the calls
+       196,276    98,138     1     1     0.54   simple_walker_can_handle       1-insn prologue
+       143,256    71,628     1     1     0.00   effective_life                 1-insn prologue
+       102,652    51,326     1     0     0.00   find_card_anywhere             nothing to outline
+```
+
+**Nothing above 0.06 % is left with `out/call` ~ 0 and a prologue worth
+taking.** `(-133)`'s two `requirement_*` rows read 0.54 and are not the shape
+either — `(-132)`'s own column settles them without a build. **Do not re-open
+`cg_frames.py` until something changes the call graph**; re-running the
+instrument after a landing is still right, but the table is now a
+confirmation, not a queue.
 
 ### Hundred-and-fourteenth pass (2) — `(-136)`, and the column that turned `cg_frames.py` from advisory into decisive
 
@@ -18369,6 +18463,98 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-138) THE QUEUE WAS RE-PROFILED FROM SCRATCH AT `bda1a69d` AND THE HONEST
+HEADLINE IS THAT NOTHING NEW IS BIG.** Fresh `--dump-instr=yes` dumps, both
+pools, six games, one thread, seed 1, `profiling-fast --no-default-features`:
+`cube` **2,489,474,925**, `fixed` **838,570,681**. (The `cube` figure is
+0.54 % under the 2,502,879,696 the previous tip quoted; the card fixes
+between them are the only engine difference, so read it as a new base rather
+than as a win.)
+
+Everything the four instruments rank splits into three groups, and **only the
+third is a candidate**:
+
+* **Diffuse, already line-profiled, refuse to concentrate.**
+  `dispatch_triggers_for_events` 5.20 %, `gather_continuous_effects_inner`
+  3.34 %, `compute_permanent_pass` 3.17 % (`(-135)` line-profiled it: 102
+  lines, none above 0.22 %), `check_state_based_actions_into` 2.89 %
+  (`(-128)`), `__memcpy` 2.77 % over 2,319 callers.
+* **The allocator, and it is not one row.** `_int_free` 3.20 + `malloc` 2.44 +
+  `_int_malloc` 2.23 + `free` 1.99 + `unlink_chunk` 0.23 + `_int_free_merge`
+  0.26 = **10.35 %**, over **1,268,320 allocations**. The two tables that rank
+  them are both long tails: `__rust_alloc`'s callers are topped by
+  `finish_grow` 239,701 (18.9 %) and `computed_permanent_hinted` 201,554
+  (15.9 %) and then fall away over 438 more rows; `finish_grow`'s own callers
+  are `grow_one` 243,266 spread over **100+ engine sites**, the largest being
+  `dispatch_board_scan` at 23,576. `Vec::SpecFromIterNested::from_iter` is
+  2.64 % of the run over **395,799 calls from 90+ callers** at 166 Ir each.
+  `(-92)`'s "stop looking for a hot line" is the correct reading of all three.
+* **`GameState::clone`, which is the one row with a *shape* nobody has
+  attacked.** See below.
+
+**`GameState::clone` — 1,175 instructions on EVERY call, 91.5 % of its own
+self cost, and the largest reducible fixed cost in the program.**
+
+```text
+  calls                      22,558     (cube, six games)
+  self Ir                28,965,990     1.16 % of the run
+  fixed (cg_arms --sweep)  1,175/call   26,505,650 Ir = 1.065 %
+  inclusive                ~49.6 M      1.99 %, ~2,200 Ir a clone
+  callees per clone        8.0 Vec::clone, 7.4 memcpy, 3.0 RawTable::clone,
+                           2.4 __rust_alloc
+  callers   accept_on::{{closure}} 11,764 (52 %) / perform_action 4,988 /
+            sim_start_state 2,336 / evaluate_action_sequence 1,422 / ...
+```
+
+**Why 1,175 is the number to attack and not the 2,200.** The clone is a
+hand-written 200-field literal (`impl Clone for GameState`), and it is 91.5 %
+*fixed* because nearly every field is copied unconditionally whether or not it
+holds anything: ~40 `Vec`/`HashMap`/`IdMap` fields, of which the callee table
+says only **2.4 actually allocate**, i.e. eight in ten of those clones are a
+branch on an empty length. The population is one shape — `*_this_resolution`,
+`*_scratch`, `pending_*`, `resolving_*`, `sacrificed_*`, `last_*` — about 75
+fields that are meaningful only *inside* a resolution, and a probe clones at
+priority.
+
+**The device is `cold: CowBox<ColdState>` again, for a second group** (a
+`CowBox<ResolutionScratch>`): one `Arc` bump per clone instead of ~75 field
+copies and ~18 `Vec` clones. **Priced and deliberately not taken in one
+sitting**, for two reasons that a taker needs up front:
+
+1. **The CoW sharp edge is on the write side and the write side is the
+   resolution.** Every `&mut` reach unshares the whole group, so the win is
+   only real for probes that *don't* write it — and `finalize_cast` sets
+   `pending_cast_*`, which most probes reach. Nobody has counted how many of
+   the 22,558 clones ever write the group; **that census is the first build,
+   not the refactor.** A `#[cfg(feature = "trig-census")]` counter on the
+   group's `_mut` accessor answers it for the price of one engine rebuild.
+2. **It is a 500+ site mechanical edit** and PERF's own history is full of
+   whole-struct reshapes that gave the win back. One commit per field group,
+   census first.
+
+**Refuted here without a build: `controlled_by`.** It reads as an obvious
+per-clone allocation (`Vec<Option<usize>>`, one entry a seat) and it is not —
+`GameState::new` leaves it **empty** and only `control_player_turn`
+(Mindslaver) ever `resize`s it, so on a normal game it allocates nothing. The
+2.37 allocations a clone are `players` and a small tail.
+
+**Also read and not taken: `dispatch_board_scan`'s two grant lists.**
+`DispatchScan { trigger_grants: Vec<_>, equip_grants: Vec<_> }` starts both
+empty and pushes; 23,576 `grow_one` calls over 80,222 scans (0.29/call) cost
+**2,829,321 Ir inclusive = 0.114 %** on the alloc side, roughly double with
+the free. A `SmallVec` would remove them — but `DispatchScan` is returned by
+value and its lists are then *moved out* by the caller (`let trigger_grants =
+scan.trigger_grants;`), which is exactly the by-value `IntoIter` hazard
+`(-106)` measured: a `SmallVec`'s inline buffer is copied on every move, and
+`TriggerGrant` carries a whole `SelectionRequirement`. Worth ~0.2 % if the
+move can be avoided; **measure the struct's size before assuming the sign.**
+
+**And the gather is still at its floor**, which is worth restating because it
+looks like the largest lever and is not: 59,022 gathers at the tip against the
+59,002 the ninety-third pass's `cg_contexts` survey called the floor for this
+call graph, 152.9 M Ir inclusive = **6.14 %**. The lever there is the cost of
+one gather, not the count.
 
 **(-128) STATE-BASED ACTIONS ARE THE LARGEST UNFILED CLUSTER AND THE ONLY TOP
 ROW THAT IS *BIGGER* ON `fixed` THAN ON `cube`.** Read off the `8e2d5df9`
