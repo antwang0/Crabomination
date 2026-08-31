@@ -10305,6 +10305,41 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass (7) — `(-145)`: the last five, and where the sweep stops
+
+**`cube` -0.178 % / `fixed` -0.207 %** against `(-144)`, i.e. **-1.080 % /
+-0.872 % cumulative** against the run tip `33955a1f`. `--bench` still reads
+195,806 / 27.49 / 611.9 / 0 stalls.
+
+```text
+  pool    tip 33955a1f    (-143)          (-144)          (-145)      cumulative
+  cube    2,503,861,524   2,501,137,861   2,481,232,541   2,476,827,927  -1.0797 %
+  fixed     927,368,664     925,804,066     921,192,718     919,283,529  -0.8718 %
+```
+
+What `cg_edges.py --callers` still named after `(-144)`:
+
+```text
+  declare_attackers_banded   seen: HashSet<CardId>        25,768 inserts, 4.10 M incl
+  declare_attackers_banded   seats: HashSet<usize>        (the Melee count)
+  simulate_attack_outcome_once  declared: HashSet<(u32, TurnStep)>   6,640 / 1.35 M
+  GameState                  cards_discarded_per_player_this_resolution
+  GameState                  nonland_cards_discarded_per_player_this_resolution
+```
+
+**The last two are the interesting ones**: two `fxhash` maps keyed by *seat*,
+sitting in `GameState` itself, so they were **45,112 `RawTable::clone` calls
+— exactly two per `GameState` clone** and empty in nearly every one.
+
+**Where the sweep stops, and why.** The hashbrown cluster is down from 17 M to
+**4.59 M (0.185 %)**, and `RawTable::clone`'s 2.47 M of that now comes
+**entirely** from `Arc::clone_from_ref_in` — the cold-group deep copies.
+Those maps are not obviously small (`cycled_counts` is keyed by card name and
+grows all game, `commander_damage` by `(seat, card)`), so a `Vec` there trades
+a 41-Ir clone for a linear *lookup* that could be long. **The rule the sweep
+ends on: swap a map for a `Vec` when its size is bounded by the board, the
+batch or the seat count — not when it is bounded by the game.**
+
 ### Hundred-and-sixteenth pass (6) — `(-144)`: the eight per-call tables in the blocking path, and the device is now proved
 
 **`cube` -0.796 % / `fixed` -0.498 %** against `(-143)`, i.e. **-0.904 % /

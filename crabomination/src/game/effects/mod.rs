@@ -1868,11 +1868,12 @@ impl GameState {
         self.cards_revealed_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
         self.greatest_discarded_mv_this_resolution = 0;
-        // Dropped, not cleared: a cleared `HashMap` keeps its table, and
-        // `GameState::clone` then allocates and memcpys that table on every
+        // Dropped, not cleared: a cleared map keeps its buffer, and
+        // `GameState::clone` then allocates and memcpys it on every
         // checkpoint and probe for the rest of the game. Assigning an empty
-        // map costs two stores when it is already empty (hashbrown's `new`
-        // does not allocate) and the next discard rebuilds the table.
+        // map costs two stores when it is already empty (neither hashbrown's
+        // nor `Vec`'s `new` allocates) and the next discard rebuilds it.
+        // Both are `IdMap`s now (PERF `(-147)`), so the buffer is a `Vec`.
         if self.scratch.cards_discarded_per_player_this_resolution.capacity() > 0 {
             self.scratch.cards_discarded_per_player_this_resolution = Default::default();
         }

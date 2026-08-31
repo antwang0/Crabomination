@@ -8800,7 +8800,7 @@ fn simulate_attack_outcome_once(
     // horizon can push the stop out one more cycle (see below).
     let mut stop_turn = start_turn;
     let mut extended = false;
-    let mut declared: crate::fxhash::HashSet<(u32, TurnStep)> = Default::default();
+    let mut declared: crate::game::types::IdSet<(u32, TurnStep)> = Default::default();
     // *This* turn's attack declaration is the candidate, already submitted.
     // Without this the loop's own DeclareAttackers arm fires on the same
     // turn and re-declares the greedy set over the top of it — which the

@@ -1174,7 +1174,7 @@ impl GameState {
                         ))),
                 "attack_static_scan missed an attack power cap",
             );
-            let mut seen = crate::fxhash::HashSet::default();
+            let mut seen: crate::game::types::IdSet<CardId> = Default::default();
             for atk in &attacks {
                 let id = atk.attacker;
                 if !seen.insert(id) {
@@ -1450,7 +1450,7 @@ impl GameState {
         // this combat (a player targeted directly, or the controller of a
         // planeswalker/battle attacked). Computed over the whole batch up front.
         let melee_opponents: i32 = {
-            let mut seats: crate::fxhash::HashSet<usize> = crate::fxhash::HashSet::default();
+            let mut seats: crate::game::types::IdSet<usize> = Default::default();
             for atk in &attacks {
                 let seat = match atk.target {
                     AttackTarget::Player(s) => Some(s),

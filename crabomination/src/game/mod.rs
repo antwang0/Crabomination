@@ -1164,14 +1164,14 @@ pub struct ResolutionScratch {
     /// discarded this way" via `Value::MaxCardsDiscardedThisEffectByAnyPlayer`.
     /// Reset to empty between independent resolutions.
     #[serde(skip)]
-    pub(crate) cards_discarded_per_player_this_resolution: crate::fxhash::HashMap<usize, u32>,
+    pub(crate) cards_discarded_per_player_this_resolution: crate::game::types::IdMap<usize, u32>,
     /// Transient: per-player count of *nonland* cards discarded within the
     /// current effect resolution. Read by `Predicate::DiscardedNonlandThisEffect`
     /// — Kroxa's "each opponent who didn't discard a nonland card this way
     /// loses 3 life." Reset to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) nonland_cards_discarded_per_player_this_resolution:
-        crate::fxhash::HashMap<usize, u32>,
+        crate::game::types::IdMap<usize, u32>,
     /// CR 702.55 — Haunt. Set by `Effect::HauntCreature` while an instant/
     /// sorcery resolves to the creature it should haunt plus the haunt body;
     /// the post-resolution routing exiles the spell card (instead of the
@@ -15934,8 +15934,7 @@ impl GameState {
         self.last_discarded_colors = card.definition.cost.colors();
         *self
             .scratch.cards_discarded_per_player_this_resolution
-            .entry(p)
-            .or_insert(0) += 1;
+            .entry_or_default(p) += 1;
         self.scratch.discarded_card_ids_this_resolution.push(card_id);
         if was_creature {
             self.creature_cards_discarded_this_resolution += 1;
@@ -15943,8 +15942,7 @@ impl GameState {
         if was_nonland {
             *self
                 .scratch.nonland_cards_discarded_per_player_this_resolution
-                .entry(p)
-                .or_insert(0) += 1;
+                .entry_or_default(p) += 1;
         }
 
         // CR 614 — Dodecapod: an opponent's effect deploys it instead of
