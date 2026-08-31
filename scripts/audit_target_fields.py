@@ -57,7 +57,12 @@ QUERY = BASE / "crabomination_base" / "src" / "effect" / "query.rs"
 TARGETY = re.compile(r"\b(Selector|PlayerRef|Value|Target)\b")
 
 # (variant, field) pairs a reviewer has signed off. Keep the reason on the row.
-ALLOWED: dict[tuple[str, str], str] = {}
+ALLOWED: dict[tuple[str, str], str] = {
+    # The accept branch's slot-0 player is bound at resolution, not at cast:
+    # only `otherwise` can demand a cast-time target (Browbeat's drawer). The
+    # arm says so in `query.rs` and this is that decision, recorded.
+    ("PlayersMayAccept", "who"): "slot-0 player bound at resolution, not cast",
+}
 
 
 def enum_body(text: str, name: str) -> str:

@@ -626,7 +626,6 @@ impl Effect {
         }
         match self {
             Effect::DestroyAllNoRegenGainControllerLifePerManaValue { .. }
-            | Effect::RevealHandDiscardMatchingUnlessPayLife { .. }
             | Effect::EachPlayerCreatesTokenPerControlled { .. }
             | Effect::AbandonThisScheme | Effect::GameIsADraw
             | Effect::PumpAttackersThisTurn { .. }
@@ -636,8 +635,6 @@ impl Effect {
             | Effect::ExileRandomFromHandMayPlayThisTurn { .. }
             | Effect::ReturnToHandAtYourNextUntapStep { .. }
             | Effect::SwapPhasedState { .. }
-            | Effect::TopOfGraveyardToLibraryTop { .. }
-            | Effect::LookTopMayPayLifeToBin { .. }
             | Effect::ExileCostSacrificedBatch
             | Effect::ExileEachMatchingThenControllerDraws { .. }
             | Effect::YourLandsProduceColorThisTurn(_)
@@ -657,10 +654,8 @@ impl Effect {
             | Effect::AsEntersSacrificeForTotalPt
             | Effect::PlaySubgame
             | Effect::EnterExilingGraveyardCreaturesForCounters { .. }
-            | Effect::ExileTopFaceDownGrantPlay { .. }
             | Effect::AsEntersExileFromYourGraveyard { .. }
             | Effect::ExileSelfWithCountdown
-            | Effect::WaiveShroudForPlayerThisTurn { .. }
             | Effect::DestroyEachUnlessPaysLife { .. }
             | Effect::VentureInto { .. }
             | Effect::TakeInitiative { .. }
@@ -912,9 +907,25 @@ impl Effect {
             Effect::LookTopPutOneOnBottom { .. }
             | Effect::DoubleCombatDamageToCreaturesThisTurn => false,
             Effect::AllLandsProduceChosenColorThisTurn { chooser } => player_has_target(chooser),
-            Effect::ReduceEquipCost { .. }
-            | Effect::SacrificeAtNextUpkeep { .. }
-            | Effect::SacrificeAtNextEndStep { .. } => false,
+            Effect::ReduceEquipCost { .. } => false,
+            // Five that sat in the `| … => false` group above and each hold a
+            // `PlayerRef` a shipped card aims (`audit_target_fields.py`).
+            // Autumn Willow is the clearest: its whole ability is
+            // `WaiveShroudForPlayerThisTurn { player: Target(0) }`, so the
+            // group answered "targets nothing" for an ability whose only
+            // content is a target.
+            Effect::WaiveShroudForPlayerThisTurn { player } => player_has_target(player),
+            Effect::TopOfGraveyardToLibraryTop { who, .. }
+            | Effect::LookTopMayPayLifeToBin { who, .. }
+            | Effect::RevealHandDiscardMatchingUnlessPayLife { who, .. } => {
+                player_has_target(who)
+            }
+            Effect::ExileTopFaceDownGrantPlay { library, grantee } => {
+                player_has_target(library) || player_has_target(grantee)
+            }
+            Effect::SacrificeAtNextUpkeep { what } | Effect::SacrificeAtNextEndStep { what } => {
+                sel_has_target(what)
+            }
             Effect::ExileAtNextEndStep { what }
             | Effect::AssignsNoCombatDamageThisTurn { what } => sel_has_target(what),
             Effect::SacrificeSourceUnlessSacrificeTotalPower { .. } => false,
@@ -959,7 +970,9 @@ impl Effect {
             Effect::DestroyEachNonlandWithManaValue { .. } => false,
             Effect::DestroyEachCreatureWithManaValue { .. } => false,
             Effect::AttackDespiteDefenderThisTurn { .. } => false,
-            Effect::LookTopExileOneMayPlay { .. } => false,
+            Effect::LookTopExileOneMayPlay { count, who } => {
+                value_has_target(count) || player_has_target(who)
+            }
             Effect::LookTopDeployLandOrHand { .. } => false,
             Effect::LookTopMayDeployLand { .. } => false,
             // Targets are chosen at resolution (Decision::ChooseCards), so no
@@ -989,7 +1002,10 @@ impl Effect {
             Effect::LookTopNDeployPermanentsRestToHand { .. } => false,
             Effect::LookTopMayDeployAttacking { .. } => false,
             Effect::ExileTopUntilPermanentToBattlefieldOrHand => false,
-            Effect::ExileTopUntilNonlandMayPlay { .. } => false,
+            Effect::ExileTopUntilNonlandMayPlay { who, hand_unless_mv_below, .. } => {
+                player_has_target(who)
+                    || hand_unless_mv_below.as_ref().is_some_and(value_has_target)
+            }
             Effect::ReturnGraveyardCreaturesUpToTotalPower { .. } => false,
             Effect::ReturnGraveyardCreaturesUpToTotalManaValue { .. } => false,
             Effect::CommandTheDreadhorde => false,
@@ -1083,7 +1099,9 @@ impl Effect {
             Effect::LockCreatureAndPlaneswalkerCasts => false,
             Effect::ExileTopFaceDownTokenReturns { .. } => false,
             Effect::DeployLandsFromHandAndGraveyard { .. } => false,
-            Effect::Manifest { .. } => false,
+            Effect::Manifest { who, amount } => {
+                player_has_target(who) || value_has_target(amount)
+            }
             Effect::ManifestFromHand { who, count, .. } => {
                 sel_has_target(who) || value_has_target(count)
             }
@@ -1111,11 +1129,13 @@ impl Effect {
             Effect::DestroyTargets { .. } => true,
             Effect::DealHalfLifeDamage { .. } => false,
             Effect::Champion { .. } => false,
-            Effect::ExileUpToNFromGraveyards { count, .. } => value_has_target(count),
+            Effect::ExileUpToNFromGraveyards { count, of, .. } => {
+                value_has_target(count) || of.as_ref().is_some_and(player_has_target)
+            }
             Effect::SpellTaxUntilYourNextTurn { .. } => false,
             Effect::CreateTokenAttachedTo { target, .. } => sel_has_target(target),
             Effect::CreateTokenAttachedToEach { target, .. } => sel_has_target(target),
-            Effect::ManifestDread { .. } => false,
+            Effect::ManifestDread { who } => player_has_target(who),
             Effect::ManifestDreadRepeatThenCounters { .. } => false,
             Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands { .. } => false,
@@ -1220,7 +1240,10 @@ impl Effect {
             | Effect::ChooseModesCast { .. }
             | Effect::ChooseModesByPoints { .. }
             | Effect::ChooseUnchosenMode { .. } => false,
-            Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
+            Effect::MayDoBy { who, body, .. } => {
+                player_has_target(who) || body.requires_target()
+            }
+            Effect::MayDo { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. } => body.requires_target(),
@@ -1244,9 +1267,14 @@ impl Effect {
             Effect::ReturnResolvingSpellToHand => false,
             Effect::ExileResolvingSpell => false,
             Effect::SilencePlayersThisTurn { who } => player_has_target(who),
-            Effect::MayPay { body, .. }
-            | Effect::MayPayBy { body, .. }
-            | Effect::MayPayLife { body, .. } => body.requires_target(),
+            Effect::MayPayBy { who, body, else_, .. } => {
+                player_has_target(who)
+                    || body.requires_target()
+                    || else_.as_ref().is_some_and(|e| e.requires_target())
+            }
+            Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
+                body.requires_target()
+            }
             Effect::MaySacrifice { then, else_, .. }
             | Effect::MaySacrificeSource { then, else_, .. }
             | Effect::MayTap { then, else_, .. }
@@ -1523,7 +1551,11 @@ impl Effect {
             }
             Effect::EnchantmentsBiteControllersAndHosts { .. } => false,
             Effect::CounterSpellDiscardSplicedNames { what } => sel_has_target(what),
-            Effect::UnlessPlayerPays { then, .. } => then.requires_target(),
+            Effect::UnlessPlayerPays { who, then, if_paid, .. } => {
+                player_has_target(who)
+                    || then.requires_target()
+                    || if_paid.as_ref().is_some_and(|e| e.requires_target())
+            }
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
@@ -1570,9 +1602,10 @@ impl Effect {
             | Effect::SacrificeThenRevealUntilSharedType { what } => sel_has_target(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
             | Effect::AlternatingExileFromHand { who } => sel_has_target(who),
-            Effect::ExileHandThenReclaimLinked
-            | Effect::ExileHandLinked { .. }
-            | Effect::ReturnLinkedExilesToHand { .. } => false,
+            Effect::ExileHandThenReclaimLinked => false,
+            Effect::ExileHandLinked { who } | Effect::ReturnLinkedExilesToHand { who } => {
+                player_has_target(who)
+            }
             Effect::LookExileAnyNumberRestBack { who, count } => {
                 sel_has_target(who) || value_has_target(count)
             }
@@ -1735,7 +1768,13 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::ChooseSector { body } => body.requires_target(),
-            Effect::DelayUntilWithCapture { body, .. } | Effect::DelayUntil { body, .. } => body.requires_target(),
+            // The captured selector is a target too — a delayed trigger that
+            // remembers "target creature" (`capture: Target(0)`) picks it at
+            // cast time, not at the delayed resolution.
+            Effect::DelayUntilWithCapture { capture, body, .. } => {
+                sel_has_target(capture) || body.requires_target()
+            }
+            Effect::DelayUntil { body, .. } => body.requires_target(),
             // Needs a creature to watch for death (the watched target).
             Effect::WhenTargetDiesThisTurn { .. } => true,
             // Needs a creature to watch for damage (Paladin's Forecast).
@@ -1878,15 +1917,26 @@ impl Effect {
             Effect::GrantHexproofFromColorThisTurn { who, .. } => sel_has_target(who),
             Effect::GainHexproofUntilYourNextTurn { who } => player_has_target(who),
             Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
-            Effect::ExileTopAndGrantMayPlay { .. } => false,
+            Effect::ExileTopAndGrantMayPlay { who, count, max_mana_value, .. } => {
+                player_has_target(who)
+                    || value_has_target(count)
+                    || max_mana_value.as_ref().is_some_and(value_has_target)
+            }
             Effect::ExileTopLandTokenElseMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::AddExperience(amount) => value_has_target(amount),
-            Effect::PayEnergy { then, .. } | Effect::PayEnergyValue { then, .. } | Effect::PayAnyEnergy { then } => then.requires_target(),
+            Effect::PayEnergyValue { amount, then } => {
+                value_has_target(amount) || then.requires_target()
+            }
+            Effect::PayEnergy { then, .. } | Effect::PayAnyEnergy { then } => {
+                then.requires_target()
+            }
             Effect::PayAnyEnergyDealDamage { to } => sel_has_target(to),
             Effect::TimeTravel { who } => player_has_target(who),
-            Effect::PayEnergyOrElse { otherwise, .. }
-            | Effect::PayEnergyOrElseValue { otherwise, .. } => otherwise.requires_target(),
+            Effect::PayEnergyOrElseValue { amount, otherwise } => {
+                value_has_target(amount) || otherwise.requires_target()
+            }
+            Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
             Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
@@ -2353,6 +2403,20 @@ impl Effect {
             // "Target opponent gets an emblem with …" (Ob Nixilis Reignited's
             // ultimate) — the emblem's recipient is the slot.
             Effect::CreateEmblem { who, .. } => implicit_player_if_bare_player_ref(who),
+            // Same five, slot-agnostically — see the slot walker's note.
+            // Autumn Willow's `{G}` is the one whose *whole* body is the
+            // player ref; the rest ride a `Seq` (Questing Phelddagrif's
+            // `{U}`: grant flying, then `MayDoBy { who: Target(0) }`).
+            Effect::TopOfGraveyardToLibraryTop { who, .. }
+            | Effect::LookTopMayPayLifeToBin { who, .. } => {
+                implicit_player_if_bare_player_ref(who)
+            }
+            Effect::WaiveShroudForPlayerThisTurn { player } => {
+                implicit_player_if_bare_player_ref(player)
+            }
+            Effect::ExileUpToNFromGraveyards { of, .. } => {
+                of.as_ref().and_then(implicit_player_if_bare_player_ref)
+            }
             // Unit variants whose whole shape is "target player <names a card
             // and loses it>": the slot is a player by construction, there is
             // no field to read it off, and without an arm here the enumerator
@@ -2435,11 +2499,16 @@ impl Effect {
             | Effect::RevealAnyNumberFromHand { then: body, .. }
             | Effect::MayExileSelfThen { body }
             | Effect::MayExileFromYourGraveyard { then: body, .. }
-            | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
+            | Effect::MayDo { body, .. }
             | Effect::MayPayX { body, .. }
             | Effect::CapTargetsAtX { body }
             | Effect::TargetsExactlyX { body }
             | Effect::CapTargetsAt { body, .. } => body.primary_target_filter(),
+            // "**Target player** may draw a card" (Questing Phelddagrif's
+            // `{U}`) — the chooser is a slot of its own, and the body's is
+            // still the fallback, so this cannot shadow it.
+            Effect::MayDoBy { who, body, .. } => implicit_player_if_bare_player_ref(who)
+                .or_else(|| body.primary_target_filter()),
             Effect::MayPay { body, .. }
             | Effect::MayPayBy { body, .. }
             | Effect::MayPayLife { body, .. }
@@ -3841,9 +3910,13 @@ impl Effect {
                     Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
+                // See `primary_target_filter`'s note: the chooser is a slot
+                // of its own and the body's is the fallback.
+                Effect::MayDoBy { who, body, .. } => implicit_player_for_ref_slot(who, slot)
+                    .or_else(|| eff_find(body, slot, None, kicked)),
                 Effect::Parley { then: body }
                 | Effect::RevealAnyNumberFromHand { then: body, .. }
-                | Effect::MayDo { body, .. } | Effect::MayDoBy { body, .. }
+                | Effect::MayDo { body, .. }
                 | Effect::CapTargetsAtX { body }
                 | Effect::TargetsExactlyX { body }
                 | Effect::CapTargetsAt { body, .. }
@@ -4231,7 +4304,21 @@ impl Effect {
                 | Effect::ShuffleHandsDrawSame { who }
                 | Effect::ExileHandLinked { who }
                 | Effect::ReturnLinkedExilesToHand { who }
+                // The five `requires_target` started answering `true` for at
+                // the hundred-and-fifteenth pass. A body that needs a target
+                // and gives slot 0 no filter is offered `Any` — every
+                // permanent and a player — which is what
+                // `core_rules::target_walkers` fails on, and rightly: the two
+                // walkers have to agree about which slots exist.
+                | Effect::TopOfGraveyardToLibraryTop { who, .. }
+                | Effect::LookTopMayPayLifeToBin { who, .. }
                 | Effect::DiscardUnlessKind { who, .. } => implicit_player_for_ref_slot(who, slot),
+                Effect::WaiveShroudForPlayerThisTurn { player } => {
+                    implicit_player_for_ref_slot(player, slot)
+                }
+                Effect::ExileUpToNFromGraveyards { of, .. } => {
+                    of.as_ref().and_then(|p| implicit_player_for_ref_slot(p, slot))
+                }
                 Effect::PhaseOut { what, .. }
                 | Effect::GrantSuspend { what, .. }
                 | Effect::ModularCounters { what }
