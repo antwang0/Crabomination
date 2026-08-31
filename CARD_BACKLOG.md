@@ -191,6 +191,22 @@ to two", and the Illusion's controller is you rather than a targeted player.
 missing half was an `Option` field left `None` on a variant that already had
 it; nothing in the audit reads "the field exists and is empty".
 
+**Fourth: Suki, Courageous Rescuer — and the note that hid it was doubly
+wrong.** The Ally rider sat behind "observer leaves-battlefield triggers can't
+read the departed permanent's LKI yet (TODO.md)". The trigger reads *nothing*
+off the departed permanent, and the observer path is wired — `Genku, Future
+Shaper` has been using `EventKind::PermanentLeavesBattlefield` with
+`EventScope::AnotherOfYours` and a working test for passes. Wired with
+`.once_per_turn()` (the printed "only once each turn") and
+`Predicate::IsTurnOf(You)` (the printed "during your turn").
+
+⚠ **The test path is the trap, not the engine.** `remove_to_graveyard_with_triggers`
+fires the *dying card's own* triggers; an observer's LTB trigger needs the SBA
+funnel — `check_state_based_actions()` then `dispatch_triggers_for_events`, the
+way `genku_makes_a_token_on_permanent_leaving` already did it. Three builds went
+into believing the engine was missing something because the harness call was
+the wrong one.
+
 **Still open in the class and both want an engine primitive, not a card fix**:
 Complaints Clerk's "whenever you roll a 1" (no die-roll event) and Magmatic
 Galleon's "creatures your opponents control are dealt excess noncombat damage"
@@ -198,8 +214,8 @@ Galleon's "creatures your opponents control are dealt excess noncombat damage"
 Pinnacle Starcage keeps its ETB exile and still drops the `{6}{W}{W}`
 "graveyard them all, then a Robot for each"; Sequence Engine ships an
 unrelated `RevealUntilFind` for a printed `{X}, {T}` graveyard-exile Fractal
-and wants an X-cost exile-from-graveyard shape. `token` 21 -> **11**, whole
-audit 138 -> **125**.
+and wants an X-cost exile-from-graveyard shape. `token` 21 -> **10**, whole
+audit 138 -> **124**.
 
 ## Oracle-verb audit — the `draw` and `counters` classes
 

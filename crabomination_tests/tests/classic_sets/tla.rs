@@ -1667,7 +1667,6 @@ fn the_lion_turtle_gains_and_ramps() {
     assert!(g.players[0].mana_pool.amount(crabomination::mana::Color::Blue) >= 1, "added a blue");
 }
 
-/// Suki anthems your other creatures and replaces a leaving permanent with an
 /// Suki anthems your other creatures (+1/+0) but not herself.
 #[test]
 fn suki_anthems_other_creatures() {
@@ -1676,6 +1675,34 @@ fn suki_anthems_other_creatures() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "other creature gets +1/+0");
     assert_eq!(g.computed_permanent(suki).unwrap().power, 2, "Suki doesn't pump herself");
+}
+
+/// "Whenever another permanent you control leaves the battlefield during your
+/// turn, create a 1/1 white Ally creature token. This ability triggers only
+/// once each turn." Dropped behind a stale "observer LTB triggers can't read
+/// LKI" note until the `token` oracle-verb class — the trigger reads nothing
+/// off the departed permanent.
+#[test]
+fn suki_mints_one_ally_per_turn_when_your_permanents_leave() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::suki_courageous_rescuer());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+
+    g.battlefield_find_mut(a).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Ally").count(), 1,
+        "the first departure mints an Ally");
+
+    g.battlefield_find_mut(b).unwrap().damage = 99;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Ally").count(), 1,
+        "and only once each turn");
 }
 
 /// Guru Pathik digs five deep and pulls a Lesson to hand.

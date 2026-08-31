@@ -2954,9 +2954,36 @@ pub fn suki_courageous_rescuer() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        // The "another permanent you control leaves during your turn → Ally
-        // token (once/turn)" rider is dropped — observer leaves-battlefield
-        // triggers can't read the departed permanent's LKI yet (TODO.md).
+        // "Whenever another permanent you control leaves the battlefield
+        // during your turn, create a 1/1 white Ally creature token. This
+        // ability triggers only once each turn." The trigger does not need
+        // the departed permanent's LKI — it reads nothing off it — so the
+        // note that used to sit here (claiming observer LTB triggers cannot
+        // read LKI) was both stale and beside the point.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::PermanentLeavesBattlefield,
+                EventScope::AnotherOfYours,
+            )
+            .once_per_turn()
+            .with_filter(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(crate::card::TokenDefinition {
+                    name: "Ally".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Ally],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            },
+        }],
         ..Default::default()
     }
 }
