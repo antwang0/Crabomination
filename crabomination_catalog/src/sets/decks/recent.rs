@@ -6114,7 +6114,12 @@ pub fn hugs_grisly_guardian() -> CardDefinition {
     }
 }
 
-/// Gloomfang Mauler — {5}{B}{B} 5/5 Nightmare. Swampcycling {2}. Backup 2.
+/// Gloomfang Mauler — {5}{B}{B} 5/5 Nightmare with Menace. Swampcycling {2}.
+/// Backup 2.
+///
+/// The Menace is printed on the card *and* is what Backup grants when it
+/// targets another creature; it shipped with neither
+/// (`audit_catalog_stats.py`).
 pub fn gloomfang_mauler() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
@@ -6127,8 +6132,11 @@ pub fn gloomfang_mauler() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
-        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Swamp)],
-        triggered_abilities: vec![crate::effect::shortcut::backup(2, vec![])],
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Swamp),
+        ],
+        triggered_abilities: vec![crate::effect::shortcut::backup(2, vec![Keyword::Menace])],
         ..Default::default()
     }
 }
