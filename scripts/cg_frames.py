@@ -26,7 +26,7 @@ measurement:
   shape, proved rather than suspected** — every one of those invocations paid
   a prologue for a call it never made, and outlining the calling paths behind
   an `#[inline(never)]` half removes it. `ability_strip_off_battlefield` reads
-  3 / 0.00 (`(-135)`); `can_grant_keyword` reads 2 / 0.88 and is *not* the
+  3 / 0.00 (`(-136)`); `can_grant_keyword` reads 2 / 0.88 and is *not* the
   shape, which cost nothing to learn because the column said so.
 * A recursive callee counts in `out/call`, honestly: recursion needs the frame
   too. `requirement_live_leaves` reads 0.54 and `(-126)`'s rule prices the

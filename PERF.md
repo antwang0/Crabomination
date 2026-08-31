@@ -10157,7 +10157,7 @@ the table above is safe to compress:
 
 ## Log
 
-### Hundred-and-fourteenth pass (2) — `(-135)`, and the column that turned `cg_frames.py` from advisory into decisive
+### Hundred-and-fourteenth pass (2) — `(-136)`, and the column that turned `cg_frames.py` from advisory into decisive
 
 `(-134)` came off `cg_frames.py`'s top row *against* that row's own text, so
 the first thing this pass did was ask why the instrument could not tell. It
@@ -10169,7 +10169,7 @@ had one column where it needed two:
 
 **`body calls > 0` with `out/call` ~ 0 is the shape, proved rather than
 suspected**: every one of those invocations paid a prologue for a call it
-never made. The column is four lines of `cg_frames.py` (`(-135)`'s first
+never made. The column is four lines of `cg_frames.py` (`(-136)`'s first
 commit) and it re-ranked the table immediately:
 
 ```text
@@ -18423,6 +18423,21 @@ is a function whose body is straight-line, and straight-line body is the one
 thing neither outlining nor inlining touches. **Do not re-open this on the
 1.777 %.**
 
+⚠ **CORRECTED BY MEASUREMENT — THE CEILING BELOW IS LOW BY 2.3x AND THE
+ARITHMETIC THAT PRODUCED IT IS THE REASON.** The entry prices a row at
+`calls x prologue x 2` and says 0.172 % is what the class can pay "with every
+frame removed outright". `(-136)` removed five of these frames and measured
+`cube` **-0.321 %** — nearly twice the stated ceiling for the whole class —
+because **once the fast path is a handful of instructions, LLVM inlines the
+function away entirely**, so the saving is the frame *plus* the call, the
+return and the argument setup at every site.
+`ability_strip_off_battlefield`, `counter_drain_cost` and
+`drop_pending_choices_if_game_over` stopped being functions. **The frame
+column is a floor on a private function and an estimate on a `pub` one**
+(`(-134)`'s cross-crate `has_keyword` stayed a call and landed at 0.215 %
+against its 0.23 % prediction). Read the rest of this entry with that
+correction; its per-row *ranking* held up, only its ceiling did not.
+
 **(-132) CLOSED WITHOUT A BUILD — THE CLASS IS EXHAUSTED. THE TWO ROWS OVER
 0.2 % ARE BOTH REFUTED AND EVERY ROW THAT IS ACTUALLY THE SHAPE IS UNDER
 0.06 %.** Re-read at the tip (`cube` 2,502,879,696 Ir) after `(-129)`/`(-131)`
@@ -18454,7 +18469,11 @@ nothing cold to move.
 **Two things worth keeping from the read.** `effect_produced_colors` has no
 jump table at all — LLVM turned its `Seq` recursion into a loop over the tail
 and dispatches the rest as a compare chain, so its "2 body calls" are one
-self-call in an already-optimal shape. And `CardInstance::toughness` has
+self-call in an already-optimal shape. (⚠ **"already-optimal" was wrong**:
+`(-136)` put both recursive arms behind an `#[inline(never)]` half and the
+row went 2,744,822 -> 1,548,200 Ir. A tail-recursion loop still needs the
+callee-saved registers, and 80 % of the asks never enter it.) And
+`CardInstance::toughness` has
 **zero** body calls with a four-instruction prologue: LLVM wanted the
 callee-saved registers for its own arithmetic, which is the column's
 `0 means nothing to outline` note, confirmed.
@@ -18497,7 +18516,7 @@ frame row as "what does the common *answer* cost", not "what does this function
 cost".** What remains of the 40-byte `Keyword` scanned linearly is a separate
 candidate and is now much smaller.
 
-**CLOSED at the hundred-and-fourteenth pass — `(-134)` + `(-135)` took `cube`
+**CLOSED at the hundred-and-fourteenth pass — `(-134)` + `(-136)` took `cube`
 -0.536 % between them, and the entry's ranking question is now a column rather
 than a reading.** `cg_frames.py` prints `out/call` (calls actually made per
 invocation, out of the dump's edge records); **`body calls` > 0 with
@@ -18522,7 +18541,7 @@ What is left on the table, and why neither was taken:
   only if a single early-out turns up.
 
 **Re-run the instrument after anything lands — outlining changes what gets
-inlined**, and three of `(-135)`'s five stopped being functions at all.
+inlined**, and three of `(-136)`'s five stopped being functions at all.
 
 
 **ADDENDUM, MEASURED — `has_keyword` WAS BUILT ANYWAY AND THE READING ABOVE IS

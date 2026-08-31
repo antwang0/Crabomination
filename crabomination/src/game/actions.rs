@@ -194,7 +194,7 @@ fn counter_drain_cost(
 ) -> Option<(Option<Vec<crate::card::CounterType>>, u32, crate::card::SelectionRequirement)> {
     // Both fields are `None` on every ability a `cube` run activates, and the
     // two clone paths are what the eleven `call` sites and the frame are for.
-    // See `(-135)`.
+    // See `(-136)`.
     if ability.remove_counter_among_filter.is_none() && ability.remove_counter_among_kinds.is_none()
     {
         return None;
@@ -2939,7 +2939,7 @@ pub(crate) fn effect_produced_colors(effect: &Effect) -> crate::mana::ColorSet {
         },
         // The two recursive arms are this function's only `call` sites and
         // they fire on 20 % of asks; out of line the other 80 % pay no frame.
-        // See `(-135)`.
+        // See `(-136)`.
         Effect::Seq(_) | Effect::If { .. } => effect_produced_colors_nested(effect),
         _ => ColorSet::empty(),
     }

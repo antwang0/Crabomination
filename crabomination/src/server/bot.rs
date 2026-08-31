@@ -4244,7 +4244,7 @@ fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
     match eff {
         Effect::AddMana { pool, .. } => accumulate_payload_colors(pool, set),
         // The recursion is the only `call` site and it fires on 1 % of asks;
-        // out of line the rest pay no frame. See `(-135)`.
+        // out of line the rest pay no frame. See `(-136)`.
         Effect::Seq(v) => accumulate_mana_colors_seq(v, set),
         _ => {}
     }

@@ -8802,7 +8802,7 @@ impl GameState {
     pub(crate) fn drop_pending_choices_if_game_over(&mut self) -> bool {
         // The two drops are ten `call` sites of drop glue, and the game is
         // over on none of the 31 k asks a `cube` run makes. Out of line they
-        // take the frame with them; see `(-135)`.
+        // take the frame with them; see `(-136)`.
         if self.game_over.is_none() {
             return false;
         }
@@ -9094,7 +9094,7 @@ impl GameState {
         // Every remaining route needs a card in a command zone or an emblem,
         // and the ask is 104 k a `cube` run against zero of either. The
         // emptiness test is call-free, so this half holds no callee-saved
-        // register and pays no frame; see `(-135)`.
+        // register and pays no frame; see `(-136)`.
         if self.players.iter().all(|p| p.command.is_empty() && p.emblems.is_empty()) {
             return false;
         }
