@@ -17835,6 +17835,32 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-125) NOT A CANDIDATE — A NOTE ON `perms`, AND THE RULE THAT KEPT IT FROM
+BECOMING ONE.** `LayerFreezeState::perms` is a
+`SmallVec<[(CardId, Arc<ComputedPermanent>); 8]>`, and the encoder's scope
+caches ~23 permanents, so it spills and then grows on each of its 6,282 scopes.
+That is real. **It is not the explanation of `permanent_value_with`'s 1.29
+allocations per call** — the entry above this one, written by a concurrent
+session off dumps that already existed, answers that with the memo's overlay
+`Box`, and this session's spill hypothesis was reasoned from the inline size
+rather than measured. Theirs stands.
+
+**What is worth keeping is why the spill was not filed as a candidate.** Both
+fixes are bad trades: raising the inline capacity adds ~384 bytes to
+`GameState`, whose clone is 1.23 % of the actor and calls `__memcpy` 218,188
+times — `(-74)`'s lever, which did not pay — and reserving at the push is a
+loss unconditionally, because a bot scope asks about one or two permanents and
+would spill where the inline eight served it. Either is worth **~0.2 % of the
+actor**, and `(-123)` measured this workload's ambient codegen band at
+**0.18 %**.
+
+**The rule: when the effect you are chasing is smaller than the instrument's
+band, change the instrument, not the effect.** On the actor that means pricing
+a change on *allocation counts* (`cg_contexts.py __rust_alloc`, before and
+after) and treating the Ir total as confirmation at best. Nothing in this file
+had said that, because on `bot_ladder` the band is 0.006 % and the question
+never came up.
+
 **(-124) REFUTED BEFORE A BUILD WAS SPENT ON IT, BY THE DUMP THAT PROPOSED IT
 — AND THE MISTAKE IS `(-82)`'s RULE, VERBATIM.** The entry claimed the encoder
 was a caller whose reads are never shared, so that the `Arc` and the freeze
