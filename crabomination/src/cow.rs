@@ -34,6 +34,19 @@ mod tests {
         assert_eq!(serde_json::to_string(&g).unwrap(), before, "rejected action left no trace");
     }
 
+    /// `GameState`'s size is the whole cost of a probe clone once the
+    /// containers are behind CoW handles — 544 Ir a clone is a `memcpy`, not
+    /// calls (PERF `(-143)`/`(-144)`). Two fields were 53 % of it and `None`
+    /// on essentially every clone; boxing them halved the struct. This guard
+    /// is what stops the next 800-byte field from landing inline unnoticed.
+    /// Raise it only with a `--bench`/callgrind reading that says the field
+    /// has to be inline.
+    #[test]
+    fn game_state_stays_small() {
+        let n = std::mem::size_of::<crate::game::GameState>();
+        assert!(n <= 1_536, "GameState grew to {n} bytes (cap 1,536) — see PERF (-144)");
+    }
+
     #[test]
     fn iteration_and_serde_round_trip() {
         let zone: CowBox<Vec<u32>> = vec![5, 6].into();
@@ -45,3 +58,4 @@ mod tests {
         assert_eq!(back, zone);
     }
 }
+

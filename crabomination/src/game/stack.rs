@@ -3972,10 +3972,10 @@ impl GameState {
             .iter()
             .map(|c| (c.id, c.definition.name.to_string()))
             .collect();
-        self.pending_decision = Some(crate::game::types::PendingDecision {
+        self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
             decision: Decision::Discard { player, count: excess, hand },
             resume: crate::game::types::ResumeContext::CleanupDiscard { player },
-        });
+        }));
     }
 
     /// CR 514.2 onward — the part of cleanup that runs after the discard-down

@@ -1938,13 +1938,18 @@ pub struct GameState {
     /// Set when effect resolution needs player input. Check each frame in the
     /// client to render the appropriate decision modal; clear via
     /// `submit_decision`. While `Some`, no other game actions are permitted.
-    pub pending_decision: Option<PendingDecision>,
+    /// Boxed: `PendingDecision` is 856 bytes and the field is `None` on
+    /// essentially every clone, so inline it was 28 % of `GameState`'s size
+    /// paid by every `memcpy` of the state. PERF `(-144)`.
+    pub pending_decision: Option<Box<PendingDecision>>,
     /// One-shot signal from `resolve_effect` to the enclosing resolver when an
     /// effect needs to suspend. Callers check this after each effect call, wrap
     /// it up in `pending_decision` with the full resume context, and return.
     /// `remaining` carries any sibling effects still queued behind the one that
     /// suspended (e.g. `Draw` after `Scry` in a Seq).
-    pub(crate) suspend_signal: Option<(Decision, PendingEffectState, Effect)>,
+    /// Boxed for the same reason as `pending_decision` — the tuple is 744
+    /// bytes and is `Some` only across a suspension. PERF `(-144)`.
+    pub(crate) suspend_signal: Option<Box<(Decision, PendingEffectState, Effect)>>,
     /// True when an effect has flagged "prevent all combat damage this turn"
     /// (CR 615 — damage prevention as a replacement effect). Wired by
     /// Owlin Shieldmage's ETB trigger, Holy Day, Hallowed Burial-adjacent
@@ -16341,7 +16346,7 @@ impl GameState {
         let stashed_pick = self.pending_landcycle_pick.take();
         if stashed_pick.is_none() && self.players[seat].wants_ui && matches.len() > 1 {
             let eligible: Vec<crate::card::CardId> = matches.iter().map(|(id, _)| *id).collect();
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::SearchLibrary {
                     player: seat,
                     candidates: matches,
@@ -16351,7 +16356,7 @@ impl GameState {
                     actor: seat,
                     action: Box::new(GameAction::Landcycle { card_id }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
         self.players[seat].mana_pool.pay(&cycling_cost).map_err(GameError::Mana)?;
@@ -19650,7 +19655,7 @@ impl GameState {
                         (c.source, name)
                     })
                     .collect();
-                self.pending_decision = Some(PendingDecision {
+                self.pending_decision = Some(Box::new(PendingDecision {
                     decision: crate::decision::Decision::OrderTriggers {
                         player: ctrl,
                         triggers: labels,
@@ -19660,7 +19665,7 @@ impl GameState {
                         run: run.to_vec(),
                         rest: rest[j..].to_vec(),
                     },
-                });
+                }));
                 return None;
             }
             i = j;
@@ -19856,13 +19861,13 @@ impl GameState {
                         description,
                     }
                 };
-                self.pending_decision = Some(PendingDecision {
+                self.pending_decision = Some(Box::new(PendingDecision {
                     decision,
                     resume: ResumeContext::TriggerTargetPick {
                         pending,
                         remaining,
                     },
-                });
+                }));
                 return;
             }
             // Prefer a non-source target: an "another target creature" trigger
@@ -20315,7 +20320,7 @@ impl GameState {
             let max = self.battlefield[pos]
                 .counter_count(crate::card::CounterType::Loyalty);
             let source_name = self.battlefield[pos].definition.name.to_string();
-            self.pending_decision = Some(PendingDecision {
+            self.pending_decision = Some(Box::new(PendingDecision {
                 decision: Decision::ChooseAmount {
                     source: card_id,
                     max,
@@ -20330,7 +20335,7 @@ impl GameState {
                         x_value: None,
                     }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
 
@@ -20366,7 +20371,7 @@ impl GameState {
                 return Err(GameError::SelectionRequirementViolated);
             }
             let source_name = self.battlefield[pos].definition.name.to_string();
-            self.pending_decision = Some(PendingDecision {
+            self.pending_decision = Some(Box::new(PendingDecision {
                 decision: Decision::ChooseCards {
                     source: card_id,
                     prompt: format!(
@@ -20387,7 +20392,7 @@ impl GameState {
                         x_value,
                     }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
 
@@ -20640,17 +20645,17 @@ impl GameState {
             ))
             .map(|c| c.id)
             .collect();
-        self.pending_decision = Some(PendingDecision {
+        self.pending_decision = Some(Box::new(PendingDecision {
             decision: Decision::Mulligan { player, hand, mulligans_taken, serum_powders },
             resume: ResumeContext::Mulligan { player, mulligans_taken, next_player },
-        });
+        }));
     }
 
     /// Submit an answer to the currently-pending decision and resume resolution.
     /// Fails if no decision is pending, or the answer shape doesn't match the
     /// decision kind.
     pub fn submit_decision(&mut self, answer: DecisionAnswer) -> Result<Vec<GameEvent>, GameError> {
-        let pd = self
+        let pd = *self
             .pending_decision
             .take()
             .ok_or(GameError::NoDecisionPending)?;
@@ -20661,7 +20666,7 @@ impl GameState {
         // so the answer is refused (and the decision put back).
         if matches!(answer, DecisionAnswer::CancelAction) {
             if !pd.resume.is_action_replay() {
-                self.pending_decision = Some(pd);
+                self.pending_decision = Some(Box::new(pd));
                 return Err(GameError::DecisionAnswerMismatch);
             }
             return Ok(vec![]);
@@ -20744,7 +20749,7 @@ impl GameState {
                                 .iter()
                                 .map(|c| (c.id, c.definition.name.to_string()))
                                 .collect();
-                            self.pending_decision = Some(PendingDecision {
+                            self.pending_decision = Some(Box::new(PendingDecision {
                                 decision: Decision::PutOnLibrary {
                                     player,
                                     count: mulligans_taken,
@@ -20754,7 +20759,7 @@ impl GameState {
                                 // PutOnLibrary handler below knows how many
                                 // cards to bottom.
                                 resume: ResumeContext::Mulligan { player, mulligans_taken, next_player },
-                            });
+                            }));
                             return Ok(vec![]);
                         }
                         self.advance_mulligan(next_player);
@@ -20779,7 +20784,7 @@ impl GameState {
                                 .iter()
                                 .map(|c| (c.id, c.definition.name.to_string()))
                                 .collect();
-                            self.pending_decision = Some(PendingDecision {
+                            self.pending_decision = Some(Box::new(PendingDecision {
                                 decision: Decision::PutOnLibrary {
                                     player,
                                     count: still_owed,
@@ -20790,7 +20795,7 @@ impl GameState {
                                     mulligans_taken: still_owed,
                                     next_player,
                                 },
-                            });
+                            }));
                             return Ok(vec![]);
                         }
                         self.advance_mulligan(next_player);
@@ -22615,8 +22620,8 @@ impl GameState {
         if self.drop_pending_choices_if_game_over() {
             return Ok(events);
         }
-        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
-            self.pending_decision = Some(PendingDecision {
+        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take().map(|b| *b) {
+            self.pending_decision = Some(Box::new(PendingDecision {
                 decision,
                 resume: ResumeContext::Spell {
                     card: Box::new(card),
@@ -22630,7 +22635,7 @@ impl GameState {
                     in_progress,
                     remaining,
                 },
-            });
+            }));
             return Ok(events);
         }
         // CR 702.50 — Epic: on resolution the caster snapshots the spell
@@ -23013,8 +23018,8 @@ impl GameState {
         if self.drop_pending_choices_if_game_over() {
             return Ok(());
         }
-        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
-            self.pending_decision = Some(PendingDecision {
+        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take().map(|b| *b) {
+            self.pending_decision = Some(Box::new(PendingDecision {
                 decision,
                 resume: ResumeContext::Trigger {
                     source,
@@ -23031,7 +23036,7 @@ impl GameState {
                     trigger_player,
                     additional_targets,
                 },
-            });
+            }));
         }
         Ok(())
     }
@@ -23057,8 +23062,8 @@ impl GameState {
         if self.drop_pending_choices_if_game_over() {
             return Ok(());
         }
-        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
-            self.pending_decision = Some(PendingDecision {
+        if let Some((decision, in_progress, remaining)) = self.suspend_signal.take().map(|b| *b) {
+            self.pending_decision = Some(Box::new(PendingDecision {
                 decision,
                 resume: ResumeContext::Ability {
                     source,
@@ -23067,7 +23072,7 @@ impl GameState {
                     in_progress,
                     remaining,
                 },
-            });
+            }));
         }
         Ok(())
     }

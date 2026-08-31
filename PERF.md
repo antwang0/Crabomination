@@ -10305,6 +10305,59 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-sixteenth pass (6) — `(-144)`: `GameState` was 3,008 bytes and two `None`s were half of it
+
+**`cube` -0.340 % / `fixed` -0.647 % / `sealed` -0.493 %** off the `(-143)`
+tip (`profiling-fast --no-default-features`, callgrind, six games, one thread,
+seed 1).
+
+```text
+  pool    base (-143)     (-144)          delta
+  cube    2,471,954,386   2,463,560,588   -0.3396 %
+  fixed     914,635,420     908,721,694   -0.6466 %
+  sealed  2,502,403,614   2,490,073,836   -0.4927 %
+```
+
+`(-143)` left the clone as a pure struct `memcpy` and said the next lever was
+the struct's *size*, which nobody had measured. It is:
+
+```text
+  size_of::<GameState>()                                     3,008 bytes
+    pending_decision: Option<PendingDecision>                  856   28.5 %
+    suspend_signal: Option<(Decision, PendingEffectState, Effect)>
+                                                               744   24.7 %
+    the other 165 fields                                     1,408
+  after boxing both                                          1,424   -52.7 %
+```
+
+**Both are `None` on essentially every clone** — a pending decision exists
+only across a suspension, and `suspend_signal` only for the instants between
+`resolve_effect` raising it and the enclosing resolver wrapping it up. Inline,
+their 1,600 bytes were copied by every `memcpy` of the state: the probe clone,
+`perform_action`'s checkpoint, the `*self = checkpoint` restore, every move.
+`Option<Box<_>>` costs 8 bytes and one malloc per suspension.
+
+**The row is `__memcpy`, and it is the whole delta:**
+
+```text
+  fixed                        (-143)        (-144)
+  __memcpy_avx_unaligned   18,882,081    13,411,640   -5,470,441  -29.0 %
+  GameState::clone self     6,137,744     6,006,028     -131,716
+  program                 914,635,420   908,721,694   -5,913,726
+```
+
+`GameState::clone` barely moves because its scalar tail is already emitted as
+a `__memcpy` call and charged there — 5.47 M of the program's 5.91 M delta is
+that one row, on 11,280 clones plus every other whole-state copy in the run.
+
+**`crate::cow`'s `game_state_stays_small` is the guard that keeps it.** A
+1,536-byte cap with a comment saying why; the next 800-byte field that wants
+to be inline has to bring a reading. This is the cheapest test in the suite
+and it protects the largest single structural number in the profile.
+
+**Cumulative for the two passes**, off `1a783e04`: `cube` **-1.610 %**,
+`fixed` **-2.011 %**, `sealed` **-1.414 %**.
+
 ### Hundred-and-sixteenth pass (4) — `(-142)`: the same grouping on the CoW deep copies, where the order is the DECLARATION
 
 **`cube` -0.078 % / `fixed` -0.090 %** against `(-141)`, i.e. **-0.232 % /
@@ -18892,23 +18945,16 @@ system allocator in this workload (score allocation trades with it), and the
 60-second IR probe recipe is in the Log.
 
 **(-138) THE QUEUE WAS RE-PROFILED FROM SCRATCH AT `bda1a69d` AND THE HONEST
-**(-144) `GameState::clone` IS STILL 544 Ir A CLONE AND WHAT IS LEFT IS THE
-STRUCT'S SIZE.** `(-143)` took the container half — 1,137 -> 544 self Ir a
-clone, and the callee table's eight `Vec::clone`s and three `RawTable::clone`s
-went with it; `(-140)`/`(-141)` had already taken the scalar-grouping half.
-What remains is ~160 scalar fields copied unconditionally, i.e. a struct
-memcpy: 15.0 M Ir on `cube` (0.61 %) over 22,556 calls, 6,137,744 on `fixed`
-(0.67 %) over 11,280. **Nobody has measured
-`size_of::<GameState>()` or ranked its fields by size.** The shape to look for
-is a large *inline* payload that is almost always the empty variant —
-`suspend_signal: Option<(Decision, PendingEffectState, Effect)>` is the
-obvious suspect (`Effect` is the engine's widest enum and the field is `None`
-on essentially every clone), and boxing one costs a pointer chase on a field
-read ~85 times in the tree and nothing per clone. **Measure first**: print
-`size_of` for the struct and for each candidate field, and only then decide
-whether a box pays. ⚠ This is the *opposite* trade from `(-143)`: a box costs
-per **read**, so the pre-check is a read count, not a reach count.
-
+**(-144) CLOSED — TAKEN, `cube` -0.340 % / `fixed` -0.647 % / `sealed`
+-0.493 %.** `size_of::<GameState>()` was **3,008 bytes** and two fields that
+are `None` on essentially every clone were **1,600 of them**:
+`pending_decision` 856 and `suspend_signal` 744. Boxed, the struct is **1,424**
+and `__memcpy` falls 29 % on `fixed`. `crate::cow::game_state_stays_small`
+caps it at 1,536 bytes so the next inline giant has to bring a reading.
+**What is left of the clone is 165 scalar fields in 1,424 bytes and there is
+no second `Option` of that size** — `PendingEffectState` 208, `StackItem` 328
+and `DecisionAnswer` 48 are all already behind a `Vec` or a `Box`. Do not
+retake the size angle without a fresh `size_of` reading.
 
 **(-138) TAKEN BY `(-143)` FOR ITS `GameState::clone` HALF (`cube` -1.274 %
 / `fixed` -1.373 % / `sealed` -0.926 %) — the rest of the re-profile stands.

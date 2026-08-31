@@ -2979,14 +2979,14 @@ impl GameState {
             if !self.combat_damage_order.contains_key(&atk.id) && !free_divider {
                 let decision = self.combat_damage_order_decision(atk.id, &blocker_ids);
                 if assigner_ui {
-                    self.pending_decision = Some(PendingDecision {
+                    self.pending_decision = Some(Box::new(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
                             player: assigner,
                             attacker: atk.id,
                             kind: CombatDecisionKind::Order,
                         },
-                    });
+                    }));
                     return true;
                 }
                 let answer = self.decider.decide(&decision);
@@ -3019,14 +3019,14 @@ impl GameState {
                 let decision =
                     self.assign_combat_damage_decision(atk.id, total_power, &lethals);
                 if assigner_ui {
-                    self.pending_decision = Some(PendingDecision {
+                    self.pending_decision = Some(Box::new(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
                             player: assigner,
                             attacker: atk.id,
                             kind: CombatDecisionKind::Assign,
                         },
-                    });
+                    }));
                     return true;
                 }
                 let answer = self.decider.decide(&decision);
@@ -3080,14 +3080,14 @@ impl GameState {
                 let default_order = blocked.clone();
                 let decision = self.combat_damage_order_decision(bid, &default_order);
                 if assigner_ui {
-                    self.pending_decision = Some(PendingDecision {
+                    self.pending_decision = Some(Box::new(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
                             player: assigner,
                             attacker: bid,
                             kind: CombatDecisionKind::Order,
                         },
-                    });
+                    }));
                     return true;
                 }
                 let answer = self.decider.decide(&decision);
@@ -3107,14 +3107,14 @@ impl GameState {
                 }
                 let decision = self.assign_combat_damage_decision(bid, total_power, &lethals);
                 if assigner_ui {
-                    self.pending_decision = Some(PendingDecision {
+                    self.pending_decision = Some(Box::new(PendingDecision {
                         decision,
                         resume: ResumeContext::CombatDamage {
                             player: assigner,
                             attacker: bid,
                             kind: CombatDecisionKind::Assign,
                         },
-                    });
+                    }));
                     return true;
                 }
                 let answer = self.decider.decide(&decision);

@@ -3434,10 +3434,10 @@ mod tests {
             .iter()
             .map(|c| (c.id, c.definition.name.to_string()))
             .collect();
-        g.pending_decision = Some(crate::game::types::PendingDecision {
+        g.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
             decision: Decision::Discard { player: 0, count: 1, hand },
             resume: crate::game::types::ResumeContext::CleanupDiscard { player: 0 },
-        });
+        }));
 
         let spec = project_spectator(&g);
         let pd = spec.pending_decision.expect("spectator sees a decision is pending");

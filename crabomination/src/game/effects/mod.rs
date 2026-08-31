@@ -666,11 +666,11 @@ impl GameState {
         }
         let decision = Decision::OptionalTrigger { source, description };
         if self.players.get(seat).is_some_and(|p| p.wants_ui) {
-            self.suspend_signal = Some((
+            self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatBoolAnswerPending { player: seat },
                 effect.clone(),
-            ));
+            )));
             return None;
         }
         let b = matches!(self.decider.decide(&decision), DecisionAnswer::Bool(true));
@@ -828,11 +828,11 @@ impl GameState {
         }
         let decision = Decision::ChooseAmount { source, prompt, max };
         if self.seat_suspends(seat) {
-            self.suspend_signal = Some((
+            self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatAmountAnswerPending { player: seat, max },
                 effect.clone(),
-            ));
+            )));
             return None;
         }
         let n = match self.decider.decide(&decision) {
@@ -866,11 +866,11 @@ impl GameState {
         }
         let decision = Decision::ChooseOption { source, prompt, options };
         if self.seat_suspends(seat) {
-            self.suspend_signal = Some((
+            self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatAmountAnswerPending { player: seat, max: last as u32 },
                 effect.clone(),
-            ));
+            )));
             return None;
         }
         let n = match self.decider.decide(&decision) {
@@ -917,11 +917,11 @@ impl GameState {
                 if self.players.get(seat).is_some_and(|p| p.wants_ui)
                     && matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
                 {
-                    self.suspend_signal = Some((
+                    self.suspend_signal = Some(Box::new((
                         decision,
                         PendingEffectState::CardsAnswerPending { player: seat },
                         effect.clone(),
-                    ));
+                    )));
                     return None;
                 }
                 self.decider.decide(&decision)
@@ -1007,11 +1007,11 @@ impl GameState {
         }
         let decision = Decision::ChooseCards { source, prompt, candidates: candidates.clone(), min, max, eligible: None };
         if self.seat_suspends(seat) {
-            self.suspend_signal = Some((
+            self.suspend_signal = Some(Box::new((
                 decision,
                 PendingEffectState::SeatCardsAnswerPending { player: seat },
                 effect.clone(),
-            ));
+            )));
             return None;
         }
         let ids = if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
@@ -3783,7 +3783,7 @@ impl GameState {
                     // A child effect signalled suspension — append the rest of
                     // this Seq after whatever remaining effects it already
                     // saved (the child's own continuation runs first).
-                    if let Some((_, _, remaining)) = self.suspend_signal.as_mut() {
+                    if let Some((_, _, remaining)) = self.suspend_signal.as_deref_mut() {
                         let tail: Vec<Effect> = steps[idx + 1..].to_vec();
                         if !tail.is_empty() {
                             let carried = std::mem::replace(remaining, Effect::Noop);
@@ -4674,11 +4674,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[me].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: *max },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -5010,7 +5010,7 @@ impl GameState {
                         } else {
                             self.run_effect(m, ctx, events)?;
                         }
-                        if let Some((_, _, remaining)) = self.suspend_signal.as_mut() {
+                        if let Some((_, _, remaining)) = self.suspend_signal.as_deref_mut() {
                             let tail: Vec<Effect> = modes[idx + 1..].to_vec();
                             if !tail.is_empty() {
                                 let carried = std::mem::replace(remaining, Effect::Noop);
@@ -5040,11 +5040,11 @@ impl GameState {
                         Some(DecisionAnswer::Mode(i)) => i.min(modes.len().saturating_sub(1)),
                         Some(_) => 0,
                         None if self.players[ctx.controller].wants_ui => {
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 decision,
                                 PendingEffectState::ModeAnswerPending { num_modes: modes.len() },
                                 effect.clone(),
-                            ));
+                            )));
                             return Ok(());
                         }
                         // Defensive: a deferred pick reaching a non-UI
@@ -5087,11 +5087,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -5176,11 +5176,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -5226,11 +5226,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::ModesAnswerPending { num_modes: modes.len() },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -5457,11 +5457,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::MayDoAnswerPending,
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -5656,11 +5656,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: pool_max },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -5741,11 +5741,11 @@ impl GameState {
                     Some(DecisionAnswer::Amount(n)) => n.min(cap),
                     Some(_) => 0,
                     None if self.seat_suspends(ctx.controller) => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: cap },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => match self.decider.decide(&decision) {
@@ -6175,11 +6175,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::DivisionAnswerPending,
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -6255,11 +6255,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::DivisionAnswerPending,
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -6412,11 +6412,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::DivisionAnswerPending,
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -7067,7 +7067,7 @@ impl GameState {
                         Some(_) => 0,
                         None if self.seat_suspends(p) => {
                             let source = ctx.source.unwrap_or(CardId(0));
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 Decision::ChooseAmount {
                                     source,
                                     prompt: "Pay how much {E}?".to_string(),
@@ -7075,7 +7075,7 @@ impl GameState {
                                 },
                                 PendingEffectState::AmountAnswerPending { max: avail },
                                 effect.clone(),
-                            ));
+                            )));
                             return Ok(());
                         }
                         None => avail,
@@ -7783,11 +7783,11 @@ impl GameState {
                 // surface the decision; `apply_pending_effect_answer` resumes
                 // via `PendingEffectState::LearnPending`.
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((
+                    self.suspend_signal = Some(Box::new((
                         decision,
                         crate::game::types::PendingEffectState::LearnPending { player: p },
                         Effect::Noop,
-                    ));
+                    )));
                     return Ok(());
                 }
                 let choice = match self.decider.decide(&decision) {
@@ -7860,7 +7860,7 @@ impl GameState {
                             amount: crate::effect::Value::Const(n as i32),
                             random: *random,
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -9212,7 +9212,7 @@ impl GameState {
                                 max: max.clone(),
                             }
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -9353,7 +9353,7 @@ impl GameState {
                 // and `submit_decision` will apply the answer + run any
                 // remaining Seq effects.
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending_state, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending_state, Effect::Noop)));
                     return Ok(());
                 }
 
@@ -10304,14 +10304,14 @@ impl GameState {
                             // Surface a `ChooseColor` decision to the UI.
                             // After the player answers, `apply_pending_effect_answer`
                             // adds `n` mana of the chosen color.
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 crate::decision::Decision::ChooseColor {
                                     source,
                                     legal,
                                 },
                                 PendingEffectState::AnyOneColorPending { player: p, count: n, restriction },
                                 Effect::Noop,
-                            ));
+                            )));
                             return Ok(());
                         }
                         let answer = self.decider.decide(
@@ -10345,11 +10345,11 @@ impl GameState {
                         if self.players[p].wants_ui {
                             // Surface the color choice to the UI (mirrors the
                             // AnyOneColor arm); resume adds 1 of the chosen color.
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 crate::decision::Decision::ChooseColor { source, legal },
                                 PendingEffectState::AnyOneColorPending { player: p, count: 1, restriction },
                                 Effect::Noop,
-                            ));
+                            )));
                             return Ok(());
                         }
                         let answer = self.decider.decide(
@@ -10370,11 +10370,11 @@ impl GameState {
                             Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
                         ];
                         if self.players[p].wants_ui {
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 crate::decision::Decision::ChooseColor { source, legal },
                                 PendingEffectState::DevotionColorPending { player: p },
                                 Effect::Noop,
-                            ));
+                            )));
                             return Ok(());
                         }
                         let answer = self.decider.decide(
@@ -10833,11 +10833,11 @@ impl GameState {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
                     Some(_) => 0,
                     None if self.seat_suspends(ctx.controller) => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: *max },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     // Decider first (scripted tests pick real cutoffs);
@@ -14472,7 +14472,7 @@ impl GameState {
                 };
                 let pending = PendingEffectState::ReplaceCreatureTypeTextPending { target_id };
                 if self.players[ctx.controller].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -19042,11 +19042,11 @@ impl GameState {
                             count: crate::effect::Value::Const(n as i32),
                             filter: filter.clone(),
                         });
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::SacrificePending { player: p },
                             rest,
-                        ));
+                        )));
                         return Ok(());
                     }
                     let ids = self.auto_pick_sacrifices(&candidates, n, source_id, false, false);
@@ -19518,11 +19518,11 @@ impl GameState {
                         source_name: ctx.source_name.unwrap_or("").to_string(),
                         description: "choose a permanent to sacrifice".into(),
                     };
-                    self.suspend_signal = Some((
+                    self.suspend_signal = Some(Box::new((
                         decision,
                         PendingEffectState::SacrificePending { player: p },
                         Effect::Noop,
-                    ));
+                    )));
                     return Ok(());
                 }
                 Ok(())
@@ -20310,14 +20310,14 @@ impl GameState {
                     self.run_effect(&one, ctx, events)?;
                     // A `wants_ui` pick suspends: splice the outstanding picks
                     // in after the suspend's own continuation and hand back.
-                    if let Some((d, p, tail)) = self.suspend_signal.take() {
+                    if let Some((d, p, tail)) = self.suspend_signal.take().map(|b| *b) {
                         let rest = Effect::SearchUpToN {
                             who: who.clone(),
                             filter: filter.clone(),
                             to: to.clone(),
                             count: crate::effect::Value::Const(n - done - 1),
                         };
-                        self.suspend_signal = Some((d, p, Effect::Seq(vec![tail, rest])));
+                        self.suspend_signal = Some(Box::new((d, p, Effect::Seq(vec![tail, rest]))));
                         return Ok(());
                     }
                 }
@@ -20480,7 +20480,7 @@ impl GameState {
                 };
 
                 if self.players[picker].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
 
@@ -21148,7 +21148,7 @@ impl GameState {
                     source: ctx.source,
                 };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -21218,7 +21218,7 @@ impl GameState {
                     source: ctx.source,
                 };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -21271,7 +21271,7 @@ impl GameState {
                     source: ctx.source,
                 };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -21504,7 +21504,7 @@ impl GameState {
                 let decision = Decision::SearchLibrary { player: p, candidates: candidates.clone(), eligible: None };
                 let pending = PendingEffectState::PutFromZonesPending { player: p };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 // Auto-pick: the highest-MV match ("may" never declined).
@@ -21806,7 +21806,7 @@ impl GameState {
                 };
                 let pending = PendingEffectState::NameDiscardMatchingPending { who };
                 if self.players[ctx.controller].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -21911,7 +21911,7 @@ impl GameState {
                 };
                 let pending = PendingEffectState::NameExileAllZonesPending { who };
                 if self.players[ctx.controller].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -21948,7 +21948,7 @@ impl GameState {
                     namer: ctx.controller,
                 };
                 if self.players[ctx.controller].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -22016,7 +22016,7 @@ impl GameState {
                         let rest = per_seat_continuation(&seats[i + 1..], |q| {
                             Effect::EachPlayerNamesCard { who: PlayerRef::Seat(q) }
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -22081,7 +22081,7 @@ impl GameState {
                 };
                 let pending = PendingEffectState::NameRevealTopPending { player: p, count: n };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -22398,7 +22398,7 @@ impl GameState {
                 };
                 let pending = PendingEffectState::TakeOnePerTypePending { player: p, revealed: revealed.clone() };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 // Auto path: greedy first-of-each-type (the apply step
@@ -23157,11 +23157,11 @@ impl GameState {
                     let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                         Some(a) => a,
                         None if self.players[p].wants_ui => {
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 decision,
                                 PendingEffectState::MayDoAnswerPending,
                                 effect.clone(),
-                            ));
+                            )));
                             return Ok(());
                         }
                         None => self.decider.decide(&decision),
@@ -24375,7 +24375,7 @@ impl GameState {
                                 extra_cost: *extra_cost,
                             }
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -24461,7 +24461,7 @@ impl GameState {
                 let decision = Decision::Discard { player: p, count: 1, hand: candidates };
                 let pending = PendingEffectState::HoneFromHandPending { target_player: p, count: n };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -24814,13 +24814,13 @@ impl GameState {
                 let decision =
                     Decision::ChooseColor { source: ctx.source.unwrap_or(CardId(0)), legal };
                 if self.seat_suspends(ctx.controller) {
-                    self.suspend_signal = Some((
+                    self.suspend_signal = Some(Box::new((
                         decision,
                         PendingEffectState::PreventFromChosenColorPending {
                             targets: vec![crate::game::types::PreventionTarget::Anything],
                         },
                         Effect::Noop,
-                    ));
+                    )));
                     return Ok(());
                 }
                 let color = match self.decider.decide(&decision) {
@@ -25262,7 +25262,7 @@ impl GameState {
                 let pending = PendingEffectState::PutOnLibraryPending { player: p, count: actual };
 
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 // Bot: auto-pick first N cards.
@@ -25299,7 +25299,7 @@ impl GameState {
                                 who: Selector::Player(crate::effect::PlayerRef::Seat(q)),
                             }
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     // Bot: put the first hand card on top.
@@ -25644,7 +25644,7 @@ impl GameState {
                             count: crate::effect::Value::Const(n as i32),
                             filter: filter.clone(),
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -25693,7 +25693,7 @@ impl GameState {
                                 reveal: crate::effect::Value::Const(cap as i32),
                             }
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -25740,7 +25740,7 @@ impl GameState {
                             count: crate::effect::Value::Const(n as i32),
                             filter: filter.clone(),
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -25786,7 +25786,7 @@ impl GameState {
                             count: crate::effect::Value::Const(n as i32),
                             filter: filter.clone(),
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -25839,7 +25839,7 @@ impl GameState {
                             filter: filter.clone(),
                             return_to: *return_to,
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -25895,7 +25895,7 @@ impl GameState {
                             link_to_source: lts,
                             face_down: fd,
                         });
-                        self.suspend_signal = Some((decision, pending, rest));
+                        self.suspend_signal = Some(Box::new((decision, pending, rest)));
                         return Ok(());
                     }
                     let answer = self.decider.decide(&decision);
@@ -26020,11 +26020,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[p].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -26068,11 +26068,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[p].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: life },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -26470,11 +26470,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[chooser].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::CreatureTypeAnswerPending,
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -26531,11 +26531,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[p].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: life },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -26560,7 +26560,7 @@ impl GameState {
                 let decision = Decision::SearchLibrary { player: p, candidates, eligible: None };
                 let pending = PendingEffectState::PayLifeLookPending { player: p, revealed };
                 if self.players[p].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -26584,11 +26584,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[payer].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: life },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -26635,7 +26635,7 @@ impl GameState {
                     revealed,
                 };
                 if self.players[payer].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -27322,7 +27322,7 @@ impl GameState {
                                 .to_string(),
                         };
                         if self.seat_suspends(caster) {
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 decision,
                                 PendingEffectState::MayCastExiledPending {
                                     player: caster,
@@ -27330,7 +27330,7 @@ impl GameState {
                                     decline: crate::game::types::MayCastDecline::ToBottom,
                                 },
                                 Effect::Noop,
-                            ));
+                            )));
                             return Ok(());
                         }
                         let cast = match self.decider.kind() {
@@ -28607,7 +28607,7 @@ impl GameState {
                 let pending =
                     PendingEffectState::ChooseCreatureTypePending { target_id, options };
                 if self.players[chooser].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -28695,7 +28695,7 @@ impl GameState {
                 };
                 let chooser = ctx.controller;
                 if self.players[chooser].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -28721,11 +28721,11 @@ impl GameState {
                     Some(DecisionAnswer::Amount(n)) => n.min(*max),
                     Some(_) => 0,
                     None if self.seat_suspends(ctx.controller) => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::AmountAnswerPending { max: *max },
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     // Consult the installed decider (ScriptedDecider tests);
@@ -29048,7 +29048,7 @@ impl GameState {
                 };
                 let pending = PendingEffectState::OpponentNameLockPending { caster };
                 if self.players[caster].wants_ui {
-                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    self.suspend_signal = Some(Box::new((decision, pending, Effect::Noop)));
                     return Ok(());
                 }
                 let answer = self.decider.decide(&decision);
@@ -30994,11 +30994,11 @@ impl GameState {
                 let answer = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => a,
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::CreatureTypeAnswerPending,
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => self.decider.decide(&decision),
@@ -31043,11 +31043,11 @@ impl GameState {
                     return Ok(());
                 }
                 if self.players[ctx.controller].wants_ui {
-                    self.suspend_signal = Some((
+                    self.suspend_signal = Some(Box::new((
                         decision,
                         PendingEffectState::PreventFromChosenColorPending { targets: recipients },
                         Effect::Noop,
-                    ));
+                    )));
                     return Ok(());
                 }
                 let color = match self.decider.decide(&decision) {
@@ -32278,7 +32278,7 @@ impl GameState {
                         // Auto seats treat the free cast as upside; declined
                         // hits go to the bottom per CR 702.85.
                         if self.seat_suspends(p) {
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 decision,
                                 PendingEffectState::MayCastExiledPending {
                                     player: p,
@@ -32286,7 +32286,7 @@ impl GameState {
                                     decline: crate::game::types::MayCastDecline::ToBottom,
                                 },
                                 Effect::Noop,
-                            ));
+                            )));
                             return Ok(());
                         }
                         let cast = match self.decider.kind() {
@@ -32470,7 +32470,7 @@ impl GameState {
                         // Discover was unreachable). Non-UI: free casts are
                         // upside, take them.
                         if self.seat_suspends(p) {
-                            self.suspend_signal = Some((
+                            self.suspend_signal = Some(Box::new((
                                 decision,
                                 PendingEffectState::MayCastExiledPending {
                                     player: p,
@@ -32478,7 +32478,7 @@ impl GameState {
                                     decline: crate::game::types::MayCastDecline::ToHand,
                                 },
                                 Effect::Noop,
-                            ));
+                            )));
                             return Ok(());
                         }
                         let cast = match self.decider.kind() {
@@ -33245,11 +33245,11 @@ impl GameState {
                 let take = match take_opt_scratch!(self.stashed_resolution_answer) {
                     Some(a) => matches!(a, DecisionAnswer::Bool(true)),
                     None if self.players[ctx.controller].wants_ui => {
-                        self.suspend_signal = Some((
+                        self.suspend_signal = Some(Box::new((
                             decision,
                             PendingEffectState::MayDoAnswerPending,
                             effect.clone(),
-                        ));
+                        )));
                         return Ok(());
                     }
                     None => match self.decider.kind() {

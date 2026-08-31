@@ -17617,14 +17617,14 @@ mod tests {
             .chain(lands.iter().copied())
             .map(|id| (id, String::new()))
             .collect();
-        g.pending_decision = Some(crate::game::types::PendingDecision {
+        g.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
             decision: Decision::PutOnLibrary { player: 0, count: 2, hand },
             resume: crate::game::types::ResumeContext::Mulligan {
                 player: 0,
                 mulligans_taken: 1,
                 next_player: None,
             },
-        });
+        }));
         let mut bot = HeuristicBot::new();
         let action = bot.next_action(&g, 0).expect("bot answers the decision");
         let GameAction::SubmitDecision(DecisionAnswer::PutOnLibrary(put)) = action else {

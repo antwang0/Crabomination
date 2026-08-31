@@ -3919,7 +3919,7 @@ impl GameState {
                     self.max_prompt_x(p, &card.definition.cost)
                 };
                 let source_name = card.definition.name.to_string();
-                self.pending_decision = Some(crate::game::types::PendingDecision {
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseAmount {
                         source: card_id,
                         max,
@@ -3935,7 +3935,7 @@ impl GameState {
                             x_value: None,
                         }),
                     },
-                });
+                }));
                 return Ok(vec![]);
             }
         }
@@ -3981,7 +3981,7 @@ impl GameState {
                 if candidates.is_empty() {
                     return Err(GameError::SelectionRequirementViolated);
                 }
-                self.pending_decision = Some(crate::game::types::PendingDecision {
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseCards {
                         source: card_id,
                         prompt: format!(
@@ -4003,7 +4003,7 @@ impl GameState {
                             x_value,
                         }),
                     },
-                });
+                }));
                 return Ok(vec![]);
             }
         }
@@ -4100,7 +4100,7 @@ impl GameState {
                         .collect()
                 });
                 if !candidates.is_empty() {
-                    self.pending_decision = Some(crate::game::types::PendingDecision {
+                    self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                         decision: crate::decision::Decision::ChooseTarget {
                             optional,
                             source: card_id,
@@ -4122,7 +4122,7 @@ impl GameState {
                                 x_value,
                             }),
                         },
-                    });
+                    }));
                     return Ok(vec![]);
                 }
             }
@@ -6508,7 +6508,7 @@ impl GameState {
                                 .map(|c| Target::Permanent(c.id))
                                 .collect();
                             if legal.len() > 1 {
-                                self.pending_decision = Some(crate::game::types::PendingDecision {
+                                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                                     decision: crate::decision::Decision::ChooseTarget {
                                         optional: false,
                                         source: card_id,
@@ -6526,7 +6526,7 @@ impl GameState {
                                         x_value,
                                         kicked,
                                     },
-                                });
+                                }));
                                 return Ok(vec![]);
                             }
                         }
@@ -6548,7 +6548,7 @@ impl GameState {
                                 .map(|c| Target::Permanent(c.id))
                                 .collect();
                             if legal.len() > 1 {
-                                self.pending_decision = Some(crate::game::types::PendingDecision {
+                                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                                     decision: crate::decision::Decision::ChooseTarget {
                                         optional: false,
                                         source: card_id,
@@ -6566,7 +6566,7 @@ impl GameState {
                                         x_value,
                                         kicked,
                                     },
-                                });
+                                }));
                                 return Ok(vec![]);
                             }
                         }
@@ -6590,7 +6590,7 @@ impl GameState {
                                 .map(|c| (c.id, c.definition.name.to_string()))
                                 .collect();
                             if hand.len() > *count as usize {
-                                self.pending_decision = Some(crate::game::types::PendingDecision {
+                                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                                     decision: crate::decision::Decision::Discard {
                                         player: p,
                                         count: *count,
@@ -6605,7 +6605,7 @@ impl GameState {
                                         x_value,
                                         kicked,
                                     },
-                                });
+                                }));
                                 return Ok(vec![]);
                             }
                         }
@@ -7549,7 +7549,7 @@ impl GameState {
             } else {
                 GameAction::CastSpell { card_id, target, additional_targets, mode, x_value }
             };
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
@@ -7560,7 +7560,7 @@ impl GameState {
                     actor: p,
                     action: Box::new(action),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
 
@@ -9224,7 +9224,7 @@ impl GameState {
         if flashback_cost.has_x() && x_value.is_none() && self.players[p].manual_mana {
             let max = self.max_prompt_x(p, &flashback_cost);
             let source_name = card.definition.name.to_string();
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::ChooseAmount {
                     source: card_id,
                     max,
@@ -9240,7 +9240,7 @@ impl GameState {
                         x_value: None,
                     }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
 
@@ -9330,7 +9330,7 @@ impl GameState {
         {
             let float_summary = self.protectable_float(p, &cost).summary();
             let name = card.definition.name;
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
@@ -9347,7 +9347,7 @@ impl GameState {
                         x_value,
                     }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
         let forced_only = self.players[p].manual_mana;
@@ -10647,7 +10647,7 @@ impl GameState {
             let float_summary = self.protectable_float(p, &mana_cost).summary();
             let name = card.definition.name;
             self.players[p].hand.push(card);
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
@@ -10665,7 +10665,7 @@ impl GameState {
                         x_value,
                     }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
         let forced_only = self.players[p].manual_mana;
@@ -14460,7 +14460,7 @@ impl GameState {
                 .find_card_anywhere(card_id)
                 .map(|c| c.definition.name.to_string())
                 .unwrap_or_default();
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::ChooseAmount {
                     source: card_id,
                     max,
@@ -14475,7 +14475,7 @@ impl GameState {
                     x_value: None,
                     kind: crate::game::types::AbilityCostChoice::XValue,
                 },
-            });
+            }));
             return Ok(vec![]);
         }
 
@@ -14873,7 +14873,7 @@ impl GameState {
                 .find_card_anywhere(card_id)
                 .map(|c| c.definition.name.to_string())
                 .unwrap_or_default();
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::ChooseCards {
                     source: card_id,
                     prompt: format!(
@@ -14896,7 +14896,7 @@ impl GameState {
                         mode: chosen_mode,
                     }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
 
@@ -15026,7 +15026,7 @@ impl GameState {
                         )
                     })
                     .collect();
-                self.pending_decision = Some(crate::game::types::PendingDecision {
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseCards {
                         source: card_id,
                         prompt: format!(
@@ -15046,7 +15046,7 @@ impl GameState {
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::GraveyardTarget,
                     },
-                });
+                }));
                 return Ok(vec![]);
             }
             // Auto-pick the highest-MV candidate (reanimation-style effects
@@ -15175,7 +15175,7 @@ impl GameState {
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
                 let named = self.graveyard_card_names(p, &candidates);
-                self.pending_decision = Some(crate::game::types::PendingDecision {
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseCards {
                         source: card_id,
                         prompt: format!("{source_name}: exile {count} cards from your graveyard"),
@@ -15193,7 +15193,7 @@ impl GameState {
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::ExileOther,
                     },
-                });
+                }));
                 return Ok(vec![]);
             } else {
                 self.auto_pick_lowest_cmc_gy(p, &candidates, count)
@@ -15330,7 +15330,7 @@ impl GameState {
                     .battlefield_find(card_id)
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
-                self.pending_decision = Some(crate::game::types::PendingDecision {
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseTarget {
                         optional: false,
                         source: card_id,
@@ -15348,7 +15348,7 @@ impl GameState {
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::SacOther,
                     },
-                });
+                }));
                 return Ok(vec![]);
             } else {
                 self.auto_pick_lowest_power(&candidates, count)
@@ -15393,7 +15393,7 @@ impl GameState {
                         })
                         .collect();
                     let max = named.len() as u32;
-                    self.pending_decision = Some(crate::game::types::PendingDecision {
+                    self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                         decision: crate::decision::Decision::ChooseCards {
                             source: card_id,
                             prompt: format!("{source_name}: sacrifice any number of them"),
@@ -15409,7 +15409,7 @@ impl GameState {
                             x_value,
                             kind: crate::game::types::AbilityCostChoice::SacAnyNumber,
                         },
-                    });
+                    }));
                     return Ok(vec![]);
                 }
                 None => sac_other_picks.extend(candidates),
@@ -15504,7 +15504,7 @@ impl GameState {
                     .battlefield_find(card_id)
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
-                self.pending_decision = Some(crate::game::types::PendingDecision {
+                self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                     decision: crate::decision::Decision::ChooseTarget {
                         optional: false,
                         source: card_id,
@@ -15522,7 +15522,7 @@ impl GameState {
                         x_value,
                         kind: crate::game::types::AbilityCostChoice::TapOther,
                     },
-                });
+                }));
                 return Ok(vec![]);
             } else {
                 auto_tap_pick(self, &candidates)
@@ -16106,7 +16106,7 @@ impl GameState {
                 .battlefield_find(card_id)
                 .map(|c| c.definition.name)
                 .unwrap_or("this ability");
-            self.pending_decision = Some(crate::game::types::PendingDecision {
+            self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
@@ -16123,7 +16123,7 @@ impl GameState {
                         x_value, mode: None,
                     }),
                 },
-            });
+            }));
             return Ok(vec![]);
         }
 
