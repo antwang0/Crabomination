@@ -33,14 +33,14 @@ sixty-seventh pass, so don't re-take that.
    a third fits on 4 cores.
    ⚠ **Run a grid/overflow build with nothing else compiling** — two rustc on the engine at
    once is a memcg OOM (`signal: 9`) that cargo reports as a compile failure.
-2. **All gates at the tip:** suite **19,116 / 0 / 5**, **golden traces unmoved across every
+2. **All gates at the tip:** suite **19,121 / 0 / 5**, **golden traces unmoved across every
    commit of both sessions**; clippy clean `--all-targets`; determinism + thread_determinism
-   green; **grid 25 cells under `overflow` + `-C debug-assertions=yes`, five pools x five
-   seeds — no panic, no assertion, no overflow** (delete `target-audit/` after, 715 MB). The
-   only undecided games are **draws**: `undecided_by cap 0 / stuck 0 / draw 2` on `all`, and
-   the pre-change binary reads the same 2 — the previous run's `undecided_by` line answered
-   that without a rebuild. `games_per_s` read 212-407 across the day on `host_calib_ms`
-   47-84 — that is the host; **Ir is the signal**.
+   green; **grid 40 cells under `overflow` + `-C debug-assertions=yes`, five pools x eight
+   seeds — no panic, no assertion, no overflow**, and the last 15 (run AFTER the twelve card
+   fixes) are **15,960 games with 0 undecided** (delete `target-audit/` after, 715 MB). An
+   earlier seed's two undecided were **draws**, not stalls — `undecided_by cap 0 / stuck 0 /
+   draw 2`, and the pre-change binary read the same 2. `games_per_s` read 212-407 across the
+   day on `host_calib_ms` 47-84 — that is the host; **Ir is the signal**, except paired (2a).
    ⚠ **`--bench`'s INVARIANT IS 195,806 / 27.49 / 611.9 / 0 stalls** — and **a `fixed` Ir
    reading from before the card batch is not comparable to one after it**. Sengir Vampire is
    in two of the four `--bench` archetypes and stopped being a vanilla 4/4: the pool is
@@ -48,6 +48,13 @@ sixty-seventh pass, so don't re-take that.
    got bigger (`fixed`'s base moved 838 M -> 927 M). `cube` moved -0.006 %, so the training
    pools are untouched. **A card in the `--bench` archetypes is bench infrastructure — price
    the fix before taking it.** Same warning stands on `cube`/`sealed` across CR 605.1a.
+2a. **`scripts/bench_ab.py` — a wall-clock delta CAN be read off `--bench`, paired.** One run
+   of each side cannot resolve anything here; alternating the two binaries A/B/A/B... and
+   taking the median per-pair ratio does. **16 pairs resolved the state-shape pass (Ir
+   -2.011 % on `fixed`, predicting +2.05 %) as +2.62 % median games/s**, paired mean +1.47 %,
+   per-pair sd 4.6 points, against a single-run spread of 237-276. ⚠ It separates ~2 % from
+   zero and does NOT separate 0.3 % — **Ir stays the signal**; this is the confirmation that
+   an Ir win is a wall-clock win. First wall-clock confirmation of one in PERF.
 3. **Perf, four devices across two sessions.** (a) `(-134)`/`(-136)`/`(-137)` closed the frame
    class, `cube` -0.53 % cumulative; `cg_frames.py` now prints **`out/call`** and is a
    *confirmation, not a queue*. (b) `(-140)`/`(-141)`/`(-142)`: **group a hot struct's plain
@@ -118,14 +125,30 @@ sixty-seventh pass, so don't re-take that.
    `audit_variant_coverage.py` 0 dead capabilities / **2** dead primitives
    (`AddRadCounters`, `GrantCastBackFromGraveyard` — both want a card, not a fix);
    `audit_target_fields.py` 147 unread fields, **0 aimed by a shipped card**;
-   `audit_target_walkers.py` clean; grid as in (2).
-12. **Cards: `audit_oracle_verbs.py` ~140 rows over nine false classes.** **Read six rows and
+   `audit_target_walkers.py` clean; `audit_incomplete` **0 structural findings** (1 triaged)
+   and `audit_stubs` **0 flagged** over 21,795 cards; grid as in (2).
+12. **Cards: the `token` class went 21 -> 9 and the whole audit 138 -> 123 — twelve real
+   defects, one filter fix, all written up in CARD_BACKLOG.** The lesson the class teaches is
+   not "a verb is missing": **five of the twelve were carrying a DIFFERENT card's abilities.**
+   Sequence Engine ships a `RevealUntilFind`; Monument to Endurance shipped a `{2},{T}` pump
+   it does not print; Inscription of Insight shipped three `XFromCost` modes on a spell with
+   no `{X}`; Elegy Acolyte's second trigger was a copy of its first; Glaring Fleshraker's ETB
+   is not on the card. **Read the oracle, not the body, and not the doc comment.** ⚠ Two more
+   traps worth carrying: an `Option` field left `None` on a variant that already has it is
+   invisible to every audit (Divert Disaster's whole missing half was `if_paid: None`), and a
+   dropped ability's "the engine has no X" note is as likely to be stale as true (Suki's was
+   wrong twice over). ⚠ `remove_to_graveyard_with_triggers` fires only the DYING card's own
+   triggers — an observer LTB trigger needs `check_state_based_actions()` then
+   `dispatch_triggers_for_events`, or it reads as unwired. **Nine `token` rows are left and
+   four of them want an engine primitive**, listed at the end of CARD_BACKLOG's `token`
+   section. Next by size: `search_library` 18, `draw` 17, `destroy` 15, `gain_life` 13.
+12a. **The older card guidance still stands:** `audit_oracle_verbs.py` over ten false classes. **Read six rows and
    fix the filter before working a class**, **read the same-file sibling**, and ⚠ **read the
    doc comment against the ORACLE, not against the body**. **A filed primitive job is a claim
    about the tree; check it before quoting it** — three of CARD_BACKLOG's turned out to be one
    `if`, one field, and one already-shipped primitive. Next by size: `token` 21, `draw` 19,
    `search_library` 18, `destroy` 15.
-12a. **TWO NEW CARD AUDITORS, AND ONE OF THEM IS A RATCHET AT ZERO.**
+12b. **TWO NEW CARD AUDITORS, AND ONE OF THEM IS A RATCHET AT ZERO.**
    `audit_keyword_drift.py` asks whether a card carries exactly the *mechanic* keywords it
    prints — `audit_catalog_stats` compares only the ~20 evergreen ones and only what sits in
    `keywords`, so Morph / Flashback / Cycling / Foretell and every mechanic with its own field
