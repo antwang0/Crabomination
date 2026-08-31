@@ -18518,20 +18518,48 @@ fields that are meaningful only *inside* a resolution, and a probe clones at
 priority.
 
 **The device is `cold: CowBox<ColdState>` again, for a second group** (a
-`CowBox<ResolutionScratch>`): one `Arc` bump per clone instead of ~75 field
-copies and ~18 `Vec` clones. **Priced and deliberately not taken in one
-sitting**, for two reasons that a taker needs up front:
+`CowBox<ResolutionScratch>`): one `Arc` bump per clone instead of ~100 field
+copies and ~29 `Vec`/map clones. The CoW sharp edge is on the write side and
+the write side is the resolution, so the win is only real for probes that
+never write the group — and **that census is the first build, not the
+refactor.** It has now been run (`CRAB_SCRATCH_CENSUS`, `scratch_census` in
+`affordances.rs`), six games, one thread, seed 1, and it **settles which
+group to build**:
 
-1. **The CoW sharp edge is on the write side and the write side is the
-   resolution.** Every `&mut` reach unshares the whole group, so the win is
-   only real for probes that *don't* write it — and `finalize_cast` sets
-   `pending_cast_*`, which most probes reach. Nobody has counted how many of
-   the 22,558 clones ever write the group; **that census is the first build,
-   not the refactor.** A `#[cfg(feature = "trig-census")]` counter on the
-   group's `_mut` accessor answers it for the price of one engine rebuild.
-2. **It is a 500+ site mechanical edit** and PERF's own history is full of
-   whole-struct reshapes that gave the win back. One commit per field group,
-   census first.
+```text
+  pool     probes   never wrote the group      never wrote its COLLECTIONS
+  fixed     4,766   1,436  30.13 %             4,448  93.33 %
+  cube     11,762   3,778  32.12 %             9,500  80.77 %
+  sealed   13,348   5,604  41.98 %            11,764  88.13 %
+```
+
+**The whole 101-field group is the wrong group and the 29 collection fields
+are the right one.** Two thirds of probes write *something* in the wide group
+— `finalize_cast` sets `pending_cast_*`, `perform_action_inner` bumps a
+counter — so a wide `CowBox` would unshare on two calls in three and pay the
+same copy plus an `Arc`. The collection half is untouched by **four probes in
+five**, and it is where the cost is: the eight non-inlined `Vec::clone`s, the
+three `RawTable::clone`s and most of the 2.4 allocations a clone makes.
+
+**So the entry that is open is narrower than the one it was filed as**: group
+the 29 `Vec`/`Option<Vec>`/map/`IdSet` scratch fields — `last_moved_cards`,
+`last_created_tokens`, the four `*_card_ids_this_resolution`,
+`resolution_targets`, `cost_sacrificed_batch`, `damaged_this_resolution`,
+`pending_cast_sacrifices`/`_discards`, `pending_cost_events`,
+`pending_permanent_deaths`, `pending_control_changes`,
+`resolution_answer_log`, the two per-player discard maps,
+`players_sacrificed_this_resolution`, `names_this_resolution`,
+`suspend_signal`, `stashed_resolution_answer`, `resolving_source`,
+`resolving_spell_snapshot`, … — and leave the ~70 scalars where they are.
+**474 references over 13 files**, 377 of them in `game/mod.rs` and
+`game/effects/mod.rs`; `suspend_signal` alone is 85 and is control flow, so
+it is the field to split out first or leave behind. One commit per field
+group, landed fully green or reverted — **never left half-threaded.**
+
+⚠ **The census over-reports in the device's favour and says so**: the
+fingerprint is `{:?}` over the group, but the two `fxhash` maps and the
+`IdSet` are read by `len()` because their `Debug` order is not stable, so a
+probe that swaps a key without changing the count reads as unchanged.
 
 **Refuted here without a build: `controlled_by`.** It reads as an obvious
 per-clone allocation (`Vec<Option<usize>>`, one entry a seat) and it is not —

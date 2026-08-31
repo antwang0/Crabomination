@@ -11,7 +11,187 @@ use super::*;
 /// without re-walking the effect tree.
 type AbilityProbe = (bool, Option<Effect>);
 
+/// PERF `(-138)`: how many affordance probes ever write the resolution-scratch
+/// half of `GameState`.
+///
+/// **The question the `CowBox<ResolutionScratch>` device turns on, and the
+/// build it needs before the refactor.** `GameState::clone` spends 1,175
+/// instructions on every one of its 22,558 `cube` calls, 91.5 % of its own
+/// self cost, and **101 of the struct's 194 fields** are `*_this_resolution` /
+/// `*_scratch` / `pending_*` / `resolving_*` / `sacrificed_*` — meaningful
+/// only inside a resolution, while a probe clones at priority. Grouping them
+/// behind a `CowBox` makes the clone one `Arc` bump *for a probe that never
+/// writes the group* and no cheaper than today for one that does. Nobody had
+/// counted which.
+///
+/// `SAME_ALL` is the population the whole group would serve; `SAME_COLL` is
+/// the population a narrower group of just the 29 collection fields would,
+/// which is the variant that costs the fewest `_mut` call sites.
+///
+/// ```text
+/// CRAB_SCRATCH_CENSUS=1 bot_ladder --a gang --b gang --games 6 --threads 1 \
+///   --seed 1 --decks cube
+/// ```
+///
+/// ⚠ **A census, not a gate.** The fingerprint is `{:?}` over the group, so it
+/// sees value changes a length check would miss — but the two `fxhash` maps
+/// and the `IdSet` are read by `len()` (their `Debug` order is not stable), so
+/// a probe that replaces a key without changing the count reads as unchanged.
+/// That biases the answer *towards* the device, which is the direction to
+/// distrust.
+pub mod scratch_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    pub static PROBES: AtomicU64 = AtomicU64::new(0);
+    pub static SAME_ALL: AtomicU64 = AtomicU64::new(0);
+    pub static SAME_COLL: AtomicU64 = AtomicU64::new(0);
+
+    pub fn on() -> bool {
+        static LEVEL: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_SCRATCH_CENSUS") {
+            Ok(v) => !v.is_empty() && v != "0",
+            _ => false,
+        })
+    }
+
+    pub(crate) fn tick(same_all: bool, same_coll: bool) {
+        PROBES.fetch_add(1, Relaxed);
+        if same_all {
+            SAME_ALL.fetch_add(1, Relaxed);
+        }
+        if same_coll {
+            SAME_COLL.fetch_add(1, Relaxed);
+        }
+    }
+
+    /// `(probes, same_all, same_coll)` for a caller that wants to print.
+    pub fn snapshot() -> (u64, u64, u64) {
+        (PROBES.load(Relaxed), SAME_ALL.load(Relaxed), SAME_COLL.load(Relaxed))
+    }
+}
+
 impl GameState {
+
+    /// `(whole group, collections only)` fingerprints of the resolution-scratch
+    /// field group — see [`scratch_census`].
+    fn resolution_scratch_fingerprint(&self) -> (u64, u64) {
+        use std::fmt::Write as _;
+        use std::hash::{Hash, Hasher};
+        fn h(s: &str) -> u64 {
+            let mut hasher = crate::fxhash::FxHasher::default();
+            s.hash(&mut hasher);
+            hasher.finish()
+        }
+        let mut s = String::with_capacity(4096);
+        // The three hash-ordered containers are read by length: their `Debug`
+        // order is not stable across runs, so hashing it would report change
+        // that is not there.
+        let _ = write!(
+            s,
+            "{}|{}|{}|",
+            self.cards_discarded_per_player_this_resolution.len(),
+            self.nonland_cards_discarded_per_player_this_resolution.len(),
+            self.players_sacrificed_this_resolution.len(),
+        );
+        let _ = write!(s, "{}|", self.names_this_resolution.len());
+        let _ = write!(s, "{:?}|", self.activation_mana_colors_scratch);
+        let _ = write!(s, "{:?}|", self.target_slots_scratch);
+        let _ = write!(s, "{:?}|", self.last_created_tokens);
+        let _ = write!(s, "{:?}|", self.last_moved_cards);
+        let _ = write!(s, "{:?}|", self.discarded_card_ids_this_resolution);
+        let _ = write!(s, "{:?}|", self.exiled_card_ids_this_resolution);
+        let _ = write!(s, "{:?}|", self.destroyed_this_resolution);
+        let _ = write!(s, "{:?}|", self.resolution_targets);
+        let _ = write!(s, "{:?}|", self.cost_sacrificed_batch);
+        let _ = write!(s, "{:?}|", self.damaged_this_resolution);
+        let _ = write!(s, "{:?}|", self.cards_sacrificed_this_resolution);
+        let _ = write!(s, "{:?}|", self.chosen_creature_types_scratch);
+        let _ = write!(s, "{:?}|", self.pending_cast_sacrifices);
+        let _ = write!(s, "{:?}|", self.pending_cast_discards);
+        let _ = write!(s, "{:?}|", self.pending_spree_modes);
+        let _ = write!(s, "{:?}|", self.pending_prepare_copies);
+        let _ = write!(s, "{:?}|", self.pending_ability_exile_other);
+        let _ = write!(s, "{:?}|", self.pending_ability_sac_any);
+        let _ = write!(s, "{:?}|", self.resolution_answer_log);
+        let _ = write!(s, "{:?}|", self.pending_cost_events);
+        let _ = write!(s, "{:?}|", self.pending_permanent_deaths);
+        let _ = write!(s, "{:?}|", self.pending_control_changes);
+        let _ = write!(s, "{:?}|", self.named_card_this_resolution);
+        let _ = write!(s, "{:?}|", self.resolving_source);
+        let _ = write!(s, "{:?}|", self.suppress_extra_target_prompts);
+        let _ = write!(s, "{:?}|", self.haunt_pending);
+        let _ = write!(s, "{:?}|", self.suspend_signal);
+        let _ = write!(s, "{:?}|", self.stashed_resolution_answer);
+        let _ = write!(s, "{:?}|", self.resolving_spell_snapshot);
+        let coll = h(&s);
+        let _ = write!(s, "{:?}|", self.sacrificed_power);
+        let _ = write!(s, "{:?}|", self.revealed_for_cost_power);
+        let _ = write!(s, "{:?}|", self.sacrificed_total_power);
+        let _ = write!(s, "{:?}|", self.sacrificed_count);
+        let _ = write!(s, "{:?}|", self.sacrificed_toughness);
+        let _ = write!(s, "{:?}|", self.sacrificed_mana_value);
+        let _ = write!(s, "{:?}|", self.exiled_for_cost_mana_value);
+        let _ = write!(s, "{:?}|", self.prevention_source_color_scratch);
+        let _ = write!(s, "{:?}|", self.sacrificed_was_artifact);
+        let _ = write!(s, "{:?}|", self.sacrificed_was_outlaw);
+        let _ = write!(s, "{:?}|", self.sacrificed_was_vehicle);
+        let _ = write!(s, "{:?}|", self.sacrificed_card);
+        let _ = write!(s, "{:?}|", self.last_discarded_was_multicolored);
+        let _ = write!(s, "{:?}|", self.last_discarded_card_types);
+        let _ = write!(s, "{:?}|", self.last_discarded_mana_value);
+        let _ = write!(s, "{:?}|", self.last_revealed_from_hand);
+        let _ = write!(s, "{:?}|", self.cost_discarded_mana_value);
+        let _ = write!(s, "{:?}|", self.tapped_for_cost_power);
+        let _ = write!(s, "{:?}|", self.trigger_event_amount_scratch);
+        let _ = write!(s, "{:?}|", self.trigger_event_player_scratch);
+        let _ = write!(s, "{:?}|", self.last_created_token);
+        let _ = write!(s, "{:?}|", self.last_die_roll);
+        let _ = write!(s, "{:?}|", self.extra_cast_reduction);
+        let _ = write!(s, "{:?}|", self.cast_paid_uncounterable);
+        let _ = write!(s, "{:?}|", self.cast_kick_count);
+        let _ = write!(s, "{:?}|", self.cards_discarded_this_resolution);
+        let _ = write!(s, "{:?}|", self.cards_drawn_this_resolution);
+        let _ = write!(s, "{:?}|", self.energy_paid_this_resolution);
+        let _ = write!(s, "{:?}|", self.permanents_returned_this_resolution);
+        let _ = write!(s, "{:?}|", self.permanents_tapped_this_resolution);
+        let _ = write!(s, "{:?}|", self.cards_revealed_this_resolution);
+        let _ = write!(s, "{:?}|", self.creature_cards_discarded_this_resolution);
+        let _ = write!(s, "{:?}|", self.greatest_discarded_mv_this_resolution);
+        let _ = write!(s, "{:?}|", self.shuffle_resolving_spell_into_library);
+        let _ = write!(s, "{:?}|", self.return_resolving_spell_to_hand);
+        let _ = write!(s, "{:?}|", self.exile_resolving_spell);
+        let _ = write!(s, "{:?}|", self.resolving_spell_library_from_top);
+        let _ = write!(s, "{:?}|", self.resolving_spell_to_battlefield_transformed);
+        let _ = write!(s, "{:?}|", self.cipher_encode_pending);
+        let _ = write!(s, "{:?}|", self.permanents_destroyed_this_resolution);
+        let _ = write!(s, "{:?}|", self.excess_damage_this_resolution);
+        let _ = write!(s, "{:?}|", self.creatures_died_this_resolution);
+        let _ = write!(s, "{:?}|", self.resolution_depth);
+        let _ = write!(s, "{:?}|", self.damage_dealt_this_resolution);
+        let _ = write!(s, "{:?}|", self.countered_spell_mana_spent);
+        let _ = write!(s, "{:?}|", self.countered_spell_mana_value);
+        let _ = write!(s, "{:?}|", self.chosen_number_this_resolution);
+        let _ = write!(s, "{:?}|", self.resolution_causer);
+        let _ = write!(s, "{:?}|", self.nonland_cards_exiled_this_effect);
+        let _ = write!(s, "{:?}|", self.countered_spell_controller);
+        let _ = write!(s, "{:?}|", self.counters_removed_this_effect);
+        let _ = write!(s, "{:?}|", self.counters_removed_as_cost);
+        let _ = write!(s, "{:?}|", self.chosen_creature_type_scratch);
+        let _ = write!(s, "{:?}|", self.pending_cast_face);
+        let _ = write!(s, "{:?}|", self.pending_cast_spend_float);
+        let _ = write!(s, "{:?}|", self.pending_landcycle_pick);
+        let _ = write!(s, "{:?}|", self.pending_ability_sac_other);
+        let _ = write!(s, "{:?}|", self.pending_ability_tap_other);
+        let _ = write!(s, "{:?}|", self.source_name_scratch);
+        let _ = write!(s, "{:?}|", self.token_minting_source);
+        let _ = write!(s, "{:?}|", self.resolving_lki_source);
+        let _ = write!(s, "{:?}|", self.resolving_lki_subject);
+        let _ = write!(s, "{:?}|", self.resolving_spell_lifelink_seat);
+        let _ = write!(s, "{:?}|", self.resolving_spell_caster);
+        let _ = write!(s, "{:?}|", self.resolving_spell_deathtouch_seat);
+        let _ = write!(s, "{:?}|", self.exile_resolving_spell_with_countdown);
+        (h(&s), coll)
+    }
     /// Dry-run an action: clone the state, apply the action on the
     /// clone, return whether the engine would accept it. The caller's
     /// state is **not** modified. Used by the random bot to filter
@@ -140,7 +320,13 @@ impl GameState {
         crate::game::pay_census::in_probe(|| {
             let mut probe = template.clone();
             let acting = template.priority.player_with_priority;
+            let before =
+                scratch_census::on().then(|| template.resolution_scratch_fingerprint());
             let ok = probe.perform_action_inner(action).is_ok();
+            if let Some((all, coll)) = before {
+                let (a2, c2) = probe.resolution_scratch_fingerprint();
+                scratch_census::tick(all == a2, coll == c2);
+            }
             if !ok || template.suspended_without_completing(&probe, acting) {
                 return None;
             }

@@ -1646,6 +1646,20 @@ fn main() {
             if sweeps == 0 { 0.0 } else { 100.0 * repeats as f64 / sweeps as f64 },
         );
     }
+    // PERF (-138): how many affordance probes ever write the resolution-scratch
+    // half of `GameState` — the population a `CowBox<ResolutionScratch>` would
+    // serve. Off unless `CRAB_SCRATCH_CENSUS` is set.
+    if crabomination::game::affordances::scratch_census::on() {
+        let (probes, same_all, same_coll) =
+            crabomination::game::affordances::scratch_census::snapshot();
+        let pct = |n: u64| if probes == 0 { 0.0 } else { 100.0 * n as f64 / probes as f64 };
+        println!(
+            "  scratch_census {same_all}/{probes} probes never wrote the group \
+             ({:.2} %), {same_coll} never wrote its collections ({:.2} %)",
+            pct(same_all),
+            pct(same_coll),
+        );
+    }
     // PERF (-115): what the trigger dispatcher's member list is worth — hit
     // rate, and the board it skips against the members it keeps. Off unless
     // `CRAB_TRIG_CENSUS` is set.
