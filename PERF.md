@@ -17891,6 +17891,57 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-128) STATE-BASED ACTIONS ARE THE LARGEST UNFILED CLUSTER AND THE ONLY TOP
+ROW THAT IS *BIGGER* ON `fixed` THAN ON `cube`.** Read off the `8e2d5df9`
+dumps (six games, one thread, `profiling-fast --no-default-features`):
+
+```text
+                                  cube                      fixed
+  check_state_based_actions_into  20,210 c / 72.0 M / 2.85%  9,146 c / 26.2 M / 3.09%
+    Ir per sweep                  3,564                      2,862
+  sba_board_scan                  20,312 c / 23.7 M / 0.94%  9,146 c /  9.3 M / 1.10%
+    Ir per sweep                  1,167                      1,017
+  together                                 95.7 M / 3.78%            35.5 M / 4.19%
+```
+
+**3,564 Ir is the highest per-call self cost of any engine function in either
+table**, and the ratio being *inverted* (4.19 % of `fixed` against 3.78 % of
+`cube`) says the cost is per-sweep overhead rather than board size — which is
+the shape a memo answers and a board-size optimization does not. Sweeps are
+already gated: 20,210 of them against 121,802 `perform_action_inner` calls on
+`cube`, one per six or seven actions.
+
+**The device is `(-115)`'s, and the machinery is already in the tree.**
+`sba_board_scan`'s own comment calls it "one pass answering which of the rare
+SBAs can fire on this board" — a whole-battlefield walk producing a handful of
+bits, recomputed from scratch on every sweep. `zone::Battlefield` already
+memoizes board predicates against an epoch (`act_grant_lane` /
+`store_act_grant`), and the scan is a strictly larger version of the same
+question. Ceiling is the whole 0.94 % / 1.10 %, times the share of sweeps whose
+battlefield epoch is unchanged since the last one.
+
+**Size that share before building it**, with a counter beside the other three
+(`zone::grant_census` is the pattern, and `(-122)` and `(-126)` were both
+answered by one): sweeps, and sweeps whose battlefield epoch equals the
+previous sweep's. `check_state_based_actions_into` already has an `sba_census`
+hook to hang it on. **A sweep that follows a board change cannot be memoized
+and the scan is retaken three times inside the sweep itself** (shapeshifter
+sync, sector assignment, flip legs) — count those too, because they are
+already inside the 1,167 Ir.
+
+**(-129) `event_matches_spec` IS 1,028,014 CALLS ON `cube` AND 103,082 ON
+`fixed` — A 10x RATIO ON A FUNCTION THAT COSTS 31 Ir A CALL.** 1.26 % of
+`cube`, 0.39 % of `fixed`. This is the dispatcher *body* NEXT points at after
+`(-115)`/`(-120)`/`(-121)` closed the lane, and nothing is filed against it.
+
+Ten times the calls for roughly twice the board is not a board-size curve; it
+is the (events x specs) product, so the question is which factor grows. **Do
+not open this with a line profile** — pass 91 already established that
+`dispatch_triggers_for_events` has no hot line, and 31 Ir a call says the same
+about its callee. Open it with `cg_contexts.py --separate-callers=3` (which
+now prints inclusive Ir per context) to find which caller multiplies, then a
+census of batch size against spec count if the contexts do not separate.
+
 **(-126) CLOSED — BOTH DEVICES PRICED AND NEITHER IS IN THE TREE. THE
 RECURSION IS 42 % OF THE WALKER'S CALLS AND ALMOST NONE OF IT IS REMOVABLE.**
 
