@@ -2323,10 +2323,21 @@ had already filed.
   0e6ed414   2,509,983,333   the rebased base
   babadb2e   2,504,010,258   -0.238 %   (-140)/(-141)/(-142), the clone shape
   33955a1f   2,503,861,524   -0.006 %   the card batch
-  3efd6d45   2,476,827,927   -1.080 %   (-146)/(-147)/(-148), the small tables
   ---------------------------------------------------------------------------
-  whole run                  **-1.321 %**
+  0d7aa507   2,471,954,471   the concurrent session's (-143) landed here
+  merged     2,465,651,475   -0.255 %   (-146)/(-147)/(-148), the small tables
 ```
+
+⚠ **THE SMALL-TABLE SWEEP READ -1.080 % BEFORE THE REBASE AND -0.255 % AFTER
+IT, AND THAT FACTOR OF FOUR IS THE STANDING RULE EARNING ITS KEEP.** It was
+measured against `33955a1f`; the concurrent session's `(-143)` then put the 29
+resolution-scratch collections behind a `CowBox`, and **two of the twelve
+tables the sweep swapped were in that group** — the per-seat discard maps that
+had been two `RawTable::clone` calls on every `GameState` clone. Their move
+already stopped those cloning, so that share of the win is theirs, not the
+sweep's. Retaken against `0d7aa507`, the sweep is `cube` **-0.255 %** /
+`fixed` **-0.307 %**, and that is the number. **Two devices aimed at the same
+row do not add; re-read the second one against the first.**
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
@@ -2340,12 +2351,14 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 callgrind (profiling-fast --no-default-features, six games, one thread,
         seed 1, `--a gang --b gang`), **retaken on the rebased base
         `0e6ed414` after the concurrent session landed**:
-  pool    0e6ed414        babadb2e        33955a1f        3efd6d45
-  cube    2,509,983,333   2,504,010,258   2,503,861,524   2,476,827,927
-                            -0.2380 %       -0.2439 %       -1.3209 %
-  fixed     841,725,144     839,127,159     927,368,664     919,283,529
-                            -0.3087 %      +10.1748 %       +9.2141 %
+  pool    0e6ed414        babadb2e        33955a1f     | 0d7aa507       merged
+  cube    2,509,983,333   2,504,010,258   2,503,861,524 | 2,471,954,471  2,465,651,475
+                            -0.2380 %       -0.2439 %   |                  -0.2550 %
+  fixed     841,725,144     839,127,159     927,368,664 |   914,634,906    911,830,372
+                            -0.3087 %      +10.1748 %   |                  -0.3066 %
                                             ^ the card batch, see below
+        (the bar is the concurrent session's `(-143)`; the two halves of the
+        run are measured against their own bases and do not chain)
 grid    NOT re-run: the six perf commits are order changes and container
         swaps with the suite and a byte-identical `--bench` behind them, and
         the card batch is gated by 19,115 tests.
@@ -10318,6 +10331,36 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Hundred-and-sixteenth pass (9) — the small-table sweep RETAKEN after the rebase: `cube` -0.255 %, `fixed` -0.307 %
+
+⚠ **The three entries below were measured against `33955a1f` and read
+-1.080 % / -0.872 %. The concurrent session's `(-143)` then landed and the
+same three, rebuilt on `0d7aa507`, read `cube` -0.255 % / `fixed` -0.307 %.**
+
+```text
+  pool    0d7aa507        merged          delta
+  cube    2,471,954,471   2,465,651,475   -0.2550 %
+  fixed     914,634,906     911,830,372   -0.3066 %
+```
+
+**Two of the twelve tables the sweep swapped are in the group `(-143)` moved
+behind a `CowBox`** — `cards_discarded_per_player_this_resolution` and its
+nonland twin, which had been two `RawTable::clone` calls on *every*
+`GameState` clone. Once the group only clones on unshare, that share of the
+win is `(-143)`'s. What survives is `block_map` and the ten per-call locals in
+the attack/block path, which no CoW group touches.
+
+**The rule this earns, and it is stronger than the one it comes from:** PERF
+already said *a concurrent push invalidates a measurement, not a candidate*.
+The first retake of this run moved a headline by 0.006 points and read as
+ceremony; this one moved it by a **factor of four**. **Two devices aimed at
+the same row do not add — re-read the second against the first, and do it
+before the entry is written, not after.**
+
+Everything below keeps its original `33955a1f` numbers, which are internally
+consistent with each other and with the `--bench` invariant they were taken
+beside; only the *base* is stale.
 
 ### Hundred-and-sixteenth pass (8) — `(-148)`: the last five, and where the sweep stops
 

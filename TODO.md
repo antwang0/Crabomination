@@ -56,9 +56,12 @@ sixty-seventh pass, so don't re-take that.
    `noalias`, so LLVM may not move a load across a call and every interleaved scalar was its
    own fenced load/store pair. **Copies LAST, not first.** For a `#[derive(Clone)]` type the
    order is the *declaration* order, which also moves the layout tie-breaks — measure it.
-3a. **The third device, and it is the run's biggest: `(-146)`/`(-147)`/`(-148)`, `cube`
-   -1.080 % / `fixed` -0.872 %. A map whose size is bounded by the board, the batch or the
-   seat count is a `Vec`.** Twelve `hashbrown` tables became `IdMap`/`IdSet`: `block_map`,
+3a. **The third device: `(-146)`/`(-147)`/`(-148)`, `cube` -0.255 % / `fixed` -0.307 %
+   retaken on `0d7aa507`. A map whose size is bounded by the board, the batch or the seat
+   count is a `Vec`.** ⚠ It read **-1.080 %** against the pre-rebase base and a *factor of
+   four* less after: two of its twelve tables are in the group the concurrent session's
+   `(-143)` put behind a `CowBox`, so that share of the win is theirs. **Two devices aimed at
+   the same row do not add — re-read the second against the first.** Twelve `hashbrown` tables became `IdMap`/`IdSet`: `block_map`,
    eight per-call locals in `declare_blockers`/`pick_blocks_inner`, two in
    `declare_attackers_banded`, one in `simulate_attack_outcome_once`, and the two per-seat
    discard maps that were **exactly two `RawTable::clone` calls on every `GameState` clone**.
