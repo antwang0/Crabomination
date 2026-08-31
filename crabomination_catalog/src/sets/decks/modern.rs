@@ -15848,7 +15848,6 @@ pub fn relic_of_progenitus() -> CardDefinition {
 /// Synthesised body for the ⏳ cube row. Colorless artifact body with
 /// an ETB ping.
 pub fn glaring_fleshraker() -> CardDefinition {
-    use crate::effect::shortcut::{etb, target_filtered};
     CardDefinition {
         name: "Glaring Fleshraker",
         cost: cost(&[generic(2), colorless(1)]),
@@ -15859,14 +15858,33 @@ pub fn glaring_fleshraker() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(2),
-        })],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Colorless,
+                    }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(eldrazi_spawn_token()),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::Colorless)
+                            .and(SelectionRequirement::OtherThanSource),
+                    }),
+                effect: Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

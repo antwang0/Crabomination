@@ -3221,3 +3221,31 @@ fn tidal_terror_tap_cost_is_optional() {
         "and no unblockable grant"
     );
 }
+
+/// Elegy Acolyte's Void trigger prints "create a 2/2 colorless Robot artifact
+/// creature token" and shipped a duplicate of its combat-damage
+/// draw-and-lose-1 instead — the two triggers were the same effect. Found by
+/// the `token` oracle-verb class.
+#[test]
+fn elegy_acolyte_void_end_step_mints_a_robot() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::elegy_acolyte());
+    // Void — a nonland permanent left the battlefield this turn.
+    g.nonland_permanent_left_bf_this_turn = true;
+    let hand_before = g.players[0].hand.len();
+    let life_before = g.players[0].life;
+
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+
+    let robot = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Robot")
+        .expect("the Void trigger mints a Robot");
+    assert_eq!((robot.definition.power, robot.definition.toughness), (2, 2));
+    assert!(robot.definition.card_types.contains(&CardType::Artifact), "an artifact creature");
+    assert_eq!(g.players[0].hand.len(), hand_before, "it is not the draw-and-lose trigger");
+    assert_eq!(g.players[0].life, life_before, "and not its 1 life either");
+}
+

@@ -151,10 +151,35 @@ power-3-or-less creature an opponent controls), the Puppet's exile-self token
 ability, and the Berserker's boast. ⚠ **The three change bot play on
 `cube`/`sealed`** — an Ir reading across that commit is not comparable.
 
+**Second batch, three more wrong-shape cards** — and two of the three were not
+*missing* a trigger, they were carrying a **different card's**:
+
+| Card | What the tree shipped | Fix |
+|---|---|---|
+| Elegy Acolyte | the Void end-step trigger ran a **copy of its own combat trigger** (draw and lose 1) | the printed 2/2 colorless Robot |
+| Glaring Fleshraker | one ETB "deal 2 to any target"; the card prints **neither** ETB nor that damage | "colorless spell cast → Eldrazi Spawn" and "another colorless creature enters → 1 to each opponent" |
+| Monument to Endurance | `{2}, {T}: target creature gets +2/+2`, an ability the card does not have at all | the printed discard-triggered `Effect::ChooseUnchosenMode` over draw / Treasure / drain 3 |
+
+⚠ **Fleshraker's two triggers chain**: the Eldrazi Spawn the cast trigger mints
+is itself a colorless creature entering, so one colorless cast drains an
+opponent for 2, not 1. That is the printed card and the test pins it.
+
+⚠ **Monument keeps one named approximation**: printed is "hasn't been chosen
+**this turn**" and `Effect::ChooseUnchosenMode` records the pick on
+`CardInstance.modes_chosen` for the whole game, so the Monument runs out after
+three discards instead of three a turn. **The primitive job is a per-turn
+sibling of `modes_chosen`** (cleared at cleanup) plus a `reset_each_turn` flag
+on the variant — one field on `CardInstance`, which is `CardData`-sized and
+CoW'd, so price it before taking it for one card.
+
 **Still open in the class and both want an engine primitive, not a card fix**:
 Complaints Clerk's "whenever you roll a 1" (no die-roll event) and Magmatic
 Galleon's "creatures your opponents control are dealt excess noncombat damage"
 (the engine tracks `excess_damage_this_resolution` but has no event for it).
+Pinnacle Starcage keeps its ETB exile and still drops the `{6}{W}{W}`
+"graveyard them all, then a Robot for each"; Sequence Engine ships an
+unrelated `RevealUntilFind` for a printed `{X}, {T}` graveyard-exile Fractal
+and wants an X-cost exile-from-graveyard shape. `token` 21 -> **14**.
 
 ## Oracle-verb audit — the `draw` and `counters` classes
 

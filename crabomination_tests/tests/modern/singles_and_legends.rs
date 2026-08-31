@@ -197,21 +197,34 @@ fn blazemire_verge_red_gated_on_swamp_or_mountain() {
 
 // ── Monument to Endurance ───────────────────────────────────────────────────
 
+/// "Whenever you discard a card, choose one that hasn't been chosen this turn."
+/// Shipped as an unrelated `{2}, {T}: +2/+2` pump until the `token`
+/// oracle-verb class; the "this turn" window is still an approximation (the
+/// pick is recorded for the game, see the card's doc comment).
 #[test]
-fn monument_to_endurance_pumps_target_creature() {
+fn monument_to_endurance_fires_a_fresh_mode_on_each_discard() {
     let mut g = two_player_game();
     let mon = g.add_card_to_battlefield(0, catalog::monument_to_endurance());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add_colorless(2);
-    let power_before = g.battlefield.iter().find(|c| c.id == bear).unwrap().definition.power;
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: mon, ability_index: 0,
-        target: Some(Target::Permanent(bear)), additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("activate pump");
-    drain_stack(&mut g);
-    let computed = g.compute_battlefield();
-    let cp = computed.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(cp.power, power_before + 2, "Should pump +2/+2");
+    // The Draw mode is one of the three, and `two_player_game()` deals an
+    // empty library — drawing off it loses the game before the third discard.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let pitch: Vec<_> = (0..3).map(|_| g.add_card_to_hand(0, catalog::grizzly_bears())).collect();
+    let life_before = g.players[1].life;
+    for card in pitch {
+        let mut evs = Vec::new();
+        g.discard_card(0, card, &mut evs);
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+    }
+    let chosen = &g.battlefield_find(mon).expect("Monument still out").modes_chosen;
+    assert_eq!(chosen.len(), 3, "one fresh mode per discard, never a repeat");
+    let mut sorted = chosen.clone();
+    sorted.sort_unstable();
+    assert_eq!(sorted, vec![0, 1, 2], "all three modes get used exactly once");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "the Treasure mode ran");
+    assert_eq!(g.players[1].life, life_before - 3, "the drain mode ran");
 }
 
 // ── Exotic Orchard ──────────────────────────────────────────────────────────

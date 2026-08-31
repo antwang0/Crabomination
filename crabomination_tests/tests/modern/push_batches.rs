@@ -3074,14 +3074,33 @@ fn goblin_rabblemaster_attack_creates_a_goblin_token() {
 
 // ── modern_decks batch 103: new cube-expansion card tests ───────────────────
 
+/// Glaring Fleshraker prints two triggers and shipped neither: an ETB "deal 2
+/// to any target" stood in for "whenever you cast a colorless spell, create an
+/// Eldrazi Spawn" and "whenever another colorless creature you control enters,
+/// deal 1 to each opponent". Fixed in the `token` oracle-verb class.
 #[test]
-fn glaring_fleshraker_etb_pings_target() {
+fn glaring_fleshraker_spawns_on_colorless_cast_and_pings_on_colorless_etb() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::glaring_fleshraker());
-    g.players[0].mana_pool.add_colorless(3);
+    let raker = g.add_card_to_battlefield(0, catalog::glaring_fleshraker());
+    assert!(g.battlefield_find(raker).is_some(), "on the battlefield");
+    // No ETB ping — that was the wrong shape.
+    assert_eq!(g.players[1].life, 20, "entering does not ping");
+
+    // Casting a colorless spell mints an Eldrazi Spawn.
+    let colorless = g.add_card_to_hand(0, catalog::ornithopter());
+    g.players[0].mana_pool.add_colorless(4);
     let life1_before = g.players[1].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[1].life, life1_before - 2, "ETB pings for 2");
+    g.perform_action(GameAction::CastSpell {
+        card_id: colorless, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ornithopter castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Eldrazi Spawn"),
+        "a colorless cast mints an Eldrazi Spawn");
+    // …and every colorless creature that enters pings each opponent for 1:
+    // the Ornithopter itself and the Eldrazi Spawn the cast trigger minted,
+    // which is a colorless creature entering in its own right.
+    assert_eq!(g.players[1].life, life1_before - 2,
+        "each colorless creature entering deals 1 to each opponent");
 }
 
 #[test]

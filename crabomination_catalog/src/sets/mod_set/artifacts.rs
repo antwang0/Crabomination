@@ -575,36 +575,37 @@ pub fn star_compass() -> CardDefinition {
 
 /// Monument to Endurance — {3} Artifact. {2}, {T}: Target creature gets
 /// +2/+2 until end of turn. Simple pump artifact.
+/// Monument to Endurance — {3} Artifact. "Whenever you discard a card, choose
+/// one that hasn't been chosen this turn — • Draw a card. • Create a Treasure
+/// token. • Each opponent loses 3 life."
+///
+/// (Shipped as an unrelated `{2}, {T}: +2/+2` pump until the `token`
+/// oracle-verb class read it. The **this turn** half is the approximation:
+/// `Effect::ChooseUnchosenMode` records the pick on the source for the whole
+/// game rather than resetting each turn, so the Monument runs out after three
+/// discards instead of three a turn. A `reset_each_turn` window wants a
+/// per-turn sibling of `CardInstance.modes_chosen`; filed in CARD_BACKLOG.)
 pub fn monument_to_endurance() -> CardDefinition {
-    use crate::effect::Duration;
     CardDefinition {
         name: "Monument to Endurance",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: cost(&[generic(2)]),
-            effect: Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::ChooseUnchosenMode {
+                modes: vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: Box::new(crabomination_base::tokens::treasure_token()),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(3),
+                    },
+                ],
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
-            ..Default::default()
         }],
         ..Default::default()
     }

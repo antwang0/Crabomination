@@ -607,7 +607,21 @@ pub fn elegy_acolyte() -> CardDefinition {
                     cond: Predicate::VoidActive {
                         who: PlayerRef::You,
                     },
-                    then: Box::new(draw_lose()),
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: Box::new(TokenDefinition {
+                            name: "Robot".into(),
+                            power: 2,
+                            toughness: 2,
+                            card_types: vec![CardType::Artifact, CardType::Creature],
+                            subtypes: Subtypes {
+                                creature_types: vec![CreatureType::Robot],
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
+                    }),
                     else_: Box::new(Effect::Noop),
                 },
             },
