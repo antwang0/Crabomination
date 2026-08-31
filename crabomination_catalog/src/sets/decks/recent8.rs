@@ -176,9 +176,10 @@ pub fn chaos_spewer() -> CardDefinition {
     }
 }
 
-/// Boggart Mischief — {2}{B} Enchantment. When it enters, you may blight 1; if
-/// you do, create two 1/1 black-and-red Goblin tokens. (Goblin-death payoff
-/// omitted.)
+/// Boggart Mischief — {2}{B} Kindred Enchantment — Goblin. When it enters, you
+/// may blight 1; if you do, create two 1/1 black-and-red Goblin tokens.
+/// Whenever a Goblin creature you control dies, each opponent loses 1 life and
+/// you gain 1 life.
 pub fn boggart_mischief() -> CardDefinition {
     let goblin = crate::card::TokenDefinition {
         name: "Goblin".into(),
@@ -196,17 +197,34 @@ pub fn boggart_mischief() -> CardDefinition {
         name: "Boggart Mischief",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Enchantment, CardType::Kindred],
-        triggered_abilities: vec![etb(Effect::MayDo {
-            description: "Blight 1 to create two Goblins?".into(),
-            body: Box::new(Effect::Seq(vec![
-                Effect::Blight { n: Value::Const(1) },
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(2),
-                    definition: Box::new(goblin),
+        triggered_abilities: vec![
+            etb(Effect::MayDo {
+                description: "Blight 1 to create two Goblins?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Blight { n: Value::Const(1) },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(2),
+                        definition: Box::new(goblin),
+                    },
+                ])),
+            }),
+            // "Whenever a Goblin creature you control dies, each opponent
+            // loses 1 life and you gain 1 life." The whole second ability was
+            // missing (`audit_oracle_verbs.py`, `gain_life` class).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                    }),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(1),
                 },
-            ])),
-        })],
+            },
+        ],
         ..Default::default()
     }
 }

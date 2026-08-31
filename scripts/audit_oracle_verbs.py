@@ -16,7 +16,7 @@ not a semantics one — "draws a card" against `Effect::Draw` — so it cannot s
 a card that draws the wrong number or draws for the wrong player. It can see a
 card that does not draw at all.
 
-**Standing at 196 rows over 17,028 cards with oracle text (2026-08-31), and
+**Standing at 182 rows over 17,028 cards with oracle text (2026-08-31), and
 the rate of real findings is high.** Six classes were spot-checked in the
 source: Codespell Cleric is a body-only stub (its whole ETB counter ability is
 absent), Fountain of Renewal drops its sac-for-a-card, Baral drops the trigger
@@ -62,6 +62,13 @@ and the verb table names the lowercase engine spellings it cares about
 (`draw_one`, `gain_life`, `deal_damage`, `destroy_target`, …). Worth 15 rows
 across five verbs: `draw` 32 -> 23, `gain_life` 30 -> 27, `damage` 25 -> 23,
 `untap` 3 -> 2.
+
+**AND `shortcut.rs` IS NOT THE ONLY BASE-CRATE HELPER FILE.** Every
+engine-baked token lives in `crabomination_base/src/tokens.rs`, and a token's
+own triggered ability is the verb: twenty-odd STX cards mint
+`stx_pest_token()`, whose "when this token dies, you gain 1 life" is a
+`TriggeredAbility` inside that function and invisible to a scan of the set
+file. Both files feed the helper table now — `gain_life` 27 -> 19.
 
 **Worked example of what that is worth: `return_to_hand` went 31 rows -> 5,
 and all five of the survivors are real** (2026-08-31). The 26 that went were
@@ -118,9 +125,17 @@ VERBS = {
         r"\bdraws? (?:a card|\w+ cards|that many cards|cards equal)",
         r"Draw|Miracle|draw_one|draw_cards",
     ),
+    # `opponent_gains_life` is the **cost** spelling —
+    # "rather than pay this spell's mana cost, you may have an opponent gain
+    # 3 life" (the Nemesis/Mercadian free spells: Invigorate, Reverent
+    # Silence, Skyshroud Cutter). Gaining life as the price of casting is what
+    # the oracle sentence says, so a card that spells it in `AlternativeCost`
+    # is not missing the verb — the same rule `return_to_hand` wrote for
+    # `return_self_cost`.
     "gain_life": (
         r"\bgains? (?:\d+|X|that much|twice) life\b",
-        r"GainLife|Drain|SetLife|Lifelink|LifeGain|gain_life",
+        r"GainLife|Drain|SetLife|Lifelink|LifeGain|gain_life"
+        r"|opponent_gains_life",
     ),
     "lose_life": (
         r"\bloses? (?:\d+|X|that much) life\b",
@@ -325,7 +340,15 @@ def oracle_text(card, face):
 
 
 def audit():
-    shortcuts = helper_variants((BASE / "effect" / "shortcut.rs").read_text())
+    # `shortcut.rs` is not the only base-crate helper file a card body reaches:
+    # every engine-baked token lives in `tokens.rs`, and a token's own
+    # triggered ability is the verb. Twenty-odd STX cards mint
+    # `stx_pest_token()`, whose "when this token dies, you gain 1 life" is a
+    # `TriggeredAbility` inside that function and invisible to a scan of the
+    # set file. Read both.
+    shortcuts = helper_variants(
+        (BASE / "effect" / "shortcut.rs").read_text() + "\n" + (BASE / "tokens.rs").read_text()
+    )
     prims = primitive_bodies()
     findings = {v: [] for v in VERBS}
     checked = 0

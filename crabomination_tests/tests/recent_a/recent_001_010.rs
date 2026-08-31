@@ -10486,6 +10486,41 @@ mod recent8 {
         assert_eq!(goblins, 2, "two Goblin tokens");
     }
 
+    /// "Whenever a Goblin creature you control dies, each opponent loses 1
+    /// life and you gain 1 life." The whole second ability was missing
+    /// (`audit_oracle_verbs.py`'s `gain_life` class); the non-Goblin leg is
+    /// asserted because the trigger filter is the half that can silently go
+    /// wrong.
+    #[test]
+    fn boggart_mischief_drains_when_a_goblin_you_control_dies() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::boggart_mischief());
+        let goblin = g.add_card_to_battlefield(0, catalog::goblin_guide());
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let (l0, l1) = (g.players[0].life, g.players[1].life);
+
+        let mut evs = Vec::new();
+        g.deal_damage_to_from(
+            crabomination::game::effects::EntityRef::Permanent(bear), 2, None, &mut evs,
+        );
+        g.dispatch_triggers_for_events(&evs);
+        let death = g.check_state_based_actions();
+        g.dispatch_triggers_for_events(&death);
+        drain_stack(&mut g);
+        assert_eq!((g.players[0].life, g.players[1].life), (l0, l1), "a Bear is not a Goblin");
+
+        let mut evs = Vec::new();
+        g.deal_damage_to_from(
+            crabomination::game::effects::EntityRef::Permanent(goblin), 4, None, &mut evs,
+        );
+        g.dispatch_triggers_for_events(&evs);
+        let death = g.check_state_based_actions();
+        g.dispatch_triggers_for_events(&death);
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, l1 - 1, "each opponent loses 1");
+        assert_eq!(g.players[0].life, l0 + 1, "you gain 1");
+    }
+
     /// Airbending Lesson exiles a nonland permanent with a {2} may-cast grant and
     /// draws a card.
     #[test]

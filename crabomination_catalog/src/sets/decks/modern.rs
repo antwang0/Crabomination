@@ -21682,8 +21682,11 @@ pub fn rimrock_knight() -> CardDefinition {
     }
 }
 
-/// Spinewoods Paladin — {3}{G} Creature — Bear Knight 4/3, Trample.
-/// Plot {2}{G} (CR 702.170).
+/// Spinewoods Paladin — {4}{G} Creature — Human Knight 5/4. Trample. When it
+/// enters, you gain 3 life. Plot {3}{G} (CR 702.170).
+///
+/// Shipped without the ETB life gain and with a {2}{G} plot cost; both found
+/// by `audit_oracle_verbs.py`'s `gain_life` class.
 pub fn spinewoods_paladin() -> CardDefinition {
     CardDefinition {
         name: "Spinewoods Paladin",
@@ -21696,7 +21699,11 @@ pub fn spinewoods_paladin() -> CardDefinition {
         power: 5,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        plot_cost: Some(cost(&[generic(2), g()])),
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        })],
+        plot_cost: Some(cost(&[generic(3), g()])),
         ..Default::default()
     }
 }

@@ -159,11 +159,51 @@ attributes every `self.<method>(` an arm calls and the verb table names the
 lowercase spellings (`draw_one`, `gain_life`, `deal_damage`, `destroy_target`,
 …). Worth 15 rows across five verbs.
 
-**Open rows at 2026-08-31, after that fix and the four `draw` fixes below:**
-`gain_life` 27, `counters` 25, `token` 24, `damage` 23, `draw` 19,
-`search_library` 21. `return_to_hand`'s four survivors (Corpses of the Lost,
-Intimidation Campaign, Rambling Possum, The Locust God) are each a
+**A SIXTH: `shortcut.rs` is not the only base-crate helper file.** Every
+engine-baked token lives in `crabomination_base/src/tokens.rs` and a token's
+own triggered ability *is* the verb — twenty-odd STX cards mint
+`stx_pest_token()`, whose "when this token dies, you gain 1 life" is a
+`TriggeredAbility` inside that function and invisible to a scan of the set
+file. **And a seventh, which is `return_to_hand`'s cost rule again:**
+`AlternativeCost.opponent_gains_life` is how the Nemesis free spells
+(Invigorate, Reverent Silence, Skyshroud Cutter) spell "rather than pay this
+spell's mana cost, you may have an opponent gain 3 life". Together
+`gain_life` 27 -> 16.
+
+**Open rows at 2026-08-31, after those fixes and the six card fixes below:**
+`counters` 25, `token` 24, `damage` 23, `search_library` 21, `draw` 19,
+`destroy` 15, `gain_life` 14. `return_to_hand`'s four survivors (Corpses of
+the Lost, Intimidation Campaign, Rambling Possum, The Locust God) are each a
 delayed/conditional bounce the body approximates.
+
+**`gain_life` worked too: 30 rows -> 14, and two more real defects fixed.**
+
+| card | shipped | printed |
+|---|---|---|
+| Spinewoods Paladin | no ETB, plot {2}{G} | + "when this creature enters, you gain 3 life", plot {3}{G} |
+| Boggart Mischief | the blight ETB only | + "whenever a Goblin creature you control dies, each opponent loses 1 life and you gain 1 life" |
+
+**Still open in `gain_life`, read and triaged — three of them are wholly
+wrong abilities, not missing riders:**
+
+- **Geyadrone Dihada's +1 is a different ability.** Ships "each opponent
+  loses 1, you draw 1, set loyalty to 3 if behind"; prints "each opponent
+  loses 2 life and you gain 2 life. Put a corruption counter on up to one
+  other target creature or planeswalker." Blocked on a `Corruption`
+  `CounterType` (and the card's protection-from-corrupted static and its −7
+  need it too), so it is a primitive job, not a rewrite.
+- **Survey Mechan's sac ability** ships "you draw 3"; prints "target player
+  draws three cards and gains 3 life", plus "costs {X} less to activate where
+  X is the number of differently named lands you control". Two targets on one
+  activated ability and a new cost-reduction shape.
+- **Circle of Confinement** drops its whole second ability (a name-match
+  against the card it exiled), **Search for Glory** drops "gain 1 life for
+  each {S} spent" (no snow-mana-spent tally exists), **Earth Kingdom
+  General** drops a once-a-turn counters-placed payoff.
+- **Tymaret, Chosen from Death** and **The Binding of the Titans** chapter II
+  share one shape: "you gain 1 life for each creature card exiled this way",
+  i.e. a count over `Selector::LastMoved` filtered to creature cards. **Two
+  cards on one `Value`** — the best ratio left in this class.
 
 **The `draw` class worked: 32 rows -> 19, nine of them the Parley/method class
 and four of them real defects, all four fixed with a regression test apiece.**

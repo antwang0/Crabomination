@@ -355,9 +355,9 @@ fn adventure_order_of_midnight_alter_fate_reanimates() {
 fn plot_spinewoods_paladin_casts_free_later() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::spinewoods_paladin());
-    // Plot for {2}{G} — exactly enough so the pool is empty afterward.
+    // Plot for {3}{G} — exactly enough so the pool is empty afterward.
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::Plot { card_id: id }).expect("plot");
     assert!(g.exile.iter().any(|c| c.id == id), "plotted card in exile");
     assert!(g.plotted_cards.contains(&id), "tracked as plotted");
@@ -375,6 +375,23 @@ fn plot_spinewoods_paladin_casts_free_later() {
     let p = g.battlefield_find(id).expect("Paladin on battlefield");
     assert_eq!((p.power(), p.toughness()), (5, 4));
     assert!(!g.plotted_cards.contains(&id), "plot state cleared once cast");
+}
+
+/// "When this creature enters, you gain 3 life." The ETB was missing and the
+/// plot cost read {2}{G} against a printed {3}{G} (`audit_oracle_verbs.py`'s
+/// `gain_life` class).
+#[test]
+fn spinewoods_paladin_etb_gains_three_life() {
+    let mut g = two_player_game();
+    let before = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::spinewoods_paladin());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 3, "ETB gains 3 life");
+    assert_eq!(
+        catalog::spinewoods_paladin().plot_cost.unwrap().cmc(),
+        4,
+        "printed plot cost is {{3}}{{G}}"
+    );
 }
 
 /// Vault Plunderer's ETB still fires when it's cast from a plot.
@@ -631,10 +648,10 @@ fn affordances_surface_plot_and_adventure() {
     g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a target for Stomp
     let plot = g.add_card_to_hand(0, catalog::spinewoods_paladin());
     let adv = g.add_card_to_hand(0, catalog::bonecrusher_giant());
-    // Enough mana for both the plot cost ({2}{G}) and Stomp ({1}{R}).
+    // Enough mana for both the plot cost ({3}{G}) and Stomp ({1}{R}).
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(4);
     g.priority.player_with_priority = 0;
     g.active_player_idx = 0;
     let a = g.compute_hand_affordances(0);
