@@ -2310,6 +2310,46 @@ a box whose state moves.
 
 ## Baseline
 
+### `(-134)`/`(-136)` and the oracle-verb pass — closing state at `0da5456e`
+
+Two perf commits, one instrument column, four auditor false classes, nineteen
+card defects and one CR conformance fix. `profiling-fast --no-default-features`,
+callgrind, six games, one thread, seed 1:
+
+```text
+                start 7134751b              tip 0da5456e        delta
+  cube          2,502,878,729             2,489,599,251     **-0.531 %**
+  fixed           843,554,517               838,634,137     **-0.583 %**
+  sealed        2,542,618,280             2,529,523,183     **-0.515 %**
+```
+
+**The whole non-perf half of the session is free, and that is the number worth
+keeping.** Against the post-`(-136)` measurement, the nineteen card fixes plus
+the CR 605.1a `is_mana_ability` arm read **+0.005 % / +0.007 % / +0.005 %** —
+inside `(-110)`'s ±0.006 % null-control band on all three pools. Thirteen of
+those cards swapped `LoseLife` for `DealDamage` and one made the entire
+painland class a mana ability again; none of it is measurable.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,097 / 0 / 5 (cargo nextest, workspace minus crabomination_client)
+        +6 over the session; golden traces in it and **unmoved across every
+        commit**, the CR 605.1a one included
+clippy  -p crabomination -p crabomination_base -p crabomination_catalog
+        -p crabomination_tests --all-targets                       clean
+--bench release-fast: 195,528 decisions / 27.44 turns / 611.0 per game /
+        0 stalls — **byte-identical to the invariant** after every commit;
+        determinism ok, thread_determinism ok (3 vs 1 threads identical)
+grid    NOT re-run. The CR 605.1a change is the one commit that would justify
+        it — it moves what the auto-tapper can reach on every painland — and
+        the next run should.
+```
+
+⚠ `games_per_s` read **297.9 / 324.9 / 341.5 / 346.4** off four builds of the
+same workload this session, all on a 2.10 GHz host. Wall clock here is ±8 %;
+the Ir totals above reproduce to under 2 ppm. Do not read a throughput delta
+off `--bench`.
+
 ### The instrument pass — closing state at the rebased tip
 
 **No engine instruction changes here.** Both devices this session built were

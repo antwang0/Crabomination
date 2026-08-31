@@ -25,86 +25,59 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Several sessions at once: code before tracker prose, **rebase
-   not force**, sequential builds, push "TAKEN, <date>" onto a PERF entry before spending a
-   build **and re-read it then**. ⚠ Disk is a fixed allowance: `target/debug/incremental`
-   reached 18 GB and deleting it was the difference between a linker Bus error and a green
-   suite. ⚠ **`cargo-nextest` is not always in the routine image** — `curl -sSL
-   https://get.nexte.st/latest/linux | tar zxf - -C ~/.cargo/bin` (10 s) before claiming a
-   suite gate. Background builds *did* make progress unattended in this container (a cold
-   `profiling-fast` engine is ~11 min, warm ~3 min); check before assuming either way.
-2. **All gates at `67ff74e5`:** suite **19,091 / 0 / 5** (the two new bounce regressions),
-   clippy clean on all four crates `--all-targets`, traces unmoved, `--bench` **195,528 /
-   27.44 / 611.0 / 0 stalls byte-identical to the invariant**, determinism + thread_determinism
-   green. Grid not re-run — the four perf commits are behaviour-preserving and the two card
-   fixes carry a regression test apiece. ⚠ **`games_per_s` read 307.8 / 269-283 / 384.9 across
-   this session — the container's host CPU varies (2.10 vs 2.80 GHz in the `--bench` header).
-   Ir is the signal; the decision/turn/stall invariant is the behaviour check.**
-3. **`(-129)` CLOSED — cube -1.067 % over four commits, and the rule was not the one it opened
-   on.** `event_matches_spec` was 31 -> 14.7 Ir a call: 93 % of its 1 M calls are pairs no
-   event can match, so the split (`event_matches_spec_rest` out of line) and then the frame
-   removal (Taii Wakeen's one `call` moved out of the jump table) took it. **THE RULE: one call
-   in a jump-table match costs the frame on every arm** — LLVM won't shrink-wrap past the
-   indirect branch. `scripts/cg_frames.py` is that rule as an instrument; it closed `(-131)`
-   (compute_permanent_gated, -0.26 % all pools) and `(-130)` (three filter walkers -> one)
-   came out beside it. ⚠ `cg_contexts.py` was under-reading Ir by **28x** until `00b17a18` —
-   any pre-fix inclusive-Ir figure from it is wrong.
-4. **Open, and now genuinely thin — the queue needs fresh dumps, not the next-largest row.**
-   `(-132)` **CLOSED without a build**: filtered on its own 1-3-body-call criterion the frame
-   class is 4.3 M Ir / **0.172 %** with every frame removed outright, and its two biggest rows
-   are the two that are not the shape (`has_keyword` measured at +0.35 %,
-   `computed_permanent_hinted`'s pushes hold values across 83 calls). `(-135)` **CLOSED before
-   it opened**: `compute_permanent_pass` is the fixed-cost sweep's top row on both pools
-   (1.777 % `cube` / 1.885 % `fixed`) and a `profiling-lines` profile resolves 102 lines with
-   **none above 0.22 %** — the third diffuse row in the file after the dispatcher and the
-   gather. Still open: `(-133)` `requirement_mentions_power` (0.104 %, establish it shares
-   `extract_power_gate`'s tree before folding) and `(-128)`'s 2,397 Ir SBA sweep body. ⚠ Before ranking a dump row, run it at two game counts:
-   `wants_converge`'s once-per-name `{:?}` scan is 0.5 % of a six-game dump and ~nothing at gate
-   length (measured, `e1de0e0f`).
-5. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices; `(-127)`'s wrap; `(-122)`'s
-   mask; `(-128)`'s skip gate; `(-129)`'s four devices (per-pair gate IS the loop; discriminant
-   memo is unsound on payload-carrying kinds; static variant mask needs a per-call audit against
-   the real matcher); dispatch's per-event gate; a third line profile of the dispatcher or the
-   gather; **actor scaling** (`(-52)`); the `turn_granted_triggers` / `granted_triggers_eot`
-   retains.
+   not force**, and **check the candidate numbers are still free before you spend one** — two
+   sessions both filed `(-132)`/`(-135)` this run and one had to renumber. ⚠ Disk is a fixed
+   allowance: `target/debug/incremental` hit "No space left on device" mid-suite twice; `rm -rf`
+   it between builds. ⚠ `cargo-nextest` is not in the image: `curl -sSLf
+   https://get.nexte.st/latest/linux | tar zx -C ~/.cargo/bin` (10 s). Background builds **do**
+   progress unattended here (cold `profiling-fast` engine ~10 min, warm ~3, `release-fast`
+   ~8:30), and three valgrind runs in parallel on 4 cores is free.
+2. **All gates at `0da5456e`:** suite **19,097 / 0 / 5**, golden traces in it and **unmoved
+   across every commit**; clippy clean `--all-targets`; `--bench` **195,528 / 27.44 / 611.0 /
+   0 stalls byte-identical to the invariant**; determinism + thread_determinism green.
+   `games_per_s` read 297-346 on the same binaries — host clock, not signal; Ir is the signal.
+3. **Perf: `(-134)` + `(-136)` closed the frame class for `cube` -0.536 % cumulative**, and the
+   rule is a correction to `(-132)`'s: **a frame-heavy function can still be made frameless if
+   the answer it *usually gives* needs a cheaper body than the answer it is written for.**
+   `has_keyword` answers 96 % of asks with a tag test that needs no `Keyword::eq`, so the fast
+   half holds no callee-saved register; `(-136)` swept five more the same way. `cg_frames.py`
+   now prints **`out/call`** (calls actually made per invocation): **body calls > 0 with
+   out/call ~ 0 is the shape, proved.** It settled `can_grant_keyword` (0.88 — not the shape)
+   and `(-133)` (0.54 — a likely loss) without a build. ⚠ **out/call ~ 0 is necessary, not
+   sufficient**: `can_block_attacker_computed` and `active_static` put their cold calls inside
+   a loop and LLVM cannot shrink-wrap into one. ⚠ **The frame column is a floor on a private
+   function and an estimate on a `pub` one** — `(-136)` measured 2.3x its prediction because
+   three of the five stopped being functions once the fast path got small.
+4. **Perf queue is thin and both remaining entries are priced as losses or soundness burdens**
+   (`(-128)` sweep body, `(-133)`). **Replenish from a fresh dump, and the unmined one is the
+   ACTOR** — PERF's profile of record for `selfplay_train` is 15 passes stale, `rank_shape` and
+   the encoder live on no `bot_ladder` pool, and this run's attempt was abandoned to a full
+   disk, not to a finding. ⚠ Read `(-110)`'s null-control warning first: the actor's codegen
+   band is ±0.2 %.
+5. **Do not retake:** `(-112)`; `(-124)`; `(-126)` both devices *and* the pending-stack rewrite
+   (+1.218 %); `(-127)`'s wrap; `(-122)`'s mask; `(-128)`'s skip gate; `(-129)`'s four devices;
+   `(-132)`'s two non-shapes; `(-135)`'s line profile; **actor scaling** (`(-52)`); an
+   `#[inline]` on `has_keyword` (+0.35 %, and it outlined its *callee*).
 6. **Measurement traps, all in PERF:** `grep mimalloc` is not the allocator check; `(-110)`'s
    null control does not transfer to the actor; a census must be re-run *after* a fix that
-   moves what it counts; `--demangle=no` separates one recursive function from several
-   monomorphizations; and `cg_frames.py` needs the same binary the dump came from.
-7. **Robustness:** `audit_panics.py` at 0 bare sites; grid last full at 33,120 games / 0
-   failures at `f2f7d58c`. An empty pool and `n == 0` are legal *inputs*, so the degradation
-   is a return, not a `debug_assert!`.
-8. **Cards: `audit_oracle_verbs` now reads 17,028 cards (was 10,949) — it inlines helper
-   spreads and expands engine primitives/destinations.** `return_to_hand` worked, 31 -> 4 real
-   rows, one real bug fixed (`ReturnSelf`-as-bounce: Field of Reality, Viashino Sandswimmer).
-   **The four false classes it taught are in CARD_BACKLOG; read six rows before working a
-   class.** Open next by size: `draw` 32, `gain_life` 30, `damage`/`counters` 25 — but over the
-   larger corpus, so unexamined not regressed. `token` (24) and `damage` were untouched.
-9. **`(-126)`'s second device, built and reverted here: `cube` +1.218 % / `fixed` +1.171 %.**
-   The whole And/Or/Not spine walked in one frame off a pending stack, the 205-arm body
-   `#[inline(always)]` behind it. It removed **exactly** the 533,788 recursive calls it aimed
-   at and the per-call cost went **64.3 -> 214.9 Ir**. **THE RULE: inlining a large `match`
-   body into a loop turns per-arm lazy work into unconditional per-call work** — the saving is
-   countable, the cost is not. The walker's floor is 27 instructions of prologue+epilogue on
-   all 1,030,812 calls, **42.0 % of its self cost**; nothing arm-level reaches it.
-10. **`(-132)`'s `has_keyword` half was built and lost, `cube` +0.35 %**, and not for the row's
-   reason: LLVM still declined to inline it (410,736 calls, unmoved) and the attribute
-   **outlined its callee**, `KeywordCounters::get`, for +9,809,688 Ir. **An `#[inline]` is a
-   request about callers and an unasked-for decision about callees** — price it on the callee
-   table, **one attribute per build** (the two halves together read +0.115 % and would have
-   buried `(-131)`'s real -0.249 %). And the "`crabomination_base` callee is a `release-fast`
-   artifact" rule is **false** for `has_keyword` / `compute_permanent_gated` /
-   `event_matches_spec`: `profiling-lto` leaves all three out of line with identical counts.
-   Thin LTO alone is **-2.42 %** on `cube`, measured for the first time.
-11. **Instruments.** `scripts/cg_arms.py` is new — per-`match`-arm execution counts off the
-   jump table (how `(-126)` was sized), plus `--sweep`, the *measured* counterpart to
-   `cg_frames.py`'s static prologue count (it includes the epilogue and the body's
-   unconditional head). Read a row for what its instructions **are**: 100 % of self with a
-   small `n` is a frame, a high share on a discriminant predicate is the predicate. ⚠
-   `cg_edges.py` was reading the cost out of **position 1**, the second position column on any
-   `--dump-instr=yes` dump: it booked 8.7 % of the run and mis-charged self lines as call
-   edges. **Any pre-fix number off an instruction dump is suspect** — same bug, different line,
-   as `cg_contexts.py`'s at `00b17a18`.
-13. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
+   moves what it counts; `cg_frames.py` needs the same binary the dump came from; and both
+   `cg_contexts.py` (`00b17a18`) and `cg_edges.py` had cost-column bugs — any pre-fix number
+   off an instruction dump is suspect.
+7. **Robustness:** `audit_panics.py` 0 bare sites; `audit_variant_coverage.py` 0 dead
+   capabilities / **2** dead primitives (was 3); `audit_incomplete` 1 triaged finding. Grid last
+   full at 33,120 games / 0 failures at `f2f7d58c` — **not re-run this run**, and the CR 605.1a
+   change is the one commit that would justify it.
+8. **Cards: `audit_oracle_verbs.py` went 215 -> 172 rows over FOUR new false classes this run**
+   — engine arms spell verbs as `self.<method>()`; `tokens.rs` is a helper file too;
+   `AlternativeCost.opponent_gains_life` is a cost spelling; **and a helper does not have to
+   live in the caller's file** (there is a global set-file table now; a run costs ~4.5 min).
+   19 real defects fixed with a test apiece across `draw` / `gain_life` / `damage`. **The
+   `damage` class found an ENGINE bug through a card: "deals 1 damage to you" was
+   `Effect::LoseLife` on 13 cards, and fixing it exposed that `is_mana_ability` rejected the
+   whole painland class** (CR 605.1a, `0da5456e`). Next by size: `counters` 25, `token` 24,
+   `search_library` 21 — **read six rows and fix the filter before working any of them**; that
+   is what every one of the eight false classes came from.
+9. **Targeting is CLOSED and gated**; its four rules live in ENGINE_BACKLOG.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
