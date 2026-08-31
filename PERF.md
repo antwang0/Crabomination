@@ -10332,7 +10332,7 @@ the table above is safe to compress:
 
 ## Log
 
-### Hundred-and-sixteenth pass (9) — the small-table sweep RETAKEN after the rebase: `cube` -0.255 %, `fixed` -0.307 %
+### Hundred-and-sixteenth pass (10) — the small-table sweep RETAKEN after the rebase: `cube` -0.255 %, `fixed` -0.307 %
 
 ⚠ **The three entries below were measured against `33955a1f` and read
 -1.080 % / -0.872 %. The concurrent session's `(-143)` then landed and the
@@ -10362,7 +10362,7 @@ Everything below keeps its original `33955a1f` numbers, which are internally
 consistent with each other and with the `--bench` invariant they were taken
 beside; only the *base* is stale.
 
-### Hundred-and-sixteenth pass (8) — `(-148)`: the last five, and where the sweep stops
+### Hundred-and-sixteenth pass (9) — `(-148)`: the last five, and where the sweep stops
 
 **`cube` -0.178 % / `fixed` -0.207 %** against `(-147)`, i.e. **-1.080 % /
 -0.872 % cumulative** against the run tip `33955a1f`. `--bench` still reads
@@ -10397,7 +10397,7 @@ a 41-Ir clone for a linear *lookup* that could be long. **The rule the sweep
 ends on: swap a map for a `Vec` when its size is bounded by the board, the
 batch or the seat count — not when it is bounded by the game.**
 
-### Hundred-and-sixteenth pass (7) — `(-147)`: the eight per-call tables in the blocking path, and the device is now proved
+### Hundred-and-sixteenth pass (8) — `(-147)`: the eight per-call tables in the blocking path, and the device is now proved
 
 **`cube` -0.796 % / `fixed` -0.498 %** against `(-146)`, i.e. **-0.904 % /
 -0.666 % cumulative** against the run tip `33955a1f`. Same instrument, same
@@ -10450,7 +10450,7 @@ uses them); what it had not done is sweep the *locals*. `cg_edges.py
 this pass the list is `rank_library_search`, `discard_card` and
 `block_candidates_for_mcts` — 0.01 % between them.
 
-### Hundred-and-sixteenth pass (6) — `(-146)`: `block_map` was the last `hashbrown` table in combat
+### Hundred-and-sixteenth pass (7) — `(-146)`: `block_map` was the last `hashbrown` table in combat
 
 **`cube` -0.109 % / `fixed` -0.169 %** off the run tip (`33955a1f`), same
 instrument and workload.
@@ -10553,6 +10553,100 @@ and it protects the largest single structural number in the profile.
 
 **Cumulative for the two passes**, off `1a783e04`: `cube` **-1.610 %**,
 `fixed` **-2.011 %**, `sealed` **-1.414 %**.
+
+### Hundred-and-sixteenth pass (5) — `(-143)`, and a CoW group is priced by its *reaches*
+
+**`cube` -1.274 % / `fixed` -1.373 % / `sealed` -0.926 %** at the guarded tip,
+retaken against the rebased base `1a783e04` (`profiling-fast
+--no-default-features`, callgrind, six games, one thread, seed 1, `--a gang
+--b gang`). **The largest single row in this Log**, and it stacks with
+`(-140)`/`(-141)`/`(-142)` rather than overlapping them: those grouped the
+clone's *scalar* copies, this one removes its *container* copies.
+
+```text
+  pool    base 1a783e04    (-143)          delta
+  cube    2,503,859,452   2,471,954,386   -1.2742 %
+  fixed     927,366,593     914,635,420   -1.3728 %
+  sealed  2,525,788,534   2,502,403,614   -0.9258 %
+```
+
+`(-138)`'s device, built as filed: the 32 resolution-scratch **collection**
+fields (`last_moved_cards`, the four `*_card_ids_this_resolution`, the two
+per-player discard maps, `resolution_targets`, the `pending_*` group,
+`resolving_source`, …) move off `GameState` into
+`scratch: CowBox<ResolutionScratch>`. Purely mechanical — 424 access sites
+rewritten to `state.scratch.<field>`, the compiler checking both directions,
+`#[serde(flatten)]` so the wire shape does not move — and the suite stayed
+green with the golden traces unmoved at every step.
+
+```text
+  fixed                     base 1a783e04    (-143)
+  GameState::clone self       12,822,808     6,137,744    -52.1 %
+    per clone (11,280)             1,137           544    -593 Ir
+  SmallVec                     9,759,048     4,356,596
+  __memcpy_avx_unaligned      21,298,984    18,882,081
+  Arc::clone_from_ref_in      23,331,836    26,593,232
+  Arc::make_mut CALLS            367,270       390,046    +22,776
+```
+
+**The first build was a REGRESSION, and that is the entry.** Unguarded, off
+the pre-rebase base `0e6ed414`, it read **`cube` +1.125 % / `fixed`
++2.154 %** — it lost twice what the whole clone could pay. The dump says why
+in one row: `Arc::make_mut` went **341,710 -> 778,538 calls on `fixed`**,
+**437 k new mutable reaches against 10.7 k clones, 41:1**, and nearly none of
+them wrote anything:
+
+```text
+  reaches added, unguarded (fixed, six games)
+  171,394  dispatch_triggers_for_events   two mem::take of an empty Vec, EVERY call
+  146,272  resolve_effect_into            fourteen clear() at every resolution root
+   65,844  perform_action_inner
+   36,964  activate_ability_inner         two .take() on a None
+   16,860  cast_spell_with_convoke        three .take() on a None
+```
+
+A plain field write does not care that it wrote nothing. A `CowBox` write
+does: it deep-copies the group.
+
+**The fix is `clear_cold!`'s discipline, one group out.** Four macros next to
+it — `clear_scratch!`, `take_scratch!`, `take_opt_scratch!`,
+`clear_opt_scratch!` — each a read that skips a no-op write, plus three
+hand-written guards (`resolution_targets`' swap/restore pair, the two discard
+maps' drop-the-table assignment behind a `capacity() > 0`,
+`cost_sacrificed_batch`'s build-and-extend). They took the added reaches from
+**+436,828 to +22,776 on `fixed`** and **+994,724 to +58,246 on `cube`** —
+95 % of them gone — and the sign with them. Every guard is value-identical:
+`mem::take` of an empty container hands back an empty container either way.
+
+**THE TRANSFERABLE RULE, AND IT IS ARITHMETIC.** A `CowBox` group pays
+`reaches x cost(make_mut)` to save `clones x cost(the fields' clone)`. Both
+sides are readable off a dump *before* the group exists:
+
+```text
+  saved per clone   593 Ir   (1,137 -> 544 self Ir a clone)
+  cost per reach     29 Ir   (base make_mut self 10,641,518 / 367,270 calls)
+  break-even         ~20 mutable reaches per clone
+  unguarded            41    LOSES
+  guarded             2.0    WINS
+```
+
+**So the pre-check for the next proposed CoW group is a reach count, not an
+unchanged-probe rate**, and `(-138)`'s census measured the wrong thing: it
+fingerprinted the group's *value* before and after a probe, so a `clear()` on
+an empty `Vec`, a `mem::take` of one, a `.take()` on a `None` and an
+assignment of an equal value all read as "never wrote the group". They are
+nearly free today and they are a deep copy under a `CowBox`. The census's own
+⚠ said it biased towards the device; it did, by 19x, and the direction was
+right while the size was not. `cg_edges.py --callers make_mut` on the
+*existing* binary gives the denominator for free — the engine's four existing
+groups run 367,270 reaches on 11,280 clones and each saves far more than
+593 Ir a clone.
+
+**What is left on `GameState::clone`.** 544 Ir a clone, 6.1 M on `fixed` and
+15.0 M on `cube`, and it is now ~160 scalar fields copied unconditionally —
+a struct memcpy with no container calls left in it. The remaining lever there
+is the struct's *size*, not its container count; nothing in this pass measured
+it. See `(-144)`.
 
 ### Hundred-and-sixteenth pass (4) — `(-142)`: the same grouping on the CoW deep copies, where the order is the DECLARATION
 
@@ -10785,100 +10879,6 @@ would rebuild the engine), and read the first pointer argument's attributes.
 folds identical bodies into aliases of the first one, so five types under test
 come back wearing the attributes of whichever one it kept. Give each probe a
 distinct body.
-### Hundred-and-sixteenth pass (5) — `(-143)`, and a CoW group is priced by its *reaches*
-
-**`cube` -1.274 % / `fixed` -1.373 % / `sealed` -0.926 %** at the guarded tip,
-retaken against the rebased base `1a783e04` (`profiling-fast
---no-default-features`, callgrind, six games, one thread, seed 1, `--a gang
---b gang`). **The largest single row in this Log**, and it stacks with
-`(-140)`/`(-141)`/`(-142)` rather than overlapping them: those grouped the
-clone's *scalar* copies, this one removes its *container* copies.
-
-```text
-  pool    base 1a783e04    (-143)          delta
-  cube    2,503,859,452   2,471,954,386   -1.2742 %
-  fixed     927,366,593     914,635,420   -1.3728 %
-  sealed  2,525,788,534   2,502,403,614   -0.9258 %
-```
-
-`(-138)`'s device, built as filed: the 32 resolution-scratch **collection**
-fields (`last_moved_cards`, the four `*_card_ids_this_resolution`, the two
-per-player discard maps, `resolution_targets`, the `pending_*` group,
-`resolving_source`, …) move off `GameState` into
-`scratch: CowBox<ResolutionScratch>`. Purely mechanical — 424 access sites
-rewritten to `state.scratch.<field>`, the compiler checking both directions,
-`#[serde(flatten)]` so the wire shape does not move — and the suite stayed
-green with the golden traces unmoved at every step.
-
-```text
-  fixed                     base 1a783e04    (-143)
-  GameState::clone self       12,822,808     6,137,744    -52.1 %
-    per clone (11,280)             1,137           544    -593 Ir
-  SmallVec                     9,759,048     4,356,596
-  __memcpy_avx_unaligned      21,298,984    18,882,081
-  Arc::clone_from_ref_in      23,331,836    26,593,232
-  Arc::make_mut CALLS            367,270       390,046    +22,776
-```
-
-**The first build was a REGRESSION, and that is the entry.** Unguarded, off
-the pre-rebase base `0e6ed414`, it read **`cube` +1.125 % / `fixed`
-+2.154 %** — it lost twice what the whole clone could pay. The dump says why
-in one row: `Arc::make_mut` went **341,710 -> 778,538 calls on `fixed`**,
-**437 k new mutable reaches against 10.7 k clones, 41:1**, and nearly none of
-them wrote anything:
-
-```text
-  reaches added, unguarded (fixed, six games)
-  171,394  dispatch_triggers_for_events   two mem::take of an empty Vec, EVERY call
-  146,272  resolve_effect_into            fourteen clear() at every resolution root
-   65,844  perform_action_inner
-   36,964  activate_ability_inner         two .take() on a None
-   16,860  cast_spell_with_convoke        three .take() on a None
-```
-
-A plain field write does not care that it wrote nothing. A `CowBox` write
-does: it deep-copies the group.
-
-**The fix is `clear_cold!`'s discipline, one group out.** Four macros next to
-it — `clear_scratch!`, `take_scratch!`, `take_opt_scratch!`,
-`clear_opt_scratch!` — each a read that skips a no-op write, plus three
-hand-written guards (`resolution_targets`' swap/restore pair, the two discard
-maps' drop-the-table assignment behind a `capacity() > 0`,
-`cost_sacrificed_batch`'s build-and-extend). They took the added reaches from
-**+436,828 to +22,776 on `fixed`** and **+994,724 to +58,246 on `cube`** —
-95 % of them gone — and the sign with them. Every guard is value-identical:
-`mem::take` of an empty container hands back an empty container either way.
-
-**THE TRANSFERABLE RULE, AND IT IS ARITHMETIC.** A `CowBox` group pays
-`reaches x cost(make_mut)` to save `clones x cost(the fields' clone)`. Both
-sides are readable off a dump *before* the group exists:
-
-```text
-  saved per clone   593 Ir   (1,137 -> 544 self Ir a clone)
-  cost per reach     29 Ir   (base make_mut self 10,641,518 / 367,270 calls)
-  break-even         ~20 mutable reaches per clone
-  unguarded            41    LOSES
-  guarded             2.0    WINS
-```
-
-**So the pre-check for the next proposed CoW group is a reach count, not an
-unchanged-probe rate**, and `(-138)`'s census measured the wrong thing: it
-fingerprinted the group's *value* before and after a probe, so a `clear()` on
-an empty `Vec`, a `mem::take` of one, a `.take()` on a `None` and an
-assignment of an equal value all read as "never wrote the group". They are
-nearly free today and they are a deep copy under a `CowBox`. The census's own
-⚠ said it biased towards the device; it did, by 19x, and the direction was
-right while the size was not. `cg_edges.py --callers make_mut` on the
-*existing* binary gives the denominator for free — the engine's four existing
-groups run 367,270 reaches on 11,280 clones and each saves far more than
-593 Ir a clone.
-
-**What is left on `GameState::clone`.** 544 Ir a clone, 6.1 M on `fixed` and
-15.0 M on `cube`, and it is now ~160 scalar fields copied unconditionally —
-a struct memcpy with no container calls left in it. The remaining lever there
-is the struct's *size*, not its container count; nothing in this pass measured
-it. See `(-144)`.
-
 ### Hundred-and-fifteenth pass — `(-137)`, and the frame class is now empty
 
 **`cube` -0.061 % / `fixed` -0.106 %** at `ca1834cd`, off `bda1a69d`
