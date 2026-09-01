@@ -218,7 +218,10 @@ before working a row; it costs a minute and it changed the answer twice.
 
 ### 5. No "first/Nth spell this turn" / "no card drawn this turn" gate (over-triggers)
 **Stale** — `Predicate::SpellsCastThisTurn{Equals,AtLeast}` + `EventSpec::
-once_per_turn` ship. Frostpyre Arcanist ✅ (once-each-turn rider wired).
+once_per_turn` ship. Frostpyre Arcanist — **this row was about a card that does
+not exist**: the shipped body was an invented once-each-turn Magecraft return,
+and the printed card is an ETB library tutor with a Giant/Wizard cost reduction
+(`audit_oracle_verbs.py`, `search_library` class). Rewritten; the row is moot.
 Thalia, Heretic Cathar ✅ (enters-tapped static; never had this gap). The
 Quandrix/Prismari rows are fabricated `_b###` synthesized cards — moot.
 

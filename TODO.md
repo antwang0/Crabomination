@@ -25,86 +25,31 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
-   tracker prose; **claim a candidate number at PUSH time, not at file time** — the last three
-   passes collided twice, and the hundred-and-nineteenth shipped with a stale number in its
-   commit titles rather than rewrite a shared branch. Container gotchas are in **CLAUDE.md**,
-   measurement rules in **PERF**.
-2. **Gates at the tip:** suite **19,138 / 0 / 5** (`--workspace --exclude
-   crabomination_client`), traces unmoved, clippy clean `--all-targets`; `--bench`
-   **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism and
-   thread_determinism ok. **Grid re-run and green: 30 cells / 33,120 games / 0 failures**
-   under `overflow` + `-C debug-assertions=yes` (2 undecided on `all` seed 11 are the known
-   draws; delete `target-audit/` after, 715 MB). `games_per_s` is the host; **Ir is the
-   signal**. ⚠ A `cube`/`sealed` Ir figure from before `2f5ef96e` is not comparable to one
-   after it.
-3. **`(-152)` taken, `cube` -0.422 % / `fixed` -0.376 %** — a token-presence lane on the four
-   card zones, plus the `PlayerData` headroom under it. ⚠ **`PlayerData`'s ceiling is 1,016
-   bytes**: 1,032 is a 1,040-byte chunk past glibc's largest smallbin, and crossing it cost
-   11.3 M Ir — more than the 10.0 M device that grew it saved. **Price a field added to the hot
-   player group at the size class, not at the copy.** 24 bytes of headroom left (992 of 1,016).
-4. **`(-153)` taken, `cube` -0.134 % / `fixed` -0.142 % — HALF its filed 0.25-0.35 % ceiling**,
-   and the shortfall is the lesson: **price a memo by reads-per-invalidation, not by the size
-   of the walk it replaces.** `Battlefield`'s lanes clear on *membership* changes, which happen
-   several times a turn against ~20,012 sweeps, so a once-per-sweep question misses ~3 times in
-   4. `(-152)`'s piles won because a library is written a few times a turn and read every sweep.
-   ⚠ Nothing is left on that row: the predicate is 8.8 Ir a card visit, so a `layer7_scan_bits`
-   memo is worth ~0.12 % at most, and there is no device for the miss rate.
-5. **The `zone::` lane device now covers INSTANCE state** (`(-152)` is the first), which widens
-   what a zone memo can answer — but only on a zone whose every `&mut` route clears the word.
-   `Battlefield::iter_mut`/`get_mut` deliberately do **not**, so a predicate put on a
-   *battlefield* lane must still be definition-only, widening its instance legs in the sound
-   direction (`(-153)` widened two).
-6. **⚠ A line-profile row is a pointer, never a size.** `cg_lines.py` read one source line at
-   84 Ir a walk on `cube` and 3.4 on `fixed` where the A/B says both pools pay the same share.
-   Take the A/B; the counts are the truth.
-7. **The build is still the largest single lever**: PGO -23.8 to -27.6 %, how-to at the top of
-   **ML_PIPELINE.md**. Otherwise perf is near its floor — `(-151)`'s fresh dump moved nothing,
-   and `(-145)` is refused on robustness, not on size.
-8. **`(-154)` taken, `cube` -0.148 % at six games and -0.224 % at eighteen** — three damage
-   tallies gated on the one card each serves, `(-149)`'s class a third time. ⚠ **Read a
-   six-game number for a new `debug_flag` as an understatement**: the flag `format!`s a
-   definition **233 times a process**, once per distinct card name, so its cost is fixed and
-   the gate's win is not. Nothing is left in the hot player group; **`CardData` is the next
-   one to read** (32,562 unshares, 500 Ir each).
-9. **⚠ `audit_catalog_stats.py` READ 0 BECAUSE IT COULD NOT SEE THE CARDS.** Its regex needs
-   `CardDefinition { name: "…" }` at eight spaces, so every helper-built card was unaudited.
-   Three **Rust** ratchets in `core_rules/catalog_registration.rs` walk the built definitions
-   instead — 17,639 cards against the cache, not 10,764 — and found **33 shipped defects on
-   their first run** (Fervent Strike wrong in every field it has; three Zendikar lands the
-   legend rule was deleting; Plaza of Harmony counting itself as a Gate). **Every Python
-   auditor's zero is now suspect for the same reason — check its population before quoting
-   it.** Two classes are filed, not fixed, because both move `cube`/`sealed` and want pricing:
-   ~48 nonbasic lands carrying redundant basic land types, and 183 missing subtypes
-   (CARD_BACKLOG's first section). The other two card auditors stay ratchets at zero.
-11. **⚠ A COST SPELLED IN THE EFFECT IS NOT A COST, and it is a *stall* bug, not a card
-   one.** `--decks cube --seed 2` had a game that took **over twenty minutes**;
-   `CRAB_CAP_DIAG=1` (new, PERF's "How to measure") named it in one line — 50,000 actions,
-   turn 15, **49,616 copies of Gravecrawler's graveyard activation on the stack**, paid for by
-   **Pentad Prism**, whose charge counter was `Effect::RemoveCounter` rather than
-   `remove_counter_cost`. `PayEnergy` / `RemoveCounter` / a leading `Discard` / `LoseLife` /
-   `Sacrifice*` all *resolve*; none of them gates the activation, a bot repeats a free ability
-   to the cap, and every extra `StackItem` is walked by every later legality check — so the
-   game goes quadratic first. **2.8 s** after the fix.
-   `no_activated_ability_is_free_unconditional_and_unlimited` is the ratchet (it diffs each
-   ability against `ActivatedAbility::default()` with only the effect swapped in, so a *new*
-   cost field is covered automatically): 46 rows, 20 genuine `{0}:` allow-listed, **26 fixed**.
-   Write-up in CARD_BACKLOG's first section. ⚠ One primitive job falls out: **a
-   self-regenerating static** (Clergy of the Holy Nimbus is allow-listed on that account).
-   New Ir base at `22a79dcc`: `fixed` **895,819,625** / `cube` **2,449,583,333** / `sealed`
-   **2,453,428,381**.
-11a. **Stall sweep at that tip: 68,000 games** (ten seeds x `--decks all --games 400
-   --threads 3`), no panic, no hang, **0 capped / 0 stuck**; seed 11's 14 undecided are draws.
-   ⚠ **A `--games 400 --decks all` sweep is 20 s a seed and catches what the grid does not**
-   (the grid is 120 games a cell) — run it before the grid, it is nearly free.
-12. **The engine half of (11):** `add_counter_cost` placed its counter raw instead of through
-   `scaled_counter_count`, whose own doc says it is centralized "so every counter-add site …
-   replaces consistently" — Vizier of Remedies shaved the counter an *effect* placed and not
-   the one a *cost* placed (CR 614.16). **When a cost field duplicates what an effect does,
-   check it takes the same replacement path.**
-13. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
-   (both want a card, not a fix), `audit_target_fields` 0 aimed by a shipped card,
-   `audit_target_walkers` clean. Targeting is CLOSED and gated; the four rules are in
-   ENGINE_BACKLOG, and its P2 has one live lead (Sand Golem's trigger, probed, not vacuous).
+   tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
+   measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"** (moved out
+   of here verbatim when this section passed its budget again — read them before proposing one).
+2. **Gates at `7286883b`:** suite **19,148 / 0 / 5**, traces unmoved, clippy clean; `--bench`
+   **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism +
+   thread_determinism ok. `scripts/robustness_grid.sh` now has **two** legs, both green —
+   ladder 33,120 games (`cap 0 / stuck 0 / draw 2`) and a new **actor** leg, the only audit
+   `server/encode.rs`'s two hot-path assertions have. `rm -rf target-audit/` after (~1.6 GB).
+3. **`(-155)` taken, `cube` -0.114 % / `fixed` -0.163 %; `(-128)` fully closed** — the SBA sweep
+   body is split in PERF's candidates and holds no ungated collect. **Do not re-split it.**
+4. **Perf is at its floor for this shape of engine** — `(-151)` and the `(-128)` split both
+   re-read it and moved nothing, `(-145)` is refused on robustness. **The build is the lever**:
+   PGO -23.8 to -27.6 %, how-to at the top of **ML_PIPELINE.md**.
+5. **⚠ A PYTHON AUDITOR'S ZERO IS SUSPECT — CHECK ITS POPULATION** (`audit_catalog_stats.py`
+   saw 10,764 of 17,639 cards; its Rust replacements found 33 defects on their first run). Two
+   card classes and the free-activation write-up are filed in **CARD_BACKLOG's first section**.
+6. **`audit_oracle_verbs.py` is the live card lane: 115 rows, `search_library` 18 -> 11;** next
+   by size `draw` 16 / `destroy` 15 / `gain_life` 13. ⚠ It cannot see a dedicated primitive, so
+   read the body before believing a row — 4 of 18 `search_library` rows were false positives.
+7. **⚠ A `--games 400 --decks all` stall sweep is 20 s a seed and catches what the grid does
+   not** (the grid is 120 games a cell). Run it before the grid; 68,000 games clean at
+   `22a79dcc`. `CRAB_CAP_DIAG=1` names a capped game's cause in one line.
+8. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
+   (both want a card), `audit_target_fields` / `audit_target_walkers` clean; ENGINE_BACKLOG's
+   P2 has one live lead (Sand Golem's trigger, probed, not vacuous).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

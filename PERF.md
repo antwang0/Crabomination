@@ -978,6 +978,41 @@ contention-immune, which makes it the better first look.
 
 ## Standing rules for a perf pass
 
+**Memo / lane / gate rules, moved verbatim from `TODO.md`'s NEXT when that
+section passed its ~15-line budget again. They come off `(-149)` through
+`(-155)`.**
+
+- ⚠ **`PlayerData`'s ceiling is 1,016 bytes**: 1,032 is a 1,040-byte chunk
+  past glibc's largest smallbin, and crossing it cost 11.3 M Ir — more than
+  the 10.0 M device that grew it saved. **Price a field added to the hot
+  player group at the size class, not at the copy.** 24 bytes of headroom
+  left (992 of 1,016).
+- **Price a memo by reads-per-invalidation, not by the size of the walk it
+  replaces.** `(-153)` took half its filed ceiling because `Battlefield`'s
+  lanes clear on *membership* changes, which happen several times a turn
+  against ~20,012 sweeps, so a once-per-sweep question misses ~3 times in 4.
+  `(-152)`'s piles won because a library is written a few times a turn and
+  read every sweep.
+- **The `zone::` lane device covers INSTANCE state** (`(-152)` is the first),
+  which widens what a zone memo can answer — but only on a zone whose every
+  `&mut` route clears the word. `Battlefield::iter_mut`/`get_mut` deliberately
+  do **not**, so a predicate put on a *battlefield* lane must still be
+  definition-only, widening its instance legs in the sound direction
+  (`(-153)` widened two).
+- ⚠ **A line-profile row is a pointer, never a size.** `cg_lines.py` read one
+  source line at 84 Ir a walk on `cube` and 3.4 on `fixed` where the A/B says
+  both pools pay the same share. Take the A/B; the counts are the truth.
+- ⚠ **Read a six-game number for a new `debug_flag` as an understatement**:
+  the flag `format!`s a definition **233 times a process**, once per distinct
+  card name, so its cost is fixed and the gate's win is not.
+- **When a cost field duplicates what an effect does, check it takes the same
+  replacement path.** `add_counter_cost` placed its counter raw instead of
+  through `scaled_counter_count`, so Vizier of Remedies shaved the counter an
+  *effect* placed and not the one a *cost* placed (CR 614.16).
+- **Rank a chain of pure guards by cost x rejection rate** (`(-116)`, and
+  `(-155)` is its fourth application): put the field test that rejects on the
+  common board in front of the pointer chase, not after it.
+
 **Census / catalog-audit rules, moved verbatim from `TODO.md`'s NEXT at the
 hundred-and-sixth pass when that section passed its ~15-line budget. They come
 off the targeting lane (`13435f3e` / `d9e6454d` / `d0799d5c` / `45c55cc3`).**
@@ -2335,6 +2370,45 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### The robustness-leg pass — closing state at `7286883b`
+
+Three commits: the `-C debug-assertions=yes` grid gained the **actor leg** it
+had only ever documented, `Selector::ExiledThisResolution` gained the
+battlefield exits it never saw, and `(-155)` took the loss check's team walk.
+
+```text
+  pool    base 26cea814   (-155)          delta
+  cube    2,449,582,202   2,446,784,785   **-0.1142 %**
+  fixed     895,110,008     893,654,520   **-0.1626 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,148 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and **unmoved across all
+        three commits** — nine card tests added, one deleted with the
+        invented ability it exercised
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant with six cards rewritten and a zone-exit hook added;
+        determinism ok, thread_determinism ok (3 vs 1 threads identical);
+        host_calib_ms 47, games_per_s 299.9 (host, not a signal),
+        peak_rss 21.5 MiB, bin 218,169,896 B
+grid    **both legs green.** ladder 30 cells (5 pools x 6 seeds x 120
+        games/archetype) = 33,120 games, 0 failures, `undecided cap 0 /
+        stuck 0 / draw 2`; actor 3 cells x 600 games at `--actors 3
+        --steps 2`, 0 failures, 111-129 games/s. The actor leg is new and
+        is the only audit `server/encode.rs`'s two hot-path assertions have.
+audits  audit_oracle_verbs total 122 -> 115, `search_library` **18 -> 11**;
+        audit_doc_drift 0, audit_keyword_drift 0 invented, audit_panics
+        0 bare, audit_variant_coverage 2 dead primitives (both want a card)
+```
+
+⚠ The two draws are on `all` seed 11 and are a **rules outcome, not a stall**
+— `bot_ladder` splits `undecided_by` three ways and the grid now totals them
+separately, failing only on `cap` + `stuck`.
 
 ### The free-activation pass — closing state at `22a79dcc`
 
@@ -10575,6 +10649,47 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-155)` — the loss check's team walk: `cube` -0.114 %, `fixed` -0.163 %
+
+```text
+  pool    base 26cea814   candidate       delta
+  cube    2,449,582,202   2,446,784,785   **-0.1142 %**
+  fixed     895,110,008     893,654,520   **-0.1626 %**
+```
+
+`profiling-fast --no-default-features`, six games, one thread, seed 1.
+CR 704.5a/c makes the state-based sweep ask every seat's life and poison
+total, so `effective_life` and `effective_poison` are ~2 calls a sweep each
+and `effective_poison` has **no other caller in the program**. Both read
+**44 Ir a call** for what should be a field load: each walked
+`ColdState.teams` with `members.contains(&seat)` — a pointer chase into every
+team's heap `Vec` — before looking at `shared_life`, which is `None` on every
+team outside Two-Headed Giant.
+
+`(-116)`'s rule applied verbatim (rank a chain of pure guards by cost x
+rejection rate): `shared_life.is_some()` is a byte of the struct the loop has
+already loaded and rejects **every** team in a non-2HG game. Swapping the two
+is behaviour-preserving because a seat is in exactly one team
+(`assign_teams` rejects a duplicate seat), so "the seat's team, if it shares
+life" and "a life-sharing team holding the seat" name the same team or
+neither. `poison_loss_threshold` takes the same swap; all three take
+`#[inline]`.
+
+```text
+  cube                        base                 candidate
+  effective_life    72,084 c / 3,196,300 / 44.3    7,244 c / 210,076 / 29.0
+  effective_poison  40,182 c / 1,748,924 / 43.5   40,182 c / 1,125,096 / 28.0
+  check_sba_into              50,464,486           50,568,083   } the inlined
+  eval_material_inner          5,209,142            5,529,686   } bodies, moved in
+                                          program net  -2,797,417
+```
+
+**The reorder alone is 15.5 Ir a call** — `effective_poison` is too big to
+inline and still went 43.5 -> 28.0, so this is not an `#[inline]`-only
+artifact of the no-LTO profile. The ceiling was the two rows' whole self cost,
+0.202 % of `cube` / 0.286 % of `fixed`; the change takes **57 % of it on both
+pools**, which is everything but the field load the functions exist to do.
 
 ### The Blood Moon pass — a bug-class kill that reads -0.004 % / -0.006 %
 
@@ -19738,6 +19853,55 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-155) CLOSED — TAKEN, `cube` -0.114 % / `fixed` -0.163 %.** The CR
+704.5a/c loss check's `effective_life` / `effective_poison` walked the team
+table with a heap-`Vec` `contains` before testing the `shared_life` that
+rejects every team outside 2HG. See the Log for the rows; the rule is
+`(-116)`'s and this is its fourth application.
+
+**(-128)'s LAST OPEN HALF IS CLOSED — THE SWEEP BODY IS SPLIT, AND IT IS THE
+RULES' OWN OBLIGATION PLUS THE LOSS CHECK.** `(-128)` ended with "what is
+still open here is the 2,397 Ir of sweep body, of which the CR 704.5f/g/h
+death sweep is an obligation and the rest is gate evaluation. That has never
+been split out." Split here off fresh dumps at `26cea814`
+(`profiling-fast --no-default-features`, six games, one thread, seed 1;
+`cube` 2,449,582,202 Ir, `fixed` 895,110,008), `cg_edges.py --callees
+check_state_based_actions_into`. Costs are inclusive, as callgrind records
+edges:
+
+```text
+  cube, 20,506 sweeps          calls    incl Ir     what it is
+    sba_board_scan             20,506   25,243,116  the scan, 1.03 % (as (-128) priced it)
+    Vec::from_iter (nested)    23,138   37,464,826  every collect in the body, merged
+    remove_from_bf_to_gy_raw    8,882   43,240,854  the deaths — 1.77 %
+    compute_permanents          3,746   19,159,611  the death sweep's scoped layer pass
+    Battlefield::walk_and_store 8,772    9,113,342  the lane misses under it
+    note_creature_death         8,860    7,109,226
+    dying_snapshot              8,860    4,497,594
+    effective_life             41,226    1,833,626  } the loss check, 2.01 and
+    effective_poison           40,182    1,748,924  } 1.96 calls a sweep
+  fixed, 10,230 sweeps
+    sba_board_scan             10,230   10,942,878  1.22 % — the inverted ratio again
+    effective_life             20,610      917,620
+    effective_poison           20,314      883,222
+```
+
+**There is no ungated collect left in the body, and that is the finding.**
+`--demangle=no` separates the merged `from_iter` row into eight
+monomorphizations and **none of them is called once per sweep**: the two
+largest are 4,390 calls x 2,534 Ir and 3,906 x 2,907, which track the ~4,000
+sweeps that are not `DeathSweep::Skip`, and an 8,860-call row is one per
+death. Every other `collect()` in the function sits behind an `if scan.*` that
+an ordinary board leaves false — `(-88)`'s gating did its job and nothing has
+rotted back.
+
+So the body is exactly three things: the scan `(-128)` already priced, the
+death legs charged to 8,882 actual deaths (an obligation — the rules have to
+compute layers for the creatures that might die and move the ones that do),
+and the loss check. **The only row in it that was neither is the loss check,
+and `(-155)` took it.** Nothing else here is worth a build; do not re-split
+this function.
 
 **(-152) CLOSED — see the hundred-and-nineteenth pass.** `cube` **-0.422 %** /
 `fixed` **-0.376 %** cumulative for a token lane on the four card zones plus
