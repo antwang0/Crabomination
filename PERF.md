@@ -2477,6 +2477,39 @@ a box whose state moves.
 
 ## Baseline
 
+### The run's closing state, at `4c943db4` + trackers
+
+```text
+  pool         tip reading      vs b5ea6d90 (the run's first base)
+  fixed        857,355,557        **-4.6303 %**
+  cube       2,363,107,506        **-3.8900 %**
+  sealed     2,376,026,199        **-3.8486 %**
+```
+
+⚠ **That span is not all this session's.** A concurrent session's `(-164)`
+(the recycled decider) and two bug fixes land inside it, and the second of
+those — a graveyard-only activated ability that worked from the battlefield —
+is worth about 0.6 % of `fixed` on its own. This session's five legs are
+`(-166)`, `(-168)`, `(-167)`, `(-169)`, `(-171)`, each with its own paired A/B
+in the Log.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,199 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release `cargo check --profile release-fast -p crabomination --bin bot_ladder`
+        clean, 1m32s — **the new gate**, see CLAUDE.md and `(-172)`'s commit
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 20.4 MiB, bin 218,610,904 B
+        (`--no-default-features`, i.e. the system allocator)
+stalls  6 seeds / 40,800 games `--games 400 --threads 3 --decks all` at the
+        tip: 0 panic, cap 0 / stuck 0, 16 draws on seed 11. Plus a five-seed
+        68,000-game two-binary run at every one of the five legs, stdout
+        byte-identical seed for seed.
+```
+
 ### The find-memo pass — closing state at `(-171)`
 
 ```text
@@ -11171,6 +11204,44 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-172)` BUILT, MEASURED AND REVERTED — a zone lane on the graveyard trigger walk is worth **exactly zero**
+
+```text
+  pool    base 4c943db4     (-172)          delta
+  fixed     857,355,557     857,355,627   **+0.0000 %**   (+70 Ir)
+  cube    2,363,107,506   2,363,108,719   **+0.0001 %**
+  sealed  2,376,026,199   2,376,025,993   **-0.0000 %**
+```
+
+`dispatch_triggers_for_events` ends with an **ungated** walk of every player's
+graveyard, card by card and triggered ability by triggered ability, looking for
+`EventScope::FromYourGraveyard` and the CR 702.29c graveyard-resident
+`SelfSource` family. It runs on every dispatch that gets that far — 43,754 of a
+six-game `fixed` run's 86,438 — over a zone that grows all game, which is the
+exact shape `Graveyard`'s anthem lane was built for (`fixed` -0.717 %). The
+free fourth lane slot (`GY_LANE_TRIGGER = 6`) was there for it. It reads
+**seventy instructions**, on 870 million.
+
+**Why, and it is the useful half.** The lane answers `true` on nearly every
+ask, so it adds a word load and changes nothing: `is_graveyard_self_source_kind`
+admits *"put into a graveyard from anywhere"*, which is one of the commonest
+triggers printed, so both graveyards hold a listener within a turn or two of
+the first creature dying. A presence gate is worth the population it excludes,
+and this one excludes ~nothing.
+
+**And the walk it would have skipped is cheap anyway** — `(-87)`'s rule one
+level up. Per graveyard card the body is a `definition` deref and a
+`triggered_abilities` pointer+length load, and the ability loop is zero-trip on
+most cards, so the whole walk is a few instructions a card over a zone holding
+eight or ten. `cg_lines` said so before the build: line 19207 carried
+**625,594 Ir, 0.072 %**, and that was the whole region.
+
+⚠ **The lesson for the next zone-lane proposal: check the lane's ANSWER
+distribution before building it, not just the walk's frequency.** Both of this
+one's inputs looked right — an ungated whole-zone walk, 43,754 asks, a growing
+zone, a free lane slot — and the predicate was still `true` almost always.
+`grep` the catalog for the predicate first; it costs nothing.
 
 ### `(-171)` — the battlefield find memo held ONE entry and the callers it exists for alternate: `cube` -0.941 %, `fixed` -0.875 %, `sealed` -0.625 %
 

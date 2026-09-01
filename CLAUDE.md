@@ -24,6 +24,17 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   against another PGO number, and raise the profile under the profile it will
   be consumed under — a mismatched one is partially applied with no warning.
 
+- ⚠ **`cargo check` and the suite both run with `debug-assertions` ON, so
+  neither catches code that only fails with them off.** `debug_assert!`
+  expands to `if cfg!(debug_assertions) { assert!(..) }` — the body is *dead*
+  in release, not *absent*, so its format arguments are still type-checked;
+  a release-only `()`-returning stub handed to one of them broke every
+  optimized profile on this branch while `cargo check` and 19,197 tests
+  stayed green. **Before pushing, run
+  `cargo check --profile release-fast -p crabomination --bin bot_ladder`** —
+  it is typecheck-only, so it is minutes, and it is the only gate in the loop
+  that sees `debug-assertions = false`.
+
 ## Container notes (the routine image)
 
 - `cargo-nextest` is not installed: `curl -sSLf https://get.nexte.st/latest/linux

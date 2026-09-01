@@ -36,31 +36,36 @@ sixty-seventh pass, so don't re-take that.
    `overflow-checks`** (item 8), suite **19,198 / 0 / 5**. ⚠ **Leave seed 43 out of a timed loop** — the nine-minute
    Scute Swarm game that *decides*, so `0 undecided` never sees it. Sweeps + closed leads:
    **ENGINE_BACKLOG**.
-3. **The run took -3.20 % `fixed` / -2.73 % `cube` / -2.94 % `sealed` over four legs**, confirmed
-   at **+2.44 % median games/s** on a 16-pair `bench_ab.py` (mimalloc both sides). `(-166)` the
-   `ComputedPermanent` recycle list, `(-168)` the effect-list one, `(-167)` its depth, `(-169)`
-   the `getenv`. All four in PERF's Log; the durable rules are in **"The recycle-list rules"**.
+3. **The run took -3.20 % `fixed` / -2.73 % `cube` / -2.94 % `sealed` over its first four
+   legs**, confirmed at **+2.44 % median games/s** on a 16-pair `bench_ab.py` (mimalloc both
+   sides), and `(-171)` added `fixed` -0.875 % / `cube` -0.941 % / `sealed` -0.625 % on top.
+   `(-166)` the `ComputedPermanent` recycle list, `(-168)` the effect-list one, `(-167)` its
+   depth, `(-169)` the `getenv`, `(-171)` the find memo. Durable rules: PERF's **"The
+   recycle-list rules"**.
 4. **⚠⚠ ASK WHO CALLS THE LIBC ROWS — that one command was 1.7 % of `fixed`.** `getenv 0.62 %`
    and `__strncmp_avx2 0.80 %` had sat in the self table for eleven passes while every pass read
    it top-down for *engine* names. `cg_edges.py --callers getenv` named `adjust_life` asking
    `env::var_os` **per life adjustment**. No allocation census, growth census or line profile
-   looks at libc. `memcpy` / `memcmp` / `strncmp` / `getenv` / `qsort`: name the caller first.
-   The class is ratcheted by `structural_audit::no_bare_env_lookup_on_a_simulator_path`.
-5. **⚠ A RECYCLE LIST'S HIT RATE IS "CHOOSING BADLY" OR "RUNNING OUT", AND ONLY ONE OF THEM IS A
-   POLICY.** `(-167)`'s FIFO moved the allocation count by **exactly zero** on two pools (377,395
-   and 1,010,449 `malloc` calls, to the call) and cost `fixed` +0.096 %; the depth, 8 → 32, took
-   `cube`'s misses 53,721 → 4,289. **Size such a list by the TAIL of its per-scope demand, never
-   by the mean.** And the check that makes the whole device work is *when* it is asked:
-   `(-27)` asked `Arc::get_mut` at the release site and hit 1 in 8; `(-166)` asks at the reuse
-   site and hits 68-82 %.
-6. **NEXT PERF LEADS — the census is re-taken at the tip and it is in `(-170)`.** Allocator is
-   down to **8.3 % of `fixed`** (was 10.2 %). Top named rows now: `Arc::make_mut`'s CoW unshare
-   (58,440 of `fixed`'s 63,076 `clone_from_ref_in` allocations, top caller
-   `cast_spell_with_convoke` at 60,406 `make_mut` calls), `SpecFromIterNested::from_iter`
-   (177,758 calls / 129.9 Ir / **2.65 %**, ⚠ `(-156)` prices a std-adapter rewrite at ~10 % of
-   its self Ir), and **`LocalKey::with` at 99,796 calls / 49.3 Ir — 0.57 %, and it is the two new
-   pools' own overhead**; the batching fix is written up in `(-170)`. ⚠ `PrintedList::push` is
-   dead as filed (99.3 % first pushes). **The build is still the lever**: PGO -23.8 to -27.6 %.
+   looks at libc. The class is ratcheted by
+   `structural_audit::no_bare_env_lookup_on_a_simulator_path`.
+5. **⚠ `cargo check` AND THE SUITE BOTH RUN WITH `debug-assertions` ON.** A `()`-returning
+   release stub handed to a `debug_assert!`'s format arguments broke **every optimized profile**
+   on this branch while `cargo check` and 19,197 tests stayed green — `debug_assert!`'s body is
+   dead in release, not absent, so it is still type-checked. **`cargo check --profile
+   release-fast -p crabomination --bin bot_ladder` before every push**; CLAUDE.md carries it.
+6. **NEXT PERF LEADS ARE IN `(-170)`, and the profile is now FLAT** — no engine row above
+   0.65 %. Ranked: the CoW unshare (`Arc::make_mut` is 387,452 calls at 29 Ir and **85 % of them
+   are the check, not the copy**; ⚠ **an inline fast path costs TWO `Arc::get_mut`s and each is a
+   `lock cmpxchg` — Ir would show a win the hardware would not**), `SpecFromIterNested`
+   (177,758 calls / 129.9 Ir / 2.65 %, ⚠ `(-156)` prices an adapter rewrite at ~10 % of that),
+   `LocalKey::with` (99,796 calls, ~0.28 % of it TLS machinery, batchable into
+   `LayerFreezeState`). ⚠ `PrintedList::push` and the graveyard-trigger lane `(-172)` are both
+   closed as refuted. **The build is still the lever**: PGO -23.8 to -27.6 %.
+6a. **⚠ CHECK A ZONE LANE'S *ANSWER* DISTRIBUTION BEFORE BUILDING IT** (`(-172)`, built and
+   reverted, **+70 Ir on 870 M**). Every input looked right — an ungated whole-zone walk, 43,754
+   asks a run, a zone that grows all game, a free lane slot — and the predicate still answered
+   `true` almost always, because `is_graveyard_self_source_kind` admits "put into a graveyard
+   from anywhere". `grep` the catalog for the predicate first; it costs nothing.
 7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-**clause** ratchets
    (seventeen, prose, three false-positive classes); the printed-**join** ratchets (eight,
    structured fields, 297 defects in one pass — "no bespoke spelling" is what makes a join a
