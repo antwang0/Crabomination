@@ -27,7 +27,7 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at `abd37cf7`:** suite **19,195 / 0 / 5**, traces unmoved, clippy `--all-targets`
+2. **Gates at this run's tip:** suite **19,195 / 0 / 5**, traces unmoved, clippy `--all-targets`
    clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**,
    determinism ok, **thread_determinism ok (3 vs 1)**. Stall sweeps: **26 seeds / 176,800 games**
    (0 panic, 0 hang, cap 0 / stuck 0, draws only) and, after `(-159)`, **5 seeds / 34,000 games
@@ -36,33 +36,41 @@ sixty-seventh pass, so don't re-take that.
    loop**: it is the nine-minute game "How to measure" names, it *decides*, and it will look like
    a hang. Sweeps and their two closed leads live in **ENGINE_BACKLOG's first section**;
    `scripts/robustness_grid.sh` has two green legs.
-3. **`(-159)` TAKEN — `cube` -0.176 % / `sealed` -0.153 % / `fixed` -0.121 %:**
-   `auto_tap_for_cost_inner` rebuilt a `ScriptedDecider` **per coloured pip** (`Box` + `VecDeque`
-   + an `asked` log nothing reads). ⚠ **The win is BIGGER than the census row (0.117 % `cube`)
-   because `Box::new` never reaches `RawVec::finish_grow` — a growth census is a LOWER BOUND on
-   an allocation-shaped row, not its size.**
-4. **⚠ `(-158)` ROW 1 IS REFUTED AND IT IS A CLASS.** `SmallVec`'s `Drop` has no `#[may_dangle]`
+3. **TWO TAKES, AND THE SECOND CARRIES THE LESSON.** `(-159)`: `auto_tap_for_cost_inner` rebuilt
+   a `ScriptedDecider` **per coloured pip** — `cube` -0.176 % / `sealed` -0.153 % / `fixed`
+   -0.121 %. `(-161)`: `AffectedPermanents::Specific` takes a free inline slot (`CopyVec<[CardId;
+   4]>` is the same 24 bytes as the `Vec`) — **`fixed` -0.521 %**, `cube` -0.112 %, `sealed`
+   **+0.024 %** (stated, not rounded: a >4-id list spills where a `Vec` sized once).
+4. **⚠⚠ THE GROWTH CENSUS READS *ZERO* ON `vec![x]` AND ON `with_capacity(n)`.** Both are
+   exact-size allocations that reach `__rust_alloc` without ever growing, so they appear in no
+   `cg_growth.py` ranking. `(-161)`'s proof: **112,003 growths before, 112,003 after**, and
+   36,612 fewer allocations for -0.52 % of `fixed`. **Reach for `cg_alloc_sites.py` on a
+   `profiling-lines` binary BEFORE ranking, not after** — and note that a `profiling-lines` A/B
+   is sound (same opts, same inlining; it read 0.0007 % from `profiling-fast`), which saves the
+   second build.
+5. **⚠ `(-158)` ROW 1 IS REFUTED AND IT IS A CLASS.** `SmallVec`'s `Drop` has no `#[may_dangle]`
    and `Vec`'s does, so an inline buffer whose element **borrows out of `&self`** holds that
    borrow to end of scope — twelve `E0502`/`E0506`s in three files. **Ask "does the element
    borrow?" before pricing an inline slot**; that is why every slot `(-71)`/`(-158)` shipped is
    `CardId`-shaped. `(-158)`'s row 3 stays open and is priced in the entry.
-5. **NEXT PERF LEAD, and it is the BENCH pool's own top row.** `gather_continuous_effects_inner`
-   is **0.328 % of `fixed`, 0.040 % of `cube`** — the mirror of `dispatch_board_scan`. The value
-   escapes, so the device is a **`thread_local!` reuse pool with an RAII guard** (`GameState`
-   must stay `Sync`); `(-160)` has the shape and the reentrancy it must survive.
-6. **Rank a first-allocation census by COUNT, not per-call** — `(-160)` re-ran `cg_growth.py`
+6. **NEXT PERF LEAD — `(-162)`, the one row `(-161)` left in that function, and it is `cube`'s.**
+   `mod.rs:9862`, `all_effects`' `with_capacity`: **39,224 `cube` allocations, the largest single
+   line there, and absent from `fixed`**. The value escapes, so the device is a **`thread_local!`
+   reuse pool with an RAII guard** (`GameState` must stay `Sync` — that is why `in_layer_gather`
+   is an `AtomicBool`), plus an `into_vec()` for the two `Arc::new` call sites.
+7. **Rank a first-allocation census by COUNT, not per-call** — `(-160)` re-ran `cg_growth.py`
    that way on all three pools and found nine engine rows the Ir ranking never showed, plus the
    receipt that `(-158)` worked. ⚠ **`Vec::push_mut` / `Vec::from_iter` top every pool and are
    not rows** — they are the growths the inliner declined to fold into their engine caller.
    Name a line with **`cg_alloc_sites.py`** on a **`profiling-lines`** binary, never
    `profiling-fast`. **The build is still the lever**: PGO -23.8 to -27.6 %.
-7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-**clause** ratchets
+8. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-**clause** ratchets
    (seventeen, prose, three false-positive classes) and the printed-**join** ratchets (eight,
    structured fields, 297 defects in one pass; the rule that makes a join a proof is "no bespoke
    spelling"). Still unjoined: `color_identity` (⚠ and `format::color_identity` does not read
    rules-text mana symbols at all, CR 903.4), activated-ability *count* on nonlands, token
    definitions. ⚠ **A python auditor's zero is suspect — check its population.**
-7a. **`audit_oracle_verbs.py` is the third lane and it is productive: 122 -> 106 rows.**
+8a. **`audit_oracle_verbs.py` is the third lane and it is productive: 122 -> 106 rows.**
    `search_library` 18 -> 11, `destroy` 15 -> 12, `draw` 16 -> 12 — fourteen shipped cards, of
    which **three were a card that does not exist** (Frostpyre Arcanist, Lurking Deadeye, Skywarp
    Skaab: an invented body plus a doc comment quoting it as the oracle). Next by size `counters`
@@ -70,7 +78,7 @@ sixty-seventh pass, so don't re-take that.
    dedicated variant reads as a miss** — four of eighteen `search_library` rows were that. Read
    the body against the scryfall cache before believing a row; the triage and the eleven rows
    filed as primitive-blocked are in CARD_BACKLOG.
-8. **Robustness green, P2 has no open correctness lead**, and the demo builders now deal from
+9. **Robustness green, P2 has no open correctness lead**, and the demo builders now deal from
    `GameState.rng` with `set_jitter_seed` beside them, which took the 4-player FFA bot test off
    its 600-second wall-clock ceiling.
 

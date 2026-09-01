@@ -892,7 +892,7 @@ fn granted_phasing_phases_out_at_untap() {
     g.add_continuous_effect(crabomination::game::layers::ContinuousEffect {
         timestamp: 9999,
         source: bear,
-        affected: crabomination::game::layers::AffectedPermanents::Specific(vec![bear]),
+        affected: crabomination::game::layers::AffectedPermanents::just(bear),
         layer: crabomination::game::layers::Layer::L6Ability,
         sublayer: None,
         duration: crabomination::game::layers::EffectDuration::WhileSourceOnBattlefield,

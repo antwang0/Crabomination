@@ -3231,7 +3231,7 @@ impl GameState {
         &self,
         source: &CardInstance,
         applies_to: &crate::effect::Selector,
-    ) -> Option<Vec<CardId>> {
+    ) -> Option<crate::game::layers::AffectedIds> {
         let matches = |req: &SelectionRequirement, c: &CardInstance| {
             self.evaluate_requirement_static_on(
                 req,
@@ -3254,7 +3254,11 @@ impl GameState {
             crate::effect::Selector::MatchingAmong { inner, filter }
                 if matches!(**inner, crate::effect::Selector::This) =>
             {
-                Some(if matches(filter, source) { vec![source.id] } else { vec![] })
+                Some(if matches(filter, source) {
+                    std::iter::once(source.id).collect()
+                } else {
+                    Default::default()
+                })
             }
             crate::effect::Selector::ControlledBy { who, filter } => {
                 let ctx =
@@ -10043,7 +10047,7 @@ impl GameState {
             all_effects.push(ContinuousEffect {
                 timestamp: card.object_timestamp(),
                 source: card.id,
-                affected: AffectedPermanents::Specific(vec![card.id]),
+                affected: AffectedPermanents::just(card.id),
                 layer: Layer::L4Type,
                 sublayer: None,
                 duration: EffectDuration::Indefinite,
@@ -10058,7 +10062,7 @@ impl GameState {
             all_effects.push(ContinuousEffect {
                 timestamp: card.object_timestamp(),
                 source: card.id,
-                affected: AffectedPermanents::Specific(vec![target]),
+                affected: AffectedPermanents::just(target),
                 layer: Layer::L7PowerTough,
                 sublayer: Some(PtSublayer::Modify),
                 duration: EffectDuration::Indefinite,
@@ -10206,7 +10210,7 @@ impl GameState {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
-                    affected: AffectedPermanents::Specific(vec![target]),
+                    affected: AffectedPermanents::just(target),
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10222,7 +10226,7 @@ impl GameState {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
-                    affected: AffectedPermanents::Specific(vec![target]),
+                    affected: AffectedPermanents::just(target),
                     layer: Layer::L6Ability,
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10233,7 +10237,7 @@ impl GameState {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
-                    affected: AffectedPermanents::Specific(vec![target]),
+                    affected: AffectedPermanents::just(target),
                     layer: Layer::L6Ability,
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10244,7 +10248,7 @@ impl GameState {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
-                    affected: AffectedPermanents::Specific(vec![target]),
+                    affected: AffectedPermanents::just(target),
                     layer: Layer::L6Ability,
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10258,7 +10262,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target]),
+                        affected: AffectedPermanents::just(target),
                         layer: Layer::L6Ability,
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10270,7 +10274,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target]),
+                        affected: AffectedPermanents::just(target),
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10293,7 +10297,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target]),
+                        affected: AffectedPermanents::just(target),
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10308,7 +10312,7 @@ impl GameState {
                 effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
-                    affected: AffectedPermanents::Specific(vec![target]),
+                    affected: AffectedPermanents::just(target),
                     layer,
                     sublayer,
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10383,7 +10387,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target]),
+                        affected: AffectedPermanents::just(target),
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10394,7 +10398,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target]),
+                        affected: AffectedPermanents::just(target),
                         layer: Layer::L6Ability,
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10405,7 +10409,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![target]),
+                        affected: AffectedPermanents::just(target),
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::SetValue),
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10428,7 +10432,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![id]),
+                        affected: AffectedPermanents::just(id),
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10442,7 +10446,7 @@ impl GameState {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.object_timestamp(),
                         source: card.id,
-                        affected: AffectedPermanents::Specific(vec![id]),
+                        affected: AffectedPermanents::just(id),
                         layer: Layer::L6Ability,
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10460,7 +10464,7 @@ impl GameState {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.object_timestamp(),
                     source: card.id,
-                    affected: AffectedPermanents::Specific(vec![card.id]),
+                    affected: AffectedPermanents::just(card.id),
                     layer: Layer::L4Type,
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10485,7 +10489,7 @@ impl GameState {
                         else {
                             continue;
                         };
-                        let ids: Vec<CardId> = self
+                        let ids: crate::game::layers::AffectedIds = self
                             .attacking
                             .iter()
                             .map(|a| a.attacker)
@@ -10865,7 +10869,7 @@ impl GameState {
                         all_effects.push(ContinuousEffect {
                             timestamp: card.object_timestamp(),
                             source: card.id,
-                            affected: AffectedPermanents::Specific(vec![id]),
+                            affected: AffectedPermanents::just(id),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::Modify),
                             duration: EffectDuration::WhileSourceOnBattlefield,
@@ -10917,7 +10921,7 @@ impl GameState {
                         all_effects.push(ContinuousEffect {
                             timestamp: src.object_timestamp(),
                             source: src.id,
-                            affected: AffectedPermanents::Specific(vec![*id]),
+                            affected: AffectedPermanents::just(*id),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::Modify),
                             duration: EffectDuration::WhileSourceOnBattlefield,
@@ -11129,7 +11133,7 @@ impl GameState {
                 });
                 let Some(name) = card.named_card.as_deref().filter(|_| has) else { continue };
                 debug_assert!(card_can_strip_abilities(card), "strip gate: Alpine Moon");
-                let hit: Vec<CardId> = self
+                let hit: crate::game::layers::AffectedIds = self
                     .battlefield
                     .iter()
                     .filter(|c| {
@@ -11175,7 +11179,7 @@ impl GameState {
                     continue;
                 }
                 debug_assert!(card_can_strip_abilities(card), "strip gate: Ultima");
-                let hit: Vec<CardId> = self
+                let hit: crate::game::layers::AffectedIds = self
                     .battlefield
                     .iter()
                     .filter(|c| {
@@ -11353,7 +11357,7 @@ impl GameState {
                         all_effects.push(ContinuousEffect {
                             timestamp: card.object_timestamp(),
                             source: card.id,
-                            affected: AffectedPermanents::Specific(vec![target.id]),
+                            affected: AffectedPermanents::just(target.id),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::Modify),
                             duration: EffectDuration::WhileSourceOnBattlefield,
@@ -11443,7 +11447,7 @@ impl GameState {
                         all_effects.push(ContinuousEffect {
                             timestamp: card.object_timestamp(),
                             source: card.id,
-                            affected: AffectedPermanents::Specific(vec![target.id]),
+                            affected: AffectedPermanents::just(target.id),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::Modify),
                             duration: EffectDuration::WhileSourceOnBattlefield,
@@ -11535,7 +11539,8 @@ impl GameState {
                         matches!(applies_to, crate::effect::Selector::CreaturesInCombatWith(inner)
                             if matches!(inner.as_ref(), crate::effect::Selector::This))
                             .then(|| {
-                                let mut ids = self.attackers_blocked_by(card.id).to_vec();
+                                let mut ids: crate::game::layers::AffectedIds =
+                                    self.attackers_blocked_by(card.id).iter().copied().collect();
                                 ids.extend(self.blockers_of(card.id));
                                 AffectedPermanents::Specific(ids)
                             })
@@ -11603,7 +11608,7 @@ impl GameState {
                         all_effects.push(ContinuousEffect {
                             timestamp: card.object_timestamp(),
                             source: card.id,
-                            affected: AffectedPermanents::Specific(vec![other.id]),
+                            affected: AffectedPermanents::just(other.id),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::Modify),
                             duration: EffectDuration::WhileSourceOnBattlefield,
@@ -11900,7 +11905,7 @@ impl GameState {
                             requirement: Box::new(req),
                         }
                     } else {
-                        let ids: Vec<CardId> = self
+                        let ids: crate::game::layers::AffectedIds = self
                             .battlefield
                             .iter()
                             .filter(|c| c.controller == seat)
@@ -11968,7 +11973,7 @@ impl GameState {
                         continue;
                     }
                     let colors = top.definition.cost.colors();
-                    let ids: Vec<CardId> = self
+                    let ids: crate::game::layers::AffectedIds = self
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == card.controller && c.definition.is_creature())
@@ -12028,7 +12033,7 @@ impl GameState {
                         ),
                         _ => continue,
                     };
-                    let ids: Vec<CardId> = self
+                    let ids: crate::game::layers::AffectedIds = self
                         .battlefield
                         .iter()
                         .filter(|c| {
@@ -13084,7 +13089,7 @@ impl GameState {
                             .count()
                     })
                     .collect();
-                let ids: Vec<CardId> = self
+                let ids: crate::game::layers::AffectedIds = self
                     .battlefield
                     .iter()
                     .filter(|c| counts.get(c.controller).is_some_and(|n| *n as u32 <= *max))
@@ -13203,7 +13208,7 @@ impl GameState {
                 all_effects.push(ContinuousEffect {
                     timestamp: 0,
                     source: id,
-                    affected: AffectedPermanents::Specific(vec![id]),
+                    affected: AffectedPermanents::just(id),
                     layer: Layer::L4Type,
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -13221,7 +13226,7 @@ impl GameState {
                 all_effects.push(ContinuousEffect {
                     timestamp: 0,
                     source: bearer,
-                    affected: AffectedPermanents::Specific(vec![bearer]),
+                    affected: AffectedPermanents::just(bearer),
                     layer: Layer::L4Type,
                     sublayer: None,
                     duration: EffectDuration::WhileSourceOnBattlefield,
@@ -13379,7 +13384,7 @@ impl GameState {
                             all_effects.push(ContinuousEffect {
                                 timestamp: card.object_timestamp(),
                                 source: card.id,
-                                affected: AffectedPermanents::Specific(vec![subject.id]),
+                                affected: AffectedPermanents::just(subject.id),
                                 layer: Layer::L7PowerTough,
                                 sublayer: Some(PtSublayer::Modify),
                                 duration: EffectDuration::WhileSourceOnBattlefield,
@@ -13390,7 +13395,7 @@ impl GameState {
                             all_effects.push(ContinuousEffect {
                                 timestamp: card.object_timestamp(),
                                 source: card.id,
-                                affected: AffectedPermanents::Specific(vec![subject.id]),
+                                affected: AffectedPermanents::just(subject.id),
                                 layer: Layer::L6Ability,
                                 sublayer: None,
                                 duration: EffectDuration::WhileSourceOnBattlefield,
@@ -25612,7 +25617,7 @@ pub(crate) fn selector_to_affected(
             if matches!(inner.as_ref(), Selector::This)
                 && let Some(attached_id) = card.attached_to
             {
-                Some(AffectedPermanents::Specific(vec![attached_id]))
+                Some(AffectedPermanents::just(attached_id))
             } else {
                 None
             }

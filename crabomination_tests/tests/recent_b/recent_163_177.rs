@@ -1685,7 +1685,7 @@ mod recent170 {
         g.add_continuous_effect(crabomination::game::layers::ContinuousEffect {
             timestamp: ts,
             source: engine,
-            affected: crabomination::game::layers::AffectedPermanents::Specific(vec![engine]),
+            affected: crabomination::game::layers::AffectedPermanents::just(engine),
             layer: crabomination::game::layers::Layer::L4Type,
             sublayer: None,
             duration: crabomination::game::layers::EffectDuration::UntilEndOfTurn,
@@ -1859,7 +1859,7 @@ mod recent172 {
         g.add_continuous_effect(crabomination::game::layers::ContinuousEffect {
             timestamp: ts,
             source: hellride,
-            affected: crabomination::game::layers::AffectedPermanents::Specific(vec![hellride]),
+            affected: crabomination::game::layers::AffectedPermanents::just(hellride),
             layer: crabomination::game::layers::Layer::L4Type,
             sublayer: None,
             duration: crabomination::game::layers::EffectDuration::UntilEndOfTurn,

@@ -198,7 +198,7 @@ fn cr_611_2b_until_your_next_turn_spans_one_turn_cycle() {
     g.add_continuous_effect(ContinuousEffect {
         timestamp,
         source: bear,
-        affected: AffectedPermanents::Specific(vec![bear]),
+        affected: AffectedPermanents::just(bear),
         layer: Layer::L7PowerTough,
         sublayer: Some(PtSublayer::SetValue),
         duration: EffectDuration::UntilYourNextTurn { player: 0, installed_turn },

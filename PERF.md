@@ -2422,6 +2422,34 @@ a box whose state moves.
 
 ## Baseline
 
+### The allocation-shape pass — closing state
+
+Two takes and one instrument finding. `(-159)` is the scripted decider;
+`(-161)` is the one below, and it is the larger of the two on the bench pool.
+
+```text
+  pool    base 0d4b6a62      (-161)          delta
+  fixed     904,129,531     899,421,490   **-0.5207 %**
+  cube    2,462,325,526   2,459,568,601   **-0.1120 %**
+  sealed  2,471,797,637   2,472,400,646   **+0.0244 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,192 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-lines: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; thread_determinism ok (3 vs 1); peak_rss
+        21.7 MiB (`--no-default-features`)
+stalls  5 seeds / 34,000 games `--decks all`, run on BOTH binaries: identical
+        decided/undecided counts seed for seed, 0 panic either side
+```
+
+⚠ **The A/B is `profiling-lines` on both sides** — see `(-161)` for why that
+is a sound instrument and what it saved.
+
 ### The scripted-decider pass — closing state
 
 ```text
@@ -10885,6 +10913,80 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-161)` — `AffectedPermanents::Specific` takes an inline slot: `fixed` -0.521 %, `cube` -0.112 %, `sealed` +0.024 %
+
+```text
+  pool    base 0d4b6a62      (-161)          delta
+  fixed     904,129,531     899,421,490   **-0.5207 %**
+  cube    2,462,325,526   2,459,568,601   **-0.1120 %**
+  sealed  2,471,797,637   2,472,400,646   **+0.0244 %**
+
+  fixed, allocator calls: __rust_alloc 500,822 -> 464,210  (-36,612, -7.3 %)
+                          malloc  23.69 M Ir -> 22.11 M
+                          free    19.53 M Ir -> 18.10 M
+  fixed, GROWTHS: 112,003 -> 112,003 — UNCHANGED. See below.
+```
+
+`Specific(Vec<CardId>)` becomes `Specific(CopyVec<[CardId; 4]>)`. **The slot is
+free**: `CardId` is a `u32`, so the `CopyVec` is the same 24 bytes as the `Vec`
+it replaces (a `const _: () = assert!(…)` in `layers.rs` holds it there), which
+is what makes `(-152)`'s ceiling rule — an inline slot in a stored, cloned
+struct is priced at the clone — have nothing to charge. `CopyVec` rather than
+`SmallVec` so `ContinuousEffect::clone` is a `memcpy` too.
+
+**⚠ THE HEADLINE IS NOT THE 0.52 %. IT IS THAT THE GROWTH CENSUS COULD NOT SEE
+THIS ROW AT ALL.** `cg_growth.py` ranks callers of `RawVec::finish_grow`, and
+`vec![x]` for a one-element `Vec` is an **exact-size** allocation that reaches
+`__rust_alloc` directly — it never grows, so it appears in no growth census,
+ever. The proof is in the table above: 112,003 growths before, 112,003 after,
+the `gather_continuous_effects_inner` row unmoved at 11,806 — and 36,612 fewer
+allocations and 0.52 % less `fixed`. `(-159)` found the same blind spot for
+`Box::new` and called a growth census a lower bound; this says something
+stronger: **for the `vec![x]` shape the growth census reads exactly zero.**
+`scripts/cg_alloc_sites.py` on a `profiling-lines` binary is the instrument
+that sees it, and it is the one to reach for **before** ranking, not after.
+
+**What it named.** Base binary, `--dump-instr=yes`, six games, seed 1:
+
+```text
+  fixed — 48,418 allocations charged to gather_continuous_effects_inner
+    27,040  mod.rs:10236  `Specific(vec![target])`  equipped-bonus keyword grant
+     9,572  mod.rs:10209  `Specific(vec![target])`  equipped-bonus P/T
+     6,012  mod.rs:10206  `Specific(vec![target])`  (same push, the struct)
+     5,794  mod.rs:10233  `Specific(vec![target])`  (same push, the struct)
+
+  cube — 62,076, and the top line is a DIFFERENT row
+    39,224  mod.rs:9862   `all_effects` `Vec::with_capacity(base+sa)`  ← still open
+    11,918 + 5,672 + 4,878 + 384   the same four `Specific` lines
+```
+
+Fifty-five engine emit sites spell `Specific(vec![id])`; they now spell
+`AffectedPermanents::just(id)`, and the eight that `collect()` a list have
+their locals (and `eager_static_targets`' return) retyped to `AffectedIds`, so
+those collects land inline too.
+
+**`sealed` +0.024 % is real and it is the honest cost.** Callgrind Ir is
+deterministic, so a +0.02 % is not noise: a `Specific` list longer than four
+ids collects into the inline slot and then spills, which is one copy more than
+a `Vec` sized from `size_hint`. Widening the slot would fix it and break the
+"free" property (`[CardId; 8]` is 40 bytes against `Vec`'s 24), so it stays at
+four: -0.52 % on the bench pool and -0.11 % on `cube` against +0.02 % on one is
+the trade, and it is stated rather than rounded away.
+
+**A/B taken on `profiling-lines` both sides, which is new and is sound.** That
+profile is `release-fast` + packed DWARF: identical opt settings, identical
+inlining, only the debug-info packaging differs — and the reading proves it,
+`fixed` 904,129,531 here against `profiling-fast`'s 904,136,265 one commit
+earlier, 0.0007 % apart, which is the argv-length figure. Using it saved the
+`profiling-fast` rebuild that would otherwise have been needed alongside the
+`profiling-lines` one the attribution required.
+
+Gates: suite green with the golden traces unmoved, clippy `--all-targets`
+clean, `--bench` byte-identical to the invariant (195,806 / 27.49 / 611.9 /
+0 stalls), determinism ok, thread_determinism ok, and the five-seed
+34,000-game `--decks all` sweep reads the same decided/undecided counts seed
+for seed as the base.
 
 ### `(-159)` — `auto_tap_for_cost_inner` stops rebuilding its scripted decider: `cube` -0.176 %, `sealed` -0.153 %, `fixed` -0.121 %
 
@@ -20225,6 +20327,28 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-162) THE ONE ROW `(-161)` LEFT INSIDE `gather_continuous_effects_inner`,
+AND IT IS `cube`'s, NOT THE BENCH'S.** `mod.rs:9862`, `all_effects`'
+`Vec::with_capacity(base.len() + sa_cards.len())`: **39,224 of a six-game
+`cube` run's allocations, the largest single line in the function on that
+pool, and absent from `fixed`** — where the capacity is usually zero and
+`with_capacity(0)` does not allocate. The buffer is the function's return
+value, consumed as `&[ContinuousEffect]` and dropped by nine of its eleven
+call sites, so an inline slot is wrong (the struct is large and the value
+escapes) and the device is a **reuse pool**. The constraint is that
+`gather_continuous_effects` takes `&self` and `GameState` must stay `Sync` —
+which is why `in_layer_gather` is an `AtomicBool` and not a `Cell` — so a
+`thread_local!` free-list with an RAII guard is the only shape that satisfies
+both, and the reentrancy the guard has to survive is exactly the one
+`in_layer_gather` documents (`board_keyword_matching`,
+`permanents_with_abilities_removed` and the debug cross-checks all gather from
+inside a gather). Two call sites take the value permanently (`Arc::new(...)`)
+and need an `into_vec()` escape hatch.
+
+⚠ **Price it with `cg_alloc_sites.py`, not `cg_growth.py`** — see `(-161)`:
+`with_capacity(n)` is an exact-size allocation and the growth census reads
+zero on it, exactly as it did on `vec![x]`.
 
 **(-160) THE GROWTH CENSUS RE-TAKEN AT `4e10eefa`, ON ALL THREE POOLS AND
 RANKED BY COUNT — `(-158)`'s OWN RULE APPLIED TO ITS OWN TABLE.** Fresh

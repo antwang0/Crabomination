@@ -183,6 +183,24 @@ pub struct ContinuousEffect {
     pub modification: Modification,
 }
 
+/// The ids an [`AffectedPermanents::Specific`] names.
+///
+/// Inline rather than a `Vec`, and the slot is **free**: `CardId` is a `u32`,
+/// so `CopyVec<[CardId; 4]>` is the same 24 bytes as the `Vec` it replaces and
+/// `(-152)`'s ceiling rule — an inline slot in a stored, cloned struct is
+/// priced at the clone — has nothing to charge. The allocation it removes is
+/// not free: almost every emitter names exactly **one** permanent, and
+/// `just(id)` was 48,418 of a six-game `fixed` run's allocations
+/// inside `gather_continuous_effects_inner` alone. `CopyVec` rather than
+/// `SmallVec` so `ContinuousEffect::clone` is a `memcpy` too. PERF `(-161)`.
+pub type AffectedIds = crate::copyvec::CopyVec<[CardId; 4]>;
+
+/// `AffectedIds` must not be wider than the `Vec` it replaced — the whole
+/// case for the inline slot is that it is free in a struct this hot to clone.
+const _: () = assert!(
+    std::mem::size_of::<AffectedIds>() <= std::mem::size_of::<Vec<CardId>>(),
+);
+
 /// Describes which permanents a continuous effect affects.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AffectedPermanents {
@@ -247,7 +265,7 @@ pub enum AffectedPermanents {
         counter: Option<crate::card::CounterType>,
     },
     /// A specific set of permanents.
-    Specific(Vec<CardId>),
+    Specific(AffectedIds),
     /// All creatures with the given creature type (lord effect).
     /// `controller: Some(p)` restricts to that player's creatures; `None` = all.
     /// `exclude_source: true` skips the effect's source permanent itself —
@@ -295,6 +313,14 @@ pub enum AffectedPermanents {
         requirement: Box<SelectionRequirement>,
         power_at_least: i32,
     },
+}
+
+impl AffectedPermanents {
+    /// One named permanent — the shape almost every emitter builds, and the
+    /// one [`AffectedIds`]'s inline slot exists for.
+    pub fn just(id: CardId) -> Self {
+        Self::Specific(std::iter::once(id).collect())
+    }
 }
 
 // ── Computed permanent ────────────────────────────────────────────────────────

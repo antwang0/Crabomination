@@ -3960,7 +3960,7 @@ impl GameState {
                     self.add_continuous_effect(crate::game::layers::ContinuousEffect {
                         timestamp,
                         source,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![source]),
+                        affected: crate::game::layers::AffectedPermanents::just(source),
                         layer: crate::game::layers::Layer::L7PowerTough,
                         sublayer: Some(crate::game::layers::PtSublayer::SetValue),
                         duration: crate::game::layers::EffectDuration::UntilYourNextTurn {
@@ -13553,7 +13553,7 @@ impl GameState {
                             self.add_continuous_effect(ContinuousEffect {
                                 timestamp: ts,
                                 source,
-                                affected: AffectedPermanents::Specific(vec![cid]),
+                                affected: AffectedPermanents::just(cid),
                                 layer: Layer::L7PowerTough,
                                 sublayer: Some(PtSublayer::Modify),
                                 duration: duration_kind,
@@ -13607,7 +13607,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer: Layer::L6Ability,
                             sublayer: None,
                             duration: duration_kind.clone(),
@@ -13642,7 +13642,7 @@ impl GameState {
                             self.add_continuous_effect(ContinuousEffect {
                                 timestamp: ts,
                                 source,
-                                affected: AffectedPermanents::Specific(vec![cid]),
+                                affected: AffectedPermanents::just(cid),
                                 layer: Layer::L4Type,
                                 sublayer: None,
                                 duration: duration_kind.clone(),
@@ -13666,7 +13666,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer: Layer::L4Type,
                             sublayer: None,
                             duration: duration_kind.clone(),
@@ -13700,7 +13700,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::SetValue),
                             duration: duration_kind.clone(),
@@ -13730,7 +13730,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer: Layer::L7PowerTough,
                             sublayer: Some(PtSublayer::Switch),
                             duration: duration_kind.clone(),
@@ -13758,7 +13758,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let affected = AffectedPermanents::just(cid);
                     // Layer 4: add the Creature card type + any subtypes.
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
@@ -13826,7 +13826,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let affected = AffectedPermanents::just(cid);
                     let mut push = |layer, sublayer, modification| {
                         let timestamp = self.next_timestamp();
                         self.add_continuous_effect(ContinuousEffect {
@@ -13873,7 +13873,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L4Type,
                         sublayer: None,
                         duration: EffectDuration::Indefinite,
@@ -13918,7 +13918,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L4Type,
                         sublayer: None,
                         duration: duration_kind.clone(),
@@ -13939,7 +13939,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::SetValue),
                         duration: duration_kind.clone(),
@@ -14415,7 +14415,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L5Color,
                         sublayer: None,
                         duration: duration_kind.clone(),
@@ -14463,7 +14463,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L4Type,
                         sublayer: None,
                         duration: duration_kind.clone(),
@@ -14562,7 +14562,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L3Text,
                         sublayer: None,
                         duration: duration_kind.clone(),
@@ -14644,7 +14644,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L3Text,
                         sublayer: None,
                         duration: duration_kind.clone(),
@@ -14670,7 +14670,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer: Layer::L5Color,
                             sublayer: None,
                             duration: duration_kind.clone(),
@@ -14690,7 +14690,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L7PowerTough,
                         sublayer: Some(crate::game::layers::PtSublayer::Switch),
                         duration: duration_kind.clone(),
@@ -14709,7 +14709,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source,
-                        affected: AffectedPermanents::Specific(vec![cid]),
+                        affected: AffectedPermanents::just(cid),
                         layer: Layer::L4Type,
                         sublayer: None,
                         duration: duration_kind.clone(),
@@ -14729,7 +14729,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer: Layer::L4Type,
                             sublayer: None,
                             duration: duration_kind.clone(),
@@ -16080,7 +16080,7 @@ impl GameState {
                     self.add_continuous_effect(crate::game::layers::ContinuousEffect {
                         timestamp: ts,
                         source: src,
-                        affected: crate::game::layers::AffectedPermanents::Specific(vec![cid]),
+                        affected: crate::game::layers::AffectedPermanents::just(cid),
                         layer: crate::game::layers::Layer::L6Ability,
                         sublayer: None,
                         duration: crate::game::layers::EffectDuration::WhileSourceTapped,
@@ -22690,7 +22690,7 @@ impl GameState {
                 self.add_continuous_effect(ContinuousEffect {
                     timestamp: ts,
                     source: id,
-                    affected: AffectedPermanents::Specific(vec![id]),
+                    affected: AffectedPermanents::just(id),
                     layer: Layer::L5Color,
                     sublayer: None,
                     duration: EffectDuration::Indefinite,
@@ -25536,7 +25536,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source: cid,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer: Layer::L4Type,
                             sublayer: None,
                             duration: EffectDuration::Indefinite,
@@ -27901,7 +27901,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let affected = AffectedPermanents::just(cid);
                     let mut push = |layer, sublayer, modification| {
                         let ts = self.next_timestamp();
                         self.add_continuous_effect(ContinuousEffect {
@@ -27954,7 +27954,7 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let affected = AffectedPermanents::just(cid);
                     let mut push = |layer, modification| {
                         let ts = self.next_timestamp();
                         self.add_continuous_effect(ContinuousEffect {
@@ -28031,7 +28031,7 @@ impl GameState {
                 };
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 for cid in lands {
-                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let affected = AffectedPermanents::just(cid);
                     let mut push = |layer, modification| {
                         let ts = self.next_timestamp();
                         self.add_continuous_effect(ContinuousEffect {
@@ -31961,7 +31961,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source: id,
-                        affected: AffectedPermanents::Specific(vec![id]),
+                        affected: AffectedPermanents::just(id),
                         layer: Layer::L4Type,
                         sublayer: None,
                         duration: EffectDuration::UntilEndOfTurn,
@@ -31983,7 +31983,7 @@ impl GameState {
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
                         source: id,
-                        affected: AffectedPermanents::Specific(vec![id]),
+                        affected: AffectedPermanents::just(id),
                         layer: Layer::L4Type,
                         sublayer: None,
                         duration: if *until_eot {
@@ -32132,7 +32132,7 @@ impl GameState {
                         self.add_continuous_effect(ContinuousEffect {
                             timestamp: ts,
                             source,
-                            affected: AffectedPermanents::Specific(vec![cid]),
+                            affected: AffectedPermanents::just(cid),
                             layer,
                             sublayer: None,
                             duration: EffectDuration::Indefinite,

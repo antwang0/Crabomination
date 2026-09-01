@@ -1584,7 +1584,7 @@ fn cr_508_1d_layer_granted_must_attack_is_still_forced() {
     g.add_continuous_effect(ContinuousEffect {
         timestamp,
         source: bear,
-        affected: AffectedPermanents::Specific(vec![bear]),
+        affected: AffectedPermanents::just(bear),
         layer: Layer::L6Ability,
         sublayer: None,
         duration: EffectDuration::WhileSourceOnBattlefield,

@@ -29,7 +29,7 @@ fn install(g: &mut GameState, on: crabomination::card::CardId, m: Modification, 
     g.add_continuous_effect(ContinuousEffect {
         timestamp: ts,
         source: on,
-        affected: AffectedPermanents::Specific(vec![on]),
+        affected: AffectedPermanents::just(on),
         layer,
         sublayer: None,
         duration: EffectDuration::UntilEndOfTurn,
