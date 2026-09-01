@@ -27,7 +27,7 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at `5876405d`:** suite **19,168 / 0 / 5**, traces unmoved, clippy `--all-targets`
+2. **Gates at `007893c7`:** suite **19,168 / 0 / 5**, traces unmoved, clippy `--all-targets`
    clean, `--bench` **byte-identical to the invariant**. `scripts/robustness_grid.sh` has two green
    legs (ladder 33,120 games, actor 3 x 600); `rm -rf target-audit/` after (~2 GB).
 3. **Perf is at its floor for this shape of engine** — `(-151)` and the `(-128)` split moved nothing,

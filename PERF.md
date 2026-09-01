@@ -2391,7 +2391,7 @@ a box whose state moves.
 
 ## Baseline
 
-### The printed-clause pass — closing state at `5876405d`
+### The printed-clause pass — closing state at `007893c7`
 
 **A cards pass, in this file for the method rather than the numbers.** Nothing
 in the engine moved and no perf claim is made; `--bench` is byte-identical to
@@ -19978,7 +19978,7 @@ worth the ~0.1-0.2 % it could carry. `(-119)` is the warning: a restructure of
 this shape read **+0.07 %** and was reverted.
 
 **THE `profiling-lto` READING IS TAKEN AND THE SHIM SURVIVES — the gate above
-opens, not closes.** Both sides at `5876405d`, `--no-default-features`, six
+opens, not closes.** Both sides at `007893c7`, `--no-default-features`, six
 games, one thread, seed 1, `cube`:
 
 ```text
