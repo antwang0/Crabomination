@@ -26,60 +26,23 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
-   measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"** (moved out
-   of here verbatim when this section passed its budget again — read them before proposing one).
-2. **Gates at `f7132799`:** suite **19,157 / 0 / 5**, traces unmoved, clippy clean; `--bench`
-   **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism ok.
-   `scripts/robustness_grid.sh` now has **two** legs and both are green at that tip — ladder
-   33,120 games (`cap 0 / stuck 0 / draw 2`) and a new **actor** leg (3 x 600 games), the only
-   audit `server/encode.rs`'s two hot-path assertions have. `rm -rf target-audit/` after (~2 GB).
-3. **`(-155)` taken, `cube` -0.114 % / `fixed` -0.163 %; `(-128)` fully closed** — the SBA sweep
-   body is split in PERF's candidates and holds no ungated collect. **Do not re-split it.**
-4. **Perf is at its floor for this shape of engine** — `(-151)` and the `(-128)` split both
-   re-read it and moved nothing, `(-145)` is refused on robustness. **The build is the lever**:
-   PGO -23.8 to -27.6 %, how-to at the top of **ML_PIPELINE.md**.
-5. **⚠ A PYTHON AUDITOR'S ZERO IS SUSPECT — CHECK ITS POPULATION** (`audit_catalog_stats.py`
-   saw 10,764 of 17,639 cards; its Rust replacements found 33 defects on their first run). Two
-   card classes and the free-activation write-up are filed in **CARD_BACKLOG's first section**.
-5a. **THE PRODUCTIVE LANE THIS RUN WAS "READ THE PRINTED ORACLE FOR A CLAUSE, CHECK THE
-   PRIMITIVE" — five classes, 17 cards, six new ratchets.** Blood Moon did nothing to a land
-   that prints no basic type (every `tri_land`); seven cards *replaced* the types their oracle
-   *adds* (an ensouled Darksteel Citadel stopped being a Land); two printed "loses all
-   abilities" and stripped none; three sat on the wrong trigger step (Goblin Rabblemaster's
-   token is begin-combat, not attack). ⚠ **Its false-positive floor is keywords** — Menace,
-   Bushido, Prowess and Melee all print the clause they implement, so validate a needle set on
-   three known-good cards first. The measured survey and the 29 open trigger-step rows are in
-   **CARD_BACKLOG**.
-6. **`audit_oracle_verbs.py` is the live card lane: 112 rows** (`search_library` 18 -> 11,
-   `destroy` 15 -> 12); next by size `draw` 16 / `gain_life` 13 / `counters` 13. ⚠ It cannot see
-   a dedicated primitive, so read the body before believing a row — 4 of 18 `search_library`
-   rows were false positives. The triage and what is filed rather than fixed (Ravager Wurm's
-   per-mode target filter, four cards wanting a primitive) is in **CARD_BACKLOG**'s
-   `search_library`/`destroy` section.
-7. **⚠ A `--games 400 --decks all` stall sweep is 20-30 s a seed and catches what the grid
-   does not** (the grid is 120 games a cell). Run it before the grid. **Re-run at `bd42107c`
-   after this run's trigger fixes: 81,600 games / 12 seeds, 0 panic, cap 2 / stuck 0 / draw 14
-   — the two caps are the same Beacon-of-Immortality lock (7a), unchanged.** Earlier: 183,600
-   games over 27 seeds at `22a79dcc`, 4 capped, 22 draws.** `CRAB_CAP_DIAG=1` names a
-   capped game's cause in one line; **`CRAB_CAP_DIAG=<n>` names any game past `n` actions**,
-   which is the only way to see a *slow* game — one that decides is never "undecided".
-7a. **BOTH LEADS FROM THAT SWEEP ARE CLOSED, AND NEITHER IS A BUG — do not re-open them.**
-   (a) The four capped games are **Beacon of Immortality**: "Double target player's life total.
-   Then shuffle this into its owner's library." `CRAB_LIFE_WATCH=1000` prints the series —
-   1,580 -> 3,161 -> 6,322 -> 12,644, one doubling every other turn — so ~31 casts saturate
-   `i32::MAX` and **neither player can lose to damage**, while the shuffle-back keeps the
-   library from ever emptying (`lib 1` at turn 2,159). That is the printed card; paper ends it
-   by agreement or a clock, and the action cap is this engine's clock. 4 games in 183,600.
-   (b) The nine-minute game is **Scute Swarm**: 4,091 copies of itself on the board at turn 46,
-   the printed landfall doubling. Every board walk is O(4,091), so 9,223 actions take nine
-   minutes. The game *decides* (the opponent is at -4,072), so no undecided count can see it —
-   `CRAB_CAP_DIAG=5000` is what found it. Also not a bug, and the same shape will recur.
-   ⚠ **The transferable half: a correct board can be quadratic.** An actor's throughput has a
-   tail that is not a defect, and the two instruments above are how to tell one from the other
-   before spending a build.
-8. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
-   (both want a card), `audit_target_fields` / `audit_target_walkers` clean; ENGINE_BACKLOG's
-   P2 has one live lead (Sand Golem's trigger, probed, not vacuous).
+   measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
+2. **Gates at `5876405d`:** suite **19,168 / 0 / 5**, traces unmoved, clippy `--all-targets`
+   clean, `--bench` **byte-identical to the invariant**. `scripts/robustness_grid.sh` has two green
+   legs (ladder 33,120 games, actor 3 x 600); `rm -rf target-audit/` after (~2 GB).
+3. **Perf is at its floor for this shape of engine** — `(-151)` and the `(-128)` split moved nothing,
+   `(-145)` is refused on robustness. **The build is the lever**: PGO -23.8 to -27.6 %, ML_PIPELINE 0.
+4. **The lane that keeps paying: read a printed oracle clause, check the primitive, ratchet it** —
+   seventeen now live in `core_rules/catalog_registration.rs`, five sharing one `clause_ratchet` body.
+   ⚠ **The needle is the work**, and its three false-positive classes ("unless" is not the only
+   conditional; one clause has two correct spellings; "enchanted creature" is an Aura granting it)
+   are written up in **CARD_BACKLOG's first section** with the next three surveyed clauses. Also
+   **⚠ a python auditor's zero is suspect — check its population**: `audit_catalog_stats.py` saw
+   10,764 of 17,639 cards; its Rust replacements found 33 defects on their first run.
+5. **Robustness green.** The stall sweeps and their two closed leads (Beacon of Immortality,
+   Scute Swarm — **neither is a bug, do not re-open**) are now **ENGINE_BACKLOG's first section**,
+   with the `CRAB_CAP_DIAG` / `CRAB_LIFE_WATCH` recipe: 183,600 games / 27 seeds at `22a79dcc`
+   and 81,600 / 12 seeds at `bd42107c`, both clean. One live lead: Sand Golem's trigger (P2).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

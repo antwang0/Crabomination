@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [CLOSED — the two stall-sweep leads, and why neither is a bug](#closed--the-two-stall-sweep-leads-and-why-neither-is-a-bug) | 28 |
 | Bugs & robustness | [CLOSED — what the seeded cube smoke test left behind (eighty-fifth pass)](#closed--what-the-seeded-cube-smoke-test-left-behind-eighty-fifth-pass) | 72 |
 | Bugs & robustness | [Engine correctness audit — 2026-06-11](#engine-correctness-audit--2026-06-11) | 83 |
 | Bugs & robustness | [Engine — Robustness / defects: the closed audits and the twenty-three filters](#engine--robustness--defects-the-closed-audits-and-the-twenty-three-filters) | 238 |
@@ -32,6 +33,34 @@ the handoff.
 
 
 # Bugs & robustness
+
+## CLOSED — the two stall-sweep leads, and why neither is a bug
+
+A `--games 400 --decks all` sweep over 27 seeds (183,600 games at `22a79dcc`)
+found **no panic, no hang, 4 capped, 22 draws**. Both leads are closed as
+*printed cards working correctly*. **Do not re-open them.**
+
+**(a) The four capped games are Beacon of Immortality.** "Double target
+player's life total. Then shuffle this into its owner's library."
+`CRAB_LIFE_WATCH=1000` prints the series — 1,580 → 3,161 → 6,322 → 12,644, one
+doubling every other turn — so ~31 casts saturate `i32::MAX` and **neither
+player can lose to damage**, while the shuffle-back keeps the library from ever
+emptying (`lib 1` at turn 2,159). Paper ends this by agreement or a clock; the
+action cap is this engine's clock. 4 games in 183,600.
+
+**(b) The nine-minute game is Scute Swarm** — 4,091 copies of itself on the
+board at turn 46, the printed landfall doubling. Every board walk is O(4,091),
+so 9,223 actions take 597 s. The game *decides* (the opponent is at −4,072), so
+**no undecided count can ever see it**; `CRAB_CAP_DIAG=5000` is what found it.
+
+⚠ **The transferable half: a correct board can be quadratic.** An actor's
+throughput has a tail that is not a defect, and the two env-gated instruments
+above are how to tell one from the other before spending a build:
+`CRAB_CAP_DIAG=1` names a capped game's cause in one line, `CRAB_CAP_DIAG=<n>`
+names *any* game past `n` actions — the only way to see a **slow** game, since
+one that decides is never "undecided". A `--games 400 --decks all` sweep is
+20–30 s a seed and catches what `robustness_grid.sh` does not (the grid is 120
+games a cell); run it before the grid.
 
 ## Targeting — a fifth rule, from the field question rather than the wrapper one
 

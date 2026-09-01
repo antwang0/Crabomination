@@ -19,6 +19,8 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 | Set / topic | Status | Lines |
 | --- | --- | --- |
+| [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
+| [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
 | [Oracle-verb audit — the `draw` and `counters` classes](#oracle-verb-audit--the-draw-and-counters-classes) | open | 60 |
 | [Oracle-verb audit — the `search_library` and `destroy` classes](#oracle-verb-audit--the-search_library-and-destroy-classes) | open | 48 |
 | [Tier 4 — remaining SOS/SOA audit simplifications (2026-07)](#tier-4--remaining-sossoa-audit-simplifications-2026-07) | open | 608 |
@@ -123,6 +125,123 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | [Weatherlight closed](#weatherlight-closed) | closed — residuals only | 35 |
 
 # Open
+
+## The printed-clause ratchet family — one body, and where its needles break
+
+`core_rules/catalog_registration.rs` now holds a family of ratchets that all
+ask one question: **the card prints a clause, does the definition carry the
+primitive?** Five newer ones share a single walk (`clause_ratchet`); the five
+older ones predate it and keep their own copies.
+
+Every clause in the family fails *permissively* — the modelled card is
+strictly better than the printed one — which is why none of them was ever
+going to show up as a crash, a trace diff or a stall. Standing at this pass:
+
+| clause | primitive | checked | defects found |
+| --- | --- | --- | --- |
+| enters tapped | `etb_tap` / `StaticEffect::EntersTapped` | 322 | 2 |
+| this spell can't be countered | `Keyword::CantBeCountered` | 27 | 0 |
+| doesn't untap during … | `PreventUntap` / `DoesntUntap*` | 23 | 0 |
+| this creature can't block | `Keyword::CantBlock` | 82 | 0 |
+| attacks each combat if able | `Keyword::MustAttack` | 32 | 2 |
+| hexproof from … | `Keyword::HexproofFrom*` | 8 | 0 |
+| can't attack unless … | `CanAttackOnlyIf*` / `AttackCost*` | 33 | 0 (1 filed) |
+| must be blocked if able | `Keyword::MustBeBlocked` | 2 | 0 |
+| activate only once each turn | `ActivatedAbility::once_per_turn` | — | 0 |
+| this ability triggers only once each turn | `EventSpec::once_per_turn` | 64 | 3 |
+
+**⚠ The needle is where the work is, and three classes of false positive each
+cost a run before they were gated.** They generalize, so read them before
+adding a seventh clause:
+
+1. **"unless" is not the only conditional.** Eddymurk Crab enters tapped "**if**
+   it's not your turn" and Slumbering Trudge "**if** X is 2 or less". A clause
+   ratchet that only excludes *unless* reports both.
+2. **One clause can have two spellings in the catalog, both correct — and this
+   is the class that costs the most.** Entering tapped is `sets::etb_tap`'s
+   trigger on most cards and `StaticEffect::EntersTapped` (the rules-correct
+   replacement) on Leviathan, Sphere of the Suns and Steel Dromedary. The
+   conditional untap keywords — `DoesntUntapIfAttackedLastTurn` (Goblin Rock
+   Sled), `DoesntUntapWhileCounter` (Steel Dromedary) — read as misses against
+   `PreventUntap` alone.
+
+   ⚠ **The worst case measured so far: "can't attack unless" reported 14 of 34
+   cards as defects and 13 of them were correct.** The restriction spells
+   itself `CanAttackOnlyIfDefenderControls` / `CanAttackOnlyIfYouControl` (the
+   whole Sea Serpent cycle, War Falcon, Scarred Puma, Dandân) or `AttackCost*`
+   (Leviathan, Exalted Dragon, Floodtide Serpent) **far more often than
+   `CantAttackUnless*`** — the prefix that matches the printed wording is the
+   rarest of the three. **Grep the primitive's name across the catalog before
+   trusting a model predicate**, and when a finding list is mostly one
+   mechanic, suspect the predicate before the cards.
+3. **The self-anchor carries the whole family.** 48 of the 102 "doesn't untap"
+   rows and 3 of the 104 "can't block" rows are Auras: "**enchanted** creature
+   doesn't untap" is the Aura *granting* the restriction, not the Aura having
+   it. Match on `this <type>` or the card's own lowercased name.
+
+Fixed here: **Myriad Landscape** and **Nevinyrral's Disk** entered untapped;
+**Anje's Ravager** and **Deathbellow Raider** could decline to attack (and
+Deathbellow Raider had no {2}{B} regenerate at all, while Anje's Ravager's doc
+comment claimed a Legendary supertype and Trample, neither printed).
+
+**One card is allow-listed and is a primitive job**: *Phyrexian Marauder*
+prints "can't attack unless you pay {1} for each +1/+1 counter on it", and the
+only attack-cost keywords are `AttackCostSacrifice` and `AttackCostBounce` —
+there is no mana attack cost. Add one and delete the name from the needle.
+
+**Surveyed and not yet ratcheted**, counts from `scripts/.scryfall_cache.json`
+before the self-anchor: "doesn't untap" has 152 rows against the catalog's 23,
+"can't block" 81 against 82 and "enters tapped" 503 against 322 — the gaps are
+cards the catalog does not carry, which makes each of these lists a **card
+source with a known-good primitive already in place**.
+
+
+## The two once-a-turn limits, and the one card that cannot carry the flag
+
+Two ratchets landed together in `core_rules/catalog_registration.rs`, both
+permissive failures — the missing field makes the card *better* than printed,
+so nothing crashes and nothing is obviously wrong in a trace:
+
+* `every_card_has_the_activation_limit_it_prints` — "activate only once each
+  turn" vs `ActivatedAbility::{once_per_turn, max_activations_per_turn,
+  activate_once}`. Green at zero on the first run; the earlier free-activation
+  pass had already closed its rows.
+* `every_card_has_the_trigger_limit_it_prints` — "this ability triggers only
+  once each turn" / "do this only once each turn" vs
+  `EventSpec::once_per_turn`. Four rows, three now fixed: **Enduring
+  Innocence** (whose filter was also wrong — printed "another creature you
+  control **with power 2 or less**", modelled as nontoken creature),
+  **Ingenious Smith**, and **Earth Kingdom General**, whose limited trigger
+  ("whenever you put one or more +1/+1 counters on a creature, you may gain
+  that much life") was absent entirely and is now the Stalwart Successor
+  idiom: `CounterAdded(PlusOnePlusOne)` scoped `YourControl` with a creature
+  filter, because counter events carry no placer.
+
+⚠ **Three gates were needed to make either half readable**, all found as
+false positives and all load-bearing:
+
+1. **Anchor on the verb.** "This ability *triggers* only once each turn" and
+   "*activate* only once each turn" are different questions and the bare
+   phrase "only once each turn" catches both — six cards read as findings on
+   the activation ratchet before the split.
+2. **Quoted spans come out.** Cursed Wombat's limit lives inside a *granted*
+   ability ("Permanents you control have \"…triggers only once each turn\"") —
+   that is the granted ability's rule, not this card's.
+3. **Read the flag off the whole definition, not off `def.triggered_abilities`.**
+   Hollowmurk Siege carries `.once_per_turn()` inside its Sultai mode, which is
+   invisible at the top level; a top-level read reports it as a miss.
+
+**One row is allow-listed and is a real card job**: *Calix, Guided by Fate*
+prints "Whenever Calix or an enchanted creature you control deals combat
+damage to a player, you may create a token that's a copy of a nonlegendary
+enchantment you control. Do this only once each turn." Only the constellation
+half is modelled, so there is no `EventSpec` for the flag to sit on and adding
+one would be a lie. The primitives all exist (`CreateTokenCopyOf`,
+`EventScope::YourSourceDamagedOpponent`, `SelectionRequirement::IsEnchanted`);
+what is missing is the "Calix **or** an enchanted creature" disjunction on the
+damage source. Implement it and delete the entry from
+`TRIGGER_LIMIT_ABILITY_DROPPED`.
+
 
 ## Activation timing — the direction that is not yet a ratchet
 

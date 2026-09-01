@@ -2391,6 +2391,44 @@ a box whose state moves.
 
 ## Baseline
 
+### The printed-clause pass — closing state at `5876405d`
+
+**A cards pass, in this file for the method rather than the numbers.** Nothing
+in the engine moved and no perf claim is made; `--bench` is byte-identical to
+the invariant across seven rewritten card definitions.
+
+⚠ **And that reading confirms rather than tests.** `--bench` is the four
+hand-built archetypes (`bot_ladder::archetypes`), and **none of the seven
+cards is in them** — mono-red aggro, azorius skies, golgari midrange and dimir
+control are vanilla creatures and basic removal. A card pass that leaves
+`--bench` unmoved has proved the *engine* unmoved and nothing about the cards;
+`--decks all` and `--decks cube` are where a card change can show.
+
+Seven printed-clause ratchets now share one body (`clause_ratchet` in
+`core_rules/catalog_registration.rs`), which is what made adding four more
+clauses cost ten lines each rather than forty. Every clause in the family
+fails **permissively** — the modelled card is strictly better than the printed
+one — so none of them was ever going to appear as a crash, a trace diff or a
+stall, and the whole class is invisible to every gate this file records.
+
+**The transferable half is that the needle is the work, not the check**, and
+three false-positive classes each cost a run before they were gated. They are
+written up in `CARD_BACKLOG`'s first section; the shortest form is:
+"unless" is not the only conditional (Eddymurk Crab enters tapped "**if** it's
+not your turn"); one clause can have two spellings in the catalog and both be
+correct (`etb_tap`'s trigger vs `StaticEffect::EntersTapped`); and
+"**enchanted** creature can't block" is an Aura *granting* the restriction, not
+having it — 48 of the 102 "doesn't untap" rows are that shape.
+
+```text
+suite   19,168 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release: **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls
+        (cap 0 / stuck 0 / draw 0)** — byte-identical to the invariant;
+        determinism ok (all pairs split); host_calib_ms 51
+```
+
 ### The robustness-leg pass — closing state at `e6456430`
 
 Six commits in three groups. **Robustness**: the `-C debug-assertions=yes`
