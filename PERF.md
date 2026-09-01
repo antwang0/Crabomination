@@ -2323,6 +2323,46 @@ a box whose state moves.
 
 ## Baseline
 
+### The zone-lane pass — closing state at this run's tip
+
+Three commits on one device, the `zone::` presence lane, plus the sixteen
+bytes of `PlayerData` headroom the first of them needed. `(-152)` put a
+token-presence lane on the four card zones; `(-153)` put the layer-7
+toughness gate on the battlefield's lane word.
+
+```text
+  pool    (-152) cumulative   (-153)          measured against
+  cube        **-0.4222 %**   **-0.1343 %**   9abda258 / 4b5995b9
+  fixed       **-0.3762 %**   **-0.1420 %**   (two bases; a concurrent
+                                               session landed between them)
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,129 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); five new `zone` tests; golden traces in it
+        and **unmoved across all three commits**
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release-fast: 195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls — **byte-identical to the invariant**; determinism ok,
+        thread_determinism ok (3 vs 1 threads identical)
+grid    **30 cells / 33,120 games / 0 failures** under `overflow` +
+        `-C debug-assertions=yes`, five pools x six seeds, 120 games each;
+        2 undecided on `all` seed 11 are the known draws. This is the audit
+        for both new lanes — the token lane is the first over *instance*
+        state, so the grid is the thing that proves no write path reaches
+        the cards without clearing the word.
+sizes   `PlayerData` 1,016 -> 976 -> 992 (**ceiling 1,016**); `CardPile` 16,
+        `Graveyard` 16, `GameState` 1,424 unchanged
+```
+
+**The two rules this pass earns**, both about pricing rather than about these
+rows: **`size_of` on `PlayerData` is an allocator size-class question** (the
+smallbin ceiling is 1,016 bytes, and 16 bytes past it cost 11.3 M Ir), and
+**a memo is priced by reads-per-invalidation, not by the size of the walk it
+replaces** (`(-152)` 0.42 %, `(-153)` 0.13 % from the same device, and the
+difference is how often the zone is written).
+
 ### The token-sweep pass — closing state at this run's tip
 
 `(-152)`: the CR 704.5d token sweep, plus the sixteen bytes of `PlayerData`
@@ -10468,6 +10508,67 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Hundred-and-twenty-first pass — `(-153)` the layer-7 gate on a battlefield lane: `cube` -0.134 %, `fixed` -0.142 %, and **half its filed ceiling**
+
+```text
+  pool    base            candidate       delta
+  cube    2,420,680,109   2,417,428,959   **-0.1343 %**
+  fixed     895,746,252     894,473,846   **-0.1420 %**
+```
+
+`pt_reduction_in_scope` — the death sweep's "can anything on this board put a
+toughness below its instance value" gate — was a whole-battlefield `any` asked
+once per state-based sweep, **781,104 card visits over a six-game `cube`
+run**. It now reads `zone::Battlefield`'s lane word, the sixth predicate to.
+
+**The predicate had to become definition-only first, and that is the reusable
+half of this entry.** `Battlefield::iter_mut` / `get_mut` deliberately do
+*not* invalidate the lanes — their contract is that the lanes read only
+definitions — so a predicate reading `attached_to` or `soulbond_partner` is
+unsound on one. Both routes were therefore **widened** to "this printed
+`equipped_bonus` / `soulbond_bonus` could lower toughness", attached or not.
+That is the gate's own sound direction (`false` authoritative, `true` only
+means the layer read runs), it is the same widening
+`card_can_change_land_types` documents, and `gather_continuous_effects`'
+`debug_assert!` audits the implication in exactly that direction — so the
+suite and the grid check it rather than a reviewer.
+
+**⚠ THE CEILING WAS 0.25-0.35 % AND HALF OF IT DID NOT ARRIVE. The entry said
+to price the hit rate first; this is what it costs not to.**
+
+```text
+  check_state_based_actions_into  61,618,520 -> 49,803,524   -11.8 M
+  card_can_reduce_toughness  (new out-of-line row)            +6.9 M
+  Battlefield::walk_and_store     10,204,254 -> 12,158,806    +2.0 M
+                                                       net    -3.0 M
+```
+
+**`Battlefield`'s lanes are invalidated by *membership*, and a board changes
+membership several times a turn.** Against ~20,012 sweeps that is roughly a
+75 % miss rate: three sweeps in four still walk, and they now walk through an
+out-of-line call. **The lane's other five users are asked many times inside
+one freeze scope; a once-per-sweep question does not amortize the same way.**
+The rule generalises past this row: **price a memo by reads-per-invalidation,
+not by the size of the walk it replaces** — `(-152)`'s piles won because a
+library is written a handful of times a turn and read on every sweep, and this
+one half-won because the battlefield is written as often as it is asked.
+
+**What is NOT left here.** The predicate is **8.8 Ir a card visit**, which is
+near the floor for a five-leg definition walk, so a `layer7_scan_bits` memo
+on `CardMemo` (the shape `card_can_change_land_types` uses) is worth ~3 M =
+0.12 % at most and costs a new memo group. **The miss rate is the lever and
+there is no device for it**: making `iter_mut` invalidate would cost every
+other lane far more than this one gains.
+
+```text
+suite   19,129 / 0 / 5 (`--workspace --exclude crabomination_client`); golden
+        traces unmoved; clippy clean `--all-targets`
+grid    30 cells / 33,120 games / 0 failures under `overflow` +
+        `-C debug-assertions=yes`, five pools x six seeds, 120 games each —
+        2 undecided on `all` seed 11, the known draws. This is the audit for
+        both the widened layer-7 gate and `(-152)`'s token lanes.
+```
 
 ### Hundred-and-twentieth pass — `(-154)` two damage histories nobody reads: `cube` -0.148 % at six games, **-0.224 % at eighteen**
 
@@ -19536,6 +19637,14 @@ the sixteen bytes it needed. Two things it leaves behind:
 * **The lane device now covers instance state**, which widens what
   `zone::Battlefield`'s existing `lane(shift, walk)` can answer. The
   candidate below is the first user of that.
+
+**(-153) CLOSED — TAKEN, `cube` -0.134 %, `fixed` -0.142 %, and it is HALF the
+ceiling filed below.** See the hundred-and-twenty-first pass for the row
+table. The one line worth carrying forward: **price a memo by
+reads-per-invalidation, not by the size of the walk it replaces.**
+`Battlefield`'s lanes are cleared by membership changes, which happen several
+times a turn against ~20,012 sweeps, so a once-per-sweep question misses about
+three times in four. The entry as it was filed:
 
 **(-153) `pt_reduction_in_scope` IS AN UNGATED WHOLE-BATTLEFIELD WALK ONCE PER
 SBA SWEEP, AND `zone::Battlefield` ALREADY HAS THE LANE FOR IT.**

@@ -29,25 +29,31 @@ sixty-seventh pass, so don't re-take that.
    passes collided twice, and the hundred-and-nineteenth shipped with a stale number in its
    commit titles rather than rewrite a shared branch. Container gotchas are in **CLAUDE.md**,
    measurement rules in **PERF**.
-2. **Gates at the tip:** suite **19,127 / 0 / 5** (`--workspace --exclude
+2. **Gates at the tip:** suite **19,129+ / 0 / 5** (`--workspace --exclude
    crabomination_client`), traces unmoved, clippy clean `--all-targets`; `--bench`
    **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism and
-   thread_determinism ok. `games_per_s` is the host; **Ir is the signal**. ⚠ The `overflow` +
-   `debug-assertions` grid has **not** been re-run for two runs — take it next run.
-   ⚠ A `cube`/`sealed` Ir figure from before `2f5ef96e` is not comparable to one after it.
+   thread_determinism ok. **Grid re-run and green: 30 cells / 33,120 games / 0 failures**
+   under `overflow` + `-C debug-assertions=yes` (2 undecided on `all` seed 11 are the known
+   draws; delete `target-audit/` after, 715 MB). `games_per_s` is the host; **Ir is the
+   signal**. ⚠ A `cube`/`sealed` Ir figure from before `2f5ef96e` is not comparable to one
+   after it.
 3. **`(-152)` taken, `cube` -0.422 % / `fixed` -0.376 %** — a token-presence lane on the four
    card zones, plus the `PlayerData` headroom under it. ⚠ **`PlayerData`'s ceiling is 1,016
    bytes**: 1,032 is a 1,040-byte chunk past glibc's largest smallbin, and crossing it cost
    11.3 M Ir — more than the 10.0 M device that grew it saved. **Price a field added to the hot
    player group at the size class, not at the copy.** 24 bytes of headroom left (992 of 1,016).
-4. **Next candidate is `(-153)`, filed with its ceiling and its open question**:
-   `pt_reduction_in_scope` is an ungated whole-battlefield walk once per SBA sweep and
-   `zone::Battlefield::lane` is already its device (~0.25-0.35 % of `cube`). ⚠ Price the hit
-   rate first — 139,280 `&mut` battlefield reaches against 20,012 sweeps, and
-   `zone::BATTLEFIELD_REACHES` under `trig-census` already counts them.
-5. **The lane device now covers INSTANCE state** (`(-152)` is the first), which widens what a
-   `zone::` memo can answer: every `&mut` route clears the word and the `debug_assert!` makes
-   the suite the audit, so a whole-zone predicate need not be definition-only.
+4. **`(-153)` taken, `cube` -0.134 % / `fixed` -0.142 % — HALF its filed 0.25-0.35 % ceiling**,
+   and the shortfall is the lesson: **price a memo by reads-per-invalidation, not by the size
+   of the walk it replaces.** `Battlefield`'s lanes clear on *membership* changes, which happen
+   several times a turn against ~20,012 sweeps, so a once-per-sweep question misses ~3 times in
+   4. `(-152)`'s piles won because a library is written a few times a turn and read every sweep.
+   ⚠ Nothing is left on that row: the predicate is 8.8 Ir a card visit, so a `layer7_scan_bits`
+   memo is worth ~0.12 % at most, and there is no device for the miss rate.
+5. **The `zone::` lane device now covers INSTANCE state** (`(-152)` is the first), which widens
+   what a zone memo can answer — but only on a zone whose every `&mut` route clears the word.
+   `Battlefield::iter_mut`/`get_mut` deliberately do **not**, so a predicate put on a
+   *battlefield* lane must still be definition-only, widening its instance legs in the sound
+   direction (`(-153)` widened two).
 6. **⚠ A line-profile row is a pointer, never a size.** `cg_lines.py` read one source line at
    84 Ir a walk on `cube` and 3.4 on `fixed` where the A/B says both pools pay the same share.
    Take the A/B; the counts are the truth.
