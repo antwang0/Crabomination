@@ -27,7 +27,7 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at this run's tip:** suite **19,191 / 0 / 5**, traces unmoved, clippy `--all-targets`
+2. **Gates at `abd37cf7`:** suite **19,195 / 0 / 5**, traces unmoved, clippy `--all-targets`
    clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**,
    determinism ok, **thread_determinism ok (3 vs 1)**. Stall sweeps: **26 seeds / 176,800 games**
    (0 panic, 0 hang, cap 0 / stuck 0, draws only) and, after `(-159)`, **5 seeds / 34,000 games

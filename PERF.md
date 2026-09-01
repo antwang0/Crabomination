@@ -2578,15 +2578,17 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
         determinism ok (all pairs split); host_calib_ms 51
 ```
 
-### The robustness-leg pass — closing state at `e6456430`
+### The robustness-leg pass — closing state at `abd37cf7`
 
-Six commits in three groups. **Robustness**: the `-C debug-assertions=yes`
+Nine commits in three groups. **Robustness**: the `-C debug-assertions=yes`
 grid gained the **actor leg** its own header had documented and never wired,
 and `Selector::ExiledThisResolution` gained the battlefield exits it could not
-see. **Perf**: `(-155)` took the loss check's team walk, and `(-128)`'s last
-open half closed on a measurement rather than a build. **Cards**:
-`audit_oracle_verbs.py`'s `search_library` and `destroy` columns — eight
-shipped cards and one new activation-cost primitive.
+see. **Perf**: `(-155)` took the loss check's team walk, `(-128)`'s last open
+half closed on a measurement rather than a build, and `(-156)` was filed with
+`scripts/cg_chain.py` (the two-level caller walk that found it). **Cards**:
+`audit_oracle_verbs.py`'s `search_library`, `destroy` and `draw` columns —
+**fourteen shipped cards, 122 -> 106 rows** — plus one new activation-cost
+primitive (`sac_attachment_cost`).
 
 ```text
   pool    base 26cea814   (-155)          delta
@@ -2596,17 +2598,18 @@ shipped cards and one new activation-cost primitive.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,153 / 0 / 5 (cargo nextest run --workspace --exclude
+suite   19,195 / 0 / 5 (cargo nextest run --workspace --exclude
         crabomination_client); golden traces in it and **unmoved across every
-        commit** — 15 card tests added, two deleted with the invented
-        abilities they exercised
+        commit** — card tests added throughout, three deleted with the
+        invented abilities they exercised, and the DFT Surveyor cycle's
+        max-speed test folded into one table over the cycle
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
-        invariant with eight cards rewritten, a zone-exit hook and a new
-        activation cost added; determinism ok; host_calib_ms 46,
-        games_per_s 291.4 (host, not a signal), peak_rss 19.0 MiB,
-        bin 218,291,696 B
+        invariant with fourteen cards rewritten, a zone-exit hook and a new
+        activation cost added; determinism ok, **thread_determinism ok (3 vs 1
+        threads identical)**; host_calib_ms 51, games_per_s 284.4 (host, not a
+        signal), peak_rss 19.2 MiB
 grid    **both legs green at this tip.** ladder 30 cells (5 pools x 6 seeds x
         120 games/archetype) = 33,120 games, 0 failures, `undecided cap 0 /
         stuck 0 / draw 2`; actor 3 cells x 600 games at `--actors 3 --steps 2`,
@@ -2615,8 +2618,8 @@ grid    **both legs green at this tip.** ladder 30 cells (5 pools x 6 seeds x
         pointer-cache check in `index_of` and the `object_keyword_bits`
         equivalence in the per-card encoder, neither of which `bot_ladder`
         reaches on any pool.
-audits  audit_oracle_verbs total 122 -> 112, `search_library` **18 -> 11**,
-        `destroy` **15 -> 12**; audit_doc_drift 0, audit_keyword_drift 0
+audits  audit_oracle_verbs total **122 -> 106**, `search_library` 18 -> 11,
+        `destroy` 15 -> 12, `draw` 16 -> 12; audit_doc_drift 0, audit_keyword_drift 0
         invented, audit_panics 0 bare, audit_target_fields / _walkers clean,
         audit_variant_coverage 2 dead primitives (both want a card)
 ```
