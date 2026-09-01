@@ -261,15 +261,23 @@ fn paradise_druid_taps_for_any_color_and_loses_hexproof_while_tapped() {
         "the mana ability tapped it, so the hexproof is gone");
 }
 
-/// Merfolk Trickster taps an opponent's creature on ETB.
+/// Merfolk Trickster taps an opponent's creature on ETB **and turns it off**.
+///
+/// ⚠ The "it loses all abilities until end of turn" rider was documented as
+/// dropped, and it is half the card: it takes a blocker's flying, a ward, a
+/// death trigger.
 #[test]
-fn merfolk_trickster_taps_opponent_creature() {
+fn merfolk_trickster_taps_and_blanks_an_opponent_creature() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying vigilance
     let id = g.add_card_to_hand(0, catalog::merfolk_trickster());
     g.players[0].mana_pool.add(Color::Blue, 2);
     cast(&mut g, id);
-    assert!(g.battlefield_find(bear).unwrap().tapped, "opponent's creature tapped");
+    assert!(g.battlefield_find(angel).unwrap().tapped, "opponent's creature tapped");
+    let cp = g.computed_permanent(angel).expect("angel");
+    assert!(!cp.keywords().contains(&Keyword::Flying), "and lost flying");
+    assert!(!cp.keywords().contains(&Keyword::Vigilance), "and vigilance");
+    assert_eq!((cp.power, cp.toughness), (4, 4), "but keeps its body");
 }
 
 /// Vampire Lacerator's upkeep drain stops once an opponent is low.

@@ -2104,6 +2104,52 @@ fn tishanas_tidebinder_etb_counters_target_ability() {
     )), "Scry-on-cast trigger should have been countered");
 }
 
+/// **The Tidebinder blanks what it hits, and only while it is out.**
+///
+/// ⚠ "…that permanent loses all abilities for as long as this creature
+/// remains on the battlefield" was dropped, and it is the half that wins
+/// games: a countered permanent stays blank. The engine's `CounterAbility`
+/// targets the ability's *source*, so the strip lands on the target whether
+/// or not a trigger was there to counter — the approximation is in the
+/// card's comment.
+#[test]
+fn tishanas_tidebinder_blanks_its_target_while_it_lives() {
+    use crabomination::card::Keyword;
+    let mut g = two_player_game();
+    let seer = g.add_card_to_battlefield(1, catalog::cloudkin_seer()); // 2/2 flier
+    assert!(
+        g.computed_permanent(seer).expect("seer").keywords().contains(&Keyword::Flying),
+        "a flier to start",
+    );
+
+    let tide = g.add_card_to_hand(0, catalog::tishanas_tidebinder());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tide,
+        target: Some(Target::Permanent(seer)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Tidebinder castable at instant speed (Flash)");
+    drain_stack(&mut g);
+    assert!(
+        !g.computed_permanent(seer).expect("seer").keywords().contains(&Keyword::Flying),
+        "blanked while the Tidebinder is out",
+    );
+
+    // "for as long as this creature remains on the battlefield" — kill it.
+    g.destroy_permanent(tide, false, &mut vec![]);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(
+        g.computed_permanent(seer).expect("seer").keywords().contains(&Keyword::Flying),
+        "and it flies again once the Tidebinder is gone",
+    );
+}
+
 /// Sylvan Safekeeper sacrifices a Forest to grant a creature shroud EOT.
 #[test]
 fn sylvan_safekeeper_sacs_forest_to_grant_shroud() {

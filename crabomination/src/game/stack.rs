@@ -5097,6 +5097,23 @@ impl GameState {
             });
         }
 
+        // And the same for `WhileSourceOnBattlefield` — an effect a resolution
+        // installed for as long as its source is out (Tishana's Tidebinder).
+        // A *static* ability with the same clause needs no sweep: it is
+        // re-gathered every pass and vanishes with the card.
+        if self
+            .continuous_effects
+            .iter()
+            .any(|e| e.duration == crate::game::layers::EffectDuration::WhileSourceOnBattlefield)
+        {
+            let on_bf: crate::fxhash::HashSet<CardId> =
+                self.battlefield.iter().map(|c| c.id).collect();
+            self.continuous_effects.retain(|e| {
+                e.duration != crate::game::layers::EffectDuration::WhileSourceOnBattlefield
+                    || on_bf.contains(&e.source)
+            });
+        }
+
         // The continuous-effect side of the same clause: an effect installed
         // `WhileSourceAttached` lapses once its source stops being attached.
         if self

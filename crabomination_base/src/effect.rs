@@ -2173,6 +2173,12 @@ pub enum Duration {
     /// (Assimilation Aegis). The SBA sweep drops the effect once the source
     /// stops being attached or leaves the battlefield.
     WhileSourceAttached,
+    /// CR 611.2c — "for as long as this creature remains on the battlefield"
+    /// (Tishana's Tidebinder). The SBA sweep drops the effect once the source
+    /// is gone. Distinct from a *static* ability, which is re-gathered every
+    /// pass and so needs no sweep at all: this is for an effect a resolution
+    /// installs.
+    WhileSourceOnBattlefield,
     /// Indefinite (for effects like "gain control" without a clause).
     Permanent,
 }

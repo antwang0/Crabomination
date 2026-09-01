@@ -1147,7 +1147,7 @@ pub fn paradise_druid() -> CardDefinition {
 }
 
 /// Merfolk Trickster — {U}{U} 2/2 Merfolk Wizard with Flash. ETB tap target
-/// creature an opponent controls. (The "loses all abilities" rider is dropped.)
+/// creature an opponent controls; it loses all abilities until end of turn.
 pub fn merfolk_trickster() -> CardDefinition {
     CardDefinition {
         name: "Merfolk Trickster",
@@ -1160,11 +1160,19 @@ pub fn merfolk_trickster() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::Tap {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-            ),
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            // The rider is half the card: it turns off a blocker's flying, a
+            // ward, a death trigger. It was documented as dropped.
+            Effect::LoseAllAbilities {
+                what: Selector::Target(0),
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         ..Default::default()
     }
 }

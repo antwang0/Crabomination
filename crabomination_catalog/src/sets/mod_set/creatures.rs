@@ -936,11 +936,24 @@ pub fn tishanas_tidebinder() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CounterAbility {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                ),
-            },
+            effect: Effect::Seq(vec![
+                Effect::CounterAbility {
+                    what: target_filtered(
+                        SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                    ),
+                },
+                // "…that permanent loses all abilities for as long as this
+                // creature remains on the battlefield." The rider was dropped
+                // and it is the half that wins games — a countered Sheoldred
+                // stays blanked. ⚠ The engine's `CounterAbility` targets the
+                // ability's *source*, so the strip lands unconditionally
+                // where the card says "if an ability … is countered this
+                // way"; the target filter is the same one either way.
+                Effect::LoseAllAbilities {
+                    what: Selector::Target(0),
+                    duration: crate::effect::Duration::WhileSourceOnBattlefield,
+                },
+            ]),
         }],
         ..Default::default()
     }

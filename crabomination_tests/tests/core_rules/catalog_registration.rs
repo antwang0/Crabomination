@@ -1018,3 +1018,101 @@ fn no_card_replaces_the_types_its_oracle_adds() {
     wrong.dedup();
     assert!(wrong.is_empty(), "{} card(s): {:?}", wrong.len(), wrong);
 }
+
+/// **CR 305.7 — setting a land's type line takes its abilities with it.**
+///
+/// The structural half of the rule above, and it needs no oracle text: an
+/// effect that *sets* a land's subtypes removes the abilities the land had
+/// from its rules text and its old types. Every route through
+/// `Modification::SetLandTypes` pairs a `RemoveAllAbilities` — except
+/// `equipped_bonus.set_land_types`, where the pairing is the card author's to
+/// remember, and **two of its three users forgot**: Sea's Claim and Lingering
+/// Mirage left a tri-land tapping for its three colours plus blue.
+#[test]
+fn a_land_type_setting_aura_takes_the_lands_abilities() {
+    let mut wrong: Vec<&str> = Vec::new();
+    let mut checked = 0usize;
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(bonus) = def.equipped_bonus.as_ref() else {
+            continue;
+        };
+        if bonus.set_land_types.is_none() {
+            continue;
+        }
+        checked += 1;
+        if !bonus.remove_abilities {
+            wrong.push(def.name);
+        }
+    }
+    assert!(checked >= 3, "only {checked} auras set a land type — did the field move?");
+    assert!(
+        wrong.is_empty(),
+        "{} aura(s) set a land's type line without CR 305.7's ability loss: {wrong:?}",
+        wrong.len(),
+    );
+}
+
+
+/// **A card that prints "loses all abilities" has to strip them.**
+///
+/// The rider is easy to drop because the card still *does* something without
+/// it — Merfolk Trickster still tapped a blocker, and its doc comment said
+/// the rider was dropped, which is how it stayed dropped. It is half the
+/// card: it takes a blocker's flying, a ward, a death trigger.
+///
+/// The needles are the four primitives that strip, spelled out rather than
+/// inferred, so a fifth has to be added here to count.
+#[test]
+fn a_card_that_prints_losing_all_abilities_strips_them() {
+    /// Everything that reaches `Modification::RemoveAllAbilities`.
+    const STRIPPERS: [&str; 7] = [
+        "remove_abilities: true",
+        "RemoveAllAbilities",
+        "LoseAllAbilities",
+        "CreaturesLoseAllAbilities",
+        // Titania's Song's own static, which strips the whole artifact class.
+        "NoncreatureArtifactsLoseAbilities",
+        // CR 613's full rewrite: "becomes a 3/3 Elk with no abilities".
+        "ResetCreature",
+        "BecomeCreatureType",
+    ];
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<&str> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        let oracle = entry.get("oracle_text").and_then(|v| v.as_str()).unwrap_or("");
+        if !oracle.contains("loses all abilities") && !oracle.contains("lose all abilities") {
+            continue;
+        }
+        checked += 1;
+        let dbg = format!("{def:?}");
+        if !STRIPPERS.iter().any(|n| dbg.contains(n)) {
+            wrong.push(def.name);
+        }
+    }
+    assert!(
+        checked > 20,
+        "only {checked} cards print the clause — did the cache move?",
+    );
+    wrong.sort();
+    assert!(
+        wrong.is_empty(),
+        "{} of {checked} card(s) print \"loses all abilities\" and never strip: {wrong:?}",
+        wrong.len(),
+    );
+}

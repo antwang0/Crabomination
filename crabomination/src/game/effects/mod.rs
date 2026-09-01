@@ -68,6 +68,9 @@ pub(crate) fn map_effect_duration(
         | crate::effect::Duration::UntilYourNextUpkeep => EffectDuration::UntilNextTurn,
         crate::effect::Duration::WhileSourceTapped => EffectDuration::WhileSourceTapped,
         crate::effect::Duration::WhileSourceAttached => EffectDuration::WhileSourceAttached,
+        crate::effect::Duration::WhileSourceOnBattlefield => {
+            EffectDuration::WhileSourceOnBattlefield
+        }
         crate::effect::Duration::Permanent => EffectDuration::Indefinite,
     }
 }

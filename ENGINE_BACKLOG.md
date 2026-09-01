@@ -1475,6 +1475,22 @@ loops (EachPlayer shuffles) to one suspension per resolution.
 
 ## Engine — Missing Mechanics
 
+**"LOSES ALL ABILITIES" — CLOSED AS A CLASS, two cards, and it is now a
+ratchet.** `a_card_that_prints_losing_all_abilities_strips_them` reads the
+printed oracle for the clause and requires the definition to reach one of the
+seven strippers. **Merfolk Trickster** and **Tishana's Tidebinder** printed it
+and never stripped: the Trickster's rider was documented as dropped, which is
+how it stayed dropped, and the Tidebinder's was not documented at all. Both
+riders are the half that wins games — a blanked blocker has no flying, no
+ward, no death trigger.
+
+The Tidebinder needed a primitive: `Duration::WhileSourceOnBattlefield`, for
+an effect a *resolution* installs "for as long as this creature remains on
+the battlefield". A static with the same clause needs no sweep (it is
+re-gathered every pass); a resolved one does, and it now has the same
+`continuous_effects` retain the `WhileSourceTapped` and `WhileSourceAttached`
+clauses have, next to them.
+
 **"IN ADDITION TO ITS OTHER TYPES" — CLOSED AS A CLASS, seven cards, and it
 is now a ratchet.** `no_card_replaces_the_types_its_oracle_adds`
 (`core_rules/catalog_registration.rs`) reads the printed oracle for the
