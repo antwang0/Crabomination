@@ -986,24 +986,44 @@ fn the_mightstone_and_weakstone_etb_draws_two() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew 2 on ETB mode 0");
 }
 
-/// Kozilek's Command "choose two": the default picks run both the Scion
-/// mode (X tokens) and the Draw-X mode in one cast.
+/// Kozilek's Command "choose two": the default picks run the Spawn mode
+/// (X 0/1 tokens with the mana ability) and the scry-X-then-draw-one mode.
+///
+/// It shipped with three of its four printed modes wrong — X **1/1 vanilla**
+/// Eldrazi, a bare draw X, and a -X/-X pump where the printing exiles — and
+/// no graveyard mode at all.
 #[test]
 fn kozileks_command_chooses_two_modes() {
     let mut g = two_player_game();
-    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    // Both modes aim at *target player*, so the Spawn and the draw land on
+    // seat 1 here — the printed card lets you point them at an opponent.
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::kozileks_command());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+        card_id: id,
+        // Each target-bearing mode among the default `picks` owns its own
+        // cast-time slot: the Spawn mode takes slot 0, the scry mode slot 1.
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![crabomination::game::types::Target::Player(1)],
+        mode: None,
+        x_value: Some(2),
     }).expect("Kozilek's Command castable for X=2");
     drain_stack(&mut g);
-    let scions = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count();
-    assert_eq!(scions, 2, "Scion mode makes X=2 Eldrazi Scions");
-    // Cast (-1) + Draw X=2 (+2) = +1 net.
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "Draw-X mode also fired");
+    let spawn: Vec<_> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").collect();
+    assert_eq!(spawn.len(), 2, "the Spawn mode makes X=2 tokens");
+    assert!(spawn.iter().all(|c| c.controller == 1), "target player creates them");
+    assert_eq!(
+        (spawn[0].definition.power, spawn[0].definition.toughness),
+        (0, 1),
+        "0/1, not the 1/1 it shipped as"
+    );
+    assert_eq!(spawn[0].definition.activated_abilities.len(), 1, "sacrifice for {{C}}");
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "the caster draws nothing");
+    assert_eq!(g.players[1].hand.len(), 1, "target player scries X, then draws *one*");
 }
 
 /// Eldrazi Confluence "choose three, modes may repeat": the Scion mode is

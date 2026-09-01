@@ -312,6 +312,40 @@ until the walk started checking its own debug rendering for `AddMana`.
 reads the colours of cards this source exiled. Build one and delete the name
 from the test.
 
+### The three arity ratchets — count the printed abilities, not their words
+
+`every_planeswalker_has_its_printed_loyalty_abilities`,
+`every_saga_has_its_printed_chapters` and
+`every_modal_card_offers_its_printed_modes` all ask the same cheap question:
+**does the definition have as many abilities as the printing?** A dropped
+loyalty ability, chapter or mode is a whole printed line that never happens,
+and it leaves a well-formed tree that every structural audit passes.
+
+| ratchet | population | defects |
+| --- | --- | --- |
+| loyalty abilities | 100+ planeswalkers | 1 |
+| Saga chapters | 42 single-faced Sagas | 0 |
+| modal modes (`•` bullets vs `ChooseMode` / `ChooseN` arms) | 241 | 1 |
+
+* **Tezzeret the Seeker**'s −5 ultimate was dropped as "the modeled abilities
+  capture the play pattern". `Effect::BecomeCreature` is additive and takes an
+  `EachPermanent` selector, which is exactly the printed shape — it needed no
+  primitive, only somebody to notice.
+* **Kozilek's Command** had three of its four modes wrong and the fourth
+  missing: X *1/1 vanilla* Eldrazi instead of 0/1 Spawn with the mana ability,
+  a bare "draw X" instead of scry-X-then-draw-one, a −X/−X pump where the
+  printing exiles, and no graveyard mode.
+
+⚠ **And the "choose two of four" bucket below is narrower than it reads.**
+`ChooseN` *does* give each target-bearing mode among the default `picks` its
+own cast-time slot — Kozilek's Command now aims its Spawn mode at slot 0 and
+its scry mode at slot 1 in the same cast. What is still open is a decider
+picking a *different* pair than the card's default.
+
+⚠ **`strip_reminders` lowercases**, so a `−X:` loyalty line arrives as `−x:`
+and a needle written for `X` under-counts by one on every X ability. That
+cost the first run of the loyalty ratchet eight false positives.
+
 ### Open — Geyadrone Dihada's abilities are not this card's
 
 Turned up beside its starting loyalty (3 against a printed 4, fixed). The

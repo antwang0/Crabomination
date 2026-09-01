@@ -9815,6 +9815,31 @@ mod recent6 {
         assert!(g.battlefield_find(sol).is_some(), "Sol Ring tutored to battlefield");
     }
 
+    /// Tezzeret's −5 animates the artifacts he tutored — additively, so a
+    /// Sol Ring stays an artifact and still taps for mana. The ultimate was
+    /// dropped from the definition until the loyalty-arity ratchet.
+    #[test]
+    fn tezzeret_ultimate_animates_your_artifacts() {
+        let mut g = two_player_game();
+        let pw = g.add_card_to_battlefield(0, catalog::tezzeret_the_seeker());
+        g.battlefield_find_mut(pw).unwrap().add_counters(CounterType::Loyalty, 5);
+        let sol = g.add_card_to_battlefield(0, catalog::sol_ring());
+        let theirs = g.add_card_to_battlefield(1, catalog::sol_ring());
+        g.perform_action(GameAction::ActivateLoyaltyAbility {
+            card_id: pw, ability_index: 2, target: None, x_value: None,
+        })
+        .expect("-5");
+        drain_stack(&mut g);
+        let c = g.computed_permanent(sol).expect("still there");
+        assert_eq!((c.power, c.toughness), (5, 5));
+        assert!(c.card_types().contains(&CardType::Creature), "an artifact *creature*");
+        assert!(c.card_types().contains(&CardType::Artifact), "and still an artifact");
+        assert!(
+            !g.computed_permanent(theirs).unwrap().card_types().contains(&CardType::Creature),
+            "only artifacts you control"
+        );
+    }
+
     /// Dream Eater surveils 4 and bounces an opponent's nonland permanent.
     #[test]
     fn dream_eater_surveils_and_bounces() {

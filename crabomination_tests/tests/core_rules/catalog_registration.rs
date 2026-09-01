@@ -2676,3 +2676,266 @@ fn every_land_taps_for_the_mana_it_prints() {
         &wrong[..wrong.len().min(40)],
     );
 }
+
+/// **A planeswalker has every loyalty ability its printing has, and no
+/// others.**
+///
+/// A missing loyalty ability is a whole line of the card that never happens,
+/// and it is invisible to every other audit here: the tree is well-formed,
+/// the card resolves, and its test asserts the abilities that *are* there.
+///
+/// The printed count is the number of oracle lines that open with a loyalty
+/// cost — `+N:`, `−N:` (U+2212, which is what Scryfall uses, not a hyphen),
+/// `0:`, and their `X` forms.
+#[test]
+fn every_planeswalker_has_its_printed_loyalty_abilities() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    /// A line opens a loyalty ability when it starts with `+`, `−`, `-` or a
+    /// bare `0`, followed by a number or `X`, then a colon.
+    fn printed_loyalty_lines(text: &str) -> usize {
+        text.lines()
+            .map(str::trim)
+            .filter(|l| {
+                let rest = l.strip_prefix(['+', '\u{2212}', '-']).unwrap_or(l);
+                let Some((head, _)) = rest.split_once(':') else { return false };
+                !head.is_empty()
+                    && head.len() <= 2
+                    // ⚠ `strip_reminders` lowercases, so the X of a `−X:`
+                    // ability arrives as `x`.
+                    && head.chars().all(|c| c.is_ascii_digit() || c == 'x' || c == 'X')
+                    // A bare "0:" only counts when the line really is the
+                    // whole ability, not a "0" inside prose.
+                    && (l.starts_with(['+', '\u{2212}', '-']) || head != *l)
+            })
+            .count()
+    }
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        if !def.card_types.contains(&crabomination::card::CardType::Planeswalker) {
+            continue;
+        }
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        checked += 1;
+        let printed = printed_loyalty_lines(&strip_reminders(oracle));
+        let ours = def.loyalty_abilities.len();
+        if printed != ours {
+            wrong.push(format!("{} has {ours} loyalty abilities, printed {printed}", def.name));
+        }
+    }
+
+    assert!(
+        checked > 100,
+        "only {checked} planeswalkers could be compared against the cache — the ratchet is \
+         vacuous below that"
+    );
+    wrong.sort();
+    assert!(
+        wrong.is_empty(),
+        "{} planeswalker(s) with the wrong loyalty-ability count: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}
+
+/// **A Saga has every chapter its printing has.**
+///
+/// The sibling of the loyalty-arity ratchet, and the same argument: a
+/// dropped chapter is a printed line that never happens, and the tree it
+/// leaves behind is well-formed.
+///
+/// A printed chapter opens with roman numerals and an em dash — `I —`,
+/// `II —`, `I, II —` (one ability on two chapters), `III, IV —`. The count
+/// is of distinct chapter *numbers*, which is what `saga_chapters` holds.
+#[test]
+fn every_saga_has_its_printed_chapters() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    fn printed_chapters(text: &str) -> HashSet<u32> {
+        let roman = |w: &str| match w {
+            "i" => Some(1),
+            "ii" => Some(2),
+            "iii" => Some(3),
+            "iv" => Some(4),
+            "v" => Some(5),
+            _ => None,
+        };
+        let mut out = HashSet::new();
+        for line in text.lines() {
+            let Some((head, _)) = line.split_once('\u{2014}') else { continue };
+            let head = head.trim();
+            if head.is_empty() {
+                continue;
+            }
+            let nums: Vec<Option<u32>> =
+                head.split(',').map(|w| roman(w.trim())).collect();
+            if nums.iter().all(Option::is_some) {
+                out.extend(nums.into_iter().flatten());
+            }
+        }
+        out
+    }
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let printed = printed_chapters(&strip_reminders(oracle));
+        if printed.is_empty() && def.saga_chapters.is_empty() {
+            continue;
+        }
+        checked += 1;
+        let ours: HashSet<u32> = def.saga_chapters.iter().map(|(n, _)| *n).collect();
+        for n in printed.difference(&ours) {
+            wrong.push(format!("{} is missing chapter {n}", def.name));
+        }
+        for n in ours.difference(&printed) {
+            wrong.push(format!("{} has a chapter {n} the printing does not", def.name));
+        }
+    }
+
+    assert!(
+        // Most Sagas printed since 2021 are transforming DFCs, which the
+        // single-face join skips; 42 single-faced ones reach here.
+        checked > 30,
+        "only {checked} Sagas could be compared against the cache — the ratchet is vacuous \
+         below that"
+    );
+    wrong.sort();
+    assert!(
+        wrong.is_empty(),
+        "{} Saga chapter mismatch(es) over {checked} Sagas: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}
+
+/// The largest number of modes any `ChooseMode` / `ChooseN` in `e` offers,
+/// or `None` if the tree contains neither.
+fn modal_arm_count(e: &crabomination::effect::Effect) -> Option<usize> {
+    use crabomination::effect::Effect;
+    let best = |a: Option<usize>, b: Option<usize>| match (a, b) {
+        (Some(x), Some(y)) => Some(x.max(y)),
+        (x, None) => x,
+        (None, y) => y,
+    };
+    match e {
+        Effect::ChooseMode(modes) => Some(modes.len()),
+        Effect::ChooseN { modes, .. } => Some(modes.len()),
+        Effect::Seq(inner) => inner.iter().map(modal_arm_count).fold(None, best),
+        Effect::If { then, else_, .. } => best(modal_arm_count(then), modal_arm_count(else_)),
+        Effect::MayDo { body, .. } | Effect::AtNextEndStep { body } => modal_arm_count(body),
+        _ => None,
+    }
+}
+
+/// **A modal card offers every mode its printing bullets.**
+///
+/// The third arity ratchet. A dropped mode is a line of the card the player
+/// can never pick, and — like a dropped loyalty ability — it leaves a
+/// well-formed tree that every structural audit passes.
+///
+/// The printed count is the number of `•` bullets. Cards whose definition
+/// contains **no** `ChooseMode` / `ChooseN` at all are skipped: a modal card
+/// can legitimately be spelled some other way (Spree and Escalate carry their
+/// own fields, and a "choose one" on a *triggered* ability is a different
+/// shape), and this ratchet is about arms that exist and are short.
+#[test]
+fn every_modal_card_offers_its_printed_modes() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let text = strip_reminders(oracle);
+        let printed = text.lines().filter(|l| l.trim_start().starts_with('\u{2022}')).count();
+        if printed == 0 {
+            continue;
+        }
+        // Only the spell body — an ability's own modal arms answer a
+        // different question and are counted with their own bullets.
+        let Some(ours) = modal_arm_count(&def.effect) else {
+            continue;
+        };
+        checked += 1;
+        if ours < printed {
+            wrong.push(format!("{} offers {ours} of its {printed} printed modes", def.name));
+        }
+    }
+
+    assert!(
+        checked > 100,
+        "only {checked} modal cards could be compared against the cache — the ratchet is \
+         vacuous below that"
+    );
+    wrong.sort();
+    assert!(
+        wrong.is_empty(),
+        "{} modal card(s) short of their printed modes, over {checked}: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}

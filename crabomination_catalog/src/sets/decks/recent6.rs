@@ -276,8 +276,7 @@ pub fn talrand_sky_summoner() -> CardDefinition {
 /// Tezzeret the Seeker — {3}{U}{U} Planeswalker, 4 loyalty.
 /// +1: untap up to two target artifacts. −X: search your library for an
 /// artifact card with mana value X or less and put it onto the battlefield.
-/// (The −5 "artifacts become 5/5 creatures" ultimate is dropped — the modeled
-/// abilities capture the tutor + untap play pattern.)
+/// −5: artifacts you control become 5/5 artifact creatures until end of turn.
 pub fn tezzeret_the_seeker() -> CardDefinition {
     CardDefinition {
         name: "Tezzeret the Seeker",
@@ -313,6 +312,24 @@ pub fn tezzeret_the_seeker() -> CardDefinition {
                         tapped: false,
                     },
                 },
+            },
+            // The ultimate was dropped until 2026-09-01 — `BecomeCreature` is
+            // additive (the artifacts stay artifacts) and takes an
+            // `EachPermanent` selector, which is exactly this shape.
+            LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::BecomeCreature {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(5),
+                    toughness: Value::Const(5),
+                    creature_types: vec![],
+                    keywords: vec![],
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+                ..Default::default()
             },
         ],
         ..Default::default()

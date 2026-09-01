@@ -20513,48 +20513,50 @@ pub fn collective_defiance() -> CardDefinition {
     }
 }
 
-/// Kozilek's Command — {X}{C}{C} Instant. "Choose two" (CR 700.2d) via
-/// `Effect::ChooseN`; the auto-decider takes the two non-targeting modes
-/// (Scions + Draw X), leaving the -X/-X mode for the mode-pick UI.
+/// Kozilek's Command — {X}{C}{C} Instant. "Choose two —
+///  • Target player creates X 0/1 colorless Eldrazi Spawn tokens with
+///    "Sacrifice this token: Add {C}."
+///  • Target player scries X, then draws a card.
+///  • Exile target creature with mana value X or less.
+///  • Exile up to X target cards from graveyards."
+///
+/// ⚠ **Three of the four shipped modes were not this card's** and the fourth
+/// was missing: X 1/1 vanilla Eldrazi instead of 0/1 Spawn with the mana
+/// ability, a bare "draw X" instead of scry-X-then-draw-one, a -X/-X pump
+/// instead of the exile, and no graveyard mode at all.
+///
+/// `picks` names the pair the auto-decider takes; the two target-bearing
+/// modes among them each own a cast-time slot (the Spawn mode slot 0, the
+/// scry mode slot 1) so both can be aimed. Residual: the graveyard mode
+/// exiles from **target player's** graveyard rather than "graveyards", which
+/// is the shape `Effect::ExileFromGraveyard` has.
 pub fn kozileks_command() -> CardDefinition {
     CardDefinition {
         name: "Kozilek's Command",
         cost: cost(&[x(), colorless(2)]),
         card_types: vec![CardType::Instant, CardType::Kindred],
         effect: Effect::ChooseN {
-            picks: vec![0, 2],
+            picks: vec![0, 1],
             modes: vec![
                 Effect::CreateToken {
-                    who: PlayerRef::You,
+                    who: PlayerRef::Target(0),
                     count: Value::XFromCost,
-                    definition: Box::new(crate::card::TokenDefinition {
-                        name: "Eldrazi Scion".to_string(),
-                        power: 1,
-                        toughness: 1,
-                        keywords: vec![],
-                        card_types: vec![CardType::Creature],
-                        colors: vec![],
-                        supertypes: vec![],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Eldrazi],
-                            ..Default::default()
-                        },
-                        activated_abilities: vec![],
-                        triggered_abilities: vec![],
-
-                        static_abilities: vec![],
-                        ..Default::default()
-                    }),
+                    definition: Box::new(eldrazi_spawn_token()),
                 },
-                Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
-                    toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
-                    duration: Duration::EndOfTurn,
+                Effect::Seq(vec![
+                    Effect::Scry { who: PlayerRef::Target(0), amount: Value::XFromCost },
+                    Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::ONE },
+                ]),
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueAtMostXFromCost),
+                    ),
                 },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::XFromCost,
+                Effect::ExileFromGraveyard {
+                    who: PlayerRef::Target(0),
+                    count: Value::XFromCost,
+                    filter: SelectionRequirement::Any,
                 },
             ],
         },
@@ -25015,7 +25017,7 @@ fn eldrazi_spawn_token() -> crate::card::TokenDefinition {
         toughness: 1,
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Eldrazi],
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Spawn],
             ..Default::default()
         },
         activated_abilities: vec![ActivatedAbility {
