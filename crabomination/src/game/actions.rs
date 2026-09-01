@@ -13063,7 +13063,7 @@ impl GameState {
         // For abilities that produce `AnyOneColor` (Black Lotus, Birds of
         // Paradise, Mox Diamond, etc.) the source's own resolver asks the
         // installed `Decider` which color to add. We temporarily swap in a
-        // `ScriptedDecider` that answers with `color`, so the chosen color
+        // `OneColorDecider` that answers with `color`, so the chosen color
         // matches the pip we're trying to satisfy. (Without this, the
         // default `AutoDecider` always picks White and leaves the requested
         // color unfilled.)
@@ -13098,7 +13098,7 @@ impl GameState {
             if let Some((id, idx)) = source {
                 let mut b = scripted_slot
                     .take()
-                    .unwrap_or_else(|| Box::new(crate::decision::ScriptedDecider::silent()));
+                    .unwrap_or_else(|| Box::new(crate::decision::OneColorDecider::default()));
                 b.rearm_script(crate::decision::DecisionAnswer::Color(color));
                 let prev_decider = std::mem::replace(&mut self.decider, b);
                 // Force synchronous resolution: if the player normally wants
@@ -13173,12 +13173,12 @@ impl GameState {
             let Some((id, idx, fresh)) = source else { break };
             let result = if let Some(color) = fresh {
                 covered[color_index(color)] = true;
-                // Same scripted-decider device as the colored-pip loop:
+                // Same one-color-decider device as the colored-pip loop:
                 // an `AnyOneColor` source must add the fresh color, not
                 // the AutoDecider's default White.
                 let mut b = scripted_slot
                     .take()
-                    .unwrap_or_else(|| Box::new(crate::decision::ScriptedDecider::silent()));
+                    .unwrap_or_else(|| Box::new(crate::decision::OneColorDecider::default()));
                 b.rearm_script(crate::decision::DecisionAnswer::Color(color));
                 let prev_decider = std::mem::replace(&mut self.decider, b);
                 let prev_wants_ui = self.players[player].wants_ui;

@@ -542,11 +542,9 @@ impl DeciderKind {
     pub fn into_boxed(self) -> Box<dyn Decider + Send + Sync> {
         match self {
             DeciderKind::Auto => Box::new(AutoDecider),
-            DeciderKind::Scripted { answers, asked } => Box::new(ScriptedDecider {
-                answers: answers.into_iter().collect(),
-                asked,
-                log: true,
-            }),
+            DeciderKind::Scripted { answers, asked } => {
+                Box::new(ScriptedDecider { answers: answers.into_iter().collect(), asked })
+            }
         }
     }
 }
@@ -693,17 +691,14 @@ impl Decider for AutoDecider {
 /// `AutoDecider` when exhausted. Records every decision it saw for assertions.
 ///
 /// `answers` is inline rather than a `VecDeque`: a script is one or two
-/// answers, and the engine's own scripts (auto-tap's colour pick) built one
-/// per pip — a queue allocation each. `remove(0)` on two slots is cheaper
-/// than the ring buffer it replaces.
+/// answers, and a queue allocation for that is pure loss. `remove(0)` on two
+/// slots is cheaper than the ring buffer it replaces. **Test-only again as of
+/// `(-161)`** — the engine's one scripted path recycles an
+/// [`OneColorDecider`] instead, so `asked` is always read by somebody.
 #[derive(Debug)]
 pub struct ScriptedDecider {
     answers: smallvec::SmallVec<[DecisionAnswer; 2]>,
     pub asked: Vec<Decision>,
-    /// Whether `decide` logs to `asked`. On for every scripted *test*; off
-    /// for [`silent`](Self::silent), which the engine's internal scripts use
-    /// and whose log nothing reads.
-    log: bool,
 }
 
 impl Default for ScriptedDecider {
@@ -714,19 +709,62 @@ impl Default for ScriptedDecider {
 
 impl ScriptedDecider {
     pub fn new(answers: impl IntoIterator<Item = DecisionAnswer>) -> Self {
-        Self {
-            answers: answers.into_iter().collect(),
+        Self { answers: answers.into_iter().collect(), asked: Vec::new() }
+    }
+}
+
+/// Answers one `Color` decision, then defers to [`AutoDecider`] — the whole of
+/// what `auto_tap_for_cost_inner` ever used [`ScriptedDecider`] for, and the
+/// decider its `scripted_slot` recycles.
+///
+/// `(-159)` made the slot hold **one** boxed decider for the whole payment
+/// instead of one per pip; this is what that box costs per pip once the
+/// allocation is gone. `ScriptedDecider::rearm_script` clears and re-pushes a
+/// `DecisionAnswer` — a 40-byte enum with drop glue — into a `SmallVec` and
+/// clears the `asked` log beside it; `decide` then `remove(0)`s it back out.
+/// This one is an `Option<Color>`: the re-arm is a two-byte store and the whole
+/// type is `Copy`. PERF `(-161)`.
+///
+/// `kind()` reports the same `Scripted` discriminant `ScriptedDecider` does.
+/// Thirty-eight engine sites branch on `matches!(decider.kind(), Auto)` and
+/// none of them reads the payload, so the two are interchangeable there —
+/// `one_color_decider_matches_the_scripted_one` is the check.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct OneColorDecider {
+    answer: Option<Color>,
+}
+
+impl OneColorDecider {
+    pub fn new(color: Color) -> Self {
+        Self { answer: Some(color) }
+    }
+}
+
+impl Decider for OneColorDecider {
+    fn kind(&self) -> DeciderKind {
+        DeciderKind::Scripted {
+            answers: self.answer.map(DecisionAnswer::Color).into_iter().collect(),
             asked: Vec::new(),
-            log: true,
         }
     }
-
-    /// An empty script that does not record what it was asked. For engine
-    /// paths that install a one-answer script and throw it away —
-    /// `auto_tap_for_cost_inner` re-arms one per pip through
-    /// [`Decider::rearm_script`].
-    pub fn silent() -> Self {
-        Self { answers: smallvec::SmallVec::new(), asked: Vec::new(), log: false }
+    fn decide(&mut self, decision: &Decision) -> DecisionAnswer {
+        match self.answer.take() {
+            Some(c) => DecisionAnswer::Color(c),
+            None => AutoDecider.decide(decision),
+        }
+    }
+    /// Only a `Color` can be scripted here — the two auto-tap sites pass
+    /// nothing else, and a non-colour answer would be a caller bug rather than
+    /// a state to carry. Debug-asserted; in release it leaves the slot empty,
+    /// which falls through to `AutoDecider` exactly as an exhausted script does.
+    fn rearm_script(&mut self, answer: DecisionAnswer) {
+        self.answer = match answer {
+            DecisionAnswer::Color(c) => Some(c),
+            other => {
+                debug_assert!(false, "OneColorDecider re-armed with {other:?}");
+                None
+            }
+        };
     }
 }
 
@@ -738,9 +776,7 @@ impl Decider for ScriptedDecider {
         }
     }
     fn decide(&mut self, decision: &Decision) -> DecisionAnswer {
-        if self.log {
-            self.asked.push(decision.clone());
-        }
+        self.asked.push(decision.clone());
         if self.answers.is_empty() {
             AutoDecider.decide(decision)
         } else {
@@ -751,5 +787,58 @@ impl Decider for ScriptedDecider {
         self.answers.clear();
         self.answers.push(answer);
         self.asked.clear();
+    }
+}
+
+#[cfg(test)]
+mod one_color_decider_tests {
+    use super::{Decider, DeciderKind, Decision, DecisionAnswer, OneColorDecider, ScriptedDecider};
+    use crate::card::CardId;
+    use crate::mana::Color;
+
+    /// `OneColorDecider` replaced `ScriptedDecider::new([Color(c)])` on the
+    /// auto-tap path for the allocations, not for a behaviour change — so run
+    /// the same decision sequence through both and compare. The `kind()` leg is
+    /// the load-bearing half: thirty-eight engine sites branch on
+    /// `matches!(decider.kind(), DeciderKind::Auto)`, and a `OneColorDecider`
+    /// that reported `Auto` would silently take the other arm at every one.
+    /// PERF `(-161)`.
+    #[test]
+    fn one_color_decider_matches_the_scripted_one() {
+        let ask = Decision::ChooseColor {
+            source: CardId(1),
+            legal: vec![Color::White, Color::Green],
+        };
+        let later = Decision::OptionalTrigger { source: CardId(1), description: String::new() };
+        for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            let mut scripted = ScriptedDecider::new([DecisionAnswer::Color(c)]);
+            let mut one = OneColorDecider::new(c);
+            // A non-`Auto` kind is what the thirty-eight gates read.
+            assert!(matches!(scripted.kind(), DeciderKind::Scripted { .. }));
+            assert!(matches!(one.kind(), DeciderKind::Scripted { .. }));
+            // `DecisionAnswer` carries no `PartialEq` (a derive on it is a
+            // monomorphization the engine never asks for), so compare renderings.
+            let same = |x: DecisionAnswer, y: DecisionAnswer| {
+                assert_eq!(format!("{x:?}"), format!("{y:?}"));
+                x
+            };
+            // First ask: the scripted answer, whatever the decision is.
+            let first = same(scripted.decide(&ask), one.decide(&ask));
+            assert!(matches!(first, DecisionAnswer::Color(got) if got == c));
+            // Spent, so `kind()` reports an empty queue.
+            assert!(
+                matches!(one.kind(), DeciderKind::Scripted { ref answers, .. } if answers.is_empty())
+            );
+            // Every ask after the first falls through to `AutoDecider`.
+            same(scripted.decide(&later), one.decide(&later));
+            same(scripted.decide(&ask), one.decide(&ask));
+            // And the recycled path: `auto_tap_for_cost_inner` holds one box
+            // for the whole payment and re-arms it per pip, so a spent decider
+            // must answer the next pip's colour.
+            scripted.rearm_script(DecisionAnswer::Color(c));
+            one.rearm_script(DecisionAnswer::Color(c));
+            let again = same(scripted.decide(&ask), one.decide(&ask));
+            assert!(matches!(again, DecisionAnswer::Color(got) if got == c));
+        }
     }
 }
