@@ -242,6 +242,28 @@ python3 scripts/cg_sites.py cg.instr.out target-probe/profiling-lines/bot_ladder
 # so a scan's per-element loads land in `slice::iter`'s frames instead. The
 # two sites it found at 0.35 % between them measured -0.611 % when removed.
 
+# WHICH BUFFER ALLOCATED — a source line per allocation, which `cg_growth.py`
+# cannot give: it ranks the *callers* of `finish_grow` and stops at
+# "declare_blockers, 19,616 growths". Needs `--dump-instr=yes` AND the
+# **`profiling-lines`** binary: `profiling-fast` is `split-debuginfo =
+# "unpacked"`, so every `DW_TAG_inlined_subroutine` lives in a `.dwo` and
+# `addr2line -i` answers with the OUTERMOST frame — all eight sites in
+# `resolve_combat` came back as the one line `resolve_combat` calls. Packed
+# DWARF resolves the same eight addresses to eight different lines. `(-158)`.
+RUST_MIN_STACK=33554432 valgrind --tool=callgrind --dump-instr=yes \
+  --callgrind-out-file=cg.lines.out target-lines/profiling-lines/bot_ladder \
+  --a gang --b gang --games 6 --threads 1 --seed 1 --decks cube
+python3 scripts/cg_alloc_sites.py cg.lines.out \
+  target-lines/profiling-lines/bot_ladder declare_blockers
+#
+# ⚠ AND SPLIT THE GROWTHS BY ALLOCATOR ENTRY BEFORE PICKING A TOOL.
+# `--separate-callers=2` puts `malloc` vs `realloc` beside each grow context:
+# a `realloc` row is a growth *ladder* and a `reserve` flattens it; a `malloc`
+# row is a FIRST allocation and a `reserve` only moves it — only an inline
+# buffer removes that one. 81 % of this program's growths are first
+# allocations, which is why `cg_growth.py`'s growths-per-call ranking points
+# at the wrong rows on their own. `(-158)`.
+
 # whose calls those are, three frames up. A one-level caller table ranks by
 # the immediate caller, which for `gather_continuous_effects_inner` is
 # `computed_permanent` and says nothing. `--separate-callers=N` gives one
@@ -19947,6 +19969,154 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-158) THE ALLOCATION CENSUS, RE-TAKEN WITH THE ONE COLUMN IT NEVER HAD:
+`malloc` VS `realloc`. 81 % OF THE PROGRAM'S GROWTHS ARE FIRST ALLOCATIONS, SO
+`with_capacity` IS THE WRONG TOOL AND `cg_growth.py`'S OWN RANKING POINTS AT
+THE WRONG ROWS.** `finish_grow` is **336,724 calls / 16.3 M self / 76.2 M
+inclusive = 3.17 % of `cube`** (`malloc` 273,215 / 25.95 M, `realloc` 63,509 /
+33.92 M). Fresh dumps at `19b1aa6c`, `profiling-lto`, six games, one thread,
+seed 1; `fixed` is 125,607 growths over 68 callers.
+
+`--separate-callers=2` splits each grow context by which allocator entry it
+took, and that is the column that decides the tool:
+
+```text
+  cube, grow contexts by allocator entry     malloc   realloc   realloc%
+    dispatch_board_scan (two Vec fields)     23,576         0       0.0 %
+    affected_from_requirement                10,648         0       0.0 %
+    actions:: (four separate contexts)       33,122         0       0.0 %
+    trigger_grant_sources                     7,336         0       0.0 %
+    combat::resolve_combat (one context)     11,482        82       0.7 %
+    bot::pick_blocks_inner                    7,758     1,532      16.5 %
+    CowBox<Vec<T>>::push                         50     7,552      99.3 %
+```
+
+**A 0 % row is a buffer that reaches the heap once and never re-grows**, and
+`cg_growth.py`'s doc already says a reserve buys nothing there — but the script
+ranks by *growths per call*, which puts `declare_blockers`' 4.00 at the top and
+`dispatch_board_scan`'s 0.29 at rank 40, when the second is the larger row in
+absolute allocations and every one of them is avoidable. **Rank first
+allocations by COUNT and re-growths by PER-CALL; they are two different
+census questions and one script column cannot answer both.** ⚠ And 4.00
+growths a call is *not* a growth ladder here: `declare_blockers` allocates four
+separate buffers once each, which is why `(-71)`'s inline-slot device is the
+only thing that touches it and a `with_capacity` is not.
+
+**The ranked engine rows, by the Ir their growths actually cost** (the
+script's fourth column, both pools, so a row can be sized before it is taken):
+
+```text
+                              cube growths  grow Ir     %      fixed growths  grow Ir     %
+  resolve_combat                    16,366  9,401,948  0.391          6,590  5,324,895  0.606
+  gather_continuous_effects_inner        —          —      —         11,806  2,920,019  0.332
+  auto_tap_for_cost_inner           16,394  2,858,851  0.119          7,042  1,083,388  0.123
+  dispatch_board_scan               23,576  2,781,968  0.116              0          0  0.000
+  pick_blocks_inner                 11,086  2,545,945  0.106          4,348    828,038  0.094
+  CowBox<Vec<T>>::push               7,602  4,659,644  0.194          3,324  1,951,258  0.222
+  declare_blockers                  19,616  4,266,421  0.177          9,216  1,106,781  0.126
+  advance_step                       7,180  2,335,948  0.097          4,726  1,406,484  0.160
+  affected_from_requirement         10,648  1,291,732  0.054              —          —      —
+  trigger_grant_sources              7,336    865,648  0.036              0          0  0.000
+```
+
+⚠ **`dispatch_board_scan` and `trigger_grant_sources` are `cube`/`sealed`-only
+and `--bench` cannot see either** — the `fixed` archetypes carry no
+`GrantTriggeredAbility` static, so both vectors stay empty and never allocate.
+CLAUDE.md's pool rule, in its sharpest form yet: a row can be the program's
+largest allocation site on one pool and *literally zero* on the one the bench
+measures.
+
+**`resolve_combat` is the top allocation row on BOTH pools — 0.61 % of `fixed`,
+0.39 % of `cube` — and it is the one to take next.** Its own body holds almost
+no buffers; the growths are `resolve_combat_damage_with_filter` and the rest of
+the combat-damage chain inlined into it, and **808 Ir a growth on `fixed`
+against 118-226 everywhere else** says these are the big-buffer reallocs, not
+the small first allocations the rest of the table is made of. ⚠ **Attribute the
+sites before patching**: two levels of `--separate-callers` cannot see inside an
+inlined callee, so this row needs `profiling-lines` + `cg_lines.py`, which is
+the cold build this pass did not spend. `(-71)`'s eight inline slots are the
+precedent and its rule is the one to re-read first — "**read both columns
+before sizing an inline buffer**", and the second column now exists.
+
+**WHAT `scripts/cg_alloc_sites.py` SAID WHEN IT WAS POINTED AT
+`resolve_combat`, AND WHY THAT ROW IS NOT THE LEAD IT LOOKED LIKE.** Eight
+lines carry its 9,194 `fixed` allocations, and none of them is takeable:
+
+```text
+  fixed, allocations by source line, inside resolve_combat
+    2,878  combat.rs:3402  `events.reserve(32)` — a PREVIOUS pass's fix; the
+                            comment records the 34,438 growths it removed
+    1,962  combat.rs:3667  } `b.damaged_by_this_turn.push(..)` — a Vec field on
+    1,750  combat.rs:3852  } `CardInstance`, i.e. inside the CoW card group
+    1,600  combat.rs:2815  `default_damage_split`'s `.collect()`
+      384  combat.rs:2998  `combat_damage_order.get(..).cloned()`
+      190  combat.rs:3581  `combat_damage_assignment.get(..).cloned()`
+```
+
+The largest site is a deliberate `reserve` and the next two are a *stored*
+`Vec` on the card, where an inline buffer is priced at the CoW group's size
+class rather than at the allocation (`(-152)`'s ceiling rule). **A row that is
+0.61 % of a pool can be entirely made of allocations nobody should remove**,
+and that is worth more than the row was: it is why the ranking has to be read
+down to the line before a build is spent.
+
+**STILL OPEN, in order, and each one now has its lines:**
+
+1. **`dispatch_board_scan`'s two `Vec` fields — `mod.rs:3690` and `mod.rs:3699`,
+   23,576 allocations, 0 re-growths, 0.116 % of `cube` and ZERO of `fixed`.**
+   `DispatchScan.equip_grants` and `.trigger_grants`. Both are `SmallVec`
+   candidates; the struct is returned by value, so check the `sret` slot's cost
+   against `TriggerGrant`'s size before picking N. `trigger_grant_sources`'
+   `out` (7,336, 0.036 %) is the same buffer built by the other walker.
+2. **`auto_tap_for_cost_inner` — `actions.rs:13088` / `12929` / `13109`, 22,942
+   of its 25,440**, 0.119 % of `cube` / 0.123 % of `fixed`. `(-108)` took its
+   `do_reserve_and_handle` half and left these.
+3. **`affected_from_requirement`, 10,648 / 0.054 % of `cube`, 0 re-growths.**
+
+**(-157) THE PROFILE OF RECORD TRANSFERS TO THE SHIPPED BINARY — MEASURED ON
+THE WHOLE PROFILE, NOT JUST ON `(-156)`'s ROW.** Every row in this file is a
+`release-fast` (cgu 16, no LTO) reading; every ML binary `selfplay_train` runs
+is `--release` (cgu 1 + thin LTO). `(-156)` raised the doubt in its own text —
+"a win measured on `release-fast` may be worth **zero** in the binary the actor
+runs" — and its gate answered it *for one row*. This is the same question asked
+of the other forty. Two `profiling-lto` dumps against the two `release-fast`
+ones, `--games 6 --threads 1 --seed 1`, `--demangle=no`, joined on the
+demangled key with the `17h<hash>E` and `.llvm.N` suffixes stripped (taken at
+the free-activation tip, one commit either side of `39528f0f`):
+
+```text
+  pool    profiling-lto     release-fast    LTO delta
+  cube    2,404,499,361    2,471,534,012     -2.712 %
+  fixed     879,376,175      907,757,788     -3.127 %
+```
+
+**Thin LTO is worth ~3 % of Ir and it does NOT re-shape the profile.** Of the
+forty largest rows on each pool, every engine function sits within **±0.15
+points** of the share it has under `release-fast` — `dispatch_triggers_for_events`
+5.428 vs 5.423, `gather_continuous_effects_inner` 3.387 vs 3.367,
+`compute_permanent_pass` 3.232 vs 3.216, `computed_permanent_hinted` 2.427 vs
+2.407 — and **the call counts are identical to the unit** on all of them. The
+ranking a candidate is pulled off is the same ranking in the shipped binary.
+
+The whole -3 % is four rows, and each one is LTO **deleting calls**, not
+speeding them up:
+
+```text
+  cube                        lto calls    rf calls   lto Ir      rf Ir
+    Vec::clone                  368,165     459,559   17.8 M     23.5 M   -21 % of calls
+    Arc::clone_from_ref_in      101,624     120,824   56.6 M     57.4 M   -16 %
+    Arc::drop_slow              371,315     371,315   21.5 M     24.3 M
+    sba_board_scan               20,506      20,506   21.6 M     24.0 M
+  and one row LTO makes WORSE at an identical call count:
+    RawVecInner::finish_grow    333,830     333,830   16.3 M     13.4 M   +22 %
+```
+
+`fixed` reproduces all five signs. **The transferable half: a `release-fast`
+reading over-states any change to the CoW `Vec`/`Arc` clone family by about a
+fifth, because a fifth of those calls do not exist in the shipped binary — and
+understates nothing else.** Rank on `release-fast` as before; discount a
+clone-family ceiling by ~20 % before quoting it as an actor win.
+
 **(-156) CLOSED — MEASURED, REFUTED, REVERTED. Read to the end of the entry
 before re-proposing it: the shim survives thin LTO, and rewriting its largest
 instance recovered 10.9 % of the row it deleted.** The original filing follows,
@@ -20015,6 +20185,40 @@ row into the shim's. The second is at least as likely and would mean the total
 did not grow at all, only moved. **A self-Ir comparison across two inlining
 regimes is not a like-for-like measurement** — the call count is, which is why
 the gate was written on the call count.
+
+**THE TWO EXPLANATIONS ABOVE ARE SEPARABLE, AND `readelf -sW` SEPARATES THEM
+FOR THE COST OF ONE COMMAND.** It is the second one, and it also predicts the
+10.9 % the rewrite below measured. Rank the seventeen `profiling-lto`
+instances by Ir/call beside their **symbol size**:
+
+```text
+  cube, profiling-lto        calls    self Ir   Ir/call   bytes
+    ee7dc5f2 (pick_blocks)  12,992  6,574,752     506.1    4,122
+    6b9566ad (resolve_comb) 20,714  4,453,628     215.0    1,993
+    2b88a4b1 (dispatch_trg)  9,862  2,371,560     240.5      239
+    bd66cc81 (sba sweep)     5,096  1,732,612     340.0      456
+    e4b6b6df (pick_attacks) 11,292  1,166,662     103.3    1,753
+    ---- the nine genuine forwarders ----
+    (9 rows)                19,298    263,572      13.7   98-545
+    TOTAL                   92,024 17,115,446     186.0
+```
+
+**A `call_mut` 4,122 bytes long is a closure body the inliner folded into
+std's symbol, not a three-instruction shim.** Callgrind keys the row by the
+symbol the code landed in, so the name says "adapter" and the size says
+"predicate". The nine rows that really are forwarders run 13.7 Ir a call and
+hold **0.011 % of `cube`** between them; the five that carry 96 % of the cost
+are bodies a `for` loop would still execute. The removable part is the call
+and return per element — 92,024 calls at ~6-10 Ir, **0.023-0.038 %** — which
+is the same answer, arrived at without a build, as the -0.0193 % the rewrite
+below actually measured on one instance.
+
+⚠ **THE RULE THIS FILE DID NOT HAVE: price a std-generic row by its CODE SIZE,
+not by its name.** `readelf -sW <bin> | grep <symbol>` is one command and it
+tells a forwarder from a body. Every `Filter::next` / `FilterMap::next` /
+`SpecFromIterNested` row in this file's history was ranked on the assumption
+that the name describes the work; on this dump that assumption is wrong for
+the five rows holding 96 % of the cost and right for the nine holding 1.5 %.
 
 ⚠ **The dumps do not symbolize the same way and one of them lies if you
 believe `cg_symbolize.py`'s header.** The `profiling-fast` dump comes back as
