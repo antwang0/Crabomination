@@ -1415,6 +1415,60 @@ fn eternal_student_is_a_four_two_zombie() {
     assert!(card.definition.has_creature_type(crabomination::card::CreatureType::Zombie));
 }
 
+/// A graveyard-only activated ability does not function on the battlefield.
+///
+/// Eternal Student's "{1}{B}, Exile this card from your graveyard: create two
+/// Inklings" is `from_graveyard`, and `activate_ability_inner` gated only the
+/// *other* direction (a battlefield ability activated from a graveyard) — so
+/// the ability was activatable while the card was a 4/2 in play, and the
+/// payment path then accepted it without the mana. Found by the
+/// `debug-assertions` sweep at seed 2 on `--decks cube`; the bot's own
+/// `sink::AB_TOKEN` presence gate was correctly clear and `would_accept` said
+/// yes anyway. The gate is per-ability and per-flag, so this covers the whole
+/// class (`from_hand` / `from_exile` / `from_command_zone` too).
+#[test]
+fn a_graveyard_only_ability_does_not_work_from_the_battlefield() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::eternal_student());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.battlefield.len();
+    let err = g
+        .perform_action(GameAction::ActivateAbility {
+            card_id: id,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect_err("a `from_graveyard` ability does not function on the battlefield");
+    assert!(
+        matches!(err, crabomination::game::GameError::CardNotInGraveyard(x) if x == id),
+        "expected CardNotInGraveyard, got {err:?}",
+    );
+    assert_eq!(g.battlefield.len(), before, "the exile-self cost must not have been paid");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "and no mana spent");
+
+    // The same ability from the graveyard is legal — the gate is directional.
+    let gy = g.add_card_to_graveyard(0, catalog::eternal_student());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gy,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("from the graveyard it is the printed ability");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Inkling").count(),
+        2,
+        "two 1/1 Inklings",
+    );
+}
+
 #[test]
 fn postmortem_professor_drains_one_on_attack() {
     let mut g = two_player_game();

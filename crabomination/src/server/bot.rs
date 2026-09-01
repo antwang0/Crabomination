@@ -5863,13 +5863,14 @@ mod sink {
 /// gate against what it actually returned, so the whole suite audits the mask
 /// on real boards rather than against a re-derived list.
 macro_rules! gated_pick {
-    ($mask:expr, $bit:expr, $call:expr) => {{
+    ($state:expr, $mask:expr, $bit:expr, $call:expr) => {{
         let gate = $mask & $bit != 0;
         if gate || cfg!(debug_assertions) {
             let picked = $call;
             debug_assert!(
                 gate || picked.is_none(),
-                concat!("main_phase gate ", stringify!($bit), " skipped a real action"),
+                concat!("main_phase gate ", stringify!($bit), " skipped a real action: {}"),
+                gate_blame($state, picked.as_ref()),
             );
             if gate && let Some(action) = picked {
                 return BotStep::plain(action);
@@ -5877,6 +5878,42 @@ macro_rules! gated_pick {
         }
     }};
 }
+
+/// Name what a `gated_pick!` gate skipped, for the assertion above.
+///
+/// A gate audit that can only say *which bit* was clear costs a rebuild every
+/// time it fires — the same argument `CRAB_CAP_DIAG` is built on. This names the
+/// source card, its ability index and the printed cost, which is what the
+/// soundness question is actually about: `sink_facts` skips an ability whose
+/// coloured pips `available_mana` cannot cover, and `would_accept` is the
+/// authority on whether that was right.
+#[cfg(debug_assertions)]
+fn gate_blame(state: &GameState, action: Option<&GameAction>) -> String {
+    let Some(action) = action else { return String::from("(none)") };
+    let GameAction::ActivateAbility { card_id, ability_index, .. } = action else {
+        return format!("{action:?}");
+    };
+    let Some(card) = state.find_card_anywhere(*card_id) else {
+        return format!("{action:?} (card gone)");
+    };
+    let cost = card
+        .definition
+        .activated_abilities
+        .get(*ability_index)
+        .map(|ab| format!("{:?} gy={} hand={} exile={}", ab.mana_cost.symbols, ab.from_graveyard, ab.from_hand, ab.from_exile))
+        .unwrap_or_else(|| String::from("(granted)"));
+    let zone = if state.battlefield.iter().any(|c| c.id == *card_id) { "battlefield" } else { "elsewhere" };
+    let have = available_mana(state, card.controller);
+    format!(
+        "{} ability {ability_index} in {zone}, printed cost {cost}, available total {} by_color {:?}",
+        card.definition.name, have.total, have.by_color
+    )
+}
+
+/// Release build: the assertion is compiled out, so the blame string is never
+/// built. Kept as a `()`-returning stub so the macro has one shape.
+#[cfg(not(debug_assertions))]
+fn gate_blame(_state: &GameState, _action: Option<&GameAction>) {}
 
 /// The shape bits one activated ability contributes to [`sink_facts`]. Each
 /// arm calls the same predicate its generator does, so the two cannot drift.
@@ -6317,135 +6354,135 @@ fn main_phase_action_with(
     // {3} as a 2/2 (with ward {2} for Disguise). Reached only when no normal
     // spell candidate validated, so the bot still prefers casting cards face
     // up; `would_accept` enforces sorcery timing and the {3} payment.
-    gated_pick!(sinks, sink::MORPH, pick_face_down_cast(state, seat, state));
+    gated_pick!(state, sinks, sink::MORPH, pick_face_down_cast(state, seat, state));
 
     // Discard-activated hand abilities (Magma Opus's {U/R}{U/R}, Discard:
     // create a Treasure) — a fallback value play, reached only when the bot
     // has no spell/face-down line so it never pitches a castable card.
-    gated_pick!(sinks, sink::DISCARD_ACT, pick_discard_ability(state, seat, state));
+    gated_pick!(state, sinks, sink::DISCARD_ACT, pick_discard_ability(state, seat, state));
 
     // Activate planeswalker loyalty abilities the bot controls. Pick the
     // first usable ability per walker (engine enforces sorcery timing and
     // once-per-turn). The candidate set is dry-run-gated so failed targets
     // / over-spent loyalty / opp-controlled-walker rejections drop out.
-    gated_pick!(sinks, sink::LOYALTY, pick_loyalty_ability(state, seat, w));
+    gated_pick!(state, sinks, sink::LOYALTY, pick_loyalty_ability(state, seat, w));
 
     // Crew (CR 702.122): turn an uncrewed Vehicle into an attacker by tapping
     // the bot's least-valuable untapped creatures. Dry-run-gated.
-    gated_pick!(sinks, sink::CREW, pick_crew(state, seat));
+    gated_pick!(state, sinks, sink::CREW, pick_crew(state, seat));
 
     // Saddle (CR 702.171): tap the bot's least-valuable untapped creatures to
     // saddle a Mount that's about to attack, so its "attacks while saddled"
     // riders fire. Dry-run-gated.
-    gated_pick!(sinks, sink::SADDLE, pick_saddle(state, seat));
+    gated_pick!(state, sinks, sink::SADDLE, pick_saddle(state, seat));
 
     // Equip (CR 702.6): if the bot controls an Equipment that isn't yet
     // attached to one of its creatures, and it controls a creature to wear
     // it, move the Equipment onto the biggest such creature. Dry-run-gated
     // so the equip cost / sorcery timing / target legality all bottom out
     // in `would_accept`.
-    gated_pick!(sinks, sink::EQUIP, pick_equip(state, seat));
+    gated_pick!(state, sinks, sink::EQUIP, pick_equip(state, seat));
 
     // Activated two-slot attach (Brass Squire's "{T}: attach target Equipment
     // you control to target creature you control"). The native-equip pass
     // above only covers `Keyword::Equip`; this drives the Equipment-mover
     // creatures so the AI plays them.
-    gated_pick!(sinks, sink::AB_ATTACH, pick_attach_ability(state, seat));
+    gated_pick!(state, sinks, sink::AB_ATTACH, pick_attach_ability(state, seat));
 
     // Spend surplus energy on beneficial energy-payoff abilities (Bristling
     // Hydra's grow, Longtusk Cub's +1/+1, Aetherstream Leopard's
     // unblockable, …). Only pure "Pay {E}: do X" abilities with no other
     // cost are considered, so the bot can't bankrupt mana or sacrifice
     // anything. Dry-run-gated like everything else.
-    gated_pick!(sinks, sink::AB_ENERGY, pick_energy_payoff(state, seat));
+    gated_pick!(state, sinks, sink::AB_ENERGY, pick_energy_payoff(state, seat));
 
     // Recur value from the graveyard (Embalm CR 702.88 / Eternalize CR 702.91
     // and any "Exile this from your graveyard: …" ability) when there's spare
     // mana and nothing better to do. Dry-run-gated so cost / sorcery timing
     // bottom out in `would_accept`.
-    gated_pick!(sinks, sink::GY_RECUR, pick_graveyard_recursion(state, seat));
+    gated_pick!(state, sinks, sink::GY_RECUR, pick_graveyard_recursion(state, seat));
 
     // Reanimate a creature from the graveyard via a battlefield permanent's
     // activated ability (Seedship Broodtender's sac-to-return) when there's a
     // worthwhile target. Dry-run-gated so cost / sorcery-speed timing bottom
     // out in `would_accept`.
-    gated_pick!(sinks, sink::AB_REANIMATE, pick_battlefield_reanimate(state, seat));
+    gated_pick!(state, sinks, sink::AB_REANIMATE, pick_battlefield_reanimate(state, seat));
 
     // Crack a Lander token (CR — `{2}, {T}, Sacrifice: fetch a basic land
     // tapped`) for ramp when there's a basic still in the library and spare
     // mana. Sequenced after spell-casting so the bot only ramps when it has
     // nothing better to spend mana on. Dry-run-gated.
-    gated_pick!(sinks, sink::LANDER, pick_crack_lander(state, seat));
+    gated_pick!(state, sinks, sink::LANDER, pick_crack_lander(state, seat));
 
     // Fire a "{cost}: deal damage to any target" value ability (Frostwielder's
     // {T} ping, Kiku's tap-and-burn, Pain Kami-style sac burn) when it kills an
     // opposing creature outright. Dry-run-gated so cost / timing / target
     // legality bottom out in `would_accept`.
-    gated_pick!(sinks, sink::AB_DAMAGE, pick_removal_ping(state, seat));
+    gated_pick!(state, sinks, sink::AB_DAMAGE, pick_removal_ping(state, seat));
 
     // Close the game: fire a "deal N to each opponent" / "drain N" / "each
     // opponent loses N" ability when it's lethal to a living opponent
     // (Hazoret's discard-burn, drain pingers). Lethal-only, so the bot never
     // wastes the resource. Dry-run-gated via `would_accept`.
-    gated_pick!(sinks, sink::AB_REACH, pick_reach_burn(state, seat));
+    gated_pick!(state, sinks, sink::AB_REACH, pick_reach_burn(state, seat));
 
     // Fire a "Sacrifice this: destroy target creature" ability (Pus Kami,
     // Nezumi Bone-Reader-style sac-removal) on a favorable trade — only when
     // the destroyed foe is at least as big as the creature being sacrificed.
-    gated_pick!(sinks, sink::AB_SAC_DESTROY, pick_removal_sacrifice(state, seat));
+    gated_pick!(state, sinks, sink::AB_SAC_DESTROY, pick_removal_sacrifice(state, seat));
 
     // Fire a repeatable "{cost}: Destroy target creature" (the Torment
     // Possessed cycle's Threshold ability, Royal Assassin-style tappers) on
     // the biggest legal foe. No trade math — the source survives.
-    gated_pick!(sinks, sink::AB_DESTROY, pick_removal_destroy(state, seat));
+    gated_pick!(state, sinks, sink::AB_DESTROY, pick_removal_destroy(state, seat));
 
     // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
     // manifested creature card) when the turn-up cost is affordable. Dry-run-
     // gated, so the cost / timing / "manifested noncreature can't turn up"
     // rules all bottom out in `would_accept`.
-    gated_pick!(sinks, sink::FACE_DOWN, pick_turn_face_up(state, seat));
+    gated_pick!(state, sinks, sink::FACE_DOWN, pick_turn_face_up(state, seat));
 
     // Pump the whole team before combat damage (Bearer of Glory's
     // "{4}{W}: creatures you control get +1/+1") when the bot has two or more
     // attacking creatures — the pump pays off on the swing. Dry-run-gated.
-    gated_pick!(sinks, sink::AB_TEAM_PUMP, pick_team_pump(state, seat));
+    gated_pick!(state, sinks, sink::AB_TEAM_PUMP, pick_team_pump(state, seat));
 
     // As a last resort before passing, sink spare mana into a "{cost}: draw a
     // card" ability when card-starved (Bonders' Enclave, Arch of Orazca-style
     // engines). Dry-run-gated, so cost / activation conditions bottom out in
     // `would_accept`.
-    gated_pick!(sinks, sink::AB_DRAW, pick_card_draw_ability(state, seat));
+    gated_pick!(state, sinks, sink::AB_DRAW, pick_card_draw_ability(state, seat));
 
     // Same slot, the other route to a card: impulse-draw engines that mill
     // or exile off the top and grant permission to play it (Ark of Hunger).
     // Flag-gated until laddered.
     if w.impulse_draw {
-        gated_pick!(sinks, sink::AB_GRANT_PLAY, pick_impulse_draw_ability(state, seat));
+        gated_pick!(state, sinks, sink::AB_GRANT_PLAY, pick_impulse_draw_ability(state, seat));
     }
 
     // Re-arm an unprepared prepare-spell creature via an off-card "target
     // creature becomes prepared" ability (SOS: Skycoach Waypoint). The
     // counter is worth about the inset spell — see the `permanent_value`
     // term — so this banks value on par with the draw sink above.
-    gated_pick!(sinks, sink::AB_PREPARES, pick_reprepare(state, seat));
+    gated_pick!(state, sinks, sink::AB_PREPARES, pick_reprepare(state, seat));
 
     // Sacrifice-for-value engines (sac a Pest: payoff), judged by the
     // resolved outcome rather than skipped for carrying a sac cost.
-    gated_pick!(sinks, sink::AB_SAC, pick_sacrifice_value(state, seat, w));
+    gated_pick!(state, sinks, sink::AB_SAC, pick_sacrifice_value(state, seat, w));
 
     // Crew an uncrewed Vehicle so it can attack this turn (Vehicles are dead
     // cards to the bot otherwise). Dry-run-gated.
-    gated_pick!(sinks, sink::CREW, pick_crew_vehicle(state, seat));
+    gated_pick!(state, sinks, sink::CREW, pick_crew_vehicle(state, seat));
 
     // Sink leftover mana into a repeatable "{cost}: +1/+1 counter on this"
     // ability to grow the board (Fire Sages, Water Tribe Captain). Last resort,
     // so it never pre-empts a spell or land. Dry-run-gated.
-    gated_pick!(sinks, sink::AB_SELF_COUNTER, pick_self_pump_counter(state, seat));
+    gated_pick!(state, sinks, sink::AB_SELF_COUNTER, pick_self_pump_counter(state, seat));
 
     // Sink leftover mana into a "{cost}: create a token" ability to grow the
     // board (Sun Warriors' {5}: 1/1 Ally, Realm of Koh's Spirit, Jasmine Dragon).
     // Last resort, dry-run-gated.
-    gated_pick!(sinks, sink::AB_TOKEN, pick_token_maker(state, seat));
+    gated_pick!(state, sinks, sink::AB_TOKEN, pick_token_maker(state, seat));
 
     BotStep::plain(GameAction::PassPriority)
 }

@@ -14575,6 +14575,33 @@ impl GameState {
         if source_in_command && !ability.from_command_zone {
             return Err(GameError::CardNotOnBattlefield(card_id));
         }
+        // ...and the mirror, which was missing: an ability flagged for another
+        // zone does not function on the **battlefield**. The four gates above
+        // stop a printed battlefield ability being activated from a graveyard;
+        // nothing stopped the reverse, so Eternal Student's "{1}{B}, Exile this
+        // card from your graveyard: create two Inklings" was activatable while
+        // it was a 4/2 in play — and the payment path, asked to exile a
+        // graveyard card that is on the battlefield, accepted the activation
+        // without the mana. Found by the `debug-assertions` sweep: the bot's
+        // `sink::AB_TOKEN` presence gate was correctly clear (one blue mana
+        // against `{1}{B}`) and `would_accept` said yes anyway.
+        //
+        // The rule this expresses already existed four times over, on the
+        // *granting* statics — Necrotic Ooze, Marvin, Safehouse and Conspicuous
+        // Snoop each skip `from_graveyard` abilities with the comment "those
+        // function only from the graveyard". This is the same rule at the one
+        // site that matters, so no card needs a per-card fix.
+        if bf_pos.is_some() {
+            if ability.from_graveyard {
+                return Err(GameError::CardNotInGraveyard(card_id));
+            }
+            if ability.from_hand {
+                return Err(GameError::CardNotInHand(card_id));
+            }
+            if ability.from_exile || ability.from_command_zone {
+                return Err(GameError::CardNotOnBattlefield(card_id));
+            }
+        }
 
         // Only the controller (or graveyard/hand owner) can activate abilities,
         // except abilities flagged `opponents_only` (CR 602.5 — Detention
