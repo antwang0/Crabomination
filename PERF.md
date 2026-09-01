@@ -20328,6 +20328,80 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-163) THE PROGRAM'S ALLOCATIONS RANKED BY SOURCE LINE — THE CENSUS THIS
+FILE HAS NEVER HAD, AND IT DOES NOT AGREE WITH THE GROWTH CENSUS ABOUT
+ANYTHING.** `(-161)` proved `cg_growth.py` reads **zero** on `vec![x]` and on
+`with_capacity(n)`, so the growth ranking every candidate since `(-103)` was
+pulled off is a ranking of *re*-growths, not of allocations. This is the other
+one: `scripts/cg_alloc_sites.py` over the whole binary (needle `crabomination`),
+`profiling-lines`, `--dump-instr=yes`, six games, one thread, seed 1, at
+`0d4b6a62`.
+
+```text
+  fixed — 500,822 allocations, 341,190 attributed to a crabomination line
+    53,640  mod.rs:13570   computed_permanent_hinted   Arc::new(apply_layers_one_gated)
+    27,040  mod.rs:10236   gather_continuous_effects_inner   ← (-161) took it
+    16,182  mod.rs:13585   computed_permanent_hinted   Arc::new(gather_continuous_effects())
+    16,182  mod.rs:13587   computed_permanent_hinted   Arc::new(apply_layers_one_gated)
+    11,280  mod.rs:2755    GameState::clone
+    10,942  mod.rs:2776    GameState::clone
+    10,616  layers.rs:482  PrintedList<P>::push
+     9,572  mod.rs:10209   gather_continuous_effects_inner   ← (-161)
+     7,330  mod.rs:9688    frozen_effects
+     6,954  cow.rs:62      CowBox<Vec<T>>::push
+     6,954  cow.rs:65      CowBox<Vec<T>>::push
+     6,012  mod.rs:10206   gather_continuous_effects_inner   ← (-161)
+     5,794  mod.rs:10233   gather_continuous_effects_inner   ← (-161)
+     5,022  actions.rs:11899
+     4,748  stack.rs:464   advance_step
+
+  cube — 797,395 allocations
+   137,850  mod.rs:13570   computed_permanent_hinted
+    46,292  layers.rs:482  PrintedList<P>::push
+    39,224  mod.rs:9862    gather_continuous_effects_inner  ← (-162)
+    28,992  mod.rs:13585   computed_permanent_hinted
+    28,992  mod.rs:13587   computed_permanent_hinted
+    22,698  mod.rs:2755    GameState::clone
+    22,196  mod.rs:2776    GameState::clone
+    12,408  mod.rs:3690    dispatch_board_scan   ← dropck, see (-158) row 1
+    11,918  mod.rs:10209   gather_continuous_effects_inner  ← (-161)
+    11,862  cow.rs:62      CowBox<Vec<T>>::push
+    11,862  cow.rs:65      CowBox<Vec<T>>::push
+    11,806  mod.rs:9688    frozen_effects
+    11,480  actions.rs:11899
+    11,168  mod.rs:3699    dispatch_board_scan   ← dropck
+    10,648  mod.rs:25831   affected_from_requirement   ← (-158) row 3
+```
+
+**Read the two leads at the top before anything else on this list.**
+
+*(a) `computed_permanent_hinted` is 85,004 allocations of `fixed` (17 % of the
+program's) and 195,834 of `cube` (25 %), in three lines, and it has never
+appeared on this queue as an allocation row.* All three are `Arc::new` — two of
+`ComputedPermanent` (72 bytes, size-asserted) and one of the gathered effect
+list. ⚠ **`(-111)` is the prior art and it is a REFUTATION**: `computed_permanent`
+by value was built, measured and reverted. The `Arc` here is the freeze-scope
+memo's storage (`st.perms.push((id, cp.clone()))` keeps it, the caller gets the
+clone), so "return by value" is the same change `(-111)` already priced. What
+`(-111)` did **not** price is the allocation *count* — it had no instrument that
+could see an exact-size `Arc::new` — so the row is worth re-opening only with a
+device that keeps the memo and removes the box: an arena or a slab indexed by
+`CardId`, not a value return. Do not re-run `(-111)`'s experiment.
+
+*(b) `PrintedList<P>::push` — `layers.rs:482`, 46,292 on `cube` (the second
+largest line there) and 10,616 on `fixed`, and nothing has ever named it.*
+`push` materializes `printed ++ [value]` into a fresh `Box<[P::Item]>` **on
+every call**, so n pushes to one list are n allocations of growing size. The
+obvious fix — make `over` a `Vec` and push in place — costs eight bytes per
+overlay list field inside `ComputedPermanent`, whose 72 bytes are held by an
+assertion in `crabomination_tests`; `(-152)`'s ceiling rule applies and the
+count of overlay fields decides it. **Price the struct first, then the row.**
+
+⚠ **The two `GameState::clone` lines and the two `CowBox::push` lines are the
+CoW family**, which `(-99)`/`(-100)`/`(-143)` worked to exhaustion — and
+`(-157)` says a `release-fast` reading over-states that family by ~20 %
+because thin LTO deletes a fifth of its calls. Discount before pricing.
+
 **(-162) THE ONE ROW `(-161)` LEFT INSIDE `gather_continuous_effects_inner`,
 AND IT IS `cube`'s, NOT THE BENCH'S.** `mod.rs:9862`, `all_effects`'
 `Vec::with_capacity(base.len() + sa_cards.len())`: **39,224 of a six-game

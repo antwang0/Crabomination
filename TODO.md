@@ -53,11 +53,15 @@ sixty-seventh pass, so don't re-take that.
    borrow to end of scope — twelve `E0502`/`E0506`s in three files. **Ask "does the element
    borrow?" before pricing an inline slot**; that is why every slot `(-71)`/`(-158)` shipped is
    `CardId`-shaped. `(-158)`'s row 3 stays open and is priced in the entry.
-6. **NEXT PERF LEAD — `(-162)`, the one row `(-161)` left in that function, and it is `cube`'s.**
-   `mod.rs:9862`, `all_effects`' `with_capacity`: **39,224 `cube` allocations, the largest single
-   line there, and absent from `fixed`**. The value escapes, so the device is a **`thread_local!`
-   reuse pool with an RAII guard** (`GameState` must stay `Sync` — that is why `in_layer_gather`
-   is an `AtomicBool`), plus an `into_vec()` for the two `Arc::new` call sites.
+6. **NEXT PERF LEADS ARE IN `(-163)` — the program's allocations ranked by SOURCE LINE, which
+   this file has never had.** Top of both pools is **`computed_permanent_hinted`: 85,004
+   allocations of `fixed` (17 % of the program's) and 195,834 of `cube` (25 %), in three
+   `Arc::new` lines** — ⚠ **`(-111)` already refuted the "by value" fix**, so re-open it only
+   with an arena/slab that keeps the memo. Second is **`PrintedList::push` (`layers.rs:482`),
+   46,292 on `cube`, named by nothing before**: it rebuilds `printed ++ [value]` per call, and
+   the fix costs eight bytes inside the 72-byte `ComputedPermanent` — price the struct first.
+   Then `(-162)`, `mod.rs:9862`'s `all_effects` (39,224 `cube`, zero `fixed`), whose device is a
+   `thread_local!` reuse pool with an RAII guard plus an `into_vec()` for two `Arc::new` sites.
 7. **Rank a first-allocation census by COUNT, not per-call** — `(-160)` re-ran `cg_growth.py`
    that way on all three pools and found nine engine rows the Ir ranking never showed, plus the
    receipt that `(-158)` worked. ⚠ **`Vec::push_mut` / `Vec::from_iter` top every pool and are
