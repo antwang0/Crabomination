@@ -380,7 +380,11 @@ fn phantom_centaur_sheds_one_counter_per_hit() {
 #[test]
 fn phantom_nantuko_regrows_counters() {
     let mut g = main_phase();
-    let nantuko = g.add_card_to_battlefield(0, catalog::phantom_nantuko());
+    // `_with_counters`: a Phantom is a printed 0/0 that enters with its
+    // counters (CR 614.12), and the plain constructor skips every entry
+    // replacement — which now matters, because CR 704.3 is checked after an
+    // activation and a real 0/0 dies there.
+    let nantuko = g.add_card_to_battlefield_with_counters(0, catalog::phantom_nantuko());
     g.battlefield_find_mut(nantuko).unwrap().summoning_sick = false;
     let before = g.computed_permanent(nantuko).unwrap().power;
     activate(&mut g, 0, nantuko, 0, None);

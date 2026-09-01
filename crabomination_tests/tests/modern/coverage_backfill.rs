@@ -1934,16 +1934,35 @@ fn walking_ballista_counter_is_a_real_cost_not_overactivatable() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
     }).expect("castable for X=1");
     drain_stack(&mut g);
-    // First ping spends the only counter.
+    // First ping spends the only counter — and CR 704.3/704.5f then kill the
+    // Ballista, because a 0/0 with no counters is a 0-toughness creature and
+    // state-based actions are checked as soon as the ability is on the stack.
+    // That death is a *stronger* proof of CR 602.5b than the old counter read:
+    // the cost could not have been paid at resolution, because the source is
+    // gone before anything resolves.
+    let life = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("first ping");
-    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
-        .counter_count(CounterType::PlusOnePlusOne), 0, "counter paid as cost immediately");
-    // Second activation must fail — no counter left to pay the cost.
+    assert!(
+        g.battlefield.iter().all(|c| c.id != id),
+        "a 0/0 that paid its last +1/+1 counter as a cost dies to CR 704.5f",
+    );
+    assert_eq!(
+        g.players[0].graveyard.iter().filter(|c| c.id == id).count(),
+        1,
+        "and it goes to its owner's graveyard",
+    );
+    // Second activation must fail — the source is gone, and there was never a
+    // second counter to pay with.
     assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).is_err(), "can't activate without a counter to remove");
+    // CR 608.2 — the ping on the stack resolves anyway; it stopped existing
+    // as an ability of the Ballista the moment it was announced.
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "the announced ping still resolves");
+    let _ = CounterType::PlusOnePlusOne;
 }
 
 #[test]

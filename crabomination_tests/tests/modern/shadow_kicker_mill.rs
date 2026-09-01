@@ -1664,6 +1664,44 @@ fn devoted_druid_vizier_combo_untaps_without_counters() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "two G floated");
 }
 
+/// CR 704.3 / 704.5f — a cost that kills its own source kills it *now*, not
+/// when the stack next resolves.
+///
+/// Devoted Druid is a 0/2 whose untap costs a -1/-1 counter, so two
+/// activations put it at toughness 0 and the third has no source to activate.
+/// The engine checked state-based actions only on stack resolution, so the
+/// corpse stayed in play and the activation repeated without bound: a `cube`
+/// game reached **49,941 copies of this ability on one stack** before the
+/// action cap stopped it (robustness grid, `--pilots` leg, `abilarms`
+/// seed 23). Two counters, then gone.
+#[test]
+fn a_cost_that_kills_its_source_ends_the_activation_chain() {
+    let mut g = two_player_game();
+    let druid = g.add_card_to_battlefield(0, catalog::devoted_druid());
+    g.clear_sickness(druid);
+    for i in 0..2 {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: druid, ability_index: 1, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .unwrap_or_else(|e| panic!("activation {i} should be legal: {e:?}"));
+    }
+    assert!(
+        g.battlefield_find(druid).is_none(),
+        "a 0/2 with two -1/-1 counters is toughness 0 and dies to CR 704.5f",
+    );
+    assert!(
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: druid, ability_index: 1, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+        .is_err(),
+        "and the third activation has no source",
+    );
+    // The two that did happen are still on the stack, as they should be.
+    assert_eq!(g.stack.len(), 2);
+}
+
 /// Voice of Victory locks opponents out of casting during your turn.
 #[test]
 fn voice_of_victory_locks_opponent_casts_on_your_turn() {
