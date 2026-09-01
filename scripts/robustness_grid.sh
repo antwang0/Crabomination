@@ -7,18 +7,45 @@
 # audit on real boards. PERF's (-58) is the case in point: 18,795 tests missed
 # a board that sixty games of `cube` found in four seconds.
 #
-# Two legs. The **ladder** leg is `bot_ladder` over five pools x six seeds.
+# Three legs. The **ladder** leg is `bot_ladder` over five pools x six seeds.
 # The **actor** leg is `selfplay_train`, and it is not redundant: `bot_ladder`
 # runs the encoder on no pool, so the four `debug_assert!`s in
 # `server/encode.rs` — the vocab-index slot among them — have no other audit.
+# The **pilots** leg (`--pilots`, on by default under `--wide`) runs the other
+# ~45 decision policies against `gang`: the grid ran one of them for its whole
+# history, and a `debug_assert!` on a path only `mcts` or `abilarms` reaches had
+# no audit at all.
 # Costs ~9 min of build into its own target dir (the flag re-fingerprints
-# every crate), ~4 min for the 30-cell ladder grid, and ~10 min for the actor
-# leg's own build plus ~1 min for its three cells.
+# every crate), ~4 min for the 30-cell ladder grid, ~10 min for the actor
+# leg's own build plus ~1 min for its three cells, and ~12 min for the pilots.
 #
 #   scripts/robustness_grid.sh              # build + verify + both legs
 #   scripts/robustness_grid.sh --no-build   # both legs, reusing target-audit/
 #   scripts/robustness_grid.sh --no-actor   # ladder leg only
 #   scripts/robustness_grid.sh --actor-only # actor leg only (still builds it)
+#   scripts/robustness_grid.sh --wide       # the sizes that actually find things
+#   scripts/robustness_grid.sh --pilots     # the third leg: 40+ decision policies
+#
+# ⚠ **THE DEFAULT SIZES ARE A SMOKE TEST, NOT THE AUDIT, AND THAT IS MEASURED.**
+# The hundred-and-nineteenth pass found **five** shipped bugs with this script
+# and **the committed defaults are green on the tree that had all five** — 30
+# cells, 0 failures, run against a `debug-assertions` binary built at the
+# pre-fix commit. What each one needed:
+#
+#   1  a graveyard-only ability functioning on the battlefield   seed 2
+#   2  `(life + clock - 1) / clock` overflow (the race check)    seeds 53, 73
+#   3  `life_value`'s three multiplies overflow                  seeds 53, 73
+#   4  a counter cost that kills its source, corpse left in play  --pilots
+#   5  the CR 732.3 loop guard counting the stack it watches      --pilots
+#
+# 1-3 sit on seeds the default list does not carry (`1 3 7 11 23 97`) and 2-3
+# need the Beacon of Immortality board, which takes hundreds of turns to build.
+# **4 and 5 need a pilot other than `gang`**, which this grid had never run:
+# `abilarms` on `--decks cube` was piling ~50,000 copies of one ability onto one
+# stack, and fixing it took that cell from **846,610 ms to 304 ms**.
+#
+# **Run `--wide` before calling robustness green**, and read a default run as
+# "nothing obvious moved".
 #
 # ⚠ `undecided_by draw` is a **rules outcome, not a stall** — two players
 # losing at once is a legal game end. Only `cap` (turn limit) and `stuck` (no
@@ -31,15 +58,37 @@ SEEDS="${SEEDS:-1 3 7 11 23 97}"
 GAMES="${GAMES:-120}"
 ACTOR_SEEDS="${ACTOR_SEEDS:-1 7 23}"
 ACTOR_GAMES="${ACTOR_GAMES:-600}"
+# The third leg. `bot_ladder`'s pilots are ~45 decision policies over one
+# engine, and the grid ran exactly one of them (`gang`) for its whole history —
+# so every `debug_assert!` on a path only another policy reaches had no audit.
+# Each cell is `--a <pilot> --b gang`, which is also how the ladder gates them.
+PILOTS="${PILOTS:-mcts mcts-heur det1 det3 baseline landseq mull chumpblocks
+  dmgorder targeteval walkerchip abilarms impulse holdsick holdinst atk
+  atk-cheap atk-hold atk-sim atk-race atk-life dflt-life life power base kw25
+  buff2for1 convlands mullsim walkerlegacy legacyfetch landseq2 mull2 race2
+  look1 look2 blk combat lookahead planner scaled keywords v2 pretap smarttap}"
+PILOT_GAMES="${PILOT_GAMES:-40}"
+PILOT_SEED="${PILOT_SEED:-23}"
 BIN=target-audit/overflow/bot_ladder
 ACTOR_BIN=target-audit/overflow/selfplay_train
 
-build=1 ladder=1 actor=1
+build=1 ladder=1 actor=1 pilots=0
 for arg in "$@"; do
   case "$arg" in
     --no-build) build=0 ;;
     --no-actor) actor=0 ;;
     --actor-only) ladder=0 ;;
+    --pilots) pilots=1 ;;
+    # The sizes the three findings needed. 26 seeds x 400 games on the widest
+    # pool is ~18 min of ladder; the actor leg goes to a filled `--window`.
+    --wide)
+      SEEDS="1 2 3 5 7 11 13 17 19 23 29 31 37 41 47 53 59 61 67 71 73 79 83 89 97 101"
+      GAMES=400
+      POOLS="all sealed"
+      ACTOR_SEEDS="7 20260901"
+      ACTOR_GAMES=30000
+      pilots=1
+      ;;
     *) echo "unknown flag $arg"; exit 2 ;;
   esac
 done
@@ -117,6 +166,25 @@ if [ "$actor" = 1 ]; then
     acells=$((acells + 1))
   done
   echo "ACTOR DONE cells=$acells failures=$fail"
+fi
+
+if [ "$pilots" = 1 ]; then
+  check_asserts "$BIN"
+  pcells=0
+  for pilot in $PILOTS; do
+    out=$(RUST_MIN_STACK=33554432 timeout 1800 "$BIN" \
+      --a "$pilot" --b gang --games "$PILOT_GAMES" --threads 3 \
+      --seed "$PILOT_SEED" --decks all 2>&1)
+    rc=$?
+    line=$(echo "$out" | grep -E "^[0-9]+ decided" | tail -1)
+    if [ $rc -ne 0 ] || [ -z "$line" ]; then
+      echo "FAIL pilot=$pilot rc=$rc"; echo "$out" | tail -20; fail=$((fail + 1))
+    else
+      echo "ok pilot=$pilot  $line"
+    fi
+    pcells=$((pcells + 1))
+  done
+  echo "PILOTS DONE cells=$pcells failures=$fail"
 fi
 
 [ "$fail" -eq 0 ]
