@@ -3542,6 +3542,19 @@ fn keyword_value(keywords: &[crate::card::Keyword], power: i32, w: &EvalWeights)
 /// strictly increasing under integer arithmetic -- a flat spot would make
 /// "gain 1 life" evaluate to exactly zero.
 fn life_value(life: i32, w: &EvalWeights) -> i32 {
+    // ⚠ **Clamp first.** A life total is not bounded by anything: Beacon of
+    // Immortality doubles it every other turn until it saturates at `i32::MAX`
+    // (ENGINE_BACKLOG's closed stall lead — a correct card doing what it
+    // prints, seen in 4 of 183,600 sweep games). Every path below *multiplies*
+    // it — `life * w.unit`, `(life - MAX) * 4`, `tenths * w.unit / 10` — so an
+    // unclamped total wraps, and in release it wraps silently into a large
+    // negative score: the seat with unbounded life evaluates as the one that is
+    // losing. Caught by the `debug-assertions` sweep at seeds 53 and 73 of
+    // `--decks all`. Ten thousand is far past any total the evaluator has to
+    // tell apart, and it keeps every product below in `i32` for the profiles
+    // this ships (`unit` 1 and 10).
+    const LIFE_CEILING: i32 = 10_000;
+    let life = life.min(LIFE_CEILING);
     if !w.concave_life {
         return life * w.unit;
     }
@@ -7808,6 +7821,22 @@ pub fn pick_attacks(state: &GameState, seat: usize) -> Vec<Attack> {
     state.with_frozen_layers(|state| pick_attacks_inner(state, seat))
 }
 
+/// Turns for `clock` damage a turn to finish `life`, without the overflow the
+/// plain `(life + clock - 1) / clock` form has.
+///
+/// `effective_life` reads **`i32::MAX`** on a Beacon of Immortality board —
+/// ENGINE_BACKLOG's closed stall lead, a correct card doing what it prints —
+/// and `i32::MAX + clock - 1` wraps there. In release that wrap is silent and
+/// turns the race check inside out: a negative `their_turns` reads as "the
+/// opponent kills us before our next untap", so the bot attacks all-out into a
+/// board it cannot race. Caught by the `debug-assertions` sweep at seeds 53 and
+/// 73 of `--decks all`.
+fn turns_to_lethal(life: i32, clock: i32) -> i32 {
+    debug_assert!(clock > 0, "callers gate on a positive clock");
+    let life = life.max(1);
+    life / clock + i32::from(life % clock != 0)
+}
+
 fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
     use crate::card::Keyword;
     // Pick the attack target: prefer an opposing monarch (CR
@@ -7910,9 +7939,8 @@ fn pick_attacks_inner(state: &GameState, seat: usize) -> Vec<Attack> {
         .map(|c| c.power().max(0))
         .sum();
     let racing = total_raw_power > 0 && opp_clock > 0 && {
-        let our_turns = (opp_life.max(1) + total_raw_power - 1) / total_raw_power;
-        let their_turns =
-            (state.effective_life(seat).max(1) + opp_clock - 1) / opp_clock;
+        let our_turns = turns_to_lethal(opp_life, total_raw_power);
+        let their_turns = turns_to_lethal(state.effective_life(seat), opp_clock);
         our_turns < their_turns && our_turns <= 5
     };
     let lethal_swing = lethal_swing || racing;
@@ -16479,6 +16507,35 @@ mod tests {
         assert_eq!(payable_generic_budget(&g, 0, 0), 0);
         let empty = two_player_game();
         assert_eq!(payable_generic_budget(&empty, 0, 4), 0, "nothing on the board pays nothing");
+    }
+
+    /// `(life + clock - 1) / clock` overflows on an `i32::MAX` life total,
+    /// which a Beacon of Immortality board reaches — ENGINE_BACKLOG's closed
+    /// stall lead, a correct card doing what it prints. In release the wrap is
+    /// silent and negative, which reads as "we lose next turn" and turns the
+    /// race check inside out. Caught by the `debug-assertions` sweep at seeds
+    /// 53 and 73 of `--decks all`.
+    #[test]
+    fn turns_to_lethal_does_not_overflow_on_an_unbounded_life_total() {
+        // The shape that wrapped, at every clock a board can present.
+        for clock in [1, 2, 7, 4_091] {
+            let t = super::turns_to_lethal(i32::MAX, clock);
+            assert!(t > 0, "clock {clock} gave {t}");
+        }
+        // ...and it still agrees with the arithmetic it replaces everywhere
+        // that arithmetic was defined.
+        for life in [1, 2, 3, 19, 20, 21, 100] {
+            for clock in [1, 2, 3, 7] {
+                assert_eq!(
+                    super::turns_to_lethal(life, clock),
+                    (life + clock - 1) / clock,
+                    "life {life} clock {clock}",
+                );
+            }
+        }
+        // A dead-or-negative life total is one swing, not zero or negative.
+        assert_eq!(super::turns_to_lethal(0, 3), 1);
+        assert_eq!(super::turns_to_lethal(-7, 3), 1);
     }
 
     /// Sac-cost sources are deliberately *not* counted toward what the bot
