@@ -246,6 +246,32 @@ fn lethal_noncombat_from_your_source(
 /// prologue to reach `event_kind_matches`' first arm and return. The riders
 /// are `#[inline(never)]` behind an identical signature so this is a tail
 /// call on the 7 % and a frameless test on the rest.
+/// The `EventScope::SelfSource` kinds that fire off a card sitting in a
+/// **graveyard** at dispatch time, rather than off a permanent on the
+/// battlefield.
+///
+/// Read by two walkers that must agree: the `SelfSource` scope arm below,
+/// which matches the event's card id against the trigger's source, and the
+/// dispatcher's graveyard walk in `game/mod.rs`, which decides whose printed
+/// abilities are even looked at. A kind admitted by one and rejected by the
+/// other is a trigger that can never fire and never errors.
+pub(crate) fn is_graveyard_self_source_kind(kind: &EventKind) -> bool {
+    matches!(
+        kind,
+        // CR 702.29c — "These abilities trigger from whatever zone the card
+        // winds up in after it's cycled."
+        EventKind::CardCycled
+            // Narcomoeba, Creeping Chill.
+            | EventKind::CardMilled
+            // Pure Intentions' own half.
+            | EventKind::CardDiscarded
+            // Sand Golem, Mangara's Blessing.
+            | EventKind::OpponentCausedYouToDiscard
+            // "When this is put into a graveyard from anywhere" (Emrakul).
+            | EventKind::PutIntoGraveyard
+    )
+}
+
 pub(crate) fn event_matches_spec(
     state: &GameState,
     event: &GameEvent,
@@ -417,27 +443,28 @@ fn event_matches_spec_rest(
             event,
             GameEvent::DamageDealt { to_player: Some(_), from_card: Some(f), .. }
                 if matches!(spec.kind, EventKind::PlayerDamaged) && *f == source.id
-        ) || matches!(
-            // CR 702.29c — "When you cycle this card" triggers fire
-            // with the cycled card as the trigger source. The card is
-            // in the graveyard by the time triggers dispatch (per
-            // CR 702.29c, "These abilities trigger from whatever zone
-            // the card winds up in after it's cycled"), so SelfSource
-            // here intentionally identifies the source by id; the
-            // dispatcher will walk hand → graveyard to find the
-            // card's printed abilities.
-            event,
-            GameEvent::CardCycled { card_id, .. } if *card_id == source.id
-        ) || matches!(
-            // "When this card is milled" — fires from the graveyard off
-            // the milled card itself (Narcomoeba, Creeping Chill).
-            event,
-            GameEvent::CardMilled { card_id, .. } if *card_id == source.id
-        ) || matches!(
-            // "When this is put into a graveyard from anywhere" — fires
-            // from the graveyard off the card itself (Emrakul).
-            event,
-            GameEvent::CardPutIntoGraveyard { card_id, .. } if *card_id == source.id
+        ) || (
+            // The graveyard-resident family (CR 702.29c and its siblings):
+            // the card is already in a graveyard when the trigger
+            // dispatches, so `SelfSource` identifies it by id and the
+            // dispatcher's graveyard walk finds its printed abilities.
+            // ⚠ **One list, two walkers.** `is_graveyard_self_source_kind`
+            // is read here *and* by that walk in `game/mod.rs`; a kind
+            // admitted by one and not the other is a silently dead trigger
+            // — which is exactly what `CardDiscarded` /
+            // `OpponentCausedYouToDiscard` were (Pure Intentions, Sand
+            // Golem, Mangara's Blessing all had a trigger that could not
+            // fire).
+            is_graveyard_self_source_kind(&spec.kind)
+                && matches!(
+                    event,
+                    GameEvent::CardCycled { card_id, .. }
+                    | GameEvent::CardMilled { card_id, .. }
+                    | GameEvent::CardDiscarded { card_id, .. }
+                    | GameEvent::OpponentCausedYouToDiscard { card_id, .. }
+                    | GameEvent::CardPutIntoGraveyard { card_id, .. }
+                        if *card_id == source.id
+                )
         ) || matches!(
             // "When this card is put into your hand from your graveyard" —
             // fires from the hand off the card itself (Golgari Brownscale).
@@ -1120,5 +1147,67 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         // attached" is a SelfSource trigger on the Equipment.
         GameEvent::AttachmentMoved { attachment, .. } => Some(*attachment),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::card::CardId;
+    use crate::effect::EventSpec;
+
+    /// **The two walkers of the graveyard-resident `SelfSource` family agree.**
+    ///
+    /// The dispatcher's graveyard walk (`game/mod.rs`) decides *whose* printed
+    /// abilities are looked at, and the `SelfSource` scope arm above decides
+    /// whether the trigger fires. Both read
+    /// [`is_graveyard_self_source_kind`]; a kind admitted by one and not the
+    /// other is an ability that can never fire and never errors — which is
+    /// what `CardDiscarded` and `OpponentCausedYouToDiscard` were (Pure
+    /// Intentions, Sand Golem, Mangara's Blessing).
+    ///
+    /// Add a row here when you add a kind to the predicate.
+    #[test]
+    fn every_graveyard_self_source_kind_matches_its_own_card() {
+        let mut g = crate::game::two_player_game();
+        let mine = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        let other = g.add_card_to_hand(0, crate::catalog::grizzly_bears());
+        assert_ne!(mine, other);
+        let source = g.players[0].hand.iter().find(|c| c.id == mine).unwrap().clone();
+
+        type Row = (EventKind, fn(CardId) -> GameEvent);
+        let rows: &[Row] = &[
+            (EventKind::CardCycled, |id| GameEvent::CardCycled { player: 0, card_id: id, x: 0 }),
+            (EventKind::CardMilled, |id| GameEvent::CardMilled { player: 0, card_id: id }),
+            (EventKind::CardDiscarded, |id| GameEvent::CardDiscarded { player: 0, card_id: id }),
+            (EventKind::OpponentCausedYouToDiscard, |id| {
+                GameEvent::OpponentCausedYouToDiscard { player: 0, card_id: id }
+            }),
+            (EventKind::PutIntoGraveyard, |id| GameEvent::CardPutIntoGraveyard {
+                player: 0,
+                card_id: id,
+                is_land: false,
+            }),
+        ];
+
+        for (kind, build) in rows {
+            assert!(
+                is_graveyard_self_source_kind(kind),
+                "{kind:?} is in this table but not in the predicate the dispatcher gates on"
+            );
+            let spec = EventSpec::new(kind.clone(), EventScope::SelfSource);
+            assert!(
+                event_matches_spec(&g, &build(mine), &spec, &source),
+                "{kind:?} + SelfSource does not fire off its own card"
+            );
+            assert!(
+                !event_matches_spec(&g, &build(other), &spec, &source),
+                "{kind:?} + SelfSource fired off somebody else's card"
+            );
+        }
+
+        // Negative control: a battlefield-resident kind is not in the family,
+        // so the dispatcher's graveyard walk must not admit it.
+        assert!(!is_graveyard_self_source_kind(&EventKind::CreatureDied));
     }
 }

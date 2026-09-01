@@ -19022,39 +19022,18 @@ impl GameState {
                         ta.event.scope,
                         crate::effect::EventScope::FromYourGraveyard
                     );
-                    let self_scope = matches!(
+                    // The graveyard-resident `SelfSource` family — cycling,
+                    // milling, discarding, "put into a graveyard from
+                    // anywhere". The list lives with the scope arm that has
+                    // to agree with it (`effects::events::
+                    // is_graveyard_self_source_kind`); admitting a kind here
+                    // that the scope arm does not match by id is a trigger
+                    // that never fires.
+                    let gy_self = matches!(
                         ta.event.scope,
                         crate::effect::EventScope::SelfSource
-                    );
-                    // CR 702.29c cycle triggers and "when this card is
-                    // milled" triggers both fire off the card in the
-                    // graveyard.
-                    let cycle_self = matches!(
-                        ta.event.kind,
-                        crate::effect::EventKind::CardCycled
-                    ) && self_scope;
-                    let milled_self = matches!(
-                        ta.event.kind,
-                        crate::effect::EventKind::CardMilled
-                    ) && self_scope;
-                    // "When … causes you to discard this card" — the card is
-                    // already in the graveyard at dispatch (Pure Intentions).
-                    let discarded_self = matches!(
-                        ta.event.kind,
-                        crate::effect::EventKind::CardDiscarded
-                    ) && self_scope;
-                    // "When this is put into a graveyard from anywhere"
-                    // (Emrakul) — also fires off the card in the graveyard.
-                    let putgy_self = matches!(
-                        ta.event.kind,
-                        crate::effect::EventKind::PutIntoGraveyard
-                    ) && self_scope;
-                    if !from_gy_scope
-                        && !cycle_self
-                        && !milled_self
-                        && !putgy_self
-                        && !discarded_self
-                    {
+                    ) && crate::game::effects::is_graveyard_self_source_kind(&ta.event.kind);
+                    if !from_gy_scope && !gy_self {
                         continue;
                     }
                     for ev in events {

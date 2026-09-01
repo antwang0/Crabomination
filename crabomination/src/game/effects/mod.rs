@@ -20,7 +20,9 @@ pub use crabomination_base::tokens::{
 };
 pub(crate) use delayed::delayed_kind_from_effect;
 pub(crate) use eval::card_is_outlaw;
-pub(crate) use events::{emblem_event_matches, event_matches_spec, event_subject};
+pub(crate) use events::{
+    emblem_event_matches, event_matches_spec, event_subject, is_graveyard_self_source_kind,
+};
 
 use super::*;
 use crate::card::{

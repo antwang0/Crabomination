@@ -3,7 +3,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Predicate, SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition,
+    EventSpec, SelectionRequirement as R, StaticAbility, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
 use crate::effect::{Effect, PlayerRef, Selector, StaticEffect, ZoneDest};
@@ -128,8 +128,17 @@ pub fn pains_reward() -> CardDefinition {
 pub fn pure_intentions() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDiscarded, EventScope::SelfSource)
-                .with_filter(Predicate::CausedByOpponentSpellOrAbility),
+            // ⚠ Not `CardDiscarded` + `Predicate::
+            // CausedByOpponentSpellOrAbility`: that predicate reads
+            // `resolution_causer`, which is cleared when the resolution ends
+            // and so is already `None` by the time the discard's triggers
+            // dispatch. `OpponentCausedYouToDiscard` bakes the same question
+            // into the *emission*, where the causer is still known — the
+            // spelling Sand Golem and Mangara's Blessing use.
+            event: EventSpec::new(
+                EventKind::OpponentCausedYouToDiscard,
+                EventScope::SelfSource,
+            ),
             effect: Effect::AtNextEndStep {
                 body: Box::new(Effect::Move {
                     what: Selector::This,

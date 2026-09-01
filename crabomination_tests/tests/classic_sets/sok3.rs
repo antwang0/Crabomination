@@ -3,7 +3,7 @@
 use crabomination::card::{CounterType, CreatureType, SelectionRequirement as R};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, Target};
+use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
 
@@ -263,4 +263,41 @@ fn sekki_returns_itself_for_eight_spirits() {
     .expect("activate from graveyard");
     drain_stack(&mut g);
     assert!(g.battlefield_find(sekki).is_some(), "Sekki came back");
+}
+
+/// Pure Intentions' **own** printed trigger — "when a spell or ability an
+/// opponent controls causes you to discard Pure Intentions, return it to your
+/// hand at the beginning of the next end step."
+///
+/// Distinct from the delayed effect its resolution installs (tested above):
+/// this half fires off the card in the graveyard. `CardDiscarded` +
+/// `SelfSource` had no arm in the scope chain, so it never fired.
+#[test]
+fn pure_intentions_own_trigger_returns_it_from_the_graveyard() {
+    let mut g = two_player_game();
+    stock_libraries(&mut g, 10);
+    let pure = g.add_card_to_hand(0, catalog::pure_intentions());
+    let mind_rot = g.add_card_to_hand(1, catalog::mind_rot());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mind_rot,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Mind Rot");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pure), "discarded");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == pure),
+        "its own trigger hands it back at the next end step"
+    );
 }

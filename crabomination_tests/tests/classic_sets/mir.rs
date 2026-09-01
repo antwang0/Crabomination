@@ -2253,3 +2253,76 @@ fn blind_fury_doubles_creature_blows_and_strips_trample() {
     assert!(g.battlefield_find(blocker).is_none(), "4 damage to a 3/3");
     assert!(g.battlefield_find(attacker).is_none());
 }
+
+// ── The graveyard-resident `SelfSource` family ──────────────────────────────
+//
+// Both cards below carry "when a spell or ability an opponent controls causes
+// you to discard this card, …". The trigger dispatches while the card sits in
+// the graveyard, and `EventKind::OpponentCausedYouToDiscard` was admitted by
+// the dispatcher's graveyard walk but had no arm in `event_matches_spec`'s
+// `SelfSource` chain — so neither ability could ever fire. Both walkers now
+// read `is_graveyard_self_source_kind`.
+
+/// Make seat 1's Mind Rot resolve against seat 0, whose hand is exactly
+/// `card`. One card in hand, so that is the one discarded.
+fn opponent_mills_your_hand(g: &mut GameState) {
+    let mind_rot = g.add_card_to_hand(1, catalog::mind_rot());
+    g.players[1].mana_pool.add(Color::Black, 3);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mind_rot,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Mind Rot");
+    drain_stack(g);
+}
+
+/// Sand Golem comes back from the graveyard with a +1/+1 counter when an
+/// opponent's spell made you pitch it.
+#[test]
+fn sand_golem_returns_bigger_after_a_forced_discard() {
+    let mut g = two_player_game();
+    stock_libraries(&mut g, 10);
+    let golem = g.add_card_to_hand(0, catalog::sand_golem());
+    opponent_mills_your_hand(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == golem),
+        "the Golem was the only card in hand, so it is the one discarded"
+    );
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let back = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Sand Golem")
+        .expect("returned at the beginning of the next end step");
+    assert_eq!(back.controller, 0);
+    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 1, "…with a +1/+1 counter");
+}
+
+/// Mangara's Blessing refunds two life and itself when an opponent's spell
+/// makes you discard it.
+#[test]
+fn mangaras_blessing_refunds_itself_after_a_forced_discard() {
+    let mut g = two_player_game();
+    stock_libraries(&mut g, 10);
+    let blessing = g.add_card_to_hand(0, catalog::mangaras_blessing());
+    let life = g.players[0].life;
+    opponent_mills_your_hand(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "the gain-2 half is immediate");
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == blessing),
+        "back to hand at the beginning of the next end step"
+    );
+}

@@ -1887,8 +1887,17 @@ pub enum Predicate {
     /// other than your hand" rider.
     CastFromGraveyard,
     /// True while the resolving spell or ability is controlled by an opponent
-    /// of the evaluating controller (Pure Intentions' discard rider, Sacred
-    /// Ground's land destruction). Reads `GameState.resolution_causer`.
+    /// of the evaluating controller (Sacred Ground's land destruction). Reads
+    /// `GameState.resolution_causer`.
+    ///
+    /// ⚠ **As a trigger filter this is only sound on an event whose dispatch
+    /// replays the causer.** `resolution_causer` is cleared the moment the
+    /// resolution ends, and triggers dispatch after that — so at filter time
+    /// it is `None` unless something carried it across.
+    /// `pending_permanent_deaths` does exactly that for `PermanentDied`,
+    /// which is why Sacred Ground works; nothing else does. A discard rider
+    /// wants `EventKind::OpponentCausedYouToDiscard`, which asks the question
+    /// at emission instead (Pure Intentions, Sand Golem).
     #[serde(alias = "DiscardCausedByOpponent")]
     CausedByOpponentSpellOrAbility,
     /// True when the resolving spell was cast from its caster's hand
