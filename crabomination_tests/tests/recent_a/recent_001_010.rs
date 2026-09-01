@@ -11022,6 +11022,28 @@ mod recent9 {
         );
     }
 
+    /// Sacrificing Curious Farm Animals destroys an artifact or enchantment
+    /// (`audit_oracle_verbs.py`, `destroy` class — the ability was omitted).
+    #[test]
+    fn curious_farm_animals_sacrifices_to_break_an_artifact() {
+        let mut g = two_player_game();
+        let cfa = g.add_card_to_battlefield(0, catalog::curious_farm_animals());
+        let victim = g.add_card_to_battlefield(1, catalog::sol_ring());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add_colorless(2);
+        let life = g.players[0].life;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: cfa, ability_index: 0,
+            target: Some(Target::Permanent(victim)),
+            additional_targets: vec![], x_value: None, mode: None,
+        }).expect("{2}, sacrifice this");
+        drain_stack(&mut g);
+        assert!(g.battlefield.iter().all(|c| c.id != victim), "Sol Ring destroyed");
+        assert!(g.battlefield.iter().all(|c| c.id != cfa), "and it sacrificed itself");
+        assert_eq!(g.players[0].life, life + 3, "its death trigger still gains 3");
+    }
+
     /// Curious Farm Animals gains 3 life when it dies.
     #[test]
     fn curious_farm_animals_gains_life_on_death() {

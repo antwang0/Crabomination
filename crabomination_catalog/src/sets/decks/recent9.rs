@@ -418,20 +418,41 @@ pub fn unlucky_cabbage_merchant() -> CardDefinition {
     }
 }
 
-/// Curious Farm Animals — {W} 1/1. When it dies, you gain 3 life. (Sacrifice
-/// ability omitted.)
+/// Curious Farm Animals — {W} 1/1 Boar Elk Bird Ox. When it dies, you gain 3
+/// life; `{2}`, sacrifice it to destroy up to one artifact or enchantment.
 pub fn curious_farm_animals() -> CardDefinition {
     CardDefinition {
         name: "Curious Farm Animals",
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Boar, CreatureType::Bird],
+            creature_types: vec![
+                CreatureType::Boar,
+                CreatureType::Elk,
+                CreatureType::Bird,
+                CreatureType::Ox,
+            ],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
         triggered_abilities: vec![dies_gain_life(3)],
+        // "{2}, Sacrifice this creature: Destroy up to one target artifact or
+        // enchantment." The `up to one` is the optional slot, not a mode.
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
+                    ),
+                }),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

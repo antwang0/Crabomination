@@ -2970,10 +2970,14 @@ fn rise_of_extus_exiles_a_creature_and_a_graveyard_spell_then_learns() {
 
 // ── Lurking Deadeye (modern_decks push) ────────────────────────────────────
 
+/// Lurking Deadeye's ETB destroys a creature **that was dealt damage this
+/// turn** (`audit_oracle_verbs.py`, `destroy` class — it shipped as an
+/// unconditional -2/-2, which is a different card and a different target set).
 #[test]
-fn lurking_deadeye_etb_minus_two_target_creature() {
+fn lurking_deadeye_etb_destroys_a_damaged_creature() {
     let mut g = two_player_game();
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.battlefield_find_mut(angel).unwrap().dealt_damage_this_turn = true;
     let id = g.add_card_to_hand(0, catalog::lurking_deadeye());
 
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -2981,16 +2985,39 @@ fn lurking_deadeye_etb_minus_two_target_creature() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(crabomination::game::types::Target::Permanent(opp_bear)),
+        target: Some(crabomination::game::types::Target::Permanent(angel)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Lurking Deadeye castable at flash speed");
     drain_stack(&mut g);
 
-    // Bear was 2/2, -2/-2 kills it.
-    let bear_dead = g.battlefield.iter().all(|c| c.id != opp_bear);
-    assert!(bear_dead, "-2/-2 kills the bear via SBA");
+    assert!(
+        g.battlefield.iter().all(|c| c.id != angel),
+        "a 4/4 the -2/-2 would have left alive is destroyed",
+    );
+}
+
+/// ...and an undamaged creature is not a legal target for it.
+#[test]
+fn lurking_deadeye_cannot_aim_at_an_undamaged_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lurking_deadeye());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crabomination::game::types::Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("the ETB target is chosen on the stack, not at cast");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear),
+        "no damage this turn, nothing destroyed",
+    );
 }
 
 // ── Aether Helix (modern_decks push) ────────────────────────────────────────

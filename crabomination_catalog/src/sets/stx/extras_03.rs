@@ -77,19 +77,11 @@ pub fn brackish_trudge() -> CardDefinition {
 // ── Lurking Deadeye (STX 2021 Witherbloom uncommon creature) ───────────────
 
 /// Lurking Deadeye — {3}{B}, 4/2 Snake Assassin (STX 2021 uncommon).
-/// "Flash / Deathtouch / When this creature enters, target creature dealt
-/// damage this turn gets -2/-2 until end of turn."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Flash + deathtouch removal —
-/// great instant-speed surprise blocker. Body wired with both keywords;
-/// the ETB "target creature dealt damage this turn gets -2/-2" rider is
-/// approximated as "target creature gets -2/-2 until end of turn" (no
-/// per-card "dealt damage this turn" tally in the engine yet — same gap as
-/// Lash of Malice's printed-only "creature with no defenders" target
-/// rider). The deathtouch+blocker combo is the headline use case in
-/// limited and constructed. Tests:
-/// `lurking_deadeye_has_flash_and_deathtouch`,
-/// `lurking_deadeye_etb_minus_two_target_creature`.
+/// Lurking Deadeye — {3}{B} 4/2 Human Assassin with Flash. "When this creature
+/// enters, destroy target creature that was dealt damage this turn."
+/// `SelectionRequirement::DealtDamageThisTurn` is the target rider; the old
+/// "-2/-2 to any creature" approximation (and the note that no such tally
+/// existed) predated it.
 pub fn lurking_deadeye() -> CardDefinition {
     CardDefinition {
         name: "Lurking Deadeye",
@@ -104,11 +96,11 @@ pub fn lurking_deadeye() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-2),
-                toughness: Value::Const(-2),
-                duration: Duration::EndOfTurn,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::DealtDamageThisTurn),
+                ),
             },
         }],
         ..Default::default()
