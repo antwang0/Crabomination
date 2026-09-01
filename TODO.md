@@ -56,12 +56,20 @@ sixty-seventh pass, so don't re-take that.
    not rows** — they are the growths the inliner declined to fold into their engine caller.
    Name a line with **`cg_alloc_sites.py`** on a **`profiling-lines`** binary, never
    `profiling-fast`. **The build is still the lever**: PGO -23.8 to -27.6 %.
-7. **Card lanes unchanged, and both are in CARD_BACKLOG's first section:** the printed-**clause**
-   ratchets (seventeen, prose, three false-positive classes) and the printed-**join** ratchets
-   (eight, structured fields, 297 defects in one pass; the rule that makes a join a proof is
-   "no bespoke spelling"). Still unjoined: `color_identity` (⚠ and `format::color_identity` does
-   not read rules-text mana symbols at all, CR 903.4), activated-ability *count* on nonlands,
-   token definitions. ⚠ **A python auditor's zero is suspect — check its population.**
+7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-**clause** ratchets
+   (seventeen, prose, three false-positive classes) and the printed-**join** ratchets (eight,
+   structured fields, 297 defects in one pass; the rule that makes a join a proof is "no bespoke
+   spelling"). Still unjoined: `color_identity` (⚠ and `format::color_identity` does not read
+   rules-text mana symbols at all, CR 903.4), activated-ability *count* on nonlands, token
+   definitions. ⚠ **A python auditor's zero is suspect — check its population.**
+7a. **`audit_oracle_verbs.py` is the third lane and it is productive: 122 -> 106 rows.**
+   `search_library` 18 -> 11, `destroy` 15 -> 12, `draw` 16 -> 12 — fourteen shipped cards, of
+   which **three were a card that does not exist** (Frostpyre Arcanist, Lurking Deadeye, Skywarp
+   Skaab: an invented body plus a doc comment quoting it as the oracle). Next by size `counters`
+   13 / `gain_life` 12. ⚠ **It matches primitive NAMES, so a card whose whole body is one
+   dedicated variant reads as a miss** — four of eighteen `search_library` rows were that. Read
+   the body against the scryfall cache before believing a row; the triage and the eleven rows
+   filed as primitive-blocked are in CARD_BACKLOG.
 8. **Robustness green, P2 has no open correctness lead**, and the demo builders now deal from
    `GameState.rng` with `set_jitter_seed` beside them, which took the 4-player FFA bot test off
    its 600-second wall-clock ceiling.

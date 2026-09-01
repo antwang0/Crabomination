@@ -23,7 +23,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
 | [Oracle-verb audit — the `draw` and `counters` classes](#oracle-verb-audit--the-draw-and-counters-classes) | open | 60 |
-| [Oracle-verb audit — the `search_library` and `destroy` classes](#oracle-verb-audit--the-search_library-and-destroy-classes) | open | 48 |
+| [Oracle-verb audit — the `search_library`, `destroy` and `draw` classes](#oracle-verb-audit--the-search_library-destroy-and-draw-classes) | open | 76 |
 | [Tier 4 — remaining SOS/SOA audit simplifications (2026-07)](#tier-4--remaining-sossoa-audit-simplifications-2026-07) | open | 608 |
 | [New TODO suggestions (push modern_decks)](#new-todo-suggestions-push-moderndecks) | open | 188 |
 | [Edge of Eternities (`sets::eoe`)](#edge-of-eternities-setseoe) | open | 112 |
@@ -621,9 +621,11 @@ Paragon print "is also a Cleric, Rogue, Warrior, and Wizard" as a
 characteristic-defining ability that applies in every zone, so spelling the
 types as printed subtypes is the same object.
 
-## Oracle-verb audit — the `search_library` and `destroy` classes
+## Oracle-verb audit — the `search_library`, `destroy` and `draw` classes
 
-**`search_library` 18 -> 11, `destroy` 15 -> 12; total 122 -> 112.** Every
+**`search_library` 18 -> 11, `destroy` 15 -> 12, `draw` 16 -> 12.** The whole
+table read 122 when this lane opened and **106** after it, the difference over
+the three columns being the other session's card commits. Every
 fix used a primitive that already existed, and four of the eighteen
 `search_library` rows are the auditor's blind spot rather than a defect — it
 matches on primitive *names*, so a card whose whole body is one dedicated
@@ -667,6 +669,36 @@ about code" caveat `INCOMPLETE_CARDS.md` opens with, landing five more times.
 * **Cruel Deceiver, Oracle en-Vec, War Barge, The Most Dangerous Gamer** each
   want a primitive of their own (a granted damage-destroy until end of turn, a
   forced-attack-or-die end step, a leaves-play delayed destroy, Attractions).
+
+**The `draw` column, same shape.** Four fixed — Skywarp Skaab (a third
+invented card: its shipped "may discard to bounce" shares no clause with the
+printed "exile two creature cards from your graveyard to draw"), Sunpearl
+Kirin's token rider, Glitch Ghost Surveyor (**the blue member of the DFT
+Surveyor cycle, shipped without the cycle's own shared `max_speed_gy_draw`
+helper**), and Y'shtola's end-step draw. The Surveyor test is now table-driven
+over the cycle so the next member added without it fails a test.
+
+Filed, with the reason:
+
+* **The Tale of Tamiyo** — a blind spot: the draw is inside
+  `Effect::MillTwoRepeatSharing { draw_on_repeat: true }`. Not a defect.
+* **Haliya, Ascendant Cadet** and **Tannuk, Memorial Ensign** both want a
+  counter the engine does not keep. Haliya's is a **batched** combat-damage
+  event ("whenever one or more creatures you control with +1/+1 counters deal
+  combat damage to a player") — `DealsCombatDamageToPlayer` fires per creature
+  and `per_subject_cap` is per damaged player per *turn*, so either shape
+  over- or under-draws. Tannuk's is "the second time this ability has resolved
+  this turn", i.e. a per-source per-turn resolution count; `eoe.rs` already
+  files that gap in a doc comment on another card.
+* **Living Conundrum** — "If you would draw a card while your library has no
+  cards in it, skip that draw instead" is a **draw replacement effect**, and no
+  `StaticEffect` in the tree replaces a draw. Its three empty-library statics
+  ship; only the anti-decking half is missing, which is most of the card.
+* **Chains of Mephistopheles, Deadly Cover-Up, Dyadrine, Kozilek, Lich's
+  Mirror, Refurbished Familiar, Ring of Ma'rûf, Serum Powder** each want their
+  own primitive (draw replacement, name-wide graveyard/hand/library exile,
+  counter-removal costs, manifest, a full state restore, "for each opponent who
+  can't", wish, mulligan-time exile).
 
 ## Oracle-verb audit — the `token` class, and the tenth false class
 
