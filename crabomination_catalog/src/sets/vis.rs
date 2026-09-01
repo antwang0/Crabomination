@@ -1202,22 +1202,40 @@ pub fn giant_caterpillar() -> CardDefinition {
     }
 }
 
-/// Kyscu Drake — {3}{G} 2/2 flier that can pump its toughness once a turn.
-/// (The Viashivan Dragon assembly ability is dropped.)
+/// Kyscu Drake — {3}{G} 2/2 flier that can pump its toughness once a turn, or
+/// assemble Viashivan Dragon with a Spitting Drake.
 pub fn kyscu_drake() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
-        activated_abilities: vec![ActivatedAbility {
-            mana_cost: cost(&[g()]),
-            once_per_turn: true,
-            effect: Effect::PumpPT {
-                what: Selector::This,
-                power: Value::ZERO,
-                toughness: Value::ONE,
-                duration: Duration::EndOfTurn,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                once_per_turn: true,
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::ZERO,
+                    toughness: Value::ONE,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            // "Sacrifice this creature and a creature named Spitting Drake:
+            // Search your library for a card named Viashivan Dragon, put that
+            // card onto the battlefield, then shuffle."
+            ActivatedAbility {
+                sac_cost: true,
+                sac_other_filter: Some((R::HasName("Spitting Drake".into()), 1)),
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: R::HasName("Viashivan Dragon".into()),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+                ..Default::default()
+            },
+        ],
         ..creature("Kyscu Drake", cost(&[generic(3), g()]), vec![CreatureType::Drake], 2, 2)
     }
 }

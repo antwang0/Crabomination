@@ -3,12 +3,12 @@
 //! second-draw payoffs. Tests in `crabomination/src/tests/recent9.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype, TriggeredAbility,
-    Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType,
+    EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype,
+    TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{dies_gain_life, etb, on_attack, on_dies, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Predicate};
+use crate::effect::{Duration, Effect, LibraryPosition, PlayerRef, Predicate, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 use crabomination_base::tokens::food_token;
@@ -364,23 +364,56 @@ pub fn master_pakku() -> CardDefinition {
 
 // ── ETB value / utility ────────────────────────────────────────────────────
 
-/// Unlucky Cabbage Merchant — {1}{G} 2/2. When it enters, create a Food.
+/// Unlucky Cabbage Merchant — {1}{G} 2/2 Human Citizen. ETB: create a Food.
+/// Whenever you sacrifice a Food, you may tutor a basic land tapped — and if
+/// you do, the Merchant goes to the bottom of its owner's library.
 pub fn unlucky_cabbage_merchant() -> CardDefinition {
     CardDefinition {
         name: "Unlucky Cabbage Merchant",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human],
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::ONE,
-            definition: Box::new(food_token()),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Box::new(food_token()),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food),
+                    }),
+                // "If you search your library this way" — the search is the
+                // optional half, so declining also skips the bottoming.
+                effect: Effect::MayDo {
+                    description: "Search for a basic land (and bottom the Merchant)?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Search {
+                            who: PlayerRef::You,
+                            filter: SelectionRequirement::IsBasicLand,
+                            to: ZoneDest::Battlefield {
+                                controller: PlayerRef::You,
+                                tapped: true,
+                            },
+                        },
+                        Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Library {
+                                who: PlayerRef::OwnerOf(Box::new(Selector::This)),
+                                pos: LibraryPosition::Bottom,
+                            },
+                        },
+                    ])),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

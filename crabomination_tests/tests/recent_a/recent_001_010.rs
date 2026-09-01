@@ -10989,6 +10989,39 @@ mod recent9 {
         assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Food"));
     }
 
+    /// Sacrificing a Food tutors a basic tapped and bottoms the Merchant
+    /// (`audit_oracle_verbs.py`, `search_library` class — the whole second
+    /// ability was absent, so the card was a two-mana 2/2 that made a Food).
+    #[test]
+    fn unlucky_cabbage_merchant_trades_a_food_for_a_basic() {
+        let mut g = two_player_game();
+        let merch = g.add_card_to_hand(0, catalog::unlucky_cabbage_merchant());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        cast(&mut g, merch);
+        let food = g
+            .battlefield
+            .iter()
+            .find(|c| c.definition.name == "Food")
+            .map(|c| c.id)
+            .expect("the ETB Food");
+        let land = g.add_card_to_library(0, catalog::forest());
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Bool(true),
+            DecisionAnswer::Search(Some(land)),
+        ]));
+        let mut events = Vec::new();
+        g.sacrifice_one(food, 0, &mut events);
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(&mut g);
+        let fetched = g.battlefield.iter().find(|c| c.id == land).expect("basic tutored");
+        assert!(fetched.tapped, "enters tapped");
+        assert!(
+            !g.battlefield.iter().any(|c| c.id == merch),
+            "the Merchant leaves for the bottom of the library",
+        );
+    }
+
     /// Curious Farm Animals gains 3 life when it dies.
     #[test]
     fn curious_farm_animals_gains_life_on_death() {

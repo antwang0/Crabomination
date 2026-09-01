@@ -1242,6 +1242,54 @@ fn settle_the_wreckage_exiles_attackers() {
     assert!(g.exile.iter().any(|c| c.id == atk), "attacking creature exiled");
 }
 
+/// ...and the exiled attackers' controller may replace them with that many
+/// basic lands, tapped (`audit_oracle_verbs.py`, `search_library` class — the
+/// compensation half was omitted, so the bot only ever saw the upside).
+#[test]
+fn settle_the_wreckage_pays_the_victim_in_basics() {
+    use crabomination::game::types::{AttackTarget, Attack};
+    use crabomination::mana::Color;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Two attackers, both player 1's, so "that player" is the opponent.
+    g.active_player_idx = 1;
+    let a1 = g.add_card_to_battlefield(1, body("Bear", 2, 2, vec![]));
+    let a2 = g.add_card_to_battlefield(1, body("Bear", 2, 2, vec![]));
+    for a in [a1, a2] { g.clear_sickness(a); }
+    let l1 = g.add_card_to_library(1, catalog::forest());
+    let l2 = g.add_card_to_library(1, catalog::forest());
+    let l3 = g.add_card_to_library(1, catalog::forest());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a1, target: AttackTarget::Player(0) },
+        Attack { attacker: a2, target: AttackTarget::Player(0) },
+    ])).expect("attack");
+    let settle = g.add_card_to_hand(0, catalog::settle_the_wreckage());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true), // "that player may…"
+        DecisionAnswer::Search(Some(l1)),
+        DecisionAnswer::Search(Some(l2)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: settle, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Settle the Wreckage");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.iter().filter(|c| c.id == a1 || c.id == a2).count(), 2, "both exiled");
+    let fetched = [l1, l2, l3]
+        .iter()
+        .filter(|id| g.battlefield.iter().any(|c| c.id == **id))
+        .count();
+    assert_eq!(fetched, 2, "two exiled attackers buy two basics, not three");
+    assert!(
+        g.battlefield.iter().filter(|c| c.id == l1 || c.id == l2 || c.id == l3).all(|c| c.tapped),
+        "and they enter tapped",
+    );
+}
+
 /// Beastmaster Ascension gains a quest counter whenever a creature you control
 /// attacks.
 #[test]

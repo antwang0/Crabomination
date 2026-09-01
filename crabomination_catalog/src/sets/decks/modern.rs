@@ -62589,17 +62589,40 @@ pub fn mythos_of_vadrok() -> CardDefinition {
     }
 }
 
-/// Mythos of Brokkos — {2}{G}{G} Sorcery. Return up to two permanent cards from
-/// your graveyard to your hand. (The {U}{B}-spent self-mill rider is dropped.)
+/// Mythos of Brokkos — {2}{G}{G} Sorcery. If {U}{B} was spent to cast it,
+/// tutor a card into your graveyard first; then return up to two permanent
+/// cards from your graveyard to your hand.
 pub fn mythos_of_brokkos() -> CardDefinition {
     CardDefinition {
         name: "Mythos of Brokkos",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ReturnGraveyardCardsToHand {
-            filter: SelectionRequirement::Permanent,
-            max: Value::Const(2),
-        },
+        // The tutor is printed *before* the return, so a permanent card put
+        // into the graveyard this way is one of the two that can come back.
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::All(vec![
+                    Predicate::ManaSpentOfColorAtLeast {
+                        color: Color::Blue,
+                        at_least: 1,
+                    },
+                    Predicate::ManaSpentOfColorAtLeast {
+                        color: Color::Black,
+                        at_least: 1,
+                    },
+                ]),
+                then: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Graveyard,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::ReturnGraveyardCardsToHand {
+                filter: SelectionRequirement::Permanent,
+                max: Value::Const(2),
+            },
+        ]),
         ..Default::default()
     }
 }

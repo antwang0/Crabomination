@@ -1810,19 +1810,43 @@ pub fn fact_or_fiction() -> CardDefinition {
 }
 
 /// Settle the Wreckage — {2}{W}{W} Instant. "Exile all attacking creatures
-/// target player controls. That player may search for that many basic lands."
-/// Simplified to exiling all attacking creatures (the basic-land compensation
-/// is omitted).
+/// target player controls. That player may search their library for that many
+/// basic land cards, put them onto the battlefield tapped, then shuffle."
+/// A creature only ever attacks its controller's opponents, so the exile stays
+/// a board-wide "attacking creatures" sweep rather than a player target; the
+/// compensation rides `MayDoBy` over the exile count, as Ghost Quarter's does.
 pub fn settle_the_wreckage() -> CardDefinition {
     CardDefinition {
         name: "Settle the Wreckage",
         cost: cost(&[generic(2), w(), w()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Exile {
-            what: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
-            ),
-        },
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                ),
+            },
+            Effect::MayDoBy {
+                // "That player" — bound off the exiled attackers' LKI
+                // controller, as Erode's searcher is, so it is the creatures'
+                // controller and not merely "the opponent".
+                who: PlayerRef::ControllerOf(Box::new(Selector::ExiledThisResolution {
+                    filter: SelectionRequirement::Any,
+                })),
+                description: "Search for that many basic lands?".into(),
+                body: Box::new(Effect::SearchUpToN {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                    count: Value::count(Selector::ExiledThisResolution {
+                        filter: SelectionRequirement::Any,
+                    }),
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

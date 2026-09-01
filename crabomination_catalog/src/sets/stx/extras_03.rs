@@ -677,14 +677,9 @@ pub fn sage_of_the_beyond() -> CardDefinition {
 // ── Frostpyre Arcanist (STX-flavor Prismari uncommon creature) ──────────────
 
 /// Frostpyre Arcanist — {4}{U}, 2/5 Elemental Wizard.
-/// "Whenever you cast or copy an instant or sorcery spell, you may
-/// return target instant or sorcery card from your graveyard to your
-/// hand. Activate only once each turn."
-///
-/// Magecraft trigger (once each turn) that returns an auto-picked I/S
-/// card from graveyard to hand; the "may" rides `Effect::MayDo`. Tests:
-/// `frostpyre_arcanist_magecraft_returns_is_from_graveyard`,
-/// `frostpyre_arcanist_is_a_five_mana_four_four_elemental_wizard`.
+/// Frostpyre Arcanist — {4}{U} 2/5 Giant Wizard. Costs {1} less if you
+/// control a Giant or a Wizard; when it enters, tutor an instant or sorcery
+/// sharing a name with a card in your graveyard to hand.
 pub fn frostpyre_arcanist() -> CardDefinition {
     CardDefinition {
         name: "Frostpyre Arcanist",
@@ -696,23 +691,28 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         },
         power: 2,
         toughness: 5,
-        triggered_abilities: vec![{
-            let mut t = magecraft(Effect::MayDo {
-                description:
-                    "Return target instant or sorcery card from your graveyard to your hand.".into(),
-                body: Box::new(Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: crate::card::Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                    }),
-                    to: ZoneDest::Hand(PlayerRef::You),
-                }),
-            });
-            t.event = t.event.once_per_turn();
-            t
-        }],
+        self_cost_reduction_if_control: vec![(
+            SelectionRequirement::HasCreatureType(CreatureType::Giant)
+                .or(SelectionRequirement::HasCreatureType(CreatureType::Wizard))
+                .and(SelectionRequirement::ControlledByYou),
+            1,
+        )],
+        // "When this creature enters, search your library for an instant or
+        // sorcery card with the same name as a card in your graveyard, reveal
+        // it, put it into your hand, then shuffle." The graveyard card whose
+        // name is copied is the controller's pick, which is what the printed
+        // "a card in your graveyard" leaves open.
+        triggered_abilities: vec![etb(Effect::SearchSameNameAs {
+            who: PlayerRef::You,
+            subject: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+            count: None,
+        })],
         ..Default::default()
     }
 }

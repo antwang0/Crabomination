@@ -518,6 +518,30 @@ fn vis_wave_two_stat_lines_match_print() {
     assert!(catalog::talruum_piper().keywords.contains(&Keyword::AllMustBlock));
 }
 
+/// Kyscu Drake's second ability assembles Viashivan Dragon — sacrifice it and
+/// a Spitting Drake, tutor the Dragon onto the battlefield
+/// (`audit_oracle_verbs.py`, `search_library` class: the ability was dropped).
+#[test]
+fn kyscu_drake_assembles_viashivan_dragon() {
+    let mut g = two_player_game();
+    let kyscu = ready(&mut g, 0, catalog::kyscu_drake());
+    let spitting = ready(&mut g, 0, catalog::spitting_drake());
+    let dragon = g.add_card_to_library(0, catalog::viashivan_dragon());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Search(Some(dragon)),
+    ]));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kyscu, ability_index: 1, target: None,
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("assemble");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dragon), "the Dragon is on the battlefield");
+    assert!(!g.battlefield.iter().any(|c| c.id == kyscu), "Kyscu Drake sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == spitting), "Spitting Drake sacrificed");
+}
+
 /// Phyrexian Marauder enters as an X/X and can't block.
 #[test]
 fn phyrexian_marauder_enters_with_x_counters() {

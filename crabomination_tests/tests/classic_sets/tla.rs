@@ -1646,6 +1646,36 @@ fn the_earth_king_makes_a_bear() {
     assert_eq!((cp.power, cp.toughness), (4, 4));
 }
 
+/// The Earth King's attack trigger tutors one basic tapped per power-4
+/// attacker (`audit_oracle_verbs.py`, `search_library` class — the ability was
+/// dropped entirely). The King itself is a 2/2 and does not count.
+#[test]
+fn the_earth_king_tutors_a_basic_per_power_four_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_earth_king());
+    let boulder = g.add_card_to_battlefield(0, catalog::the_boulder_ready_to_rumble()); // 4/4
+    let fetch = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Search(Some(fetch)),
+    ]));
+    attack_with(&mut g, boulder);
+    let land = g.battlefield.iter().find(|c| c.id == fetch).expect("one basic tutored");
+    assert!(land.tapped, "enters tapped");
+}
+
+/// A 2/2 attacking alone leaves the trigger's gate false — no tutor.
+#[test]
+fn the_earth_king_does_not_tutor_for_a_small_attacker() {
+    let mut g = two_player_game();
+    let king = g.add_card_to_battlefield(0, catalog::the_earth_king()); // 2/2
+    let fetch = g.add_card_to_library(0, catalog::forest());
+    attack_with(&mut g, king);
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == fetch),
+        "no power-4 attacker, no basic",
+    );
+}
+
 /// The Lion-Turtle gains 3 life on ETB and taps for any color.
 #[test]
 fn the_lion_turtle_gains_and_ramps() {
@@ -2203,6 +2233,35 @@ fn wan_shi_tong_enters_with_x_counters() {
         "X +1/+1 counters"
     );
     assert_eq!(g.players[0].library.len(), lib0 - 2, "drew half of 4 = 2");
+}
+
+/// CR 701.19 — an opponent's library search grows Wan Shi Tong and draws
+/// (`audit_oracle_verbs.py`, `search_library` class: the rider was dropped as
+/// "no search trigger", which `EventKind::PlayerSearchedLibrary` refutes).
+#[test]
+fn wan_shi_tong_grows_when_an_opponent_searches() {
+    let mut g = two_player_game();
+    let wan = g.add_card_to_battlefield(0, catalog::wan_shi_tong_librarian());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    // Opponent's own fetch: Rampant Growth searches their library.
+    g.add_card_to_library(1, catalog::forest());
+    let ramp = g.add_card_to_hand(1, catalog::rampant_growth());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    let lib0 = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: ramp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rampant Growth castable");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(wan).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne),
+        1,
+        "one counter for the opponent's search",
+    );
+    assert_eq!(g.players[0].library.len(), lib0 - 1, "and one card drawn");
 }
 
 // ── Batch 17 ────────────────────────────────────────────────────────────────

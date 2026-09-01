@@ -2862,7 +2862,8 @@ pub fn the_boulder_ready_to_rumble() -> CardDefinition {
 // ── Batch 8: token-maker / lifegain manadork / anthem + token ──────────────
 
 /// The Earth King — {3}{G} 2/2 legendary Human Noble Ally. When it enters,
-/// create a 4/4 green Bear. (The attack-with-power-4+ land tutor is dropped.)
+/// create a 4/4 green Bear; whenever one or more creatures you control with
+/// power 4 or greater attack, tutor up to that many basic lands tapped.
 pub fn the_earth_king() -> CardDefinition {
     let bear = TokenDefinition {
         name: "Bear".into(),
@@ -2884,11 +2885,40 @@ pub fn the_earth_king() -> CardDefinition {
         subtypes: ally(&[CreatureType::Human, CreatureType::Noble, CreatureType::Ally]),
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::ONE,
-            definition: Box::new(bear),
-        })],
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Box::new(bear),
+            }),
+            // "Whenever one or more creatures you control with power 4 or
+            // greater attack, search your library for up to that many basic
+            // land cards, put them onto the battlefield tapped, then shuffle."
+            // One batched trigger (`YouAttack`), gated on the batch carrying a
+            // power-4 attacker, with the count read off the same board.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::YouAttack, EventScope::SelfSource).with_filter(
+                    Predicate::AttackedWithCreatureMatching {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::PowerAtLeast(4),
+                    },
+                ),
+                effect: Effect::SearchUpToN {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                    count: Value::count(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::IsAttacking)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    )),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -3966,7 +3996,7 @@ pub fn kyoshi_island_plaza() -> CardDefinition {
 
 /// Wan Shi Tong, Librarian — {X}{U}{U} 1/1 legendary Bird Spirit. Flash. Flying,
 /// vigilance. ETB: put X +1/+1 counters on him, then draw half X (rounded down).
-/// (The "opponent searches → grow + draw" rider is dropped — no search trigger.)
+/// Whenever an opponent searches their library, he grows and you draw.
 pub fn wan_shi_tong_librarian() -> CardDefinition {
     CardDefinition {
         name: "Wan Shi Tong, Librarian",
@@ -3980,17 +4010,39 @@ pub fn wan_shi_tong_librarian() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::XFromCost,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::XFromCost,
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::HalfDown(Box::new(Value::XFromCost)),
+                },
+            ])),
+            // CR 701.19 — "Whenever an opponent searches their library, put a
+            // +1/+1 counter on him and draw a card." Same rail as Ob Nixilis,
+            // Unshackled.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::PlayerSearchedLibrary,
+                    EventScope::OpponentControl,
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::ONE,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::ONE,
+                    },
+                ]),
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::HalfDown(Box::new(Value::XFromCost)),
-            },
-        ]))],
+        ],
         ..Default::default()
     }
 }

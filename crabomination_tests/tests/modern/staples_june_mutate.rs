@@ -1582,6 +1582,44 @@ fn mythos_of_brokkos_returns_two() {
     assert!(g.players[0].hand.iter().any(|c| c.id == b), "land returned to hand");
 }
 
+/// CR 702.137-style spent-mana gate: with {U}{B} paying the generic, Mythos of
+/// Brokkos tutors a card into the graveyard *before* the return
+/// (`audit_oracle_verbs.py`, `search_library` class — the whole rider was
+/// dropped, so the card played identically however it was paid for).
+#[test]
+fn mythos_of_brokkos_tutors_to_graveyard_when_ub_was_spent() {
+    let mut g = two_player_game();
+    let tutored = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let m = g.add_card_to_hand(0, catalog::mythos_of_brokkos());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1); // the {2} is paid {U}{B}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(tutored))]));
+    let lib0 = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Brokkos");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib0 - 1, "one card tutored out");
+}
+
+/// ...and paid in green only, it does not.
+#[test]
+fn mythos_of_brokkos_does_not_tutor_without_ub() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let m = g.add_card_to_hand(0, catalog::mythos_of_brokkos());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let lib0 = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: m, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mythos of Brokkos");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib0, "no {{U}}{{B}}, no tutor");
+}
+
 /// Mythos of Vadrok deals 5 damage divided (here, all to one creature).
 #[test]
 fn mythos_of_vadrok_divides_damage() {

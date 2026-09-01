@@ -3359,31 +3359,65 @@ fn sage_of_the_beyond_combat_damage_makes_opp_discard() {
 
 // ── Frostpyre Arcanist (modern_decks push) ────────────────────────────────
 
+/// Frostpyre Arcanist's ETB tutors the library copy whose name matches a card
+/// already in the graveyard (`audit_oracle_verbs.py`, `search_library` class —
+/// the card shipped with an invented Magecraft return instead).
 #[test]
-fn frostpyre_arcanist_magecraft_returns_is_from_graveyard() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+fn frostpyre_arcanist_etb_tutors_a_graveyard_name_from_library() {
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::frostpyre_arcanist());
-    // Seed an IS card in graveyard.
-    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    // Cast another bolt to trigger Magecraft.
-    let live_bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-
-    g.players[0].mana_pool.add(Color::Red, 1);
-
-    // ScriptedDecider answers Bool(true) to take the optional return.
-    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let in_library = g.add_card_to_library(0, catalog::lightning_bolt());
+    // A second library card with a name nothing in the graveyard shares, so a
+    // hit proves the name match rather than "took the first instant".
+    let decoy = g.add_card_to_library(0, catalog::counterspell());
+    let arcanist = g.add_card_to_hand(0, catalog::frostpyre_arcanist());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 20);
+    }
+    g.players[0].mana_pool.add_colorless(20);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Search(Some(in_library)),
+    ]));
     g.perform_action(GameAction::CastSpell {
-        card_id: live_bolt,
-        target: Some(crabomination::game::types::Target::Player(1)),
+        card_id: arcanist,
+        target: None,
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Bolt castable");
+    }).expect("Arcanist castable");
     drain_stack(&mut g);
 
-    // Original bolt should be back in hand.
-    let bolt_in_hand = g.players[0].hand.iter().any(|c| c.id == bolt);
-    assert!(bolt_in_hand, "Bolt returned to hand via Frostpyre's Magecraft");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == in_library),
+        "the library Bolt matching the graveyard Bolt's name is in hand",
+    );
+    assert!(
+        !g.players[0].hand.iter().any(|c| c.id == decoy),
+        "the off-name instant stays in the library",
+    );
+}
+
+/// It costs {1} less with a Giant or a Wizard out — and it is itself both, so
+/// the discount is live from the second copy on. {3}{U} pays only then.
+#[test]
+fn frostpyre_arcanist_costs_one_less_with_a_wizard_out() {
+    let cast_with_four = |wizard_out: bool| {
+        let mut g = two_player_game();
+        if wizard_out {
+            g.add_card_to_battlefield(0, catalog::frostpyre_arcanist());
+        }
+        let id = g.add_card_to_hand(0, catalog::frostpyre_arcanist());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id,
+            target: None,
+            additional_targets: vec![],
+            mode: None, x_value: None,
+        })
+        .is_ok()
+    };
+    assert!(cast_with_four(true), "{{3}}{{U}} pays the discounted cost");
+    assert!(!cast_with_four(false), "{{3}}{{U}} is a mana short undiscounted");
 }
 
 // ── Inkfathom Divers (modern_decks push) ──────────────────────────────────
@@ -4402,35 +4436,9 @@ fn cunning_rhetoric_drains_on_opp_cast() {
     assert_eq!(g.players[1].life, life_opp_before - 1, "drain loss 1");
 }
 
-/// Frostpyre Arcanist's return fires only once each turn (CR 603.3d).
-#[test]
-fn frostpyre_arcanist_only_once_each_turn() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::frostpyre_arcanist());
-    let gy1 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    let gy2 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
-    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
-    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 2);
-    g.decider = Box::new(ScriptedDecider::new(vec![
-        DecisionAnswer::Bool(true),
-        DecisionAnswer::Bool(true),
-    ]));
-    for b in [b1, b2] {
-        g.perform_action(GameAction::CastSpell {
-            card_id: b,
-            target: Some(crabomination::game::types::Target::Player(1)),
-            additional_targets: vec![],
-            mode: None, x_value: None,
-        }).expect("Bolt castable");
-        drain_stack(&mut g);
-    }
-    let returned = [gy1, gy2].iter()
-        .filter(|id| g.players[0].hand.iter().any(|c| c.id == **id))
-        .count();
-    assert_eq!(returned, 1, "second Magecraft this turn suppressed");
-}
+// `frostpyre_arcanist_only_once_each_turn` is deleted with the invented
+// Magecraft ability it exercised: the printed card has an ETB tutor and no
+// once-each-turn clause, and CR 603.3d itself is covered in `core_rules`.
 
 // Resurgent Belief's two flashback tests are deleted: the card prints
 // **Suspend 2—{1}{W}**, not Flashback (`audit_keyword_drift.py`), so the
