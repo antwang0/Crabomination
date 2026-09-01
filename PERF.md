@@ -2429,12 +2429,20 @@ a box whose state moves.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,183 / 0 / 5 (cargo nextest run --workspace --exclude
+suite   19,191 / 0 / 5 (cargo nextest run --workspace --exclude
         crabomination_client); golden traces in it and unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench release-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
-        invariant; determinism ok; peak_rss 28.1 MiB
+        invariant; determinism ok; peak_rss 28.5 MiB, bin 143,792,088 B
+stalls  **26 seeds / 176,800 games**, `--games 400 --threads 3 --decks all`:
+        0 panic, 0 hang, **cap 0 / stuck 0**, draws only. Run because this
+        pass changed the CR 704.5m orphan-Aura sweep and added a
+        `ManaPayload` variant.
+        ⚠ **Seed 43 is excluded and is not a finding**: it is the
+        nine-minute game "How to measure" already names, and it decides —
+        `0 undecided` is why `CRAB_CAP_DIAG` exists. Give it its own run or
+        leave it out of a timed loop.
 ```
 
 ⚠ **This reading tests rather than confirms, unlike the last card pass.**

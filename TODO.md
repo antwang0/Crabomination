@@ -27,12 +27,13 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at this run's tip:** suite **19,182 / 0 / 5**, traces unmoved, clippy `--all-targets`
+2. **Gates at this run's tip:** suite **19,191 / 0 / 5**, traces unmoved, clippy `--all-targets`
    clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**,
-   determinism ok. Stall sweep after `(-158)` — the first change to reach `declare_blockers` and
-   `pick_blocks_inner` in a while — **68,000 games / 10 seeds, 0 panic, cap 4 / stuck 0 / draw
-   22**, both caps the closed Beacon lead. Sweeps and their two closed leads live in
-   **ENGINE_BACKLOG's first section**; `scripts/robustness_grid.sh` has two green legs.
+   determinism ok. Stall sweep **26 seeds / 176,800 games**: 0 panic, 0 hang, cap 0 / stuck 0,
+   draws only — run because this pass changed the CR 704.5m orphan-Aura sweep. ⚠ **Leave seed 43
+   out of a timed loop**: it is the nine-minute game "How to measure" names, it *decides*, and it
+   will look like a hang. Sweeps and their two closed leads live in **ENGINE_BACKLOG's first
+   section**; `scripts/robustness_grid.sh` has two green legs.
 3. **⚠ THE FLOOR CLAIM NEEDS ONE WORD BACK: the *walk* profile is at its floor, the
    *allocation* profile was not.** `(-158)` took **`fixed` -0.212 % / `cube` -0.139 % / `sealed`
    -0.187 %** off twelve `IdMap`/`IdSet` **locals** — `Vec` newtypes, so each one reached the
