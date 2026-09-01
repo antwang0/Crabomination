@@ -11205,6 +11205,54 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-173)` BUILT TWICE, MEASURED TWICE AND REVERTED — a membership bitmask in front of the battlefield walk is a **regression** on every pool
+
+```text
+  pool    base 4c943db4   (a) inline mask   (b) mask behind an out-of-line miss path
+  fixed     857,355,557   **+0.1484 %**     **+0.0484 %**
+  cube    2,363,107,506   **+0.3748 %**     **+0.2713 %**
+  sealed  2,376,026,199   **+0.2633 %**     **+0.1590 %**
+```
+
+The premise looked sound and is written down in `find_by_id`'s own doc:
+**a lookup that finds the card stops at the match; a lookup that finds nothing
+walks every permanent, stores no hint, and hands back `None`.** The requirement
+walker's `bf_hint_or_find` does exactly that for every graveyard, exile and
+stack object it is asked about, and it is 145,162 calls at 54.9 Ir with
+7,075,650 of them (0.92 % of the run) at the one line that falls through to the
+walk. A `u64` of `id & 63` bits, cleared where the lanes are, answers the
+absent case in a word load and a bit test.
+
+**(a) The plain version, mask test inline before the walk: +0.15 / +0.37 /
++0.26 %.** **(b) The whole miss path moved out of line** — `find_by_id` keeps
+only the hint check, `#[inline(never)] find_by_id_slow` holds the mask, the
+walk and the store, the shape `walk_and_store` uses one screen up — recovers
+**0.10 points on `fixed` and 0.10 on `cube`, and is still a regression.**
+
+**Two things this establishes, and the second is the reusable one.**
+
+*One — the absent lookups are not the bulk.* If they were, the bit test would
+have paid for itself several times over. `find_by_id`'s cost is dominated by
+lookups that **succeed** and miss the 16-slot hint, so the lead in
+`bf_hint_or_find` is *give the caller its hint*, not *answer `None` faster*.
+`(-171)` took the capacity half of that; the rest is a call-site question.
+
+*Two — `#[inline(never)]` on the miss path of a function inlined at hundreds of
+sites is itself worth ~0.10 points, and it is a cost, not a saving.* Every hint
+miss now pays a call frame it did not pay before, and hint misses are common.
+The `walk_and_store` precedent does not transfer: that function's hit path is a
+word load and its miss is genuinely rare, where this one's miss is roughly half
+the asks. **Read `(-98)`'s note next to `walk_and_store` as being about *that*
+hit/miss ratio, not about miss paths in general.**
+
+⚠ **And the whole class has a cheaper pre-check than a build.** `(-172)` and
+this entry are two builds each spent on a memo whose *inputs* looked right.
+`(-153)`'s rule already covers it — **price a memo by reads per
+invalidation** — and the arithmetic here was available for free: the
+battlefield takes ~7,000 membership changes a six-game `fixed` run
+(`remove_from_battlefield_to_graveyard_raw` 3,482 + `on_left_battlefield`
+3,566), against a walk that was never the majority of the row.
+
 ### `(-172)` BUILT, MEASURED AND REVERTED — a zone lane on the graveyard trigger walk is worth **exactly zero**
 
 ```text
@@ -21063,6 +21111,24 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-174) `bf_hint_or_find` IS 145,162 CALLS AT 54.9 Ir AND ITS FALL-THROUGH IS
+0.92 % OF THE RUN — AND `(-173)` PROVED THE FIX IS THE HINT, NOT THE WALK.**
+`eval.rs`'s `_ => self.battlefield_find(cid)` carries 7,075,650 Ir on `fixed`,
+the largest single site of the `find_by_id` family after `(-171)` took its
+capacity half (family total 23.80 M -> 17.16 M, 3.06 % -> 2.23 %). A
+membership bitmask in front of the walk was built twice and regressed on all
+three pools both times (`(-173)`), which is the *proof* that these lookups
+mostly **succeed**: they miss the 16-slot hint and then find the card.
+
+So the question is a call-site one. The walker's own `_on` form already hands
+the subject over (`evaluate_requirement_static_on`, and `targeting.rs`'s two
+`is_legal_bf` closures), so what is left is (a) the walker's **recursion** —
+19,660 + 10,352 self-calls, whose inner requirements name *other* permanents —
+and (b) `auto_targets_for_effect_all_slots`, 110,920 of the walker's 181,232
+calls. ⚠ **Read the recursion first**: an `AttachedTo` / `ControllerOf` leg
+that re-finds a permanent the outer frame already located is the shape, and it
+is a `_hinted` parameter rather than a memo.
 
 **(-170) THE ALLOCATION CENSUS RE-TAKEN AT `9f9a5eac`, BY CALLER, AND IT NEEDS
 NO `profiling-lines` BUILD.** `cg_edges.py --callers "__rustc::__rust_alloc"`

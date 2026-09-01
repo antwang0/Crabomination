@@ -53,19 +53,24 @@ sixty-seventh pass, so don't re-take that.
    on this branch while `cargo check` and 19,197 tests stayed green — `debug_assert!`'s body is
    dead in release, not absent, so it is still type-checked. **`cargo check --profile
    release-fast -p crabomination --bin bot_ladder` before every push**; CLAUDE.md carries it.
-6. **NEXT PERF LEADS ARE IN `(-170)`, and the profile is now FLAT** — no engine row above
-   0.65 %. Ranked: the CoW unshare (`Arc::make_mut` is 387,452 calls at 29 Ir and **85 % of them
-   are the check, not the copy**; ⚠ **an inline fast path costs TWO `Arc::get_mut`s and each is a
-   `lock cmpxchg` — Ir would show a win the hardware would not**), `SpecFromIterNested`
-   (177,758 calls / 129.9 Ir / 2.65 %, ⚠ `(-156)` prices an adapter rewrite at ~10 % of that),
+6. **NEXT PERF LEADS: `(-174)` first, then `(-170)`. The profile is FLAT** — no engine row above
+   0.65 %. `(-174)`: `bf_hint_or_find`'s fall-through is **0.92 % of the run**, and `(-173)`
+   proved those lookups mostly *succeed*, so the fix is a `_hinted` parameter on the requirement
+   walker's recursion, not a faster miss. `(-170)`: the CoW unshare (`Arc::make_mut` is 387,452
+   calls at 29 Ir, **85 % of them the check**; ⚠ **an inline fast path costs TWO `Arc::get_mut`s
+   and each is a `lock cmpxchg` — Ir would show a win the hardware would not**),
+   `SpecFromIterNested` (2.65 %, ⚠ `(-156)` prices an adapter rewrite at ~10 % of that),
    `LocalKey::with` (99,796 calls, ~0.28 % of it TLS machinery, batchable into
-   `LayerFreezeState`). ⚠ `PrintedList::push` and the graveyard-trigger lane `(-172)` are both
-   closed as refuted. **The build is still the lever**: PGO -23.8 to -27.6 %.
-6a. **⚠ CHECK A ZONE LANE'S *ANSWER* DISTRIBUTION BEFORE BUILDING IT** (`(-172)`, built and
-   reverted, **+70 Ir on 870 M**). Every input looked right — an ungated whole-zone walk, 43,754
-   asks a run, a zone that grows all game, a free lane slot — and the predicate still answered
-   `true` almost always, because `is_graveyard_self_source_kind` admits "put into a graveyard
-   from anywhere". `grep` the catalog for the predicate first; it costs nothing.
+   `LayerFreezeState`). **The build is still the lever**: PGO -23.8 to -27.6 %.
+6a. **⚠⚠ THREE BUILDS WENT TO MEMOS WHOSE *INPUTS* LOOKED RIGHT. PRICE THE ANSWER, NOT THE
+   WALK.** `(-172)`: a graveyard zone lane, ungated walk, 43,754 asks a run, free lane slot —
+   **+70 Ir**, because the predicate answers `true` almost always. `(-173)`: a battlefield
+   membership bitmask, twice, **+0.05 to +0.37 %** — because the lookups it would shortcut mostly
+   *find* the card. Both were answerable for free before the build: `grep` the catalog for a
+   lane's predicate, and divide reads by invalidations (`(-153)`'s rule). ⚠ And
+   `#[inline(never)]` on the miss path of a function inlined at hundreds of sites is worth ~0.10
+   points **as a cost** — `walk_and_store`'s precedent is about *its* hit/miss ratio, not miss
+   paths in general.
 7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-**clause** ratchets
    (seventeen, prose, three false-positive classes); the printed-**join** ratchets (eight,
    structured fields, 297 defects in one pass — "no bespoke spelling" is what makes a join a
