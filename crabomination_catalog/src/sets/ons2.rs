@@ -2866,6 +2866,8 @@ pub fn seas_claim() -> CardDefinition {
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
         equipped_bonus: Some(EquipBonus {
             set_land_types: Some(vec![LandType::Island]),
+            // CR 305.7 — see Lingering Mirage.
+            remove_abilities: true,
             ..Default::default()
         }),
         ..Default::default()

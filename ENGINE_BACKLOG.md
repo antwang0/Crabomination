@@ -1475,24 +1475,21 @@ loops (EachPlayer shuffles) to one suspension per resolution.
 
 ## Engine — Missing Mechanics
 
-**`SetLandTypes` IS USED FOR TWO CARDS THAT SAY "IN ADDITION".** CR 305.7's
-type-*setting* removes the land's other types and its abilities; two emitters
-use `Modification::SetLandTypes` for effects whose oracle text adds:
+**`SetLandTypes` FOR "IN ADDITION" — CLOSED, and the read turned up a second
+defect next to it.** `StaticEffect::GrantAllBasicLandTypes` emitted one
+`Modification::SetLandTypes`, and all three cards on it — Prismatic Omen,
+Leyline of the Guildpact, Nylea's Presence — say "every basic land type **in
+addition to their other types**". The Set replaced, so a Prismatic Omen took
+the `Gate` off a Gate and the `Urzas` off an Urza's Tower, Tron check
+included. Now five `AddLandType`s.
 
-* `StaticEffect::GrantAllBasicLandTypes` (`game/mod.rs:24468`) — Prismatic
-  Omen, Dryad of the Ilysian Grove. "Lands you control are every basic land
-  type **in addition to their other types**." The Set drops the land's own
-  type, so a Prismatic Omen takes the `Urza's` off an Urza's Tower and the
-  Tron assembly check with it, and a `Gate`/`Cave`/`Locus` off anything that
-  cares.
-* `equipped_bonus.set_land_types` (`game/mod.rs:10319`) — the same shape from
-  the equipment/aura side.
+The other half was the opposite error: `equipped_bonus.set_land_types` has
+three users and the Set is right for all three ("enchanted land **is** an
+Island / a colorless Forest"), but **two of them shipped without CR 305.7's
+ability loss** — Sea's Claim and Lingering Mirage left the enchanted land its
+old abilities, so a Sea's Claim on a tri-land made it tap for four colours.
+Song of the Dryads had `remove_abilities: true` throughout.
 
-Neither pairs a `RemoveAllAbilities`, which is correct for their cards — the
-wrong half is the *Set*. Both want an `AddLandType` per type, or an
-`AddLandTypes(Vec<_>)` modification. Found while fixing the CR 305.7
-ability-loss gap in `effective_mana_abilities_into` (PERF, the Blood Moon
-pass); the fix there is unaffected either way, since these two emit no strip.
 
 
 ### Replacement Effects

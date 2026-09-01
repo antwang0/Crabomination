@@ -1991,6 +1991,10 @@ pub fn lingering_mirage() -> CardDefinition {
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
         equipped_bonus: Some(EquipBonus {
             set_land_types: Some(vec![LandType::Island]),
+            // CR 305.7 — "enchanted land **is** an Island" sets the type
+            // line, so the land loses the abilities its rules text and its
+            // old types gave it.
+            remove_abilities: true,
             ..Default::default()
         }),
         ..Default::default()

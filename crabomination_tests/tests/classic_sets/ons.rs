@@ -2373,6 +2373,21 @@ fn ons_utility_auras() {
             .contains(&crabomination::card::LandType::Island)
     );
 
+    // CR 305.7 — "enchanted land **is** an Island" sets the type line, so the
+    // land loses the abilities its rules text and its old types gave it. The
+    // Aura shipped without the strip, so a Sea's Claim on a tri-land left it
+    // tapping for all three of its colours *plus* blue.
+    let mut g = main_phase();
+    let tri = g.add_card_to_battlefield(1, catalog::sandsteppe_citadel());
+    g.battlefield_find_mut(tri).expect("citadel").summoning_sick = false;
+    let claim = g.add_card_to_hand(0, catalog::seas_claim());
+    cast(&mut g, 0, claim, Some(Target::Permanent(tri)));
+    assert!(g.computed_permanent(tri).expect("citadel").lost_all_abilities, "abilities gone");
+    g.auto_tap_for_cost(1, &crabomination::mana::cost(&[crabomination::mana::w()]));
+    assert_eq!(g.players[1].mana_pool.amount(Color::White), 0, "no white");
+    g.auto_tap_for_cost(1, &crabomination::mana::cost(&[crabomination::mana::u()]));
+    assert_eq!(g.players[1].mana_pool.amount(Color::Blue), 1, "blue, from the Island type");
+
     let mut g = main_phase();
     let attacker = g.add_card_to_battlefield(0, catalog::krosan_colossus());
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());

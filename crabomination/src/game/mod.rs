@@ -24457,22 +24457,32 @@ fn static_effect_to_effects(
             }
             StaticEffect::GrantAllBasicLandTypes { applies_to } => {
                 use crate::card::LandType;
+                // ⚠ **Five adds, not one set.** All three cards on this
+                // effect — Prismatic Omen, Leyline of the Guildpact, Nylea's
+                // Presence — say "every basic land type **in addition to**
+                // their other types". `SetLandTypes` replaces, so a Prismatic
+                // Omen took the `Urzas` type off an Urza's Tower and the Tron
+                // assembly check with it, and the `Gate` off a Gate. A *set*
+                // would also mean CR 305.7's ability loss, which none of the
+                // three does.
                 if let Some(affected) = selector_to_affected(applies_to, card) {
-                    out.push(ContinuousEffect {
-                        timestamp,
-                        source,
-                        affected,
-                        layer: Layer::L4Type,
-                        sublayer: None,
-                        duration: EffectDuration::WhileSourceOnBattlefield,
-                        modification: Modification::SetLandTypes(vec![
-                            LandType::Plains,
-                            LandType::Island,
-                            LandType::Swamp,
-                            LandType::Mountain,
-                            LandType::Forest,
-                        ]),
-                    });
+                    for lt in [
+                        LandType::Plains,
+                        LandType::Island,
+                        LandType::Swamp,
+                        LandType::Mountain,
+                        LandType::Forest,
+                    ] {
+                        out.push(ContinuousEffect {
+                            timestamp,
+                            source,
+                            affected: affected.clone(),
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: EffectDuration::WhileSourceOnBattlefield,
+                            modification: Modification::AddLandType(lt),
+                        });
+                    }
                 }
             }
             StaticEffect::CreaturesYouControlAreChosenType => {

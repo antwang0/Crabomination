@@ -1622,6 +1622,32 @@ mod recent110 {
         }
     }
 
+    /// **"In addition to their other types" keeps the other types.**
+    ///
+    /// ⚠ All three cards on `GrantAllBasicLandTypes` say "in addition", and
+    /// it emitted a `SetLandTypes` — so a Prismatic Omen took the `Gate` off
+    /// a Gate, the `Urzas` off an Urza's Tower, and the Tron assembly check
+    /// with it. Five `AddLandType`s now.
+    #[test]
+    fn prismatic_omen_adds_to_the_types_a_land_already_has() {
+        use crabomination::card::LandType;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::prismatic_omen());
+        let gate = g.add_card_to_battlefield(0, catalog::gateway_plaza());
+        let cp = g.computed_permanent(gate).expect("gate");
+        assert!(cp.subtypes().land_types.contains(&LandType::Gate), "still a Gate");
+        for lt in [
+            LandType::Plains,
+            LandType::Island,
+            LandType::Swamp,
+            LandType::Mountain,
+            LandType::Forest,
+        ] {
+            assert!(cp.subtypes().land_types.contains(&lt), "and every basic: missing {lt:?}");
+        }
+        assert!(!cp.lost_all_abilities, "an addition is not CR 305.7's type-set");
+    }
+
     /// Norin dodges any spell cast and returns at the next end step.
     #[test]
     fn norin_dodges_spells() {
