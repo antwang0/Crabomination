@@ -644,6 +644,27 @@ card that does not exist, Hellspark Elemental missing the Unearth it prints).
 mechanical ones.** Keep the 0 — a new row now means a doc and a body that
 have just diverged.
 
+**⚠ THE CLAUSE-VS-PRIMITIVE TECHNIQUE HAS A FALSE-POSITIVE FLOOR, AND IT IS
+KEYWORDS.** Five classes came out of it in one run, and a tenth-clause survey
+came out mostly noise for one reason: **a keyword's reminder text prints the
+clause its keyword implements.** Measured, `misses / cards printing it`:
+
+```text
+  229 / 357   "this creature can't be blocked"   <- Menace's reminder, and
+                                                    every "except by" rider
+  131 / 131   "whenever a land you control enters" <- the needle was wrong:
+                                                    landfall is `LandPlayed`
+   42 / 423   "whenever this creature attacks"   <- Melee, and `PumpSelfIf`
+                                                    as a conditional static
+   37 /  91   "whenever this creature blocks"    <- Bushido
+   34 / 526   "whenever you cast"                <- Prowess
+```
+
+**So validate the needle set against three known-good cards before reading a
+count as a finding.** The clauses that paid ("in addition to its other
+types", "loses all abilities", the step clauses) share a property: no keyword
+prints them, and the engine has exactly one encoding.
+
 **TRIGGER TIMING — A CLAUSE-VS-PRIMITIVE AUDIT, THREE DEFECTS TAKEN AND 29
 ROWS LEFT AS A READING LIST.** Cross-reference the printed oracle's step
 clause ("at the beginning of your upkeep / end step / draw step / combat on
