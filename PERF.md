@@ -19977,6 +19977,60 @@ is the fix — an explicit `for` loop with `push` in `pick_blocks_inner` —
 worth the ~0.1-0.2 % it could carry. `(-119)` is the warning: a restructure of
 this shape read **+0.07 %** and was reverted.
 
+**THE `profiling-lto` READING IS TAKEN AND THE SHIM SURVIVES — the gate above
+opens, not closes.** Both sides at `5876405d`, `--no-default-features`, six
+games, one thread, seed 1, `cube`:
+
+```text
+                       total Ir       shim calls   shim self Ir   share
+  profiling-fast   2,470,323,725         99,572     14,967,638    0.606 %
+  profiling-lto    2,404,419,437         74,482     16,875,046    0.702 %
+```
+
+**The gate asked one question — "is it near zero under LTO" — and 74,482 calls
+is not near zero.** Thin LTO removes a quarter of the call sites (99,572 →
+74,482) and leaves three quarters standing, so the call overhead the candidate
+is about is not something LTO deletes, and a win here is not worth zero in the
+`--release` binary `selfplay_train` runs.
+
+⚠ **Do not read the self-Ir column as "the survivors got dearer".** 150.3 Ir a
+call becomes 226.6, and there are two explanations these two dumps cannot
+separate: LTO kept the expensive adapters and dropped the cheap ones, or LTO
+inlined the *closure bodies into* the adapters, moving cost from the caller's
+row into the shim's. The second is at least as likely and would mean the total
+did not grow at all, only moved. **A self-Ir comparison across two inlining
+regimes is not a like-for-like measurement** — the call count is, which is why
+the gate was written on the call count.
+
+⚠ **The dumps do not symbolize the same way and one of them lies if you
+believe `cg_symbolize.py`'s header.** The `profiling-fast` dump comes back as
+raw addresses and needs the script (bias `0x108000`, 2,350 of 2,395 addresses
+in a FUNC); the `profiling-lto` dump is **already symbolized by valgrind**, and
+running the script on it anyway reports "2/43 addresses in a FUNC", which reads
+like a failure and is not — there were only 43 addresses left to resolve.
+PERF's standing advice ("run `cg_edges.py` on the raw dump first; symbolize
+only if the rows come out as addresses") is the check; apply it per dump, not
+per session.
+
+⚠ **And LTO merges every monomorphization into one row**, so the per-instance
+attribution that names `pick_blocks_inner` only exists on the `profiling-fast`
+side. Take the caller table there:
+
+```text
+  shim instance (calls / self Ir)        caller (calls / Ir incl)
+    12,992 / 4,375,134   Vec::from_iter    pick_blocks_inner    4,578 / 32.4 M
+    20,714 / 4,453,628   SmallVec::extend  resolve_combat
+     9,862 / 2,371,560   Vec::from_iter    (auto_target_for_effect_avoiding)
+     5,096 / 1,707,132   Vec::from_iter    check_state_based_actions_into 3,906
+    11,292 /   805,076   Vec::from_iter    pick_attacks_inner   4,548 / 9.6 M
+    25,026 /   675,180   Vec::from_iter    process_echo         2,812 / 1.5 M
+    10,124 /   394,938   Vec::from_iter    auto_target_for_effect_avoiding
+```
+
+`pick_blocks_inner` is the top row by self Ir and the ceiling on rewriting it
+alone is **0.177 % of `cube`** — the shim's whole self cost is 0.606 %, so no
+single site is the entry.
+
 **(-155) CLOSED — TAKEN, `cube` -0.114 % / `fixed` -0.163 %.** The CR
 704.5a/c loss check's `effective_life` / `effective_poison` walked the team
 table with a heap-`Vec` `contains` before testing the `shared_life` that
