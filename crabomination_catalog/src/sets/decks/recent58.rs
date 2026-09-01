@@ -108,18 +108,13 @@ pub fn tajuru_paragon() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![
-                CreatureType::Elf,
-                CreatureType::Cleric,
-                CreatureType::Rogue,
-                CreatureType::Warrior,
-                CreatureType::Wizard,
-            ],
+            creature_types: vec![CreatureType::Elf],
             ..Default::default()
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Kicker(cost(&[generic(3)]))],
+        // Changeling (CR 702.73), not the four extra types it used to list.
+        keywords: vec![Keyword::Changeling, Keyword::Kicker(cost(&[generic(3)]))],
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::LookPickToHand(Box::new(LookPick {

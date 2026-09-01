@@ -540,6 +540,48 @@ card that does not exist, Hellspark Elemental missing the Unearth it prints).
 mechanical ones.** Keep the 0 — a new row now means a doc and a body that
 have just diverged.
 
+**THE THREE PRINTED-CHARACTERISTIC RATCHETS ARE RUST TESTS, NOT SCRIPTS, AND
+THAT IS WHY THEY FOUND ANYTHING.** `audit_catalog_stats.py` reads **0** in its
+cost, P/T, type and super columns and has for a long time — because its `FN`
+regex only sees a factory that spells `CardDefinition { name: "…" }` at eight
+spaces. Every card built through a helper (`body(..)`, `creature(..)`,
+`spellshaper(..)`, `dual_land_with(..)`) was invisible to it. Walking the
+built `CardDefinition`s instead compares **17,639** cards where the script
+compares 10,764, and the three tests in
+`crabomination_tests/tests/core_rules/catalog_registration.rs` found **25
+shipped defects between them** on their first run:
+
+* `every_card_has_the_cost_and_body_its_printing_has` — **21**, including
+  Fervent Strike (wrong in its cost, its pump and both keywords), Mossborn
+  Hydra (an invented X-hydra), and the Odyssey Dreams cycle (an `{X}` pip
+  none of the four prints).
+* `every_card_has_the_type_line_its_printing_has` — **3**: Emeria, Magosi and
+  Oran-Rief carried `Legendary`, and the legend rule was deleting three of
+  every four.
+* `every_card_has_the_subtypes_its_printing_has` — **9 INVENTED**, now 0:
+  Plaza of Harmony counted itself as a Gate, The Wanderer and The Wandering
+  Emperor invented a planeswalker type (both print a bare `Legendary
+  Planeswalker`), Bearer of Silence was a Drone, two Karlov Manor lands had
+  each other's colours, and two changelings spelled four roles out.
+
+**TWO CLASSES ARE FILED RATHER THAN FIXED, BOTH BECAUSE THEY MOVE THE POOLS
+AND MUST BE PRICED FIRST** (PERF's rule about `cube`/`sealed`):
+
+1. **~48 nonbasic lands carry basic land types their printing does not.**
+   Blackcleave Cliffs is `Land`, not `Land — Mountain Swamp`. The types are
+   **redundant**: `dual_land_with` already gives the land its colours through
+   `tap_add` activated abilities, and `tri_land` two definitions below is
+   explicitly "untyped (matching the print)". So they buy nothing and cost
+   correctness — those lands are fetchable by Farseek, hit by Blood Moon,
+   grant landwalk and count for domain. The subtype ratchet excuses exactly
+   this shape, by shape and not by name, with the reason inline.
+2. **183 cards are missing a printed subtype.** Centaur Courser is a Centaur
+   where the card is a Centaur **Warrior**; Beskir Shieldmate, Cloudkin Seer,
+   Coiling Oracle and 180 more are the same shape. Unlike the keyword
+   auditor's MISSING, this one is a *proof* — a printed type line has no
+   second reading — but closing it changes the tribal shape of every pool, so
+   it is its own pass. **Run the test and read its message for the list.**
+
 **`audit_keyword_value.py` — the keyword *payload*, filed 2026-08-31, now 0
 of 761.** The drift auditor is blind to what a keyword carries:
 `Bushido(1)` and `Bushido(2)` are the same row to it. Most mechanic keywords

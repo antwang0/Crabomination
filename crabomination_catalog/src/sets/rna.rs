@@ -4747,10 +4747,10 @@ pub fn plaza_of_harmony() -> CardDefinition {
         name: "Plaza of Harmony",
         cost: cost(&[]),
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![LandType::Gate],
-            ..Default::default()
-        },
+        // ⚠ **Not a Gate.** Its printed type line is a bare `Land`, which is
+        // why "if you control two or more Gates" needs two *other* Gates —
+        // it shipped as a Gate and so counted itself
+        // (`every_card_has_the_subtypes_its_printing_has`).
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SelectorCountAtLeast {
                 sel: Selector::EachPermanent(

@@ -6967,9 +6967,9 @@ pub fn commercial_district() -> CardDefinition {
     super::super::dual_land_with(
         "Commercial District",
         LandType::Mountain,
-        LandType::Plains,
+        LandType::Forest,
         Color::Red,
-        Color::White,
+        Color::Green,
         vec![super::super::etb_tap_then_surveil_one()],
     )
 }
@@ -6995,9 +6995,9 @@ pub fn elegant_parlor() -> CardDefinition {
     super::super::dual_land_with(
         "Elegant Parlor",
         LandType::Mountain,
-        LandType::Forest,
+        LandType::Plains,
         Color::Red,
-        Color::Green,
+        Color::White,
         vec![super::super::etb_tap_then_surveil_one()],
     )
 }
@@ -32643,17 +32643,16 @@ pub fn stonework_packbeast() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![
-                CreatureType::Beast,
-                CreatureType::Cleric,
-                CreatureType::Rogue,
-                CreatureType::Warrior,
-                CreatureType::Wizard,
-            ],
+            creature_types: vec![CreatureType::Beast],
             ..Default::default()
         },
         power: 2,
         toughness: 1,
+        // Changeling (CR 702.73), not the five types it used to list: the
+        // printed line is "Artifact Creature — Beast" and the keyword is what
+        // makes it every other type
+        // (`every_card_has_the_subtypes_its_printing_has`).
+        keywords: vec![Keyword::Changeling],
         activated_abilities: vec![crate::catalog::sets::tap_add_any_color()],
         ..Default::default()
     }
@@ -65240,7 +65239,7 @@ pub fn mind_spike() -> CardDefinition {
 /// strike. −1: make a 2/2 white Samurai with vigilance. −2: exile a target
 /// tapped creature, gain 2 life.
 pub fn the_wandering_emperor() -> CardDefinition {
-    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::card::{LoyaltyAbility, Supertype as Sup};
     use crate::effect::shortcut::target_filtered;
     let samurai = TokenDefinition {
         name: "Samurai".into(),
@@ -65260,10 +65259,7 @@ pub fn the_wandering_emperor() -> CardDefinition {
         cost: cost(&[generic(2), w(), w()]),
         supertypes: vec![Sup::Legendary],
         card_types: vec![CardType::Planeswalker],
-        subtypes: Subtypes {
-            planeswalker_subtypes: vec![PlaneswalkerSubtype::WanderingEmperor],
-            ..Default::default()
-        },
+        // ⚠ **No planeswalker type at all** — see The Wanderer.
         keywords: vec![Keyword::Flash],
         base_loyalty: 3,
         flash_loyalty: true,

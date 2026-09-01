@@ -2413,6 +2413,11 @@ pub fn the_wanderer() -> CardDefinition {
             },
             ..Default::default()
         }],
+        // ⚠ **No planeswalker type at all.** The Wanderer and The Wandering
+        // Emperor are the two planeswalkers whose printed line is a bare
+        // `Legendary Planeswalker`; the helper takes one, so it is cleared
+        // here (`every_card_has_the_subtypes_its_printing_has`).
+        subtypes: Subtypes::default(),
         ..walker(
             "The Wanderer",
             cost(&[generic(3), w()]),

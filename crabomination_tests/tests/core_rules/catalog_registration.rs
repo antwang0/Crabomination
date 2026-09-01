@@ -673,3 +673,191 @@ const CARD_TYPE_NAMES: [&str; 14] = [
     "Plane",
     "Phenomenon",
 ];
+
+/// **Every card's subtypes are the ones its printing has.**
+///
+/// The third of the printed-characteristics ratchets. Scryfall spells all six
+/// kinds of subtype in one list after the em dash; the engine keeps them in
+/// six enums, so both sides are flattened to a **set of normalized words**
+/// (`{:?}` with the non-alphanumerics stripped, lower-cased) — that is what
+/// makes `CreatureType::TimeLord` and the printed "Time Lord" the same thing,
+/// and it is why a two-word subtype needs no special case.
+///
+/// Skipped, each with its reason:
+/// * a subtype the engine has **no variant for** — that is a gap in the enum
+///   and `audit_variant_coverage.py`'s business, not a wrong card. The set is
+///   compared only when every printed word is one the engine can spell.
+/// * a **Changeling**, which is every creature type (CR 702.73) and which the
+///   engine approximates with a handful of them.
+#[test]
+fn every_card_has_the_subtypes_its_printing_has() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    fn norm(s: &str) -> String {
+        s.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
+    }
+
+    // Every subtype the engine can spell, so a printed word it cannot is a
+    // missing variant rather than a wrong card.
+    let spellable: HashSet<String> = {
+        let mut v: HashSet<String> = HashSet::new();
+        for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+            let d = factory();
+            for s in subtype_words(&d) {
+                v.insert(s);
+            }
+        }
+        v
+    };
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        let field = |k: &str| entry.get(k).and_then(|v| v.as_str()).unwrap_or("");
+        let line = field("type_line");
+        if entry.get("card_faces").is_some()
+            || field("name").contains(" // ")
+            || line.contains(" // ")
+            || line.is_empty()
+        {
+            continue;
+        }
+        if def.keywords.iter().any(|k| format!("{k:?}").starts_with("Changeling")) {
+            continue;
+        }
+        // ⚠ **A FILED DEFECT CLASS, EXCUSED BY SHAPE RATHER THAN BY NAME.**
+        // ~48 nonbasic lands carry basic `land_types` their printed type line
+        // does not have (Blackcleave Cliffs is `Land`, not `Land — Mountain
+        // Swamp`). The types are *redundant*: `dual_land_with` gives the land
+        // its colors through `tap_add` activated abilities, and `tri_land`
+        // two definitions below is explicitly "untyped (matching the print)".
+        // So the types buy nothing and cost correctness — those lands are
+        // fetchable by Farseek, hit by Blood Moon, grant landwalk and count
+        // for domain, none of which the printed cards do.
+        //
+        // Taking it moves the `cube` and `sealed` pools, so it is priced and
+        // taken on its own (CARD_BACKLOG), not smuggled in under a ratchet.
+        // The rule below excuses exactly that shape and nothing else.
+        if def.card_types.contains(&crabomination::card::CardType::Land)
+            && !line.contains(" — ")
+            && def.activated_abilities.iter().any(|a| a.tap_cost)
+            && subtype_words(&def)
+                .iter()
+                .all(|w| ["plains", "island", "swamp", "mountain", "forest"].contains(&w.as_str()))
+        {
+            continue;
+        }
+        // ⚠ Four names the cache cannot adjudicate, each for its own reason.
+        // A name here is a claim about the *cache*, never about the card.
+        if matches!(
+            def.name,
+            // A theme-deck placeholder: the cache holds `type_line: "Card"`
+            // and `oracle_text: "(Theme color: {B})"`.
+            "Bounty Hunter"
+                // Strixhaven reprinted both as `Sorcery — Lesson`; the cache
+                // holds the older same-named card, which is a plain Sorcery.
+                | "Brilliant Plan"
+                | "Reduce to Ashes"
+                // A Cave in its Lost Caverns printing; the cache's entry has
+                // no subtype, so the two are not the same card and this
+                // cannot decide which the body should be.
+                | "Hidden Grotto"
+                // Modelled as a creature everywhere but the battlefield
+                // (CR 306.1), which is what the printed Insect type buys.
+                | "Grist, the Hunger Tide"
+                // The types are the animation: "during your turn, Gideon
+                // Blackblade is a 4/4 Human Soldier that's still a
+                // planeswalker", wired as `StaticEffect::SelfIsCreatureIf`.
+                | "Gideon Blackblade"
+        ) {
+            continue;
+        }
+        let Some(tail) = line.split(" — ").nth(1) else {
+            // No subtypes printed and none in the body is the common case;
+            // a body that invents one is still a finding.
+            let ours = subtype_words(&def);
+            if !ours.is_empty() {
+                checked += 1;
+                let mut o: Vec<String> = ours.into_iter().collect();
+                o.sort();
+                wrong.push(format!("INVENTED {}: {o:?} (nothing printed)", def.name));
+            }
+            continue;
+        };
+        let printed: HashSet<String> = tail.split_whitespace().map(norm).collect();
+        if !printed.iter().all(|w| spellable.contains(w)) {
+            continue;
+        }
+        checked += 1;
+        let ours = subtype_words(&def);
+        let mut extra: Vec<&String> = ours.difference(&printed).collect();
+        let mut missing: Vec<&String> = printed.difference(&ours).collect();
+        extra.sort();
+        missing.sort();
+        if !extra.is_empty() {
+            wrong.push(format!("INVENTED {}: {extra:?}", def.name));
+        }
+        if !missing.is_empty() {
+            wrong.push(format!("missing  {}: {missing:?}", def.name));
+        }
+    }
+
+    assert!(
+        checked > 6_000,
+        "only {checked} subtype lines were comparable — did the cache move?",
+    );
+    wrong.sort();
+    wrong.dedup();
+    // **Only the INVENTED direction is asserted, and the asymmetry is the
+    // point** — the same one `audit_keyword_drift.py` draws. A subtype the
+    // engine has and the card does not is a wrong card at the table *now*: it
+    // is fetched, tutored, anthemed and Blood-Mooned by things that should
+    // not touch it. A subtype the card has and the engine lacks is a *gap*,
+    // equally real but one that only ever fails to trigger something.
+    //
+    // The missing pile is 183 cards at the time of writing (Centaur Courser
+    // is a Centaur where the card is a Centaur **Warrior**), and it is filed
+    // in CARD_BACKLOG rather than fixed here: closing it moves the tribal
+    // shape of the `cube` and `sealed` pools, so it is priced and taken on
+    // its own.
+    let invented: Vec<&String> = wrong.iter().filter(|w| w.starts_with("INVENTED")).collect();
+    let missing = wrong.len() - invented.len();
+    assert!(
+        invented.is_empty(),
+        "{} card(s) carry a subtype their printing does not ({missing} more are missing one, \
+         which this does not assert — see CARD_BACKLOG):\n{}",
+        invented.len(),
+        invented.iter().take(60).map(|s| s.as_str()).collect::<Vec<_>>().join("\n"),
+    );
+}
+
+/// Every subtype on a definition, from all six enums, as normalized words.
+fn subtype_words(def: &crabomination::card::CardDefinition) -> HashSet<String> {
+    fn norm(s: String) -> String {
+        s.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
+    }
+    let s = &def.subtypes;
+    let mut out: HashSet<String> = HashSet::new();
+    out.extend(s.creature_types.iter().map(|t| norm(format!("{t:?}"))));
+    out.extend(s.land_types.iter().map(|t| norm(format!("{t:?}"))));
+    out.extend(s.artifact_subtypes.iter().map(|t| norm(format!("{t:?}"))));
+    out.extend(s.enchantment_subtypes.iter().map(|t| norm(format!("{t:?}"))));
+    out.extend(s.spell_subtypes.iter().map(|t| norm(format!("{t:?}"))));
+    out.extend(s.planeswalker_subtypes.iter().map(|t| norm(format!("{t:?}"))));
+    out.extend(s.battle_subtypes.iter().map(|t| norm(format!("{t:?}"))));
+    out
+}

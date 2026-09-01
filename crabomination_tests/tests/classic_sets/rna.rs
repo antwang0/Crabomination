@@ -2319,12 +2319,19 @@ fn awaken_the_erstwhile_discards_and_zombifies() {
     assert!(g.players[0].hand.is_empty() && g.players[1].hand.is_empty(), "both hands emptied");
 }
 
-/// Plaza of Harmony gains 3 life when it enters with another Gate, and taps for
-/// colorless.
+/// Plaza of Harmony gains 3 life when it enters and you control two Gates, and
+/// taps for colorless.
+///
+/// ⚠ **Plaza is not itself a Gate** — its printed line is a bare `Land`, so
+/// "two or more Gates" needs two *others*. It shipped as a Gate and counted
+/// itself, which made one other Gate enough
+/// (`every_card_has_the_subtypes_its_printing_has`); this test passed for
+/// that reason and now seats the second Gate it always needed.
 #[test]
 fn plaza_of_harmony_gate_gain() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::gateway_plaza()); // a Gate
+    g.add_card_to_battlefield(0, catalog::gateway_plaza()); // and a second
     let life = g.players[0].life;
     let plaza = g.move_card_to_battlefield_for_test(0, catalog::plaza_of_harmony());
     drain_stack(&mut g);

@@ -1191,16 +1191,33 @@ fn joraga_visionary_etb_draws() {
     assert_eq!(g.players[0].hand.len(), before, "drew a card on ETB");
 }
 
-/// Stonework Packbeast is all four party types and taps for any color.
+/// Stonework Packbeast fills a party slot by **Changeling**, not by listing
+/// the four roles.
+///
+/// Its printed line is "Artifact Creature — Beast" and the keyword is what
+/// makes it every other type (CR 702.73). It shipped with Beast plus the four
+/// party roles spelled out — which filled a party but made it a Cleric to a
+/// Cleric anthem and nothing to a Sliver
+/// (`every_card_has_the_subtypes_its_printing_has`).
+/// `Value::PartyCount` honours Changeling, so the behaviour is unchanged
+/// where it mattered and correct everywhere else.
 #[test]
-fn stonework_packbeast_is_full_party() {
-    use crabomination::card::CreatureType;
+fn stonework_packbeast_is_a_changeling_and_fills_a_party() {
+    use crabomination::card::{CreatureType, Keyword};
     let mut g = two_player_game();
     let pb = g.add_card_to_battlefield(0, catalog::stonework_packbeast());
-    let types = &g.battlefield_find(pb).unwrap().definition.subtypes.creature_types;
-    for t in [CreatureType::Cleric, CreatureType::Rogue, CreatureType::Warrior, CreatureType::Wizard] {
-        assert!(types.contains(&t), "is a {t:?}");
-    }
+    let def = &g.battlefield_find(pb).unwrap().definition;
+    assert_eq!(def.subtypes.creature_types, vec![CreatureType::Beast], "printed type only");
+    assert!(def.keywords.contains(&Keyword::Changeling), "and Changeling for the rest");
+
+    // Squad Commander mints one Kor Warrior per party member. It is a Kor
+    // Warrior itself, so with the Packbeast the party is two — and it is two
+    // only because the Packbeast's Changeling fills a slot.
+    let before = g.battlefield.len();
+    g.move_card_to_battlefield_for_test(0, catalog::squad_commander());
+    drain_stack(&mut g);
+    let tokens = g.battlefield.len() - before - 1;
+    assert_eq!(tokens, 2, "Commander (Warrior) + Packbeast (Changeling) is a party of two");
 }
 
 /// Cleric of Chill Depths stuns what it blocks.

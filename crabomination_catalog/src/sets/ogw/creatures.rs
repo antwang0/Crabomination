@@ -2183,6 +2183,13 @@ pub fn bearer_of_silence() -> CardDefinition {
     use crate::effect::{PlayerRef, Selector, Value};
     CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Flying, Keyword::CantBlock],
+        // ⚠ "Creature — Eldrazi", **not** a Drone — the `drone` helper's
+        // second type is wrong for this one card
+        // (`every_card_has_the_subtypes_its_printing_has`).
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
         triggered_abilities: vec![on_cast(Effect::MayPay {
             description: "Pay {1}{C}: target opponent sacrifices a creature".into(),
             mana_cost: cost(&[crate::mana::generic(1), crate::mana::colorless(1)]),

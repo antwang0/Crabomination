@@ -2812,7 +2812,7 @@ pub fn ty_lee_chi_blocker() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
-        subtypes: ally(&[CreatureType::Human, CreatureType::Monk, CreatureType::Ally]),
+        subtypes: ally(&[CreatureType::Human, CreatureType::Performer, CreatureType::Ally]),
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Prowess],
