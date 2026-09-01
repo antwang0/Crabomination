@@ -22,6 +22,9 @@ pub fn yavimaya_enchantress() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
             ..Default::default()
         },
+        // The printed base — `dynamic_pt` only reaches the battlefield.
+        power: 2,
+        toughness: 2,
         dynamic_pt: Some(DynamicPt::EnchantmentsInPlay {
             base_p: 2,
             base_t: 2,

@@ -123,6 +123,68 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 # Open
 
+## The defaulted-field class — nine defects `audit_doc_drift` could not see
+
+**`audit_catalog_stats.py` required BOTH `power:` and `toughness:` to be
+present before it compared either**, so a body that spells one and lets
+`..Default::default()` supply 0 for the other was skipped outright. **An
+omitted field is a value.** Same reading for `cost:`. Gated on the
+`..Default::default()` tail (a missing field could otherwise come from a
+file-local helper the `HELPERS` table does not know) and on `station:` (a
+Spacecraft's printed P/T is its station band's, so all 21 EOE Spacecraft read
+as 0/0-vs-N/M without it), the audit reads **8 P/T + 1 cost, all real**:
+
+| Card | Shipped | Printed |
+|---|---|---|
+| Paradise Druid | 0/2, unconditional Hexproof | 2/1, hexproof **while untapped** |
+| Wildgrowth Walker | 0/3 | 1/3 |
+| Carven Caryatid | 0/5 | 2/5 |
+| Mockingbird | 0/0 | 1/1 |
+| Omnath, Locus of Mana | no printed base | 1/1 (the `dynamic_pt` base only reaches the battlefield) |
+| Yavimaya Enchantress | no printed base | 2/2 (same) |
+| Basking Broodscale | 0/1 Lizard, ETB two Spawn | 2/2 Eldrazi Lizard, Devoid, Adapt 1, **counter**-triggered Spawn |
+| Ursine Monstrosity | 0/0, five enter counters, ETB draw | 3/3 Bear Mutant, begin-combat mill + indestructible + `+1/+1` per graveyard card type |
+| Conjurer's Bauble | no `cost:` at all — free | `{1}` |
+
+**Two of them were a different card wearing this one's name** (Broodscale,
+Ursine), which is the same class `token` found — and the doc comment agreed
+with the body in both, which is precisely why `audit_doc_drift` reads 0 BODY
+WRONG and this one does not: **a card whose doc and body are wrong the same
+way is invisible to a doc/body comparison.**
+
+⚠ **Ursine keeps one named approximation**: printed is "choose an opponent at
+random. This creature attacks *that player* this combat if able", and the
+engine has no attacks-a-*named*-player restriction, so the grant is
+`Keyword::MustAttack` for the turn — the same requirement in a two-player game.
+A primitive job if a multiplayer pool ever cares.
+
+Three invented keywords came off the same read (they are
+`audit_catalog_stats`'s `kw` column, direction *code has, Scryfall does not*,
+22 -> 19): Paradise Druid's unconditional Hexproof (above), **Goblin
+Bushwhacker**'s printed Haste (the card has none — the haste rides the kicked
+ETB, so an unkicked one was attacking the turn it landed for `{R}`), and
+**Goblin Warchief**'s printed Haste (its own anthem covers it; a printed
+keyword would also survive a type change that stops the anthem applying).
+
+**The 19 `kw` rows that remain are triaged and are not this class.** Ten are
+Scryfall's `keywords` field listing a keyword the card only *grants* (Steel
+Seraph, Angelic Skirmisher) — a false positive in the MISSING direction. The
+rest are named approximations with their reasoning in the doc comment and no
+better primitive in the tree: Frost Titan's and Reality Smasher's `Ward` for a
+printed "counter unless…" trigger (Frost Titan's is exactly modern ward
+templating), Exalted Angel's and Paladin of Prahv's `Lifelink` for "whenever
+this deals damage, you gain that much life", Stinkweed Imp's `Deathtouch` for
+the combat-damage destroy trigger, and Karplusan Strider's
+`ProtectionFromMatching` for "can't be the target of blue or black spells".
+**Karplusan Strider is the one worth revisiting** — protection also prevents
+damage and blocking, which the printed card does not, and a pair of
+`HexproofFromColor` is closer.
+
+**The two `sub` rows are correct as spelled**: Stonework Packbeast and Tajuru
+Paragon print "is also a Cleric, Rogue, Warrior, and Wizard" as a
+characteristic-defining ability that applies in every zone, so spelling the
+types as printed subtypes is the same object.
+
 ## Oracle-verb audit — the `token` class, and the tenth false class
 
 **`token` 21 -> 17, five of six rows read in the source were real, and the

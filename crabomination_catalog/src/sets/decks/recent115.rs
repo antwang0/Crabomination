@@ -38,6 +38,11 @@ pub fn omnath_locus_of_mana() -> CardDefinition {
             creature_types: vec![CreatureType::Elemental],
             ..Default::default()
         },
+        // The printed base. `dynamic_pt` sets the battlefield P/T in layer 7,
+        // but the "+1/+1 for each unspent green mana" is a static ability and
+        // not a CDA, so off the battlefield Omnath is the printed 1/1.
+        power: 1,
+        toughness: 1,
         dynamic_pt: Some(DynamicPt::BasePlusUnspentColorMana {
             base_p: 1,
             base_t: 1,

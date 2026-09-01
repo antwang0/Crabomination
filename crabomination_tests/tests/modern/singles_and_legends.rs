@@ -522,9 +522,12 @@ fn singles_and_legends_printed_shapes() {
         PrintedShape { def: catalog::koma_cosmos_serpent, name: "Koma, Cosmos Serpent",
             cmc: None, pt: Some((6, 6)), kws: &[Keyword::CantBeCountered], supers: &[],
             enters_with_counters: false, trigs: Some(1), acts: None },
+        // Printed 3/3 with a begin-combat trigger, corrected 2026-09-01: the
+        // body was a 0/0 entering with five +1/+1 counters and drawing on ETB,
+        // which is not this card at all.
         PrintedShape { def: catalog::ursine_monstrosity, name: "Ursine Monstrosity",
-            cmc: None, pt: None, kws: &[Keyword::Trample], supers: &[],
-            enters_with_counters: true, trigs: Some(1), acts: None },
+            cmc: None, pt: Some((3, 3)), kws: &[Keyword::Trample], supers: &[],
+            enters_with_counters: false, trigs: Some(1), acts: None },
         // 7/7, not the 2/1 the deleted test's *name* claimed; its asserts said 7/7.
         // Menace, not flying — the printed keyword, corrected 2026-08-30.
         PrintedShape { def: catalog::moonshadow, name: "Moonshadow",

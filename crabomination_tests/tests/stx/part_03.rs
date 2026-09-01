@@ -789,6 +789,9 @@ fn conjurers_bauble_bottoms_a_graveyard_card_and_cantrips() {
     g.add_card_to_library(0, catalog::island());
     g.add_card_to_library(0, catalog::island());
     let dead_bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // It costs {1} to cast — it shipped with no `cost:` field at all, i.e. as a
+    // free artifact, until 2026-09-01.
+    assert_eq!(catalog::conjurers_bauble().cost.cmc(), 1, "Conjurer's Bauble costs {{1}}");
     let bauble = g.add_card_to_battlefield(0, catalog::conjurers_bauble());
     let hand_before = g.players[0].hand.len();
     g.players[0].mana_pool.add_colorless(1);

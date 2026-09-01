@@ -1614,10 +1614,10 @@ pub fn mystical_inquiry() -> CardDefinition {
 /// Horizons). "{1}, Sacrifice this artifact: Put a card from your
 /// graveyard on the bottom of your library. Draw a card."
 ///
-/// A zero-mana artifact that cycles graveyard contents for a fresh
+/// A one-mana artifact that cycles graveyard contents for a fresh
 /// draw — useful for both blue control and graveyard-based decks
 /// (snake the right card back into the library for a future tutor).
-/// Wired with `cost: 0`, `{1}` mana cost + `sac_cost: true` on the
+/// Cast for `{1}`, with `{1}` + `sac_cost: true` on the
 /// activation. ✅ The "put a card from your graveyard on the bottom of
 /// your library" clause is now wired: the effect bottoms one chosen
 /// card (any type) from your graveyard via `ZoneDest::Library { pos:
@@ -1631,6 +1631,7 @@ pub fn mystical_inquiry() -> CardDefinition {
 pub fn conjurers_bauble() -> CardDefinition {
     CardDefinition {
         name: "Conjurer's Bauble",
+        cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,

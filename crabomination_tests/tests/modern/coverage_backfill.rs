@@ -77,8 +77,12 @@ fn candelabra_of_tawnos_untaps_up_to_x_lands() {
         "both lands untapped by Candelabra");
 }
 
+/// Basking Broodscale is a printed 2/2 with no ETB at all: it adapts for
+/// `{1}{G}`, and the Eldrazi Spawn rides the *counter* trigger, not an enters
+/// trigger. The body it replaced (0/1 entering with two counters and minting
+/// two Spawn on ETB) was a different card wearing this one's name.
 #[test]
-fn basking_broodscale_etb_makes_two_spawn_and_enters_two_three() {
+fn basking_broodscale_adapts_and_the_counter_mints_a_spawn() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::basking_broodscale());
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -87,11 +91,52 @@ fn basking_broodscale_etb_makes_two_spawn_and_enters_two_three() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Basking Broodscale castable for {1}{G}");
     drain_stack(&mut g);
-    let spawn = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
-    assert_eq!(spawn, 2, "ETB makes two Eldrazi Spawn");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count(), 0,
+        "no ETB — the printed card mints nothing on entry");
     let view = g.compute_battlefield();
     let bs = view.iter().find(|c| c.id == id).unwrap();
-    assert_eq!((bs.power, bs.toughness), (2, 3), "0/1 + two +1/+1 counters = 2/3");
+    assert_eq!((bs.power, bs.toughness), (2, 2), "printed 2/2");
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // The Spawn is a "you may", so the scripted yes is what the printed
+    // optional wants; the AutoDecider answers no.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(),
+        x_value: None, mode: None,
+    }).expect("adapt 1 activatable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let bs = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((bs.power, bs.toughness), (3, 3), "2/2 + one +1/+1 counter");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count(), 1,
+        "the counter trigger mints one Spawn");
+}
+
+/// Ursine Monstrosity's printed begin-combat trigger: mill one, then it gains
+/// indestructible and +1/+1 for each card type among cards in your graveyard
+/// until end of turn. Nothing before 2026-09-01 fired here — the body was a
+/// 0/0 with five enter counters and an ETB draw, which is a different card.
+#[test]
+fn ursine_monstrosity_begin_combat_mills_and_pumps_per_graveyard_type() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ursine_monstrosity());
+    // Two card types already in the graveyard, plus the creature the mill puts
+    // there: Instant, Creature and Land are three.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 2, "milled one card");
+    let view = g.compute_battlefield();
+    let u = view.iter().find(|c| c.id == id).unwrap();
+    // Instant (Bolt) + Creature (the milled Bears) = 2 types, on a printed 3/3.
+    assert_eq!((u.power, u.toughness), (5, 5), "3/3 +1/+1 per graveyard card type");
+    assert!(u.keywords().contains(&crabomination::card::Keyword::Indestructible));
+    assert!(u.keywords().contains(&crabomination::card::Keyword::MustAttack));
 }
 
 #[test]
@@ -984,7 +1029,7 @@ fn phyrexian_rager_etb_draws_and_loses_one() {
     assert_eq!(g.players[0].hand.len(), hand);
 }
 
-/// Carven Caryatid is a 0/5 Defender that draws on ETB.
+/// Carven Caryatid is a 2/5 Defender that draws on ETB.
 #[test]
 fn carven_caryatid_etb_draws() {
     let mut g = two_player_game();
@@ -997,6 +1042,7 @@ fn carven_caryatid_etb_draws() {
     assert_eq!(g.players[0].hand.len(), hand, "ETB draw refilled the cast");
     let c = g.battlefield.iter().find(|c| c.definition.name == "Carven Caryatid").unwrap();
     assert!(c.has_keyword(&crabomination::card::Keyword::Defender));
+    assert_eq!((c.definition.power, c.definition.toughness), (2, 5), "printed 2/5");
 }
 
 /// Doomed Traveler leaves a 1/1 flying Spirit when it dies.

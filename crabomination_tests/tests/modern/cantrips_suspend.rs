@@ -235,20 +235,30 @@ fn ravenform_destroys_and_gifts_bird() {
 
 // ── Utility creatures ────────────────────────────────────────────────────────
 
-/// Paradise Druid taps for one mana of any color and has hexproof.
+/// Paradise Druid is a 2/1 that taps for one mana of any color, and its
+/// hexproof is conditional: "as long as it's untapped" (the printed card),
+/// not the unconditional keyword it used to ship with.
 #[test]
-fn paradise_druid_taps_for_any_color() {
+fn paradise_druid_taps_for_any_color_and_loses_hexproof_while_tapped() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::paradise_druid());
     g.clear_sickness(id);
-    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Hexproof));
+    let printed = g.battlefield_find(id).unwrap().definition.clone();
+    assert_eq!((printed.power, printed.toughness), (2, 1), "printed 2/1");
+    assert!(!printed.keywords.contains(&Keyword::Hexproof),
+        "hexproof is a static, not a printed keyword");
+    let untapped = g.computed_permanent(id).expect("on battlefield");
+    assert!(untapped.keywords().contains(&Keyword::Hexproof), "hexproof while untapped");
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None})
     .expect("tap for mana");
     drain_stack(&mut g);
     let pool = &g.players[0].mana_pool;
     assert_eq!(pool.total() + pool.restricted_total(), 1, "produced one mana");
+    let tapped = g.computed_permanent(id).expect("on battlefield");
+    assert!(!tapped.keywords().contains(&Keyword::Hexproof),
+        "the mana ability tapped it, so the hexproof is gone");
 }
 
 /// Merfolk Trickster taps an opponent's creature on ETB.

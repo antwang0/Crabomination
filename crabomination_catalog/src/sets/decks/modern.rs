@@ -1111,10 +1111,10 @@ pub fn aspect_of_hydra() -> CardDefinition {
 
 // ── Utility creatures ────────────────────────────────────────────────────────
 
-/// Paradise Druid — {1}{G} 0/2 Elf Druid with Hexproof. {T}: Add one mana of
-/// any color.
+/// Paradise Druid — {1}{G} 2/1 Elf Druid. Hexproof **as long as it's
+/// untapped**; {T}: Add one mana of any color.
 pub fn paradise_druid() -> CardDefinition {
-    use crate::card::ActivatedAbility;
+    use crate::card::{ActivatedAbility, StaticAbility, StaticEffect};
     CardDefinition {
         name: "Paradise Druid",
         cost: cost(&[generic(1), g()]),
@@ -1123,8 +1123,15 @@ pub fn paradise_druid() -> CardDefinition {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
             ..Default::default()
         },
-        toughness: 2,
-        keywords: vec![Keyword::Hexproof],
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "This creature has hexproof as long as it's untapped.",
+            effect: StaticEffect::SelfHasKeywordWhile {
+                keyword: Keyword::Hexproof,
+                condition: SelectionRequirement::Untapped,
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -4243,7 +4250,7 @@ pub fn jadelight_ranger() -> CardDefinition {
     }
 }
 
-/// Wildgrowth Walker — {1}{G} 0/3 Elemental. Whenever a creature you control
+/// Wildgrowth Walker — {1}{G} 1/3 Elemental. Whenever a creature you control
 /// explores, put a +1/+1 counter on Wildgrowth Walker and you gain 3 life.
 pub fn wildgrowth_walker() -> CardDefinition {
     CardDefinition {
@@ -4254,6 +4261,7 @@ pub fn wildgrowth_walker() -> CardDefinition {
             creature_types: vec![CreatureType::Elemental],
             ..Default::default()
         },
+        power: 1,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Explored, EventScope::YourControl),
@@ -9211,8 +9219,10 @@ pub fn beetleback_chief() -> CardDefinition {
     }
 }
 
-/// Goblin Warchief — {1}{R}{R} 2/2 Goblin Warrior with Haste. Goblin spells
-/// you cast cost {1} less to cast. Goblins you control have haste.
+/// Goblin Warchief — {1}{R}{R} 2/2 Goblin Warrior. Goblin spells you cast cost
+/// {1} less to cast. Goblins you control have haste — the card prints no haste
+/// of its own; its own static covers it, and a printed keyword would survive a
+/// type change that stops the static applying.
 pub fn goblin_warchief() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -9225,7 +9235,6 @@ pub fn goblin_warchief() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Haste],
         static_abilities: vec![
             StaticAbility {
                 description: "Goblin spells you cast cost {1} less to cast.",
@@ -9901,9 +9910,10 @@ pub fn goblin_chainwhirler() -> CardDefinition {
     }
 }
 
-/// Goblin Bushwhacker — {R} Creature — Goblin, 1/1, Haste. Kicker {R}.
-/// When it enters, if it was kicked, creatures you control get +1/+0 and
-/// gain haste until end of turn (CR 702.32 + ETB-kicked context).
+/// Goblin Bushwhacker — {R} Creature — Goblin, 1/1. Kicker {R}. When it
+/// enters, if it was kicked, creatures you control get +1/+0 and gain haste
+/// until end of turn (CR 702.32 + ETB-kicked context). **It prints no haste of
+/// its own** — the kicked ETB grants it, and an unkicked one is summoning-sick.
 pub fn goblin_bushwhacker() -> CardDefinition {
     CardDefinition {
         name: "Goblin Bushwhacker",
@@ -9915,7 +9925,7 @@ pub fn goblin_bushwhacker() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Haste, Keyword::Kicker(cost(&[r()]))],
+        keywords: vec![Keyword::Kicker(cost(&[r()]))],
         triggered_abilities: vec![etb(Effect::If {
             cond: Predicate::SpellWasKicked,
             then: Box::new(Effect::Seq(vec![

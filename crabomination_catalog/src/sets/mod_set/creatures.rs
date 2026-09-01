@@ -2667,6 +2667,8 @@ pub fn mockingbird() -> CardDefinition {
             creature_types: vec![CreatureType::Bird, CreatureType::Bard],
             ..Default::default()
         },
+        power: 1,
+        toughness: 1,
         keywords: vec![Keyword::Flying],
         enters_as_copy: Some(EntersAsCopy {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -5123,8 +5125,10 @@ pub fn master_of_death() -> CardDefinition {
 
 // ── Basking Broodscale ─────────────────────────────────────────────────────
 
-/// Basking Broodscale — {1}{G} Creature — Lizard 0/1.
-/// ETB with 2 +1/+1 counters + creates 2 Eldrazi Spawn tokens.
+/// Basking Broodscale — {1}{G} Creature — Eldrazi Lizard 2/2. Devoid.
+/// `{1}{G}: Adapt 1` (CR 702.108); whenever one or more +1/+1 counters are put
+/// on it, you may create a 0/1 colorless Eldrazi Spawn with "Sacrifice this
+/// token: Add {C}."
 pub fn basking_broodscale() -> CardDefinition {
     use crate::card::{CounterType, TokenDefinition};
     let spawn = TokenDefinition {
@@ -5159,17 +5163,29 @@ pub fn basking_broodscale() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Lizard],
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Lizard],
             ..Default::default()
         },
-        toughness: 1,
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: crate::effect::shortcut::adapt(1),
+            ..Default::default()
+        }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                definition: Box::new(spawn),
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::SelfSource,
+            ),
+            effect: Effect::MayDo {
+                description: "create a 0/1 colorless Eldrazi Spawn".to_string(),
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(spawn),
+                }),
             },
         }],
         ..Default::default()
@@ -5204,26 +5220,52 @@ pub fn sowing_mycospawn() -> CardDefinition {
     }
 }
 
-/// Ursine Monstrosity — {2}{G} Creature — Bear 0/0.
-/// Enters with 5 +1/+1 counters, Trample, ETB draw 1.
+/// Ursine Monstrosity — {2}{G} Creature — Bear Mutant 3/3. Trample. "At the
+/// beginning of combat on your turn, mill a card and choose an opponent at
+/// random. This creature attacks that player this combat if able. Until end of
+/// turn, it gains indestructible and gets +1/+1 for each card type among cards
+/// in your graveyard."
+///
+/// The random opponent is dropped — the engine has no "attacks a *named*
+/// player if able" restriction, so the grant is `Keyword::MustAttack` for the
+/// turn, which is the same requirement in a two-player game. Everything else
+/// is the printed card; the body it replaced (0/0 entering with five counters
+/// and an ETB draw) was a different card wearing this one's name.
 pub fn ursine_monstrosity() -> CardDefinition {
-    use crate::card::CounterType;
+    use crate::effect::Duration;
     CardDefinition {
         name: "Ursine Monstrosity",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bear],
+            creature_types: vec![CreatureType::Bear, CreatureType::Mutant],
             ..Default::default()
         },
+        power: 3,
+        toughness: 3,
         keywords: vec![Keyword::Trample],
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(5))),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeywords {
+                    what: Selector::This,
+                    keywords: vec![Keyword::Indestructible, Keyword::MustAttack],
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::CardTypesInGraveyard(PlayerRef::You),
+                    toughness: Value::CardTypesInGraveyard(PlayerRef::You),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
         }],
         ..Default::default()
     }
@@ -5692,6 +5734,7 @@ pub fn carven_caryatid() -> CardDefinition {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
+        power: 2,
         toughness: 5,
         keywords: vec![Keyword::Defender],
         triggered_abilities: vec![etb(Effect::Draw {

@@ -320,11 +320,18 @@ fn beetleback_chief_makes_two_goblins() {
 fn goblin_warchief_reduces_goblin_costs_and_grants_haste() {
     use crabomination::card::Keyword;
     let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::goblin_warchief());
+    let chief = g.add_card_to_battlefield(0, catalog::goblin_warchief());
     let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders());
     // Haste anthem reaches other Goblins.
     assert!(g.computed_permanent(raider).unwrap().keywords().contains(&Keyword::Haste),
         "Goblins gain haste");
+    // And itself — through the anthem, which is the only place the card prints
+    // haste. It also carried `Keyword::Haste` until 2026-09-01, which is a
+    // printed keyword the card does not have.
+    assert!(g.computed_permanent(chief).unwrap().keywords().contains(&Keyword::Haste),
+        "the anthem covers the Warchief itself");
+    assert!(!g.battlefield_find(chief).unwrap().definition.keywords.contains(&Keyword::Haste),
+        "haste is the anthem's, not a printed keyword");
     // {2}{R} Krenko (a Goblin spell) is discounted by {1} → costs {1}{R}{R}.
     let krenko = g.add_card_to_hand(0, catalog::krenko_mob_boss());
     g.players[0].mana_pool.add(Color::Red, 2);
@@ -688,6 +695,7 @@ fn goblin_bushwhacker_kicked_pumps_the_team() {
 
 #[test]
 fn goblin_bushwhacker_unkicked_has_no_etb_pump() {
+    use crabomination::card::Keyword;
     let mut g = two_player_game();
     let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
     let id = g.add_card_to_hand(0, catalog::goblin_bushwhacker());
@@ -702,6 +710,12 @@ fn goblin_bushwhacker_unkicked_has_no_etb_pump() {
     drain_stack(&mut g);
     let cp = g.computed_permanent(ally).expect("ally still in play");
     assert_eq!(cp.power, 2, "unkicked Bushwhacker leaves the team unpumped");
+    // And it prints no haste of its own: the haste rides the kicked ETB, so an
+    // unkicked one is summoning-sick. It shipped with `Keyword::Haste` until
+    // 2026-09-01, which let it attack the turn it landed for {R}.
+    let me = g.computed_permanent(id).expect("Bushwhacker in play");
+    assert!(!me.keywords().contains(&Keyword::Haste),
+        "Goblin Bushwhacker has no printed haste");
 }
 
 #[test]

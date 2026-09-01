@@ -89,7 +89,8 @@ fn wildgrowth_walker_grows_and_gains_life_on_explore() {
     drain_stack(&mut g);
     let view = g.compute_battlefield();
     let w = view.iter().find(|c| c.id == ww).unwrap();
-    assert_eq!((w.power, w.toughness), (1, 4), "Wildgrowth Walker grew from the explore");
+    // Printed 1/3 (it shipped as a 0/3 until 2026-09-01) + one +1/+1 counter.
+    assert_eq!((w.power, w.toughness), (2, 4), "Wildgrowth Walker grew from the explore");
     assert_eq!(g.players[0].life, life_before + 3, "gained 3 life on explore");
 }
 
