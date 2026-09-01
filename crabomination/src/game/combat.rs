@@ -4409,6 +4409,16 @@ impl GameState {
                             }
                         }
                     }
+                    // The Fallen — "each player this creature has dealt damage
+                    // to this game". ⚠ Combat damage to a player has its own
+                    // path here and never reached the recorder in
+                    // `deal_damage_to_from`, so a 2/3 Zombie whose whole text
+                    // is its combat victims remembered none of them.
+                    if let Some(c) = self.battlefield_find_mut(atk_id)
+                        && !c.damaged_players_this_game.contains(&p)
+                    {
+                        c.damaged_players_this_game.push(p);
+                    }
                 }
                 // CR 702.180c — Toxic N adds N poison on combat damage to a
                 // player, on top of any life loss (and stacks with Infect's

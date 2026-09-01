@@ -463,6 +463,36 @@ fn skull_of_orm_buys_back_an_enchantment() {
 
 // ── Closing wave (`catalog::sets::drk2`) ───────────────────────────────────
 
+/// The Fallen keeps bleeding whoever it has bled — including through combat,
+/// which is how a 2/3 Zombie damages anyone.
+///
+/// ⚠ Combat damage to a player has its own path in `combat.rs` and never
+/// reached `deal_damage_to_from`'s recorder, so the card's whole text was
+/// dead for its own attacks. `the_fallen_keeps_bleeding_everyone_it_has_hit`
+/// below tested the direct-damage path only and passed throughout.
+#[test]
+fn the_fallen_bleeds_every_player_it_has_damaged_in_combat() {
+    let mut g = main_phase();
+    let fallen = g.add_card_to_battlefield(0, catalog::the_fallen());
+    g.clear_sickness(fallen);
+    g.attacking = vec![Attack { attacker: fallen, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "2 combat damage");
+    assert_eq!(
+        g.battlefield_find(fallen).expect("fallen").damaged_players_this_game,
+        vec![1],
+        "the combat victim is remembered on the source",
+    );
+
+    // A later upkeep: one more damage to everyone it has ever bled.
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "the upkeep trigger found the remembered victim");
+}
+
 #[test]
 fn banshee_splits_x_between_a_target_and_you() {
     let mut g = main_phase();
