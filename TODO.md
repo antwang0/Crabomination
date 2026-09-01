@@ -28,7 +28,7 @@ sixty-seventh pass, so don't re-take that.
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"** (moved out
    of here verbatim when this section passed its budget again — read them before proposing one).
-2. **Gates at `e6456430`:** suite **19,153 / 0 / 5**, traces unmoved, clippy clean; `--bench`
+2. **Gates at `f7132799`:** suite **19,157 / 0 / 5**, traces unmoved, clippy clean; `--bench`
    **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism ok.
    `scripts/robustness_grid.sh` now has **two** legs and both are green at that tip — ladder
    33,120 games (`cap 0 / stuck 0 / draw 2`) and a new **actor** leg (3 x 600 games), the only
@@ -41,6 +41,15 @@ sixty-seventh pass, so don't re-take that.
 5. **⚠ A PYTHON AUDITOR'S ZERO IS SUSPECT — CHECK ITS POPULATION** (`audit_catalog_stats.py`
    saw 10,764 of 17,639 cards; its Rust replacements found 33 defects on their first run). Two
    card classes and the free-activation write-up are filed in **CARD_BACKLOG's first section**.
+5a. **THE PRODUCTIVE LANE THIS RUN WAS "READ THE PRINTED ORACLE FOR A CLAUSE, CHECK THE
+   PRIMITIVE" — five classes, 17 cards, six new ratchets.** Blood Moon did nothing to a land
+   that prints no basic type (every `tri_land`); seven cards *replaced* the types their oracle
+   *adds* (an ensouled Darksteel Citadel stopped being a Land); two printed "loses all
+   abilities" and stripped none; three sat on the wrong trigger step (Goblin Rabblemaster's
+   token is begin-combat, not attack). ⚠ **Its false-positive floor is keywords** — Menace,
+   Bushido, Prowess and Melee all print the clause they implement, so validate a needle set on
+   three known-good cards first. The measured survey and the 29 open trigger-step rows are in
+   **CARD_BACKLOG**.
 6. **`audit_oracle_verbs.py` is the live card lane: 112 rows** (`search_library` 18 -> 11,
    `destroy` 15 -> 12); next by size `draw` 16 / `gain_life` 13 / `counters` 13. ⚠ It cannot see
    a dedicated primitive, so read the body before believing a row — 4 of 18 `search_library`
