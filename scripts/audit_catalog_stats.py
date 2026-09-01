@@ -579,8 +579,15 @@ def audit():
             face = face_for(card, nm.group(1))
             d["checked"] += 1
             tag = (nm.group(1), src.name, m.group(1))
-            # cost
+            # cost. A card with no `cost:` at all and a `..Default::default()`
+            # tail is castable for free — the same "an omitted field is a
+            # value" reading the P/T block below spells out. Lands and the
+            # other genuinely costless faces answer `""` on both sides.
             cargs = toplevel_cost_args(body)
+            if (cargs is None
+                    and own_field(body, r"cost:") is None
+                    and own_field(body, r"\.\.Default::default\(\)") is not None):
+                cargs = ""
             if cargs is not None:
                 syms = [sym(c) for c in re.split(r",(?![^()]*\))", cargs) if c.strip()]
                 if all(syms):
@@ -591,14 +598,32 @@ def audit():
                     refs = [r for r in refs if r]
                     if refs and all(norm(got) != norm(r) for r in refs):
                         d["cost"].append((tag, got, "|".join(refs)))
-            # P/T
+            # P/T. ⚠ **An omitted field is a value, not an absence.** Requiring
+            # both `power:` and `toughness:` skipped every card that spells one
+            # of them and lets `..Default::default()` supply 0 for the other —
+            # and 0 is a printed characteristic like any number. Paradise Druid
+            # shipped as a 0/2 (printed 2/1) with its doc comment agreeing, so
+            # `audit_doc_drift` could not see it either. The `..Default::
+            # default()` tail is the gate: without it the missing field could
+            # come from a helper this file's table does not know, and a
+            # defaulted 0 would be invented rather than read.
             pm = own_field(body, r"power:\s*(-?\d+)")
             tm = own_field(body, r"toughness:\s*(-?\d+)")
+            defaulted = own_field(body, r"\.\.Default::default\(\)") is not None
+            # ⚠ A Spacecraft's printed P/T is its station band's, and the card
+            # is a 0/0 non-creature until it is stationed. Scryfall reports the
+            # band number in `power`/`toughness`, so all 21 EOE Spacecraft read
+            # as 0/0-vs-N/M defects without this gate.
+            if own_field(body, r"station:\s*vec!\[") is not None:
+                pm = tm = None
+                defaulted = False
+            got_p = pm.group(1) if pm else ("0" if defaulted else None)
+            got_t = tm.group(1) if tm else ("0" if defaulted else None)
             ref_pt = face if face is not None and face.get("power") is not None else card
             numeric = lambda v: v is not None and re.fullmatch(r"-?\d+", str(v))
-            if pm and tm and numeric(ref_pt.get("power")) and numeric(ref_pt.get("toughness")):
-                if (pm.group(1), tm.group(1)) != (str(ref_pt["power"]), str(ref_pt["toughness"])):
-                    d["pt"].append((tag, f"{pm.group(1)}/{tm.group(1)}", f"{ref_pt['power']}/{ref_pt['toughness']}"))
+            if got_p and got_t and numeric(ref_pt.get("power")) and numeric(ref_pt.get("toughness")):
+                if (got_p, got_t) != (str(ref_pt["power"]), str(ref_pt["toughness"])):
+                    d["pt"].append((tag, f"{got_p}/{got_t}", f"{ref_pt['power']}/{ref_pt['toughness']}"))
             # creature subtypes
             ctm = next(own_helper_fields(body, r"creature_types:"), None)
             ctv = vec_after(body, ctm.start()) if ctm else None
