@@ -2430,7 +2430,7 @@ correct (`etb_tap`'s trigger vs `StaticEffect::EntersTapped`); and
 having it — 48 of the 102 "doesn't untap" rows are that shape.
 
 ```text
-suite   19,168 / 0 / 5 (cargo nextest run --workspace --exclude
+suite   19,171 / 0 / 5 (cargo nextest run --workspace --exclude
         crabomination_client); golden traces in it and unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench release: **195,806 decisions / 27.49 turns / 611.9 per game / 0 stalls

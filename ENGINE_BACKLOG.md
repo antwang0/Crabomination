@@ -40,6 +40,14 @@ A `--games 400 --decks all` sweep over 27 seeds (183,600 games at `22a79dcc`)
 found **no panic, no hang, 4 capped, 22 draws**. Both leads are closed as
 *printed cards working correctly*. **Do not re-open them.**
 
+**Re-run twice since and both leads reproduce verbatim, which is the point of
+recording their fingerprints here**: 81,600 games / 12 seeds at `bd42107c`
+(cap 2 / stuck 0 / draw 14) and again at `d825411f` after seven card rewrites
+(cap 2 / stuck 0 / draw 18). `CRAB_CAP_DIAG=5000` names the same two boards
+each time — Scute Swarm x4,091 at turn 46 and the twin `i32::MAX` life totals
+at turn 2,159. **A capped game whose diagnostic matches one of the two boards
+below is not a new finding**; one that does not is.
+
 **(a) The four capped games are Beacon of Immortality.** "Double target
 player's life total. Then shuffle this into its owner's library."
 `CRAB_LIFE_WATCH=1000` prints the series — 1,580 → 3,161 → 6,322 → 12,644, one

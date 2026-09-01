@@ -27,8 +27,11 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at `007893c7`:** suite **19,168 / 0 / 5**, traces unmoved, clippy `--all-targets`
-   clean, `--bench` **byte-identical to the invariant**. `scripts/robustness_grid.sh` has two green
+2. **Gates at `d825411f`:** suite **19,171 / 0 / 5**, traces unmoved, clippy `--all-targets`
+   clean, `--bench` **byte-identical to the invariant**, and a **12-seed stall sweep re-run after
+   this run's seven card rewrites — 81,600 games, 0 panic, cap 2 / stuck 0 / draw 18, and both
+   caps are the two closed leads verbatim** (`CRAB_CAP_DIAG` names Scute Swarm x4,091 at turn 46
+   and the twin `i32::MAX` life totals at turn 2,159). `scripts/robustness_grid.sh` has two green
    legs (ladder 33,120 games, actor 3 x 600); `rm -rf target-audit/` after (~2 GB).
 3. **Perf is at its floor for this shape of engine** — `(-151)`, the `(-128)` split and now
    `(-156)` all measured and moved nothing; `(-145)` is refused on robustness. **⚠ `(-156)`'s
