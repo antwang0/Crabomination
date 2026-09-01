@@ -2817,6 +2817,14 @@ pub struct ActivatedAbility {
     /// the creature paying it (The Dominion Bracelet).
     #[serde(default)]
     pub exile_attachment_cost: bool,
+    /// "Sacrifice [this Equipment]" as an activation cost on an ability the
+    /// Equipment *grants to its bearer* — the sacrifice-side twin of
+    /// [`exile_attachment_cost`](Self::exile_attachment_cost), and for the same
+    /// reason: `sac_cost` would sacrifice the creature paying, which is not
+    /// what the card says. Deconstruction Hammer, Blazing Torch, Ninja's Kunai,
+    /// Citizen's Crowbar — every printed instance of the shape.
+    #[serde(default)]
+    pub sac_attachment_cost: bool,
     /// "This ability costs {X} less to activate, where X is this creature's
     /// power" (The Dominion Bracelet). Reduces generic mana only.
     #[serde(default)]

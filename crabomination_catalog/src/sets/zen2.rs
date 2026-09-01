@@ -1246,16 +1246,14 @@ pub fn blazing_torch() -> CardDefinition {
                 R::HasCreatureType(CreatureType::Vampire)
                     .or(R::HasCreatureType(CreatureType::Zombie)),
             ))],
+            // "{T}, Sacrifice Blazing Torch: Blazing Torch deals 2 damage to
+            // any target." The sacrifice is a **cost** and it is the Equipment,
+            // not its bearer: spelled in the effect it resolved after the
+            // damage, and a `HasName` sacrifice could take a different copy.
             activated_abilities: vec![ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::Seq(vec![
-                    Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
-                    Effect::Sacrifice {
-                        who: Selector::You,
-                        count: Value::Const(1),
-                        filter: R::HasName("Blazing Torch".into()),
-                    },
-                ]),
+                sac_attachment_cost: true,
+                effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
                 ..Default::default()
             }],
             ..Default::default()

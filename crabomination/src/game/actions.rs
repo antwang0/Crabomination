@@ -16450,6 +16450,30 @@ impl GameState {
             self.remove_from_battlefield_to_exile(granter);
             events.push(GameEvent::PermanentExiled { card_id: granter });
         }
+        // The sacrifice-side twin: "Sacrifice [this Equipment]" on an ability
+        // the Equipment grants its bearer. `sac_cost` would sacrifice the
+        // creature paying, which is not what the card says (Deconstruction
+        // Hammer, Blazing Torch).
+        if ability.sac_attachment_cost {
+            let granter = self
+                .battlefield
+                .iter()
+                .find(|c| {
+                    c.attached_to == Some(card_id)
+                        && c.definition
+                            .equipped_bonus
+                            .as_ref()
+                            .is_some_and(|b| !b.activated_abilities.is_empty())
+                })
+                .map(|c| c.id)
+                .ok_or(GameError::SelectionRequirementViolated)?;
+            let controller = self
+                .battlefield
+                .find_by_id(granter)
+                .map(|c| c.controller)
+                .unwrap_or(self.active_player_idx);
+            self.sacrifice_one(granter, controller, &mut events);
+        }
         // "Return N [filter] you control to their owner's hand" as a cost
         // (Floodbringer). Bounce the cheapest matches so a bot doesn't throw
         // away its best permanents.

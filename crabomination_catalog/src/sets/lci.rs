@@ -4326,9 +4326,8 @@ pub fn volatile_wanderglyph() -> CardDefinition {
     }
 }
 
-/// Deconstruction Hammer — {W} Equipment, equipped +1/+1, Equip {1}. (The
-/// granted "{3}, {T}, sac: destroy artifact/enchantment" ability is omitted —
-/// equipment can't grant activated abilities yet.)
+/// Deconstruction Hammer — {W} Equipment, equipped +1/+1 and "{3}, {T},
+/// Sacrifice this: Destroy target artifact or enchantment". Equip {1}.
 pub fn deconstruction_hammer() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -4343,6 +4342,23 @@ pub fn deconstruction_hammer() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
+            // "{3}, {T}, Sacrifice Deconstruction Hammer: Destroy target
+            // artifact or enchantment." The sacrifice is the *Equipment*, not
+            // the creature paying — `sac_attachment_cost`, the twin of the
+            // exile-side cost The Dominion Bracelet uses.
+            activated_abilities: vec![crate::card::ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                tap_cost: true,
+                sac_attachment_cost: true,
+                effect: Effect::Destroy {
+                    what: crate::effect::shortcut::target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::HasCardType(
+                            CardType::Enchantment,
+                        )),
+                    ),
+                },
+                ..Default::default()
+            }],
             ..Default::default()
         }),
         ..Default::default()

@@ -405,6 +405,34 @@ fn armament_master_scales_with_its_own_equipment() {
     assert_eq!(g.computed_permanent(master).unwrap().power, 2, "but not itself");
 }
 
+/// Blazing Torch's granted ability sacrifices the **Torch** as a cost, not its
+/// bearer, and the damage is dealt after (`audit_oracle_verbs.py` `destroy`
+/// class turned this up: the sacrifice was spelled in the effect, so it
+/// resolved after the damage and a `HasName` match could take another copy).
+#[test]
+fn blazing_torch_sacrifices_itself_as_a_cost() {
+    let mut g = two_player_game();
+    let bearer = g.add_card_to_battlefield(0, catalog::cliff_threader());
+    g.clear_sickness(bearer);
+    let torch = g.add_card_to_battlefield(0, catalog::blazing_torch());
+    g.battlefield_find_mut(torch).unwrap().attached_to = Some(bearer);
+    let spare = g.add_card_to_battlefield(0, catalog::blazing_torch());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bearer, ability_index: 0,
+        target: Some(crabomination::game::types::Target::Player(1)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("the bearer activates the granted ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage to any target");
+    assert!(g.battlefield.iter().all(|c| c.id != torch), "the attached Torch paid");
+    assert!(g.battlefield.iter().any(|c| c.id == spare), "not the unattached copy");
+    assert!(g.battlefield.iter().any(|c| c.id == bearer), "and not its bearer");
+}
+
 /// Mindless Null can't block until you control a Vampire.
 #[test]
 fn mindless_null_needs_a_vampire() {

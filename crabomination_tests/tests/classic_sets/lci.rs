@@ -1938,6 +1938,34 @@ fn deconstruction_hammer_equips() {
     assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1 from the Hammer");
 }
 
+/// ...and grants "{3}, {T}, Sacrifice this: Destroy target artifact or
+/// enchantment", whose sacrifice is the **Equipment**, not its bearer
+/// (`audit_oracle_verbs.py`, `destroy` class — the ability was omitted as
+/// "equipment can't grant activated abilities yet", which it can).
+#[test]
+fn deconstruction_hammer_grants_a_sacrifice_this_destroy() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let hammer = g.add_card_to_battlefield(0, catalog::deconstruction_hammer());
+    let victim = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Equip { equipment: hammer, target: bear }).expect("equip");
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0,
+        target: Some(crabomination::game::types::Target::Permanent(victim)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("the bearer activates the granted ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != victim), "Sol Ring destroyed");
+    assert!(g.battlefield.iter().all(|c| c.id != hammer), "the Hammer paid the cost");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "and its bearer did not");
+}
+
 /// Kindled Heroism pumps +1/+0, grants first strike, and scries.
 #[test]
 fn kindled_heroism_pumps_and_scries() {
