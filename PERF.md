@@ -2391,11 +2391,15 @@ a box whose state moves.
 
 ## Baseline
 
-### The robustness-leg pass — closing state at `7286883b`
+### The robustness-leg pass — closing state at `e6456430`
 
-Three commits: the `-C debug-assertions=yes` grid gained the **actor leg** it
-had only ever documented, `Selector::ExiledThisResolution` gained the
-battlefield exits it never saw, and `(-155)` took the loss check's team walk.
+Six commits in three groups. **Robustness**: the `-C debug-assertions=yes`
+grid gained the **actor leg** its own header had documented and never wired,
+and `Selector::ExiledThisResolution` gained the battlefield exits it could not
+see. **Perf**: `(-155)` took the loss check's team walk, and `(-128)`'s last
+open half closed on a measurement rather than a build. **Cards**:
+`audit_oracle_verbs.py`'s `search_library` and `destroy` columns — eight
+shipped cards and one new activation-cost primitive.
 
 ```text
   pool    base 26cea814   (-155)          delta
@@ -2405,25 +2409,29 @@ battlefield exits it never saw, and `(-155)` took the loss check's team walk.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   19,148 / 0 / 5 (cargo nextest run --workspace --exclude
-        crabomination_client); golden traces in it and **unmoved across all
-        three commits** — nine card tests added, one deleted with the
-        invented ability it exercised
+suite   19,153 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and **unmoved across every
+        commit** — 15 card tests added, two deleted with the invented
+        abilities they exercised
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
-        invariant with six cards rewritten and a zone-exit hook added;
-        determinism ok, thread_determinism ok (3 vs 1 threads identical);
-        host_calib_ms 47, games_per_s 299.9 (host, not a signal),
-        peak_rss 21.5 MiB, bin 218,169,896 B
-grid    **both legs green.** ladder 30 cells (5 pools x 6 seeds x 120
-        games/archetype) = 33,120 games, 0 failures, `undecided cap 0 /
-        stuck 0 / draw 2`; actor 3 cells x 600 games at `--actors 3
-        --steps 2`, 0 failures, 111-129 games/s. The actor leg is new and
-        is the only audit `server/encode.rs`'s two hot-path assertions have.
-audits  audit_oracle_verbs total 122 -> 115, `search_library` **18 -> 11**;
-        audit_doc_drift 0, audit_keyword_drift 0 invented, audit_panics
-        0 bare, audit_variant_coverage 2 dead primitives (both want a card)
+        invariant with eight cards rewritten, a zone-exit hook and a new
+        activation cost added; determinism ok; host_calib_ms 46,
+        games_per_s 291.4 (host, not a signal), peak_rss 19.0 MiB,
+        bin 218,291,696 B
+grid    **both legs green at this tip.** ladder 30 cells (5 pools x 6 seeds x
+        120 games/archetype) = 33,120 games, 0 failures, `undecided cap 0 /
+        stuck 0 / draw 2`; actor 3 cells x 600 games at `--actors 3 --steps 2`,
+        0 failures, 115-125 games/s. **The actor leg is new and is the only
+        audit `server/encode.rs`'s two hot-path assertions have** — the vocab
+        pointer-cache check in `index_of` and the `object_keyword_bits`
+        equivalence in the per-card encoder, neither of which `bot_ladder`
+        reaches on any pool.
+audits  audit_oracle_verbs total 122 -> 112, `search_library` **18 -> 11**,
+        `destroy` **15 -> 12**; audit_doc_drift 0, audit_keyword_drift 0
+        invented, audit_panics 0 bare, audit_target_fields / _walkers clean,
+        audit_variant_coverage 2 dead primitives (both want a card)
 ```
 
 ⚠ The two draws are on `all` seed 11 and are a **rules outcome, not a stall**

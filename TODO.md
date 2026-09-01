@@ -28,11 +28,11 @@ sixty-seventh pass, so don't re-take that.
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"** (moved out
    of here verbatim when this section passed its budget again — read them before proposing one).
-2. **Gates at `7286883b`:** suite **19,148 / 0 / 5**, traces unmoved, clippy clean; `--bench`
-   **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism +
-   thread_determinism ok. `scripts/robustness_grid.sh` now has **two** legs, both green —
-   ladder 33,120 games (`cap 0 / stuck 0 / draw 2`) and a new **actor** leg, the only audit
-   `server/encode.rs`'s two hot-path assertions have. `rm -rf target-audit/` after (~1.6 GB).
+2. **Gates at `e6456430`:** suite **19,153 / 0 / 5**, traces unmoved, clippy clean; `--bench`
+   **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism ok.
+   `scripts/robustness_grid.sh` now has **two** legs and both are green at that tip — ladder
+   33,120 games (`cap 0 / stuck 0 / draw 2`) and a new **actor** leg (3 x 600 games), the only
+   audit `server/encode.rs`'s two hot-path assertions have. `rm -rf target-audit/` after (~2 GB).
 3. **`(-155)` taken, `cube` -0.114 % / `fixed` -0.163 %; `(-128)` fully closed** — the SBA sweep
    body is split in PERF's candidates and holds no ungated collect. **Do not re-split it.**
 4. **Perf is at its floor for this shape of engine** — `(-151)` and the `(-128)` split both
@@ -41,9 +41,12 @@ sixty-seventh pass, so don't re-take that.
 5. **⚠ A PYTHON AUDITOR'S ZERO IS SUSPECT — CHECK ITS POPULATION** (`audit_catalog_stats.py`
    saw 10,764 of 17,639 cards; its Rust replacements found 33 defects on their first run). Two
    card classes and the free-activation write-up are filed in **CARD_BACKLOG's first section**.
-6. **`audit_oracle_verbs.py` is the live card lane: 115 rows, `search_library` 18 -> 11;** next
-   by size `draw` 16 / `destroy` 15 / `gain_life` 13. ⚠ It cannot see a dedicated primitive, so
-   read the body before believing a row — 4 of 18 `search_library` rows were false positives.
+6. **`audit_oracle_verbs.py` is the live card lane: 112 rows** (`search_library` 18 -> 11,
+   `destroy` 15 -> 12); next by size `draw` 16 / `gain_life` 13 / `counters` 13. ⚠ It cannot see
+   a dedicated primitive, so read the body before believing a row — 4 of 18 `search_library`
+   rows were false positives. The triage and what is filed rather than fixed (Ravager Wurm's
+   per-mode target filter, four cards wanting a primitive) is in **CARD_BACKLOG**'s
+   `search_library`/`destroy` section.
 7. **⚠ A `--games 400 --decks all` stall sweep is 20-30 s a seed and catches what the grid
    does not** (the grid is 120 games a cell). Run it before the grid. **183,600 games over 27
    seeds at `22a79dcc`: no panic, no hang, 4 capped, 22 draws.** `CRAB_CAP_DIAG=1` names a

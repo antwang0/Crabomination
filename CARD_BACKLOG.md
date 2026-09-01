@@ -20,6 +20,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | Set / topic | Status | Lines |
 | --- | --- | --- |
 | [Oracle-verb audit — the `draw` and `counters` classes](#oracle-verb-audit--the-draw-and-counters-classes) | open | 60 |
+| [Oracle-verb audit — the `search_library` and `destroy` classes](#oracle-verb-audit--the-search_library-and-destroy-classes) | open | 48 |
 | [Tier 4 — remaining SOS/SOA audit simplifications (2026-07)](#tier-4--remaining-sossoa-audit-simplifications-2026-07) | open | 608 |
 | [New TODO suggestions (push modern_decks)](#new-todo-suggestions-push-moderndecks) | open | 188 |
 | [Edge of Eternities (`sets::eoe`)](#edge-of-eternities-setseoe) | open | 112 |
@@ -240,6 +241,53 @@ damage and blocking, which the printed card does not, and a pair of
 Paragon print "is also a Cleric, Rogue, Warrior, and Wizard" as a
 characteristic-defining ability that applies in every zone, so spelling the
 types as printed subtypes is the same object.
+
+## Oracle-verb audit — the `search_library` and `destroy` classes
+
+**`search_library` 18 -> 11, `destroy` 15 -> 12; total 122 -> 112.** Every
+fix used a primitive that already existed, and four of the eighteen
+`search_library` rows are the auditor's blind spot rather than a defect — it
+matches on primitive *names*, so a card whose whole body is one dedicated
+variant reads as "no search": `SignalTheClans`, `CatchUpBasicLands`,
+`IsperiaReveal`, `TransmuteArtifact`. **Read the body before believing a row.**
+
+| Card | What the tree shipped | What it prints |
+|---|---|---|
+| Frostpyre Arcanist | an invented once-each-turn Magecraft graveyard return | ETB `SearchSameNameAs` + a Giant/Wizard cost reduction |
+| Settle the Wreckage | the exile, and nothing else | "that player may search for that many basic lands" |
+| The Earth King | ETB Bear only | + "one or more power-4 attackers → that many basics tapped" |
+| Wan Shi Tong, Librarian | ETB counters + draw only | + "whenever an opponent searches, grow and draw" |
+| Unlucky Cabbage Merchant | ETB Food only, Human | + the Food payoff; Human **Citizen** |
+| Kyscu Drake | flier + toughness pump | + the Viashivan Dragon assembly |
+| Mythos of Brokkos | the return only | + the `{U}{B}`-spent tutor |
+| Curious Farm Animals | death trigger only, Boar Bird | + the sac-to-destroy; Boar **Elk** Bird **Ox** |
+| Lurking Deadeye | "target creature gets -2/-2" | "destroy target creature **dealt damage this turn**" |
+| Deconstruction Hammer | +1/+1 only | + the granted "{3},{T},Sac this: destroy" |
+
+⚠ **Two doc comments described a card that does not exist** (Frostpyre
+Arcanist, Lurking Deadeye) and three more cited an engine gap that had since
+been filled (`PlayerSearchedLibrary`, `DealtDamageThisTurn`,
+`EquipBonus::activated_abilities`). That is the same "a row here is a claim
+about code" caveat `INCOMPLETE_CARDS.md` opens with, landing five more times.
+
+**Open, filed rather than fixed:**
+
+* **Ravager Wurm** — its ETB is "choose up to one — fight / **destroy target
+  land with an activated ability that isn't a mana ability**", and only the
+  fight ships. `SelectionRequirement::HasNonManaActivatedAbility` exists, so
+  the body is one `ChooseMode` arm; what needs checking first is that the
+  *targeting* walk reads the per-mode filter. `primary_target_filter` takes the
+  **first** mode's filter (`query.rs`), and only
+  `target_filter_for_slot_in_mode_kicked` is mode-aware — so a naive
+  `ChooseMode` here would offer creature targets for the land mode. Price that
+  path before wiring it.
+* **Cockatrice / Thicket Basilisk / Stinkweed Imp / Mirror Shield / Simic
+  Basilisk** all print "destroy that creature (at end of combat)" and ship
+  `Deathtouch`. That is a deliberate approximation and a good one; closing it
+  wants a delayed-trigger primitive, not a card edit.
+* **Cruel Deceiver, Oracle en-Vec, War Barge, The Most Dangerous Gamer** each
+  want a primitive of their own (a granted damage-destroy until end of turn, a
+  forced-attack-or-die end step, a leaves-play delayed destroy, Attractions).
 
 ## Oracle-verb audit — the `token` class, and the tenth false class
 
