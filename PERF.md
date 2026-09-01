@@ -2436,7 +2436,7 @@ Two takes and one instrument finding. `(-159)` is the scripted decider;
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
-suite   19,192 / 0 / 5 (cargo nextest run --workspace --exclude
+suite   19,195 / 0 / 5 (cargo nextest run --workspace --exclude
         crabomination_client); golden traces in it and unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench profiling-lines: **195,806 decisions / 27.49 turns / 611.9 per game /
@@ -10982,7 +10982,7 @@ earlier, 0.0007 % apart, which is the argv-length figure. Using it saved the
 `profiling-fast` rebuild that would otherwise have been needed alongside the
 `profiling-lines` one the attribution required.
 
-Gates: suite green with the golden traces unmoved, clippy `--all-targets`
+Gates: suite 19,195 / 0 / 5 with the golden traces unmoved, clippy `--all-targets`
 clean, `--bench` byte-identical to the invariant (195,806 / 27.49 / 611.9 /
 0 stalls), determinism ok, thread_determinism ok, and the five-seed
 34,000-game `--decks all` sweep reads the same decided/undecided counts seed
