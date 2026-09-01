@@ -146,3 +146,54 @@ fn cr_732_3_repeated_free_activation_is_rejected() {
     );
     assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
 }
+
+/// CR 732.3 — the same loop **without** resolving between activations, which is
+/// the shape a real one takes.
+///
+/// The test above drains the stack every iteration, so `stack.len()` is 0 at
+/// every announcement — and that is the only reason it passed. The watch hashed
+/// a fingerprint that *counted the stack*, so an announcement never matched its
+/// own previous call and the cap was unreachable in the case it exists for.
+/// Two shipped cards reached ~50,000 copies of one ability on one stack in a
+/// `--decks cube` game: Blinking Spirit (`{0}`: return this to its owner's hand)
+/// and Greater Good, whose sacrifice is spelled in the *effect* and so is paid
+/// at resolution, not at announcement — which also means the printed cost
+/// cannot be what decides whether to watch.
+#[test]
+fn cr_732_3_repeat_is_rejected_without_resolving_between_activations() {
+    use crabomination::game::types::GameError;
+    for (name, def, index) in [
+        ("Blinking Spirit", catalog::blinking_spirit(), 0usize),
+        ("Greater Good", catalog::greater_good(), 0usize),
+    ] {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        // Greater Good's `condition` needs a creature on the board; the Spirit
+        // is its own.
+        let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(fodder);
+        let id = g.add_card_to_battlefield(0, def);
+        g.clear_sickness(id);
+        let mut refused_at = None;
+        for i in 0..200 {
+            let r = g.perform_action(GameAction::ActivateAbility {
+                card_id: id,
+                ability_index: index,
+                target: None,
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            });
+            if matches!(r, Err(GameError::LoopMustBeBroken)) {
+                refused_at = Some(i);
+                break;
+            }
+            r.unwrap_or_else(|e| panic!("{name} activation {i}: {e:?}"));
+        }
+        let at = refused_at.unwrap_or_else(|| panic!("{name} never hit the cap"));
+        assert!(at <= 60, "{name} hit the cap at {at}, which is the ~50 the const asks for");
+        assert!(g.stack.len() <= 60, "{name} left {} on the stack", g.stack.len());
+        assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
+    }
+}

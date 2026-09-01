@@ -1623,24 +1623,40 @@ impl GameState {
     /// `game_over`. Set far above any legitimate repeat.
     pub const FREE_ACTIVATION_REPEAT_CAP: u32 = 50;
 
-    /// CR 732.3 guard — reject a free activation that would repeat a loop.
-    /// Called before any cost is paid, so a rejected activation leaves no
-    /// trace. Non-free abilities always pass and clear the watch: paying a
-    /// cost is itself a game choice that moves the state.
+    /// CR 732.3 guard — reject an activation that repeats a loop. Called before
+    /// any cost is paid, so a rejected activation leaves no trace.
+    ///
+    /// The watch is `(source, ability)` plus [`activation_fingerprint`], and it
+    /// fires when the same ability is announced
+    /// [`FREE_ACTIVATION_REPEAT_CAP`](Self::FREE_ACTIVATION_REPEAT_CAP) times
+    /// with nothing but the stack moving.
+    ///
+    /// ⚠ **Two things this got wrong for its whole life, and it caught nothing
+    /// because of them.** Both were found by the robustness grid's `--pilots`
+    /// leg — `abilarms` on `--decks cube`, the first run that ever put a pilot
+    /// other than `gang` under `debug-assertions`.
+    ///
+    /// * It hashed [`loop_fingerprint`](Self::loop_fingerprint), **which counts
+    ///   the stack** — and an announcement is exactly a `stack.len() + 1`. The
+    ///   watch therefore never matched its own previous call, the repeat counter
+    ///   reset to 1 every time, and the cap was unreachable. Blinking Spirit
+    ///   (`{0}`: return this to its owner's hand) reached **49,905 copies of one
+    ///   ability on one stack** before the action cap stopped the game.
+    /// * It only watched `is_free()` abilities, on the argument that paying a
+    ///   cost is itself a game choice that moves the state. **A cost spelled in
+    ///   the *effect* is paid at resolution, not at announcement** — Greater
+    ///   Good's "Sacrifice a creature: draw three" is written that way and its
+    ///   own card comment predicts this ("a bot could activate it with nothing
+    ///   to sacrifice, for ever"): 49,427 copies. The printed cost is not the
+    ///   question; whether the state moved is.
+    ///
+    /// [`activation_fingerprint`]: Self::activation_fingerprint
     pub(crate) fn check_free_activation_loop(
         &mut self,
         card_id: CardId,
         ability_index: usize,
     ) -> Result<(), GameError> {
-        let free = self
-            .find_card_anywhere(card_id)
-            .and_then(|c| c.definition.activated_abilities.get(ability_index))
-            .is_some_and(|a| a.is_free());
-        if !free {
-            self.free_activation_watch = (0, None, 0);
-            return Ok(());
-        }
-        let fp = self.loop_fingerprint();
+        let fp = self.activation_fingerprint();
         let key = Some((card_id, ability_index));
         if self.free_activation_watch.0 == fp && self.free_activation_watch.1 == key {
             if self.free_activation_watch.2 >= Self::FREE_ACTIVATION_REPEAT_CAP {
@@ -1651,6 +1667,14 @@ impl GameState {
             self.free_activation_watch = (fp, key, 1);
         }
         Ok(())
+    }
+
+    /// [`loop_fingerprint`](Self::loop_fingerprint) for the *announcement* side:
+    /// the stack is left out because announcing is what grows it, and the mana
+    /// pools are folded in because paying mana is the commonest way an
+    /// activation moves the state without touching a zone.
+    fn activation_fingerprint(&self) -> u64 {
+        self.fingerprint(false)
     }
 
     pub fn resolve_top_of_stack(&mut self) -> Result<Vec<GameEvent>, GameError> {
@@ -1696,6 +1720,21 @@ impl GameState {
     /// above asks for. The engine's own `fxhash` is the wrong tool here — it
     /// is a *map* hasher and its own doc says it is not collision-resistant.
     fn loop_fingerprint(&self) -> u64 {
+        self.fingerprint(true)
+    }
+
+    /// The digest behind both loop watchdogs.
+    ///
+    /// `with_stack` is the whole difference between them. The **resolution**
+    /// watch (CR 104.4b) wants it: a trigger chain that resolves and re-pushes
+    /// returns the stack to the same depth, so a moving depth is real progress.
+    /// The **announcement** watch (CR 732.3) must not have it: announcing is
+    /// precisely what grows the stack, so including it made that watch unable to
+    /// match its own previous call. The mana pools go in on the announcement
+    /// side only, where paying mana is the commonest way an activation moves the
+    /// state without touching a zone; the resolution side keeps its historical
+    /// field list so its committed behaviour is unchanged.
+    fn fingerprint(&self, with_stack: bool) -> u64 {
         /// SplitMix64's finalizer over `acc + v + PHI`. Chaining it makes the
         /// digest order-sensitive, which the field stream needs.
         #[inline]
@@ -1706,13 +1745,19 @@ impl GameState {
             z ^ (z >> 31)
         }
         let mut h = mix(0, self.turn_number as u64);
-        h = mix(h, self.stack.len() as u64);
+        if with_stack {
+            h = mix(h, self.stack.len() as u64);
+        }
         for p in &self.players {
             h = mix(h, p.life as u64);
             h = mix(h, p.hand.len() as u64);
             h = mix(h, p.library.len() as u64);
             h = mix(h, p.graveyard.len() as u64);
             h = mix(h, p.poison_counters as u64);
+            if !with_stack {
+                h = mix(h, p.mana_pool.total() as u64);
+                h = mix(h, p.mana_pool.colorless_amount() as u64);
+            }
         }
         h = mix(h, self.exile.len() as u64);
         h = mix(h, self.battlefield.len() as u64);
