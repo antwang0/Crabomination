@@ -369,10 +369,18 @@ printed subtypes with no enum variant, so those four tokens carry none. The
 name → subtype lookup asks the enums directly, so adding a variant needs no
 edit to the test.
 
-**Still unwalked in the token population:** whether two tokens of the same
-printed name agree on their *abilities* (the shape key here counts them, it
-does not compare them — a Goldspan Treasure and a plain one both read as
-"one activated ability").
+**Taken, same pass:** `every_standard_artifact_token_is_the_shared_one`
+compares each Treasure / Food / Clue / Blood / Powerstone / Map token
+*against the shared body* rather than counting its abilities — 418 of them,
+one shape each. `tapped` is normalised out because it belongs to the minting
+clause, not the token: "create a **tapped** Treasure token" is printed on
+Hell to Pay, Magda, Season of the Bold and Kain, and all four were checked
+against the oracle.
+
+**Open, one allow-list entry:** Goldspan Dragon prints a static ("Treasures
+you control have '{T}, Sacrifice this artifact: Add **two** mana of any one
+color'") and models it by minting a two-mana Treasure instead. Build the
+static and delete the name.
 
 ### Open — Geyadrone Dihada's abilities are not this card's
 

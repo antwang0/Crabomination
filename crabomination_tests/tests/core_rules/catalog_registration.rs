@@ -2982,6 +2982,72 @@ fn nested_tokens(def: &crabomination::card::CardDefinition) -> Vec<crabomination
     out
 }
 
+/// **Every "artifact-that-does-a-thing" token is the one shared definition,
+/// modulo whether it enters tapped.**
+///
+/// Treasure, Food, Clue, Blood, Powerstone and Map are minted by 400-odd
+/// cards between them, each of which writes the token inline. One body per
+/// token lives in `crabomination_base::tokens`; this asserts nobody has a
+/// second one. A *private* second body is exactly how four cards came to
+/// mint Treasures with no `Treasure` subtype.
+///
+/// `tapped` is normalised out because it is a property of the **minting**
+/// clause, not of the token: "create a *tapped* Treasure token" is printed on
+/// Hell to Pay, Magda, Season of the Bold and Kain, and all four are right.
+#[test]
+fn every_standard_artifact_token_is_the_shared_one() {
+    use crabomination::card::TokenDefinition;
+    type Canon = (&'static str, fn() -> TokenDefinition);
+    let canon: &[Canon] = &[
+        ("Treasure", crabomination_base::tokens::treasure_token),
+        ("Food", crabomination_base::tokens::food_token),
+        ("Clue", crabomination_base::tokens::clue_token),
+        ("Blood", crabomination_base::tokens::blood_token),
+        ("Powerstone", crabomination_base::tokens::powerstone_token),
+        ("Map", crabomination_base::tokens::map_token),
+    ];
+    // ⚠ One allow-list entry, and it is an approximation rather than a
+    // duplicate: **Goldspan Dragon** prints a static ("Treasures you control
+    // have '{T}, Sacrifice this artifact: Add *two* mana of any one color'")
+    // and models it by minting a two-mana Treasure instead, so its token is
+    // deliberately not the shared one. Build the static and delete the name.
+    const ALLOWED: &[&str] = &["Goldspan Dragon"];
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        if ALLOWED.contains(&def.name) {
+            continue;
+        }
+        for mut t in nested_tokens(&def) {
+            let Some((_, make)) = canon.iter().find(|(n, _)| *n == t.name) else {
+                continue;
+            };
+            checked += 1;
+            let mut want = make();
+            // The minting clause decides this, not the token.
+            t.tapped = false;
+            want.tapped = false;
+            if format!("{t:?}") != format!("{want:?}") {
+                wrong.push(format!("{}'s {} token is not the shared one", def.name, t.name));
+            }
+        }
+    }
+    assert!(
+        checked > 300,
+        "only {checked} standard artifact tokens were walked — the ratchet is vacuous below that"
+    );
+    wrong.sort();
+    wrong.dedup();
+    assert!(
+        wrong.is_empty(),
+        "{} card(s) carry their own copy of a shared token, over {checked}: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}
+
 /// **A token named after a subtype the engine models carries that subtype.**
 ///
 /// Tokens are values inside effect trees, not catalog entries, so **no other
