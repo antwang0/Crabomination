@@ -296,7 +296,8 @@ pub struct PlayerData {
     /// `Predicate::CastSpellThisTurnWith` — the Trap alternative costs
     /// ("if an opponent cast a blue spell this turn", Ricochet Trap).
     #[serde(default)]
-    pub spell_casts_this_turn: smallvec::SmallVec<[crate::game::types::CastProfile; 1]>,
+    pub spell_casts_this_turn:
+        crate::copyvec::CopyVec<[crate::game::types::CastProfile; 4]>,
     /// The rarely-written tail — see [`PlayerCold`].
     #[serde(flatten)]
     pub cold: crate::cow::CowBox<PlayerCold>,
@@ -1215,7 +1216,7 @@ impl Player {
             creature_spells_uncounterable_this_turn: false,
             hexproof_until_next_turn: false,
             cast_blue_or_black_this_turn: false,
-            spell_casts_this_turn: smallvec::SmallVec::new(),
+            spell_casts_this_turn: crate::copyvec::CopyVec::new(),
             cant_cast_noncreature_this_turn: false,
             free_spells_from_hand_this_turn: false,
             play_from_graveyard_this_turn: false,

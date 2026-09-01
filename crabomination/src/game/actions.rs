@@ -8576,7 +8576,7 @@ impl GameState {
             }
             me.spell_casts_this_turn.push(crate::game::types::CastProfile {
                 colors,
-                card_types: cast_types.clone(),
+                card_types: crate::card::CardTypeSet::from_slice(cast_types),
             });
         }
         consume_first_spell_tax(self, p);

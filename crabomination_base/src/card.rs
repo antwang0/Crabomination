@@ -45,6 +45,118 @@ pub enum CardType {
     Phenomenon,
 }
 
+/// A set of [`CardType`]s as a bitmask — fourteen variants, one `u16`.
+///
+/// It exists so a struct that carries a card's types can be `Copy`.
+/// [`crate::…`-side `CastProfile`] kept its types as a `Vec<CardType>` inside
+/// the **hot** player group, so every cast allocated one and every
+/// `PlayerData` unshare cloned every profile's buffer. A mask makes the
+/// profile four bytes and the whole per-turn list a `memcpy`. PERF `(-150)`.
+///
+/// ⚠ **The wire shape is a sequence of `CardType`**, not a number: this type
+/// replaced a `Vec<CardType>` in a serialized struct, and the hand-written
+/// `Serialize`/`Deserialize` below keep old snapshots readable. Iteration is
+/// in declaration order, which is the order a `Vec` built from a definition's
+/// `card_types` already had.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CardTypeSet(u16);
+
+impl CardTypeSet {
+    /// Every variant, in declaration order. The index into this table **is**
+    /// the bit, so appending a `CardType` means appending here too — and
+    /// nothing else.
+    const ALL: [CardType; 14] = [
+        CardType::Land,
+        CardType::Creature,
+        CardType::Artifact,
+        CardType::Enchantment,
+        CardType::Planeswalker,
+        CardType::Battle,
+        CardType::Instant,
+        CardType::Sorcery,
+        CardType::Kindred,
+        CardType::Scheme,
+        CardType::Vanguard,
+        CardType::Conspiracy,
+        CardType::Plane,
+        CardType::Phenomenon,
+    ];
+
+    /// The bit for one variant. ⚠ Must agree with [`Self::ALL`]'s order —
+    /// that order is the serialized order and the two are checked against
+    /// each other by `card_type_set_bits_match_the_table`.
+    #[inline]
+    fn bit(t: &CardType) -> u16 {
+        1 << match t {
+            CardType::Land => 0,
+            CardType::Creature => 1,
+            CardType::Artifact => 2,
+            CardType::Enchantment => 3,
+            CardType::Planeswalker => 4,
+            CardType::Battle => 5,
+            CardType::Instant => 6,
+            CardType::Sorcery => 7,
+            CardType::Kindred => 8,
+            CardType::Scheme => 9,
+            CardType::Vanguard => 10,
+            CardType::Conspiracy => 11,
+            CardType::Plane => 12,
+            CardType::Phenomenon => 13,
+        }
+    }
+
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
+    pub fn insert(&mut self, t: &CardType) {
+        self.0 |= Self::bit(t);
+    }
+
+    pub fn contains(&self, t: &CardType) -> bool {
+        self.0 & Self::bit(t) != 0
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn from_slice(types: &[CardType]) -> Self {
+        let mut out = Self::empty();
+        for t in types {
+            out.insert(t);
+        }
+        out
+    }
+
+    /// The members, in declaration order.
+    pub fn iter(&self) -> impl Iterator<Item = CardType> + '_ {
+        Self::ALL
+            .iter()
+            .enumerate()
+            .filter(move |(i, _)| self.0 & (1 << i) != 0)
+            .map(|(_, t)| t.clone())
+    }
+}
+
+impl Serialize for CardTypeSet {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeSeq;
+        let mut seq = s.serialize_seq(None)?;
+        for t in self.iter() {
+            seq.serialize_element(&t)?;
+        }
+        seq.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for CardTypeSet {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let v = Vec::<CardType>::deserialize(d)?;
+        Ok(Self::from_slice(&v))
+    }
+}
+
 /// Supertypes that modify a card's identity and rules interactions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Supertype {

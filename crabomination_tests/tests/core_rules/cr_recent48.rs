@@ -272,6 +272,38 @@ fn cr_601_2b_ability_view_lists_modes() {
 
 // ── Snapshot schema stability ──
 
+/// `CardTypeSet`'s two orderings are one ordering.
+///
+/// The mask's bit for a variant comes from a `match`; its serialized order
+/// comes from the `ALL` table. Both are hand-written, both must agree, and a
+/// `CardType` added to the enum has to be added to `ALL` — a bit set from the
+/// `match` that `ALL` cannot name would round-trip to nothing.
+#[test]
+fn card_type_set_bits_match_the_table() {
+    use crabomination::card::CardTypeSet;
+    // Every variant the enum has, spelled here so adding one to `CardType`
+    // without adding it to `ALL` fails this test rather than losing a bit.
+    let all = [
+        CardType::Land, CardType::Creature, CardType::Artifact, CardType::Enchantment,
+        CardType::Planeswalker, CardType::Battle, CardType::Instant, CardType::Sorcery,
+        CardType::Kindred, CardType::Scheme, CardType::Vanguard, CardType::Conspiracy,
+        CardType::Plane, CardType::Phenomenon,
+    ];
+    for t in &all {
+        let set = CardTypeSet::from_slice(std::slice::from_ref(t));
+        assert!(set.contains(t), "{t:?} is in a set built from itself");
+        assert_eq!(set.iter().collect::<Vec<_>>(), vec![t.clone()], "{t:?} survives `iter`");
+        for other in &all {
+            if other != t {
+                assert!(!set.contains(other), "{t:?}'s set does not contain {other:?}");
+            }
+        }
+    }
+    let every = CardTypeSet::from_slice(&all);
+    assert_eq!(every.iter().collect::<Vec<_>>(), all.to_vec(), "`iter` is declaration order");
+    assert!(CardTypeSet::empty().is_empty());
+}
+
 /// Every `#[serde(default)]` field this run added survives a full-state
 /// snapshot round-trip, so an in-flight match can be reloaded across a deploy.
 #[test]
@@ -280,7 +312,7 @@ fn new_serde_fields_survive_snapshot_roundtrip() {
     let mut g = two_player_game();
     g.players[0].spell_casts_this_turn.push(CastProfile {
         colors: crabomination::mana::ColorSet::single(crabomination::mana::Color::Blue),
-        card_types: vec![CardType::Instant],
+        card_types: crabomination::card::CardTypeSet::from_slice(&[CardType::Instant]),
     });
     g.players[1].lands_entered_this_turn = 2;
     g.prevention_shields.push(PreventionShield {
@@ -298,6 +330,18 @@ fn new_serde_fields_survive_snapshot_roundtrip() {
     let json = serde_json::to_string(&g).expect("serialize");
     let g2: GameState = serde_json::from_str(&json).expect("deserialize");
     assert_eq!(g2.players[0].spell_casts_this_turn.len(), 1, "cast profiles round-trip");
+    assert!(
+        g2.players[0].spell_casts_this_turn[0].card_types.contains(&CardType::Instant),
+        "the profile's types round-trip",
+    );
+    // `CastProfile::card_types` became a `CardTypeSet` bitmask (PERF (-150))
+    // and its hand-written serde keeps the old `Vec<CardType>` wire shape, so
+    // a snapshot written before that change still loads. Pinned literally,
+    // because a derived impl on the mask would silently write `4` here.
+    assert!(
+        json.contains(r#""card_types":["Instant"]"#),
+        "the mask still serializes as the sequence a `Vec<CardType>` wrote",
+    );
     assert_eq!(g2.players[1].lands_entered_this_turn, 2);
     assert_eq!(
         g2.prevention_shields[0].target,

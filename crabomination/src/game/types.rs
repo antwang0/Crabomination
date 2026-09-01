@@ -2112,10 +2112,16 @@ pub enum PreventionTarget {
 /// its card types. Kept per player for the turn (`Player.spell_casts_this_turn`)
 /// so "if an opponent cast a [color] [type] spell this turn" riders can read
 /// back a spell that has long since left the stack.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// **Four bytes and `Copy`**, so the per-turn list is a `CopyVec` and both the
+/// cast that appends one and the `PlayerData` unshare that copies the list are
+/// allocation-free. It carried a `Vec<crate::card::CardType>` until PERF
+/// `(-150)`: one allocation per cast, and one per profile on each of the
+/// 22,060 unshares a six-game `cube` run makes.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CastProfile {
     pub colors: crate::mana::ColorSet,
-    pub card_types: Vec<crate::card::CardType>,
+    pub card_types: crate::card::CardTypeSet,
 }
 
 impl Default for PreventionTarget {

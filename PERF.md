@@ -10396,6 +10396,55 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-eighteenth pass — `(-150)` a four-byte `CastProfile`: `cube` -0.297 %, `fixed` -0.286 %
+
+```text
+  pool    9abda258 (base)   candidate       delta
+  cube    2,449,644,059     2,442,367,748   -0.2970 %
+  fixed     901,791,908       899,212,876   -0.2860 %
+```
+
+**`(-149)`'s own filed recommendation, taken.** That entry named
+`spell_casts_this_turn` as the one non-empty heap collection left in the hot
+player group. It held `SmallVec<[CastProfile; 1]>` and a `CastProfile` held a
+**`Vec<crate::card::CardType>`** — so every cast allocated a types buffer, and
+every `PlayerData` unshare cloned one per profile.
+
+`CardType` has fourteen variants, so the types are a `u16` mask
+(`card::CardTypeSet`). That makes `CastProfile` **four bytes and `Copy`**, and
+the per-turn list a `CopyVec` whose `Clone` is a `memcpy`. The whole path is
+now allocation-free, in both directions.
+
+```text
+  SmallVec::extend self      14,248,682 -> 12,667,950   -1,580,732
+  __rust_alloc calls          1,256,361 ->  1,239,677      -16,684
+      x 183 Ir a malloc/free pair                          -3.05 M
+                                            total ~ -4.6 M of -7.28 M
+```
+
+The rest is the `Vec<CardType>` clone and drop glue the profile no longer
+carries. `PlayerData` also **shrank 16 bytes**: `CopyVec<[CastProfile; 4]>` is
+24 bytes where `SmallVec<[CastProfile; 1]>` was 40, because four four-byte
+profiles fit in the sixteen bytes the spilled `(ptr, len)` pair needed anyway.
+**Four inline slots cost nothing over one** whenever the item is small enough
+— check `size_of` before picking the inline count, not after.
+
+⚠ **The mask replaced a `Vec` inside a serialized struct**, so `CardTypeSet`
+has hand-written `Serialize`/`Deserialize` that keep the sequence-of-names
+wire shape. A derived impl would write `4` where a snapshot has
+`["Instant"]`. `cr_recent48::new_serde_fields_survive_snapshot_roundtrip`
+asserts the literal `"card_types":["Instant"]` for exactly that reason, and
+`card_type_set_bits_match_the_table` pins the `match` and the `ALL` table to
+each other — the mask has two hand-written orderings and they must be one.
+
+**The generalisation, and it is the same one `(-149)` reached from the other
+side.** `(-149)` was "do not write what nobody reads"; this is "do not
+*allocate* what fits in a word". Both live in the hot CoW group and both were
+found the same way — `--demangle=no`, then read what the group's
+`clone_from_ref_in` calls. What is left in `PlayerData` is nine `Vec`s that
+are **empty** in most games (a ~10 Ir clone, no allocation), so the group is
+done; `CardData` (32,562 unshares, 500 Ir each) is the next one to read.
+
 ### Hundred-and-seventeenth pass — `(-149)` the per-name cast tally is kept for one card, and was kept for every card: `cube` -0.250 %, `fixed` -0.460 %
 
 ```text
@@ -19242,6 +19291,13 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-150) CLOSED — see the hundred-and-eighteenth pass.** `cube` **-0.297 %** /
+`fixed` **-0.286 %** for making `CastProfile` four bytes and `Copy`. **The hot
+player group is now done**: what is left in `PlayerData` is nine `Vec`s that
+are empty in most games, and an empty `Vec` clone is ~10 Ir with no
+allocation. **`CardData` is the next group to read** — 32,562 unshares at 500
+Ir each, `CardMemo::clone` its identifying callee.
 
 **(-149) CLOSED — see the hundred-and-seventeenth pass.** `cube` **-0.250 %**
 / `fixed` **-0.460 %** for gating one `HashMap` write on the one card that
