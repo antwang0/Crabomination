@@ -2422,6 +2422,42 @@ a box whose state moves.
 
 ## Baseline
 
+### The allocation-census pass — closing state
+
+Three measurement findings and one take, plus the discard family's fan-out
+half. The perf change is `(-158)`'s `Id*` locals; the rest of this run is the
+instrument that found it and two questions this file had carried open.
+
+```text
+  pool    base 15441479   (-158)          delta
+  fixed     907,159,277     905,235,619   **-0.2121 %**
+  cube    2,470,376,133   2,466,933,808   **-0.1393 %**
+  sealed  2,482,510,471   2,477,861,156   **-0.1873 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,178 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 19.0 MiB, bin 218,462,384 B
+stalls  **68,000 games / 10 seeds**, `--games 400 --threads 3 --decks all`:
+        0 panic, 0 hang, **cap 4 / stuck 0 / draw 22**, both caps the closed
+        Beacon lead. Run because `(-158)` is the first change in a while to
+        reach `declare_blockers` and `pick_blocks_inner`.
+audits  audit_panics 0 bare, audit_keyword_drift 0 invented,
+        audit_variant_coverage 2 dead primitives (both want a card),
+        audit_target_fields / audit_target_walkers clean
+```
+
+⚠ **The A/B was taken twice and the entry lands a third rebase later.** A
+concurrent session pushed nine commits under the first reading and nine more
+under the second; the retake moved the deltas by at most 0.012 points. **Name
+the tip a reading was taken at, and re-take when the diff touches the walk —
+not on every push**, or a run of this shape never files a number at all.
+
 ### The printed-clause pass — closing state at `007893c7`
 
 **A cards pass, in this file for the method rather than the numbers.** Nothing

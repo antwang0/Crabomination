@@ -40,10 +40,13 @@ A `--games 400 --decks all` sweep over 27 seeds (183,600 games at `22a79dcc`)
 found **no panic, no hang, 4 capped, 22 draws**. Both leads are closed as
 *printed cards working correctly*. **Do not re-open them.**
 
-**Re-run twice since and both leads reproduce verbatim, which is the point of
-recording their fingerprints here**: 81,600 games / 12 seeds at `bd42107c`
-(cap 2 / stuck 0 / draw 14) and again at `d825411f` after seven card rewrites
-(cap 2 / stuck 0 / draw 18). `CRAB_CAP_DIAG=5000` names the same two boards
+**Re-run three times since and both leads reproduce verbatim, which is the
+point of recording their fingerprints here**: 81,600 games / 12 seeds at
+`bd42107c` (cap 2 / stuck 0 / draw 14), again at `d825411f` after seven card
+rewrites (cap 2 / stuck 0 / draw 18), and **68,000 games / 10 seeds after
+`(-158)`'s `SmallIdSet` / `SmallIdMap` swap — the first change to reach
+`declare_blockers` and `pick_blocks_inner` in a while — 0 panic, cap 4 /
+stuck 0 / draw 22**. `CRAB_CAP_DIAG=5000` names the same two boards
 each time — Scute Swarm x4,091 at turn 46 and the twin `i32::MAX` life totals
 at turn 2,159. **A capped game whose diagnostic matches one of the two boards
 below is not a new finding**; one that does not is.
@@ -698,29 +701,34 @@ parallel hand-maintained walkers drifting) are tracked in P3 below.
   `core_rules::cr_recent16::cr_104_3c_decked_opponent_still_seen_by_the_same_resolution`
   and `::cr_800_4a_decked_players_permanents_leave_with_them`.
 
-- 🟡 **Sand Golem's "return this card with a +1/+1 counter" could not be shown
-  to fire, and the reason is unestablished.** The counter itself was missing
-  from the tree and is fixed; the trigger under it is the open half.
-  `on_forced_discard` (Mangara's Blessing, Sand Golem) is
-  `EventKind::OpponentCausedYouToDiscard` + `EventScope::SelfSource`, and
-  neither half of that reads as reachable: `event_matches_spec`'s SelfSource
-  arm is an explicit `matches!` chain over ~40 events that **does not name
-  `OpponentCausedYouToDiscard`**, and the dispatcher's graveyard walk
-  (`mod.rs`, "Also walk every player's graveyard") admits a `SelfSource`
-  trigger only for `CardCycled` / `CardMilled` / `CardDiscarded` /
-  `PutIntoGraveyard`. Pure Intentions' idiom — `CardDiscarded` + `SelfSource`
-  + `Predicate::CausedByOpponentSpellOrAbility` — is the one that demonstrably
-  works, and **swapping Sand Golem onto it did not make the trigger fire in a
-  Mind Rot test either**, so the blocker is not (only) the event kind.
+- ✅ **Sand Golem's discard trigger — FIXED at `39528f0f`, and it was a whole
+  family.** `EventScope::SelfSource` on a card in a graveyard is decided by two
+  hand-written walkers that had drifted: the dispatcher's graveyard walk
+  admitted `CardCycled` / `CardMilled` / `CardDiscarded` / `PutIntoGraveyard`,
+  and `event_matches_spec`'s SelfSource chain matched only three of those four
+  by id. `CardDiscarded` was admitted and never matched;
+  `OpponentCausedYouToDiscard` was in neither. Dead as a result: Sand Golem,
+  Mangara's Blessing, and Pure Intentions' own return-to-hand trigger. Both
+  walkers now read one predicate, `is_graveyard_self_source_kind`.
 
-  What *was* established, and is the reason this is filed rather than fixed:
-  `sok3::pure_intentions_returns_opponent_forced_discards` is **not** vacuous
-  (probed: Pure Intentions reaches the graveyard, and the Forest added beside
-  the Bear is discarded and returned, `hand 2 / gy 1`), so the family works
-  for a card that was already in the graveyard before the discard. Sand Golem
-  is the case where the source **is** the discarded card, and that is the
-  distinction to test next. It is not a dead *arm*, so `audit_incomplete`
-  cannot see it and neither can `audit_oracle_verbs`.
+  The earlier probe that "swapping Sand Golem onto Pure Intentions' idiom did
+  not make it fire either" was right and pointed at the third defect: that
+  idiom was `CardDiscarded` + `Predicate::CausedByOpponentSpellOrAbility`, and
+  the predicate reads `resolution_causer`, which is cleared before the
+  discard's triggers dispatch. Pure Intentions moves to the event that stamps
+  the causer at discard time.
+
+  **A fourth defect, one level up in the dispatcher (`6a0a79ca`):**
+  `OpponentCausedYouToDiscard` was missing from the CR 603.6 fan-out list, so
+  a batch carrying two of the event minted one trigger — Spiritual Focus paid
+  2 life for a Mind Rot that takes two cards. Its twin `CardDiscarded` was
+  already in that list; the same two-lists-must-agree shape, one level higher.
+
+  Ratchets: `events.rs`' unit test walks the graveyard family and asserts the
+  two walkers agree; `catalog_registration::every_self_source_trigger_kind_
+  reaches_a_dispatcher` asks the population question — no card in the catalog
+  carries a `SelfSource` trigger on a kind nothing admits, with the fifteen
+  kinds dispatched by a *push* site listed with their sites.
 
 **P2 has no other open correctness entries.**
 

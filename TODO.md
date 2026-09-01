@@ -27,28 +27,40 @@ sixty-seventh pass, so don't re-take that.
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
    tracker prose; **claim a candidate number at PUSH time**. Container gotchas in **CLAUDE.md**;
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at `d825411f`:** suite **19,171 / 0 / 5**, traces unmoved, clippy `--all-targets`
-   clean, `--bench` **byte-identical to the invariant**, and a **12-seed stall sweep re-run after
-   this run's seven card rewrites — 81,600 games, 0 panic, cap 2 / stuck 0 / draw 18, and both
-   caps are the two closed leads verbatim** (`CRAB_CAP_DIAG` names Scute Swarm x4,091 at turn 46
-   and the twin `i32::MAX` life totals at turn 2,159). `scripts/robustness_grid.sh` has two green
-   legs (ladder 33,120 games, actor 3 x 600); `rm -rf target-audit/` after (~2 GB).
-3. **Perf is at its floor for this shape of engine** — `(-151)`, the `(-128)` split and now
-   `(-156)` all measured and moved nothing; `(-145)` is refused on robustness. **⚠ `(-156)`'s
-   lesson is the reusable one: price a std-adapter rewrite at ~10 % of the adapter's self Ir**
-   (deleting a 4.38 M-Ir row bought 476 k — the rest moved into the `for` loop). **The build is
-   the lever**: PGO -23.8 to -27.6 %, ML_PIPELINE 0.
-4. **The lane that keeps paying: read a printed oracle clause, check the primitive, ratchet it** —
-   seventeen now live in `core_rules/catalog_registration.rs`, five sharing one `clause_ratchet` body.
-   ⚠ **The needle is the work**, and its three false-positive classes ("unless" is not the only
-   conditional; one clause has two correct spellings; "enchanted creature" is an Aura granting it)
-   are written up in **CARD_BACKLOG's first section** with the next three surveyed clauses. Also
-   **⚠ a python auditor's zero is suspect — check its population**: `audit_catalog_stats.py` saw
-   10,764 of 17,639 cards; its Rust replacements found 33 defects on their first run.
-5. **Robustness green.** The stall sweeps and their two closed leads (Beacon of Immortality,
-   Scute Swarm — **neither is a bug, do not re-open**) are now **ENGINE_BACKLOG's first section**,
-   with the `CRAB_CAP_DIAG` / `CRAB_LIFE_WATCH` recipe: 183,600 games / 27 seeds at `22a79dcc`
-   and 81,600 / 12 seeds at `bd42107c`, both clean. One live lead: Sand Golem's trigger (P2).
+2. **Gates at this run's tip:** suite **19,178 / 0 / 5**, traces unmoved, clippy `--all-targets`
+   clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**,
+   determinism ok. Stall sweep after `(-158)` — the first change to reach `declare_blockers` and
+   `pick_blocks_inner` in a while — **68,000 games / 10 seeds, 0 panic, cap 4 / stuck 0 / draw
+   22**, both caps the closed Beacon lead. Sweeps and their two closed leads live in
+   **ENGINE_BACKLOG's first section**; `scripts/robustness_grid.sh` has two green legs.
+3. **⚠ THE FLOOR CLAIM NEEDS ONE WORD BACK: the *walk* profile is at its floor, the
+   *allocation* profile was not.** `(-158)` took **`fixed` -0.212 % / `cube` -0.139 % / `sealed`
+   -0.187 %** off twelve `IdMap`/`IdSet` **locals** — `Vec` newtypes, so each one reached the
+   heap on its first entry. Three sized rows are still open **with their source lines in the
+   entry**: `dispatch_board_scan`'s two `Vec` fields (0.116 % `cube`, **0 % `fixed`**),
+   `auto_tap_for_cost_inner` (~0.12 % both), `affected_from_requirement`.
+4. **⚠ 81 % OF THIS PROGRAM'S GROWTHS ARE FIRST ALLOCATIONS**, so `with_capacity` almost always
+   only *moves* one and `cg_growth.py`'s growths-per-call ranking points at the wrong rows on its
+   own. Split them with `--separate-callers=2` (malloc vs realloc), then name the line with
+   **`scripts/cg_alloc_sites.py`** — which needs the **`profiling-lines`** binary, not
+   `profiling-fast`, whose `.dwo` debuginfo makes `addr2line -i` answer with the outermost frame.
+5. **Two questions this file carried are now closed, and both say "read the instrument, not the
+   name".** `(-157)`: the profile of record **transfers** — thin LTO is -2.7 % `cube` / -3.1 %
+   `fixed` and moves no engine row's share past ±0.15 pts, so a `release-fast` ranking is the
+   shipped binary's ranking (only the CoW clone family is over-stated, by ~20 %). `(-156)`:
+   price a std-adapter row by its **code size** (`readelf -sW`) — its 4,122-byte `call_mut` is a
+   closure body, which is why deleting the row bought a tenth of it. **The build is still the
+   lever**: PGO -23.8 to -27.6 %, ML_PIPELINE 0.
+6. **The lane that keeps paying: read a printed oracle clause, check the primitive, ratchet it** —
+   seventeen ratchets now live in `core_rules/catalog_registration.rs`, five sharing one
+   `clause_ratchet` body. ⚠ **The needle is the work**, and its three false-positive classes are
+   in **CARD_BACKLOG's first section** with the next three surveyed clauses. Also **⚠ a python
+   auditor's zero is suspect — check its population** (`audit_catalog_stats.py` saw 10,764 of
+   17,639 cards; its Rust replacements found 33 defects on their first run).
+7. **Robustness green, and P2 has no open correctness lead** — the discard family is fixed at
+   `39528f0f` plus its fan-out half, and `every_self_source_trigger_kind_reaches_a_dispatcher`
+   is the population ratchet: no catalog card carries a `SelfSource` trigger on a kind nothing
+   admits, with the fifteen kinds dispatched by a *push* site listed with their sites.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
