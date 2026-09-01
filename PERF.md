@@ -118,6 +118,17 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 # before ranking it: run the dump at two game counts and compare the row, not
 # the total.
 #
+# ⚠ **ASK WHO CALLS THE LIBC ROWS.** The self table is read top-down for
+# *engine* names, and `(-169)` sat in it for eleven passes as
+# `__strncmp_avx2 7,109,249 (0.80 %)` and `getenv 5,475,482 (0.62 %)` with
+# nobody asking whose they were. One command answered it:
+#   python3 scripts/cg_edges.py cg.out --callers getenv
+# and the answer was `GameState::adjust_life` asking `env::var_os` per life
+# adjustment — 1.5 % of `fixed`, invisible to the allocation census, the
+# growth census and the line profile alike, because none of them looks at
+# libc. `memcpy`, `memcmp`, `strncmp`, `getenv`, `qsort`: name the caller
+# before ranking the next engine row.
+#
 # WHO CALLS THE CALLERS — two levels of caller for one row, which is what a
 # std generic needs: `--callers` gets you `Vec::from_iter`, and the engine
 # function that owns the cost is one hop further up. **Needs `--demangle=no`**,
@@ -2465,6 +2476,42 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### The env-lookup pass — closing state at `(-169)`
+
+```text
+  pool    base 6e2b43e0      (-169)          delta
+  fixed     885,159,084     870,185,461   **-1.6916 %**
+  cube    2,418,640,525   2,391,617,137   **-1.1173 %**
+  sealed  2,441,073,367   2,398,392,016   **-1.7485 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,197 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 20.3 MiB, bin 218,612,504 B
+        (`--no-default-features`, i.e. the system allocator)
+stalls  5 seeds / 68,000 games `--games 400 --threads 3 --decks all`, run on
+        BOTH binaries: **stdout byte-identical seed for seed**
+```
+
+⚠ **The suite gains one test, not a skip**:
+`structural_audit::no_bare_env_lookup_on_a_simulator_path`.
+
+**Run-total, this branch's tip against `b5ea6d90` four commits back — the four
+legs are `(-166)`, `(-168)`, `(-167)`, `(-169)`, and a concurrent session's
+`(-164)` lands inside the span:**
+
+```text
+  pool     base b5ea6d90    tip (-169)       cumulative
+  fixed      898,980,997     870,185,461   **-3.2031 %**
+  cube     2,458,753,806   2,391,617,137   **-2.7305 %**
+  sealed   2,471,129,875   2,398,392,016   **-2.9435 %**
+```
 
 ### The recycle-list pass — closing state at `(-167)`
 
@@ -11073,6 +11120,64 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-169)` — `adjust_life` asked `getenv` PER LIFE ADJUSTMENT: `sealed` -1.749 %, `fixed` -1.692 %, `cube` -1.117 %
+
+```text
+  pool    base 6e2b43e0      (-169)          delta
+  fixed     885,159,084     870,185,461   **-1.6916 %**
+  cube    2,418,640,525   2,391,617,137   **-1.1173 %**
+  sealed  2,441,073,367   2,398,392,016   **-1.7485 %**
+
+  getenv CALLS     base     (-169)        the two rows it takes, fixed
+    fixed         9,028         74      getenv        5,475,482 Ir  0.62 %
+    cube         15,732        130      __strncmp     7,109,249 Ir  0.80 %
+    sealed       18,742        186      -------------------------------
+                                        env::var_os inclusive 13.3 M  1.50 %
+```
+
+**The largest single-line win on this queue since `(-144)`, and it is not an
+optimization — it is a defect the file's own instrument had been walking past
+for eleven passes.** `GameState::adjust_life` opened with
+
+```rust
+if let Some(v) = std::env::var_os("CRAB_LIFE_WATCH") { … }
+```
+
+for a diagnostic nobody sets, and the comment above it priced the cost as
+"one env lookup per life change and nothing else". **`getenv` is a linear scan
+of the environment block that `strncmp`s every entry** — 58 entries a lookup
+in this container — so "one env lookup" is ~2,960 Ir, and `adjust_life` runs
+4,478 times a six-game `fixed` run and 7,861 on `cube`. The `strncmp` row was
+sitting at 0.80 % of `fixed` in the profile of record with no caller anyone had
+asked for.
+
+The fix is the idiom the same crate already uses four times over
+(`CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`, `CRAB_SBA_CENSUS`, `CRAB_SCRATCH_CENSUS`):
+a `OnceLock`, so every guarded site is an atomic load and a branch.
+`recommend.rs`'s `CRAB_CAP_DIAG` is the same class one call-frequency down —
+once a *game*, which is nothing here and 360 k lookups in a 30 k-game gate run
+— and is cached in the same commit.
+
+⚠ **The rule, and it is about the instrument, not about `getenv`.** A
+`strncmp`/`getenv`/`memcmp` row in the self table is a **libc** row, and every
+pass since `(-90)` had read the self table top-down looking for *engine*
+names. **Ask who calls the libc rows.** `cg_edges.py --callers getenv` is one
+command and it named a 1.5 % defect that no allocation census, no growth
+census and no line profile could have surfaced — none of them is looking at
+libc.
+
+**The class is ratcheted, not just fixed**:
+`structural_audit::no_bare_env_lookup_on_a_simulator_path` walks
+`crabomination/src/game/`, `recommend.rs` and `server/bot.rs` and fails on an
+`env::var` that is not within eight lines of a `OnceLock`. It asserts its own
+population (`seen >= 5`), because a source-scanning ratchet that stops matching
+is the failure mode this repo has been bitten by.
+
+Gates: suite 19,197 / 0 / 5 with the golden traces unmoved, clippy
+`--all-targets` clean, `--bench` byte-identical to the invariant
+(195,806 / 27.49 / 611.9 / 0 stalls), determinism ok, and a five-seed
+68,000-game `--decks all` sweep on both binaries, byte-identical seed for seed.
 
 ### `(-167)` — the recycle list was SUPPLY-limited, and the ordering is worth nothing: `cube` -0.699 %, `fixed` -0.369 %, `sealed` -0.293 %
 

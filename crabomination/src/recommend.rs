@@ -2087,12 +2087,11 @@ fn play_one_game_traced(
     // every game that ran past `n` actions, capped or not. The second form is
     // the one that finds a *slow* game — a pair on `--decks all --seed 43` took
     // nine minutes and decided, so the cap-only form never saw it.
-    if let Some(v) = std::env::var_os("CRAB_CAP_DIAG") {
-        let floor = v
-            .to_str()
-            .and_then(|s| s.parse::<usize>().ok())
-            .filter(|n| *n > 1)
-            .unwrap_or(max_actions);
+    // Read once through a `OnceLock` — one `getenv` a *game* is far cheaper
+    // than `adjust_life`'s one an *adjustment* (PERF `(-169)`), but it is the
+    // same class and it scales with the 10-30k-game gate runs.
+    if let Some(floor) = cap_diag_floor() {
+        let floor = floor.unwrap_or(max_actions);
         if actions >= floor || matches!(stop, StopReason::ActionCap) {
             eprintln!("{}", cap_diagnosis(&g, actions));
         }
@@ -2110,6 +2109,16 @@ fn play_one_game_traced(
 ///
 /// **A runaway names itself in one of the two tallies**: an unbounded stack is
 /// a trigger or activation loop, an unbounded battlefield is a token loop.
+/// `CRAB_CAP_DIAG` — set at all (outer `Some`) and, if it parses above 1, the
+/// action floor to report at (inner `Some`). See PERF `(-169)`.
+fn cap_diag_floor() -> Option<Option<usize>> {
+    static FLOOR: std::sync::OnceLock<Option<Option<usize>>> = std::sync::OnceLock::new();
+    *FLOOR.get_or_init(|| {
+        let v = std::env::var_os("CRAB_CAP_DIAG")?;
+        Some(v.to_str().and_then(|s| s.parse::<usize>().ok()).filter(|n| *n > 1))
+    })
+}
+
 fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     use crate::game::StackItem;
     use std::fmt::Write;

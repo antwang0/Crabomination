@@ -2434,6 +2434,23 @@ pub struct GameState {
     pub cold: CowBox<ColdState>,
 }
 
+/// `CRAB_LIFE_WATCH=<n>` — the life-adjustment watch's threshold, `None` off.
+///
+/// Read once through a `OnceLock` for the reason the whole family is:
+/// `adjust_life` asked `env::var_os` **per adjustment**, and `getenv` is a
+/// linear scan of the environment block that `strncmp`s every entry. 4,478
+/// lookups a six-game `fixed` run at ~2,960 Ir apiece was **13.3 M Ir, 1.50 %
+/// of the pool** — 7,861 and 23.3 M (0.96 %) on `cube` — for a flag nobody
+/// sets. See PERF `(-169)`; the doc comment this replaces called it "one env
+/// lookup per life change and nothing else", which is the arithmetic that
+/// went unchecked.
+fn life_watch_threshold() -> Option<i32> {
+    static LEVEL: std::sync::OnceLock<Option<i32>> = std::sync::OnceLock::new();
+    *LEVEL.get_or_init(|| {
+        std::env::var_os("CRAB_LIFE_WATCH")?.to_str().and_then(|s| s.parse::<i32>().ok())
+    })
+}
+
 /// `CRAB_SIM_REJECTS` — the picker/engine disagreement instrument's level.
 ///
 /// 0 = off, 1 = count, 2 = count and name. Lives here rather than in
@@ -4716,10 +4733,7 @@ impl GameState {
         // compounding source shows as a doubling series here, a one-shot as a
         // single row. `--decks all --seed 53` ends with both seats at
         // `i32::MAX`, which no card on that board can accumulate linearly.
-        // Off by default and read once per adjustment, so it costs the
-        // throughput path one env lookup per life change and nothing else.
-        if let Some(v) = std::env::var_os("CRAB_LIFE_WATCH")
-            && let Some(n) = v.to_str().and_then(|s| s.parse::<i32>().ok())
+        if let Some(n) = life_watch_threshold()
             && delta.saturating_abs() >= n
         {
             eprintln!(

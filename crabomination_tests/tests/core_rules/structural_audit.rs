@@ -282,3 +282,60 @@ fn every_ability_that_could_add_mana_is_a_mana_ability() {
         stale,
     );
 }
+
+/// Every `env::var` on a simulator path is read once through a `OnceLock`.
+///
+/// PERF `(-169)`: `GameState::adjust_life` asked `env::var_os` **per life
+/// adjustment** for a flag nobody sets. `getenv` is a linear scan of the
+/// environment block that `strncmp`s every entry, so 4,478 lookups a six-game
+/// `fixed` run cost 13.3 M Ir — **1.50 % of the pool**, 1.64 % of `sealed` —
+/// and the site's own doc comment had priced it at "one env lookup per life
+/// change and nothing else". A count nobody took is how that survived.
+///
+/// The engine's `game/`, `recommend.rs` and `server/bot.rs` are the simulator;
+/// a lookup there must be behind a process-lifetime cache. `server/`'s
+/// per-connection reads and the `trig-census` feature's are not, and are not
+/// checked here.
+#[test]
+fn no_bare_env_lookup_on_a_simulator_path() {
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for e in std::fs::read_dir(dir).expect("engine source dir") {
+            let p = e.expect("dir entry").path();
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                out.push(p);
+            }
+        }
+    }
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../crabomination/src");
+    let mut files = vec![src.join("recommend.rs"), src.join("server/bot.rs")];
+    walk(&src.join("game"), &mut files);
+
+    let mut bad: Vec<String> = Vec::new();
+    let mut seen = 0usize;
+    for f in &files {
+        let text = std::fs::read_to_string(f).expect("engine source file");
+        let lines: Vec<&str> = text.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
+            if !line.contains("env::var(") && !line.contains("env::var_os(") {
+                continue;
+            }
+            seen += 1;
+            // The cache is a `OnceLock` initialised a few lines above the
+            // lookup; eight lines covers every shape the crate uses.
+            let ctx = lines[i.saturating_sub(8)..(i + 1).min(lines.len())].join("\n");
+            if !ctx.contains("OnceLock") && !ctx.contains("get_or_init") {
+                bad.push(format!("{}:{}: {}", f.display(), i + 1, line.trim()));
+            }
+        }
+    }
+    assert!(seen >= 5, "the scan found only {seen} env lookups — it has gone vacuous");
+    assert!(
+        bad.is_empty(),
+        "{} env lookup(s) on a simulator path are not behind a process-lifetime \
+         cache. `getenv` walks the whole environment block:\n  {}",
+        bad.len(),
+        bad.join("\n  "),
+    );
+}
