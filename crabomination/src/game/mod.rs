@@ -472,7 +472,7 @@ mod cp_pool {
     /// Deep enough for one scope's working set — a scope computes 4.3
     /// permanents on `fixed` and 5.8 on `cube` — and shallow enough that the
     /// definitions the parked boxes keep alive stay a rounding error.
-    const CAP: usize = 8;
+    const CAP: usize = 32;
 
     thread_local! {
         static POOL: std::cell::RefCell<Vec<Arc<ComputedPermanent>>> =
@@ -485,7 +485,7 @@ mod cp_pool {
         POOL.with(|p| {
             let Ok(mut pool) = p.try_borrow_mut() else { return };
             for h in handles {
-                if pool.len() == CAP {
+                if pool.len() >= CAP {
                     break;
                 }
                 pool.push(h);

@@ -1079,6 +1079,35 @@ section passed its ~15-line budget again. They come off `(-149)` through
   is real" means the row is not an artifact; it does **not** mean the row is
   an opportunity.
 
+**The recycle-list rules, from `(-166)`/`(-167)`/`(-168)` — the device is now
+three entries deep and each one produced a rule that is not about this pool.**
+
+- ⚠ **A "is this handle still shared" question is answered by WHEN it is
+  asked, not by what it is asked about.** `(-27)` asked `Arc::get_mut` at the
+  *release* site (scope exit, the caller still in frame) and hit 1 in 8;
+  `(-166)` asks the same question at the *reuse* site and hits 68-82 %. Move
+  the check, not the data structure.
+- ⚠ **When a pool's hit rate is short, ask "choosing badly or running out?"
+  BEFORE building a policy change.** A reordering answers only the first, and
+  `(-167)`'s FIFO moved the allocation count by *exactly zero* on two pools —
+  which is the proof that it was the second. **Size a recycle list by the tail
+  of its per-scope demand, never by the mean**: 4.3 and 5.8 permanents a scope
+  sized a list at 8, and the misses were all scopes asking for twenty.
+- **Pool the OWNER, not the buffer, when the buffer's owner is already an
+  `Arc` somebody parks** (`(-168)`). An `Arc<Vec<T>>` is two allocations and a
+  parked one comes back sized, so one hit is worth 1.3-1.7 allocations —
+  `(-162)`'s free-list-with-RAII-guard design for the inner `Vec` is subsumed
+  by recycling the box that holds it, with no guard and no escape hatch.
+  `std::mem::take` on the parked slot is what keeps the box in the `Arc`;
+  unwrap-and-rewrap retakes the allocation and wins nothing.
+- **Thread-local, not per-object, whenever the object is cloned more often
+  than it is used.** `Clone for LayerFreeze` is `default()` and a `cube` run
+  takes 22,684 `GameState` clones against 28,992 freeze scopes.
+- ⚠ `try_borrow_mut`, never `borrow_mut`, and **release the borrow before
+  calling back into the engine**: the gather re-enters itself, and a borrow
+  held across it turns every inner call into a miss (or, with `borrow_mut`, a
+  panic reachable from self-play).
+
 **Census / catalog-audit rules, moved verbatim from `TODO.md`'s NEXT at the
 hundred-and-sixth pass when that section passed its ~15-line budget. They come
 off the targeting lane (`13435f3e` / `d9e6454d` / `d0799d5c` / `45c55cc3`).**
@@ -2436,6 +2465,43 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### The recycle-list pass — closing state at `(-167)`
+
+Three takes on one device and one refutation, over two A/B anchors. The pool
+column below is the *cumulative* move across `(-166)` + `(-168)` + `(-167)`;
+each leg's own table is in the Log.
+
+```text
+  pool     base b5ea6d90    tip (-167)       cumulative
+  fixed      898,980,997     885,159,084   **-1.5382 %**
+  cube     2,458,753,806   2,418,640,525   **-1.6314 %**
+  sealed   2,471,129,875   2,441,073,367   **-1.2163 %**
+```
+
+⚠ **`(-164)`, a concurrent session's, lands inside that span** and is worth
+`fixed` -0.092 % of it; the three legs' own paired A/Bs (`(-166)` at
+`b5ea6d90`, `(-168)` at `6d54918a`, `(-167)` at `d869211f`) are the numbers to
+quote, not this arithmetic.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,196 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 21.8 MiB, bin 218,545,296 B
+        (`--no-default-features`, i.e. the system allocator)
+stalls  5 seeds / 68,000 games `--games 400 --threads 3 --decks all`, run on
+        BOTH binaries at every leg: **stdout byte-identical seed for seed**,
+        0 panic, cap 0 / stuck 0, 16 draws on seed 11 either side
+```
+
+⚠ **peak RSS moves and it is the pool, not a leak**: 19.4 -> 21.8 MiB, which
+is 32 parked `ComputedPermanent`s and 4 parked effect lists **per thread**,
+both bounded by a `const`. A `selfplay_train` actor count multiplies it by the
+actor count and nothing else.
 
 ### The recycle-list pass — closing state at `(-166)`
 
@@ -11007,6 +11073,56 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-167)` — the recycle list was SUPPLY-limited, and the ordering is worth nothing: `cube` -0.699 %, `fixed` -0.369 %, `sealed` -0.293 %
+
+```text
+  pool    base d869211f    CAP 8 -> 32       delta
+  fixed     888,435,668     885,159,084   **-0.3688 %**
+  cube    2,435,660,499   2,418,640,525   **-0.6988 %**
+  sealed  2,448,251,431   2,441,073,367   **-0.2932 %**
+
+  malloc CALLS         CAP 8      CAP 32      delta    pool misses left
+    fixed            377,395     362,951    -14,444    ~0 (off the table)
+    cube           1,010,449     961,017    -49,432    4,289
+    sealed         1,151,582   1,121,516    -30,066
+```
+
+`(-166)`'s list held 8 and `(-167)` filed the depth as "one A/B, no design
+work". It was, and it is the larger half of the two-part entry: **`cp_pool`'s
+misses were the fifth-largest allocation row on `cube` at 53,721 and are now
+4,289.**
+
+**AND THE OTHER HALF IS A REFUTATION THAT SAYS WHY.** The obvious first move
+was **FIFO**: every handle in the list is parked by one scope exit, so age
+within it is the order that scope computed them in, and the oldest is the one
+whose caller has had longest to return — the deferred-check argument one step
+on. It was built (`VecDeque`, park at the back, pop from the front) and it
+moved the allocation count by **exactly zero**: `fixed` 377,395 malloc calls
+before and after, `cube` 1,010,449 before and after, to the call. It cost
+`fixed` **+0.096 %** / `sealed` +0.099 % / `cube` +0.016 % in `VecDeque`'s
+wrapping index arithmetic, and was reverted.
+
+**Identical counts under a reordering is a proof, not a null result: the set of
+parked handles that are unique at pop time does not depend on which one you
+pop.** The pool was never choosing badly — it was running *out*. A scope
+computes 4.3 permanents on `fixed` and 5.8 on `cube` **on average**, and the
+average was the wrong statistic to size a list by: the misses all came from
+scopes in the tail, which park 8 and then ask for twenty. **Size a recycle
+list by the tail of its per-scope demand, never by the mean** — and when a
+pool's hit rate is short, ask whether it is choosing badly or running out
+*before* building a policy change, because a reordering answers the first
+question and cannot touch the second.
+
+32 is where the ceiling is: `fixed`'s miss row leaves the table entirely and
+`cube`'s residue is 4,289 allocations, ~450 k Ir, **0.018 %** — not worth
+another build. `fx_pool` keeps `CAP = 4`: a scope has exactly one effect list,
+so its supply is one a scope and depth was never its constraint.
+
+Gates: suite 19,196 / 0 / 5 with the golden traces unmoved, clippy
+`--all-targets` clean, `--bench` byte-identical to the invariant
+(195,806 / 27.49 / 611.9 / 0 stalls), determinism ok, and a five-seed
+68,000-game `--decks all` sweep on both binaries, byte-identical seed for seed.
 
 ### `(-168)` — the freeze scope's effect list is recycled too, and a hit is worth 1.3-1.7 allocations: `fixed` -0.468 %, `cube` -0.269 %, `sealed` -0.253 %
 
@@ -20670,17 +20786,13 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-167) THE RECYCLE LIST'S DEPTH WAS NEVER TUNED, AND `cube` IS ITS WORST
-POOL.** `(-166)` ships `CAP = 8` — one scope's working set by the census's own
-per-scope counts (4.3 permanents on `fixed`, 5.8 on `cube`) — and reads a
-68.0 % hit rate on `cube` against 79.3 % / 82.1 % on the other two. The
-list is LIFO and a still-shared handle is dropped on the pop, so a deeper list
-holds more of the previous scope's boxes *and* more dead ones; whether that is
-a net win is one A/B (rebuild + three dumps, no design work). The ceiling is
-small and known: `cube`'s remaining misses are 53,419 `malloc` pairs, ~11 M Ir,
-**0.45 % of the pool** if every one of them were recovered, which they will not
-be. ⚠ Price the *dead* pops too — a deeper list makes `alloc`'s loop longer on
-a miss, and `alloc` is already 74.8 Ir a call.
+**(-167) CLOSED — TAKEN, `cube` -0.699 % / `fixed` -0.369 % / `sealed`
+-0.293 %, and the half that was *not* the depth is a refutation. See the Log.**
+The depth was the whole thing (`CAP` 8 -> 32, `cube`'s pool misses 53,721 ->
+4,289); a FIFO reordering moved the allocation count by exactly zero and cost
+`fixed` +0.096 %. **Size a recycle list by the tail of its per-scope demand,
+not by the mean**, and ask "choosing badly or running out?" before building a
+policy change.
 
 **(-163)(a) TAKEN by `(-166)` — `fixed` -0.640 % / `cube` -0.628 % / `sealed`
 -0.636 %, the largest three-pool win since `(-144)`. The entry below is kept
