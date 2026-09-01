@@ -146,9 +146,6 @@ impl<T> SmallIdSet<T> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
     pub fn iter(&self) -> std::slice::Iter<'_, T> {
         self.0.iter()
     }
@@ -183,6 +180,10 @@ impl<'a, T> IntoIterator for &'a SmallIdSet<T> {
 /// [`IdMap`] with an inline buffer. Same rule as [`SmallIdSet`]: locals only,
 /// and the bodies are [`IdMap`]'s verbatim so the two cannot drift — the
 /// `small_id_containers_agree_with_the_heap_backed_ones` test is the check.
+///
+/// The surface is exactly what the swapped locals call plus what that test
+/// needs to compare the two types; a method neither of those wants is not
+/// here, and the next local to move over adds it beside its `IdMap` twin.
 #[derive(Debug, Clone)]
 pub struct SmallIdMap<K, V>(smallvec::SmallVec<[(K, V); 4]>);
 

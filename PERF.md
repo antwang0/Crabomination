@@ -2437,12 +2437,12 @@ instrument that found it and two questions this file had carried open.
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
-suite   19,178 / 0 / 5 (cargo nextest run --workspace --exclude
+suite   19,182 / 0 / 5 (cargo nextest run --workspace --exclude
         crabomination_client); golden traces in it and unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
-        invariant; determinism ok; peak_rss 19.0 MiB, bin 218,462,384 B
+        invariant; determinism ok; peak_rss 19.0 MiB, bin 218,334,368 B
 stalls  **68,000 games / 10 seeds**, `--games 400 --threads 3 --decks all`:
         0 panic, 0 hang, **cap 4 / stuck 0 / draw 22**, both caps the closed
         Beacon lead. Run because `(-158)` is the first change in a while to
