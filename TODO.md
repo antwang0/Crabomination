@@ -30,8 +30,11 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at `007893c7`:** suite **19,168 / 0 / 5**, traces unmoved, clippy `--all-targets`
    clean, `--bench` **byte-identical to the invariant**. `scripts/robustness_grid.sh` has two green
    legs (ladder 33,120 games, actor 3 x 600); `rm -rf target-audit/` after (~2 GB).
-3. **Perf is at its floor for this shape of engine** — `(-151)` and the `(-128)` split moved nothing,
-   `(-145)` is refused on robustness. **The build is the lever**: PGO -23.8 to -27.6 %, ML_PIPELINE 0.
+3. **Perf is at its floor for this shape of engine** — `(-151)`, the `(-128)` split and now
+   `(-156)` all measured and moved nothing; `(-145)` is refused on robustness. **⚠ `(-156)`'s
+   lesson is the reusable one: price a std-adapter rewrite at ~10 % of the adapter's self Ir**
+   (deleting a 4.38 M-Ir row bought 476 k — the rest moved into the `for` loop). **The build is
+   the lever**: PGO -23.8 to -27.6 %, ML_PIPELINE 0.
 4. **The lane that keeps paying: read a printed oracle clause, check the primitive, ratchet it** —
    seventeen now live in `core_rules/catalog_registration.rs`, five sharing one `clause_ratchet` body.
    ⚠ **The needle is the work**, and its three false-positive classes ("unless" is not the only

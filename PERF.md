@@ -1032,6 +1032,15 @@ section passed its ~15-line budget again. They come off `(-149)` through
 - **Rank a chain of pure guards by cost x rejection rate** (`(-116)`, and
   `(-155)` is its fourth application): put the field test that rejects on the
   common board in front of the pointer chase, not after it.
+- ⚠ **PRICE A STD-ADAPTER REWRITE AT ~10 % OF THE ADAPTER'S SELF Ir, NOT AT
+  ITS SELF Ir** (`(-156)`, measured). Deleting `Filter`/`FilterMap` from
+  `pick_blocks_inner` removed the adapter's entire 4,375,134-Ir row and made
+  the program 475,735 Ir cheaper — **89 % of the row moved into the `for`
+  loop**, because an adapter's self cost is mostly the iteration it drives
+  (bounds, advance, the `find` loop), which a hand loop drives too. Only the
+  call frame is removable. `cg_calls.py`'s "a std generic the inliner declined
+  is real" means the row is not an artifact; it does **not** mean the row is
+  an opportunity.
 
 **Census / catalog-audit rules, moved verbatim from `TODO.md`'s NEXT at the
 hundred-and-sixth pass when that section passed its ~15-line budget. They come
@@ -19938,7 +19947,12 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-156) THE `FnMut for &mut F` SHIM IS STILL 0.61 % OF `cube` AND IT IS
+**(-156) CLOSED — MEASURED, REFUTED, REVERTED. Read to the end of the entry
+before re-proposing it: the shim survives thin LTO, and rewriting its largest
+instance recovered 10.9 % of the row it deleted.** The original filing follows,
+because the reasoning that led here is the useful part.
+
+**THE `FnMut for &mut F` SHIM IS STILL 0.61 % OF `cube` AND IT IS
 STD'S OWN ADAPTER CODE, NOT OURS — PRICE IT AGAINST `release` BEFORE
 BUILDING.** `zone::Battlefield::lane`'s doc records that passing a predicate
 by reference cost 18.8 M Ir through
@@ -20030,6 +20044,47 @@ side. Take the caller table there:
 `pick_blocks_inner` is the top row by self Ir and the ceiling on rewriting it
 alone is **0.177 % of `cube`** — the shim's whole self cost is 0.606 %, so no
 single site is the entry.
+
+**(-156) CLOSED — THE FIX WAS BUILT, IT WORKED EXACTLY AS INTENDED, AND IT IS
+WORTH A TENTH OF WHAT ITS ROW SAYS. REVERTED.** `attacker_info`'s
+`.filter().filter_map().collect()` rewritten as a `for` loop with `push`,
+nothing else changed, `--bench` byte-identical (195,806 / 27.49 / 0 stalls,
+determinism ok):
+
+```text
+  pool    base            candidate       delta
+  cube    2,470,323,725   2,469,847,990   **-0.0193 %**   (-475,735 Ir)
+  fixed     907,147,703     907,004,231   **-0.0158 %**   (-143,472 Ir)
+
+  and the change did land, precisely:
+  shim calls     99,572 -> 86,580       -12,992  = the whole instance
+  shim self Ir   14,967,638 -> 10,592,504   -4,375,134  = the whole row
+```
+
+**Read those two blocks against each other, because they are the finding.**
+The rewrite deleted the adapter's entire row — 4,375,134 Ir of self cost, the
+exact number the candidate was written on — and the program got only 475,735
+Ir cheaper. **10.9 % of the row was real overhead; the other 89 % moved into
+the `for` loop**, because a std adapter's self Ir is mostly the *iteration it
+is driving* — the bounds check, the advance, the `find` loop — and a hand
+loop has to drive it too. Only the call-and-return frame is removable.
+
+**THE RULE, and it applies to every std-generic row this file ranks:
+`cg_calls.py`'s "a std generic the inliner declined is real" says the row is
+not an artifact. It does not say the row is an opportunity.** Price an adapter
+rewrite at ~10 % of the adapter's self Ir, not at its self Ir. On that rate
+the whole shim — all 99,572 calls, 0.606 % of `cube` — is worth **0.066 %** if
+every site were rewritten, which is below the floor this file carries and an
+order of magnitude under the 0.1-0.2 % the entry estimated. `(-119)` is the
+same shape from the other side: a restructure that read +0.07 % and was
+reverted.
+
+Reverted rather than kept. The win is real and deterministic (Ir is exact for
+a fixed binary and workload), but 0.019 % is unmeasurable in wall clock —
+`scripts/bench_ab.py` separates ~2 % and not 0.3 % — and keeping it would
+leave a perf-justified shape in `pick_blocks_inner` that the numbers do not
+support, which is the exact failure mode CLAUDE.md's "a profile number in a
+code comment" rule exists to prevent.
 
 **(-155) CLOSED — TAKEN, `cube` -0.114 % / `fixed` -0.163 %.** The CR
 704.5a/c loss check's `effective_life` / `effective_poison` walked the team
