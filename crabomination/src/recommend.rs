@@ -2083,13 +2083,25 @@ fn play_one_game_traced(
     } else {
         StopReason::NoLegalMove
     };
-    if matches!(stop, StopReason::ActionCap) && std::env::var_os("CRAB_CAP_DIAG").is_some() {
-        eprintln!("{}", cap_diagnosis(&g, actions));
+    // `CRAB_CAP_DIAG=1` reports the capped games; `CRAB_CAP_DIAG=<n>` reports
+    // every game that ran past `n` actions, capped or not. The second form is
+    // the one that finds a *slow* game — a pair on `--decks all --seed 43` took
+    // nine minutes and decided, so the cap-only form never saw it.
+    if let Some(v) = std::env::var_os("CRAB_CAP_DIAG") {
+        let floor = v
+            .to_str()
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|n| *n > 1)
+            .unwrap_or(max_actions);
+        if actions >= floor || matches!(stop, StopReason::ActionCap) {
+            eprintln!("{}", cap_diagnosis(&g, actions));
+        }
     }
     GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
 }
 
-/// `CRAB_CAP_DIAG=1` — what a game that hit the action cap was actually doing.
+/// `CRAB_CAP_DIAG=1` — what a game that hit the action cap was actually doing;
+/// `CRAB_CAP_DIAG=<n>` — the same line for any game that ran past `n` actions.
 ///
 /// The bench prints `undecided_by cap N` and stops there, so the next question
 /// — *which* board, *which* loop — has cost a rebuild every time it has been
