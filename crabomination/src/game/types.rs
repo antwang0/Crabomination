@@ -146,6 +146,11 @@ impl<T> SmallIdSet<T> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+    /// Clippy's `len_without_is_empty`: a `len` with no `is_empty` beside it
+    /// is the shape that makes a caller write `x.len() == 0`.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
     pub fn iter(&self) -> std::slice::Iter<'_, T> {
         self.0.iter()
     }
