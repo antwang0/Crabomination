@@ -317,6 +317,26 @@ fn spiritual_focus_triggers_on_an_opponents_discard_spell() {
     assert_eq!(g.players[0].life, 22, "one discard → 2 life");
 }
 
+/// **CR 603.6 fan-out — the payoff triggers once per card discarded, not once
+/// per batch.** Mind Rot discards two, so Spiritual Focus pays twice.
+///
+/// Regression: `OpponentCausedYouToDiscard` was missing from the trigger
+/// dispatcher's fan-out list, so a two-card discard minted one trigger.
+#[test]
+fn spiritual_focus_pays_once_per_card_the_discard_spell_takes() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spiritual_focus());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let rot = g.add_card_to_hand(1, catalog::mind_rot());
+    script(&mut g, vec![DecisionAnswer::Bool(false), DecisionAnswer::Bool(false)]);
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    cast(&mut g, 1, rot, Some(Target::Player(0)));
+    assert_eq!(g.players[0].hand.len(), 0, "both cards went");
+    assert_eq!(g.players[0].life, 24, "two discards → 2 life each");
+}
+
 /// Thieves' Auction pots every nontoken permanent and drafts them back tapped.
 #[test]
 fn thieves_auction_redistributes_the_board() {

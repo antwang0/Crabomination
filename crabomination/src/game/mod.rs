@@ -18653,6 +18653,9 @@ impl GameState {
                         | crate::effect::EventKind::PermanentLeavesBattlefield
                         | crate::effect::EventKind::CardDrawn
                         | crate::effect::EventKind::CardDiscarded
+                        // Its twin: Spiritual Focus pays per card an
+                        // opponent's spell takes, and Mind Rot takes two.
+                        | crate::effect::EventKind::OpponentCausedYouToDiscard
                         | crate::effect::EventKind::CardLeftGraveyard
                         | crate::effect::EventKind::CounterAdded(_)
                         | crate::effect::EventKind::AnyCounterAdded
