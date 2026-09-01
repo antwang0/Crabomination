@@ -55,13 +55,17 @@ sixty-seventh pass, so don't re-take that.
    ratchets — read an oracle clause, check the primitive; seventeen live, five sharing
    `clause_ratchet`, false-positive classes in **CARD_BACKLOG's first section**. (b) the
    printed-**join** ratchets, new this run: don't read prose, join the catalog against the
-   cache's *structured* fields. Four of them found **290 defects in one pass** — keywords (25),
-   numbers (3), creature subtypes (148), type line (89 invented + 25 missing). ⚠ **The rule that
-   makes a join a proof is "no bespoke spelling"**: a keyword read only from `def.keywords` is a
-   proof, and prowess/exalted/cascade/riot/mentor are triggered abilities here — including them
-   reported 68 correct cards. **Still unjoined and worth a run: `produced_mana`, `color_identity`, the
-   `oracle_text` of an activated ability's cost.** Also **⚠ a python auditor's zero is suspect —
-   check its population** (`audit_catalog_stats.py` saw 10,764 of 17,639 cards).
+   cache's *structured* fields. **Eight of them, 297 defects in one pass** — keywords 25, numbers 3,
+   creature subtypes 148, type line 114, land mana 3, loyalty arity 1, Saga arity 0, modal arity 1.
+   ⚠ **The rule that makes a join a proof is "no bespoke spelling"**: a keyword read only from
+   `def.keywords` is a proof, and prowess/exalted/cascade/riot/mentor are triggered abilities here —
+   including them reported 68 correct cards. ⚠ **A walk over the effect tree must be able to say
+   "I did not read this"** (the land-mana one answers `None` on an undescended container; without
+   that, Rhystic Cave read as colourless). **The two shapes that keep paying: (a) a *field* the
+   engine reads from exactly one place, (b) an *arity* — count the printed abilities.** Still
+   unjoined: `color_identity`, activated-ability *count* on nonlands, token definitions (no ratchet
+   reaches a `TokenDefinition` at all). Also **⚠ a python auditor's zero is suspect — check its
+   population** (`audit_catalog_stats.py` saw 10,764 of 17,639 cards).
 7. **Robustness green, and P2 has no open correctness lead** — the discard family is fixed at
    `39528f0f` plus its fan-out half, and `every_self_source_trigger_kind_reaches_a_dispatcher`
    is the population ratchet: no catalog card carries a `SelfSource` trigger on a kind nothing

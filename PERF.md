@@ -2439,7 +2439,7 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 
 ⚠ **This reading tests rather than confirms, unlike the last card pass.**
 That one noted `--bench` is the four hand-built archetypes and none of its
-seven cards was in them. **None of this pass's 290 changed cards is in them
+seven cards was in them. **None of this pass's 297 changed cards is in them
 either** — but the pass also changed the engine: the CR 704.5m orphan-Aura
 sweep gained two guards, and `--decks fixed` plays Pacifism. A card pass that
 touches an SBA is a pass whose `--bench` reading is a real check.
@@ -2455,6 +2455,12 @@ bespoke spelling"**: the property must be one the engine reads from exactly
 one field. `prowess`, `exalted`, `cascade`, `riot`, `battle cry`, `mentor`,
 `training`, `myriad`, `melee` and `storm` are all triggered abilities in this
 catalog, and including them reported **68 correct cards**.
+
+**The second shape, and it is even cheaper: an *arity*.** Count the printed
+loyalty abilities / Saga chapters / modal bullets and compare the counts —
+no field to read, no tree to walk, and a dropped ability is a printed line
+that never happens. Three of those found two more defects (Tezzeret the
+Seeker's ultimate, Kozilek's Command's fourth mode) over ~380 cards.
 
 ### The allocation-census pass — closing state
 
