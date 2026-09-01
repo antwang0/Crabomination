@@ -2654,7 +2654,7 @@ pub fn phantasmal_image() -> CardDefinition {
     }
 }
 
-/// Mockingbird — {X}{U}, 0/0 Shapeshifter. Flash. May enter as a copy of a
+/// Mockingbird — {X}{U}, 1/1 Bird Bard with flying. May enter as a copy of a
 /// creature you control, except its name stays "Mockingbird" (CR 707.2
 /// name-retention via `EntersAsCopy.keep_name`).
 pub fn mockingbird() -> CardDefinition {
@@ -5722,7 +5722,7 @@ pub fn phyrexian_rager() -> CardDefinition {
     }
 }
 
-/// Carven Caryatid — {1}{G}{G}, 0/5 Defender. "When this creature enters,
+/// Carven Caryatid — {1}{G}{G}, 2/5 Defender. "When this creature enters,
 /// draw a card."
 pub fn carven_caryatid() -> CardDefinition {
     use crate::effect::shortcut::etb;

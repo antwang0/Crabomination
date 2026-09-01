@@ -24,6 +24,24 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
   against another PGO number, and raise the profile under the profile it will
   be consumed under — a mismatched one is partially applied with no warning.
 
+## Container notes (the routine image)
+
+- `cargo-nextest` is not installed: `curl -sSLf https://get.nexte.st/latest/linux
+  | tar zx -C ~/.cargo/bin`.
+- The suite is `cargo nextest run --workspace --exclude crabomination_client`.
+  Without the exclusion cargo builds the whole Bevy stack, and
+  `crabomination_client` does not build here without four apt packages
+  (`CLIENT_BACKLOG.md`'s header has them).
+- **Run a `profiling-fast`/`overflow` build with nothing else compiling** —
+  two rustc on the engine at once is a memcg OOM (`signal: 9`) that cargo
+  reports as a compile failure. `profiling-fast` on the engine is **9m41s warm**
+  (deps cached, nothing else building) and ~40 min cold or contended — the
+  dependency graph, not the engine. `rm -rf target/*/incremental` between
+  profile switches.
+- Callgrind is cheap here and contention-immune: a `--games 6` dump is ~25 s
+  on `cube`, ~10 s on `fixed`, so two pools in parallel are free. **The build
+  is the whole cost of an A/B, not the measurement.**
+
 ## Performance
 
 `PERF.md` is the record: a committed bench baseline, a before/after row per

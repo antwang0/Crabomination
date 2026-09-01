@@ -13,6 +13,44 @@ including basics) keeps the embedding table small and well-fed.
 
 ---
 
+## 0. How to build the thing that generates the data
+
+The simulator is the actor's whole cost, and **the build is a bigger lever on
+it than any source change in `PERF.md`'s Log.** Nothing turns these on by
+default — a committed Ir or throughput reading has to stay a plain
+`release-fast` one, which is why `scripts/pgo_build.sh` is opt-in — so a real
+run has to ask for them. The ladder, measured in PERF's Baseline (lower is
+faster, `release-fast` = 1.0):
+
+```text
+  release-fast              1.000    the default `--profile release-fast`
+  release (LTO + cgu 1)     0.917    -8.3 %, at ~5x the rebuild
+  release-fast + PGO        0.762
+  release      + PGO        0.724    -27.6 % against release-fast
+```
+
+**Which one to build is a build-time question, not a throughput one**:
+`release-fast + PGO` is ~18 min for -23.8 %, `release + PGO` ~44 min (two LTO
+builds) for -27.6 %. The last five points cost 26 minutes a build, so they
+belong to a long run, not to an iteration loop.
+
+```sh
+PGO_PROFILE=release scripts/pgo_build.sh selfplay_train   # long run / gate
+scripts/pgo_build.sh selfplay_train                       # release-fast + PGO
+```
+
+⚠ **A profile must be raised under the profile it is consumed under.** One
+raised under `release-fast` and consumed by a `release` build is not rejected,
+it is *partially* applied and most of the win vanishes silently; the binary
+size is the check. ⚠ **And a PGO number may only be quoted against another PGO
+number** — never file one in `PERF.md`'s Baseline.
+
+⚠ **Print `t_step_ms` against `elapsed_s` before quoting any `selfplay_train`
+throughput figure.** The same two binaries measured -23.1 % or -4.9 % purely
+on where the learner/actor balance sat; PERF's Baseline has the working.
+
+---
+
 ## 1. Data generation — actors
 
 `crabomination_ml/src/bin/selfplay_train.rs` runs one process: N actor

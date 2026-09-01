@@ -2323,6 +2323,48 @@ a box whose state moves.
 
 ## Baseline
 
+### The defaulted-field card pass — closing state at `2f5ef96e`
+
+A run with **no perf commit in it**, so this entry is the base for the next
+one and the proof that nothing regressed. `(-149)` is the re-profile it came
+out of.
+
+```text
+  profiling-fast --no-default-features, six games, one thread, seed 1
+  pool     b8f05380 (pre-cards)   2f5ef96e (post)      delta
+  fixed        905,973,489          905,955,831      -0.0019 %
+  cube       2,455,861,932        2,473,370,280      +0.713 %
+  sealed                   —      2,480,883,166      new base
+```
+
+**`fixed` is the pool this run is measured on and it did not move.** The nine
+cards are all in `cube`/`sealed` and none is in a `--bench` archetype, so
+`fixed`'s -17,658 Ir is codegen noise and `cube`'s +0.713 % is the pool getting
+heavier, not the engine getting slower: Basking Broodscale gained an activated
+ability and a counter trigger, Ursine Monstrosity a begin-combat trigger,
+Paradise Druid a static. **A `cube`/`sealed` Ir figure from before `2f5ef96e`
+is not comparable to one after it** — same warning as the Sengir Vampire batch.
+`fixed`'s own pre-card reading reproduces the previous run's committed
+905,973,251 to **+238 Ir (0.00003 %)**.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,122 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces unmoved across every commit
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: 195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls — **byte-identical to the invariant** before and after the
+        card batch; determinism ok (all pairs split). games_per_s read 255.4
+        (host_calib_ms 55) and 286.2 (48) on the two sides — the host, not
+        the code; peak_rss 19.4 -> 18.9 MiB, bin 218,263,360 -> 218,273,296 B
+audits  audit_catalog_stats P/T 8 -> 0, cost 1 -> 0, kw 22 -> 19;
+        audit_doc_drift 338 -> **0 of 21,426**; audit_keyword_drift 0 invented
+build   warm `profiling-fast -p crabomination --bin bot_ladder
+        --no-default-features` is **9m41s** on this box with deps cached; the
+        ~40 min figure a cold run shows is the dependency graph plus
+        contention, not the engine
+```
+
 ### The state-shape pass — closing state at `613f20dc`
 
 Two perf commits on one subject: **what a `GameState` clone actually copies.**
@@ -19291,6 +19333,71 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-151) THE QUEUE WAS RE-PROFILED FROM SCRATCH AT `b8f05380` AND NOTHING HAS
+MOVED SINCE `bda1a69d` — WHICH IS THE FINDING, AND IT IS THE SECOND TIME.**
+Fresh dumps, `profiling-fast --no-default-features`, six games, one thread,
+seed 1, `--dump-instr=yes`: `cube` **2,455,861,932**, `fixed`
+**905,973,489**. The `fixed` figure reproduces the committed
+905,973,251 to **+238 Ir (0.00003 %)**, so the instrument and the tip are both
+where the Baseline says they are.
+
+Every row is `(-138)`'s three groups again, in the same order and within a
+tenth of a point of the same share. **Rank by call count and read Ir/call**
+(`cg_calls.py`) turns up nothing new above the floor either: the top rows are
+the allocator (1,278,254 allocations), `__memcpy` (1,037,197 calls, 54.1
+Ir/call, still 2,319 callers), `event_matches_spec` at the 14.7 Ir/call
+`(-129)` left it at, and `has_keyword` at the 31.3 `(-114)` refuted.
+`SpecFromIterNested::from_iter` is 395,865 calls over **92 callers** whose
+largest is 25,730 (6.5 %) — diffuse, unchanged, do not re-open.
+
+**Three readings are new and each one closes something, so nobody spends a
+build on them.**
+
+*(a) `computed_permanent_hinted`'s allocation is 1.5 % of `cube` and both
+devices for it are already refuted.* 354,566 calls, and **201,452 of them
+allocate (56.8 %)** — 22,056,133 Ir on the alloc side alone (0.90 %), and with
+the matching free at `(-139)`'s 183 Ir a malloc+free pair, **~36.9 M = 1.50 %**.
+The callee table splits it exactly: **172,648 memo misses** each taking one
+`Arc<ComputedPermanent>` and one `compute_permanent_pass`, plus **35,964
+scope-first gathers** each taking one `Arc<Vec<ContinuousEffect>>`. That is the
+largest single allocation site in the engine and it stays open only in the
+sense that *nothing safe reaches it*: the recycling pool is refuted by the
+standing rules ("a pool can only recycle a handle whose lifetime the pool's
+owner bounds", `fixed` +0.137 %) and the by-value form is `(-111)`, built and
+reverted.
+
+*(b) THE `perms` LINEAR SCAN IS NOT THE PER-CALL COST — do not build an index
+for it.* The function reads **166.5 Ir/call self on `cube` against 153.0 on
+`fixed`**, i.e. **8.8 %** more for a board several times larger. A scan over
+the scope's memo would scale with the board and this does not; the ~150 Ir is
+the fixed body — the reentrancy load, the freeze-depth load, the mutex
+acquire/release the guard inlines, the `Arc::clone` and the return. Same
+device as `(-128)`'s inverted `fixed`/`cube` ratio, and it costs nothing to
+take before proposing a memo.
+
+*(c) The CoW deep copy is 3.94 % of `cube` and its unshare rate is 12.4 %.*
+`Arc::clone_from_ref_in` is 119,938 calls at **479.7 Ir self**, 96.8 M
+inclusive, and **112,034 of them come from `make_mut`** — 12.4 % of its
+905,060 calls. Against 22,556 `GameState::clone`s that is **~5 unshares a
+clone**, which is the per-`CardData` zone barrier doing what `(-100)` said it
+does (`CardData` is 48 % of the deep copies), not a group that could be made
+to unshare less. `GameState::clone` self is now **501.2 Ir/call** (544 after
+`(-144)`) over ~6 `Vec::clone` a clone.
+
+⚠ **And one number to stop reading as ours**: `__rustc::__rust_no_alloc_shim_
+is_unstable_v2` is **1,278,510 calls at 1 Ir**, one per allocation, and with
+`__rust_alloc` / `__rdl_alloc` / `__rust_dealloc` / `__rdl_dealloc` the whole
+Rust allocator *shim* is **16.6 M = 0.68 %** on top of glibc's own malloc/free
+rows. It is rustc-emitted and not reachable from this source tree; it is
+already inside every allocation-count ceiling this file quotes.
+
+**So the honest state of the queue is: `(-145)` is the only entry with a
+number on it and it is deliberately refused.** The next real move here is not
+another micro-row — it is either taking `(-145)` with the Miri'd `unsafe` box
+and an explicit decision that the trade is wanted, or accepting that the
+profile is at its floor for this shape of engine and spending runs on the
+build lever (PGO, which is measured at -23 % and opt-in) instead.
 
 **(-150) CLOSED — see the hundred-and-eighteenth pass.** `cube` **-0.297 %** /
 `fixed` **-0.286 %** for making `CastProfile` four bytes and `Copy`. **The hot
