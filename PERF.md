@@ -1024,6 +1024,21 @@ contention-immune, which makes it the better first look.
 section passed its ~15-line budget again. They come off `(-149)` through
 `(-155)`.**
 
+- ⚠ **PRICE AN INLINE BUFFER BY WHETHER IT GROWS ITS OWNER, NOT BY THE
+  ALLOCATION OR THE SPILL IT REMOVES** (`(-165)`, four builds, all reverted;
+  `(-161)` is the same rule seen from the winning side). It is **free** when the
+  inline form is the same size as the `Vec` it replaces — `(-161)`'s
+  `CopyVec<[CardId; 4]>` at 24 bytes, `fixed` -0.521 % — and free when the owner
+  is a frame nothing copies (`(-158)`'s twelve locals, `(-164)`). It **loses**
+  on an owner that is **returned** (`DispatchScan` 56 -> 216 bytes: `__memcpy`
+  +9.5 M against 5.6 M of allocator recovered, and **+0.99 % on `fixed`**, where
+  both its lists are always empty) and on one that is **cloned**
+  (`LayerFreezeState::perms` 8 -> 24 slots is +256 bytes of `GameState`:
+  `__memcpy` +1.74 M, of which `GameState::clone` is +1.06 M and the bot's
+  dry-run probes the rest). **A byte added to `GameState` costs ~6,800 Ir a
+  six-game `cube` run** — `PlayerData`'s size-class rule one level out. And a
+  spill costs ~208 Ir, about what the width to remove it costs, so **the
+  `reserve_one_unchecked` census is an instrument, never a queue**.
 - ⚠ **`PlayerData`'s ceiling is 1,016 bytes**: 1,032 is a 1,040-byte chunk
   past glibc's largest smallbin, and crossing it cost 11.3 M Ir — more than
   the 10.0 M device that grew it saved. **Price a field added to the hot
@@ -2421,6 +2436,48 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### The inline-buffer price pass — closing state at `(-164)`
+
+One take on top of the other session's `(-159)`, and four builds spent on
+refutations that are the pass's larger half.
+
+```text
+  pool    base ebbb449f     (-164)          delta
+  fixed     904,136,467     903,305,646   **-0.0919 %**
+  cube    2,462,281,859   2,461,680,255   **-0.0244 %**
+  sealed  2,471,798,553   2,470,616,385   **-0.0478 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,196 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 28.1 MiB, bin 143,590,072 B,
+        games_per_s 332.28 at host_calib_ms 58
+stalls  **68,000 games / 10 seeds**, `--games 400 --threads 3 --decks all`,
+        seeds 1/3/7/11/17/23/29/31/37/41: 0 panic, 0 hang, **cap 0 /
+        stuck 0 / draw 20**, draws only. Run because `(-164)` changes the
+        decider every `AnyOneColor` tap installs, which is a path every game
+        takes. ⚠ Seed 43 excluded, as ever — the nine-minute Scute Swarm game
+        that *decides*, so no undecided count can see it.
+audits  audit_panics 0 bare (77 sites, 66 guarded, 11 lock-poison),
+        audit_variant_coverage 2 dead primitives (both want a card),
+        audit_keyword_drift 0 invented, audit_target_fields 147 unread fields
+        and **0 aimed by a shipped card**, audit_target_walkers clean
+```
+
+⚠ **The suite gained one test, not a skip**: `(-164)` brings
+`one_color_decider_matches_the_scripted_one`. Nothing was deleted or ignored.
+
+**The four reverted builds are `(-165)`** — `(-158)` row 1 taken past the dropck
+wall and measured (`fixed` **+0.99 %**), and three widenings off the spill
+census. The rule they produced is in "Standing rules for a perf pass": **price
+an inline buffer by whether it grows its owner**, with `GameState`'s ~6,800 Ir a
+byte as the number and `(-161)`'s free 24-byte `CopyVec` as the other end of it.
 
 ### The allocation-shape pass — closing state
 
@@ -10913,6 +10970,127 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-164)` — the recycled decider is two bytes, not a re-armed script: `fixed` -0.092 %, `sealed` -0.048 %, `cube` -0.024 %
+
+```text
+  pool    base ebbb449f     candidate       delta
+  fixed     904,136,467     903,305,646   **-0.0919 %**
+  cube    2,462,281,859   2,461,680,255   **-0.0244 %**
+  sealed  2,471,798,553   2,470,616,385   **-0.0478 %**
+```
+
+`profiling-fast --no-default-features`, six games, one thread, seed 1, both
+sides built by one warm cargo in the main tree.
+
+**`(-159)` removed the allocation; this is what the box still cost per pip.**
+`ScriptedDecider::rearm_script` clears and re-pushes a `DecisionAnswer` — a
+drop-glued enum — into a `SmallVec`, clears the `asked` log beside it, and
+`decide` `remove(0)`s it back out. `OneColorDecider` is an `Option<Color>`: the
+re-arm is a two-byte store and the whole type is `Copy`.
+
+```text
+  the rows that moved                 cube        fixed
+    ScriptedDecider::rearm_script   -499,832    -249,310    (deleted)
+    OneColorDecider::rearm_script   +143,680     +71,936    3.5x cheaper
+    SmallVec::drop                  -176,784     -94,338
+    drop_in_place<ScriptedDecider>  -146,696     -76,868
+    __memcpy                        -199,242    -103,066
+    auto_tap_for_cost_inner          -90,600     -54,344
+```
+
+⚠ **`fixed` is 3.8x `cube` here, which is the reverse of `(-159)`'s split**
+(-0.121 / -0.176). `(-159)` removed *allocations*, and the grant-heavy pool
+makes more of them; this removes *per-pip bookkeeping*, and the four vanilla
+archetypes spend a larger share of their instructions paying mana. **A row's
+pool split is a property of the change, not of the row** — two commits on the
+same six lines split opposite ways.
+
+`ScriptedDecider` goes back to test-only: `silent()` and its `log` flag existed
+for this one engine caller and are deleted with it, so `asked` is again always
+read by somebody. `kind()` reports the same `Scripted` discriminant the
+thirty-eight `matches!(decider.kind(), Auto)` gates read — and those gates are
+**not** a candidate: `AutoDecider::kind` is 91,128 Ir, **0.004 % of `cube`**,
+so an `is_auto()` that skips materialising the enum is worth nothing. Measured
+off the `ad55ba78` dump, no build spent.
+
+### `(-165)` — WHAT AN INLINE BUFFER COSTS, MEASURED FOUR TIMES. **Price it by what copies its OWNER, not by the allocation or the spill it removes.**
+
+`(-158)` shipped twelve of these and `(-159)`/`(-161)`/`(-164)` three more, so
+the device looked free. It is not, and the four builds that say so are worth
+more than a fifth win would have been. **The wins are the buffers whose owner
+does not get bigger** — `(-158)`'s twelve locals sit in frames nothing copies,
+and `(-161)` says the same thing from the other end: a `CopyVec<[CardId; 4]>` is
+the same 24 bytes as the `Vec` it replaces, so the stored, cloned struct it
+lives in has nothing to charge and the slot is **free**. **Every one of these
+four grows its owner.**
+
+**(a) `(-158)` row 1 past the dropck wall — MEASURED, and the number is worse
+than the compile error suggested.** `12753f84` refuted this row on
+`SmallVec`'s missing `#[may_dangle]`; getting past that (three explicit
+`drop()`s and two `let DispatchScan { .. } =` destructurings, at base
+`5efdbf96`) produces a binary, and the binary is the argument:
+
+```text
+  pool    base 5efdbf96   SmallVec fields   delta
+  fixed     905,215,522     914,173,322   **+0.9896 %**
+  cube    2,466,625,616   2,474,625,275   **+0.3243 %**
+```
+
+The allocator side fell exactly as the census predicted — `cube` malloc
+-1,429,035, `_int_free` -1,715,320, `free` -1,241,292, `finish_grow`
+-1,236,480, about 5.6 M recovered — against `__memcpy` **+9,474,477**,
+`SmallVec::retain` +3,230,306 (over `Vec::retain` -2,491,300),
+`SmallVec::drop` +2,937,892 and `dispatch_triggers_for_events` +1,680,018.
+`DispatchScan` went from **56 bytes to 216**; it is returned by value and the
+`sret` slot is copied whether or not the inline buffer holds anything.
+⚠ **`fixed` is the sharper reading — +0.99 % on a pool where both lists are
+always empty.** A returned container's inline buffer is a cost every caller
+pays and a saving only the pools that fill it collect.
+
+**(b) The spill census is an instrument, never a queue.**
+`reserve_one_unchecked` — a `SmallVec` outgrowing its buffer, i.e. paying
+exactly the allocation it exists to avoid — reads **17,604 calls on `cube` and
+3,124 on `fixed`**, ~4.5 M Ir (0.18 % of `cube`). It looks like the cheapest
+row on the list.
+
+```text
+  cube, spills by caller (calls / Ir) at ad55ba78
+    computed_permanent_hinted   5,524  1,376,859   LayerFreezeState::perms, [_; 8]
+    declare_blockers            5,166  1,456,263   five locals + two SmallIdMaps
+    combat_damage_computed      2,240    523,144
+    finalize_cast               1,266    349,473
+    pick_blocks_inner             868    276,334
+
+  three widenings, each a build and a three-pool A/B against ad55ba78
+                                          fixed      cube     sealed   spills
+  (1) LayerFreezeState::perms  8 -> 24   +0.0272   -0.0073   +0.0214   ->12,786
+  (2) declare_blockers' five locals 8->16 +0.0104  -0.0049   -0.0062   ->16,960
+  (3) SmallIdSet/SmallIdMap    4 ->  8   +0.0499   -0.0625   +0.0166   ->15,854
+```
+
+**The spills genuinely fall and the program does not move.** A spill costs
+about **208 Ir**, and the width that removes it costs about as much again in
+whatever copies the buffer's owner.
+
+* **(1) names the mechanism and it is a sizing rule.** `perms` lives in
+  `LayerFreezeState` inside `GameState`; 24 slots is +256 bytes of `GameState`,
+  and `__memcpy` rose **+1,737,760 on `cube` / +953,290 on `fixed`** against
+  ~1.0 M of allocator recovered. By caller: `GameState::clone` +1,056,772, then
+  the bot's dry-run probes — `simulate_attack_outcome_once` +161,816,
+  `sim_spell_action_inner` +157,346, `main_phase_action_with` +139,564,
+  `sim_start_state` +56,544. **A byte added to `GameState` costs ~6,800 Ir a
+  six-game `cube` run and ~3,700 a `fixed` one**, whatever the field does: the
+  CoW zones are cheap to clone and the struct around them is not. That is
+  `PlayerData`'s 1,016-byte ceiling one level out.
+* **(2) says the census names a FUNCTION, not a buffer.** `declare_blockers`
+  holds eight `SmallVec`s; widening the five obvious ones took **644 of its
+  5,166 spills**. The rest are its two `SmallIdMap`s — a combat with more than
+  four distinct blocked attackers.
+* **(3) is the closest to a win and still is not one**: `cube` -0.063 % against
+  `fixed` **+0.050 %** and `sealed` +0.017 %, on 1,750 spills removed. A wider
+  `SmallIdSet`/`SmallIdMap` is 64-128 more bytes in twelve frames, which the
+  `fixed` pool pays for and never fills.
 
 ### `(-161)` — `AffectedPermanents::Specific` takes an inline slot: `fixed` -0.521 %, `cube` -0.112 %, `sealed` +0.024 %
 
@@ -20436,7 +20614,7 @@ turns up nine engine rows the Ir ranking never showed. Base totals: `fixed`
   cube — growth callers by count (315,914 growths over 114 callers)
     growths    calls   /call   grow Ir
     38,212    163,574   0.23   7,812,347  Vec::push_mut            ⓘ
-    23,576     80,728   0.29   2,829,120  dispatch_board_scan      ✗ dropck
+    23,576     80,728   0.29   2,829,120  dispatch_board_scan      ✗ (-165)(a)
     19,684    365,837   0.05  13,653,258  Vec::from_iter           ⓘ
     16,394     11,310   1.45   2,892,179  auto_tap_for_cost_inner  ← (-159)
     16,366      6,128   2.67   9,507,753  resolve_combat           ✗ (-158)
@@ -20450,7 +20628,7 @@ turns up nine engine rows the Ir ranking never showed. Base totals: `fixed`
      8,248      8,526   0.97   1,127,415  mana_source_table        ✗ its `reserve(16)`
      7,632      9,884   0.77   1,723,749  remove_from_battlefield_to_graveyard_raw
      7,566     12,538   0.60     958,846  cast_candidates
-     7,336     49,786   0.15     880,989  trigger_grant_sources    ✗ dropck
+     7,336     49,786   0.15     880,989  trigger_grant_sources    ✗ (-165)(a)
      7,180     37,848   0.19   2,365,260  advance_step
      6,848      4,910   1.39   2,085,026  declare_blockers         ✗ (-158) took it
      6,832     12,294   0.56   1,398,257  send_to_graveyard
@@ -20473,6 +20651,14 @@ turns up nine engine rows the Ir ranking never showed. Base totals: `fixed`
     11,924      9,450   1.26   1,604,800  deal_combat_damage_to_target
     11,068     31,010   0.36   7,075,133  fire_step_triggers       ← 0.286 %, sealed only
 ```
+
+⚠ **The two `✗ (-165)(a)` rows are refuted TWICE OVER now, and the second
+refutation is the one to read.** `12753f84` closed them on `SmallVec`'s missing
+`#[may_dangle]`; `(-165)` got past that and built the binary, which reads
+`fixed` **+0.9896 %** / `cube` +0.3243 %. `DispatchScan` is *returned*, so its
+inline buffer is copied by every caller and filled only by the pools that carry
+a grant static. Do not re-open either row, and read `(-165)` before proposing an
+inline buffer anywhere.
 
 **Three things this reading establishes.**
 
@@ -20502,6 +20688,34 @@ which is why `in_layer_gather` is an `AtomicBool` and not a `Cell`. A
 `thread_local!` free-list with an RAII guard is the only shape that satisfies
 both; the reentrancy the guard has to survive is the same one
 `in_layer_gather` documents.
+
+**FOUR MORE ROWS PRICED AND RULED OUT, so nobody re-reads them.**
+
+* **`PrintedList::push` — two facts for `(-163)`'s lead, not a refutation of
+  it.** 46,292 allocations, 5,565,774 Ir of `__rust_alloc` alone, 11.83 M
+  inclusive (0.48 % of `cube`). (i) Its `__rust_dealloc` edge is **316**, so
+  **99.3 % of pushes are the first push on a fresh list** — amortising repeated
+  pushes (a `Vec` instead of a re-materialised `Box<[T]>`) buys essentially
+  nothing, and the whole row is one allocation per (permanent, grant). (ii) The
+  box escapes through `into_overlay` into the cached `ComputedPermanent`, so an
+  inline slot there is priced at that struct's size by `(-165)`, and its element
+  is a `Keyword`, not `(-161)`'s free `u32`. **Price `ComputedPermanent` before
+  spending the build**, which is what `(-163)`'s entry already says.
+* **`CowBox<Vec<T>>::push` (8,296 growths / 5,590,426 Ir) is the CoW unshare
+  itself** — one allocation for the copy, which is the type's whole point. Its
+  37,472 `__rust_alloc` calls are `Arc::make_mut`'s materialisation with room
+  for the appended element, a previous pass's fix.
+* **`Vec::spec_from_iter_nested::from_iter` is 2.70 % of `cube` self and it is
+  diffuse.** 399,015 calls over **92 callers**, largest `Map::fold` at 25,982
+  (6.5 %), largest engine caller `check_state_based_actions_into` at 24,326.
+  `(-156)` prices a std-adapter rewrite at ~10 % of the row's self Ir *per
+  site*, and there is no site — it is every `.filter(..).collect()` in the
+  program.
+* **`Decider::kind`'s thirty-eight discriminant gates are worth nothing.**
+  `matches!(self.decider.kind(), DeciderKind::Auto)` materialises a 56-byte enum
+  with drop glue through a virtual call, thirty-eight times over — and
+  `AutoDecider::kind` reads **91,128 Ir, 0.004 % of `cube`**. An `is_auto()` on
+  the trait is a tidy, not a candidate.
 
 ⓘ **`Vec::push_mut` and `Vec::from_iter` are not rows, they are the
 un-inlined remainder.** Callgrind charges a growth to the innermost frame it

@@ -693,7 +693,7 @@ impl Decider for AutoDecider {
 /// `answers` is inline rather than a `VecDeque`: a script is one or two
 /// answers, and a queue allocation for that is pure loss. `remove(0)` on two
 /// slots is cheaper than the ring buffer it replaces. **Test-only again as of
-/// `(-161)`** — the engine's one scripted path recycles an
+/// `(-164)`** — the engine's one scripted path recycles an
 /// [`OneColorDecider`] instead, so `asked` is always read by somebody.
 #[derive(Debug)]
 pub struct ScriptedDecider {
@@ -723,7 +723,7 @@ impl ScriptedDecider {
 /// `DecisionAnswer` — a 40-byte enum with drop glue — into a `SmallVec` and
 /// clears the `asked` log beside it; `decide` then `remove(0)`s it back out.
 /// This one is an `Option<Color>`: the re-arm is a two-byte store and the whole
-/// type is `Copy`. PERF `(-161)`.
+/// type is `Copy`. PERF `(-164)`.
 ///
 /// `kind()` reports the same `Scripted` discriminant `ScriptedDecider` does.
 /// Thirty-eight engine sites branch on `matches!(decider.kind(), Auto)` and
@@ -802,7 +802,7 @@ mod one_color_decider_tests {
     /// the load-bearing half: thirty-eight engine sites branch on
     /// `matches!(decider.kind(), DeciderKind::Auto)`, and a `OneColorDecider`
     /// that reported `Auto` would silently take the other arm at every one.
-    /// PERF `(-161)`.
+    /// PERF `(-164)`.
     #[test]
     fn one_color_decider_matches_the_scripted_one() {
         let ask = Decision::ChooseColor {
