@@ -6517,6 +6517,18 @@ impl GameState {
             // without dying (Dour Port-Mage / Three Tree Scribe watchers).
             let leaver =
                 (card.definition.is_creature()).then_some((card.id, card.controller));
+            // Record for `Selector::ExiledThisResolution` ("that many basic
+            // lands", "if you exiled a land card this way"). The library and
+            // graveyard exits record it in `place_card_in_dest` /
+            // `ExilePlayerGraveyard`; this is the *battlefield* exit, and all
+            // eighteen of its call sites — `Effect::Exile` among them — went
+            // through here without recording, so the selector could not see a
+            // permanent exiled from play at all. Gated on the resolved zone so
+            // a replaced exile (CR 614, Rest in Peace-style redirects) is not
+            // counted as one.
+            if resolved == crate::card::Zone::Exile {
+                self.scratch.exiled_card_ids_this_resolution.push(id);
+            }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.on_left_battlefield(id, &mut events);
