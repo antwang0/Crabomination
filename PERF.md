@@ -2437,6 +2437,43 @@ a box whose state moves.
 
 ## Baseline
 
+### The recycle-list pass — closing state at `(-166)`
+
+One take, and it is the largest three-pool win since `(-144)`.
+
+```text
+  pool    base b5ea6d90      (-166)          delta
+  fixed     898,980,997     893,229,018   **-0.6398 %**
+  cube    2,458,753,806   2,443,311,034   **-0.6281 %**
+  sealed  2,471,129,875   2,455,421,360   **-0.6357 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,195 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 19.4 MiB, bin 218,535,704 B
+        (`--no-default-features`, i.e. the system allocator)
+stalls  5 seeds / 68,000 games `--games 400 --threads 3 --decks all`, run on
+        BOTH binaries: **stdout byte-identical seed for seed**, 0 panic,
+        cap 0 / stuck 0, 16 draws on seed 11 either side
+```
+
+⚠ **The A/B is `profiling-fast` on both sides**, six games, one thread,
+seed 1, `--no-default-features` — the profile the Log's rows are read under.
+The base column is this branch's own reading at `b5ea6d90` and lands within
+0.05 % of `(-161)`'s committed `profiling-lines` figures on all three pools,
+which is the cross-profile check `(-161)` argued for.
+
+⚠ **A concurrent session landed `(-164)` under this pass's A/B and the reading
+was NOT re-taken.** The rule says re-read a candidate against the tip it lands
+on *because two changes to the same walk multiply*; these two are not the same
+walk — `(-164)` is `auto_tap_for_cost_inner`'s per-pip decider and `(-166)` is
+the layer memo's box — so they add, and both columns stand as measured.
+
 ### The inline-buffer price pass — closing state at `(-164)`
 
 One take on top of the other session's `(-159)`, and four builds spent on
@@ -10971,6 +11008,79 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-166)` — `computed_permanent_hinted`'s `Arc` is recycled: `fixed` -0.640 %, `cube` -0.628 %, `sealed` -0.636 %
+
+```text
+  pool    base b5ea6d90      (-166)          delta
+  fixed     898,980,997     893,229,018   **-0.6398 %**
+  cube    2,458,753,806   2,443,311,034   **-0.6281 %**
+  sealed  2,471,129,875   2,455,421,360   **-0.6357 %**
+
+  malloc CALLS          base        (-166)      delta      pool hit rate
+    fixed             464,219      408,878    -55,341      55,341 / 69,822  = 79.3 %
+    cube            1,193,595    1,080,172   -113,423     113,423 / 166,842 = 68.0 %
+    sealed          1,374,536    1,235,649   -138,887     138,887 / 169,168 = 82.1 %
+
+  fixed, the glibc rows                base        (-166)
+    _int_free                    28,380,914    24,786,258
+    malloc                       21,499,337    18,889,278
+    _int_malloc                  17,687,219    15,133,895
+    free                         12,997,340    11,447,820
+    malloc_consolidate            3,717,690     2,920,717
+    allocator total              91,930,206    80,614,843   **-12.3 %**
+```
+
+`(-163)`'s top row, taken. `computed_permanent_hinted` makes one
+`Arc<ComputedPermanent>` per (scope, card) pair — **69,822 a six-game `fixed`
+run, 166,842 on `cube`**, the two counts the census predicted to the unit — and
+the boxes now come off a **thread-local free list** instead of `malloc`.
+
+**THE UNIQUENESS CHECK MOVED FROM THE SCOPE EXIT TO THE REUSE SITE, AND THAT
+ONE MOVE IS THE WHOLE DIFFERENCE BETWEEN THIS AND `(-27)`.** `(-27)` asked
+`Arc::get_mut` of each memo handle *as the scope closed*, found 7 of every 8
+still shared — the caller that took the handle collects it **out** of the
+scope — and recovered 19,086 boxes for 316,576 bookkeeping calls, so it was
+reverted. Here the closing scope parks its handles unexamined and `get_mut` is
+asked only when something wants a box back, by which point the frame that held
+it has returned. **12.5 % becomes 68-82 %.** The rule: *a "is this handle
+still shared" question is answered by WHEN it is asked, not by what it is
+asked about — ask it at the reuse site, never at the release site.*
+
+**The pool is thread-local, not per-`GameState`, and that is forced.**
+`Clone for LayerFreeze` is `default()` and a `cube` run takes 22,684 state
+clones against 28,992 freeze scopes — 1.28 scopes per state — so a pool that
+lived on the state would be cold at nearly every scope that could use one.
+`RefCell<Vec<_>>` with `try_borrow_mut` (never `borrow_mut`: a panic reachable
+from self-play is the one thing this path must not add), depth 8, LIFO. A
+popped handle that is still shared is **dropped, not put back** — putting it
+back would wedge the list behind whatever holds it.
+
+**The device costs about half of what it saves, and the honest arithmetic is
+worth writing down.** The allocator rows fall 11.32 M Ir on `fixed` while the
+program falls 5.75 M: `cp_pool::alloc` is 69,822 calls / 5.22 M self Ir
+(74.8 a call) and `LocalKey::with` 76,284 / 4.12 M (54.0), against a
+`malloc`+`free` pair that was ~205 Ir including the `_int_*` bodies. A free
+list is only ever worth the difference between a `malloc` and a TLS access,
+and on this row that difference is a bit over half.
+
+Producer and consumer are one line each: `LayerFreezeState::end_of_scope`'s
+`perms.clear()` becomes `cp_pool::recycle(self.perms.drain(..)…)`, and the two
+`Arc::new(apply_layers_one_gated(..))` sites in `computed_permanent_hinted`
+become `cp_pool::alloc(..)`. The unfrozen tail (`apply_layers_one`, no scope to
+park into) is deliberately left on `Arc::new` — it would consume from the list
+without ever feeding it.
+
+⚠ **The hit rate is `CAP`-sensitive on `cube` and the depth was not tuned.**
+8 is one scope's working set (`fixed` computes 4.3 permanents a scope, `cube`
+5.8), and `cube` is the pool's worst reading at 68.0 %. A depth sweep is
+`(-167)`.
+
+Gates: suite 19,195 / 0 / 5 with the golden traces unmoved, clippy
+`--all-targets` clean, `--bench` byte-identical to the invariant
+(195,806 / 27.49 / 611.9 / 0 stalls), determinism ok, and a **five-seed
+68,000-game `--decks all` sweep run on both binaries whose stdout is
+byte-identical seed for seed** (0 panic, cap 0 / stuck 0, 16 draws on seed 11
+either side) — the behaviour check an Ir delta cannot give.
 ### `(-164)` — the recycled decider is two bytes, not a re-armed script: `fixed` -0.092 %, `sealed` -0.048 %, `cube` -0.024 %
 
 ```text
@@ -20506,6 +20616,22 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-167) THE RECYCLE LIST'S DEPTH WAS NEVER TUNED, AND `cube` IS ITS WORST
+POOL.** `(-166)` ships `CAP = 8` — one scope's working set by the census's own
+per-scope counts (4.3 permanents on `fixed`, 5.8 on `cube`) — and reads a
+68.0 % hit rate on `cube` against 79.3 % / 82.1 % on the other two. The
+list is LIFO and a still-shared handle is dropped on the pop, so a deeper list
+holds more of the previous scope's boxes *and* more dead ones; whether that is
+a net win is one A/B (rebuild + three dumps, no design work). The ceiling is
+small and known: `cube`'s remaining misses are 53,419 `malloc` pairs, ~11 M Ir,
+**0.45 % of the pool** if every one of them were recovered, which they will not
+be. ⚠ Price the *dead* pops too — a deeper list makes `alloc`'s loop longer on
+a miss, and `alloc` is already 74.8 Ir a call.
+
+**(-163)(a) TAKEN by `(-166)` — `fixed` -0.640 % / `cube` -0.628 % / `sealed`
+-0.636 %, the largest three-pool win since `(-144)`. The entry below is kept
+for its census; `(b)` is still open and is re-priced under it.**
+
 **(-163) THE PROGRAM'S ALLOCATIONS RANKED BY SOURCE LINE — THE CENSUS THIS
 FILE HAS NEVER HAD, AND IT DOES NOT AGREE WITH THE GROWTH CENSUS ABOUT
 ANYTHING.** `(-161)` proved `cg_growth.py` reads **zero** on `vec![x]` and on
@@ -20552,6 +20678,12 @@ one: `scripts/cg_alloc_sites.py` over the whole binary (needle `crabomination`),
 ```
 
 **Read the two leads at the top before anything else on this list.**
+
+*(a) — ✅ TAKEN, `(-166)`. The device was neither of the two the entry
+proposed: not a value return (`(-111)`'s refutation stands) and not an arena,
+but a thread-local **recycle list with the uniqueness check deferred to the
+reuse site**, which is `(-27)` with one thing changed and it turns 12.5 %
+into 68-82 %. Read `(-166)` before proposing anything else here.*
 
 *(a) `computed_permanent_hinted` is 85,004 allocations of `fixed` (17 % of the
 program's) and 195,834 of `cube` (25 %), in three lines, and it has never

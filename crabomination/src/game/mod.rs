@@ -432,9 +432,80 @@ impl LayerFreezeState {
     /// only the first is what made a stale gate outlive its scope and broke
     /// Sarkhan the Masterless. `gates` is an array for the same reason — a
     /// family added to it cannot be forgotten here.
+    ///
+    /// `perms` is *drained into [`cp_pool`]* rather than cleared: the entries
+    /// are dead either way, and handing the boxes on is what makes the next
+    /// scope's `Arc::new`s free (PERF `(-166)`).
     fn end_of_scope(&mut self) {
         self.memo = None;
-        self.perms.clear();
+        cp_pool::recycle(self.perms.drain(..).map(|(_, cp)| cp));
+    }
+}
+
+/// A thread-local free list of `Arc<ComputedPermanent>` boxes, recycled
+/// between freeze scopes.
+///
+/// `computed_permanent_hinted` is the program's largest allocation site by
+/// source line — PERF `(-163)`, 85,004 boxes of a six-game `fixed` run (17 %
+/// of the program's) and 195,834 of `cube` (25 %) — and every one of them is
+/// an exact-size `Arc::new` that the growth census cannot see.
+///
+/// **The uniqueness check is at the reuse site, not at the scope exit, and
+/// that is the whole device.** `(-27)` asked `Arc::get_mut` of each memo
+/// handle as the scope closed and 7 of every 8 were still shared, because the
+/// caller that took the handle collects it *out* of the scope; it recovered
+/// 19,086 boxes for 316,576 calls and was reverted. Here the handle goes on
+/// the list unexamined and is only asked when something wants the box back —
+/// by which point the frame that held it has returned.
+///
+/// **Thread-local, not per-`GameState`:** `Clone for LayerFreeze` is
+/// `default()` and a `cube` run takes 22,684 state clones against 28,992
+/// freeze scopes, so a pool that lived on the state would be empty at nearly
+/// every scope that could use one.
+mod cp_pool {
+    use std::sync::Arc;
+
+    use crate::game::layers::ComputedPermanent;
+
+    /// Deep enough for one scope's working set — a scope computes 4.3
+    /// permanents on `fixed` and 5.8 on `cube` — and shallow enough that the
+    /// definitions the parked boxes keep alive stay a rounding error.
+    const CAP: usize = 8;
+
+    thread_local! {
+        static POOL: std::cell::RefCell<Vec<Arc<ComputedPermanent>>> =
+            const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// Park a closing scope's handles. Shared ones are parked too: whether
+    /// the box comes back is [`alloc`]'s question, asked later.
+    pub(super) fn recycle(handles: impl Iterator<Item = Arc<ComputedPermanent>>) {
+        POOL.with(|p| {
+            let Ok(mut pool) = p.try_borrow_mut() else { return };
+            for h in handles {
+                if pool.len() == CAP {
+                    break;
+                }
+                pool.push(h);
+            }
+        });
+    }
+
+    /// `Arc::new`, served from the free list when a parked box has since
+    /// become unique. A still-shared box is dropped rather than put back —
+    /// putting it back would wedge the list behind whatever holds it.
+    pub(super) fn alloc(cp: ComputedPermanent) -> Arc<ComputedPermanent> {
+        POOL.with(|p| {
+            if let Ok(mut pool) = p.try_borrow_mut() {
+                while let Some(mut h) = pool.pop() {
+                    if let Some(slot) = Arc::get_mut(&mut h) {
+                        *slot = cp;
+                        return h;
+                    }
+                }
+            }
+            Arc::new(cp)
+        })
     }
 }
 
@@ -13572,9 +13643,8 @@ impl GameState {
                     Some(c) => c,
                     None => self.battlefield.find_by_id(id)?,
                 };
-                let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(
-                    card, fx, *gates,
-                ));
+                let computed = crate::game::layers::apply_layers_one_gated(card, fx, *gates);
+                let cp = cp_pool::alloc(computed);
                 st.perms.push((id, cp.clone()));
                 return Some(cp);
             }
@@ -13589,7 +13659,7 @@ impl GameState {
             // `frozen_effects` would, then store both memos under one guard.
             let fx = std::sync::Arc::new(self.gather_continuous_effects());
             let gates = crate::game::layers::SecondPass::of(&fx);
-            let cp = std::sync::Arc::new(crate::game::layers::apply_layers_one_gated(
+            let cp = cp_pool::alloc(crate::game::layers::apply_layers_one_gated(
                 card, &fx, gates,
             ));
             // Re-check: an entry stored after the scope closed would outlive
