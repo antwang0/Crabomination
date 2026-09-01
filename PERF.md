@@ -20105,6 +20105,34 @@ another micro-row — it is either taking `(-145)` with the Miri'd `unsafe` box
 and an explicit decision that the trade is wanted, or accepting that the
 profile is at its floor for this shape of engine and spending runs on the
 build lever (PGO, which is measured at -23 % and opt-in) instead.
+**FILED WITH NUMBERS, NOT TAKEN: `cast_spell_with_convoke` IS THE LARGEST
+SINGLE `make_mut` CALLER AND ~46 % OF ITS CALLS ARE REJECTIONS.** A fresh
+`cube` dump at `5cba7ddc` ranks the `make_mut` callers, and the top row is
+not close:
+
+```text
+  callers of make_mut (cube, 6 games)      calls    Ir incl
+    cast_spell_with_convoke              132,054  37,900,852   1.55 %
+    resolve_combat                       101,432   6,464,048
+    resolve_top_of_stack_inner            77,510  10,407,253
+```
+
+**13.3 `make_mut` a call, and the shape says one deep copy plus twelve
+refcount checks.** The function is entered 9,898 times and reaches
+`finalize_cast` 5,320 — so **4,578 casts (46 %) are rejected**, and the
+rejection paths all sit *after* `self.players[p].remove_from_hand(card_id)`
+at `actions.rs:6643`, with **~50 `self.players[p].hand.push(card)` sites**
+putting it back. Each rejected cast therefore pays one full `PlayerData`
+unshare (~2,000 Ir) to take a card out of a hand and put it back.
+
+**Ceiling ~0.19 % of `cube`**, and it is filed rather than taken because the
+device is a restructure of a **1,363-line** function: the ~50 checks between
+the removal and `finalize_cast` would have to run against a `&CardInstance`
+still in the hand, and several of them mutate the owned `card`
+(`cast_from_hand`, `kicked`, the waterbend rider). ⚠ **Price the rejection
+rate again before starting** — 46 % is a bot-policy number, not a constant,
+and the whole win is proportional to it.
+
 **(-154) CLOSED — see the hundred-and-twentieth pass.** `cube` **-0.224 %**
 at eighteen games (-0.148 % at six) / `fixed` **-0.263 %** for gating three
 damage tallies on the one card each serves. ⚠ **The `debug_flag` word is now
