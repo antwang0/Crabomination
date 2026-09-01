@@ -57,8 +57,10 @@ sixty-seventh pass, so don't re-take that.
    per-mode target filter, four cards wanting a primitive) is in **CARD_BACKLOG**'s
    `search_library`/`destroy` section.
 7. **⚠ A `--games 400 --decks all` stall sweep is 20-30 s a seed and catches what the grid
-   does not** (the grid is 120 games a cell). Run it before the grid. **183,600 games over 27
-   seeds at `22a79dcc`: no panic, no hang, 4 capped, 22 draws.** `CRAB_CAP_DIAG=1` names a
+   does not** (the grid is 120 games a cell). Run it before the grid. **Re-run at `bd42107c`
+   after this run's trigger fixes: 81,600 games / 12 seeds, 0 panic, cap 2 / stuck 0 / draw 14
+   — the two caps are the same Beacon-of-Immortality lock (7a), unchanged.** Earlier: 183,600
+   games over 27 seeds at `22a79dcc`, 4 capped, 22 draws.** `CRAB_CAP_DIAG=1` names a
    capped game's cause in one line; **`CRAB_CAP_DIAG=<n>` names any game past `n` actions**,
    which is the only way to see a *slow* game — one that decides is never "undecided".
 7a. **BOTH LEADS FROM THAT SWEEP ARE CLOSED, AND NEITHER IS A BUG — do not re-open them.**
