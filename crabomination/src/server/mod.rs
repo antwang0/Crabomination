@@ -2439,10 +2439,15 @@ mod tests {
     /// match-driver against bot loop deadlocks.
     #[test]
     fn bot_vs_bot_modern_demo_decks_terminate() {
-        use crate::demo::build_demo_state;
-        let state = build_demo_state();
+        use crate::demo::build_demo_state_seeded;
+        let state = build_demo_state_seeded(0xDECAF);
         let (done_tx, done_rx) = mpsc::channel();
         let handle = thread::spawn(move || {
+            // Both halves of the match's randomness pinned: the deal by the
+            // seeded builder, the bot's tie-breaks by the jitter stream. The
+            // assertion is termination, and a reproducible match is one whose
+            // failure can be re-run.
+            crate::server::bot::set_jitter_seed(Some(0xDECAF));
             run_match(
                 state,
                 vec![
@@ -2469,10 +2474,11 @@ mod tests {
     /// validation collapsing to FFA semantics.
     #[test]
     fn bot_vs_bot_commander_demo_terminates() {
-        use crate::demo::build_commander_state;
-        let state = build_commander_state();
+        use crate::demo::build_commander_state_seeded;
+        let state = build_commander_state_seeded(0xC0FFEE);
         let (done_tx, done_rx) = mpsc::channel();
         let handle = thread::spawn(move || {
+            crate::server::bot::set_jitter_seed(Some(0xC0FFEE));
             run_match(
                 state,
                 vec![
@@ -2484,13 +2490,13 @@ mod tests {
             );
             let _ = done_tx.send(());
         });
-        // `HeuristicBot` draws from the global RNG, so a 4-player FFA's length
-        // varies by more than an order of magnitude run to run (observed
-        // 0.5s–15s). The assertion is termination, not speed — give it enough
-        // headroom that an unlucky game isn't a false failure. (Seeding the
-        // bots so this is reproducible is tracked in TODO.md.)
+        // Both the deal and the bot's tie-breaks are pinned above, so this is
+        // one fixed game rather than a draw from a distribution whose tail ran
+        // to 15 s. The ceiling was 600 s for that tail and is a loaded-box
+        // margin over one game now; a failure here is a real hang, and it
+        // re-runs identically.
         done_rx
-            .recv_timeout(Duration::from_secs(600))
+            .recv_timeout(Duration::from_secs(120))
             .expect("commander 4-player FFA bot match must terminate");
         handle.join().unwrap();
     }

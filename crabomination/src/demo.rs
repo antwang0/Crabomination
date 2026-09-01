@@ -20,19 +20,29 @@ type CardFactory = fn() -> CardDefinition;
 /// into each opening hand. `wants_ui` is set on both seats so every decision
 /// surfaces as a `pending_decision` for the human/bot to answer.
 pub fn build_demo_state() -> GameState {
+    use rand::RngExt;
+    build_demo_state_seeded(rand::rng().random())
+}
+
+/// [`build_demo_state`] with the deal pinned to `seed`, drawn from the
+/// state's own stream (`GameState.rng`) rather than the thread RNG — which is
+/// what `game::rng`'s doc has asked of every shuffle since it was written.
+/// Pair it with `server::bot::set_jitter_seed` on the thread that plays the
+/// match and a bot-vs-bot run replays exactly.
+pub fn build_demo_state_seeded(seed: u64) -> GameState {
     let mut state = GameState::new(vec![
         Player::new(0, "Player 0"),
         Player::new(1, "Player 1"),
     ]);
+    state.rng.reseed(seed);
 
     let p0_deck: &[CardFactory] = brg_combo_deck();
     let p1_deck: &[CardFactory] = goryos_vengeance_deck();
 
-    let mut rng = rand::rng();
     for &f in p0_deck { state.add_card_to_library(0, crate::cube::card_arc(f)); }
-    state.players[0].library.shuffle(&mut rng);
+    state.players[0].library.shuffle(&mut state.rng.draw());
     for &f in p1_deck { state.add_card_to_library(1, crate::cube::card_arc(f)); }
-    state.players[1].library.shuffle(&mut rng);
+    state.players[1].library.shuffle(&mut state.rng.draw());
 
     state.players[0].wants_ui = true;
     state.players[1].wants_ui = true;
@@ -83,18 +93,26 @@ pub fn brg_combo_deck() -> &'static [CardFactory] {
 /// identity matches Rofellos's mono-green identity so every
 /// non-basic passes the Phase K validator.
 pub fn build_commander_state() -> GameState {
+    use rand::RngExt;
+    build_commander_state_seeded(rand::rng().random())
+}
+
+/// [`build_commander_state`] with the deal pinned — see
+/// [`build_demo_state_seeded`] for why the shuffle moved onto the state's own
+/// stream.
+pub fn build_commander_state_seeded(seed: u64) -> GameState {
     let players = (0..4)
         .map(|i| Player::new(i, format!("Player {i}")))
         .collect();
     let mut state = GameState::new(players);
     state.apply_format(crate::format::Format::Commander);
+    state.rng.reseed(seed);
 
-    let mut rng = rand::rng();
     for seat in 0..4 {
         for &f in rofellos_commander_main() {
             state.add_card_to_library(seat, crate::cube::card_arc(f));
         }
-        state.players[seat].library.shuffle(&mut rng);
+        state.players[seat].library.shuffle(&mut state.rng.draw());
         state.seat_commanders(seat, vec![rofellos_llanowar_emissary()]);
         state.players[seat].wants_ui = true;
     }
