@@ -735,6 +735,10 @@ pub fn rishadan_pawnshop() -> CardDefinition {
 /// Mercadian Atlas — {5}. A card for a turn you didn't make a land drop.
 pub fn mercadian_atlas() -> CardDefinition {
     CardDefinition {
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
                 .with_filter(Predicate::ValueAtMost(

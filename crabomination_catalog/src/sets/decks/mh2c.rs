@@ -631,6 +631,7 @@ pub fn parcel_myr() -> CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Myr],
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Clue],
             ..Default::default()
         },
         power: 2,

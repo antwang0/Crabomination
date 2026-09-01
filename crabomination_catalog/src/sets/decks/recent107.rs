@@ -65,6 +65,10 @@ pub fn the_underworld_cookbook() -> CardDefinition {
         name: "The Underworld Cookbook",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

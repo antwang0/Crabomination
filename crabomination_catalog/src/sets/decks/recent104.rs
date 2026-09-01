@@ -123,6 +123,10 @@ pub fn paradox_haze() -> CardDefinition {
         name: "Paradox Haze",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),

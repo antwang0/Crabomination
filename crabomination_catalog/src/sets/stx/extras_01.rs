@@ -146,13 +146,12 @@ fn snarl_land(
     use crate::effect::{EventKind, EventScope, EventSpec};
     let reveal_filter =
         SelectionRequirement::HasLandType(type_a).or(SelectionRequirement::HasLandType(type_b));
+    // ⚠ A Snarl prints "Land" with **no** basic land types — `type_a` /
+    // `type_b` name what the ETB reveal looks for, not what the land is. It
+    // carried them as subtypes until 2026-09-01.
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![type_a, type_b],
-            ..Default::default()
-        },
         activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),

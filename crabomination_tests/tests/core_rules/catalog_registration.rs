@@ -2340,3 +2340,112 @@ fn every_self_source_trigger_kind_reaches_a_dispatcher() {
         dead
     );
 }
+
+/// **A card's printed type line is the card's type line** — supertypes, card
+/// types, land types, and artifact / enchantment subtypes, both directions.
+#[test]
+fn every_card_carries_its_printed_type_line() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+    const HOMONYMS: &[&str] = &["Maraxus of Keld", "Bounty Hunter", "Resurgent Belief"];
+    let normalize = |w: &str| match w.replace(['-', '\'', '\u{2019}'], "").as_str() {
+        // `{:?}` spellings the printed words do not match letter for letter.
+        "Urzas" => "Urza".to_string(),
+        other => other.to_string(),
+    };
+    // "Is this printed word a type we model" is asked of the enum, not of a
+    // hand-kept list, so a word the engine has no name for is skipped rather
+    // than reported as a missing type.
+    let modelled = |label: &str, w: &String| {
+        let v = serde_json::Value::String(w.clone());
+        match label {
+            "supertype" => serde_json::from_value::<crabomination::card::Supertype>(v).is_ok(),
+            "card type" => serde_json::from_value::<crabomination::card::CardType>(v).is_ok(),
+            "land type" => serde_json::from_value::<crabomination::card::LandType>(v).is_ok(),
+            "artifact subtype" => {
+                serde_json::from_value::<crabomination::card::ArtifactSubtype>(v).is_ok()
+            }
+            _ => serde_json::from_value::<crabomination::card::EnchantmentSubtype>(v).is_ok(),
+        }
+    };
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        if HOMONYMS.contains(&def.name) { continue; }
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else { continue };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        { continue; }
+        let Some(type_line) = entry.get("type_line").and_then(|v| v.as_str()) else { continue };
+        checked += 1;
+        let (base, sub) = match type_line.split_once('—') {
+            Some((b, s)) => (b, s),
+            None => (type_line, ""),
+        };
+        let base_words: HashSet<String> = base.split_whitespace().map(normalize).collect();
+        let sub_words: HashSet<String> = sub.split_whitespace().map(normalize).collect();
+        let mut all_ours: HashSet<String> =
+            def.subtypes.creature_types.iter().map(|t| format!("{t:?}")).collect();
+        all_ours.extend(def.subtypes.land_types.iter().map(|t| format!("{t:?}")));
+        all_ours.extend(def.subtypes.artifact_subtypes.iter().map(|t| format!("{t:?}")));
+        all_ours.extend(def.subtypes.enchantment_subtypes.iter().map(|t| format!("{t:?}")));
+        all_ours.extend(def.subtypes.spell_subtypes.iter().map(|t| format!("{t:?}")));
+        all_ours
+            .extend(def.subtypes.planeswalker_subtypes.iter().map(|t| format!("{t:?}")));
+        // A subtype family is only compared when the printed type line has
+        // the card type that owns it — "Legendary Planeswalker — Urza" names
+        // a planeswalker subtype that happens to spell a `LandType`.
+        let owns = |t: &str| base.contains(t);
+        for (label, ours, printed) in [
+            ("supertype",
+             def.supertypes.iter().map(|t| format!("{t:?}")).collect::<HashSet<_>>(),
+             base_words.clone()),
+            ("card type",
+             def.card_types.iter().map(|t| format!("{t:?}")).collect::<HashSet<_>>(),
+             base_words.clone()),
+            ("land type",
+             def.subtypes.land_types.iter().map(|t| format!("{t:?}")).collect::<HashSet<_>>(),
+             if owns("Land") { sub_words.clone() } else { HashSet::new() }),
+            ("artifact subtype",
+             def.subtypes.artifact_subtypes.iter().map(|t| format!("{t:?}")).collect::<HashSet<_>>(),
+             if owns("Artifact") { sub_words.clone() } else { HashSet::new() }),
+            ("enchantment subtype",
+             def.subtypes.enchantment_subtypes.iter().map(|t| format!("{t:?}")).collect::<HashSet<_>>(),
+             if owns("Enchantment") { sub_words.clone() } else { HashSet::new() }),
+        ] {
+            if printed.is_empty() && !ours.is_empty() && !matches!(label, "supertype" | "card type")
+            {
+                // The family does not apply to this card at all; the
+                // INVENTED direction below would report every entry.
+                for w in &ours {
+                    wrong.push(format!("{}: {label} {w} is not printed", def.name));
+                }
+                continue;
+            }
+            for w in ours.difference(&printed) {
+                wrong.push(format!("{}: {label} {w} is not printed", def.name));
+            }
+            for w in printed.difference(&ours) {
+                // A printed word satisfied by *any* subtype list is
+                // satisfied: the type line does not say which family a word
+                // belongs to, and "Book" is both an `ArtifactSubtype` and a
+                // `CreatureType` (Jayemdae Tome against Codie).
+                if modelled(label, w) && !all_ours.contains(w) {
+                    wrong.push(format!("{}: printed {label} {w} is missing", def.name));
+                }
+            }
+        }
+    }
+    assert!(checked > 15_000, "only {checked} cards compared — vacuous");
+    wrong.sort();
+    assert!(wrong.is_empty(), "{} type-line mismatch(es): {:?}", wrong.len(), &wrong[..wrong.len().min(200)]);
+}

@@ -291,6 +291,30 @@ pub fn dual_land_with(
     }
 }
 
+/// A two-color land that taps for both colors and prints **no** basic land
+/// types — the fastland / gainland / scryland shape. Same body as
+/// [`dual_land_with`] without the subtypes.
+///
+/// ⚠ These twenty-five lands carried `land_types` until 2026-09-01, which
+/// made a Temple of Epiphany fetchable by "search for an Island card", live
+/// to islandwalk and counted for domain. Only a land whose printed type line
+/// has the basic types (shocklands, true duals, surveil lands) uses
+/// [`dual_land_with`].
+pub fn dual_land_untyped(
+    name: &'static str,
+    color_a: Color,
+    color_b: Color,
+    triggers: Vec<TriggeredAbility>,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
+        triggered_abilities: triggers,
+        ..Default::default()
+    }
+}
+
 /// Enters-tapped tri-land that taps for any of three colors (the Khans
 /// "wedge" cycle — Sandsteppe Citadel et al.). Untyped (matching the print).
 pub fn tri_land(name: &'static str, a: Color, b: Color, c: Color) -> CardDefinition {

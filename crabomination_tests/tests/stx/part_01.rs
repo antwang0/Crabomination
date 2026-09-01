@@ -2321,9 +2321,11 @@ fn frostboil_snarl_enters_tapped_without_revealable_card() {
     drain_stack(&mut g);
     let card = g.battlefield_find(id).expect("snarl on bf");
     assert!(card.tapped, "Frostboil Snarl should enter tapped (no Island/Mountain in hand)");
+    // ⚠ A Snarl prints "Land" — the Island/Mountain in its rules text name
+    // what the ETB reveal looks for, not what the land *is*. It carried them
+    // as land types until the printed-type-line ratchet.
     let def = catalog::frostboil_snarl();
-    assert!(def.subtypes.land_types.contains(&crabomination::card::LandType::Island));
-    assert!(def.subtypes.land_types.contains(&crabomination::card::LandType::Mountain));
+    assert!(def.subtypes.land_types.is_empty(), "no printed basic land types");
 }
 
 /// Frostboil Snarl with an Island in hand enters untapped — the new

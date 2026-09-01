@@ -406,6 +406,10 @@ pub fn jayemdae_tome() -> CardDefinition {
         name: "Jayemdae Tome",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
             tap_cost: true,

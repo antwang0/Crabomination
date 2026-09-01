@@ -5911,9 +5911,27 @@ impl GameState {
             self.battlefield
             .iter()
             .filter(|c| c.definition.is_aura() && c.attached_to_player.is_none())
+            // CR 704.5m — an Aura that attaches itself from its own enters
+            // trigger (Animate Dead, Necromancy) is not orphaned while that
+            // trigger is still on the stack: SBAs run before it resolves, so
+            // it has not had the chance to attach yet. Once the trigger has
+            // resolved the ordinary sweep applies and a fizzled one is swept
+            // on the next check.
+            .filter(|c| {
+                !self.stack.iter().any(|item| {
+                    matches!(item, crate::game::types::StackItem::Trigger { source, .. }
+                        if *source == c.id)
+                })
+            })
             .filter(|c| {
                 match c.attached_to {
-                    None => true, // not attached to anything
+                    // Not attached to anything. An Aura the engine can
+                    // attach (`Pacifism`, `Animate Dead`) belongs in the
+                    // graveyard; one it never attaches is an approximation
+                    // of the printed enchant clause (Ossification's "enchant
+                    // basic land you control"), and sweeping it on the turn
+                    // it enters is strictly worse than leaving it.
+                    None => c.definition.attaches_itself(),
                     Some(attached_id) => !self.battlefield.iter().any(|b| b.id == attached_id),
                 }
             })

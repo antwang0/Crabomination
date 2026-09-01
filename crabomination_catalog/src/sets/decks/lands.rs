@@ -7,7 +7,7 @@
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
 use super::super::{
-    dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
+    dual_land_untyped, dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
     fastland_etb_conditional_tap, painland, shockland_pay_two_or_tap, tap_add, tap_add_colorless,
     tri_land,
 };
@@ -26,10 +26,8 @@ use crate::mana::{Color, ManaCost, cost, g, generic, r, u, w};
 // already control 4+ lands (this land plus 3+ others) it taps itself.
 
 pub fn blackcleave_cliffs() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Blackcleave Cliffs",
-        LandType::Swamp,
-        LandType::Mountain,
         Color::Black,
         Color::Red,
         vec![fastland_etb_conditional_tap()],
@@ -37,10 +35,8 @@ pub fn blackcleave_cliffs() -> CardDefinition {
 }
 
 pub fn blooming_marsh() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Blooming Marsh",
-        LandType::Swamp,
-        LandType::Forest,
         Color::Black,
         Color::Green,
         vec![fastland_etb_conditional_tap()],
@@ -48,10 +44,8 @@ pub fn blooming_marsh() -> CardDefinition {
 }
 
 pub fn copperline_gorge() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Copperline Gorge",
-        LandType::Mountain,
-        LandType::Forest,
         Color::Red,
         Color::Green,
         vec![fastland_etb_conditional_tap()],
@@ -775,8 +769,6 @@ pub fn shifting_woodland() -> CardDefinition {
 #[allow(clippy::too_many_arguments)]
 fn manland(
     name: &'static str,
-    type_a: LandType,
-    type_b: LandType,
     color_a: Color,
     color_b: Color,
     animate_cost: ManaCost,
@@ -800,13 +792,12 @@ fn manland(
         },
         ..Default::default()
     };
+    // ⚠ **A creature-land prints "Land" and no basic land type.** All
+    // eighteen carried two until 2026-09-01, which made them fetchable by
+    // "search for a Forest card", live to landwalk and counted for domain.
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![type_a, type_b],
-            ..Default::default()
-        },
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), animate],
         triggered_abilities: vec![etb_tap()],
         ..Default::default()
@@ -820,8 +811,6 @@ pub fn celestial_colonnade() -> CardDefinition {
     use crate::card::Keyword;
     manland(
         "Celestial Colonnade",
-        LandType::Plains,
-        LandType::Island,
         Color::White,
         Color::Blue,
         cost(&[generic(3), crate::mana::w(), u()]),
@@ -838,8 +827,6 @@ pub fn creeping_tar_pit() -> CardDefinition {
     use crate::card::Keyword;
     manland(
         "Creeping Tar Pit",
-        LandType::Island,
-        LandType::Swamp,
         Color::Blue,
         Color::Black,
         cost(&[generic(1), u(), crate::mana::b()]),
@@ -856,8 +843,6 @@ pub fn hissing_quagmire() -> CardDefinition {
     use crate::card::Keyword;
     manland(
         "Hissing Quagmire",
-        LandType::Swamp,
-        LandType::Forest,
         Color::Black,
         Color::Green,
         cost(&[generic(1), crate::mana::b(), crate::mana::g()]),
@@ -874,8 +859,6 @@ pub fn needle_spires() -> CardDefinition {
     use crate::card::Keyword;
     manland(
         "Needle Spires",
-        LandType::Mountain,
-        LandType::Plains,
         Color::Red,
         Color::White,
         cost(&[generic(2), crate::mana::r(), crate::mana::w()]),
@@ -1636,10 +1619,8 @@ pub fn field_of_ruin() -> CardDefinition {
 // `etb_tap_then_gain_one` trigger taps it and gains the life.
 
 pub fn tranquil_cove() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Tranquil Cove",
-        LandType::Plains,
-        LandType::Island,
         Color::White,
         Color::Blue,
         vec![etb_tap_then_gain_one()],
@@ -1647,10 +1628,8 @@ pub fn tranquil_cove() -> CardDefinition {
 }
 
 pub fn dismal_backwater() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Dismal Backwater",
-        LandType::Island,
-        LandType::Swamp,
         Color::Blue,
         Color::Black,
         vec![etb_tap_then_gain_one()],
@@ -1658,10 +1637,8 @@ pub fn dismal_backwater() -> CardDefinition {
 }
 
 pub fn bloodfell_caves() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Bloodfell Caves",
-        LandType::Swamp,
-        LandType::Mountain,
         Color::Black,
         Color::Red,
         vec![etb_tap_then_gain_one()],
@@ -1669,10 +1646,8 @@ pub fn bloodfell_caves() -> CardDefinition {
 }
 
 pub fn rugged_highlands() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Rugged Highlands",
-        LandType::Mountain,
-        LandType::Forest,
         Color::Red,
         Color::Green,
         vec![etb_tap_then_gain_one()],
@@ -1680,10 +1655,8 @@ pub fn rugged_highlands() -> CardDefinition {
 }
 
 pub fn blossoming_sands() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Blossoming Sands",
-        LandType::Forest,
-        LandType::Plains,
         Color::Green,
         Color::White,
         vec![etb_tap_then_gain_one()],
@@ -1692,10 +1665,8 @@ pub fn blossoming_sands() -> CardDefinition {
 
 // IKO completes the enemy-pair half of the gain-tapland cycle.
 pub fn jungle_hollow() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Jungle Hollow",
-        LandType::Swamp,
-        LandType::Forest,
         Color::Black,
         Color::Green,
         vec![etb_tap_then_gain_one()],
@@ -1703,10 +1674,8 @@ pub fn jungle_hollow() -> CardDefinition {
 }
 
 pub fn scoured_barrens() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Scoured Barrens",
-        LandType::Plains,
-        LandType::Swamp,
         Color::White,
         Color::Black,
         vec![etb_tap_then_gain_one()],
@@ -1714,10 +1683,8 @@ pub fn scoured_barrens() -> CardDefinition {
 }
 
 pub fn swiftwater_cliffs() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Swiftwater Cliffs",
-        LandType::Island,
-        LandType::Mountain,
         Color::Blue,
         Color::Red,
         vec![etb_tap_then_gain_one()],
@@ -1725,10 +1692,8 @@ pub fn swiftwater_cliffs() -> CardDefinition {
 }
 
 pub fn thornwood_falls() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Thornwood Falls",
-        LandType::Forest,
-        LandType::Island,
         Color::Green,
         Color::Blue,
         vec![etb_tap_then_gain_one()],
@@ -1736,10 +1701,8 @@ pub fn thornwood_falls() -> CardDefinition {
 }
 
 pub fn wind_scarred_crag() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Wind-Scarred Crag",
-        LandType::Mountain,
-        LandType::Plains,
         Color::Red,
         Color::White,
         vec![etb_tap_then_gain_one()],
@@ -1992,8 +1955,6 @@ pub fn raging_ravine() -> CardDefinition {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
     let mut d = manland(
         "Raging Ravine",
-        LandType::Mountain,
-        LandType::Forest,
         Color::Red,
         Color::Green,
         cost(&[generic(2), crate::mana::r(), crate::mana::g()]),
@@ -2017,8 +1978,6 @@ pub fn stirring_wildwood() -> CardDefinition {
     use crate::card::Keyword;
     manland(
         "Stirring Wildwood",
-        LandType::Forest,
-        LandType::Plains,
         Color::Green,
         Color::White,
         cost(&[generic(1), crate::mana::g(), crate::mana::w()]),
@@ -2033,8 +1992,6 @@ pub fn shambling_vent() -> CardDefinition {
     use crate::card::Keyword;
     manland(
         "Shambling Vent",
-        LandType::Plains,
-        LandType::Swamp,
         Color::White,
         Color::Black,
         cost(&[generic(1), crate::mana::w(), crate::mana::b()]),
@@ -2049,8 +2006,6 @@ pub fn shambling_vent() -> CardDefinition {
 pub fn lavaclaw_reaches() -> CardDefinition {
     let mut d = manland(
         "Lavaclaw Reaches",
-        LandType::Swamp,
-        LandType::Mountain,
         Color::Black,
         Color::Red,
         cost(&[generic(1), crate::mana::b(), crate::mana::r()]),
@@ -2077,8 +2032,6 @@ pub fn lumbering_falls() -> CardDefinition {
     use crate::card::Keyword;
     manland(
         "Lumbering Falls",
-        LandType::Forest,
-        LandType::Island,
         Color::Green,
         Color::Blue,
         cost(&[generic(2), crate::mana::g(), u()]),
@@ -2093,8 +2046,6 @@ pub fn lumbering_falls() -> CardDefinition {
 pub fn wandering_fumarole() -> CardDefinition {
     let mut d = manland(
         "Wandering Fumarole",
-        LandType::Island,
-        LandType::Mountain,
         Color::Blue,
         Color::Red,
         cost(&[generic(2), u(), crate::mana::r()]),

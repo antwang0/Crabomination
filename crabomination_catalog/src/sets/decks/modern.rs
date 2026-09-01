@@ -676,6 +676,7 @@ pub fn goldhound() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Treasure],
             creature_types: vec![CreatureType::Dog],
             ..Default::default()
         },
@@ -1693,15 +1694,12 @@ pub fn crop_rotation() -> CardDefinition {
 /// before the EOT exile fires (returning it to hand cleanly rather than
 /// losing it to exile).
 pub fn karakas() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Karakas",
         supertypes: vec![Supertype::Legendary],
+        // ⚠ "Legendary Land" — no Plains type, though it taps for {W}.
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![LandType::Plains],
-            ..Default::default()
-        },
         activated_abilities: vec![
             // {T}: Add {W}.
             ActivatedAbility {
@@ -2238,7 +2236,7 @@ pub fn greater_good() -> CardDefinition {
 /// each opponent's graveyard" via `ForEach` + `Exile`. The ETB-tapped piece
 /// reuses the existing `etb_tap` self-source trigger pattern.
 pub fn bojuka_bog() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     let etb = TriggeredAbility {
         event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
         effect: Effect::Seq(vec![
@@ -2262,11 +2260,8 @@ pub fn bojuka_bog() -> CardDefinition {
     };
     CardDefinition {
         name: "Bojuka Bog",
+        // ⚠ Printed "Land" — it taps for {B} without being a Swamp.
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![LandType::Swamp],
-            ..Default::default()
-        },
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -6109,7 +6104,7 @@ fn modern_etb_tap() -> TriggeredAbility {
 /// you gain 1 life for each Locus you control (`locus_count_value`).
 /// {T}: Add {C}.
 pub fn glimmerpost() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Glimmerpost",
         card_types: vec![CardType::Land],
@@ -6165,7 +6160,7 @@ fn locus_count_value() -> Value {
 /// Cloudpost — Land — Locus. Cloudpost enters tapped. {T}: Add {C} for
 /// each Locus you control (`locus_count_value`).
 pub fn cloudpost() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Cloudpost",
         card_types: vec![CardType::Land],
@@ -10265,15 +10260,12 @@ pub fn fiery_impulse() -> CardDefinition {
 /// preference (the same one used by Raise Dead) picks a creature card
 /// when one is available; otherwise the trigger fizzles benignly.
 pub fn mortuary_mire() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     use crate::effect::LibraryPosition;
     CardDefinition {
         name: "Mortuary Mire",
+        // ⚠ Printed "Land" — it taps for {B} without being a Swamp.
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![LandType::Swamp],
-            ..Default::default()
-        },
         triggered_abilities: vec![
             // ETB tapped.
             TriggeredAbility {
@@ -20172,6 +20164,10 @@ pub fn the_mightstone_and_weakstone() -> CardDefinition {
         cost: cost(&[generic(5)]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Powerstone],
+            ..Default::default()
+        },
         triggered_abilities: vec![etb(Effect::ChooseMode(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -20736,7 +20732,7 @@ pub fn rift_bolt() -> CardDefinition {
 /// Trenchpost — Locus Land. `{T}: Add {C}`; `{3}, {T}: Target player mills a
 /// card for each Locus you control.`
 pub fn trenchpost() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     use crate::catalog::sets::tap_add_colorless;
     let locus_count = Value::CountOf(Box::new(Selector::EachPermanent(
         SelectionRequirement::HasLandType(LandType::Locus)
@@ -24081,6 +24077,10 @@ pub fn spellbook() -> CardDefinition {
     CardDefinition {
         name: "Spellbook",
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         static_abilities: vec![StaticAbility {
             description: "You have no maximum hand size.",
             effect: StaticEffect::NoMaximumHandSize,
@@ -24223,6 +24223,10 @@ pub fn vensers_journal() -> CardDefinition {
         name: "Venser's Journal",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         static_abilities: vec![StaticAbility {
             description: "You have no maximum hand size.",
             effect: StaticEffect::NoMaximumHandSize,
@@ -27166,7 +27170,7 @@ pub fn the_gitrog_monster() -> CardDefinition {
 /// out. `{T}`: Add {C}. `{1}, {T}`: Add one mana of any color. `{4}`: Put this
 /// card from your hand onto the battlefield (a from-hand activated ability).
 pub fn talon_gates_of_madara() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     use crate::effect::ZoneDest;
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
@@ -29169,7 +29173,7 @@ pub fn condemn() -> CardDefinition {
 
 /// Arbor Elf — {G} 1/1 Elf Druid. `{T}: Untap target Forest.`
 pub fn arbor_elf() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Arbor Elf",
         cost: cost(&[g()]),
@@ -36965,7 +36969,7 @@ pub fn wildwood_mentor() -> CardDefinition {
 /// Conduit Pylons — Desert land. ETB: surveil 1. `{T}`: Add {C}. `{1}, {T}`:
 /// Add one mana of any color.
 pub fn conduit_pylons() -> CardDefinition {
-    use crate::card::{ActivatedAbility, LandType};
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Conduit Pylons",
         card_types: vec![CardType::Land],
@@ -50198,10 +50202,14 @@ pub fn lightning_skelemental() -> CardDefinition {
 
 /// One Urza's Tron land: taps for 1 (or `full` with the other two pieces
 /// out — the count gate ORs `Min(count,1)` per other piece).
+/// `land_types` carries the printed "Urza's <piece>" subtypes; the mana
+/// arithmetic below keys on the two *names*, not on them. Both are wanted —
+/// the subtypes are what "Urza's land"-matters cards and `HasLandType` see.
 fn tron_land(
     name: &'static str,
     other_a: &'static str,
     other_b: &'static str,
+    piece_type: crate::card::LandType,
     full: i32,
 ) -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -50217,6 +50225,10 @@ fn tron_land(
     CardDefinition {
         name,
         card_types: vec![CardType::Land],
+        subtypes: crate::card::Subtypes {
+            land_types: vec![crate::card::LandType::Urza, piece_type],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {
@@ -50236,17 +50248,17 @@ fn tron_land(
 
 /// Urza's Tower — Land. {T}: Add {C} ({C}{C}{C} with Mine + Power Plant).
 pub fn urzas_tower() -> CardDefinition {
-    tron_land("Urza's Tower", "Urza's Mine", "Urza's Power Plant", 3)
+    tron_land("Urza's Tower", "Urza's Mine", "Urza's Power Plant", crate::card::LandType::Tower, 3)
 }
 
 /// Urza's Mine — Land. {T}: Add {C} ({C}{C} with Tower + Power Plant).
 pub fn urzas_mine() -> CardDefinition {
-    tron_land("Urza's Mine", "Urza's Tower", "Urza's Power Plant", 2)
+    tron_land("Urza's Mine", "Urza's Tower", "Urza's Power Plant", crate::card::LandType::Mine, 2)
 }
 
 /// Urza's Power Plant — Land. {T}: Add {C} ({C}{C} with Tower + Mine).
 pub fn urzas_power_plant() -> CardDefinition {
-    tron_land("Urza's Power Plant", "Urza's Tower", "Urza's Mine", 2)
+    tron_land("Urza's Power Plant", "Urza's Tower", "Urza's Mine", crate::card::LandType::PowerPlant, 2)
 }
 
 /// Eldrazi Temple — Land. {T}: Add {C}; {T}: Add {C}{C}, Eldrazi creature
@@ -54409,6 +54421,10 @@ pub fn sunken_citadel() -> CardDefinition {
     CardDefinition {
         name: "Sunken Citadel",
         card_types: vec![CardType::Land],
+        subtypes: crate::card::Subtypes {
+            land_types: vec![crate::card::LandType::Cave],
+            ..Default::default()
+        },
         static_abilities: vec![StaticAbility {
             description: "This land enters tapped.",
             effect: StaticEffect::EntersTapped {

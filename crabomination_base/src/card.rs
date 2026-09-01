@@ -5965,6 +5965,32 @@ impl CardDefinition {
     pub fn is_aura(&self) -> bool {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
     }
+
+    /// True if this definition ever attaches **itself** to something — the
+    /// cast effect (`Pacifism`) or one of its triggered abilities
+    /// (`Animate Dead`).
+    ///
+    /// Read by the CR 704.5m orphan-Aura sweep: an Aura the engine has no
+    /// way to attach is an *approximation* (Ossification's "enchant basic
+    /// land you control" is not modelled), and sweeping it to the graveyard
+    /// the moment it enters is strictly worse than leaving it on the
+    /// battlefield doing its job.
+    ///
+    /// Walks one level into `Seq`, which is where every current case lives.
+    /// A deeper nesting reads as `false`, and false is the safe answer: it
+    /// spares the Aura rather than killing it.
+    pub fn attaches_itself(&self) -> bool {
+        fn is_self_attach(e: &crate::effect::Effect) -> bool {
+            use crate::effect::{Effect, Selector};
+            match e {
+                Effect::Attach { what: Selector::This, .. } => true,
+                Effect::Seq(inner) => inner.iter().any(is_self_attach),
+                _ => false,
+            }
+        }
+        is_self_attach(&self.effect)
+            || self.triggered_abilities.iter().any(|t| is_self_attach(&t.effect))
+    }
     /// CR 716 — a Class enchantment (enters at level 1, gains levels at
     /// sorcery speed via its `Level N` activated abilities).
     pub fn is_class(&self) -> bool {

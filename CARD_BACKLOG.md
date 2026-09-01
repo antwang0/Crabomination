@@ -234,6 +234,45 @@ P/T is the **last station band's**, which is where the ratchet reads it — and
 that is how *Infinite Guideline Station* turned up, whose `{12+}` band carried
 no `pt` at all and stationed into a 0/0 that died on the same SBA sweep.
 
+### The type line — 45 lands carried basic types they do not print
+
+`every_card_carries_its_printed_type_line` is the third join ratchet and
+compares supertypes, card types, land types and artifact / enchantment
+subtypes in **both** directions. 89 invented entries on the first run, all
+land types, on 45 lands: the fastlands, the gainlands, the creature-lands,
+the Snarls, the Temples, the five Mirrodin artifact lands, Karakas, Bojuka
+Bog, Mortuary Mire and Hidden Grotto. Every one of them made the land
+fetchable by "search for a Swamp card", live to swampwalk, and counted for
+domain.
+
+Four of those were shared helpers, which is the useful half: `dual_land_with`
+(25 of its 46 callers are untyped and now use `dual_land_untyped`), `manland`
+(all 18), `snarl_land` (all 5 — its two `LandType`s name the ETB *reveal*, not
+the land) and `artifact_land` (all 5).
+
+25 missing entries in the other direction: **Aura** on Animate Dead,
+Ossification, Paradox Haze and Light of Promise; **Book** on seven artifacts;
+the four Urzatron pieces' `Urza` / `Mine` / `PowerPlant` / `Tower`; Cave on
+Sunken Citadel and Urza's Cave; Treasure on Goldhound; Clue on Parcel Myr;
+Powerstone on The Mightstone and Weakstone.
+
+⚠ **Two engine facts fell out of adding `Aura` to four cards**, both now
+guarded in the CR 704.5m orphan sweep:
+
+* An Aura that attaches itself from its **own enters trigger** (Animate Dead)
+  is swept before that trigger can resolve — SBAs run first. Spared while the
+  trigger is still on the stack.
+* An Aura the engine **never attaches** is an approximation of the printed
+  enchant clause, not an orphan. Ossification's "enchant basic land you
+  control" is unmodelled, and sweeping it on the turn it enters is strictly
+  worse than leaving it. `CardDefinition::attaches_itself` is the gate, and it
+  answers `false` conservatively — false spares the Aura.
+
+  **Open:** Ossification, Paradox Haze and Light of Promise still do not model
+  their enchant clause. Ossification's needs a second target slot beside its
+  ETB exile; the other two enchant a creature and could take the ordinary
+  `Attach { what: This, to: target_filtered(..) }` cast effect.
+
 ### Open — Geyadrone Dihada's abilities are not this card's
 
 Turned up beside its starting loyalty (3 against a printed 4, fixed). The

@@ -10,7 +10,8 @@
 //!   helper doesn't compose `CardType::Artifact` onto a Land.
 
 use super::super::{
-    dual_land_with, fastland_etb_conditional_tap, shockland_pay_two_or_tap, tap_add,
+    dual_land_untyped, dual_land_with, fastland_etb_conditional_tap, shockland_pay_two_or_tap,
+    tap_add,
 };
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, Effect, Keyword, LandType, Subtypes,
@@ -94,10 +95,8 @@ pub fn blood_crypt() -> CardDefinition {
 
 /// Seachrome Coast — UW fastland (Plains/Island).
 pub fn seachrome_coast() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Seachrome Coast",
-        LandType::Plains,
-        LandType::Island,
         Color::White,
         Color::Blue,
         vec![fastland_etb_conditional_tap()],
@@ -106,10 +105,8 @@ pub fn seachrome_coast() -> CardDefinition {
 
 /// Darkslick Shores — UB fastland (Island/Swamp).
 pub fn darkslick_shores() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Darkslick Shores",
-        LandType::Island,
-        LandType::Swamp,
         Color::Blue,
         Color::Black,
         vec![fastland_etb_conditional_tap()],
@@ -118,10 +115,8 @@ pub fn darkslick_shores() -> CardDefinition {
 
 /// Spirebluff Canal — UR fastland (Island/Mountain).
 pub fn spirebluff_canal() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Spirebluff Canal",
-        LandType::Island,
-        LandType::Mountain,
         Color::Blue,
         Color::Red,
         vec![fastland_etb_conditional_tap()],
@@ -130,10 +125,8 @@ pub fn spirebluff_canal() -> CardDefinition {
 
 /// Botanical Sanctum — UG fastland (Forest/Island).
 pub fn botanical_sanctum() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Botanical Sanctum",
-        LandType::Forest,
-        LandType::Island,
         Color::Green,
         Color::Blue,
         vec![fastland_etb_conditional_tap()],
@@ -142,10 +135,8 @@ pub fn botanical_sanctum() -> CardDefinition {
 
 /// Razorverge Thicket — GW fastland (Forest/Plains).
 pub fn razorverge_thicket() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Razorverge Thicket",
-        LandType::Forest,
-        LandType::Plains,
         Color::Green,
         Color::White,
         vec![fastland_etb_conditional_tap()],
@@ -154,10 +145,8 @@ pub fn razorverge_thicket() -> CardDefinition {
 
 /// Concealed Courtyard — WB fastland (Plains/Swamp).
 pub fn concealed_courtyard() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Concealed Courtyard",
-        LandType::Plains,
-        LandType::Swamp,
         Color::White,
         Color::Black,
         vec![fastland_etb_conditional_tap()],
@@ -166,10 +155,8 @@ pub fn concealed_courtyard() -> CardDefinition {
 
 /// Inspiring Vantage — RW fastland (Mountain/Plains).
 pub fn inspiring_vantage() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Inspiring Vantage",
-        LandType::Mountain,
-        LandType::Plains,
         Color::Red,
         Color::White,
         vec![fastland_etb_conditional_tap()],
@@ -182,19 +169,14 @@ pub fn inspiring_vantage() -> CardDefinition {
 /// the basic land type is preserved on `subtypes.land_types` so non-basic
 /// "is a Forest" lookups still work (Nature's Lore tutoring Tree of Tales,
 /// e.g.). Each tap produces one mana of the chosen color.
-fn artifact_land(
-    name: &'static str,
-    land_type: LandType,
-    color: Color,
-    keywords: Vec<Keyword>,
-) -> CardDefinition {
+/// ⚠ **A Mirrodin artifact land prints "Artifact Land" and no basic land
+/// type.** It carried one until 2026-09-01, which made every one of them
+/// fetchable by "search for a Plains/Island/… card", live to landwalk and
+/// counted for domain.
+fn artifact_land(name: &'static str, color: Color, keywords: Vec<Keyword>) -> CardDefinition {
     CardDefinition {
         name,
         card_types: vec![CardType::Land, CardType::Artifact],
-        subtypes: Subtypes {
-            land_types: vec![land_type],
-            ..Default::default()
-        },
         keywords,
         activated_abilities: vec![tap_add(color)],
         ..Default::default()
@@ -203,27 +185,27 @@ fn artifact_land(
 
 /// Ancient Den — Artifact Land — Plains. {T}: Add {W}.
 pub fn ancient_den() -> CardDefinition {
-    artifact_land("Ancient Den", LandType::Plains, Color::White, vec![])
+    artifact_land("Ancient Den", Color::White, vec![])
 }
 
 /// Seat of the Synod — Artifact Land — Island. {T}: Add {U}.
 pub fn seat_of_the_synod() -> CardDefinition {
-    artifact_land("Seat of the Synod", LandType::Island, Color::Blue, vec![])
+    artifact_land("Seat of the Synod", Color::Blue, vec![])
 }
 
 /// Vault of Whispers — Artifact Land — Swamp. {T}: Add {B}.
 pub fn vault_of_whispers() -> CardDefinition {
-    artifact_land("Vault of Whispers", LandType::Swamp, Color::Black, vec![])
+    artifact_land("Vault of Whispers", Color::Black, vec![])
 }
 
 /// Great Furnace — Artifact Land — Mountain. {T}: Add {R}.
 pub fn great_furnace() -> CardDefinition {
-    artifact_land("Great Furnace", LandType::Mountain, Color::Red, vec![])
+    artifact_land("Great Furnace", Color::Red, vec![])
 }
 
 /// Tree of Tales — Artifact Land — Forest. {T}: Add {G}.
 pub fn tree_of_tales() -> CardDefinition {
-    artifact_land("Tree of Tales", LandType::Forest, Color::Green, vec![])
+    artifact_land("Tree of Tales", Color::Green, vec![])
 }
 
 /// Darksteel Citadel — Indestructible Artifact Land. {T}: Add {C}.
@@ -476,6 +458,7 @@ pub fn urzas_saga() -> CardDefinition {
         card_types: vec![CardType::Enchantment, CardType::Land],
         subtypes: Subtypes {
             enchantment_subtypes: vec![EnchantmentSubtype::Saga],
+            land_types: vec![crate::card::LandType::Urza],
             ..Default::default()
         },
         saga_chapters: vec![

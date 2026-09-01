@@ -5190,16 +5190,13 @@ pub fn unlucky_drop() -> CardDefinition {
     }
 }
 
-/// Hidden Grotto — Cave Land. ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one
-/// mana of any color.
+/// Hidden Grotto — plain Land (Bloomburrow; **not** a Cave, checked against
+/// the oracle). ETB: surveil 1. {T}: Add {C}. {1}, {T}: Add one mana of any
+/// color.
 pub fn hidden_grotto() -> CardDefinition {
     CardDefinition {
         name: "Hidden Grotto",
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![LandType::Cave],
-            ..Default::default()
-        },
         triggered_abilities: vec![etb(Effect::Surveil {
             who: PlayerRef::You,
             amount: Value::Const(1),

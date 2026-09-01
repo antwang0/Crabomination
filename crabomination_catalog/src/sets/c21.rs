@@ -3,7 +3,7 @@
 //! original printings. Most ride existing engine primitives.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, LandType, Predicate,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Keyword, Predicate,
     SelectionRequirement, Selector, Subtypes, Supertype, Value,
 };
 use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
@@ -11,7 +11,7 @@ use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, w};
 
-use super::{dual_land_with, etb_tap_then_scry_one, tap_add, tap_add_colorless};
+use super::{dual_land_untyped, etb_tap_then_scry_one, tap_add, tap_add_colorless};
 
 // ══════════════════════════════════════════════════════════════════════════
 // Lands
@@ -20,50 +20,40 @@ use super::{dual_land_with, etb_tap_then_scry_one, tap_add, tap_add_colorless};
 // ── Theros scrylands (enters tapped, scry 1) ──────────────────────────────
 
 pub fn temple_of_epiphany() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Temple of Epiphany",
-        LandType::Island,
-        LandType::Mountain,
         Color::Blue,
         Color::Red,
         vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_malady() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Temple of Malady",
-        LandType::Swamp,
-        LandType::Forest,
         Color::Black,
         Color::Green,
         vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_mystery() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Temple of Mystery",
-        LandType::Forest,
-        LandType::Island,
         Color::Green,
         Color::Blue,
         vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_silence() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Temple of Silence",
-        LandType::Plains,
-        LandType::Swamp,
         Color::White,
         Color::Black,
         vec![etb_tap_then_scry_one()],
     )
 }
 pub fn temple_of_triumph() -> CardDefinition {
-    dual_land_with(
+    dual_land_untyped(
         "Temple of Triumph",
-        LandType::Mountain,
-        LandType::Plains,
         Color::Red,
         Color::White,
         vec![etb_tap_then_scry_one()],

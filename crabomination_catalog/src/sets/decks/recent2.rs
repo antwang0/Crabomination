@@ -1013,6 +1013,10 @@ pub fn ossification() -> CardDefinition {
         name: "Ossification",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ExileUntilSourceLeaves {

@@ -1434,6 +1434,10 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
         name: "Tome of the Guildpact",
         cost: cost(&[generic(5)]),
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

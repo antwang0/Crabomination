@@ -84,6 +84,10 @@ pub fn animate_dead() -> CardDefinition {
         name: "Animate Dead",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         equipped_bonus: Some(crate::card::EquipBonus { power: -1, ..Default::default() }),
         triggered_abilities: vec![
             TriggeredAbility {

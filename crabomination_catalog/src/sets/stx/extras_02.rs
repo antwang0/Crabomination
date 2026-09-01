@@ -1097,6 +1097,10 @@ pub fn light_of_promise() -> CardDefinition {
         name: "Light of Promise",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Enchantment],
+        subtypes: crate::card::Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -1771,6 +1775,10 @@ pub fn tome_of_the_infinite() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Artifact],
+        subtypes: crate::card::Subtypes {
+            artifact_subtypes: vec![crate::card::ArtifactSubtype::Book],
+            ..Default::default()
+        },
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

@@ -14,6 +14,10 @@ pub fn urzas_cave() -> CardDefinition {
     CardDefinition {
         name: "Urza's Cave",
         card_types: vec![CardType::Land],
+        subtypes: crate::card::Subtypes {
+            land_types: vec![crate::card::LandType::Urza, crate::card::LandType::Cave],
+            ..Default::default()
+        },
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
