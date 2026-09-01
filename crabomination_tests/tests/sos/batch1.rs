@@ -2634,3 +2634,71 @@ fn infusion_lifegain_does_not_carry_into_the_opponents_turn() {
     assert!(!trample(&mut g), "nor still granting trample");
 }
 
+/// CR 509.1b / 702.9b — Reach blocks Flying, in the exact shape a recorded
+/// game presented it: the blocker summoning sick (cast the turn before), the
+/// flier attacking a *planeswalker* rather than the player.
+///
+/// Pins the whole chain the client depends on, because a replay showed the
+/// flier going unblocked with a Reach creature available: the engine's
+/// `legal_blockers` / `legal_block_targets`, the projected view's
+/// `block_is_legal` (which is what the client's click handler consults before
+/// accepting a pairing), and the `DeclareBlockers` action itself.
+#[test]
+fn reach_can_block_a_flier_attacking_a_planeswalker() {
+    let mut g = two_player_game();
+    // Rancorous Archaic — Trample + Reach. Summoning sick, as it would be the
+    // turn after it was cast; sickness never restricts blocking.
+    let arch = g.add_card_to_battlefield(0, catalog::rancorous_archaic());
+    g.battlefield.iter_mut().find(|c| c.id == arch).unwrap().summoning_sick = true;
+    let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+    // Soaring Stoneglider — 4/3 Flying, Vigilance.
+    let flyer = g.add_card_to_battlefield(1, catalog::soaring_stoneglider());
+    g.clear_sickness(flyer);
+
+    assert!(
+        g.computed_permanent(arch)
+            .unwrap()
+            .keywords()
+            .contains(&crabomination::card::Keyword::Reach),
+        "the blocker has Reach",
+    );
+
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: flyer,
+        target: AttackTarget::Planeswalker(pw),
+    }]))
+    .expect("the flier attacks the planeswalker");
+    while g.step == TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass to blockers");
+    }
+    assert_eq!(g.step, TurnStep::DeclareBlockers);
+
+    // The engine offers it, and pairs it with the flier specifically.
+    assert_eq!(g.legal_blockers(0), vec![arch], "Reach is a legal blocker here");
+    assert_eq!(
+        g.legal_block_targets(0),
+        vec![(arch, vec![flyer])],
+        "and may block the flier",
+    );
+
+    // The projected view agrees — this is the predicate the client's
+    // blocker-assignment click checks before accepting the pairing.
+    let cv = crabomination::server::view::project(&g, 0);
+    assert!(cv.declares_blocks(0), "the viewer declares blocks");
+    assert!(
+        cv.block_is_legal(arch, flyer),
+        "the client must see the Reach-blocks-flier pairing as legal",
+    );
+
+    // And the declaration itself is accepted.
+    g.perform_action(GameAction::DeclareBlockers(vec![(arch, flyer)]))
+        .expect("Reach blocks Flying");
+    assert_eq!(
+        g.blockers_of(flyer).as_slice(),
+        [arch],
+        "the flier is blocked by the Reach creature",
+    );
+}
