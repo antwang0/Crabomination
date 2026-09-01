@@ -282,6 +282,23 @@ fn strip_reminders(text: &str) -> String {
     out
 }
 
+/// Quoted spans removed. A *granted* ability's own text ("Permanents you
+/// control have \"…\"") is that ability's rule and not this card's, and the
+/// clause ratchets below all read the card's own printing — 80 of the 92
+/// first rows on the printed-`{T}` ratchet were quoted grants.
+fn strip_quoted(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut inside = false;
+    for ch in text.chars() {
+        match ch {
+            '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
+            _ if !inside => out.push(ch),
+            _ => {}
+        }
+    }
+    out
+}
+
 /// **No card carries a mechanic keyword its printed text does not have.**
 ///
 /// This is the Rust ratchet under `scripts/audit_keyword_drift.py`'s INVENTED
@@ -1178,19 +1195,6 @@ fn no_card_drops_a_printed_tap_symbol() {
     /// temporary grant, none of which is this card's own activation. That is
     /// 80 of the first 92 rows, so the quoted spans come out before anything
     /// is read.
-    fn strip_quoted(text: &str) -> String {
-        let mut out = String::with_capacity(text.len());
-        let mut inside = false;
-        for ch in text.chars() {
-            match ch {
-                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
-                _ if !inside => out.push(ch),
-                _ => {}
-            }
-        }
-        out
-    }
-
     /// Does `text` hold an activation line whose **cost** (left of the first
     /// colon) carries `{t}`? Only the cost half counts: "…: Tap target
     /// creature" is not a tap cost, and `{t}` inside the effect half never is.
@@ -1283,19 +1287,6 @@ fn every_card_has_the_activation_timing_it_prints() {
         .collect();
     let allowed: HashSet<&str> = SORCERY_SPEED_ALLOWED.iter().map(|(n, _)| *n).collect();
 
-    fn strip_quoted(text: &str) -> String {
-        let mut out = String::with_capacity(text.len());
-        let mut inside = false;
-        for ch in text.chars() {
-            match ch {
-                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
-                _ if !inside => out.push(ch),
-                _ => {}
-            }
-        }
-        out
-    }
-
     let mut checked = 0usize;
     let mut missing: Vec<&str> = Vec::new();
     for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
@@ -1387,19 +1378,6 @@ fn every_card_has_the_activation_limit_it_prints() {
         .filter(|(_, v)| v.is_object())
         .map(|(k, v)| (k.to_lowercase(), v))
         .collect();
-
-    fn strip_quoted(text: &str) -> String {
-        let mut out = String::with_capacity(text.len());
-        let mut inside = false;
-        for ch in text.chars() {
-            match ch {
-                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
-                _ if !inside => out.push(ch),
-                _ => {}
-            }
-        }
-        out
-    }
 
     let mut checked = 0usize;
     let mut missing: Vec<&str> = Vec::new();
@@ -1511,15 +1489,7 @@ fn every_card_has_the_trigger_limit_it_prints() {
         // *granted* ability ("Permanents you control have \"…triggers only
         // once each turn\""), which is that ability's rule and not this
         // card's own trigger.
-        let mut text = String::with_capacity(oracle.len());
-        let mut inside = false;
-        for ch in strip_reminders(oracle).chars() {
-            match ch {
-                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
-                _ if !inside => text.push(ch),
-                _ => {}
-            }
-        }
+        let text = strip_quoted(&strip_reminders(oracle));
         // Anchor on the verb: "activate only once each turn" is the other
         // ratchet's question, and the bare phrase catches both.
         if !(text.contains("triggers only once each turn")
@@ -1548,5 +1518,196 @@ fn every_card_has_the_trigger_limit_it_prints() {
          {:?}",
         missing.len(),
         &missing[..missing.len().min(40)],
+    );
+}
+
+// ── The printed-clause family, one body ─────────────────────────────────────
+
+/// The shared body of the printed-clause ratchets below. Walk the catalog
+/// against the cache, keep the cards whose **own** printed text satisfies
+/// `prints`, and report the ones whose definition does not satisfy `models`.
+///
+/// `prints` is handed the card's oracle text with reminder text and quoted
+/// spans already removed, lowercased, plus the card's lowercased name — every
+/// clause in this family needs the name to tell "**this** creature can't
+/// block" from "**enchanted** creature can't block", which is a different card
+/// granting the restriction to something else.
+///
+/// The five older ratchets in this file each carry their own copy of this
+/// walk; they predate the helper and are left alone rather than churned.
+fn clause_ratchet(
+    clause: &str,
+    floor: usize,
+    prints: impl Fn(&str, &str) -> bool,
+    models: impl Fn(&crabomination::card::CardDefinition, &str) -> bool,
+) {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut missing: Vec<&str> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        // A two-faced card's clause can belong to either face and the
+        // top-level `oracle_text` is not the face's, so skip as elsewhere.
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let text = strip_quoted(&strip_reminders(oracle));
+        let name = def.name.to_lowercase();
+        if !prints(&text, &name) {
+            continue;
+        }
+        checked += 1;
+        let body = format!("{def:?}");
+        if !models(&def, &body) {
+            missing.push(def.name);
+        }
+    }
+    assert!(checked >= floor, "only {checked} cards print {clause:?} — did the cache move?");
+    missing.sort();
+    assert!(
+        missing.is_empty(),
+        "{} of {checked} card(s) print {clause:?} and do not model it: {:?}",
+        missing.len(),
+        &missing[..missing.len().min(40)],
+    );
+}
+
+/// True if some line of `text` is about the card itself and satisfies `f`.
+/// "Enchanted creature can't block" is an Aura granting the restriction to
+/// somebody else and must not count as the Aura's own printing.
+fn own_line(text: &str, name: &str, f: impl Fn(&str) -> bool) -> bool {
+    text.lines()
+        .map(str::trim)
+        .any(|l| (l.starts_with("this ") || l.starts_with(name)) && f(l))
+}
+
+/// **A permanent that prints "This land enters tapped." enters tapped.**
+///
+/// A tempo gift the bot cannot see: an untapped Guildgate is a strictly better
+/// card than the printed one, and every game played with it is mis-scored.
+///
+/// ⚠ **Unconditional lines only, and "unless" is not the only conditional.**
+/// "…enters tapped **unless** you control two or more other lands" and
+/// "…enters tapped **if** it's not your turn" (Eddymurk Crab, Slumbering
+/// Trudge) are both different cards. "…enters tapped **and** you gain 1 life"
+/// (Noble's Purse, Sphere of the Suns, Leviathan) does count — the rest of the
+/// sentence does not change the tapped half.
+///
+/// ⚠ **Two spellings, and both are in the catalog**: `sets::etb_tap`'s trigger
+/// (`Tap { what: This }`) and `StaticEffect::EntersTapped` (the rules-correct
+/// replacement). Looking for only the trigger reports Leviathan as a miss.
+#[test]
+fn every_permanent_that_prints_entering_tapped_enters_tapped() {
+    clause_ratchet(
+        "enters tapped",
+        100,
+        |t, n| {
+            own_line(t, n, |l| {
+                l.contains(" enters tapped") && !l.contains("unless") && !l.contains(" if ")
+            })
+        },
+        |_, body| body.contains("Tap { what: This }") || body.contains("EntersTapped {"),
+    );
+}
+
+/// **A spell that prints "This spell can't be countered." carries
+/// `Keyword::CantBeCountered`.**
+///
+/// The bot's counterspell heuristics otherwise see a legal target the printed
+/// card does not offer — a wrong line taken with real frequency in blue
+/// mirrors.
+///
+/// ⚠ **Self-referential lines only.** "Creature spells you control can't be
+/// countered" (Cavern of Souls) is a static about *other* objects and belongs
+/// to a different primitive; anchoring on the exact sentence keeps those out.
+#[test]
+fn every_spell_that_prints_uncounterable_carries_the_keyword() {
+    clause_ratchet(
+        "this spell can't be countered",
+        20,
+        |t, _| t.lines().map(str::trim).any(|l| l == "this spell can't be countered."),
+        |def, _| def.keywords.contains(&crabomination::card::Keyword::CantBeCountered),
+    );
+}
+
+/// **A permanent that prints "doesn't untap during your untap step" does not
+/// untap.**
+///
+/// `StaticEffect::PreventUntap` is the primitive. Missing it is the difference
+/// between a one-shot and a repeatable, which is a mana or a blocker every
+/// turn for the rest of the game.
+///
+/// ⚠ 48 of the 102 cache rows are Auras — "**Enchanted** creature doesn't
+/// untap" is the Aura granting it, not the Aura itself doing it — so the
+/// self-anchor is doing most of the work here.
+#[test]
+fn every_permanent_that_prints_not_untapping_does_not_untap() {
+    clause_ratchet(
+        "doesn't untap during",
+        20,
+        |t, n| own_line(t, n, |l| l.contains("doesn't untap during")),
+        // ⚠ The conditional variants count. Goblin Rock Sled ("if it attacked
+        // during your last turn") is `Keyword::DoesntUntapIfAttackedLastTurn`
+        // and Steel Dromedary ("if it has a +1/+1 counter on it") is
+        // `DoesntUntapWhileCounter` — both correct, and both read as misses
+        // against `PreventUntap` alone.
+        |_, body| body.contains("PreventUntap") || body.contains("DoesntUntap"),
+    );
+}
+
+/// **A creature that prints "This creature can't block." can't block.**
+///
+/// A combat restriction the bot reads straight out of `declare_blockers`, so a
+/// miss is a blocker that should not exist — the most directly play-visible
+/// class in this family.
+#[test]
+fn every_creature_that_prints_it_cannot_block_cannot_block() {
+    clause_ratchet(
+        "can't block",
+        40,
+        |t, n| own_line(t, n, |l| l == format!("{n} can't block.") || l == "this creature can't block."),
+        |def, body| {
+            def.keywords.contains(&crabomination::card::Keyword::Defender)
+                || body.contains("CantBlock")
+                || body.contains("Decayed")
+        },
+    );
+}
+
+/// **A creature that prints "attacks each combat if able" must attack.**
+///
+/// `Keyword::MustAttack`. The mirror of the previous test on the attack side,
+/// and the same argument: the bot is free to hold back a creature the printed
+/// card forces into combat, which is a strictly better card.
+#[test]
+fn every_creature_that_prints_it_must_attack_must_attack() {
+    clause_ratchet(
+        "attacks each combat if able",
+        30,
+        |t, n| {
+            own_line(t, n, |l| {
+                l == format!("{n} attacks each combat if able.")
+                    || l == "this creature attacks each combat if able."
+            })
+        },
+        |_, body| body.contains("MustAttack"),
     );
 }

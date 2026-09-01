@@ -118,12 +118,14 @@ pub fn sol_ring() -> CardDefinition {
     }
 }
 
-/// Nevinyrral's Disk — {4} Artifact, {1}{T}: Destroy all artifacts, creatures, and enchantments
+/// Nevinyrral's Disk — {4} Artifact, enters tapped. {1}{T}: Destroy all
+/// artifacts, creatures, and enchantments
 pub fn nevinyrrals_disk() -> CardDefinition {
     CardDefinition {
         name: "Nevinyrral's Disk",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![super::super::etb_tap()],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,

@@ -450,7 +450,8 @@ pub fn borderland_minotaur() -> CardDefinition {
     }
 }
 
-/// Deathbellow Raider — {1}{R} Creature — Minotaur Berserker 2/3.
+/// Deathbellow Raider — {1}{R} Creature — Minotaur Berserker 2/3. Attacks
+/// each combat if able; {2}{B}: regenerate.
 pub fn deathbellow_raider() -> CardDefinition {
     CardDefinition {
         name: "Deathbellow Raider",
@@ -462,6 +463,12 @@ pub fn deathbellow_raider() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        keywords: vec![Keyword::MustAttack],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

@@ -19020,9 +19020,9 @@ pub fn blazing_rootwalla() -> CardDefinition {
     }
 }
 
-/// Anje's Ravager — {2}{R} Legendary Creature — Vampire Berserker. 3/3.
-/// Trample. Madness {1}{R}. "Whenever Anje's Ravager attacks, discard your
-/// hand, then draw three cards."
+/// Anje's Ravager — {2}{R} Creature — Vampire Berserker. 3/3. Attacks each
+/// combat if able; whenever it attacks, discard your hand, then draw three
+/// cards. (Madness {1}{R} is not modelled.)
 pub fn anjes_ravager() -> CardDefinition {
 use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
@@ -19036,7 +19036,9 @@ use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
+        // "This creature attacks each combat if able." (Madness {1}{R} is
+        // not modelled.)
+        keywords: vec![Keyword::MustAttack],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Seq(vec![

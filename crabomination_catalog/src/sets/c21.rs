@@ -193,14 +193,15 @@ pub fn blighted_woodland() -> CardDefinition {
     }
 }
 
-/// Myriad Landscape — Land. {T}: Add {C}. {2},{T},Sacrifice this land: Search
-/// your library for up to two basic land cards that share a land type, put
-/// them onto the battlefield tapped, then shuffle. (The "share a land type"
-/// rider is approximated as any two basics.)
+/// Myriad Landscape — Land, enters tapped. {T}: Add {C}. {2},{T},Sacrifice
+/// this land: Search your library for up to two basic land cards that share
+/// a land type, put them onto the battlefield tapped, then shuffle. (The
+/// "share a land type" rider is approximated as any two basics.)
 pub fn myriad_landscape() -> CardDefinition {
     CardDefinition {
         name: "Myriad Landscape",
         card_types: vec![CardType::Land],
+        triggered_abilities: vec![super::etb_tap()],
         activated_abilities: vec![
             tap_add_colorless(),
             ActivatedAbility {
