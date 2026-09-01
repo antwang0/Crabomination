@@ -109,6 +109,132 @@ impl<T: PartialEq> Extend<T> for IdSet<T> {
     }
 }
 
+/// [`IdSet`] with an inline buffer, for a **local** that never leaves its frame.
+///
+/// The stored `IdSet`/`IdMap` fields keep the `Vec` backing on purpose: they
+/// sit inside `ColdState` and `PlayerData`, where the *size class* of the
+/// group is the constraint (PERF's 1,016-byte `PlayerData` ceiling) and an
+/// empty `Vec` clone allocates nothing. A local has neither problem and pays
+/// the opposite cost: `insert` / `entry_or_default` reach the heap on their
+/// first entry and — the census's finding — **never re-grow**, so a
+/// `with_capacity` only moves the allocation while an inline buffer removes
+/// it. PERF `(-158)` has the per-line attribution; four inline slots covers
+/// every measured case and a wider one spills to the heap exactly as before.
+#[derive(Debug, Clone)]
+pub struct SmallIdSet<T>(smallvec::SmallVec<[T; 4]>);
+
+impl<T> Default for SmallIdSet<T> {
+    fn default() -> Self {
+        Self(smallvec::SmallVec::new())
+    }
+}
+
+impl<T: PartialEq> SmallIdSet<T> {
+    pub fn insert(&mut self, v: T) -> bool {
+        if self.0.contains(&v) {
+            return false;
+        }
+        self.0.push(v);
+        true
+    }
+    pub fn contains(&self, v: &T) -> bool {
+        self.0.contains(v)
+    }
+}
+
+impl<T> SmallIdSet<T> {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.0.iter()
+    }
+}
+
+impl<T: PartialEq> FromIterator<T> for SmallIdSet<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(it: I) -> Self {
+        let mut out = Self::default();
+        for v in it {
+            out.insert(v);
+        }
+        out
+    }
+}
+
+impl<T: PartialEq> Extend<T> for SmallIdSet<T> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, it: I) {
+        for v in it {
+            self.insert(v);
+        }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a SmallIdSet<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+/// [`IdMap`] with an inline buffer. Same rule as [`SmallIdSet`]: locals only,
+/// and the bodies are [`IdMap`]'s verbatim so the two cannot drift — the
+/// `small_id_containers_agree_with_the_heap_backed_ones` test is the check.
+#[derive(Debug, Clone)]
+pub struct SmallIdMap<K, V>(smallvec::SmallVec<[(K, V); 4]>);
+
+impl<K, V> Default for SmallIdMap<K, V> {
+    fn default() -> Self {
+        Self(smallvec::SmallVec::new())
+    }
+}
+
+impl<K: PartialEq, V> SmallIdMap<K, V> {
+    pub fn get(&self, k: &K) -> Option<&V> {
+        self.0.iter().find(|(x, _)| x == k).map(|(_, v)| v)
+    }
+    pub fn contains_key(&self, k: &K) -> bool {
+        self.0.iter().any(|(x, _)| x == k)
+    }
+}
+
+impl<K, V> SmallIdMap<K, V> {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+    pub fn keys(&self) -> impl Iterator<Item = &K> {
+        self.0.iter().map(|(k, _)| k)
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (&K, &V)> {
+        self.0.iter().map(|(k, v)| (k, v))
+    }
+}
+
+impl<K: PartialEq, V: Default> SmallIdMap<K, V> {
+    /// `entry(k).or_default()` without the `Entry` machinery.
+    pub fn entry_or_default(&mut self, k: K) -> &mut V {
+        if let Some(i) = self.0.iter().position(|(x, _)| *x == k) {
+            return &mut self.0[i].1;
+        }
+        self.0.push((k, V::default()));
+        &mut self.0.last_mut().expect("just pushed").1
+    }
+}
+
+impl<K, V> IntoIterator for SmallIdMap<K, V> {
+    type Item = (K, V);
+    type IntoIter = smallvec::IntoIter<[(K, V); 4]>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 /// An insertion-ordered map from ids to values, backed by a `Vec`.
 ///
 /// The map sibling of [`IdSet`], and it exists for the order half of that
@@ -259,7 +385,44 @@ impl<'de, K: serde::Deserialize<'de>, V: serde::Deserialize<'de>> serde::Deseria
 
 #[cfg(test)]
 mod id_set_tests {
-    use super::IdSet;
+    use super::{IdMap, IdSet, SmallIdMap, SmallIdSet};
+
+    /// The inline-backed locals are the heap-backed types' bodies verbatim, so
+    /// the only way they can differ is a typo. Run the same op sequence — one
+    /// that crosses the four-slot inline buffer in both directions — through
+    /// both and compare. PERF `(-158)`.
+    #[test]
+    fn small_id_containers_agree_with_the_heap_backed_ones() {
+        let ops = [5u32, 1, 5, 9, 2, 7, 7, 3, 1, 11, 0];
+        let mut heap: IdSet<u32> = IdSet::default();
+        let mut small: SmallIdSet<u32> = SmallIdSet::default();
+        for v in ops {
+            assert_eq!(heap.insert(v), small.insert(v), "novelty of {v}");
+            assert_eq!(heap.len(), small.len());
+            assert_eq!(heap.contains(&v), small.contains(&v));
+        }
+        assert!(heap.iter().eq(small.iter()), "insertion order");
+
+        let mut hm: IdMap<u32, u32> = IdMap::default();
+        let mut sm: SmallIdMap<u32, u32> = SmallIdMap::default();
+        for v in ops {
+            *hm.entry_or_default(v) += v;
+            *sm.entry_or_default(v) += v;
+            assert_eq!(hm.get(&v), sm.get(&v));
+            assert_eq!(hm.contains_key(&v), sm.contains_key(&v));
+            assert_eq!(hm.len(), sm.len());
+        }
+        assert!(hm.keys().eq(sm.keys()), "insertion order");
+        assert!(hm.iter().eq(sm.iter()));
+        assert_eq!(hm.is_empty(), sm.is_empty());
+
+        let from_iter: SmallIdSet<u32> = ops.into_iter().collect();
+        let heap_from_iter: IdSet<u32> = ops.into_iter().collect();
+        assert!(heap_from_iter.iter().eq(from_iter.iter()));
+        let mut ext = from_iter;
+        ext.extend([4u32, 5, 12]);
+        assert_eq!(ext.len(), 10, "extend keeps set semantics past the inline buffer");
+    }
 
     /// The three properties the field swap relies on: `insert` keeps set
     /// semantics and reports novelty like `HashSet::insert`, iteration is

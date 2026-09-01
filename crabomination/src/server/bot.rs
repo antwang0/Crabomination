@@ -8800,7 +8800,7 @@ fn simulate_attack_outcome_once(
     // horizon can push the stop out one more cycle (see below).
     let mut stop_turn = start_turn;
     let mut extended = false;
-    let mut declared: crate::game::types::IdSet<(u32, TurnStep)> = Default::default();
+    let mut declared: crate::game::types::SmallIdSet<(u32, TurnStep)> = Default::default();
     // *This* turn's attack declaration is the candidate, already submitted.
     // Without this the loop's own DeclareAttackers arm fires on the same
     // turn and re-declares the greedy set over the top of it — which the
@@ -10070,9 +10070,9 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // is being attacked, if the attackers aimed at it would deal lethal
     // (total power ≥ its loyalty), mark those attackers so the chump-block
     // pass will trade idle blockers to save the walker.
-    let defend_attackers: crate::game::types::IdSet<CardId> = {
+    let defend_attackers: crate::game::types::SmallIdSet<CardId> = {
         use crate::card::CounterType;
-        let mut pw_attackers: crate::game::types::IdMap<CardId, (u32, Vec<CardId>)> =
+        let mut pw_attackers: crate::game::types::SmallIdMap<CardId, (u32, Vec<CardId>)> =
             Default::default();
         for atk in state.attacking() {
             if let AttackTarget::Planeswalker(pw) = atk.target
@@ -10084,7 +10084,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 e.1.push(atk.attacker);
             }
         }
-        let mut set: crate::game::types::IdSet<CardId> = Default::default();
+        let mut set: crate::game::types::SmallIdSet<CardId> = Default::default();
         for (pw, (incoming, atkrs)) in pw_attackers {
             let loyalty = state
                 .battlefield_find(pw)
@@ -10139,11 +10139,11 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // assigned blockers — if blocker total toughness >= attacker
     // power, additional blockers on the same attacker are wasteful
     // unless they bring deathtouch / first strike.
-    let mut attacker_damage_taken: crate::game::types::IdMap<CardId, i32> =
+    let mut attacker_damage_taken: crate::game::types::SmallIdMap<CardId, i32> =
         Default::default();
     // Blockers already committed to each attacker — folds Rampage (CR 702.23)
     // into the trade math for the second-and-later blocker.
-    let mut attacker_block_count: crate::game::types::IdMap<CardId, i32> =
+    let mut attacker_block_count: crate::game::types::SmallIdMap<CardId, i32> =
         Default::default();
     let mut assignments: Vec<(CardId, CardId)> = Vec::new();
 

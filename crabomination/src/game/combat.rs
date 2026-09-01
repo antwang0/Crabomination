@@ -1885,7 +1885,7 @@ impl GameState {
         // block more (`CanBlockAdditional` / `CanBlockAnyNumber`); count the
         // merged set (already-declared blocks plus this batch) against the
         // allowance, and reject a repeat of the same pair.
-        let mut batch_blocks: crate::game::types::IdMap<CardId, SmallVec<[CardId; 4]>> =
+        let mut batch_blocks: crate::game::types::SmallIdMap<CardId, SmallVec<[CardId; 4]>> =
             Default::default();
         // CR 509.1b — Silent Arbiter: "No more than N creatures can block each
         // combat." Count distinct blockers across already-declared blocks and
@@ -1893,7 +1893,7 @@ impl GameState {
         if let Some(cap) = self.combat_participation_cap(true)
             && let Some(&(first, _)) = assignments.first()
         {
-            let mut distinct: crate::game::types::IdSet<CardId> =
+            let mut distinct: crate::game::types::SmallIdSet<CardId> =
                 self.block_map.keys().copied().collect();
             distinct.extend(assignments.iter().map(|(b, _)| *b));
             if distinct.len() > cap as usize {
@@ -1959,7 +1959,7 @@ impl GameState {
         // only creature blocking this combat; count the merged block set
         // (this batch plus any earlier-declared blockers).
         {
-            let mut all_blockers: crate::game::types::IdSet<CardId> =
+            let mut all_blockers: crate::game::types::SmallIdSet<CardId> =
                 self.block_map.keys().copied().collect();
             all_blockers.extend(assignments.iter().map(|(b, _)| *b));
             if all_blockers.len() == 1 {
@@ -1996,7 +1996,7 @@ impl GameState {
         // life rather than mana.
         // The spend is deferred to after every block-legality check so a
         // rejected declaration never costs mana (CR 601.2h-style atomicity).
-        let mut block_tax_by_controller: crate::game::types::IdMap<usize, (u32, u32)> =
+        let mut block_tax_by_controller: crate::game::types::SmallIdMap<usize, (u32, u32)> =
             Default::default();
         for &(blocker_id, _) in &assignments {
             let (mana, life) = self.block_tax_for(blocker_id);
@@ -2032,7 +2032,7 @@ impl GameState {
         // (Oppressive Rays). Charged once per declared blocker, paid from
         // that blocker's controller's pool with auto-tap for the shortfall.
         {
-            let mut owed: crate::game::types::IdMap<usize, u32> = Default::default();
+            let mut owed: crate::game::types::SmallIdMap<usize, u32> = Default::default();
             for &(blocker_id, _) in &assignments {
                 let Some(seat) = self.battlefield_find(blocker_id).map(|c| c.controller) else {
                     continue;
@@ -2320,7 +2320,7 @@ impl GameState {
             kws.iter().filter_map(pick).sum()
         };
         let mut pt_deltas: SmallVec<[(CardId, i32); 8]> = SmallVec::new();
-        let mut blocked: crate::game::types::IdMap<CardId, usize> = Default::default();
+        let mut blocked: crate::game::types::SmallIdMap<CardId, usize> = Default::default();
         for &(b, a) in &assignments {
             *blocked.entry_or_default(a) += 1;
             let bk = kws_for(b);

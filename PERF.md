@@ -10765,6 +10765,66 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-158)` — the `Id*` locals get an inline buffer: `fixed` -0.212 %, `cube` -0.139 %, `sealed` -0.187 %
+
+```text
+  pool    base 15441479   candidate       delta
+  fixed     907,159,277     905,235,619   **-0.2121 %**
+  cube    2,470,376,133   2,466,933,808   **-0.1393 %**
+  sealed  2,482,510,471   2,477,861,156   **-0.1873 %**
+  growths, six-game run:  cube 336,724 -> 315,846 (-20,878)
+                          fixed 125,607 -> 115,429 (-10,178)
+```
+
+`profiling-fast --no-default-features`, six games, one thread, seed 1. **Taken
+twice**, per the standing rule, because a concurrent session's nine commits
+landed under the first reading: the base moved by 62 k Ir on `fixed` and the
+deltas by at most 0.012 points (-0.2115 / -0.1511 / -0.1855 before), so the
+rebase confirmed the reading rather than changing it. That is worth recording
+in its own right — the rule exists for the cases where it does not, and this
+run is now a data point on how often it does. The base side is a detached
+worktree, the candidate the main tree, both cold-built by the same cargo.
+⚠ **The entry lands one rebase later still, on `39528f0f`**, and was not
+retaken a third time: the same session pushed nine more commits inside the
+window and the second reading is the evidence that a batch of that shape moves
+this delta by hundredths of a point. Name the tip a reading was taken at — that
+is the rule — and re-take when the diff touches the walk, not on every push.
+
+**The census found it and `scripts/cg_alloc_sites.py` named it.** `(-158)`'s
+`malloc`/`realloc` split says 81 % of the program's growths are *first*
+allocations, so the question is never "reserve how much" but "does this buffer
+need the heap at all"; the new attributor then puts a source line on each one.
+Two of the top four callers came back pointing at the same two lines of
+`types.rs`:
+
+```text
+  cube, allocations by source line
+    declare_blockers      3,424 + 3,186 + 2,734 + 3,424  types.rs:197  IdMap::entry_or_default
+                                                  3,424  types.rs:41   IdSet::insert
+                                                  3,424  combat.rs:2389 `events`, and it is returned
+    pick_blocks_inner             3,020 + 3,020 + 28     types.rs:197  IdMap::entry_or_default
+                                          1,722 + 18     types.rs:41   IdSet::insert
+                                                  3,250  bot.rs:10263 `assignments`, returned
+```
+
+**`IdSet`/`IdMap` are `Vec` newtypes and every local one reaches the heap on
+its first entry.** The stored fields cannot take an inline buffer — they sit in
+`ColdState` and `PlayerData`, where the size class is the constraint and an
+empty `Vec` clone is what the type was introduced *for* — so the locals get
+`SmallIdSet` / `SmallIdMap`, four inline slots, bodies copied verbatim from
+their heap-backed siblings with
+`small_id_containers_agree_with_the_heap_backed_ones` as the anti-drift check.
+Twelve locals swapped across `combat.rs` and `bot.rs`.
+
+⚠ **The two rows this does NOT take are the returned `Vec`s** — `events` in
+`declare_blockers` and `assignments` in `pick_blocks_inner`, 6,674 allocations
+between them. A returned buffer's allocation cannot be removed, only moved,
+and `combat.rs:3402`'s `events.reserve(32)` is a previous pass having already
+moved one.
+
+**`--bench` reads its invariant unchanged** — 195,806 / 27.49 / 611.9 / 0
+stalls, determinism ok; suite 19,159 / 0 / 5, golden traces unmoved.
+
 ### `(-155)` — the loss check's team walk: `cube` -0.114 %, `fixed` -0.163 %
 
 ```text
@@ -19969,13 +20029,17 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-158) PARTLY TAKEN — the `Id*` locals, `fixed` -0.212 % / `cube` -0.139 % /
+`sealed` -0.187 %; see the Log. What is still open is listed at the end of this
+entry.**
+
 **(-158) THE ALLOCATION CENSUS, RE-TAKEN WITH THE ONE COLUMN IT NEVER HAD:
 `malloc` VS `realloc`. 81 % OF THE PROGRAM'S GROWTHS ARE FIRST ALLOCATIONS, SO
 `with_capacity` IS THE WRONG TOOL AND `cg_growth.py`'S OWN RANKING POINTS AT
 THE WRONG ROWS.** `finish_grow` is **336,724 calls / 16.3 M self / 76.2 M
 inclusive = 3.17 % of `cube`** (`malloc` 273,215 / 25.95 M, `realloc` 63,509 /
-33.92 M). Fresh dumps at `19b1aa6c`, `profiling-lto`, six games, one thread,
-seed 1; `fixed` is 125,607 growths over 68 callers.
+33.92 M). Fresh dumps, `profiling-lto`, six games, one thread, seed 1, taken one
+commit either side of `39528f0f`; `fixed` is 125,607 growths over 68 callers.
 
 `--separate-callers=2` splits each grow context by which allocator entry it
 took, and that is the column that decides the tool:
