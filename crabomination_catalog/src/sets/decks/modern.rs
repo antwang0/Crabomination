@@ -18785,8 +18785,9 @@ pub fn keen_eyed_curator() -> CardDefinition {
 // ── Cube expansion: body-only stubs ─────────────────────────────────────────
 
 /// Enduring Innocence — {1}{W}{W} Enchantment Creature — Glimmer. 2/1
-/// Lifelink. Draw a card when a nontoken creature you control enters; when it
-/// dies it returns as a noncreature enchantment (`ReturnSelfAsEnchantment`).
+/// Lifelink. Draw a card the first time another creature you control with
+/// power 2 or less enters each turn; when it dies it returns as a noncreature
+/// enchantment (`ReturnSelfAsEnchantment`).
 pub fn enduring_innocence() -> CardDefinition {
     CardDefinition {
         name: "Enduring Innocence",
@@ -18804,8 +18805,10 @@ pub fn enduring_innocence() -> CardDefinition {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
-                        filter: SelectionRequirement::Creature.and(SelectionRequirement::NotToken),
-                    }),
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::PowerAtMost(2)),
+                    })
+                    .once_per_turn(),
                 effect: Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),

@@ -428,7 +428,7 @@ fn parallax_nexus_enters_with_counters_and_forces_discard() {
 // ── Cube expansion: body-only stubs ─────────────────────────────────────────
 
 #[test]
-fn enduring_innocence_draws_on_nontoken_creature_etb() {
+fn enduring_innocence_draws_on_a_small_creature_etb() {
     let mut g = two_player_game();
     // Seed the library so the draw has something to pull.
     g.add_card_to_library(0, catalog::island());
@@ -454,7 +454,52 @@ fn enduring_innocence_draws_on_nontoken_creature_etb() {
     assert_eq!(
         g.players[0].hand.len(),
         hand_before,
-        "Enduring Innocence should draw 1 when a nontoken creature ETBs (net 0 from cast + draw)"
+        "Enduring Innocence should draw 1 when a power-2 creature ETBs (net 0 from cast + draw)"
+    );
+}
+
+/// The two riders the printed card carries and the body did not: the trigger
+/// only sees creatures with **power 2 or less**, and it fires **once each
+/// turn**. Both were added with the trigger-limit ratchet.
+#[test]
+fn enduring_innocence_is_power_gated_and_once_a_turn() {
+    // ⚠ `add_card_to_battlefield` skips the stack, so ETB triggers never
+    // fire from it — every subject here has to be cast.
+    fn cast(g: &mut GameState, def: crabomination::card::CardDefinition) {
+        let id = g.add_card_to_hand(0, def);
+        g.players[0].mana_pool.add_colorless(6);
+        g.players[0].mana_pool.add(Color::Green, 3);
+        g.players[0].mana_pool.add(Color::White, 3);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("castable");
+        drain_stack(g);
+    }
+
+    let mut g = two_player_game();
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.add_card_to_battlefield(0, catalog::enduring_innocence());
+
+    // A 4/4 is outside "power 2 or less" — cast costs a card, no draw back.
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, catalog::serra_angel());
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "a power-4 creature entering is outside the printed filter (no draw)"
+    );
+
+    // `cast` is hand-neutral (add one, spend one), so a draw is visible as +1.
+    cast(&mut g, catalog::grizzly_bears());
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "first small creature draws");
+    cast(&mut g, catalog::grizzly_bears());
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before + 1,
+        "\"triggers only once each turn\" — the second is silent"
     );
 }
 

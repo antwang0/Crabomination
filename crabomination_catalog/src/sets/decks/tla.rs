@@ -2255,7 +2255,8 @@ fn firebending_soldier_token() -> TokenDefinition {
 }
 
 /// Earth Kingdom General — {3}{G} 2/2 Human Soldier Ally. When it enters,
-/// earthbend 2.
+/// earthbend 2. The first time each turn you put +1/+1 counters on a creature,
+/// you may gain that much life.
 pub fn earth_kingdom_general() -> CardDefinition {
     CardDefinition {
         name: "Earth Kingdom General",
@@ -2268,7 +2269,31 @@ pub fn earth_kingdom_general() -> CardDefinition {
         ]),
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Earthbend { n: Value::Const(2) })],
+        triggered_abilities: vec![
+            etb(Effect::Earthbend { n: Value::Const(2) }),
+            // "Whenever you put one or more +1/+1 counters on a creature, you
+            // may gain that much life. Do this only once each turn." Counter
+            // events don't attribute a placer, so scope on the subject being a
+            // creature you control — the Stalwart Successor idiom.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::YourControl,
+                )
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                })
+                .once_per_turn(),
+                effect: Effect::MayDo {
+                    description: "gain that much life".to_string(),
+                    body: Box::new(Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::TriggerEventAmount,
+                    }),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

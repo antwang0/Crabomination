@@ -1625,6 +1625,21 @@ mod recent55 {
         );
     }
 
+    /// "This ability triggers only once each turn" — the second artifact of
+    /// the turn does not grow the Smith.
+    #[test]
+    fn ingenious_smith_grows_only_once_a_turn() {
+        let mut g = two_player_game();
+        let smith = g.add_card_to_battlefield(0, catalog::ingenious_smith());
+        cast_artifact(&mut g, 0);
+        cast_artifact(&mut g, 0);
+        assert_eq!(
+            g.battlefield_find(smith).unwrap().counter_count(CounterType::PlusOnePlusOne),
+            1,
+            "two artifacts, one counter",
+        );
+    }
+
     #[test]
     fn ravenous_intruder_eats_an_artifact() {
         let mut g = two_player_game();

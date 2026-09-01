@@ -1285,6 +1285,32 @@ fn earth_kingdom_general_earthbends() {
         "earthbend 2 counters");
 }
 
+/// The General's second printed trigger — "whenever you put one or more
+/// +1/+1 counters on a creature, you may gain that much life. Do this only
+/// once each turn." Its own earthbend is the counter source.
+#[test]
+fn earth_kingdom_general_gains_life_from_counters_once_a_turn() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    let ekg = g.add_card_to_battlefield(0, catalog::earth_kingdom_general());
+    // `ScriptedDecider` falls back to `AutoDecider` once drained, and
+    // `MayDo` auto-answers "no" — so the scripted `true` is what makes the
+    // optional life gain visible at all.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[0].life;
+    g.fire_self_etb_triggers(ekg, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "earthbend 2 → gain that much life");
+
+    // ⚠ The limit is per ability *instance*, so a second General would gain
+    // again (correctly). Re-fire this one's own ETB to test the rider.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_self_etb_triggers(ekg, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "\"only once each turn\" — no second gain");
+}
+
 /// Cruel Administrator mints a firebending Soldier when it attacks.
 #[test]
 fn cruel_administrator_attack_makes_soldier() {

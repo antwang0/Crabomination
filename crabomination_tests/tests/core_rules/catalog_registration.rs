@@ -1363,3 +1363,190 @@ fn every_card_has_the_activation_timing_it_prints() {
         &missing[..missing.len().min(40)],
     );
 }
+
+/// **A card that prints "activate only once each turn" carries the limit.**
+///
+/// The permissive half again, and the same failure mode: without the limit the
+/// bot gets every activation the mana allows instead of one, which is both a
+/// different card and one more shape for an action loop to live in.
+/// `once_per_turn` and `max_activations_per_turn` both satisfy it.
+///
+/// Same two gates as the timing ratchet, for the same reasons: reminder text
+/// and quoted spans come out (the limit inside a granted ability's quotes is
+/// that ability's), and a card with more than one printed activation is
+/// skipped because the limit sits on one of them.
+#[test]
+fn every_card_has_the_activation_limit_it_prints() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    fn strip_quoted(text: &str) -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut inside = false;
+        for ch in text.chars() {
+            match ch {
+                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
+                _ if !inside => out.push(ch),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    let mut checked = 0usize;
+    let mut missing: Vec<&str> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if def.activated_abilities.is_empty() {
+            continue;
+        }
+        let text = strip_quoted(&strip_reminders(oracle));
+        let activations: Vec<&str> = text
+            .lines()
+            .filter(|l| l.split_once(':').is_some_and(|(c, _)| c.contains('{') && c.len() < 120))
+            .collect();
+        if activations.len() != 1 {
+            continue;
+        }
+        checked += 1;
+        // ⚠ "This ability **triggers** only once each turn" is a limit on a
+        // *triggered* ability and has nothing to do with an activation — six
+        // cards read as findings on the bare phrase. Anchor on the verb.
+        if !(text.contains("activate only once each turn")
+            || text.contains("activate this ability only once each turn"))
+        {
+            continue;
+        }
+        let limited = def
+            .activated_abilities
+            .iter()
+            .any(|a| a.once_per_turn || a.max_activations_per_turn.is_some() || a.activate_once);
+        if !limited {
+            missing.push(def.name);
+        }
+    }
+    assert!(checked > 500, "only {checked} single-activation cards seen — vacuous");
+    missing.sort();
+    assert!(
+        missing.is_empty(),
+        "{} card(s) print \"activate only once each turn\" and are unlimited in the tree: {:?}",
+        missing.len(),
+        &missing[..missing.len().min(40)],
+    );
+}
+
+/// **A card that prints "this ability triggers only once each turn" carries
+/// `EventSpec.once_per_turn`.**
+///
+/// The trigger-side sibling of the activation-limit ratchet, and the same
+/// permissive failure: without the flag the ability fires on every matching
+/// event instead of the first, which on a token-maker (Elvish Warmaster,
+/// Baron Bertram Graywater) compounds with whatever else reads tokens
+/// entering. The primitive exists — `EventSpec::once_per_turn` — so every one
+/// of these is a one-field fix, not a missing mechanic.
+///
+/// The exception is a card whose limited trigger is *absent from the tree*
+/// entirely — there is no `EventSpec` for the flag to sit on, so it is a card
+/// job rather than a one-field fix. Those live in
+/// `TRIGGER_LIMIT_ABILITY_DROPPED` with the oracle line they drop.
+#[test]
+fn every_card_has_the_trigger_limit_it_prints() {
+    /// Cards printing a once-a-turn trigger limit on an ability that isn't
+    /// modeled at all. Adding the flag here would be a lie; implementing the
+    /// ability is the fix, and is filed in `CARD_BACKLOG.md`.
+    const TRIGGER_LIMIT_ABILITY_DROPPED: &[&str] = &[
+        // "Whenever Calix or an enchanted creature you control deals combat
+        // damage to a player, you may create a token that's a copy of a
+        // nonlegendary enchantment you control. Do this only once each turn."
+        // Only the constellation half is modeled.
+        "Calix, Guided by Fate",
+    ];
+
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut missing: Vec<&str> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        // ⚠ Quoted spans come out: Cursed Wombat's limit is inside a
+        // *granted* ability ("Permanents you control have \"…triggers only
+        // once each turn\""), which is that ability's rule and not this
+        // card's own trigger.
+        let mut text = String::with_capacity(oracle.len());
+        let mut inside = false;
+        for ch in strip_reminders(oracle).chars() {
+            match ch {
+                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
+                _ if !inside => text.push(ch),
+                _ => {}
+            }
+        }
+        // Anchor on the verb: "activate only once each turn" is the other
+        // ratchet's question, and the bare phrase catches both.
+        if !(text.contains("triggers only once each turn")
+            || text.contains("do this only once each turn"))
+        {
+            continue;
+        }
+        checked += 1;
+        if TRIGGER_LIMIT_ABILITY_DROPPED.contains(&def.name) {
+            continue;
+        }
+        // ⚠ The flag is read off the whole definition, not off
+        // `def.triggered_abilities`. A modal card keeps its triggers inside
+        // the mode (Hollowmurk Siege's Sultai half carries `.once_per_turn()`
+        // and is invisible at the top level), and a top-level-only read
+        // reports it as a miss.
+        if !format!("{def:?}").contains("once_per_turn: true") {
+            missing.push(def.name);
+        }
+    }
+    assert!(checked > 3, "only {checked} cards print the clause — did the cache move?");
+    missing.sort();
+    assert!(
+        missing.is_empty(),
+        "{} of {checked} card(s) print a once-a-turn trigger limit and fire on every event: \
+         {:?}",
+        missing.len(),
+        &missing[..missing.len().min(40)],
+    );
+}

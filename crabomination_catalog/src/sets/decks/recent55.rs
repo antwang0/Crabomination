@@ -95,8 +95,8 @@ pub fn maverick_thopterist() -> CardDefinition {
 }
 
 /// Ingenious Smith — {1}{W} 1/1 Human Artificer. ETB look at the top four cards
-/// and may put an artifact from among them into your hand. Whenever an artifact
-/// you control enters, put a +1/+1 counter on this creature.
+/// and may put an artifact from among them into your hand. The first time an
+/// artifact you control enters each turn, put a +1/+1 counter on this creature.
 pub fn ingenious_smith() -> CardDefinition {
     CardDefinition {
         name: "Ingenious Smith",
@@ -122,7 +122,8 @@ pub fn ingenious_smith() -> CardDefinition {
                     .with_filter(Predicate::EntityMatches {
                         what: Selector::TriggerSource,
                         filter: R::Artifact,
-                    }),
+                    })
+                    .once_per_turn(),
                 effect: Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
