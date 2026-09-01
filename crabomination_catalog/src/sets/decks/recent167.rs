@@ -14,8 +14,9 @@ use crate::game::TurnStep;
 use crate::mana::{Color, SpendRestriction, b, cost, g, generic, r, u, w, x};
 
 /// The shared "Max speed — {N}, Exile this card from your graveyard: Draw a
-/// card" ability the DFT Surveyor cycle prints.
-fn max_speed_gy_draw(mana: u32) -> ActivatedAbility {
+/// card" ability the DFT Surveyor cycle prints. `pub(crate)` because the
+/// cycle's blue member (Glitch Ghost Surveyor) lives in `recent30`.
+pub(crate) fn max_speed_gy_draw(mana: u32) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: cost(&[generic(mana)]),
         from_graveyard: true,

@@ -822,9 +822,10 @@ pub fn vanille_cheerful_lcie() -> CardDefinition {
     }
 }
 
-/// Y'shtola, Night's Blessed — {1}{W}{U}{B} 2/4 Cat Warlock, vigilance. Whenever
-/// you cast a noncreature spell with mana value 3 or greater, deal 2 damage to
-/// each opponent and gain 2 life. (The lost-4-life end-step draw is omitted.)
+/// Y'shtola, Night's Blessed — {1}{W}{U}{B} 2/4 Cat Warlock, vigilance. At the
+/// beginning of **each** end step, if a player lost 4 or more life this turn,
+/// draw a card; and whenever you cast a noncreature spell with mana value 3 or
+/// greater, deal 2 damage to each opponent and gain 2 life.
 pub fn yshtola_nights_blessed() -> CardDefinition {
     CardDefinition {
         name: "Y'shtola, Night's Blessed",
@@ -838,24 +839,43 @@ pub fn yshtola_nights_blessed() -> CardDefinition {
         power: 2,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-                Predicate::CastSpellMatches(
-                    SelectionRequirement::Noncreature
-                        .and(SelectionRequirement::ManaValueAtLeast(3)),
-                ),
-            ),
-            effect: Effect::Seq(vec![
-                Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(2),
-                },
-                Effect::GainLife {
+        triggered_abilities: vec![
+            // CR 603.4 — an intervening-if checked both on trigger and on
+            // resolution. `LifeLostThisTurn` is the *maximum* over the players
+            // it resolves, so `EachPlayer` reads "the most any player has lost
+            // this turn", which is the printed "a player lost 4 or more life".
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::AnyPlayer,
+                )
+                .with_filter(Predicate::ValueAtLeast(
+                    Value::LifeLostThisTurn(PlayerRef::EachPlayer),
+                    Value::Const(4),
+                )),
+                effect: Effect::Draw {
                     who: Selector::You,
-                    amount: Value::Const(2),
+                    amount: Value::ONE,
                 },
-            ]),
-        }],
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellMatches(
+                        SelectionRequirement::Noncreature
+                            .and(SelectionRequirement::ManaValueAtLeast(3)),
+                    )),
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(2),
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(2),
+                    },
+                ]),
+            },
+        ],
         ..Default::default()
     }
 }

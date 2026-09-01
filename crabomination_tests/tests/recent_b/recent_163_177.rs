@@ -876,35 +876,47 @@ mod recent167 {
     use crabomination::game::*;
     use crabomination::mana::Color;
 
-    /// Loxodon Surveyor's max-speed graveyard ability exiles itself to draw, and is
-    /// gated behind speed 4.
+    /// The DFT Surveyor cycle's shared "Max speed — {3}, exile this card from
+    /// your graveyard: Draw a card": gated behind speed 4, exiles itself as a
+    /// cost. Table-driven over the cycle because the ability is one shared
+    /// helper — Glitch Ghost Surveyor is the blue member and shipped without it
+    /// (`audit_oracle_verbs.py`, `draw` class). `mutant_surveyor` carries a
+    /// pump ability first, so its index is 1.
     #[test]
-    fn loxodon_surveyor_max_speed_draws_from_graveyard() {
-        let mut g = two_player_game();
-        let surveyor = g.add_card_to_graveyard(0, catalog::loxodon_surveyor());
-        g.add_card_to_library(0, catalog::grizzly_bears());
-        g.players[0].mana_pool.add_colorless(3);
-        g.priority.player_with_priority = 0;
-        // Below max speed → activation rejected.
-        g.players[0].speed = 3;
-        assert!(
+    fn dft_surveyor_cycle_max_speed_draws_from_graveyard() {
+        for (def, idx) in [
+            (catalog::loxodon_surveyor(), 0),
+            (catalog::leonin_surveyor(), 0),
+            (catalog::glitch_ghost_surveyor(), 0),
+            (catalog::mutant_surveyor(), 1),
+        ] {
+            let name = def.name;
+            let mut g = two_player_game();
+            let surveyor = g.add_card_to_graveyard(0, def);
+            g.add_card_to_library(0, catalog::grizzly_bears());
+            g.players[0].mana_pool.add_colorless(3);
+            g.priority.player_with_priority = 0;
+            // Below max speed → activation rejected.
+            g.players[0].speed = 3;
+            assert!(
+                g.perform_action(GameAction::ActivateAbility {
+                    card_id: surveyor, ability_index: idx, target: None,
+                    additional_targets: Vec::new(), x_value: None, mode: None,
+                }).is_err(),
+                "{name} is not usable below max speed"
+            );
+            // At max speed → exile self, draw a card.
+            g.players[0].speed = 4;
+            let before = g.players[0].hand.len();
             g.perform_action(GameAction::ActivateAbility {
-                card_id: surveyor, ability_index: 0, target: None,
+                card_id: surveyor, ability_index: idx, target: None,
                 additional_targets: Vec::new(), x_value: None, mode: None,
-            }).is_err(),
-            "not usable below max speed"
-        );
-        // At max speed → exile self, draw a card.
-        g.players[0].speed = 4;
-        let before = g.players[0].hand.len();
-        g.perform_action(GameAction::ActivateAbility {
-            card_id: surveyor, ability_index: 0, target: None,
-            additional_targets: Vec::new(), x_value: None, mode: None,
-        })
-        .expect("max speed gy draw");
-        drain_stack(&mut g);
-        assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
-        assert!(g.exile.iter().any(|c| c.id == surveyor), "exiled itself as a cost");
+            })
+            .unwrap_or_else(|e| panic!("{name} max speed gy draw: {e:?}"));
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].hand.len(), before + 1, "{name} drew a card");
+            assert!(g.exile.iter().any(|c| c.id == surveyor), "{name} exiled itself as a cost");
+        }
     }
 
     /// Leonin Surveyor has first strike only during its controller's turn.

@@ -437,6 +437,30 @@ fn yshtola_triggers_on_expensive_noncreature() {
     assert_eq!(g.players[0].life, life0 + 2, "gained 2");
 }
 
+/// CR 603.4 — Y'shtola's end-step draw has an intervening if: it fires only
+/// when a player lost 4 or more life this turn (`audit_oracle_verbs.py`,
+/// `draw` class — the whole ability was omitted).
+#[test]
+fn yshtola_draws_at_end_step_only_after_four_life_lost() {
+    let end_step_hand_gain = |lost: u32| {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::yshtola_nights_blessed());
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        g.players[1].life -= lost as i32;
+        g.players[1].life_lost_this_turn = lost;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let before = g.players[0].hand.len();
+        advance_to(&mut g, TurnStep::End);
+        drain_stack(&mut g);
+        g.players[0].hand.len() as i32 - before as i32
+    };
+    assert_eq!(end_step_hand_gain(4), 1, "a player lost 4 — draw");
+    assert_eq!(end_step_hand_gain(3), 0, "only 3 lost — no draw");
+}
+
 /// Tonberry enters tapped with a stun counter and gains combat keywords on your turn.
 #[test]
 fn tonberry_enters_stunned_and_conditional_keywords() {

@@ -376,7 +376,9 @@ pub fn endrider_catalyzer() -> CardDefinition {
 }
 
 /// Glitch Ghost Surveyor — {2}{U} 2/2 Spirit Scout with flying. Start your
-/// engines! (The max-speed graveyard draw is dropped.)
+/// engines! Max speed — {3}, exile it from your graveyard: draw a card. The
+/// ability is the DFT Surveyor cycle's shared one, so it comes from
+/// `recent167` rather than being spelled a second time here.
 pub fn glitch_ghost_surveyor() -> CardDefinition {
     CardDefinition {
         name: "Glitch Ghost Surveyor",
@@ -389,6 +391,7 @@ pub fn glitch_ghost_surveyor() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::StartYourEngines],
+        activated_abilities: vec![super::recent167::max_speed_gy_draw(3)],
         ..Default::default()
     }
 }
