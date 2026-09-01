@@ -194,3 +194,38 @@ pub fn goryos_vengeance_deck() -> &'static [CardFactory] {
         thoughtseize, thoughtseize, thoughtseize,
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The seeded builders are the deal half of a reproducible bot match —
+    /// `server::bot::set_jitter_seed` is the other. Same seed, same order;
+    /// a different seed is a different order, so the seed is actually read.
+    #[test]
+    fn seeded_demo_builders_reproduce_the_deal() {
+        let order = |s: &GameState, seat: usize| -> Vec<u32> {
+            s.players[seat].library.iter().map(|c| c.id.0).collect()
+        };
+        for seat in 0..2 {
+            assert_eq!(
+                order(&build_demo_state_seeded(7), seat),
+                order(&build_demo_state_seeded(7), seat),
+            );
+        }
+        assert_ne!(
+            order(&build_demo_state_seeded(7), 0),
+            order(&build_demo_state_seeded(8), 0),
+        );
+        for seat in 0..4 {
+            assert_eq!(
+                order(&build_commander_state_seeded(7), seat),
+                order(&build_commander_state_seeded(7), seat),
+            );
+        }
+        assert_ne!(
+            order(&build_commander_state_seeded(7), 0),
+            order(&build_commander_state_seeded(8), 0),
+        );
+    }
+}

@@ -2436,10 +2436,11 @@ rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
 suite   19,191 / 0 / 5 (cargo nextest run --workspace --exclude
         crabomination_client); golden traces in it and unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
---bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
-        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
-        invariant; determinism ok; thread_determinism ok (3 vs 1); peak_rss
-        21.3 MiB (`--no-default-features`, i.e. the system allocator)
+--bench profiling-fast, **rebuilt at the pushed tip**: **195,806 decisions /
+        27.49 turns / 611.9 per game / 0 stalls (cap 0 / stuck 0 / draw 0)**
+        — byte-identical to the invariant; determinism ok; thread_determinism
+        ok (3 vs 1); peak_rss 19.0 MiB, bin 218,357,064 B
+        (`--no-default-features`, i.e. the system allocator)
 --bench release at the base tip, for the profile comparison: same four
         counters, games_per_s 209.29, peak_rss 24.7 MiB
 ```
