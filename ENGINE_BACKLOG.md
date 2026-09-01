@@ -1475,6 +1475,26 @@ loops (EachPlayer shuffles) to one suspension per resolution.
 
 ## Engine — Missing Mechanics
 
+**`SetLandTypes` IS USED FOR TWO CARDS THAT SAY "IN ADDITION".** CR 305.7's
+type-*setting* removes the land's other types and its abilities; two emitters
+use `Modification::SetLandTypes` for effects whose oracle text adds:
+
+* `StaticEffect::GrantAllBasicLandTypes` (`game/mod.rs:24468`) — Prismatic
+  Omen, Dryad of the Ilysian Grove. "Lands you control are every basic land
+  type **in addition to their other types**." The Set drops the land's own
+  type, so a Prismatic Omen takes the `Urza's` off an Urza's Tower and the
+  Tron assembly check with it, and a `Gate`/`Cave`/`Locus` off anything that
+  cares.
+* `equipped_bonus.set_land_types` (`game/mod.rs:10319`) — the same shape from
+  the equipment/aura side.
+
+Neither pairs a `RemoveAllAbilities`, which is correct for their cards — the
+wrong half is the *Set*. Both want an `AddLandType` per type, or an
+`AddLandTypes(Vec<_>)` modification. Found while fixing the CR 305.7
+ability-loss gap in `effective_mana_abilities_into` (PERF, the Blood Moon
+pass); the fix there is unaffected either way, since these two emit no strip.
+
+
 ### Replacement Effects
 The engine has no general replacement-effect primitive.  Many real cards need one:
 - ETB replacements (Containment Priest, Torpor Orb, Rest in Peace)

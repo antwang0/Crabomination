@@ -10576,6 +10576,51 @@ the table above is safe to compress:
 
 ## Log
 
+### The Blood Moon pass — a bug-class kill that reads -0.004 % / -0.006 %
+
+```text
+  pool   tip (5cba7ddc)   candidate       delta
+  cube   2,449,841,846    2,449,737,922   -0.0042 %
+  fixed    894,885,647      894,834,443   -0.0057 %
+```
+
+**Free, and that is the whole perf content.** It is recorded here because a
+behaviour change to a pooled card has to be priced before it lands, not
+because it is an optimization: `lost_all_abilities` was already computed by
+the pass the function runs, so the gate is a field read.
+
+**What it fixes: a Blood-Mooned Sandsteppe Citadel tapped for white.** The
+only ability-loss check in `effective_mana_abilities_into` — the auto-tapper's
+source table — was CR 305.6's `printed_land_mana_ability_lost_with`, which
+drops a printed `{T}: Add <colour>` **whose colour matches a basic type the
+card printed**. Celestial Colonnade prints `Island Plains`, so it was handled;
+every `tri_land` in the cycle prints no basic type at all, so none of them
+were. `activate_ability` has gated on `lost_all_abilities` since it existed —
+**the two disagreed and the tapper won**, because the tapper is what the bot
+uses.
+
+⚠ **A presence gate that a second gate already answers is not a second walk.**
+The obvious form of this fix calls `ability_strip_in_scope()`, which is a
+whole-battlefield walk, once per untapped permanent inside
+`auto_tap_for_cost_inner`'s loop. `computed` is the layer pass the function
+*already ran* two statements above, and the flag is on it — so the fix is
+`computed.as_ref().is_some_and(|cp| cp.lost_all_abilities)` and costs a load.
+Read the function for a gate before adding one.
+
+**One gap, stated rather than papered over:** `computed` is `None` on the
+land-type presence gate — inside a freeze scope with nothing in it that writes
+a land type — so a land stripped *without* a land-type rewrite (Humility on an
+animated manland) still reaches the tapper. `activate_ability`'s own check,
+which pays the walk, refuses it there.
+
+**Two more defects were found in the same read and are filed, not fixed:**
+`StaticEffect::GrantAllBasicLandTypes` (Prismatic Omen, Dryad of the Ilysian
+Grove) and `equipped_bonus.set_land_types` both emit `SetLandTypes` with **no**
+`RemoveAllAbilities`, which is right for their cards — but `SetLandTypes`
+*replaces*, and both cards say "in addition to their other types". A Prismatic
+Omen on an Urza's Tower takes the `Urza's` type away and the Tron check with
+it. See ENGINE_BACKLOG.
+
 ### Hundred-and-twenty-first pass — `(-153)` the layer-7 gate on a battlefield lane: `cube` -0.134 %, `fixed` -0.142 %, and **half its filed ceiling**
 
 ```text

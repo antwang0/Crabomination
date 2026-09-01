@@ -13426,8 +13426,28 @@ impl GameState {
         // read `.effect` and the cost fields. Cloning them was one
         // `ActivatedAbility` deep copy per printed mana ability per untapped
         // permanent per `auto_tap_for_cost_inner`.
+        // CR 305.7 / 113.10b — a permanent that has lost all abilities has no
+        // printed mana ability either.
+        //
+        // ⚠ The per-ability CR 305.6 check below is **not** this rule: it only
+        // drops a printed `{T}: Add <colour>` whose colour matches a basic
+        // type the card *printed*, so a land with no printed basic type kept
+        // every one of them. A Blood-Mooned Sandsteppe Citadel tapped for
+        // white — the whole `tri_land` cycle, plus any land whose mana
+        // ability is real rules text, ignored Blood Moon and Magus of the
+        // Moon outright. `activate_ability` has always gated on this flag
+        // (line ~14400); the auto-tapper's source table did not, so the two
+        // disagreed and the tapper won.
+        // It costs nothing: `computed` is the pass this function already ran,
+        // and it is `None` only on the gate above — inside a freeze scope with
+        // nothing in it that writes a land type. A land stripped *without* a
+        // land-type rewrite (Humility on an animated manland) is not covered
+        // here and would need the gate to widen; `activate_ability`'s own
+        // check, which pays `ability_strip_in_scope`, still refuses it.
+        let lost_all = computed.as_ref().is_some_and(|cp| cp.lost_all_abilities);
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
+                && !lost_all
                 && !Self::printed_land_mana_ability_lost_with(card, i, computed_land_types)
             {
                 out.push((i, AbilityRef::Printed(a)));

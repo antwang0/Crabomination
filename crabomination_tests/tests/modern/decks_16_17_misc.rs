@@ -425,6 +425,35 @@ fn blood_moon_turns_nonbasics_into_mountains() {
     assert_eq!(g.players[1].mana_pool.amount(Color::Red), 1, "taps for red");
 }
 
+/// **Blood Moon strips an *untyped* land's mana abilities too** — CR 305.7.
+///
+/// ⚠ A Sandsteppe Citadel under a Blood Moon tapped for **white**. The only
+/// ability-loss check in the auto-tapper's source table was CR 305.6's, which
+/// drops a printed `{T}: Add <colour>` whose colour matches a basic type the
+/// card *printed* — so Celestial Colonnade (printed Island Plains) was
+/// handled and every `tri_land` in the cycle, which prints no basic type at
+/// all, was not. `activate_ability` gated on `lost_all_abilities` throughout;
+/// the tapper did not, and the tapper is what the bot uses.
+#[test]
+fn blood_moon_strips_an_untyped_lands_mana_abilities() {
+    use crabomination::card::LandType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_moon());
+    let tri = g.add_card_to_battlefield(1, catalog::sandsteppe_citadel());
+    let cp = g.computed_permanent(tri).expect("citadel");
+    assert_eq!(cp.subtypes().land_types, vec![LandType::Mountain]);
+    assert!(cp.lost_all_abilities, "the type-set stripped its abilities");
+    g.battlefield_find_mut(tri).expect("citadel").summoning_sick = false;
+
+    // It is a Mountain and nothing else: no white, and red from the
+    // intrinsic ability its new type grants.
+    g.auto_tap_for_cost(1, &crabomination::mana::cost(&[crabomination::mana::w()]));
+    assert_eq!(g.players[1].mana_pool.amount(Color::White), 0, "no white");
+    assert!(!g.battlefield_find(tri).expect("citadel").tapped, "and it stayed untapped");
+    g.auto_tap_for_cost(1, &crabomination::mana::cost(&[crabomination::mana::r()]));
+    assert_eq!(g.players[1].mana_pool.amount(Color::Red), 1, "red, from the Mountain type");
+}
+
 /// Urborg: every land is a Swamp in addition — it taps for black, keeping
 /// its other types.
 #[test]
