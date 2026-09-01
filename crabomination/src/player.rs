@@ -85,7 +85,7 @@ pub struct PlayerCold {
     // Ante, Archenemy, Planechase and Attractions. Every one of them is
     // empty in every format the simulator plays, and each cost `PlayerData`
     // eight bytes it pays on every unshare. Reads and writes reach them
-    // through `PlayerData`'s `Deref`/`DerefMut` unchanged (PERF `(-150)`).
+    // through `PlayerData`'s `Deref`/`DerefMut` unchanged (PERF `(-152)`).
     /// CR 407 — cards this player owns in the ante zone. Only ever non-empty
     /// while `GameState.playing_for_ante`; the winner takes all of it
     /// (CR 407.2). `#[serde(default)]` for snapshot back-compat.

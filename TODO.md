@@ -23,24 +23,46 @@ sixty-seventh pass, so don't re-take that.
 
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
-1. **FIRST:** `git checkout -B claude/modern_decks origin/claude/modern_decks`. Two sessions can
-   be live: **rebase, never force**; code before tracker prose; **check a candidate number is free
-   before spending it.** Container gotchas are in **CLAUDE.md**, measurement rules in **PERF**.
-2. **Gates at the tip:** suite **19,122 / 0 / 5**, traces unmoved, clippy clean; `--bench`
-   **195,806 / 27.49 / 611.9 / 0 stalls**, determinism ok. Base Ir (six games, seed 1, one
-   thread): `fixed` **905,973,489**, `cube` **2,455,861,932** *pre*-card-batch. The nine cards
-   are `cube`/`sealed`-only, so **`fixed` is the pool comparable across them**.
-3. **Perf is at its floor and `(-149)` proves it on a fresh dump** — nothing moved since
-   `bda1a69d`, and its three new readings each *close* a device. `(-145)` is the last entry with
-   a number and is refused on robustness. **The lever is the build**: PGO -23.8 to -27.6 %, now
-   with a how-to at the top of **ML_PIPELINE.md**.
-4. **Two card auditors are ratchets at zero — keep them there** (`audit_doc_drift` 0/21,426,
-   `audit_keyword_drift` 0 invented). `audit_catalog_stats` is 0 cost / 0 P/T; its 19 `kw` + 2
-   `sub` rows are triaged in **CARD_BACKLOG**'s first section, and the one worth taking is
-   **Karplusan Strider**.
-5. **Robustness green** (`audit_panics` 0 bare, variant/target walkers clean) — but the
-   `overflow` + `debug-assertions` grid was **not** re-run this run. Take it next run.
-6. **Next by size** in the oracle-verb audit: `search_library` 18, `draw` 17, `destroy` 15.
+1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
+   origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
+   tracker prose; **claim a candidate number at PUSH time, not at file time** — the last three
+   passes collided twice, and the hundred-and-nineteenth shipped with a stale number in its
+   commit titles rather than rewrite a shared branch. Container gotchas are in **CLAUDE.md**,
+   measurement rules in **PERF**.
+2. **Gates at the tip:** suite **19,127 / 0 / 5** (`--workspace --exclude
+   crabomination_client`), traces unmoved, clippy clean `--all-targets`; `--bench`
+   **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism and
+   thread_determinism ok. `games_per_s` is the host; **Ir is the signal**. ⚠ The `overflow` +
+   `debug-assertions` grid has **not** been re-run for two runs — take it next run.
+   ⚠ A `cube`/`sealed` Ir figure from before `2f5ef96e` is not comparable to one after it.
+3. **`(-152)` taken, `cube` -0.422 % / `fixed` -0.376 %** — a token-presence lane on the four
+   card zones, plus the `PlayerData` headroom under it. ⚠ **`PlayerData`'s ceiling is 1,016
+   bytes**: 1,032 is a 1,040-byte chunk past glibc's largest smallbin, and crossing it cost
+   11.3 M Ir — more than the 10.0 M device that grew it saved. **Price a field added to the hot
+   player group at the size class, not at the copy.** 24 bytes of headroom left (992 of 1,016).
+4. **Next candidate is `(-153)`, filed with its ceiling and its open question**:
+   `pt_reduction_in_scope` is an ungated whole-battlefield walk once per SBA sweep and
+   `zone::Battlefield::lane` is already its device (~0.25-0.35 % of `cube`). ⚠ Price the hit
+   rate first — 139,280 `&mut` battlefield reaches against 20,012 sweeps, and
+   `zone::BATTLEFIELD_REACHES` under `trig-census` already counts them.
+5. **The lane device now covers INSTANCE state** (`(-152)` is the first), which widens what a
+   `zone::` memo can answer: every `&mut` route clears the word and the `debug_assert!` makes
+   the suite the audit, so a whole-zone predicate need not be definition-only.
+6. **⚠ A line-profile row is a pointer, never a size.** `cg_lines.py` read one source line at
+   84 Ir a walk on `cube` and 3.4 on `fixed` where the A/B says both pools pay the same share.
+   Take the A/B; the counts are the truth.
+7. **The build is still the largest single lever**: PGO -23.8 to -27.6 %, how-to at the top of
+   **ML_PIPELINE.md**. Otherwise perf is near its floor — `(-151)`'s fresh dump moved nothing,
+   and `(-145)` is refused on robustness, not on size.
+8. **Two card auditors are ratchets at zero — keep them there** (`audit_doc_drift` 0/21,426,
+   `audit_keyword_drift` 0 invented). `audit_catalog_stats` is 0 cost / 0 P/T; its 19 `kw` +
+   2 `sub` rows are triaged in **CARD_BACKLOG**'s first section and the one worth taking is
+   **Karplusan Strider**. Next by size in the oracle-verb audit: `search_library` 18,
+   `draw` 17, `destroy` 15.
+9. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
+   (both want a card, not a fix), `audit_target_fields` 0 aimed by a shipped card,
+   `audit_target_walkers` clean. Targeting is CLOSED and gated; the four rules are in
+   ENGINE_BACKLOG, and its P2 has one live lead (Sand Golem's trigger, probed, not vacuous).
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

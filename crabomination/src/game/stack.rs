@@ -6093,7 +6093,7 @@ impl GameState {
         // Each `retain` unshares its CoW zone and the seat's `PlayerData`, so
         // ask the zone's own memo first: an off-battlefield token is the rare
         // case, and the walk this replaces was a whole library per seat per
-        // sweep (PERF `(-150)`).
+        // sweep (PERF `(-152)`).
         for seat in 0..self.players.len() {
             if self.players[seat].graveyard.has_token() {
                 self.players[seat].graveyard.retain(|c| !c.is_token);

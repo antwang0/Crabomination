@@ -2323,6 +2323,38 @@ a box whose state moves.
 
 ## Baseline
 
+### The token-sweep pass — closing state at this run's tip
+
+`(-152)`: the CR 704.5d token sweep, plus the sixteen bytes of `PlayerData`
+headroom it needed. Cumulative off `9abda258`:
+
+```text
+  pool    base 9abda258   PlayerData -40  + the memo      cumulative
+  cube    2,420,696,475   2,419,711,834   2,410,476,916   **-0.4222 %**
+  fixed     901,868,314     901,647,153     898,475,182   **-0.3762 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,127 / 0 / 5 (cargo nextest --workspace --exclude
+        crabomination_client); golden traces in it, **unmoved across both
+        commits**; five new `zone` tests
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release-fast: 195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls — **byte-identical to the invariant**; determinism ok,
+        thread_determinism ok (3 vs 1 threads identical); host_calib_ms 59,
+        games_per_s 221.9 (host, not a signal)
+sizes   `PlayerData` 1,016 -> 976 -> 992; `CardPile` 16, `Graveyard` 16,
+        `GameState` 1,424 unchanged
+grid    NOT re-run: both commits are behaviour-preserving with the suite, the
+        golden traces and a byte-identical `--bench` behind them.
+```
+
+⚠ **`PlayerData`'s ceiling is 1,016 bytes** — a 1,032-byte struct is a
+1,040-byte chunk, past glibc's largest smallbin, and the same memo that wins
+0.38 % lost 0.07-0.33 % when it crossed it. See the hundred-and-nineteenth
+pass.
+
 ### The defaulted-field card pass — closing state at `2f5ef96e`
 
 A run with **no perf commit in it**, so this entry is the base for the next
@@ -2364,7 +2396,6 @@ build   warm `profiling-fast -p crabomination --bin bot_ladder
         ~40 min figure a cold run shows is the dependency graph plus
         contention, not the engine
 ```
-
 ### The state-shape pass — closing state at `613f20dc`
 
 Two perf commits on one subject: **what a `GameState` clone actually copies.**
@@ -10437,6 +10468,109 @@ the table above is safe to compress:
 
 
 ## Log
+
+### Hundred-and-nineteenth pass — `(-152)` the CR 704.5d token sweep: `cube` -0.422 %, `fixed` -0.376 %, and **`PlayerData`'s size is an allocator size-class question**
+
+Two commits on one subject. The device is a zone memo; the first commit is the
+sixteen bytes it needs, and the *reason* it needs them is the finding.
+
+```text
+  pool    9abda258 (base)   PlayerData -40   + the memo      cumulative
+  cube    2,420,696,475     2,419,711,834    2,410,476,916   **-0.4222 %**
+  fixed     901,868,314       901,647,153      898,475,182   **-0.3762 %**
+                               -0.0407 %        -0.3817 %
+                               -0.0245 %        -0.3518 %
+```
+
+⚠ **The two commits carry `(-150)` in their titles.** A concurrent session
+spent `(-150)` on `CastProfile` and then `(-151)` on a re-profile, both
+between this pass's rebase and its push;
+the code comments and this entry say `(-152)`, and the branch is shared, so
+the titles were not rewritten. **Check a candidate number is free at push
+time as well as at file time** — this is the second collision in three passes.
+
+**The walk.** `check_state_based_actions_into` enforced CR 704.5d ("a token
+outside the battlefield ceases to exist") by asking every library, hand,
+graveyard and exile whether it held a token — on **every sweep**, 20,012 of
+them on a six-game `cube` run. The library is the expensive one: a whole deck
+per seat per sweep, for a case that fires a handful of times a game. A
+previous pass had already turned an unconditional `retain` into a read-first
+`any`, which is the right shape and still a whole-deck walk.
+
+`zone::CardPile` is `Graveyard`'s shape for the three piles that had no
+wrapper (`library`, `hand`, `exile`): the CoW list plus one two-bit lane.
+`Graveyard` gains the same lane on its existing word and so costs nothing.
+`check_state_based_actions_into` self falls **71.1 M -> 61.1 M, -14.09 %**.
+
+**It is the first lane over *instance* state rather than definition state, and
+the soundness argument is unchanged**: `DerefMut`, the `&mut` `IntoIterator`
+and `push` are the only routes to the cards, each clears the lane, and the
+`debug_assert!` recomputes on every read a debug build makes — so the whole
+19,127-test suite audits the enumeration of write sites.
+
+**⚠ AND IT WAS A REGRESSION THE FIRST TIME IT WAS BUILT — `cube` +0.0685 % /
+`fixed` +0.3308 % — WITH THE MEMO WORKING.** Same diff, without the field
+move under it. The device's own row behaved exactly as designed (SBA -10.0 M
+on `cube`); the allocator family rose **11.3 M**:
+
+```text
+  cube, memo only, against the same base
+  check_state_based_actions_into   71,122,083 -> 61,100,040   -10.0 M
+  _int_malloc                      59,381,735 -> 66,096,061    +6.7 M
+  _int_free_merge_chunk             7,448,857 ->  8,862,936    +1.4 M
+  unlink_chunk                      6,196,251 ->  7,268,447    +1.1 M
+  malloc_consolidate               12,479,172 -> 13,350,892    +0.9 M
+  malloc                           60,608,860 -> 61,326,289    +0.7 M
+  _int_free_maybe_consolidate       2,754,499 ->  3,263,521    +0.5 M
+```
+
+**Two `CardPile`s take `PlayerData` from 1,016 bytes to 1,032, and glibc's
+largest smallbin is a 1,024-byte chunk — i.e. a request of 1,016.** A
+1,032-byte request rounds to a 1,040-byte chunk and every seat unshare moves
+from the smallbin fast path to `_int_malloc`'s large-bin walk, with
+`unlink_chunk` and `malloc_consolidate` behind it. `PlayerData` is unshared
+22,060 times a six-game `cube` run, so the boundary is crossed on one of the
+hottest allocations in the program.
+
+**THE RULE: `size_of` is not only a `memcpy` question, it is an allocator
+size-class question, and `PlayerData` sits one word under the ceiling.** Price
+a field added to it against **1,016 bytes**, not against the copy it adds.
+`(-144)` established `size_of` as a first-class instrument for the copy; this
+is the second thing it measures, and it is a step function rather than a
+slope — 16 bytes cost 11.3 M Ir where the 40 bytes the fix gave back cost
+nothing measurable.
+
+**The sixteen bytes.** `ante`, `scheme_deck`, `planar_deck`, `attraction_deck`
+and `attraction_junkyard` are eight bytes each and empty in every format the
+simulator plays. `PlayerData` already `Deref`/`DerefMut`s to `PlayerCold`, so
+moving them there **touched no call site**: 1,016 -> 976, and the memo brings
+it back to 992. On its own the move is `cube` -0.0407 % / `fixed` -0.0245 %,
+i.e. inside the instrument's noise — **it is headroom, not a win, and it is
+filed as headroom.**
+
+**A measurement note that cost a wrong ranking.** `cg_lines.py --in
+check_state_based_actions_into` read the library-scan source line at
+**3,365,628 Ir on `cube` and 61,392 on `fixed`** — 84 Ir a walk against 3.4 —
+and the A/B says the sweep is worth 10.0 M and 3.1 M, i.e. the *same* share of
+each pool. The line attribution moved the loop body between the source line
+and `core/src/slice/iter/macros.rs` differently on two builds of the same
+source. **The file already says the counts are the truth and the lines are a
+pointer; this is what it looks like when a line row is read as a size.** A
+row that reads as ~0 on one pool and 0.14 % on another is not a pool
+difference, it is an attribution difference — take the A/B.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,127 / 0 / 5 (`cargo nextest --workspace --exclude
+        crabomination_client`); five new `zone` tests; golden traces in it
+        and **unmoved across both commits**
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release-fast: 195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls — **byte-identical to the invariant**; determinism ok,
+        thread_determinism ok (3 vs 1 threads identical)
+sizes   `PlayerData` 1,016 -> 976 -> 992; `CardPile` 16, `Graveyard` 16,
+        `GameState` 1,424 unchanged (exile's eight bytes landed in padding)
+```
 
 ### Hundred-and-eighteenth pass — `(-150)` a four-byte `CastProfile`: `cube` -0.297 %, `fixed` -0.286 %
 
@@ -19334,6 +19468,51 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-152) CLOSED — see the hundred-and-nineteenth pass.** `cube` **-0.422 %** /
+`fixed` **-0.376 %** cumulative for a token lane on the four card zones plus
+the sixteen bytes it needed. Two things it leaves behind:
+
+* **`PlayerData` has 40 bytes of headroom and a hard ceiling at 1,016.** The
+  next field added to the hot player group is priced at glibc's smallbin
+  boundary, not at its copy — the entry has the 11.3 M reading.
+* **The lane device now covers instance state**, which widens what
+  `zone::Battlefield`'s existing `lane(shift, walk)` can answer. The
+  candidate below is the first user of that.
+
+**(-153) `pt_reduction_in_scope` IS AN UNGATED WHOLE-BATTLEFIELD WALK ONCE PER
+SBA SWEEP, AND `zone::Battlefield` ALREADY HAS THE LANE FOR IT.**
+`game/mod.rs:9558` is
+`self.continuous_effects.iter().any(..) || self.battlefield.iter().any(card_can_reduce_toughness)`,
+called from `check_state_based_actions_into`'s death-sweep scope check — once
+a sweep, over the whole board. The line profile shows the predicate's body as
+a run of **eight identically-costed rows at 781,104 Ir each** (`game/mod.rs`
+23938-23964), the signature of a straight-line fallback chain run ~781 k times
+a six-game `cube` run — ~39 card visits a sweep, which is the board.
+
+```text
+  cube, --in check_state_based_actions_into, after (-152)
+    game/mod.rs:23939/23943/23945/23946/23957/23964 …  781,104 each
+    game/mod.rs:23806 (the type-scan half)           1,562,208
+```
+
+**Ceiling ~0.25-0.35 % of `cube`**, and the shape is precedented twice over:
+`Battlefield::has_damage_scaler` and its five siblings are exactly
+`lane(LANE_X, walk)` over a whole-board predicate, and `(-152)` established
+that an *instance*-reading predicate is sound on one of these lanes because
+every `&mut` route clears the word. `card_can_reduce_toughness` reads
+`attached_to` and `soulbond_partner` besides the definition, so it needs that
+argument; it also reads `def.static_abilities`, `station`, `level_bands` and
+`equipped_bonus`, which is a real walk rather than a length check — the
+condition `(-87)` says a presence bit needs.
+
+⚠ **Price the hit rate first.** `Battlefield`'s three `&mut` chokepoints fire
+**139,280 times a `cube` run against 20,012 sweeps**, so the lane is cold
+about seven reaches out of every eight if the reaches interleave evenly.
+`(-152)`'s piles had the same shape on paper and still hit often enough to
+save 10 M, because the writes cluster — but that was luck, not a prediction.
+`zone::BATTLEFIELD_REACHES` (the `trig-census` counter `(-128)` added) already
+counts them; extend it to count *sweeps since the last reach* and the hit rate
+is a number before a build is spent.
 **(-151) THE QUEUE WAS RE-PROFILED FROM SCRATCH AT `b8f05380` AND NOTHING HAS
 MOVED SINCE `bda1a69d` — WHICH IS THE FINDING, AND IT IS THE SECOND TIME.**
 Fresh dumps, `profiling-fast --no-default-features`, six games, one thread,
@@ -19398,7 +19577,6 @@ another micro-row — it is either taking `(-145)` with the Miri'd `unsafe` box
 and an explicit decision that the trade is wanted, or accepting that the
 profile is at its floor for this shape of engine and spending runs on the
 build lever (PGO, which is measured at -23 % and opt-in) instead.
-
 **(-150) CLOSED — see the hundred-and-eighteenth pass.** `cube` **-0.297 %** /
 `fixed` **-0.286 %** for making `CastProfile` four bytes and `Copy`. **The hot
 player group is now done**: what is left in `PlayerData` is nine `Vec`s that
