@@ -2513,6 +2513,24 @@ legs are `(-166)`, `(-168)`, `(-167)`, `(-169)`, and a concurrent session's
   sealed   2,471,129,875   2,398,392,016   **-2.9435 %**
 ```
 
+**And it is a wall-clock win, confirmed the way "How to measure" asks.**
+`scripts/bench_ab.py`, 16 pairs, both sides `release-fast` **with mimalloc**
+(i.e. the shipped configuration, not the A/B's system allocator), engine source
+at `b5ea6d90` vs the tip:
+
+```text
+  A  b5ea6d90   median 272.56  mean 273.11  sd 8.93   games/s
+  B  tip        median 280.78  mean 280.13  sd 8.30
+  paired B/A    median **+2.44 %**  mean +2.64 %  sd 3.46
+```
+
+⚠ **+2.44 % against -3.20 % Ir is the expected ratio, not a shortfall.** Three
+of the four legs remove *allocations*, and the shipped binary allocates through
+mimalloc, where the pair this file's glibc A/B prices at ~205 Ir is
+substantially cheaper; only `(-169)` is allocator-independent. The Ir column is
+measured on the system allocator by construction (valgrind replaces malloc), so
+an allocation win always reads larger there than it ships.
+
 ### The recycle-list pass — closing state at `(-167)`
 
 Three takes on one device and one refutation, over two A/B anchors. The pool
@@ -20890,6 +20908,69 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-170) THE ALLOCATION CENSUS RE-TAKEN AT `9f9a5eac`, BY CALLER, AND IT NEEDS
+NO `profiling-lines` BUILD.** `cg_edges.py --callers "__rustc::__rust_alloc"`
+on the ordinary `profiling-fast` dump ranks every allocation by the function
+that made it, and `--separate-callers=2` on the *same binary* (a 25-second
+re-run, no rebuild) splits each row by its caller's caller. That is the
+instrument `(-163)` spent a cold `profiling-lines` build to approximate, and it
+answers the same question one level coarser for free. Use it first.
+
+```text
+  fixed — 362,942 engine allocations (was 500,822 at (-163)); allocator is
+  8.3 % of the pool, was 10.2 %
+    86,936  RawVecInner::finish_grow            ← 74,530 of them via grow_one
+    63,076  Arc::clone_from_ref_in              ← 58,440 of them via make_mut
+    53,224  SpecFromIterNested::from_iter
+    26,488  Vec::clone                          ← 21,452 under clone_from_ref_in
+    23,954  GameState::clone                    ← 10,130 under affordances
+    21,740  CowBox<Vec<T>>::push
+    10,616  PrintedList::push                   ✗ dead as filed, see below
+```
+
+**Three leads, in order.**
+
+*(a) The CoW unshare is the largest named family and it is 92 % of one
+callee.* 58,440 of `fixed`'s 63,076 `clone_from_ref_in` allocations are
+`Arc::make_mut` deep-copying a `CowBox` field, and `make_mut` itself is
+**387,452 calls at 29 Ir** — so 85 % of the calls are the *check*, not the
+copy. Top callers by call count: `cast_spell_with_convoke` 60,406 (17.9 M Ir
+inclusive), `resolve_top_of_stack_inner` 43,400, `do_untap` 42,072,
+`resolve_combat` 33,366, `finalize_cast` 18,050. ⚠ `(-99)`/`(-100)`/`(-143)`
+worked the *copies*; what no entry has ranked is the **check** — 11.2 M Ir of
+`make_mut` self on a path where the answer is "unique" 85 % of the time. And
+⚠ `(-157)`: a `release-fast` reading over-states this family by ~20 % because
+thin LTO deletes a fifth of its calls.
+
+*(b) `LocalKey::with` is 99,796 calls / 4.92 M Ir / **0.57 % of `fixed`**, and
+it is `(-166)`/`(-168)`'s own overhead.* One TLS access per pooled box:
+69,822 from `cp_pool::alloc`, 23,512 from `fx_pool::alloc_with`, the rest from
+the scope exits. It is 49.3 Ir a call because the pooled types need `Drop`, so
+`LocalKey::with` cannot take std's const-init fast path and is not inlined.
+**The fix is batching, not a leak.** Give `LayerFreezeState` a `spare` list,
+fill it from the thread-local on the scope's *first* `alloc` and return the
+remainder at `end_of_scope`: two TLS accesses a scope instead of ~5, ~69,822
+calls down to ~32,000. Worth ~0.2-0.3 % on `fixed`. ⚠ **Do not reach for a
+non-`Drop` thread-local instead** — the only way there is `ManuallyDrop`, which
+leaks a bounded amount *per thread ever created*, and `recommend.rs`'s game
+workers are not obviously a fixed pool.
+
+*(c) `SpecFromIterNested::from_iter` is 177,758 calls / 23.1 M self Ir /
+129.9 a call = **2.65 % of `fixed`**, and 53,224 of them allocate.* It is
+`collect()`'s slow path, taken whenever the iterator's lower size hint is not
+exact — i.e. after a `filter`. ⚠ **`(-156)` prices a std-adapter rewrite at
+~10 % of the adapter's self Ir**, so the removable part is ~2.3 M, not 23 M;
+and the concurrent session already ruled the row out once at 92 callers. What
+is *not* ruled out is the 53,224 allocations: a `filter().collect()` whose
+result is immediately iterated and dropped wants a reused scratch buffer, and
+`(-168)` is the pattern.
+
+⚠ **`(-163)(b)`, `PrintedList::push`, IS DEAD AS FILED and should not be
+re-pulled.** Its `__rust_dealloc` edge is 316 against 10,616 pushes, so
+**99.3 % of its calls are a *first* push** — the `Vec`-instead-of-`Box<[T]>`
+change amortises repeats that do not exist, and the +8 bytes on
+`ComputedPermanent` would be paid for nothing.
 
 **(-167) CLOSED — TAKEN, `cube` -0.699 % / `fixed` -0.369 % / `sealed`
 -0.293 %, and the half that was *not* the depth is a refutation. See the Log.**

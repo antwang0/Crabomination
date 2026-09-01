@@ -25,42 +25,40 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
-   tracker prose; ⚠ **claim a candidate number at PUSH time, not at commit time** — `(-159)` and
-   `(-161)` were each claimed twice this afternoon and both had to renumber. Container gotchas in
+   tracker prose; ⚠ **claim a candidate number at PUSH time** — `(-164)`/`(-165)` were claimed
+   twice again this run and had to renumber to `(-166)`/`(-167)`. Container gotchas in
    **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at `(-164)`:** suite **19,196 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
+2. **Gates at `(-169)`:** suite **19,197 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
    `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**, determinism
-   ok. Sweeps: 26 seeds / 176,800 games; 5 seeds / 34,000 on BOTH `(-159)` binaries with the same
-   counts seed for seed; 10 seeds / 68,000 after `(-164)` (cap 0 / stuck 0 / draw 20). ⚠ **Leave
-   seed 43 out of a timed loop** — the nine-minute Scute Swarm game that *decides*, so
-   `0 undecided` never sees it. Sweeps and their two closed leads: **ENGINE_BACKLOG**.
-3. **Three takes, all in the Log:** `(-159)` the per-pip `ScriptedDecider`, `(-161)`
-   `AffectedPermanents::Specific`'s **free** inline slot (`fixed` -0.521 %), `(-164)` the
-   recycled decider as an `Option<Color>`. ⚠ **`(-159)` and `(-164)` split OPPOSITE ways by pool**
-   (1.5x `cube` vs 3.8x `fixed`) on the same six lines — a pool split is a property of the
-   *change*, not of the row.
-4. **⚠⚠ THE GROWTH CENSUS READS *ZERO* ON `vec![x]` AND `with_capacity(n)`** — exact-size
-   allocations never grow, so no `cg_growth.py` ranking sees them. `(-161)`'s proof: 112,003
-   growths before and after, 36,612 fewer allocations, -0.52 % of `fixed`. **Reach for
-   `cg_alloc_sites.py` on a `profiling-lines` binary BEFORE ranking**; a `profiling-lines` A/B is
-   sound (0.0007 % from `profiling-fast`) and saves the second build. `Box::new` is the same
-   blind spot, one size down (`(-159)`).
-5. **⚠ AN INLINE BUFFER IS PRICED BY WHETHER IT GROWS ITS OWNER** (`(-165)`, four builds, four
-   reverts; `(-161)` is the winning side of the same rule — 24 bytes in, 24 out). Refuse one when
-   (a) its element **borrows out of `&self`** (`SmallVec`'s `Drop` is not `#[may_dangle]`), or
-   (b) the owner is **returned** or **cloned**: `(-158)` row 1 reads `fixed` **+0.99 %**, and
-   **a byte added to `GameState` costs ~6,800 Ir a six-game `cube` run**. The
-   `reserve_one_unchecked` **spill census is an instrument, never a queue** (~208 Ir a spill,
-   and the width costs the same).
-6. **NEXT PERF LEADS ARE IN `(-163)`** — allocations ranked by SOURCE LINE. Top of both pools is
-   `computed_permanent_hinted`'s three `Arc::new` lines (17 % of `fixed`'s allocations, 25 % of
-   `cube`'s); ⚠ **`(-111)` already refuted the by-value fix**, so re-open only with an arena that
-   keeps the memo. Then `PrintedList::push` (⚠ price `ComputedPermanent` first — and note its
-   `__rust_dealloc` edge is **316**, so 99.3 % of its pushes are a *first* push and amortising
-   repeats buys nothing) and `mod.rs:9862`'s `all_effects`. Four rows are priced and ruled out in
-   the candidates (`CowBox::push`, `SpecFromIterNested` 2.70 % over 92 callers, `Decider::kind`'s
-   38 gates at 0.004 %, and the two `(-165)(a)` rows) — do not re-read them. **The build is still
-   the lever**: PGO -23.8 to -27.6 %.
+   ok. Sweeps: 5 seeds / 68,000 games `--decks all` run on **both** binaries at every leg, stdout
+   **byte-identical seed for seed**. ⚠ **Leave seed 43 out of a timed loop** — the nine-minute
+   Scute Swarm game that *decides*, so `0 undecided` never sees it. Sweeps + closed leads:
+   **ENGINE_BACKLOG**.
+3. **The run took -3.20 % `fixed` / -2.73 % `cube` / -2.94 % `sealed` over four legs**, confirmed
+   at **+2.44 % median games/s** on a 16-pair `bench_ab.py` (mimalloc both sides). `(-166)` the
+   `ComputedPermanent` recycle list, `(-168)` the effect-list one, `(-167)` its depth, `(-169)`
+   the `getenv`. All four in PERF's Log; the durable rules are in **"The recycle-list rules"**.
+4. **⚠⚠ ASK WHO CALLS THE LIBC ROWS — that one command was 1.7 % of `fixed`.** `getenv 0.62 %`
+   and `__strncmp_avx2 0.80 %` had sat in the self table for eleven passes while every pass read
+   it top-down for *engine* names. `cg_edges.py --callers getenv` named `adjust_life` asking
+   `env::var_os` **per life adjustment**. No allocation census, growth census or line profile
+   looks at libc. `memcpy` / `memcmp` / `strncmp` / `getenv` / `qsort`: name the caller first.
+   The class is ratcheted by `structural_audit::no_bare_env_lookup_on_a_simulator_path`.
+5. **⚠ A RECYCLE LIST'S HIT RATE IS "CHOOSING BADLY" OR "RUNNING OUT", AND ONLY ONE OF THEM IS A
+   POLICY.** `(-167)`'s FIFO moved the allocation count by **exactly zero** on two pools (377,395
+   and 1,010,449 `malloc` calls, to the call) and cost `fixed` +0.096 %; the depth, 8 → 32, took
+   `cube`'s misses 53,721 → 4,289. **Size such a list by the TAIL of its per-scope demand, never
+   by the mean.** And the check that makes the whole device work is *when* it is asked:
+   `(-27)` asked `Arc::get_mut` at the release site and hit 1 in 8; `(-166)` asks at the reuse
+   site and hits 68-82 %.
+6. **NEXT PERF LEADS — the census is re-taken at the tip and it is in `(-170)`.** Allocator is
+   down to **8.3 % of `fixed`** (was 10.2 %). Top named rows now: `Arc::make_mut`'s CoW unshare
+   (58,440 of `fixed`'s 63,076 `clone_from_ref_in` allocations, top caller
+   `cast_spell_with_convoke` at 60,406 `make_mut` calls), `SpecFromIterNested::from_iter`
+   (177,758 calls / 129.9 Ir / **2.65 %**, ⚠ `(-156)` prices a std-adapter rewrite at ~10 % of
+   its self Ir), and **`LocalKey::with` at 99,796 calls / 49.3 Ir — 0.57 %, and it is the two new
+   pools' own overhead**; the batching fix is written up in `(-170)`. ⚠ `PrintedList::push` is
+   dead as filed (99.3 % first pushes). **The build is still the lever**: PGO -23.8 to -27.6 %.
 7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-**clause** ratchets
    (seventeen, prose, three false-positive classes); the printed-**join** ratchets (eight,
    structured fields, 297 defects in one pass — "no bespoke spelling" is what makes a join a
@@ -72,9 +70,9 @@ sixty-seventh pass, so don't re-take that.
    nonlands, token definitions. ⚠ **A python auditor's zero is suspect — check its population.**
 8. **Robustness green, P2 has no open correctness lead.** `audit_panics` 0 bare,
    `audit_keyword_drift` 0 invented, `audit_variant_coverage` 2 dead primitives (both want a
-   card), `audit_target_fields` / `audit_target_walkers` clean. The demo builders deal from
-   `GameState.rng` with `set_jitter_seed` beside them, which took the 4-player FFA bot test off
-   its 600-second wall-clock ceiling.
+   card), `audit_target_fields` / `audit_target_walkers` clean, `audit_incomplete --structural`
+   one triaged finding. ⚠ **Peak RSS moved 19.4 → 20.3 MiB and it is the two pools, not a leak**:
+   32 `ComputedPermanent`s and 4 effect lists **per thread**, both bounded by a `const`.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
