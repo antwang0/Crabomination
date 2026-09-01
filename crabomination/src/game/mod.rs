@@ -4487,8 +4487,19 @@ impl GameState {
     /// player's own `life` field. Callers checking lethal damage,
     /// "if you have ≤ X life" predicates, "the most life total" etc.
     /// should consult this rather than `players[seat].life`.
+    ///
+    /// ⚠ **`shared_life.is_some()` goes first in all three of these walks**
+    /// (PERF `(-155)`, the `(-116)` rule: rank a chain of pure guards by cost
+    /// x rejection rate). A seat belongs to exactly one team, so a team that
+    /// both holds the seat and has a shared pool is the same team either
+    /// order finds; but `members.contains` is a pointer chase into the team's
+    /// heap `Vec` and `shared_life` is a byte of the struct the loop already
+    /// loaded. Outside 2HG the `Option` rejects every team, so the chase
+    /// never happens.
+    #[inline]
     pub fn effective_life(&self, seat: usize) -> i32 {
-        if let Some(t) = self.teams.iter().find(|t| t.members.contains(&seat))
+        if let Some(t) =
+            self.teams.iter().find(|t| t.shared_life.is_some() && t.members.contains(&seat))
             && let Some(shared) = t.shared_life
         {
             return shared;
@@ -4499,21 +4510,21 @@ impl GameState {
     /// CR 810.5 — poison counters are a shared team resource in Two-Headed
     /// Giant (identified here by the shared life pool): a team's poison total
     /// is the sum over its members. Solo teams just report the seat's own.
+    #[inline]
     pub fn effective_poison(&self, seat: usize) -> u32 {
-        match self.teams.iter().find(|t| t.members.contains(&seat)) {
-            Some(t) if t.shared_life.is_some() => {
-                t.members.iter().map(|&m| self.players[m].poison_counters).sum()
-            }
-            _ => self.players[seat].poison_counters,
+        match self.teams.iter().find(|t| t.shared_life.is_some() && t.members.contains(&seat)) {
+            Some(t) => t.members.iter().map(|&m| self.players[m].poison_counters).sum(),
+            None => self.players[seat].poison_counters,
         }
     }
 
     /// CR 704.5c / 810.8d — the poison total that loses the game: ten for a
     /// solo player, fifteen for a shared-pool (2HG) team.
+    #[inline]
     pub fn poison_loss_threshold(&self, seat: usize) -> u32 {
-        match self.teams.iter().find(|t| t.members.contains(&seat)) {
-            Some(t) if t.shared_life.is_some() => 15,
-            _ => 10,
+        match self.teams.iter().find(|t| t.shared_life.is_some() && t.members.contains(&seat)) {
+            Some(_) => 15,
+            None => 10,
         }
     }
 
