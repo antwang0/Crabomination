@@ -539,3 +539,137 @@ fn every_card_has_the_cost_and_body_its_printing_has() {
         &wrong[..wrong.len().min(60)]
     );
 }
+
+/// **Every card's type line is the one its printing has** — card types and
+/// supertypes, compared as sets against Scryfall's `type_line`.
+///
+/// The sibling of `every_card_has_the_cost_and_body_its_printing_has`, and it
+/// exists for the same reason: `audit_catalog_stats.py` reads 0 here and can
+/// only see a factory that spells `CardDefinition { name: … }` at eight
+/// spaces, so every helper-built card was unaudited.
+///
+/// Subtypes are deliberately **not** compared. Scryfall's right-hand side
+/// mixes creature, land, artifact, enchantment, spell and planeswalker types
+/// into one list, several are two words, and the engine keeps them in six
+/// separate enums — that comparison needs its own pass, and doing it badly
+/// here would bury the type-line signal in false rows.
+#[test]
+fn every_card_has_the_type_line_its_printing_has() {
+    use crabomination::card::CardType;
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        let field = |k: &str| entry.get(k).and_then(|v| v.as_str()).unwrap_or("");
+        let line = field("type_line");
+        if entry.get("card_faces").is_some()
+            || field("name").contains(" // ")
+            || line.contains(" // ")
+            || line.is_empty()
+        {
+            continue;
+        }
+        // A Vanguard avatar wears an ordinary card's name; see the sibling.
+        if def.card_types.iter().any(|t| {
+            matches!(
+                t,
+                CardType::Vanguard
+                    | CardType::Scheme
+                    | CardType::Plane
+                    | CardType::Phenomenon
+                    | CardType::Conspiracy
+            )
+        }) {
+            continue;
+        }
+        checked += 1;
+
+        // "Legendary Artifact Creature — Phyrexian Imp": everything left of
+        // the em dash is a supertype or a card type, and both spell the
+        // engine's variant name exactly.
+        let head = line.split(" — ").next().unwrap_or(line);
+        let mut printed_types: Vec<String> = Vec::new();
+        let mut printed_supers: Vec<String> = Vec::new();
+        for word in head.split_whitespace() {
+            match word {
+                "Basic" | "Legendary" | "Snow" | "World" | "Ongoing" => {
+                    printed_supers.push(word.to_string())
+                }
+                // `Tribal` was renamed `Kindred`; old printings still say it.
+                "Tribal" => printed_types.push("Kindred".to_string()),
+                _ => printed_types.push(word.to_string()),
+            }
+        }
+        // A type the engine has no variant for cannot be a finding — it is a
+        // gap in `CardType`, which `audit_variant_coverage.py` owns.
+        let known = |t: &String| CARD_TYPE_NAMES.contains(&t.as_str());
+        if !printed_types.iter().all(known) {
+            continue;
+        }
+
+        let mut ours: Vec<String> = def.card_types.iter().map(|t| format!("{t:?}")).collect();
+        ours.sort();
+        printed_types.sort();
+        if ours != printed_types {
+            wrong.push(format!("{}: types {ours:?} vs printed {printed_types:?}", def.name));
+        }
+        let mut our_supers: Vec<String> =
+            def.supertypes.iter().map(|t| format!("{t:?}")).collect();
+        our_supers.sort();
+        printed_supers.sort();
+        if our_supers != printed_supers {
+            wrong.push(format!(
+                "{}: supertypes {our_supers:?} vs printed {printed_supers:?}",
+                def.name
+            ));
+        }
+    }
+
+    assert!(
+        checked > 12_000,
+        "only {checked} type lines were comparable — did the cache move?",
+    );
+    wrong.sort();
+    wrong.dedup();
+    assert!(
+        wrong.is_empty(),
+        "{} card(s) do not have their printed type line: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(60)]
+    );
+}
+
+/// The `CardType` variant names, spelled once so the type-line test can tell
+/// "the engine models this type differently" from "the engine has no such
+/// type at all" — the second is `audit_variant_coverage.py`'s business.
+const CARD_TYPE_NAMES: [&str; 14] = [
+    "Land",
+    "Creature",
+    "Artifact",
+    "Enchantment",
+    "Planeswalker",
+    "Battle",
+    "Instant",
+    "Sorcery",
+    "Kindred",
+    "Scheme",
+    "Vanguard",
+    "Conspiracy",
+    "Plane",
+    "Phenomenon",
+];

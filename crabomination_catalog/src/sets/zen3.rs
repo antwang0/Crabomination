@@ -1094,11 +1094,11 @@ pub fn turntimber_grove() -> CardDefinition {
     )
 }
 
-/// Oran-Rief, the Vastwood — enters tapped, taps for {G}, and counters up every
+/// Oran-Rief, the Vastwood — **not legendary** — enters tapped, taps for {G},
+/// and counters up every
 /// green creature that entered this turn.
 pub fn oran_rief_the_vastwood() -> CardDefinition {
     CardDefinition {
-        supertypes: vec![Supertype::Legendary],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
@@ -1124,11 +1124,11 @@ pub fn oran_rief_the_vastwood() -> CardDefinition {
     }
 }
 
-/// Magosi, the Waterveil — enters tapped, taps for {U}; bank an eon counter to
+/// Magosi, the Waterveil — **not legendary** — enters tapped, taps for {U};
+/// bank an eon counter to
 /// skip a turn, then cash it in for an extra one.
 pub fn magosi_the_waterveil() -> CardDefinition {
     CardDefinition {
-        supertypes: vec![Supertype::Legendary],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,

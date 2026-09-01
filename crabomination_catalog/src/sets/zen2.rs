@@ -1980,11 +1980,11 @@ pub fn crypt_of_agadeem() -> CardDefinition {
     }
 }
 
-/// Emeria, the Sky Ruin — enters tapped, taps for {W}; each upkeep with seven
+/// Emeria, the Sky Ruin — **not legendary** — enters tapped, taps for {W};
+/// each upkeep with seven
 /// Plains it reanimates.
 pub fn emeria_the_sky_ruin() -> CardDefinition {
     CardDefinition {
-        supertypes: vec![Supertype::Legendary],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
