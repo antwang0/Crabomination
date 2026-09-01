@@ -104,6 +104,7 @@ pub fn crib_swap() -> CardDefinition {
         name: "Crib Swap",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Instant, CardType::Kindred],
+        keywords: vec![Keyword::Changeling],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),

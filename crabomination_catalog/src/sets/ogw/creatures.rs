@@ -95,11 +95,13 @@ pub fn eldrazi_devastator() -> CardDefinition {
     }
 }
 
-/// Warden of Geometries — {4} 2/3 Eldrazi Drone. Devoid, {T}: Add {C}.
+/// Warden of Geometries — {4} 2/3 Eldrazi Drone. Devoid, vigilance,
+/// {T}: Add {C}.
 pub fn warden_of_geometries() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::{ManaPayload, PlayerRef, Value};
     CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Vigilance],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {

@@ -1697,6 +1697,7 @@ pub fn slip_through_space() -> CardDefinition {
         name: "Slip Through Space",
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Devoid],
         effect: Effect::Seq(vec![
             Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),

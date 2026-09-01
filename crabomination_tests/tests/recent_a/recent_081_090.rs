@@ -950,10 +950,11 @@ mod recent88 {
         let b = cp.iter().find(|c| c.id == bear).unwrap();
         assert_eq!((b.power, b.toughness), (4, 4), "other creature +2/+2");
         assert!(b.keywords().contains(&Keyword::Trample), "other creature has trample");
-        // The Baloth doesn't buff itself.
+        // The Baloth doesn't buff itself — but it does print its own trample,
+        // which the static's `OtherThanSource` has nothing to do with.
         let self_ = cp.iter().find(|c| c.id == baloth).unwrap();
-        assert_eq!((self_.power, self_.toughness), (5, 5));
-        assert!(!self_.keywords().contains(&Keyword::Trample), "source excluded");
+        assert_eq!((self_.power, self_.toughness), (5, 5), "the +2/+2 excludes the source");
+        assert!(self_.keywords().contains(&Keyword::Trample), "printed trample");
     }
 }
 

@@ -310,9 +310,12 @@ fn strip_quoted(text: &str) -> String {
 /// each one a different card at the table than the one the deck lists. The
 /// count is 0 and this test is what keeps it there.
 ///
-/// The MISSING direction is deliberately *not* ratcheted: it cannot see a
+/// The MISSING direction is not ratcheted **in general**: it cannot see a
 /// mechanic spelled as a bespoke triggered ability, so it is a list of cards
-/// to read rather than a set of proven gaps. Run the script for that.
+/// to read rather than a set of proven gaps. Run the script for that. It *is*
+/// ratcheted on the subset where no bespoke spelling exists — see
+/// `every_card_that_prints_a_keyword_line_carries_those_keywords` at the end
+/// of this file, which found 25 cards on its first run.
 ///
 /// Skipped, matching the script: any card the cache spells over two faces
 /// (`card_faces`, or ` // ` in the name, cost or type line), because the body
@@ -1776,5 +1779,193 @@ fn every_creature_that_prints_lure_carries_it() {
         2,
         |t, n| own_line(t, n, |l| l.contains("must be blocked if able")),
         |_, body| body.contains("MustBeBlocked"),
+    );
+}
+
+// ── The printed *keyword* ratchet — the MISSING direction, restricted ───────
+
+/// The keywords this ratchet checks, as `(scryfall name, does the definition
+/// carry it)`.
+///
+/// ⚠ **Membership is the whole argument.** A keyword belongs here only if the
+/// engine reads it from `CardDefinition.keywords` and **nowhere else** — no
+/// bespoke spelling can satisfy it, so a card that prints it and does not
+/// carry it is a proven gap rather than a reading-list entry. That is why
+/// `prowess`, `exalted`, `cascade`, `riot`, `battle cry`, `mentor`,
+/// `training`, `myriad`, `melee` and `storm` are **not** here: each is
+/// spelled as a triggered ability in this catalog (Monastery Mentor and Abbot
+/// of Keral Keep both ride `shortcut::prowess_trigger()`), and including them
+/// reported 68 correct cards on the first run.
+#[allow(clippy::type_complexity)]
+const PRINTED_KEYWORDS: &[(&str, fn(&crabomination::card::CardDefinition) -> bool)] = {
+    use crabomination::card::Keyword as K;
+    macro_rules! kw {
+        ($name:literal, $variant:ident) => {
+            ($name, (|d: &crabomination::card::CardDefinition| d.keywords.contains(&K::$variant))
+                as fn(&crabomination::card::CardDefinition) -> bool)
+        };
+    }
+    &[
+        kw!("flying", Flying),
+        kw!("reach", Reach),
+        kw!("menace", Menace),
+        kw!("trample", Trample),
+        kw!("vigilance", Vigilance),
+        kw!("first strike", FirstStrike),
+        kw!("double strike", DoubleStrike),
+        kw!("lifelink", Lifelink),
+        kw!("deathtouch", Deathtouch),
+        kw!("haste", Haste),
+        kw!("defender", Defender),
+        kw!("shroud", Shroud),
+        kw!("flash", Flash),
+        kw!("indestructible", Indestructible),
+        kw!("intimidate", Intimidate),
+        kw!("fear", Fear),
+        kw!("skulk", Skulk),
+        kw!("horsemanship", Horsemanship),
+        kw!("shadow", Shadow),
+        kw!("changeling", Changeling),
+        kw!("devoid", Devoid),
+        kw!("infect", Infect),
+        kw!("wither", Wither),
+        kw!("flanking", Flanking),
+        kw!("decayed", Decayed),
+        kw!("phasing", Phasing),
+    ]
+};
+
+/// Words that may share a keyword line without disqualifying it, on top of
+/// `PRINTED_KEYWORDS`' own names. A line is only a keyword line if **every**
+/// comma-separated piece of it is one of these, which is what separates
+/// "Flying, lifelink" from "choose first strike, vigilance, or lifelink".
+const KEYWORD_LINE_ALSO: &[&str] = &[
+    "prowess", "exalted", "cascade", "riot", "battle cry", "mentor", "training", "myriad",
+    "storm", "melee", "convoke", "improvise", "delve", "soulbond", "sunburst", "persist",
+    "undying", "split second", "epic", "compleated", "retrace", "jump-start", "afflict",
+    "daybound", "nightbound", "banding", "changeling", "devoid",
+];
+
+/// Parameterized keywords, matched by prefix because their line carries a
+/// cost or a quality ("hexproof from black", "ward {2}", "bushido 1").
+const KEYWORD_LINE_PREFIXES: &[&str] = &[
+    "hexproof", "protection", "ward", "landwalk", "forestwalk", "islandwalk", "swampwalk",
+    "mountainwalk", "plainswalk", "bushido", "annihilator", "rampage", "absorb", "frenzy",
+    "toxic", "poisonous", "modular", "crew", "saddle", "casualty", "escape", "dredge",
+    "kicker", "multikicker", "bloodthirst", "echo", "cycling", "flashback", "buyback",
+    "equip", "enchant", "fortify", "level up", "affinity", "graft", "vanishing", "fading",
+    "amplify", "provoke", "soulshift", "splice", "entwine", "madness", "ninjutsu",
+    "transmute", "haunt", "replicate", "forecast", "recover", "ripple", "suspend",
+    "reinforce", "champion", "devour", "unearth", "conspire", "evoke", "prowl", "hideaway",
+];
+
+/// The set of keywords printed on `text` as a **keyword line** — a line whose
+/// every comma-separated piece is a keyword.
+fn printed_keyword_line_words(text: &str) -> HashSet<String> {
+    let mut out = HashSet::new();
+    for line in text.lines() {
+        let line = line.trim().trim_end_matches('.');
+        if line.is_empty() {
+            continue;
+        }
+        let pieces: Vec<&str> = line.split(',').map(str::trim).filter(|p| !p.is_empty()).collect();
+        let all_keywords = pieces.iter().all(|p| {
+            PRINTED_KEYWORDS.iter().any(|(n, _)| n == p)
+                || KEYWORD_LINE_ALSO.contains(p)
+                || KEYWORD_LINE_PREFIXES.iter().any(|pre| p.starts_with(pre))
+        });
+        if all_keywords {
+            out.extend(pieces.into_iter().map(str::to_string));
+        }
+    }
+    out
+}
+
+/// **A card that prints a keyword on a keyword line carries that keyword.**
+///
+/// The MISSING half of `no_card_carries_a_mechanic_keyword_it_does_not_print`,
+/// restricted to the keywords in `PRINTED_KEYWORDS` — the ones with no bespoke
+/// spelling, where a gap is a proof rather than a reading list. It found **25
+/// cards** on its first run, every one of them a strictly better card than the
+/// printed one at the table: Supreme Phantom without flying, Nessian Asp
+/// without reach, Goldhound without first strike or menace, Nivix Cyclops
+/// without defender (and so free to attack every turn).
+///
+/// Two structural gates carry the whole false-positive load:
+///
+/// 1. **A keyword line, not a mention.** Angelic Skirmisher's "choose first
+///    strike, vigilance, or lifelink", Steel Seraph's granted choice, a token
+///    minted "with trample, lifelink, and haste" and a "put a flying,
+///    lifelink, or +1/+1 counter on it" are all *mentions*; none is a line
+///    whose every piece is a keyword.
+/// 2. **Level-up cards are skipped.** Student of Warfare prints "First strike"
+///    as a bare line inside a `LEVEL 2-6` band, which is a level ability and
+///    not the creature's printed keyword.
+///
+/// Scryfall's own `keywords` array is the other half of the gate — it is what
+/// says the word on the line *is* a keyword ability on this card.
+#[test]
+fn every_card_that_prints_a_keyword_line_carries_those_keywords() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut missing: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        // A two-faced card's `keywords` array unions both faces; the body
+        // here is the front face alone.
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let text = strip_reminders(oracle);
+        // Gate 2 — a level band's keyword line is the band's, not the card's.
+        if text.contains("level up") {
+            continue;
+        }
+        checked += 1;
+        let scryfall: HashSet<String> = entry
+            .get("keywords")
+            .and_then(|v| v.as_array())
+            .map(|a| a.iter().filter_map(|v| v.as_str()).map(str::to_lowercase).collect())
+            .unwrap_or_default();
+        if scryfall.is_empty() {
+            continue;
+        }
+        let lines = printed_keyword_line_words(&text);
+        for (name, carried) in PRINTED_KEYWORDS {
+            if scryfall.contains(*name) && lines.contains(*name) && !carried(&def) {
+                missing.push(format!("{} is missing {name}", def.name));
+            }
+        }
+    }
+
+    assert!(
+        checked > 15_000,
+        "only {checked} cards could be compared against the cache — the ratchet is vacuous \
+         below that"
+    );
+    missing.sort();
+    assert!(
+        missing.is_empty(),
+        "{} card(s) print a keyword they do not carry: {:?}",
+        missing.len(),
+        &missing[..missing.len().min(40)],
     );
 }

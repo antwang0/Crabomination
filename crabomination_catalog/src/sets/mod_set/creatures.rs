@@ -1998,7 +1998,7 @@ pub fn ambassador_oak() -> CardDefinition {
     }
 }
 
-/// Nessian Asp — {4}{G}, 4/5 Snake. "{6}{G}: Monstrosity 4." (THS)
+/// Nessian Asp — {4}{G}, 4/5 Snake with Reach. "{6}{G}: Monstrosity 4." (THS)
 pub fn nessian_asp() -> CardDefinition {
     CardDefinition {
         name: "Nessian Asp",
@@ -2010,6 +2010,7 @@ pub fn nessian_asp() -> CardDefinition {
         },
         power: 4,
         toughness: 5,
+        keywords: vec![Keyword::Reach],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -2946,8 +2947,8 @@ pub fn kingpins_pet() -> CardDefinition {
     }
 }
 
-/// Frenzied Arynx — {2}{R}{G} 3/3 Cat Beast with Riot. {3}{R}{G}: it gets
-/// +2/+2 until end of turn.
+/// Frenzied Arynx — {2}{R}{G} 3/3 Cat Beast with Riot and Trample. {3}{R}{G}:
+/// it gets +2/+2 until end of turn.
 pub fn frenzied_arynx() -> CardDefinition {
     CardDefinition {
         name: "Frenzied Arynx",
@@ -2959,6 +2960,7 @@ pub fn frenzied_arynx() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        keywords: vec![Keyword::Trample],
         triggered_abilities: vec![crate::effect::shortcut::riot()],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
@@ -5225,6 +5227,7 @@ pub fn sowing_mycospawn() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        keywords: vec![Keyword::Devoid],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -6250,7 +6253,7 @@ pub fn disowned_ancestor() -> CardDefinition {
     }
 }
 
-/// Citadel Castellan — {1}{G}{W} 2/3 Human Knight, Renown 3.
+/// Citadel Castellan — {1}{G}{W} 2/3 Human Knight. Vigilance, Renown 3.
 pub fn citadel_castellan() -> CardDefinition {
     CardDefinition {
         name: "Citadel Castellan",
@@ -6262,6 +6265,7 @@ pub fn citadel_castellan() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![crate::effect::shortcut::renown(3)],
         ..Default::default()
     }

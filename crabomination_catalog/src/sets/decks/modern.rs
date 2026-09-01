@@ -681,6 +681,7 @@ pub fn goldhound() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
+        keywords: vec![Keyword::FirstStrike, Keyword::Menace],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -10126,6 +10127,7 @@ pub fn crumble_to_dust() -> CardDefinition {
         name: "Crumble to Dust",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Devoid],
         effect: Effect::ExileSameNameAsTarget {
             what: target_filtered(
                 SelectionRequirement::Land.and(SelectionRequirement::IsBasicLand.negate()),
@@ -18500,6 +18502,7 @@ pub fn helix_pinnacle() -> CardDefinition {
         name: "Helix Pinnacle",
         cost: cost(&[g()]),
         card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Shroud],
         max_counters_of_kind: Some((CounterType::Charge, 100)),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
@@ -18836,6 +18839,7 @@ pub fn amped_raptor() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::AddEnergy(Value::Const(2)),
             // CR 107.16 — exile top card; may pay {E}{E}{E}{E} to free-cast it.
@@ -21043,18 +21047,18 @@ pub fn pithing_needle() -> CardDefinition {
     }
 }
 
-/// Wight of the Reliquary — {B}{G} Creature — Zombie Knight 2/2.
-/// Gets +1/+1 for each land card in your graveyard (dynamic P/T via
-/// `DynamicPt::BasePlusLandsInControllerGraveyard`). {T}, Sacrifice a
-/// land: Search your library for a land card onto the battlefield tapped.
+/// Wight of the Reliquary — {B}{G} Creature — Zombie Knight 2/2. Vigilance.
+/// Gets +1/+1 for each **creature** card in your graveyard. {T}, Sacrifice
+/// another **creature**: search your library for a land card onto the
+/// battlefield tapped.
 pub fn wight_of_the_reliquary() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Wight of the Reliquary",
-        dynamic_pt: Some(DynamicPt::BasePlusLandsInControllerGraveyard {
-            base_p: 1,
-            base_t: 1,
-        }),
+        // ⚠ Printed count is creature cards, not lands: `base` 1 gives the
+        // 1/1 base plus the graveyard count, which is the printed 2/2 with
+        // one creature card down.
+        dynamic_pt: Some(DynamicPt::BasePlusCreaturesInControllerGraveyard { base: 1 }),
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -21063,6 +21067,7 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::Vigilance],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
@@ -21076,7 +21081,7 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
                     tapped: true,
                 },
             },
-            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             ..Default::default()
         }],
         ..Default::default()
@@ -22013,10 +22018,12 @@ pub fn realm_cloaked_giant() -> CardDefinition {
     }
 }
 
-/// Nivix Cyclops — {1}{U}{R} Creature — Cyclops Wizard 1/4. Whenever you cast
-/// an instant or sorcery spell, it gets +3/+0 until end of turn.
+/// Nivix Cyclops — {1}{U}{R} Creature — Cyclops Wizard 1/4 with Defender.
+/// Whenever you cast an instant or sorcery spell, it gets +3/+0 until end of
+/// turn **and can attack this turn as though it didn't have defender**.
 pub fn nivix_cyclops() -> CardDefinition {
-    use crate::effect::shortcut::magecraft_self_pump;
+    use crate::effect::Duration;
+    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Nivix Cyclops",
         cost: cost(&[generic(1), u(), r()]),
@@ -22027,7 +22034,20 @@ pub fn nivix_cyclops() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        triggered_abilities: vec![magecraft_self_pump(3, 0)],
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(3),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::AttacksAsThoughNoDefender,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
         ..Default::default()
     }
 }
@@ -41252,8 +41272,8 @@ pub fn legion_lieutenant() -> CardDefinition {
     }
 }
 
-/// Stromkirk Captain — {1}{R}{B} 2/2 Vampire. Other Vampires you control get
-/// +1/+1 and have first strike.
+/// Stromkirk Captain — {1}{R}{B} 2/2 Vampire with first strike. Other Vampires
+/// you control get +1/+1 and have first strike.
 pub fn stromkirk_captain() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -41274,6 +41294,7 @@ pub fn stromkirk_captain() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
         static_abilities: vec![
             StaticAbility {
                 description: "Other Vampires you control get +1/+1.",
@@ -41604,6 +41625,7 @@ pub fn supreme_phantom() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
+        keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+1.",
             effect: StaticEffect::PumpPT {
@@ -41730,9 +41752,12 @@ pub fn keen_sense() -> CardDefinition {
     aura_damage_draw("Keen Sense", cost(&[g()]))
 }
 
-/// Ophidian Eye — {1}{U} Aura. Flash Curiosity ("draw on damage to a player").
+/// Ophidian Eye — {2}{U} Aura. Flash Curiosity ("draw on damage to a player").
 pub fn ophidian_eye() -> CardDefinition {
-    aura_damage_draw("Ophidian Eye", cost(&[generic(2), u()]))
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        ..aura_damage_draw("Ophidian Eye", cost(&[generic(2), u()]))
+    }
 }
 
 fn aura_damage_draw(name: &'static str, mana: ManaCost) -> CardDefinition {

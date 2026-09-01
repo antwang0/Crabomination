@@ -1326,6 +1326,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         },
         power: 9,
         toughness: 7,
+        keywords: vec![Keyword::Trample],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::GainLife {

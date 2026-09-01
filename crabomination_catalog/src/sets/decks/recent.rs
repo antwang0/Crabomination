@@ -7977,8 +7977,8 @@ pub fn surging_might() -> CardDefinition {
     }
 }
 
-/// Surging Sentinels — {2}{W} 2/1 Spirit. Ripple 4. (Its "gains protection from
-/// black when you cast a white spell" rider is omitted.)
+/// Surging Sentinels — {2}{W} 2/1 Spirit with first strike. Ripple 4. (Its
+/// "gains protection from black when you cast a white spell" rider is omitted.)
 pub fn surging_sentinels() -> CardDefinition {
     use crate::effect::shortcut::ripple;
     CardDefinition {
@@ -7991,6 +7991,7 @@ pub fn surging_sentinels() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![ripple(4)],
         ..Default::default()
     }

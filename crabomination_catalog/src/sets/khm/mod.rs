@@ -24,6 +24,7 @@ pub fn dragonkin_berserker() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![crate::card::Keyword::FirstStrike],
         activated_abilities: vec![boast(
             cost(&[generic(4), r()]),
             Effect::CreateToken {

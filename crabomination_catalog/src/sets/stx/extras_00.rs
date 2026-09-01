@@ -2263,6 +2263,7 @@ pub fn eccentric_apprentice() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::Flying],
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }

@@ -585,6 +585,7 @@ pub fn aetherstream_leopard() -> CardDefinition {
         },
         power: 2,
         toughness: 3,
+        keywords: vec![Keyword::Trample],
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![sneak],
         ..Default::default()
@@ -612,6 +613,7 @@ pub fn riparian_tiger() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
+        keywords: vec![Keyword::Trample],
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![guard],
         ..Default::default()
@@ -667,6 +669,7 @@ pub fn aetherborn_marauder() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EnergyGained, EventScope::YourControl),
             effect: Effect::AddCounter {

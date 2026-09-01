@@ -75,8 +75,8 @@ pub fn rain_of_embers() -> CardDefinition {
     }
 }
 
-/// Thunderfoot Baloth — {4}{G}{G} 5/5 Beast. Other creatures you control get
-/// +2/+2 and have trample.
+/// Thunderfoot Baloth — {4}{G}{G} 5/5 Beast with trample. Other creatures you
+/// control get +2/+2 and have trample.
 pub fn thunderfoot_baloth() -> CardDefinition {
     let others =
         || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::OtherThanSource));
@@ -90,6 +90,7 @@ pub fn thunderfoot_baloth() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
+        keywords: vec![Keyword::Trample],
         static_abilities: vec![
             StaticAbility {
                 description: "Other creatures you control get +2/+2.",

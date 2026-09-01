@@ -5131,12 +5131,14 @@ pub fn leaves_from_the_vine() -> CardDefinition {
     }
 }
 
-/// Rumble Arena — Land. When it enters, scry 1. {T}: Add {C}. {1}, {T}: Add one
-/// mana of any color.
+/// Rumble Arena — Land with a printed Vigilance (it matters only once the land
+/// is animated). When it enters, scry 1. {T}: Add {C}. {1}, {T}: Add one mana
+/// of any color.
 pub fn rumble_arena() -> CardDefinition {
     CardDefinition {
         name: "Rumble Arena",
         card_types: vec![CardType::Land],
+        keywords: vec![Keyword::Vigilance],
         triggered_abilities: vec![etb(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::ONE,
