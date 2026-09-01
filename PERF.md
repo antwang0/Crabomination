@@ -2477,6 +2477,39 @@ a box whose state moves.
 
 ## Baseline
 
+### The find-memo pass — closing state at `(-171)`
+
+```text
+  pool    base 9f9a5eac      (-171)          delta
+  fixed     870,185,461     862,574,752   **-0.8746 %**
+  cube    2,391,617,137   2,369,108,140   **-0.9412 %**
+  sealed  2,398,392,016   2,383,399,820   **-0.6251 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,197 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 21.2 MiB, bin 218,604,552 B
+        (`--no-default-features`, i.e. the system allocator)
+stalls  5 seeds / 68,000 games `--games 400 --threads 3 --decks all`, run on
+        BOTH binaries: **stdout byte-identical seed for seed**
+```
+
+**Run-total, this branch's tip against `b5ea6d90` five commits back — the five
+legs are `(-166)`, `(-168)`, `(-167)`, `(-169)`, `(-171)`, and a concurrent
+session's `(-164)` lands inside the span:**
+
+```text
+  pool     base b5ea6d90    tip (-171)       cumulative
+  fixed      898,980,997     862,574,752   **-4.0497 %**
+  cube     2,458,753,806   2,369,108,140   **-3.6460 %**
+  sealed   2,471,129,875   2,383,399,820   **-3.5502 %**
+```
+
 ### The env-lookup pass — closing state at `(-169)`
 
 ```text
@@ -11138,6 +11171,57 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-171)` — the battlefield find memo held ONE entry and the callers it exists for alternate: `cube` -0.941 %, `fixed` -0.875 %, `sealed` -0.625 %
+
+```text
+  pool    base 9f9a5eac      (-171)          delta      and at 32 slots
+  fixed     870,185,461     862,574,752   **-0.8746 %**    -0.7534 %
+  cube    2,391,617,137   2,369,108,140   **-0.9412 %**    -1.1221 %
+  sealed  2,398,392,016   2,383,399,820   **-0.6251 %**    -0.6269 %
+```
+
+`Battlefield::find_by_id`'s hint becomes `[AtomicU32; 16]`, direct-mapped by
+`CardId`'s low bits. Nothing else changes: the memo's whole soundness argument
+is that a hit is **verified** (`cards[hint].id == id`), so widening it needs no
+invalidation, no epoch and no new write-path store.
+
+**`cg_sites.py` priced the family first, and it is the largest single named
+cost left in the simulator: `find_by_id` is 23,803,384 Ir, 3.06 % of the run**,
+16.18 M of it at one site (`GameState::battlefield_find`). `(-38)` read the
+same family at 4.03 % and built the one-entry memo; `(-102)` paid off four of
+its six named sites with `_on` forms. What neither asked is **how often one
+entry is the right number**.
+
+**It is not, and the reason is in `(-38)`'s own doc comment.** The memo exists
+for "the callers that ask about the *same* permanent several times running —
+the combat resolver's per-pair freeze scope asks three or four times for the
+blocker alone". Those callers ask about the blocker *and the attacker*, in
+turn: one slot means each ask evicts the answer the next one wants, so it hits
+only on an exact repeat and never on an alternation. The row deltas are the
+receipt — every big drop is a *different* caller of the same helper
+(`pick_blocks_inner` -685 k on `fixed` / -2.18 M on `cube`,
+`computed_permanent_hinted` -1.61 M on `cube`,
+`gather_continuous_effects_inner` -872 k on `fixed`), which is what a
+capacity fix looks like and a call-site fix does not.
+
+⚠ **16, not 32, and the split is the whole trade.** 32 slots reads `cube`
+**-1.122 %** (0.18 points better) and `fixed` **-0.753 %** (0.12 points
+*worse*): the extra 16 `AtomicU32`s are cloned with the zone on every
+`GameState::clone` — 23,954 of them a `fixed` run, 48,558 on `cube` — and
+`fixed`'s smaller boards were not colliding at 16 in the first place. The
+bench pool is `fixed`; 16 wins there, ties on `sealed`, and gives up 0.18
+points of `cube`. **A memo's width is priced against its owner's CLONE rate,
+not against its hit rate** — the same shape as `(-165)`'s inline-buffer rule,
+one level up.
+
+The cost side is visible and small: `zone.rs`'s clone row +237 k on `fixed` /
++477 k on `cube`, plus 60 bytes of `__memcpy` (+138 k / +232 k).
+
+Gates: suite 19,197 / 0 / 5 with the golden traces unmoved, clippy
+`--all-targets` clean, `--bench` byte-identical to the invariant
+(195,806 / 27.49 / 611.9 / 0 stalls), determinism ok, and a five-seed
+68,000-game `--decks all` sweep on both binaries, byte-identical seed for seed.
 
 ### `(-169)` — `adjust_life` asked `getenv` PER LIFE ADJUSTMENT: `sealed` -1.749 %, `fixed` -1.692 %, `cube` -1.117 %
 

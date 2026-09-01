@@ -819,6 +819,21 @@ pub mod ems_census {
 /// So [`iter_mut`](Self::iter_mut), [`get_mut`](Self::get_mut) and the `&mut`
 /// [`IntoIterator`] — the tap, damage, counter and untap paths, 139,280
 /// invalidations a `cube` run before this split — leave the lanes alone.
+/// Slots in [`Battlefield`]'s find memo. **One slot thrashes**: the callers
+/// the memo exists for ask about two or three permanents in turn (the combat
+/// resolver's attacker and blocker, the block picker's pair), so a single
+/// entry is overwritten by the very next ask and hits only on an exact
+/// repeat. Direct-mapping by `CardId` gives each of them its own slot; 16 is
+/// 60 bytes more on the zone against a board of ~15-25 permanents.
+const FIND_HINTS: usize = 16;
+
+/// The memo slot a `CardId` maps to. Ids come off a monotonic counter, so the
+/// low bits are the spread-out end of them.
+#[inline]
+const fn hint_slot(id: crate::card::CardId) -> usize {
+    (id.0 as usize) & (FIND_HINTS - 1)
+}
+
 #[derive(Debug, Default)]
 pub struct Battlefield {
     cards: CowBox<Vec<CardInstance>>,
@@ -827,9 +842,10 @@ pub struct Battlefield {
     /// The `definition_epoch` the lanes were computed at. A lane is valid only
     /// while this still matches.
     def_epoch: std::sync::atomic::AtomicU64,
-    /// The index [`find_by_id`](Self::find_by_id) last returned from. Needs no
-    /// invalidation at all — see that function.
-    find_hint: std::sync::atomic::AtomicU32,
+    /// The indices [`find_by_id`](Self::find_by_id) last returned, one slot
+    /// per `CardId` low-bit class. Needs no invalidation at all — see that
+    /// function.
+    find_hints: [std::sync::atomic::AtomicU32; FIND_HINTS],
     /// Which battlefield *indices* satisfy [`card_is_triggerer`], one bit
     /// each. Read only while [`LANE_TRIGGERER`] says the list is computed, so
     /// it inherits the lanes' invalidation whole and needs none of its own.
@@ -869,9 +885,16 @@ impl Battlefield {
     /// ~23 `Arc`-boxed permanents costs (PERF's "price a `find` at its
     /// expected stopping point"), and a miss adds those same few instructions
     /// plus one store on top of the scan it was going to make anyway.
+    ///
+    /// **It is [`FIND_HINTS`] entries, direct-mapped by id, and that is what
+    /// makes the repeat rate real.** One entry hits only on an *exact*
+    /// repeat, and the callers this memo exists for alternate — attacker,
+    /// blocker, attacker — so each ask evicted the answer the next one
+    /// wanted.
     #[inline]
     pub fn find_by_id(&self, id: crate::card::CardId) -> Option<&CardInstance> {
-        let hint = self.find_hint.load(Ordering::Relaxed) as usize;
+        let slot = hint_slot(id);
+        let hint = self.find_hints[slot].load(Ordering::Relaxed) as usize;
         if let Some(c) = self.cards.get(hint)
             && c.id == id
         {
@@ -882,7 +905,7 @@ impl Battlefield {
             !self.cards[i + 1..].iter().any(|o| o.id == id),
             "two battlefield permanents share a CardId: the find hint could name either",
         );
-        self.find_hint.store(i as u32, Ordering::Relaxed);
+        self.find_hints[slot].store(i as u32, Ordering::Relaxed);
         Some(c)
     }
 
@@ -898,7 +921,8 @@ impl Battlefield {
     /// `debug_assert!` on the scan path.
     #[inline]
     pub fn find_by_id_mut(&mut self, id: crate::card::CardId) -> Option<&mut CardInstance> {
-        let hint = self.find_hint.load(Ordering::Relaxed) as usize;
+        let slot = hint_slot(id);
+        let hint = self.find_hints[slot].load(Ordering::Relaxed) as usize;
         let i = if self.cards.get(hint).is_some_and(|c| c.id == id) {
             hint
         } else {
@@ -907,7 +931,7 @@ impl Battlefield {
                 !self.cards[i + 1..].iter().any(|o| o.id == id),
                 "two battlefield permanents share a CardId: the find hint could name either",
             );
-            self.find_hint.store(i as u32, Ordering::Relaxed);
+            self.find_hints[slot].store(i as u32, Ordering::Relaxed);
             i
         };
         self.cards_unchecked_mut().get_mut(i)
@@ -1266,9 +1290,9 @@ impl Clone for Battlefield {
             def_epoch: std::sync::atomic::AtomicU64::new(
                 self.def_epoch.load(Ordering::Relaxed),
             ),
-            find_hint: std::sync::atomic::AtomicU32::new(
-                self.find_hint.load(Ordering::Relaxed),
-            ),
+            find_hints: std::array::from_fn(|i| {
+                std::sync::atomic::AtomicU32::new(self.find_hints[i].load(Ordering::Relaxed))
+            }),
             trig_members: std::sync::atomic::AtomicU64::new(
                 self.trig_members.load(Ordering::Relaxed),
             ),
@@ -1303,7 +1327,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
             cards,
             type_gates: std::sync::atomic::AtomicU32::new(0),
             def_epoch: std::sync::atomic::AtomicU64::new(0),
-            find_hint: std::sync::atomic::AtomicU32::new(0),
+            find_hints: std::array::from_fn(|_| std::sync::atomic::AtomicU32::new(0)),
             trig_members: std::sync::atomic::AtomicU64::new(0),
         }
     }
