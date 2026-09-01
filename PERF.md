@@ -106,6 +106,14 @@ cargo build --profile profiling-fast -p crabomination --bin bot_ladder \
 # before ranking it: run the dump at two game counts and compare the row, not
 # the total.
 #
+# WHO CALLS THE CALLERS — two levels of caller for one row, which is what a
+# std generic needs: `--callers` gets you `Vec::from_iter`, and the engine
+# function that owns the cost is one hop further up. **Needs `--demangle=no`**,
+# because a demangled dump merges every `from_iter` monomorphization into one
+# row and the second hop then cannot tell which of them fed the first. Found
+# `(-156)`.
+#   python3 scripts/cg_chain.py cg.nd 'FnMut' --top 4 --up 2
+#
 # WHICH HOT FUNCTIONS PAY A FRAME THEY ALMOST NEVER USE — the instrument for
 # `(-129)`'s rule. Joins the dump's call counts against the binary's
 # disassembly and ranks by `calls x prologue instructions`, with the body's
@@ -19853,6 +19861,45 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-156) THE `FnMut for &mut F` SHIM IS STILL 0.61 % OF `cube` AND IT IS
+STD'S OWN ADAPTER CODE, NOT OURS — PRICE IT AGAINST `release` BEFORE
+BUILDING.** `zone::Battlefield::lane`'s doc records that passing a predicate
+by reference cost 18.8 M Ir through
+`core::ops::function::impls::<impl FnMut<A> for &mut F>::call_mut`. At
+`26cea814` that row still reads **99,572 calls / 14,967,638 self Ir / 150.3 a
+call = 0.61 % of `cube`**, and no engine site passes a closure by reference
+any more. Traced to its source with `scripts/cg_chain.py` over a
+`--demangle=no` dump — two levels of caller, because one is not enough when
+the immediate caller is itself a std generic and the merged demangled table
+cannot tell its monomorphizations apart:
+
+```text
+  shim callers (calls / inclusive Ir)     ... and *their* caller
+    Vec::from_iter        12,992 / 30.6 M   bot::pick_blocks_inner   4,578 calls / 32.4 M
+    SmallVec::extend      20,714 /  4.6 M   combat::resolve_combat   6,128 / 5.5 M
+    Vec::from_iter        11,292 /  8.4 M   bot::pick_attacks_inner  4,548 / 9.6 M
+    Vec::from_iter        25,026 /  0.7 M   GameState::process_echo  2,812 / 1.5 M
+```
+
+**It is `Filter::next` and `FilterMap::next` themselves.** Both are written in
+std as `self.iter.find(&mut self.predicate)` / `find_map(&mut self.f)`, so
+every `.filter(..).filter_map(..).collect()` instantiates the adapter with
+`F = &mut Closure` and the local inliner at `codegen-units = 16` with no LTO
+sometimes declines it. `pick_blocks_inner`'s `attacker_info` chain is the
+largest single instance.
+
+⚠ **This is the one candidate on the list whose size is profile-dependent in
+the direction that matters.** `cg_calls.py`'s own rule says a std generic the
+inliner declined is real — but the ML binaries are built with `--release`
+(cgu 1 + thin LTO), where these adapters do inline, so a win measured on
+`release-fast` may be worth **zero** in the binary `selfplay_train` actually
+runs. **Take a `profiling-lto` reading of the shim's call count first** (PERF's
+"How to measure" names it as exactly this instrument); if it is near zero
+there, close this entry and do not rewrite the chains. Only if it survives LTO
+is the fix — an explicit `for` loop with `push` in `pick_blocks_inner` —
+worth the ~0.1-0.2 % it could carry. `(-119)` is the warning: a restructure of
+this shape read **+0.07 %** and was reverted.
 
 **(-155) CLOSED — TAKEN, `cube` -0.114 % / `fixed` -0.163 %.** The CR
 704.5a/c loss check's `effective_life` / `effective_poison` walked the team
