@@ -1562,24 +1562,20 @@ pub fn putrid_imp() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
-            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             // "Discard a card: This creature gains flying until end of turn."
             // Printed as an activated grant, not a static keyword — it shipped
             // with unconditional Flying *and* a Menace grant (2026-08-30).
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::GrantKeyword {
-                    what: Selector::This,
-                    keyword: Keyword::Flying,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            // The discard is the activation **cost** (`discard_cost`), not
+            // the first step of the effect: as an effect the activation was
+            // free and a bot could repeat it with an empty hand for ever.
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -2168,6 +2164,13 @@ pub fn greater_good() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
+            // The sacrifice is the activation cost. It is spelled in the effect
+            // (the payoff reads what was sacrificed), which does **not** gate
+            // the activation — so without this condition a bot could activate
+            // it with nothing to sacrifice, for ever.
+            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ))),
             effect: Effect::Seq(vec![
                 Effect::SacrificeAndRemember {
                     who: PlayerRef::You,
@@ -2187,7 +2190,6 @@ pub fn greater_good() -> CardDefinition {
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
-            condition: None,
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
@@ -2305,6 +2307,13 @@ pub fn goblin_bombardment() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
+            // The sacrifice is the activation cost. It is spelled in the effect
+            // (the payoff reads what was sacrificed), which does **not** gate
+            // the activation — so without this condition a bot could activate
+            // it with nothing to sacrifice, for ever.
+            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ))),
             effect: Effect::Seq(vec![
                 Effect::SacrificeAndRemember {
                     who: PlayerRef::You,
@@ -2319,7 +2328,6 @@ pub fn goblin_bombardment() -> CardDefinition {
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
-            condition: None,
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
@@ -2361,7 +2369,6 @@ pub fn wasteland() -> CardDefinition {
                 once_per_turn: false,
                 sorcery_speed: false,
                 sac_cost: false,
-                condition: None,
                 life_cost: 0,
                 from_graveyard: false,
                 exile_self_cost: false,
@@ -5948,15 +5955,13 @@ pub fn wild_mongrel() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
-            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
+            // The discard is the activation **cost** (`discard_cost`), not
+            // the first step of the effect: as an effect the activation was
+            // free and a bot could repeat it with an empty hand for ever.
+            discard_cost: Some((SelectionRequirement::Any, 1)),
             effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
                 Effect::PumpPT {
                     what: Selector::This,
                     power: Value::Const(1),
@@ -6872,6 +6877,13 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             // effect. The activated ability needs a target so the human
             // picker can pick *which* artifact to sac; the bot's
             // auto-target picks the first sacrificeable artifact.
+            // The sacrifice is the activation cost. It is spelled in the effect
+            // (the payoff reads what was sacrificed), which does **not** gate
+            // the activation — so without this condition a bot could activate
+            // it with nothing to sacrifice, for ever.
+            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+            ))),
             effect: Effect::Seq(vec![
                 Effect::SacrificeAndRemember {
                     who: PlayerRef::You,
@@ -6886,7 +6898,6 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
-            condition: None,
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
@@ -8523,17 +8534,18 @@ pub fn pentad_prism() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Charge,
-                    amount: Value::Const(1),
-                },
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
-                },
-            ]),
+            // ⚠ The charge counter is the **cost**, and it has to be a cost
+            // field. As `Effect::RemoveCounter` it removed nothing once the
+            // counters ran out and the `AddMana` still resolved — an
+            // unbounded free mana source. A `--decks cube --seed 2` self-play
+            // game reached the 50,000-action cap at turn 15 with 49,616
+            // copies of Gravecrawler's graveyard activation on the stack,
+            // paid for by this. See `no_activated_ability_is_free_...`.
+            remove_counter_cost: Some((CounterType::Charge, 1)),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -19527,6 +19539,10 @@ pub fn parallax_nexus() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
+            // "Remove a fade counter from this enchantment: … Activate only
+            // as a sorcery." Both halves were missing.
+            remove_counter_cost: Some((crate::card::CounterType::Fade, 1)),
+            sorcery_speed: true,
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
@@ -19551,6 +19567,9 @@ pub fn parallax_tide() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
+            // "Remove a fade counter from this enchantment:" — a cost, not a
+            // free activation. It shipped as `{0}`, and its doc said so too.
+            remove_counter_cost: Some((crate::card::CounterType::Fade, 1)),
             effect: Effect::ExileUntilSourceLeaves {
                 what: target_filtered(SelectionRequirement::Land),
                 return_to: ExileReturnZone::BattlefieldTapped,
@@ -51949,17 +51968,14 @@ pub fn devoted_druid() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
-                effect: Effect::Seq(vec![
-                    Effect::AddCounter {
-                        what: Selector::This,
-                        kind: CounterType::MinusOneMinusOne,
-                        amount: Value::Const(1),
-                    },
-                    Effect::Untap {
-                        what: Selector::This,
-                        up_to: None,
-                    },
-                ]),
+                // "Put a -1/-1 counter on this creature: Untap this
+                // creature." The counter is the cost, which is what stops
+                // the activation once the Druid can no longer take one.
+                add_counter_cost: Some((CounterType::MinusOneMinusOne, 1)),
+                effect: Effect::Untap {
+                    what: Selector::This,
+                    up_to: None,
+                },
                 ..Default::default()
             },
         ],

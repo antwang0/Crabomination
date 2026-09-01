@@ -16730,15 +16730,27 @@ impl GameState {
         // Add-counter-as-cost (CR 602.5b "Put a verse counter on this:"):
         // paid before the ability goes on the stack, so a body reading the
         // source's counters sees the new total. Yisan.
-        if let Some((kind, count)) = ability.add_counter_cost
-            && let Some(c) = self.battlefield.find_by_id_mut(card_id)
-        {
-            c.add_counters(kind, count);
-            events.push(GameEvent::CounterAdded {
-                card_id,
-                counter_type: kind,
-                count,
-            });
+        // CR 614.16 — a counter *cost* is still a counter placement, so it
+        // goes through `scaled_counter_count` like every other add site.
+        // Without it Vizier of Remedies shaved the counter an `AddCounter`
+        // effect placed and not the one a cost placed, and Devoted Druid
+        // (whose untap is `add_counter_cost`) killed itself through the combo.
+        if let Some((kind, count)) = ability.add_counter_cost {
+            let is_creature = self
+                .battlefield
+                .find_by_id(card_id)
+                .is_some_and(|c| c.definition.is_creature());
+            let scaled = self.scaled_counter_count(p, kind, count, is_creature);
+            if scaled > 0
+                && let Some(c) = self.battlefield.find_by_id_mut(card_id)
+            {
+                c.add_counters(kind, scaled);
+                events.push(GameEvent::CounterAdded {
+                    card_id,
+                    counter_type: kind,
+                    count: scaled,
+                });
+            }
         }
 
         // Exile-top-of-library-as-cost (CR 602.5b — Arc-Slogger). Paid after

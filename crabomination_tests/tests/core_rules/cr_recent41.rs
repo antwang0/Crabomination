@@ -111,6 +111,34 @@ fn cr_702_44a_sunburst_noncreature_gets_charge_counters() {
     assert_eq!(g.battlefield_find(prism).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
 }
 
+/// The charge counter is Pentad Prism's activation **cost** (CR 602.5b), so a
+/// Prism with none can't be activated at all.
+///
+/// Regression, 2026-09-01: the removal was the first step of the *effect*, so
+/// with no counters it removed nothing and the `AddMana` still resolved — an
+/// unbounded free mana source. A `--decks cube --seed 2` self-play game ran to
+/// the 50,000-action cap at turn 15 with 49,616 copies of Gravecrawler's
+/// graveyard activation on the stack, all of it paid for by this.
+#[test]
+fn pentad_prism_charge_counter_is_the_cost_not_the_effect() {
+    let mut g = main_phase();
+    let prism = cast_with(&mut g, catalog::pentad_prism(), &[Color::Red], 1);
+    assert_eq!(g.battlefield_find(prism).unwrap().counter_count(CounterType::Charge), 1);
+    let act = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: prism, ability_index: 0, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    act(&mut g).expect("one charge counter buys one activation");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(prism).unwrap().counter_count(CounterType::Charge), 0,
+        "the counter was spent");
+    let pool = g.players[0].mana_pool.total() + g.players[0].mana_pool.restricted_total();
+    assert!(pool >= 1, "and it made a mana");
+    assert!(act(&mut g).is_err(), "no counters left → not activatable");
+}
+
 /// 702.44b — no colored mana spent means no counters at all.
 #[test]
 fn cr_702_44b_sunburst_lands_nothing_on_a_colorless_cast() {

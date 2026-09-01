@@ -239,6 +239,11 @@ pub fn briar_shield() -> CardDefinition {
         // creature while the Aura is still attached (sac-as-cost would clear the
         // `AttachedTo` link before the pump resolves).
         activated_abilities: vec![ActivatedAbility {
+            // The Aura sacrifices itself, so the ability can only ever resolve
+            // once — but the *activation* was unlimited, and a bot will stack
+            // 50,000 copies given the chance. One a turn is what the printed
+            // one-shot can actually do.
+            max_activations_per_turn: Some(1),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::AttachedTo(Box::new(Selector::This)),

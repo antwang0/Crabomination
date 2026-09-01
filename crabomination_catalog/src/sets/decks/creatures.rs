@@ -199,22 +199,19 @@ pub fn griselbrand() -> CardDefinition {
             discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            // "Pay 7 life: Draw seven cards."
-            effect: Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::Const(7),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(7),
-                },
-            ]),
+            // "Pay 7 life: Draw seven cards." The life is a **cost**:
+            // `life_cost` is the pre-pay gate, so a player at 6 or less
+            // cannot activate. As an `Effect::LoseLife` the activation was
+            // free and a bot could draw its deck out at any life total.
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(7),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
             condition: None,
-            life_cost: 0,
+            life_cost: 7,
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
@@ -253,46 +250,31 @@ pub fn psychic_frog() -> CardDefinition {
             },
         }],
         activated_abilities: vec![
-            // "Discard a card: Put a +1/+1 counter on Psychic Frog."
+            // "Discard a card: Put a +1/+1 counter on Psychic Frog." The
+            // discard is the **cost**; as the first step of the effect the
+            // activation was free and repeatable on an empty hand.
             ActivatedAbility {
                 energy_cost: 0,
-                discard_cost: None,
-                effect: Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
-                    Effect::AddCounter {
-                        what: Selector::This,
-                        kind: crate::card::CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
-                    },
-                ]),
+                discard_cost: Some((SelectionRequirement::Any, 1)),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: crate::card::CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
                 ..Default::default()
             },
             // "Exile three cards from your graveyard: gains flying EOT."
+            // `exile_other_filter` is the graveyard-exile additional cost
+            // (Grim Lavamancer's), which gates the activation; spelling it
+            // as a `Move` in the effect did not.
             ActivatedAbility {
                 energy_cost: 0,
-                discard_cost: None,
-                effect: Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::take(
-                            Selector::CardsInZone {
-                                who: PlayerRef::You,
-                                zone: crate::card::Zone::Graveyard,
-                                filter: SelectionRequirement::Any,
-                            },
-                            Value::Const(3),
-                        ),
-                        to: ZoneDest::Exile,
-                    },
-                    Effect::GrantKeyword {
-                        what: Selector::This,
-                        keyword: Keyword::Flying,
-                        duration: Duration::EndOfTurn,
-                    },
-                ]),
+                exile_other_filter: Some((SelectionRequirement::Any, 3)),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                },
                 ..Default::default()
             },
         ],

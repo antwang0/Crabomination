@@ -57,6 +57,16 @@ pub fn cartel_aristocrat() -> CardDefinition {
         2,
     );
     def.activated_abilities = vec![ActivatedAbility {
+        // The sacrifice is the activation cost. It is spelled in the effect
+        // (the payoff reads what was sacrificed, or the attachment LKI
+        // needs it), which does **not** gate the activation — so without
+        // this condition a bot could activate it with nothing to
+        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
+        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        ))),
         effect: Effect::Seq(vec![
             sac_creature(true),
             Effect::GrantProtectionFromChosenColor {
@@ -80,6 +90,14 @@ pub fn bloodflow_connoisseur() -> CardDefinition {
         1,
     );
     def.activated_abilities = vec![ActivatedAbility {
+        // The sacrifice is the activation cost. It is spelled in the effect
+        // (the payoff reads what was sacrificed, or the attachment LKI
+        // needs it), which does **not** gate the activation — so without
+        // this condition a bot could activate it with nothing to
+        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
+        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ))),
         effect: Effect::Seq(vec![
             sac_creature(false),
             Effect::AddCounter {
@@ -108,6 +126,14 @@ pub fn vampire_aristocrat() -> CardDefinition {
         2,
     );
     def.activated_abilities = vec![ActivatedAbility {
+        // The sacrifice is the activation cost. It is spelled in the effect
+        // (the payoff reads what was sacrificed, or the attachment LKI
+        // needs it), which does **not** gate the activation — so without
+        // this condition a bot could activate it with nothing to
+        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
+        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        ))),
         effect: Effect::Seq(vec![
             sac_creature(false),
             Effect::PumpPT {
@@ -144,6 +170,16 @@ pub fn yahenni_undying_partisan() -> CardDefinition {
         },
     }];
     def.activated_abilities = vec![ActivatedAbility {
+        // The sacrifice is the activation cost. It is spelled in the effect
+        // (the payoff reads what was sacrificed, or the attachment LKI
+        // needs it), which does **not** gate the activation — so without
+        // this condition a bot could activate it with nothing to
+        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
+        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        ))),
         effect: Effect::Seq(vec![
             sac_creature(true),
             Effect::GrantKeyword {
@@ -177,6 +213,16 @@ pub fn bontu_the_glorified() -> CardDefinition {
     ];
     def.activated_abilities = vec![ActivatedAbility {
         mana_cost: cost(&[generic(1), b()]),
+        // The sacrifice is the activation cost. It is spelled in the effect
+        // (the payoff reads what was sacrificed, or the attachment LKI
+        // needs it), which does **not** gate the activation — so without
+        // this condition a bot could activate it with nothing to
+        // sacrifice, for ever. See `no_activated_ability_is_free_...`.
+        condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        ))),
         effect: Effect::Seq(vec![
             sac_creature(true),
             Effect::Scry {

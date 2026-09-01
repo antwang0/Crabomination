@@ -3708,6 +3708,9 @@ pub fn phantom_wings() -> CardDefinition {
         // bins — modeling the sacrifice via the effect rather than a `sac_cost`
         // (whose post-sacrifice attachment LKI doesn't survive onto the stack).
         activated_abilities: vec![ActivatedAbility {
+            // Same one-shot as Briar Shield: the Aura goes away when this
+            // resolves, but the activation itself was unlimited.
+            max_activations_per_turn: Some(1),
             effect: Effect::Move {
                 what: Selector::AttachedTo(Box::new(Selector::This)),
                 to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),

@@ -373,22 +373,23 @@ pub fn scurry_of_gremlins() -> CardDefinition {
         ]))],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[]),
-            effect: Effect::PayEnergy {
-                amount: 4,
-                then: Box::new(Effect::Seq(vec![
-                    Effect::PumpPT {
-                        what: yours(),
-                        power: Value::ONE,
-                        toughness: Value::Const(0),
-                        duration: Duration::EndOfTurn,
-                    },
-                    Effect::GrantKeyword {
-                        what: yours(),
-                        keyword: Keyword::Haste,
-                        duration: Duration::EndOfTurn,
-                    },
-                ])),
-            },
+            // The energy is the activation cost, not the effect: as
+            // `Effect::PayEnergy` the activation was free and a bot could
+            // repeat it with no energy for ever.
+            energy_cost: 4,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: yours(),
+                    power: Value::ONE,
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: yours(),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

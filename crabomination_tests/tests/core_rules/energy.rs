@@ -70,7 +70,8 @@ fn longtusk_cub_pays_energy_for_counter() {
         card_id: cub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activatable with 3 energy");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].energy, 0, "spent {{E}}{{E}}{{E}}");
+    // Printed `Pay {E}{E}` — it shipped as {E}{E}{E} until 2026-09-01.
+    assert_eq!(g.players[0].energy, 1, "spent {{E}}{{E}}");
     assert_eq!(g.battlefield_find(cub).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
@@ -114,18 +115,21 @@ fn bristling_hydra_etb_energy_then_pays_for_counter_and_hexproof() {
 }
 
 #[test]
-fn pay_energy_without_enough_is_a_noop() {
-    // Longtusk Cub with only 2 energy can't pay {E}{E}{E} → no counter, no spend.
+fn pay_energy_without_enough_is_rejected() {
+    // CR 601/602 — the energy is an activation **cost**, so a player who can't
+    // pay it can't activate. It used to be an `Effect::PayEnergy`, which made
+    // the activation itself free: the engine accepted it, the effect no-opped,
+    // and a bot could repeat that for ever (the 50,000-action stall class).
     let mut g = two_player_game();
     let cub = g.add_card_to_battlefield(0, catalog::longtusk_cub());
     g.clear_sickness(cub);
-    g.players[0].energy = 2;
-    g.perform_action(GameAction::ActivateAbility {
+    g.players[0].energy = 1;
+    assert!(g.perform_action(GameAction::ActivateAbility {
         card_id: cub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("activation itself is free");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].energy, 2, "insufficient energy → not spent");
+    }).is_err(), "one energy cannot pay {{E}}{{E}}");
+    assert_eq!(g.players[0].energy, 1, "insufficient energy → not spent");
     assert_eq!(g.battlefield_find(cub).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    assert!(g.stack.is_empty(), "and nothing reached the stack");
 }
 
 #[test]
@@ -397,7 +401,7 @@ fn cr_107_14_paying_energy_removes_counters() {
         card_id: cub, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("activatable");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].energy, 2, "paid {{E}}{{E}}{{E}} of 5 → 2 remain");
+    assert_eq!(g.players[0].energy, 3, "paid {{E}}{{E}} of 5 → 3 remain");
 }
 
 #[test]

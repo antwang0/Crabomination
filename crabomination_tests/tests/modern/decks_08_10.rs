@@ -902,10 +902,10 @@ fn wild_mongrel_pumps_via_discard() {
     g.clear_sickness(mongrel);
     let fodder = g.add_card_to_hand(0, catalog::lightning_bolt());
 
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Discard(vec![fodder]),
-        DecisionAnswer::Color(Color::Blue),
-    ]));
+    // The discard is the activation cost now (it was the effect's first step
+    // until 2026-09-01), so the cost picker takes the card and the only
+    // scripted answer left is the effect's colour choice.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: mongrel, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None , mode: None}).expect("Wild Mongrel activates");

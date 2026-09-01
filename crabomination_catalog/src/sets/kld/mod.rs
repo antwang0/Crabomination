@@ -14,22 +14,22 @@ use crate::effect::{Duration, PlayerRef};
 use crate::game::types::TurnStep;
 use crate::mana::{ManaCost, b, cost, g, generic, r, u};
 
-/// {E}{E}{E}: Put a +1/+1 counter on this creature (energy-only activated
-/// ability via `PayEnergy`). The ability itself is free; the player commits
-/// by activating and the energy is consumed on resolution.
+/// `Pay {E}xN: Put a +1/+1 counter on this creature.` **The energy is the
+/// activation cost, not the effect.** It was an `Effect::PayEnergy` until
+/// 2026-09-01, which made the activation itself free: with no energy the
+/// engine still accepted it, the effect no-opped, and a bot could repeat it
+/// without bound. `energy_cost` is the pre-pay gate (`actions.rs`), the same
+/// shape as the mana and life gates.
 fn pay_energy_counter(amount: u32) -> ActivatedAbility {
     ActivatedAbility {
-        energy_cost: 0,
+        energy_cost: amount,
         discard_cost: None,
         tap_cost: false,
         mana_cost: ManaCost::default(),
-        effect: Effect::PayEnergy {
-            amount,
-            then: Box::new(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            }),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
         },
         once_per_turn: false,
         sorcery_speed: false,
@@ -109,7 +109,7 @@ pub fn longtusk_cub() -> CardDefinition {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::AddEnergy(Value::Const(2)),
         }],
-        activated_abilities: vec![pay_energy_counter(3)],
+        activated_abilities: vec![pay_energy_counter(2)],
         ..Default::default()
     }
 }
@@ -120,21 +120,18 @@ pub fn longtusk_cub() -> CardDefinition {
 pub fn bristling_hydra() -> CardDefinition {
     use crate::effect::shortcut::etb;
     let mut grow = pay_energy_counter(3);
-    grow.effect = Effect::PayEnergy {
-        amount: 3,
-        then: Box::new(Effect::Seq(vec![
-            Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-            Effect::GrantKeyword {
-                what: Selector::This,
-                keyword: Keyword::Hexproof,
-                duration: Duration::EndOfTurn,
-            },
-        ])),
-    };
+    grow.effect = Effect::Seq(vec![
+        Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+        Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: Keyword::Hexproof,
+            duration: Duration::EndOfTurn,
+        },
+    ]);
     CardDefinition {
         name: "Bristling Hydra",
         cost: cost(&[generic(2), g(), g()]),
@@ -573,13 +570,10 @@ pub fn aetherstream_leopard() -> CardDefinition {
     use crate::effect::Duration;
     use crate::effect::shortcut::etb;
     let mut sneak = pay_energy_counter(4);
-    sneak.effect = Effect::PayEnergy {
-        amount: 4,
-        then: Box::new(Effect::GrantKeyword {
-            what: Selector::This,
-            keyword: Keyword::Unblockable,
-            duration: Duration::EndOfTurn,
-        }),
+    sneak.effect = Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: Keyword::Unblockable,
+        duration: Duration::EndOfTurn,
     };
     CardDefinition {
         name: "Aetherstream Leopard",
@@ -603,13 +597,10 @@ pub fn riparian_tiger() -> CardDefinition {
     use crate::effect::Duration;
     use crate::effect::shortcut::etb;
     let mut guard = pay_energy_counter(2);
-    guard.effect = Effect::PayEnergy {
-        amount: 2,
-        then: Box::new(Effect::GrantKeyword {
-            what: Selector::This,
-            keyword: Keyword::Hexproof,
-            duration: Duration::EndOfTurn,
-        }),
+    guard.effect = Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: Keyword::Hexproof,
+        duration: Duration::EndOfTurn,
     };
     CardDefinition {
         name: "Riparian Tiger",

@@ -512,6 +512,15 @@ pub fn sage_of_hours() -> CardDefinition {
             amount: Value::Const(1),
         })],
         activated_abilities: vec![ActivatedAbility {
+            // "Remove all +1/+1 counters from this creature: for each five
+            // removed this way, take an extra turn." The removal is the cost
+            // and it is spelled in the effect (the extra-turn count has to
+            // read the counters), so the activation needs a gate of its own —
+            // without it a bot repeats a no-op activation for ever.
+            condition: Some(crate::card::Predicate::SourceHasCountersAtLeast {
+                counter: CounterType::PlusOnePlusOne,
+                n: 5,
+            }),
             effect: Effect::Seq(vec![
                 Effect::TakeExtraTurn {
                     who: PlayerRef::You,

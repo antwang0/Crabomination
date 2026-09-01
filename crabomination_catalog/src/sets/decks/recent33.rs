@@ -82,6 +82,14 @@ pub fn altar_of_dementia() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
+            // The sacrifice is the activation cost. It is spelled in the effect
+            // (the payoff reads what was sacrificed, or the attachment LKI
+            // needs it), which does **not** gate the activation — so without
+            // this condition a bot could activate it with nothing to
+            // sacrifice, for ever. See `no_activated_ability_is_free_...`.
+            condition: Some(crate::card::Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ))),
             effect: Effect::Seq(vec![
                 Effect::SacrificeAndRemember {
                     who: PlayerRef::You,

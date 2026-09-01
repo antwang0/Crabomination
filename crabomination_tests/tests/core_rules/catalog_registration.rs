@@ -861,3 +861,79 @@ fn subtype_words(def: &crabomination::card::CardDefinition) -> HashSet<String> {
     out.extend(s.battle_subtypes.iter().map(|t| norm(format!("{t:?}"))));
     out
 }
+
+/// Cards whose free, unconditional, unlimited activated ability is genuinely
+/// what the printed card says — a printed `{0}:` ability. Each entry carries
+/// its reason; adding one is a claim about the *oracle*, not about the body.
+const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
+    ("Blessing of Leeches", "printed `{0}: Regenerate enchanted creature.`"),
+    ("Blinking Spirit", "printed `{0}: Return this creature to its owner's hand.`"),
+    ("Chimeric Idol", "printed `{0}: Tap all lands you control. …`"),
+    ("Dark Maze", "printed `{0}: This creature can attack this turn as though …`"),
+    ("Flowstone Hellion", "printed `{0}: This creature gets +1/-1 until end of turn.`"),
+    ("Frenetic Efreet", "printed `{0}: Flip a coin. …`"),
+    ("Hopping Automaton", "printed `{0}: This creature gets -1/-1 and gains flying …`"),
+    ("Lancers en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
+    ("Mist Dragon", "printed `{0}: gains flying` / `{0}: loses flying`"),
+    ("Nomads en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
+    ("Opal Acrolith", "printed `{0}: This permanent becomes an enchantment.`"),
+    ("Reconnaissance", "printed `{0}: Remove target attacking creature … from combat`"),
+    ("Sentinel", "printed `{0}: Change this creature's base toughness …`"),
+    ("Shaman en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
+    ("Soltari Guerrillas", "printed `{0}: The next time this creature would deal …`"),
+    ("Spirit Mirror", "printed `{0}: Destroy target Reflection.`"),
+    ("Spirit en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
+    ("Urza's Avenger", "printed `{0}: This creature gets -1/-1 and gains …`"),
+    ("Warrior en-Kor", "printed `{0}:` damage-shift (the en-Kor cycle)"),
+    // ⚠ NOT a printed `{0}`: the card's first ability is the *static*
+    // "If this creature would be destroyed, regenerate it", modelled as a free
+    // activated regenerate because the engine has no such replacement. Its
+    // printed activated ability (`{1}:`, opponents only) is the second one and
+    // is correctly costed. Primitive job: a self-regenerating static.
+    ("Clergy of the Holy Nimbus", "static regeneration modelled as a free activation"),
+];
+
+/// **No shipped card carries an activated ability that is free, unconditional
+/// and unlimited.**
+///
+/// Such an ability is an unbounded action loop the moment a bot wants it: the
+/// engine will accept it forever, so a self-play game runs to its 50,000-action
+/// cap instead of ending. Found the hard way — a `--decks cube --seed 2` game
+/// reached the cap at turn 15 with **49,616 copies of Gravecrawler's
+/// graveyard activation on the stack**, paid for by Pentad Prism, whose charge
+/// counter was spelled as the ability's *effect* rather than its cost
+/// (`CRAB_CAP_DIAG=1` names both). The Prism was free, so the mana was
+/// unbounded, so the Gravecrawler activation was too.
+///
+/// The check is a comparison against `ActivatedAbility::default()` with only
+/// the effect swapped in, so **it covers every cost field the struct has and
+/// every one a later pass adds** — a new cost cannot slip past it the way
+/// `remove_counter_cost` did.
+#[test]
+fn no_activated_ability_is_free_unconditional_and_unlimited() {
+    use crabomination::card::ActivatedAbility;
+    let allowed: HashSet<&str> = FREE_ACTIVATION_ALLOWED.iter().map(|(n, _)| *n).collect();
+    let mut bad: Vec<String> = Vec::new();
+    let mut checked = 0usize;
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        checked += 1;
+        for (i, ab) in def.activated_abilities.iter().enumerate() {
+            let bare = ActivatedAbility { effect: ab.effect.clone(), ..Default::default() };
+            if *ab == bare && !allowed.contains(def.name) {
+                bad.push(format!("{} [{i}]", def.name));
+            }
+        }
+    }
+    assert!(checked > 15_000, "only {checked} factories walked — the ratchet is vacuous");
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} activated ability/abilities cost nothing, take no condition and have no \
+         per-turn limit, so a bot can activate them without bound. Give the ability its \
+         printed cost, or add the card to FREE_ACTIVATION_ALLOWED with its reason: {:?}",
+        bad.len(),
+        &bad[..bad.len().min(40)]
+    );
+}

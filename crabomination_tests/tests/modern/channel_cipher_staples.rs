@@ -1823,6 +1823,60 @@ fn gravecrawler_recasts_from_graveyard_with_a_zombie() {
     assert!(g.battlefield_find(crawler).is_some(), "Gravecrawler returned");
 }
 
+/// The graveyard activation costs `{B}` **every time**, and the card is only
+/// on the stack once.
+///
+/// Regression: a cube self-play game reached the 50,000-action cap at turn 15
+/// with **49,616 copies of this ability on the stack** and nine untapped
+/// Swamps on the board (`CRAB_CAP_DIAG`, `--decks cube --seed 2`). Two
+/// separate holes let that happen and this pins both.
+#[test]
+fn gravecrawler_graveyard_activation_is_paid_for_and_not_repeatable() {
+    let mut g = two_player_game();
+    let crawler = g.add_card_to_graveyard(0, catalog::gravecrawler());
+    g.add_card_to_battlefield(0, catalog::gravecrawler()); // a Zombie
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: crawler, ability_index: 0, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    act(&mut g).expect("first activation");
+    assert_eq!(g.stack.len(), 1, "one copy on the stack");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the black mana was spent");
+    assert!(act(&mut g).is_err(),
+        "a second activation with an empty pool and the card already on the stack");
+    assert_eq!(g.stack.len(), 1, "still one copy");
+}
+
+/// The same, paid off *lands* rather than a pre-filled pool — the route the
+/// bot takes (`auto_tap_for_cost`). One Swamp buys one activation.
+#[test]
+fn gravecrawler_graveyard_activation_taps_a_land_and_then_stops() {
+    let mut g = two_player_game();
+    let crawler = g.add_card_to_graveyard(0, catalog::gravecrawler());
+    g.add_card_to_battlefield(0, catalog::gravecrawler()); // a Zombie
+    let swamp = g.add_card_to_battlefield(0, catalog::swamp());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let act = |g: &mut crabomination::game::GameState| {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: crawler, ability_index: 0, target: None,
+            additional_targets: Vec::new(), x_value: None, mode: None,
+        })
+    };
+    act(&mut g).expect("first activation taps the Swamp");
+    assert!(g.battlefield_find(swamp).unwrap().tapped, "the Swamp paid for it");
+    assert_eq!(g.stack.len(), 1);
+    assert!(act(&mut g).is_err(), "no untapped land left");
+    assert_eq!(g.stack.len(), 1, "still one copy");
+}
+
 /// Soulherder grows on battlefield exiles and flickers a creature at end step.
 #[test]
 fn soulherder_grows_and_flickers() {

@@ -574,7 +574,14 @@ pub fn butcher_of_the_horde() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
-            // Sacrifice-another cost folded as the effect's first step.
+            // Sacrifice-another cost folded as the effect's first step, which
+            // does **not** gate the activation — hence the condition, or a bot
+            // activates it with nothing to sacrifice for ever.
+            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ))),
             effect: Effect::Seq(vec![
                 Effect::Sacrifice {
                     who: Selector::You,
