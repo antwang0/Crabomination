@@ -11205,6 +11205,55 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-174)` BUILT, MEASURED AND REVERTED — the hint works, and the SIGNATURE CHANGE costs six times what it saves
+
+```text
+  pool    base 4c943db4      (-174)          delta
+  fixed     857,355,557     861,289,149   **+0.4588 %**
+  cube    2,363,107,506   2,372,618,158   **+0.4025 %**
+  sealed  2,376,026,199   2,386,771,330   **+0.4522 %**
+```
+
+`(-173)`'s census says 31,116 of a six-game `fixed` run's 38,674 requirement-
+walker hint misses are for a card that is **not on the battlefield** — the
+graveyard sweep `targeting::first_legal_graveyard_card` evaluating a filter
+against each graveyard card. The walker searched the battlefield for it (it is
+not there), then walked the LKI caches, both graveyards, exile, the stack, both
+libraries and both hands to find it again: `requirement_card_off_battlefield`
+is **2,847,930 Ir, 0.37 % of the run**. The sweep is holding the card.
+
+So: a `CardHint` enum — `None` / `OnBattlefield` / `OffBattlefield` — replacing
+the walker's `Option<&CardInstance>`, an `evaluate_requirement_static_off`
+mirroring the `_on` form, and the off-battlefield arm consulted **after** the
+two CR 603.10 LKI caches (a dies-trigger filter must read the last-known
+battlefield state, not the graveyard copy). Behaviour-preserving: `--bench`
+byte-identical to the invariant, and two `--decks all` seeds byte-identical to
+the base's stdout.
+
+**And it is +0.46 %, all of it in a function the diff does not touch.**
+
+```text
+  the only rows that moved, `fixed`
+    dispatch_triggers_for_events   49,800,088 -> 55,167,988   **+5,367,900**
+    bf_hint_or_find                 7,968,240 ->  7,968,240    unchanged, to the Ir
+    everything else                                            about -1.4 M
+```
+
+**`bf_hint_or_find` did not move at all** — correctly, since an
+`OffBattlefield` hint must still let the battlefield lookup fail — so the whole
+saving was the ~2.85 M zone walk, and against it the walker's **hint parameter
+going from 8 bytes to 16** cost 5.37 M inside `dispatch_triggers_for_events`,
+which reaches the walker through `event_matches_spec` and inlines it. Call
+count there is identical (86,438) and only the slice-iteration rows grew, so it
+is an inlining decision retaken, not extra work.
+
+⚠ **The rule: a parameter added to a function that is inlined into a 6 %-of-the-
+program caller is not a parameter, it is that caller's codegen, re-rolled.**
+Same family as `(-129)`'s "a branch added to a function that is inlined
+everywhere is not one branch". The prize here is real and still open — see
+`(-174)` in the candidates — but it needs a device that does not widen
+`evaluate_requirement_static_hinted`'s signature.
+
 ### `(-173)` BUILT TWICE, MEASURED TWICE AND REVERTED — a membership bitmask in front of the battlefield walk is a **regression** on every pool
 
 ```text
@@ -11231,11 +11280,20 @@ walk and the store, the shape `walk_and_store` uses one screen up — recovers
 
 **Two things this establishes, and the second is the reusable one.**
 
-*One — the absent lookups are not the bulk.* If they were, the bit test would
-have paid for itself several times over. `find_by_id`'s cost is dominated by
-lookups that **succeed** and miss the 16-slot hint, so the lead in
-`bf_hint_or_find` is *give the caller its hint*, not *answer `None` faster*.
-`(-171)` took the capacity half of that; the rest is a call-site question.
+*One — ⚠ THE FIRST VERSION OF THIS ENTRY GUESSED THE REASON AND GUESSED WRONG.
+It said "the absent lookups are not the bulk"; a census taken afterwards says
+they are 80 % of the misses.* Six games of `fixed`, counted at the hint:
+**106,488 hint hits, 7,558 misses that find the card, 31,116 misses that do
+not** — and every miss has `hint == None`, so the hint never names the wrong
+card. The mask's ceiling is those 31,116 lookups, minus a false-positive rate
+that is *not* the textbook one: the ids being looked up are graveyard and
+stack objects off the **same monotonic counter** as the battlefield's, so
+`id & 63` collides far more than a random model predicts. Against that, the
+mask pays a recompute on every membership change — **3,722 `DerefMut` + 3,794
+`push` a run, i.e. five reads per invalidation**, which is exactly `(-153)`'s
+"price a memo by reads per invalidation" and exactly the arithmetic that was
+available before either build. **Take the census first; it cost one build and
+would have saved two.**
 
 *Two — `#[inline(never)]` on the miss path of a function inlined at hundreds of
 sites is itself worth ~0.10 points, and it is a cost, not a saving.* Every hint
@@ -21112,23 +21170,28 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**(-174) `bf_hint_or_find` IS 145,162 CALLS AT 54.9 Ir AND ITS FALL-THROUGH IS
-0.92 % OF THE RUN — AND `(-173)` PROVED THE FIX IS THE HINT, NOT THE WALK.**
-`eval.rs`'s `_ => self.battlefield_find(cid)` carries 7,075,650 Ir on `fixed`,
-the largest single site of the `find_by_id` family after `(-171)` took its
-capacity half (family total 23.80 M -> 17.16 M, 3.06 % -> 2.23 %). A
-membership bitmask in front of the walk was built twice and regressed on all
-three pools both times (`(-173)`), which is the *proof* that these lookups
-mostly **succeed**: they miss the 16-slot hint and then find the card.
+**(-174) STILL OPEN, AND THE ENTRY IN THE LOG IS THE MAP: the prize is
+~2.85 M Ir and the thing that killed the first attempt was the SIGNATURE, not
+the device.** The census is the starting point — 106,488 hint hits / 7,558
+misses that find the card / **31,116 misses for a card that is not on the
+battlefield**, and every miss has `hint == None`. Those 31,116 are the
+graveyard sweep, and the walker re-finds each card through
+`requirement_card_off_battlefield` (0.37 % of the run;
+`cg_sites` splits it 1.51 M graveyard leg / 0.98 M exile leg / 0.33 M the two
+LKI maps).
 
-So the question is a call-site one. The walker's own `_on` form already hands
-the subject over (`evaluate_requirement_static_on`, and `targeting.rs`'s two
-`is_legal_bf` closures), so what is left is (a) the walker's **recursion** —
-19,660 + 10,352 self-calls, whose inner requirements name *other* permanents —
-and (b) `auto_targets_for_effect_all_slots`, 110,920 of the walker's 181,232
-calls. ⚠ **Read the recursion first**: an `AttachedTo` / `ControllerOf` leg
-that re-finds a permanent the outer frame already located is the shape, and it
-is a `_hinted` parameter rather than a memo.
+⚠ **What is NOT available: widening `evaluate_requirement_static_hinted`'s
+hint from 8 bytes to 16.** That was built and it cost **5.37 M Ir inside
+`dispatch_triggers_for_events`**, which inlines the walker and is 6 % of the
+program on its own — six times the saving, for a diff that does not touch it.
+Any device here has to leave that signature alone. Two that might:
+
+* the **exile leg** (0.98 M) runs only for calls that got past both
+  graveyards, so a large share of the 31,116 are *not* graveyard cards at all
+  — count them before assuming the sweep is the whole row;
+* `died_card_snapshots.get` and the `leaves_bf_lki` pair are 0.33 M of hashing
+  on maps that are empty outside a death trigger — an `is_empty()` in front of
+  each is a signature-free change and costs one build to price.
 
 **(-170) THE ALLOCATION CENSUS RE-TAKEN AT `9f9a5eac`, BY CALLER, AND IT NEEDS
 NO `profiling-lines` BUILD.** `cg_edges.py --callers "__rustc::__rust_alloc"`
