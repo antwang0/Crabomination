@@ -48,6 +48,18 @@ CRAB_THREAD_CHECK=1 cargo run --release --bin bot_ladder -- --bench
 # It found the Pentad Prism / Gravecrawler stall on its first run.
 CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder --a gang --b gang \
   --games 34 --threads 1 --seed 2 --decks cube
+# ⚠ `CRAB_CAP_DIAG=<n>` reports every game past `n` actions, capped or not,
+# which is the ONLY way to see a *slow* game: one that decides is never
+# "undecided", and `--decks all --seed 43 --games 370` hides a nine-minute
+# game behind `0 undecided`.
+
+# WHERE DID THAT LIFE COME FROM. Prints every single life adjustment of at
+# least `n` with the seat, the turn and the running total. A compounding
+# source reads as a doubling series, a one-shot as a single row — which is how
+# the `i32::MAX` life totals in the stall sweep were pinned on Beacon of
+# Immortality (1,580 / 3,161 / 6,322 / 12,644, one doubling every other turn).
+CRAB_LIFE_WATCH=1000 target/profiling-fast/bot_ladder --a gang --b gang \
+  --games 400 --threads 2 --seed 53 --decks all
 
 # allocator A/B — mimalloc is the default now, so the *system* allocator is
 # the opt-in side. A feature change on the engine crate is a full rebuild, so
