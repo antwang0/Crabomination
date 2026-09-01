@@ -5574,8 +5574,14 @@ pub fn tendril_of_the_mycotyrant() -> CardDefinition {
 }
 
 /// Pit of Offerings — Land — Cave. Enters tapped. ETB exile up to three target
-/// cards from graveyards. {T}: Add {C}. (The "any of the exiled cards' colors"
-/// mana mode is approximated as colorless.)
+/// cards from graveyards. `{T}: Add {C}.` `{T}: Add one mana of any of the
+/// exiled cards' colors.`
+///
+/// The second mana ability rides `ManaPayload::AnyColorAmongExiledWithSource`,
+/// which needs the ETB exile to stamp `exiled_with` — so the move goes to
+/// `ZoneDest::ExileWithSourceStamp`, not plain `Exile`. It was a bare
+/// `{T}: Add {C}` until 2026-09-01, which the land-mana ratchet had on its
+/// allow-list.
 pub fn pit_of_offerings() -> CardDefinition {
     CardDefinition {
         name: "Pit of Offerings",
@@ -5596,17 +5602,27 @@ pub fn pit_of_offerings() -> CardDefinition {
             filter: SelectionRequirement::InGraveyard,
             effect: Box::new(Effect::Move {
                 what: Selector::Target(0),
-                to: ZoneDest::Exile,
+                to: ZoneDest::ExileWithSourceStamp,
             }),
         })],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(1)),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyColorAmongExiledWithSource,
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

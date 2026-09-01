@@ -3414,3 +3414,48 @@ fn view_surfaces_descended_this_turn_count() {
     assert_eq!(v1.players[0].descended_this_turn_count, 3, "three permanent cards → descended 3×");
     assert_eq!(v1.players[0].descend_count, 3, "graveyard total also three");
 }
+
+/// Pit of Offerings' second mana ability makes a colour of one of the cards
+/// **it** exiled — it was a bare `{T}: Add {C}` until the land-mana ratchet,
+/// and the ability needed a new `ManaPayload` to read those colours.
+#[test]
+fn pit_of_offerings_taps_for_a_color_it_exiled() {
+    use crabomination::game::types::GameAction;
+    let mut g = two_player_game();
+    // A red card and a green one in the opponent's graveyard for it to eat.
+    let bolt = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.add_card_to_graveyard(1, catalog::forest());
+    let pit = g.add_card_to_hand(0, catalog::pit_of_offerings());
+    g.perform_action(GameAction::PlayLand(pit)).expect("play the land");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "the ETB exiled the Bolt");
+    assert!(g.battlefield_find(pit).unwrap().tapped, "and it enters tapped");
+
+    g.battlefield.iter_mut().find(|c| c.id == pit).unwrap().tapped = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pit,
+        ability_index: 1,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("the exiled-colours ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "Bolt is red, so red is legal");
+
+    // The first ability is still the printed colourless one.
+    g.battlefield.iter_mut().find(|c| c.id == pit).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pit,
+        ability_index: 0,
+        target: None,
+        additional_targets: Vec::new(),
+        x_value: None,
+        mode: None,
+    })
+    .expect("{T}: Add {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+}

@@ -1468,6 +1468,7 @@ impl Effect {
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
                     ManaPayload::AnyTypeTriggerSourceProduces
                     | ManaPayload::AnyTypeSacrificedLandProduces
+                    | ManaPayload::AnyColorAmongExiledWithSource
                     | ManaPayload::AnyColorAmongYourPermanents => false,
                     ManaPayload::Restricted(inner, _)
                     | ManaPayload::RestrictedToChosenType(inner)

@@ -10460,6 +10460,34 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
+                    ManaPayload::AnyColorAmongExiledWithSource => {
+                        // Pit of Offerings — the union of printed colours
+                        // among the cards its ETB exiled. Nothing exiled (or
+                        // all of it colourless) means no mana, which is what
+                        // the printing does.
+                        let src = ctx.source.unwrap_or(CardId(0));
+                        let mut legal: Vec<Color> = Vec::new();
+                        for c in self.exile.iter().filter(|c| c.exiled_with == Some(src)) {
+                            for col in c.definition.cost.colors() {
+                                if !legal.contains(&col) {
+                                    legal.push(col);
+                                }
+                            }
+                        }
+                        if !legal.is_empty() {
+                            let color = if legal.len() == 1 {
+                                legal[0]
+                            } else {
+                                self.chosen_mana_color(p, &legal, ctx.source)
+                            };
+                            add_one(self, p, color);
+                            events.push(GameEvent::ManaAdded {
+                                player: p,
+                                color,
+                                source: ctx.source,
+                            });
+                        }
+                    }
                     ManaPayload::DraftNotedColorOfSource => {
                         // Paliano, the High City — the three colors chosen as
                         // this seat drafted cards with the source's name.

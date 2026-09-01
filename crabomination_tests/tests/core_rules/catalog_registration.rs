@@ -2608,13 +2608,9 @@ fn every_land_taps_for_the_mana_it_prints() {
         {
             continue;
         }
-        // ⚠ One allow-list entry, and it is a primitive job: **Pit of
-        // Offerings** prints "{T}: Add one mana of any of the exiled cards'
-        // colors" and no `ManaPayload` reads the colours of cards this
-        // source exiled. Build one and delete the name.
-        if def.name == "Pit of Offerings" {
-            continue;
-        }
+        // The allow-list is empty. It held **Pit of Offerings** ("{T}: Add
+        // one mana of any of the exiled cards' colors") until
+        // `ManaPayload::AnyColorAmongExiledWithSource` was built for it.
         let printed: HashSet<char> =
             printed.iter().filter_map(|v| v.as_str()).filter_map(|s| s.chars().next()).collect();
 

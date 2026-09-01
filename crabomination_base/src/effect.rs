@@ -2349,6 +2349,12 @@ pub enum ManaPayload {
     /// could produce (Squandered Resources). The controller picks among the
     /// sacrificed lands' basic types; a typeless land yields {C}.
     AnyTypeSacrificedLandProduces,
+    /// Add one mana of any color among the cards **exiled with this source**
+    /// (Pit of Offerings — "{T}: Add one mana of any of the exiled cards'
+    /// colors"). The controller picks among the union of those cards'
+    /// printed colors; produces nothing when the union is empty, which is
+    /// the printed behaviour before the ETB exile has found anything.
+    AnyColorAmongExiledWithSource,
     /// Add one mana of any color among legendary creatures and planeswalkers
     /// you control (Mox Amber). The legal-color set is the union of those
     /// permanents' colors; produces nothing when empty.

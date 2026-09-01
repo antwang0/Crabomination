@@ -307,10 +307,11 @@ read this"** rather than "no mana here" when it meets a container it does not
 descend — Rhystic Cave's `unless_anyone_pays` wrapper read as *colourless*
 until the walk started checking its own debug rendering for `AddMana`.
 
-**Open — one allow-list entry, a primitive job.** *Pit of Offerings* prints
-"{T}: Add one mana of any of the exiled cards' colors" and no `ManaPayload`
-reads the colours of cards this source exiled. Build one and delete the name
-from the test.
+**Closed, same pass.** *Pit of Offerings* prints "{T}: Add one mana of any of
+the exiled cards' colors"; `ManaPayload::AnyColorAmongExiledWithSource` is the
+new payload and its ETB exile now goes to `ZoneDest::ExileWithSourceStamp`,
+without which `exiled_with` is never set and the ability would read an empty
+colour set. The ratchet's allow-list is empty.
 
 ### The three arity ratchets — count the printed abilities, not their words
 

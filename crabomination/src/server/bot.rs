@@ -4275,6 +4275,7 @@ fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet
         | ManaPayload::DraftNotedColorOfSource
         | ManaPayload::ImprintedCardColor
         | ManaPayload::AnyColorAmongLegendaries
+        | ManaPayload::AnyColorAmongExiledWithSource
         | ManaPayload::AnyColorAmongYourPermanents => *set = crate::mana::ColorSet::all(),
         ManaPayload::Restricted(inner, _) | ManaPayload::RestrictedToChosenType(inner)
                     | ManaPayload::RestrictedToChosenTypePlain(inner) => {
