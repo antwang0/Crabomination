@@ -2,6 +2,7 @@ use super::*;
 use crate::card::{CardType, Keyword};
 use crate::effect::{Effect, ManaPayload};
 use crate::mana::{Color as ManaColor, ManaSymbol};
+use smallvec::SmallVec;
 
 /// Per-pick snapshot of a permanent sacrificed to an additional cost:
 /// `(id, power, is_creature, toughness, mana_value, is_artifact, is_vehicle,
@@ -12918,10 +12919,23 @@ impl GameState {
         }
         let mut avail_colorless = pool.colorless_amount();
 
-        let mut still_need_colors: Vec<ManaColor> = Vec::new();
+        // Inline rather than `Vec::new()`: both buffers are per-call, hold one
+        // entry per pip of a printed cost, and their first `push` was
+        // ~23,000 of a six-game run's first allocations with no re-growth
+        // (PERF `(-158)`'s census, `malloc` column). A cost with more pips of
+        // one kind than the slots below spills to the heap exactly as before.
+        // One boxed `ScriptedDecider` for the whole payment. Both pip loops
+        // below install a one-answer script on an `AnyOneColor` source and
+        // take it straight back out; building it per pip was a `Box` plus a
+        // `VecDeque` allocation each, and this row is `cube`'s largest engine
+        // allocation site that is not a deliberate `reserve` (PERF `(-159)`).
+        // `None` until the first such source, so a payment that scripts
+        // nothing still allocates nothing.
+        let mut scripted_slot: Option<Box<dyn crate::decision::Decider + Send + Sync>> = None;
+        let mut still_need_colors: SmallVec<[ManaColor; 8]> = SmallVec::new();
         // Hybrid pips are resolved after the fixed-color pass so the
         // pool is drained by the more-constrained colored pips first.
-        let mut hybrids: Vec<(ManaColor, ManaColor)> = Vec::new();
+        let mut hybrids: SmallVec<[(ManaColor, ManaColor); 8]> = SmallVec::new();
         let mut generic: u32 = 0;
 
         for sym in &cost.symbols {
@@ -13082,13 +13096,11 @@ impl GameState {
                 .min_by_key(|&(rank, breadth, ..)| (rank, breadth))
                 .map(|(_, _, id, idx)| (id, idx));
             if let Some((id, idx)) = source {
-                let scripted = crate::decision::ScriptedDecider::new([
-                    crate::decision::DecisionAnswer::Color(color),
-                ]);
-                let prev_decider = std::mem::replace(
-                    &mut self.decider,
-                    Box::new(scripted),
-                );
+                let mut b = scripted_slot
+                    .take()
+                    .unwrap_or_else(|| Box::new(crate::decision::ScriptedDecider::silent()));
+                b.rearm_script(crate::decision::DecisionAnswer::Color(color));
+                let prev_decider = std::mem::replace(&mut self.decider, b);
                 // Force synchronous resolution: if the player normally wants
                 // a UI prompt for `AnyOneColor`, auto-tap must still finish
                 // inline (otherwise the cast aborts mid-payment with a
@@ -13098,7 +13110,7 @@ impl GameState {
                 self.players[player].wants_ui = false;
                 let result = self.activate_ability(id, idx, None, Vec::new(), None, None);
                 crate::game::pay_census::record_tap(3, 1);
-                self.decider = prev_decider;
+                scripted_slot = Some(std::mem::replace(&mut self.decider, prev_decider));
                 self.players[player].wants_ui = prev_wants_ui;
                 if let Ok(mut evs) = result {
                     // One allocation for the batch instead of the
@@ -13125,10 +13137,10 @@ impl GameState {
         // It used to be recomputed per live source per pip. Gated on there
         // being a generic pip at all: most costs have none, and building the
         // ranking is O(sources² × colours).
-        let keep_by_idx: Vec<u32> = if smart && generic_to_tap > 0 {
+        let keep_by_idx: SmallVec<[u32; 16]> = if smart && generic_to_tap > 0 {
             sources.iter().map(|s| s.redundancy(&sources)).collect()
         } else {
-            Vec::new()
+            SmallVec::new()
         };
         for _ in 0..generic_to_tap {
             // Same controller-vs-owner fix as the colored-pip loop.
@@ -13164,14 +13176,15 @@ impl GameState {
                 // Same scripted-decider device as the colored-pip loop:
                 // an `AnyOneColor` source must add the fresh color, not
                 // the AutoDecider's default White.
-                let scripted = crate::decision::ScriptedDecider::new([
-                    crate::decision::DecisionAnswer::Color(color),
-                ]);
-                let prev_decider = std::mem::replace(&mut self.decider, Box::new(scripted));
+                let mut b = scripted_slot
+                    .take()
+                    .unwrap_or_else(|| Box::new(crate::decision::ScriptedDecider::silent()));
+                b.rearm_script(crate::decision::DecisionAnswer::Color(color));
+                let prev_decider = std::mem::replace(&mut self.decider, b);
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
                 let r = self.activate_ability(id, idx, None, Vec::new(), None, None);
-                self.decider = prev_decider;
+                scripted_slot = Some(std::mem::replace(&mut self.decider, prev_decider));
                 self.players[player].wants_ui = prev_wants_ui;
                 r
             } else {

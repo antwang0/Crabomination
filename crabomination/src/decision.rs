@@ -512,6 +512,12 @@ pub trait Decider {
     fn kind(&self) -> DeciderKind {
         DeciderKind::Auto
     }
+    /// Re-point a scripted decider at a single answer, keeping its buffers.
+    /// Default: a no-op, because a decider with no script has nothing to
+    /// re-arm. It exists so a hot caller can hold **one** boxed
+    /// `ScriptedDecider` across a loop instead of boxing a fresh one per
+    /// iteration (`auto_tap_for_cost_inner`, PERF `(-159)`).
+    fn rearm_script(&mut self, _answer: DecisionAnswer) {}
 }
 
 /// Tagged, serializable representation of every decider implementation
@@ -539,6 +545,7 @@ impl DeciderKind {
             DeciderKind::Scripted { answers, asked } => Box::new(ScriptedDecider {
                 answers: answers.into_iter().collect(),
                 asked,
+                log: true,
             }),
         }
     }
@@ -684,10 +691,25 @@ impl Decider for AutoDecider {
 
 /// Pre-scripted decider for tests. Pops answers in FIFO order; falls back to
 /// `AutoDecider` when exhausted. Records every decision it saw for assertions.
-#[derive(Debug, Default)]
+///
+/// `answers` is inline rather than a `VecDeque`: a script is one or two
+/// answers, and the engine's own scripts (auto-tap's colour pick) built one
+/// per pip — a queue allocation each. `remove(0)` on two slots is cheaper
+/// than the ring buffer it replaces.
+#[derive(Debug)]
 pub struct ScriptedDecider {
-    answers: std::collections::VecDeque<DecisionAnswer>,
+    answers: smallvec::SmallVec<[DecisionAnswer; 2]>,
     pub asked: Vec<Decision>,
+    /// Whether `decide` logs to `asked`. On for every scripted *test*; off
+    /// for [`silent`](Self::silent), which the engine's internal scripts use
+    /// and whose log nothing reads.
+    log: bool,
+}
+
+impl Default for ScriptedDecider {
+    fn default() -> Self {
+        Self::new([])
+    }
 }
 
 impl ScriptedDecider {
@@ -695,7 +717,16 @@ impl ScriptedDecider {
         Self {
             answers: answers.into_iter().collect(),
             asked: Vec::new(),
+            log: true,
         }
+    }
+
+    /// An empty script that does not record what it was asked. For engine
+    /// paths that install a one-answer script and throw it away —
+    /// `auto_tap_for_cost_inner` re-arms one per pip through
+    /// [`Decider::rearm_script`].
+    pub fn silent() -> Self {
+        Self { answers: smallvec::SmallVec::new(), asked: Vec::new(), log: false }
     }
 }
 
@@ -707,9 +738,18 @@ impl Decider for ScriptedDecider {
         }
     }
     fn decide(&mut self, decision: &Decision) -> DecisionAnswer {
-        self.asked.push(decision.clone());
-        self.answers
-            .pop_front()
-            .unwrap_or_else(|| AutoDecider.decide(decision))
+        if self.log {
+            self.asked.push(decision.clone());
+        }
+        if self.answers.is_empty() {
+            AutoDecider.decide(decision)
+        } else {
+            self.answers.remove(0)
+        }
+    }
+    fn rearm_script(&mut self, answer: DecisionAnswer) {
+        self.answers.clear();
+        self.answers.push(answer);
+        self.asked.clear();
     }
 }
