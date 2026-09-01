@@ -10469,6 +10469,65 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-twentieth pass — `(-154)` two damage histories nobody reads: `cube` -0.148 % at six games, **-0.224 % at eighteen**
+
+```text
+  pool / games   4d97201e (base)   candidate       delta
+  cube / 6       2,449,557,704     2,445,929,400   -0.1481 %
+  cube / 18      5,818,616,409     5,805,562,243   -0.2244 %
+  fixed / 6        902,088,166       899,712,219   -0.2634 %
+```
+
+**`(-149)`'s class again, and this time the write was not merely wasted — it
+was an unshare.** Three tallies, each read by exactly one card:
+
+* `damaged_players_this_game` / `damaged_permanents_this_game` — The Fallen
+  (`Selector::DamagedBySourceThisGame`). The non-combat recorder read
+  `battlefield_find_mut(src)` **before** the `contains` check that decides
+  whether anything is pushed, so every damage event in the game deep-copied
+  the whole battlefield zone to append nothing.
+* `damage_by_source_name_this_turn` — Blazing Effigy
+  (`Value::DamageToSourceThisTurnFromOthersNamedSame`). Its `Vec` lives in the
+  hot `CardData` group and was cloned on every unshare carrying entries
+  nobody could read.
+
+Both are gated on the definition asking, through the same `debug_flag` word
+`(-149)` added.
+
+⚠ **THE GATE'S WIN GROWS WITH GAME COUNT AND THE THING IT COSTS DOES NOT** —
+which is why the six-game number understates it by a third. `debug_flags`
+`format!`s the definition **233 times in a six-game `cube` run and 233 times
+in a thirty-thousand-game one**: once per distinct card name per process.
+Measured at two game counts on the same binary:
+
+```text
+                                  6 games      18 games     ratio
+  is_contained_in (the {:?} scan)  3,484,674     4,200,617   x1.21   <- names, not games
+  CardDefinition::debug_flags        883,151     2,308,960   x2.61   <- per call
+  the gate's delta                  -0.1481 %     -0.2244 %
+```
+
+**Ask a row whether it saturates before you price it** — PERF's "How to
+measure" says so about `wants_converge` and this is the same row under a new
+name.
+
+⚠ **The gate's own lookup is not free, and folding it into a scan that was
+already there did not help.** The combat path had a `battlefield.find_by_id`
+for the Changeling/prowl walk two lines above; hanging `remembers` off it
+instead of a second `find_by_id` read `cube` **+0.02 %** and `fixed`
+**-0.003 %** — i.e. nothing, twice, in opposite directions. At
+`codegen-units = 16` that is inlining noise, not a device. The folded form is
+kept because it is the honest shape (one scan, not two), not because it
+measured better.
+
+**What this pass cost, stated plainly.** It rides a card fix — The Fallen
+never recorded its *combat* victims at all — and that fix, ungated, read
+`cube` **+0.294 %** / `fixed` **+0.320 %**: a `battlefield_find_mut` per
+combat damage event. The gate takes most of it back and the residual is
+~0.025 % of steady-state play plus a first-touch that does not scale. **A
+correctness fix on a hot path is priced like an optimization, and the price is
+paid in the same commit that names it.**
+
 ### Hundred-and-nineteenth pass — `(-152)` the CR 704.5d token sweep: `cube` -0.422 %, `fixed` -0.376 %, and **`PlayerData`'s size is an allocator size-class question**
 
 Two commits on one subject. The device is a zone memo; the first commit is the
@@ -10571,7 +10630,6 @@ clippy  --workspace --exclude crabomination_client --all-targets   clean
 sizes   `PlayerData` 1,016 -> 976 -> 992; `CardPile` 16, `Graveyard` 16,
         `GameState` 1,424 unchanged (exile's eight bytes landed in padding)
 ```
-
 ### Hundred-and-eighteenth pass — `(-150)` a four-byte `CastProfile`: `cube` -0.297 %, `fixed` -0.286 %
 
 ```text
@@ -19577,6 +19635,14 @@ another micro-row — it is either taking `(-145)` with the Miri'd `unsafe` box
 and an explicit decision that the trade is wanted, or accepting that the
 profile is at its floor for this shape of engine and spending runs on the
 build lever (PGO, which is measured at -23 % and opt-in) instead.
+**(-154) CLOSED — see the hundred-and-twentieth pass.** `cube` **-0.224 %**
+at eighteen games (-0.148 % at six) / `fixed` **-0.263 %** for gating three
+damage tallies on the one card each serves. ⚠ **The `debug_flag` word is now
+the vehicle for this whole class and it has a fixed cost**: 233 `format!`s a
+process, once per distinct card name, five `contains` over each. Adding a
+sixth flag is free at run scale and adds ~0.7 M Ir to a six-game dump — read
+a six-game number for a new flag as an overstatement.
+
 **(-150) CLOSED — see the hundred-and-eighteenth pass.** `cube` **-0.297 %** /
 `fixed` **-0.286 %** for making `CastProfile` four bytes and `Copy`. **The hot
 player group is now done**: what is left in `PlayerData` is nine `Vec`s that

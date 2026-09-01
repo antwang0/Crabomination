@@ -142,8 +142,40 @@ fn blazing_effigy_adds_damage_from_its_namesakes() {
         &ctx,
     )
     .expect("ping");
+    assert_eq!(
+        g.battlefield_find(effigy).expect("effigy").damage_by_source_name_this_turn,
+        vec![("Blazing Effigy", 2)],
+        "the Effigy remembers what its namesake burned into it",
+    );
     kill(&mut g, effigy);
     assert!(g.battlefield_find(turtle).is_none(), "3 + 2 kills a 2/4");
+}
+
+/// The negative half of that tally's gate (PERF `(-154)`): a card whose text
+/// never asks how much its namesakes have burned it records nothing, so the
+/// `Vec` stays empty in the hot `CardData` group it lives in.
+#[test]
+fn a_creature_that_never_asks_records_no_per_name_damage() {
+    use crabomination::effect::{Effect, Selector, Value};
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let namesake = g.add_card_to_graveyard(1, catalog::blazing_effigy());
+    let ctx = crabomination::game::effects::EffectContext::for_ability(
+        namesake,
+        1,
+        Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(
+        &Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        &ctx,
+    )
+    .expect("ping");
+    let b = g.battlefield_find(bear).expect("bear");
+    assert_eq!(b.damage, 1, "the damage still lands");
+    assert!(
+        b.damage_by_source_name_this_turn.is_empty(),
+        "nothing reads a Bear's per-name damage, so nothing records it",
+    );
 }
 
 /// Brine Hag permanently shrinks whatever killed it. The first-striking

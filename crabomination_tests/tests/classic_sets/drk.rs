@@ -493,6 +493,26 @@ fn the_fallen_bleeds_every_player_it_has_damaged_in_combat() {
     assert_eq!(g.players[1].life, 17, "the upkeep trigger found the remembered victim");
 }
 
+/// The same history is **not** kept for a creature that cannot read it — the
+/// negative half of the gate that stops every attacker in the game from
+/// unsharing the battlefield to append to a list only The Fallen reads
+/// (PERF `(-154)`).
+#[test]
+fn a_creature_that_never_asks_records_no_damage_history() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "2 combat damage");
+    assert!(
+        g.battlefield_find(bear).expect("bear").damaged_players_this_game.is_empty(),
+        "nothing reads a Bear's damage history, so nothing records it",
+    );
+}
+
 #[test]
 fn banshee_splits_x_between_a_target_and_you() {
     let mut g = main_phase();

@@ -5305,6 +5305,13 @@ pub(crate) mod debug_flag {
     pub const CONVERGE: u8 = 1 << 0;
     /// The card asks how many spells with its own name were cast this game.
     pub const OWN_NAME_CASTS: u8 = 1 << 1;
+    /// The card asks which players and planeswalkers **it** has damaged this
+    /// game (`Selector::DamagedBySourceThisGame` — The Fallen).
+    pub const DAMAGE_VICTIMS: u8 = 1 << 2;
+    /// The card asks how much damage sources **sharing its name** have dealt
+    /// it this turn (`Value::DamageToSourceThisTurnFromOthersNamedSame` —
+    /// Blazing Effigy).
+    pub const DAMAGE_BY_NAME: u8 = 1 << 3;
 }
 
 impl CardDefinition {
@@ -5775,6 +5782,28 @@ impl CardDefinition {
         self.debug_flags() & debug_flag::OWN_NAME_CASTS != 0
     }
 
+    /// Whether this card remembers **who it has damaged this game**
+    /// (`Selector::DamagedBySourceThisGame`, which is The Fallen and nothing
+    /// else in the tree).
+    ///
+    /// The damage paths gate their two "this game" tallies on this. Recording
+    /// for every source cost a `battlefield_find_mut` — an unshare of the
+    /// whole battlefield — on every damage event, and in the non-combat path
+    /// that unshare happened *before* the `contains` check that decides
+    /// whether anything is pushed at all. See PERF `(-154)`.
+    pub fn remembers_damage_victims(&self) -> bool {
+        self.debug_flags() & debug_flag::DAMAGE_VICTIMS != 0
+    }
+
+    /// Whether this card asks how much damage sources sharing its name have
+    /// dealt it this turn (`Value::DamageToSourceThisTurnFromOthersNamedSame`,
+    /// which is Blazing Effigy and nothing else). Gates
+    /// `record_damage_from_named`, whose `Vec` is otherwise cloned on every
+    /// `CardData` unshare carrying entries nobody can read. PERF `(-154)`.
+    pub fn counts_damage_by_source_name(&self) -> bool {
+        self.debug_flags() & debug_flag::DAMAGE_BY_NAME != 0
+    }
+
     /// The `{:?}`-derived per-definition flags, all answered by **one** scan
     /// behind **one** cache.
     ///
@@ -5818,6 +5847,12 @@ impl CardDefinition {
                 }
                 if dbg.contains("CastOwnNameThisGameAtLeast") {
                     v |= debug_flag::OWN_NAME_CASTS;
+                }
+                if dbg.contains("DamagedBySourceThisGame") {
+                    v |= debug_flag::DAMAGE_VICTIMS;
+                }
+                if dbg.contains("DamageToSourceThisTurnFromOthersNamedSame") {
+                    v |= debug_flag::DAMAGE_BY_NAME;
                 }
                 cache.write().unwrap().insert(name.to_string(), v);
                 v

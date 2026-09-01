@@ -1331,7 +1331,16 @@ impl GameState {
                     self.in_damage_redirect = false;
                 }
                 // The Fallen — the source remembers who it has bled, forever.
+                //
+                // ⚠ The definition gate comes **first**, and it is the whole
+                // point: `battlefield_find_mut` unshares the battlefield, so
+                // asking it before the `contains` check paid a full zone deep
+                // copy on every damage event for a list only The Fallen can
+                // read. One immutable scan replaces it. PERF `(-154)`.
                 if let Some(src) = source
+                    && self
+                        .battlefield_find(src)
+                        .is_some_and(|c| c.definition.remembers_damage_victims())
                     && let Some(c) = self.battlefield_find_mut(src)
                     && !c.damaged_players_this_game.contains(&p)
                 {
@@ -1594,11 +1603,15 @@ impl GameState {
                     let source_name = source
                         .filter(|s| *s != cid)
                         .and_then(|s| self.find_card_anywhere(s).map(|c| c.definition.name));
+                    // Same gate, same reason (PERF `(-154)`).
                     if let Some(src) = source
                         && src != cid
                         && self
                             .battlefield_find(cid)
                             .is_some_and(|c| c.definition.is_planeswalker())
+                        && self
+                            .battlefield_find(src)
+                            .is_some_and(|c| c.definition.remembers_damage_victims())
                         && let Some(c) = self.battlefield_find_mut(src)
                         && !c.damaged_permanents_this_game.contains(&cid)
                     {
@@ -1617,7 +1630,12 @@ impl GameState {
                             c.damaged_by_this_turn.push(src);
                             c.record_damage_from(src, amount);
                         }
-                        if let Some(name) = source_name {
+                        // Blazing Effigy is the only card that reads this
+                        // tally, and its `Vec` was cloned on every `CardData`
+                        // unshare carrying entries nobody could read.
+                        if let Some(name) = source_name
+                            && c.definition.counts_damage_by_source_name()
+                        {
                             c.record_damage_from_named(name, amount);
                         }
                     }

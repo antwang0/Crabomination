@@ -4397,8 +4397,13 @@ impl GameState {
                     // CR 702.76 — Prowl window: record the damaging creature's
                     // types for its controller (Changeling counts as every
                     // type, recorded via the controller-side any flag).
+                    // ⚠ `remembers` rides the scan that is already here.
+                    // Asking for it with a second `find_by_id` cost more than
+                    // the gate saved on `fixed` — see PERF `(-154)`.
+                    let mut remembers = false;
                     if let Some(c) = self.battlefield.find_by_id(atk.id) {
                         let ctrl = c.controller;
+                        remembers = c.definition.remembers_damage_victims();
                         if c.definition.keywords.has_kw(&Keyword::Changeling) {
                             self.players[ctrl].prowl_any_type_this_turn = true;
                         }
@@ -4414,7 +4419,13 @@ impl GameState {
                     // path here and never reached the recorder in
                     // `deal_damage_to_from`, so a 2/3 Zombie whose whole text
                     // is its combat victims remembered none of them.
-                    if let Some(c) = self.battlefield_find_mut(atk_id)
+                    //
+                    // Gated on the definition asking (PERF `(-154)`): the
+                    // mutable find is an unshare of the whole battlefield, and
+                    // every attacker in the game would pay it for a list only
+                    // The Fallen can read.
+                    if remembers
+                        && let Some(c) = self.battlefield_find_mut(atk_id)
                         && !c.damaged_players_this_game.contains(&p)
                     {
                         c.damaged_players_this_game.push(p);
