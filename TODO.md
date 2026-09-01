@@ -31,7 +31,9 @@ sixty-seventh pass, so don't re-take that.
 2. **Gates at `(-169)`:** suite **19,197 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
    `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**, determinism
    ok. Sweeps: 5 seeds / 68,000 games `--decks all` run on **both** binaries at every leg, stdout
-   **byte-identical seed for seed**. ⚠ **Leave seed 43 out of a timed loop** — the nine-minute
+   **byte-identical seed for seed**; and, at the two bug-fix commits after it, **26 seeds /
+   176,800 games plus 20 seeds / 96,000 `--decks sealed` under `debug-assertions` +
+   `overflow-checks`** (item 8), suite **19,198 / 0 / 5**. ⚠ **Leave seed 43 out of a timed loop** — the nine-minute
    Scute Swarm game that *decides*, so `0 undecided` never sees it. Sweeps + closed leads:
    **ENGINE_BACKLOG**.
 3. **The run took -3.20 % `fixed` / -2.73 % `cube` / -2.94 % `sealed` over four legs**, confirmed
@@ -68,11 +70,21 @@ sixty-seventh pass, so don't re-take that.
    `color_identity` (⚠ `format::color_identity` never reads rules-text mana symbols — CR 903.4c,
    so every dual land will look wrong and the gap is real), activated-ability *count* on
    nonlands, token definitions. ⚠ **A python auditor's zero is suspect — check its population.**
-8. **Robustness green, P2 has no open correctness lead.** `audit_panics` 0 bare,
-   `audit_keyword_drift` 0 invented, `audit_variant_coverage` 2 dead primitives (both want a
-   card), `audit_target_fields` / `audit_target_walkers` clean, `audit_incomplete --structural`
-   one triaged finding. ⚠ **Peak RSS moved 19.4 → 20.3 MiB and it is the two pools, not a leak**:
-   32 `ComputedPermanent`s and 4 effect lists **per thread**, both bounded by a `const`.
+8. **⚠ RUN THE `debug-assertions` SWEEP EVERY FEW PASSES — IT FOUND THREE SHIPPED BUGS AND
+   NOTHING ELSE SEES THEM.** `RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit
+   cargo build --profile overflow`, then `--games 400 --threads 3 --decks all` / `--decks sealed`.
+   A `debug_assert!` is compiled out and an overflow *wraps*, so the plain sweep reads the same
+   games clean. Found: a **graveyard-only ability functioning on the battlefield** (and accepted
+   without its mana — 103 abilities carry the flag), and **two silent wraps on the Beacon of
+   Immortality board** — the race check reads "we lose next turn" and the material term scores
+   unbounded life as *losing*. ⚠ **A closed *stall* lead is not a closed board: ask what else
+   reads the number that made it unusual.** Clean after, 176,800 + 96,000 + 6,000 games.
+   Write-up: **ENGINE_BACKLOG's first section**. The four syntax audits stay green
+   (`audit_panics` 0 bare, `audit_keyword_drift` 0 invented, `audit_variant_coverage` 2 dead
+   primitives, `audit_target_fields` / `audit_target_walkers` clean, `audit_incomplete
+   --structural` one triaged finding) — **and none of them could reach any of the three**.
+   ⚠ **Peak RSS moved 19.4 → 20.3 MiB and it is the two pools, not a leak**: 32
+   `ComputedPermanent`s and 4 effect lists **per thread**, both bounded by a `const`.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

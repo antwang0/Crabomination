@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [The `debug-assertions` sweep found three real defects — and the Beacon board is where all three live](#the-debug-assertions-sweep-found-three-real-defects--and-the-beacon-board-is-where-all-three-live) | 48 |
 | Bugs & robustness | [CLOSED — the two stall-sweep leads, and why neither is a bug](#closed--the-two-stall-sweep-leads-and-why-neither-is-a-bug) | 28 |
 | Bugs & robustness | [CLOSED — what the seeded cube smoke test left behind (eighty-fifth pass)](#closed--what-the-seeded-cube-smoke-test-left-behind-eighty-fifth-pass) | 72 |
 | Bugs & robustness | [Engine correctness audit — 2026-06-11](#engine-correctness-audit--2026-06-11) | 83 |
@@ -34,7 +35,63 @@ the handoff.
 
 # Bugs & robustness
 
+## The `debug-assertions` sweep found three real defects — and the Beacon board is where all three live
+
+**Run because nothing had, for thirty-odd passes.** `RUSTFLAGS="-C
+debug-assertions=yes" CARGO_TARGET_DIR=target-audit cargo build --profile
+overflow`, then `--a gang --b gang --games 400 --threads 3 --decks all` over 26
+seeds (176,800 games), plus 20 seeds of `--decks sealed` (96,000 games — the
+deck builder a training actor runs twice a game) and six of `--decks sos`. The plain `release-fast` sweep this file already carries
+runs the same games and reads them all clean; **the two profiles are not the
+same instrument**, and the difference is three shipped bugs.
+
+```text
+  seed  what fired
+    2   debug_assert  main_phase gate sink::AB_TOKEN skipped a real action
+   53   overflow      bot.rs  (life + clock - 1) / clock        } the same
+   73   overflow      bot.rs  (4 * hand + emblems + crown) * unit + life_value
+```
+
+**All three are silent in release.** A `debug_assert!` is compiled out; an
+overflow *wraps*. That is the whole argument for the profile: the five syntax
+filters in this file cannot reach a wrap, and the suite cannot either — a wrap
+needs a board, and 19,198 tests carry fewer interesting boards than 400 games of
+`--decks all`.
+
+**(1) A graveyard-only ability functioned on the battlefield.**
+`activate_ability_inner` had four wrong-zone gates and only in one direction.
+Eternal Student's "{1}{B}, Exile this card from your graveyard: create two
+Inklings" was activatable while it was a 4/2 in play, and the payment path —
+asked to exile a graveyard card that is on the battlefield — **accepted the
+activation without the mana** (one blue against `{1}{B}`). 103 catalog abilities
+carry `from_graveyard`, 40 `from_hand`, 4 `from_command_zone`. The mirror gate
+closes the class.
+⚠ **The bot's presence-gate audit is what caught it, and it caught an ENGINE bug
+rather than a gate bug** — `colors_coverable` was right and `would_accept` was
+wrong. A gate audit that fires is not automatically a gate to widen.
+
+**(2) and (3) are the same board: Beacon of Immortality, twice.** The closed
+stall lead above says life doubles to `i32::MAX` and the game caps. It does
+more than that on the way: `pick_attacks_inner`'s race check
+`(life + clock - 1) / clock` wraps *negative*, which reads as "the opponent
+kills us before our next untap", so **the bot stops racing exactly when it is
+being raced**; and `life_value` multiplies the total three different ways, so
+the whole material term wraps and **the seat with unbounded life evaluates as
+the one that is losing**. `turns_to_lethal` removes the addition; `life_value`
+clamps at 10,000, far past anything the evaluator has to tell apart.
+
+⚠ **The transferable half: a *closed* stall lead is not a closed board.** This
+file recorded Beacon as "a correct card doing what it prints, 4 games in
+183,600" and stopped there. Every arithmetic path that reads a life total was
+wrong on those four games, and two of them changed what the bot *did* rather
+than only what it reported. **When a sweep files a board as benign, ask what
+else reads the number that made it unusual.**
+
 ## CLOSED — the two stall-sweep leads, and why neither is a bug
+
+⚠ **Read the section above first: the Beacon lead is closed as a *stall* and was
+not closed as a *board*.** Two of the bot's arithmetic paths wrapped on it, both
+silently in release, and neither shows in any `release-fast` sweep.
 
 A `--games 400 --decks all` sweep over 27 seeds (183,600 games at `22a79dcc`)
 found **no panic, no hang, 4 capped, 22 draws**. Both leads are closed as
