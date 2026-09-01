@@ -492,37 +492,57 @@ pub fn rite_of_renewal() -> CardDefinition {
     }
 }
 
-/// Dalkovan Encampment — a Warrior-making land that taps for two on demand.
+/// Dalkovan Encampment — Land. Enters tapped unless you control a Swamp or a
+/// Mountain. `{T}: Add {W}.` `{2}{W}, {T}:` two 1/1 red Warriors, tapped and
+/// attacking.
+///
+/// ⚠ **All three shipped abilities were somebody else's card**: a free
+/// `{T}: Add {C}`, a `{1}, {T}` that made {R} or {W}, and a
+/// `{3}{R}{W}, {T}, Sacrifice` that minted the Warriors off-combat. The
+/// printed land makes **only white**, which is what the mana ratchet caught.
+///
+/// Residual: the printed third ability is a *delayed* "whenever you attack
+/// this turn", and the tokens go at the beginning of the next end step. The
+/// engine has `OnMatchingAttacksThisTurn` (per attacker, so it over-fires)
+/// and no once-per-combat delayed attack trigger, so the tokens are minted
+/// immediately and cleaned up at end of combat — strictly *worse* than the
+/// printing (you must activate after attackers are declared), which is the
+/// safe direction for an approximation.
 pub fn dalkovan_encampment() -> CardDefinition {
     CardDefinition {
         name: "Dalkovan Encampment",
         card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "This land enters tapped unless you control a Swamp or a Mountain.",
+            effect: StaticEffect::EntersTappedUnless {
+                applies_to: Selector::This,
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        R::HasLandType(crate::card::LandType::Swamp)
+                            .or(R::HasLandType(crate::card::LandType::Mountain))
+                            .and(R::ControlledByYou),
+                    ),
+                    n: Value::ONE,
+                },
+            },
+        }],
         activated_abilities: vec![
             ActivatedAbility {
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::Colorless(Value::ONE),
+                    pool: ManaPayload::OfColor(Color::White, Value::ONE),
                 },
                 ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: true,
-                mana_cost: cost(&[generic(1)]),
-                effect: Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::OfColors(vec![Color::Red, Color::White], Value::ONE),
-                },
-                ..Default::default()
-            },
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: cost(&[generic(3), r(), w()]),
-                sac_cost: true,
-                effect: Effect::CreateToken {
+                mana_cost: cost(&[generic(2), w()]),
+                effect: Effect::CreateTokenAttacking {
                     who: PlayerRef::You,
                     count: Value::Const(2),
                     definition: Box::new(warrior_token()),
+                    cleanup: crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
                 },
                 ..Default::default()
             },

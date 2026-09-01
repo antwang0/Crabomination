@@ -145,40 +145,44 @@ fn magda_brazen_outlaw_pumps_other_dwarves() {
     assert_eq!(c.toughness, 2, "toughness unchanged by +1/+0");
 }
 
+/// Three Tree City taps for {C}, and its second ability scales on the
+/// creature type it named as it entered — it shipped as Gemstone Mine
+/// (charge counters, sacrifice on the last) under this name.
 #[test]
-fn three_tree_city_enters_with_charge_and_taps_for_any_color() {
+fn three_tree_city_taps_for_colorless_then_scales_on_the_named_type() {
     let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::CreatureType(crabomination::card::CreatureType::Bear),
+        DecisionAnswer::Color(Color::Green),
+    ]));
     let id = g.add_card_to_hand(0, catalog::three_tree_city());
     g.perform_action(GameAction::PlayLand(id)).unwrap();
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 3,
-        "Three Tree City enters with three charge counters");
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::Charge),
+        0,
+        "no charge counters — that was Gemstone Mine"
+    );
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
-    .expect("{T}, remove a charge: add one mana of any color");
+    .expect("the free colorless mana ability");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "produced blue mana");
-    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 2,
-        "one charge counter spent");
-}
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "the printed colorless ability");
+    assert!(g.battlefield_find(id).is_some(), "and it does not sacrifice itself");
 
-#[test]
-fn three_tree_city_sacrifices_itself_when_last_charge_removed() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::three_tree_city());
-    // Seed with a single charge so the next activation empties it.
-    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 1);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    // Two Bears out, {2} paid → the second ability makes two green.
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hill_giant()); // not a Bear
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: id, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
     })
-    .expect("removing the last charge taps for mana");
+    .expect("{2}, {T}: choose a color, add one per creature of the named type");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "produced green mana");
-    assert!(g.battlefield_find(id).is_none(), "sacrificed once charges hit zero");
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "in the graveyard");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "one per Bear, the Giant excluded");
 }
 
 /// The printed cost is "{T}, Sacrifice **another creature**" — it was a land

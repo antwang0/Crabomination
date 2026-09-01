@@ -2586,16 +2586,26 @@ fn mox_sapphire_taps_for_blue() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "Mox Sapphire adds blue mana");
 }
 
+/// Planar Nexus taps for {C} free and for any colour with {1} — it shipped
+/// as an ETB-tapped land whose only ability was a *free* any-colour tap.
 #[test]
-fn planar_nexus_taps_for_any_color() {
+fn planar_nexus_taps_for_colorless_free_and_any_color_for_one() {
     let mut g = two_player_game();
-    let nexus = g.add_card_to_battlefield(0, catalog::planar_nexus());
-    g.clear_sickness(nexus);
+    let nexus = g.add_card_to_hand(0, catalog::planar_nexus());
+    g.perform_action(GameAction::PlayLand(nexus)).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(nexus).unwrap().tapped, "it does not enter tapped");
     g.perform_action(GameAction::ActivateAbility {
         card_id: nexus, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Planar Nexus mana ability activates");
+    }).expect("the free colorless mana ability");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.total(), 1, "Planar Nexus adds one mana of any color");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "the free ability makes colorless");
+    g.battlefield.iter_mut().find(|c| c.id == nexus).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nexus, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("the any-colour ability for one");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "the colorless paid for the any-colour ability");
 }
 
 #[test]

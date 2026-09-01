@@ -20442,26 +20442,37 @@ pub fn stonecoil_serpent() -> CardDefinition {
     }
 }
 
-/// Planar Nexus — Land. ETB tapped. {T}: Add any color.
+/// Planar Nexus — Land. `{T}: Add {C}.` `{1}, {T}: Add one mana of any color.`
+///
+/// ⚠ It shipped as an **ETB-tapped** land whose only ability was a free
+/// `{T}: any color` — neither half printed. The printed "this land is every
+/// nonbasic land type" is still dropped: `StaticEffect::GrantAllBasicLandTypes`
+/// is the basic-type sibling and there is no nonbasic one. Nonbasic types
+/// produce no mana, so the drop costs nothing the mana ratchet can see.
 pub fn planar_nexus() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Planar Nexus",
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![etb(Effect::Tap {
-            what: Selector::This,
-        })],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
             },
-            ..Default::default()
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
@@ -20806,76 +20817,48 @@ pub fn exquisite_firecraft() -> CardDefinition {
 }
 
 /// Three Tree City — Legendary Land.
-/// "Three Tree City enters with three charge counters on it.
-///  {T}, Remove a charge counter: Add one mana of any color.
-///  When the last charge counter is removed, sacrifice Three Tree City."
+/// "As Three Tree City enters, choose a creature type.
+///  {T}: Add {C}.
+///  {2}, {T}: Choose a color. Add an amount of mana of that color equal to
+///  the number of creatures you control of the chosen type."
 ///
-/// Enters with 3 charge counters via ETB trigger; `{T}, remove a charge
-/// counter: add one mana of any color`. The "when the last charge counter
-/// is removed, sacrifice" rider folds into the ability's resolution (remove
-/// → add mana → if no counters left, sacrifice), matching Gemstone Mine.
+/// ⚠ It shipped as **Gemstone Mine** under this name — three charge counters,
+/// `{T}`-remove-a-counter for any colour, sacrifice on the last. Neither the
+/// counters nor the sacrifice is printed here, and the `{T}: Add {C}` that is
+/// printed was missing.
 pub fn three_tree_city() -> CardDefinition {
-    use crate::card::{ActivatedAbility, CounterType};
-    use crate::effect::ZoneDest;
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Three Tree City",
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Land],
-        triggered_abilities: vec![etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::Charge,
-            amount: Value::Const(3),
-        })],
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Charge,
-                    amount: Value::Const(1),
-                },
-                Effect::AddMana {
+        // "As this enters, choose a creature type" — stamped on the land
+        // itself, which is what `IsSourceChosenCreatureType` below reads.
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    pool: ManaPayload::Colorless(Value::Const(1)),
                 },
-                Effect::If {
-                    cond: Predicate::ValueAtMost(
-                        Value::CountersOn {
-                            what: Box::new(Selector::This),
-                            kind: CounterType::Charge,
-                        },
-                        Value::Const(0),
-                    ),
-                    then: Box::new(Effect::Move {
-                        what: Selector::This,
-                        to: ZoneDest::Graveyard,
-                    }),
-                    else_: Box::new(Effect::Noop),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    // `AnyOneColor(n)` *is* "choose a color, add n of it".
+                    pool: ManaPayload::AnyOneColor(Value::count(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::IsSourceChosenCreatureType),
+                    ))),
                 },
-            ]),
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: Some(Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::Charge,
-                },
-                Value::Const(1),
-            )),
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
-            ..Default::default()
-        }],
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

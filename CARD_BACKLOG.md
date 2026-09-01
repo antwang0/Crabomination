@@ -273,6 +273,45 @@ guarded in the CR 704.5m orphan sweep:
   ETB exile; the other two enchant a creature and could take the ordinary
   `Attach { what: This, to: target_filtered(..) }` cast effect.
 
+### The land-mana ratchet — three lands were somebody else's card
+
+`every_land_taps_for_the_mana_it_prints` joins on `produced_mana` and walks
+the definition's `AddMana` payloads, both directions, over **628 lands**.
+
+* **Three Tree City shipped as Gemstone Mine** — three charge counters, a
+  `{T}`-remove-a-counter any-colour ability, sacrifice on the last. None of
+  that is printed; the printed `{T}: Add {C}` was missing. Rewritten to the
+  printed card (name a creature type on ETB, `{T}: Add {C}`, `{2}, {T}`
+  scaling on that type via `AnyOneColor(count)`).
+* **Planar Nexus** shipped ETB-tapped with a *free* any-colour tap; the
+  printed land does not enter tapped, taps for `{C}` free, and charges `{1}`
+  for the colour. Residual: "this land is every nonbasic land type" is
+  dropped — `GrantAllBasicLandTypes` is the basic-type sibling and there is
+  no nonbasic one. Nonbasic types make no mana, so the drop is invisible here.
+* **Dalkovan Encampment**'s three abilities were all somebody else's: a free
+  `{T}: Add {C}`, a `{1}, {T}` for R or W, and a `{3}{R}{W}, {T}, Sacrifice`
+  that minted Warriors off-combat. It makes **only white**. Residual: the
+  printed muster is a *delayed* "whenever you attack this turn" and the
+  engine has no once-per-combat delayed attack trigger
+  (`OnMatchingAttacksThisTurn` fires per attacker), so the tokens mint
+  immediately and clean up at end of combat — strictly worse than printed,
+  which is the safe direction.
+
+**Four structural gates carry the false positives, and each was a finding:**
+a basic land type produces its colour intrinsically (Gingerbread Cabin);
+a static that grants a land *type* makes the land tap for that colour
+(Urborg, Yavimaya); a static that grants a mana ability elsewhere counts
+toward `produced_mana` (Forgotten Monument, Riftstone Portal); and a saga
+chapter can grant one (Urza's Saga). ⚠ **And the walk must say "I did not
+read this"** rather than "no mana here" when it meets a container it does not
+descend — Rhystic Cave's `unless_anyone_pays` wrapper read as *colourless*
+until the walk started checking its own debug rendering for `AddMana`.
+
+**Open — one allow-list entry, a primitive job.** *Pit of Offerings* prints
+"{T}: Add one mana of any of the exiled cards' colors" and no `ManaPayload`
+reads the colours of cards this source exiled. Build one and delete the name
+from the test.
+
 ### Open — Geyadrone Dihada's abilities are not this card's
 
 Turned up beside its starting loyalty (3 against a printed 4, fixed). The

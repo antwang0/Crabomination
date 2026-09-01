@@ -3,7 +3,7 @@
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::{GameAction, Target, TurnStep};
+use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
 use crabomination::game::effects::EffectContext;
 use crabomination::game::{GameState, drain_stack, two_player_game};
 use crabomination::mana::Color;
@@ -246,9 +246,11 @@ fn rite_of_renewal_exiles_itself() {
     assert!(g.exile.iter().any(|c| c.id == rite), "exiled on resolution");
 }
 
-/// Dalkovan Encampment taps for colorless, then for R or W, then makes Warriors.
+/// Dalkovan Encampment taps for **white** — it shipped with a free
+/// `{T}: Add {C}` and a `{1}, {T}` for R or W, neither printed — and its
+/// `{2}{W}, {T}` musters two Warriors tapped and attacking.
 #[test]
-fn dalkovan_encampment_pays_and_musters() {
+fn dalkovan_encampment_taps_for_white_and_musters_attackers() {
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(0, catalog::dalkovan_encampment());
     g.priority.player_with_priority = 0;
@@ -260,12 +262,28 @@ fn dalkovan_encampment_pays_and_musters() {
         x_value: None,
         mode: None,
     })
-    .expect("tap for {C}");
-    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    .expect("tap for {W}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1, "white, not colorless");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 0);
+
+    // The muster ability mints into an existing combat (CR 508.3a).
     g.battlefield.iter_mut().find(|c| c.id == land).unwrap().tapped = false;
-    activate(&mut g, land, 2, None);
-    let warriors = g.battlefield.iter().filter(|c| c.definition.name == "Warrior").count();
-    assert_eq!(warriors, 2);
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    activate(&mut g, land, 1, None);
+    let warriors: Vec<_> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Warrior").collect();
+    assert_eq!(warriors.len(), 2);
+    assert!(warriors.iter().all(|c| c.tapped), "tapped and attacking");
 }
 
 /// Silent Hallcreeper never repeats a mode.

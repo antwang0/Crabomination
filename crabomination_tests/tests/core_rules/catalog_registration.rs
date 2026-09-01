@@ -2479,3 +2479,200 @@ fn every_card_carries_its_printed_type_line() {
         &wrong[..wrong.len().min(40)],
     );
 }
+
+/// The colours an `Effect` tree can add, as Scryfall spells them (`W`, `U`,
+/// `B`, `R`, `G`, `C`).
+///
+/// `None` means **"this tree says something this walk does not model"** — a
+/// context-dependent payload (`AnyColorOpponentCouldProduce`, `Restricted`,
+/// `DevotionOfChosenColor`, …) or a container variant not descended here.
+/// `None` propagates, and the caller skips the card: the walk is only allowed
+/// to accuse a card whose whole mana story it read.
+fn mana_colors_added(e: &crabomination::effect::Effect) -> Option<HashSet<char>> {
+    use crabomination::effect::{Effect, ManaPayload};
+    use crabomination::mana::Color;
+    let letter = |c: &Color| match c {
+        Color::White => 'W',
+        Color::Blue => 'U',
+        Color::Black => 'B',
+        Color::Red => 'R',
+        Color::Green => 'G',
+    };
+    let all = || "WUBRG".chars().collect::<HashSet<_>>();
+    let union = |parts: Vec<Option<HashSet<char>>>| -> Option<HashSet<char>> {
+        let mut out = HashSet::new();
+        for p in parts {
+            out.extend(p?);
+        }
+        Some(out)
+    };
+    match e {
+        Effect::AddMana { pool, .. } => match pool {
+            ManaPayload::Colors(cs) => Some(cs.iter().map(letter).collect()),
+            ManaPayload::OfColor(c, _) => Some([letter(c)].into_iter().collect()),
+            ManaPayload::OfColors(cs, _) => Some(cs.iter().map(letter).collect()),
+            ManaPayload::Colorless(_) => Some(['C'].into_iter().collect()),
+            ManaPayload::AnyOneColor(_) | ManaPayload::AnyColors(_) => Some(all()),
+            _ => None,
+        },
+        Effect::Seq(inner) | Effect::ChooseMode(inner) => {
+            union(inner.iter().map(mana_colors_added).collect())
+        }
+        Effect::ChooseN { modes, .. } => union(modes.iter().map(mana_colors_added).collect()),
+        Effect::If { then, else_, .. } | Effect::IfRevealFromHand { then, else_, .. } => {
+            union(vec![mana_colors_added(then), mana_colors_added(else_)])
+        }
+        Effect::MayDo { body, .. }
+        | Effect::AtNextEndStep { body }
+        | Effect::PayEnergy { then: body, .. } => mana_colors_added(body),
+        // Anything else: a leaf that is not `AddMana` contributes nothing —
+        // but a *container* this walk does not descend would silently
+        // contribute nothing too, and that is a false accusation waiting to
+        // happen. `Rhystic Cave`'s `unless_anyone_pays` wrapper is exactly
+        // that shape and read as "produces no colour" on the first run.
+        //
+        // The debug rendering is the cheap oracle: if the subtree mentions
+        // `AddMana` anywhere and this arm reached it, the walk did not read
+        // the card and must say so.
+        other => {
+            if format!("{other:?}").contains("AddMana") {
+                None
+            } else {
+                Some(HashSet::new())
+            }
+        }
+    }
+}
+
+/// **A land taps for exactly the mana its printing produces.**
+///
+/// The fourth join ratchet, and the one whose defects are the most directly
+/// deck-breaking: a land that cannot make the colour it prints is a mana base
+/// the bot cannot route around, and one that makes a colour it does not print
+/// is a free fixer in every deck that runs it.
+///
+/// Lands only. A mana rock or a creature can add mana through a bespoke
+/// resolver the walk above cannot read, and Scryfall's `produced_mana`
+/// carries entries for cards whose "production" is a Treasure token; lands
+/// are the population where the printed field and the effect tree mean the
+/// same thing.
+///
+/// ⚠ **The walk is allowed to skip.** `mana_colors_added` answers `None` for
+/// a context-dependent payload (`AnyColorOpponentCouldProduce`, a `Restricted`
+/// wrapper, `DevotionOfChosenColor`) and for any container it does not
+/// descend, and a `None` anywhere skips the card. That is the safe direction:
+/// the ratchet only accuses a card whose whole mana story it read.
+#[test]
+fn every_land_taps_for_the_mana_it_prints() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        if !def.card_types.contains(&crabomination::card::CardType::Land) {
+            continue;
+        }
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(printed) = entry.get("produced_mana").and_then(|v| v.as_array()) else {
+            continue;
+        };
+        // Scryfall counts mana an ability *grants elsewhere* toward
+        // `produced_mana`. Three shapes do that and none is readable from
+        // this land's own effect tree:
+        //   * a static that gives lands a basic type, so they tap for its
+        //     colour (Urborg, Yavimaya) — including this land itself;
+        //   * a static that grants a mana ability to other permanents or
+        //     from another zone (Forgotten Monument, Riftstone Portal);
+        //   * a saga chapter that grants one (Urza's Saga).
+        let statics = format!("{:?}", def.static_abilities);
+        if !def.saga_chapters.is_empty()
+            || statics.contains("LandType")
+            || statics.contains("Grant")
+        {
+            continue;
+        }
+        // ⚠ One allow-list entry, and it is a primitive job: **Pit of
+        // Offerings** prints "{T}: Add one mana of any of the exiled cards'
+        // colors" and no `ManaPayload` reads the colours of cards this
+        // source exiled. Build one and delete the name.
+        if def.name == "Pit of Offerings" {
+            continue;
+        }
+        let printed: HashSet<char> =
+            printed.iter().filter_map(|v| v.as_str()).filter_map(|s| s.chars().next()).collect();
+
+        // The engine gives a land with a basic land type that type's mana
+        // ability intrinsically, so the colours never appear in the effect
+        // tree (Gingerbread Cabin is "Land — Forest" with no `AddMana`).
+        let mut ours: HashSet<char> = def
+            .subtypes
+            .land_types
+            .iter()
+            .filter_map(|t| match t {
+                crabomination::card::LandType::Plains => Some('W'),
+                crabomination::card::LandType::Island => Some('U'),
+                crabomination::card::LandType::Swamp => Some('B'),
+                crabomination::card::LandType::Mountain => Some('R'),
+                crabomination::card::LandType::Forest => Some('G'),
+                _ => None,
+            })
+            .collect();
+        let mut readable = true;
+        for a in &def.activated_abilities {
+            match mana_colors_added(&a.effect) {
+                Some(cs) => ours.extend(cs),
+                None => readable = false,
+            }
+        }
+        for t in &def.triggered_abilities {
+            match mana_colors_added(&t.effect) {
+                Some(cs) => ours.extend(cs),
+                None => readable = false,
+            }
+        }
+        if !readable {
+            continue;
+        }
+        checked += 1;
+        // `{S}` (snow mana) has no `Color` here, and Scryfall does not list a
+        // separate letter for it either — both sides spell it `C`.
+        for c in printed.difference(&ours) {
+            wrong.push(format!("{} does not tap for {c}", def.name));
+        }
+        for c in ours.difference(&printed) {
+            wrong.push(format!("{} taps for {c} and the printing does not", def.name));
+        }
+    }
+
+    // Four gates skip cards; the floor is what keeps a widened gate from
+    // quietly emptying the population. 628 lands pass all four today.
+    assert!(
+        checked > 400,
+        "only {checked} lands could be compared against the cache — the ratchet is vacuous \
+         below that"
+    );
+    wrong.sort();
+    assert!(
+        wrong.is_empty(),
+        "{} land mana mismatch(es) over {checked} lands: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}
