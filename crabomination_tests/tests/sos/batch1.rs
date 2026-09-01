@@ -2579,3 +2579,58 @@ fn mica_only_copies_the_spell_if_an_artifact_was_actually_sacrificed() {
         "with no artifact there is nothing to sacrifice, so no copy",
     );
 }
+
+/// "This turn" means the *current* turn, for both players.
+///
+/// `life_gained_this_turn` was reset only for the **active** player at their
+/// untap, on the convention `lands_played_this_turn` uses. That convention
+/// doesn't transfer: lands-played is a quantity only its own controller can
+/// add to on their own turn, whereas life-gain is read by both players' cards
+/// at any time. So the non-active player's tally stood through the whole
+/// opposing turn — life gained on your turn kept Thornfist Striker's Infusion
+/// pump and trample switched on for all of your opponent's turn as well
+/// (reported Aug 2026).
+#[test]
+fn infusion_lifegain_does_not_carry_into_the_opponents_turn() {
+    let mut g = two_player_game();
+    let striker = g.add_card_to_battlefield(0, catalog::thornfist_striker());
+    // Stock both libraries so passing turns doesn't deck anyone out.
+    for _ in 0..20 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    let power = |g: &mut GameState| g.computed_permanent(striker).unwrap().power;
+    let trample = |g: &mut GameState| {
+        g.computed_permanent(striker)
+            .unwrap()
+            .keywords()
+            .contains(&crabomination::card::Keyword::Trample)
+    };
+
+    assert_eq!(power(&mut g), 3, "no life gained yet — the base 3/3");
+    assert!(!trample(&mut g));
+
+    g.adjust_life_applied(0, 3);
+    assert_eq!(power(&mut g), 4, "Infusion is live on the turn you gained life");
+    assert!(trample(&mut g), "and grants trample");
+
+    // Advance into the opponent's turn.
+    for _ in 0..40 {
+        if g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert_eq!(g.active_player_idx, 1, "we reached the opponent's turn");
+    assert_eq!(
+        g.players[0].life_gained_this_turn, 0,
+        "the tally resets for every player at the turn boundary, not just the active one",
+    );
+    assert_eq!(power(&mut g), 3, "last turn's lifegain must not still be pumping");
+    assert!(!trample(&mut g), "nor still granting trample");
+}
+

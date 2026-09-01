@@ -3951,16 +3951,22 @@ impl GameState {
             // Johann's once-per-turn top-of-library cast resets each turn.
             pl.cast_from_library_top_this_turn = false;
         }
-        // Reset Infusion / "if you gained life this turn" tracking for the
-        // active player at the start of their turn. Other players' counters
-        // tick down only at their own untaps so symmetric "this turn"
-        // checks remain accurate per-player. (Same convention as
-        // `lands_played_this_turn` and `spells_cast_this_turn`.)
-        self.players[p].life_gained_this_turn = 0;
-        // "For the first time each turn" life-gain gates key on the turn
-        // boundary itself, so this flag resets for EVERY player at each
-        // untap (unlike the per-player-turn tallies above).
+        // "This turn" is the *current* turn, one shared turn — so Infusion and
+        // every other "if you gained life this turn" gate resets for EVERY
+        // player at each untap, not just the active one.
+        //
+        // The per-player-turn convention that `lands_played_this_turn` and
+        // `spells_cast_this_turn` use does not transfer: those are quantities
+        // only their own controller can add to on their own turn, whereas
+        // life-gain is read by both players' cards at any time. Resetting only
+        // the active player left the *non*-active player's tally standing
+        // through the whole opposing turn: life gained on your turn kept
+        // Thornfist Striker's team pump and trample switched on for all of
+        // your opponent's turn too, a full extra turn of "this turn".
         for pl in &mut self.players {
+            pl.life_gained_this_turn = 0;
+            // "For the first time each turn" life-gain gates key on the same
+            // turn boundary.
             pl.gained_life_earlier_this_turn = false;
         }
         // Reset cards-drawn tally for the active player. Powers Quandrix
