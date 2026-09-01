@@ -4556,6 +4556,24 @@ impl GameState {
         if delta == 0 {
             return self.effective_life(seat);
         }
+        // `CRAB_LIFE_WATCH=<n>` — print every single adjustment of at least
+        // `n` in absolute size, with the seat, the turn and the resulting
+        // total. The instrument for "where did that life come from": a
+        // compounding source shows as a doubling series here, a one-shot as a
+        // single row. `--decks all --seed 53` ends with both seats at
+        // `i32::MAX`, which no card on that board can accumulate linearly.
+        // Off by default and read once per adjustment, so it costs the
+        // throughput path one env lookup per life change and nothing else.
+        if let Some(v) = std::env::var_os("CRAB_LIFE_WATCH")
+            && let Some(n) = v.to_str().and_then(|s| s.parse::<i32>().ok())
+            && delta.saturating_abs() >= n
+        {
+            eprintln!(
+                "life: turn {} seat {seat} delta {delta} (from {})",
+                self.turn_number,
+                self.players[seat].life,
+            );
+        }
         // CR 119.7: if `seat` can't gain life and the delta would
         // increase their life total, drop the gain on the floor. The
         // 119.10 rider — "If a player gains 0 life, no life gain event

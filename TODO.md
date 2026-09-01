@@ -49,16 +49,20 @@ sixty-seventh pass, so don't re-take that.
    seeds at `22a79dcc`: no panic, no hang, 4 capped, 22 draws.** `CRAB_CAP_DIAG=1` names a
    capped game's cause in one line; **`CRAB_CAP_DIAG=<n>` names any game past `n` actions**,
    which is the only way to see a *slow* game — one that decides is never "undecided".
-7a. **TWO LEADS LEFT FROM THAT SWEEP, filed and not fixed.** (a) All four capped games share a
-   signature: *both* players at **`i32::MAX` life** after 2,159 / 2,492 turns, stack 0, ~30
-   permanents a side, `lib 1` — nobody can lose, so the game runs to the cap. Repro
-   `--decks all --seed 53` (and 73) `--games 400`. Life saturates in `adjust_life`'s
-   `saturating_add`; **what feeds it 2^31 is the open question** — `Effect::DoubleLife` is the
-   only multiplicative life path in the tree and neither board carries a card that has it.
-   (b) `--decks all --seed 43 --games 370` takes **597 s** against 59 s for `--games 368` and
-   reports **0 undecided**: one game eating nine minutes. RSS flat at 77 MB and ordinary
-   `game::actions::` frames, so it is a long game rather than a stack runaway — a throughput
-   bug for an actor even though it is not a stall.
+7a. **BOTH LEADS FROM THAT SWEEP ARE CLOSED, AND NEITHER IS A BUG — do not re-open them.**
+   (a) The four capped games are **Beacon of Immortality**: "Double target player's life total.
+   Then shuffle this into its owner's library." `CRAB_LIFE_WATCH=1000` prints the series —
+   1,580 -> 3,161 -> 6,322 -> 12,644, one doubling every other turn — so ~31 casts saturate
+   `i32::MAX` and **neither player can lose to damage**, while the shuffle-back keeps the
+   library from ever emptying (`lib 1` at turn 2,159). That is the printed card; paper ends it
+   by agreement or a clock, and the action cap is this engine's clock. 4 games in 183,600.
+   (b) The nine-minute game is **Scute Swarm**: 4,091 copies of itself on the board at turn 46,
+   the printed landfall doubling. Every board walk is O(4,091), so 9,223 actions take nine
+   minutes. The game *decides* (the opponent is at -4,072), so no undecided count can see it —
+   `CRAB_CAP_DIAG=5000` is what found it. Also not a bug, and the same shape will recur.
+   ⚠ **The transferable half: a correct board can be quadratic.** An actor's throughput has a
+   tail that is not a defect, and the two instruments above are how to tell one from the other
+   before spending a build.
 8. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
    (both want a card), `audit_target_fields` / `audit_target_walkers` clean; ENGINE_BACKLOG's
    P2 has one live lead (Sand Golem's trigger, probed, not vacuous).

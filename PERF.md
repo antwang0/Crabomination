@@ -2474,11 +2474,17 @@ suite   19,138 / 0 / 5; golden traces unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench profiling-fast: 195,806 / 27.49 / 611.9 / 0 stalls, determinism ok
 stalls  **183,600 games** over 27 seeds x `--decks all --games 400`: no panic,
-        no hang, **4 capped / 0 stuck / 22 draws**. The four capped games share
-        a signature — both players at `i32::MAX` life after 2,159 and 2,492
-        turns — and a fifth game *decides* after **597 s**; both are filed in
-        TODO's NEXT (11b) with their repro, and `CRAB_CAP_DIAG=<n>` is what
-        sees the second one at all
+        no hang, **4 capped / 0 stuck / 22 draws**, and **both outliers are
+        printed cards working correctly**. The four capped games are Beacon of
+        Immortality — it doubles a life total and shuffles itself back, so ~31
+        casts saturate `i32::MAX` (the series is 1,580 / 3,161 / 6,322 /
+        12,644 under `CRAB_LIFE_WATCH=1000`), nobody can lose to damage and the
+        shuffle-back stops the library emptying. A fifth game *decides* after
+        **597 s** and is Scute Swarm at **4,091 copies** on turn 46: every
+        board walk is O(4,091), so 9,223 actions take nine minutes, and no
+        undecided count can see it — `CRAB_CAP_DIAG=5000` is what found it.
+        ⚠ **A correct board can be quadratic**: an actor's throughput tail is
+        not automatically a defect
 engine  `add_counter_cost` now goes through `scaled_counter_count` like every
         other counter-add site (CR 614.16): Vizier of Remedies was shaving the
         counter an *effect* placed and not the one a *cost* placed
