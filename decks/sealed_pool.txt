@@ -41,7 +41,7 @@
 1 strife scholar
 1 blazing firesinger
 1 bulk up
-1 hydro-channeler
+2 hydro-channeler
 1 spellbook seeker
 1 chase inspiration
 1 procrastinate
@@ -71,5 +71,7 @@
 2 forum of amity
 2 fields of strife
 2 page, loose leaf
-1 rancorous archaic
+2 rancorous archaic
 1 sundering archaic
+1 together as one
+1 shattered sanctum
