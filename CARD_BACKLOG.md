@@ -123,6 +123,62 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 # Open
 
+## A cost spelled in the effect is not a cost — 26 free activations
+
+**Found by a stall, not by a card read.** `--decks cube --seed 2` had a
+self-play game that took over twenty minutes instead of ending;
+`CRAB_CAP_DIAG=1` named it in one line — the 50,000-action cap at turn 15 with
+**49,616 copies of Gravecrawler's graveyard activation on the stack**, an empty
+mana pool and untapped lands. The unbounded mana was **Pentad Prism**, whose
+charge counter was the first step of its `Effect::Seq` rather than a cost
+field: with none left it removed nothing and the `AddMana` still resolved.
+Fixed, the same case runs in **2.8 s**.
+
+⚠ **`Effect::PayEnergy`, `Effect::RemoveCounter`, a leading `Effect::Discard`,
+`Effect::LoseLife`, `Effect::Sacrifice*` are resolution steps.** They gate what
+*happens*; they never gate whether the activation is *legal*. A bot activates a
+free ability until the action cap, and each activation is another `StackItem`
+that every later legality check walks — so the game goes quadratic before the
+cap ends it. The pre-pay gates live on `ActivatedAbility`: `energy_cost`,
+`life_cost`, `remove_counter_cost`, `add_counter_cost`, `discard_cost`,
+`exile_other_filter`, `sac_other_filter`, `max_activations_per_turn`.
+
+**The ratchet is `no_activated_ability_is_free_unconditional_and_unlimited`**
+(`core_rules/catalog_registration.rs`). It compares each printed ability with
+`ActivatedAbility::default()` with only the effect swapped in, so it covers
+every cost field the struct has **and every one a later pass adds** — a new
+cost cannot slip past it the way `remove_counter_cost` did. 46 rows first run:
+
+| fix | cards |
+|---|---|
+| `remove_counter_cost` | Pentad Prism; Parallax Tide; Parallax Nexus (+ the missing `sorcery_speed`) |
+| `add_counter_cost` | Devoted Druid's untap |
+| `life_cost: 7` | Griselbrand — it drew seven at any life total |
+| `energy_cost` | Longtusk Cub (and `{E}{E}`, not the `{E}{E}{E}` it shipped), Bristling Hydra, Aetherstream Leopard, Riparian Tiger, Scurry of Gremlins |
+| `discard_cost` | Wild Mongrel, Putrid Imp, Psychic Frog |
+| `exile_other_filter` | Psychic Frog's graveyard-exile ability |
+| `max_activations_per_turn: 1` | Briar Shield, Phantom Wings — one-shot Auras whose *activation* was unlimited |
+| `condition` gate | the eight sacrifice outlets whose payoff reads what was sacrificed (Altar of Dementia, Goblin Bombardment, Greater Good, Krark-Clan Ironworks, Butcher of the Horde, Cartel Aristocrat, Bloodflow Connoisseur, Vampire Aristocrat) and Sage of Hours, whose extra-turn count reads the counters it removes |
+
+**The 20 allow-listed are genuine printed `{0}:` abilities** — the four en-Kor
+damage-shifters plus Spirit en-Kor, Blessing of Leeches, Blinking Spirit,
+Chimeric Idol, Dark Maze, Flowstone Hellion, Frenetic Efreet, Hopping
+Automaton, Mist Dragon, Opal Acrolith, Reconnaissance, Sentinel, Soltari
+Guerrillas, Spirit Mirror, Urza's Avenger — each with its oracle line in the
+table. ⚠ **One is not**: **Clergy of the Holy Nimbus**'s first ability is the
+*static* "If this creature would be destroyed, regenerate it", modelled as a
+free activated regenerate because the engine has no such replacement.
+**Primitive job: a self-regenerating static.** (Its printed `{1}:`,
+opponents-only ability is the second one and is correctly costed.)
+
+⚠ **An engine bug fell out of it.** `add_counter_cost` placed its counter raw
+instead of through `scaled_counter_count`, whose own doc says it is
+"centralized so every counter-add site … replaces consistently" — so Vizier of
+Remedies shaved the counter an `AddCounter` *effect* placed and not the one a
+*cost* placed, and Devoted Druid killed itself through the combo the moment its
+untap became a real cost. CR 614.16 applies to both. Fixed in the same commit.
+
+
 ## The defaulted-field class — nine defects `audit_doc_drift` could not see
 
 **`audit_catalog_stats.py` required BOTH `power:` and `toughness:` to be

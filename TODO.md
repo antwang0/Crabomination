@@ -29,7 +29,7 @@ sixty-seventh pass, so don't re-take that.
    passes collided twice, and the hundred-and-nineteenth shipped with a stale number in its
    commit titles rather than rewrite a shared branch. Container gotchas are in **CLAUDE.md**,
    measurement rules in **PERF**.
-2. **Gates at the tip:** suite **19,134 / 0 / 5** (`--workspace --exclude
+2. **Gates at the tip:** suite **19,138 / 0 / 5** (`--workspace --exclude
    crabomination_client`), traces unmoved, clippy clean `--all-targets`; `--bench`
    **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism and
    thread_determinism ok. **Grid re-run and green: 30 cells / 33,120 games / 0 failures**
@@ -76,7 +76,32 @@ sixty-seventh pass, so don't re-take that.
    it.** Two classes are filed, not fixed, because both move `cube`/`sealed` and want pricing:
    ~48 nonbasic lands carrying redundant basic land types, and 183 missing subtypes
    (CARD_BACKLOG's first section). The other two card auditors stay ratchets at zero.
-10. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
+11. **⚠ A COST SPELLED IN THE EFFECT IS NOT A COST, and it is a *stall* bug, not a card
+   one.** `--decks cube --seed 2` had a game that took **over twenty minutes**;
+   `CRAB_CAP_DIAG=1` (new, PERF's "How to measure") named it in one line — 50,000 actions,
+   turn 15, **49,616 copies of Gravecrawler's graveyard activation on the stack**, paid for by
+   **Pentad Prism**, whose charge counter was `Effect::RemoveCounter` rather than
+   `remove_counter_cost`. `PayEnergy` / `RemoveCounter` / a leading `Discard` / `LoseLife` /
+   `Sacrifice*` all *resolve*; none of them gates the activation, a bot repeats a free ability
+   to the cap, and every extra `StackItem` is walked by every later legality check — so the
+   game goes quadratic first. **2.8 s** after the fix.
+   `no_activated_ability_is_free_unconditional_and_unlimited` is the ratchet (it diffs each
+   ability against `ActivatedAbility::default()` with only the effect swapped in, so a *new*
+   cost field is covered automatically): 46 rows, 20 genuine `{0}:` allow-listed, **26 fixed**.
+   Write-up in CARD_BACKLOG's first section. ⚠ One primitive job falls out: **a
+   self-regenerating static** (Clergy of the Holy Nimbus is allow-listed on that account).
+   New Ir base at `22a79dcc`: `fixed` **895,819,625** / `cube` **2,449,583,333** / `sealed`
+   **2,453,428,381**.
+11a. **Stall sweep at that tip: 68,000 games** (ten seeds x `--decks all --games 400
+   --threads 3`), no panic, no hang, **0 capped / 0 stuck**; seed 11's 14 undecided are draws.
+   ⚠ **A `--games 400 --decks all` sweep is 20 s a seed and catches what the grid does not**
+   (the grid is 120 games a cell) — run it before the grid, it is nearly free.
+12. **The engine half of (11):** `add_counter_cost` placed its counter raw instead of through
+   `scaled_counter_count`, whose own doc says it is centralized "so every counter-add site …
+   replaces consistently" — Vizier of Remedies shaved the counter an *effect* placed and not
+   the one a *cost* placed (CR 614.16). **When a cost field duplicates what an effect does,
+   check it takes the same replacement path.**
+13. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
    (both want a card, not a fix), `audit_target_fields` 0 aimed by a shipped card,
    `audit_target_walkers` clean. Targeting is CLOSED and gated; the four rules are in
    ENGINE_BACKLOG, and its P2 has one live lead (Sand Golem's trigger, probed, not vacuous).

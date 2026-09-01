@@ -36,6 +36,19 @@ cargo run --release --bin bot_ladder -- --bench
 # filter 23 (`1c304384`).
 CRAB_THREAD_CHECK=1 cargo run --release --bin bot_ladder -- --bench
 
+# WHAT A CAPPED GAME WAS DOING. `undecided_by cap N` names the count and stops
+# there, so "which board, which loop" has cost a rebuild every time it has been
+# asked. Read once, on the capped game only, so the throughput path pays
+# nothing — the `CRAB_SBA_CENSUS` shape. Prints the action/turn count, the
+# stack depth, per-seat life/board/untapped/hand/graveyard/library/pool, and
+# two tallies by name: **what is on the stack** and **what is on the board**.
+# A runaway names itself in one of them — an unbounded stack is a trigger or
+# activation loop, an unbounded battlefield is a token loop; the pool and the
+# untapped count beside them say whether a repeated activation was *paid for*.
+# It found the Pentad Prism / Gravecrawler stall on its first run.
+CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder --a gang --b gang \
+  --games 34 --threads 1 --seed 2 --decks cube
+
 # allocator A/B — mimalloc is the default now, so the *system* allocator is
 # the opt-in side. A feature change on the engine crate is a full rebuild, so
 # the variants need separate caches; /target-mi/ is gitignored.
@@ -2322,6 +2335,60 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### The free-activation pass — closing state at `22a79dcc`
+
+**A correctness pass with a throughput consequence**, which is why it is here
+rather than only in `CARD_BACKLOG`. `--decks cube --seed 2` had a game that
+took **over twenty minutes** instead of ending; `CRAB_CAP_DIAG` named it in one
+line (50,000 actions, turn 15, **49,616 copies of Gravecrawler's graveyard
+activation on the stack**, pool 0, five untapped permanents). The unbounded
+mana was **Pentad Prism**, whose charge counter was `Effect::RemoveCounter` —
+the first step of its *effect*, which gates what happens and never whether the
+activation is legal. The same case now runs in **2.8 s**.
+
+**The rule: a cost spelled in the effect is not a cost.** `Effect::PayEnergy`,
+`Effect::RemoveCounter`, a leading `Effect::Discard`, an `Effect::LoseLife`,
+`Effect::SacrificeAndRemember` — all of them resolve, none of them gates. A
+bot will activate a free ability until the action cap, and every such
+activation is one more `StackItem` that every legality check then walks, so
+the game goes quadratic before the cap ends it. `energy_cost` / `life_cost` /
+`remove_counter_cost` / `add_counter_cost` / `discard_cost` /
+`exile_other_filter` are the pre-pay gates in `activate_ability_inner`.
+
+`no_activated_ability_is_free_unconditional_and_unlimited` (core_rules) is the
+ratchet: it compares each printed ability against `ActivatedAbility::default()`
+with only the effect swapped in, so it covers every cost field the struct has
+**and every one a later pass adds**. 46 rows on its first run — 20 genuine
+printed `{0}:` abilities, allow-listed with their oracle line, and 26 defects.
+
+```text
+  profiling-fast --no-default-features, six games, one thread, seed 1
+  pool     new base at `22a79dcc`
+  fixed          895,819,625
+  cube         2,449,583,333
+  sealed       2,453,428,381
+```
+
+⚠ **A pre-batch reading at this tip was not taken** — the concurrent session
+landed four perf commits in between — so these are a base, not a delta.
+`fixed` sits where that session's published deltas predict off 905,955,831, so
+the batch costs it nothing, and the `--bench` invariant is byte-identical
+across it, which is the behavioural proof for that pool. `cube`/`sealed` are
+not comparable across the batch: 26 abilities stopped being activatable in
+positions where they used to be.
+
+```text
+suite   19,138 / 0 / 5; golden traces unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: 195,806 / 27.49 / 611.9 / 0 stalls, determinism ok
+stalls  **68,000 games** over ten seeds x `--decks all` (400 games, 3 threads):
+        no panic, no hang, **0 capped / 0 stuck**; seed 11 has 14 draws, which
+        `undecided_by` splits out as a rules outcome
+engine  `add_counter_cost` now goes through `scaled_counter_count` like every
+        other counter-add site (CR 614.16): Vizier of Remedies was shaving the
+        counter an *effect* placed and not the one a *cost* placed
+```
 
 ### The zone-lane pass — closing state at this run's tip
 
