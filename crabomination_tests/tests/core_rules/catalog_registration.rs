@@ -2172,3 +2172,171 @@ fn every_creature_carries_its_printed_subtypes() {
         &wrong[..wrong.len().min(40)],
     );
 }
+
+/// **Every `EventScope::SelfSource` trigger in the catalog must reach a
+/// dispatcher that admits it.** A kind the scope check has no arm for is a
+/// silently dead ability: the card ships, its test asserts something else, and
+/// nothing ever fails.
+///
+/// Three shipped cards were dead this way — Sand Golem, Mangara's Blessing and
+/// Pure Intentions' self-return half, all on the discard events, which
+/// `event_matches_spec`'s `SelfSource` chain named nowhere.
+///
+/// The check reads the engine's own two walkers rather than a hand-kept list:
+///
+/// * `event_kind_matches`' `(EventKind::X, GameEvent::Y)` arms — the kind half;
+/// * the `EventScope::SelfSource =>` block's `GameEvent::Y` names — the scope
+///   half;
+/// * `is_event_hardcoded`'s `GameEvent::Y => matches!(spec.scope,
+///   EventScope::SelfSource)` arms, which are the kinds dispatched *inline* by
+///   the emitting site and so never reach the scope chain at all.
+///
+/// It asks a **population** question the engine's own unit tests cannot: those
+/// walk a fixed family (`is_graveyard_self_source_kind`'s, and that the two
+/// walkers reading it agree), this walks every card in the catalog. The two
+/// are complements — the kind gate inside that family is checked there, the
+/// set of kinds cards actually use is checked here.
+///
+/// A catalog kind that none of the three reaches lands in `UNPROVEN`, whose
+/// entries each carry the dedicated path that dispatches them. The ratchet is
+/// that list: a **new** kind cannot join it by accident.
+#[test]
+fn every_self_source_trigger_kind_reaches_a_dispatcher() {
+    use crabomination::effect::EventScope;
+
+    /// Kinds the three walkers above cannot prove, each with the dedicated
+    /// path that dispatches it. Adding a row here means having read that path.
+    ///
+    /// Every one of them is a *push* site: the emitting code walks the
+    /// participants and queues the trigger itself, so the scope chain is never
+    /// consulted and a missing arm there costs nothing. That is why the
+    /// discard family was the exception — it had no push site and depended on
+    /// the chain that did not name it.
+    const UNPROVEN: &[(&str, &str)] = &[
+        // The combat-damage hook: `fire_combat_damage_triggers` and its
+        // creature-side twin push these off the damage they just dealt.
+        ("DealsCombatDamage", "combat.rs fire_combat_damage_triggers"),
+        ("DealsCombatDamageToPlayer", "combat.rs fire_combat_damage_triggers"),
+        ("DealsCombatDamageToCreature", "combat.rs fire_combat_damage_triggers"),
+        ("DealsCombatDamageToPlaneswalker", "combat.rs, the planeswalker leg"),
+        ("ControllerDealtCombatDamage", "combat.rs, the controller leg"),
+        // The non-combat damage halves, same file, same device.
+        ("DealsDamage", "combat.rs fire_noncombat_damage_triggers"),
+        ("DealsDamageToPlayer", "combat.rs fire_noncombat_damage_triggers"),
+        ("DealsDamageToCreature", "combat.rs fire_noncombat_damage_triggers"),
+        // "Whenever you attack" — pushed by `declare_attackers` off the batch.
+        ("YouAttack", "combat.rs declare_attackers"),
+        // CR 700.4 — the LKI death path collects the dying permanent's own
+        // triggers directly (`stack.rs`, beside `CreatureDied` /
+        // `PermanentLeavesBattlefield`, which the chain does name).
+        ("PermanentDied", "stack.rs, the leave-trigger collection"),
+        ("BecomesPlotted", "actions.rs, the plot action"),
+        // Planechase (CR 901): the planar die and the walk push their own.
+        ("ChaosEnsues", "stack.rs planar_trigger_pushes"),
+        ("Encountered", "stack.rs planar_trigger_pushes"),
+        ("PlaneswalkedAwayFrom", "stack.rs planar_trigger_pushes"),
+        // CR 701.25 — a scheme set in motion, a turn-based action.
+        ("SetInMotion", "stack.rs, the scheme turn-based action"),
+    ];
+
+    let engine = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../crabomination/src/game");
+    let events_rs = fs::read_to_string(engine.join("effects/events.rs")).expect("events.rs");
+    let mod_rs = fs::read_to_string(engine.join("mod.rs")).expect("game/mod.rs");
+
+    // (a) the kind -> event pairing, off `event_kind_matches`' arms.
+    let kind_block = {
+        let start = events_rs.find("match (&spec.kind, event) {").expect("kind match");
+        &events_rs[start..]
+    };
+    let mut pairs: Vec<(String, String)> = Vec::new();
+    for (i, _) in kind_block.match_indices("EventKind::") {
+        let kind: String = kind_block[i + "EventKind::".len()..]
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        // The `GameEvent::` that follows before the next `EventKind::` is this
+        // arm's event; arms are written `(EventKind::X, GameEvent::Y ..)`.
+        let rest = &kind_block[i..];
+        let next_kind = rest[1..].find("EventKind::").map(|j| j + 1).unwrap_or(rest.len());
+        if let Some(j) = rest[..next_kind].find("GameEvent::") {
+            let ev: String = rest[j + "GameEvent::".len()..]
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            pairs.push((kind, ev));
+        }
+    }
+    assert!(pairs.len() > 100, "kind/event pairing came out empty: {}", pairs.len());
+
+    // (b) the events the `SelfSource` scope arm names.
+    let scope_block = {
+        let start = events_rs.find("EventScope::SelfSource => matches!(").expect("scope arm");
+        let end = events_rs[start..].find("EventScope::YourControl =>").expect("arm end");
+        &events_rs[start..start + end]
+    };
+    let mut self_events: HashSet<String> = scope_block
+        .match_indices("GameEvent::")
+        .map(|(i, _)| {
+            scope_block[i + "GameEvent::".len()..]
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect()
+        })
+        .collect();
+    assert!(self_events.len() > 20, "SelfSource arm came out empty: {self_events:?}");
+
+    // (c) the events dispatched inline, which never reach (b).
+    let hard_block = {
+        let start = mod_rs.find("fn is_event_hardcoded(").expect("is_event_hardcoded");
+        let end = mod_rs[start..].find("\n}\n").expect("fn end");
+        &mod_rs[start..start + end]
+    };
+    for line in hard_block.lines() {
+        if !line.contains("EventScope::SelfSource") && !line.trim_end().ends_with("=> true,") {
+            continue;
+        }
+        if let Some(i) = line.find("GameEvent::") {
+            self_events.insert(
+                line[i + "GameEvent::".len()..]
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect(),
+            );
+        }
+    }
+
+    let mut checked = 0usize;
+    let mut dead: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let equip = def.equipped_bonus.iter().flat_map(|b| b.triggered_abilities.iter());
+        for ta in def.triggered_abilities.iter().chain(equip) {
+            if ta.event.scope != EventScope::SelfSource {
+                continue;
+            }
+            checked += 1;
+            let kind = format!("{:?}", ta.event.kind);
+            let kind = kind.split('(').next().unwrap_or(&kind).to_string();
+            if UNPROVEN.iter().any(|(k, _)| *k == kind) {
+                continue;
+            }
+            let reachable = pairs
+                .iter()
+                .any(|(k, ev)| *k == kind && self_events.contains(ev));
+            if !reachable {
+                dead.push(format!("{kind} (e.g. {})", def.name));
+            }
+        }
+    }
+    assert!(checked > 1_000, "population check: only {checked} SelfSource triggers walked");
+    dead.sort();
+    dead.dedup_by(|a, b| a.split(' ').next() == b.split(' ').next());
+    assert!(
+        dead.is_empty(),
+        "{} SelfSource trigger kind(s) no dispatcher admits — the ability is dead. \
+         Add the arm to `events.rs`' SelfSource chain, or add the kind to `UNPROVEN` with \
+         the dedicated path that dispatches it: {:?}",
+        dead.len(),
+        dead
+    );
+}
