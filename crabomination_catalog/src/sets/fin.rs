@@ -2779,6 +2779,15 @@ pub fn white_auracite() -> CardDefinition {
             ),
             return_to: ExileReturnZone::Battlefield,
         })],
+        // "{T}: Add {W}." — the whole mana ability was missing.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: crate::effect::ManaPayload::Colors(vec![crate::mana::Color::White]),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

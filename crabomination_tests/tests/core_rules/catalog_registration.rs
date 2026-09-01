@@ -1116,3 +1116,140 @@ fn a_card_that_prints_losing_all_abilities_strips_them() {
         wrong.len(),
     );
 }
+
+/// Cards whose printed `{T}` activation is not in the tree, each because the
+/// ability wants a primitive the engine does not have. **An entry is a filed
+/// card job, not a pass** — the card is missing an ability until it is done.
+const PRINTED_TAP_ALLOWED: &[(&str, &str)] = &[
+    ("Biomancer's Familiar", "\"the next time target creature adapts this turn, it \
+      adapts as though it had no +1/+1 counters\" — adapt is an `Effect::If` on a \
+      counter test, not a keyword, so there is nothing for a delayed modifier to hook"),
+    ("Conduit of Worlds", "\"if you haven't cast a spell this turn, you may cast that \
+      card [from your graveyard]. If you do, you can't cast additional spells this \
+      turn\" — wants a cast-from-graveyard that installs a one-spell lock"),
+    ("Eladamri, Korvecdal", "\"reveal a card from your hand OR the top card of your \
+      library\" — a chooser over two zones with a put-onto-battlefield tail; \
+      `tap_others_cost` covers the cost half, nothing covers the effect"),
+    ("Rydia, Summoner of Mist", "\"return target Saga card with mana value X from your \
+      graveyard to the battlefield\" — no filter for a graveyard card of mana value X"),
+    ("Sequence Engine", "\"exile target creature card with mana value X from a \
+      graveyard\" — same missing filter; CARD_BACKLOG already files this card for \
+      shipping a `RevealUntilFind` it does not print"),
+];
+
+/// **No card drops a printed `{T}` from its activation cost.**
+///
+/// A `{T}` an ability does not carry is the same defect class as a cost spelled
+/// in the effect: the ability stops being once-a-turn and becomes repeatable,
+/// which is an unbounded action loop under bot self-play (a Pentad Prism whose
+/// charge counter was an *effect* is what ran a `--decks cube` game to the
+/// 50,000-action cap). It is also simply a different card — a mana creature
+/// that does not tap makes infinite mana.
+///
+/// The check is deliberately one-directional and coarse: **if the printed text
+/// has an activation whose cost contains `{T}`, the body must carry at least
+/// one `tap_cost` (or `untap_self_cost`, for `{Q}`)**. It does not try to pair
+/// abilities up — a card with two activations, one tapping, is not a finding
+/// — because the pairing is what a per-card read is for and a ratchet that
+/// guesses it produces noise.
+///
+/// Reminder text is stripped first, so a basic land's `({T}: Add {G}.)` — which
+/// is *entirely* reminder — is not a printed activation at all and the
+/// direction of the assert makes that a non-event.
+#[test]
+fn no_card_drops_a_printed_tap_symbol() {
+    use crabomination::effect::StaticEffect;
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+    let allowed: HashSet<&str> = PRINTED_TAP_ALLOWED.iter().map(|(n, _)| *n).collect();
+
+    /// ⚠ **A quoted ability belongs to something else.** "Enchanted land has
+    /// `\"{T}, Sacrifice a creature: …\"`", "create a Treasure token with
+    /// `\"{T}, Sacrifice this artifact: Add …\"`", "all creatures gain
+    /// `\"{T}: …\"`" — the `{T}` is on the aura's host, the token, or a
+    /// temporary grant, none of which is this card's own activation. That is
+    /// 80 of the first 92 rows, so the quoted spans come out before anything
+    /// is read.
+    fn strip_quoted(text: &str) -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut inside = false;
+        for ch in text.chars() {
+            match ch {
+                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
+                _ if !inside => out.push(ch),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    /// Does `text` hold an activation line whose **cost** (left of the first
+    /// colon) carries `{t}`? Only the cost half counts: "…: Tap target
+    /// creature" is not a tap cost, and `{t}` inside the effect half never is.
+    fn prints_tap_activation(text: &str) -> bool {
+        strip_quoted(text).lines().any(|line| {
+            line.split_once(':')
+                .is_some_and(|(cost, _)| cost.contains("{t}") && cost.len() < 120)
+        })
+    }
+
+    let mut checked = 0usize;
+    let mut bad: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        // Two-faced entries spell both halves into one blob; the body here is
+        // the front face alone, so the comparison would have to follow
+        // `back_face`. Same gate as the keyword ratchet above.
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        checked += 1;
+        let text = strip_reminders(oracle);
+        if !prints_tap_activation(&text) || allowed.contains(def.name) {
+            continue;
+        }
+        // Granted abilities count: "Creatures you control have '{T}: Add one
+        // mana of any color'" prints the `{T}` on this card and carries it on
+        // the grant.
+        let granted = def.static_abilities.iter().filter_map(|sa| match &sa.effect {
+            StaticEffect::GrantActivatedAbility { ability, .. } => Some(ability),
+            StaticEffect::GrantActivatedAbilityFromGraveyard { ability, .. } => Some(&**ability),
+            _ => None,
+        });
+        let taps = def
+            .activated_abilities
+            .iter()
+            .chain(granted)
+            .any(|a| a.tap_cost || a.untap_self_cost || a.tap_other_filter.is_some());
+        if !taps {
+            bad.push(def.name.to_string());
+        }
+    }
+    assert!(checked > 15_000, "only {checked} cards compared — the ratchet is vacuous");
+    bad.sort();
+    bad.dedup();
+    assert!(
+        bad.is_empty(),
+        "{} card(s) print a `{{T}}` activation and carry no tap cost, so the ability is \
+         repeatable in a turn. Give it `tap_cost`, or add the card to PRINTED_TAP_ALLOWED \
+         with the reason the tap lives elsewhere: {:?}",
+        bad.len(),
+        &bad[..bad.len().min(40)]
+    );
+}

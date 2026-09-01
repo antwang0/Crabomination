@@ -363,6 +363,30 @@ pub fn inside_source() -> CardDefinition {
             count: Value::Const(1),
             definition: Box::new(detective_token()),
         })],
+        // "{3}, {T}: Target Detective you control gets +2/+0 and gains
+        // vigilance until end of turn. Activate only as a sorcery."
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::HasCreatureType(CreatureType::Detective)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Vigilance,
+                    duration: crate::effect::Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

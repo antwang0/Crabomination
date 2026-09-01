@@ -1598,14 +1598,20 @@ pub fn crashing_drawbridge() -> CardDefinition {
             ..Default::default()
         },
         toughness: 4,
-        static_abilities: vec![StaticAbility {
-            description: "Creatures you control have haste.",
-            effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(
+        keywords: vec![Keyword::Defender],
+        // Printed `{T}: Creatures you control gain haste until end of turn.`
+        // It shipped as a permanent static grant, which is strictly better
+        // than the card and never taps.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 keyword: Keyword::Haste,
+                duration: crate::effect::Duration::EndOfTurn,
             },
+            ..Default::default()
         }],
         ..Default::default()
     }

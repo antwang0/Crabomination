@@ -184,6 +184,26 @@ pub fn icon_of_ancestry() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::NameCreatureType {
             what: Selector::This,
         })],
+        // "{3}, {T}: Look at the top three cards of your library. You may
+        // reveal a creature card of the chosen type from among them and put it
+        // into your hand. Put the rest on the bottom in a random order."
+        // The whole ability was missing.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                pick_filter: Some(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::IsSourceChosenCreatureType),
+                ),
+                optional: true,
+                rest_bottom_random: true,
+                ..Default::default()
+            })),
+            ..Default::default()
+        }],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control of the chosen type get +1/+1.",
             effect: StaticEffect::AnthemForChosenType {

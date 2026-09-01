@@ -2775,6 +2775,25 @@ pub fn the_mechanist_aerial_artisan() -> CardDefinition {
         power: 1,
         toughness: 3,
         triggered_abilities: vec![crate::effect::shortcut::magecraft(investigate(1))],
+        // "{T}: Until end of turn, target artifact token you control becomes a
+        // 3/1 Construct artifact creature with flying." The whole ability was
+        // missing, which left the Clue-making half with nothing to do.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::BecomeCreature {
+                what: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::IsToken)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(3),
+                toughness: Value::Const(1),
+                creature_types: vec![CreatureType::Construct],
+                keywords: vec![Keyword::Flying],
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

@@ -330,17 +330,21 @@ pub fn whip_of_erebos() -> CardDefinition {
     }
 }
 
-/// Hammer of Purphoros — {2}{R} Legendary Enchantment. Creatures you control
-/// have haste. {1}{R}, Sacrifice a land: Create a 3/3 colorless Golem
-/// artifact creature token. Activate only as a sorcery.
+/// Hammer of Purphoros — {1}{R}{R} Legendary Enchantment Artifact. Creatures
+/// you control have haste. {2}{R}, {T}, Sacrifice a land: Create a 3/3
+/// colorless Golem enchantment artifact creature token.
 pub fn hammer_of_purphoros() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: cost(&[generic(1), r()]),
-            sorcery_speed: true,
+            // Printed `{2}{R}, {T}, Sacrifice a land:` — it charged `{1}{R}`
+            // and never tapped.
+            mana_cost: cost(&[generic(2), r()]),
+            tap_cost: true,
+            // The printed card carries no "activate only as a sorcery" — that
+            // rider was invented, and the doc above repeated it.
             sac_other_filter: Some((SelectionRequirement::Land, 1)),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,

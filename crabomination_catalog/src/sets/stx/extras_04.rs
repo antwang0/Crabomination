@@ -1636,8 +1636,10 @@ pub fn conjurers_bauble() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
             discard_cost: None,
-            mana_cost: cost(&[generic(1)]),
-            tap_cost: false,
+            // Printed `{T}, Sacrifice this artifact:` — it charged `{1}` and
+            // never tapped until 2026-09-01.
+            mana_cost: cost(&[]),
+            tap_cost: true,
             sac_cost: true,
             life_cost: 0,
             sorcery_speed: false,

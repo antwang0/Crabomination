@@ -1532,48 +1532,58 @@ fn inquisitive_puppet_exiles_itself_for_a_human() {
 // ── modern_decks: sac-a-Blood activated ability (Bloodtithe Harvester) ──────
 
 #[test]
-fn bloodtithe_harvester_sacs_blood_to_deal_two_damage() {
+fn bloodtithe_harvester_taps_and_sacs_itself_for_minus_two_per_blood() {
     use crabomination::game::effects::blood_token;
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let bh = g.add_card_to_battlefield(0, catalog::bloodtithe_harvester());
     g.clear_sickness(bh);
-    // Give the controller a Blood token to feed the sacrifice cost.
-    let blood = g.add_token_to_battlefield(0, &blood_token());
-    g.players[0].mana_pool.add_colorless(1);
-    let opp_life = g.players[1].life;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    // Two Blood tokens → X is 4, so -4/-4 kills the Bears twice over.
+    g.add_token_to_battlefield(0, &blood_token());
+    g.add_token_to_battlefield(0, &blood_token());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: bh,
         ability_index: 0,
-        target: Some(Target::Player(1)),
+        target: Some(Target::Permanent(victim)),
         additional_targets: Vec::new(),
         x_value: None, mode: None,
     })
-    .expect("{1}, Sacrifice a Blood: 2 damage activates");
+    .expect("{T}, Sacrifice this creature activates at sorcery speed");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_life - 2, "deals 2 to the targeted player");
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == blood),
-        "the Blood token was sacrificed to pay the cost",
+    assert!(!g.battlefield.iter().any(|c| c.id == bh), "it sacrificed itself");
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "-4/-4 killed the 2/2");
+    // The Blood tokens are only counted, never paid.
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Blood").count(),
+        2,
+        "the Bloods are the count, not the cost",
     );
 }
 
+/// The printed activation is sorcery-speed only, so it is not available in
+/// the declare-blockers step. It shipped as an instant-speed `{1}, Sacrifice a
+/// Blood: deal 2 damage` — a different card's ability — until 2026-09-01.
 #[test]
-fn bloodtithe_harvester_cannot_activate_without_a_blood() {
+fn bloodtithe_harvester_is_sorcery_speed_only() {
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let bh = g.add_card_to_battlefield(0, catalog::bloodtithe_harvester());
     g.clear_sickness(bh);
-    g.players[0].mana_pool.add_colorless(1);
-    // No Blood token on the battlefield → the sac cost cannot be paid.
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: bh,
         ability_index: 0,
-        target: Some(Target::Player(1)),
+        target: Some(Target::Permanent(victim)),
         additional_targets: Vec::new(),
         x_value: None, mode: None,
     });
-    assert!(res.is_err(), "no Blood to sacrifice → activation rejected");
+    assert!(res.is_err(), "sorcery-speed only → rejected in combat");
 }
 
 // ── modern_decks: Tireless Tracker sac-a-Clue counter trigger ───────────────

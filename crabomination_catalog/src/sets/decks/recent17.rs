@@ -520,6 +520,24 @@ pub fn canopy_crawler() -> CardDefinition {
         power: 2,
         toughness: 2,
         enters_with_counters: amplify(1, CreatureType::Beast),
+        // "{T}: Target creature gets +1/+1 until end of turn for each +1/+1
+        // counter on this creature." The whole ability was missing.
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                toughness: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

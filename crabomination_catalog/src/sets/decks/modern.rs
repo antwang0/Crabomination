@@ -2104,6 +2104,24 @@ pub fn stoneforge_mystic() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
+        // "{1}{W}, {T}: You may put an Equipment card from your hand onto the
+        // battlefield." The half that makes the card was missing.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            tap_cost: true,
+            effect: Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Hand,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                }),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -4700,6 +4718,18 @@ pub fn otepec_huntmaster() -> CardDefinition {
                 filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
                 amount: 1,
             },
+        }],
+        // "{T}: Target Dinosaur gains haste until end of turn." — missing.
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::HasCreatureType(
+                    CreatureType::Dinosaur,
+                )),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -25323,8 +25353,8 @@ pub fn ramunap_excavator() -> CardDefinition {
     }
 }
 
-/// Executioner's Capsule — {B} Artifact. "{1}{B}, Sacrifice this: Destroy
-/// target nonblack creature."
+/// Executioner's Capsule — {B} Artifact. "{1}{B}, {T}, Sacrifice this artifact:
+/// Destroy target nonblack creature."
 pub fn executioners_capsule() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -25335,6 +25365,9 @@ pub fn executioners_capsule() -> CardDefinition {
             energy_cost: 0,
             discard_cost: None,
             mana_cost: cost(&[generic(1), b()]),
+            // The printed `{T}` was missing, so the ability was repeatable
+            // within a turn.
+            tap_cost: true,
             sac_cost: true,
             effect: Effect::Destroy {
                 what: target_filtered(

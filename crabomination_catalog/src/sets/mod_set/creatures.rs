@@ -778,25 +778,8 @@ pub fn tireless_tracker() -> CardDefinition {
 /// cost. Both ETB and attack triggers fire.
 pub fn bloodtithe_harvester() -> CardDefinition {
     use crate::card::{ActivatedAbility, ArtifactSubtype};
-    use crate::effect::shortcut::target_any;
     use crate::game::effects::blood_token;
     use crate::mana::r;
-    let blood_etb = TriggeredAbility {
-        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: Box::new(blood_token()),
-        },
-    };
-    let blood_attack = TriggeredAbility {
-        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: Box::new(blood_token()),
-        },
-    };
     CardDefinition {
         name: "Bloodtithe Harvester",
         cost: cost(&[b(), r()]),
@@ -807,34 +790,45 @@ pub fn bloodtithe_harvester() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
+        // "{T}, Sacrifice this creature: Target creature gets -X/-X until end
+        // of turn, where X is twice the number of Blood tokens you control.
+        // Activate only as a sorcery."
+        //
+        // It shipped as `{1}, Sacrifice a Blood: deal 2 damage to any target`
+        // — a different card's ability — plus an attack trigger minting a
+        // second Blood token that the printed card does not have.
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: cost(&[generic(1)]),
-            effect: Effect::DealDamage {
-                to: target_any(),
-                amount: Value::Const(2),
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Times(
+                    Box::new(Value::Const(-2)),
+                    Box::new(Value::PermanentCountControlledByMatching(
+                        PlayerRef::You,
+                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                    )),
+                ),
+                toughness: Value::Times(
+                    Box::new(Value::Const(-2)),
+                    Box::new(Value::PermanentCountControlledByMatching(
+                        PlayerRef::You,
+                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                    )),
+                ),
+                duration: crate::effect::Duration::EndOfTurn,
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            // {1}, Sacrifice a Blood: deals 2 damage to any target.
-            sac_other_filter: Some((
-                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
-                1,
-            )),
-            tap_other_filter: None,
-            from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![blood_etb, blood_attack],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(blood_token()),
+            },
+        }],
         ..Default::default()
     }
 }

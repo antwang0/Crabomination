@@ -1043,7 +1043,7 @@ fn tireless_tracker_does_not_trigger_on_non_land_etb() {
 }
 
 #[test]
-fn bloodtithe_harvester_etb_and_attack_each_make_a_blood() {
+fn bloodtithe_harvester_etb_makes_one_blood_and_attacking_makes_none() {
     let mut g = two_player_game();
     let harv = g.add_card_to_hand(0, catalog::bloodtithe_harvester());
     g.players[0].mana_pool.add_colorless(1);
@@ -1070,7 +1070,9 @@ fn bloodtithe_harvester_etb_and_attack_each_make_a_blood() {
     drain_stack(&mut g);
     let bloods_after_attack =
         g.battlefield.iter().filter(|c| c.definition.name == "Blood").count();
-    assert_eq!(bloods_after_attack, 2, "Attack should make a second Blood");
+    // The printed card has ONE Blood trigger, on entry. The attack trigger it
+    // also shipped with until 2026-09-01 is not on the card.
+    assert_eq!(bloods_after_attack, 1, "attacking makes no second Blood");
 }
 
 // ── Engine: trigger-filter enforcement ──────────────────────────────────────
