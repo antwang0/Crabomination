@@ -1711,3 +1711,70 @@ fn every_creature_that_prints_it_must_attack_must_attack() {
         |_, body| body.contains("MustAttack"),
     );
 }
+
+/// **A creature that prints "hexproof from …" carries a `HexproofFrom*`
+/// keyword.**
+///
+/// ⚠ **The self-anchor does not work on a keyword line.** "Hexproof from
+/// black" is printed bare, with no subject, so `own_line` cannot see it —
+/// the rule here is that the line *starts* with the clause, which is what
+/// separates the creature's own keyword from an Aura's grant ("**Enchanted**
+/// creature has hexproof from black").
+#[test]
+fn every_creature_that_prints_hexproof_from_carries_it() {
+    clause_ratchet(
+        "hexproof from",
+        5,
+        |t, _| t.lines().map(str::trim).any(|l| l.starts_with("hexproof from")),
+        |_, body| body.contains("HexproofFrom"),
+    );
+}
+
+/// **A creature that prints "can't attack unless …" carries a
+/// `CantAttackUnless*` keyword.**
+///
+/// The attack-side sibling of the can't-block ratchet, and the same argument:
+/// without it the bot swings with a creature the printing holds back.
+#[test]
+fn every_creature_that_prints_an_attack_condition_carries_it() {
+    clause_ratchet(
+        "can't attack unless",
+        20,
+        |t, n| {
+            own_line(t, n, |l| l.contains("can't attack unless"))
+                // "…unless you pay {1} for each +1/+1 counter on it"
+                // (Phyrexian Marauder) is an attack cost in *mana*, and the
+                // only attack-cost keywords are `AttackCostSacrifice` and
+                // `AttackCostBounce`. Primitive job, filed in CARD_BACKLOG.
+                && n != "phyrexian marauder"
+        },
+        // ⚠ **Three prefixes, and the obvious one is the rarest.** The
+        // restriction spells itself `CanAttackOnlyIfDefenderControls` /
+        // `CanAttackOnlyIfYouControl` (the Sea Serpent cycle, War Falcon,
+        // Scarred Puma) or `AttackCost*` (Leviathan, Exalted Dragon,
+        // Floodtide Serpent) far more often than `CantAttackUnless*`.
+        // Grepping only for the clause's own wording reported 13 correct
+        // cards as defects.
+        |_, body| {
+            body.contains("CantAttack")
+                || body.contains("CanAttackOnlyIf")
+                || body.contains("AttackCost")
+        },
+    );
+}
+
+/// **A creature that prints "must be blocked if able" carries
+/// `Keyword::MustBeBlocked`.**
+///
+/// CR 509.1c, the Lure effect. A missing one is a free attack every combat.
+/// The cache has 19 such cards and the catalog carries 2 of them, so the
+/// vacuity floor is 2 — raise it when the rest land.
+#[test]
+fn every_creature_that_prints_lure_carries_it() {
+    clause_ratchet(
+        "must be blocked if able",
+        2,
+        |t, n| own_line(t, n, |l| l.contains("must be blocked if able")),
+        |_, body| body.contains("MustBeBlocked"),
+    );
+}
