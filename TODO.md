@@ -44,9 +44,21 @@ sixty-seventh pass, so don't re-take that.
 6. **`audit_oracle_verbs.py` is the live card lane: 115 rows, `search_library` 18 -> 11;** next
    by size `draw` 16 / `destroy` 15 / `gain_life` 13. ⚠ It cannot see a dedicated primitive, so
    read the body before believing a row — 4 of 18 `search_library` rows were false positives.
-7. **⚠ A `--games 400 --decks all` stall sweep is 20 s a seed and catches what the grid does
-   not** (the grid is 120 games a cell). Run it before the grid; 68,000 games clean at
-   `22a79dcc`. `CRAB_CAP_DIAG=1` names a capped game's cause in one line.
+7. **⚠ A `--games 400 --decks all` stall sweep is 20-30 s a seed and catches what the grid
+   does not** (the grid is 120 games a cell). Run it before the grid. **183,600 games over 27
+   seeds at `22a79dcc`: no panic, no hang, 4 capped, 22 draws.** `CRAB_CAP_DIAG=1` names a
+   capped game's cause in one line; **`CRAB_CAP_DIAG=<n>` names any game past `n` actions**,
+   which is the only way to see a *slow* game — one that decides is never "undecided".
+7a. **TWO LEADS LEFT FROM THAT SWEEP, filed and not fixed.** (a) All four capped games share a
+   signature: *both* players at **`i32::MAX` life** after 2,159 / 2,492 turns, stack 0, ~30
+   permanents a side, `lib 1` — nobody can lose, so the game runs to the cap. Repro
+   `--decks all --seed 53` (and 73) `--games 400`. Life saturates in `adjust_life`'s
+   `saturating_add`; **what feeds it 2^31 is the open question** — `Effect::DoubleLife` is the
+   only multiplicative life path in the tree and neither board carries a card that has it.
+   (b) `--decks all --seed 43 --games 370` takes **597 s** against 59 s for `--games 368` and
+   reports **0 undecided**: one game eating nine minutes. RSS flat at 77 MB and ordinary
+   `game::actions::` frames, so it is a long game rather than a stack runaway — a throughput
+   bug for an actor even though it is not a stall.
 8. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
    (both want a card), `audit_target_fields` / `audit_target_walkers` clean; ENGINE_BACKLOG's
    P2 has one live lead (Sand Golem's trigger, probed, not vacuous).

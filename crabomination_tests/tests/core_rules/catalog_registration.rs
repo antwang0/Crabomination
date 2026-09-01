@@ -912,13 +912,24 @@ const FREE_ACTIVATION_ALLOWED: &[(&str, &str)] = &[
 #[test]
 fn no_activated_ability_is_free_unconditional_and_unlimited() {
     use crabomination::card::ActivatedAbility;
+    use crabomination::effect::StaticEffect;
     let allowed: HashSet<&str> = FREE_ACTIVATION_ALLOWED.iter().map(|(n, _)| *n).collect();
     let mut bad: Vec<String> = Vec::new();
     let mut checked = 0usize;
     for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
         let def = factory();
         checked += 1;
-        for (i, ab) in def.activated_abilities.iter().enumerate() {
+        // Printed abilities, plus the ones a static hands to other
+        // permanents: `Cryptolith Rite`-shaped grants reach the same
+        // `activate_ability` path as a printed one and are just as unbounded.
+        let granted = def.static_abilities.iter().filter_map(|sa| match &sa.effect {
+            StaticEffect::GrantActivatedAbility { ability, .. } => Some(ability),
+            StaticEffect::GrantActivatedAbilityFromGraveyard { ability, .. } => {
+                Some(&**ability)
+            }
+            _ => None,
+        });
+        for (i, ab) in def.activated_abilities.iter().chain(granted).enumerate() {
             let bare = ActivatedAbility { effect: ab.effect.clone(), ..Default::default() };
             if *ab == bare && !allowed.contains(def.name) {
                 bad.push(format!("{} [{i}]", def.name));

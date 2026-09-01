@@ -2446,14 +2446,23 @@ printed `{0}:` abilities, allow-listed with their oracle line, and 26 defects.
 
 ```text
   profiling-fast --no-default-features, six games, one thread, seed 1
-  pool     new base at `22a79dcc`
-  fixed          895,819,625
-  cube         2,449,583,333
-  sealed       2,453,428,381
+  pool     new base, RETAKEN on the merged tip `22a79dcc`
+  fixed          894,854,188
+  cube         2,449,858,411
+  sealed       2,447,613,524
 ```
 
+⚠ **The commit that landed this pass quotes 895,819,625 / 2,449,583,333 /
+2,453,428,381, and those are a DIFFERENT TIP** — the binary was built before
+the rebase that brought in the concurrent session's `(-152)`/`(-153)`/`(-154)`
+and its two card batches. The table above is the retake on the tip the branch
+actually carries; the two sets agree to within 0.25 % because the commits
+between them are small and partly offset. **A number is about the tip its
+binary was built at, not the tip its commit lands on** — a rebase that lands
+work in between invalidates a reading exactly the way a concurrent push does.
+
 ⚠ **A pre-batch reading at this tip was not taken** — the concurrent session
-landed four perf commits in between — so these are a base, not a delta.
+landed four perf commits inside the window — so these are a base, not a delta.
 `fixed` sits where that session's published deltas predict off 905,955,831, so
 the batch costs it nothing, and the `--bench` invariant is byte-identical
 across it, which is the behavioural proof for that pool. `cube`/`sealed` are
