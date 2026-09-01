@@ -1253,3 +1253,113 @@ fn no_card_drops_a_printed_tap_symbol() {
         &bad[..bad.len().min(40)]
     );
 }
+
+/// Cards whose `sorcery_speed` disagrees with the printed restriction, with
+/// the reason it is right anyway.
+const SORCERY_SPEED_ALLOWED: &[(&str, &str)] = &[];
+
+/// **A card's `sorcery_speed` matches the restriction it prints.**
+///
+/// Both directions are defects and neither is cosmetic. A *missing* one lets
+/// the bot activate at instant speed — one more window per turn to find a
+/// loop in, and one more line the opponent cannot plan against. An *invented*
+/// one takes the ability away for most of the turn; Hammer of Purphoros
+/// carried one its oracle does not have, and its doc comment repeated it.
+///
+/// Reminder text and quoted spans come out first, for the same reasons as the
+/// `{T}` ratchet: "Activate only as a sorcery" inside a quoted grant belongs
+/// to the token or the enchanted permanent, not to this card.
+#[test]
+fn every_card_has_the_activation_timing_it_prints() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+    let allowed: HashSet<&str> = SORCERY_SPEED_ALLOWED.iter().map(|(n, _)| *n).collect();
+
+    fn strip_quoted(text: &str) -> String {
+        let mut out = String::with_capacity(text.len());
+        let mut inside = false;
+        for ch in text.chars() {
+            match ch {
+                '"' | '\u{201c}' | '\u{201d}' => inside = !inside,
+                _ if !inside => out.push(ch),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    let mut checked = 0usize;
+    let mut missing: Vec<&str> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(oracle) = entry.get("oracle_text").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if def.activated_abilities.is_empty() || allowed.contains(def.name) {
+            continue;
+        }
+        checked += 1;
+        // ⚠ **Reminder text comes out, and for this direction that is exactly
+        // right.** A rider printed inside a parenthetical belongs to that
+        // keyword's own ability — Equip, Saddle, Embalm, Scavenge, Outlast and
+        // level up all say "only as a sorcery" in reminder text, and the
+        // engine models each of those somewhere other than an
+        // `ActivatedAbility`. Keeping reminders read Leonin Bola, Bulwark Ox,
+        // Cursecloth Wrappings and Varolz as findings; stripping them leaves
+        // exactly the cards whose own activation states the rider.
+        let text = strip_quoted(&strip_reminders(oracle));
+        // ⚠ **Only a card with exactly ONE printed activation is checked.** The
+        // rider sits on one ability, and this test deliberately does not pair
+        // printed abilities to modelled ones — so on a card with two, "the
+        // text says sorcery somewhere" is not a claim about the ability the
+        // tree has. Ghost Vacuum, Keys to the House and Secluded Starforge all
+        // print the rider on their *second* activation and were findings until
+        // this gate.
+        let activations: Vec<&str> = text
+            .lines()
+            .filter(|l| l.split_once(':').is_some_and(|(c, _)| c.contains('{') && c.len() < 120))
+            .collect();
+        if activations.len() != 1 {
+            continue;
+        }
+        let prints = text.contains("only as a sorcery")
+            || text.contains("only any time you could cast a sorcery");
+        let has = def.activated_abilities.iter().any(|a| a.sorcery_speed);
+        // Only the *permissive* direction is a ratchet. The other one — a
+        // sorcery restriction the card does not print — is a real class too
+        // (the monstrosity helpers carried one for twenty-odd cards, fixed in
+        // the same commit), but its remaining rows need a per-card read
+        // against CR: a Class's level abilities are sorcery-speed by CR 716.4
+        // and print nothing, and "activate only during your turn" is a
+        // *different* rider the engine approximates with this flag. The triage
+        // so far is in CARD_BACKLOG.
+        if prints && !has {
+            missing.push(def.name);
+        }
+    }
+    assert!(checked > 1_000, "only {checked} cards had an activated ability — vacuous");
+    missing.sort();
+    assert!(
+        missing.is_empty(),
+        "{} card(s) print \"activate only as a sorcery\" and are instant-speed in the tree, \
+         which hands the bot a window the card does not give it: {:?}",
+        missing.len(),
+        &missing[..missing.len().min(40)],
+    );
+}

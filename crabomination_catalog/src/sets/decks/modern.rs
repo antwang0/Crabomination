@@ -20211,6 +20211,8 @@ pub fn urza_lord_protector() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(7)]),
+            // "Activate only as a sorcery."
+            sorcery_speed: true,
             effect: Effect::Meld {
                 partner: "The Mightstone and Weakstone".to_string(),
                 into: "Urza, Planeswalker".to_string(),

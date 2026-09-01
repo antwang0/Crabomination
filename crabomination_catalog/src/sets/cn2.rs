@@ -39,12 +39,13 @@ fn etb_monarch() -> TriggeredAbility {
     etb(Effect::BecomeMonarch { who: PlayerRef::You })
 }
 
-/// `{cost}: Monstrosity n` (CR 701.31), sorcery-speed like every printing.
+/// `{cost}: Monstrosity n` (CR 701.31). **No timing rider** — the "sorcery-
+/// speed like every printing" this said is not what CR 701.31a defines, and no
+/// printing carries the restriction.
 fn monstrosity(c: ManaCost, n: i32) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: c,
         effect: Effect::Monstrosity { n: Value::Const(n) },
-        sorcery_speed: true,
         ..Default::default()
     }
 }

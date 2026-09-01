@@ -124,6 +124,53 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 
 # Open
 
+## Activation timing — the direction that is not yet a ratchet
+
+`every_card_has_the_activation_timing_it_prints` (core_rules) ratchets the
+**permissive** half: a card whose own printed activation says "activate only as
+a sorcery" and whose body does not. Three shipped that way — **Birthing Pod**
+(an instant-speed sacrifice outlet), **Urza, Lord Protector** and **Whip of
+Erebos** — and they are fixed.
+
+⚠ **Two gates make that half readable and both are load-bearing.** Reminder
+text comes out, because Equip / Saddle / Embalm / Scavenge / Outlast / level up
+all state the rider inside a parenthetical for an ability the engine models
+somewhere other than an `ActivatedAbility`; and a card with more than one
+printed activation is skipped, because the rider sits on *one* ability and the
+test deliberately does not pair printed abilities to modelled ones (Ghost
+Vacuum, Keys to the House and Secluded Starforge all print it on their
+*second*).
+
+**The other direction — a sorcery restriction the card does not print — is a
+real class and is NOT yet asserted.** One sub-class is already fixed: both
+`monstrosity` helpers (`effect/shortcut.rs` and `sets/cn2.rs`) set
+`sorcery_speed: true` and said so in their doc comments, and **CR 701.31a puts
+no timing rider on monstrosity at all** — instant-speed Polukranos in combat is
+the card. Two helper edits plus Polukranos's own inline copy took the direction
+from 62 rows to 38.
+
+What is left, for whoever picks it up:
+
+* **14 are legitimate and want a mechanic-level skip, not a fix.** A Class's
+  level abilities are sorcery-speed by **CR 716.4** and print nothing:
+  Barbarian / Cleric / Warlock / Wizard Class and the ten `… Talent`
+  enchantments (they are `Enchantment — Class` too).
+* **~24 want a per-card read**, and at least some are the same invention the
+  monstrosity helpers were: Arcanum Wings, Bitter Work, Clattering Augur,
+  Domesticated Hydra, Fledgling Mawcor, Geier Reach Sanitarium, June Bounty
+  Hunter, Llanowar Greenwidow, Lonis, Nebuchadnezzar, Path to Redemption,
+  Pernicious Deed, Professor Zei, Rag Man, Relentless X-ATM092, Scrapheap
+  Scrounger, Skeletal Kathari, Sneaky Snacker, Soul Conduit, Squee the
+  Immortal, Stern Marshal, Vizier of Many Faces, Wand of Ith, Wishclaw
+  Talisman. ⚠ **Rag Man is the shape to expect**: it prints "activate only
+  during your turn, before attackers are declared", which is a *different*
+  rider the engine approximates with this flag — that is a named
+  approximation, not a defect.
+
+Close the direction by fixing the ~24 and skipping the Class cycle by type
+line, then assert it.
+
+
 ## A cost spelled in the effect is not a cost — 26 free activations
 
 **Found by a stall, not by a card read.** `--decks cube --seed 2` had a

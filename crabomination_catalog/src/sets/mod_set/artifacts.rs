@@ -1352,6 +1352,9 @@ pub fn birthing_pod() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1), g()]),
+            // "Activate only as a sorcery." — the rider was missing, so the
+            // Pod was an instant-speed sacrifice outlet.
+            sorcery_speed: true,
             condition: Some(Predicate::SelectorCountAtLeast {
                 sel: Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),

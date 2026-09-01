@@ -1358,14 +1358,20 @@ pub fn boast(cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
     }
 }
 
-/// CR 701.31 — "`cost`: Monstrosity `n`." A sorcery-speed activated
-/// ability that grows the source to monstrous once.
+/// CR 701.31 — "`cost`: Monstrosity `n`." Grows the source to monstrous once.
+///
+/// ⚠ **It is NOT sorcery-speed.** CR 701.31a defines monstrosity as a plain
+/// activated ability with no timing rider, and playing Polukranos at instant
+/// speed in combat is the card's whole point. Both this helper and `cn2.rs`'s
+/// copy carried `sorcery_speed: true` and a doc comment asserting it, which
+/// took the ability away from every monstrosity card for most of the turn
+/// (twenty-odd of them, found by
+/// `every_card_has_the_activation_timing_it_prints`).
 pub fn monstrosity(cost: crate::mana::ManaCost, n: i32) -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
         mana_cost: cost,
         effect: Effect::Monstrosity { n: Value::Const(n) },
-        sorcery_speed: true,
         ..Default::default()
     }
 }

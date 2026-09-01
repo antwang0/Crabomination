@@ -293,6 +293,9 @@ pub fn whip_of_erebos() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2), b(), b()]),
+            // "Activate only as a sorcery." — the rider was missing, so the
+            // Whip reanimated at instant speed.
+            sorcery_speed: true,
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: target_filtered(
