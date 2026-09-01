@@ -902,14 +902,46 @@ fn goldspan_dragon_attack_creates_a_treasure() {
     drain_stack(&mut g);
     let treasure = g.battlefield.iter().find(|c| c.definition.name == "Treasure")
         .expect("attack mints a Treasure");
-    // Goldspan's Treasure taps+sacs for *two* mana of one color.
+    // ⚠ It mints an **ordinary** Treasure; the two-mana ability comes from
+    // Goldspan's printed static, which grants it to every Treasure you
+    // control. So the token has both (CR 613's "have" is additive): the
+    // printed ability at index 0 and the granted one after it.
     let tid = treasure.id;
+    assert!(
+        treasure.definition.subtypes.artifact_subtypes
+            .contains(&crabomination::card::ArtifactSubtype::Treasure),
+        "and it is a Treasure, so the static can see it"
+    );
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tid, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("the granted two-mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "Goldspan's static yields two mana");
+}
+
+/// Goldspan's static reaches a Treasure it did **not** mint — it was modeled
+/// on its own token until the shared-token ratchet.
+#[test]
+fn goldspan_dragon_upgrades_a_treasure_it_did_not_make() {
+    let mut g = two_player_game();
+    let tid = g.add_token_to_battlefield(0, &crabomination::game::effects::treasure_token());
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
         card_id: tid, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
-    }).expect("Treasure mana ability");
+    }).expect("the printed one-mana ability");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.total(), 2, "Goldspan Treasure yields two mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "a plain Treasure makes one");
+
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goldspan_dragon());
+    let tid = g.add_token_to_battlefield(0, &crabomination::game::effects::treasure_token());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tid, ability_index: 1, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("the granted two-mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "the same Treasure makes two under Goldspan");
 }
 
 #[test]

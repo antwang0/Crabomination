@@ -3006,12 +3006,11 @@ fn every_standard_artifact_token_is_the_shared_one() {
         ("Powerstone", crabomination_base::tokens::powerstone_token),
         ("Map", crabomination_base::tokens::map_token),
     ];
-    // ⚠ One allow-list entry, and it is an approximation rather than a
-    // duplicate: **Goldspan Dragon** prints a static ("Treasures you control
-    // have '{T}, Sacrifice this artifact: Add *two* mana of any one color'")
-    // and models it by minting a two-mana Treasure instead, so its token is
-    // deliberately not the shared one. Build the static and delete the name.
-    const ALLOWED: &[&str] = &["Goldspan Dragon"];
+    // The allow-list is empty, and it is worth saying why: **Goldspan
+    // Dragon** was on it until its printed static was built. It minted a
+    // bespoke two-mana Treasure; the card grants the two-mana ability to
+    // *every* Treasure you control, and `GrantActivatedAbility` says so.
+    const ALLOWED: &[&str] = &[];
 
     let mut checked = 0usize;
     let mut wrong: Vec<String> = Vec::new();

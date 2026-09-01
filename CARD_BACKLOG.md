@@ -377,10 +377,13 @@ clause, not the token: "create a **tapped** Treasure token" is printed on
 Hell to Pay, Magda, Season of the Bold and Kain, and all four were checked
 against the oracle.
 
-**Open, one allow-list entry:** Goldspan Dragon prints a static ("Treasures
-you control have '{T}, Sacrifice this artifact: Add **two** mana of any one
-color'") and models it by minting a two-mana Treasure instead. Build the
-static and delete the name.
+**Closed, same pass:** Goldspan Dragon minted a bespoke two-mana Treasure.
+The printed static grants the two-mana ability to **every** Treasure you
+control, including ones another source made, and
+`StaticEffect::GrantActivatedAbility` says exactly that — the granted ability
+sits beside the printed one, which is CR 613's additive "have". Its token is
+now the shared `treasure_token()`, `goldspan_treasure_token()` is deleted,
+and the allow-list is empty.
 
 ### Open — Geyadrone Dihada's abilities are not this card's
 

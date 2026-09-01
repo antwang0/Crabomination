@@ -683,16 +683,23 @@ pub fn voldaren_epicure() -> CardDefinition {
 
 /// Goldspan Dragon — {3}{R}{R}, 4/4 Dragon with Flying and Haste. Whenever
 /// this attacks or becomes the target of a spell, create a Treasure token.
-/// Goldspan's Treasures tap+sac for two mana of one color
-/// (`goldspan_treasure_token`). The static is modeled on the Treasures it
-/// mints (the common case) rather than retagging every Treasure you control.
+/// Treasures you control have "{T}, Sacrifice this artifact: Add two mana of
+/// any one color."
 pub fn goldspan_dragon() -> CardDefinition {
-    use crate::game::effects::goldspan_treasure_token;
+    use crate::card::{ActivatedAbility, ArtifactSubtype, StaticAbility};
+    use crate::effect::{ManaPayload, StaticEffect};
+    use crate::game::effects::treasure_token;
     use crate::mana::r;
+    // ⚠ It minted a bespoke two-mana Treasure until 2026-09-01, which is not
+    // what the card says: the printed static gives **every** Treasure you
+    // control the two-mana ability, including ones another source made, and
+    // the tokens it makes are ordinary Treasures. `GrantActivatedAbility`
+    // adds a virtual ability beside the printed one, which is exactly CR
+    // 613's "have" — a Treasure under Goldspan has both.
     let make_treasure = || Effect::CreateToken {
         who: PlayerRef::You,
         count: Value::Const(1),
-        definition: Box::new(goldspan_treasure_token()),
+        definition: Box::new(treasure_token()),
     };
     CardDefinition {
         name: "Goldspan Dragon",
@@ -715,6 +722,26 @@ pub fn goldspan_dragon() -> CardDefinition {
                 effect: make_treasure(),
             },
         ],
+        static_abilities: vec![StaticAbility {
+            description: "Treasures you control have \"{T}, Sacrifice this artifact: Add two \
+                          mana of any one color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Treasure)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    sac_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::Const(2)),
+                    },
+                    ..Default::default()
+                },
+                condition: None,
+            },
+        }],
         ..Default::default()
     }
 }
