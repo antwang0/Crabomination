@@ -10003,13 +10003,17 @@ pub fn goblin_bushwhacker() -> CardDefinition {
 /// and attacking. Goblin creatures you control attack each combat if
 /// able."
 ///
-/// Cube-style approximation. Wires the attack-trigger token-creation
-/// half (1/1 red Goblin); the "other goblins +1/+0 and haste" anthem
-/// and "must attack" restriction are dropped (no goblin-anthem static
-/// primitive nor must-attack restriction in the engine). The body is
-/// still strong on attack-trigger token chains.
+/// ⚠ It shipped with the token on an **attack** trigger, and Rabblemaster
+/// makes its Goblin at the **beginning of combat on your turn** — the
+/// difference is a whole extra body every turn it does not attack, and the
+/// token had no haste. The doc called it "the attack-trigger token-creation
+/// half"; the attack trigger is the *pump*. All three abilities are here now.
 pub fn goblin_rabblemaster() -> CardDefinition {
-    use crate::card::TokenDefinition;
+    use crate::card::{SelectionRequirement as R, TokenDefinition};
+    use crate::game::TurnStep;
+    let other_goblins = R::HasCreatureType(CreatureType::Goblin)
+        .and(R::ControlledByYou)
+        .and(R::OtherThanSource);
     CardDefinition {
         name: "Goblin Rabblemaster",
         cost: cost(&[generic(2), r()]),
@@ -10020,25 +10024,50 @@ pub fn goblin_rabblemaster() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
-                    name: "Goblin".into(),
-                    power: 1,
-                    toughness: 1,
-                    card_types: vec![CardType::Creature],
-                    colors: vec![Color::Red],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Goblin],
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
+        static_abilities: vec![StaticAbility {
+            description: "Other Goblins you control attack each combat if able.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(other_goblins.clone()),
+                keyword: Keyword::MustAttack,
             },
         }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: Box::new(TokenDefinition {
+                        name: "Goblin".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Red],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Goblin],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Haste],
+                        ..Default::default()
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(other_goblins.clone())),
+                        filter: R::IsAttacking,
+                    },
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

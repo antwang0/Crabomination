@@ -3055,21 +3055,47 @@ fn knight_of_the_reliquary_pt_scales_with_lands_in_graveyards() {
     assert_eq!(k.toughness, 2 + 5, "Knight is 7/7");
 }
 
+/// **Goblin Rabblemaster mints its Goblin at the beginning of combat, not on
+/// attack** — and the token has haste.
+///
+/// ⚠ It shipped with the token on the *attack* trigger, which is the card's
+/// **pump** ("+1/+0 for each other attacking Goblin"). The difference is a
+/// body every turn it does not attack, and a token that could not attack the
+/// turn it arrived. The doc called it "the attack-trigger token-creation
+/// half"; there is no such half.
 #[test]
-fn goblin_rabblemaster_attack_creates_a_goblin_token() {
-    use crabomination::card::CreatureType;
+fn goblin_rabblemaster_mints_a_hasty_goblin_at_the_beginning_of_combat() {
+    use crabomination::card::{CreatureType, Keyword};
+    use crabomination::game::TurnStep;
     let mut g = two_player_game();
     let rabble = g.add_card_to_battlefield(0, catalog::goblin_rabblemaster());
     g.clear_sickness(rabble);
     let bf_before = g.battlefield.len();
-    let trig = catalog::goblin_rabblemaster().triggered_abilities[0].effect.clone();
-    let ctx = crabomination::game::effects::EffectContext::for_trigger(rabble, 0, None, 0);
-    let _ = g.resolve_effect(&trig, &ctx);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
     drain_stack(&mut g);
     assert_eq!(g.battlefield.len(), bf_before + 1, "Goblin token entered");
-    assert!(g.battlefield.iter().any(|c|
-        c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Goblin)
-    ), "Goblin token present");
+    let (token, hasty) = g
+        .battlefield
+        .iter()
+        .find(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Goblin))
+        .map(|c| (c.id, c.definition.keywords.contains(&Keyword::Haste)))
+        .expect("Goblin token present");
+    assert!(hasty, "with haste");
+
+    // And other Goblins you control attack each combat if able.
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(
+        !g.computed_permanent(other).expect("bear").keywords().contains(&Keyword::MustAttack),
+        "a Bear is not a Goblin",
+    );
+    assert!(
+        g.computed_permanent(token)
+            .expect("token")
+            .keywords()
+            .contains(&Keyword::MustAttack),
+        "but the Goblin token must attack",
+    );
 }
 
 // ── modern_decks batch 103: new cube-expansion card tests ───────────────────

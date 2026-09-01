@@ -2107,8 +2107,14 @@ fn silversmote_ghoul_sacrifices_itself_to_draw() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
 }
 
+/// **Bitterbloom Bearer mints a Faerie every upkeep and bleeds you for it.**
+///
+/// ⚠ It shipped as an **enters** trigger with no life loss: one token, once,
+/// where the card makes one every upkeep. That is the whole card — the drain
+/// is what prices it.
 #[test]
-fn bitterbloom_bearer_etb_creates_a_faerie_token() {
+fn bitterbloom_bearer_mints_a_faerie_each_upkeep() {
+    use crabomination::game::TurnStep;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::bitterbloom_bearer());
     g.players[0].mana_pool.add(Color::Black, 2);
@@ -2118,13 +2124,23 @@ fn bitterbloom_bearer_etb_creates_a_faerie_token() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bitterbloom Bearer castable for {B}{B}");
     drain_stack(&mut g);
+    assert_eq!(g.battlefield.len(), bf_before + 1, "no token on the way in");
 
-    assert_eq!(g.battlefield.len(), bf_before + 2,
-        "Bitterbloom Bearer + 1 Faerie token = +2 permanents");
+    for n in 1..=2 {
+        let life = g.players[0].life;
+        g.active_player_idx = 0;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].life, life - 1, "upkeep {n}: you lose 1");
+        assert_eq!(
+            g.battlefield.iter().filter(|c| c.definition.name == "Faerie").count(),
+            n,
+            "upkeep {n}: one more Faerie",
+        );
+    }
     let faerie = g.battlefield.iter().find(|c| c.definition.name == "Faerie")
         .expect("Faerie token should be on the battlefield");
-    assert_eq!(faerie.definition.power, 1);
-    assert_eq!(faerie.definition.toughness, 1);
+    assert_eq!((faerie.definition.power, faerie.definition.toughness), (1, 1));
     assert!(faerie.definition.keywords.contains(&crabomination::card::Keyword::Flying));
 }
 

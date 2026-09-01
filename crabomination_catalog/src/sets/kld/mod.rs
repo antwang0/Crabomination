@@ -698,8 +698,12 @@ pub fn lathnu_hellion() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::AddEnergy(Value::Const(2))),
             TriggeredAbility {
+                // ⚠ **End step**, not upkeep. It shipped on the upkeep, which
+                // bought the Hellion a whole extra turn: it attacked, then
+                // asked for the energy on the *next* turn's upkeep instead of
+                // that turn's end step.
                 event: EventSpec::new(
-                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventKind::StepBegins(TurnStep::End),
                     EventScope::YourControl,
                 ),
                 effect: Effect::PayEnergyOrElse {

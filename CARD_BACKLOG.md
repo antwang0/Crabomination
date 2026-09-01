@@ -644,6 +644,63 @@ card that does not exist, Hellspark Elemental missing the Unearth it prints).
 mechanical ones.** Keep the 0 — a new row now means a doc and a body that
 have just diverged.
 
+**TRIGGER TIMING — A CLAUSE-VS-PRIMITIVE AUDIT, THREE DEFECTS TAKEN AND 29
+ROWS LEFT AS A READING LIST.** Cross-reference the printed oracle's step
+clause ("at the beginning of your upkeep / end step / draw step / combat on
+your turn") against the `EventKind::StepBegins(..)` the built definition
+names. 884 clauses, 273 raw misses, of which most are keyword reminder text
+(Echo, Fading, Vanishing, Suspend, Impending all print a step clause the
+engine keeps in the keyword) — exempt those and 32 remain. Three were real
+and are fixed:
+
+* **Goblin Rabblemaster** — the token was on the **attack** trigger. It is a
+  *begin-combat* trigger, the attack trigger is the pump, and the token has
+  haste. Its "other Goblins attack each combat if able" was missing too.
+* **Lathnu Hellion** — the `{E}{E}` tax was on the **upkeep**. It is the end
+  step, which bought the Hellion an extra turn every time.
+* **Bitterbloom Bearer** — an **enters** trigger with no life loss, where the
+  card mints a Faerie *every upkeep* and drains you for each.
+
+⚠ **It is not a ratchet, and the reason is the list below**: the remaining 29
+are mostly encodings the `{:?}` cannot see through (the Case cycle's "solve at
+the beginning of your end step" reminder, an ability *granted* to another
+permanent, `ExileSelfWithCountdown`), mixed with real drops that each want
+their own read. A ratchet would need 29 allowlist entries, which is a reading
+list wearing a test's clothes. Re-run the probe from the fourth pass's shape
+(it is six lines against `all_catalog_card_factories`) and work the list:
+
+```text
+  Aang, Airbending Master [beginning of your upkeep] wants StepBegins(Upkeep)
+  Aethermage's Touch [beginning of your end step] wants StepBegins(End)
+  Alacrian Armory [beginning of combat on your turn] wants StepBegins(BeginCombat)
+  All Hallow's Eve [beginning of your upkeep] wants StepBegins(Upkeep)
+  Barret, Avalanche Leader [beginning of combat on your turn] wants StepBegins(BeginCombat)
+  Bloodcurdler [beginning of your end step] wants StepBegins(End)
+  Case of the Burning Masks [beginning of your end step] wants StepBegins(End)
+  Case of the Crimson Pulse [beginning of your end step] wants StepBegins(End)
+  Case of the Filched Falcon [beginning of your end step] wants StepBegins(End)
+  Case of the Gateway Express [beginning of your end step] wants StepBegins(End)
+  Case of the Gorgon's Kiss [beginning of your end step] wants StepBegins(End)
+  Case of the Locked Hothouse [beginning of your end step] wants StepBegins(End)
+  Case of the Pilfered Proof [beginning of your end step] wants StepBegins(End)
+  Case of the Ransacked Lab [beginning of your end step] wants StepBegins(End)
+  Case of the Shattered Pact [beginning of your end step] wants StepBegins(End)
+  Case of the Stashed Skeleton [beginning of your end step] wants StepBegins(End)
+  Case of the Trampled Garden [beginning of your end step] wants StepBegins(End)
+  Case of the Uneaten Feast [beginning of your end step] wants StepBegins(End)
+  Eccentric Apprentice [beginning of combat on your turn] wants StepBegins(BeginCombat)
+  Herald's Horn [beginning of your upkeep] wants StepBegins(Upkeep)
+  Iroh, Tea Master [beginning of combat on your turn] wants StepBegins(BeginCombat)
+  Overlord of the Balemurk [beginning of your end step] wants StepBegins(End)
+  Overlord of the Boilerbilges [beginning of your end step] wants StepBegins(End)
+  Overlord of the Floodpits [beginning of your end step] wants StepBegins(End)
+  Overlord of the Hauntwoods [beginning of your end step] wants StepBegins(End)
+  Overlord of the Mistmoors [beginning of your end step] wants StepBegins(End)
+  Sproutback Trudge [beginning of your end step] wants StepBegins(End)
+  Terminal Velocity [beginning of your end step] wants StepBegins(End)
+  Yavimaya Granger [beginning of your upkeep] wants StepBegins(Upkeep)
+```
+
 **THE THREE PRINTED-CHARACTERISTIC RATCHETS ARE RUST TESTS, NOT SCRIPTS, AND
 THAT IS WHY THEY FOUND ANYTHING.** `audit_catalog_stats.py` reads **0** in its
 cost, P/T, type and super columns and has for a long time — because its `FN`

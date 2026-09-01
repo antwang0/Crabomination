@@ -456,8 +456,12 @@ fn aetherborn_marauder_does_not_trigger_on_opponent_energy() {
     );
 }
 
+/// ⚠ The tax is at the **end step**, not the upkeep — it shipped on the
+/// upkeep, which bought the Hellion a whole extra turn: it attacked, then
+/// asked for the energy on the *next* turn's upkeep instead of that turn's
+/// end step. These two wait for the end step now.
 #[test]
-fn lathnu_hellion_survives_upkeep_when_energy_paid() {
+fn lathnu_hellion_survives_end_step_when_energy_paid() {
     use crabomination::game::TurnStep;
     let mut g = two_player_game();
     // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
@@ -470,7 +474,7 @@ fn lathnu_hellion_survives_upkeep_when_energy_paid() {
     let h = g.add_card_to_battlefield(0, catalog::lathnu_hellion());
     g.players[0].energy = 2;
     let mut iters = 0;
-    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 3)
+    while !(g.active_player_idx == 0 && g.step == TurnStep::End && g.turn_number >= 1)
         && iters < 300
     {
         let _ = g.pass_priority();
@@ -480,11 +484,11 @@ fn lathnu_hellion_survives_upkeep_when_energy_paid() {
     }
     drain_stack(&mut g);
     assert!(g.battlefield_find(h).is_some(), "paid {{E}}{{E}} → kept");
-    assert_eq!(g.players[0].energy, 0, "energy spent on the upkeep tax");
+    assert_eq!(g.players[0].energy, 0, "energy spent on the end-step tax");
 }
 
 #[test]
-fn lathnu_hellion_sacrificed_when_energy_unpaid() {
+fn lathnu_hellion_sacrificed_at_end_step_when_energy_unpaid() {
     use crabomination::game::TurnStep;
     let mut g = two_player_game();
     // CR 103.7a — only turn 1's draw is skipped; keep libraries stocked for
@@ -497,7 +501,7 @@ fn lathnu_hellion_sacrificed_when_energy_unpaid() {
     let h = g.add_card_to_battlefield(0, catalog::lathnu_hellion());
     g.players[0].energy = 0;
     let mut iters = 0;
-    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 3)
+    while !(g.active_player_idx == 0 && g.step == TurnStep::End && g.turn_number >= 1)
         && iters < 300
     {
         let _ = g.pass_priority();

@@ -3899,8 +3899,12 @@ pub fn silversmote_ghoul() -> CardDefinition {
     }
 }
 
-/// Bitterbloom Bearer — {B}{B}, 1/1 Faerie Wizard with Flash and Flying. "When this
-/// creature enters, create a 1/1 black Faerie creature token with flying."
+/// Bitterbloom Bearer — {B}{B}, 1/1 Faerie Rogue with Flash and Flying. "At the
+/// beginning of your upkeep, you lose 1 life and create a 1/1 blue and black
+/// Faerie creature token with flying."
+///
+/// ⚠ It shipped as an **enters** trigger with no life loss: one token, once,
+/// where the card mints one every upkeep. That is the whole card.
 pub fn bitterbloom_bearer() -> CardDefinition {
     use crate::card::TokenDefinition;
     CardDefinition {
@@ -3915,29 +3919,38 @@ pub fn bitterbloom_bearer() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: Box::new(TokenDefinition {
-                    name: "Faerie".into(),
-                    power: 1,
-                    toughness: 1,
-                    keywords: vec![Keyword::Flying],
-                    card_types: vec![CardType::Creature],
-                    colors: vec![crate::mana::Color::Black],
-                    supertypes: vec![],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Faerie],
-                        ..Default::default()
-                    },
-                    activated_abilities: vec![],
-                    triggered_abilities: vec![],
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::ONE,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(TokenDefinition {
+                        name: "Faerie".into(),
+                        power: 1,
+                        toughness: 1,
+                        keywords: vec![Keyword::Flying],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::Blue, crate::mana::Color::Black],
+                        supertypes: vec![],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Faerie],
+                            ..Default::default()
+                        },
+                        activated_abilities: vec![],
+                        triggered_abilities: vec![],
 
-                    static_abilities: vec![],
-                    ..Default::default()
-                }),
-            },
+                        static_abilities: vec![],
+                        ..Default::default()
+                    }),
+                },
+            ]),
         }],
         ..Default::default()
     }
