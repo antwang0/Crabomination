@@ -2473,9 +2473,12 @@ positions where they used to be.
 suite   19,138 / 0 / 5; golden traces unmoved
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 --bench profiling-fast: 195,806 / 27.49 / 611.9 / 0 stalls, determinism ok
-stalls  **68,000 games** over ten seeds x `--decks all` (400 games, 3 threads):
-        no panic, no hang, **0 capped / 0 stuck**; seed 11 has 14 draws, which
-        `undecided_by` splits out as a rules outcome
+stalls  **183,600 games** over 27 seeds x `--decks all --games 400`: no panic,
+        no hang, **4 capped / 0 stuck / 22 draws**. The four capped games share
+        a signature — both players at `i32::MAX` life after 2,159 and 2,492
+        turns — and a fifth game *decides* after **597 s**; both are filed in
+        TODO's NEXT (11b) with their repro, and `CRAB_CAP_DIAG=<n>` is what
+        sees the second one at all
 engine  `add_counter_cost` now goes through `scaled_counter_count` like every
         other counter-add site (CR 614.16): Vizier of Remedies was shaving the
         counter an *effect* placed and not the one a *cost* placed
