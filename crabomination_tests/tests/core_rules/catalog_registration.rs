@@ -2342,7 +2342,28 @@ fn every_self_source_trigger_kind_reaches_a_dispatcher() {
 }
 
 /// **A card's printed type line is the card's type line** — supertypes, card
-/// types, land types, and artifact / enchantment subtypes, both directions.
+/// types, land types and artifact / enchantment subtypes, in both directions.
+///
+/// The join ratchet whose *invented* half is the loud one: **89 land types on
+/// 45 lands** that print none. Every fastland, gainland, creature-land, Snarl
+/// and Temple, the five Mirrodin artifact lands, Karakas, Bojuka Bog,
+/// Mortuary Mire and Hidden Grotto carried the basic types they tap for,
+/// which made each of them fetchable by "search for a Swamp card", live to
+/// swampwalk, and counted for domain. Four shared helpers, not 45 mistakes.
+///
+/// 25 in the other direction, `Aura` on four enchantments among them — and
+/// adding those four turned up two facts about the CR 704.5m orphan sweep
+/// (`stack.rs` carries both, `CARD_BACKLOG` the write-up).
+///
+/// Two structural rules, each of which arrived as a false positive:
+///
+/// 1. **A subtype family is only compared when the printed type line carries
+///    the card type that owns it.** "Legendary Planeswalker — Urza" names a
+///    planeswalker subtype that spells a `LandType`.
+/// 2. **A printed word satisfied by *any* of the card's subtype lists is
+///    satisfied.** The type line does not say which family a word belongs to,
+///    and "Book" is both an `ArtifactSubtype` and a `CreatureType` — Jayemdae
+///    Tome against Codie, Vociferous Codex.
 #[test]
 fn every_card_carries_its_printed_type_line() {
     let cache_path =
@@ -2445,7 +2466,16 @@ fn every_card_carries_its_printed_type_line() {
             }
         }
     }
-    assert!(checked > 15_000, "only {checked} cards compared — vacuous");
+    assert!(
+        checked > 15_000,
+        "only {checked} cards could be compared against the cache — the ratchet is vacuous \
+         below that"
+    );
     wrong.sort();
-    assert!(wrong.is_empty(), "{} type-line mismatch(es): {:?}", wrong.len(), &wrong[..wrong.len().min(200)]);
+    assert!(
+        wrong.is_empty(),
+        "{} type-line mismatch(es): {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
 }

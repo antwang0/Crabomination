@@ -2422,6 +2422,40 @@ a box whose state moves.
 
 ## Baseline
 
+### The join-ratchet card pass — closing state
+
+**A cards pass. Nothing in the engine's walk moved and no perf claim is made**
+— it is filed here for the gates and for one method note.
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,183 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench release-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; peak_rss 28.1 MiB
+```
+
+⚠ **This reading tests rather than confirms, unlike the last card pass.**
+That one noted `--bench` is the four hand-built archetypes and none of its
+seven cards was in them. **None of this pass's 290 changed cards is in them
+either** — but the pass also changed the engine: the CR 704.5m orphan-Aura
+sweep gained two guards, and `--decks fixed` plays Pacifism. A card pass that
+touches an SBA is a pass whose `--bench` reading is a real check.
+
+**The method note, because it is the transferable half.** The clause ratchets
+read printed *prose* and pay for it in false positives — three documented
+classes, and one needle reported 13 correct cards out of 14. The ratchets
+added this pass join on the cache's **structured** fields instead
+(`keywords[]`, `loyalty`, `power`, `type_line`) and found **290 defects on
+their first run** at a false-positive rate low enough to triage by hand. The
+rule that makes such a join a *proof* rather than a reading list is **"no
+bespoke spelling"**: the property must be one the engine reads from exactly
+one field. `prowess`, `exalted`, `cascade`, `riot`, `battle cry`, `mentor`,
+`training`, `myriad`, `melee` and `storm` are all triggered abilities in this
+catalog, and including them reported **68 correct cards**.
+
 ### The allocation-census pass — closing state
 
 Three measurement findings and one take, plus the discard family's fan-out

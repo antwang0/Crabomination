@@ -51,12 +51,17 @@ sixty-seventh pass, so don't re-take that.
    price a std-adapter row by its **code size** (`readelf -sW`) — its 4,122-byte `call_mut` is a
    closure body, which is why deleting the row bought a tenth of it. **The build is still the
    lever**: PGO -23.8 to -27.6 %, ML_PIPELINE 0.
-6. **The lane that keeps paying: read a printed oracle clause, check the primitive, ratchet it** —
-   seventeen ratchets now live in `core_rules/catalog_registration.rs`, five sharing one
-   `clause_ratchet` body. ⚠ **The needle is the work**, and its three false-positive classes are
-   in **CARD_BACKLOG's first section** with the next three surveyed clauses. Also **⚠ a python
-   auditor's zero is suspect — check its population** (`audit_catalog_stats.py` saw 10,764 of
-   17,639 cards; its Rust replacements found 33 defects on their first run).
+6. **Two card lanes now, and the second is cheaper per defect.** (a) the printed-**clause**
+   ratchets — read an oracle clause, check the primitive; seventeen live, five sharing
+   `clause_ratchet`, false-positive classes in **CARD_BACKLOG's first section**. (b) the
+   printed-**join** ratchets, new this run: don't read prose, join the catalog against the
+   cache's *structured* fields. Four of them found **290 defects in one pass** — keywords (25),
+   numbers (3), creature subtypes (148), type line (89 invented + 25 missing). ⚠ **The rule that
+   makes a join a proof is "no bespoke spelling"**: a keyword read only from `def.keywords` is a
+   proof, and prowess/exalted/cascade/riot/mentor are triggered abilities here — including them
+   reported 68 correct cards. **Still unjoined and worth a run: `produced_mana`, `color_identity`, the
+   `oracle_text` of an activated ability's cost.** Also **⚠ a python auditor's zero is suspect —
+   check its population** (`audit_catalog_stats.py` saw 10,764 of 17,639 cards).
 7. **Robustness green, and P2 has no open correctness lead** — the discard family is fixed at
    `39528f0f` plus its fan-out half, and `every_self_source_trigger_kind_reaches_a_dispatcher`
    is the population ratchet: no catalog card carries a `SelfSource` trigger on a kind nothing
