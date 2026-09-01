@@ -2422,6 +2422,39 @@ a box whose state moves.
 
 ## Baseline
 
+### The scripted-decider pass — closing state
+
+```text
+  pool    base 4e10eefa      (-159)          delta
+  fixed     905,228,901     904,136,265   **-0.1207 %**
+  cube    2,466,595,486   2,462,264,406   **-0.1756 %**
+  sealed  2,475,598,365   2,471,802,422   **-0.1533 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,191 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok; thread_determinism ok (3 vs 1); peak_rss
+        21.3 MiB (`--no-default-features`, i.e. the system allocator)
+--bench release at the base tip, for the profile comparison: same four
+        counters, games_per_s 209.29, peak_rss 24.7 MiB
+```
+
+⚠ **The A/B above was taken at base `4e10eefa`; the gates were re-run after a
+rebase onto a concurrent session's two commits** (a `ManaPayload` variant and
+the LCI card that uses it). Suite, clippy and the `--bench` counters below are
+the rebased tip's; the Ir columns are `4e10eefa` either side, which is the tip
+to name when quoting them.
+
+The pass also re-took the growth census on all three pools and ranked it by
+count — see `(-160)` in the candidates — and pinned the demo builders' deal to
+`GameState.rng`, which is what took the 4-player FFA bot test off a 600-second
+wall-clock ceiling.
+
 ### The join-ratchet card pass — closing state
 
 **A cards pass. Nothing in the engine's walk moved and no perf claim is made**
@@ -10848,6 +10881,82 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-159)` — `auto_tap_for_cost_inner` stops rebuilding its scripted decider: `cube` -0.176 %, `sealed` -0.153 %, `fixed` -0.121 %
+
+```text
+  pool    base 4e10eefa      (-159)          delta
+  fixed     905,228,901     904,136,265   **-0.1207 %**
+  cube    2,466,595,486   2,462,264,406   **-0.1756 %**
+  sealed  2,475,598,365   2,471,802,422   **-0.1533 %**
+
+  the row itself, growths / calls / grow Ir
+  cube    16,394 / 11,310 / 2,892,179  ->  8,746 / 11,310 / 1,631,860
+  fixed    7,042 /  5,022 / 1,095,383  ->  3,548 /  5,022 /   506,239
+  whole-run growths: cube 315,914 -> 307,584, fixed 115,497 -> 112,003
+```
+
+`profiling-fast --no-default-features`, six games, one thread, seed 1, both
+sides built by one warm cargo in the main tree. **The call counts are
+identical to the unit on both pools** — 11,310 and 5,022 — which is the check
+that this removed allocations and not work.
+
+**Why this row and not the census's largest.** `(-160)`'s re-ranking makes
+`auto_tap_for_cost_inner` the biggest engine growth caller that is not already
+refuted, and the only one that is large on **all three** pools (1.45 / 1.40 /
+1.35 growths a call). Three of its four buffers are per-call locals; the
+fourth is the one that mattered and it is not a buffer at all.
+
+**The decider was rebuilt once per colored pip.** Both pip loops install a
+one-answer `ScriptedDecider` so an `AnyOneColor` source adds the colour being
+paid rather than the `AutoDecider`'s default White, then take it straight back
+out. `Box::new(ScriptedDecider::new([Color(c)]))` is **three** allocations a
+pip — the `Box`, the `VecDeque` behind `answers`, and the `asked` log's `Vec`
+on the first `decide` — and the log is read by no engine caller. The fix is
+one boxed decider for the whole payment, re-armed in place:
+
+- `Decider::rearm_script(&mut self, DecisionAnswer)`, defaulted to a no-op, so
+  the caller can re-point whatever it is holding without downcasting a
+  `Box<dyn Decider>` back to its concrete type. `ScriptedDecider` overrides it
+  to clear and re-push, keeping both buffers' capacity.
+- `ScriptedDecider::silent()` — an empty script that does not log. The two
+  stock constructors keep logging, so every scripted *test* is unchanged.
+- `answers` moves from `VecDeque` to `SmallVec<[DecisionAnswer; 2]>` with a
+  `remove(0)`: a script is one or two answers, and the ring buffer's only job
+  here was an allocation.
+- `still_need_colors`, `hybrids` and `keep_by_idx` take inline slots, the
+  `(-158)` device, for the same "first allocation, no re-growth" reason.
+
+⚠ **`Box::new` is invisible to `cg_growth.py`** — the census counts
+`RawVec::finish_grow` callers, and a plain `Box` allocation reaches the
+allocator by another path. That is why the measured `cube` win (-0.176 %) is
+*larger* than the row the census sized (0.117 %): two of the three allocations
+a pip were never in the table that ranked it. **Read a growth census as a lower
+bound on an allocation-shaped row, not as its size.**
+
+Suite green (19,191 / 0 / 5) and the golden traces unmoved; `--bench`
+byte-identical to the invariant (195,806 / 27.49 / 611.9 / 0 stalls),
+`determinism ok`, `thread_determinism ok (3 vs 1 threads identical)`.
+
+**And the check the Ir delta cannot give: the same five-seed stall sweep run on
+BOTH binaries.** `--a gang --b gang --games 400 --threads 3 --decks all`, seeds
+11 / 23 / 41 / 67 / 89, 34,000 games a side:
+
+```text
+  seed   base                       (-159)
+    11   6,784 decided / 16 undec   6,784 / 16
+    23   6,800 /  0                 6,800 /  0
+    41   6,796 /  4                 6,796 /  4
+    67   6,800 /  0                 6,800 /  0
+    89   6,796 /  4                 6,796 /  4
+```
+
+Identical seed for seed, 0 panics either side, 24 undecided of 34,000
+(0.071 %) on both — draws, per the 26-seed 176,800-game sweep in the Baseline
+block below, which reads `cap 0 / stuck 0`. A change that reaches **every mana payment in the engine**
+and moves no game's outcome across seventeen archetypes is behaviour-preserving
+in the only sense that matters here; `--bench`'s four counters say the same
+thing over a narrower pool.
 
 ### `(-158)` — the `Id*` locals get an inline buffer: `fixed` -0.212 %, `cube` -0.139 %, `sealed` -0.187 %
 
@@ -20113,6 +20222,92 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-160) THE GROWTH CENSUS RE-TAKEN AT `4e10eefa`, ON ALL THREE POOLS AND
+RANKED BY COUNT — `(-158)`'s OWN RULE APPLIED TO ITS OWN TABLE.** Fresh
+`profiling-fast --no-default-features` dumps, six games, one thread, seed 1.
+`(-158)` printed the top ten *by Ir*; ranking the same dump by **count** is
+what its "rank first allocations by COUNT" rule actually asks for, and it
+turns up nine engine rows the Ir ranking never showed. Base totals: `fixed`
+905,228,901 / `cube` 2,466,595,486 / `sealed` 2,475,598,365.
+
+```text
+  cube — growth callers by count (315,914 growths over 114 callers)
+    growths    calls   /call   grow Ir
+    38,212    163,574   0.23   7,812,347  Vec::push_mut            ⓘ
+    23,576     80,728   0.29   2,829,120  dispatch_board_scan      ✗ dropck
+    19,684    365,837   0.05  13,653,258  Vec::from_iter           ⓘ
+    16,394     11,310   1.45   2,892,179  auto_tap_for_cost_inner  ← (-159)
+    16,366      6,128   2.67   9,507,753  resolve_combat           ✗ (-158)
+    11,410     26,660   0.43   1,509,276  grant_scan
+    10,688     26,820   0.40   1,725,806  IdSet::insert
+    10,648     45,002   0.24   1,309,986  affected_from_requirement
+     9,194     82,924   0.11   1,110,797  effective_mana_abilities_into
+     8,684      7,032   1.23   1,204,770  deal_combat_damage_to_target
+     8,296     41,856   0.20   5,590,426  CowBox<Vec<T>>::push
+     8,286     93,874   0.09   1,220,715  granted_abilities_of_inner
+     8,248      8,526   0.97   1,127,415  mana_source_table        ✗ its `reserve(16)`
+     7,632      9,884   0.77   1,723,749  remove_from_battlefield_to_graveyard_raw
+     7,566     12,538   0.60     958,846  cast_candidates
+     7,336     49,786   0.15     880,989  trigger_grant_sources    ✗ dropck
+     7,180     37,848   0.19   2,365,260  advance_step
+     6,848      4,910   1.39   2,085,026  declare_blockers         ✗ (-158) took it
+     6,832     12,294   0.56   1,398,257  send_to_graveyard
+     6,722     10,062   0.67   1,025,177  resolve_top_of_stack_inner
+     5,460      6,572   0.83   1,016,780  declare_attackers_banded
+     5,262     59,456   0.09     990,780  gather_continuous_effects_inner
+
+  fixed — the same ranking, and it is a DIFFERENT list
+    13,922     47,304   0.29   2,142,688  Vec::push_mut            ⓘ
+    11,806     30,234   0.39   2,970,367  gather_continuous_effects_inner  ← 0.328 %
+     7,042      5,022   1.40   1,095,383  auto_tap_for_cost_inner  ← (-159)
+     6,590      3,308   1.99   5,303,210  resolve_combat           ✗ (-158)
+     5,650      9,556   0.59     764,678  IdSet::insert
+     4,726     24,642   0.19   1,412,940  advance_step
+
+  sealed — and a third list again
+    17,820      8,458   2.11  11,926,373  resolve_combat           ✗ (-158)
+    16,272     12,076   1.35   2,956,061  auto_tap_for_cost_inner  ← (-159)
+    14,264     29,710   0.48   2,081,946  IdSet::insert
+    11,924      9,450   1.26   1,604,800  deal_combat_damage_to_target
+    11,068     31,010   0.36   7,075,133  fire_step_triggers       ← 0.286 %, sealed only
+```
+
+**Three things this reading establishes.**
+
+*One — `(-158)` verifiably worked, and the census is the receipt.* `declare_blockers`
+went 19,616 → 6,848 growths and `pick_blocks_inner` 11,086 → 5,000 on `cube`, at
+the same call counts. Neither is a lead any more; do not re-pull them off the
+old table.
+
+*Two — `auto_tap_for_cost_inner` is the largest engine growth row on ALL THREE
+pools that is not already refuted*, at 1.35-1.45 growths a call: `cube` 16,394 /
+0.117 %, `fixed` 7,042 / 0.121 %, `sealed` 16,272 / 0.119 %. That is `(-159)`,
+taken this pass.
+
+*Three — the top row on `fixed` is one no `cube` ranking would ever surface.*
+`gather_continuous_effects_inner` is **0.328 % of `fixed` and 0.040 % of
+`cube`** — an eight-fold pool inversion, and the mirror image of
+`dispatch_board_scan`, which is 0.116 % of `cube` and *zero* of `fixed`.
+CLAUDE.md's pool rule again, in the direction that catches the **bench**:
+a row can be the bench pool's largest and near-invisible on the pool the queue
+is usually ranked on. **It is the next entry to price**, and the shape is known
+before a build is spent: the buffer is the returned `Vec<ContinuousEffect>`,
+0.39 allocations a call, consumed as `&[ContinuousEffect]` at nine of its
+eleven call sites and dropped. An inline slot is wrong (the struct is large and
+the value escapes); the device is a **reuse pool**, and the constraint is that
+`gather_continuous_effects` takes `&self` and `GameState` must stay `Sync` —
+which is why `in_layer_gather` is an `AtomicBool` and not a `Cell`. A
+`thread_local!` free-list with an RAII guard is the only shape that satisfies
+both; the reentrancy the guard has to survive is the same one
+`in_layer_gather` documents.
+
+ⓘ **`Vec::push_mut` and `Vec::from_iter` are not rows, they are the
+un-inlined remainder.** Callgrind charges a growth to the innermost frame it
+can name, so every `push` the local inliner declined to fold into its engine
+caller lands in one of these two buckets instead of in the function that owns
+the buffer. They are the largest "callers" on every pool and there is nothing
+at either address to fix — read past them.
+
 **(-158) PARTLY TAKEN — the `Id*` locals, `fixed` -0.212 % / `cube` -0.139 % /
 `sealed` -0.187 %; see the Log. What is still open is listed at the end of this
 entry.**
@@ -20208,18 +20403,39 @@ class rather than at the allocation (`(-152)`'s ceiling rule). **A row that is
 and that is worth more than the row was: it is why the ranking has to be read
 down to the line before a build is spent.
 
-**STILL OPEN, in order, and each one now has its lines:**
+**THE THREE THAT WERE OPEN, AND WHERE EACH LANDED:**
 
-1. **`dispatch_board_scan`'s two `Vec` fields — `mod.rs:3690` and `mod.rs:3699`,
-   23,576 allocations, 0 re-growths, 0.116 % of `cube` and ZERO of `fixed`.**
-   `DispatchScan.equip_grants` and `.trigger_grants`. Both are `SmallVec`
-   candidates; the struct is returned by value, so check the `sret` slot's cost
-   against `TriggerGrant`'s size before picking N. `trigger_grant_sources`'
-   `out` (7,336, 0.036 %) is the same buffer built by the other walker.
-2. **`auto_tap_for_cost_inner` — `actions.rs:13088` / `12929` / `13109`, 22,942
-   of its 25,440**, 0.119 % of `cube` / 0.123 % of `fixed`. `(-108)` took its
-   `do_reserve_and_handle` half and left these.
-3. **`affected_from_requirement`, 10,648 / 0.054 % of `cube`, 0 re-growths.**
+1. **`dispatch_board_scan`'s two `Vec` fields — REFUTED, AND THE REASON IS A
+   BORROW-CHECKER PROPERTY OF `SmallVec`, NOT A COST.** `mod.rs:3690` /
+   `mod.rs:3699`, 23,576 allocations, 0 re-growths, 0.116 % of `cube` and ZERO
+   of `fixed`; `trigger_grant_sources`' `out` (7,336, 0.036 %) is the same
+   buffer built by the other walker, and it falls with it. `Vec`'s destructor
+   carries `#[may_dangle]` (the dropck eyepatch) and `SmallVec`'s does not, so
+   a `SmallVec<[TriggerGrant<'a>; N]>` — whose element borrows the battlefield
+   out of `&'a self` — holds that borrow to the end of the enclosing scope
+   instead of releasing it at the last use. All three consumers take `&mut
+   self` afterwards, and the swap turns twelve of those into `E0502`/`E0506`:
+   `actions.rs:11828 / 11839 / 11857` (`self.stack.push`), `stack.rs:1059 /
+   1101` (`self.delayed_triggers`), `mod.rs:18899 / 18902 / 19410 / 19413 /
+   19417` and two more.
+   ⚠ **The `Vec` is load-bearing for the borrow checker, not for storage, and
+   this is a CLASS, not one row.** Every inline-buffer candidate whose element
+   type carries a lifetime out of `&self` has the same blocker — which is why
+   `(-71)`'s eight slots and `(-158)`'s twelve `Id*` locals are all
+   `CardId`-shaped. **Ask "does the element borrow?" before pricing an inline
+   slot.** If it does, the entry is no longer the mechanical change the census
+   makes it look like: it costs a scope restructure (hoisting the grant
+   consumers into a block that ends before the first `&mut self`), and the
+   lifetime-erased scratch buffer that would sidestep it needs `unsafe`, of
+   which the engine has none outside `server/`'s three `set_var` sites.
+2. **`auto_tap_for_cost_inner` — TAKEN as `(-159)`; see the Log.**
+3. **`affected_from_requirement`, 10,648 / 0.054 % of `cube`, 0 re-growths —
+   still open, and priced.** The buffer is `types: Vec<CardType>`, which is
+   *moved into* `AffectedPermanents::All.card_types`, so an inline slot there
+   does not remove the allocation, it moves it into a struct that
+   `ContinuousEffect` clones once per gather — `(-152)`'s ceiling rule, and the
+   same shape that made `resolve_combat`'s two largest lines untakeable. Take
+   it only with a reading of how often that struct is cloned.
 
 **(-157) THE PROFILE OF RECORD TRANSFERS TO THE SHIPPED BINARY — MEASURED ON
 THE WHOLE PROFILE, NOT JUST ON `(-156)`'s ROW.** Every row in this file is a

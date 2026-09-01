@@ -29,48 +29,42 @@ sixty-seventh pass, so don't re-take that.
    measurement + memo/lane/gate rules in **PERF's "Standing rules for a perf pass"**.
 2. **Gates at this run's tip:** suite **19,191 / 0 / 5**, traces unmoved, clippy `--all-targets`
    clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**,
-   determinism ok. Stall sweep **26 seeds / 176,800 games**: 0 panic, 0 hang, cap 0 / stuck 0,
-   draws only — run because this pass changed the CR 704.5m orphan-Aura sweep. ⚠ **Leave seed 43
-   out of a timed loop**: it is the nine-minute game "How to measure" names, it *decides*, and it
-   will look like a hang. Sweeps and their two closed leads live in **ENGINE_BACKLOG's first
-   section**; `scripts/robustness_grid.sh` has two green legs.
-3. **⚠ THE FLOOR CLAIM NEEDS ONE WORD BACK: the *walk* profile is at its floor, the
-   *allocation* profile was not.** `(-158)` took **`fixed` -0.212 % / `cube` -0.139 % / `sealed`
-   -0.187 %** off twelve `IdMap`/`IdSet` **locals** — `Vec` newtypes, so each one reached the
-   heap on its first entry. Three sized rows are still open **with their source lines in the
-   entry**: `dispatch_board_scan`'s two `Vec` fields (0.116 % `cube`, **0 % `fixed`**),
-   `auto_tap_for_cost_inner` (~0.12 % both), `affected_from_requirement`.
-4. **⚠ 81 % OF THIS PROGRAM'S GROWTHS ARE FIRST ALLOCATIONS**, so `with_capacity` almost always
-   only *moves* one and `cg_growth.py`'s growths-per-call ranking points at the wrong rows on its
-   own. Split them with `--separate-callers=2` (malloc vs realloc), then name the line with
-   **`scripts/cg_alloc_sites.py`** — which needs the **`profiling-lines`** binary, not
-   `profiling-fast`, whose `.dwo` debuginfo makes `addr2line -i` answer with the outermost frame.
-5. **Two questions this file carried are now closed, and both say "read the instrument, not the
-   name".** `(-157)`: the profile of record **transfers** — thin LTO is -2.7 % `cube` / -3.1 %
-   `fixed` and moves no engine row's share past ±0.15 pts, so a `release-fast` ranking is the
-   shipped binary's ranking (only the CoW clone family is over-stated, by ~20 %). `(-156)`:
-   price a std-adapter row by its **code size** (`readelf -sW`) — its 4,122-byte `call_mut` is a
-   closure body, which is why deleting the row bought a tenth of it. **The build is still the
-   lever**: PGO -23.8 to -27.6 %, ML_PIPELINE 0.
-6. **Two card lanes now, and the second is cheaper per defect.** (a) the printed-**clause**
-   ratchets — read an oracle clause, check the primitive; seventeen live, five sharing
-   `clause_ratchet`, false-positive classes in **CARD_BACKLOG's first section**. (b) the
-   printed-**join** ratchets, new this run: don't read prose, join the catalog against the
-   cache's *structured* fields. **Eight of them, 297 defects in one pass** — keywords 25, numbers 3,
-   creature subtypes 148, type line 114, land mana 3, loyalty arity 1, Saga arity 0, modal arity 1.
-   ⚠ **The rule that makes a join a proof is "no bespoke spelling"**: a keyword read only from
-   `def.keywords` is a proof, and prowess/exalted/cascade/riot/mentor are triggered abilities here —
-   including them reported 68 correct cards. ⚠ **A walk over the effect tree must be able to say
-   "I did not read this"** (the land-mana one answers `None` on an undescended container; without
-   that, Rhystic Cave read as colourless). **The two shapes that keep paying: (a) a *field* the
-   engine reads from exactly one place, (b) an *arity* — count the printed abilities.** Still
-   unjoined: `color_identity`, activated-ability *count* on nonlands, token definitions (no ratchet
-   reaches a `TokenDefinition` at all). Also **⚠ a python auditor's zero is suspect — check its
-   population** (`audit_catalog_stats.py` saw 10,764 of 17,639 cards).
-7. **Robustness green, and P2 has no open correctness lead** — the discard family is fixed at
-   `39528f0f` plus its fan-out half, and `every_self_source_trigger_kind_reaches_a_dispatcher`
-   is the population ratchet: no catalog card carries a `SelfSource` trigger on a kind nothing
-   admits, with the fifteen kinds dispatched by a *push* site listed with their sites.
+   determinism ok, **thread_determinism ok (3 vs 1)**. Stall sweeps: **26 seeds / 176,800 games**
+   (0 panic, 0 hang, cap 0 / stuck 0, draws only) and, after `(-159)`, **5 seeds / 34,000 games
+   `--decks all` run on BOTH binaries — the same decided/undecided counts seed for seed**, which
+   is the behaviour-preservation check an Ir delta cannot give. ⚠ **Leave seed 43 out of a timed
+   loop**: it is the nine-minute game "How to measure" names, it *decides*, and it will look like
+   a hang. Sweeps and their two closed leads live in **ENGINE_BACKLOG's first section**;
+   `scripts/robustness_grid.sh` has two green legs.
+3. **`(-159)` TAKEN — `cube` -0.176 % / `sealed` -0.153 % / `fixed` -0.121 %:**
+   `auto_tap_for_cost_inner` rebuilt a `ScriptedDecider` **per coloured pip** (`Box` + `VecDeque`
+   + an `asked` log nothing reads). ⚠ **The win is BIGGER than the census row (0.117 % `cube`)
+   because `Box::new` never reaches `RawVec::finish_grow` — a growth census is a LOWER BOUND on
+   an allocation-shaped row, not its size.**
+4. **⚠ `(-158)` ROW 1 IS REFUTED AND IT IS A CLASS.** `SmallVec`'s `Drop` has no `#[may_dangle]`
+   and `Vec`'s does, so an inline buffer whose element **borrows out of `&self`** holds that
+   borrow to end of scope — twelve `E0502`/`E0506`s in three files. **Ask "does the element
+   borrow?" before pricing an inline slot**; that is why every slot `(-71)`/`(-158)` shipped is
+   `CardId`-shaped. `(-158)`'s row 3 stays open and is priced in the entry.
+5. **NEXT PERF LEAD, and it is the BENCH pool's own top row.** `gather_continuous_effects_inner`
+   is **0.328 % of `fixed`, 0.040 % of `cube`** — the mirror of `dispatch_board_scan`. The value
+   escapes, so the device is a **`thread_local!` reuse pool with an RAII guard** (`GameState`
+   must stay `Sync`); `(-160)` has the shape and the reentrancy it must survive.
+6. **Rank a first-allocation census by COUNT, not per-call** — `(-160)` re-ran `cg_growth.py`
+   that way on all three pools and found nine engine rows the Ir ranking never showed, plus the
+   receipt that `(-158)` worked. ⚠ **`Vec::push_mut` / `Vec::from_iter` top every pool and are
+   not rows** — they are the growths the inliner declined to fold into their engine caller.
+   Name a line with **`cg_alloc_sites.py`** on a **`profiling-lines`** binary, never
+   `profiling-fast`. **The build is still the lever**: PGO -23.8 to -27.6 %.
+7. **Card lanes unchanged, and both are in CARD_BACKLOG's first section:** the printed-**clause**
+   ratchets (seventeen, prose, three false-positive classes) and the printed-**join** ratchets
+   (eight, structured fields, 297 defects in one pass; the rule that makes a join a proof is
+   "no bespoke spelling"). Still unjoined: `color_identity` (⚠ and `format::color_identity` does
+   not read rules-text mana symbols at all, CR 903.4), activated-ability *count* on nonlands,
+   token definitions. ⚠ **A python auditor's zero is suspect — check its population.**
+8. **Robustness green, P2 has no open correctness lead**, and the demo builders now deal from
+   `GameState.rng` with `set_jitter_seed` beside them, which took the 4-player FFA bot test off
+   its 600-second wall-clock ceiling.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
