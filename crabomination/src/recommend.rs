@@ -2083,7 +2083,86 @@ fn play_one_game_traced(
     } else {
         StopReason::NoLegalMove
     };
+    if matches!(stop, StopReason::ActionCap) && std::env::var_os("CRAB_CAP_DIAG").is_some() {
+        eprintln!("{}", cap_diagnosis(&g, actions));
+    }
     GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
+}
+
+/// `CRAB_CAP_DIAG=1` — what a game that hit the action cap was actually doing.
+///
+/// The bench prints `undecided_by cap N` and stops there, so the next question
+/// — *which* board, *which* loop — has cost a rebuild every time it has been
+/// asked. Read once, on the capped game only, so it costs the throughput path
+/// nothing; same shape as `CRAB_SBA_CENSUS`.
+///
+/// **A runaway names itself in one of the two tallies**: an unbounded stack is
+/// a trigger or activation loop, an unbounded battlefield is a token loop.
+fn cap_diagnosis(g: &GameState, actions: usize) -> String {
+    use crate::game::StackItem;
+    use std::fmt::Write;
+
+    fn tally(names: impl Iterator<Item = String>) -> Vec<(String, usize)> {
+        let mut out: Vec<(String, usize)> = Vec::new();
+        for n in names {
+            match out.iter_mut().find(|(k, _)| *k == n) {
+                Some((_, c)) => *c += 1,
+                None => out.push((n, 1)),
+            }
+        }
+        out.sort_by_key(|b| std::cmp::Reverse(b.1));
+        out.truncate(12);
+        out
+    }
+    fn render(rows: &[(String, usize)]) -> String {
+        rows.iter().map(|(n, c)| format!("{n} x{c}")).collect::<Vec<_>>().join(", ")
+    }
+
+    let mut s = String::new();
+    let _ = write!(
+        s,
+        "cap: {actions} actions, turn {}, stack {}",
+        g.turn_number,
+        g.stack.len()
+    );
+    for (seat, p) in g.players.iter().enumerate() {
+        // The pool and the untapped count are what say whether a repeated
+        // activation was *paid for*: an unbounded loop of a `{cost}` ability
+        // means an unbounded mana source, and it will show here.
+        let untapped = g
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && !c.tapped)
+            .count();
+        let _ = write!(
+            s,
+            "\n  p{seat}: life {} bf {} ({untapped} untapped) hand {} gy {} lib {} pool {}",
+            p.life,
+            g.battlefield.iter().filter(|c| c.controller == seat).count(),
+            p.hand.len(),
+            p.graveyard.len(),
+            p.library.len(),
+            p.mana_pool.total() + p.mana_pool.restricted_total(),
+        );
+    }
+    let on_stack = tally(g.stack.iter().map(|it| match it {
+        StackItem::Spell { card, .. } => format!("spell {}", card.definition.name),
+        StackItem::Trigger { source, activated, .. } => format!(
+            "{} {}",
+            if *activated { "ability" } else { "trigger" },
+            g.find_card_anywhere(*source)
+                .map(|c| c.definition.name.to_string())
+                .unwrap_or_else(|| format!("{source:?}")),
+        ),
+    }));
+    if !on_stack.is_empty() {
+        let _ = write!(s, "\n  stack: {}", render(&on_stack));
+    }
+    let board = tally(g.battlefield.iter().map(|c| c.definition.name.to_string()));
+    if !board.is_empty() {
+        let _ = write!(s, "\n  board: {}", render(&board));
+    }
+    s
 }
 
 // ─────────────────────────────── evaluation ──────────────────────────────
