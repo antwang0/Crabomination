@@ -625,7 +625,14 @@ pub fn xenograft() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Each creature you control is the chosen type in addition to its \
                           other types.",
-            effect: StaticEffect::CreaturesYouControlAreChosenType,
+            // ⚠ **"In addition"**, so the additive `…Too` variant — not
+            // `CreaturesYouControlAreChosenType`, which is Conspiracy's
+            // *replacement* ("Creatures you control are the chosen type").
+            // The two cards read alike and are opposite; a Xenograft naming
+            // Sliver used to stop your Goblins being Goblins.
+            effect: StaticEffect::MatchingAreChosenTypeToo {
+                filter: R::Creature.and(R::ControlledByYou),
+            },
         }],
         ..Default::default()
     }

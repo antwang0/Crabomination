@@ -894,6 +894,9 @@ mod recent204 {
         assert!(!c.keywords().contains(&Keyword::Flying), "lost flying");
         assert!(c.card_types().contains(&CardType::Artifact), "now an artifact");
         assert!(c.subtypes().creature_types.contains(&CreatureType::Toy), "a Toy");
+        // ⚠ "a Toy artifact creature ... **in addition to its other types**".
+        // It shipped on `set_creature_types`, so the Angel stopped being one.
+        assert!(c.subtypes().creature_types.contains(&CreatureType::Angel), "and still an Angel");
     }
 
     /// Sporogenic Infection edicts on enter and destroys the host when it's damaged.

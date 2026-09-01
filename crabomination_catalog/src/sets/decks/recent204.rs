@@ -60,8 +60,12 @@ pub fn unable_to_scream() -> CardDefinition {
         },
         equipped_bonus: Some(EquipBonus {
             set_base_pt: Some((0, 2)),
-            set_card_types: Some(vec![CardType::Artifact, CardType::Creature]),
-            set_creature_types: Some(vec![CreatureType::Toy]),
+            // ⚠ Add, not set — "a Toy artifact creature ... in addition to
+            // its other types". The host is already a creature; setting the
+            // list dropped an Enchantment Creature's Enchantment and every
+            // creature type it printed.
+            add_card_types: vec![CardType::Artifact],
+            add_creature_types: vec![CreatureType::Toy],
             remove_abilities: true,
             ..Default::default()
         }),

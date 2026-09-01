@@ -158,13 +158,11 @@ fn xenograft_retypes_your_creatures() {
         CreatureType::Sliver,
     )]));
     cast(&mut g, 0, graft, None);
-    assert!(
-        g.computed_permanent(bear)
-            .unwrap()
-            .subtypes()
-            .creature_types
-            .contains(&CreatureType::Sliver)
-    );
+    let types = g.computed_permanent(bear).unwrap().subtypes().creature_types.clone();
+    assert!(types.contains(&CreatureType::Sliver), "gains the chosen type");
+    // ⚠ "**in addition** to its other types" — Xenograft shipped on
+    // Conspiracy's *replacing* static, so the Bear stopped being a Bear.
+    assert!(types.contains(&CreatureType::Bear), "and keeps its own");
 }
 
 /// Jor Kadeen's metalcraft anthem only fires with three artifacts out.

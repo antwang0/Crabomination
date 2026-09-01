@@ -1475,6 +1475,22 @@ loops (EachPlayer shuffles) to one suspension per resolution.
 
 ## Engine — Missing Mechanics
 
+**"IN ADDITION TO ITS OTHER TYPES" — CLOSED AS A CLASS, seven cards, and it
+is now a ratchet.** `no_card_replaces_the_types_its_oracle_adds`
+(`core_rules/catalog_registration.rs`) reads the printed oracle for the
+clause and refuses a definition built on a primitive that *replaces*. The
+list of replacing primitives is spelled in the test rather than inferred,
+which is the point: a new one has to be added to it.
+
+The seven, and they read alike from the outside — **Ensoul Artifact**,
+**Zoetic Glyph** and **Unable to Scream** on `equipped_bonus.set_card_types` /
+`set_creature_types`; **Xenograft** on `CreaturesYouControlAreChosenType`,
+which is *Conspiracy's* replacing static and the two cards' text differs by
+three words; **Prismatic Omen**, **Leyline of the Guildpact** and **Nylea's
+Presence** on a `GrantAllBasicLandTypes` that emitted a `SetLandTypes`. An
+ensouled Darksteel Citadel stopped being a Land and stopped tapping for
+mana.
+
 **`SetLandTypes` FOR "IN ADDITION" — CLOSED, and the read turned up a second
 defect next to it.** `StaticEffect::GrantAllBasicLandTypes` emitted one
 `Modification::SetLandTypes`, and all three cards on it — Prismatic Omen,

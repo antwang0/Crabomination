@@ -1911,7 +1911,11 @@ pub fn ensoul_artifact() -> CardDefinition {
         R::Artifact,
         EquipBonus {
             set_base_pt: Some((5, 5)),
-            set_card_types: Some(vec![CardType::Artifact, CardType::Creature]),
+            // ⚠ **Add, not set** — "in addition to its other types". A
+            // `set_card_types` of `[Artifact, Creature]` drops every other
+            // card type the host has, so an ensouled Darksteel Citadel
+            // stopped being a Land and stopped tapping for mana.
+            add_card_types: vec![CardType::Creature],
             ..Default::default()
         },
     )

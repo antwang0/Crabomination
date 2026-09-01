@@ -418,6 +418,28 @@ fn ensoul_artifact_makes_a_five_five() {
     assert_eq!((cp.power, cp.toughness), (5, 5));
     assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
+
+    // ⚠ "**in addition** to its other types". It shipped on a
+    // `set_card_types` of `[Artifact, Creature]`, so an ensouled artifact
+    // *land* stopped being a Land — and stopped tapping for mana.
+    let mut g = main_phase();
+    let citadel = g.add_card_to_battlefield(0, catalog::darksteel_citadel());
+    cast(
+        &mut g,
+        catalog::ensoul_artifact(),
+        Some(Target::Permanent(citadel)),
+        1,
+        &[(Color::Blue, 1)],
+    );
+    let cp = g.computed_permanent(citadel).expect("citadel");
+    assert_eq!((cp.power, cp.toughness), (5, 5));
+    for t in [
+        crabomination::card::CardType::Land,
+        crabomination::card::CardType::Artifact,
+        crabomination::card::CardType::Creature,
+    ] {
+        assert!(cp.card_types().contains(&t), "still a {t:?}");
+    }
 }
 
 /// Burning Anger turns the host into a repeatable cannon.

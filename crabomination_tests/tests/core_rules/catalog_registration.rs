@@ -948,3 +948,73 @@ fn no_activated_ability_is_free_unconditional_and_unlimited() {
         &bad[..bad.len().min(40)]
     );
 }
+
+/// **A card whose oracle says "in addition to its other types" must not be
+/// built on a primitive that replaces them.**
+///
+/// Seven cards were, and they read alike from the outside: Ensoul Artifact,
+/// Zoetic Glyph and Unable to Scream on `equipped_bonus.set_card_types` /
+/// `set_creature_types`; Xenograft on `CreaturesYouControlAreChosenType`,
+/// which is *Conspiracy's* replacing static; Prismatic Omen, Leyline of the
+/// Guildpact and Nylea's Presence on a `GrantAllBasicLandTypes` that emitted
+/// a `SetLandTypes`. An ensouled Darksteel Citadel stopped being a Land and
+/// stopped tapping for mana; a Xenograft naming Sliver stopped your Goblins
+/// being Goblins.
+///
+/// The signal is the oracle's own words, and the replacing primitives are
+/// named here rather than inferred — a new one has to be added to the list,
+/// which is the point: the list is the inventory of "this drops types".
+#[test]
+fn no_card_replaces_the_types_its_oracle_adds() {
+    /// Every primitive whose effect is "the type list becomes exactly this".
+    /// `{:?}` of the built definition is the medium, the same way the
+    /// `debug_flag` word reads a definition.
+    const REPLACERS: [&str; 4] = [
+        "set_card_types: Some(",
+        "set_creature_types: Some(",
+        "set_land_types: Some(",
+        // Conspiracy's static, and Conspiracy is the only card whose oracle
+        // wants it ("Creatures you control are the chosen type", no "in
+        // addition").
+        "CreaturesYouControlAreChosenType",
+    ];
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        let oracle = entry.get("oracle_text").and_then(|v| v.as_str()).unwrap_or("");
+        if !oracle.contains("in addition to its other types")
+            && !oracle.contains("in addition to their other types")
+        {
+            continue;
+        }
+        checked += 1;
+        let dbg = format!("{def:?}");
+        for r in REPLACERS {
+            if dbg.contains(r) {
+                wrong.push(format!("{}: `{r}` under an \"in addition\" oracle", def.name));
+            }
+        }
+    }
+    assert!(
+        checked > 20,
+        "only {checked} cards printed an \"in addition\" clause — did the cache move?",
+    );
+    wrong.sort();
+    wrong.dedup();
+    assert!(wrong.is_empty(), "{} card(s): {:?}", wrong.len(), wrong);
+}

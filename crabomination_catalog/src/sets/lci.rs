@@ -6022,8 +6022,10 @@ pub fn zoetic_glyph() -> CardDefinition {
         },
         equipped_bonus: Some(EquipBonus {
             set_base_pt: Some((5, 4)),
-            set_card_types: Some(vec![CardType::Artifact, CardType::Creature]),
-            set_creature_types: Some(vec![CreatureType::Golem]),
+            // ⚠ Add, not set — "in addition to its other types". See
+            // Ensoul Artifact.
+            add_card_types: vec![CardType::Creature],
+            add_creature_types: vec![CreatureType::Golem],
             ..Default::default()
         }),
         triggered_abilities: vec![TriggeredAbility {
