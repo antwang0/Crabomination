@@ -1969,3 +1969,88 @@ fn every_card_that_prints_a_keyword_line_carries_those_keywords() {
         &missing[..missing.len().min(40)],
     );
 }
+
+/// **A card's printed numbers are the card's numbers: starting loyalty, and
+/// power/toughness where the definition does not compute them.**
+///
+/// The other no-bespoke-spelling family. `base_loyalty` has exactly one
+/// spelling and a planeswalker that enters on the wrong number is a different
+/// card every game it is cast — Geyadrone Dihada and Nahiri, the Harbinger
+/// both entered on 3 against a printed 4 until this ran.
+///
+/// P/T is only compared where `dynamic_pt` is `None`: a `*/4` body carries
+/// `toughness: 0` plus a `DynamicPt` that supplies both halves, which is
+/// correct and reads as a mismatch against the printed characteristic
+/// (Enigma Drake, Renata, Tymaret are the three).
+#[test]
+fn every_card_carries_its_printed_numbers() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    // A card the cache holds under the same name but a different frame:
+    // "Bounty Hunter" resolves to a non-Magic `Card` type line, and
+    // "Maraxus of Keld" to the Vanguard avatar rather than the creature.
+    const HOMONYMS: &[&str] = &["Bounty Hunter", "Maraxus of Keld"];
+
+    let numeric = |v: Option<&serde_json::Value>| -> Option<i32> {
+        v.and_then(|v| v.as_str()).and_then(|s| s.parse::<i32>().ok())
+    };
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        if HOMONYMS.contains(&def.name) {
+            continue;
+        }
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        checked += 1;
+        if let Some(loyalty) = numeric(entry.get("loyalty"))
+            && def.card_types.contains(&crabomination::card::CardType::Planeswalker)
+            && def.base_loyalty as i32 != loyalty
+        {
+            wrong.push(format!("{} enters on {} loyalty, printed {loyalty}", def.name, def.base_loyalty));
+        }
+        if def.dynamic_pt.is_none() {
+            // CR 721 — a Spacecraft is a 0/0 artifact until it stations; the
+            // printed P/T is the last band's, which is what the cache holds.
+            let station_pt = def.station.last().and_then(|b| b.pt);
+            let (ours_p, ours_t) = station_pt.unwrap_or((def.power, def.toughness));
+            for (field, ours) in [("power", ours_p), ("toughness", ours_t)] {
+                if let Some(printed) = numeric(entry.get(field))
+                    && ours != printed
+                {
+                    wrong.push(format!("{} has {field} {ours}, printed {printed}", def.name));
+                }
+            }
+        }
+    }
+
+    assert!(
+        checked > 15_000,
+        "only {checked} cards could be compared against the cache — the ratchet is vacuous \
+         below that"
+    );
+    wrong.sort();
+    assert!(
+        wrong.is_empty(),
+        "{} card(s) carry a number the printing does not: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}

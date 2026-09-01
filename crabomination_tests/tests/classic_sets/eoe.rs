@@ -2805,6 +2805,23 @@ fn infinite_guideline_station_etb_robots_per_multicolored() {
     assert!(robots.iter().all(|c| c.tapped), "Robots enter tapped");
 }
 
+/// Its `{12+}` band is a **7/15**. The band carried no P/T, so stationing it
+/// produced a 0/0 artifact creature that died to CR 704.5a on the same sweep.
+#[test]
+fn infinite_guideline_station_stations_into_a_seven_fifteen() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::infinite_guideline_station());
+    if let Some(c) = g.battlefield_find_mut(ship) {
+        c.add_counters(CounterType::Charge, 12);
+    }
+    let post = g.computed_permanent(ship).expect("still on the battlefield");
+    assert!(post.card_types().contains(&CardType::Creature), "{{12+}} makes it a creature");
+    assert_eq!((post.power, post.toughness), (7, 15), "the printed band P/T");
+    assert!(post.keywords().contains(&Keyword::Flying));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ship).is_some(), "a 7/15 does not die to state-based actions");
+}
+
 /// All-Fates Scroll: {7},{T},Sac → draw X = differently named lands you control.
 #[test]
 fn all_fates_scroll_draws_per_differently_named_land() {

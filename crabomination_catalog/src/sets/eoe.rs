@@ -7330,6 +7330,9 @@ pub fn infinite_guideline_station() -> CardDefinition {
         activated_abilities: vec![station()],
         station: vec![StationBand {
             min: 12,
+            // ⚠ Without this the band stationed into a 0/0 artifact creature
+            // and died to CR 704.5a on the same sweep.
+            pt: Some((7, 15)),
             keywords: vec![Keyword::Flying],
             triggers: vec![on_attack(Effect::Draw {
                 who: Selector::You,

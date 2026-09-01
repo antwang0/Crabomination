@@ -20,6 +20,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | Set / topic | Status | Lines |
 | --- | --- | --- |
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
+| [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
 | [Oracle-verb audit — the `draw` and `counters` classes](#oracle-verb-audit--the-draw-and-counters-classes) | open | 60 |
 | [Oracle-verb audit — the `search_library` and `destroy` classes](#oracle-verb-audit--the-search_library-and-destroy-classes) | open | 48 |
@@ -194,6 +195,66 @@ before the self-anchor: "doesn't untap" has 152 rows against the catalog's 23,
 "can't block" 81 against 82 and "enters tapped" 503 against 322 — the gaps are
 cards the catalog does not carry, which makes each of these lists a **card
 source with a known-good primitive already in place**.
+
+
+## The printed *keyword* and printed *numbers* ratchets — the join, not the text
+
+Two more ratchets in `core_rules/catalog_registration.rs`, and neither reads
+the oracle **prose**: both join the catalog against
+`scripts/.scryfall_cache.json`'s structured fields, which is a different
+needle from the clause family above and finds a different kind of defect.
+
+| ratchet | field it joins on | checked | defects found |
+| --- | --- | --- | --- |
+| `every_card_that_prints_a_keyword_line_carries_those_keywords` | `keywords[]` + a keyword **line** in the oracle | 17,633 | 25 |
+| `every_card_carries_its_printed_numbers` | `loyalty`, `power`, `toughness` | 17,635 | 3 |
+
+**The rule that makes the keyword one a proof rather than a reading list:**
+the keyword must have **no bespoke spelling** — the engine reads it from
+`CardDefinition.keywords` and nowhere else. Prowess, exalted, cascade, riot,
+battle cry, mentor, training, myriad, melee and storm are all spelled as
+triggered abilities in this catalog (Monastery Mentor and Abbot of Keral Keep
+both ride `shortcut::prowess_trigger()`), and including them reported **68
+correct cards**. That is the same shape as the clause family's false-positive
+classes and the same fix: gate on the structure, not on the word.
+
+**Two false-positive classes, both structural and both measured:**
+
+1. **A keyword line, not a mention.** "Choose first strike, vigilance, or
+   lifelink" (Angelic Skirmisher), a token minted "with trample, lifelink, and
+   haste", "put a flying, lifelink, or +1/+1 counter on it" — none is a line
+   whose every comma-separated piece is a keyword.
+2. **Level bands print bare keyword lines.** Student of Warfare's "First
+   strike" sits inside `LEVEL 2-6`; level-up cards are skipped whole.
+
+⚠ **A `*/N` body reads as a P/T mismatch and is correct** — `toughness: 0`
+plus a `DynamicPt` that supplies both halves (Enigma Drake, Renata, Tymaret).
+So does a Spacecraft: it is a 0/0 artifact until it stations, and the printed
+P/T is the **last station band's**, which is where the ratchet reads it — and
+that is how *Infinite Guideline Station* turned up, whose `{12+}` band carried
+no `pt` at all and stationed into a 0/0 that died on the same SBA sweep.
+
+### Open — Geyadrone Dihada's abilities are not this card's
+
+Turned up beside its starting loyalty (3 against a printed 4, fixed). The
+printed card is:
+
+```text
+  Protection from permanents with corruption counters on them
+  +1: Each opponent loses 2 life and you gain 2 life. Put a corruption
+      counter on up to one other target creature or planeswalker.
+  -3: Gain control of target creature or planeswalker until end of turn.
+      Untap it and put a corruption counter on it. It gains haste until EOT.
+  -7: Gain control of each permanent with a corruption counter on it.
+```
+
+The shipped body is a +1 that drains 1 and draws (with a `SetLoyalty` rider
+nothing on the card asks for) and a -7 that halves life. **Every printed half
+turns on a corruption counter**, and there is no `CounterType::Corruption`;
+the protection wants `ProtectionFromMatching(has a corruption counter)` and
+the -7 wants a mass `GainControl` over the same predicate. ⚠ **Adding a
+`CounterType` variant is the encoding caution in TODO** — price that before
+taking it.
 
 
 ## The two once-a-turn limits, and the one card that cannot carry the flag

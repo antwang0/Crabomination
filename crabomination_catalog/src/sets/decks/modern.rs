@@ -12743,7 +12743,14 @@ pub fn collective_brutality() -> CardDefinition {
 }
 
 /// Geyadrone Dihada — {1}{U}{B}{R} Legendary Planeswalker — Dihada.
-/// 3 loyalty.
+/// 4 loyalty.
+///
+/// ⚠ **The ability bodies below are not this card's.** The printed card is
+/// protection from permanents with corruption counters, a +1 that drains 2
+/// and corrupts, a −3 that corrupts what it steals and a −7 that takes every
+/// corrupted permanent — none of which the engine can spell without a
+/// corruption counter. Filed in `CARD_BACKLOG.md`; the starting loyalty is
+/// fixed here because that half needed no primitive.
 /// **+1**: Each opponent loses 1 life and you draw a card. Then if you
 /// have less life than an opponent, this PW's loyalty is reset to its
 /// starting value.
@@ -12768,7 +12775,7 @@ pub fn geyadrone_dihada() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Dihada],
             ..Default::default()
         },
-        base_loyalty: 3,
+        base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
                 x_cost: false,

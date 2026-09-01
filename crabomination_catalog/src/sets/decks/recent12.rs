@@ -599,7 +599,7 @@ pub fn coastal_breach() -> CardDefinition {
     }
 }
 
-/// Nahiri, the Harbinger — {2}{R}{W} Legendary Planeswalker — Nahiri, 3 loyalty.
+/// Nahiri, the Harbinger — {2}{R}{W} Legendary Planeswalker — Nahiri, 4 loyalty.
 /// +2: you may discard a card; if you do, draw a card.
 /// −2: exile target enchantment, tapped artifact, or tapped creature.
 /// −8: search your library for an artifact or creature card and put it onto the
@@ -614,7 +614,7 @@ pub fn nahiri_the_harbinger() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Nahiri],
             ..Default::default()
         },
-        base_loyalty: 3,
+        base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 2,
