@@ -81,6 +81,38 @@ pub enum LossCause {
 /// as a write, so the reset loops guard theirs on `is_empty()`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PlayerCold {
+    // ── Rare-format card zones ────────────────────────────────────────────
+    // Ante, Archenemy, Planechase and Attractions. Every one of them is
+    // empty in every format the simulator plays, and each cost `PlayerData`
+    // eight bytes it pays on every unshare. Reads and writes reach them
+    // through `PlayerData`'s `Deref`/`DerefMut` unchanged (PERF `(-150)`).
+    /// CR 407 — cards this player owns in the ante zone. Only ever non-empty
+    /// while `GameState.playing_for_ante`; the winner takes all of it
+    /// (CR 407.2). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub ante: CowBox<Vec<CardInstance>>,
+    /// CR 904.3 — the archenemy's face-down scheme deck. Like the command
+    /// zone it never empties into another zone: a scheme is set in motion off
+    /// the top (CR 904.9) into `command`, and abandoned back to the bottom
+    /// here (CR 904.10). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub scheme_deck: CowBox<Vec<CardInstance>>,
+    /// CR 901.3 — this player's face-down planar deck. Like the scheme deck it
+    /// never empties into another zone: planeswalking moves the top card into
+    /// `command` face up (CR 901.11) and puts the plane left behind on the
+    /// bottom. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub planar_deck: CowBox<Vec<CardInstance>>,
+    /// CR 717.2 — this player's face-down Attraction deck, in the command
+    /// zone. Cards leave it only by being opened onto the battlefield
+    /// (CR 701.51b). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub attraction_deck: CowBox<Vec<CardInstance>>,
+    /// CR 717.6a — the face-up "junkyard" pile of Attraction cards that would
+    /// have gone anywhere but the battlefield, exile, or the command zone.
+    #[serde(default)]
+    pub attraction_junkyard: CowBox<Vec<CardInstance>>,
+
     pub name: String,
     /// CardIds of cards this player has designated as Commanders
     /// (Phase J). Populated by `GameState::seat_commanders`. Read by
@@ -199,32 +231,6 @@ pub struct PlayerData {
     /// existed deserialize cleanly as empty.
     #[serde(default)]
     pub command: CowBox<Vec<CardInstance>>,
-    /// CR 407 — cards this player owns in the ante zone. Only ever non-empty
-    /// while `GameState.playing_for_ante`; the winner takes all of it
-    /// (CR 407.2). `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub ante: CowBox<Vec<CardInstance>>,
-    /// CR 904.3 — the archenemy's face-down scheme deck. Like the command
-    /// zone it never empties into another zone: a scheme is set in motion off
-    /// the top (CR 904.9) into `command`, and abandoned back to the bottom
-    /// here (CR 904.10). `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub scheme_deck: CowBox<Vec<CardInstance>>,
-    /// CR 901.3 — this player's face-down planar deck. Like the scheme deck it
-    /// never empties into another zone: planeswalking moves the top card into
-    /// `command` face up (CR 901.11) and puts the plane left behind on the
-    /// bottom. `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub planar_deck: CowBox<Vec<CardInstance>>,
-    /// CR 717.2 — this player's face-down Attraction deck, in the command
-    /// zone. Cards leave it only by being opened onto the battlefield
-    /// (CR 701.51b). `#[serde(default)]` for snapshot back-compat.
-    #[serde(default)]
-    pub attraction_deck: CowBox<Vec<CardInstance>>,
-    /// CR 717.6a — the face-up "junkyard" pile of Attraction cards that would
-    /// have gone anywhere but the battlefield, exile, or the command zone.
-    #[serde(default)]
-    pub attraction_junkyard: CowBox<Vec<CardInstance>>,
     /// CR 406 / 701.45 — the Lessons "sideboard" (cards owned from outside
     /// the game). A Learn ability may reveal a Lesson card here and put it
     /// into hand. Populated by deck construction; empty by default (in
@@ -1112,6 +1118,11 @@ impl Player {
         Self::from(PlayerData {
             id: PlayerId(idx),
             cold: crate::cow::CowBox::new(PlayerCold {
+                ante: CowBox::default(),
+                scheme_deck: CowBox::default(),
+                planar_deck: CowBox::default(),
+                attraction_deck: CowBox::default(),
+                attraction_junkyard: CowBox::default(),
                 name: name.into(),
                 ..Default::default()
             }),
@@ -1124,11 +1135,6 @@ impl Player {
             graveyard: crate::zone::Graveyard::default(),
             command: CowBox::default(),
             may_spend_any_color_this_turn: false,
-            ante: CowBox::default(),
-            scheme_deck: CowBox::default(),
-            planar_deck: CowBox::default(),
-            attraction_deck: CowBox::default(),
-            attraction_junkyard: CowBox::default(),
             planar_die_rolls_this_turn: 0,
             sideboard: CowBox::default(),
             lands_played_this_turn: 0,
