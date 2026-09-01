@@ -854,11 +854,11 @@ pub fn benalish_hero() -> CardDefinition {
         vec![Keyword::Banding],
     )
 }
-/// Skyhunter Skirmisher — {1}{W} 1/1 Cat Knight with flying and double strike.
+/// Skyhunter Skirmisher — {1}{W}{W} 1/1 Cat Knight with flying and double strike.
 pub fn skyhunter_skirmisher() -> CardDefinition {
     body(
         "Skyhunter Skirmisher",
-        &[generic(1), w()],
+        &[generic(1), w(), w()],
         vec![CreatureType::Cat, CreatureType::Knight],
         1,
         1,
@@ -946,15 +946,15 @@ pub fn sea_eagle() -> CardDefinition {
         vec![Keyword::Flying],
     )
 }
-/// Wind Spirit — {3}{U} 2/3 Spirit with flying.
+/// Wind Spirit — {4}{U} 3/2 Elemental Spirit with flying and menace.
 pub fn wind_spirit() -> CardDefinition {
     body(
         "Wind Spirit",
-        &[generic(3), u()],
-        vec![CreatureType::Spirit],
+        &[generic(4), u()],
+        vec![CreatureType::Elemental, CreatureType::Spirit],
         3,
         2,
-        vec![Keyword::Flying],
+        vec![Keyword::Flying, Keyword::Menace],
     )
 }
 
@@ -992,14 +992,14 @@ pub fn bog_imp() -> CardDefinition {
         vec![Keyword::Flying],
     )
 }
-/// Looming Shade — {2}{B} 2/2 Shade. "{B}: +1/+1 until end of turn."
+/// Looming Shade — {2}{B} 1/1 Shade. "{B}: +1/+1 until end of turn."
 pub fn looming_shade() -> CardDefinition {
     let mut c = body(
         "Looming Shade",
         &[generic(2), b()],
         vec![CreatureType::Shade],
-        2,
-        2,
+        1,
+        1,
         vec![],
     );
     c.activated_abilities = vec![pump_nn(&[b()], 1)];
@@ -1040,12 +1040,12 @@ pub fn goblin_piker() -> CardDefinition {
         vec![],
     )
 }
-/// Goblin Chariot — {1}{R} 2/2 Goblin with haste.
+/// Goblin Chariot — {2}{R} 2/2 Goblin Warrior with haste.
 pub fn goblin_chariot() -> CardDefinition {
     body(
         "Goblin Chariot",
-        &[generic(1), r()],
-        vec![CreatureType::Goblin],
+        &[generic(2), r()],
+        vec![CreatureType::Goblin, CreatureType::Warrior],
         2,
         2,
         vec![Keyword::Haste],
@@ -1062,11 +1062,11 @@ pub fn mountain_goat() -> CardDefinition {
         vec![Keyword::Landwalk(LandType::Mountain)],
     )
 }
-/// Dragon Hatchling — {1}{R}{R} 0/1 Dragon with flying. "{R}: +1/+0 EOT."
+/// Dragon Hatchling — {1}{R} 0/1 Dragon with flying. "{R}: +1/+0 EOT."
 pub fn dragon_hatchling() -> CardDefinition {
     let mut c = body(
         "Dragon Hatchling",
-        &[generic(1), r(), r()],
+        &[generic(1), r()],
         vec![CreatureType::Dragon],
         0,
         1,
@@ -1077,11 +1077,11 @@ pub fn dragon_hatchling() -> CardDefinition {
 }
 
 // Green
-/// Panther Warriors — {3}{G} 6/1 Cat Warrior.
+/// Panther Warriors — {4}{G} 6/3 Cat Warrior.
 pub fn panther_warriors() -> CardDefinition {
     body(
         "Panther Warriors",
-        &[generic(3), g()],
+        &[generic(4), g()],
         vec![CreatureType::Cat, CreatureType::Warrior],
         6,
         3,
@@ -1099,11 +1099,11 @@ pub fn redwood_treefolk() -> CardDefinition {
         vec![],
     )
 }
-/// Gorilla Chieftain — {2}{G} 3/3 Ape. "{1}{G}: Regenerate this creature."
+/// Gorilla Chieftain — {2}{G}{G} 3/3 Ape. "{1}{G}: Regenerate this creature."
 pub fn gorilla_chieftain() -> CardDefinition {
     let mut c = body(
         "Gorilla Chieftain",
-        &[generic(2), g()],
+        &[generic(2), g(), g()],
         vec![CreatureType::Ape],
         3,
         3,

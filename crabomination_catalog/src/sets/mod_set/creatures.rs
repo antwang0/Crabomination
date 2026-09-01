@@ -6895,13 +6895,17 @@ pub fn steel_overseer() -> CardDefinition {
     }
 }
 
-/// Vault Skirge — {B/P} Artifact Creature — Imp 1/1, Flying, Lifelink. (MBS)
+/// Vault Skirge — {1}{B/P} Artifact Creature — Phyrexian Imp 1/1, Flying,
+/// Lifelink. (MBS)
 pub fn vault_skirge() -> CardDefinition {
     use crate::mana::ManaSymbol;
     CardDefinition {
         name: "Vault Skirge",
         cost: ManaCost {
-            symbols: vec![ManaSymbol::Phyrexian(crate::mana::Color::Black)],
+            symbols: vec![
+                ManaSymbol::Generic(1),
+                ManaSymbol::Phyrexian(crate::mana::Color::Black),
+            ],
         },
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {

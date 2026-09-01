@@ -3901,7 +3901,16 @@ impl GameState {
             if x_value.is_none()
                 && self.players[p].manual_mana
                 && let Some(card) = self.find_card_anywhere(card_id)
-                && (card.definition.cost.has_x() || card.definition.additional_cost_pay_x_life)
+                && (card.definition.cost.has_x()
+                    || card.definition.additional_cost_pay_x_life
+                    // "As an additional cost, discard X cards" (the Odyssey
+                    // Dreams cycle): X is chosen but no `{X}` pip is paid, so
+                    // the printed mana cost alone would never open the picker.
+                    || card
+                        .definition
+                        .additional_cast_cost
+                        .iter()
+                        .any(|c| matches!(c, crate::card::AdditionalCastCost::DiscardXFromCost)))
                 // Don't open a picker on a cast that can't happen at any X —
                 // the player answers, the replay dies on a coloured pip, and
                 // the client (which only logs mana errors) shows nothing at
@@ -3911,10 +3920,16 @@ impl GameState {
             {
                 // A "pay X life" additional cost with no {X} mana pip is
                 // bounded by the caster's life total (CR 119.4), not mana.
-                let max = if card.definition.additional_cost_pay_x_life
-                    && !card.definition.cost.has_x()
-                {
-                    self.effective_life(p).max(0) as u32
+                let max = if !card.definition.cost.has_x() {
+                    // No `{X}` pip: the bound is whatever the *additional*
+                    // cost can pay — a life total (CR 119.4) or a hand.
+                    if card.definition.additional_cost_pay_x_life {
+                        self.effective_life(p).max(0) as u32
+                    } else {
+                        // The card being cast is still in hand and cannot
+                        // discard itself to its own cost.
+                        (self.players[p].hand.len().saturating_sub(1)) as u32
+                    }
                 } else {
                     self.max_prompt_x(p, &card.definition.cost)
                 };

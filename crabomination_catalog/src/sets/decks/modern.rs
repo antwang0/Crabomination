@@ -18171,30 +18171,31 @@ pub fn firebolt() -> CardDefinition {
     }
 }
 
-/// Mossborn Hydra — {X}{G} Creature — Hydra. 0/0. Enters with X +1/+1
-/// counters; if X is 4 or more, it enters with twice X instead.
+/// Mossborn Hydra — {2}{G} 0/0 Elemental Hydra with Trample. It enters with a
+/// +1/+1 counter; **Landfall — whenever a land you control enters, double the
+/// number of +1/+1 counters on it.**
+///
+/// It shipped as an invented X-hydra ({X}{G}, X counters, twice X at X >= 4)
+/// with no trample, no Elemental and no landfall — a different card wearing
+/// the name (`every_card_has_the_cost_and_body_its_printing_has`).
 pub fn mossborn_hydra() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Mossborn Hydra",
-        cost: ManaCost::new(vec![ManaSymbol::X, ManaSymbol::Colored(Color::Green)]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Hydra],
+            creature_types: vec![CreatureType::Elemental, CreatureType::Hydra],
             ..Default::default()
         },
-        enters_with_counters: Some((
-            CounterType::PlusOnePlusOne,
-            Value::IfAtLeast {
-                value: Box::new(Value::XFromCost),
-                threshold: 4,
-                then: Box::new(Value::Times(
-                    Box::new(Value::Const(2)),
-                    Box::new(Value::XFromCost),
-                )),
-                else_: Box::new(Value::XFromCost),
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ONE)),
+        triggered_abilities: vec![crate::effect::shortcut::landfall(
+            Effect::DoubleCountersOnEach {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
             },
-        )),
+        )],
         ..Default::default()
     }
 }
@@ -30340,12 +30341,13 @@ pub fn hammerhand() -> CardDefinition {
 /// doesn't untap during its controller's untap step (Claustrophobia,
 /// Dehydration). CR 502.3 prevention is aura-anchored via
 /// `StaticEffect::PreventUntap { applies_to: AttachedTo(This) }`.
-fn tap_down_aura(name: &'static str) -> CardDefinition {
-    tap_down_aura_cost(name, cost(&[generic(2), u()]))
-}
-
-/// Like [`tap_down_aura`] but with an explicit mana cost (Charmed Sleep is
-/// {1}{U}{U}, not {2}{U}).
+/// The tap-down Aura shape, with the cost spelled at every call site.
+///
+/// ⚠ It used to have a `tap_down_aura(name)` sibling that defaulted to
+/// `{2}{U}`, and both cards that took the default were the wrong cost —
+/// Claustrophobia is {1}{U}{U} and Dehydration is {3}{U}. A default cost on a
+/// card helper is a defect waiting for a card
+/// (`every_card_has_the_cost_and_body_its_printing_has`).
 fn tap_down_aura_cost(name: &'static str, mana: crate::mana::ManaCost) -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     use crate::effect::shortcut::etb;
@@ -30374,16 +30376,16 @@ fn tap_down_aura_cost(name: &'static str, mana: crate::mana::ManaCost) -> CardDe
     }
 }
 
-/// Claustrophobia — {2}{U} Aura. ETB taps the enchanted creature; it doesn't
+/// Claustrophobia — {1}{U}{U} Aura. ETB taps the enchanted creature; it doesn't
 /// untap during its controller's untap step.
 pub fn claustrophobia() -> CardDefinition {
-    tap_down_aura("Claustrophobia")
+    tap_down_aura_cost("Claustrophobia", cost(&[generic(1), u(), u()]))
 }
 
-/// Dehydration — {2}{U} Aura. ETB taps the enchanted creature; it doesn't
+/// Dehydration — {3}{U} Aura. ETB taps the enchanted creature; it doesn't
 /// untap during its controller's untap step.
 pub fn dehydration() -> CardDefinition {
-    tap_down_aura("Dehydration")
+    tap_down_aura_cost("Dehydration", cost(&[generic(3), u()]))
 }
 
 /// Charmed Sleep — {1}{U}{U} Aura. ETB taps the enchanted creature; it doesn't

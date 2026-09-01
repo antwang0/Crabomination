@@ -171,7 +171,7 @@ fn looming_shade_pumps_plus_one_plus_one() {
     }).expect("shade pump");
     drain_stack(&mut g);
     let c = g.battlefield_find(shade).unwrap();
-    assert_eq!((c.power(), c.toughness()), (3, 3), "{{B}}: +1/+1 makes the 2/2 a 3/3");
+    assert_eq!((c.power(), c.toughness()), (2, 2), "{{B}}: +1/+1 makes the printed 1/1 a 2/2");
 }
 
 #[test]

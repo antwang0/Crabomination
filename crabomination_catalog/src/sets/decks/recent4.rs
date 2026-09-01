@@ -866,15 +866,15 @@ pub fn devour_flesh() -> CardDefinition {
     }
 }
 
-/// Mudbutton Torchrunner — {1}{R} 1/1 Goblin. When it dies, it deals 3 damage
+/// Mudbutton Torchrunner — {2}{R} 1/1 Goblin. When it dies, it deals 3 damage
 /// to any target.
 pub fn mudbutton_torchrunner() -> CardDefinition {
     CardDefinition {
         name: "Mudbutton Torchrunner",
-        cost: cost(&[generic(1), crate::mana::r()]),
+        cost: cost(&[generic(2), crate::mana::r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin],
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
             ..Default::default()
         },
         power: 1,

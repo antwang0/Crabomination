@@ -3340,38 +3340,45 @@ fn brightglass_gearhulk_etb_fetches_two_low_mv_permanents() {
     assert_eq!(memnites, 2, "ETB tutors up to two MV-≤1 permanents to hand");
 }
 
+/// Mossborn Hydra is a {2}{G} 0/0 that enters with **one** +1/+1 counter and
+/// doubles its counters on every landfall.
+///
+/// It shipped as an invented {X}{G} hydra that entered with X counters (twice
+/// X at X >= 4) and had no landfall, no trample and no Elemental — a
+/// different card wearing the name, and the two tests it had asserted the
+/// invented one. Found by
+/// `every_card_has_the_cost_and_body_its_printing_has`.
 #[test]
-fn mossborn_hydra_enters_with_x_counters() {
-    use crabomination::card::CounterType;
+fn mossborn_hydra_enters_with_one_counter_and_doubles_on_landfall() {
+    use crabomination::card::{CounterType, Keyword};
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mossborn_hydra());
     g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![],
-        mode: None, x_value: Some(3),
-    }).expect("Mossborn castable at X=3");
+        mode: None, x_value: None,
+    }).expect("{2}{G}, no X");
     drain_stack(&mut g);
     let hydra = g.battlefield_find(id).expect("Hydra on bf");
-    assert_eq!(hydra.counter_count(CounterType::PlusOnePlusOne), 3,
-        "Mossborn enters with X +1/+1 counters (X<4: not doubled)");
-}
+    assert_eq!(hydra.counter_count(CounterType::PlusOnePlusOne), 1, "enters with one counter");
+    assert!(hydra.definition.keywords.contains(&Keyword::Trample), "printed trample");
 
-#[test]
-fn mossborn_hydra_doubles_counters_at_x_four_or_more() {
-    use crabomination::card::CounterType;
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::mossborn_hydra());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![],
-        mode: None, x_value: Some(4),
-    }).expect("Mossborn castable at X=4");
-    drain_stack(&mut g);
-    let hydra = g.battlefield_find(id).expect("Hydra on bf");
-    assert_eq!(hydra.counter_count(CounterType::PlusOnePlusOne), 8,
-        "X≥4 doubles the entering counters (2×4 = 8)");
+    // Landfall doubles: 1 -> 2 -> 4.
+    for expected in [2, 4] {
+        let land = g.add_card_to_hand(0, catalog::forest());
+        g.players[0].lands_played_this_turn = 0;
+        g.step = crabomination::game::TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+        drain_stack(&mut g);
+        assert_eq!(
+            g.battlefield_find(id).expect("Hydra on bf").counter_count(CounterType::PlusOnePlusOne),
+            expected,
+            "landfall doubles the counters",
+        );
+    }
 }
 
 #[test]

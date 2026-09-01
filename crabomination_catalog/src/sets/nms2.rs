@@ -186,9 +186,11 @@ pub fn animate_land() -> CardDefinition {
     )
 }
 
-/// Arc Mage — {2}{R} Spellshaper. Two damage, split as you like.
+/// Arc Mage — {2}{R} 2/2 Spellshaper. Two damage, split as you like.
 pub fn arc_mage() -> CardDefinition {
-    spellshaper(
+    // A 2/2, where every other Spellshaper in the set is the 1/1 the helper
+    // builds.
+    CardDefinition { power: 2, toughness: 2, ..spellshaper(
         "Arc Mage",
         cost(&[generic(2), r()]),
         vec![CreatureType::Human, CreatureType::Spellshaper],
@@ -199,7 +201,7 @@ pub fn arc_mage() -> CardDefinition {
             max_targets: 2,
             retaliate_to_source: false,
         },
-    )
+    ) }
 }
 
 /// Defender en-Vec — {3}{W}. Fading 4 spent two damage at a time.

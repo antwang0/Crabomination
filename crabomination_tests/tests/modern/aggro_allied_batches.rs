@@ -704,8 +704,9 @@ fn claustrophobia_taps_and_locks_down_the_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
     let aura = g.add_card_to_hand(0, catalog::claustrophobia());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    // {1}{U}{U}, not the {2}{U} a shared helper's default cost gave it.
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
     cast_at(&mut g, aura, Target::Permanent(bear));
     assert!(g.battlefield_find(bear).unwrap().tapped, "ETB tapped the creature");
     // The enchanted creature's controller's untap step must NOT untap it.

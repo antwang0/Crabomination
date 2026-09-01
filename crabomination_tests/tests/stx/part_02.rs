@@ -3475,8 +3475,11 @@ fn search_for_glory_tutors_a_legendary_card_to_hand() {
 
 // ── Fervent Strike (modern_decks push) ──────────────────────────────────
 
+/// Fervent Strike is `{R}`: **+1/+0 and first strike and haste**. It shipped
+/// as a {R/G} +2/+0 trample spell — a different card in the cost, the pump
+/// and both keywords (`every_card_has_the_cost_and_body_its_printing_has`).
 #[test]
-fn fervent_strike_pumps_target_and_grants_trample() {
+fn fervent_strike_pumps_one_and_grants_first_strike_and_haste() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::fervent_strike());
@@ -3487,12 +3490,14 @@ fn fervent_strike_pumps_target_and_grants_trample() {
         target: Some(crabomination::game::types::Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Fervent Strike castable");
+    }).expect("Fervent Strike castable for {R}");
     drain_stack(&mut g);
 
     let b = g.computed_permanent(bear).expect("bear");
-    assert_eq!(b.power, 4, "+2/+0 pump");
-    assert!(b.keywords().contains(&Keyword::Trample), "trample granted");
+    assert_eq!(b.power, 3, "+1/+0 pump");
+    assert!(b.keywords().contains(&Keyword::FirstStrike), "first strike granted");
+    assert!(b.keywords().contains(&Keyword::Haste), "haste granted");
+    assert!(!b.keywords().contains(&Keyword::Trample), "the invented trample is gone");
 }
 
 // ── Elemental Summoning (modern_decks push) ─────────────────────────────

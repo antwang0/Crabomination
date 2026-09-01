@@ -35,16 +35,16 @@ fn chosen_type_keyword(
     }
 }
 
-/// Steely Resolve — {2}{G} Enchantment. Choose a creature type. Creatures of the
+/// Steely Resolve — {1}{G} Enchantment. Choose a creature type. Creatures of the
 /// chosen type have shroud.
 pub fn steely_resolve() -> CardDefinition {
-    chosen_type_keyword("Steely Resolve", &[generic(2), g()], Keyword::Shroud)
+    chosen_type_keyword("Steely Resolve", &[generic(1), g()], Keyword::Shroud)
 }
 
-/// Kindred Boon — {2}{W} Enchantment. Choose a creature type. Creatures you
+/// Kindred Boon — {2}{W}{W} Enchantment. Choose a creature type. Creatures you
 /// control of the chosen type have indestructible.
 pub fn kindred_boon() -> CardDefinition {
-    chosen_type_keyword("Kindred Boon", &[generic(2), w()], Keyword::Indestructible)
+    chosen_type_keyword("Kindred Boon", &[generic(2), w(), w()], Keyword::Indestructible)
 }
 
 /// Cover of Darkness — {1}{B} Enchantment. Choose a creature type. Creatures of

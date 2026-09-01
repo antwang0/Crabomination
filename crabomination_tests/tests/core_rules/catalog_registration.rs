@@ -409,3 +409,133 @@ fn no_card_carries_a_mechanic_keyword_it_does_not_print() {
         &invented[..invented.len().min(30)]
     );
 }
+
+/// **Every card's printed cost and body are the ones Scryfall prints.**
+///
+/// The Rust ratchet under `audit_catalog_stats.py`'s `cost` and `P/T`
+/// columns, which read **0** across every set. It exists so the ~100
+/// hand-written `*_stat_lines` tests do not have to: those asserted what a
+/// test author typed for a hand-picked list of cards, where this asserts what
+/// Wizards printed, for every card the cache can adjudicate.
+///
+/// Skipped, and each skip is a shape the cache cannot answer rather than a
+/// card given a pass: a name the cache does not hold; a card it spells over
+/// two faces (`card_faces`, or ` // ` in the name, cost or type line), since
+/// the body here is the front face alone; a cost the cache leaves empty (a
+/// land, where the engine writes `{0}`); and a `*` power or toughness.
+#[test]
+fn every_card_has_the_cost_and_body_its_printing_has() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    /// `{3}{B}{B}` -> a sorted `["3", "B", "B"]`, so the two sides may spell
+    /// the same cost in different orders.
+    fn pips(s: &str) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        let mut cur: Option<String> = None;
+        for ch in s.chars() {
+            match ch {
+                '{' => cur = Some(String::new()),
+                '}' => {
+                    if let Some(p) = cur.take() {
+                        out.push(p);
+                    }
+                }
+                _ => {
+                    if let Some(p) = cur.as_mut() {
+                        p.push(ch);
+                    }
+                }
+            }
+        }
+        out.sort();
+        out
+    }
+
+    let mut costs = 0usize;
+    let mut bodies = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        let field = |k: &str| entry.get(k).and_then(|v| v.as_str()).unwrap_or("");
+        if entry.get("card_faces").is_some()
+            || field("name").contains(" // ")
+            || field("mana_cost").contains(" // ")
+            || field("type_line").contains(" // ")
+        {
+            continue;
+        }
+        // ⚠ A Vanguard avatar shares its name with an ordinary card and the
+        // cache holds the *card* — "Maraxus of Keld" is a {4}{R}{R} Legends
+        // creature to Scryfall and a costless command-zone avatar here. The
+        // other four command-zone types are skipped for the same reason.
+        if def.card_types.iter().any(|t| {
+            matches!(
+                t,
+                crabomination::card::CardType::Vanguard
+                    | crabomination::card::CardType::Scheme
+                    | crabomination::card::CardType::Plane
+                    | crabomination::card::CardType::Phenomenon
+                    | crabomination::card::CardType::Conspiracy
+            )
+        }) {
+            continue;
+        }
+        let printed = field("mana_cost");
+        if !printed.is_empty() {
+            costs += 1;
+            let ours = def.cost.summary();
+            if pips(&ours) != pips(printed) {
+                wrong.push(format!("{}: cost {ours} vs printed {printed}", def.name));
+            }
+        }
+        // ⚠ A Spacecraft's printed P/T is the one its highest station band
+        // gives it (CR 311.9), and the engine spells that as a 0/0 body plus
+        // `station` bands. Twenty of them read as body bugs before this gate
+        // and every one is correct.
+        //
+        // `power`/`toughness` are strings in the cache and may be `*`, `1+*`
+        // or absent; only a plain integer is comparable.
+        if def.station.is_empty()
+            && let (Some(p), Some(t)) = (
+            field("power").parse::<i32>().ok(),
+            field("toughness").parse::<i32>().ok(),
+        )
+        {
+            bodies += 1;
+            if (def.power, def.toughness) != (p, t) {
+                wrong.push(format!(
+                    "{}: body {}/{} vs printed {p}/{t}",
+                    def.name, def.power, def.toughness
+                ));
+            }
+        }
+    }
+
+    // Non-vacuity, as above: a moved cache or a renamed field would otherwise
+    // turn this into a loop that compares nothing and passes.
+    assert!(
+        costs > 12_000 && bodies > 6_000,
+        "only {costs} costs and {bodies} bodies were comparable — did the cache move?",
+    );
+    wrong.sort();
+    wrong.dedup();
+    assert!(
+        wrong.is_empty(),
+        "{} card(s) do not have their printed cost or body: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(60)]
+    );
+}

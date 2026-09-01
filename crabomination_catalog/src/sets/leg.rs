@@ -574,11 +574,12 @@ pub fn winds_of_change() -> CardDefinition {
     }
 }
 
-/// Field of Dreams — everyone plays off a revealed top card.
+/// Field of Dreams — {U} World Enchantment: everyone plays off a revealed
+/// top card.
 pub fn field_of_dreams() -> CardDefinition {
     CardDefinition {
         name: "Field of Dreams",
-        cost: cost(&[generic(2), crate::mana::u()]),
+        cost: cost(&[crate::mana::u()]),
         card_types: vec![CardType::Enchantment],
         supertypes: vec![Supertype::World],
         static_abilities: vec![StaticAbility {

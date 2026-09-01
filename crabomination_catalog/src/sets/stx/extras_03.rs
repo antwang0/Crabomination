@@ -826,33 +826,36 @@ pub fn search_for_glory() -> CardDefinition {
     }
 }
 
-// ── Fervent Strike (STX hybrid combat trick) ───────────────────────────────
+// ── Fervent Strike (mono-red combat trick) ─────────────────────────────────
 
-/// Fervent Strike — {R/G} Instant (STX 2021, Lorehold-ish hybrid).
-/// "Target creature gets +2/+0 and gains trample until end of turn."
+/// Fervent Strike — {R} Instant. "Target creature gets +1/+0 and gains first
+/// strike and haste until end of turn."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Lorehold's small-curve
-/// combat trick. The `{R/G}` pip is a real `ManaSymbol::Hybrid(Red,
-/// Green)`, payable with either red or green. Wired as
-/// `Seq(PumpPT(+2/+0 EOT), GrantKeyword(Trample EOT))` against a
-/// `Creature` target. Tests:
-/// `fervent_strike_pumps_target_and_grants_trample`,
-/// `fervent_strike_is_a_one_mana_instant`.
+/// ⚠ It shipped as a `{R/G}` hybrid that gave **+2/+0 and trample** — wrong
+/// in the cost, the pump and both keywords, i.e. a different card in every
+/// field it has (`every_card_has_the_cost_and_body_its_printing_has`). Its
+/// old test lived in the hybrid-pip file and exercised a pip the card does
+/// not print; Rubble Slinger ({2}{R/G}) took that slot.
 pub fn fervent_strike() -> CardDefinition {
     CardDefinition {
         name: "Fervent Strike",
-        cost: cost(&[crate::mana::hybrid(Color::Red, Color::Green)]),
+        cost: cost(&[crate::mana::r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(2),
+                power: Value::ONE,
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::Trample,
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
             },
         ]),

@@ -107,7 +107,7 @@ fn dreams(name: &'static str, c: ManaCost, sorcery_speed: bool, effect: Effect) 
 pub fn restless_dreams() -> CardDefinition {
     dreams(
         "Restless Dreams",
-        cost(&[x(), b()]),
+        cost(&[b()]),
         true,
         Effect::MoveChosen {
             from: Selector::CardsInZone {
@@ -127,7 +127,7 @@ pub fn restless_dreams() -> CardDefinition {
 pub fn nostalgic_dreams() -> CardDefinition {
     dreams(
         "Nostalgic Dreams",
-        cost(&[x(), g(), g()]),
+        cost(&[g(), g()]),
         true,
         Effect::Seq(vec![
             Effect::MoveChosen {
@@ -150,7 +150,7 @@ pub fn nostalgic_dreams() -> CardDefinition {
 pub fn turbulent_dreams() -> CardDefinition {
     dreams(
         "Turbulent Dreams",
-        cost(&[x(), u(), u()]),
+        cost(&[u(), u()]),
         true,
         Effect::MoveChosen {
             from: Selector::EachPermanent(R::Nonland),
@@ -166,7 +166,7 @@ pub fn turbulent_dreams() -> CardDefinition {
 pub fn vengeful_dreams() -> CardDefinition {
     dreams(
         "Vengeful Dreams",
-        cost(&[x(), w(), w()]),
+        cost(&[w(), w()]),
         false,
         Effect::MoveChosen {
             from: Selector::EachPermanent(R::Creature.and(R::IsAttacking)),

@@ -162,23 +162,26 @@ fn spectacle_mage_castable_with_two_red() {
     assert!(g.battlefield.iter().any(|c| c.id == id));
 }
 
+/// ⚠ This tested Fervent Strike, which prints **{R}** and no hybrid pip at
+/// all — the card had been built as a {R/G} +2/+0 trample spell, so the test
+/// exercised the hybrid path on a card that has none
+/// (`every_card_has_the_cost_and_body_its_printing_has`). Rubble Slinger is
+/// {2}{R/G} and really does have one.
 #[test]
-fn fervent_strike_castable_with_green() {
-    // {R/G}: hybrid pip payable with green.
+fn rubble_slinger_castable_with_green() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::fervent_strike());
+    let id = g.add_card_to_hand(0, catalog::rubble_slinger());
     g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Fervent Strike castable for {G} via hybrid pip");
+    .expect("Rubble Slinger castable for {2}{G} via the hybrid pip");
     drain_stack(&mut g);
-
-    let view = g.computed_permanent(bear).expect("bear on bf");
-    assert_eq!(view.power, 4, "Fervent Strike pumps +2/+0");
-    assert!(view.keywords().contains(&Keyword::Trample));
+    let view = g.computed_permanent(id).expect("slinger on bf");
+    assert_eq!((view.power, view.toughness), (2, 3));
+    assert!(view.keywords().contains(&Keyword::Reach));
 }
 
 // ── Monocolored hybrid pips ({n/C}) ───────────────────────────────────────────
