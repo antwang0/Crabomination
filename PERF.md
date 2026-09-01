@@ -11008,6 +11008,60 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-168)` — the freeze scope's effect list is recycled too, and a hit is worth 1.3-1.7 allocations: `fixed` -0.468 %, `cube` -0.269 %, `sealed` -0.253 %
+
+```text
+  pool    base 6d54918a      (-168)          delta
+  fixed     892,615,759     888,435,668   **-0.4683 %**
+  cube    2,442,218,243   2,435,660,499   **-0.2685 %**
+  sealed  2,454,453,242   2,448,251,431   **-0.2527 %**
+
+  malloc CALLS      base       (-168)      delta   alloc_with calls   per call
+    fixed        408,878      377,395    -31,483        23,512          1.34
+    cube       1,080,172    1,010,449    -69,723        40,798          1.71
+    sealed     1,235,649    1,151,582    -84,067        52,750          1.59
+```
+
+`(-166)`'s device on the scope's **other** memo. `LayerFreezeState::memo` holds
+an `Arc<Vec<ContinuousEffect>>`; `end_of_scope` parked it instead of dropping
+it, and the two fill sites (`frozen_effects`, and `computed_permanent_hinted`'s
+scope-first read) take it back off the list.
+
+**The reason the per-call figure is above 1 is the whole point of picking this
+box over the next one on the census.** An `Arc<Vec<T>>` is *two* allocations,
+and a parked one comes back with its buffer already sized by the last gather
+this thread took. So one hit removes the `Arc` box's `malloc`, the
+`Vec::with_capacity(base.len() + sa_cards.len())` that `(-163)` measured at
+39,224 of a six-game `cube` run — the line it filed as `(-162)` — **and** every
+`finish_grow` the pass would have paid climbing to its final length. `(-162)`
+asked for a `thread_local!` free list with an RAII guard and an `into_vec()`
+escape hatch for the two `Arc::new` sites; what it actually needed was to
+recycle *the two `Arc::new` sites themselves*, which subsumes it. **Closed.**
+
+**`mem::take` is what keeps the box in the `Arc`.** The obvious shape —
+unwrap the `Arc`, fill the `Vec`, re-wrap — retakes the box allocation and
+wins nothing. Instead `alloc_with` steals the buffer out of the parked handle
+with `std::mem::take`, fills it, and moves it back into the same slot, so
+neither allocation is ever retaken. The gather threading is one parameter:
+`gather_continuous_effects_inner` takes the buffer by value and binds it to
+its existing `all_effects` local, so the 3,500-line body is untouched and the
+`Vec::with_capacity` becomes a `reserve` that no-ops on a warm buffer.
+
+**The borrow is released before the fill runs**, because a gather re-enters
+itself (`board_keyword_matching`, `permanents_with_abilities_removed`, the
+debug cross-checks) — holding it across would make the inner call take the
+miss path for nothing, and a `borrow_mut` there would be a panic reachable
+from self-play.
+
+`CAP = 4` against `cp_pool`'s 8: a scope has exactly one effect list, and a
+parked buffer holds a whole board's worth of effects rather than one
+permanent's.
+
+Gates: suite 19,196 / 0 / 5 with the golden traces unmoved, clippy
+`--all-targets` clean, `--bench` byte-identical to the invariant
+(195,806 / 27.49 / 611.9 / 0 stalls), determinism ok, and a five-seed
+68,000-game `--decks all` sweep on both binaries, byte-identical seed for seed.
+
 ### `(-166)` — `computed_permanent_hinted`'s `Arc` is recycled: `fixed` -0.640 %, `cube` -0.628 %, `sealed` -0.636 %
 
 ```text
@@ -20711,6 +20765,15 @@ count of overlay fields decides it. **Price the struct first, then the row.**
 CoW family**, which `(-99)`/`(-100)`/`(-143)` worked to exhaustion — and
 `(-157)` says a `release-fast` reading over-states that family by ~20 %
 because thin LTO deletes a fifth of its calls. Discount before pricing.
+
+**(-162) CLOSED — SUBSUMED BY `(-168)`, NOT TAKEN AS FILED.** The row is gone,
+but not by the reuse pool this entry designed: `(-168)` recycles the
+`Arc<Vec<ContinuousEffect>>` the freeze scope already holds, and a parked
+handle brings its buffer back with it, so the `with_capacity` this entry
+ranked is a `reserve` that no-ops. **The transferable half: when a buffer's
+owner is already an `Arc` somebody parks, pool the OWNER, not the buffer** —
+one device, two allocations, and no RAII guard or `into_vec()` escape hatch
+needed. The entry is kept for its census.
 
 **(-162) THE ONE ROW `(-161)` LEFT INSIDE `gather_continuous_effects_inner`,
 AND IT IS `cube`'s, NOT THE BENCH'S.** `mod.rs:9862`, `all_effects`'

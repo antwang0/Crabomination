@@ -433,11 +433,13 @@ impl LayerFreezeState {
     /// Sarkhan the Masterless. `gates` is an array for the same reason — a
     /// family added to it cannot be forgotten here.
     ///
-    /// `perms` is *drained into [`cp_pool`]* rather than cleared: the entries
-    /// are dead either way, and handing the boxes on is what makes the next
-    /// scope's `Arc::new`s free (PERF `(-166)`).
+    /// Both memos are *parked* rather than dropped: the entries are dead
+    /// either way, and handing the boxes on is what makes the next scope's
+    /// `Arc::new`s free (PERF `(-166)`, `(-168)`).
     fn end_of_scope(&mut self) {
-        self.memo = None;
+        if let Some((fx, _)) = self.memo.take() {
+            fx_pool::park(fx);
+        }
         cp_pool::recycle(self.perms.drain(..).map(|(_, cp)| cp));
     }
 }
@@ -506,6 +508,83 @@ mod cp_pool {
             }
             Arc::new(cp)
         })
+    }
+}
+
+/// [`cp_pool`]'s device applied to the freeze scope's *other* memo, the
+/// gathered effect list — and here it recycles two allocations per hit, not
+/// one.
+///
+/// `Arc<Vec<ContinuousEffect>>` is the `Arc` box **plus** the list's own
+/// buffer, and a parked box comes back with that buffer already sized by the
+/// last gather this thread took. So the hit removes the box's `malloc`, the
+/// `Vec::with_capacity` PERF `(-163)` measured at 39,224 of a six-game `cube`
+/// run, and every `finish_grow` the pass would have paid on the way to its
+/// final length. The two fill sites are `frozen_effects` and
+/// `computed_permanent_hinted`'s scope-first read: 7,330 + 16,182 boxes on
+/// `fixed`, 11,806 + 28,992 on `cube`.
+///
+/// Shallower than [`cp_pool`] because a scope has exactly one of these and a
+/// parked buffer holds a whole board's worth of effects.
+mod fx_pool {
+    use std::sync::Arc;
+
+    use crate::game::layers::ContinuousEffect;
+
+    const CAP: usize = 4;
+
+    thread_local! {
+        static POOL: std::cell::RefCell<Vec<Arc<Vec<ContinuousEffect>>>> =
+            const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// Park a closing scope's effect list, shared or not — see [`cp_pool`].
+    pub(super) fn park(fx: Arc<Vec<ContinuousEffect>>) {
+        POOL.with(|p| {
+            if let Ok(mut pool) = p.try_borrow_mut()
+                && pool.len() < CAP
+            {
+                pool.push(fx);
+            }
+        });
+    }
+
+    /// `Arc::new(fill(Vec::new()))`, with the box and the buffer taken off the
+    /// free list when a parked one has since become unique.
+    ///
+    /// `fill` runs with **no borrow held**: a gather re-enters itself
+    /// (`board_keyword_matching`, `permanents_with_abilities_removed`, the
+    /// debug cross-checks), so a borrow across it would make the inner call
+    /// take the miss path for no reason — and a `borrow_mut` would panic.
+    pub(super) fn alloc_with(
+        fill: impl FnOnce(Vec<ContinuousEffect>) -> Vec<ContinuousEffect>,
+    ) -> Arc<Vec<ContinuousEffect>> {
+        let mut parked = POOL.with(|p| {
+            let mut pool = p.try_borrow_mut().ok()?;
+            while let Some(mut h) = pool.pop() {
+                if Arc::get_mut(&mut h).is_some() {
+                    return Some(h);
+                }
+            }
+            None
+        });
+        // Steal the buffer out of the parked box, fill it, put it back: the
+        // box never leaves the `Arc`, so neither allocation is retaken.
+        match parked.as_mut().and_then(Arc::get_mut) {
+            Some(slot) => {
+                let mut buf = std::mem::take(slot);
+                buf.clear();
+                let filled = fill(buf);
+                match parked.as_mut().and_then(Arc::get_mut) {
+                    Some(slot) => *slot = filled,
+                    // Unreachable: the handle was unique a moment ago and
+                    // nothing above clones it. Costs a branch, not a panic.
+                    None => return Arc::new(filled),
+                }
+                parked.expect("the parked handle is Some in this arm")
+            }
+            None => Arc::new(fill(Vec::new())),
+        }
     }
 }
 
@@ -9760,7 +9839,7 @@ impl GameState {
         }
         // First computed read in this scope: gather outside the lock (the
         // gather itself re-enters `frozen_effects` via guarded eval paths).
-        let fx = std::sync::Arc::new(self.gather_continuous_effects());
+        let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
         let gates = crate::game::layers::SecondPass::of(&fx);
         let mut st = self.layer_freeze.lock();
         st.memo = Some((fx.clone(), gates));
@@ -9775,6 +9854,16 @@ impl GameState {
     /// anthems. Shared by [`compute_battlefield`] (applies to every
     /// permanent) and [`computed_permanent`] (applies to just one).
     fn gather_continuous_effects(&self) -> Vec<ContinuousEffect> {
+        self.gather_continuous_effects_with(Vec::new())
+    }
+
+    /// [`gather_continuous_effects`](Self::gather_continuous_effects) filling
+    /// a buffer the caller supplies. `buf` must be empty; its **capacity** is
+    /// what the caller is handing over, and a buffer that has held a gather
+    /// before is already the right size, so the pass allocates nothing. See
+    /// [`fx_pool`].
+    fn gather_continuous_effects_with(&self, buf: Vec<ContinuousEffect>) -> Vec<ContinuousEffect> {
+        debug_assert!(buf.is_empty(), "gather_continuous_effects_with wants an empty buffer");
         // Reentrancy guard — see `in_layer_gather`. Passes below that
         // evaluate selection requirements must not recurse back into
         // `computed_permanent`.
@@ -9785,7 +9874,7 @@ impl GameState {
         // every computed read after that point would take the wrong branch.
         use std::sync::atomic::Ordering;
         let prev = self.in_layer_gather.swap(true, Ordering::Relaxed);
-        let out = self.gather_continuous_effects_inner();
+        let out = self.gather_continuous_effects_inner(buf);
         self.in_layer_gather.store(prev, Ordering::Relaxed);
         // The card-type presence gate's audit, run in the sound direction and
         // in the one place where the gather already happened, so it costs a
@@ -9850,7 +9939,10 @@ impl GameState {
         out
     }
 
-    fn gather_continuous_effects_inner(&self) -> Vec<ContinuousEffect> {
+    fn gather_continuous_effects_inner(
+        &self,
+        buf: Vec<ContinuousEffect>,
+    ) -> Vec<ContinuousEffect> {
         use gather_spec as gs;
         // Most passes below are gated on `definition.static_abilities`, and a
         // typical board is vanilla creatures and basic lands. Filter once so
@@ -9933,8 +10025,12 @@ impl GameState {
         // measured **+1.54 %**: a bigger allocation on every one of the 32,002
         // gathers is a worse trade than the 10,040 growths it removes.
         let base = &*self.continuous_effects;
-        let mut all_effects: Vec<ContinuousEffect> =
-            Vec::with_capacity(base.len() + sa_cards.len());
+        // `buf` arrives empty and, off `fx_pool`, already sized by the last
+        // gather this thread took — so the `reserve` is a no-op there and the
+        // `with_capacity` this replaced was 39,224 of a six-game `cube` run's
+        // allocations (PERF `(-163)`'s census, the line it called `(-162)`).
+        let mut all_effects: Vec<ContinuousEffect> = buf;
+        all_effects.reserve(base.len() + sa_cards.len());
         all_effects.extend_from_slice(base);
         // Bludgeon Brawl's pass calls `brawl_equip_mv` per battlefield card,
         // and that helper re-scans the whole board's static abilities looking
@@ -13657,7 +13753,7 @@ impl GameState {
         if needs_gather {
             // The scope's first computed read: fill `memo` exactly as
             // `frozen_effects` would, then store both memos under one guard.
-            let fx = std::sync::Arc::new(self.gather_continuous_effects());
+            let fx = fx_pool::alloc_with(|buf| self.gather_continuous_effects_with(buf));
             let gates = crate::game::layers::SecondPass::of(&fx);
             let cp = cp_pool::alloc(crate::game::layers::apply_layers_one_gated(
                 card, &fx, gates,
