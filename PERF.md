@@ -2361,6 +2361,13 @@ wall    **+2.62 % median games/s**, 16 paired `--bench` runs alternating the
         resolve.
 ```
 
+**Closing `fixed` reading for the whole run, taken at `1b429c25` after both
+sessions' commits and this one's twelve card fixes: 905,973,251 Ir** — a
+further **-0.302 %** under `(-144)`, so nothing between them regressed, and
+**-2.307 % across the run** (927,366,593 at `1a783e04`). None of the twelve
+cards is in a `--bench` archetype, so they are invisible to `fixed` exactly as
+predicted; `cube`/`sealed` are NOT comparable across them.
+
 ⚠ **Every number here is a `--no-default-features` (system-allocator)
 `profiling-fast` reading**, and `fixed`'s base moved 838 M -> 927 M across the
 concurrent session's card batch — a `fixed` Ir figure from before `33955a1f`
