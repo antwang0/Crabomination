@@ -9559,7 +9559,7 @@ impl GameState {
         self.continuous_effects
             .iter()
             .any(|e| modification_reduces_toughness(&e.modification))
-            || self.battlefield.iter().any(card_can_reduce_toughness)
+            || self.battlefield.has_toughness_reducer(card_can_reduce_toughness)
     }
 
     /// Run `f` with the gathered continuous-effect set memoized, so every
@@ -23928,6 +23928,17 @@ fn static_effect_reduces_toughness(effect: &crate::effect::StaticEffect) -> bool
 /// Station bands), the attachment route (`equipped_bonus`' five P/T fields,
 /// including its `scale` and its conditional bands), CR 702.95 Soulbond, and
 /// every static route including Station-band statics.
+///
+/// **Reads no instance field**, which is what puts it on
+/// [`zone::Battlefield`]'s lane (whose `iter_mut` / `get_mut` deliberately do
+/// *not* invalidate — see that type). The attachment and Soulbond routes are
+/// therefore *widened*: a printed `equipped_bonus` or `soulbond_bonus` that
+/// could lower toughness answers `true` whether or not the permanent is
+/// currently attached or paired. That is the sound direction — the gate's
+/// contract is that `false` is authoritative and `true` only means the layer
+/// read has to run — and it costs the layer read only on a board holding an
+/// *unattached* toughness-lowering Equipment or an unpaired negative Soulbond
+/// creature. PERF `(-153)`.
 fn card_can_reduce_toughness(card: &CardInstance) -> bool {
     let def = &card.definition;
     // 7a: a characteristic-defining formula, a level band or a Station band
@@ -23940,8 +23951,7 @@ fn card_can_reduce_toughness(card: &CardInstance) -> bool {
     }) {
         return true;
     }
-    if card.attached_to.is_some()
-        && let Some(b) = def.equipped_bonus.as_ref()
+    if let Some(b) = def.equipped_bonus.as_ref()
         && (b.toughness < 0
             || b.during_your_turn_pt.1 < 0
             || b.conditional_pt.as_ref().is_some_and(|(_, t, _)| *t < 0)
@@ -23954,11 +23964,7 @@ fn card_can_reduce_toughness(card: &CardInstance) -> bool {
     {
         return true;
     }
-    if card
-        .soulbond_partner
-        .is_some()
-        && def.soulbond_bonus.as_ref().is_some_and(|b| b.toughness < 0)
-    {
+    if def.soulbond_bonus.as_ref().is_some_and(|b| b.toughness < 0) {
         return true;
     }
     def.static_abilities.iter().any(|sa| static_effect_reduces_toughness(&sa.effect))

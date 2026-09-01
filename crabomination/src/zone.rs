@@ -402,6 +402,7 @@ const LANE_ACT_GRANT: u32 = 18;
 /// computed", and the list is what the caller reads. It shares the word so
 /// that the one store every write path already makes clears it too.
 const LANE_TRIGGERER: u32 = 20;
+const LANE_PT_REDUCE: u32 = 22;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -937,6 +938,14 @@ impl Battlefield {
     #[inline]
     pub fn has_damage_scaler(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
         self.lane(LANE_DAMAGE_SCALE, walk)
+    }
+
+    /// CR 613.4 layer 7 — can any permanent here contribute a
+    /// *toughness-lowering* modification (`GameState::pt_reduction_in_scope`'s
+    /// board half)? Asked once per state-based sweep, over the whole board.
+    #[inline]
+    pub fn has_toughness_reducer(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
+        self.lane(LANE_PT_REDUCE, walk)
     }
 
     /// CR 615 — can any permanent here prevent damage a *source* would deal
