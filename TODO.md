@@ -29,7 +29,7 @@ sixty-seventh pass, so don't re-take that.
    passes collided twice, and the hundred-and-nineteenth shipped with a stale number in its
    commit titles rather than rewrite a shared branch. Container gotchas are in **CLAUDE.md**,
    measurement rules in **PERF**.
-2. **Gates at the tip:** suite **19,129+ / 0 / 5** (`--workspace --exclude
+2. **Gates at the tip:** suite **19,134 / 0 / 5** (`--workspace --exclude
    crabomination_client`), traces unmoved, clippy clean `--all-targets`; `--bench`
    **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the invariant**, determinism and
    thread_determinism ok. **Grid re-run and green: 30 cells / 33,120 games / 0 failures**
@@ -60,12 +60,23 @@ sixty-seventh pass, so don't re-take that.
 7. **The build is still the largest single lever**: PGO -23.8 to -27.6 %, how-to at the top of
    **ML_PIPELINE.md**. Otherwise perf is near its floor — `(-151)`'s fresh dump moved nothing,
    and `(-145)` is refused on robustness, not on size.
-8. **Two card auditors are ratchets at zero — keep them there** (`audit_doc_drift` 0/21,426,
-   `audit_keyword_drift` 0 invented). `audit_catalog_stats` is 0 cost / 0 P/T; its 19 `kw` +
-   2 `sub` rows are triaged in **CARD_BACKLOG**'s first section and the one worth taking is
-   **Karplusan Strider**. Next by size in the oracle-verb audit: `search_library` 18,
-   `draw` 17, `destroy` 15.
-9. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
+8. **`(-154)` taken, `cube` -0.148 % at six games and -0.224 % at eighteen** — three damage
+   tallies gated on the one card each serves, `(-149)`'s class a third time. ⚠ **Read a
+   six-game number for a new `debug_flag` as an understatement**: the flag `format!`s a
+   definition **233 times a process**, once per distinct card name, so its cost is fixed and
+   the gate's win is not. Nothing is left in the hot player group; **`CardData` is the next
+   one to read** (32,562 unshares, 500 Ir each).
+9. **⚠ `audit_catalog_stats.py` READ 0 BECAUSE IT COULD NOT SEE THE CARDS.** Its regex needs
+   `CardDefinition { name: "…" }` at eight spaces, so every helper-built card was unaudited.
+   Three **Rust** ratchets in `core_rules/catalog_registration.rs` walk the built definitions
+   instead — 17,639 cards against the cache, not 10,764 — and found **33 shipped defects on
+   their first run** (Fervent Strike wrong in every field it has; three Zendikar lands the
+   legend rule was deleting; Plaza of Harmony counting itself as a Gate). **Every Python
+   auditor's zero is now suspect for the same reason — check its population before quoting
+   it.** Two classes are filed, not fixed, because both move `cube`/`sealed` and want pricing:
+   ~48 nonbasic lands carrying redundant basic land types, and 183 missing subtypes
+   (CARD_BACKLOG's first section). The other two card auditors stay ratchets at zero.
+10. **Robustness green** — `audit_panics` 0 bare, `audit_variant_coverage` 2 dead primitives
    (both want a card, not a fix), `audit_target_fields` 0 aimed by a shipped card,
    `audit_target_walkers` clean. Targeting is CLOSED and gated; the four rules are in
    ENGINE_BACKLOG, and its P2 has one live lead (Sand Golem's trigger, probed, not vacuous).
