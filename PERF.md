@@ -10396,6 +10396,74 @@ the table above is safe to compress:
 
 ## Log
 
+### Hundred-and-seventeenth pass — `(-149)` the per-name cast tally is kept for one card, and was kept for every card: `cube` -0.250 %, `fixed` -0.460 %
+
+```text
+  pool    3f1296ee (base)   candidate       delta
+  cube    2,455,809,519     2,449,658,867   -0.2504 %
+  fixed     905,974,772       901,809,737   -0.4597 %
+```
+
+**What it is.** `PlayerData::spells_cast_by_name_this_game` is a
+`HashMap<&'static str, u32>` bumped in `finalize_cast` for **every** spell
+cast, and read by exactly one predicate on exactly one card —
+`Predicate::CastOwnNameThisGameAtLeast`, which is Approach of the Second Sun
+and nothing else in the tree. It is in the **hot** player group, never reset,
+and grows all game, so it was a live `hashbrown` table deep-copied on every
+`PlayerData` unshare.
+
+The predicate reads the **source's own** name and the source is the card that
+carries the predicate, so a name nobody asks about can never be read back out.
+Gating the bump on `CardDefinition::counts_own_name_casts()` leaves the map
+hashbrown's **empty singleton** in every pool without an Approach — and
+`RawTable::clone` has a fast path for that.
+
+**The mechanism, fully accounted for** (`cube`, base -> candidate):
+
+```text
+  RawTable::clone self          2,471,212 -> 1,476,844    -994,368
+  RawTable::reserve_rehash        703,620 ->       0      -703,620  (never grows)
+  __rust_alloc calls            1,278,253 -> 1,256,361     -21,892
+      x 183 Ir a malloc/free pair (the `(-139)` calibration)      -4.01 M
+                                                     total ~ -5.7 M of -6.15 M
+```
+
+The allocation count falls by **21,892**, which is the 22,060 `PlayerData`
+unshares a six-game `cube` run makes, one table allocation each. That is the
+same census `(-146)` used and it lands on the number it predicted.
+
+**How it was found, and the instrument is worth keeping.** `--demangle=no`
+splits `Arc::clone_from_ref_in`'s twelve monomorphizations, and each is
+identified by what it calls: `RawTable::clone` + `SmallVec::extend` is
+`PlayerData` (22,060 unshares, 775 Ir each), `CardMemo::clone` is `CardData`
+(32,562 / 500 Ir), `String::clone` is `PlayerCold` — **and `PlayerCold` is
+unshared only 2,880 times, 7.7x less often than `PlayerData`.** That ratio is
+the whole argument for the cold group and the whole way to price a move into
+it.
+
+⚠ **The rejected alternative, for whoever reaches for it next.** Moving the
+map into `PlayerCold` rather than gating it looks equivalent and is not: the
+write happens on every cast, so it would drag `PlayerCold`'s unshare count
+from 2,880 up toward the cast count at 302 Ir each and hand back most of the
+win. **A CoW group is priced by reaches, `(-143)`'s rule — and a field that is
+written on a hot path does not become cold by being moved.** Not writing at
+all is a different and better answer than writing somewhere cheaper.
+
+**Refactor carried by the same commit.** `wants_converge` is a `{:?}` scan of
+the definition behind a two-level cache; `counts_own_name_casts` is a second
+question of exactly the same kind. Two functions would `format!` the
+definition twice and hold two caches, so the cached value became a **`u8` of
+flags** (`card::debug_flag`) filled by one scan. ⚠ The L1 slot's *key*, not
+its value, is the empty marker — a definition with no flags stores 0 and must
+still hit.
+
+**The class this opens.** A collection in a hot CoW group that serves one card
+is not a data-structure problem, it is a **write that should not happen**.
+`cg_edges.py --callers make_mut` ranks the reaches and `--demangle=no` names
+the group; the question to ask of each remaining hot-group collection is not
+"can this be a `Vec`" but "who reads this, and can the write be gated on
+them".
+
 ### Hundred-and-sixteenth pass (10) — the small-table sweep RETAKEN after the rebase: `cube` -0.255 %, `fixed` -0.307 %
 
 ⚠ **The three entries below were measured against `33955a1f` and read
@@ -19174,6 +19242,51 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-149) CLOSED — see the hundred-and-seventeenth pass.** `cube` **-0.250 %**
+/ `fixed` **-0.460 %** for gating one `HashMap` write on the one card that
+reads it. **The device generalises and the list below is thin, so this is the
+question to ask next**: for each collection still in a *hot* CoW group, who
+reads it, and can the write be gated on them? `--demangle=no` +
+`cg_edges.py --callers make_mut` names the group and ranks the reaches;
+`PlayerData` unshares 22,060 times a six-game `cube` run against
+`PlayerCold`'s 2,880, so a hot-group collection is priced ~7.7x a cold-group
+one. What is left in `PlayerData` that owns heap and is not a zone:
+`creatures_entered_this_turn` / `_last_turn`,
+`creatures_that_damaged_me_this_turn`, `prowl_types_this_turn`,
+`graveyard_ids_this_turn`, `spell_casts_this_turn` (a `SmallVec` whose
+`extend` is 2.49 M = 0.10 % on its own), `dungeon`,
+`pending_creature_etb_counters`, `pending_is_discounts`,
+`pending_spell_discounts`. Each is an *empty* `Vec` clone in most games (~10
+Ir, no allocation), so none is worth `(-149)`'s size on its own — but
+`spell_casts_this_turn` is not empty and is the one to read first.
+
+**FRESH PROFILE AT `3f1296ee`, AND THE SHAPE HAS NOT MOVED.** Taken because
+this list had gone thin: `cube` 2,455,809,519 Ir, one thread, seed 1.
+`dispatch_triggers_for_events` 5.34 %, `gather_continuous_effects_inner`
+3.39 %, `compute_permanent_pass` 3.22 %, `check_state_based_actions_into`
+2.93 %, `SpecFromIterNested::from_iter` 2.67 %, `computed_permanent_hinted`
+2.40 %, `Arc::clone_from_ref_in` 2.34 %, the allocator cluster ~11 %, and
+`__memcpy` 2.28 %. **Three things were priced and none is a lever**:
+
+* **`grow_one` is 2.02 % and it is finished.** 279,584 growths, but over ~100
+  callers of which the largest is 37,866 (`Vec::push`'s own std helper, itself
+  split across `static_effect_to_effects`, `activate_ability_inner`,
+  `declare_attackers_banded` and `run_effect`) and the largest *engine* site
+  is `dispatch_board_scan` at 23,576 = **0.115 %**. `(-71)` already took the
+  one big one. ⚠ And `with_capacity` is the wrong instinct for most of them:
+  a `Vec` that ends at <= 4 elements grows exactly once, so reserving saves
+  nothing — the device that pays is `SmallVec`, and only where the buffer
+  never escapes.
+* **The gather's output `Vec` must NOT be reserved.** 56,814 allocations over
+  71,930 gathers is **0.8 per gather**, i.e. most gathers emit nothing and
+  `Vec::new()` never allocates. `with_capacity` would make every empty gather
+  allocate.
+* **`cast_spell_with_convoke` is the largest CoW row — 131,364 `make_mut`
+  reaches over 9,856 calls, 40.0 M inclusive = 1.63 %** — and at 305 Ir a
+  reach those are real unshares of the zones a cast moves cards between, not
+  `(-143)`'s no-op reaches. Lazy copy working as designed; there is nothing to
+  guard.
 
 **(-145) `Arc::make_mut` IS 29 Ir A CALL AND 905,060 OF THEM ARE THE ENGINE'S
 CoW WRITE BARRIER — `cube` 26,238,578 self = 1.07 %.** After `(-143)` the

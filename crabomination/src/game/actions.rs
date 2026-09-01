@@ -8507,11 +8507,22 @@ impl GameState {
         }
         // Per-name lifetime tally — "you've cast another spell named X this
         // game" (Approach of the Second Sun).
-        *self
-            .players[p]
-            .spells_cast_by_name_this_game
-            .entry(card.definition.name)
-            .or_insert(0) += 1;
+        //
+        // Gated on the cast card asking the question. `CastOwnNameThisGameAtLeast`
+        // reads the **source's own** name and the source is the card that
+        // carries the predicate, so a name nobody asks about can never be
+        // read back out. Counting every cast instead left a growing
+        // `hashbrown` table in the *hot* player group: it was cloned on
+        // every `PlayerData` unshare — 22,060 of them on six `cube` games —
+        // where an empty map hits hashbrown's empty-singleton fast path and
+        // allocates nothing. See PERF `(-149)`.
+        if card.definition.counts_own_name_casts() {
+            *self
+                .players[p]
+                .spells_cast_by_name_this_game
+                .entry(card.definition.name)
+                .or_insert(0) += 1;
+        }
         if from_hand {
             self.players[p].spells_cast_from_hand_this_turn += 1;
         }

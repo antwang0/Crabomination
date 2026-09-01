@@ -351,6 +351,15 @@ pub struct PlayerData {
     /// Keyed by the printed `&'static str` name, not an owned `String`: this
     /// map is deep-cloned with every `GameState` clone (millions per bot
     /// self-play game) and an owned key allocates per entry per clone.
+    ///
+    /// ⚠ **Only names that ask are recorded** — `finalize_cast` gates the
+    /// bump on `CardDefinition::counts_own_name_casts`. Counting every cast
+    /// grew a `hashbrown` table inside the *hot* group, and its clone was
+    /// 176 Ir and an allocation on each of the 22,060 `PlayerData` unshares
+    /// a six-game `cube` run makes. An empty map takes hashbrown's
+    /// empty-singleton clone path instead. PERF `(-149)`. If a second card
+    /// ever needs a per-name tally by some *other* route than
+    /// `Predicate::CastOwnNameThisGameAtLeast`, widen the gate with it.
     #[serde(with = "crate::static_str_serde::map_u32", default)]
     pub spells_cast_by_name_this_game:
         crate::fxhash::HashMap<crate::static_str_serde::StaticStr, u32>,

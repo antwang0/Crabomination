@@ -465,12 +465,33 @@ in both directions. Over the 10,744 single-faced cards the cache adjudicates:
   `channel`, `evolve` — have no `Keyword::` variant and no field at all**, so
   those 69 rows are one primitive each rather than 69 card jobs.
 
-**`audit_doc_drift.py` — 340 stale doc comments, 0 body bugs.** The bodies are
-oracle-clean (`audit_catalog_stats` reads 0 cost and 0 P/T drift), so every
-row is a comment describing a different card than the body builds — which is
-this file's own "the doc comment above the body is the tell". **56 of them
-disagree on cost AND P/T**; a five-card sample of that subset found four with
-real ability defects, so it is the subset to read first.
+**`audit_doc_drift.py` — CLOSED at 0 of 21,469.** It read 338 stale doc
+comments and 0 body bugs: the bodies are oracle-clean (`audit_catalog_stats`
+reads 0 cost and 0 P/T drift), so every row was a comment describing a
+different card than the body builds — this file's own "the doc comment above
+the body is the tell", 338 times over. `scripts/fix_doc_drift.py` rewrote the
+326 whose substitution placed uniquely; the twelve that spelled the same cost
+twice were read by hand **and three of them were real card defects** (Ghost
+Vacuum's {2} surcharge on a free tap ability, Merfolk Skydiver built as a
+card that does not exist, Hellspark Elemental missing the Unearth it prints).
+**That is the yield of the class: 1 defect per 4 hand-read docs, 0 per 326
+mechanical ones.** Keep the 0 — a new row now means a doc and a body that
+have just diverged.
+
+**`audit_keyword_value.py` — the keyword *payload*, filed 2026-08-31, now 0
+of 761.** The drift auditor is blind to what a keyword carries:
+`Bushido(1)` and `Bushido(2)` are the same row to it. Most mechanic keywords
+are "keyword N" or "keyword {cost}" and **the parameter is the card**. Eleven
+were wrong — five Equipment charging {1} or {3} for a printed Equip {2},
+Casualty 1 for 3, Vanishing 2 for 3, Echo/Megamorph/Kicker/Flashback each a
+mana out. One allowlisted modelling: Archangel of Wrath's "Kicker {B} and/or
+{R}" is two costs where `Multikicker` carries one.
+
+⚠ **Both of the auditor's false classes were in the *plumbing*, not the
+cards.** The payload arrives as the whole `cost(&[..])` call where
+`body_cost_symbols` wants the slice, and `oracle_words` lower-cases, so
+`{W}` arrives as `{w}` — between them they first hid 640 rows and then
+reported 271 false ones. Read six rows before working a class.
 
 **Primitive jobs the two classes surfaced, none taken.** Each is filed here
 rather than fixed because it needs an engine primitive, and the count beside

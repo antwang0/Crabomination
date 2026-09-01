@@ -5185,6 +5185,16 @@ pub struct AlternativeCost {
     pub converted: bool,
 }
 
+/// The bits [`CardDefinition::debug_flags`] answers. One `{:?}` scan and one
+/// cache serve all of them; add a bit here rather than a second cached
+/// predicate.
+pub(crate) mod debug_flag {
+    /// The card's text reads the converge count.
+    pub const CONVERGE: u8 = 1 << 0;
+    /// The card asks how many spells with its own name were cast this game.
+    pub const OWN_NAME_CASTS: u8 = 1 << 1;
+}
+
 impl CardDefinition {
     // `#[inline]` on the card-type predicates, measured at `c58f8407`:
     // `release-fast` (cgu 16, no LTO) `fixed` -0.907 % / `cube` -0.741 % /
@@ -5636,13 +5646,42 @@ impl CardDefinition {
     /// per name per process; steady state never touches the lock, which used
     /// to be an `RwLock` round-trip per cast on every thread at once.
     pub fn wants_converge(&self) -> bool {
+        self.debug_flags() & debug_flag::CONVERGE != 0
+    }
+
+    /// Whether this card's own text asks how many spells with **its name**
+    /// have been cast this game (`Predicate::CastOwnNameThisGameAtLeast`,
+    /// which is Approach of the Second Sun and nothing else in the tree).
+    ///
+    /// `finalize_cast` keeps the per-name lifetime tally
+    /// (`PlayerData::spells_cast_by_name_this_game`) and gates the bump on
+    /// this. The predicate reads the **source's own** name, and the source
+    /// is the card that carries the predicate, so a name nobody asks about
+    /// can never be read back — and the map then stays hashbrown's empty
+    /// singleton, whose clone is a fast path. See PERF `(-149)`.
+    pub fn counts_own_name_casts(&self) -> bool {
+        self.debug_flags() & debug_flag::OWN_NAME_CASTS != 0
+    }
+
+    /// The `{:?}`-derived per-definition flags, all answered by **one** scan
+    /// behind **one** cache.
+    ///
+    /// Splitting them into a function each would `format!` the definition
+    /// once per question and hold a cache per question; the rendering of a
+    /// `CardDefinition` is the expensive part (PERF: `wants_converge` alone
+    /// is 0.32 % of a six-game dump, all of it first-touch), so every new
+    /// text question belongs in this word.
+    fn debug_flags(&self) -> u8 {
         use std::cell::RefCell;
         use std::collections::HashMap;
         use std::sync::{OnceLock, RwLock};
         const L1: usize = 512;
+        // ⚠ `(0, _)` is the empty marker, so the *value* cannot double as
+        // "present": a definition with no flags set stores 0 and must still
+        // hit. The key is the discriminator, as it always was.
         thread_local! {
-            static NEAR: RefCell<[(usize, bool); L1]> =
-                const { RefCell::new([(0, false); L1]) };
+            static NEAR: RefCell<[(usize, u8); L1]> =
+                const { RefCell::new([(0, 0); L1]) };
         }
         let key = self.name.as_ptr() as usize;
         // Key 0 is the empty marker; a `&str`'s data pointer is never null.
@@ -5653,7 +5692,7 @@ impl CardDefinition {
         }) {
             return hit;
         }
-        static CACHE: OnceLock<RwLock<HashMap<String, bool>>> = OnceLock::new();
+        static CACHE: OnceLock<RwLock<HashMap<String, u8>>> = OnceLock::new();
         let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
         let name: &str = self.name;
         let hit = cache.read().unwrap().get(name).copied();
@@ -5661,8 +5700,13 @@ impl CardDefinition {
             Some(v) => v,
             None => {
                 let dbg = format!("{self:?}");
-                let v = dbg.contains("ConvergedValue")
-                    || dbg.contains("ManaValueAtMostConverged");
+                let mut v = 0u8;
+                if dbg.contains("ConvergedValue") || dbg.contains("ManaValueAtMostConverged") {
+                    v |= debug_flag::CONVERGE;
+                }
+                if dbg.contains("CastOwnNameThisGameAtLeast") {
+                    v |= debug_flag::OWN_NAME_CASTS;
+                }
                 cache.write().unwrap().insert(name.to_string(), v);
                 v
             }
