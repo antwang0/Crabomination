@@ -265,7 +265,7 @@ pub fn soulgorger_orgg() -> CardDefinition {
         ..creature(
             "Soulgorger Orgg",
             cost(&[generic(3), r(), r()]),
-            vec![CreatureType::Nightmare],
+            vec![CreatureType::Nightmare, CreatureType::Orgg],
             6,
             6,
         )

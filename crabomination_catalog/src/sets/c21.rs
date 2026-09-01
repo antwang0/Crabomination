@@ -272,7 +272,7 @@ pub fn zetalpa_primal_dawn() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dinosaur],
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Elder],
             ..Default::default()
         },
         power: 4,

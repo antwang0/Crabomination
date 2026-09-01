@@ -55,7 +55,7 @@ pub fn ezuri_claw_of_progress() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 3,

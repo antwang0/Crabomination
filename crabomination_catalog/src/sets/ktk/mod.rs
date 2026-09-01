@@ -110,7 +110,7 @@ pub fn ponyback_brigade() -> CardDefinition {
         cost: cost(&[generic(3), r(), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin],
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
             ..Default::default()
         },
         power: 2,

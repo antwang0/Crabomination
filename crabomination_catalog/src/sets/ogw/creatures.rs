@@ -1786,7 +1786,9 @@ fn processor(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> Ca
         cost: c,
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Eldrazi],
+            // Every caller is printed "Eldrazi Processor"; the second type
+            // was missing until 2026-09-01.
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Processor],
             ..Default::default()
         },
         power: p,

@@ -69,7 +69,7 @@ pub fn elvish_clancaller() -> CardDefinition {
         cost: cost(&[g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf],
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
             ..Default::default()
         },
         power: 1,

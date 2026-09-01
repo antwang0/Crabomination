@@ -47,6 +47,10 @@ pub fn camera_launcher() -> CardDefinition {
     };
     CardDefinition {
         name: "Camera Launcher",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Construct],
+            ..Default::default()
+        },
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         power: 2,

@@ -446,7 +446,7 @@ pub fn cytoplast_manipulator() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Wizard, CreatureType::Mutant],
+            creature_types: vec![CreatureType::Wizard, CreatureType::Mutant, CreatureType::Human],
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),

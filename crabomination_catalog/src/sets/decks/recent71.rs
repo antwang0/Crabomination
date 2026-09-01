@@ -51,7 +51,7 @@ pub fn rukh_egg() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird],
+            creature_types: vec![CreatureType::Bird, CreatureType::Egg],
             ..Default::default()
         },
         power: 0,

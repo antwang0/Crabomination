@@ -320,7 +320,7 @@ pub fn deadbeat_attendant() -> CardDefinition {
     etb_opener(
         "Deadbeat Attendant",
         cost(&[generic(1), b()]),
-        vec![CreatureType::Vampire],
+        vec![CreatureType::Vampire, CreatureType::Employee],
         1,
         1,
         vec![],
@@ -332,7 +332,7 @@ pub fn petting_zookeeper() -> CardDefinition {
     etb_opener(
         "Petting Zookeeper",
         cost(&[generic(2), g()]),
-        vec![CreatureType::Elf],
+        vec![CreatureType::Elf, CreatureType::Employee],
         0,
         4,
         vec![Keyword::Reach],
@@ -344,7 +344,7 @@ pub fn seasoned_buttoneer() -> CardDefinition {
     etb_opener(
         "Seasoned Buttoneer",
         cost(&[generic(2), u()]),
-        vec![CreatureType::Vedalken],
+        vec![CreatureType::Vedalken, CreatureType::Employee],
         2,
         2,
         vec![],
@@ -356,7 +356,7 @@ pub fn rad_rascal() -> CardDefinition {
     etb_opener(
         "Rad Rascal",
         cost(&[generic(3), r()]),
-        vec![CreatureType::Devil],
+        vec![CreatureType::Devil, CreatureType::Employee],
         3,
         3,
         vec![],
@@ -446,7 +446,7 @@ pub fn complaints_clerk() -> CardDefinition {
     etb_opener(
         "Complaints Clerk",
         cost(&[generic(3), w()]),
-        vec![CreatureType::Sloth, CreatureType::Beast],
+        vec![CreatureType::Sloth, CreatureType::Beast, CreatureType::Employee],
         3,
         3,
         vec![],

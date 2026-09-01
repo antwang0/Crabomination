@@ -174,7 +174,7 @@ pub fn glowrider() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cleric],
+            creature_types: vec![CreatureType::Cleric, CreatureType::Human],
             ..Default::default()
         },
         power: 2,

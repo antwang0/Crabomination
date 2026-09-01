@@ -82,7 +82,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard, CreatureType::Sorcerer],
             ..Default::default()
         },
         power: 1,
@@ -464,7 +464,7 @@ pub fn eager_cadet() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Soldier],
+            creature_types: vec![CreatureType::Soldier, CreatureType::Human],
             ..Default::default()
         },
         power: 1,
@@ -480,7 +480,7 @@ pub fn elite_vanguard() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Soldier],
+            creature_types: vec![CreatureType::Soldier, CreatureType::Human],
             ..Default::default()
         },
         power: 2,
@@ -496,7 +496,7 @@ pub fn devoted_hero() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Soldier],
+            creature_types: vec![CreatureType::Soldier, CreatureType::Elf],
             ..Default::default()
         },
         power: 1,
@@ -681,7 +681,7 @@ pub fn royal_assassin() -> CardDefinition {
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Assassin],
+            creature_types: vec![CreatureType::Assassin, CreatureType::Human],
             ..Default::default()
         },
         power: 1,
@@ -725,7 +725,7 @@ pub fn flame_spirit() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Elemental],
             ..Default::default()
         },
         power: 2,
@@ -742,7 +742,7 @@ pub fn goblin_balloon_brigade() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin],
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
             ..Default::default()
         },
         power: 1,
@@ -837,7 +837,7 @@ pub fn standing_troops() -> CardDefinition {
     body(
         "Standing Troops",
         &[generic(2), w()],
-        vec![CreatureType::Soldier],
+        vec![CreatureType::Soldier, CreatureType::Human],
         1,
         4,
         vec![Keyword::Vigilance],
@@ -881,7 +881,7 @@ pub fn venerable_monk() -> CardDefinition {
     let mut c = body(
         "Venerable Monk",
         &[generic(2), w()],
-        vec![CreatureType::Monk, CreatureType::Cleric],
+        vec![CreatureType::Monk, CreatureType::Cleric, CreatureType::Human],
         2,
         2,
         vec![],
@@ -1023,7 +1023,7 @@ pub fn raging_goblin() -> CardDefinition {
     body(
         "Raging Goblin",
         &[r()],
-        vec![CreatureType::Goblin],
+        vec![CreatureType::Goblin, CreatureType::Berserker],
         1,
         1,
         vec![Keyword::Haste],
@@ -1034,7 +1034,7 @@ pub fn goblin_piker() -> CardDefinition {
     body(
         "Goblin Piker",
         &[generic(1), r()],
-        vec![CreatureType::Goblin],
+        vec![CreatureType::Goblin, CreatureType::Warrior],
         2,
         1,
         vec![],

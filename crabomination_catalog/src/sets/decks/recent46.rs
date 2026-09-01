@@ -242,7 +242,7 @@ pub fn ghalta_primal_hunger() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dinosaur],
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Elder],
             ..Default::default()
         },
         power: 12,

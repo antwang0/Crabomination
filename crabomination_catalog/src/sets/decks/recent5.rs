@@ -477,7 +477,7 @@ pub fn skrelv_defector_mite() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Mite],
             ..Default::default()
         },
         power: 1,

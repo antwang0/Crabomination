@@ -585,7 +585,7 @@ pub fn chimney_rabble() -> CardDefinition {
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Goblin, CreatureType::Warrior],
             ..Default::default()
         },
         power: 3,

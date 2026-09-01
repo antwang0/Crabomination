@@ -159,7 +159,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dragon],
+            creature_types: vec![CreatureType::Dragon, CreatureType::Elder],
             ..Default::default()
         },
         power: 5,
@@ -229,7 +229,7 @@ pub fn tanazir_quandrix() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dragon],
+            creature_types: vec![CreatureType::Dragon, CreatureType::Elder],
             ..Default::default()
         },
         power: 4,
@@ -324,7 +324,7 @@ pub fn shadrix_silverquill() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dragon],
+            creature_types: vec![CreatureType::Dragon, CreatureType::Elder],
             ..Default::default()
         },
         power: 2,

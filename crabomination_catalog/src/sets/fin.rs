@@ -1481,7 +1481,7 @@ pub fn demon_wall() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Wall],
+            creature_types: vec![CreatureType::Wall, CreatureType::Demon],
             ..Default::default()
         },
         power: 3,

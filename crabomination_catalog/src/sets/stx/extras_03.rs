@@ -1533,7 +1533,7 @@ pub fn coiling_oracle() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid, CreatureType::Snake],
             ..Default::default()
         },
         power: 1,

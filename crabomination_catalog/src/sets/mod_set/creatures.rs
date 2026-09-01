@@ -143,7 +143,7 @@ pub fn cloudkin_seer() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
@@ -169,7 +169,7 @@ pub fn benthic_biomancer() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard, CreatureType::Mutant],
             ..Default::default()
         },
         power: 1,
@@ -281,6 +281,10 @@ pub fn pteramander() -> CardDefinition {
 pub fn sylvan_caryatid() -> CardDefinition {
     CardDefinition {
         name: "Sylvan Caryatid",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Plant],
+            ..Default::default()
+        },
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         toughness: 3,
@@ -501,7 +505,7 @@ pub fn ranger_captain_of_eos() -> CardDefinition {
         cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ranger],
             ..Default::default()
         },
         power: 3,
@@ -1375,7 +1379,7 @@ pub fn slither_blade() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Snake],
+            creature_types: vec![CreatureType::Snake, CreatureType::Rogue],
             ..Default::default()
         },
         power: 1,
@@ -1409,7 +1413,7 @@ pub fn vorstclaw() -> CardDefinition {
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
+            creature_types: vec![CreatureType::Elemental, CreatureType::Horror],
             ..Default::default()
         },
         power: 7,
@@ -1477,7 +1481,7 @@ pub fn bone_shredder() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Minion],
+            creature_types: vec![CreatureType::Minion, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 1,
@@ -1506,7 +1510,7 @@ pub fn goldnight_commander() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -1619,7 +1623,7 @@ pub fn sylvan_ranger() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Scout],
+            creature_types: vec![CreatureType::Elf, CreatureType::Scout, CreatureType::Ranger],
             ..Default::default()
         },
         power: 1,
@@ -1642,7 +1646,7 @@ pub fn civic_wayfinder() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior, CreatureType::Druid],
             ..Default::default()
         },
         power: 2,
@@ -1881,7 +1885,7 @@ pub fn phyrexian_gargantua() -> CardDefinition {
         cost: cost(&[generic(4), b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Horror],
+            creature_types: vec![CreatureType::Horror, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 4,
@@ -1912,7 +1916,7 @@ pub fn frost_lynx() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat],
+            creature_types: vec![CreatureType::Cat, CreatureType::Elemental],
             ..Default::default()
         },
         power: 2,
@@ -2118,7 +2122,7 @@ pub fn pestermite() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Faerie],
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
             ..Default::default()
         },
         power: 2,
@@ -2147,7 +2151,7 @@ pub fn suture_priest() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cleric],
+            creature_types: vec![CreatureType::Cleric, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 1,
@@ -2466,7 +2470,7 @@ pub fn thrummingbird() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird],
+            creature_types: vec![CreatureType::Bird, CreatureType::Phyrexian, CreatureType::Horror],
             ..Default::default()
         },
         power: 1,
@@ -2574,7 +2578,7 @@ pub fn phyrexian_metamorph() -> CardDefinition {
         cost: cost(&[generic(3), phyrexian(Color::Blue)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Shapeshifter],
+            creature_types: vec![CreatureType::Shapeshifter, CreatureType::Phyrexian],
             ..Default::default()
         },
         enters_as_copy: Some(EntersAsCopy {
@@ -2757,6 +2761,10 @@ pub fn heliod_sun_crowned() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Heliod, Sun-Crowned",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::God],
+            ..Default::default()
+        },
         cost: cost(&[generic(2), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature, CardType::Enchantment],
@@ -2986,7 +2994,7 @@ pub fn fleshbag_marauder() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie],
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
             ..Default::default()
         },
         power: 3,
@@ -3076,7 +3084,7 @@ pub fn spectral_sailor() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Pirate],
             ..Default::default()
         },
         power: 1,
@@ -3121,7 +3129,7 @@ pub fn gnarlwood_dryad() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dryad],
+            creature_types: vec![CreatureType::Dryad, CreatureType::Horror],
             ..Default::default()
         },
         power: 1,
@@ -3359,7 +3367,7 @@ pub fn centaur_courser() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Centaur],
+            creature_types: vec![CreatureType::Centaur, CreatureType::Warrior],
             ..Default::default()
         },
         power: 3,
@@ -3669,7 +3677,7 @@ pub fn borderland_ranger() -> CardDefinition {
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            creature_types: vec![CreatureType::Human, CreatureType::Scout, CreatureType::Ranger],
             ..Default::default()
         },
         power: 2,
@@ -3691,7 +3699,7 @@ pub fn viashino_pyromancer() -> CardDefinition {
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Lizard],
+            creature_types: vec![CreatureType::Lizard, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
@@ -4079,7 +4087,7 @@ pub fn blade_splicer() -> CardDefinition {
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 1,
@@ -5654,7 +5662,7 @@ pub fn cloudfin_raptor() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird],
+            creature_types: vec![CreatureType::Bird, CreatureType::Mutant],
             ..Default::default()
         },
         toughness: 1,
@@ -5726,7 +5734,7 @@ pub fn phyrexian_rager() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Horror],
+            creature_types: vec![CreatureType::Horror, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 2,
@@ -6933,7 +6941,7 @@ pub fn vault_skirge() -> CardDefinition {
         },
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Imp],
+            creature_types: vec![CreatureType::Imp, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 1,
@@ -8311,7 +8319,7 @@ pub fn mesmeric_fiend() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Horror],
+            creature_types: vec![CreatureType::Horror, CreatureType::Nightmare],
             ..Default::default()
         },
         power: 1,
@@ -8754,7 +8762,7 @@ pub fn glistener_elf() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 1,

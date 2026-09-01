@@ -664,7 +664,7 @@ pub fn aetherborn_marauder() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Aetherborn],
+            creature_types: vec![CreatureType::Aetherborn, CreatureType::Rogue],
             ..Default::default()
         },
         power: 2,

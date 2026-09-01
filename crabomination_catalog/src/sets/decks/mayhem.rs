@@ -54,7 +54,7 @@ pub fn raging_goblinoids() -> CardDefinition {
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin, CreatureType::Berserker],
+            creature_types: vec![CreatureType::Goblin, CreatureType::Berserker, CreatureType::Villain],
             ..Default::default()
         },
         power: 5,

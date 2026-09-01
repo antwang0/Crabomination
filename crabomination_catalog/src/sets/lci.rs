@@ -3739,7 +3739,7 @@ pub fn ghalta_stampede_tyrant() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dinosaur],
+            creature_types: vec![CreatureType::Dinosaur, CreatureType::Elder],
             ..Default::default()
         },
         power: 12,
@@ -6655,7 +6655,7 @@ pub fn the_mycotyrant() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fungus],
+            creature_types: vec![CreatureType::Fungus, CreatureType::Elder],
             ..Default::default()
         },
         power: 0,

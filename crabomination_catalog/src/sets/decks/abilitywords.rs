@@ -39,7 +39,7 @@ pub fn mystic_enforcer() -> CardDefinition {
         cost: cost(&[generic(2), g(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human],
+            creature_types: vec![CreatureType::Human, CreatureType::Nomad, CreatureType::Mystic],
             ..Default::default()
         },
         power: 3,

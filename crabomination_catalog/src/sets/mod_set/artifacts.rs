@@ -13,6 +13,10 @@ use crate::mana::{Color, ManaCost, cost, generic, phyrexian};
 pub fn ornithopter() -> CardDefinition {
     CardDefinition {
         name: "Ornithopter",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Thopter],
+            ..Default::default()
+        },
         card_types: vec![CardType::Artifact, CardType::Creature],
         toughness: 2,
         keywords: vec![Keyword::Flying],
@@ -26,6 +30,10 @@ pub fn ornithopter() -> CardDefinition {
 pub fn ornithopter_of_paradise() -> CardDefinition {
     CardDefinition {
         name: "Ornithopter of Paradise",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Thopter],
+            ..Default::default()
+        },
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         toughness: 2,
@@ -478,7 +486,7 @@ pub fn cankerbloom() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fungus],
+            creature_types: vec![CreatureType::Fungus, CreatureType::Phyrexian],
             ..Default::default()
         },
         power: 3,
@@ -665,6 +673,10 @@ pub fn walking_ballista() -> CardDefinition {
     use crate::mana::x;
     CardDefinition {
         name: "Walking Ballista",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Construct],
+            ..Default::default()
+        },
         cost: cost(&[x(), x()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
@@ -702,6 +714,10 @@ pub fn triskelion() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Triskelion",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Construct],
+            ..Default::default()
+        },
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         power: 1,
@@ -746,6 +762,10 @@ pub fn hangarback_walker() -> CardDefinition {
     };
     CardDefinition {
         name: "Hangarback Walker",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Construct],
+            ..Default::default()
+        },
         cost: cost(&[x(), x()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
@@ -1013,7 +1033,7 @@ pub fn phyrexian_walker() -> CardDefinition {
         cost: cost(&[generic(0)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![crate::card::CreatureType::Construct],
+            creature_types: vec![crate::card::CreatureType::Construct, crate::card::CreatureType::Phyrexian],
             ..Default::default()
         },
         toughness: 3,

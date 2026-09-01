@@ -71,7 +71,7 @@ pub fn crater_hellion() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
+            creature_types: vec![CreatureType::Beast, CreatureType::Hellion],
             ..Default::default()
         },
         power: 6,

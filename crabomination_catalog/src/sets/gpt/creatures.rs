@@ -63,7 +63,7 @@ pub fn absolver_thrull() -> CardDefinition {
         cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Thrull],
+            creature_types: vec![CreatureType::Thrull, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,

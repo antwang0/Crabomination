@@ -8,7 +8,7 @@ pub fn gaeas_skyfolk() -> CardDefinition {
         cost: cost(&[g(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk],
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Elf],
             ..Default::default()
         },
         power: 2,

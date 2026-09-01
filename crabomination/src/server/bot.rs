@@ -13396,12 +13396,18 @@ mod tests {
         use crate::card::CreatureType;
         use crate::decision::DecisionAnswer;
         let mut g = two_player_game();
+        // Llanowar Elves and Elvish Clancaller are both printed *Elf Druid*,
+        // so a board of those two alone ties Elf against Druid. The third
+        // Elf breaks it — and the tie is the reason this setup is spelled
+        // out rather than "two Elves and a Bear".
         g.add_card_to_battlefield(0, catalog::grizzly_bears()); // Bear
-        g.add_card_to_battlefield(0, catalog::llanowar_elves()); // Elf
-        g.add_card_to_battlefield(0, catalog::elvish_clancaller()); // Elf
+        g.add_card_to_battlefield(0, catalog::llanowar_elves()); // Elf Druid
+        g.add_card_to_battlefield(0, catalog::elvish_clancaller()); // Elf Druid
+        g.add_card_to_battlefield(0, catalog::elvish_mystic()); // Elf Druid
+        g.add_card_to_battlefield(0, catalog::devoted_hero()); // Elf Soldier
         let ans = decide_creature_type(&g, 0, &[]);
         assert!(matches!(ans, DecisionAnswer::CreatureType(CreatureType::Elf)),
-            "two Elves vs one Bear → names Elf, got {ans:?}");
+            "four Elves against three Druids and a Bear → names Elf, got {ans:?}");
     }
 
     #[test]

@@ -37,7 +37,7 @@ pub fn aquastrand_spider() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spider],
+            creature_types: vec![CreatureType::Spider, CreatureType::Mutant],
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
@@ -70,7 +70,7 @@ pub fn cytoplast_root_kin() -> CardDefinition {
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Mutant],
+            creature_types: vec![CreatureType::Mutant, CreatureType::Elemental],
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
@@ -120,7 +120,7 @@ pub fn vigean_graftmage() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard, CreatureType::Mutant],
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
@@ -150,7 +150,7 @@ pub fn helium_squirter() -> CardDefinition {
         cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Mutant],
+            creature_types: vec![CreatureType::Mutant, CreatureType::Beast],
             ..Default::default()
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),

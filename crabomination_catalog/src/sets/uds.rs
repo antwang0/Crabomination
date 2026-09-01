@@ -159,7 +159,7 @@ pub fn metathran_soldier() -> CardDefinition {
         ..creature(
             "Metathran Soldier",
             cost(&[generic(1), u()]),
-            vec![CreatureType::Soldier],
+            vec![CreatureType::Soldier, CreatureType::Metathran],
             1,
             1,
         )
@@ -1905,7 +1905,7 @@ pub fn metathran_elite() -> CardDefinition {
                 keywords: vec![Keyword::Unblockable],
             },
         }],
-        ..creature("Metathran Elite", cost(&[generic(1), u(), u()]), vec![CreatureType::Soldier], 2, 3)
+        ..creature("Metathran Elite", cost(&[generic(1), u(), u()]), vec![CreatureType::Soldier, CreatureType::Metathran], 2, 3)
     }
 }
 

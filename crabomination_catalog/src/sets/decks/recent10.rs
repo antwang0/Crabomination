@@ -211,7 +211,7 @@ pub fn boar_q_pine() -> CardDefinition {
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Boar],
+            creature_types: vec![CreatureType::Boar, CreatureType::Porcupine],
             ..Default::default()
         },
         power: 2,

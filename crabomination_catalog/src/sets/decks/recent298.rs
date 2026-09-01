@@ -86,7 +86,7 @@ pub fn vulturous_zombie() -> CardDefinition {
         cost: cost(&[generic(3), b(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie],
+            creature_types: vec![CreatureType::Zombie, CreatureType::Plant],
             ..Default::default()
         },
         power: 3,

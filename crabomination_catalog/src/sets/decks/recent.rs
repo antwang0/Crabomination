@@ -964,7 +964,7 @@ pub fn vampire_socialite() -> CardDefinition {
         cost: cost(&[b(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Vampire],
+            creature_types: vec![CreatureType::Vampire, CreatureType::Noble],
             ..Default::default()
         },
         power: 2,
@@ -8223,7 +8223,7 @@ pub fn viscera_dragger() -> CardDefinition {
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior, CreatureType::Ogre],
             ..Default::default()
         },
         power: 3,

@@ -2054,3 +2054,121 @@ fn every_card_carries_its_printed_numbers() {
         &wrong[..wrong.len().min(40)],
     );
 }
+
+/// Printed subtype words that are **not** creature types, so a creature card
+/// carrying one on the same type line (an enchantment creature Saga, an
+/// artifact creature Equipment) does not read as a missing creature type.
+/// Only words that also name a `CreatureType` variant need listing; the rest
+/// fail to deserialize and are skipped for free.
+const NON_CREATURE_SUBTYPES: &[&str] = &[
+    "Saga", "Aura", "Room", "Class", "Shrine", "Curse", "Equipment", "Vehicle", "Food",
+    "Clue", "Treasure", "Blood", "Gold", "Powerstone", "Fortification", "Attraction",
+    "Spacecraft", "Map", "Junk", "Incubator", "Background", "Rune", "Cartouche", "Shard",
+    "Case", "Bobblehead", "Lander", "Graveborn", "Adventure", "Siege", "Plains", "Island",
+    "Swamp", "Mountain", "Forest", "Desert", "Gate", "Lair", "Locus", "Mine", "Tower",
+    "Cave", "Sphere", "Town",
+];
+
+/// **A creature's printed subtypes are the creature types it carries — both
+/// directions.**
+///
+/// Tribal is the whole point: a missing type is a lord that skips the
+/// creature, an Ally counter that never lands, a Phyrexian-matters trigger
+/// that does not see it, and a bot that evaluates the board as though the
+/// card were something else. It found **148 cards** on its first run and
+/// **0 invented types**, which is why both directions are asserted here.
+///
+/// Three defects were one line each rather than one card each, which is what
+/// makes this worth a ratchet:
+///
+/// * `tla.rs`'s `ally()` helper did not append `CreatureType::Ally` — ten of
+///   its callers shipped without the type the helper is named for. Four
+///   others were not Allies at all and now use a plainly named `ct()`.
+/// * `ogw/creatures.rs`'s `processor()` gave every "Eldrazi Processor" only
+///   `Eldrazi`.
+///
+/// `CreatureType` derives `Deserialize`, so "is this printed word a type we
+/// model" is asked of the enum itself rather than a hand-kept list — five
+/// words are genuinely unmodelled today (Astartes, Guest, Rigger, Lobster,
+/// Gamer) and skip out through that.
+#[test]
+fn every_creature_carries_its_printed_subtypes() {
+    let cache_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/.scryfall_cache.json");
+    let raw = fs::read_to_string(&cache_path).expect(".scryfall_cache.json");
+    let cache: std::collections::HashMap<String, serde_json::Value> =
+        serde_json::from_str(&raw).expect("cache is a JSON object");
+    let by_name: std::collections::HashMap<String, &serde_json::Value> = cache
+        .iter()
+        .filter(|(_, v)| v.is_object())
+        .map(|(k, v)| (k.to_lowercase(), v))
+        .collect();
+
+    // The cache holds the Vanguard avatar under this name, not the creature.
+    const HOMONYMS: &[&str] = &["Maraxus of Keld"];
+    let normalize = |w: &str| w.replace(['-', '\'', '\u{2019}'], "");
+
+    let mut checked = 0usize;
+    let mut wrong: Vec<String> = Vec::new();
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        if HOMONYMS.contains(&def.name) {
+            continue;
+        }
+        let Some(entry) = by_name.get(&def.name.to_lowercase()) else {
+            continue;
+        };
+        if entry.get("card_faces").is_some()
+            || entry.get("name").and_then(|v| v.as_str()).is_some_and(|n| n.contains(" // "))
+        {
+            continue;
+        }
+        let Some(type_line) = entry.get("type_line").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let Some((base, sub)) = type_line.split_once('—') else {
+            continue;
+        };
+        if !base.contains("Creature") {
+            continue;
+        }
+        checked += 1;
+        let printed: HashSet<String> = sub.split_whitespace().map(normalize).collect();
+        let ours: HashSet<String> =
+            def.subtypes.creature_types.iter().map(|t| format!("{t:?}")).collect();
+
+        for word in &printed {
+            if ours.contains(word) || NON_CREATURE_SUBTYPES.contains(&word.as_str()) {
+                continue;
+            }
+            // The enum itself answers "do we model this type": a word that
+            // is not a variant is a type the engine has no name for, and
+            // that is a different (and much larger) job than a missing one.
+            let modelled = serde_json::from_value::<crabomination::card::CreatureType>(
+                serde_json::Value::String(word.clone()),
+            )
+            .is_ok();
+            if modelled {
+                wrong.push(format!("{} is not a {word}", def.name));
+            }
+        }
+        for word in &ours {
+            if !printed.contains(word) {
+                wrong.push(format!("{} is a {word} and the printing is not", def.name));
+            }
+        }
+    }
+
+    assert!(
+        checked > 5_000,
+        "only {checked} creatures could be compared against the cache — the ratchet is \
+         vacuous below that"
+    );
+    wrong.sort();
+    assert!(
+        wrong.is_empty(),
+        "{} creature subtype mismatch(es): {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}

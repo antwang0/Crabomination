@@ -312,11 +312,24 @@ pub fn united_front() -> CardDefinition {
 
 // ── Second wave: Ally / Lesson / Raid / Clue commons ────────────────────────
 
+/// `Subtypes` for a printed **Ally**: the listed types plus `Ally`.
+///
+/// ⚠ It did not append `Ally` until 2026-09-01 — it was `ct` with a
+/// misleading name — so ten of its callers shipped without the type the
+/// helper is named for, invisible to every Ally-matters card in the set.
 fn ally(types: &[CreatureType]) -> Subtypes {
-    Subtypes {
-        creature_types: types.to_vec(),
-        ..Default::default()
+    let mut creature_types = types.to_vec();
+    if !creature_types.contains(&CreatureType::Ally) {
+        creature_types.push(CreatureType::Ally);
     }
+    Subtypes { creature_types, ..Default::default() }
+}
+
+/// `Subtypes` from a bare creature-type list — the four `ally()` callers
+/// whose printing is not an Ally (Fire Nation Engineer, Fire Nation Raider,
+/// Saber-Tooth Moose-Lion, Earth Kingdom Soldier).
+fn ct(types: &[CreatureType]) -> Subtypes {
+    Subtypes { creature_types: types.to_vec(), ..Default::default() }
 }
 
 /// "Another Ally you control enters" trigger.
@@ -549,7 +562,7 @@ pub fn fire_nation_engineer() -> CardDefinition {
         name: "Fire Nation Engineer",
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
-        subtypes: ally(&[CreatureType::Human, CreatureType::Artificer]),
+        subtypes: ct(&[CreatureType::Human, CreatureType::Artificer]),
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
@@ -601,7 +614,7 @@ pub fn fire_nation_raider() -> CardDefinition {
         name: "Fire Nation Raider",
         cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
-        subtypes: ally(&[CreatureType::Human, CreatureType::Soldier]),
+        subtypes: ct(&[CreatureType::Human, CreatureType::Soldier]),
         power: 4,
         toughness: 2,
         triggered_abilities: vec![etb(Effect::If {
@@ -652,7 +665,7 @@ pub fn saber_tooth_moose_lion() -> CardDefinition {
         name: "Saber-Tooth Moose-Lion",
         cost: cost(&[generic(4), g(), g()]),
         card_types: vec![CardType::Creature],
-        subtypes: ally(&[CreatureType::Elk, CreatureType::Cat]),
+        subtypes: ct(&[CreatureType::Elk, CreatureType::Cat]),
         power: 7,
         toughness: 7,
         keywords: vec![
@@ -697,7 +710,7 @@ pub fn earth_kingdom_soldier() -> CardDefinition {
         name: "Earth Kingdom Soldier",
         cost: cost(&[generic(4), hybrid(Color::Green, Color::White)]),
         card_types: vec![CardType::Creature],
-        subtypes: ally(&[CreatureType::Human, CreatureType::Soldier]),
+        subtypes: ct(&[CreatureType::Human, CreatureType::Soldier]),
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
@@ -2691,7 +2704,7 @@ pub fn earth_rumble_wrestlers() -> CardDefinition {
         cost: cost(&[generic(3), hybrid(Color::Red, Color::Green)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Performer],
             ..Default::default()
         },
         power: 3,
@@ -2887,7 +2900,7 @@ pub fn the_boulder_ready_to_rumble() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Performer],
             ..Default::default()
         },
         power: 4,
@@ -2977,7 +2990,7 @@ pub fn the_lion_turtle() -> CardDefinition {
         card_types: vec![CardType::Creature],
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Turtle],
+            creature_types: vec![CreatureType::Cat, CreatureType::Turtle, CreatureType::Elder],
             ..Default::default()
         },
         power: 3,

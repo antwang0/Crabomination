@@ -619,7 +619,7 @@ pub fn plague_engineer() -> CardDefinition {
         cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Carrier],
             ..Default::default()
         },
         power: 2,

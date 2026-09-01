@@ -37,6 +37,10 @@ pub fn ghor_clan_rampager() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
         name: "Ghor-Clan Rampager",
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Beast],
+            ..Default::default()
+        },
         cost: cost(&[generic(2), r(), g()]),
         card_types: vec![CardType::Creature],
         power: 4,

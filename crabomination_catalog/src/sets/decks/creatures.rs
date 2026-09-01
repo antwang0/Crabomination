@@ -677,7 +677,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phyrexian],
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Praetor],
             ..Default::default()
         },
         power: 4,

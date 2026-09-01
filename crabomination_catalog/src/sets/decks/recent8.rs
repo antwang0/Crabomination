@@ -24,7 +24,7 @@ pub fn badgermole_cub() -> CardDefinition {
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Badger],
+            creature_types: vec![CreatureType::Badger, CreatureType::Mole],
             ..Default::default()
         },
         power: 2,
@@ -41,7 +41,7 @@ pub fn badgermole() -> CardDefinition {
         cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Badger],
+            creature_types: vec![CreatureType::Badger, CreatureType::Mole],
             ..Default::default()
         },
         power: 4,
@@ -522,7 +522,7 @@ pub fn pretending_poxbearers() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Ally],
+            creature_types: vec![CreatureType::Human, CreatureType::Ally, CreatureType::Citizen],
             ..Default::default()
         },
         power: 2,
@@ -605,7 +605,7 @@ pub fn platypus_bear() -> CardDefinition {
         cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bear],
+            creature_types: vec![CreatureType::Bear, CreatureType::Platypus],
             ..Default::default()
         },
         power: 2,

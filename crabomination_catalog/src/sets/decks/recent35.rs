@@ -81,7 +81,7 @@ pub fn weathered_wayfarer() -> CardDefinition {
         cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Nomad],
             ..Default::default()
         },
         power: 1,

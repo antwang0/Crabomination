@@ -14,7 +14,7 @@ pub fn goblin_guide() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Goblin],
+            creature_types: vec![CreatureType::Goblin, CreatureType::Scout],
             ..Default::default()
         },
         power: 2,
