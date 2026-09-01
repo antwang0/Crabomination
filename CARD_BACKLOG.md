@@ -346,6 +346,34 @@ picking a *different* pair than the card's default.
 and a needle written for `X` under-counts by one on every X ability. That
 cost the first run of the loyalty ratchet eight false positives.
 
+### Tokens — the population every other ratchet is blind to
+
+A token is a value inside an effect tree, not a catalog entry, so it has no
+Scryfall row to join against and `all_catalog_card_factories()` never yields
+one. `every_token_named_after_a_subtype_carries_it` serde-walks the
+serialized card for nested `TokenDefinition`s — the same device
+`crabomination::audit` uses — and asks one question: **a token named after a
+subtype the engine models carries that subtype.**
+
+It found the shape that motivates it. `decks/modern.rs` carried a private
+`treasure_token()` **shadowing** the shared one in
+`crabomination_base::tokens`, identical but for the missing
+`ArtifactSubtype::Treasure`. Six call sites used it, so four cards
+(Tireless Provisioner, Outcaster Trailblazer, Reckoner Bankbuster, Fable of
+the Mirror-Breaker) minted Treasures that no "sacrifice a Treasure" cost, no
+Treasure-matters payoff and no artifact-subtype filter could see. The
+duplicate is deleted.
+
+**Open, and cheap:** `Gold` (Theros) and `Shard` (Niko, Light of Hope) are
+printed subtypes with no enum variant, so those four tokens carry none. The
+name → subtype lookup asks the enums directly, so adding a variant needs no
+edit to the test.
+
+**Still unwalked in the token population:** whether two tokens of the same
+printed name agree on their *abilities* (the shape key here counts them, it
+does not compare them — a Goldspan Treasure and a plain one both read as
+"one activated ability").
+
 ### Open — Geyadrone Dihada's abilities are not this card's
 
 Turned up beside its starting loyalty (3 against a printed 4, fixed). The

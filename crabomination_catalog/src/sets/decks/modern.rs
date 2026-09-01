@@ -18469,7 +18469,7 @@ pub fn tireless_provisioner() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         }],
         ..Default::default()
@@ -18554,39 +18554,6 @@ pub fn helix_pinnacle() -> CardDefinition {
     }
 }
 
-fn treasure_token() -> TokenDefinition {
-    use crate::card::ActivatedAbility;
-    TokenDefinition {
-        name: "Treasure".into(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        card_types: vec![CardType::Artifact],
-        colors: vec![],
-        supertypes: vec![],
-        subtypes: Subtypes::default(),
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: true,
-            condition: None,
-            life_cost: 0,
-            ..Default::default()
-        }],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        ..Default::default()
-    }
-}
-
 // ── Push claude/modern_decks additions ──────────────────────────────────
 
 /// Fiery Confluence — {2}{R}{R} Sorcery. Choose three; modes may repeat
@@ -18665,7 +18632,6 @@ pub fn cam_and_farrik() -> CardDefinition {
 pub fn magda_brazen_outlaw() -> CardDefinition {
     use crate::card::{ActivatedAbility, ArtifactSubtype, StaticAbility};
     use crate::effect::{StaticEffect, ZoneDest};
-    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Magda, Brazen Outlaw",
         cost: cost(&[generic(1), r()]),
@@ -18698,7 +18664,7 @@ pub fn magda_brazen_outlaw() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(treasure_token()),
+                definition: Box::new(crate::game::effects::treasure_token()),
             },
         }],
         // Sacrifice five Treasures: search your library for an artifact or
@@ -22473,7 +22439,7 @@ pub fn outcaster_trailblazer() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(treasure_token()),
+                        definition: Box::new(crate::game::effects::treasure_token()),
                     },
                 ])),
                 else_: Box::new(Effect::Noop),
@@ -25351,7 +25317,6 @@ fn monolith(name: &'static str, cmc: u32, untap_cost: u32) -> CardDefinition {
 /// creature deals combat damage to a player, roll a d20 and create that many
 /// Treasure tokens." (CR 706.4 — `Value::LastDieRoll`.)
 pub fn ancient_copper_dragon() -> CardDefinition {
-    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Ancient Copper Dragon",
         cost: cost(&[generic(4), r(), r()]),
@@ -25376,7 +25341,7 @@ pub fn ancient_copper_dragon() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::LastDieRoll,
-                        definition: Box::new(treasure_token()),
+                        definition: Box::new(crate::game::effects::treasure_token()),
                     },
                 )],
                 on_doubles: None,
@@ -47420,7 +47385,7 @@ pub fn reckoner_bankbuster() -> CardDefinition {
                         Effect::CreateToken {
                             who: PlayerRef::You,
                             count: Value::ONE,
-                            definition: Box::new(treasure_token()),
+                            definition: Box::new(crate::game::effects::treasure_token()),
                         },
                         Effect::CreateToken {
                             who: PlayerRef::You,
@@ -47538,7 +47503,7 @@ pub fn fable_of_the_mirror_breaker() -> CardDefinition {
                             effect: Effect::CreateToken {
                                 who: PlayerRef::You,
                                 count: Value::ONE,
-                                definition: Box::new(treasure_token()),
+                                definition: Box::new(crate::game::effects::treasure_token()),
                             },
                         }],
                         ..Default::default()

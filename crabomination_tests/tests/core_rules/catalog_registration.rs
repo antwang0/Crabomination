@@ -2939,3 +2939,104 @@ fn every_modal_card_offers_its_printed_modes() {
         &wrong[..wrong.len().min(40)],
     );
 }
+
+/// Every `TokenDefinition` nested anywhere in `def`, found by serde-walking
+/// the serialized card — the same device `crabomination::audit` uses for the
+/// dead-ability pass. Nothing else can reach a token: they are values inside
+/// effect trees, not catalog entries, so **no ratchet in this file sees one**
+/// unless it walks for them.
+fn nested_tokens(def: &crabomination::card::CardDefinition) -> Vec<crabomination::card::TokenDefinition> {
+    fn walk(v: &serde_json::Value, out: &mut Vec<crabomination::card::TokenDefinition>) {
+        match v {
+            serde_json::Value::Object(map) => {
+                if map.contains_key("power")
+                    && map.contains_key("toughness")
+                    && map.contains_key("card_types")
+                    && map.get("name").and_then(|n| n.as_str()).is_some()
+                    && let Ok(t) = serde_json::from_value::<crabomination::card::TokenDefinition>(
+                        v.clone(),
+                    )
+                {
+                    out.push(t);
+                }
+                for (_, child) in map {
+                    walk(child, out);
+                }
+            }
+            serde_json::Value::Array(items) => {
+                for child in items {
+                    walk(child, out);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    let Ok(v) = serde_json::to_value(def) else { return out };
+    // Skip the top-level object, which is the card itself.
+    if let serde_json::Value::Object(map) = &v {
+        for (_, child) in map {
+            walk(child, &mut out);
+        }
+    }
+    out
+}
+
+/// **A token named after a subtype the engine models carries that subtype.**
+///
+/// Tokens are values inside effect trees, not catalog entries, so **no other
+/// ratchet in this file can see one** — the join ratchets walk
+/// `all_catalog_card_factories()` and a token has no Scryfall row to join
+/// against. This one walks for them.
+///
+/// It found the shape that motivates it: `decks/modern.rs` carried a
+/// **private `treasure_token()` shadowing the shared one** in
+/// `crabomination_base::tokens`, identical but for the missing
+/// `ArtifactSubtype::Treasure`. Six call sites used it, so four cards minted
+/// Treasures that no "sacrifice a Treasure" cost, Treasure-matters payoff or
+/// artifact-subtype filter could see. The duplicate is deleted and its
+/// callers point at the shared helper.
+///
+/// Name → subtype is asked of the enums (both derive `Deserialize`), so a
+/// token whose name the engine has no subtype for is skipped for the right
+/// reason: `Gold` (Theros) and `Shard` (Niko) are real printed subtypes with
+/// no variant here, and adding one later needs no edit to this test.
+#[test]
+fn every_token_named_after_a_subtype_carries_it() {
+    let mut wrong: Vec<String> = Vec::new();
+    let mut checked = 0usize;
+    for factory in crabomination_catalog::sets::all_factories::all_catalog_card_factories() {
+        let def = factory();
+        for t in nested_tokens(&def) {
+            let name = serde_json::Value::String(t.name.clone());
+            if let Ok(sub) =
+                serde_json::from_value::<crabomination::card::ArtifactSubtype>(name.clone())
+            {
+                checked += 1;
+                if !t.subtypes.artifact_subtypes.contains(&sub) {
+                    wrong.push(format!("{}: its {} token is not an {sub:?}", def.name, t.name));
+                }
+            } else if let Ok(sub) =
+                serde_json::from_value::<crabomination::card::EnchantmentSubtype>(name)
+            {
+                checked += 1;
+                if !t.subtypes.enchantment_subtypes.contains(&sub) {
+                    wrong.push(format!("{}: its {} token is not a {sub:?}", def.name, t.name));
+                }
+            }
+        }
+    }
+    assert!(
+        checked > 300,
+        "only {checked} named-after-a-subtype tokens were walked — the ratchet is vacuous \
+         below that"
+    );
+    wrong.sort();
+    wrong.dedup();
+    assert!(
+        wrong.is_empty(),
+        "{} token(s) missing the subtype they are named for, over {checked}: {:?}",
+        wrong.len(),
+        &wrong[..wrong.len().min(40)],
+    );
+}
