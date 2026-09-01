@@ -215,8 +215,8 @@ pub struct PlayerData {
     /// The card zones are [`CowBox`]-wrapped so a `GameState` clone
     /// (affordance probes, the `perform_action` checkpoint) shares them
     /// until written — see `crate::cow`.
-    pub library: CowBox<Vec<CardInstance>>,
-    pub hand: CowBox<Vec<CardInstance>>,
+    pub library: crate::zone::CardPile,
+    pub hand: crate::zone::CardPile,
     /// The graveyard is the one zone with a wrapper of its own: it also
     /// carries the answer two hot walkers ask of it. Reads and writes go
     /// through `Deref`/`DerefMut` unchanged — see [`crate::zone::Graveyard`].
@@ -1130,8 +1130,8 @@ impl Player {
             starting_life: 20,
             mana_pool: ManaPool::new(),
             kept_mana_this_turn: ManaPool::new(),
-            library: CowBox::default(),
-            hand: CowBox::default(),
+            library: crate::zone::CardPile::default(),
+            hand: crate::zone::CardPile::default(),
             graveyard: crate::zone::Graveyard::default(),
             command: CowBox::default(),
             may_spend_any_color_this_turn: false,

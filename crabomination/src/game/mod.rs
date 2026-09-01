@@ -1416,7 +1416,7 @@ pub struct GameState {
     #[serde(default)]
     pub phased_out: CowBox<Vec<CardInstance>>,
     /// Cards that have been exiled.
-    pub exile: CowBox<Vec<CardInstance>>,
+    pub exile: crate::zone::CardPile,
     /// The stack of spells and triggered abilities waiting to resolve (LIFO).
     pub stack: CowBox<Vec<StackItem>>,
     pub step: TurnStep,
@@ -2972,7 +2972,7 @@ impl GameState {
             deploy_creatures: false,
             battlefield: crate::zone::Battlefield::default(),
             phased_out: CowBox::default(),
-            exile: CowBox::default(),
+            exile: crate::zone::CardPile::default(),
             stack: CowBox::default(),
             step: TurnStep::Untap,
             active_player_idx: 0,

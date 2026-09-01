@@ -20,6 +20,7 @@ const PRESENT: u8 = 2;
 /// one store on the write path clears every lane. A `u8` takes four.
 const GY_LANE_ANTHEM: u32 = 0;
 const GY_LANE_ACT_GRANT: u32 = 2;
+const GY_LANE_TOKEN: u32 = 4;
 
 /// A player's graveyard: the CoW card list, plus the whole-zone questions hot
 /// walkers ask of it — "does any card here carry a
@@ -58,6 +59,13 @@ fn card_has_anthem(c: &CardInstance) -> bool {
 /// Portal)? The [`GY_LANE_ACT_GRANT`] predicate — the same bare match
 /// `grant_scan`'s walk makes, so the lane is exact rather than an
 /// over-approximation.
+/// CR 704.5d's per-card question: is this a token sitting outside the
+/// battlefield? The per-card half of [`Graveyard::has_token`] and
+/// [`CardPile::has_token`].
+fn card_is_token(c: &CardInstance) -> bool {
+    c.is_token
+}
+
 fn card_has_gy_activated_grant(c: &CardInstance) -> bool {
     c.definition.static_abilities.iter().any(|sa| {
         matches!(
@@ -85,6 +93,16 @@ impl Graveyard {
     /// graveyards for on every call. Memoized on the same word.
     pub fn has_activated_grant(&self) -> bool {
         self.lane(GY_LANE_ACT_GRANT, card_has_gy_activated_grant, "activated-grant")
+    }
+
+    /// CR 704.5d — does this graveyard hold a token that has to cease to
+    /// exist? Asked of every graveyard on every state-based sweep; the answer
+    /// is `false` on nearly all of them. Instance state, not definition
+    /// state — sound for the same reason the other two lanes are, since a
+    /// write is the only thing that can change it and every write clears the
+    /// word.
+    pub fn has_token(&self) -> bool {
+        self.lane(GY_LANE_TOKEN, card_is_token, "token")
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the zone
@@ -194,6 +212,145 @@ impl<'a> IntoIterator for &'a mut Graveyard {
     type IntoIter = std::slice::IterMut<'a, CardInstance>;
     fn into_iter(self) -> Self::IntoIter {
         self.deref_mut().iter_mut()
+    }
+}
+
+/// A plain card pile — library, hand, exile — with the one whole-zone
+/// question the state-based sweep asks of it: **does it hold a token?**
+///
+/// CR 704.5d makes a token outside the battlefield cease to exist, and the
+/// sweep that enforces it walked every library, hand and exile on every
+/// sweep for a case that fires a handful of times a game. The library is the
+/// expensive one: a whole deck per seat per sweep.
+///
+/// Same shape and the same soundness argument as [`Graveyard`]: [`DerefMut`],
+/// the `&mut` [`IntoIterator`] and [`push`](Self::push) are the only routes to
+/// the cards, and each clears the memo — so the enumeration of write sites
+/// never has to be right. [`Deref`] leaves every read site untouched, which is
+/// why swapping the field type touches no caller.
+#[derive(Debug, Default)]
+pub struct CardPile {
+    cards: CowBox<Vec<CardInstance>>,
+    /// One two-bit lane, packed like the other zones' so a single store on
+    /// the write path clears it.
+    lanes: AtomicU8,
+}
+
+/// The pile's only lane.
+const PILE_LANE_TOKEN: u32 = 0;
+
+impl CardPile {
+    /// CR 704.5d — does this pile hold a token? Memoized; a miss walks the
+    /// pile once.
+    pub fn has_token(&self) -> bool {
+        let cur = (self.lanes.load(Ordering::Relaxed) >> PILE_LANE_TOKEN) & 0b11;
+        debug_assert!(
+            cur == UNKNOWN || (cur == PRESENT) == self.cards.iter().any(card_is_token),
+            "card-pile token memo is stale: a write reached the cards without clearing it",
+        );
+        match cur {
+            ABSENT => false,
+            PRESENT => true,
+            _ => {
+                let found = self.cards.iter().any(card_is_token);
+                let bits = if found { PRESENT } else { ABSENT };
+                self.lanes.store(bits << PILE_LANE_TOKEN, Ordering::Relaxed);
+                found
+            }
+        }
+    }
+
+    /// Append through [`CowBox::push`] so the unshare materializes with room
+    /// for the card. Inherent, so it shadows the `Deref`'d `Vec::push` at
+    /// every existing call site.
+    pub fn push(&mut self, card: CardInstance) {
+        self.lanes.store(0, Ordering::Relaxed);
+        self.cards.push(card);
+    }
+
+    /// True when both handles still share one allocation — the [`CowBox`]
+    /// contract, forwarded for the zone tests.
+    pub fn shares_with(&self, other: &Self) -> bool {
+        self.cards.shares_with(&other.cards)
+    }
+
+    /// The lane's current state, for the invalidation tests: `None` while
+    /// unknown.
+    #[cfg(test)]
+    fn memo(&self) -> Option<bool> {
+        match (self.lanes.load(Ordering::Relaxed) >> PILE_LANE_TOKEN) & 0b11 {
+            ABSENT => Some(false),
+            PRESENT => Some(true),
+            _ => None,
+        }
+    }
+}
+
+impl Clone for CardPile {
+    /// The cards clone as a `CowBox` (a refcount bump); the memo describes
+    /// those same cards, so it comes along.
+    fn clone(&self) -> Self {
+        Self {
+            cards: self.cards.clone(),
+            lanes: AtomicU8::new(self.lanes.load(Ordering::Relaxed)),
+        }
+    }
+}
+
+impl Deref for CardPile {
+    type Target = Vec<CardInstance>;
+    fn deref(&self) -> &Vec<CardInstance> {
+        &self.cards
+    }
+}
+
+impl DerefMut for CardPile {
+    fn deref_mut(&mut self) -> &mut Vec<CardInstance> {
+        self.lanes.store(0, Ordering::Relaxed);
+        &mut self.cards
+    }
+}
+
+impl From<Vec<CardInstance>> for CardPile {
+    fn from(cards: Vec<CardInstance>) -> Self {
+        Self { cards: cards.into(), lanes: AtomicU8::new(0) }
+    }
+}
+
+impl From<CowBox<Vec<CardInstance>>> for CardPile {
+    fn from(cards: CowBox<Vec<CardInstance>>) -> Self {
+        Self { cards, lanes: AtomicU8::new(0) }
+    }
+}
+
+// `for c in &pile` / `for c in &mut pile` — deref coercion doesn't apply to
+// `for` loops, so forward `IntoIterator` explicitly. The `&mut` arm is the
+// second invalidation point.
+impl<'a> IntoIterator for &'a CardPile {
+    type Item = &'a CardInstance;
+    type IntoIter = std::slice::Iter<'a, CardInstance>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.cards.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut CardPile {
+    type Item = &'a mut CardInstance;
+    type IntoIter = std::slice::IterMut<'a, CardInstance>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.deref_mut().iter_mut()
+    }
+}
+
+impl serde::Serialize for CardPile {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.cards.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for CardPile {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        CowBox::<Vec<CardInstance>>::deserialize(deserializer).map(CardPile::from)
     }
 }
 
@@ -1276,6 +1433,93 @@ mod tests {
         assert_eq!(g.memo(), None, "&mut iteration invalidated");
     }
 
+    /// CR 704.5d's lane on the graveyard. Instance state, not definition
+    /// state — the only lane of the three that is, and it is sound for the
+    /// same reason: a write is the only thing that can change the answer.
+    #[test]
+    fn the_graveyard_token_lane_reads_instance_state() {
+        let mut g = gy(vec![crate::catalog::shivan_dragon()]);
+        assert!(!g.has_token());
+        assert_eq!(g.memo_lane(GY_LANE_TOKEN), Some(false));
+        assert_eq!(g.memo_lane(GY_LANE_ANTHEM), None, "the other lanes are untouched");
+        g.push(CardInstance::new_token(CardId(99), crate::catalog::shivan_dragon(), 0));
+        assert_eq!(g.memo_lane(GY_LANE_TOKEN), None, "the push invalidated");
+        assert!(g.has_token());
+        g.retain(|c| !c.is_token);
+        assert!(!g.has_token(), "the retain invalidated through DerefMut");
+    }
+
+    fn pile(tokens: usize, plain: usize) -> CardPile {
+        let mut v: Vec<CardInstance> = (0..plain)
+            .map(|i| CardInstance::new(CardId(i as u32), crate::catalog::shivan_dragon(), 0))
+            .collect();
+        v.extend((0..tokens).map(|i| {
+            CardInstance::new_token(CardId(1000 + i as u32), crate::catalog::shivan_dragon(), 0)
+        }));
+        v.into()
+    }
+
+    /// The pile's one lane: lazy, then remembered, and `false` on the pile
+    /// every library actually is.
+    #[test]
+    fn pile_token_presence_is_detected_and_memoized() {
+        let empty_of_tokens = pile(0, 3);
+        assert_eq!(empty_of_tokens.memo(), None, "lazy until asked");
+        assert!(!empty_of_tokens.has_token());
+        assert_eq!(empty_of_tokens.memo(), Some(false));
+
+        let with = pile(1, 2);
+        assert!(with.has_token());
+        assert_eq!(with.memo(), Some(true));
+    }
+
+    /// Every route to the cards invalidates; no read does.
+    #[test]
+    fn pile_writes_invalidate_and_reads_do_not() {
+        let mut p = pile(0, 2);
+        assert!(!p.has_token());
+        assert_eq!(p.iter().count(), 2);
+        assert_eq!((&p).into_iter().count(), 2);
+        assert_eq!(p.memo(), Some(false), "a read does not invalidate");
+
+        p.push(CardInstance::new_token(CardId(7), crate::catalog::shivan_dragon(), 0));
+        assert_eq!(p.memo(), None, "push invalidated");
+        assert!(p.has_token());
+
+        for _ in &mut p {}
+        assert_eq!(p.memo(), None, "&mut iteration invalidated");
+
+        p.retain(|c| !c.is_token);
+        assert!(!p.has_token(), "DerefMut invalidated and the answer moved");
+    }
+
+    /// The CoW contract survives the pile wrapper too.
+    #[test]
+    fn pile_clone_shares_and_carries_the_memo() {
+        let mut a = pile(1, 1);
+        assert!(a.has_token());
+        let b = a.clone();
+        assert!(a.shares_with(&b), "clone is a refcount bump");
+        assert_eq!(b.memo(), Some(true), "the memo describes the same cards");
+        a.retain(|c| !c.is_token);
+        assert!(!a.shares_with(&b), "the write unshared");
+        assert_eq!(b.memo(), Some(true), "the snapshot's answer is still right");
+        assert!(!a.has_token());
+    }
+
+    /// A pile round-trips through serde as a bare list, so no snapshot
+    /// schema moves with the wrapper.
+    #[test]
+    fn pile_serde_round_trips_as_a_bare_list() {
+        let p = pile(1, 1);
+        let json = serde_json::to_string(&p).unwrap();
+        assert!(json.starts_with('['), "a pile serializes as its cards: {json:.40}");
+        let back: CardPile = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.len(), 2);
+        assert_eq!(back.memo(), None, "a fresh pile starts unknown");
+        assert!(back.has_token());
+    }
+
     /// The CoW contract survives the wrapper, and the memo travels with the
     /// snapshot it describes.
     #[test]
@@ -1541,3 +1785,4 @@ mod tests {
         assert_eq!(back.memo(), None, "a fresh deserialize starts unknown");
     }
 }
+
