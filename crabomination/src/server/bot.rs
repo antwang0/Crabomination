@@ -5924,9 +5924,18 @@ fn gate_blame(state: &GameState, action: Option<&GameAction>) -> String {
 }
 
 /// Release build: the assertion is compiled out, so the blame string is never
-/// built. Kept as a `()`-returning stub so the macro has one shape.
+/// built.
+///
+/// ⚠ **It must still be `Display`.** `debug_assert!` expands to
+/// `if cfg!(debug_assertions) { assert!(..) }` — the body is *dead* in
+/// release, not *absent*, so its format arguments are still type-checked and
+/// a `()`-returning stub is `error[E0277]` on every profile with
+/// `debug-assertions` off. `cargo check` and the suite both run with them on,
+/// so nothing but a release build catches it.
 #[cfg(not(debug_assertions))]
-fn gate_blame(_state: &GameState, _action: Option<&GameAction>) {}
+fn gate_blame(_state: &GameState, _action: Option<&GameAction>) -> &'static str {
+    ""
+}
 
 /// The shape bits one activated ability contributes to [`sink_facts`]. Each
 /// arm calls the same predicate its generator does, so the two cannot drift.
