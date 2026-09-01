@@ -1117,14 +1117,11 @@ pub fn light_of_promise() -> CardDefinition {
 
 // ── Skywarp Skaab (STX) ────────────────────────────────────────────────────
 
-/// Skywarp Skaab — {3}{U}{U} Creature — Zombie Wizard, 2/5 (STX 2021).
-/// "Flying / When this creature enters, you may discard a card. If you
-/// do, return up to one target creature to its owner's hand."
-///
-/// ✅ ETB body wired via `MayDo(Seq(Discard 1, Move target Creature →
-/// owner's hand))`. The "may" optionality is honored — AutoDecider
-/// declines by default; ScriptedDecider can opt into the discard +
-/// bounce line.
+/// Skywarp Skaab — {3}{U}{U} 2/5 Zombie Drake with Flying. "When this creature
+/// enters, you may exile two creature cards from your graveyard. If you do,
+/// draw a card." The "if you do" is gated by the graveyard count rather than
+/// by the exile's own result, so the prompt is only offered when it can be
+/// paid.
 pub fn skywarp_skaab() -> CardDefinition {
     CardDefinition {
         name: "Skywarp Skaab",
@@ -1139,19 +1136,36 @@ pub fn skywarp_skaab() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::MayDo {
-                description: "Skywarp Skaab ETB: discard a card to bounce target creature?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
                     },
-                    Effect::Move {
-                        what: target_filtered(SelectionRequirement::Creature),
-                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-                    },
-                ])),
+                    n: Value::Const(2),
+                },
+                then: Box::new(Effect::MayDo {
+                    description: "Exile two creature cards from your graveyard to draw?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::Take {
+                                inner: Box::new(Selector::CardsInZone {
+                                    who: PlayerRef::You,
+                                    zone: crate::card::Zone::Graveyard,
+                                    filter: SelectionRequirement::Creature,
+                                }),
+                                count: Box::new(Value::Const(2)),
+                            },
+                            to: ZoneDest::Exile,
+                        },
+                        Effect::Draw {
+                            who: Selector::You,
+                            amount: Value::Const(1),
+                        },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         }],
         ..Default::default()

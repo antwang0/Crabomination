@@ -2280,6 +2280,30 @@ fn sunpearl_kirin_bounces_your_permanent() {
     assert!(g.players[0].hand.iter().any(|c| c.id == other), "bounced the bear to hand");
 }
 
+/// ...and bouncing a **token** draws a card (`audit_oracle_verbs.py`, `draw`
+/// class — the rider was dropped as unreadable after the bounce; it is a
+/// question about the pre-bounce object, so the card asks it first).
+#[test]
+fn sunpearl_kirin_draws_when_it_bounces_a_token() {
+    let mut g = two_player_game();
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::sunpearl_kirin());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sunpearl Kirin");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == token), "the token left and ceased to exist");
+    // -1 for the cast, +1 for the token draw.
+    assert_eq!(g.players[0].hand.len(), hand_before, "cast one, drew one");
+}
+
 /// Formation Breaker (CR 509.1b): creatures with less power can't block it.
 #[test]
 fn formation_breaker_blocks_only_by_equal_or_greater_power() {

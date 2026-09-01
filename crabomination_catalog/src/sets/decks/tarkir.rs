@@ -3061,9 +3061,14 @@ pub fn kishla_trawlers() -> CardDefinition {
 }
 
 /// Sunpearl Kirin — {1}{W} 2/1 Kirin with flash and flying. ETB: return up to
-/// one other target nonland permanent you control to its owner's hand.
-/// (The "if it was a token, draw a card" rider is omitted — the bounced object
-/// is gone before the rider can read it.)
+/// one other target nonland permanent you control to its owner's hand; if it
+/// was a token, draw a card.
+///
+/// ⚠ The token test runs **before** the bounce, because after it the token has
+/// ceased to exist and `Target(0)` resolves to nothing. "If it *was* a token"
+/// is a question about the pre-bounce object, so the answer is the same either
+/// way, and the ordering is unobservable: nothing can respond inside one
+/// resolution and the drawn card cannot be played until it ends.
 pub fn sunpearl_kirin() -> CardDefinition {
     CardDefinition {
         name: "Sunpearl Kirin",
@@ -3082,10 +3087,23 @@ pub fn sunpearl_kirin() -> CardDefinition {
             filter: SelectionRequirement::Nonland
                 .and(SelectionRequirement::ControlledByYou)
                 .and(SelectionRequirement::OtherThanSource),
-            effect: Box::new(Effect::Move {
-                what: Selector::Target(0),
-                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-            }),
+            effect: Box::new(Effect::Seq(vec![
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::IsToken,
+                    },
+                    then: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
+            ])),
         })],
         ..Default::default()
     }

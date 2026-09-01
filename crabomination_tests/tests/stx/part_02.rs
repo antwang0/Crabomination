@@ -1497,34 +1497,49 @@ fn acolyte_of_affliction_mills_each_player_three() {
 
 // ── Skywarp Skaab (STX) ────────────────────────────────────────────────────
 
+/// Skywarp Skaab's ETB exiles two creature cards from your graveyard to draw
+/// (`audit_oracle_verbs.py`, `draw` class — it shipped as "may discard a card
+/// to bounce target creature", which is a different card in every clause).
 #[test]
-fn skywarp_skaab_etb_declines_by_default() {
-    // AutoDecider declines the "you may discard" — Skywarp Skaab just
-    // enters as a vanilla 2/3 flier.
+fn skywarp_skaab_etb_exiles_two_creatures_to_draw() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.add_card_to_hand(0, catalog::island());
+    let gy1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let gy2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let keep = g.add_card_to_graveyard(0, catalog::lightning_bolt()); // not a creature
+    g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::skywarp_skaab());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
-    // Hand size before cast — should be -1 cast + 0 discard = -1.
-    let p0_hand_before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Skywarp Skaab castable for {1}{U}{U}");
+    .expect("Skywarp Skaab castable");
     drain_stack(&mut g);
 
-    // AutoDecider declines: opp bear stays on battlefield, P0 hand size = before - 1 (cast cost).
-    assert!(
-        g.battlefield.iter().any(|c| c.id == opp_bear),
-        "Opp bear stays on battlefield when Skywarp Skaab declines"
-    );
-    assert_eq!(
-        g.players[0].hand.len(),
-        p0_hand_before - 1,
-        "P0 hand size = before - 1 (cast cost) — no discard since AutoDecider declines"
-    );
+    assert_eq!(g.exile.iter().filter(|c| c.id == gy1 || c.id == gy2).count(), 2, "both exiled");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == keep), "the Bolt is not a creature card");
+    // -1 for the cast, +1 for the draw.
+    assert_eq!(g.players[0].hand.len(), hand_before, "cast one, drew one");
+}
+
+/// With only one creature card in the graveyard the gate is false and the
+/// controller is never prompted.
+#[test]
+fn skywarp_skaab_needs_two_creature_cards() {
+    let mut g = two_player_game();
+    let gy1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::skywarp_skaab());
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Skywarp Skaab castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == gy1), "the lone creature stays");
 }
 
 // ── STA reprint tests (push: modern_decks) ─────────────────────────────────
