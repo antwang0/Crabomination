@@ -11205,6 +11205,61 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-176)` TAKEN — the loop watchdogs' digest mixed one 32-bit field per finalizer; two per word halves it: `cube` -0.686 % / `sealed` -0.675 % / `fixed` -0.563 %
+
+```text
+  pool    base 519d459e      (-176)          delta
+  fixed     871,864,149     866,955,198   **-0.5630 %**
+  cube    2,402,642,371   2,386,168,882   **-0.6856 %**
+  sealed  2,410,268,144   2,394,006,955   **-0.6747 %**
+```
+
+**The row is new, and it is the price of a bug fix.** `01ac62e3` ("the CR
+732.3 loop guard counted the stack it was watching grow") removed the
+`is_free()` gate in front of `check_free_activation_loop`, so `fingerprint`
+now runs at **every** activation announcement rather than at the free ones:
+`fixed` 9,636 calls / 14,209,166 Ir / **1.63 %**, 8,828 of them from
+`activate_ability`; `cube` 28,566 calls / 47,760,608 Ir / **1.99 %**. That is
+where most of the +2.1 % between `4c943db4`'s baseline and this run's base
+went, and it was the largest single engine row a fresh top-down read of the
+dump turned up — nothing else above 0.65 % is new.
+
+The digest chained SplitMix64's finalizer (two multiplies, ten instructions)
+over one 32-bit field at a time: seven fields a seat, four a permanent. Every
+field is a `u32` (life is an `i32` reinterpreted), so two pack into one
+`u64` **exactly** — `pair(lo, hi)` is injective, nothing truncates — and the
+stream becomes one mix a seat-pair, two a permanent: 4N + 16 mixes down to
+2N + 8. Same information, same finalizer, half the multiplies. The digest's
+*values* change, and only ever meet numbers this same function produced inside
+one process; two states digest equal after the change exactly when they did
+before, up to the same 2^-64 the old stream already carried.
+
+```text
+  fingerprint self         base 519d459e       (-176)
+    fixed                    14,209,166       9,299,822   -4,909,344  (965 Ir/call)
+    cube                     47,760,608      31,286,706  -16,473,902
+    sealed                   47,768,644      31,506,798  -16,261,846
+  every other row on all three pools: within ±700 Ir
+```
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, `--bench` byte-identical to the invariant (195,806 /
+27.49 / 611.9 / 0 stalls), suite 19,201 / 0 / 5 with the golden traces
+unmoved.
+
+**What is left in the row, and why it stays.** 965 Ir a call is still one
+whole-board walk per activation, most of them mana abilities whose
+announcement provably moves the pool. An exemption by ability *kind* is the
+gate `01ac62e3` just removed ("the printed cost is not the question; whether
+the state moved is"), and a lazy scheme — digest only when the key repeats —
+cannot be exact: the comparison needs the *previous* call's digest, which is
+the one a lazy scheme declined to compute, so the cap would trip one
+activation late on the looping case and on time on the others. The floor for
+an exact guard is one digest per announcement; what a later pass can still
+buy is a cheaper *walk* (the `counters.values().sum()` per permanent is a
+`Vec` scan that is empty on most boards, and `pair` could take `tapped` and
+`damage` together if `damage` were bounded), not a cheaper *policy*.
+
 ### `(-175)` TAKEN — a freeze scope that read nothing paid a thread-local access to park nothing: `fixed` -0.422 % / `sealed` -0.389 % / `cube` -0.300 %
 
 ```text
