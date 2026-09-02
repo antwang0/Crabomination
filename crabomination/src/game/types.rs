@@ -1809,6 +1809,43 @@ pub enum ResumeContext {
     },
 }
 
+impl GameEvent {
+    /// True for the events a cost payment leaves behind that cannot make a
+    /// state-based action apply: the announcement itself, mana, tapping,
+    /// targeting, hand and library traffic. Anything that moves a permanent,
+    /// a counter or a life total is *not* here, and an unknown kind is not
+    /// either — the gate this feeds sweeps on doubt.
+    pub(crate) fn inert_for_state_based_actions(&self) -> bool {
+        use GameEvent as E;
+        matches!(
+            self,
+            E::SpellCast { .. }
+                | E::AbilityActivated { .. }
+                | E::ManaAdded { .. }
+                | E::ColorlessManaAdded { .. }
+                | E::TappedForMana { .. }
+                | E::PermanentTapped { .. }
+                | E::PermanentUntapped { .. }
+                | E::BecameTarget { .. }
+                | E::ChoseTargets { .. }
+                | E::SpellTargetChanged { .. }
+                | E::CardDrawn { .. }
+                | E::FirstCardDrawnThisTurn { .. }
+                | E::CardDiscarded { .. }
+                | E::DiscardedBatch { .. }
+                | E::OpponentCausedYouToDiscard { .. }
+                | E::CardLeftGraveyard { .. }
+                | E::LibraryShuffled { .. }
+                | E::PlayerSearchedLibrary { .. }
+                | E::TopCardRevealed { .. }
+                | E::ScriedOrSurveiled { .. }
+                | E::ScryPerformed { .. }
+                | E::SurveilPerformed { .. }
+                | E::CardCycled { .. }
+        )
+    }
+}
+
 impl GameAction {
     /// True for actions a Revel-in-Silence lock forbids: casting any spell
     /// (every `Cast*` variant) or activating a loyalty ability.

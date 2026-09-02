@@ -16110,7 +16110,12 @@ impl GameState {
         // resolves. After this action's own dispatch, never before it: the
         // sweep's death batch would otherwise consume the LKI a sacrifice
         // cost's death triggers still need (Pest Brewmaster's "another Pest").
-        if pays_a_cost {
+        // Gated on the payment having moved something a sweep reads — a
+        // permanent, a counter, a life total — because the sweep is ~4.2 k Ir
+        // and most announcements leave only mana and tapping behind
+        // (+1.7 % on `fixed` ungated; the cost paths emit `CounterRemoved`
+        // for exactly this reason).
+        if pays_a_cost && !events.iter().all(GameEvent::inert_for_state_based_actions) {
             let mut swept = Vec::new();
             self.check_state_based_actions_into(&mut swept);
             if !swept.is_empty() {

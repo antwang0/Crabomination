@@ -16785,6 +16785,7 @@ impl GameState {
         {
             let ctrl = c.controller;
             c.remove_counters(kind, count);
+            events.push(GameEvent::CounterRemoved { card_id, counter_type: kind, count });
             if kind == crate::card::CounterType::Oil {
                 self.players[ctrl].oil_activity_this_turn = true;
             }
@@ -16799,6 +16800,9 @@ impl GameState {
             let had = c.counter_count(kind);
             c.remove_counters(kind, had);
             self.counters_removed_as_cost = had;
+            if had > 0 {
+                events.push(GameEvent::CounterRemoved { card_id, counter_type: kind, count: had });
+            }
         }
 
         // Tap-permanents-as-cost (CR 602.5b): tap the pre-flight picks now that
@@ -16857,7 +16861,11 @@ impl GameState {
         if let Some(kind) = ability.remove_counter_x
             && let Some(c) = self.battlefield.find_by_id_mut(card_id)
         {
-            c.remove_counters(kind, x_value.unwrap_or(0));
+            let x = x_value.unwrap_or(0);
+            c.remove_counters(kind, x);
+            if x > 0 {
+                events.push(GameEvent::CounterRemoved { card_id, counter_type: kind, count: x });
+            }
         }
 
         // Remove-counters-from-among-cost (Hopeful Initiate): drain `count`
@@ -16888,6 +16896,7 @@ impl GameState {
                         if left == 0 { break; }
                         let take = left.min(c.counter_count(k));
                         c.remove_counters(k, take);
+                        events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: k, count: take });
                         left -= take;
                     }
                 }
@@ -16912,6 +16921,7 @@ impl GameState {
                 if let Some(c) = self.battlefield.find_by_id_mut(cid) {
                     let take = left.min(c.counter_count(kind));
                     c.remove_counters(kind, take);
+                    events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count: take });
                     left -= take;
                 }
             }
