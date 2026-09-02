@@ -3971,8 +3971,8 @@ pub fn hard_hitting_question() -> CardDefinition {
 }
 
 /// Refurbished Familiar — {3}{B} 2/1 Zombie Rat. Affinity for artifacts, flying.
-/// When it enters, each opponent discards a card. (The draw-per-opponent-who-
-/// can't rider is omitted.)
+/// When it enters, each opponent discards a card; for each opponent who
+/// can't, you draw a card.
 pub fn refurbished_familiar() -> CardDefinition {
     CardDefinition {
         name: "Refurbished Familiar",
@@ -3986,11 +3986,22 @@ pub fn refurbished_familiar() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         affinity_filter: Some(SelectionRequirement::Artifact),
-        triggered_abilities: vec![etb(Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(1),
-            random: false,
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+            // "For each opponent who can't, you draw a card": the opponents
+            // minus the discards this effect produced.
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Diff(
+                    Box::new(Value::OpponentCount),
+                    Box::new(Value::CardsDiscardedThisEffect),
+                ),
+            },
+        ]))],
         ..Default::default()
     }
 }

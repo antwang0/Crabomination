@@ -466,22 +466,31 @@ pub fn necropolis() -> CardDefinition {
 
 /// War Barge — lends islandwalk, and the loan is called in if the Barge goes.
 pub fn war_barge() -> CardDefinition {
-    artifact(
-        "War Barge",
-        cost(&[generic(4)]),
-        vec![ActivatedAbility {
-            mana_cost: cost(&[generic(3)]),
-            effect: Effect::Seq(vec![
-                Effect::GrantKeywords {
-                    what: target_filtered(R::Creature),
-                    keywords: vec![Keyword::Landwalk(LandType::Island)],
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::RememberPermanentOnSource { what: Selector::Target(0) },
-            ]),
-            ..Default::default()
+    CardDefinition {
+        // "When this artifact leaves the battlefield this turn, destroy that
+        // creature. It can't be regenerated." The remembered creature is not
+        // forgotten at end of turn, so a later departure also calls it in.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::DestroyNoRegen { what: Selector::ChosenPermanentOfSource },
         }],
-    )
+        ..artifact(
+            "War Barge",
+            cost(&[generic(4)]),
+            vec![ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeywords {
+                        what: target_filtered(R::Creature),
+                        keywords: vec![Keyword::Landwalk(LandType::Island)],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::RememberPermanentOnSource { what: Selector::Target(0) },
+                ]),
+                ..Default::default()
+            }],
+        )
+    }
 }
 
 // ── Lands ──────────────────────────────────────────────────────────────────

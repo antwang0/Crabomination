@@ -1399,3 +1399,23 @@ fn sorrows_path_swaps_two_blockers_and_burns_its_controller() {
     assert_eq!(g.players[0].life, 18);
     assert!(g.battlefield_find(mine).expect("bear").damage >= 2);
 }
+
+/// War Barge: the islandwalk loan is called in when the Barge leaves — the
+/// creature is destroyed and can't be regenerated.
+#[test]
+fn war_barge_leaving_destroys_the_creature_it_lent_islandwalk() {
+    let mut g = two_player_game();
+    let barge = g.add_card_to_battlefield(0, catalog::war_barge());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: barge, ability_index: 0, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("lend islandwalk");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords().iter().any(|k| matches!(k, Keyword::Landwalk(_))));
+    let evs = g.remove_to_graveyard_with_triggers(barge);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "the Barge left, the creature is destroyed");
+}

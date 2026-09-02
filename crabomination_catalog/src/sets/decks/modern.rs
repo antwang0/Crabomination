@@ -21902,9 +21902,10 @@ pub fn shepherd_of_the_flock() -> CardDefinition {
     }
 }
 
-/// Flaxen Intruder — {G} Creature — Human Berserker 1/1.
-/// Adventure: Welcome Home {3}{G}{G}{G} Sorcery — create three 2/2 green
-/// Bear tokens.
+/// Flaxen Intruder — {G} Creature — Human Berserker 1/2. Whenever it deals
+/// combat damage to a player, you may sacrifice it; when you do, destroy
+/// target artifact or enchantment. Adventure: Welcome Home {5}{G}{G} Sorcery
+/// — create three 2/2 green Bear tokens.
 pub fn flaxen_intruder() -> CardDefinition {
     CardDefinition {
         name: "Flaxen Intruder",
@@ -21916,9 +21917,29 @@ pub fn flaxen_intruder() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "You may sacrifice it. When you do, destroy target artifact or enchantment.".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::You),
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::IsSource,
+                    },
+                    Effect::Reflexive {
+                        body: Box::new(Effect::Destroy {
+                            what: target_filtered(
+                                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                            ),
+                        }),
+                    },
+                ])),
+            },
+        }],
         adventure: Some(Box::new(Adventure {
             name: "Welcome Home",
-            cost: cost(&[generic(3), g(), g(), g()]),
+            cost: cost(&[generic(5), g(), g()]),
             card_types: vec![CardType::Sorcery],
             effect: Effect::CreateToken {
                 who: PlayerRef::You,

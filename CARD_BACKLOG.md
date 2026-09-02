@@ -912,6 +912,44 @@ because a spell's targets come from the cast action. And
 `fire_self_etb_triggers` auto-picks even for a `wants_ui` seat, so a fixture
 cannot script a trigger's player target through it.
 
+**`destroy` at the same pass: 12 rows -> 5 deathtouch stand-ins + 1 primitive +
+2 filed, four fixed — and again one was a wrong card.** Sundering Eruption
+shipped as "3 damage to target creature or planeswalker" with a doc comment
+naming the wrong set; it is MH3's "destroy target land, its controller may
+fetch a basic tapped, creatures without flying can't block this turn", the
+back a pay-3-life-or-tapped land with no basic type — and it is in the cube
+pool. Cockatrice, Thicket Basilisk, Stinkweed Imp, Cruel Deceiver and Simic
+Basilisk model "destroy the creature it damages / blocks" as deathtouch, each
+documented; Oracle en-Vec is `AttackMandateNextTurn`. Filed without a
+primitive: **Mirror Shield** (a granted *triggered* ability — `EquipBonus`
+carries keywords and activated abilities only) and **The Most Dangerous
+Gamer** ("whenever you claim the prize of an Attraction" — no such event).
+
+| card | shipped | printed |
+|---|---|---|
+| Flaxen Intruder | the adventure only, at {3}{G}{G}{G} | + the front: combat damage to a player → `MayDo` sacrifice it, `Reflexive` destroy target artifact/enchantment; Welcome Home is {5}{G}{G} |
+| Ravager Wurm | the fight | + "destroy target land with an activated ability that isn't a mana ability" as mode 1 (`R::Land.and(R::HasNonManaActivatedAbility)`; the declined fight target is the "up to one") |
+| War Barge | the islandwalk loan | + "when this leaves the battlefield, destroy that creature, no regeneration" (`ChosenPermanentOfSource`; not forgotten at end of turn) |
+| Sundering Eruption | a different card | the printed one, both faces |
+
+⚠ A trigger's *mode* is auto-picked too (`pick_trigger_mode`), so a fixture
+that wants mode 1 of an ETB resolves the mode body with `ctx.mode = 1`.
+
+**`draw` at the same pass: 12 rows -> 8 blind spots or fields, 2 filed, two
+fixed.** Chains of Mephistopheles, Lich's Mirror, Ring of Ma'rûf (a wish, not
+a draw), Serum Powder, Living Conundrum (its rider is inert by design) are
+dedicated statics; Kozilek's `controller_draws`, The Tale of Tamiyo's
+`draw_on_repeat` and Deadly Cover-Up's `ExileSameNameAsTarget` carry the draw
+in a field or an arm. Filed without a primitive: **Dyadrine** ("remove a +1/+1
+counter from each of two creatures you control" as a may-cost) and **Tannuk**
+("the second time this ability has resolved this turn" — no per-source
+resolution counter).
+
+| card | shipped | printed |
+|---|---|---|
+| Haliya, Ascendant Cadet | the counters only | + "whenever one or more creatures you control with +1/+1 counters deal combat damage to a player, draw a card" (per creature here) |
+| Refurbished Familiar | the discard only | + "for each opponent who can't, you draw a card" — `Diff(OpponentCount, CardsDiscardedThisEffect)` |
+
 **`gain_life` worked too: 30 rows -> 14, and two more real defects fixed.**
 
 | card | shipped | printed |

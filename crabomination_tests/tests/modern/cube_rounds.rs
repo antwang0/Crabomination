@@ -1530,38 +1530,47 @@ fn rakshasas_bargain_takes_two_rest_to_graveyard() {
     assert_eq!(g.players[0].graveyard.len(), gy_before + 3);
 }
 
+/// Sundering Eruption's front destroys a land; its owner may fetch a basic
+/// onto the battlefield tapped (MH3 — it was shipped as a 3-damage burn).
 #[test]
-fn sundering_eruption_front_face_burns_a_creature() {
+fn sundering_eruption_front_face_destroys_a_land_and_its_owner_fetches() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let port = g.add_card_to_battlefield(1, catalog::rishadan_port());
+    let basic = g.add_card_to_library(1, catalog::island());
     let erupt = g.add_card_to_hand(0, catalog::sundering_eruption());
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(basic))]));
     g.perform_action(GameAction::CastSpell {
         card_id: erupt,
-        target: Some(Target::Permanent(bear)),
+        target: Some(Target::Permanent(port)),
         additional_targets: vec![],
         mode: None, x_value: None,
     })
     .expect("Sundering Eruption castable");
     drain_stack(&mut g);
-    // 3 damage to a 2/2 → dies.
-    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+    assert!(g.battlefield_find(port).is_none(), "the targeted land is destroyed");
+    let fetched = g.battlefield_find(basic).expect("its owner fetched a basic");
+    assert!(fetched.tapped && fetched.controller == 1, "onto the battlefield tapped, theirs");
 }
 
+/// The back, Volcanic Fissure: "as this enters, you may pay 3 life; if you
+/// don't, it enters tapped" — no basic land type.
 #[test]
-fn sundering_eruption_back_face_plays_as_a_mountain() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::sundering_eruption());
-    g.priority.player_with_priority = 0;
-    g.perform_action(GameAction::PlayLandBack(id))
-        .expect("Volcanic Fissure plays via PlayLandBack");
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).expect("on battlefield");
-    assert_eq!(card.definition.name, "Volcanic Fissure");
-    assert!(card.definition.subtypes.land_types.contains(&crabomination::card::LandType::Mountain));
-    // ETB-tap trigger taps it.
-    assert!(card.tapped, "Volcanic Fissure enters tapped");
+fn sundering_eruption_back_face_pays_life_or_enters_tapped() {
+    for (mode, tapped, life) in [(0, false, 17), (1, true, 20)] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::sundering_eruption());
+        g.priority.player_with_priority = 0;
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(mode)]));
+        g.perform_action(GameAction::PlayLandBack(id))
+            .expect("Volcanic Fissure plays via PlayLandBack");
+        drain_stack(&mut g);
+        let card = g.battlefield_find(id).expect("on battlefield");
+        assert_eq!(card.definition.name, "Volcanic Fissure");
+        assert!(card.definition.subtypes.land_types.is_empty(), "no basic land type");
+        assert_eq!((card.tapped, g.players[0].life), (tapped, life), "mode {mode}");
+    }
 }
 
 #[test]

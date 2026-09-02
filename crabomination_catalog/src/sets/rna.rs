@@ -5001,22 +5001,31 @@ pub fn incubation_druid() -> CardDefinition {
 }
 
 /// Ravager Wurm — {3}{R}{G}{G} 4/5 Wurm with Riot. ETB, choose up to one — it
-/// fights target creature you don't control. (The "destroy a land with a
-/// non-mana activated ability" mode is omitted — no such land filter yet.)
+/// fights target creature you don't control, or destroy target land with an
+/// activated ability that isn't a mana ability.
 pub fn ravager_wurm() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
             riot(),
-            etb(Effect::OptionalTargets {
-                min: 0,
-                body: Box::new(Effect::Fight {
-                    attacker: Selector::This,
-                    defender: Selector::TargetFiltered {
+            // "Choose up to one —": a declined fight target is the "none".
+            etb(Effect::ChooseMode(vec![
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Fight {
+                        attacker: Selector::This,
+                        defender: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: R::Creature.and(R::ControlledByOpponent),
+                        },
+                    }),
+                },
+                Effect::Destroy {
+                    what: Selector::TargetFiltered {
                         slot: 0,
-                        filter: R::Creature.and(R::ControlledByOpponent),
+                        filter: R::Land.and(R::HasNonManaActivatedAbility),
                     },
-                }),
-            }),
+                },
+            ])),
         ],
         ..body(
             "Ravager Wurm",

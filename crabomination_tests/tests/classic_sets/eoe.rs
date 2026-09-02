@@ -3320,3 +3320,37 @@ fn elegy_acolyte_void_end_step_mints_a_robot() {
     assert_eq!(g.players[0].life, life_before, "and not its 1 life either");
 }
 
+
+/// Haliya, Ascendant Cadet: a creature you control with a +1/+1 counter
+/// dealing combat damage to a player draws you a card.
+#[test]
+fn haliya_draws_when_a_countered_creature_connects() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let _haliya = g.add_card_to_battlefield(0, catalog::haliya_ascendant_cadet());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.clear_sickness(bear);
+    g.clear_sickness(plain);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+        Attack { attacker: plain, target: AttackTarget::Player(1) },
+    ]))
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 15, "3 + 2 combat damage");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one draw: only the countered creature counts");
+}

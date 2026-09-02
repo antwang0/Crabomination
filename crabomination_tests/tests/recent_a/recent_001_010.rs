@@ -11298,3 +11298,25 @@ fn crawl_from_the_cellar_returns_and_may_grow_a_zombie() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead2), "second return");
 }
+
+/// Refurbished Familiar: each opponent discards; for each who can't, you draw.
+#[test]
+fn refurbished_familiar_draws_for_an_opponent_with_an_empty_hand() {
+    use crabomination::game::{drain_stack, two_player_game};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, crabomination::catalog::island());
+    g.players[1].hand.clear();
+    let hand = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, crabomination::catalog::refurbished_familiar());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "the opponent could not discard → you drew");
+    // …and not when the opponent could.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, crabomination::catalog::island());
+    g.add_card_to_hand(1, crabomination::catalog::island());
+    let hand = g.players[0].hand.len();
+    g.move_card_to_battlefield_for_test(0, crabomination::catalog::refurbished_familiar());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "the opponent discarded → no draw");
+    assert!(g.players[1].hand.is_empty());
+}

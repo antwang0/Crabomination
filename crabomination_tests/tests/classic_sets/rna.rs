@@ -2706,3 +2706,23 @@ fn captive_audience_lands_on_an_opponent_and_never_repeats_a_mode() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(audience).unwrap().modes_chosen.len(), 3, "modes run out");
 }
+
+/// Ravager Wurm's second mode: destroy target land with a non-mana activated
+/// ability. (A trigger's mode is auto-picked, so the mode body is resolved
+/// directly here.)
+#[test]
+fn ravager_wurm_second_mode_destroys_a_utility_land() {
+    let mut g = two_player_game();
+    let port = g.add_card_to_battlefield(1, catalog::rishadan_port());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    let wurm = g.add_card_to_battlefield(0, catalog::ravager_wurm());
+    let etb = catalog::ravager_wurm().triggered_abilities[1].effect.clone();
+    // Mode 1's slot 0 only admits a land with a non-mana activated ability.
+    assert!(etb.target_filter_for_slot_in_mode_kicked(0, Some(1), false).is_some());
+    let mut ctx = EffectContext::for_ability(wurm, 0, Some(Target::Permanent(port)));
+    ctx.targets = vec![Target::Permanent(port)];
+    ctx.mode = 1;
+    g.resolve_effect(&etb, &ctx).unwrap();
+    assert!(g.battlefield_find(port).is_none(), "the utility land was destroyed");
+    assert!(g.battlefield_find(forest).is_some(), "the basic was not touched");
+}

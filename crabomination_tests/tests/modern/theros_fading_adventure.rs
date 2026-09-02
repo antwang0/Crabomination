@@ -612,8 +612,8 @@ fn adventure_realm_cloaked_giant_cast_off_spares_giants() {
 fn adventure_flaxen_intruder_welcome_home() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::flaxen_intruder());
-    g.players[0].mana_pool.add(Color::Green, 3);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5); // {5}{G}{G}
     g.perform_action(GameAction::CastAdventure {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Welcome Home");
@@ -1251,3 +1251,35 @@ fn signets_pay_one_and_tap_for_their_two_colors() {
     }
 }
 
+
+/// Flaxen Intruder's front face: combat damage to a player lets you sacrifice
+/// it, and when you do, destroy target artifact or enchantment.
+#[test]
+fn flaxen_intruder_sacrifices_itself_to_destroy_an_artifact() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let intruder = g.add_card_to_battlefield(0, catalog::flaxen_intruder());
+    let relic = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.clear_sickness(intruder);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(relic)),
+    ]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: intruder,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 combat damage");
+    assert!(g.battlefield_find(intruder).is_none(), "sacrificed itself");
+    assert!(g.battlefield_find(relic).is_none(), "and destroyed the artifact");
+}

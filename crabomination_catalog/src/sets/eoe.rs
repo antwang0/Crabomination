@@ -5480,8 +5480,8 @@ pub fn starbreach_whale() -> CardDefinition {
 
 /// Haliya, Ascendant Cadet — {2}{G}{W}{W} Legendary Creature — Human Soldier
 /// 3/3. Whenever Haliya enters or attacks, put a +1/+1 counter on target
-/// creature you control. (The counter-creatures-deal-damage card-draw rider is
-/// approximated away.)
+/// creature you control. Whenever creatures you control with +1/+1 counters
+/// deal combat damage to a player, draw a card (per creature here).
 pub fn haliya_ascendant_cadet() -> CardDefinition {
     let counter = || Effect::AddCounter {
         what: target_filtered(
@@ -5501,7 +5501,21 @@ pub fn haliya_ascendant_cadet() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        triggered_abilities: vec![etb(counter()), on_attack(counter())],
+        triggered_abilities: vec![
+            etb(counter()),
+            on_attack(counter()),
+            // "One or more creatures you control with +1/+1 counters deal
+            // combat damage to a player" — fires per such creature here.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                    }),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
         ..Default::default()
     }
 }

@@ -1,7 +1,8 @@
 //! Modern-staple sorceries — sweepers, ramp, removal, recursion.
 
 use crate::card::{
-    CardDefinition, CardType, Effect, Keyword, LandType, SelectionRequirement, Subtypes,
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, Keyword, LandType,
+    SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{LookPick, Duration, PlayerRef, Selector, Value, ZoneDest};
@@ -287,39 +288,49 @@ pub fn rakshasas_bargain() -> CardDefinition {
     }
 }
 
-/// Sundering Eruption — {2}{R} Sorcery. Sundering Eruption deals 3 damage
-/// to target creature or planeswalker. Modal-double-faced; the back face
-/// (Volcanic Fissure) is a Mountain that enters tapped and taps for {R}.
+/// Sundering Eruption // Volcanic Fissure — {2}{R} Sorcery (MH3). Destroy
+/// target land. Its controller may search their library for a basic land
+/// card, put it onto the battlefield tapped, then shuffle. Creatures without
+/// flying can't block this turn. The back is a land: "as this enters, you may
+/// pay 3 life; if you don't, it enters tapped", {T}: Add {R}.
 ///
 /// The front (Sorcery) is cast normally; the back is played via
 /// `GameAction::PlayLandBack`. The `back_face` slot only swaps in the
 /// back's `CardDefinition` after `play_land_with_face` swaps faces, so
 /// the front retains its sorcery effect when cast from hand.
 pub fn sundering_eruption() -> CardDefinition {
-    use super::super::etb_tap;
-    use crate::card::LandType;
     let back = CardDefinition {
         name: "Volcanic Fissure",
         card_types: vec![CardType::Land],
-        subtypes: Subtypes {
-            land_types: vec![LandType::Mountain],
-            ..Default::default()
-        },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Tap { what: Selector::This },
+            ]),
+        }],
         activated_abilities: vec![super::super::tap_add(crate::mana::Color::Red)],
-        triggered_abilities: vec![etb_tap()],
         ..Default::default()
     };
+    // The destroyed land's *owner* stands in for its controller: the search
+    // runs after the destruction, when the card is in its owner's graveyard.
+    let owner = PlayerRef::OwnerOf(Box::new(Selector::Target(0)));
     CardDefinition {
         name: "Sundering Eruption",
-        // Real Oracle: `{2}{R}` Sorcery (DSK); the back is Volcanic Fissure.
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Land) },
+            Effect::Search {
+                who: owner.clone(),
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: owner, tapped: true },
+            },
+            Effect::MatchingCantBlockThisTurn {
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasKeyword(Keyword::Flying)))),
+            },
+        ]),
         back_face: Some(Box::new(back)),
         ..Default::default()
     }
