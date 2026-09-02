@@ -118,6 +118,8 @@ the replay window and its reuse cap. Built the same way and run clean:
 
   60,000 games / 5,785,847 rows / 0 stalls / 0 panic / 0 assertion, 389 s
   plus 5 seeds x 6,000 games at --window 20000: 0 panic, 0 stalls
+  re-run at the pass's closing tip, after all five fixes, 3 seeds x 20,000:
+    60,000 games / 5,773,403 rows / 0 stalls / 0 panic, 157-160 games/s
 ```
 
 ⚠ **The `--window 250000` leg matters on its own**: `(-52)`'s correction says
