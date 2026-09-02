@@ -2477,6 +2477,45 @@ a box whose state moves.
 
 ## Baseline
 
+### The CR 704.3 pass — closing state at `cdd62eb2`
+
+Three commits, one base: `71d43ea1` (the `(-179)` tip). Two rules fixes
+and the gate that pays for the second; no candidate taken. The base row
+below is `68cb55cd` (the entry fix), which is Ir-neutral on all three
+pools against `71d43ea1` — the fixed pool carries none of the cards it
+touches.
+
+```text
+  pool     base 68cb55cd     tip cdd62eb2     delta
+  fixed      857,372,846      858,390,652   **+0.1187 %**
+  cube     2,363,005,367    2,367,434,772   **+0.1875 %**
+  sealed   2,368,396,104    2,371,337,031   **+0.1242 %**
+
+  commit    what                                              fixed     cube    sealed
+  68cb55cd  0/0 window at entry closed (tokens, 9 cards, land)  0.000 %  -0.000 %  -0.001 %
+  aab5b1ea  CR 704.3 sweep after every cast/activation         +1.714 %  +1.415 %  +0.983 %
+  cdd62eb2  … gated on the payment's events                    +0.119 %  +0.187 %  +0.124 %
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,203 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved at every
+        commit (+1 test: a token's counters precede its PermanentEntered)
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release `cargo check --profile release-fast -p crabomination --bin bot_ladder`
+        clean at every commit
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok (3 vs 1 threads identical); peak_rss
+        19.3 MiB, bin 219,297,592 B (`--no-default-features`)
+stalls  release-fast opts (the profiling-fast binary), fresh seeds:
+        `--games 400 --threads 3` on `all` seed 101 (6,800 games), `sealed`
+        seed 101 (4,800), `cube` seed 102 (3,200): **0 undecided**. Six-game
+        three-pool stdout identical to the base's at every commit but the
+        wall-clock line. No `debug-assertions`+`overflow` leg this run.
+```
+
 ### The CoW-check pass — closing state at `(-179)`
 
 Five legs, one base: `01ac62e3` (the branch tip this run started from, two
@@ -11256,6 +11295,51 @@ the table above is safe to compress:
 
 
 ## Log
+
+### CR 704.3 — the sweep after every cast and activation: ungated `fixed` +1.714 % / `cube` +1.415 % / `sealed` +0.983 %, gated on the payment's events **+0.119 % / +0.187 % / +0.124 %**
+
+```text
+  pool     base 68cb55cd   ungated aab5b1ea   gated cdd62eb2    gated delta
+  fixed      857,372,846       872,066,488      858,390,652    **+0.1187 %**
+  cube     2,363,005,367     2,396,436,516    2,367,434,772    **+0.1875 %**
+  sealed   2,368,396,104     2,391,672,704    2,371,337,031    **+0.1242 %**
+  check_state_based_actions_into on fixed: 10,230 calls -> 13,748 ungated
+    (3,518 from perform_action_inner, 14,603,835 Ir inclusive = the whole row)
+```
+
+A rules fix, not a candidate, and the second one on this branch whose cost
+had to be read off the top of the dump rather than assumed (`(-176)`'s
+`fingerprint` was the first). The engine swept state-based actions on
+resolution only, plus a scoped sweep after activations whose cost moved
+the source's own counters; CR 704.3 checks them whenever a player would
+receive priority, which is as soon as the spell or ability is on the
+stack. `GameAction::pays_a_cost` (every `Cast*`, the non-loyalty
+activations) sweeps once in `perform_action_inner`, **after** the action's
+own trigger dispatch — before it, the sweep's death batch ate the LKI a
+sacrifice cost's death triggers still needed. Landing it needed the 0/0
+entry window closed first (`68cb55cd`, the base here: tokens "with N
+counters" carry them as part of the mint, nine cards' "enters with"
+triggers became `enters_with_counters`), and after that the sweep moved
+**12 tests, all fixtures** — a bare 0/0, a bare Aura, two copies of one
+legendary walker. Six-game stdout on all three pools is identical to the
+base's, and the golden traces do not move: on these pools nothing the
+sweep finds is ever alive at an announcement.
+
+**The gate is the whole saving, and it is an events gate.** A cost payment
+can make a state-based action apply only by moving a permanent, a counter
+or a life total, so the sweep runs when the action's events hold anything
+that is not `GameEvent::inert_for_state_based_actions` — the
+announcement, mana, tap/untap, targeting, hand and library traffic; an
+unknown kind sweeps. ⚠ **It only works if the cost paths report what they
+moved**: the four remove-counters-as-cost payments removed counters with
+no event at all, so Walking Ballista's last +1/+1 would have slipped the
+gate. They emit `CounterRemoved` now, which the "whenever counters are
+removed" listeners wanted anyway. **When a guard is an events gate, audit
+the silent mutators before pricing it.**
+
+What is left (+0.12-0.19 %) is the sweeps that do run — sacrifice costs,
+counter costs, life payments — and it is the rule's price. Not on the
+candidates list.
 
 ### `(-179)` TAKEN — one digest word per permanent, a tagged second only for the rare one: `cube` -0.234 % / `sealed` -0.213 % / `fixed` -0.206 %
 
@@ -21492,6 +21576,15 @@ activation loops were closed (~50,000 copies of one ability on one stack, each).
 that a pilot's throughput is not covered by anything in this file**, and the
 instrument that found it is `scripts/robustness_grid.sh --pilots`. Write-up:
 **ENGINE_BACKLOG's first section**.
+
+**The CR 704.3 sweep is a rules price, not a candidate** (Log, top): the
+sweep after every cast/activation is gated on the payment's events and
+costs +0.12-0.19 % as landed. The two things that could shave it are not
+worth a build on their own: a cheaper `check_state_based_actions_into`
+head for a board with nothing to sweep (the `sba_board_scan` is already
+that), and skipping the sweep inside the bot's dry-run probes (they call
+`perform_action` too — but a probe that misses a death mis-evaluates the
+line, so that is a strength question first).
 
 **Sized this run and left, so nobody re-prices them:**
 * **A per-card hint for the graveyard sweep** (`(-174)`'s remaining device,

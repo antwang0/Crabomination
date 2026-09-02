@@ -179,7 +179,13 @@ two seeded a bare Aura (CR 704.5m sweeps it), one two copies of a
 legendary planeswalker under one controller (CR 704.5j), one a 0/0 whose
 converge count is cast-time. ⚠ **A fixture that puts a printed 0/0, a
 bare Aura or a duplicate legend on the battlefield and then casts a spell
-is now testing the sweep, not the card.**
+is now testing the sweep, not the card.** The sweep is gated on the
+payment's events (`GameEvent::inert_for_state_based_actions`; ungated it
+was +1.7 % of `fixed`, gated +0.12 % — PERF's Log has the row), and the
+gate is why the four remove-counters-as-cost payments now emit
+`CounterRemoved`: they moved counters silently, and Walking Ballista's
+last +1/+1 would have slipped past. ⚠ **A cost path that mutates the board
+without an event defeats the gate; audit new cost kinds for their event.**
 
 Still open in the same family, sized and left: `apply_as_enters_effect`
 runs a full `resolve_effect` (which can sweep) before the entry-counter

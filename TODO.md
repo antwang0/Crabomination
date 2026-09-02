@@ -24,54 +24,29 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
-   origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force (this run
-   rebased once, onto tracker commits — both conflicts were adjacent insertions, keep both);
-   code before tracker prose; ⚠ **claim a candidate number at PUSH time** — `(-175)`..`(-179)`
-   are this run's. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
-   rules for a perf pass"**.
-2. **Gates at `(-179)`:** suite **19,202 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
+   origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
+   tracker prose; ⚠ claim a candidate number at PUSH time — none taken this run, `(-180)` is next.
+   Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a perf pass"**.
+   ⚠ **A worktree build sharing `CARGO_TARGET_DIR` reuses the main tree's engine artifact** —
+   the first A/B here read 0.000 % off two identical binaries; `cargo clean -p` the engine first.
+2. **Gates at `cdd62eb2`:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
    `cargo check --profile release-fast` clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
-   byte-identical to the invariant** at every leg, determinism ok, Miri on `cow::` 2 / 0.
-   Sweeps: `debug-assertions`+`overflow` on fresh seeds 101-108 `all` / 101-104 `sealed`
-   (73,600 games, clean, cap 2 = the Beacon board); the concurrent session's
-   `robustness_grid.sh --wide` **52 cells / 301,600 games, 0 failures** and its `--pilots` leg
-   (44 clean; `abilarms` needs `PILOT_GAMES` 12) and 60,000-game actor leg. ⚠ **Leave seed 43
-   out of a timed loop.** Sweeps + closed leads: **ENGINE_BACKLOG**.
-3. **This run: -2.09 % `fixed` / -1.95 % `cube` / -2.09 % `sealed` over five legs, +2.89 %
-   median games/s on 24 `bench_ab.py` pairs.** `(-175)` a freeze scope with nothing to park
-   skips the thread-local; `(-176)`/`(-179)` the loop watchdogs' digest (a NEW 1.6-2.0 % row —
-   the CR 732.3 fix made `fingerprint` run at every activation; ⚠ **a bug fix that widens a
-   guard is a perf change, read the top of the dump after one**); `(-177)`/`(-178)` CoW
-   uniqueness is `strong == 1` inline, no `Weak` can exist (`(-145)`'s deferred device, taken
-   the small way: ten lines over std's `Arc`, Miri-checked). PERF's Baseline has the table.
-4. **⚠⚠ THREE CENSUSES THAT COST NOTHING AND EACH CORRECTED AN ENTRY THIS RUN:**
-   `cg_edges.py --callers '<std row>'` (`(-170)(b)` assigned `LocalKey::with` to the alloc
-   sites; 89,500 of 99,796 were scope EXITS parking nothing), `--demangle=no` + `--callers` per
-   hash (found the third CoW family `Player(Arc<PlayerData>)`, 155 k calls, which a grep for
-   `Arc::make_mut` missed because the site spells `std::sync::Arc::make_mut`), and the
-   24-pair clock (~330 k `lock cmpxchg` removed read FLAT — price an atomic by Ir, not cycles).
-5. **⚠ `cargo check`, `clippy` AND THE SUITE ALL RUN WITH `debug-assertions` ON.** `cargo check
-   --profile release-fast -p crabomination --bin bot_ladder` before every push — CLAUDE.md.
-6. **NEXT PERF LEADS — the profile is FLAT again; every row above 0.65 % is mapped.** Sized and
-   left this run (PERF candidates, top): the graveyard-sweep hint (~0.17 %), a `cast_lock_scan`
-   lane (~0.1 %), the SBA `collect` (~0.15 %), `fingerprint`'s walk (7.5 M, exact floor). Still
-   open and expensive: `(-174)` (leave the walker's signature alone), the requirement walker's
-   recursive instance (13.6x cube/fixed ratio, needs a contexts dump), `SpecFromIterNested`
-   (price at ~10 %). ⚠ **Two shapes to remember: a thread-local pool is shared by NESTED scopes
-   on the thread — checking it out to one owner starves the bot's dry-run clones; and a
-   `#[inline]` hint on a two-path fn is declined — force the check, split the cold path.**
-   **The build is still the lever**: PGO -23.8 to -27.6 %.
-7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-clause ratchets, the
-   printed-join ratchets, `audit_oracle_verbs.py` 106 rows (next `counters` 13 / `gain_life`
-   12; ⚠ it matches primitive NAMES). Still unjoined: `color_identity` (⚠ `format::color_identity`
-   never reads rules-text mana symbols — CR 903.4c), activated-ability count on nonlands, token
-   definitions. ⚠ **A python auditor's zero is suspect — check its population.**
-8. **Rules, open and SIZED (concurrent session):** the general CR 704.3 sweep goes *after*
-   `perform_action_inner`'s own `dispatch_triggers_for_events`; what remains is **19 tests of
-   19,202, ten of them one root cause — a 0/0 window at entry** (the engine mints a token and
-   *then* adds its counters where CR 614.12 makes them part of the entry). Write-up and the
-   five `--wide` bugs: **ENGINE_BACKLOG's first section**. ⚠ **Peak RSS 21 MiB is the two
-   recycle pools per thread, both bounded by a `const`, not a leak.**
+   byte-identical**, determinism ok, 14,800 fresh-seed games 0 undecided. No `debug-assertions` +
+   `overflow` leg this run — worth one on the next (`scripts/robustness_grid.sh --wide --pilots`).
+3. **This run: two rules fixes, one gate, no candidate.** The 0/0 window at entry is closed
+   (`TokenDefinition::enters_with_counters`; 70 catalog sites + the shortcut fold into it; nine
+   real cards' "enters with" triggers became `enters_with_counters`); the **general CR 704.3 sweep**
+   after every cast/activation is landed, gated on the payment's events at **+0.12 / +0.19 /
+   +0.12 %** (ungated it was +1.7 %). Write-ups: **ENGINE_BACKLOG's first section**, PERF's Log top.
+4. **Perf leads — the profile is FLAT; every row above 0.65 % is mapped.** Open and expensive:
+   `(-174)`, the requirement walker's recursive instance, `SpecFromIterNested` (~10 %). **The
+   build is still the lever**: PGO -23.8 to -27.6 %. PERF candidates has the sized-and-left list.
+5. **Open, sized (this family):** `apply_as_enters_effect` runs a full `resolve_effect` before the
+   entry-counter block in both entry paths (deliberate: Mimeoplasm) — a 0/0 whose as-enters
+   body sweeps would die; no shipped card has the pair. CARD_BACKLOG's "bare `PassPriority` with
+   an empty stack never reaches the sweep" note is the same rule from the other side; unpriced.
+6. **Card lanes, all in CARD_BACKLOG's first sections** (printed-clause ratchets,
+   `audit_oracle_verbs.py`). ⚠ A python auditor's zero is suspect — check its population.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
