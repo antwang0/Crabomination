@@ -67,7 +67,16 @@ PILOTS="${PILOTS:-mcts mcts-heur det1 det3 baseline landseq mull chumpblocks
   atk-cheap atk-hold atk-sim atk-race atk-life dflt-life life power base kw25
   buff2for1 convlands mullsim walkerlegacy legacyfetch landseq2 mull2 race2
   look1 look2 blk combat lookahead planner scaled keywords v2 pretap smarttap}"
-PILOT_GAMES="${PILOT_GAMES:-40}"
+# Twelve, not forty. `abilarms` puts every activated ability into the
+# outcome-judged candidate list, so a board with an activation combo (Spike
+# Feeder + Greater Good + Devoted Druid, seed 23's `cube` and `sos` pairs) costs
+# it hundreds of probes a turn: the cell reads **1.1 s at 12 games, 1.5 s at 16,
+# and then does not finish 20 in fifteen minutes or 40 in thirty** on the audit
+# build — one game past 3,000 actions is the whole of the jump. That is the
+# pilot's price, not a loop — the two loops that *were* on that board are fixed
+# (see ENGINE_BACKLOG) and `--bench` is unmoved. Raise `PILOT_GAMES` only with
+# the timeout below raised to match.
+PILOT_GAMES="${PILOT_GAMES:-12}"
 PILOT_SEED="${PILOT_SEED:-23}"
 BIN=target-audit/overflow/bot_ladder
 ACTOR_BIN=target-audit/overflow/selfplay_train
