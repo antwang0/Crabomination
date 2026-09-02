@@ -4,7 +4,7 @@
 //! hold its own cold group behind one; this module re-exports it under the
 //! path the engine has always used.
 
-pub use crabomination_base::cow::CowBox;
+pub use crabomination_base::cow::{CowBox, make_mut, unique_mut};
 
 #[cfg(test)]
 mod tests {

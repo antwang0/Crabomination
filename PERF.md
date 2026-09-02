@@ -11205,6 +11205,44 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-178)` TAKEN — the third CoW handle, `Player(Arc<PlayerData>)`, still went through std's `make_mut`: `fixed` -0.357 % / `sealed` -0.319 % / `cube` -0.248 %
+
+```text
+  pool    base 97d70525      (-178)          delta
+  fixed     862,151,617     859,069,934   **-0.3574 %**
+  cube    2,374,284,451   2,368,390,709   **-0.2482 %**
+  sealed  2,381,636,899   2,374,045,920   **-0.3187 %**
+```
+
+`(-177)` covered the two CoW `Arc`s the grep for `Arc::make_mut` named —
+`CowBox` and `CardInstance::data` — and left 4,660,868 Ir in std's
+`Arc::make_mut`. A `--demangle=no` dump split that row by monomorphization and
+its callers named the owner in one command: `do_untap` 36,024, `finalize_cast`
+14,556, `adjust_life` 12,390, `declare_attackers_banded` 9,324 — every one a
+write through `Player`'s `DerefMut`, which is `std::sync::Arc::make_mut` on
+its own private `Arc<PlayerData>`. **155,278 calls a six-game `fixed` run,
+more than `CowBox` and `CardInstance` together**, and the first grep missed it
+because that site spells the path out (`std::sync::Arc::make_mut`) — the
+pattern matched, the eye did not. Same fast path, same argument (private
+field, nothing in the workspace downgrades), one line in `player.rs` and a
+re-export through the engine's `cow` module. Binary +163 KB.
+
+```text
+  fixed                          (-177)        (-178)
+    Arc::make_mut              4,660,868             0
+    cow::make_mut_slow        13,509,486    18,174,322   ← the copy path, now
+                                                           all three families
+```
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, `--bench` byte-identical to the invariant, golden traces
+unmoved.
+
+⚠ **The transferable half: a grep for a std call finds the sites that spell
+it the way the grep does.** The `--demangle=no` dump plus `--callers` on
+each hash is the census that cannot miss a spelling, and it is one 25-second
+run; take it before declaring a std row closed.
+
 ### `(-177)` TAKEN — the CoW unshare's uniqueness check was a `lock cmpxchg` behind a call; a `strong == 1` load inline is the same answer: `fixed` -0.554 % / `sealed` -0.517 % / `cube` -0.498 %
 
 ```text

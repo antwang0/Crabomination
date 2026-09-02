@@ -1083,7 +1083,9 @@ impl std::ops::Deref for Player {
 impl std::ops::DerefMut for Player {
     #[inline]
     fn deref_mut(&mut self) -> &mut PlayerData {
-        std::sync::Arc::make_mut(&mut self.0)
+        // PERF `(-178)`: the same Weak-free uniqueness check as the other two
+        // CoW handles — this `Arc` is a private field nothing downgrades.
+        crate::cow::make_mut(&mut self.0)
     }
 }
 
