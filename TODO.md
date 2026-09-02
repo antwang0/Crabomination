@@ -25,17 +25,17 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
-   tracker prose; ⚠ **claim a candidate number at PUSH time** — `(-164)`/`(-165)` were claimed
-   twice again this run and had to renumber to `(-166)`/`(-167)`. Container gotchas in
-   **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a perf pass"**.
-2. **Gates at `(-169)`:** suite **19,197 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
-   `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to the invariant**, determinism
-   ok. Sweeps: 5 seeds / 68,000 games `--decks all` run on **both** binaries at every leg, stdout
-   **byte-identical seed for seed**; and, at the two bug-fix commits after it, **26 seeds /
-   176,800 games plus 20 seeds / 96,000 `--decks sealed` under `debug-assertions` +
-   `overflow-checks`** (item 8), suite **19,198 / 0 / 5**. ⚠ **Leave seed 43 out of a timed loop** — the nine-minute
-   Scute Swarm game that *decides*, so `0 undecided` never sees it. Sweeps + closed leads:
-   **ENGINE_BACKLOG**.
+   tracker prose; ⚠ **claim a candidate number at PUSH time** — three numbers were claimed twice
+   this run. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules
+   for a perf pass"**.
+2. **Gates at this run's tip:** suite **19,201 / 0 / 5**, traces unmoved, clippy `--all-targets`
+   clean, `cargo check --profile release-fast` clean, `--bench` **195,806 / 27.49 / 611.9 / 0
+   stalls, byte-identical to the invariant**, determinism ok. Sweeps: 5 seeds / 68,000 games
+   `--decks all` on **both** `(-169)` binaries, stdout byte-identical seed for seed; and
+   `robustness_grid.sh --wide` at the tip — **52 cells / 301,600 games, 0 failures**, cap 4 /
+   stuck 0 / draw 26, plus the 45-cell `--pilots` leg and a 60,000-game actor leg. ⚠ **Leave seed
+   43 out of a timed loop** — the nine-minute Scute Swarm game that *decides*, so `0 undecided`
+   never sees it. Sweeps + closed leads: **ENGINE_BACKLOG**.
 3. **The run took -3.20 % `fixed` / -2.73 % `cube` / -2.94 % `sealed` over its first four
    legs**, confirmed at **+2.44 % median games/s** on a 16-pair `bench_ab.py` (mimalloc both
    sides), and `(-171)` added `fixed` -0.875 % / `cube` -0.941 % / `sealed` -0.625 % on top.
@@ -48,11 +48,10 @@ sixty-seventh pass, so don't re-take that.
    `env::var_os` **per life adjustment**. No allocation census, growth census or line profile
    looks at libc. The class is ratcheted by
    `structural_audit::no_bare_env_lookup_on_a_simulator_path`.
-5. **⚠ `cargo check` AND THE SUITE BOTH RUN WITH `debug-assertions` ON.** A `()`-returning
-   release stub handed to a `debug_assert!`'s format arguments broke **every optimized profile**
-   on this branch while `cargo check` and 19,197 tests stayed green — `debug_assert!`'s body is
-   dead in release, not absent, so it is still type-checked. **`cargo check --profile
-   release-fast -p crabomination --bin bot_ladder` before every push**; CLAUDE.md carries it.
+5. **⚠ `cargo check`, `clippy` AND THE SUITE ALL RUN WITH `debug-assertions` ON**, so none of
+   them sees code that only fails with them off (a `debug_assert!`'s arguments are dead in
+   release, not absent). **`cargo check --profile release-fast -p crabomination --bin bot_ladder`
+   before every push** — CLAUDE.md has the worked example.
 6. **NEXT PERF LEADS. The profile is FLAT** — no engine row above 0.65 %. `(-174)` is the biggest
    single one and it is **mapped, not taken**: the walker re-finds 31,116 non-battlefield cards a
    six-game `fixed` run through `requirement_card_off_battlefield` (0.37 %), and the obvious fix
@@ -83,19 +82,21 @@ sixty-seventh pass, so don't re-take that.
    `color_identity` (⚠ `format::color_identity` never reads rules-text mana symbols — CR 903.4c,
    so every dual land will look wrong and the gap is real), activated-ability *count* on
    nonlands, token definitions. ⚠ **A python auditor's zero is suspect — check its population.**
-8. **⚠ RUN THE `debug-assertions` SWEEP EVERY FEW PASSES — IT FOUND THREE SHIPPED BUGS AND
-   NOTHING ELSE SEES THEM.** `RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit
-   cargo build --profile overflow`, then `--games 400 --threads 3 --decks all` / `--decks sealed`.
-   A `debug_assert!` is compiled out and an overflow *wraps*, so the plain sweep reads the same
-   games clean. Found: a **graveyard-only ability functioning on the battlefield** (and accepted
-   without its mana — 103 abilities carry the flag), and **two silent wraps on the Beacon of
-   Immortality board** — the race check reads "we lose next turn" and the material term scores
-   unbounded life as *losing*. ⚠ **A closed *stall* lead is not a closed board: ask what else
-   reads the number that made it unusual.** Clean after, 176,800 + 96,000 + 6,000 games.
-   Write-up: **ENGINE_BACKLOG's first section**. The four syntax audits stay green
-   (`audit_panics` 0 bare, `audit_keyword_drift` 0 invented, `audit_variant_coverage` 2 dead
-   primitives, `audit_target_fields` / `audit_target_walkers` clean, `audit_incomplete
-   --structural` one triaged finding) — **and none of them could reach any of the three**.
+8. **⚠ RUN `scripts/robustness_grid.sh --wide` — IT FOUND FIVE SHIPPED BUGS AND THE COMMITTED
+   DEFAULT GRID IS GREEN ON ALL FIVE** (measured: a pre-fix `debug-assertions` binary runs the
+   30-cell default with 0 failures). A `debug_assert!` is compiled out, an overflow *wraps*, and
+   an unbounded stack only shows as a capped game somebody looks at. Found: a graveyard-only
+   ability functioning on the battlefield (accepted without its mana); **two silent wraps on the
+   Beacon board** (the race check reads "we lose next turn", the material term scores unbounded
+   life as *losing*); a counter cost that left its dead source in play (Devoted Druid to
+   toughness -6); and **the CR 732.3 loop guard hashing a fingerprint that counts the stack it
+   watches grow**. ⚠ **Two rules fell out: a closed *stall* lead is not a closed board, and a
+   capped game is not a rate** — `CRAB_CAP_DIAG` named ~50,000 copies of one ability on one
+   stack in a line. The new `--pilots` leg (45 policies, the grid had run one) found the last
+   two: `abilarms` on `cube` went **846,610 ms → 304 ms**. ⚠ **One thing is left open and it is
+   filed**: the general CR 704.3 sweep after *every* activation needs the death-batch /
+   `died_card_snapshots` interleave fixed first. All of it: **ENGINE_BACKLOG's first section**.
+   The four syntax audits stay green and **none of them could reach any of the five**.
    ⚠ **Peak RSS moved 19.4 → 20.3 MiB and it is the two pools, not a leak**: 32
    `ComputedPermanent`s and 4 effect lists **per thread**, both bounded by a `const`.
 

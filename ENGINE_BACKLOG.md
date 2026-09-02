@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [The `debug-assertions` sweep found three real defects — and the Beacon board is where all three live](#the-debug-assertions-sweep-found-three-real-defects--and-the-beacon-board-is-where-all-three-live) | 48 |
+| Bugs & robustness | [The `debug-assertions` sweep found FIVE real defects, and the committed grid was green on all of them](#the-debug-assertions-sweep-found-five-real-defects-and-the-committed-grid-was-green-on-all-of-them) | 120 |
 | Bugs & robustness | [CLOSED — the two stall-sweep leads, and why neither is a bug](#closed--the-two-stall-sweep-leads-and-why-neither-is-a-bug) | 28 |
 | Bugs & robustness | [CLOSED — what the seeded cube smoke test left behind (eighty-fifth pass)](#closed--what-the-seeded-cube-smoke-test-left-behind-eighty-fifth-pass) | 72 |
 | Bugs & robustness | [Engine correctness audit — 2026-06-11](#engine-correctness-audit--2026-06-11) | 83 |
@@ -35,28 +35,40 @@ the handoff.
 
 # Bugs & robustness
 
-## The `debug-assertions` sweep found three real defects — and the Beacon board is where all three live
+## The `debug-assertions` sweep found FIVE real defects, and the committed grid was green on all of them
 
 **Run because nothing had, for thirty-odd passes.** `RUSTFLAGS="-C
 debug-assertions=yes" CARGO_TARGET_DIR=target-audit cargo build --profile
 overflow`, then `--a gang --b gang --games 400 --threads 3 --decks all` over 26
 seeds (176,800 games), plus 20 seeds of `--decks sealed` (96,000 games — the
-deck builder a training actor runs twice a game) and six of `--decks sos`. The plain `release-fast` sweep this file already carries
+deck builder a training actor runs twice a game), six of `--decks sos`, and the
+new `--pilots` leg. The plain `release-fast` sweep this file already carries
 runs the same games and reads them all clean; **the two profiles are not the
-same instrument**, and the difference is three shipped bugs.
+same instrument**, and the difference is five shipped bugs.
 
 ```text
-  seed  what fired
-    2   debug_assert  main_phase gate sink::AB_TOKEN skipped a real action
-   53   overflow      bot.rs  (life + clock - 1) / clock        } the same
-   73   overflow      bot.rs  (4 * hand + emblems + crown) * unit + life_value
+  what fired                                                   where
+  1  debug_assert  main_phase gate sink::AB_TOKEN skipped ...   seed 2
+  2  overflow      bot.rs  (life + clock - 1) / clock           seeds 53, 73
+  3  overflow      bot.rs  (4*hand + emblems + crown) * unit    seeds 53, 73
+  4  cap 50000     a counter cost left its dead source in play  --pilots
+  5  cap 50000     the CR 732.3 guard counted its own stack     --pilots
 ```
 
-**All three are silent in release.** A `debug_assert!` is compiled out; an
-overflow *wraps*. That is the whole argument for the profile: the five syntax
-filters in this file cannot reach a wrap, and the suite cannot either — a wrap
-needs a board, and 19,198 tests carry fewer interesting boards than 400 games of
-`--decks all`.
+⚠ **AND THE COMMITTED DEFAULT GRID IS GREEN ON THE TREE THAT HAD ALL FIVE.**
+Measured, not argued: a `debug-assertions` binary built at the pre-fix commit
+runs `scripts/robustness_grid.sh`'s 30-cell default (five pools x six seeds x
+120 games) with **0 failures**. 1-3 sit on seeds the default list does not carry
+and 2-3 need a board that takes hundreds of turns to build; 4-5 need a pilot
+other than `gang`, which the grid had never run. That is why the script now has
+`--wide` and `--pilots`, and why its header carries this table.
+
+**All five are silent in release.** A `debug_assert!` is compiled out; an
+overflow *wraps*; an unbounded stack only shows as a capped game somebody has to
+be looking at. That is the whole argument for the profile: the five syntax
+filters in this file cannot reach any of them, and the suite cannot either — a
+wrap needs a board, and 19,201 tests carry fewer interesting boards than 400
+games of `--decks all`.
 
 **(1) A graveyard-only ability functioned on the battlefield.**
 `activate_ability_inner` had four wrong-zone gates and only in one direction.
@@ -86,6 +98,85 @@ file recorded Beacon as "a correct card doing what it prints, 4 games in
 wrong on those four games, and two of them changed what the bot *did* rather
 than only what it reported. **When a sweep files a board as benign, ask what
 else reads the number that made it unusual.**
+
+⚠ **And the same for a capped game.** `undecided_by cap N` was read as a turn
+limit and left there; each of the two caps in `abilarms`' `cube` cell was ~50,000
+copies of *one ability* on *one stack*, i.e. two engine bugs wearing a rate.
+`CRAB_CAP_DIAG` names the board in one line and cost nothing to run.
+
+### The same profile on the ACTOR, which is the binary a training run uses
+
+`bot_ladder` is a proxy. `selfplay_train` is the program, and it runs code
+`bot_ladder` never does — the encoder, the sealed deck builder (twice a game),
+the replay window and its reuse cap. Built the same way and run clean:
+
+```text
+  RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit \
+    cargo build --profile overflow -p crabomination_ml --bin selfplay_train
+  CRAB_NO_JITTER=1 RUST_MIN_STACK=33554432 target-audit/overflow/selfplay_train \
+    --actors 3 --games 60000 --steps 40 --seed 20260901 --window 250000 --out /tmp/actorprof
+
+  60,000 games / 5,785,847 rows / 0 stalls / 0 panic / 0 assertion, 389 s
+  plus 5 seeds x 6,000 games at --window 20000: 0 panic, 0 stalls
+```
+
+⚠ **The `--window 250000` leg matters on its own**: `(-52)`'s correction says
+the window is ~10.4 KiB a row over a ~370 MiB floor, so 250 k rows is the
+configuration that actually fills, and 5.8 M rows pushed through it is the first
+time this file has run the reuse cap under arithmetic checks.
+
+
+### The `--pilots` leg found two unbounded stacks, and one of them means the CR 732.3 guard never worked
+
+The grid ran one pilot (`gang`) for its whole history. Running the other
+forty-five against it turned up exactly one cell that could not finish 680
+games in fifteen minutes — `abilarms` on `--decks cube` — and
+`CRAB_CAP_DIAG=3000` named both causes in one line each:
+
+```text
+  cap: 50000 actions, turn 4,  stack 49905   ability Blinking Spirit x49905
+  cap: 50000 actions, turn 25, stack 49427   ability Greater Good    x49427
+  --a abilarms --b gang --games 4 --threads 1 --seed 23 --decks cube
+    before  846,610 ms   30 decided / 2 undecided / 2 capped
+    after       304 ms   32 decided / 0 undecided / 0 capped
+```
+
+**2,785x on that cell, and the two capped games decide.** `--bench` is
+byte-identical to the invariant, so neither fix moves the default pilot's play,
+and `robustness_grid.sh --wide` at the fixed tip reads **52 ladder cells /
+301,600 games, 0 failures** (cap 4 / stuck 0 / draw 26 — the four caps are the
+Beacon board below, unchanged).
+
+**(4) A counter cost that kills its own source left the corpse in play.**
+CR 704.3 — the activating player receives priority as soon as the ability is on
+the stack — so state-based actions belong there, and the engine checked them
+only on stack resolution. A Devoted Druid (0/2, "put a -1/-1 counter on this:
+untap this") ran to toughness **-6** and kept untapping. Walking Ballista is the
+mirror: a 0/0 that removes its last +1/+1 to ping, whose test asserted the old
+behaviour and now asserts the rule (it dies, and CR 608.2 still resolves the
+announced ping).
+
+⚠ **The general CR 704.3 sweep is still open, and it is bigger than it looks.**
+Running the sweep after *every* activation costs
+`pest_brewmaster_b122_gains_life_on_other_pest_death` one of its two death
+triggers: a sacrifice cost's death batch and an SBA sweep interleave through
+`died_card_snapshots`, which `push_ordered_trigger_candidates` clears **per
+batch**. The shipped fix is scoped to costs that move the source's own counters,
+which is what the two known cards do. **Whoever takes the general case has to
+fix the batching first**; the reproduction is that one test with the sweep moved
+to `perform_action_inner`'s `ActivateAbility` arm.
+
+**(5) The CR 732.3 loop guard hashed a fingerprint that counts the stack.** An
+announcement is exactly a `stack.len() + 1`, so the watch never matched its own
+previous call and the cap of 50 was unreachable. It also only watched
+`is_free()` abilities — and a cost spelled in the *effect* (Greater Good's
+sacrifice) is paid at resolution, so the printed cost is not the question.
+⚠ **The one test of the guard drained the stack between activations**, which is
+the single shape a real loop does not take: it kept `stack.len()` at 0, the
+fingerprint matched, and the guard looked like it worked for its whole life.
+**A test that arranges away the thing under test is worse than no test**, and
+the new sibling test runs the same loop without resolving.
+
 
 ## CLOSED — the two stall-sweep leads, and why neither is a bug
 
