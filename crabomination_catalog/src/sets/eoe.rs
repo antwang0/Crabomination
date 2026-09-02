@@ -6852,8 +6852,8 @@ pub fn tractor_beam() -> CardDefinition {
 }
 
 /// Starport Security — {W} 1/1 Artifact Creature — Robot Soldier. {3}{W}, {T}:
-/// Tap another target creature. (The "{2} less if you control a +1/+1-countered
-/// creature" discount is dropped.)
+/// Tap another target creature; costs {2} less if you control a creature with
+/// a +1/+1 counter on it.
 pub fn starport_security() -> CardDefinition {
     CardDefinition {
         name: "Starport Security",
@@ -6868,6 +6868,11 @@ pub fn starport_security() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3), w()]),
             tap_cost: true,
+            cost_reduction_if_control: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                2,
+            )),
             effect: Effect::Tap {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),

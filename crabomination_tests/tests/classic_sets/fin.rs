@@ -1649,6 +1649,36 @@ fn prishes_wanderings_ramps_tapped() {
     assert!(f.tapped, "entered tapped");
 }
 
+/// …and "when you search your library this way" is a reflexive trigger that
+/// puts a +1/+1 counter on target creature you control.
+#[test]
+fn prishes_wanderings_search_grows_a_creature() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::prishes_wanderings());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast Prishe's Wanderings");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "the reflexive trigger grew the only creature you control"
+    );
+}
+
 /// Laughing Mad discards one and draws two.
 #[test]
 fn laughing_mad_discards_one_draws_two() {

@@ -2745,21 +2745,34 @@ pub fn commune_with_beavers() -> CardDefinition {
 }
 
 /// Prishe's Wanderings — {2}{G} Instant. Search your library for a basic land
-/// card, put it onto the battlefield tapped, then shuffle. (Town lands are
-/// approximated by the basic-land search.)
+/// or Town card, put it onto the battlefield tapped, then shuffle. When you
+/// search this way, put a +1/+1 counter on target creature you control (a
+/// reflexive trigger, CR 603.7d).
 pub fn prishes_wanderings() -> CardDefinition {
     CardDefinition {
         name: "Prishe's Wanderings",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::IsBasicLand,
-            to: ZoneDest::Battlefield {
-                controller: PlayerRef::You,
-                tapped: true,
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand
+                    .or(SelectionRequirement::HasLandType(crate::card::LandType::Town)),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: true,
+                },
             },
-        },
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

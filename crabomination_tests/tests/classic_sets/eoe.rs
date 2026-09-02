@@ -2397,6 +2397,30 @@ fn starport_security_taps_a_creature() {
     assert!(g.battlefield_find(theirs).unwrap().tapped, "target creature tapped");
 }
 
+/// …and costs {2} less while you control a creature with a +1/+1 counter.
+#[test]
+fn starport_security_discount_with_a_countered_creature() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    let sec = g.add_card_to_battlefield(0, catalog::starport_security());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(sec);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sec, ability_index: 0, target: Some(Target::Permanent(theirs)),
+        additional_targets: vec![], x_value: None, mode: None,
+    }).expect("{1}{W} is enough with the discount");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).unwrap().tapped, "target creature tapped");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the discounted cost was paid in full");
+}
+
 /// Mm'menon, the Right Hand lets you cast artifact spells from the top of library.
 #[test]
 fn mmmenon_right_hand_grants_cast_artifacts_from_top() {

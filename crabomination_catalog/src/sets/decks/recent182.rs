@@ -56,8 +56,10 @@ pub fn finneas_ace_archer() -> CardDefinition {
 }
 
 /// Gev, Scaled Scorch — {B}{R} 3/2 legendary Lizard Mercenary. Ward—Pay 2 life.
-/// Whenever you cast a Lizard spell, Gev deals 1 damage to target opponent.
-/// (The enters-with-extra-counters static is omitted — no engine primitive yet.)
+/// Other creatures you control enter with an additional +1/+1 counter for each
+/// opponent who lost life this turn (rides the creature-*spell* rider, so a
+/// token or reanimated creature misses it). Whenever you cast a Lizard spell,
+/// Gev deals 1 damage to target opponent.
 pub fn gev_scaled_scorch() -> CardDefinition {
     CardDefinition {
         name: "Gev, Scaled Scorch",
@@ -71,6 +73,13 @@ pub fn gev_scaled_scorch() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Ward(WardCost::Life(2))],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Other creatures you control enter with an additional +1/+1 counter on them for each opponent who lost life this turn.",
+            effect: crate::effect::StaticEffect::ExtraEtbCountersForCreatureCasts {
+                kind: CounterType::PlusOnePlusOne,
+                value: Value::OpponentsWhoLostLifeThisTurn,
+            },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                 Predicate::EntityMatches {

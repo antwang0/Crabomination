@@ -861,6 +861,35 @@ spell's mana cost, you may have an opponent gain 3 life". Together
 the Lost, Intimidation Campaign, Rambling Possum, The Locust God) are each a
 delayed/conditional bounce the body approximates.
 
+**`counters` worked at the CR 704.3 pass: 11 rows -> 2 blind spots + 2 filed,
+seven fixed — and one of the seven was a whole wrong card.** Moonshadow
+shipped as a flying Faerie "combat damage → discard" body under the right
+name, P/T and keyword (the printed-shape table had corrected the keyword and
+not read the ability); it is now the printed 7/7 with six -1/-1 counters and
+the "permanent card into your graveyard → shed one" trigger, and it is in
+the cube pool. Two rows are the auditor's blind spot (a dedicated primitive
+whose name lacks the verb: Galloping Lizrog's
+`DoubleP1P1CountersFromYourCreatures`, Grave Betrayal's
+`GraveBetrayalRegister`). Two are filed, not fixed: **Soul-Scar Mage** (a
+damage-as--1/-1-counters replacement; no primitive) and **Vampiric Embrace**
+("whenever a creature dealt damage by enchanted creature this turn dies" —
+`DamagedBySourceThisGame` reads the Aura as the source, not its host).
+
+| card | shipped | printed |
+|---|---|---|
+| Crawl from the Cellar | the return only | + "up to one target Zombie you control" — `OptionalTargets { min: 1 }`, slot 1 |
+| Gev, Scaled Scorch | no static | `ExtraEtbCountersForCreatureCasts` x `OpponentsWhoLostLifeThisTurn` (creature *spells*; a token or reanimation misses it) |
+| Guru Pathik | the dig only | + "whenever you cast a Lesson, Saga or Shrine spell, +1/+1 counter on another creature you control" |
+| Prishe's Wanderings | basic only, no rider | + Town cards; "when you search this way" as a `ReflexiveTrigger` |
+| Starport Security | flat {3}{W} | + "{2} less if you control a creature with a +1/+1 counter" — new `ActivatedAbility::cost_reduction_if_control` |
+| Turntimber Symbiosis | no rider | + "MV 3 or less: three more +1/+1 counters" via `LookPick::then_if_picked` on `Selector::LastMoved` (the pick-to-battlefield path now records its picks there) |
+
+⚠ Two of those needed the *test* walker, not the card: `ReflexiveTrigger`'s
+body targets when it triggers, so `cr_601_2c`'s cast-time surfacing walk now
+skips it as it skips `Reflexive`; and a `then_if_picked` rider runs through
+`run_effect`, not a fresh resolution root, or the root's scratch reset wipes
+the very list it reads.
+
 **`gain_life` worked too: 30 rows -> 14, and two more real defects fixed.**
 
 | card | shipped | printed |

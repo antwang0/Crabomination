@@ -529,10 +529,11 @@ fn singles_and_legends_printed_shapes() {
             cmc: None, pt: Some((3, 3)), kws: &[Keyword::Trample], supers: &[],
             enters_with_counters: false, trigs: Some(1), acts: None },
         // 7/7, not the 2/1 the deleted test's *name* claimed; its asserts said 7/7.
-        // Menace, not flying — the printed keyword, corrected 2026-08-30.
+        // Menace, not flying — the printed keyword, corrected 2026-08-30; the
+        // six -1/-1 counters and the graveyard trigger, the printed body.
         PrintedShape { def: catalog::moonshadow, name: "Moonshadow",
             cmc: None, pt: Some((7, 7)), kws: &[Keyword::Menace], supers: &[],
-            enters_with_counters: false, trigs: Some(1), acts: None },
+            enters_with_counters: true, trigs: Some(1), acts: None },
         PrintedShape { def: catalog::golos_tireless_pilgrim, name: "Golos, Tireless Pilgrim",
             cmc: None, pt: Some((3, 5)), kws: &[], supers: &[Supertype::Legendary],
             enters_with_counters: false, trigs: Some(1), acts: None },
@@ -568,4 +569,25 @@ fn singles_and_legends_printed_shapes() {
             assert_eq!(def.activated_abilities.len(), n, "{} activated abilities", row.name);
         }
     }
+}
+
+/// Moonshadow enters as a 1/1 (7/7 under six -1/-1 counters) and sheds a
+/// counter whenever a permanent card is put into your graveyard.
+#[test]
+fn moonshadow_enters_shrunk_and_grows_as_permanents_hit_your_graveyard() {
+    let mut g = two_player_game();
+    let moon = g.move_card_to_battlefield_for_test(0, catalog::moonshadow());
+    let cp = g.computed_permanent(moon).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "six -1/-1 counters on a 7/7");
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let evs = g.remove_to_graveyard_with_triggers(bears);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(moon).unwrap().counter_count(CounterType::MinusOneMinusOne), 5,
+        "a permanent card in your graveyard removed one counter");
+    // An instant card going to the graveyard is not a permanent card.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.discard_card(0, bolt, &mut Vec::new());
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(moon).unwrap().counter_count(CounterType::MinusOneMinusOne), 5);
 }

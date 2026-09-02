@@ -16167,6 +16167,24 @@ impl GameState {
                 effective_mana_cost.reduce_generic(count);
             }
         }
+        // "Costs {N} less to activate if you control a [filter]" (Starport
+        // Security): once, not per match.
+        if let Some((filter, n)) = &ability.cost_reduction_if_control {
+            let any = self.with_frozen_layers(|g| {
+                g.battlefield.iter().any(|c| {
+                    c.controller == p
+                        && g.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            Some(card_id),
+                        )
+                })
+            });
+            if any {
+                effective_mana_cost.reduce_generic(*n);
+            }
+        }
         // "Costs {X} less to activate, where X is this creature's power"
         // (The Dominion Bracelet, granted to its bearer).
         if ability.cost_reduction_per_equipped_power {

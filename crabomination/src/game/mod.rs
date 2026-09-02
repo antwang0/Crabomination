@@ -21861,6 +21861,11 @@ impl GameState {
                             if battlefield_haste {
                                 self.grant_keyword_eot(cid, crate::card::Keyword::Haste);
                             }
+                            // `then_if_picked` addresses the picks as
+                            // `Selector::LastMoved` (Turntimber Symbiosis'
+                            // "if it's a creature with mana value 3 or
+                            // less, it enters with three more counters").
+                            self.scratch.last_moved_cards.push(cid);
                         } else {
                             // CR 121.5 — putting a card into hand this way
                             // is NOT a draw: no CardDrawn event, no
@@ -21917,9 +21922,10 @@ impl GameState {
                         source,
                         ..Default::default()
                     };
-                    if let Ok(mut evs) = self.resolve_effect(&then, &ctx) {
-                        events.append(&mut evs);
-                    }
+                    // `run_effect`, not `resolve_effect`: a resolution root
+                    // clears `last_moved_cards`, and the rider addresses the
+                    // picks through it.
+                    let _ = self.run_effect(&then, &ctx, &mut events);
                 }
                 // …and its mirror, for the cards that print a consolation
                 // instead ("If you didn't put a card into your hand this

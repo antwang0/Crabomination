@@ -1000,7 +1000,10 @@ fn turntimber_symbiosis_deploys_creature() {
         card_id: ts, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast");
     drain_stack(&mut g);
-    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"));
+    let bears = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Grizzly Bears")
+        .expect("deployed the Bears");
+    // Mana value 2: "it enters with three additional +1/+1 counters".
+    assert_eq!(bears.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 3);
 }
 
 /// Ondu Inversion destroys all nonland permanents.

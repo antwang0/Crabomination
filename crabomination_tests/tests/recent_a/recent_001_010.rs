@@ -11238,3 +11238,47 @@ mod recent10 {
         assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Clue"));
     }
 }
+
+/// Crawl from the Cellar: the graveyard return, plus "up to one target Zombie
+/// you control" — the second slot is optional, so the spell is castable with
+/// no Zombie and grows one when there is.
+#[test]
+fn crawl_from_the_cellar_returns_and_may_grow_a_zombie() {
+    use crabomination::card::CounterType;
+    use crabomination::game::types::Target;
+    use crabomination::game::{drain_stack, two_player_game, GameAction};
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, crabomination::catalog::grizzly_bears());
+    let zombie = g.add_card_to_battlefield(0, crabomination::catalog::walking_corpse());
+    let spell = g.add_card_to_hand(0, crabomination::catalog::crawl_from_the_cellar());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.step = crabomination::TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(dead)),
+        additional_targets: vec![Target::Permanent(zombie)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast with both targets");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature card returned");
+    assert_eq!(g.battlefield_find(zombie).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    // No Zombie at all: still castable on the required slot alone.
+    let dead2 = g.add_card_to_graveyard(0, crabomination::catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard_raw(zombie);
+    let spell2 = g.add_card_to_hand(0, crabomination::catalog::crawl_from_the_cellar());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell2,
+        target: Some(Target::Permanent(dead2)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable without a Zombie");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead2), "second return");
+}

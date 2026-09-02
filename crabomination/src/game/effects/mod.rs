@@ -2506,7 +2506,7 @@ impl GameState {
         Ok(())
     }
 
-    fn run_effect(
+    pub(crate) fn run_effect(
         &mut self,
         effect: &Effect,
         ctx: &EffectContext,

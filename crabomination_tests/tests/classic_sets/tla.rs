@@ -1774,6 +1774,30 @@ fn guru_pathik_digs_for_a_lesson() {
         "pulled a Lesson to hand");
 }
 
+/// …and casting a Lesson puts a +1/+1 counter on another creature you control.
+#[test]
+fn guru_pathik_grows_another_creature_on_a_lesson_cast() {
+    use crabomination::card::CounterType;
+    let mut g = two_player_game();
+    let gp = g.add_card_to_battlefield(0, catalog::guru_pathik());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lesson = g.add_card_to_hand(0, catalog::boomerang_basics());
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 3);
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: lesson, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the Lesson");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "the other creature grew");
+    assert_eq!(g.battlefield_find(gp).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "\"another\" excludes Guru Pathik");
+}
+
 /// Ty Lee, Artful Acrobat can pay {1} on attack to stop a blocker.
 #[test]
 fn ty_lee_artful_pays_to_unblock() {

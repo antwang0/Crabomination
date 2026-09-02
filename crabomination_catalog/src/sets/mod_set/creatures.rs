@@ -5329,8 +5329,10 @@ pub fn ursine_monstrosity() -> CardDefinition {
     }
 }
 
-/// Moonshadow — {B} Creature — Faerie Rogue 7/7 Flying.
-/// Combat damage to player -> that player discards.
+/// Moonshadow — {B} 7/7 Elemental, menace. Enters with six -1/-1 counters.
+/// Whenever one or more permanent cards are put into your graveyard from
+/// anywhere while it has a -1/-1 counter on it, remove one. (Fires per card
+/// rather than per batch.)
 pub fn moonshadow() -> CardDefinition {
     CardDefinition {
         name: "Moonshadow",
@@ -5343,12 +5345,24 @@ pub fn moonshadow() -> CardDefinition {
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Menace],
+        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(6))),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::DefendingPlayer),
+            event: EventSpec::new(EventKind::PutIntoGraveyard, EventScope::YourControl).with_filter(
+                crate::effect::Predicate::All(vec![
+                    crate::effect::Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::PermanentCard,
+                    },
+                    crate::effect::Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::WithCounter(CounterType::MinusOneMinusOne),
+                    },
+                ]),
+            ),
+            effect: Effect::RemoveCounter {
+                what: Selector::This,
+                kind: CounterType::MinusOneMinusOne,
                 amount: Value::Const(1),
-                random: false,
             },
         }],
         ..Default::default()

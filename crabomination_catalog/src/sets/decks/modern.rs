@@ -32159,7 +32159,8 @@ pub fn emerias_call() -> CardDefinition {
 
 /// Turntimber Symbiosis // Turntimber, Serpentine Wood — {4}{G}{G}{G} Sorcery.
 /// Look at the top seven; put a creature card from among them onto the
-/// battlefield. (The "+3 counters if its mana value is 3 or less" rider is dropped.)
+/// battlefield; if its mana value is 3 or less, it enters with three
+/// additional +1/+1 counters (placed right after entry).
 pub fn turntimber_symbiosis() -> CardDefinition {
     CardDefinition {
         name: "Turntimber Symbiosis",
@@ -32170,8 +32171,21 @@ pub fn turntimber_symbiosis() -> CardDefinition {
             count: Value::Const(7),
             pick_filter: Some(SelectionRequirement::Creature),
             to_battlefield: true,
-    ..Default::default()
-})),
+            then_if_picked: Some(Box::new(Effect::AddCounter {
+                what: Selector::LastMoved,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::IfPred {
+                    pred: Box::new(Predicate::EntityMatchesAny {
+                        what: Selector::LastMoved,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ManaValueAtMost(3)),
+                    }),
+                    then: Box::new(Value::Const(3)),
+                    else_: Box::new(Value::Const(0)),
+                },
+            })),
+            ..Default::default()
+        })),
         back_face: Some(Box::new(znr_painland_back(
             "Turntimber, Serpentine Wood",
             Color::Green,

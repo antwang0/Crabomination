@@ -649,6 +649,36 @@ mod recent182 {
         assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew at total power 10+");
     }
 
+    /// Gev's static: other creatures you cast enter with an additional +1/+1
+    /// counter for each opponent who lost life this turn.
+    #[test]
+    fn gev_other_creatures_enter_bigger_after_an_opponent_lost_life() {
+        use crabomination::card::CounterType;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::gev_scaled_scorch());
+        g.players[1].lost_life_this_turn = true;
+        let spell = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast the Bears");
+        drain_stack(&mut g);
+        assert_eq!(
+            g.battlefield_find(spell).unwrap().counter_count(CounterType::PlusOnePlusOne),
+            1,
+            "one opponent lost life this turn → one extra counter"
+        );
+    }
+
     /// Gev pings an opponent whenever you cast a Lizard spell.
     #[test]
     fn gev_pings_on_lizard_cast() {

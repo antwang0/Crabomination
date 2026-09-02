@@ -3073,8 +3073,13 @@ pub fn suki_courageous_rescuer() -> CardDefinition {
 
 /// Guru Pathik — {2}{G/U}{G/U} 2/4 legendary Human Monk Ally. When it enters,
 /// look at the top five cards; you may put a Lesson, Saga, or Shrine from among
-/// them into your hand, the rest to the bottom.
+/// them into your hand, the rest to the bottom. Whenever you cast a Lesson,
+/// Saga, or Shrine spell, put a +1/+1 counter on another target creature you
+/// control.
 pub fn guru_pathik() -> CardDefinition {
+    let lesson_saga_shrine = SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)
+        .or(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Saga))
+        .or(SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Shrine));
     CardDefinition {
         name: "Guru Pathik",
         cost: cost(&[
@@ -3087,22 +3092,33 @@ pub fn guru_pathik() -> CardDefinition {
         subtypes: ally(&[CreatureType::Human, CreatureType::Monk, CreatureType::Ally]),
         power: 2,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::LookPickToHand(Box::new(LookPick {
-            rest_bottom_random: true,
-            who: PlayerRef::You,
-            count: Value::Const(5),
-            pick_filter: Some(
-                SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson)
-                    .or(SelectionRequirement::HasEnchantmentSubtype(
-                        EnchantmentSubtype::Saga,
-                    ))
-                    .or(SelectionRequirement::HasEnchantmentSubtype(
-                        EnchantmentSubtype::Shrine,
-                    )),
-            ),
-            optional: true,
-    ..Default::default()
-})))],
+        triggered_abilities: vec![
+            etb(Effect::LookPickToHand(Box::new(LookPick {
+                rest_bottom_random: true,
+                who: PlayerRef::You,
+                count: Value::Const(5),
+                pick_filter: Some(lesson_saga_shrine.clone()),
+                optional: true,
+                ..Default::default()
+            }))),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: lesson_saga_shrine,
+                    },
+                ),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

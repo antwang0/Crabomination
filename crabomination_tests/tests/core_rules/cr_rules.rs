@@ -1857,7 +1857,9 @@ fn cr_601_2c_every_catalog_target_filter_is_surfaced() {
                     // targets at resolution (after the gating cost), not at
                     // cast time, so its slots are intentionally opaque to the
                     // cast-time surfacing walk (Glacial Dragonhunt's bolt).
-                    if k == "Reflexive" {
+                    // …and a `ReflexiveTrigger` targets when it triggers
+                    // (CR 603.7d — Prishe's Wanderings' "when you search").
+                    if k == "Reflexive" || k == "ReflexiveTrigger" {
                         continue;
                     }
                     // A `GrantTriggeredAbility`'s granted `trigger` chooses its

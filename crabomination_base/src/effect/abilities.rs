@@ -2975,6 +2975,12 @@ pub struct ActivatedAbility {
     /// discount). Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub cost_reduction_per: Option<SelectionRequirement>,
+    /// "This ability costs {N} less to activate if you control a [filter]" —
+    /// a flat generic-only reduction taken once when at least one permanent
+    /// the activator controls matches (Starport Security's "{2} less if you
+    /// control a creature with a +1/+1 counter on it"). Defaults to None.
+    #[serde(default)]
+    pub cost_reduction_if_control: Option<(SelectionRequirement, u32)>,
     /// "This ability costs {1} less to activate for each [filter] card in your
     /// graveyard" — generic-only reduction counted off the activator's
     /// graveyard at payment time (Battlefield Butcher). Defaults to None.

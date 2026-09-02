@@ -12145,19 +12145,33 @@ pub fn falkenrath_perforator() -> CardDefinition {
 }
 
 /// Crawl from the Cellar — {B} Sorcery. Return target creature card from your
-/// graveyard to your hand. Flashback {3}{B}. (The optional Zombie counter rider
-/// is omitted.)
+/// graveyard to your hand. Put a +1/+1 counter on up to one target Zombie you
+/// control. Flashback {3}{B}.
 pub fn crawl_from_the_cellar() -> CardDefinition {
     CardDefinition {
         name: "Crawl from the Cellar",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Flashback(cost(&[generic(3), b()]))],
-        effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::AddCounter {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ])),
         },
         ..Default::default()
     }
