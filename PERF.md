@@ -2556,12 +2556,12 @@ release the profiling-fast build (release-fast opts, debug-assertions off)
         peak_rss 20.8 MiB, bin 219,324,224 B (`--no-default-features`)
 stalls  three-pool six-game stdout identical to the base's at both legs
         but the wall-clock line.
-audit   `-C debug-assertions=yes` + `overflow` ladder at (-182): `cube`
-        seeds 1 3 7 11 23 97, `all` 1 3, `sos` 1, `sealed` 1, 120
-        games/archetype — 8,880 games, 0 undecided, no panic / assertion /
-        overflow, the `printed_grant_filter disagrees` string present in
-        the binary. The `(-183)` assert has the suite behind it only; run
-        the grid next.
+audit   `-C debug-assertions=yes` + `overflow` ladder, 120 games/archetype,
+        every assert string verified present in the binary: at (-182)
+        `cube` x6 seeds, `all` x2, `sos`, `sealed` — 8,880 games; at
+        (-183) and again at (-185) the same plus `sealed` 3 and `fixed` 1
+        — 11,760 games each. 0 undecided, no panic / assertion / overflow
+        at all three tips.
 ```
 
 ### The step-grant pass — closing state at `0c3f4a78`
@@ -21985,6 +21985,30 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-187) BUILT AND REVERTED, A LOSS (`fixed` +0.172 % / `cube` +0.110 % /
+`sealed` +0.096 %):** a 63-bucket keyword tag mask per definition (a third
+`CardMemo` word) in front of `board_keyword_matching`'s printed-list scan,
+plus `is_empty` tests on the two instance lists. `board_keyword_in_scope`'s
+self row *rose* (11.4 M -> 12.0 M on `fixed`), which says where its 640 Ir
+a call are not: the printed lists are one or two keywords long, so the scan
+the mask gates costs about what the mask read does. **The row's cost is the
+gate the negative path pays** — `keyword_grant_in_scope` inlined into it,
+the `continuous_effects` walk and the per-player command / emblem /
+graveyard legs (`(-180)`'s residual, which this entry now sizes at most of
+the row rather than ~1 M). A lane over those legs is the device; the
+printed scan is not.
+
+**(-186) BUILT AND REVERTED, FLAT (`cube` -0.000 % / `fixed` -0.001 % /
+`sealed` -0.008 %):** the SBA sweep's `no_other` filter, its equipment
+`attach_only_filter` legality and `do_untap`'s per-step untap caps on the
+evaluator. All three are cold on every pool — no Synod Centurion, Konda's
+Banner or untap-cap static in six games of any of them — so the walker's
+remaining `check_state_based_actions_into` context (5,896 calls / 3.3 M
+on `cube`, a `collect` closure) is not one of the three; `--demangle=no`
+on the `--separate-callers=4` dump would name the closure. **A walker
+context worth 0.14 % is below the bar on its own; the lane is mined out at
+~145 k calls / 1.4 % of `cube`.**
 
 **(-185) TAKEN — `fixed` -1.057 % / `cube` -0.133 % / `sealed` -0.104 %:**
 the graveyard sweep on the evaluator's off-battlefield twin (Log). **What
