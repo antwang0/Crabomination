@@ -51,7 +51,10 @@ sixty-seventh pass, so don't re-take that.
    `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 1.9 % of both pools in gate
    prelude with no single hot line — a `profiling-lines` read, not a device.
 6. **Card lanes, all in CARD_BACKLOG's first sections** (printed-clause ratchets,
-   `audit_oracle_verbs.py`). ⚠ A python auditor's zero is suspect — check its population.
+   `audit_oracle_verbs.py`: `counters` and `lose_life` worked at the CR 704.3 pass — 10 defects,
+   Moonshadow was a whole wrong card; `draw` 12 / `gain_life` 12 / `destroy` 12 / `search_library`
+   11 / `token` 9 / `mill` 8 left, ~half of each class is the auditor's blind spot — read the
+   body before believing a row). ⚠ A python auditor's zero is suspect — check its population.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
