@@ -25,24 +25,25 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-180)` and `(-181)` taken this run,
-   `(-182)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
-   rules for a perf pass"**. Cold here: audit build 11 min, `profiling-fast` 23 min (6 min warm),
-   test build 12 min, suite 4 min; `nextest` needs installing (CLAUDE.md has the line).
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-182)` taken this run, `(-183)` is
+   next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a
+   perf pass"**. Cold here: `profiling-fast` 17 min (5 min warm), test build+suite 12 min;
+   `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind ~2 min.
    ⚠ **A worktree build sharing `CARGO_TARGET_DIR` reuses the main tree's engine artifact** — an
    A/B read 0.000 % off two identical binaries; `cargo clean -p` the engine between sides.
-2. **Gates at `0c3f4a78`:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
-   `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok. **The wide
-   `debug-assertions` + `overflow` grid ran** (ladder 301,600 + actor 60,000 games + 45 pilots):
-   0 panic / assertion / overflow / stuck; cap 4 = the known Beacon board. PERF's Baseline top.
-3. **This run: two candidates, both sized off `--separate-callers=4` context tables, not the
-   (flat) self table.** `(-181)` `fire_step_triggers` pre-filters trigger grants to the step's
-   kind: **`cube` -1.17 %**, flat elsewhere. `(-180)` is marginal (-0.06 to -0.09 %). Log top.
-4. **Next perf lead, sized:** the requirement walker is ~8.8 % of `cube` inclusive and its
-   largest entries are now the mana sweeps' `GrantActivatedAbility` filter evaluations
-   (`granted_abilities_of_inner` under `effective_mana_abilities_into` / `available_mana`,
-   ~2.7 %); each sweep is a distinct state, so the lever is the price of one evaluation —
-   PERF candidates, `(-181)` entry. Then the `(-90)`/`(-174)` map. PGO is still -24 %, opt-in.
+2. **Gates at the `(-182)` tip:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets`
+   clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok.
+   No `debug-assertions` grid this run — **run it next: the new `debug_assert_eq!` in
+   `granted_abilities_of_inner` (printed filter vs walker) has only the suite's boards behind it.**
+3. **This run: `(-182)`** — a grant's `EachPermanent` filter is reduced to printed-line tests once
+   per `grant_scan`: **`cube` -1.16 %**, `fixed` +0.008 %, `sealed` +0.013 %. Log top. ⚠ Two
+   builds lost to inlining first (a one-caller wrapper, then `presence_gate`) — the Log row's
+   rule: `--callers <wrapper>` reading 0 on the base means "do not add a caller".
+4. **Next perf lead:** the walker is ~7.5 % of `cube` inclusive after `(-182)`; re-take the
+   `--separate-callers=4` context table and apply the same resolve-once/test-per-permanent device
+   to its next largest many-permanents-one-requirement caller (`fire_combat_damage_triggers`,
+   `event_matches_spec`). ⚠ Census the filter shape off the run first — the handoff's shape from
+   memory missed an `IsToken` leaf and cost a build. Then the `(-90)`/`(-174)` map. PGO -24 %, opt-in.
 5. **Open, sized (leave):** `apply_as_enters_effect` / Mimeoplasm (ENGINE_BACKLOG); the empty-stack
    `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 1.9 % of both pools in gate
    prelude with no single hot line — a `profiling-lines` read, not a device.

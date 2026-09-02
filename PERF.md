@@ -2477,6 +2477,36 @@ a box whose state moves.
 
 ## Baseline
 
+### The printed-filter pass — closing state at `(-182)`
+
+One candidate, one base: `0c3f4a78` (the `(-181)` tip). Sized off the
+`--separate-callers=4` cube context table again; the first `cube` row
+above 1 % two passes running, and the two flat pools inside the codegen
+band.
+
+```text
+  pool     base 0c3f4a78     tip (-182)       delta
+  fixed      857,841,759      857,911,397   **+0.0081 %**
+  cube     2,338,151,325    2,310,937,194   **-1.1639 %**
+  sealed   2,370,047,541    2,370,355,006   **+0.0130 %**
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   see the commit; golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the profiling-fast build (release-fast opts, debug-assertions off)
+        is the typecheck gate here
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant; determinism ok (3 vs 1 threads identical); peak_rss
+        21.1 MiB, bin 219,313,192 B (`--no-default-features`)
+stalls  three-pool six-game stdout identical to the base's but the
+        wall-clock line. No `debug-assertions`+`overflow` grid this run; the
+        new `debug_assert_eq!` in `granted_abilities_of_inner` is what the
+        next grid audits.
+```
+
 ### The step-grant pass — closing state at `0c3f4a78`
 
 Two candidates, one base: `094b361a` (the CR 704.3 tip). Both are
@@ -11342,6 +11372,70 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-182)` TAKEN — a `GrantActivatedAbility` filter is reduced to printed-line tests once per scan, not walked once per (permanent x grant): `cube` -1.164 % / `fixed` +0.008 % / `sealed` +0.013 %
+
+```text
+  pool    base 0c3f4a78      (-182)          delta
+  fixed     857,841,759     857,911,397   **+0.0081 %**
+  cube    2,338,151,325   2,310,937,194   **-1.1639 %**
+  sealed  2,370,047,541   2,370,355,006   **+0.0130 %**
+  evaluate_requirement_static_hinted <- granted_abilities_of_inner, cube:
+    105,436 calls / 31,641,022 Ir  ->  0
+  the reduction's price on cube: fold_printed_grant_filter 7,410 statics
+    over 5,030 scans, 0.98 M self; grant_scan self +0.50 M
+  fixed / sealed carry no EachPermanent grant: grant_scan self +97 k /
+    +247 k (~8 Ir a scan — the emptiness test and the wider tuple)
+```
+
+`GrantScan::statics` now carries a `PrintedGrantFilter` beside each
+`EachPermanent` static: an `And` chain over `ControlledByYou`,
+`IsToken`/`NotToken`, one card-type leaf and one `HasCreatureType` leaf,
+resolved by `printed_grant_filter` at `grant_scan` time — the two presence
+gates asked once per scan — and answered per permanent as a controller
+compare, a bool, a `card_types.contains` and a subtype `contains`.
+`granted_abilities_of_inner` asks it first and the walker only for the
+shapes it declined (and, per permanent, for `bestowed` and Grist). A
+`debug_assert_eq!` against the walker on every fast answer is the ratchet;
+`scripts/robustness_grid.sh`'s `-C debug-assertions=yes` cell audits it
+over boards the suite does not carry.
+
+**What the six cube games actually evaluate — read with a one-build
+`eprintln!` census, then removed:** every one of the 7,410 statics is
+`And(And(Creature, IsToken), ControlledByYou)` (the SOK "Snake" token
+grant), the card-type gate is `false` on all 5,030 scans, and no sliver
+grant appears at all. `(-122)`'s "usually a type test" was right; the
+`(-181)` handoff's `And(ControlledByYou, Creature)` was the shape from
+memory and missed the `IsToken` leaf — **the first build reduced nothing
+because of it (walker calls 105,436 -> 105,436), and the census is what
+said why.** Read the filter off the run, not off the catalog.
+
+⚠ **Two builds lost to inlining before the number above, both on the pools
+the device does not touch:**
+* The fold called `card_type_change_in_scope` — a one-line wrapper whose
+  only caller was the walker, which inlined it whole. A second caller
+  de-inlined it *in the walker*: 175,070 out-of-line asks, **+11.0 M on
+  `cube`**, `fixed` +0.058 %, `sealed` +0.079 %.
+* `#[inline]` on the two wrappers fixed that and pushed `presence_gate`
+  (generic over its closure, three call sites now) out of line instead:
+  self 0 -> 3.07 M / 5.05 M / 10.8 M on `fixed` / `sealed` / `cube`,
+  `fixed` +0.060 %, `sealed` +0.082 %.
+The fold now calls the gate's *body* (`presence_gate(PresenceGate::Card,
+…)`) and the walker's codegen is the base's. **A one-caller wrapper is
+inlined by luck; adding a caller to it is a codegen change to the first
+caller, and the reading lands on every pool that reaches the first caller.
+Check `--callers <wrapper>` on the base: 0 calls means "do not add one".**
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, golden traces unmoved, `--bench` byte-identical,
+determinism ok (3 vs 1 threads).
+
+Residual, filed under Perf candidates: the `graveyard` grant leg
+(Riftstone Portal) takes the same filter; the `HasCreatureType` leaf is
+built but unmeasured (no sliver board in the six-game dump — a seed that
+deals one is the instrument); `granted_abilities_of_inner`'s own body is
+16 M self on `cube` after this, the six-flag `static_abilities` pass and
+the `out` `Vec` (8,286 `grow_one`).
 
 ### `(-181)` TAKEN — `fire_step_triggers` evaluated every trigger grant against every permanent on every step, then dropped all but this step's kind: `cube` -1.166 % / `sealed` +0.011 % / `fixed` +0.025 %
 
@@ -21694,19 +21788,25 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-182) TAKEN — `cube` -1.164 % / `fixed` +0.008 % / `sealed` +0.013 %:**
+the grant filter is reduced to printed-line tests once per `grant_scan`
+(Log). The walker's 105,436 calls under `granted_abilities_of_inner` are
+gone; what is left of that function on `cube` is its own 16 M self (the
+six-flag `static_abilities` pass, the `out` `Vec`) and `grant_scan`'s
+12.8 M. **Next on the walker (~7.5 % of `cube` inclusive after this):**
+re-take the `--separate-callers=4` context table for
+`evaluate_requirement_static_hinted` — the largest remaining entries were
+`fire_combat_damage_triggers` and the dispatcher's `event_matches_spec`
+filters, and the `PrintedGrantFilter` device transfers to any caller that
+evaluates one requirement against many permanents inside one `&self`
+scope: resolve once, test per permanent, assert against the walker.
+Residuals of `(-182)` itself: the `graveyard` grant leg; the
+`HasCreatureType` leaf is unmeasured (no sliver board in seed 1's six
+games).
+
 **(-181) TAKEN — `cube` -1.166 % / `sealed` +0.011 % / `fixed` +0.025 %:**
 `fire_step_triggers` filters the trigger grants to this step's kind before
-the per-permanent requirement walk (Log). **What is left of the requirement
-walker on `cube` (~8.8 % inclusive) is the mana sweeps**:
-`granted_abilities_of_inner` under `effective_mana_abilities_into` /
-`available_mana` evaluates every `GrantActivatedAbility` filter against
-every untapped permanent per payment and per affordability check — ~65 M
-Ir, 2.7 % of `cube`. Each sweep is on a distinct state (the bot's probes),
-so no scope memo spans two of them; the lever is the price of one
-evaluation (~190 Ir inclusive for an `And(ControlledByYou, Creature)`
-filter that could be answered off the printed line when no type-changer is
-in scope — read `evaluate_requirement_static_hinted`'s `Creature` arm
-before pricing).
+the per-permanent requirement walk (Log).
 
 **(-180) TAKEN — `fixed` -0.088 % / `cube` -0.072 % / `sealed` -0.063 %:**
 `board_keyword_matching` asks the presence gate before a scope's first

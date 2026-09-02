@@ -35,11 +35,14 @@ static DEPLOY_CREATURES_ABILITY: std::sync::LazyLock<crate::effect::ActivatedAbi
 #[derive(Default)]
 pub(crate) struct GrantScan<'a> {
     /// Live `GrantActivatedAbility` statics past their CR 611.2 wrapper and
-    /// `condition` gate: `(applies_to, ability, source)`.
+    /// `condition` gate: `(applies_to, ability, source, printed filter)`. The
+    /// last is `Some` when an `EachPermanent` filter reduces to printed-line
+    /// tests on this board — see [`GameState::printed_grant_filter`].
     statics: Vec<(
         &'a crate::effect::Selector,
         &'a crate::effect::ActivatedAbility,
         &'a CardInstance,
+        Option<PrintedGrantFilter>,
     )>,
     /// Live `GrantActivatedAbilityFromGraveyard`: `(filter, ability, owning
     /// seat, source id)`.
@@ -65,6 +68,61 @@ pub(crate) struct GrantScan<'a> {
     /// it lives, so the gather it was built against is the gather every
     /// reader of it sees.
     land_types_rewritten: Option<bool>,
+}
+
+/// A `GrantActivatedAbility` filter reduced to the printed-line tests the
+/// requirement walker would make anyway, resolved once per [`GrantScan`]
+/// rather than once per (permanent x grant). `granted_abilities_of_inner`
+/// is reached by every mana sweep for every untapped permanent, and on
+/// `cube` each of its asks was three walker frames (~300 Ir, 105 k asks a
+/// six-game run — PERF `(-182)`) for what is a controller compare, a token
+/// flag and a card-type `contains`. Built by [`GameState::printed_grant_filter`], which
+/// asks the presence gates once per scan; `test` is the per-permanent half
+/// and answers `None` where the walker's answer leaves the printed line.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct PrintedGrantFilter {
+    /// `ControlledByYou` — the asking permanent's controller is the source's.
+    yours: bool,
+    /// One card-type leaf (`Creature`, `Land`, `Artifact`, `Enchantment`,
+    /// `Planeswalker`); sound only because no layer-4 card-type source was
+    /// in scope when the scan was built.
+    card_type: Option<&'static CardType>,
+    /// One `HasCreatureType` leaf; sound only because no creature-type
+    /// source was in scope.
+    creature_type: Option<crate::card::CreatureType>,
+    /// `IsToken` / `NotToken` — an instance field, no gate needed.
+    token: Option<bool>,
+}
+
+impl PrintedGrantFilter {
+    /// The walker's answer for `me`, or `None` where `me` itself would take
+    /// the walker off the printed line: `bestowed` (CR 702.103d rewrites the
+    /// type line without a `Modification`) and Grist's `creature_off_battlefield`
+    /// clause. Both are rare; the walker stays the oracle for them.
+    #[inline]
+    fn test(&self, me: &CardInstance, src_controller: usize) -> Option<bool> {
+        if self.yours && me.controller != src_controller {
+            return Some(false);
+        }
+        if self.token.is_some_and(|t| t != me.is_token) {
+            return Some(false);
+        }
+        if let Some(t) = self.card_type {
+            if me.bestowed || (*t == CardType::Creature && me.definition.creature_off_battlefield) {
+                return None;
+            }
+            if !me.definition.card_types.contains(t) {
+                return Some(false);
+            }
+        }
+        if let Some(ct) = self.creature_type
+            && !me.definition.subtypes.creature_types.contains(&ct)
+            && !me.has_keyword(&Keyword::Changeling)
+        {
+            return Some(false);
+        }
+        Some(true)
+    }
 }
 
 /// Skip-Ward check. Ward variants whose payment is trivially affordable
@@ -13579,7 +13637,7 @@ impl GameState {
                         continue;
                     }
                 }
-                scan.statics.push((applies_to, ability, src));
+                scan.statics.push((applies_to, ability, src, None));
             }
         };
         // A board where no permanent carries the static at all — nearly every
@@ -13612,6 +13670,17 @@ impl GameState {
             for p in &self.players {
                 for src in p.command.iter().filter(|c| c.command_zone_abilities_active()) {
                     push_grants(src, &mut ignored);
+                }
+            }
+        }
+        // Reduce each `EachPermanent` filter to printed-line tests where the
+        // board allows it. Behind the emptiness test so the pools that carry
+        // no such static (`fixed`, `sealed`) pay nothing — `(-181)`'s rule.
+        if !scan.statics.is_empty() {
+            let mut gates = [None; 2];
+            for entry in &mut scan.statics {
+                if let Selector::EachPermanent(req) = entry.0 {
+                    entry.3 = self.printed_grant_filter(req, &mut gates);
                 }
             }
         }
@@ -13661,7 +13730,7 @@ impl GameState {
             let grants = scan
                 .statics
                 .iter()
-                .filter(|(a, _, _)| matches!(a, Selector::EachPermanent(_)))
+                .filter(|(a, _, _, _)| matches!(a, Selector::EachPermanent(_)))
                 .count()
                 + scan.graveyard.len();
             crate::zone::grant_census::scan(grants, self.battlefield.len());
@@ -13696,6 +13765,83 @@ impl GameState {
         }
         scan.land_types_rewritten =
             self.frozen_effects().map(|fx| fx.iter().any(rewrites_land_types));
+    }
+
+    /// Reduce a grant's `EachPermanent` requirement to a
+    /// [`PrintedGrantFilter`] when the walker would answer it off the printed
+    /// line on this board: an `And` chain over `ControlledByYou`, at most one
+    /// card-type leaf with no layer-4 card-type source in scope, and at most
+    /// one `HasCreatureType` leaf with no creature-type source in scope.
+    /// `None` for every other shape. `gates` memoizes the two presence gates
+    /// across one scan's statics — `false` from either is authoritative,
+    /// which is exactly the case the walker reads the printed line in
+    /// (`has_type` / `has_ctype` in `evaluate_requirement_static_hinted`).
+    fn printed_grant_filter(
+        &self,
+        req: &crate::card::SelectionRequirement,
+        gates: &mut [Option<bool>; 2],
+    ) -> Option<PrintedGrantFilter> {
+        let mut f = PrintedGrantFilter::default();
+        self.fold_printed_grant_filter(req, &mut f, gates).then_some(f)
+    }
+
+    fn fold_printed_grant_filter(
+        &self,
+        req: &crate::card::SelectionRequirement,
+        f: &mut PrintedGrantFilter,
+        gates: &mut [Option<bool>; 2],
+    ) -> bool {
+        use crate::card::SelectionRequirement as R;
+        match req {
+            R::And(a, b) => {
+                self.fold_printed_grant_filter(a, f, gates)
+                    && self.fold_printed_grant_filter(b, f, gates)
+            }
+            R::ControlledByYou => {
+                f.yours = true;
+                true
+            }
+            R::IsToken | R::NotToken => {
+                let want = matches!(req, R::IsToken);
+                if f.token.is_some_and(|t| t != want) {
+                    return false;
+                }
+                f.token = Some(want);
+                true
+            }
+            R::Creature | R::Land | R::Artifact | R::Enchantment | R::Planeswalker => {
+                // `card_type_change_in_scope`'s body, not the wrapper: the
+                // wrapper's one caller is the requirement walker, which
+                // inlines it whole, and a second caller de-inlined it there
+                // (`(-182)`: +11 M Ir on `cube` from the walker's 175 k
+                // asks, more than the device saved on `fixed`/`sealed`).
+                if f.card_type.is_some()
+                    || *gates[0].get_or_insert_with(|| {
+                        self.presence_gate(PresenceGate::Card, || self.card_type_change_unscoped())
+                    })
+                {
+                    return false;
+                }
+                f.card_type = Some(match req {
+                    R::Creature => &CardType::Creature,
+                    R::Land => &CardType::Land,
+                    R::Artifact => &CardType::Artifact,
+                    R::Enchantment => &CardType::Enchantment,
+                    _ => &CardType::Planeswalker,
+                });
+                true
+            }
+            R::HasCreatureType(ct) => {
+                if f.creature_type.is_some()
+                    || *gates[1].get_or_insert_with(|| self.creature_type_change_in_scope())
+                {
+                    return false;
+                }
+                f.creature_type = Some(*ct);
+                true
+            }
+            _ => false,
+        }
     }
 
     pub fn granted_abilities_for(
@@ -13861,12 +14007,12 @@ impl GameState {
             let n = scan
                 .statics
                 .iter()
-                .filter(|(a, _, _)| matches!(a, Selector::EachPermanent(_)))
+                .filter(|(a, _, _, _)| matches!(a, Selector::EachPermanent(_)))
                 .count()
                 + scan.graveyard.len();
             crate::zone::grant_census::walk(n);
         }
-        for (applies_to, ability, src) in &scan.statics {
+        for (applies_to, ability, src, fast) in &scan.statics {
             match applies_to {
                 Selector::EachPermanent(req) => {
                     // Evaluate the filter from the granting source's
@@ -13878,7 +14024,23 @@ impl GameState {
                     // walker re-find it by id — one `battlefield_find` per
                     // (permanent x grant), on a path the mana sweep runs for
                     // every untapped permanent.
-                    if self.evaluate_requirement_static_on(req, me, src.controller, Some(src.id)) {
+                    // The scan's printed reduction answers first; the
+                    // walker is the oracle for every shape it declined, and
+                    // the audit under `-C debug-assertions=yes` is what
+                    // keeps the two in step.
+                    let walk = || self.evaluate_requirement_static_on(req, me, src.controller, Some(src.id));
+                    let pass = match fast.and_then(|f| f.test(me, src.controller)) {
+                        Some(p) => {
+                            debug_assert_eq!(
+                                p,
+                                walk(),
+                                "printed_grant_filter disagrees with the requirement walker"
+                            );
+                            p
+                        }
+                        None => walk(),
+                    };
+                    if pass {
                         out.push(*ability);
                     }
                 }
