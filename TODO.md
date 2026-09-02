@@ -94,9 +94,13 @@ sixty-seventh pass, so don't re-take that.
    watches grow**. ⚠ **Two rules fell out: a closed *stall* lead is not a closed board, and a
    capped game is not a rate** — `CRAB_CAP_DIAG` named ~50,000 copies of one ability on one
    stack in a line. The new `--pilots` leg (45 policies, the grid had run one) found the last
-   two: `abilarms` on `cube` went **846,610 ms → 304 ms**. ⚠ **One thing is left open and it is
-   filed**: the general CR 704.3 sweep after *every* activation needs the death-batch /
-   `died_card_snapshots` interleave fixed first. All of it: **ENGINE_BACKLOG's first section**.
+   two: `abilarms` on `cube` went **846,610 ms → 304 ms**. ⚠ **One thing is left open and it is now
+   SIZED, with its first blocker solved**: the general CR 704.3 sweep goes *after*
+   `perform_action_inner`'s own `dispatch_triggers_for_events` (that one line fixes the
+   death-batch / `died_card_snapshots` interleave), and what remains is **19 tests of 19,201,
+   ten of them one root cause — a 0/0 window at entry**, because the engine mints a token and
+   *then* adds its counters where CR 614.12 makes them part of the entry. Fixing entry closes
+   the ten on its own merits. All of it: **ENGINE_BACKLOG's first section**.
    The four syntax audits stay green and **none of them could reach any of the five**.
    ⚠ **Peak RSS moved 19.4 → 20.3 MiB and it is the two pools, not a leak**: 32
    `ComputedPermanent`s and 4 effect lists **per thread**, both bounded by a `const`.

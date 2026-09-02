@@ -156,15 +156,50 @@ mirror: a 0/0 that removes its last +1/+1 to ping, whose test asserted the old
 behaviour and now asserts the rule (it dies, and CR 608.2 still resolves the
 announced ping).
 
-⚠ **The general CR 704.3 sweep is still open, and it is bigger than it looks.**
-Running the sweep after *every* activation costs
-`pest_brewmaster_b122_gains_life_on_other_pest_death` one of its two death
-triggers: a sacrifice cost's death batch and an SBA sweep interleave through
-`died_card_snapshots`, which `push_ordered_trigger_candidates` clears **per
-batch**. The shipped fix is scoped to costs that move the source's own counters,
-which is what the two known cards do. **Whoever takes the general case has to
-fix the batching first**; the reproduction is that one test with the sweep moved
-to `perform_action_inner`'s `ActivateAbility` arm.
+⚠ **THE GENERAL CR 704.3 SWEEP IS OPEN, SIZED, AND ITS FIRST BLOCKER IS ALREADY
+SOLVED.** The shipped fix is scoped to costs that move the source's own counters;
+the rule is that state-based actions are checked after *every* action. Built and
+measured, so the next run starts from the answer rather than the question:
+
+* **The death-batch interleave is a PLACEMENT bug, not a design one.** Put the
+  sweep in `perform_action_inner`'s `ActivateAbility` arm and
+  `pest_brewmaster_b122_gains_life_on_other_pest_death` loses one of its two
+  death triggers: the sweep's own `dispatch_triggers_for_events` takes the
+  `pending_permanent_deaths` the in-flight action is still holding events for,
+  dispatches them as its own batch, and `push_ordered_trigger_candidates` clears
+  `died_card_snapshots` at the end of it — so the "another **Pest** dies" leg
+  has no LKI left to read the dead card's subtypes from. **Put it after
+  `perform_action_inner`'s own `dispatch_triggers_for_events(&events)` instead
+  and that test passes.** One line, at `game/mod.rs`'s
+  `self.dispatch_triggers_for_events(&events); Ok(events)`.
+* **What is actually left is 19 tests of 19,201, and they have one dominant
+  root cause: a 0/0 window at entry.** The engine mints a token or resolves a
+  permanent onto the battlefield and *then* adds its counters, so there is a
+  moment where a correct SBA sweep sees a 0-toughness creature. In paper the
+  counters are part of the entry (CR 614.12) and the window does not exist.
+
+```text
+  the 19, with the sweep placed after the dispatch
+    fractal / magecraft / counter-pump bodies (the 0/0 window)      9
+      stx part_06 quandrix_logician, part_09 stx_magecraft,
+      part_11 magecraft_adds_counter_to_tribe_member,
+      part_12 magecraft_power_pump / magecraft_counter_pump,
+      part_15 fractal_reflection_b125 / quandrix_fractus_touch_b127,
+      sos push8_10 wildgrowth_archaic, modern servant_of_the_scale
+    "as this enters, choose X" modelled as an ETB *trigger*          1
+      classic_sets mmq5 chameleon_spirit (a 0/0 until the trigger resolves)
+    the rest, one each — read them before assuming a shared cause    9
+      pls aura_blast / ertai_the_corrupted, ths etb_riders,
+      war the_elderspell, recent_b recent_291 aura_mutation,
+      core_rules cr_recent71 banding x2, cr_rules cr_702_179f,
+      game ephemerate_rebound
+```
+
+**The 0/0-window class is the same root as `add_card_to_battlefield` vs
+`add_card_to_battlefield_with_counters`** — the helper's doc already says the
+plain constructor "leaves a printed 0/0 body on the battlefield as a 0/0 waiting
+to die". Fixing entry to apply CR 614.12 atomically closes ten of the nineteen
+and is worth doing on its own merits; the sweep then lands on top.
 
 **(5) The CR 732.3 loop guard hashed a fingerprint that counts the stack.** An
 announcement is exactly a `stack.len() + 1`, so the watch never matched its own
