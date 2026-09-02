@@ -11296,6 +11296,47 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-180)` TAKEN — a scope's first `board_keyword_in_scope` asked the gather to prove a negative the presence gate already answers: `fixed` -0.088 % / `cube` -0.072 % / `sealed` -0.063 %
+
+```text
+  pool    base 094b361a      (-180)          delta
+  fixed     858,389,861     857,631,217   **-0.0884 %**
+  cube    2,367,433,676   2,365,738,312   **-0.0716 %**
+  sealed  2,371,340,947   2,369,856,226   **-0.0626 %**
+  gather_continuous_effects_inner calls: fixed 30,234 -> 28,530,
+    cube 59,598 -> 57,322, sealed 74,246 -> 71,460
+  board_keyword_in_scope self: fixed 9.08 M -> 11.40 M (the gate, plus the
+    memo read now inlined here instead of behind `frozen_effects`' call)
+```
+
+Sized off `--separate-callers=4` (`cg_contexts.py gather_continuous_effects_inner`):
+the largest single gather context on `fixed` was `board_keyword_in_scope <-
+declare_attackers_banded`, 4,186 gathers / 0.53 %, and `compute_permanents`
+in the same scope only reached `frozen_effects` 2,686 times — the other 1,500
+declarations were empty (`compute_permanents` returns early on an empty
+subset) and the gather they paid served nothing. `board_keyword_matching`
+now reads the scope memo only when it is already filled
+(`frozen_effects_memoized`) and otherwise asks `keyword_grant_in_scope`
+before gathering, the same gate the unscoped branch has used since the
+ninety-first pass.
+
+**Why it is a quarter of the sized 1.6 M:** the gate is ~150 Ir an ask, not
+the few loads the grant lane suggests — the `continuous_effects` walk and the
+per-player command / emblem / graveyard legs are paid on every negative, and
+it is asked on every scope-first call (7,126 on `fixed`), including the 5,600
+whose gather `compute_permanents` then needed anyway. **The device the
+ninety-first pass refuted is right in its count and wrong in its sign only
+because the empty declaration exists**; on a pool where the bot declares
+more often, the gate's price approaches the saving. Below the bar as a lead
+on its own — taken because it is strictly less work with identical output.
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, golden traces unmoved, `--bench` byte-identical.
+
+Residual, filed under Perf candidates: a cheaper negative for
+`keyword_grant_in_scope` (a lane over the legs the battlefield lane does not
+cover) would take the remaining ~1 M on `fixed`.
+
 ### CR 704.3 — the sweep after every cast and activation: ungated `fixed` +1.714 % / `cube` +1.415 % / `sealed` +0.983 %, gated on the payment's events **+0.119 % / +0.187 % / +0.124 %**
 
 ```text
@@ -21567,6 +21608,27 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-180) TAKEN — `fixed` -0.088 % / `cube` -0.072 % / `sealed` -0.063 %:**
+`board_keyword_matching` asks the presence gate before a scope's first
+gather. Marginal, and the Log says why: the gate is ~150 Ir an ask and is
+paid on every scope-first call, so the saving is the ~1,500-2,800 gathers a
+run that served an empty `compute_permanents`. **Residual:** a cheaper
+negative for `keyword_grant_in_scope` — its `continuous_effects` walk and
+the per-player command / emblem / graveyard legs are what the battlefield
+grant lane does not cover — is worth the remaining ~1 M on `fixed`; a
+candidate only bundled with something else in the same function.
+
+**Re-read at `094b361a` (this pass, three pools, `--separate-callers=4` on
+`fixed`): the self table is the `(-179)` one to within 0.1 points on every
+row.** What the context table names that no entry has: `activate_ability_inner`
+is 8,828 calls at **1,897 Ir of self** (1.95 % of `fixed`, 1.91 % of `cube`)
+with every callee small — the cost is the gate prelude itself, spread over
+~30 gates, so a line read (a `profiling-lines` build) is the next instrument,
+not a device. `fire_combat_damage_triggers` is 7,258 calls at 1,749 Ir self
+(1.48 % / 1.60 %), four battlefield walks and a per-kind graveyard walk that
+sum to it; the graveyard leg would take a `Graveyard` lane ("any
+`FromYourGraveyard` combat trigger") but is sized at ~0.25 % of `fixed`.
 
 ⚠ **The largest throughput result of the hundred-and-nineteenth pass is not in
 this file's Log, because it is a bug fix.** `abilarms` — a shipped gate pilot —

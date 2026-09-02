@@ -9203,23 +9203,28 @@ impl GameState {
             c.definition.keywords.iter().any(&pred)
                 || c.granted_keywords_eot.iter().any(&pred)
                 || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
-        }) || match self.frozen_effects() {
+        }) || match self.frozen_effects_memoized() {
             Some(fx) => granted(&fx),
             // The legs above are positive short-circuits; when they all miss
             // this used to gather to prove a negative. Ask the presence gate
             // first — a board with no source that can *grant* a matching
             // keyword cannot have one in its gathered set either.
             //
-            // **Asking the gate before `frozen_effects` buys nothing and was
-            // measured** (ninety-first pass): inside a scope `frozen_effects`
-            // *is* the gather, so this looks like the same fix as
-            // `damage_prevented_by_protection_inner`'s — but both callers
-            // that reach here inside a scope
-            // (`declare_attackers_banded` / `declare_blockers`) go straight on
-            // to `compute_permanents` in that same scope, so the gather is
-            // moved, not removed, and the gate is then paid for nothing.
+            // The gate is asked whenever no memo exists yet, *including*
+            // inside a scope whose first computed question this is. The
+            // ninety-first pass measured that as a loss because both scoped
+            // callers went on to `compute_permanents` in the same scope, so
+            // the gather was moved, not removed — but `compute_permanents`
+            // now returns early on an empty subset, and `declare_attackers_banded`
+            // reaches it empty on 1,500 of its 4,186 declarations over six
+            // `fixed` games (the bot's attack search declares nothing more
+            // often than something). Those gathers proved a negative the
+            // gate answers at ~150 Ir; a small net win, PERF `(-180)`.
             None if !self.keyword_grant_in_scope(&pred) => false,
-            None => granted(&self.gather_continuous_effects()),
+            None => match self.frozen_effects() {
+                Some(fx) => granted(&fx),
+                None => granted(&self.gather_continuous_effects()),
+            },
         };
         #[cfg(debug_assertions)]
         if !hit {
@@ -9873,6 +9878,19 @@ impl GameState {
             return false;
         }
         self.layer_freeze.lock().memo.is_some()
+    }
+
+    /// [`frozen_effects`](Self::frozen_effects) that never gathers: the
+    /// scope's memo when one is already filled, else `None` — for a caller
+    /// with a cheaper way to answer its question than proving it off a fresh
+    /// gather (`board_keyword_matching`'s presence gate).
+    fn frozen_effects_memoized(&self) -> Option<std::sync::Arc<Vec<ContinuousEffect>>> {
+        if self.in_layer_gather.load(std::sync::atomic::Ordering::Relaxed)
+            || self.layer_freeze.depth() == 0
+        {
+            return None;
+        }
+        self.layer_freeze.lock().memo.as_ref().map(|(fx, _)| fx.clone())
     }
 
     fn frozen_effects(&self) -> Option<std::sync::Arc<Vec<ContinuousEffect>>> {
