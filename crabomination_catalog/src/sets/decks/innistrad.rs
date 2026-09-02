@@ -4345,11 +4345,7 @@ pub fn grizzly_ghoul() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::CreaturesDiedThisTurnTotal,
-        })],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::CreaturesDiedThisTurnTotal)),
         ..Default::default()
     }
 }

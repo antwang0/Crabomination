@@ -414,14 +414,9 @@ pub fn quandrix_pop_quiz() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token()),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-                ))),
+                ))))),
             },
         ]),
         ..Default::default()

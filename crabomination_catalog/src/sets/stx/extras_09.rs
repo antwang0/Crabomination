@@ -2202,12 +2202,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(fractal),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(2),
+                    definition: Box::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::Const(2))),
                 },
             ]),
             once_per_turn: false,

@@ -1246,12 +1246,7 @@ pub fn manifestation_sage() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::catalog::sets::sos::fractal_token()),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::HandSizeOf(PlayerRef::You),
+                    definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::HandSizeOf(PlayerRef::You))),
                 },
             ]),
         }],

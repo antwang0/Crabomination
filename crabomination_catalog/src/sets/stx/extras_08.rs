@@ -1434,15 +1434,10 @@ pub fn quandrix_equation() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Times(
+                definition: Box::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::Times(
                     Box::new(Value::Const(2)),
                     Box::new(Value::HandSizeOf(PlayerRef::You)),
-                ),
+                ))),
             },
         ]),
         ..Default::default()

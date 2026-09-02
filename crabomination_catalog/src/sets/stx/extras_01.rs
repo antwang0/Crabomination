@@ -1178,15 +1178,10 @@ pub fn inscription_of_insight() -> CardDefinition {
                                 ..Default::default()
                             },
                             ..Default::default()
-                        }),
-                    },
-                    Effect::AddCounter {
-                        what: Selector::LastCreatedToken,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::CardsInHandMatching {
+                        }.entering_with(CounterType::PlusOnePlusOne, Value::CardsInHandMatching {
                             who: PlayerRef::You,
                             filter: SelectionRequirement::Any,
-                        },
+                        })),
                     },
                 ]),
             ],
@@ -1307,12 +1302,7 @@ pub fn leyline_invocation() -> CardDefinition {
                     power: 0,
                     toughness: 0,
                     ..Default::default()
-                }),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: lands_you_control,
+                }.entering_with(CounterType::PlusOnePlusOne, lands_you_control)),
             },
         ]),
         ..Default::default()

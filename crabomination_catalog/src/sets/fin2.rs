@@ -163,12 +163,7 @@ pub fn zanarkand_ancient_metropolis() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    }),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::PermanentCountControlledByMatching(PlayerRef::You, R::Land),
+                    }.entering_with(CounterType::PlusOnePlusOne, Value::PermanentCountControlledByMatching(PlayerRef::You, R::Land))),
                 },
             ]),
         },

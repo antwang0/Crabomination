@@ -897,3 +897,41 @@ fn the_consolation_counter_stays_off_when_the_pick_lands() {
         "no consolation when the pick landed",
     );
 }
+
+// ── "Create a token with N counters on it" (CR 614.1c) ──────────────────
+
+/// The counters are part of the token's entry: they are on it before its
+/// `PermanentEntered` is published, so a printed 0/0 Fractal is never on the
+/// battlefield as a 0/0 for a state-based sweep — or its own ETB triggers —
+/// to see. The catalog used to mint first and `AddCounter` the last-created
+/// token second, and a decision raised in between swept the token dead.
+#[test]
+fn a_token_created_with_counters_has_them_before_it_enters() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_ability(CardId(0), 0, None);
+    let eff = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(2),
+        definition: Box::new(
+            crabomination_base::tokens::fractal_token()
+                .entering_with(CounterType::PlusOnePlusOne, Value::Const(3)),
+        ),
+    };
+    let events = g.resolve_effect(&eff, &ctx).unwrap();
+    let fractals: Vec<_> =
+        g.battlefield.iter().filter(|c| c.definition.name == "Fractal").map(|c| c.id).collect();
+    assert_eq!(fractals.len(), 2, "both tokens survived their entry");
+    for id in fractals {
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+        let added = events
+            .iter()
+            .position(|e| matches!(e, GameEvent::CounterAdded { card_id, .. } if *card_id == id))
+            .expect("counters were placed");
+        let entered = events
+            .iter()
+            .position(|e| matches!(e, GameEvent::PermanentEntered { card_id } if *card_id == id))
+            .expect("token entered");
+        assert!(added < entered, "counters are part of the entry, not a step after it");
+    }
+}

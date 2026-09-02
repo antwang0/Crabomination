@@ -171,12 +171,7 @@ pub fn serpentine_curve() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(crate::catalog::sets::sos::fractal_token()),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Sum(vec![
+                definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::Sum(vec![
                     Value::Const(1),
                     Value::CountOf(Box::new(Selector::CardsInZone {
                         who: PlayerRef::You,
@@ -188,7 +183,7 @@ pub fn serpentine_curve() -> CardDefinition {
                         zone: Zone::Exile,
                         filter: is_filter(),
                     })),
-                ]),
+                ]))),
             },
         ]),
         ..Default::default()
@@ -438,12 +433,7 @@ pub fn geometric_nexus() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(crate::catalog::sets::sos::fractal_token()),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: charge_on_self(),
+                    definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, charge_on_self())),
                 },
                 Effect::RemoveCounter {
                     what: Selector::This,
@@ -1239,12 +1229,7 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
                     Effect::CreateToken {
                         who: PlayerRef::You,
                         count: Value::Const(1),
-                        definition: Box::new(crate::catalog::sets::sos::fractal_token()),
-                    },
-                    Effect::AddCounter {
-                        what: Selector::LastCreatedToken,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::XFromCost,
+                        definition: Box::new(crate::catalog::sets::sos::fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
                     },
                 ]),
                 ..Default::default()

@@ -406,12 +406,7 @@ pub fn zimone_all_questioning() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    }),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: lands_you_control(),
+                    }.entering_with(CounterType::PlusOnePlusOne, lands_you_control())),
                 },
             ]),
         }],

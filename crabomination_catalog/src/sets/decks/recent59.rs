@@ -170,12 +170,7 @@ pub fn metallurgic_summonings() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::ONE,
-                    definition: Box::new(construct),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    definition: Box::new(construct.entering_with(CounterType::PlusOnePlusOne, Value::ManaValueOf(Box::new(Selector::TriggerSource)))),
                 },
             ]),
         }],

@@ -3348,6 +3348,26 @@ pub struct TokenDefinition {
     /// `CardDefinition.back_face` so `Effect::Transform` can toggle it.
     #[serde(default)]
     pub back_face: Option<Box<TokenDefinition>>,
+    /// "Create a [token] with N [kind] counters on it." The counters are part
+    /// of the entry (CR 614.1c — placed as it is created): the mint sets them before the
+    /// token's `PermanentEntered` is published or its ETB triggers fire, so a
+    /// printed 0/0 Fractal is never on the battlefield as a 0/0. The value is
+    /// evaluated against the *creating* effect's context (X, hand size) once
+    /// the token is on the battlefield — "for each creature you control"
+    /// counts it, as the cast path's spec does — which is why it does not
+    /// lift onto the `CardDefinition`'s `enters_with_counters` (that one
+    /// evaluates from the permanent's own context and would read X as 0).
+    #[serde(default)]
+    pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
+}
+
+impl TokenDefinition {
+    /// Builder for `enters_with_counters`: "create this token with `amount`
+    /// `kind` counters on it".
+    pub fn entering_with(mut self, kind: CounterType, amount: crate::effect::Value) -> Self {
+        self.enters_with_counters = Some((kind, amount));
+        self
+    }
 }
 
 /// A `CardDefinition.exile_countdown` fuse: exile the card with `count`

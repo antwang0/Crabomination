@@ -973,12 +973,7 @@ pub fn fractal_anomaly() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token()),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::CardsDrawnThisTurn(PlayerRef::You),
+                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::CardsDrawnThisTurn(PlayerRef::You))),
             },
         ]),
         ..Default::default()

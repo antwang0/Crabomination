@@ -7985,9 +7985,8 @@ pub fn vinelasher_kudzu() -> CardDefinition {
 
 /// Avatar of the Resolute — {G}{G} 3/2 Avatar. Reach, trample. Enters with a
 /// +1/+1 counter for each other creature you control that has a +1/+1
-/// counter (modeled as an ETB trigger). (AER)
+/// counter. (AER)
 pub fn avatar_of_the_resolute() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Avatar of the Resolute",
         cost: cost(&[g(), g()]),
@@ -7999,18 +7998,15 @@ pub fn avatar_of_the_resolute() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Reach, Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByYou)
                     .and(SelectionRequirement::OtherThanSource)
-                    .and(SelectionRequirement::WithCounter(
-                        CounterType::PlusOnePlusOne,
-                    )),
+                    .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
             ))),
-        })],
+        )),
         ..Default::default()
     }
 }

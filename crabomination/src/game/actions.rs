@@ -3216,15 +3216,16 @@ impl GameState {
         }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);
+        // CR 614.1c — a printed "enters with N counters" land (the MMQ
+        // depletion cycle) gets them off the land drop too, and as part of
+        // the entry: before its ETB triggers, like every other entry path.
+        let mut counter_events = Vec::new();
+        self.apply_printed_etb_counters(card_id, &mut counter_events);
         // Fire self-source ETB triggers for the land (shockland pay-or-tap,
         // surveil-land tap-and-surveil, etc.). The cast path inlines the same
         // logic in `resolve_top_of_stack`; play_land needs an analogous push
         // so triggered abilities on lands actually fire.
         self.fire_self_etb_triggers(card_id, p);
-        // CR 614.1c — a printed "enters with N counters" land (the MMQ
-        // depletion cycle) gets them off the land drop too.
-        let mut counter_events = Vec::new();
-        self.apply_printed_etb_counters(card_id, &mut counter_events);
         // CR 714.2b — a Saga land (Urza's Saga) enters with its first lore
         // counter; chapter I fires off the land drop too.
         if self

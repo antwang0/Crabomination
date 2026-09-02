@@ -17617,6 +17617,12 @@ impl GameState {
                 let dyn_pt = definition.dynamic_pt.as_ref().map(|(pv, tv)| {
                     (self.evaluate_value(pv, ctx), self.evaluate_value(tv, ctx))
                 });
+                // "with N counters on it" — evaluated per mint against this
+                // resolution's context (X, hand size), by the mint itself.
+                let counters = definition
+                    .enters_with_counters
+                    .as_ref()
+                    .map(|(kind, v)| (*kind, v, ctx));
                 for p in players {
                     let mut n = base;
                     // CR 614.13 token-doubling replacement: each
@@ -17664,7 +17670,13 @@ impl GameState {
                     // `Into<Arc<_>>`, so the loop hands out refcount bumps.
                     let def = token_arc_with_pt(definition, dyn_pt);
                     for _ in 0..n {
-                        self.mint_token_onto_battlefield(def.clone(), p, definition.tapped, events);
+                        self.mint_token_with_counters(
+                            def.clone(),
+                            p,
+                            definition.tapped,
+                            counters,
+                            events,
+                        );
                     }
                 }
                 Ok(())

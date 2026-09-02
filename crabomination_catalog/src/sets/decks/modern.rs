@@ -16,7 +16,7 @@ use crate::card::{CounterType, DynamicPt, EventKind, EventScope, EventSpec};
 use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, on_attack, on_dies, on_mutate,
-    target_filtered,
+    revolt_value, target_filtered,
 };
 use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, Predicate, ZoneDest};
 use crate::mana::{
@@ -14184,11 +14184,7 @@ pub fn narnam_renegade() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Deathtouch],
-        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, revolt_value(1))),
         ..Default::default()
     }
 }
@@ -14207,11 +14203,7 @@ pub fn greenwheel_liberator() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(2),
-        })],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, revolt_value(2))),
         ..Default::default()
     }
 }
@@ -29508,12 +29500,8 @@ pub fn servant_of_the_scale() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
             ..Default::default()
         },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
         triggered_abilities: vec![
-            etb(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::AddCounter {
@@ -48475,12 +48463,7 @@ pub fn promise_of_power() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    }),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::HandSizeOf(PlayerRef::You),
+                    }.entering_with(CounterType::PlusOnePlusOne, Value::HandSizeOf(PlayerRef::You))),
                 },
             ]),
         ]),
@@ -58494,10 +58477,9 @@ pub fn cautery_sliver() -> CardDefinition {
     }
 }
 
-/// Crystalline Crawler — {4} 1/1 Construct. Converge ETB counters; remove a
-/// counter: any-color mana; {T}: add a counter.
+/// Crystalline Crawler — {4} 1/1 Construct. Converge — enters with a +1/+1
+/// counter per color spent; remove a counter: any-color mana; {T}: add a counter.
 pub fn crystalline_crawler() -> CardDefinition {
-    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Crystalline Crawler",
         cost: cost(&[generic(4)]),
@@ -58508,11 +58490,7 @@ pub fn crystalline_crawler() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::ConvergedValue,
-        })],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
         activated_abilities: vec![
             ActivatedAbility {
                 remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
@@ -64253,12 +64231,7 @@ pub fn quartzwood_crasher() -> CardDefinition {
                         },
                         keywords: vec![Keyword::Trample],
                         ..Default::default()
-                    }),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::TriggerEventAmount,
+                    }.entering_with(CounterType::PlusOnePlusOne, Value::TriggerEventAmount)),
                 },
             ]),
         }],

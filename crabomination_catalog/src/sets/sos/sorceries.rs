@@ -1570,22 +1570,12 @@ pub fn snarl_song() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token()),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: x(),
+                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, x())),
             },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token()),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: x(),
+                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, x())),
             },
             Effect::GainLife {
                 who: Selector::You,
@@ -1600,11 +1590,9 @@ pub fn snarl_song() -> CardDefinition {
 /// "Create a 0/0 green and blue Fractal creature token. Put X +1/+1
 /// counters on it. / Surveil 2."
 ///
-/// Mints a Fractal token then adds X (= XFromCost) counters via
-/// `Selector::LastCreatedToken`, then `Effect::Surveil 2`. Surveil is
-/// a first-class engine effect so this resolves end-to-end with no
-/// approximation. At X=0 the token enters as 0/0 and dies to SBA before
-/// surveil resolves, matching printed semantics.
+/// Mints a Fractal entering with X (= XFromCost) counters, then
+/// `Effect::Surveil 2`. At X=0 the token is a 0/0 and dies to the
+/// state-based sweep after the spell finishes resolving.
 pub fn wild_hypothesis() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::{ManaSymbol, g};
@@ -1618,12 +1606,7 @@ pub fn wild_hypothesis() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal_token()),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::XFromCost,
+                definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
             },
             Effect::Surveil {
                 who: PlayerRef::You,

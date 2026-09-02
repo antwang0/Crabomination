@@ -998,14 +998,9 @@ pub fn intrude_on_the_mind() -> CardDefinition {
                     },
                     keywords: vec![Keyword::Flying],
                     ..Default::default()
-                }),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::CardsMilledThisEffectMatching {
+                }.entering_with(CounterType::PlusOnePlusOne, Value::CardsMilledThisEffectMatching {
                     filter: SelectionRequirement::Any,
-                },
+                })),
             },
         ]),
         ..Default::default()

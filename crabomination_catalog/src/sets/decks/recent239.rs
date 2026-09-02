@@ -212,18 +212,13 @@ pub fn outlaw_stitcher() -> CardDefinition {
                             ..Default::default()
                         },
                         ..Default::default()
-                    }),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Times(
+                    }.entering_with(CounterType::PlusOnePlusOne, Value::Times(
                         Box::new(Value::Const(2)),
                         Box::new(Value::NonNeg(Box::new(Value::Diff(
                             Box::new(Value::SpellsCastThisTurn(PlayerRef::You)),
                             Box::new(Value::ONE),
                         )))),
-                    ),
+                    ))),
                 },
             ]),
         }],

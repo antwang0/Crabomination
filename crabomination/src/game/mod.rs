@@ -7994,6 +7994,28 @@ impl GameState {
         tapped: bool,
         events: &mut Vec<crate::game::GameEvent>,
     ) -> CardId {
+        self.mint_token_with_counters(def, controller, tapped, None, events)
+    }
+
+    /// [`Self::mint_token_onto_battlefield`] for "create a token with N
+    /// counters on it": `counters` is `TokenDefinition::enters_with_counters`
+    /// with the creating effect's context, evaluated once the token is on
+    /// the battlefield (so "for each creature you control" counts it, as the
+    /// cast and move paths count theirs) and placed as part of the entry —
+    /// before `PermanentEntered` and the token's own ETB triggers — so a
+    /// 0/0 Fractal is never on the battlefield without them (CR 614.1c).
+    pub(crate) fn mint_token_with_counters(
+        &mut self,
+        def: impl Into<std::sync::Arc<CardDefinition>>,
+        controller: usize,
+        tapped: bool,
+        counters: Option<(
+            crate::card::CounterType,
+            &crate::effect::Value,
+            &crate::game::effects::EffectContext,
+        )>,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) -> CardId {
         let id = self.next_id();
         // CR 800.4b — no token is created under a departed player's control.
         if !self.players.get(controller).is_some_and(|p| p.is_alive()) {
@@ -8069,9 +8091,15 @@ impl GameState {
         self.apply_printed_etb_counters(id, events);
         // CR 122.1 — Metallic Mimic / Cathars' Crusade / Arlinn-style typed
         // ETB counters apply to minted tokens too (they enter as normal
-        // creatures). Skipped while counters are locked (Solemnity).
+        // creatures), and so do the creating effect's own "with N counters".
+        // Skipped while counters are locked (Solemnity).
         if !self.counters_locked() {
-            for (kind, n) in self.chosen_type_etb_counter_specs(id, ctrl) {
+            let minted = counters.and_then(|(kind, value, ctx)| {
+                let n = self.evaluate_value(value, ctx).max(0) as u32;
+                (n > 0).then_some((kind, n))
+            });
+            let specs = self.chosen_type_etb_counter_specs(id, ctrl);
+            for (kind, n) in minted.into_iter().chain(specs) {
                 let scaled = if kind == crate::card::CounterType::PlusOnePlusOne {
                     self.scaled_counter_count(ctrl, kind, n, true)
                 } else {

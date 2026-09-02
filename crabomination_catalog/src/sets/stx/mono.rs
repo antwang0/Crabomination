@@ -230,12 +230,7 @@ pub fn body_of_research() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::LibrarySizeOf(PlayerRef::You),
+                definition: Box::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::LibrarySizeOf(PlayerRef::You))),
             },
         ]),
         ..Default::default()

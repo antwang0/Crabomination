@@ -599,14 +599,9 @@ pub fn fractal_studies() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: Box::new(fractal),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                definition: Box::new(fractal.entering_with(CounterType::PlusOnePlusOne, Value::CountOf(Box::new(Selector::EachPermanent(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ))),
+                ))))),
             },
         ]),
         ..Default::default()

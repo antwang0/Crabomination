@@ -9,7 +9,7 @@ use crate::card::{
     StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{
-    etb, investigate, on_attack, on_dies, raid_etb, target_any, target_filtered,
+    etb, investigate, on_attack, on_dies, raid_value, target_any, target_filtered,
 };
 use crate::effect::{LookPick, Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::TurnStep;
@@ -2325,18 +2325,12 @@ pub fn cruel_administrator() -> CardDefinition {
         },
         power: 5,
         toughness: 4,
-        triggered_abilities: vec![
-            raid_etb(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
-            }),
-            on_attack(Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::ONE,
-                definition: Box::new(firebending_soldier_token()),
-            }),
-        ],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, raid_value(1))),
+        triggered_abilities: vec![on_attack(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: Box::new(firebending_soldier_token()),
+        })],
         ..Default::default()
     }
 }

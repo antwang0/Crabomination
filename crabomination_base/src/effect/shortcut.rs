@@ -339,6 +339,25 @@ pub fn revolt_etb(body: Effect) -> TriggeredAbility {
         else_: Box::new(Effect::Noop),
     })
 }
+/// "Revolt — this enters with `n` counters if ..." as an `enters_with_counters`
+/// value (CR 614.12 — a replacement, not a trigger): `n` while revolt is
+/// active, else 0.
+pub fn revolt_value(n: i32) -> Value {
+    Value::IfPred {
+        pred: Box::new(Predicate::RevoltActive { who: PlayerRef::You }),
+        then: Box::new(Value::Const(n)),
+        else_: Box::new(Value::Const(0)),
+    }
+}
+/// "Raid — this enters with `n` counters if you attacked this turn", the
+/// `enters_with_counters` value.
+pub fn raid_value(n: i32) -> Value {
+    Value::IfPred {
+        pred: Box::new(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+        then: Box::new(Value::Const(n)),
+        else_: Box::new(Value::Const(0)),
+    }
+}
 /// CR 702.171 — "Whenever this Mount attacks while saddled, [effect]."
 /// The `SourceSaddled` filter gates the trigger on the Mount's saddled
 /// state (set by a Saddle activation earlier in the turn).
@@ -1190,11 +1209,11 @@ pub fn create_token_with_keyword(
 }
 
 /// Convenience: "Create a [token] with N [counter] counters on it."
-/// Mints `count` copies of `token`, then drops `counter_n` copies of
-/// `counter` on the last-created token batch. Used by Quandrix
-/// Summoner (mint Fractal + add +1/+1 counter), Fractal Harvest
-/// (mint Fractal + 3 +1/+1 counters), and any "create a Fractal /
-/// Phyrexian / generic token with N counters" pattern.
+/// Mints `count` copies of `token`, each entering with `counter_n`
+/// `counter` counters (`TokenDefinition::enters_with_counters`, so the
+/// counters are part of the entry and a 0/0 body never sees a state-based
+/// sweep bare). Used by Quandrix Summoner, Fractal Harvest, and any
+/// "create a Fractal / Phyrexian / generic token with N counters" pattern.
 pub fn create_token_with_counter(
     who: PlayerRef,
     count: i32,
@@ -1202,18 +1221,11 @@ pub fn create_token_with_counter(
     counter: crate::card::CounterType,
     counter_n: i32,
 ) -> Effect {
-    Effect::Seq(vec![
-        Effect::CreateToken {
-            who,
-            count: Value::Const(count),
-            definition: Box::new(token),
-        },
-        Effect::AddCounter {
-            what: Selector::LastCreatedToken,
-            kind: counter,
-            amount: Value::Const(counter_n),
-        },
-    ])
+    Effect::CreateToken {
+        who,
+        count: Value::Const(count),
+        definition: Box::new(token.entering_with(counter, Value::Const(counter_n))),
+    }
 }
 
 /// Convenience: Magecraft trigger pumping any chosen target.

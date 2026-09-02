@@ -1145,26 +1145,16 @@ pub fn jadzi_steward_of_fate() -> CardDefinition {
             ],
         },
         CardType::Sorcery,
-        Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::XFromCost,
-                definition: Box::new(crabomination_base::tokens::fractal_token()),
-            },
-            // Counters land on the freshly-minted batch in one shot —
-            // a per-Fractal ForEach lets the SBA sweep the still-0/0
-            // stragglers between iterations (only the first token
-            // survived). Same pattern as Snarl Song / Wild Hypothesis.
-            //
-            // Approximation: printed text says *each Fractal you
-            // control*; pre-existing Fractals (rare in practice) miss
-            // the counters.
-            Effect::AddCounter {
-                what: Selector::LastCreatedTokens,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::XFromCost,
-            },
-        ]),
+        // Approximation: printed text says *each Fractal you control*;
+        // pre-existing Fractals (rare in practice) miss the counters.
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: Box::new(
+                crabomination_base::tokens::fractal_token()
+                    .entering_with(CounterType::PlusOnePlusOne, Value::XFromCost),
+            ),
+        },
     );
     let mut front = enters_prepared(vanilla_front(
         "Jadzi, Steward of Fate",

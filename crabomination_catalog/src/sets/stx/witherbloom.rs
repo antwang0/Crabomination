@@ -3389,12 +3389,7 @@ pub fn witherbloom_pestrider() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(stx_pest_token()),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
+                    definition: Box::new(stx_pest_token().entering_with(CounterType::PlusOnePlusOne, Value::Const(1))),
                 },
             ]),
         }],

@@ -58,9 +58,9 @@ fn young_wolf_returns_with_a_counter_via_undying() {
 #[test]
 fn servant_of_the_scale_moves_counters_on_death() {
     let mut g = two_player_game();
-    let servant = g.add_card_to_battlefield(0, catalog::servant_of_the_scale());
-    g.fire_self_etb_triggers(servant, 0);
-    drain_stack(&mut g); // ETB counter
+    // CR 614.12 — a printed 0/0 that "enters with a +1/+1 counter" is never
+    // a 0/0 on the battlefield: the counter is part of the entry.
+    let servant = g.move_card_to_battlefield_for_test(0, catalog::servant_of_the_scale());
     let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let cp = g.computed_permanent(servant).unwrap();
     assert_eq!((cp.power, cp.toughness), (1, 1), "enters with a +1/+1 counter");

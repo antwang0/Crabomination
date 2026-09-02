@@ -10195,11 +10195,10 @@ pub fn lifecraft_cavalry() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(2),
-        })],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            crate::effect::shortcut::revolt_value(2),
+        )),
         ..Default::default()
     }
 }

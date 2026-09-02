@@ -1914,23 +1914,18 @@ pub fn fractal_tender() -> CardDefinition {
             // trigger (fires at each end step, matching the printed
             // "each end step") gated on the new
             // `Predicate::SourceGainedCounterThisTurn`. The trigger
-            // body mints a Fractal via the shared `fractal_token()` and
-            // piles 3 +1/+1 counters via `Selector::LastCreatedToken`.
+            // body mints a Fractal entering with three +1/+1 counters.
             TriggeredAbility {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
                     .with_filter(Predicate::SourceGainedCounterThisTurn),
-                effect: Effect::Seq(vec![
-                    Effect::CreateToken {
-                        who: PlayerRef::You,
-                        count: Value::Const(1),
-                        definition: Box::new(fractal_token()),
-                    },
-                    Effect::AddCounter {
-                        what: Selector::LastCreatedToken,
-                        kind: crate::card::CounterType::PlusOnePlusOne,
-                        amount: Value::Const(3),
-                    },
-                ]),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: Box::new(
+                        fractal_token()
+                            .entering_with(crate::card::CounterType::PlusOnePlusOne, Value::Const(3)),
+                    ),
+                },
             },
         ],
         ..Default::default()
@@ -3037,20 +3032,16 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(4), g()]),
-            effect: Effect::Seq(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: Box::new(fractal_token()),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    // "X is the number of DIFFERENTLY NAMED lands you
-                    // control" — duplicate basics count once.
-                    amount: Value::DistinctNamesControlledMatching(SelectionRequirement::Land),
-                },
-            ]),
+            // "X is the number of DIFFERENTLY NAMED lands you control" —
+            // duplicate basics count once.
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: Box::new(fractal_token().entering_with(
+                    CounterType::PlusOnePlusOne,
+                    Value::DistinctNamesControlledMatching(SelectionRequirement::Land),
+                )),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -4050,12 +4041,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: Box::new(fractal_token()),
-                },
-                Effect::AddCounter {
-                    what: Selector::LastCreatedToken,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::XFromCost,
+                    definition: Box::new(fractal_token().entering_with(CounterType::PlusOnePlusOne, Value::XFromCost)),
                 },
             ]),
             once_per_turn: false,

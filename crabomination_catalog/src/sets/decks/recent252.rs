@@ -514,12 +514,7 @@ pub fn slime_against_humanity() -> CardDefinition {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                definition: Box::new(ooze),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Sum(vec![Value::Const(2), Value::OozesInExileAndGraveyard]),
+                definition: Box::new(ooze.entering_with(CounterType::PlusOnePlusOne, Value::Sum(vec![Value::Const(2), Value::OozesInExileAndGraveyard]))),
             },
         ]),
         ..Default::default()

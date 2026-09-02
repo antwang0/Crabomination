@@ -6,7 +6,7 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EnchantmentSubtype,
     Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{
     Duration, Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector,
     StaticEffect, TriggeredAbility, ZoneDest,
@@ -28,11 +28,10 @@ pub fn petrified_wood_kin() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::CantBeCountered, Keyword::ProtectionFromInstants],
-        triggered_abilities: vec![etb(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::DamageTakenThisTurn(PlayerRef::EachOpponent),
-        })],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::DamageTakenThisTurn(PlayerRef::EachOpponent),
+        )),
         ..Default::default()
     }
 }

@@ -1327,11 +1327,8 @@ fn harvesttide_sentry_evasion_under_coven() {
 fn grizzly_ghoul_scales_with_deaths() {
     let mut g = two_player_game();
     g.players[0].creatures_died_this_turn = 2;
-    let ghoul = g.add_card_to_battlefield(0, catalog::grizzly_ghoul());
-    g.resolve_effect(
-        &catalog::grizzly_ghoul().triggered_abilities[0].effect,
-        &EffectContext::for_ability(ghoul, 0, None),
-    ).unwrap();
+    // CR 614.12 — the counters are part of the entry, not an ETB trigger.
+    let ghoul = g.move_card_to_battlefield_for_test(0, catalog::grizzly_ghoul());
     assert_eq!(g.battlefield_find(ghoul).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
