@@ -147,9 +147,12 @@ if [ "$ladder" = 1 ]; then
       cells=$((cells + 1))
     done
   done
+  # A capped or stuck game is a defect cell in its own right, counted HERE
+  # so the ladder line carries it — a shared counter bumped after the echo
+  # read as "failures=1" on the actor and pilots lines with every cell ok.
+  [ $((cap + stuck)) -eq 0 ] || fail=$((fail + 1))
   echo "GRID DONE cells=$cells games=$games failures=$fail"
   echo "  undecided      cap $cap / stuck $stuck / draw $draw   (only cap+stuck are defects)"
-  [ $((cap + stuck)) -eq 0 ] || fail=$((fail + 1))
 fi
 
 if [ "$actor" = 1 ]; then
@@ -159,6 +162,7 @@ if [ "$actor" = 1 ]; then
   fi
   check_asserts "$ACTOR_BIN"
   acells=0
+  afail=0
   out_dir=$(mktemp -d)
   trap 'rm -rf "$out_dir"' EXIT
   for seed in $ACTOR_SEEDS; do
@@ -168,18 +172,20 @@ if [ "$actor" = 1 ]; then
     rc=$?
     line=$(echo "$out" | grep -E "^actors: " | tail -1)
     if [ $rc -ne 0 ]; then
-      echo "FAIL actor seed=$seed rc=$rc"; echo "$out" | tail -25; fail=$((fail + 1))
+      echo "FAIL actor seed=$seed rc=$rc"; echo "$out" | tail -25; afail=$((afail + 1))
     else
       echo "ok actor seed=$seed  ${line:-ran}"
     fi
     acells=$((acells + 1))
   done
-  echo "ACTOR DONE cells=$acells failures=$fail"
+  echo "ACTOR DONE cells=$acells failures=$afail"
+  fail=$((fail + afail))
 fi
 
 if [ "$pilots" = 1 ]; then
   check_asserts "$BIN"
   pcells=0
+  pfail=0
   for pilot in $PILOTS; do
     out=$(RUST_MIN_STACK=33554432 timeout 1800 "$BIN" \
       --a "$pilot" --b gang --games "$PILOT_GAMES" --threads 3 \
@@ -187,13 +193,14 @@ if [ "$pilots" = 1 ]; then
     rc=$?
     line=$(echo "$out" | grep -E "^[0-9]+ decided" | tail -1)
     if [ $rc -ne 0 ] || [ -z "$line" ]; then
-      echo "FAIL pilot=$pilot rc=$rc"; echo "$out" | tail -20; fail=$((fail + 1))
+      echo "FAIL pilot=$pilot rc=$rc"; echo "$out" | tail -20; pfail=$((pfail + 1))
     else
       echo "ok pilot=$pilot  $line"
     fi
     pcells=$((pcells + 1))
   done
-  echo "PILOTS DONE cells=$pcells failures=$fail"
+  echo "PILOTS DONE cells=$pcells failures=$pfail"
+  fail=$((fail + pfail))
 fi
 
 [ "$fail" -eq 0 ]

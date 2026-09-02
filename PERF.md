@@ -2552,7 +2552,15 @@ stalls  release-fast opts (the profiling-fast binary), fresh seeds:
         `--games 400 --threads 3` on `all` seed 101 (6,800 games), `sealed`
         seed 101 (4,800), `cube` seed 102 (3,200): **0 undecided**. Six-game
         three-pool stdout identical to the base's at every commit but the
-        wall-clock line. No `debug-assertions`+`overflow` leg this run.
+        wall-clock line.
+grid    `scripts/robustness_grid.sh --wide` at `094b361a` (`debug-assertions`
+        + `overflow`): ladder **52 cells / 301,600 games, 0 panic / 0
+        assertion / 0 overflow**, cap 4 / stuck 0 / draw 10 — the four caps
+        are seeds 53 and 73 on `all`, twin `i32::MAX` life totals at turn
+        2,159 (`CRAB_CAP_DIAG=1`), the Beacon board, unchanged; actor leg
+        2 x 30,000 games clean at 166.1 / 164.7 games/s; pilots 45 / 45
+        clean. ⚠ The script's `failures=1` on the actor and pilots lines is
+        the ladder's cap count carried in a shared counter, not a new cell.
 ```
 
 ### The CoW-check pass — closing state at `(-179)`

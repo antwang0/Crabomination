@@ -29,6 +29,8 @@ sixty-seventh pass, so don't re-take that.
    `(-182)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
    rules for a perf pass"**. Cold here: audit build 11 min, `profiling-fast` 23 min (6 min warm),
    test build 12 min, suite 4 min; `nextest` needs installing (CLAUDE.md has the line).
+   ⚠ **A worktree build sharing `CARGO_TARGET_DIR` reuses the main tree's engine artifact** — an
+   A/B read 0.000 % off two identical binaries; `cargo clean -p` the engine between sides.
 2. **Gates at `0c3f4a78`:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
    `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok. **The wide
    `debug-assertions` + `overflow` grid ran** (ladder 301,600 + actor 60,000 games + 45 pilots):
