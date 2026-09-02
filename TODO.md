@@ -24,86 +24,54 @@ sixty-seventh pass, so don't re-take that.
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
-   origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force; code before
-   tracker prose; ⚠ **claim a candidate number at PUSH time** — three numbers were claimed twice
-   this run. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules
-   for a perf pass"**.
-2. **Gates at this run's tip:** suite **19,201 / 0 / 5**, traces unmoved, clippy `--all-targets`
-   clean, `cargo check --profile release-fast` clean, `--bench` **195,806 / 27.49 / 611.9 / 0
-   stalls, byte-identical to the invariant**, determinism ok. Sweeps: 5 seeds / 68,000 games
-   `--decks all` on **both** `(-169)` binaries, stdout byte-identical seed for seed; and
-   `robustness_grid.sh --wide` at the tip — **52 cells / 301,600 games, 0 failures**, cap 4 /
-   stuck 0 / draw 26 — plus the 45-cell `--pilots` leg (44 clean; `abilarms` is the one cell that
-   needs `PILOT_GAMES` at 12, see the script header) and a 60,000-game / 5.8 M-row actor leg re-run at the closing tip (0 panic, 0 stalls). ⚠ **Leave seed
-   43 out of a timed loop** — the nine-minute Scute Swarm game that *decides*, so `0 undecided`
-   never sees it. Sweeps + closed leads: **ENGINE_BACKLOG**.
-3. **The run took -3.20 % `fixed` / -2.73 % `cube` / -2.94 % `sealed` over its first four
-   legs**, confirmed at **+2.44 % median games/s** on a 16-pair `bench_ab.py` (mimalloc both
-   sides), and `(-171)` added `fixed` -0.875 % / `cube` -0.941 % / `sealed` -0.625 % on top.
-   `(-166)` the `ComputedPermanent` recycle list, `(-168)` the effect-list one, `(-167)` its
-   depth, `(-169)` the `getenv`, `(-171)` the find memo. Durable rules: PERF's **"The
-   recycle-list rules"**.
-4. **⚠⚠ ASK WHO CALLS THE LIBC ROWS — that one command was 1.7 % of `fixed`.** `getenv 0.62 %`
-   and `__strncmp_avx2 0.80 %` had sat in the self table for eleven passes while every pass read
-   it top-down for *engine* names. `cg_edges.py --callers getenv` named `adjust_life` asking
-   `env::var_os` **per life adjustment**. No allocation census, growth census or line profile
-   looks at libc. The class is ratcheted by
-   `structural_audit::no_bare_env_lookup_on_a_simulator_path`.
-5. **⚠ `cargo check`, `clippy` AND THE SUITE ALL RUN WITH `debug-assertions` ON**, so none of
-   them sees code that only fails with them off (a `debug_assert!`'s arguments are dead in
-   release, not absent). **`cargo check --profile release-fast -p crabomination --bin bot_ladder`
-   before every push** — CLAUDE.md has the worked example.
-6. **NEXT PERF LEADS. The profile is FLAT** — no engine row above 0.65 %. `(-174)` is the biggest
-   single one and it is **mapped, not taken**: the walker re-finds 31,116 non-battlefield cards a
-   six-game `fixed` run through `requirement_card_off_battlefield` (0.37 %), and the obvious fix
-   — a three-state hint — was built, is behaviour-identical, and reads **+0.46 %** because
-   widening the hint from 8 to 16 bytes cost **5.37 M Ir inside `dispatch_triggers_for_events`**,
-   which inlines the walker. Any device here must leave that signature alone. Then `(-170)`: the
-   CoW unshare (`Arc::make_mut` 387,452 calls at 29 Ir, **85 % of them the check**; ⚠ **an inline
-   fast path costs TWO `Arc::get_mut`s and each is a `lock cmpxchg` — Ir would show a win the
-   hardware would not**), `SpecFromIterNested` (2.65 %, ⚠ `(-156)`: price an adapter rewrite at
-   ~10 % of that), `LocalKey::with` (99,796 calls, ~0.28 % TLS machinery, batchable into
-   `LayerFreezeState`). **The build is still the lever**: PGO -23.8 to -27.6 %.
-6a. **⚠⚠ FOUR BUILDS WENT TO CHANGES WHOSE INPUTS LOOKED RIGHT. TAKE THE CENSUS FIRST.**
-   `(-172)` a graveyard zone lane (**+70 Ir** — the predicate answers `true` almost always),
-   `(-173)` a battlefield membership bitmask twice (**+0.05 to +0.37 %** — five reads per
-   invalidation, and the ids looked up come off the *same monotonic counter* as the board's so
-   `id & 63` collides far more than a random model says), `(-174)` the hint (**+0.46 %**, all of
-   it codegen in a function the diff does not touch). The counting build that settled all three
-   was **one** build and would have saved three. ⚠ Two shapes to remember: `#[inline(never)]` on
-   the miss path of a function inlined at hundreds of sites is worth ~0.10 points **as a cost**,
-   and **a parameter added to a function inlined into a 6 %-of-the-program caller is that
-   caller's codegen, re-rolled** — `(-129)`'s rule for branches, one level up.
-7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-**clause** ratchets
-   (seventeen, prose, three false-positive classes); the printed-**join** ratchets (eight,
-   structured fields, 297 defects in one pass — "no bespoke spelling" is what makes a join a
-   proof); `audit_oracle_verbs.py`, 122 → 106 rows, next by size `counters` 13 / `gain_life` 12.
-   ⚠ **It matches primitive NAMES, so a card whose whole body is one dedicated variant reads as a
-   miss**, and three rows turned out to be *a card that does not exist*. Still unjoined:
-   `color_identity` (⚠ `format::color_identity` never reads rules-text mana symbols — CR 903.4c,
-   so every dual land will look wrong and the gap is real), activated-ability *count* on
-   nonlands, token definitions. ⚠ **A python auditor's zero is suspect — check its population.**
-8. **⚠ RUN `scripts/robustness_grid.sh --wide` — IT FOUND FIVE SHIPPED BUGS AND THE COMMITTED
-   DEFAULT GRID IS GREEN ON ALL FIVE** (measured: a pre-fix `debug-assertions` binary runs the
-   30-cell default with 0 failures). A `debug_assert!` is compiled out, an overflow *wraps*, and
-   an unbounded stack only shows as a capped game somebody looks at. Found: a graveyard-only
-   ability functioning on the battlefield (accepted without its mana); **two silent wraps on the
-   Beacon board** (the race check reads "we lose next turn", the material term scores unbounded
-   life as *losing*); a counter cost that left its dead source in play (Devoted Druid to
-   toughness -6); and **the CR 732.3 loop guard hashing a fingerprint that counts the stack it
-   watches grow**. ⚠ **Two rules fell out: a closed *stall* lead is not a closed board, and a
-   capped game is not a rate** — `CRAB_CAP_DIAG` named ~50,000 copies of one ability on one
-   stack in a line. The new `--pilots` leg (45 policies, the grid had run one) found the last
-   two: `abilarms` on `cube` went **846,610 ms → 304 ms**. ⚠ **One thing is left open and it is now
-   SIZED, with its first blocker solved**: the general CR 704.3 sweep goes *after*
-   `perform_action_inner`'s own `dispatch_triggers_for_events` (that one line fixes the
-   death-batch / `died_card_snapshots` interleave), and what remains is **19 tests of 19,201,
-   ten of them one root cause — a 0/0 window at entry**, because the engine mints a token and
-   *then* adds its counters where CR 614.12 makes them part of the entry. Fixing entry closes
-   the ten on its own merits. All of it: **ENGINE_BACKLOG's first section**.
-   The four syntax audits stay green and **none of them could reach any of the five**.
-   ⚠ **Peak RSS moved 19.4 → 20.3 MiB and it is the two pools, not a leak**: 32
-   `ComputedPermanent`s and 4 effect lists **per thread**, both bounded by a `const`.
+   origin/claude/modern_decks`. **Two sessions run at once**: rebase, never force (this run
+   rebased once, onto tracker commits — both conflicts were adjacent insertions, keep both);
+   code before tracker prose; ⚠ **claim a candidate number at PUSH time** — `(-175)`..`(-179)`
+   are this run's. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
+   rules for a perf pass"**.
+2. **Gates at `(-179)`:** suite **19,202 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
+   `cargo check --profile release-fast` clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
+   byte-identical to the invariant** at every leg, determinism ok, Miri on `cow::` 2 / 0.
+   Sweeps: `debug-assertions`+`overflow` on fresh seeds 101-108 `all` / 101-104 `sealed`
+   (73,600 games, clean, cap 2 = the Beacon board); the concurrent session's
+   `robustness_grid.sh --wide` **52 cells / 301,600 games, 0 failures** and its `--pilots` leg
+   (44 clean; `abilarms` needs `PILOT_GAMES` 12) and 60,000-game actor leg. ⚠ **Leave seed 43
+   out of a timed loop.** Sweeps + closed leads: **ENGINE_BACKLOG**.
+3. **This run: -2.09 % `fixed` / -1.95 % `cube` / -2.09 % `sealed` over five legs, +2.89 %
+   median games/s on 24 `bench_ab.py` pairs.** `(-175)` a freeze scope with nothing to park
+   skips the thread-local; `(-176)`/`(-179)` the loop watchdogs' digest (a NEW 1.6-2.0 % row —
+   the CR 732.3 fix made `fingerprint` run at every activation; ⚠ **a bug fix that widens a
+   guard is a perf change, read the top of the dump after one**); `(-177)`/`(-178)` CoW
+   uniqueness is `strong == 1` inline, no `Weak` can exist (`(-145)`'s deferred device, taken
+   the small way: ten lines over std's `Arc`, Miri-checked). PERF's Baseline has the table.
+4. **⚠⚠ THREE CENSUSES THAT COST NOTHING AND EACH CORRECTED AN ENTRY THIS RUN:**
+   `cg_edges.py --callers '<std row>'` (`(-170)(b)` assigned `LocalKey::with` to the alloc
+   sites; 89,500 of 99,796 were scope EXITS parking nothing), `--demangle=no` + `--callers` per
+   hash (found the third CoW family `Player(Arc<PlayerData>)`, 155 k calls, which a grep for
+   `Arc::make_mut` missed because the site spells `std::sync::Arc::make_mut`), and the
+   24-pair clock (~330 k `lock cmpxchg` removed read FLAT — price an atomic by Ir, not cycles).
+5. **⚠ `cargo check`, `clippy` AND THE SUITE ALL RUN WITH `debug-assertions` ON.** `cargo check
+   --profile release-fast -p crabomination --bin bot_ladder` before every push — CLAUDE.md.
+6. **NEXT PERF LEADS — the profile is FLAT again; every row above 0.65 % is mapped.** Sized and
+   left this run (PERF candidates, top): the graveyard-sweep hint (~0.17 %), a `cast_lock_scan`
+   lane (~0.1 %), the SBA `collect` (~0.15 %), `fingerprint`'s walk (7.5 M, exact floor). Still
+   open and expensive: `(-174)` (leave the walker's signature alone), the requirement walker's
+   recursive instance (13.6x cube/fixed ratio, needs a contexts dump), `SpecFromIterNested`
+   (price at ~10 %). ⚠ **Two shapes to remember: a thread-local pool is shared by NESTED scopes
+   on the thread — checking it out to one owner starves the bot's dry-run clones; and a
+   `#[inline]` hint on a two-path fn is declined — force the check, split the cold path.**
+   **The build is still the lever**: PGO -23.8 to -27.6 %.
+7. **Card lanes, all in CARD_BACKLOG's first sections:** the printed-clause ratchets, the
+   printed-join ratchets, `audit_oracle_verbs.py` 106 rows (next `counters` 13 / `gain_life`
+   12; ⚠ it matches primitive NAMES). Still unjoined: `color_identity` (⚠ `format::color_identity`
+   never reads rules-text mana symbols — CR 903.4c), activated-ability count on nonlands, token
+   definitions. ⚠ **A python auditor's zero is suspect — check its population.**
+8. **Rules, open and SIZED (concurrent session):** the general CR 704.3 sweep goes *after*
+   `perform_action_inner`'s own `dispatch_triggers_for_events`; what remains is **19 tests of
+   19,202, ten of them one root cause — a 0/0 window at entry** (the engine mints a token and
+   *then* adds its counters where CR 614.12 makes them part of the entry). Write-up and the
+   five `--wide` bugs: **ENGINE_BACKLOG's first section**. ⚠ **Peak RSS 21 MiB is the two
+   recycle pools per thread, both bounded by a `const`, not a leak.**
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

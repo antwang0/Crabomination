@@ -2477,6 +2477,58 @@ a box whose state moves.
 
 ## Baseline
 
+### The CoW-check pass — closing state at `(-179)`
+
+Five legs, one base: `01ac62e3` (the branch tip this run started from, two
+bug-fix commits past `4c943db4` — `fingerprint` at every activation is where
+that +2.1 % went, and `(-176)`/`(-179)` took 1.1 points of it back).
+
+```text
+  pool     base 01ac62e3     tip (-179)       cumulative
+  fixed      875,560,645     857,301,130   **-2.0855 %**
+  cube     2,409,864,538   2,362,843,584   **-1.9512 %**
+  sealed   2,419,668,097   2,368,985,401   **-2.0946 %**
+
+  leg      fixed      cube     sealed   what
+  (-175)  -0.422 %  -0.300 %  -0.389 %  a freeze scope that read nothing parked nothing
+  (-176)  -0.563 %  -0.686 %  -0.675 %  the loop watchdogs' digest, two fields a word
+  (-177)  -0.554 %  -0.498 %  -0.517 %  CoW uniqueness is `strong == 1` inline (CowBox, CardData)
+  (-178)  -0.357 %  -0.248 %  -0.319 %  the same for Player(Arc<PlayerData>)
+  (-179)  -0.206 %  -0.234 %  -0.213 %  one digest word per permanent
+```
+
+Wall clock, 24 pairs of `bench_ab.py`, base binary against the tip, nothing
+else running: **+2.89 % median / +2.18 % mean games/s, sd 3.34** — the
+instrument resolves ~2 % and this is it. (`(-177)` alone read +0.14 % on 24
+pairs for -0.55 % Ir: ~330 k uncontended `lock cmpxchg` a run cost the clock
+nothing measurable, see its Log entry.)
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,202 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved at every leg
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release `cargo check --profile release-fast -p crabomination --bin bot_ladder`
+        clean at every leg
+miri    nightly, -Zmiri-strict-provenance, crabomination_base cow:: 2 / 0
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant at every leg; determinism ok; peak_rss 21.0 MiB, bin
+        219,094,440 B (`--no-default-features`, i.e. the system allocator)
+stalls  `debug-assertions` + `overflow` binary at `82a3953e`, fresh seeds:
+        8 seeds / 54,400 games `--decks all` + 4 seeds / 19,200 `--decks
+        sealed` — 0 panic / 0 assertion / 0 overflow, cap 2 (seed 108, the
+        Beacon board) / stuck 0 / draw 4. Three-pool six-game stdout
+        identical to the base's at every leg, wall-clock line aside.
+```
+
+**Refuted this run, one build each — do not re-derive:** `(-170)(b)` as
+filed, the free list checked out into the scope (+0.20 to +0.29 % on every
+pool: a thread-local pool is shared by the *nested* scopes on the thread,
+and moving the `Vec` moves its allocation); and `(-177)` as a plain
+`#[inline]` (-0.235 %: the call was the cost, not the atomic — force the
+check inline and split the copy path cold).
+
 ### The run's closing state, at `4c943db4` + trackers
 
 ```text
@@ -21440,6 +21492,30 @@ activation loops were closed (~50,000 copies of one ability on one stack, each).
 that a pilot's throughput is not covered by anything in this file**, and the
 instrument that found it is `scripts/robustness_grid.sh --pilots`. Write-up:
 **ENGINE_BACKLOG's first section**.
+
+**Sized this run and left, so nobody re-prices them:**
+* **A per-card hint for the graveyard sweep** (`(-174)`'s remaining device,
+  signature-free: `first_legal_graveyard_card` stores `(id, seat, index)` in a
+  `Relaxed` atomic on the state and `requirement_card_off_battlefield` reads
+  it after the two LKI maps) saves only the *graveyard* leg — the exile leg
+  runs for cards that are not in a graveyard at all — so its ceiling is
+  ~1.5 M Ir, **~0.17 % of `fixed`**. Below the bar for a build; take it only
+  bundled with something else in the same function.
+* **`cast_lock_scan` in front of every cast/activate action** walks every
+  permanent's statics, but it is ~4 k calls a six-game `fixed` run (casts,
+  not activations — those come through `sim_step`), so a `zone::Battlefield`
+  lane on "any cast-lock static present" is worth ~1 M Ir. Not a lead.
+* **`check_state_based_actions_into` is 10,606 `collect()`s a run** through
+  the slow `from_iter` path (15.6 M inclusive, but the closures are most of
+  it). One of its ten `collect` sites runs once per sweep; find it with
+  `--separate-callers=2` before pricing a scratch buffer, and expect
+  ~0.15 %.
+* **`fingerprint`** is 7.5 M on `fixed` after `(-179)`: one `Arc` deref per
+  permanent (`damage`/`counters` live in `CardData`) and the call count,
+  which the `(-176)` Log says an exact guard cannot reduce.
+
+**(-179) TAKEN — `cube` -0.234 % / `sealed` -0.213 % / `fixed` -0.206 %:**
+`(-176)`'s residual, one word per permanent with a tagged extra. See the Log.
 
 **(-176) TAKEN — `cube` -0.686 % / `sealed` -0.675 % / `fixed` -0.563 %,
 and the row it halved was NEW: `fingerprint` runs at every activation since

@@ -215,7 +215,7 @@ mod tests {
         v.push(2);
         assert_eq!(*a, vec![1, 2]);
         let c = a.clone();
-        *a = vec![9].into_iter().collect::<Vec<_>>().into();
+        *a = vec![9];
         assert_eq!(*c, vec![1, 2], "make_mut's copy path still copies");
     }
 }
