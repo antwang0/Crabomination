@@ -5139,8 +5139,14 @@ Open follow-ups:
   sticker-sheet setup in CR 103. Only worth doing alongside Unfinity cards. ⏳
 - **`GameState::check_state_based_actions` isn't reached by a bare
   `PassPriority` with an empty stack.** Tests that arm a CR 603.8 state
-  trigger have to call it by hand (`classic_sets/wth`'s `settle`). Worth
-  confirming whether that matches CR 704.3 or is a fixture-only gap. ⏳
+  trigger have to call it by hand (`classic_sets/wth`'s `settle`). Sized
+  at the CR 704.3 pass: an empty-stack pass advances the step and the new
+  step gives priority without a sweep, which CR 704.3 does ask for — but
+  every board mutation reaches a sweep already (resolution, combat, cleanup,
+  and now every cost payment), so only a state trigger whose condition is
+  made true *by the step transition itself* could arm and wait. A sweep per
+  step would cost ~0.7 % of a game (~8 steps x ~4 k Ir x 27 turns) for no
+  known board. Fixture-only until one is found. ⏳
 
 ## Dropped "may" clauses — `scripts/audit_dropped_may.py`
 

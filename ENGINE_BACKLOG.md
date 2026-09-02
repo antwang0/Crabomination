@@ -192,7 +192,12 @@ runs a full `resolve_effect` (which can sweep) before the entry-counter
 block in both the cast path (`stack.rs`) and the move path
 (`movement.rs`), deliberately — Mimeoplasm's count reads what the
 as-enters effect did — so a 0/0 with an as-enters effect *whose body
-sweeps* would die before its counters; no shipped card has that pair.
+sweeps* would die before its counters. Two shipped cards carry the pair:
+Riptide Replicator (an artifact, nothing to die) and Mimeoplasm, whose
+as-enters body is the dedicated `AsEntersExileFromYourGraveyard` (no
+sweep inside it; `mimeoplasm_exiles_for_counters_then_copies` pins the
+order). A card that pairs a 0/0 body with a *generic* as-enters effect
+would be the first to hit it.
 
 **(5) The CR 732.3 loop guard hashed a fingerprint that counts the stack.** An
 announcement is exactly a `stack.len() + 1`, so the watch never matched its own

@@ -43,8 +43,9 @@ sixty-seventh pass, so don't re-take that.
    build is still the lever**: PGO -23.8 to -27.6 %. PERF candidates has the sized-and-left list.
 5. **Open, sized (this family):** `apply_as_enters_effect` runs a full `resolve_effect` before the
    entry-counter block in both entry paths (deliberate: Mimeoplasm) — a 0/0 whose as-enters
-   body sweeps would die; no shipped card has the pair. CARD_BACKLOG's "bare `PassPriority` with
-   an empty stack never reaches the sweep" note is the same rule from the other side; unpriced.
+   body *sweeps* would die; the two shipped pairs don't (ENGINE_BACKLOG). CARD_BACKLOG's "bare
+   `PassPriority` with an empty stack never reaches the sweep" note is now sized there: ~0.7 %
+   of a game for a sweep per step, with no known board that needs it — leave it.
 6. **Card lanes, all in CARD_BACKLOG's first sections** (printed-clause ratchets,
    `audit_oracle_verbs.py`). ⚠ A python auditor's zero is suspect — check its population.
 
