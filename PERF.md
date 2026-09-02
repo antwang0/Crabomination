@@ -21170,6 +21170,15 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+⚠ **The largest throughput result of the hundred-and-nineteenth pass is not in
+this file's Log, because it is a bug fix.** `abilarms` — a shipped gate pilot —
+took **846,610 ms → 304 ms** on `--decks cube --games 4` once two unbounded
+activation loops were closed (~50,000 copies of one ability on one stack, each).
+`--bench` is byte-identical either side, so no row here moves; **the point is
+that a pilot's throughput is not covered by anything in this file**, and the
+instrument that found it is `scripts/robustness_grid.sh --pilots`. Write-up:
+**ENGINE_BACKLOG's first section**.
+
 **(-174) STILL OPEN, AND THE ENTRY IN THE LOG IS THE MAP: the prize is
 ~2.85 M Ir and the thing that killed the first attempt was the SIGNATURE, not
 the device.** The census is the starting point — 106,488 hint hits / 7,558

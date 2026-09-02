@@ -33,7 +33,8 @@ sixty-seventh pass, so don't re-take that.
    stalls, byte-identical to the invariant**, determinism ok. Sweeps: 5 seeds / 68,000 games
    `--decks all` on **both** `(-169)` binaries, stdout byte-identical seed for seed; and
    `robustness_grid.sh --wide` at the tip — **52 cells / 301,600 games, 0 failures**, cap 4 /
-   stuck 0 / draw 26, plus the 45-cell `--pilots` leg and a 60,000-game actor leg. ⚠ **Leave seed
+   stuck 0 / draw 26 — plus the 45-cell `--pilots` leg (44 clean; `abilarms` is the one cell that
+   needs `PILOT_GAMES` at 12, see the script header) and a 60,000-game / 5.8 M-row actor leg. ⚠ **Leave seed
    43 out of a timed loop** — the nine-minute Scute Swarm game that *decides*, so `0 undecided`
    never sees it. Sweeps + closed leads: **ENGINE_BACKLOG**.
 3. **The run took -3.20 % `fixed` / -2.73 % `cube` / -2.94 % `sealed` over its first four
