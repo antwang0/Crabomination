@@ -11205,6 +11205,79 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-175)` TAKEN — a freeze scope that read nothing paid a thread-local access to park nothing: `fixed` -0.422 % / `sealed` -0.389 % / `cube` -0.300 %
+
+```text
+  pool    base 01ac62e3      (-175)          delta
+  fixed     875,560,645     871,864,149   **-0.4222 %**
+  cube    2,409,864,538   2,402,642,371   **-0.2997 %**
+  sealed  2,419,668,097   2,410,268,144   **-0.3885 %**
+```
+
+One guard in `LayerFreezeState::end_of_scope`: `memo.is_none()` returns before
+`fx_pool::park` / `cp_pool::recycle`. Behaviour-preserving — the three pools'
+stdout is identical to the base's apart from the wall-clock line.
+
+**The census that found it corrects `(-170)(b)`'s attribution, and that
+correction is the transferable half.** `(-170)(b)` read `LocalKey::with` as
+99,796 calls / 4.92 M Ir on `fixed` and assigned 69,822 of them to
+`cp_pool::alloc` and 23,512 to `fx_pool::alloc_with`, i.e. one access per pooled
+box. `cg_edges.py --callers 'LocalKey<T>::with'` on the base dump says otherwise:
+
+```text
+  callers of LocalKey<T>::with, fixed, base — 99,796 calls
+    89,500   with_frozen_layers::Unfreeze::drop     ← every scope EXIT
+     4,084   freeze_layers_pop                      ← the other exit
+     3,962   resolve_combat
+     1,570   IntoIter::try_fold (rand)
+       660   recommend::build_match_template
+```
+
+The alloc-site accesses are not in the row at all: `cp_pool::alloc` and
+`fx_pool::alloc_with` inline their `with` (their 5.24 M and 2.97 M self rows
+carry it). **The row was the scope exits — 93,584 of them against 23,512
+gathers, so three scopes in four closed with an empty `perms` and a `None`
+memo and still paid `cp_pool::recycle`'s `POOL.with` to drain nothing.**
+After the guard: 49,254 calls, 47,024 of them from the drop — two per scope
+that read (park + recycle), which is the floor without merging the two pools'
+thread-locals (~23 k accesses, priced at ~0.03 %; not taken).
+
+```text
+  the rows that moved, fixed                base          (-175)
+    LocalKey<T>::with                  4,915,628       2,893,948   -2,021,680
+    Unfreeze::drop                     4,631,804       3,609,788   -1,022,016
+    FnOnce::call_once (the closure)      898,646         443,760     -454,886
+    resolve_combat                     6,023,848       5,923,638     -100,210
+    freeze_layers_pop                    270,374         172,698      -97,676
+  cube: LocalKey -4.00 M, Unfreeze::drop -1.77 M, call_once -0.90 M
+```
+
+⚠ **`(-170)(b)` AS FILED — the whole free list checked out into the scope on
+its first read and returned at exit — WAS BUILT FIRST, AND IT IS A REGRESSION
+ON EVERY POOL: `fixed` +0.287 % / `cube` +0.228 % / `sealed` +0.201 %.** It
+did what it promised (`LocalKey::with` 4.92 M -> 0.10 M) and lost anyway, for
+two reasons that are both worth keeping:
+
+* **A thread-local pool is shared by every scope on the thread, and the
+  scopes nest.** The bot's dry-run clones open their own scopes *inside* the
+  planner's, and `Clone for LayerFreeze` is `default()`, so a clone's scope
+  found the list checked out by its parent and allocated fresh:
+  `alloc_cp` made 7,955 `Arc::new`s against fewer than 3,500 misses on the
+  base. Checking a shared pool out to one owner starves the others.
+* **Moving the list moves its allocation.** The parked `Vec` came back into
+  the scope's `spare`, grew by `extend` at exit (23,512 calls, +1.8 M in
+  `extend_desugared`) and was dropped when the pool already held a list:
+  `_int_malloc` +0.89 M, `_int_free` +0.80 M, `malloc` +0.42 M. A pool that
+  lives in a thread-local and is *borrowed* allocates once per thread; one
+  that is passed by value allocates once per scope.
+
+**The rule: before batching an access, ask which caller makes it.** The
+entry's arithmetic (69,822 + 23,512 + "the rest") was built from the pooled
+types' call counts, not from the row's caller table, and the one command that
+reads the table would have named the scope exit and the empty-drain case in
+one line. Same shape as `(-169)` — `cg_edges.py --callers` on a std row before
+pricing a device against it.
+
 ### `(-174)` BUILT, MEASURED AND REVERTED — the hint works, and the SIGNATURE CHANGE costs six times what it saves
 
 ```text
@@ -21235,6 +21308,13 @@ worked the *copies*; what no entry has ranked is the **check** — 11.2 M Ir of
 `make_mut` self on a path where the answer is "unique" 85 % of the time. And
 ⚠ `(-157)`: a `release-fast` reading over-states this family by ~20 % because
 thin LTO deletes a fifth of its calls.
+
+*(b) ✅ CLOSED by `(-175)` — `fixed` -0.422 % / `sealed` -0.389 % / `cube`
+-0.300 %, and NOT by the device below, which was built and is a regression on
+all three pools (+0.20 to +0.29 %). The caller table says 89,500 of the 99,796
+calls are scope EXITS, three in four of them parking nothing; a `memo.is_none()`
+guard in `end_of_scope` is the whole fix. The paragraph is kept for the
+refutation; see the Log.*
 
 *(b) `LocalKey::with` is 99,796 calls / 4.92 M Ir / **0.57 % of `fixed`**, and
 it is `(-166)`/`(-168)`'s own overhead.* One TLS access per pooled box:

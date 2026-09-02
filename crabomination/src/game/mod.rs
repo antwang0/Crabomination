@@ -436,7 +436,15 @@ impl LayerFreezeState {
     /// Both memos are *parked* rather than dropped: the entries are dead
     /// either way, and handing the boxes on is what makes the next scope's
     /// `Arc::new`s free (PERF `(-166)`, `(-168)`).
+    ///
+    /// A scope that never took a computed read has nothing to park and pays
+    /// no thread-local access — three scopes in four, and each access is ~49
+    /// Ir because the pooled types need `Drop` (PERF `(-175)`).
     fn end_of_scope(&mut self) {
+        if self.memo.is_none() {
+            debug_assert!(self.perms.is_empty(), "perms are only stored beside a memo");
+            return;
+        }
         if let Some((fx, _)) = self.memo.take() {
             fx_pool::park(fx);
         }
