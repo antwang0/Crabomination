@@ -11205,6 +11205,35 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-179)` TAKEN — one digest word per permanent, a tagged second only for the rare one: `cube` -0.234 % / `sealed` -0.213 % / `fixed` -0.206 %
+
+```text
+  pool    base f93ab8eb      (-179)          delta
+  fixed     859,069,934     857,301,130   **-0.2059 %**
+  cube    2,368,390,709   2,362,843,584   **-0.2342 %**
+  sealed  2,374,045,920   2,368,985,401   **-0.2132 %**
+  fingerprint self: fixed 9,299,822 -> 7,530,340; cube 31,286,706 -> 25,737,844
+```
+
+`(-176)`'s residual, and the last cheap word in the walk. A permanent's
+`counters` sum is zero and its damage is under 2^30 on nearly every board, so
+those permanents digest as **one** word — `id | tapped << 32 | damage << 33`,
+bit 63 clear — and the exception pays a second word with bit 63 **set**
+carrying `damage | counters << 32`. The tag is what keeps the stream
+injective: a parser reading words back can always tell "the next permanent"
+from "the previous permanent's extra", so no two boards share a stream and
+two states still digest equal exactly when they did under `(-176)`. ⚠ **Do not
+skip a zero field without a tag** — `[A1, A2]` with A2 a second permanent and
+`[A1, X]` with X an untagged extra are the same stream, and that is a false
+positive the doc comment forbids.
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, `--bench` byte-identical to the invariant, golden traces
+unmoved. What is left of the row (~780 Ir a call on `fixed`) is the walk
+itself — one `Arc` deref per permanent for `damage` and `counters`, which live
+in `CardData` — and the call count, which the Log at `(-176)` says an exact
+guard cannot reduce.
+
 ### `(-178)` TAKEN — the third CoW handle, `Player(Arc<PlayerData>)`, still went through std's `make_mut`: `fixed` -0.357 % / `sealed` -0.319 % / `cube` -0.248 %
 
 ```text
@@ -11299,6 +11328,16 @@ settled it.
 Behaviour-preserving: three-pool stdout identical to the base's apart from
 the wall-clock line, `--bench` byte-identical to the invariant, golden
 traces unmoved.
+
+**`(-145)` asked for a Miri run before this device landed, and it has one.**
+The pinned toolchain is stable and has no `miri` component, so:
+`rustup toolchain install nightly --profile minimal --component miri,rust-src`,
+then `MIRIFLAGS=-Zmiri-strict-provenance cargo +nightly miri test -p
+crabomination_base --lib -- cow::` — **2 passed, 0 failed** (the CoW contract
+test and `unique_mut_tracks_the_strong_count`, which exercises the shared,
+unique-after-drop and copy paths). Strict provenance is the mode that would
+reject a pointer with the wrong permission; `Arc::as_ptr` derives from the
+`Arc`'s own `NonNull`, and Miri agrees.
 
 ### `(-176)` TAKEN — the loop watchdogs' digest mixed one 32-bit field per finalizer; two per word halves it: `cube` -0.686 % / `sealed` -0.675 % / `fixed` -0.563 %
 
@@ -22354,6 +22393,16 @@ this list had gone thin: `cube` 2,455,809,519 Ir, one thread, seed 1.
   reach those are real unshares of the zones a cast moves cards between, not
   `(-143)`'s no-op reaches. Lazy copy working as designed; there is nothing to
   guard.
+
+**(-145) ✅ TAKEN by `(-177)` + `(-178)` — `cube` -0.746 % / `fixed` -0.911 % /
+`sealed` -0.835 % across the two, against the 0.73 % ceiling priced below —
+and NOT by the device this entry feared.** No hand-rolled `Arc`, no
+`get_mut_unchecked`: ten lines in `crabomination_base::cow` over std's own
+`Arc` — `strong_count == 1`, an `Acquire` fence, `&mut` through `Arc::as_ptr`
+— behind one type with its own tests, the `weak_count == 0` invariant under
+`debug_assert!` for the sweep, and the Miri run this entry asked for (see the
+Log). The trade is wanted: the failure mode needs a `Weak` that nothing in the
+workspace can construct.
 
 **(-145) `Arc::make_mut` IS 29 Ir A CALL AND 905,060 OF THEM ARE THE ENGINE'S
 CoW WRITE BARRIER — `cube` 26,238,578 self = 1.07 %.** After `(-143)` the

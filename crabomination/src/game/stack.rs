@@ -1765,8 +1765,21 @@ impl GameState {
         }
         h = mix(h, pair(self.exile.len() as u32, self.battlefield.len() as u32));
         for c in &self.battlefield {
-            h = mix(h, pair(c.id.0, u32::from(c.tapped)));
-            h = mix(h, pair(c.damage, c.counters.values().sum::<u32>()));
+            // One word a permanent — id, tapped and a 30-bit damage — and a
+            // second, tagged in bit 63, only when the permanent carries
+            // counters or a damage total the field cannot hold. A permanent
+            // word never sets bit 63, so the stream parses back into
+            // permanents uniquely: the extra word is *distinguishable* from
+            // the next permanent's, which is what keeps two boards from ever
+            // sharing a stream (PERF `(-179)`).
+            let counters = c.counters.values().sum::<u32>();
+            let head = u64::from(c.id.0) | (u64::from(c.tapped) << 32);
+            if counters == 0 && c.damage < (1 << 30) {
+                h = mix(h, head | (u64::from(c.damage) << 33));
+            } else {
+                h = mix(h, head);
+                h = mix(h, (1 << 63) | pair(c.damage, counters));
+            }
         }
         h
     }
