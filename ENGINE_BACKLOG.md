@@ -158,50 +158,35 @@ mirror: a 0/0 that removes its last +1/+1 to ping, whose test asserted the old
 behaviour and now asserts the rule (it dies, and CR 608.2 still resolves the
 announced ping).
 
-⚠ **THE GENERAL CR 704.3 SWEEP IS OPEN, SIZED, AND ITS FIRST BLOCKER IS ALREADY
-SOLVED.** The shipped fix is scoped to costs that move the source's own counters;
-the rule is that state-based actions are checked after *every* action. Built and
-measured, so the next run starts from the answer rather than the question:
+✅ **THE GENERAL CR 704.3 SWEEP IS LANDED** (`GameAction::pays_a_cost` —
+every `Cast*` and non-loyalty activation — sweeps in `perform_action_inner`
+*after* the action's own `dispatch_triggers_for_events`, which is the
+placement the Pest Brewmaster interleave needed; the counter-cost-scoped
+sweep in `activate_ability_inner` is gone). What made it land was closing
+the **0/0 window at entry** first, in its own commit: a token "with N
+counters" now carries them as part of the mint
+(`TokenDefinition::enters_with_counters`, evaluated with the token on the
+battlefield, placed before `PermanentEntered` and its ETB triggers — the 70
+`Seq([CreateToken, AddCounter { LastCreatedToken }])` sites and the
+`create_token_with_counter` shortcut all fold into it), nine real cards
+that modelled a printed "enters with N counters" as an ETB *trigger* ride
+`enters_with_counters`, and the land drop applies its printed counters
+before its ETB triggers like the other three entry paths. With that in,
+the sweep broke **12 tests, every one a fixture**: eight seeded a printed
+0/0 Fractal card bare through `add_card_to_battlefield` (now
+`move_card_to_battlefield_for_test`, which applies its entry counters),
+two seeded a bare Aura (CR 704.5m sweeps it), one two copies of a
+legendary planeswalker under one controller (CR 704.5j), one a 0/0 whose
+converge count is cast-time. ⚠ **A fixture that puts a printed 0/0, a
+bare Aura or a duplicate legend on the battlefield and then casts a spell
+is now testing the sweep, not the card.**
 
-* **The death-batch interleave is a PLACEMENT bug, not a design one.** Put the
-  sweep in `perform_action_inner`'s `ActivateAbility` arm and
-  `pest_brewmaster_b122_gains_life_on_other_pest_death` loses one of its two
-  death triggers: the sweep's own `dispatch_triggers_for_events` takes the
-  `pending_permanent_deaths` the in-flight action is still holding events for,
-  dispatches them as its own batch, and `push_ordered_trigger_candidates` clears
-  `died_card_snapshots` at the end of it — so the "another **Pest** dies" leg
-  has no LKI left to read the dead card's subtypes from. **Put it after
-  `perform_action_inner`'s own `dispatch_triggers_for_events(&events)` instead
-  and that test passes.** One line, at `game/mod.rs`'s
-  `self.dispatch_triggers_for_events(&events); Ok(events)`.
-* **What is actually left is 19 tests of 19,201, and they have one dominant
-  root cause: a 0/0 window at entry.** The engine mints a token or resolves a
-  permanent onto the battlefield and *then* adds its counters, so there is a
-  moment where a correct SBA sweep sees a 0-toughness creature. In paper the
-  counters are part of the entry (CR 614.12) and the window does not exist.
-
-```text
-  the 19, with the sweep placed after the dispatch
-    fractal / magecraft / counter-pump bodies (the 0/0 window)      9
-      stx part_06 quandrix_logician, part_09 stx_magecraft,
-      part_11 magecraft_adds_counter_to_tribe_member,
-      part_12 magecraft_power_pump / magecraft_counter_pump,
-      part_15 fractal_reflection_b125 / quandrix_fractus_touch_b127,
-      sos push8_10 wildgrowth_archaic, modern servant_of_the_scale
-    "as this enters, choose X" modelled as an ETB *trigger*          1
-      classic_sets mmq5 chameleon_spirit (a 0/0 until the trigger resolves)
-    the rest, one each — read them before assuming a shared cause    9
-      pls aura_blast / ertai_the_corrupted, ths etb_riders,
-      war the_elderspell, recent_b recent_291 aura_mutation,
-      core_rules cr_recent71 banding x2, cr_rules cr_702_179f,
-      game ephemerate_rebound
-```
-
-**The 0/0-window class is the same root as `add_card_to_battlefield` vs
-`add_card_to_battlefield_with_counters`** — the helper's doc already says the
-plain constructor "leaves a printed 0/0 body on the battlefield as a 0/0 waiting
-to die". Fixing entry to apply CR 614.12 atomically closes ten of the nineteen
-and is worth doing on its own merits; the sweep then lands on top.
+Still open in the same family, sized and left: `apply_as_enters_effect`
+runs a full `resolve_effect` (which can sweep) before the entry-counter
+block in both the cast path (`stack.rs`) and the move path
+(`movement.rs`), deliberately — Mimeoplasm's count reads what the
+as-enters effect did — so a 0/0 with an as-enters effect *whose body
+sweeps* would die before its counters; no shipped card has that pair.
 
 **(5) The CR 732.3 loop guard hashed a fingerprint that counts the stack.** An
 announcement is exactly a `stack.len() + 1`, so the watch never matched its own

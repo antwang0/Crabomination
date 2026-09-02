@@ -173,7 +173,7 @@ fn stx_magecraft_pumps_other_friendly_creature() {
         let name = watcher.name;
         let mut g = two_player_game();
         let _w = g.add_card_to_battlefield(0, watcher);
-        let target = g.add_card_to_battlefield(0, recipient);
+        let target = g.move_card_to_battlefield_for_test(0, recipient);
         drain_stack(&mut g);
         let pwr_before = g.battlefield_find(target).unwrap().power();
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());

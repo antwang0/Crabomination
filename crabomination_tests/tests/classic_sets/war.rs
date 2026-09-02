@@ -2345,7 +2345,9 @@ fn the_elderspell_destroys_and_pumps() {
     let mut g = two_player_game();
     let mine = g.add_card_to_battlefield(0, catalog::jace_arcane_strategist()); // loyalty 4
     let foe1 = g.add_card_to_battlefield(1, catalog::jace_arcane_strategist());
-    let foe2 = g.add_card_to_battlefield(1, catalog::jace_arcane_strategist());
+    // A second Jace would fall to the legend rule (CR 704.5j) in the sweep
+    // after the cast, leaving the Elderspell one target.
+    let foe2 = g.add_card_to_battlefield(1, catalog::tezzeret_master_of_the_bridge());
     let spell = g.add_card_to_hand(0, catalog::the_elderspell());
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 0;

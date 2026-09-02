@@ -149,7 +149,7 @@ fn magecraft_counter_pump_on_bolt() {
         g.add_card_to_library(0, catalog::island());
         let src_id = g.add_card_to_battlefield(0, src);
         let tgt_id = match tgt {
-            Some(d) => g.add_card_to_battlefield(0, d),
+            Some(d) => g.move_card_to_battlefield_for_test(0, d),
             None => src_id,
         };
         let before = plus_counters(g.battlefield_find(tgt_id).unwrap());
@@ -175,7 +175,7 @@ fn magecraft_power_pump_of_friendly_creature_on_bolt() {
     ] {
         let mut g = two_player_game();
         let _ = g.add_card_to_battlefield(0, src);
-        let tgt_id = g.add_card_to_battlefield(0, tgt);
+        let tgt_id = g.move_card_to_battlefield_for_test(0, tgt);
         let p_before = g.battlefield_find(tgt_id).unwrap().power() as i32;
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
         g.players[0].mana_pool.add(Color::Red, 1);

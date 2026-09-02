@@ -17300,38 +17300,11 @@ impl GameState {
             self.give_priority_to_active();
         }
 
-        // CR 704.3 / 704.5f — the activating player receives priority as soon
-        // as the ability is on the stack, so a source that paid a counter cost
-        // it cannot survive dies **now**, not when the stack next resolves.
-        //
-        // Devoted Druid is the case that found it: a 0/2 whose untap costs a
-        // -1/-1 counter — and Walking Ballista is the mirror, a 0/0 that pays
-        // its last +1/+1 to ping.
-        // Without this it ran to toughness -6 and kept untapping, and a `cube`
-        // game reached **49,941 copies of the same ability on one stack**
-        // before the action cap stopped it — found by the robustness grid's
-        // `--pilots` leg (`abilarms`, `--decks cube`, seed 23), the first thing
-        // that ever ran a pilot other than `gang` under `debug-assertions`.
-        //
-        // ⚠ **Scoped to the counter cost on purpose.** The general CR 704.3
-        // sweep after *every* activation is the correct rule and is a larger
-        // change than this: it costs the Pest Brewmaster test one of its two
-        // death triggers, because a sacrifice cost's death batch and an SBA
-        // sweep interleave through `died_card_snapshots`. That is filed in
-        // ENGINE_BACKLOG with the reproduction; this closes the loop that a
-        // *self*-killing counter cost opens, and touches only the abilities
-        // that have one.
-        // The gate is "this activation's cost moved the source's own counters":
-        // Devoted Druid *adds* a -1/-1, Walking Ballista *removes* its last
-        // +1/+1, and both are 0/0-or-worse bodies afterwards.
-        if ability.add_counter_cost.is_some()
-            || ability.remove_counter_cost.is_some()
-            || ability.remove_all_counters_cost.is_some()
-            || ability.remove_counter_x.is_some()
-        {
-            self.check_state_based_actions_into(&mut events);
-        }
-
+        // CR 704.3 — the state-based sweep that a self-killing counter cost
+        // needs (Devoted Druid at toughness -6 kept untapping; a `cube` game
+        // reached 49,941 copies of one ability on the stack) runs in
+        // `perform_action_inner` after this activation's events dispatch,
+        // for every cost-paying action.
         Ok(events)
     }
 }

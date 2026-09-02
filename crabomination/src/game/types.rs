@@ -1816,6 +1816,19 @@ impl GameAction {
         self.is_cast() || matches!(self, GameAction::ActivateLoyaltyAbility { .. })
     }
 
+    /// True for the actions that pay a cost on the board — every `Cast*`
+    /// variant and the non-loyalty activations — after which CR 704.3 gives
+    /// priority and so checks state-based actions (`activate_loyalty_ability`
+    /// sweeps on its own). Passing priority and declaring attackers or
+    /// blockers change nothing a sweep would act on.
+    pub(crate) fn pays_a_cost(&self) -> bool {
+        self.is_cast()
+            || matches!(
+                self,
+                GameAction::ActivateAbility { .. } | GameAction::ActivateAbilityWaterbend { .. }
+            )
+    }
+
     /// True for every `Cast*` action variant — the CR 601 "cast a spell"
     /// surface, gated by one-spell-per-turn locks (Rule of Law).
     pub(crate) fn is_cast(&self) -> bool {

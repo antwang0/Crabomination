@@ -407,8 +407,9 @@ fn necromantic_thirst_returns_a_creature_on_combat_damage() {
 #[test]
 fn aura_mutation_destroys_enchantment_and_makes_saprolings_by_mv() {
     let mut g = two_player_game();
-    // A {1}{G} enchantment (MV 2) on the opponent's battlefield.
-    let ench = g.add_card_to_battlefield(1, catalog::fists_of_ironwood());
+    // A {1}{W}{W} global enchantment (MV 3) on the opponent's battlefield —
+    // an unattached Aura would be swept (CR 704.5m) as the Mutation is cast.
+    let ench = g.add_card_to_battlefield(1, catalog::glorious_anthem());
     let spell = g.add_card_to_hand(0, catalog::aura_mutation());
     flood(&mut g);
     g.perform_action(GameAction::CastSpell {
@@ -417,7 +418,7 @@ fn aura_mutation_destroys_enchantment_and_makes_saprolings_by_mv() {
     }).expect("cast mutation");
     drain_stack(&mut g);
     assert!(g.battlefield_find(ench).is_none(), "the enchantment was destroyed");
-    assert_eq!(count_tokens(&g, "Saproling"), 2, "X = destroyed enchantment's mana value (2)");
+    assert_eq!(count_tokens(&g, "Saproling"), 3, "X = destroyed enchantment's mana value (3)");
 }
 
 #[test]

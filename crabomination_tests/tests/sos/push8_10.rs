@@ -474,7 +474,10 @@ fn wildgrowth_archaic_grants_extra_counter_to_creature_spells() {
     let mut g = two_player_game();
     // Seed the Archaic directly on battlefield (skip cast to focus on
     // the static rider).
-    let _archaic = g.add_card_to_battlefield(0, catalog::wildgrowth_archaic());
+    let archaic = g.add_card_to_battlefield(0, catalog::wildgrowth_archaic());
+    // A printed 0/0: give it the counter its cast would, or the sweep after
+    // the Bears' cast takes it first.
+    g.battlefield_find_mut(archaic).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     drain_stack(&mut g);
     let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Green, 1);
@@ -495,7 +498,10 @@ fn wildgrowth_archaic_grants_extra_counter_to_creature_spells() {
 #[test]
 fn wildgrowth_archaic_static_does_not_grant_to_opp_creature_spells() {
     let mut g = two_player_game();
-    let _archaic = g.add_card_to_battlefield(0, catalog::wildgrowth_archaic());
+    let archaic = g.add_card_to_battlefield(0, catalog::wildgrowth_archaic());
+    // A printed 0/0: give it the counter its cast would, or the sweep after
+    // the Bears' cast takes it first.
+    g.battlefield_find_mut(archaic).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     drain_stack(&mut g);
     let opp_bears = g.add_card_to_hand(1, catalog::grizzly_bears());
     // Pass turn so opp can cast at sorcery speed.

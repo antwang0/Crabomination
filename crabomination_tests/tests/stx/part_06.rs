@@ -1385,7 +1385,7 @@ fn quandrix_logician_etb_scrys_and_pumps_fractal_on_cast() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_some());
     // Mint a Fractal first then cast a spell.
-    let fractal = g.add_card_to_battlefield(0, catalog::quandrix_hatchling());
+    let fractal = g.move_card_to_battlefield_for_test(0, catalog::quandrix_hatchling());
     drain_stack(&mut g);
     let counters_before = g.battlefield_find(fractal).unwrap().counter_count(CounterType::PlusOnePlusOne);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());

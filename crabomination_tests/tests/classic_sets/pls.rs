@@ -121,12 +121,14 @@ fn arctic_merfolk_kicked_by_bouncing_a_creature() {
 #[test]
 fn aura_blast_destroys_and_draws() {
     let mut g = main_phase();
-    let pacifism = g.add_card_to_battlefield(1, catalog::pacifism());
+    // A global enchantment: an unattached Aura is a CR 704.5m state-based
+    // action, swept the moment the Blast is cast.
+    let anthem = g.add_card_to_battlefield(1, catalog::glorious_anthem());
     g.add_card_to_library(0, catalog::forest());
     let blast = g.add_card_to_hand(0, catalog::aura_blast());
     let before = g.players[0].hand.len();
-    cast(&mut g, 0, blast, Some(Target::Permanent(pacifism)));
-    assert!(g.battlefield.iter().all(|c| c.id != pacifism));
+    cast(&mut g, 0, blast, Some(Target::Permanent(anthem)));
+    assert!(g.battlefield.iter().all(|c| c.id != anthem));
     assert_eq!(g.players[0].hand.len(), before, "spell out, card in");
 }
 
@@ -359,7 +361,9 @@ fn ertai_the_corrupted_counters_by_sacrificing() {
     let mut g = main_phase();
     let ertai = g.add_card_to_battlefield(0, catalog::ertai_the_corrupted());
     g.clear_sickness(ertai);
-    g.add_card_to_battlefield(0, catalog::pacifism());
+    // Sacrifice fodder that survives the state-based sweep the Bolt's cast
+    // triggers (an unattached Aura would not — CR 704.5m).
+    g.add_card_to_battlefield(0, catalog::glorious_anthem());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     mana(&mut g, 1);
     g.priority.player_with_priority = 1;

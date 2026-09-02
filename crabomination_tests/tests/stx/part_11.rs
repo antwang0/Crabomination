@@ -380,7 +380,7 @@ fn magecraft_adds_counter_to_tribe_member() {
     ] {
         let name = def.name;
         let mut g = two_player_game();
-        let tgt = g.add_card_to_battlefield(0, target_def);
+        let tgt = g.move_card_to_battlefield_for_test(0, target_def);
         let _ = g.add_card_to_battlefield(0, def);
         let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
         let before = g.battlefield_find(tgt).unwrap()

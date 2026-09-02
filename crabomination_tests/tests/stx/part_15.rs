@@ -368,7 +368,7 @@ fn fractal_coursemate_b124_enters_with_counters_equal_to_twice_hand() {
 #[test]
 fn fractal_reflection_b125_pumps_target_fractal_and_draws() {
     let mut g = two_player_game();
-    let f = g.add_card_to_battlefield(0, catalog::fractal_treewright_b125());
+    let f = g.move_card_to_battlefield_for_test(0, catalog::fractal_treewright_b125());
     g.clear_sickness(f);
     let p_before = g.battlefield_find(f).unwrap().power();
     let fr = g.add_card_to_hand(0, catalog::fractal_reflection_b125());
@@ -756,7 +756,7 @@ fn lorehold_pyrestone_b128_pumps_target_and_grants_first_strike() {
 fn quandrix_fractus_touch_b127_adds_two_counters_to_fractal_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
-    let bedrock = g.add_card_to_battlefield(0, catalog::fractal_bedrock_b127());
+    let bedrock = g.move_card_to_battlefield_for_test(0, catalog::fractal_bedrock_b127());
     g.clear_sickness(bedrock);
     let p_before = g.battlefield_find(bedrock).unwrap().power();
     let f = g.add_card_to_hand(0, catalog::quandrix_fractus_touch_b127());

@@ -15662,6 +15662,7 @@ impl GameState {
         if let GameAction::SubmitDecision(answer) = action {
             return self.submit_decision(answer);
         }
+        let pays_a_cost = action.pays_a_cost();
         if self.pending_decision.is_some() {
             return Err(GameError::DecisionPending);
         }
@@ -16102,6 +16103,21 @@ impl GameState {
             events.extend(std::mem::take(&mut self.scratch.pending_cost_events));
         }
         self.dispatch_triggers_for_events(&events);
+        // CR 704.3 — the player receives priority as soon as the spell or
+        // ability is on the stack, so state-based actions are checked *now*:
+        // a source that paid a counter cost it cannot survive (Devoted Druid,
+        // Walking Ballista's last +1/+1) dies here, not when the stack next
+        // resolves. After this action's own dispatch, never before it: the
+        // sweep's death batch would otherwise consume the LKI a sacrifice
+        // cost's death triggers still need (Pest Brewmaster's "another Pest").
+        if pays_a_cost {
+            let mut swept = Vec::new();
+            self.check_state_based_actions_into(&mut swept);
+            if !swept.is_empty() {
+                self.dispatch_triggers_for_events(&swept);
+                events.extend(swept);
+            }
+        }
         Ok(events)
     }
 
