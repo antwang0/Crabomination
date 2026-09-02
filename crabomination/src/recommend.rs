@@ -1714,13 +1714,32 @@ pub fn simulate_match_pairs_cross(
             // bots' tie-breaks replay identically and the only thing left
             // that can separate the two games is the profiles themselves.
             let outcome = match &mut cross {
-                None => play_one_game(
-                    template,
-                    seated,
-                    max_actions,
-                    Some(&mut shuffle_rng),
-                    Some(seed),
-                ),
+                None => match trace_dump_dir() {
+                    None => play_one_game(
+                        template,
+                        seated,
+                        max_actions,
+                        Some(&mut shuffle_rng),
+                        Some(seed),
+                    ),
+                    Some(dir) => {
+                        let mut lines = Vec::new();
+                        let o = play_one_game_traced(
+                            template,
+                            seated,
+                            max_actions,
+                            Some(&mut shuffle_rng),
+                            Some(seed),
+                            GameHooks { trace: Some(&mut lines), ..Default::default() },
+                        );
+                        let t = GameTrace { lines, winner: o.winner, turns: o.turns };
+                        let path = dir.join(format!("{seed_base:016x}_{k}_{}.txt", u8::from(a_seat0)));
+                        if let Err(e) = std::fs::write(&path, t.text()) {
+                            eprintln!("CRAB_DUMP_TRACES: {}: {e}", path.display());
+                        }
+                        o
+                    }
+                },
                 Some(cx) => {
                     let my_seat = usize::from(a_seat0 != i_am_a);
                     cx.seat_at(my_seat);
@@ -1886,6 +1905,26 @@ impl GameTrace {
         ));
         s
     }
+}
+
+/// `CRAB_DUMP_TRACES=<dir>` — every game the in-process paired loop plays is
+/// written to `<dir>/<job seed>_<pair>_<seat order>.txt` as its
+/// [`GameTrace`] text. Read once.
+///
+/// The instrument for "two binaries on one seed play different games":
+/// `bot_ladder`'s stdout is outcomes only, `--bench` reaches one pool, and
+/// the golden traces are one pairing — so a divergence on a `cube` board
+/// was invisible until it moved a callgrind total. Dump both binaries' runs
+/// and diff the directories; the first differing line names the action and
+/// the board. Off the hot path: one `OnceLock` read per game.
+fn trace_dump_dir() -> Option<&'static std::path::Path> {
+    static DIR: std::sync::OnceLock<Option<std::path::PathBuf>> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        let dir = std::path::PathBuf::from(std::env::var_os("CRAB_DUMP_TRACES")?);
+        std::fs::create_dir_all(&dir).ok()?;
+        Some(dir)
+    })
+    .as_deref()
 }
 
 /// Play one fully seeded game and record its trace. The shuffle stream and

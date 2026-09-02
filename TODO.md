@@ -25,28 +25,31 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-182)` and `(-183)` taken this run,
-   `(-184)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a
-   perf pass"**. Cold here: `profiling-fast` 17 min (5 min warm), test build+suite 12 min;
-   `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind ~2 min.
-   ⚠ **A worktree build sharing `CARGO_TARGET_DIR` reuses the main tree's engine artifact** — an
-   A/B read 0.000 % off two identical binaries; `cargo clean -p` the engine between sides.
-2. **Gates at the `(-183)` tip:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets`
-   clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok.
-   `debug-assertions` ladder (10 cells, 8,880 games) clean at `(-182)`; **the `(-183)` assert
-   (`printed_requirement` vs walker) has only the suite behind it — run the grid next.**
-3. **This run: `(-182)` + `(-183)`, one device twice** — answer a requirement off the printed line
-   where the walker would, walker for the rest, `debug_assert_eq!` as the ratchet. `(-182)` a struct
-   per grant static: **`cube` -1.16 %**, flat elsewhere. `(-183)` `printed_requirement` at the
-   targeting enumerator + `resolve_selector`: **-0.52 / -0.68 / -0.70 %** on cube / fixed / sealed.
-   ⚠ Two builds lost to inlining in `(-182)` — Log: `--callers <wrapper>` 0 on the base means "do
-   not add a caller"; read a gate's *body* through your own closure instead.
-4. **Next perf lead, sized in PERF candidates `(-183)`:** the walker's largest contexts on `cube`
-   are now `first_legal_graveyard_card` (7.8 M — a graveyard-card twin of the evaluator),
-   `statics_granted_triggers_inner` (7.2 M — `(-182)`'s struct for trigger grants) and the
-   gather's condition-gated statics (5.7 M). ⚠ Census the filter shapes off the run first
-   (`eprintln!` at the site, one build) — a shape from memory cost `(-182)` a build.
-   Then the `(-90)`/`(-174)` map. PGO -24 %, opt-in.
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-182)`..`(-185)` taken this run,
+   `(-186)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
+   rules for a perf pass"**. Cold here: `profiling-fast` 17 min (5 min warm), test build+suite
+   12 min; `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind ~2 min.
+   ⚠ **A rebase between an A/B's two builds can pull a concurrent CATALOG commit** — the `(-185)`
+   base predated a Moonshadow rewrite and read +2.6 % on `cube` for a device that is -0.13 %;
+   four builds to prove it. `git log --stat <base>..HEAD -- crabomination_catalog` after any
+   rebase, and `CRAB_DUMP_TRACES=<dir>` (new, PERF "How to measure") names the diverging pairing.
+2. **Gates at the `(-185)` tip:** suite green, traces unmoved, clippy `--all-targets` clean,
+   `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok.
+   `debug-assertions` ladder clean at `(-182)` (10 cells) and `(-183)` (12 cells, 11,760 games);
+   **the `(-185)` off-battlefield assert has the suite + one six-game cube run behind it — grid next.**
+3. **This run: `(-182)`..`(-185)`, one device four times** — answer a requirement off the printed
+   line where the walker would, walker for the rest, `debug_assert_eq!` as the ratchet:
+   `printed_requirement` (`eval.rs`) at the targeting enumerator, `resolve_selector`, the
+   trigger-grant walk and the graveyard sweep. Cumulative vs `0c3f4a78`: **cube -1.81 %, fixed
+   -0.67 %, sealed -0.69 %** through `(-184)`, then `(-185)` **-1.06 / -0.13 / -0.10 %** (fixed /
+   cube / sealed) on the re-based catalog. PERF Baseline top. ⚠ Two rules fell out: a one-caller
+   wrapper is inlined by luck (read a gate's body through your own closure), and an evaluator
+   called 500 k times a run takes no flag — `const OFF: bool`, not an argument or a field.
+4. **Next perf lead (PERF candidates, `(-185)`):** the walker is ~167 k calls on `cube` after
+   this; largest contexts are its own recursion from plain-form callers (`cg_contexts.py`,
+   `--separate-callers=4`), the gather's condition-gated statics (5.7 M) and the SBA `no_other`
+   filter. Evaluator residuals: the card-type closure out of line (3 M), ~35 Ir a node, and
+   `PrintedGrantFilter` onto the evaluator (one measured build). Then the `(-90)`/`(-174)` map.
 5. **Open, sized (leave):** `apply_as_enters_effect` / Mimeoplasm (ENGINE_BACKLOG); the empty-stack
    `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 1.9 % of both pools in gate
    prelude with no single hot line — a `profiling-lines` read, not a device.

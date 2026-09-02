@@ -3231,6 +3231,39 @@ impl GameState {
         }
     }
 
+    /// The same entry for a card the caller holds in a graveyard. The walker
+    /// asked about a graveyard card pays a `battlefield_find` miss and then
+    /// `requirement_card_off_battlefield`'s chain to re-find it; this reads
+    /// the same object the chain would return — a death snapshot or the
+    /// leaves-battlefield LKI first, the graveyard card itself otherwise — and
+    /// evaluates it in the off-battlefield zone (PERF `(-185)`).
+    pub(crate) fn requirement_on_graveyard_card(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+        source: Option<CardId>,
+    ) -> bool {
+        let cid = card.id;
+        let walk = || self.evaluate_requirement_static(req, &Target::Permanent(cid), controller, source);
+        // The walker's lookup order, minus the battlefield miss: an id names
+        // one object and this one is in a graveyard.
+        let obj = match self.died_card_snapshots.get(&cid) {
+            Some(snap) => snap,
+            None => match self.leaves_bf_lki.get(&cid) {
+                Some(lki) if self.resolving_lki_source == Some(cid) => lki,
+                _ => card,
+            },
+        };
+        match self.printed_requirement_impl::<true>(req, obj, controller, source, &PrintedGates::default()) {
+            Some(p) => {
+                debug_assert_eq!(p, walk(), "printed_requirement (off battlefield) disagrees with the walker");
+                p
+            }
+            None => walk(),
+        }
+    }
+
     /// The printed-line twin of the walker's `Target::Permanent` block, for a
     /// permanent the caller holds: three-valued, `None` meaning "ask the
     /// walker". A leaf is answered here only where the walker itself reads
@@ -3253,16 +3286,35 @@ impl GameState {
         source: Option<CardId>,
         gates: &PrintedGates,
     ) -> Option<bool> {
+        self.printed_requirement_impl::<false>(req, card, controller, source, gates)
+    }
+
+    /// The body of [`printed_requirement`](Self::printed_requirement). `OFF`
+    /// is which of the walker's two `Target::Permanent` paths it stands in
+    /// for: the battlefield permanent (layer gates, `bestowed`, the
+    /// controller off the object) or a card the walker finds off the
+    /// battlefield (printed types unconditionally, a controller only through
+    /// the stack or a death snapshot). A const parameter and not a value:
+    /// the evaluator recurses per node, and a seventh argument spilled on
+    /// every call (+5.1 M Ir on `cube`) while a runtime flag cost six
+    /// instructions a call across the 465 k calls the battlefield sites
+    /// already made (`(-185)`).
+    fn printed_requirement_impl<const OFF: bool>(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+        source: Option<CardId>,
+        gates: &PrintedGates,
+    ) -> Option<bool> {
         use SelectionRequirement as R;
         let cid = card.id;
-        // The walker's `has_type`: printed unless a layer-4 card-type source
-        // is in scope or the permanent is bestowed. Grist's
-        // `creature_off_battlefield` clause is the walker's too.
+        let on_bf = !OFF;
+        // The walker's `has_type`: on the battlefield, printed unless a
+        // layer-4 card-type source is in scope or the permanent is bestowed;
+        // off it, printed unconditionally.
         let card_type = |t: CardType| -> Option<bool> {
-            if card.bestowed
-                || gates.card(self)
-                || (t == CardType::Creature && card.definition.creature_off_battlefield)
-            {
+            if on_bf && (card.bestowed || gates.card(self)) {
                 return None;
             }
             Some(card.definition.card_types.contains(&t))
@@ -3271,11 +3323,11 @@ impl GameState {
             R::Any => Some(true),
             R::Player => Some(false),
             R::And(a, b) => {
-                let x = self.printed_requirement(a, card, controller, source, gates);
+                let x = self.printed_requirement_impl::<OFF>(a, card, controller, source, gates);
                 if x == Some(false) {
                     return Some(false);
                 }
-                let y = self.printed_requirement(b, card, controller, source, gates);
+                let y = self.printed_requirement_impl::<OFF>(b, card, controller, source, gates);
                 match (x, y) {
                     (Some(true), y) => y,
                     (None, Some(false)) => Some(false),
@@ -3283,25 +3335,49 @@ impl GameState {
                 }
             }
             R::Or(a, b) => {
-                let x = self.printed_requirement(a, card, controller, source, gates);
+                let x = self.printed_requirement_impl::<OFF>(a, card, controller, source, gates);
                 if x == Some(true) {
                     return Some(true);
                 }
-                let y = self.printed_requirement(b, card, controller, source, gates);
+                let y = self.printed_requirement_impl::<OFF>(b, card, controller, source, gates);
                 match (x, y) {
                     (Some(false), y) => y,
                     (None, Some(true)) => Some(true),
                     _ => None,
                 }
             }
-            R::Not(inner) => {
-                self.printed_requirement(inner, card, controller, source, gates).map(|v| !v)
-            }
-            R::ControlledByYou => Some(card.controller == controller),
-            R::ControlledByOpponent => Some(!self.same_team(card.controller, controller)),
-            R::ControlledByActivePlayer => Some(card.controller == self.active_player_idx),
+            R::Not(inner) => self
+                .printed_requirement_impl::<OFF>(inner, card, controller, source, gates)
+                .map(|v| !v),
+            // Off the battlefield the walker knows a controller only through
+            // the stack (a spell's caster) or the CR 603.10 death snapshot.
+            R::ControlledByYou => Some(if on_bf {
+                card.controller == controller
+            } else {
+                self.stack_spell_caster(cid)
+                    .or_else(|| self.died_card_snapshots.get(&cid).map(|c| c.controller))
+                    == Some(controller)
+            }),
+            R::ControlledByOpponent => Some(if on_bf {
+                !self.same_team(card.controller, controller)
+            } else {
+                self.stack_spell_caster(cid).is_some_and(|c| !self.same_team(c, controller))
+            }),
+            R::ControlledByActivePlayer => Some(on_bf && card.controller == self.active_player_idx),
+            // Ownership is stable across zones; the walker's `find_card_anywhere`
+            // lands on this object.
+            R::OwnedByYou => Some(card.owner == controller),
             R::Permanent => Some(card.definition.is_permanent()),
-            R::Creature => card_type(CardType::Creature),
+            // CR 604.3 — Grist's `creature_off_battlefield` clause is the
+            // walker's `Creature` arm only (`Noncreature` is `!has_type`):
+            // `true` off the battlefield, the walker's question on it.
+            R::Creature => {
+                let grist = card.definition.creature_off_battlefield;
+                if on_bf && grist {
+                    return None;
+                }
+                card_type(CardType::Creature).map(|v| v || (grist && !on_bf))
+            }
             R::Land => card_type(CardType::Land),
             R::Artifact => card_type(CardType::Artifact),
             R::Enchantment => card_type(CardType::Enchantment),
@@ -3314,8 +3390,11 @@ impl GameState {
                 Some(half) => half.card_types.contains(ct),
                 None => card.definition.card_types.contains(ct),
             }),
+            // Off the battlefield both subtype arms end on the printed line
+            // whatever the gate says: `computed()` is `None` there and the
+            // shallow read needs a battlefield permanent too.
             R::HasCreatureType(ct) => {
-                if gates.creature(self) {
+                if on_bf && gates.creature(self) {
                     return None;
                 }
                 Some(
@@ -3324,7 +3403,7 @@ impl GameState {
                 )
             }
             R::HasLandType(lt) => {
-                if gates.land(self) {
+                if on_bf && gates.land(self) {
                     return None;
                 }
                 Some(card.definition.subtypes.land_types.contains(lt))
@@ -3343,6 +3422,12 @@ impl GameState {
             )),
             R::InYourGraveyard => Some(
                 self.players.get(controller).is_some_and(|p| p.graveyard.iter().any(|c| c.id == cid)),
+            ),
+            R::InOpponentGraveyard => Some(
+                self.players
+                    .iter()
+                    .enumerate()
+                    .any(|(i, p)| i != controller && p.graveyard.iter().any(|c| c.id == cid)),
             ),
             _ => None,
         }

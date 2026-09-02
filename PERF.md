@@ -53,6 +53,26 @@ CRAB_CAP_DIAG=1 target/profiling-fast/bot_ladder --a gang --b gang \
 # "undecided", and `--decks all --seed 43 --games 370` hides a nine-minute
 # game behind `0 undecided`.
 
+# WHICH GAME DIVERGED, AND AT WHICH ACTION. Every game the in-process paired
+# loop plays is written as its golden-trace text (one line per accepted
+# action with the board after it) to `<dir>/<job seed>_<pair>_<seat
+# order>.txt`. `bot_ladder`'s stdout is outcomes only, `--bench` reaches one
+# pool and the golden traces are one pairing, so "two binaries on one seed
+# play different `cube` games" was invisible until it moved a callgrind
+# total by 2.6 %. Dump both sides and `diff -rq` the directories: the first
+# differing file names the pairing, the first differing line the action.
+# `CRAB_CAP_DIAG=2` on a binary without the instrument prints every game's
+# final board, which is enough to name the pairing from the outside.
+#   CRAB_DUMP_TRACES=/tmp/trA target/profiling-fast/bot_ladder --a gang \
+#     --b gang --games 6 --threads 1 --seed 1 --decks cube
+# ⚠ AND CHECK THE CATALOG BEFORE CALLING A DIVERGENCE A BUG. The first use
+# of this instrument chased a "layout-dependent game" for four builds; the
+# base binary predated a rebase that had pulled two concurrent catalog
+# commits (a Moonshadow rewrite among them). **An A/B's two sides are built
+# from one base tree**, and `git log --oneline --stat <base>..HEAD --
+# crabomination_catalog crabomination_base` is the check when a rebase
+# lands between them.
+#
 # WHERE DID THAT LIFE COME FROM. Prints every single life adjustment of at
 # least `n` with the seat, the turn and the running total. A compounding
 # source reads as a doubling series, a one-shot as a single row — which is how
@@ -1030,6 +1050,21 @@ per run, not ten. Callgrind on six games takes about three minutes and is
 contention-immune, which makes it the better first look.
 
 ## Standing rules for a perf pass
+
+- ⚠ **AN A/B'S TWO SIDES ARE BUILT FROM ONE BASE TREE.** A rebase between
+  the base build and the candidate build can pull a concurrent *catalog*
+  commit, and a card rewrite moves the six-game `cube` run — `(-185)`'s
+  first reading was `cube` +2.62 % / `sealed` +0.52 % / `fixed` -0.59 %
+  against a base that predated a Moonshadow fix, and four builds went into
+  proving the candidate innocent. Read `git log --oneline --stat
+  <base>..HEAD -- crabomination_catalog crabomination_base` after any
+  rebase; a non-empty answer means re-take the base. The tell in the dump
+  is a *different game*, not a different cost: `pay_taps` under
+  `CRAB_PAY_FAILS=1` moves, and `CRAB_DUMP_TRACES` names the pairing.
+- **A one-caller wrapper is inlined by luck; adding a caller to it is a
+  codegen change to the first caller** (`(-182)`, two builds). Check
+  `cg_edges.py --callers <wrapper>` on the base: 0 calls means "do not add
+  one" — read the wrapper's body through a closure of your own instead.
 
 **Memo / lane / gate rules, moved verbatim from `TODO.md`'s NEXT when that
 section passed its ~15-line budget again. They come off `(-149)` through
@@ -2477,14 +2512,18 @@ a box whose state moves.
 
 ## Baseline
 
-### The printed-filter pass — closing state at `(-184)`
+### The printed-filter pass — closing state at `(-185)`
 
-Three candidates, one base: `0c3f4a78` (the `(-181)` tip). All three are
-the same device — answer a requirement off the printed line where the
-walker would, and ask the walker only for the rest — first as a struct
-resolved once per grant scan, then as a three-valued evaluator at the
-targeting enumerator and the selector resolver, then the same evaluator
-at the trigger-grant walk. The second moves all three pools.
+Four candidates, two bases. All four are the same device — answer a
+requirement off the printed line where the walker would, and ask the
+walker only for the rest — first as a struct resolved once per grant
+scan, then as a three-valued evaluator at the targeting enumerator and
+the selector resolver, then the same evaluator at the trigger-grant walk,
+then its off-battlefield twin at the graveyard sweep. The first three
+legs are against `0c3f4a78`; the `(-184)` rebase pulled two concurrent
+catalog commits (Moonshadow rewritten), so the fourth is against
+`b700cfe7` rebuilt on that catalog, and the two cumulative rows below do
+not chain.
 
 ```text
   pool     base 0c3f4a78     tip (-184)       cumulative
@@ -2492,10 +2531,16 @@ at the trigger-grant walk. The second moves all three pools.
   cube     2,338,151,325    2,295,724,445   **-1.8146 %**
   sealed   2,370,047,541    2,353,800,675   **-0.6855 %**
 
+  pool     base b700cfe7     tip (-185)       delta
+  fixed      856,291,452      847,241,709   **-1.0569 %**
+  cube     2,356,266,820    2,353,126,178   **-0.1333 %**
+  sealed   2,364,812,716    2,362,347,082   **-0.1043 %**
+
   leg      fixed      cube     sealed   what
   (-182)  +0.008 %  -1.164 %  +0.013 %  grant filters reduced to printed tests once per grant_scan
   (-183)  -0.682 %  -0.524 %  -0.698 %  printed_requirement in front of the walker at five many-permanent sites
   (-184)   0.000 %  -0.135 %  -0.000 %  the trigger-grant walk on the evaluator, every entry point hinted
+  (-185)  -1.057 %  -0.133 %  -0.104 %  the graveyard sweep on the evaluator's off-battlefield twin
 ```
 
 ```text
@@ -11384,6 +11429,57 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-185)` TAKEN — the targeting enumerator's graveyard sweep evaluates the card it holds off the printed line instead of re-finding it through the walker: `fixed` -1.057 % / `cube` -0.133 % / `sealed` -0.104 %
+
+```text
+  pool    base b700cfe7      (-185)          delta
+  fixed     856,291,452     847,241,709   **-1.0569 %**
+  cube    2,356,266,820   2,353,126,178   **-0.1333 %**
+  sealed  2,364,812,716   2,362,347,082   **-0.1043 %**
+  first_legal_graveyard_card's 18,612 asks on cube:
+    walker 7,828,016 Ir  ->  printed_requirement_impl::<true> 1,553,998 Ir
+  printed_requirement calls on cube: 465,644 -> 487,768 (the sweep's)
+```
+
+⚠ **The base is `b700cfe7` rebuilt, not the `(-184)` candidate binary**:
+the `(-184)` rebase had pulled two concurrent catalog commits (`49af93ca`
+rewrote Moonshadow among seven cards; `906b8d09` three more), so every
+binary built after it plays a different seed-1 `cube` game — the first
+reading against the pre-rebase binary was **`cube` +2.62 % / `sealed`
++0.52 % / `fixed` -0.59 %** and four builds went into proving the device
+innocent (Standing rules, top; `CRAB_DUMP_TRACES` in "How to measure" is
+what named the pairing). The Baseline's cumulative row carries both
+bases.
+
+`requirement_on_graveyard_card` is the off-battlefield entry: it resolves
+the object the walker's `requirement_card_off_battlefield` would return
+(a death snapshot, then the leaves-battlefield LKI, then the card itself)
+without the walker's `battlefield_find` miss and graveyard re-scan, and
+evaluates it with `printed_requirement_impl::<true>` — the same arms as the
+battlefield evaluator with the off-battlefield readings the walker takes
+there: the card-type family printed unconditionally, `Creature` with
+Grist's CR 604.3 clause, a controller only through the stack or the death
+snapshot, the subtype gates skipped (`computed()` is `None` off the
+battlefield and the shallow read needs a permanent too). `first_legal_
+graveyard_card` takes the card rather than its id, and both of its call
+sites (the graveyard-preferring effects and the last-resort sweep) go
+through it.
+
+**Two readings before this one, both off the same base, both the
+evaluator's own price:** the zone as a seventh argument spilled every
+recursive call (`printed_requirement` +5.1 M on `cube`, +8.2 M on
+`sealed`: `cube` +0.058 %, `sealed` +0.122 %, `fixed` -0.997 %); the zone
+as a field read per call cost six instructions a call over the 465 k
+calls the battlefield sites already made (37.3 -> 43.2 Ir a call: `cube`
++0.023 %, `sealed` +0.061 %). A `const OFF: bool` parameter monomorphizes
+the two paths and the per-call cost is the base's. **An evaluator that is
+called half a million times a run cannot take a flag; the flag is a
+monomorphization.**
+
+`--bench` byte-identical (195,806 / 27.49 / 611.9 / 0 stalls),
+determinism ok, three-pool stdout identical bar wall-clock, golden traces
+unmoved; suite in the commit.
 
 ### `(-184)` TAKEN — the trigger-grant walk hands every entry point's battlefield permanent to the printed evaluator: `cube` -0.135 %, `fixed` / `sealed` flat
 
@@ -21889,6 +21985,15 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-185) TAKEN — `fixed` -1.057 % / `cube` -0.133 % / `sealed` -0.104 %:**
+the graveyard sweep on the evaluator's off-battlefield twin (Log). **What
+is left of the walker on `cube` after it is ~167 k calls**: its own
+recursion from callers still on the plain form, the gather's
+condition-gated statics (27,132 / 5.7 M), and the SBA sweep's
+`no_other` filter. The evaluator's own residuals stand: the card-type
+closure out of line, ~35 Ir a node, `PrintedGrantFilter` and a per-batch
+`PrintedGates` for the trigger-grant walk.
 
 **(-184) TAKEN — `cube` -0.135 %, flat elsewhere:** the trigger-grant walk
 on the evaluator, every entry point hinted (Log).

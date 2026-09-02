@@ -722,6 +722,10 @@ impl GameState {
                 self.requirement_on_permanent(req, c, controller, source, &gates)
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
+            let is_legal_gy = |c: &CardInstance| -> bool {
+                self.requirement_on_graveyard_card(req, c, controller, source)
+                    && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
+            };
             let pick = {
                 // Player slots: try controller first (caster-friendly),
                 // then opponent.
@@ -738,7 +742,7 @@ impl GameState {
                 // permanent that happens to match the filter; sweep
                 // graveyards first for those.
                 if found.is_none() && eff.prefers_graveyard_target() {
-                    found = first_legal_graveyard_card(self, is_legal);
+                    found = first_legal_graveyard_card(self, is_legal_gy);
                 }
                 // Battlefield: prefer one not already picked by slot 0 or
                 // earlier slots to avoid double-targeting when the filter is
@@ -836,7 +840,7 @@ impl GameState {
                 // graveyard"). The battlefield walk above can't see them, so
                 // sweep every graveyard as a last resort.
                 if found.is_none() {
-                    found = first_legal_graveyard_card(self, is_legal);
+                    found = first_legal_graveyard_card(self, is_legal_gy);
                 }
                 found
             };
@@ -860,15 +864,19 @@ impl GameState {
 /// `players.iter().flat_map(..).map(..).find(..)`; the walk is per graveyard
 /// card per slot and the adapter stack costs a `&mut F` forward per element
 /// (PERF (-78)).
+///
+/// Takes the card, not its id: the requirement goes through
+/// [`GameState::requirement_on_graveyard_card`], which skips the walker's
+/// battlefield miss and re-find for a card the loop already holds (PERF
+/// `(-185)`).
 fn first_legal_graveyard_card(
     state: &GameState,
-    is_legal: impl Fn(&Target) -> bool,
+    is_legal: impl Fn(&CardInstance) -> bool,
 ) -> Option<Target> {
     for p in state.players.iter() {
         for c in p.graveyard.iter() {
-            let t = Target::Permanent(c.id);
-            if is_legal(&t) {
-                return Some(t);
+            if is_legal(c) {
+                return Some(Target::Permanent(c.id));
             }
         }
     }
