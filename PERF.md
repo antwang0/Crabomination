@@ -2477,34 +2477,44 @@ a box whose state moves.
 
 ## Baseline
 
-### The printed-filter pass — closing state at `(-182)`
+### The printed-filter pass — closing state at `(-183)`
 
-One candidate, one base: `0c3f4a78` (the `(-181)` tip). Sized off the
-`--separate-callers=4` cube context table again; the first `cube` row
-above 1 % two passes running, and the two flat pools inside the codegen
-band.
+Two candidates, one base: `0c3f4a78` (the `(-181)` tip). Both are the
+same device — answer a requirement off the printed line where the walker
+would, and ask the walker only for the rest — first as a struct resolved
+once per grant scan, then as a three-valued evaluator at the targeting
+enumerator and the selector resolver. The second moves all three pools.
 
 ```text
-  pool     base 0c3f4a78     tip (-182)       delta
-  fixed      857,841,759      857,911,397   **+0.0081 %**
-  cube     2,338,151,325    2,310,937,194   **-1.1639 %**
-  sealed   2,370,047,541    2,370,355,006   **+0.0130 %**
+  pool     base 0c3f4a78     tip (-183)       cumulative
+  fixed      857,841,759      852,058,963   **-0.6741 %**
+  cube     2,338,151,325    2,298,837,652   **-1.6814 %**
+  sealed   2,370,047,541    2,353,801,948   **-0.6855 %**
+
+  leg      fixed      cube     sealed   what
+  (-182)  +0.008 %  -1.164 %  +0.013 %  grant filters reduced to printed tests once per grant_scan
+  (-183)  -0.682 %  -0.524 %  -0.698 %  printed_requirement in front of the walker at five many-permanent sites
 ```
 
 ```text
 rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
-suite   see the commit; golden traces in it and unmoved
+suite   19,203 / 0 / 5 at (-182); see the (-183) commit for its run.
+        Golden traces in it and unmoved at both legs.
 clippy  --workspace --exclude crabomination_client --all-targets   clean
 release the profiling-fast build (release-fast opts, debug-assertions off)
         is the typecheck gate here
 --bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
         0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
-        invariant; determinism ok (3 vs 1 threads identical); peak_rss
-        21.1 MiB, bin 219,313,192 B (`--no-default-features`)
-stalls  three-pool six-game stdout identical to the base's but the
-        wall-clock line. No `debug-assertions`+`overflow` grid this run; the
-        new `debug_assert_eq!` in `granted_abilities_of_inner` is what the
-        next grid audits.
+        invariant at both legs; determinism ok (3 vs 1 threads identical);
+        peak_rss 20.8 MiB, bin 219,324,224 B (`--no-default-features`)
+stalls  three-pool six-game stdout identical to the base's at both legs
+        but the wall-clock line.
+audit   `-C debug-assertions=yes` + `overflow` ladder at (-182): `cube`
+        seeds 1 3 7 11 23 97, `all` 1 3, `sos` 1, `sealed` 1, 120
+        games/archetype — 8,880 games, 0 undecided, no panic / assertion /
+        overflow, the `printed_grant_filter disagrees` string present in
+        the binary. The `(-183)` assert has the suite behind it only; run
+        the grid next.
 ```
 
 ### The step-grant pass — closing state at `0c3f4a78`
@@ -11372,6 +11382,59 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-183)` TAKEN — the targeting enumerator and `resolve_selector`'s `EachPermanent` arms ask a printed-line evaluator before the walker: `sealed` -0.698 % / `fixed` -0.682 % / `cube` -0.524 %
+
+```text
+  pool    base (-182)        (-183)          delta
+  fixed     857,911,397     852,058,963   **-0.6822 %**
+  cube    2,310,937,194   2,298,837,652   **-0.5236 %**
+  sealed  2,370,355,006   2,353,801,948   **-0.6984 %**
+  evaluate_requirement_static_hinted calls on cube: 726,652 -> 252,968
+    (from auto_targets_for_effect_all_slots_kicked: 101,716 -> 7,582;
+     from resolve_selector's from_iter: 48,570 -> ~1,200)
+  printed_requirement on cube: 432,090 calls, 7.18 M + 7.67 M (its own
+    recursion) + 3.07 M (the card-type closure, out of line) self
+  presence_gate / card_type_change_in_scope callers on every pool: 0 (the
+    walker's inlining is the base's)
+```
+
+`GameState::printed_requirement` is the three-valued printed-line twin of
+the walker's `Target::Permanent` block: `Some` where the walker reads the
+printed line or an instance field — the card-type family behind the
+layer-4 gate and `bestowed`, `HasCreatureType` / `HasLandType` behind
+theirs, `HasCardType` (never layered in the walker either), controller,
+token, tapped, attacking, source, `IsSpellOnStack`, `InYourGraveyard` —
+and `None` for every other leaf. `And`/`Or` short-circuit on a known side,
+so `And(IsSpellOnStack, Or(PowerAtMost(2), …))` is `false` on a battlefield
+permanent without touching the half the walker would have to compute.
+`requirement_on_permanent` is the entry (printed first, walker for `None`,
+`debug_assert_eq!` on every fast answer) and `PrintedGates` is the caller's
+per-requirement memo of the three presence gates, each read through its
+own `presence_gate` closure so the walker's inlined copies are untouched
+(`(-182)`'s rule, and the `--callers` rows above are the check). Five
+sites: the three `is_legal_bf` closures in `targeting.rs` and the two
+`EachPermanent*` arms of `resolve_selector_inner`.
+
+**Sized by a one-build `eprintln!` census at the five sites** (six `cube`
+games, invocations x board = walker calls): 170,560 walker calls, of which
+`And(HasLandType(Forest), ControlledByYou)` under a predicate's selector
+is 39,630, bare `Any` 24,800, `Creature` 24,822, and the `IsSpellOnStack`
+conjunctions (a counterspell's filter asked of every permanent) 33,550.
+None of the four is a shape the `(-182)` struct could hold, which is why
+this is an evaluator and not a second struct.
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, golden traces unmoved, `--bench` byte-identical
+(195,806 / 27.49 / 611.9 / 0 stalls), determinism ok (3 vs 1 threads).
+
+Residuals, filed under Perf candidates: `first_legal_graveyard_card` is now
+the enumerator's largest walker context (18,612 calls / 7.8 M on `cube`)
+and takes a graveyard-card twin of the same evaluator; the card-type
+closure runs out of line (3.07 M on `cube`) and the recursion is ~34 Ir a
+node — a flattened conjunction would halve it; `PrintedGrantFilter` is the
+same device as a struct and one measured build decides whether the grant
+site moves onto this evaluator.
 
 ### `(-182)` TAKEN — a `GrantActivatedAbility` filter is reduced to printed-line tests once per scan, not walked once per (permanent x grant): `cube` -1.164 % / `fixed` +0.008 % / `sealed` +0.013 %
 
@@ -21787,6 +21850,20 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-183) TAKEN — `sealed` -0.698 % / `fixed` -0.682 % / `cube` -0.524 %:**
+`printed_requirement` answers the targeting enumerator's and the selector
+resolver's per-permanent asks before the walker (Log). **What is left of
+the walker on `cube` after it is 252,968 calls**, the largest contexts
+now `first_legal_graveyard_card` (18,612 / 7.8 M — a graveyard-card twin
+of the evaluator: the walker's off-battlefield block reads the printed
+definition for every leaf, so the twin is simpler than the battlefield
+one), `statics_granted_triggers_inner` (33,554 / 7.2 M — the trigger
+grant twin of `(-182)`, resolve once per `trigger_grant_sources`), and
+the gather's condition-gated statics (27,132 / 5.7 M). Residuals of the
+evaluator itself: the card-type closure is out of line (3.07 M on `cube`),
+the recursion is ~34 Ir a node, and `PrintedGrantFilter` could move onto
+it (one build, measured against the `(-182)` row).
 
 **(-182) TAKEN — `cube` -1.164 % / `fixed` +0.008 % / `sealed` +0.013 %:**
 the grant filter is reduced to printed-line tests once per `grant_scan`

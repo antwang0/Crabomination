@@ -34311,9 +34311,10 @@ impl GameState {
                 // "destroy each artifact with mana value X" (Dauntless
                 // Dismantler) and similar sweeps read the activation's X.
                 let filter = filter.resolve_x(ctx.x_value);
+                let gates = eval::PrintedGates::default();
                 self.battlefield
                     .iter()
-                    .filter(|c| self.evaluate_requirement_static_on(&filter, c, ctx.controller, ctx.source))
+                    .filter(|c| self.requirement_on_permanent(&filter, c, ctx.controller, ctx.source, &gates))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }
@@ -34328,10 +34329,11 @@ impl GameState {
                         _ => None,
                     })
                     .collect();
+                let gates = eval::PrintedGates::default();
                 self.battlefield
                     .iter()
                     .filter(|c| !chosen.contains(&c.id))
-                    .filter(|c| self.evaluate_requirement_static_on(&filter, c, ctx.controller, ctx.source))
+                    .filter(|c| self.requirement_on_permanent(&filter, c, ctx.controller, ctx.source, &gates))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }

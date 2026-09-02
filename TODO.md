@@ -25,25 +25,28 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-182)` taken this run, `(-183)` is
-   next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-182)` and `(-183)` taken this run,
+   `(-184)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a
    perf pass"**. Cold here: `profiling-fast` 17 min (5 min warm), test build+suite 12 min;
    `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind ~2 min.
    ⚠ **A worktree build sharing `CARGO_TARGET_DIR` reuses the main tree's engine artifact** — an
    A/B read 0.000 % off two identical binaries; `cargo clean -p` the engine between sides.
-2. **Gates at the `(-182)` tip:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets`
+2. **Gates at the `(-183)` tip:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets`
    clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok.
-   No `debug-assertions` grid this run — **run it next: the new `debug_assert_eq!` in
-   `granted_abilities_of_inner` (printed filter vs walker) has only the suite's boards behind it.**
-3. **This run: `(-182)`** — a grant's `EachPermanent` filter is reduced to printed-line tests once
-   per `grant_scan`: **`cube` -1.16 %**, `fixed` +0.008 %, `sealed` +0.013 %. Log top. ⚠ Two
-   builds lost to inlining first (a one-caller wrapper, then `presence_gate`) — the Log row's
-   rule: `--callers <wrapper>` reading 0 on the base means "do not add a caller".
-4. **Next perf lead:** the walker is ~7.5 % of `cube` inclusive after `(-182)`; re-take the
-   `--separate-callers=4` context table and apply the same resolve-once/test-per-permanent device
-   to its next largest many-permanents-one-requirement caller (`fire_combat_damage_triggers`,
-   `event_matches_spec`). ⚠ Census the filter shape off the run first — the handoff's shape from
-   memory missed an `IsToken` leaf and cost a build. Then the `(-90)`/`(-174)` map. PGO -24 %, opt-in.
+   `debug-assertions` ladder (10 cells, 8,880 games) clean at `(-182)`; **the `(-183)` assert
+   (`printed_requirement` vs walker) has only the suite behind it — run the grid next.**
+3. **This run: `(-182)` + `(-183)`, one device twice** — answer a requirement off the printed line
+   where the walker would, walker for the rest, `debug_assert_eq!` as the ratchet. `(-182)` a struct
+   per grant static: **`cube` -1.16 %**, flat elsewhere. `(-183)` `printed_requirement` at the
+   targeting enumerator + `resolve_selector`: **-0.52 / -0.68 / -0.70 %** on cube / fixed / sealed.
+   ⚠ Two builds lost to inlining in `(-182)` — Log: `--callers <wrapper>` 0 on the base means "do
+   not add a caller"; read a gate's *body* through your own closure instead.
+4. **Next perf lead, sized in PERF candidates `(-183)`:** the walker's largest contexts on `cube`
+   are now `first_legal_graveyard_card` (7.8 M — a graveyard-card twin of the evaluator),
+   `statics_granted_triggers_inner` (7.2 M — `(-182)`'s struct for trigger grants) and the
+   gather's condition-gated statics (5.7 M). ⚠ Census the filter shapes off the run first
+   (`eprintln!` at the site, one build) — a shape from memory cost `(-182)` a build.
+   Then the `(-90)`/`(-174)` map. PGO -24 %, opt-in.
 5. **Open, sized (leave):** `apply_as_enters_effect` / Mimeoplasm (ENGINE_BACKLOG); the empty-stack
    `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 1.9 % of both pools in gate
    prelude with no single hot line — a `profiling-lines` read, not a device.

@@ -11,7 +11,73 @@ use super::{EffectContext, EntityRef};
 use crate::card::{CardId, CardInstance, CardType, SelectionRequirement, Supertype};
 use crate::effect::{Predicate, Value};
 use crate::mana::ManaSymbol;
-use crate::game::{GameState, StackItem, Target};
+use crate::game::{GameState, PresenceGate, StackItem, Target};
+
+/// One requirement walk's memo of the three layer-4 presence gates the
+/// printed evaluator consults — see [`GameState::requirement_on_permanent`].
+/// Built once per requirement by the caller and read per permanent; `false`
+/// from a gate is authoritative, `true` sends that leaf to the walker.
+///
+/// Each read is the gate's *body*, not its `GameState` wrapper: the wrappers'
+/// one caller is the walker, which inlines them whole, and a second caller
+/// de-inlines them there (PERF `(-182)`, two builds). A closure of this
+/// module's own is a separate `presence_gate` monomorphization, so the
+/// walker's copies are untouched.
+#[derive(Default)]
+pub(crate) struct PrintedGates {
+    card: std::cell::Cell<Option<bool>>,
+    creature: std::cell::Cell<Option<bool>>,
+    land: std::cell::Cell<Option<bool>>,
+}
+
+impl PrintedGates {
+    #[inline]
+    fn card(&self, g: &GameState) -> bool {
+        if let Some(v) = self.card.get() {
+            return v;
+        }
+        let v = g.presence_gate(PresenceGate::Card, || g.card_type_change_unscoped());
+        self.card.set(Some(v));
+        v
+    }
+    #[inline]
+    fn creature(&self, g: &GameState) -> bool {
+        if let Some(v) = self.creature.get() {
+            return v;
+        }
+        let v = g.battlefield.has_creature_type_changer(crate::game::card_can_change_creature_types)
+            || g.presence_gate(PresenceGate::Creature, || {
+                g.continuous_effects.iter().any(|e| {
+                    matches!(
+                        e.modification,
+                        crate::game::Modification::AddCreatureType(_)
+                            | crate::game::Modification::SetCreatureTypes(_)
+                    )
+                })
+            });
+        self.creature.set(Some(v));
+        v
+    }
+    #[inline]
+    fn land(&self, g: &GameState) -> bool {
+        if let Some(v) = self.land.get() {
+            return v;
+        }
+        let v = g.battlefield.has_land_type_changer(crate::game::card_can_change_land_types)
+            || g.presence_gate(PresenceGate::Land, || {
+                g.continuous_effects.iter().any(|e| {
+                    matches!(
+                        e.modification,
+                        crate::game::Modification::AddLandType(_)
+                            | crate::game::Modification::SetLandTypes(_)
+                            | crate::game::Modification::ReplaceBasicLandType(..)
+                    )
+                })
+            });
+        self.land.set(Some(v));
+        v
+    }
+}
 
 /// OTJ — a card is an outlaw if it is a creature that's an Assassin, Mercenary,
 /// Pirate, Rogue, or Warlock (Changeling satisfies any type).
@@ -3128,6 +3194,158 @@ impl GameState {
             source,
             Some(card),
         )
+    }
+
+    /// [`evaluate_requirement_static_on`](Self::evaluate_requirement_static_on)
+    /// for a caller that asks one requirement of many battlefield permanents:
+    /// the printed-line evaluator answers first and the walker only the
+    /// shapes it declines. `gates` is the caller's per-walk memo of the three
+    /// presence gates; build one per requirement, never per permanent.
+    ///
+    /// The walker's frame is the cost — ~150-300 Ir a call for what a target
+    /// filter usually is (a card type, a controller, a subtype), and the
+    /// targeting enumerator and `resolve_selector`'s `EachPermanent` arm ask
+    /// it 170 k times a six-game `cube` run (PERF `(-183)`). Every fast
+    /// answer is checked against the walker under `debug_assertions`, so the
+    /// suite and `scripts/robustness_grid.sh` are the ratchet that keeps
+    /// [`printed_requirement`](Self::printed_requirement) in step with it.
+    #[inline]
+    pub(crate) fn requirement_on_permanent(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+        source: Option<CardId>,
+        gates: &PrintedGates,
+    ) -> bool {
+        match self.printed_requirement(req, card, controller, source, gates) {
+            Some(p) => {
+                debug_assert_eq!(
+                    p,
+                    self.evaluate_requirement_static_on(req, card, controller, source),
+                    "printed_requirement disagrees with the requirement walker"
+                );
+                p
+            }
+            None => self.evaluate_requirement_static_on(req, card, controller, source),
+        }
+    }
+
+    /// The printed-line twin of the walker's `Target::Permanent` block, for a
+    /// permanent the caller holds: three-valued, `None` meaning "ask the
+    /// walker". A leaf is answered here only where the walker itself reads
+    /// the printed line — the card-type family behind the layer-4 presence
+    /// gate and `bestowed`, the subtype families behind theirs — or an
+    /// instance field / zone scan it would read the same way. `And`/`Or`
+    /// short-circuit on a known side, so `And(IsSpellOnStack, …)` is `false`
+    /// on the battlefield without touching the unknown half.
+    ///
+    /// **Every arm here is a copy of a walker arm and must read what it
+    /// reads.** `requirement_on_permanent`'s `debug_assert_eq!` is the audit;
+    /// a leaf that is not a bit-for-bit restatement of its walker arm stays
+    /// out (`PowerAtMost` reads the computed view; `HasKeyword` the instance
+    /// grants — both walker-only).
+    pub(crate) fn printed_requirement(
+        &self,
+        req: &SelectionRequirement,
+        card: &CardInstance,
+        controller: usize,
+        source: Option<CardId>,
+        gates: &PrintedGates,
+    ) -> Option<bool> {
+        use SelectionRequirement as R;
+        let cid = card.id;
+        // The walker's `has_type`: printed unless a layer-4 card-type source
+        // is in scope or the permanent is bestowed. Grist's
+        // `creature_off_battlefield` clause is the walker's too.
+        let card_type = |t: CardType| -> Option<bool> {
+            if card.bestowed
+                || gates.card(self)
+                || (t == CardType::Creature && card.definition.creature_off_battlefield)
+            {
+                return None;
+            }
+            Some(card.definition.card_types.contains(&t))
+        };
+        match req {
+            R::Any => Some(true),
+            R::Player => Some(false),
+            R::And(a, b) => {
+                let x = self.printed_requirement(a, card, controller, source, gates);
+                if x == Some(false) {
+                    return Some(false);
+                }
+                let y = self.printed_requirement(b, card, controller, source, gates);
+                match (x, y) {
+                    (Some(true), y) => y,
+                    (None, Some(false)) => Some(false),
+                    _ => None,
+                }
+            }
+            R::Or(a, b) => {
+                let x = self.printed_requirement(a, card, controller, source, gates);
+                if x == Some(true) {
+                    return Some(true);
+                }
+                let y = self.printed_requirement(b, card, controller, source, gates);
+                match (x, y) {
+                    (Some(false), y) => y,
+                    (None, Some(true)) => Some(true),
+                    _ => None,
+                }
+            }
+            R::Not(inner) => {
+                self.printed_requirement(inner, card, controller, source, gates).map(|v| !v)
+            }
+            R::ControlledByYou => Some(card.controller == controller),
+            R::ControlledByOpponent => Some(!self.same_team(card.controller, controller)),
+            R::ControlledByActivePlayer => Some(card.controller == self.active_player_idx),
+            R::Permanent => Some(card.definition.is_permanent()),
+            R::Creature => card_type(CardType::Creature),
+            R::Land => card_type(CardType::Land),
+            R::Artifact => card_type(CardType::Artifact),
+            R::Enchantment => card_type(CardType::Enchantment),
+            R::Planeswalker => card_type(CardType::Planeswalker),
+            R::Nonland => card_type(CardType::Land).map(|v| !v),
+            R::Noncreature => card_type(CardType::Creature).map(|v| !v),
+            // CR 715 / 702.183 — the walker reads the adventure/omen half's
+            // types here and never the layer view.
+            R::HasCardType(ct) => Some(match card.alt_spell_half() {
+                Some(half) => half.card_types.contains(ct),
+                None => card.definition.card_types.contains(ct),
+            }),
+            R::HasCreatureType(ct) => {
+                if gates.creature(self) {
+                    return None;
+                }
+                Some(
+                    card.definition.subtypes.creature_types.contains(ct)
+                        || card.has_keyword(&crate::card::Keyword::Changeling),
+                )
+            }
+            R::HasLandType(lt) => {
+                if gates.land(self) {
+                    return None;
+                }
+                Some(card.definition.subtypes.land_types.contains(lt))
+            }
+            R::HasColor(c) => Some(card.definition.printed_colors().contains(c)),
+            R::IsToken => Some(card.is_token),
+            R::NotToken => Some(!card.is_token),
+            R::Tapped => Some(card.tapped),
+            R::Untapped => Some(!card.tapped),
+            R::EnteredThisTurn => Some(card.entered_turn == Some(self.turn_number)),
+            R::IsAttacking => Some(self.attacking.iter().any(|a| a.attacker == cid)),
+            R::OtherThanSource => Some(source.is_none_or(|s| cid != s)),
+            R::IsSource => Some(source == Some(cid)),
+            R::IsSpellOnStack => Some(self.stack.iter().any(
+                |si| matches!(si, StackItem::Spell { card: c, .. } if c.id == cid),
+            )),
+            R::InYourGraveyard => Some(
+                self.players.get(controller).is_some_and(|p| p.graveyard.iter().any(|c| c.id == cid)),
+            ),
+            _ => None,
+        }
     }
 
     /// The hint stands in for `battlefield_find` only when it names the id

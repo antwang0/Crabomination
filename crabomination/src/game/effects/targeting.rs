@@ -161,8 +161,9 @@ impl GameState {
         // holds the permanent, and the plain form re-finds it by id —
         // `evaluate_requirement_static`'s own `battlefield_find` is 1.7 % of
         // simulator instructions on its own (pass 53).
+        let gates = crate::game::effects::eval::PrintedGates::default();
         let is_legal_bf = |c: &CardInstance| -> bool {
-            self.evaluate_requirement_static_on(req, c, controller, avoid_source)
+            self.requirement_on_permanent(req, c, controller, avoid_source, &gates)
                 && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
         };
         // CR 702.21 — a hostile permanent with a non-trivial Ward gets the
@@ -556,8 +557,9 @@ impl GameState {
         // See `auto_target_for_effect_avoiding_set_xc_inner` — the
         // battlefield walk hands the permanent over rather than making
         // `evaluate_requirement_static` re-find it.
+        let gates = crate::game::effects::eval::PrintedGates::default();
         let is_legal_bf = |c: &CardInstance| -> bool {
-            self.evaluate_requirement_static_on(req, c, controller, source)
+            self.requirement_on_permanent(req, c, controller, source, &gates)
                 && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
         };
 
@@ -715,8 +717,9 @@ impl GameState {
             };
             // The battlefield candidate walk below already holds each
             // permanent; hand it over instead of re-finding it by id.
+            let gates = crate::game::effects::eval::PrintedGates::default();
             let is_legal_bf = |c: &CardInstance| -> bool {
-                self.evaluate_requirement_static_on(req, c, controller, source)
+                self.requirement_on_permanent(req, c, controller, source, &gates)
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
             let pick = {
