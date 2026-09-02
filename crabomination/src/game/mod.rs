@@ -3577,11 +3577,22 @@ impl GameState {
     /// `StaticEffect::GrantTriggeredAbility` statics ("All artifacts have
     /// '…'" — Kataki, War's Wage). Each fires as though printed on the
     /// matching permanent (CR 702.6e-style source binding).
+    ///
+    /// `card` must be the battlefield permanent itself (every caller finds
+    /// it there first): it is handed to each grant filter as the walker's
+    /// hint, which `evaluate_requirement_static_on` `debug_assert!`s. The
+    /// hintless form ran one `battlefield_find` per grant per call — 14,656
+    /// calls / 3.7 M Ir on a six-game `cube` run (PERF `(-184)`). A caller
+    /// holding a snapshot or a card being cast takes
+    /// [`statics_granted_triggers_with`](Self::statics_granted_triggers_with).
     pub fn statics_granted_triggers_for(
         &self,
         card: &CardInstance,
     ) -> Vec<crate::card::TriggeredAbility> {
-        self.statics_granted_triggers_with(card, &self.trigger_grant_sources())
+        self.statics_granted_triggers_inner(card, &self.trigger_grant_sources())
+            .into_iter()
+            .cloned()
+            .collect()
     }
 
     /// The live `GrantTriggeredAbility` statics on the board, each with its
@@ -3651,10 +3662,11 @@ impl GameState {
         }
     }
 
-    /// [`statics_granted_triggers_for`] against a prebuilt grant list, for a
-    /// caller that cannot promise `card` is a live battlefield permanent (a
-    /// death snapshot, a card being cast). Prefer
-    /// [`statics_granted_triggers_on`](Self::statics_granted_triggers_on).
+    /// [`statics_granted_triggers_for`] against a prebuilt grant list — the
+    /// owning form for a caller that keeps the list past a `&mut self` call.
+    /// Same contract: `card` is the battlefield permanent. Prefer
+    /// [`statics_granted_triggers_on`](Self::statics_granted_triggers_on)
+    /// where the result is consumed in place.
     ///
     /// [`statics_granted_triggers_for`]: Self::statics_granted_triggers_for
     pub(crate) fn statics_granted_triggers_with(
@@ -3662,7 +3674,7 @@ impl GameState {
         card: &CardInstance,
         grants: &[TriggerGrant<'_>],
     ) -> Vec<crate::card::TriggeredAbility> {
-        self.statics_granted_triggers_inner(card, grants, None)
+        self.statics_granted_triggers_inner(card, grants)
             .into_iter()
             .cloned()
             .collect()
@@ -3673,12 +3685,12 @@ impl GameState {
     /// it by id.
     ///
     /// Three of this function's four call sites are exactly that loop, and it
-    /// is the hottest of them: `statics_granted_triggers_with` is 351,982
+    /// is the hottest of them: `statics_granted_triggers_with` was 351,982
     /// calls / ~207 M Ir inclusive on a cube run at the fifty-fifth tip, and
-    /// each call runs one `battlefield_find` per grant. The hint is only
+    /// each call ran one `battlefield_find` per grant. The hint is only
     /// equivalent to the walk when `card` *is* the battlefield permanent with
-    /// that id, which `evaluate_requirement_static_on` `debug_assert!`s — so
-    /// a caller that cannot promise it keeps the plain form above.
+    /// that id, which `evaluate_requirement_static_on` `debug_assert!`s; since
+    /// PERF `(-184)` every entry point promises it.
     ///
     /// Borrows rather than clones, because all three of those callers filter
     /// the result on `event.kind` and drop most of it: at the eighty-fourth
@@ -3691,25 +3703,26 @@ impl GameState {
         card: &'a CardInstance,
         grants: &[TriggerGrant<'a>],
     ) -> SmallVec<[&'a crate::card::TriggeredAbility; 2]> {
-        self.statics_granted_triggers_inner(card, grants, Some(card))
+        self.statics_granted_triggers_inner(card, grants)
     }
 
     fn statics_granted_triggers_inner<'a>(
         &'a self,
         card: &'a CardInstance,
         grants: &[TriggerGrant<'a>],
-        hint: Option<&CardInstance>,
     ) -> SmallVec<[&'a crate::card::TriggeredAbility; 2]> {
+        // `card` is the battlefield permanent (every entry point finds it
+        // there), so it is the walker's hint, and the printed evaluator goes
+        // first (PERF `(-184)`): a trigger grant's filter is "creatures you
+        // control" on nearly every card, and this is asked per permanent per
+        // step. The gates memo is per call, which is per permanent — the
+        // step and dispatch callers hold a freeze scope, so each read past
+        // the first is the scope's memo, not a walk.
+        let gates = crate::game::effects::PrintedGates::default();
         let matches = |req: &crate::card::SelectionRequirement,
                        controller: usize,
-                       source: Option<CardId>| match hint {
-            Some(c) => self.evaluate_requirement_static_on(req, c, controller, source),
-            None => self.evaluate_requirement_static(
-                req,
-                &Target::Permanent(card.id),
-                controller,
-                source,
-            ),
+                       source: Option<CardId>| {
+            self.requirement_on_permanent(req, card, controller, source, &gates)
         };
         let mut out: SmallVec<[&'a crate::card::TriggeredAbility; 2]> = SmallVec::new();
         for g in grants {

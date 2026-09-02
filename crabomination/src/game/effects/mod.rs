@@ -8,6 +8,7 @@
 
 mod delayed;
 mod eval;
+pub(crate) use eval::PrintedGates;
 pub(crate) mod events;
 mod movement;
 mod targeting;

@@ -2477,23 +2477,25 @@ a box whose state moves.
 
 ## Baseline
 
-### The printed-filter pass — closing state at `(-183)`
+### The printed-filter pass — closing state at `(-184)`
 
-Two candidates, one base: `0c3f4a78` (the `(-181)` tip). Both are the
-same device — answer a requirement off the printed line where the walker
-would, and ask the walker only for the rest — first as a struct resolved
-once per grant scan, then as a three-valued evaluator at the targeting
-enumerator and the selector resolver. The second moves all three pools.
+Three candidates, one base: `0c3f4a78` (the `(-181)` tip). All three are
+the same device — answer a requirement off the printed line where the
+walker would, and ask the walker only for the rest — first as a struct
+resolved once per grant scan, then as a three-valued evaluator at the
+targeting enumerator and the selector resolver, then the same evaluator
+at the trigger-grant walk. The second moves all three pools.
 
 ```text
-  pool     base 0c3f4a78     tip (-183)       cumulative
-  fixed      857,841,759      852,058,963   **-0.6741 %**
-  cube     2,338,151,325    2,298,837,652   **-1.6814 %**
-  sealed   2,370,047,541    2,353,801,948   **-0.6855 %**
+  pool     base 0c3f4a78     tip (-184)       cumulative
+  fixed      857,841,759      852,059,045   **-0.6741 %**
+  cube     2,338,151,325    2,295,724,445   **-1.8146 %**
+  sealed   2,370,047,541    2,353,800,675   **-0.6855 %**
 
   leg      fixed      cube     sealed   what
   (-182)  +0.008 %  -1.164 %  +0.013 %  grant filters reduced to printed tests once per grant_scan
   (-183)  -0.682 %  -0.524 %  -0.698 %  printed_requirement in front of the walker at five many-permanent sites
+  (-184)   0.000 %  -0.135 %  -0.000 %  the trigger-grant walk on the evaluator, every entry point hinted
 ```
 
 ```text
@@ -11382,6 +11384,43 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-184)` TAKEN — the trigger-grant walk hands every entry point's battlefield permanent to the printed evaluator: `cube` -0.135 %, `fixed` / `sealed` flat
+
+```text
+  pool    base (-183)        (-184)          delta
+  fixed     852,058,963     852,059,045   **+0.0000 %**
+  cube    2,298,837,652   2,295,724,445   **-0.1354 %**
+  sealed  2,353,801,948   2,353,800,675   **-0.0001 %**
+  statics_granted_triggers_inner's 33,554 grant asks on cube:
+    walker 7,230,586 Ir  ->  printed_requirement 4,198,104 Ir (125 Ir an ask)
+  evaluate_requirement_static_hinted calls on cube: 252,968 -> 185,860
+```
+
+Two halves, measured together because the second is what makes the first
+reach every ask. `statics_granted_triggers_inner` asks the grant filters
+through `requirement_on_permanent` — and its `hint` parameter is gone:
+`statics_granted_triggers_for` / `_with` passed `None` and paid a
+`battlefield_find` per grant inside the walker, though all five of their
+callers find the permanent on the battlefield first (`stack.rs` ETBs,
+`actions.rs` ETBs, `combat.rs`' attack and damage batches). Every entry
+point now hands the permanent over, so the walker's hinted-only
+`debug_assert!` covers all of them. The first build (the hinted path
+alone) read `cube` -0.057 %: 18,690 of the 33,554 asks moved and the
+hintless 14,864 stayed on the walker at 251 Ir apiece.
+
+125 Ir an ask is the `PrintedGates` read per *call* — per permanent —
+because the grant list is a slice and carries no memo; the step and
+dispatch callers hold a freeze scope, so the read past the first is the
+scope's gate memo behind a lock, not a walk. Threading a per-batch
+`PrintedGates` through `TriggerGrant`'s callers would take ~50 Ir an ask
+(~0.07 % of `cube`); below the bar on its own.
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, golden traces unmoved, `--bench` byte-identical
+(195,806 / 27.49 / 611.9 / 0 stalls), determinism ok (3 vs 1 threads).
+`fixed` and `sealed` carry no `GrantTriggeredAbility` static, which is
+why both rows are flat to the Ir.
 
 ### `(-183)` TAKEN — the targeting enumerator and `resolve_selector`'s `EachPermanent` arms ask a printed-line evaluator before the walker: `sealed` -0.698 % / `fixed` -0.682 % / `cube` -0.524 %
 
@@ -21851,19 +21890,25 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**(-184) TAKEN — `cube` -0.135 %, flat elsewhere:** the trigger-grant walk
+on the evaluator, every entry point hinted (Log).
+
 **(-183) TAKEN — `sealed` -0.698 % / `fixed` -0.682 % / `cube` -0.524 %:**
 `printed_requirement` answers the targeting enumerator's and the selector
 resolver's per-permanent asks before the walker (Log). **What is left of
-the walker on `cube` after it is 252,968 calls**, the largest contexts
-now `first_legal_graveyard_card` (18,612 / 7.8 M — a graveyard-card twin
-of the evaluator: the walker's off-battlefield block reads the printed
-definition for every leaf, so the twin is simpler than the battlefield
-one), `statics_granted_triggers_inner` (33,554 / 7.2 M — the trigger
-grant twin of `(-182)`, resolve once per `trigger_grant_sources`), and
-the gather's condition-gated statics (27,132 / 5.7 M). Residuals of the
+the walker on `cube` after `(-184)` is 185,860 calls**, the largest
+contexts now `first_legal_graveyard_card` (18,612 / 7.8 M — a
+graveyard-card twin of the evaluator, and read the walker's `_` arm first:
+it looks the card up through `died_card_snapshots` / `leaves_bf_lki`
+*before* the graveyard, so the twin must read instance fields off the
+same object the walker finds), the gather's condition-gated statics
+(27,132 / 5.7 M), and the walker's own recursion (74,536 / 18.7 M — the
+`Target::Permanent` block reached from callers still on the plain form:
+`cg_contexts.py` with `--separate-callers=4` names them). Residuals of the
 evaluator itself: the card-type closure is out of line (3.07 M on `cube`),
-the recursion is ~34 Ir a node, and `PrintedGrantFilter` could move onto
-it (one build, measured against the `(-182)` row).
+the recursion is ~34 Ir a node, `PrintedGrantFilter` could move onto it
+(one build, measured against the `(-182)` row), and a per-batch
+`PrintedGates` for the trigger-grant walk (~0.07 % of `cube`).
 
 **(-182) TAKEN — `cube` -1.164 % / `fixed` +0.008 % / `sealed` +0.013 %:**
 the grant filter is reduced to printed-line tests once per `grant_scan`
