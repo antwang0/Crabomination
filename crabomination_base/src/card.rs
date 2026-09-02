@@ -7899,7 +7899,7 @@ impl std::ops::DerefMut for CardInstance {
         // `definition`, and `definition` cannot be written through this
         // handle — see [`Definition`]. Clearing here was sound and cost
         // 89.5 % of every recompute in the program (PERF `(-91)`).
-        Arc::make_mut(&mut self.data)
+        crate::cow::make_mut(&mut self.data)
     }
 }
 

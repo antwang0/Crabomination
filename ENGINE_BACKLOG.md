@@ -215,6 +215,14 @@ fingerprint matched, and the guard looked like it worked for its whole life.
 the new sibling test runs the same loop without resolving.
 
 
+**Re-run at `82a3953e` (after `(-175)` / `(-176)`), fresh seeds:** the same
+`debug-assertions` + `overflow` binary, `--games 400 --threads 2 --decks all`
+over seeds 101-108 (54,400 games) and `--decks sealed` over seeds 101-104
+(19,200 games). **0 panic, 0 assertion, 0 overflow, cap 2 / stuck 0 / draw 4**
+— the two capped games are seed 108's twin `i32::MAX` life totals on the
+Beacon of Immortality board below (`CRAB_CAP_DIAG=1`: turn 1,837, `lib 0` /
+`lib 1`, 43 basic lands), the fingerprint this file says is not a finding.
+
 ## CLOSED — the two stall-sweep leads, and why neither is a bug
 
 ⚠ **Read the section above first: the Beacon lead is closed as a *stall* and was

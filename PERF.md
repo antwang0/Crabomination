@@ -11205,6 +11205,63 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-177)` TAKEN — the CoW unshare's uniqueness check was a `lock cmpxchg` behind a call; a `strong == 1` load inline is the same answer: `fixed` -0.554 % / `sealed` -0.517 % / `cube` -0.498 %
+
+```text
+  pool    base 82a3953e      (-177)          delta
+  fixed     866,955,198     862,151,617   **-0.5541 %**
+  cube    2,386,168,882   2,374,284,451   **-0.4981 %**
+  sealed  2,394,006,955   2,381,636,899   **-0.5167 %**
+```
+
+`(-170)(a)`'s check half. `Arc::make_mut` is 387,452 calls a six-game `fixed`
+run at 29 Ir self, and 85 % of them answer "unique" — a `compare_exchange` on
+`strong`, a `weak` load to rule out a `Weak`, a store back, all behind a call.
+**No `Weak` can exist for either CoW `Arc`** — `CowBox`'s and
+`CardInstance::data` are private fields and nothing in the workspace calls
+`Arc::downgrade` — so uniqueness is `strong == 1`: a `Relaxed` load plus an
+`Acquire` fence (which synchronizes with the last other handle's release
+decrement exactly as `make_mut`'s own acquire does), then `&mut` through
+`Arc::as_ptr`. `crabomination_base::cow::{make_mut, unique_mut}`, used by
+`CowBox`'s `DerefMut` / `push` / `iter_mut` and `CardInstance`'s `DerefMut`;
+the seven `Arc::make_mut(c.definition_mut())` rewrite sites are cold and stay.
+A `debug_assert_eq!(weak_count, 0)` keeps the invariant under the
+`debug-assertions` sweep.
+
+**Two builds, and the first is the lesson.** As a plain `#[inline]` fn the
+check did not inline (`cow::make_mut` 4,817,174 Ir self, 12.4 a call) and
+the row read **-0.235 %**: the call was most of the cost, not the atomic.
+`#[inline(always)]` on the check with the copy path behind a
+`#[cold] #[inline(never)]` split gives the row above — the load, compare and
+branch at the site, and the 15 % that copy pay the call they always paid.
+Binary +316 KB.
+
+```text
+  fixed                              base        (a) #[inline]   (b) always+cold
+    Arc::make_mut                11,246,924       4,661,636       4,660,868
+    cow::make_mut                         0       4,817,174               0
+    CowBox<Vec<T>>::push          1,867,478       1,749,202       1,749,202
+```
+
+**⚠ The hardware reading, which is the transferable half: removing ~330,000
+uncontended `lock cmpxchg` a six-game run reads FLAT on the clock.** 24 pairs
+of `bench_ab.py`, nothing else running: **+0.14 % median / -0.14 % mean, sd
+2.22**, for a change Ir prices at -0.55 %. The naive cycle model (18-25
+cycles a locked RMW, ~4 % of a game) is wrong here — an uncontended locked
+op on a line this core already owns overlaps with the surrounding work, and
+`(-170)(a)`'s warning that "Ir would show a win the hardware would not" has
+its mirror: **Ir does not show a hardware win the atomic's removal would
+have earned either, because there was none to earn.** The row lands on its
+Ir, like every other row in this file, and the clock says only "not a loss".
+The first variant read -0.94 % and -1.53 % median on the same instrument
+(16 and 24 pairs, one of them with a callgrind run alongside) — two negative
+readings inside noise are still noise, and the third at +0.14 % is what
+settled it.
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, `--bench` byte-identical to the invariant, golden
+traces unmoved.
+
 ### `(-176)` TAKEN — the loop watchdogs' digest mixed one 32-bit field per finalizer; two per word halves it: `cube` -0.686 % / `sealed` -0.675 % / `fixed` -0.563 %
 
 ```text
@@ -21307,6 +21364,14 @@ that a pilot's throughput is not covered by anything in this file**, and the
 instrument that found it is `scripts/robustness_grid.sh --pilots`. Write-up:
 **ENGINE_BACKLOG's first section**.
 
+**(-176) TAKEN — `cube` -0.686 % / `sealed` -0.675 % / `fixed` -0.563 %,
+and the row it halved was NEW: `fingerprint` runs at every activation since
+`01ac62e3` removed the `is_free()` gate (the CR 732.3 fix), 1.6-2.0 % of a
+run.** What is left is 965 Ir a call, one whole-board walk per announcement,
+and the Log says why an exact guard cannot skip it. The next device is a
+cheaper walk, not a cheaper policy. ⚠ **A bug fix that widens a guard is a
+perf change; read the top of the dump after one.**
+
 **(-174) STILL OPEN, AND THE ENTRY IN THE LOG IS THE MAP: the prize is
 ~2.85 M Ir and the thing that killed the first attempt was the SIGNATURE, not
 the device.** The census is the starting point — 106,488 hint hits / 7,558
@@ -21351,6 +21416,13 @@ answers the same question one level coarser for free. Use it first.
 ```
 
 **Three leads, in order.**
+
+*(a) ✅ THE CHECK HALF IS TAKEN by `(-177)` — `fixed` -0.554 % / `sealed`
+-0.517 % / `cube` -0.498 %: uniqueness is a `strong == 1` load inline once
+the `Weak` case is ruled out by construction (no `downgrade` in the
+workspace). ⚠ The clock read FLAT for ~330 k `lock cmpxchg` removed — see the
+Log before pricing any other atomic by its cycle count. The copy half
+(58,440 deep copies) is still what `(-99)`/`(-100)`/`(-143)` left it.*
 
 *(a) The CoW unshare is the largest named family and it is 92 % of one
 callee.* 58,440 of `fixed`'s 63,076 `clone_from_ref_in` allocations are

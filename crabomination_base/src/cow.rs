@@ -2,6 +2,51 @@
 
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::sync::atomic::{Ordering, fence};
+
+/// `&mut T` when `arc` is its allocation's only handle, without the
+/// `lock cmpxchg` that `Arc::get_mut` / `Arc::make_mut` spend ruling out a
+/// `Weak`. **The `Weak` case cannot arise for the two `Arc`s this serves**:
+/// `CowBox`'s and `CardInstance::data` are private fields, nothing in the
+/// workspace calls `Arc::downgrade`, so uniqueness is `strong == 1`. The
+/// `Relaxed` count read plus the `Acquire` fence synchronizes with the last
+/// other handle's release-decrement in `Arc::drop`, exactly as `make_mut`'s
+/// own acquire does. PERF `(-177)`: 387,452 `make_mut` calls a six-game
+/// `fixed` run, 85 % of them answering "unique".
+#[inline(always)]
+pub fn unique_mut<T>(arc: &mut Arc<T>) -> Option<&mut T> {
+    if Arc::strong_count(arc) != 1 {
+        return None;
+    }
+    debug_assert_eq!(Arc::weak_count(arc), 0, "a Weak of a CoW Arc exists");
+    fence(Ordering::Acquire);
+    // SAFETY: `strong == 1` and no `Weak` exists (the invariant above), so
+    // this `&mut Arc<T>` is the only path to the allocation for as long as
+    // the returned borrow lives. `Arc::as_ptr` derives from the `Arc`'s own
+    // `NonNull`, so the pointer carries write provenance.
+    Some(unsafe { &mut *(Arc::as_ptr(arc) as *mut T) })
+}
+
+/// `Arc::make_mut` with [`unique_mut`]'s check on the common path. The check
+/// is forced inline — a load, a compare and a branch at the site — and the
+/// copy path is out of line, so the 85 % of calls that answer "unique" pay
+/// no call at all.
+#[inline(always)]
+pub fn make_mut<T: Clone>(arc: &mut Arc<T>) -> &mut T {
+    if Arc::strong_count(arc) == 1 {
+        debug_assert_eq!(Arc::weak_count(arc), 0, "a Weak of a CoW Arc exists");
+        fence(Ordering::Acquire);
+        // SAFETY: as in `unique_mut`.
+        return unsafe { &mut *(Arc::as_ptr(arc) as *mut T) };
+    }
+    make_mut_slow(arc)
+}
+
+#[cold]
+#[inline(never)]
+fn make_mut_slow<T: Clone>(arc: &mut Arc<T>) -> &mut T {
+    Arc::make_mut(arc)
+}
 
 /// Copy-on-write box: `Clone` is an `Arc` bump; the first `&mut` access
 /// after a clone copies the inner value (`Arc::make_mut`). `Deref`/
@@ -55,7 +100,7 @@ impl<T: Clone> CowBox<T> {
 impl<T: Clone> CowBox<Vec<T>> {
     #[inline]
     pub fn push(&mut self, value: T) {
-        if let Some(v) = Arc::get_mut(&mut self.0) {
+        if let Some(v) = unique_mut(&mut self.0) {
             v.push(value);
             return;
         }
@@ -87,7 +132,7 @@ impl<T: Clone> Deref for CowBox<T> {
 
 impl<T: Clone> DerefMut for CowBox<T> {
     fn deref_mut(&mut self) -> &mut T {
-        Arc::make_mut(&mut self.0)
+        make_mut(&mut self.0)
     }
 }
 
@@ -125,7 +170,7 @@ where
     type Item = <&'a mut T as IntoIterator>::Item;
     type IntoIter = <&'a mut T as IntoIterator>::IntoIter;
     fn into_iter(self) -> Self::IntoIter {
-        Arc::make_mut(&mut self.0).into_iter()
+        make_mut(&mut self.0).into_iter()
     }
 }
 
@@ -154,5 +199,23 @@ mod tests {
         assert!(!a.shares_with(&b), "first write unshares");
         assert_eq!(*a, vec![1, 2, 3, 4]);
         assert_eq!(*b, vec![1, 2, 3], "the snapshot kept the old value");
+    }
+
+    /// PERF `(-177)`: the fast path answers by `strong == 1` alone, so it
+    /// must say "shared" while a clone lives and "unique" the moment it is
+    /// dropped — and never unshare on its own.
+    #[test]
+    fn unique_mut_tracks_the_strong_count() {
+        let mut a: CowBox<Vec<u32>> = vec![1].into();
+        let b = a.clone();
+        assert!(unique_mut(&mut a.0).is_none(), "shared while the clone lives");
+        assert!(a.shares_with(&b), "a refused check does not unshare");
+        drop(b);
+        let v = unique_mut(&mut a.0).expect("unique once the clone is gone");
+        v.push(2);
+        assert_eq!(*a, vec![1, 2]);
+        let c = a.clone();
+        *a = vec![9].into_iter().collect::<Vec<_>>().into();
+        assert_eq!(*c, vec![1, 2], "make_mut's copy path still copies");
     }
 }
