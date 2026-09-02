@@ -25,27 +25,25 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — none taken this run, `(-180)` is next.
-   Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing rules for a perf pass"**.
-   ⚠ **A worktree build sharing `CARGO_TARGET_DIR` reuses the main tree's engine artifact** —
-   the first A/B here read 0.000 % off two identical binaries; `cargo clean -p` the engine first.
-2. **Gates at `cdd62eb2`:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
-   `cargo check --profile release-fast` clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
-   byte-identical**, determinism ok, 14,800 fresh-seed games 0 undecided. No `debug-assertions` +
-   `overflow` leg this run — worth one on the next (`scripts/robustness_grid.sh --wide --pilots`).
-3. **This run: two rules fixes, one gate, no candidate.** The 0/0 window at entry is closed
-   (`TokenDefinition::enters_with_counters`; 70 catalog sites + the shortcut fold into it; nine
-   real cards' "enters with" triggers became `enters_with_counters`); the **general CR 704.3 sweep**
-   after every cast/activation is landed, gated on the payment's events at **+0.12 / +0.19 /
-   +0.12 %** (ungated it was +1.7 %). Write-ups: **ENGINE_BACKLOG's first section**, PERF's Log top.
-4. **Perf leads — the profile is FLAT; every row above 0.65 % is mapped.** Open and expensive:
-   `(-174)`, the requirement walker's recursive instance, `SpecFromIterNested` (~10 %). **The
-   build is still the lever**: PGO -23.8 to -27.6 %. PERF candidates has the sized-and-left list.
-5. **Open, sized (this family):** `apply_as_enters_effect` runs a full `resolve_effect` before the
-   entry-counter block in both entry paths (deliberate: Mimeoplasm) — a 0/0 whose as-enters
-   body *sweeps* would die; the two shipped pairs don't (ENGINE_BACKLOG). CARD_BACKLOG's "bare
-   `PassPriority` with an empty stack never reaches the sweep" note is now sized there: ~0.7 %
-   of a game for a sweep per step, with no known board that needs it — leave it.
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-180)` and `(-181)` taken this run,
+   `(-182)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
+   rules for a perf pass"**. Cold here: audit build 11 min, `profiling-fast` 23 min (6 min warm),
+   test build 12 min, suite 4 min; `nextest` needs installing (CLAUDE.md has the line).
+2. **Gates at `0c3f4a78`:** suite **19,203 / 0 / 5**, traces unmoved, clippy `--all-targets` clean,
+   `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok. **The wide
+   `debug-assertions` + `overflow` grid ran** (ladder 301,600 + actor 60,000 games + 45 pilots):
+   0 panic / assertion / overflow / stuck; cap 4 = the known Beacon board. PERF's Baseline top.
+3. **This run: two candidates, both sized off `--separate-callers=4` context tables, not the
+   (flat) self table.** `(-181)` `fire_step_triggers` pre-filters trigger grants to the step's
+   kind: **`cube` -1.17 %**, flat elsewhere. `(-180)` is marginal (-0.06 to -0.09 %). Log top.
+4. **Next perf lead, sized:** the requirement walker is ~8.8 % of `cube` inclusive and its
+   largest entries are now the mana sweeps' `GrantActivatedAbility` filter evaluations
+   (`granted_abilities_of_inner` under `effective_mana_abilities_into` / `available_mana`,
+   ~2.7 %); each sweep is a distinct state, so the lever is the price of one evaluation —
+   PERF candidates, `(-181)` entry. Then the `(-90)`/`(-174)` map. PGO is still -24 %, opt-in.
+5. **Open, sized (leave):** `apply_as_enters_effect` / Mimeoplasm (ENGINE_BACKLOG); the empty-stack
+   `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 1.9 % of both pools in gate
+   prelude with no single hot line — a `profiling-lines` read, not a device.
 6. **Card lanes, all in CARD_BACKLOG's first sections** (printed-clause ratchets,
    `audit_oracle_verbs.py`). ⚠ A python auditor's zero is suspect — check its population.
 

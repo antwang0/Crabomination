@@ -2477,6 +2477,45 @@ a box whose state moves.
 
 ## Baseline
 
+### The step-grant pass — closing state at `0c3f4a78`
+
+Two candidates, one base: `094b361a` (the CR 704.3 tip). Both are
+callgrind-sized off `--separate-callers=4` context tables rather than the
+self table, which is flat; the second is the first `cube` row above 1 %
+since `(-166)`.
+
+```text
+  pool     base 094b361a     tip 0c3f4a78     cumulative
+  fixed      858,389,861      857,841,862   **-0.0638 %**
+  cube     2,367,433,676    2,338,150,657   **-1.2369 %**
+  sealed   2,371,340,947    2,370,122,216   **-0.0514 %**
+
+  leg      fixed      cube     sealed   what
+  (-180)  -0.088 %  -0.072 %  -0.063 %  presence gate before a scope's first gather in board_keyword_matching
+  (-181)  +0.025 %  -1.166 %  +0.011 %  fire_step_triggers filters trigger grants to the step's kind first
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,203 / 0 / 5 (cargo nextest run --workspace --exclude
+        crabomination_client); golden traces in it and unmoved at both legs
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the profiling-fast build of each leg (release-fast opts,
+        debug-assertions off) is the typecheck gate here
+--bench profiling-fast: **195,806 decisions / 27.49 turns / 611.9 per game /
+        0 stalls (cap 0 / stuck 0 / draw 0)** — byte-identical to the
+        invariant at both legs; determinism ok (3 vs 1 threads identical);
+        peak_rss 21.1 MiB, bin 219,295,488 B (`--no-default-features`)
+stalls  **the `debug-assertions` + `overflow` grid, `--wide`, at `094b361a`+(-180)
+        in the tree**: ladder 52 cells / 301,600 games (`all` + `sealed`, 26
+        seeds x 400), actor 2 seeds x 30,000 games, pilots 45 cells — 0 panic
+        / 0 assertion / 0 overflow / stuck 0 / draw 10, **cap 4** = seeds 53
+        and 73's twin `i32::MAX` Beacon of Immortality board (turns 2,159 and
+        2,490, `lib 0/1`), the ENGINE_BACKLOG fingerprint, not a finding.
+        Three-pool six-game stdout identical to the base's at both legs but
+        the wall-clock line.
+```
+
 ### The CR 704.3 pass — closing state at `cdd62eb2`
 
 Three commits, one base: `71d43ea1` (the `(-179)` tip). Two rules fixes
