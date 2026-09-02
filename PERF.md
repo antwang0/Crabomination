@@ -11296,6 +11296,44 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-181)` TAKEN — `fire_step_triggers` evaluated every trigger grant against every permanent on every step, then dropped all but this step's kind: `cube` -1.166 % / `sealed` +0.011 % / `fixed` +0.025 %
+
+```text
+  pool    base 50a4bc44      (-181)          delta
+  fixed     857,631,217     857,841,862   **+0.0246 %**
+  cube    2,365,738,312   2,338,150,657   **-1.1659 %**
+  sealed  2,369,856,226   2,370,122,216   **+0.0112 %**
+  statics_granted_triggers_inner calls on cube: 142,848 -> 57,782
+  (the 85,066 from fire_step_triggers, exactly the context table's row)
+  fire_step_triggers self on cube: 19,469,340 -> 17,774,076
+```
+
+Sized off the `--separate-callers=4` cube dump: the requirement walker is
+9.9 % of `cube` inclusive and its largest single entry was
+`statics_granted_triggers_inner <- fire_step_triggers`, 108,540 calls /
+26.3 M Ir. `fire_step_triggers` hoists `trigger_grant_sources` once per
+step, then asks `statics_granted_triggers_on` about every permanent — a
+requirement walk per (permanent x grant) — and keeps only the survivors
+whose `event.kind` is this step's. A cube board with one lord ("creatures
+you control have 'whenever this attacks, …'") paid that walk at every step
+of every turn, and no candidate ever came out of it. The grant list is now
+filtered to `kind` before the walk, and the walk (and its freeze scope) is
+skipped when nothing is left — the same pre-filter the dispatcher applies
+to its batch, one call up.
+
+⚠ **The first build cost `fixed` +0.077 %** — `Vec::retain` on the empty
+grant list, 16,004 times, is an out-of-line generic at ~19 Ir plus the
+closure setup. Behind `!is_empty()` (and the same for the
+`turn_granted_triggers` scan) the pool with nothing to filter reads inside
+the codegen band. **A pre-filter is paid on the pool that has nothing to
+filter; gate it on the emptiness test the filter was going to establish.**
+
+Behaviour-preserving: three-pool stdout identical to the base's apart from
+the wall-clock line, golden traces unmoved, `--bench` byte-identical,
+suite green. `fixed` carries no `GrantTriggeredAbility` static at all, which
+is why its row is flat — the actor pool is `cube`'s shape (Profile of
+record), so the training run sees the `cube` number.
+
 ### `(-180)` TAKEN — a scope's first `board_keyword_in_scope` asked the gather to prove a negative the presence gate already answers: `fixed` -0.088 % / `cube` -0.072 % / `sealed` -0.063 %
 
 ```text
@@ -21608,6 +21646,20 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-181) TAKEN — `cube` -1.166 % / `sealed` +0.011 % / `fixed` +0.025 %:**
+`fire_step_triggers` filters the trigger grants to this step's kind before
+the per-permanent requirement walk (Log). **What is left of the requirement
+walker on `cube` (~8.8 % inclusive) is the mana sweeps**:
+`granted_abilities_of_inner` under `effective_mana_abilities_into` /
+`available_mana` evaluates every `GrantActivatedAbility` filter against
+every untapped permanent per payment and per affordability check — ~65 M
+Ir, 2.7 % of `cube`. Each sweep is on a distinct state (the bot's probes),
+so no scope memo spans two of them; the lever is the price of one
+evaluation (~190 Ir inclusive for an `And(ControlledByYou, Creature)`
+filter that could be answered off the printed line when no type-changer is
+in scope — read `evaluate_requirement_static_hinted`'s `Creature` arm
+before pricing).
 
 **(-180) TAKEN — `fixed` -0.088 % / `cube` -0.072 % / `sealed` -0.063 %:**
 `board_keyword_matching` asks the presence gate before a scope's first

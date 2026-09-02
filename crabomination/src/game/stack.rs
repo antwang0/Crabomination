@@ -896,10 +896,28 @@ impl GameState {
         };
         // One board-level scan for the whole walk: the per-card shim rebuilds
         // it, so asking it per battlefield permanent is O(cards²).
-        let trigger_grants = self.trigger_grant_sources();
+        //
+        // Kept only for the grants that fire on *this* step. The per-permanent
+        // walk below evaluates every grant's filter against every permanent
+        // and then drops all but `kind` at the test on `t.event.kind` — so a
+        // board whose one lord grants "whenever this attacks" paid a
+        // requirement walk per (permanent x grant) on every step of every
+        // turn for candidates it never kept: 85,066 `statics_granted_triggers_inner`
+        // calls / 1.09 % of a six-game `cube` run from here. The dispatcher's
+        // batch pre-filter is the same device one call up (PERF `(-181)`).
+        // Both filters behind an emptiness test: `retain` is an out-of-line
+        // generic that cost `fixed` — a pool with no grant at all — +0.08 %
+        // when called on its empty list 16,004 times.
+        let mut trigger_grants = self.trigger_grant_sources();
+        if !trigger_grants.is_empty() {
+            trigger_grants.retain(|g| g.ability.event.kind == kind);
+        }
         // Presence gate for the per-card grant walk (the dispatcher's device):
-        // on a board that grants nothing it returns empty for every permanent.
-        let any_static_grant = !trigger_grants.is_empty() || !self.turn_granted_triggers.is_empty();
+        // on a board that grants nothing on this step it returns empty for
+        // every permanent.
+        let any_static_grant = !trigger_grants.is_empty()
+            || (!self.turn_granted_triggers.is_empty()
+                && self.turn_granted_triggers.iter().any(|(_, t)| t.event.kind == kind));
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> =
             Vec::new();
         // CR 613 — `statics_granted_triggers_with` evaluates each grant's
