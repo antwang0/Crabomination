@@ -818,12 +818,30 @@ pub fn reign_of_terror() -> CardDefinition {
         "Reign of Terror",
         cost(&[generic(3), b(), b()]),
         Effect::ChooseMode(vec![
-            Effect::DestroyNoRegen {
-                what: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::Green))),
-            },
-            Effect::DestroyNoRegen {
-                what: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::White))),
-            },
+            Effect::Seq(vec![
+                Effect::DestroyNoRegen {
+                    what: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::Green))),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Times(
+                        Box::new(Value::Const(2)),
+                        Box::new(Value::CreaturesDiedThisResolution),
+                    ),
+                },
+            ]),
+            Effect::Seq(vec![
+                Effect::DestroyNoRegen {
+                    what: Selector::EachPermanent(R::Creature.and(R::HasColor(Color::White))),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Times(
+                        Box::new(Value::Const(2)),
+                        Box::new(Value::CreaturesDiedThisResolution),
+                    ),
+                },
+            ]),
         ]),
     )
 }

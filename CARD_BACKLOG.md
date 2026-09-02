@@ -890,6 +890,28 @@ skips it as it skips `Reflexive`; and a `then_if_picked` rider runs through
 `run_effect`, not a fresh resolution root, or the root's scratch reset wipes
 the very list it reads.
 
+**`lose_life` at the same pass: 10 rows -> 6 blind spots + 1 filed, three
+fixed.** Six rows are dedicated primitives named without the verb (Caustic
+Bronco's `RevealTopToHandLoseMv`, False Cure, Grim Reminder, Menacing Ogre,
+Rain of Gore's `LifeGainBecomesLoss`, Strongarm Tactics) and a seventh,
+Spoils of the Vault, carries the loss in a *field* (`life_per_revealed`) —
+filed, not fixed, for what it does print wrong: misses are exiled and the loss
+is per exiled card, and `RevealMissDest` has no `Exile`.
+
+| card | shipped | printed |
+|---|---|---|
+| Faerie Dreamthief | the graveyard draw | + "and you lose 1 life" |
+| Reign of Terror | the wrath | + "you lose 2 life for each creature that died this way" (`Times(2, CreaturesDiedThisResolution)` inside each mode) |
+| Vault Plunderer | "you draw a card" | "**target player** draws a card **and loses 1 life**" — `TargetPlayerThen` |
+
+⚠ A trigger whose body is `Draw { who: Target(0) }` never *asks* for the
+target — `requires_target` reads it as untargeted and `Target(0)` falls back
+to the controller. `TargetPlayerThen { filter: Player, then }` is the shape
+that declares the slot; Toil // Trouble gets away with the bare form only
+because a spell's targets come from the cast action. And
+`fire_self_etb_triggers` auto-picks even for a `wants_ui` seat, so a fixture
+cannot script a trigger's player target through it.
+
 **`gain_life` worked too: 30 rows -> 14, and two more real defects fixed.**
 
 | card | shipped | printed |

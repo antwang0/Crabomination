@@ -7143,6 +7143,22 @@ mod recent2 {
         let d = catalog::faerie_dreamthief();
         assert_eq!(d.triggered_abilities.len(), 1, "ETB surveil wired");
         assert!(d.activated_abilities[0].from_graveyard && d.activated_abilities[0].exile_self_cost);
+        // From the graveyard: "you draw a card and you lose 1 life".
+        let dead = g.add_card_to_graveyard(0, catalog::faerie_dreamthief());
+        g.add_card_to_library(0, catalog::island());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: dead, ability_index: 0, target: None, additional_targets: vec![],
+            x_value: None, mode: None,
+        }).expect("activate from the graveyard");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + 1, "drew");
+        assert_eq!(g.players[0].life, life - 1, "and lost 1 life");
     }
 
     /// Vinereap Mentor makes a Food on ETB (and again on death).

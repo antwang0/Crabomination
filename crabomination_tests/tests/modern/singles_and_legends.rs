@@ -591,3 +591,22 @@ fn moonshadow_enters_shrunk_and_grows_as_permanents_hit_your_graveyard() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(moon).unwrap().counter_count(CounterType::MinusOneMinusOne), 5);
 }
+
+/// Vault Plunderer: target player draws a card AND loses 1 life — the two
+/// land on the same targeted player (a bot seat auto-picks itself for a
+/// draw; the body used to draw for you and lose nothing).
+#[test]
+fn vault_plunderer_targets_a_player_for_the_draw_and_the_life() {
+    let mut g = two_player_game();
+    g.add_card_to_library(1, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let vp = g.add_card_to_battlefield(0, catalog::vault_plunderer());
+    let (hand, life) = (g.players[1].hand.len(), g.players[1].life);
+    let (my_hand, my_life) = (g.players[0].hand.len(), g.players[0].life);
+    g.fire_self_etb_triggers(vp, 0);
+    drain_stack(&mut g);
+    let drew = [g.players[0].hand.len() - my_hand, g.players[1].hand.len() - hand];
+    let lost = [my_life - g.players[0].life, life - g.players[1].life];
+    assert_eq!(drew.iter().sum::<usize>(), 1, "exactly one player drew");
+    assert_eq!(drew.map(|d| d as i32), lost, "the player who drew is the one who lost 1 life");
+}

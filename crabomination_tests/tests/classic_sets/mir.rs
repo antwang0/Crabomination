@@ -2326,3 +2326,28 @@ fn mangaras_blessing_refunds_itself_after_a_forced_discard() {
         "back to hand at the beginning of the next end step"
     );
 }
+
+/// Reign of Terror: the one-colour wrath costs 2 life per creature it killed.
+#[test]
+fn reign_of_terror_costs_two_life_per_creature_destroyed() {
+    use crabomination::game::{drain_stack, two_player_game, GameAction};
+    let mut g = two_player_game();
+    let _mine = g.add_card_to_battlefield(0, crabomination::catalog::grizzly_bears());
+    let _theirs = g.add_card_to_battlefield(1, crabomination::catalog::grizzly_bears());
+    let _white = g.add_card_to_battlefield(1, crabomination::catalog::serra_angel());
+    let spell = g.add_card_to_hand(0, crabomination::catalog::reign_of_terror());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = crabomination::TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast, green mode");
+    drain_stack(&mut g);
+    let greens = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(greens, 0, "both green creatures destroyed");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Serra Angel"), "white one lives");
+    assert_eq!(g.players[0].life, life - 4, "2 life per creature that died this way");
+}

@@ -21661,8 +21661,8 @@ pub fn spinewoods_paladin() -> CardDefinition {
     }
 }
 
-/// Vault Plunderer — {2}{B} Creature — Human Rogue 3/1. When it enters, draw
-/// a card. It prints **no** Plot — the body carried one until
+/// Vault Plunderer — {2}{B} Creature — Human Rogue 3/1. When it enters, target
+/// player draws a card and loses 1 life. It prints **no** Plot — the body carried one until
 /// `audit_keyword_drift.py` (`{2}{B}`, which is a different card).
 pub fn vault_plunderer() -> CardDefinition {
     CardDefinition {
@@ -21675,9 +21675,18 @@ pub fn vault_plunderer() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(1),
+        triggered_abilities: vec![etb(Effect::TargetPlayerThen {
+            filter: SelectionRequirement::Player,
+            then: Box::new(Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::Target(0),
+                    amount: Value::Const(1),
+                },
+                Effect::LoseLife {
+                    who: Selector::Target(0),
+                    amount: Value::Const(1),
+                },
+            ])),
         })],
         ..Default::default()
     }

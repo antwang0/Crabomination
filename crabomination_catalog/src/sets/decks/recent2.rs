@@ -405,7 +405,7 @@ pub fn glistening_deluge() -> CardDefinition {
 }
 
 /// Faerie Dreamthief — {B} 1/1 Faerie Warlock with flying. ETB surveil 1.
-/// {2}{B}, exile this card from your graveyard: draw a card.
+/// {2}{B}, exile this card from your graveyard: draw a card and lose 1 life.
 pub fn faerie_dreamthief() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -427,10 +427,16 @@ pub fn faerie_dreamthief() -> CardDefinition {
             mana_cost: cost(&[generic(2), b()]),
             from_graveyard: true,
             exile_self_cost: true,
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            effect: Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
