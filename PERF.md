@@ -2512,6 +2512,48 @@ a box whose state moves.
 
 ## Baseline
 
+### The presence-flag pass — closing state at `(-192)`
+
+Five candidates, one base (`fb120400`, the `(-185)` tip plus trackers),
+one device: the keyword presence gates asked five questions per call and
+a probe with each leg out of line priced them (`(-188)`'s Log entry);
+each leg then went behind the cheapest thing that could hold its answer
+— a definition-only battlefield lane, a member list on the zone, two
+state flags exact at cleanup, and no hoist at all. A sixth candidate,
+`(-170)(b)`'s pool batching, built and reverted at +0.9-1.3 %.
+
+```text
+  pool     base fb120400     tip (-192)       cumulative
+  fixed      847,238,714      833,352,202   **-1.6391 %**
+  cube     2,353,123,287    2,315,286,224   **-1.6079 %**
+  sealed   2,362,293,751    2,342,732,076   **-0.8281 %**
+
+  leg        fixed      cube     sealed   what
+  (-188)   -0.233 %  -0.133 %  -0.176 %  printed leg on LANE_GATE_KEYWORD
+  (-189)   -0.449 %  -0.879 %  +0.001 %  grant lane -> grant member list (+has_anthem #[inline])
+  6717b648 +0.000 %  -0.002 %  -0.000 %  three eot grants take a CR 613.7 timestamp (a fix)
+  (-190)   -0.676 %  -0.395 %  -0.414 %  board_instance_keywords flag for the instance leg
+  (-191)   -0.110 %  -0.099 %  -0.103 %  offboard_keyword_grants flag for the command/emblem legs
+  (-192)   -0.181 %  -0.108 %  -0.138 %  no per-ask tag list
+  (-193)   +1.288 %  +0.920 %  +1.097 %  REVERTED: one pool access per scope
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.10 GHz, 4 cores
+suite   19,217 / 0 / 5 at every leg (19,216 at (-188); (-189) adds one
+        zone test); golden traces in it and unmoved at every leg
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the profiling-fast build of each leg (release-fast opts,
+        debug-assertions off) is the typecheck gate here
+--bench profiling-fast at (-192): **195,806 decisions / 27.49 turns /
+        611.9 per game / 0 stalls (cap 0 / stuck 0 / draw 0)** —
+        byte-identical to the invariant; determinism ok (3 vs 1 threads
+        identical); peak_rss 19.3 MiB, bin 219,372,936 B
+        (`--no-default-features`)
+stalls  three-pool six-game stdout identical to the base's at every leg
+        but the wall-clock line
+```
+
 ### The printed-filter pass — closing state at `(-185)`
 
 Four candidates, two bases. All four are the same device — answer a
@@ -11433,6 +11475,212 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `(-193)` BUILT AND REVERTED, A LOSS — one pool access per scope instead of one per box: `fixed` +1.288 % / `sealed` +1.097 % / `cube` +0.920 %
+
+```text
+  pool    base (-192)       (-193)          delta
+  fixed     833,352,202     844,085,894   **+1.288 %**
+  cube    2,315,286,224   2,336,578,146   **+0.920 %**
+  sealed  2,342,732,076   2,368,442,940   **+1.097 %**
+  fixed by row: scope_pool::take +7.42 M (24,524 calls x 303 Ir),
+    scope_pool::alloc +4.05 M (69,822 x 58), fill_fx +2.11 M,
+    SmallVec::drop +0.70 M, Unfreeze::drop +0.33 M;
+    fx_pool::alloc_with -2.76 M, LocalKey::with -1.25 M (115,716 calls
+    -> 24,038), FnOnce::call_once -0.82 M
+```
+
+`(-170)(b)` as filed: `cp_pool` and `fx_pool` merged into one thread-local,
+a scope's first computed read taking its effect list and up to eight
+boxes into a `spare` list on `LayerFreezeState` in one access, the reads
+after it drawing on the list, the exit handing everything back in one
+access. The access count did fall by 4.8x. The program got slower by
+10.7 M Ir, and the rows say why: **the cost of a pool access was never
+the thread-local, it was the handle the access moves.** `scope_pool::alloc`
+— a `SmallVec::pop` and an `Arc::get_mut` with no TLS in sight — costs
+58 Ir a call, within a few Ir of the 64 the old `LocalKey::with` charged
+for the same pop and check *plus* the TLS lookup. And batching moves
+every handle twice more: `take` pops eight and pushes eight for a scope
+that will use four (303 Ir a scope), the exit drains the four it did not
+use back through `give`, and the inline `SmallVec` drops on every scope
+exit and every state clone.
+
+**Rules that fall out.** *(1)* `LocalKey::with`'s 49-67 Ir a call is the
+closure's work, not the accessor's; `(-175)` and this entry were the
+same mistake from two sides — `(-175)` won by not calling it on scopes
+with nothing to park, i.e. by removing the *work*. *(2)* A batch is
+priced by the handles it moves that the unbatched form would not have,
+and a working set of four against a batch of eight is a 2x on the moves
+before any TLS saving is counted. `(-170)(b)` is closed.
+
+### `(-192)` TAKEN — `board_keyword_in_scope` stops hoisting its tag list: `fixed` -0.181 % / `sealed` -0.138 % / `cube` -0.108 %
+
+```text
+  pool    base (-191)       (-192)          delta
+  fixed     834,866,189     833,352,202   **-0.181 %**
+  cube    2,317,795,316   2,315,286,224   **-0.108 %**
+  sealed  2,345,966,563   2,342,732,076   **-0.138 %**
+```
+
+The wrapper collected the caller's keyword list into a `SmallVec` of
+discriminants on every ask — 73 Ir by the `(-188)` probe, 17,788 asks on
+`fixed` — so that the per-permanent printed scan compared one hoisted tag
+list. That hoist was measured right when it landed (`fixed` -0.584 %
+against -0.105 % for re-reading the list per board keyword), and
+`(-188)` inverted the premise: the printed scan now runs only on a board
+that carries a gate keyword, and the predicate is asked a handful of
+times an ask (the instance legs behind `(-190)`'s flag, the
+`continuous_effects` walk, the three `synth` probes, the grant members).
+Re-reading the caller's constant tags per call is cheaper than building
+the list once. **A hoist is priced by the loop it serves; when a later
+pass empties the loop, re-price the hoist.** The `(-119)` rule stands:
+the wrapper stays, because one closure over a `&[Keyword]` is one
+monomorphization of the walk.
+
+Three-pool stdout identical bar wall-clock, golden traces unmoved.
+
+### `(-191)` TAKEN — `offboard_keyword_grants`, the presence flag for the grant gate's command-zone and emblem legs: `fixed` -0.110 % / `sealed` -0.103 % / `cube` -0.099 %
+
+```text
+  pool    base (-190)       (-191)          delta
+  fixed     835,788,356     834,866,189   **-0.110 %**
+  cube    2,320,090,251   2,317,795,316   **-0.099 %**
+  sealed  2,348,397,116   2,345,966,563   **-0.103 %**
+  fixed by row: the activate_ability_inner closure -0.24 M,
+    board_keyword_in_scope -0.17 M, damage_prevented_by_protection
+    -0.16 M, GameState::clone -0.09 M; cleanup_wear_off +0.08 M
+```
+
+`keyword_grant_in_scope`'s per-player legs — the command zone's schemes /
+vanguards / planes / conspiracies and the emblems' statics — were 80 Ir a
+call by the `(-188)` probe over 46,498 calls, three dependent derefs per
+list per seat to find two lists that are empty in every ordinary game.
+The flag is `board_instance_keywords`' device again: `true` from
+construction and on deserialize, recomputed exactly at cleanup
+(`offboard_keyword_grants_now`, which counts a face-down conspiracy as
+live so a hidden agenda turning face up needs no writer), set by all
+twelve `command.push` / `emblems.push` sites in between, audited in the
+gate. The graveyard-anthem leg keeps its own zone lane and is what is
+left of the 80 Ir. Smaller than the probe's 80 Ir a call priced it: the
+two `Vec` length reads through `Player`'s `Arc` were ~20 of the 80, the
+rest is the per-seat loop and the anthem lane.
+
+Three-pool stdout identical bar wall-clock, golden traces unmoved.
+
+### `(-190)` TAKEN — `board_instance_keywords`, the presence flag for the gate's instance leg: `fixed` -0.676 % / `sealed` -0.414 % / `cube` -0.395 %
+
+```text
+  pool    base 6717b648     (-190)          delta
+  fixed     841,478,338     835,788,356   **-0.676 %**
+  cube    2,329,289,912   2,320,090,251   **-0.395 %**
+  sealed  2,358,151,790   2,348,397,116   **-0.414 %**
+  board_keyword_in_scope self on fixed: 8,613 k -> 3,916 k (220 Ir a call)
+  the rest of the delta: process_cumulative_upkeep -0.74 M, do_untap
+    -0.59 M (both ask through board_keyword_matching directly);
+    cleanup_wear_off +0.31 M is the once-a-turn recompute
+```
+
+The gate's instance leg read `granted_keywords_eot` and
+`keyword_counters` off every permanent — a `CardData` deref each, 266 Ir
+a call by the `(-188)` probe — to find two lists that are empty on nearly
+every board. `GameState::board_instance_keywords` is `step_bounded_may_
+play`'s device: `true` from construction and on deserialize, recomputed
+**exactly** at `cleanup_wear_off` (the eot grants have just been cleared,
+so the counters are the whole question), and set by every engine writer
+in between — `grant_keyword_eot`, the three `keyword_counters.add` sites
+(the counter placer, the random-keyword-counter picker, the counter
+mover) and a permanent phasing back in with its counters. The gate skips
+the leg whole when it is clear, and a `debug_assert!` in the gate
+recomputes the two emptiness tests against it, so the suite and the
+`debug-assertions` grid audit the writer list. Tests that write the two
+fields directly stay correct until a cleanup has run; none of the 25
+sites trips the audit.
+
+Three-pool stdout identical bar wall-clock, golden traces unmoved.
+
+### `(-189)` TAKEN — the keyword-grant lane is a member list: `cube` -0.879 % / `fixed` -0.449 % / `sealed` flat
+
+```text
+  pool    base (-188)       list only       +has_anthem #[inline]   delta
+  fixed     845,268,007     841,865,230     841,475,061   **-0.449 %**
+  cube    2,349,985,341   2,330,410,688   2,329,326,109   **-0.879 %**
+  sealed  2,358,140,993   2,359,201,449   2,358,162,231   **+0.001 %**
+  keyword_grant_in_scope on fixed: 46,498 calls; board_grants_keyword
+    walked on 21,800 of them at 282 Ir (the lane read PRESENT), 7.2 M
+  where cube's win lands: damage_prevented_by_protection -4.8 M,
+    apply_prevention_shields_with -3.9 M, damage_from_source_prevented_
+    by_keyword -3.7 M, creature_redirects_damage_to_controller -3.3 M,
+    the activate_ability_inner closure -2.4 M; GameState::clone +0.16 M
+```
+
+`Battlefield::grant_lane` held a presence bit — "some permanent's
+definition can grant *some* keyword" — and a board with any lord, aura
+or equipment reads `PRESENT`. The caller asks about *one* keyword, so on
+a `PRESENT` board it walked every permanent (a `grant_scan_bits` memo
+load each) to find the one or two granters and test them: 21,800 of
+46,498 asks on `fixed`. `grant_members` is the `trigger_members` shape —
+an index mask of the granters, same epoch/clear invalidation, no list
+past 64 permanents — so a hit visits the granters only. A miss fills the
+list from the walk it was making anyway, and that walk no longer stops at
+the first match (a partial list is not a list; the predicate stops, the
+bit loads do not).
+
+**The list alone read `sealed` +0.045 %, and both halves were codegen:**
+`Graveyard::has_anthem` went out of line at 184,124 call sites once
+`keyword_grant_in_scope`'s inlined body grew (+1.4 M self on `sealed`),
+and `tap_ability_summoning_sick`'s copy paid the no-early-exit fill
+(+0.48 M). `#[inline]` on `has_anthem` is -0.045 % on all three pools and
+landed in the same commit as the repair it is. `GameState::clone` pays
+the extra word on the zone (+0.16 M `cube` / +0.20 M `sealed`).
+
+Three-pool stdout identical bar wall-clock, golden traces unmoved, suite
+19,217 / 0 / 5 (one new zone test, `grant_member_list_is_filled_and_
+invalidated`).
+
+### `(-188)` TAKEN — the keyword presence gate's printed leg on a battlefield lane: `fixed` -0.233 % / `sealed` -0.176 % / `cube` -0.133 %
+
+```text
+  pool    base fb120400     (-188)          delta
+  fixed     847,238,714     845,268,007   **-0.233 %**
+  cube    2,353,123,287   2,349,985,341   **-0.133 %**
+  sealed  2,362,293,751   2,358,140,993   **-0.176 %**
+  board_keyword_in_scope self on fixed: 11,413,212 -> 9,163,500 over
+    17,788 calls; walk_and_store +0.97 M (the lane's misses)
+  the row's 886 Ir a call, split by a probe with each leg out of line:
+    printed scan 277 | instance legs 266 | keyword_grant_in_scope 238
+    | frozen_effects_memoized 32 | the tag build 73
+```
+
+`board_keyword_matching` scanned every permanent's printed keyword list
+on every ask — a definition deref and a one-or-two-entry tag compare
+each. The list is definition-only, so one lane over the **union** of
+every caller's keywords (`LANE_GATE_KEYWORD`, `card_has_gate_keyword`:
+the seven combat requirements, `CantBeBlockedByMoreThanOne`, `Phasing`,
+`CumulativeUpkeep`, the two untap locks) answers the printed leg for the
+whole board, and the walk reads two instance lengths per permanent
+instead. A caller adding a keyword outside the union gets a wrong `false`
+on that leg, which is what the gate's own recompute `debug_assert!`
+fires on.
+
+**`(-187)` read the row wrong, and the probe is the correction.** It
+inferred from a per-definition mask *raising* the self row that the
+printed scan was not the cost; the mask paid the same definition deref
+the scan does, so it could not have moved it. Out-of-line legs cost one
+3-minute build and a ten-second `fixed` dump and priced all five —
+that is the instrument for an inlined row, ahead of any device.
+
+**Also read this pass, so nobody re-reads it: the lanes' hit rates.** A
+census probe (asks / hits / clears in `zone.rs`, printed at exit) on the
+same tree: closure lanes 92,862 asks / 69,806 hits (75 %), split lanes
+146,316 / 130,556 (89 %), `definition_epoch` stale 0 on `fixed` (245 on
+`cube`); `DerefMut` clears 3,722 — 3,482 of them
+`remove_from_battlefield_to_graveyard_raw`, the rest
+`objects_leave_with_player` and the exile twin — and 3,794 pushes. Every
+clear is a real membership change; the miss rate is the board turning
+over, not a stray `&mut`.
+
+Three-pool stdout identical bar wall-clock, golden traces unmoved, suite
+19,216 / 0 / 5.
 
 ### `(-185)` TAKEN — the targeting enumerator's graveyard sweep evaluates the card it holds off the printed line instead of re-finding it through the walker: `fixed` -1.057 % / `cube` -0.133 % / `sealed` -0.104 %
 
@@ -22026,6 +22274,41 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**(-188)..(-192) TAKEN — the keyword presence gates, five legs priced by
+one probe and taken one at a time; cumulative `fixed` -1.64 % / `cube`
+-1.61 % / `sealed` -0.83 % against `fb120400` (Baseline, top).** The
+`(-187)` entry below is closed by them: the row's cost was every leg, and
+the way to see that was three `#[inline(never)]` fns and a ten-second
+dump, not a device. What is left of the family on `fixed` at `(-192)`:
+`board_keyword_in_scope` ~2.6 M self over 17,788 calls (the
+`frozen_effects_memoized` lock at 32 Ir, the instance walk on the turns
+`board_instance_keywords` is set), and `keyword_grant_in_scope` at
+~100 Ir over 46,498 calls (three dynamic `synth` probes at 34, the
+`continuous_effects` walk, the member-list read, two graveyard-anthem
+lane reads). Nothing there is worth a build on its own.
+
+**Re-read at `(-192)`, `cube`, ranked by call count — the rows a device
+could still name:**
+* `affected_includes_gated` 548,110 calls x 49 Ir = 26.9 M (1.16 %): the
+  layer pass's per-(effect, permanent) selector match, already
+  cheapest-first. A per-pass "which permanents does this effect reach"
+  mask would be the device, and `compute_permanent_pass` (279,444 calls,
+  293 Ir) is where it would live.
+* `LocalKey::with` 261,084 x 67 = 17.5 M (0.75 %): 171 k from
+  `computed_permanent_hinted`'s box alloc, 79 k from `Unfreeze::drop`.
+  ⚠ **`(-170)(b)`'s batching is REFUTED as `(-193)`** (Log: `fixed`
+  +1.288 %) — the 67 Ir is the pop and the `Arc::get_mut`, not the
+  thread-local, and a batch moves every handle twice more. Closed.
+* `has_keyword` 274,578 x 32 = 8.7 M plus `Keyword::eq` 346,155 x 13 =
+  4.5 M: the tag split is in and the exact half is out of line; read the
+  callers before pricing anything.
+* `drop_in_place<ComputedPermanent>` 268,198 x 35 = 9.4 M, 167 k of them
+  under the pool's own `LocalKey::with` — a recycled box is *overwritten*
+  (`*slot = cp`), so the old view drops there; the cost is the view's
+  `Vec` fields, which is `(-107)`'s by-value question again.
+* `Unfreeze::drop` 213,134 x 34 = 7.2 M self: the pop, the gate clear
+  and the lock, three in four scopes with nothing to park.
 
 **`Vec::from_iter` RE-READ AT `72e7bf37` (2.87 % of `cube`, 2.72 % of
 `fixed`) AND STILL DIFFUSE:** `cg_chain.py cg.nd 'from_iter' --top 8 --up

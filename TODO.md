@@ -25,42 +25,37 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-182)`..`(-185)` taken this run,
-   `(-186)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
-   rules for a perf pass"**. Cold here: `profiling-fast` 17 min (5 min warm), test build+suite
-   12 min; `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind ~2 min.
-   ⚠ **A rebase between an A/B's two builds can pull a concurrent CATALOG commit** — the `(-185)`
-   base predated a Moonshadow rewrite and read +2.6 % on `cube` for a device that is -0.13 %;
-   four builds to prove it. `git log --stat <base>..HEAD -- crabomination_catalog` after any
-   rebase, and `CRAB_DUMP_TRACES=<dir>` (new, PERF "How to measure") names the diverging pairing.
-2. **Gates at the `(-185)` tip:** suite green, traces unmoved, clippy `--all-targets` clean,
-   `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok.
-   `debug-assertions` ladders clean at `(-182)`, `(-183)` and `(-185)` (12 cells, 11,760 games),
-   and **`robustness_grid.sh --pilots` at the `(-185)` engine: 30 cells / 33,120 games, actor
-   3 seeds, pilots 45 / 45 — 0 failures.** The `--wide` grid has not run on this run's engine.
-3. **This run: `(-182)`..`(-185)`, one device four times** — answer a requirement off the printed
-   line where the walker would, walker for the rest, `debug_assert_eq!` as the ratchet:
-   `printed_requirement` (`eval.rs`) at the targeting enumerator, `resolve_selector`, the
-   trigger-grant walk and the graveyard sweep. Cumulative vs `0c3f4a78`: **cube -1.81 %, fixed
-   -0.67 %, sealed -0.69 %** through `(-184)`, then `(-185)` **-1.06 / -0.13 / -0.10 %** (fixed /
-   cube / sealed) on the re-based catalog. PERF Baseline top. **The actor reads -5.6 % since
-   `ec1bb132`** (Profile of record, top). ⚠ Two rules fell out: a one-caller wrapper is inlined
-   by luck (read a gate's body through your own closure), and an evaluator called 500 k times a
-   run takes no flag — `const OFF: bool`, not an argument or a field. `(-186)` flat and `(-187)` a
-   loss, both reverted and filed (candidates): the walker lane is mined out.
-4. **Next perf lead (PERF candidates, `(-185)`):** the walker is ~167 k calls on `cube` after
-   this; largest contexts are its own recursion from plain-form callers (`cg_contexts.py`,
-   `--separate-callers=4`), the gather's condition-gated statics (5.7 M) and the SBA `no_other`
-   filter. Evaluator residuals: the card-type closure out of line (3 M), ~35 Ir a node, and
-   `PrintedGrantFilter` onto the evaluator (one measured build). Then the `(-90)`/`(-174)` map.
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-188)`..`(-193)` taken this run,
+   `(-194)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
+   rules for a perf pass"**. Cold here: `profiling-fast` 10 min (3 min warm), test build+suite
+   5 min cold / 3 warm; `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind
+   ~2 min. ⚠ A rebase between an A/B's two builds can pull a concurrent CATALOG commit: `git log
+   --stat <base>..HEAD -- crabomination_catalog` after any rebase (PERF Standing rules, top).
+2. **Gates at the `(-192)` tip:** suite 19,217 / 0 / 5, traces unmoved at every leg, clippy
+   `--all-targets` clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**,
+   determinism ok. `robustness_grid.sh` (ladder + actor) at `(-192)`: see PERF Baseline — three
+   new `debug_assert!`s this run (the gate-keyword lane, the grant member list, the two state
+   flags) are what it audits. `--pilots` and `--wide` last ran at the `(-185)` engine.
+3. **This run: `(-188)`..`(-192)`, one probe then five legs** — a keyword presence gate cost
+   886 Ir a call; three `#[inline(never)]` fns and a ten-second `fixed` dump priced its five
+   legs, and each went behind the cheapest holder: a definition-only lane, a member list
+   (`grant_members`, the `trigger_members` shape), two `GameState` flags exact at cleanup
+   (`board_instance_keywords`, `offboard_keyword_grants` — `step_bounded_may_play`'s device), no
+   hoist. Cumulative vs `fb120400`: **fixed -1.64 %, cube -1.61 %, sealed -0.83 %** (Baseline
+   top). `(-193)` (pool batching, `(-170)(b)`) **+0.9..1.3 %, reverted**: a pool access costs
+   what it moves, not the thread-local. A fix rode along: three eot keyword grants had no CR
+   613.7 timestamp (`6717b648`).
+4. **Next perf lead (PERF candidates, `(-192)` block):** `affected_includes_gated` 548 k calls /
+   1.16 % of `cube` (a per-pass reach mask in `compute_permanent_pass`); `drop_in_place<
+   ComputedPermanent>` under the pool's overwrite (`(-107)`'s by-value question); `Unfreeze::drop`
+   at 34 Ir x 213 k. The keyword-gate family is mined out (~100 Ir a call left, all legs priced).
 5. **Open, sized (leave):** `apply_as_enters_effect` / Mimeoplasm (ENGINE_BACKLOG); the empty-stack
-   `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 1.9 % of both pools in gate
+   `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 2.0 % of both pools in gate
    prelude with no single hot line — a `profiling-lines` read, not a device.
 6. **Card lanes, all in CARD_BACKLOG's first sections** (printed-clause ratchets,
-   `audit_oracle_verbs.py`: `counters` and `lose_life` worked at the CR 704.3 pass — 10 defects,
-   Moonshadow was a whole wrong card; `draw` 12 / `gain_life` 12 / `destroy` 12 / `search_library`
-   11 / `token` 9 / `mill` 8 left, ~half of each class is the auditor's blind spot — read the
-   body before believing a row). ⚠ A python auditor's zero is suspect — check its population.
+   `audit_oracle_verbs.py`: `counters` / `lose_life` / `draw` / `destroy` worked; `gain_life` 12 /
+   `search_library` 11 / `token` 9 / `mill` 8 left, ~half of each class is the auditor's blind
+   spot — read the body before believing a row). ⚠ A python auditor's zero is suspect.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
