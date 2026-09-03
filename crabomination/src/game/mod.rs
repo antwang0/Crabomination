@@ -9199,45 +9199,45 @@ impl GameState {
     /// the disjunction over those four never misses. Debug builds re-run the
     /// whole-board pass whenever this says `false`, so the suite audits it.
     ///
-    /// The membership test is a **precomputed discriminant** compare, and
-    /// that is the whole cost of this function. `Keyword` is a
+    /// The membership test is a **discriminant** compare: `Keyword` is a
     /// 200-odd-variant payload-carrying enum, so its derived `PartialEq` is a
-    /// tag compare *plus a jump into a per-variant payload compare*, and
-    /// `kws.contains(k)` pays one per (board keyword x `kws` entry) — the
-    /// inner loop of a walk eight callers make 16,406 times over six
-    /// `--decks fixed` games.
+    /// tag compare *plus a jump into a per-variant payload compare*, and a
+    /// tag compare is exactly the over-approximation this gate is documented
+    /// to be — it can only answer `true` more often. In practice it is not
+    /// even that, because **every list every caller passes is unit
+    /// variants**, where a tag match *is* equality; the payload keywords have
+    /// their own entry point in [`board_keyword_matching`](Self::board_keyword_matching).
     ///
-    /// Comparing tags rather than values is exactly the over-approximation
-    /// this gate is documented to be: it can only answer `true` more often,
-    /// and `false` — the only answer a caller acts on — stays authoritative.
-    /// In practice it is not even that, because **every list every caller
-    /// passes is unit variants** (`MustAttack`, `MustBlock`, `Phasing`,
-    /// `CantBeBlockedByMoreThanOne`, …), where a tag match *is* equality; the
-    /// payload keywords have their own entry point in
-    /// [`board_keyword_matching`](Self::board_keyword_matching).
-    ///
-    /// Two variants measured against this one and not taken:
-    /// keeping the exact `&& *w == k` fallback behind the tag reads `fixed`
-    /// **-0.212 %** against this form's **-0.584 %**, and
-    /// [`KeywordSlice::has_kw`] — the same idea with only the *wanted* tag
-    /// hoisted, so every `kws` entry's tag is reloaded per board keyword —
-    /// reads **-0.105 %**. Hoisting the short list once is the win.
+    /// The tags used to be hoisted into a `SmallVec` once per ask, and that
+    /// was the win while the printed scan ran on every permanent (`fixed`
+    /// **-0.584 %** against **-0.105 %** for re-reading the caller's list per
+    /// board keyword, and **-0.212 %** for keeping an exact `== k` fallback
+    /// behind the tag). Since PERF `(-188)` the printed scan runs only on a
+    /// board that carries a gate keyword and the predicate is asked a handful
+    /// of times an ask, so the 73-Ir build outweighed what it hoisted:
+    /// re-reading the caller's constant tags is `fixed` **-0.181 %** /
+    /// `sealed` -0.138 % / `cube` -0.108 % (`(-192)`).
     ///
     /// **A third variant was built and reverted (PERF `(-119)`): deleting this
     /// wrapper and letting each of the seven call sites pass its own
     /// `matches!` closure to [`board_keyword_matching`] costs
-    /// `fixed` +0.098 / `cube` +0.070 / `sealed` +0.044 %.** The tag list and
-    /// the 69 Ir a call it costs are what keep `board_keyword_matching`'s
-    /// ~23-permanent three-list walk to **one** monomorphization — a
-    /// `&[Keyword]` is a value, a closure is a type — and seven copies of that
-    /// walk cost more than the scan they remove. Do not take it a fourth time.
+    /// `fixed` +0.098 / `cube` +0.070 / `sealed` +0.044 %.** This wrapper's
+    /// one closure over a `&[Keyword]` is what keeps `board_keyword_matching`'s
+    /// three-list walk to **one** monomorphization — a `&[Keyword]` is a
+    /// value, a closure is a type — and seven copies of that walk cost more
+    /// than the scan they remove. Do not take it a fourth time.
     ///
     /// [`compute_permanents`]: Self::compute_permanents
     /// [`board_keyword_matching`]: Self::board_keyword_matching
     pub(crate) fn board_keyword_in_scope(&self, kws: &[Keyword]) -> bool {
-        let tags: SmallVec<[std::mem::Discriminant<Keyword>; 8]> =
-            kws.iter().map(std::mem::discriminant).collect();
-        self.board_keyword_matching(|k| tags.contains(&std::mem::discriminant(k)))
+        // No hoisted tag list any more (PERF `(-192)`): since `(-188)` the
+        // printed scan runs only on a board that carries a gate keyword, so
+        // the predicate is asked a handful of times an ask and the 73-Ir
+        // `SmallVec` build outweighed re-reading the caller's constant tags.
+        self.board_keyword_matching(|k| {
+            let tag = std::mem::discriminant(k);
+            kws.iter().any(|w| std::mem::discriminant(w) == tag)
+        })
     }
 
     /// [`board_keyword_in_scope`] over a predicate, for the keywords that
