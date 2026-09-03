@@ -22027,6 +22027,15 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
+**`Vec::from_iter` RE-READ AT `72e7bf37` (2.87 % of `cube`, 2.72 % of
+`fixed`) AND STILL DIFFUSE:** `cg_chain.py cg.nd 'from_iter' --top 8 --up
+2` on `--demangle=no` dumps ranks its owners as `compute_permanents`
+(20,932 calls on `cube`, 73 M inclusive — the layer pass itself, collected),
+`fire_step_triggers` (24,216 / 2.0 M), two `Map::next` chains (3.0 M /
+2.5 M), `pick_defensive_removal`, `can_afford_in_state_with`'s `OnceCell`
+init, `pick_combat_trick`. No collect owns more than ~0.3 % of a pool on its
+own; `(-92)`'s reading stands and this row is not a candidate.
+
 **(-187) BUILT AND REVERTED, A LOSS (`fixed` +0.172 % / `cube` +0.110 % /
 `sealed` +0.096 %):** a 63-bucket keyword tag mask per definition (a third
 `CardMemo` word) in front of `board_keyword_matching`'s printed-list scan,
