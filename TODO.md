@@ -35,8 +35,9 @@ sixty-seventh pass, so don't re-take that.
    rebase, and `CRAB_DUMP_TRACES=<dir>` (new, PERF "How to measure") names the diverging pairing.
 2. **Gates at the `(-185)` tip:** suite green, traces unmoved, clippy `--all-targets` clean,
    `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**, determinism ok.
-   `debug-assertions` ladder clean at `(-182)` (10 cells) and `(-183)` (12 cells, 11,760 games);
-   **the `(-185)` off-battlefield assert has the suite + one six-game cube run behind it — grid next.**
+   `debug-assertions` ladders clean at `(-182)`, `(-183)` and `(-185)` (12 cells, 11,760 games),
+   and **`robustness_grid.sh --pilots` at the `(-185)` engine: 30 cells / 33,120 games, actor
+   3 seeds, pilots 45 / 45 — 0 failures.** The `--wide` grid has not run on this run's engine.
 3. **This run: `(-182)`..`(-185)`, one device four times** — answer a requirement off the printed
    line where the walker would, walker for the rest, `debug_assert_eq!` as the ratchet:
    `printed_requirement` (`eval.rs`) at the targeting enumerator, `resolve_selector`, the

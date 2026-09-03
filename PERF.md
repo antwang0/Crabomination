@@ -2562,6 +2562,10 @@ audit   `-C debug-assertions=yes` + `overflow` ladder, 120 games/archetype,
         (-183) and again at (-185) the same plus `sealed` 3 and `fixed` 1
         — 11,760 games each. 0 undecided, no panic / assertion / overflow
         at all three tips.
+grid    `scripts/robustness_grid.sh --pilots` at `fb120400` (the `(-185)`
+        engine): ladder **30 cells / 33,120 games, 0 failures**, cap 0 /
+        stuck 0 / draw 0; actor leg 3 seeds x 600 games clean; **pilots
+        45 / 45 clean** (`abilarms` and `mcts` included), rc 0.
 ```
 
 ### The step-grant pass — closing state at `0c3f4a78`
