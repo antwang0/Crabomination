@@ -2520,24 +2520,25 @@ a box whose state moves.
 
 ## Baseline
 
-### The dispatcher-mask pass — closing state at `5bf4e81c`
+### The dispatcher-mask pass — closing state at `2003d1cf`
 
-Four engine commits, each behaviour-preserving (three-pool stdout
+Five engine commits, each behaviour-preserving (three-pool stdout
 identical, `--bench` byte-identical, golden traces unmoved at every
 step), all found by ranking a hot row's *callers* on a
 `--separate-callers=3` dump rather than reading its body by line.
 
 ```text
-  pool     base 0e9bdaa4     tip 5bf4e81c      cumulative
-  fixed      837,759,772      820,222,909   **-2.093 %**
-  cube     2,335,851,736    2,247,464,551   **-3.784 %**
-  sealed   2,345,940,541    2,251,720,461   **-4.016 %**
+  pool     base 0e9bdaa4     tip 2003d1cf      cumulative
+  fixed      837,759,772      813,220,278   **-2.929 %**
+  cube     2,335,851,736    2,236,499,052   **-4.253 %**
+  sealed   2,345,940,541    2,236,898,811   **-4.648 %**
 
   leg      fixed      cube      sealed    what
   (-194)  -0.313 %  -0.787 %  -0.504 %   the block planner reads the views it holds
   (-195)  -0.251 %  -1.096 %  -1.339 %   batch kind mask ahead of the dispatcher's pair loop
   (-196)  -0.977 %  -1.270 %  -1.669 %   per-card printed-trigger kind fold gates its walk
   (-197)  -0.568 %  -0.684 %  -0.562 %   mana-static lane ahead of the land tap's three walks
+  (-198)  -0.854 %  -0.488 %  -0.658 %   per-definition mana summary is the auto-tapper's row
 
   bench_ab.py, 16 pairs, base vs the (-196) tip (--bench = fixed):
   median +0.67 %, mean +0.35 %, sd 2.09 — inside the instrument's noise,
@@ -2555,12 +2556,13 @@ release the release-fast typecheck gate (debug-assertions off)   clean
         611.9 per game / 0 stalls** — byte-identical to df27df7e;
         determinism ok (all pairs split); peak_rss 21.4 MiB,
         bin 219,679,016 B (`--no-default-features`)
-grid    `scripts/robustness_grid.sh --no-actor` at 5bf4e81c (and at
-        d3d28c18 before it): ladder **30 cells / 33,120 games, 0
-        failures**, cap 0 / stuck 0 / draw 0, 7 assertion strings in the
-        binary — the `trigger_kind_fold`, dispatch-memo and mana-static
-        lane staleness `debug_assert!`s live on every cell. Actor leg
-        not run: no encoder or pool change this run.
+grid    `scripts/robustness_grid.sh --no-actor` at 2003d1cf (and at
+        5bf4e81c and d3d28c18 before it): ladder **30 cells / 33,120
+        games, 0 failures**, cap 0 / stuck 0 / draw 0, 7 assertion
+        strings in the binary — the `trigger_kind_fold`, `mana_summary`,
+        dispatch-memo and mana-static lane staleness `debug_assert!`s
+        live on every cell. Actor leg not run: no encoder or pool change
+        this run.
 audits  audit_incomplete --structural-only 21,795 / 0 to review (Elite
         Interceptor reviewed); audit_stubs 0 flagged;
         audit_oracle_verbs.py 70 -> 61 rows, every one filed
@@ -22695,10 +22697,10 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at `5bf4e81c` (`(-194)`..`(-197)`, three-pool Ir against
-`0e9bdaa4`): `fixed` 837,759,772 -> 820,222,909 (-2.093 %), `cube`
-2,335,851,736 -> 2,247,464,551 (-3.784 %), `sealed` 2,345,940,541 ->
-2,251,720,461 (-4.016 %).** The `cube` self table at `(-196)`, top rows:
+**State at `2003d1cf` (`(-194)`..`(-198)`, three-pool Ir against
+`0e9bdaa4`): `fixed` 837,759,772 -> 813,220,278 (-2.929 %), `cube`
+2,335,851,736 -> 2,236,499,052 (-4.253 %), `sealed` 2,345,940,541 ->
+2,236,898,811 (-4.648 %).** The `cube` self table at `(-196)`, top rows:
 `dispatch_triggers_for_events` 3.95 % (was 5.80 %), `gather_continuous_
 effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
 2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
@@ -22722,14 +22724,14 @@ Open, priced, largest first:
   three-pool stdout identity and the golden traces are the check that
   can see a slip, and every cast in the suite exercises it. Not
   attempted this run.
-* **`mana_source_table` — 2.1 % of `cube`** (8,678 calls x 5,463 Ir):
-  one `effective_mana_abilities_into` per untapped permanent (71,720 x
-  400 Ir, of which `granted_abilities_of_inner` 96,734 x 170 — its
-  grants-nothing gate misses on any permanent with a static or a
-  counter), plus `effect_produced_colors` 44,974 walks. A per-definition
-  memo of "printed mana-ability indices and the colours each makes"
-  serves the `rewrites == Some(false)`, no-grant, unstripped case, which
-  is nearly every land.
+* **`mana_source_table`'s other 58 % of rows** — `(-198)` memoized the
+  42 % that pass `grants_nothing`; the rest carry a static or a counter
+  (the gate's third-largest miss, per its own comment) and still walk
+  `effective_mana_abilities_into` + `granted_abilities_of_inner` (96,734
+  x 170 Ir, 0.73 % of `cube`, also from `available_mana`'s probes). A
+  memo keyed on the definition alone cannot serve them; a gate that
+  reads *which* static / counter kinds actually grant abilities could
+  admit most.
 
 * **Cheap-on-empty clones — ceiling ~0.7 % of `cube`.** `Vec::clone` is
   471,251 calls / 33.6 M inclusive (1.44 %) and only 29,494 of them reach
