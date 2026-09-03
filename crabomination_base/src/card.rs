@@ -5726,6 +5726,15 @@ impl CardDefinition {
             if static_grants_triggered_ability(&sa.effect) {
                 m |= b::GRANT_TRIGGER;
             }
+            if matches!(
+                sa.effect,
+                StaticEffect::ManaProductionDoubled
+                    | StaticEffect::ManaProductionTripled
+                    | StaticEffect::ExtraManaOnLandTap { .. }
+                    | StaticEffect::NamedSourcesActivationTax { .. }
+            ) {
+                m |= b::MANA_STATIC;
+            }
         }
         if self
             .station
@@ -6932,6 +6941,13 @@ pub mod dispatch_bits {
     pub const YOUR_CONTROL_TRIGGER: u64 = 1 << 61;
     /// See [`YOUR_CONTROL_TRIGGER`].
     pub const ANY_PLAYER_TRIGGER: u64 = 1 << 62;
+    /// A printed static the mana-ability path reads on **every** activation:
+    /// `ManaProductionDoubled` / `ManaProductionTripled` (the CR 614.5
+    /// multiplier), `ExtraManaOnLandTap` (CR 605.1b) or
+    /// `NamedSourcesActivationTax` (Skyseer's Chariot). Each was a
+    /// whole-board `static_abilities` walk per land tap; the zone's
+    /// mana-static lane answers all three from this bit (PERF `(-197)`).
+    pub const MANA_STATIC: u64 = 1 << 63;
     /// The subset `GameState::dispatch_board_scan` acts on, so its `bits == 0`
     /// early-out keeps its meaning when a bit is added for another caller.
     pub const BOARD_SCAN: u64 =
@@ -6939,7 +6955,7 @@ pub mod dispatch_bits {
     /// The two listener bits, as the combat dispatch asks for them.
     pub const LISTENER: u64 = YOUR_CONTROL_TRIGGER | ANY_PLAYER_TRIGGER;
     /// The memo's payload.
-    pub const ALL: u64 = BOARD_SCAN | LISTENER;
+    pub const ALL: u64 = BOARD_SCAN | LISTENER | MANA_STATIC;
 }
 
 /// Two answers about a card's *definition*, memoized on the object: its

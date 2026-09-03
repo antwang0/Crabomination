@@ -405,6 +405,10 @@ const LANE_ACT_GRANT: u32 = 18;
 const LANE_TRIGGERER: u32 = 20;
 const LANE_PT_REDUCE: u32 = 22;
 const LANE_GATE_KEYWORD: u32 = 24;
+/// Any permanent's definition carries a `dispatch_bits::MANA_STATIC` static
+/// — the presence question three per-activation walks on the mana path ask
+/// (PERF `(-197)`).
+const LANE_MANA_STATIC: u32 = 26;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -413,6 +417,12 @@ const LANE_MASK: u32 = 0b11;
 /// audits against — so the memo and the walk it gates cannot drift.
 fn card_has_dispatch_bits(c: &CardInstance) -> bool {
     c.dispatch_scan_bits() & crate::card::dispatch_bits::BOARD_SCAN != 0
+}
+
+/// Does this permanent's definition carry a static the mana-ability path
+/// reads per activation? The [`LANE_MANA_STATIC`] predicate.
+fn card_has_mana_static(c: &CardInstance) -> bool {
+    c.dispatch_scan_bits() & crate::card::dispatch_bits::MANA_STATIC != 0
 }
 
 /// Can this permanent grant a keyword to anything, whatever the predicate
@@ -1272,6 +1282,19 @@ impl Battlefield {
     /// Record what the caller's own walk found in the listener lane.
     pub fn store_listener(&self, epoch: u64, found: bool) {
         self.store_lane(LANE_LISTENER, epoch, found);
+    }
+
+    /// The mana-static lane, same caller-filled contract as
+    /// [`dispatch_lane`](Self::dispatch_lane): does any permanent's definition
+    /// carry a `MANA_STATIC` static? Read once per mana-ability activation
+    /// by `GameState::board_has_mana_static`.
+    pub fn mana_static_lane(&self) -> Result<bool, u64> {
+        self.split_lane(LANE_MANA_STATIC, card_has_mana_static, "mana-static")
+    }
+
+    /// Record what the caller's own walk found in the mana-static lane.
+    pub fn store_mana_static(&self, epoch: u64, found: bool) {
+        self.store_lane(LANE_MANA_STATIC, epoch, found);
     }
 
     /// The activated-grant lane, same caller-filled contract as

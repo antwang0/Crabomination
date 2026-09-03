@@ -11610,6 +11610,55 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-197)` TAKEN — a mana-static lane in front of the three walks every land tap made: `cube` -0.684 % / `fixed` -0.568 % / `sealed` -0.562 %
+
+```text
+  pool    base (-196)       (-197)          delta
+  fixed     824,906,185     820,222,909   **-0.568 %**
+  cube    2,262,935,469   2,247,464,551   **-0.684 %**
+  sealed  2,264,448,217   2,251,720,461   **-0.562 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+  cube by row:  mana_production_multiplier_for   210.4 -> 26.1 Ir/call (24,232)
+                resolve_extra_mana_on_land_tap   322.7 -> 34.0 Ir/call (24,232)
+                FlattenCompat::iter_fold (the Skyseer tax walk)
+                                                 28,318 calls -> 3,396
+                board_has_mana_static  +25,166 calls x 106.5 Ir = 2.7 M (new)
+```
+
+**The auto-tapper is 9.65 % of `cube` inclusive** (`auto_tap_for_cost_inner`,
+11,726 calls / 225 M, 7.71 % of it under `cast_spell_with_convoke`'s
+payment), and 5.9 % of that is `activate_ability` on land mana abilities
+— 22,330 taps at ~6,000 Ir each. `cg_contexts.py` on `activate_ability_
+inner` said where the taps come from; its callee table said what a tap
+pays for beyond its 1,963 Ir of self (which `cg_lines.py` reads diffuse,
+top line 0.19 %): three whole-board `static_abilities` walks that run on
+**every** activation whatever the board — the CR 614.5 production
+multiplier, the CR 605.1b extra-mana grant walk (already behind a
+short-circuiting `any`, which is the walk), and Skyseer's Chariot's
+named-source tax, the one activation tax that covers mana abilities.
+
+One definition-level bit answers all three: `dispatch_bits::MANA_STATIC`
+(word 0, bit 63 — the last free one) is set on a definition carrying any
+of the four statics, memoized with the dispatch bits, and
+`Battlefield::mana_static_lane` (`LANE_MANA_STATIC`, the same
+`split_lane` contract and staleness `debug_assert!` as the dispatch and
+listener lanes) holds the board's answer until membership or a definition
+moves. `board_has_mana_static` reads the lane and fills it from the memo
+words on a miss. The lane is a superset — a board with one of the four
+and not the one a caller wants walks as before and finds nothing.
+
+**What is left of the tap, priced:** `activate_ability_inner` self 1,945
+Ir over 23,666 (2.0 %, diffuse: ~100 cheap gates and the zone-position
+scan), `continue_ability_resolution_x_into` ~900 (an `EffectContext` and
+the generic resolver for one `AddMana`), `check_free_activation_loop`
+~900 (the CR 732.3 digest — kept: a `{T}` cost does not exempt an
+activation, see the resolution-side loop that untaps its source), the
+probe clone's `find_by_id_mut` unshare 220. A printed-mana-ability fast
+path that reproduces the generic path's events exactly is the device
+that would take the 2 % + 0.9 %; it is a two-thousand-line read to write
+soundly and was not attempted this run.
+
 ### `(-196)` TAKEN — a per-card fold of its printed triggers' kinds, one memo word, gates the dispatcher's permanent walk: `sealed` -1.669 % / `cube` -1.270 % / `fixed` -0.977 %
 
 ```text

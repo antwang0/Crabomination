@@ -2557,13 +2557,37 @@ impl crate::game::GameState {
         })
     }
 
+    /// Does any battlefield permanent's definition carry a static the
+    /// mana-ability path reads per activation (`dispatch_bits::MANA_STATIC`:
+    /// a production multiplier, an extra-mana land-tap grant, a named-source
+    /// activation tax)? One lane read on a hit; a miss walks the memo words
+    /// and fills the lane. Every land tap asked all three as whole-board
+    /// `static_abilities` walks — ~780 Ir a tap over 24,232 taps on a
+    /// six-game `cube` run (PERF `(-197)`).
+    pub(crate) fn board_has_mana_static(&self) -> bool {
+        match self.battlefield.mana_static_lane() {
+            Ok(found) => found,
+            Err(epoch) => {
+                let found = self.battlefield.iter().any(|c| {
+                    c.dispatch_scan_bits() & crate::card::dispatch_bits::MANA_STATIC != 0
+                });
+                self.battlefield.store_mana_static(epoch, found);
+                found
+            }
+        }
+    }
+
     /// CR 701.10f / 614.5 — combined mana-production multiplier from the
     /// `ManaProductionDoubled` (Mana Reflection) and `ManaProductionTripled`
     /// (Nyxbloom Ancient) permanents `player` controls. Replacements compose
     /// multiplicatively: 2^doublers × 3^triplers, clamped to keep pip math
-    /// sane.
+    /// sane. Behind the mana-static lane: a board with neither answers 1
+    /// without the walk.
     pub fn mana_production_multiplier_for(&self, player: usize) -> u32 {
         use crate::effect::StaticEffect;
+        if !self.board_has_mana_static() {
+            return 1;
+        }
         let mut mult: u32 = 1;
         for c in self.battlefield.iter().filter(|c| c.controller == player) {
             for sa in &c.definition.static_abilities {
@@ -2763,14 +2787,10 @@ impl crate::game::GameState {
         // `static_abilities`, and an emptiness check. **Asked before the
         // `land_id` lookup**, which is a second whole-battlefield walk for a
         // card nobody reads on a board with no such grant.
-        if self.extra_mana_on_land_tap_this_turn.is_empty()
-            && !self.battlefield.iter().any(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .any(|sa| matches!(sa.effect, StaticEffect::ExtraManaOnLandTap { .. }))
-            })
-        {
+        // The lane is a superset (`MANA_STATIC` covers three static kinds);
+        // a board that has one of the others and no `ExtraManaOnLandTap`
+        // walks below and collects nothing, as before.
+        if self.extra_mana_on_land_tap_this_turn.is_empty() && !self.board_has_mana_static() {
             return;
         }
         let Some(land) = self.battlefield.find_by_id(land_id) else { return };
@@ -16293,8 +16313,12 @@ impl GameState {
             }
         }
         // Skyseer's Chariot — abilities of sources with the named card name
-        // cost {N} more. Unlike the taxes below this one covers mana abilities.
-        if let Some(name) = self.battlefield_find(card_id).map(|c| c.definition.name) {
+        // cost {N} more. Unlike the taxes below this one covers mana abilities,
+        // so it is behind the mana-static lane: no permanent's definition
+        // carries the tax, no walk.
+        if self.board_has_mana_static()
+            && let Some(name) = self.battlefield_find(card_id).map(|c| c.definition.name)
+        {
             let tax: u32 = self
                 .battlefield
                 .iter()
