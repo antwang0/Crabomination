@@ -70,6 +70,19 @@ filters in this file cannot reach any of them, and the suite cannot either — a
 wrap needs a board, and 19,201 tests carry fewer interesting boards than 400
 games of `--decks all`.
 
+**(6) — found at the presence-flag pass, `d98c4212`: a permanent leaving the
+battlefield kept its "until end of turn" effects.** A creature bounced with
+"can't block" and recast the same turn still could not block; a pumped one
+came back pumped. Neither leave-the-battlefield bundle (`move_card_to`, the
+`remove_*` raw path) touched the `eot_wear_off` fields. What found it was
+not a test but a **memo audit**: `board_instance_keywords` (PERF `(-190)`)
+is exact after cleanup and set by every grant, so a card that *re-entered*
+carrying a grant nobody made was the one state the flag could not explain,
+and the `debug_assert!` said so on six grid cells. **A presence flag's
+audit is a free invariant check on every write path that feeds it** — the
+fix (`clear_effects_on_zone_change`) keeps the per-turn *history* fields,
+which are LKI for the death triggers (Scythe of the Wretched pins it).
+
 **(1) A graveyard-only ability functioned on the battlefield.**
 `activate_ability_inner` had four wrong-zone gates and only in one direction.
 Eternal Student's "{1}{B}, Exile this card from your graveyard: create two

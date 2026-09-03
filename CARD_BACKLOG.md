@@ -810,6 +810,37 @@ upkeep Allies, and Dyadrine's optional two-counter attack trigger.
 
 ## Oracle-verb audit — the `draw` and `counters` classes
 
+**`mill` worked (8 rows, `cfbed722`): four real** — Devourer of Memory (a
+wholly wrong card, a magecraft draw body), Mind Drain (no mill / drain /
+gain, and "each opponent" for "target opponent"), Aether Syphon (the Max
+speed trigger absent), Master Pakku (the tap trigger absent) — **four the
+auditor cannot see**: Chains of Mephistopheles (`StaticEffect`, the mill
+is in the engine), Grist (`Effect::GristPlusOne`), Six (`LookPick` with
+`rest_to_graveyard`, an approximation of "mill three, take a land"), and
+Heirloom Mirror, a DFC stub whose oracle the cache does not carry — **that
+one is still open**: it ships as a mana rock with a sac-draw, the printed
+card is "{1}, {T}, pay 1 life, discard: draw, mill, ritual counter,
+transform at three". Devourer's trigger fires per milled card where the
+printed "one or more" fires once a batch (no per-event batching in
+`EventSpec`; `DiscardedOneOrMore` is the one kind that has it).
+
+**`token` read (9 rows): two fixed** — Aang, Airbending Master (two of three
+abilities absent: the leave-without-dying experience counter and the upkeep
+Ally per counter) and Sequence Engine (a wholly wrong card, a
+reveal-until-instant body; now `{X}, {T}` with `ManaValueExactlyXFromCost`
+and a Fractal with X counters) — **six real and open, each blocked on a
+primitive**: Calix (a token copy of a chosen nonlegendary enchantment on
+combat damage by Calix or an enchanted creature), Dyadrine ("remove a +1/+1
+counter from each of two creatures" as a may-cost), Magmatic Galleon (an
+*excess noncombat damage* event), Pinnacle Starcage (its `{6}{W}{W}` dump
+of the cards exiled with it, a Robot each), Severance Priest (on leave, a
+Spirit with P/T = the exiled card's mana value, the card staying exiled —
+ships as `ExileChosenUntilSourceLeaves`, which returns it), Zidane
+("whenever an opponent gains control of a permanent from you" — the
+control-change kinds are per-permanent `GainedControlOfThis` /
+`LostControlOfThis`). Complaints Clerk (UNF) is the auditor reading an
+Attraction's reminder text.
+
 `scripts/audit_oracle_verbs.py` asks the cheapest question that catches a
 wrong-shape card: **the oracle names a verb and the effect tree has no
 primitive for it.** `surveil` and `tap_target` read zero; `untap` (3) and

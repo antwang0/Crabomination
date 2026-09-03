@@ -11476,6 +11476,24 @@ the table above is safe to compress:
 
 ## Log
 
+### `d98c4212` — a rules price, not a candidate: CR 400.7 clears "until end of turn" effects as a permanent leaves — `fixed` +0.070 % / `sealed` +0.070 % / `cube` +0.062 %
+
+```text
+  pool    base (-192)       d98c4212        delta
+  fixed     833,352,202     833,938,088   **+0.070 %**
+  cube    2,315,286,224   2,316,727,619   **+0.062 %**
+  sealed  2,342,732,076   2,344,376,847   **+0.070 %**
+```
+
+The `(-190)` audit found it on six grid cells (ENGINE_BACKLOG's sweep
+section, row 6): a bounced creature recast the same turn kept its pump
+and its "can't block". The fix probes the `eot_wear_off` fields on every
+permanent leaving the battlefield (`clear_effects_on_zone_change`,
+guarded so a clean card pays no unshare) — ~170 Ir a leave, which is the
+row. `--bench` byte-identical (195,806 / 27.49 / 611.9 / 0 stalls),
+three-pool stdout identical, golden traces unmoved: no seed-1 game had a
+bounce-and-recast the rules change could move.
+
 ### `(-193)` BUILT AND REVERTED, A LOSS — one pool access per scope instead of one per box: `fixed` +1.288 % / `sealed` +1.097 % / `cube` +0.920 %
 
 ```text

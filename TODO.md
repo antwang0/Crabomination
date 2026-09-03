@@ -53,8 +53,9 @@ sixty-seventh pass, so don't re-take that.
    `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 2.0 % of both pools in gate
    prelude with no single hot line — a `profiling-lines` read, not a device.
 6. **Card lanes, all in CARD_BACKLOG's first sections** (printed-clause ratchets,
-   `audit_oracle_verbs.py`: `counters` / `lose_life` / `draw` / `destroy` worked; `gain_life` 12 /
-   `search_library` 11 / `token` 9 / `mill` 8 left, ~half of each class is the auditor's blind
+   `audit_oracle_verbs.py`: `counters` / `lose_life` / `draw` / `destroy` / `mill` / `token` worked
+   (`mill` 4 real of 8, `token` 2 fixed + 6 blocked on a primitive each, both with a whole wrong
+   card); `gain_life` 12 / `search_library` 10 left, ~half of each class is the auditor's blind
    spot — read the body before believing a row). ⚠ A python auditor's zero is suspect.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
