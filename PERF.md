@@ -1051,6 +1051,14 @@ contention-immune, which makes it the better first look.
 
 ## Standing rules for a perf pass
 
+- **Price a hot row by WHO CALLS IT, not by its body.** Six functions had
+  been read by line across three passes and all said "no hot line";
+  `(-194)`..`(-196)` came off one `--separate-callers=3` dump and
+  `cg_contexts.py`, which ranked `computed_permanent_hinted`'s 366 k
+  calls by context and found the top two were a caller asking for a view
+  it held. A memo-hit path's cost is the asks that reach it; a walk's
+  cost is the entries that enter it. `cg_lines.py` is for the row whose
+  callers are all legitimate.
 - ⚠ **AN A/B'S TWO SIDES ARE BUILT FROM ONE BASE TREE.** A rebase between
   the base build and the candidate build can pull a concurrent *catalog*
   commit, and a card rewrite moves the six-game `cube` run — `(-185)`'s
@@ -2511,6 +2519,51 @@ quote a build-time delta at all.** A one-sided series is not a measurement on
 a box whose state moves.
 
 ## Baseline
+
+### The dispatcher-mask pass — closing state at `d3d28c18`
+
+Three engine commits, each behaviour-preserving (three-pool stdout
+identical, `--bench` byte-identical, golden traces unmoved at every
+step), all found by ranking a hot row's *callers* on a
+`--separate-callers=3` dump rather than reading its body by line.
+
+```text
+  pool     base 0e9bdaa4     tip d3d28c18      cumulative
+  fixed      837,759,772      824,906,185   **-1.534 %**
+  cube     2,335,851,736    2,262,935,469   **-3.122 %**
+  sealed   2,345,940,541    2,264,448,217   **-3.474 %**
+
+  leg      fixed      cube      sealed    what
+  (-194)  -0.313 %  -0.787 %  -0.504 %   the block planner reads the views it holds
+  (-195)  -0.251 %  -1.096 %  -1.339 %   batch kind mask ahead of the dispatcher's pair loop
+  (-196)  -0.977 %  -1.270 %  -1.669 %   per-card printed-trigger kind fold gates its walk
+
+  bench_ab.py, 16 pairs, base vs tip (--bench = fixed): median +0.67 %,
+  mean +0.35 %, sd 2.09 — inside the instrument's noise, as a -1.5 % Ir
+  change on that pool should be.
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,239 / 0 / 5 (+1: events::tests::variant_and_payload_halves_
+        agree_with_the_reference_table); golden traces in it and unmoved
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+        (one type_complexity on (-194)'s blocker tuple, now `BlockerFacts`)
+release the release-fast typecheck gate (debug-assertions off)   clean
+--bench profiling-fast at d3d28c18: **195,806 decisions / 27.49 turns /
+        611.9 per game / 0 stalls** — byte-identical to df27df7e;
+        determinism ok (all pairs split); peak_rss 21.4 MiB,
+        bin 219,679,016 B (`--no-default-features`)
+grid    `scripts/robustness_grid.sh --no-actor` at d3d28c18 (+ the
+        `BlockerFacts` rename): ladder **30 cells / 33,120 games, 0
+        failures**, cap 0 / stuck 0 / draw 0, 7 assertion strings in the
+        binary — the `trigger_kind_fold` and dispatch-memo staleness
+        `debug_assert!`s live on every cell. Actor leg not run: no
+        encoder or pool change this run.
+audits  audit_incomplete --structural-only 21,795 / 0 to review (Elite
+        Interceptor reviewed); audit_stubs 0 flagged;
+        audit_oracle_verbs.py 70 -> 61 rows, every one filed
+```
 
 ### The attack-search census pass — closing state at `e725e5c2`
 
@@ -22551,6 +22604,57 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**State at `d3d28c18` (`(-194)`..`(-196)`, three-pool Ir against
+`0e9bdaa4`): `fixed` 837,759,772 -> 824,906,185 (-1.534 %), `cube`
+2,335,851,736 -> 2,262,935,469 (-3.122 %), `sealed` 2,345,940,541 ->
+2,264,448,217 (-3.474 %).** The `cube` self table at the tip, top rows:
+`dispatch_triggers_for_events` 3.95 % (was 5.80 %), `gather_continuous_
+effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
+2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
+`activate_ability_inner` 2.05 %, `computed_permanent_hinted` 1.96 %.
+
+Open, priced, cheapest build first:
+
+* **Cheap-on-empty clones — ceiling ~0.7 % of `cube`.** `Vec::clone` is
+  471,251 calls / 33.6 M inclusive (1.44 %) and only 29,494 of them reach
+  `memcpy`: the rest copy nothing and still pay `with_capacity`'s checks
+  and a call, ~45 Ir. `CardData` carries five such lists (`counters`,
+  `damaged_by_this_turn`, `damaged_players_this_game`,
+  `damaged_permanents_this_game`, `damage_by_source_name_this_turn`) and
+  is deep-copied under `Arc::make_mut` on every CoW unshare;
+  `GameState`'s manual `Clone` copies `attacking` / `delayed_triggers` and
+  four maps (`RawTable::clone` 61,730 calls, ~25 Ir on an empty table).
+  The device is a `#[serde(transparent)]` `Deref` newtype whose `Clone`
+  tests `is_empty()` first (`CounterBag` can take a manual `Clone`
+  directly), and `clone_vec` guards in `GameState::clone`. Price it
+  against `(-165)`: no inline buffer, no owner growth. Largest context
+  is `make_mut_slow <- cast_spell_with_convoke` (106,518 clones, 43 Ir
+  each — those are real zone-buffer copies, not the empties).
+* **`resolve_combat`'s protection asks — 0.2 %.** 13,164
+  `damage_prevented_by_protection` calls (5.0 M) inside scopes that
+  already hold `computed_of`; `protection_prevents_views` is the form.
+  The SBA lethal-damage walk's 5,896 (3.1 M) are the same shape.
+* **`activate_ability_inner` — 1,963 Ir/call self over 23,666 calls
+  (46.5 M, 2.05 %), never read by calling context.** Its callees say
+  what it is not: `continue_ability_resolution_x_into` 21.8 M,
+  `resolve_extra_mana_on_land_tap` 7.8 M, `find_by_id_mut` 5.4 M (the
+  probe clone's unshare), `mana_production_multiplier_for` 5.1 M. The
+  self is the activation body itself; `cg_contexts.py` on it is the
+  next question, `cg_lines.py` the one after.
+* **`fingerprint` — 29,196 calls x 900 Ir (26.3 M, 1.16 %),** 23,666 of
+  them the CR 732.3 announcement watch under `activate_ability`. The
+  per-permanent cost is one `mix` plus four loads; `CounterBag` is a
+  `Vec`, so its `values().sum()` is already cheap on empty. No device
+  seen; a cheaper *policy* (watch only activations whose cost cannot
+  change the digest) is refuted by the `{T}: untap` loop, which the
+  watch catches through the tapped bit across two announcements.
+
+Refuted this run, no build spent or one: the kind-fold gate in
+`fire_step_triggers` (`(-196)`, +0.2 M on `cube` — a one-element loop
+over an inlined tag compare is cheaper than a memo load); the same gate
+on the dispatcher's graveyard leg, by the same arithmetic (its per-trigger
+test is a `matches!` on the scope).
 
 **`(-21)`'s search-count half read at `e725e5c2` (Log): the census
 `CRAB_ATTACK_CENSUS` says 9-16 % of searched declarations face no blocker

@@ -10187,6 +10187,19 @@ struct AttackerFacts<'a> {
     poison: u32,
 }
 
+/// One candidate blocker in [`pick_blocks_inner`]'s greedy pass: the card and
+/// the view `legal_blockers` built for it, plus the printed P/T and the three
+/// computed evasion keywords the trade math reads per attacker.
+struct BlockerFacts<'a> {
+    card: &'a crate::card::CardInstance,
+    view: &'a std::sync::Arc<crate::game::layers::ComputedPermanent>,
+    power: i32,
+    toughness: i32,
+    flying: bool,
+    reach: bool,
+    deathtouch: bool,
+}
+
 fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // Improved blocker heuristic (push claude/modern_decks):
     //   1. Build the candidate set of (attacker, attacker_power,
@@ -10353,29 +10366,19 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // handed back, then re-run `blocker_can_block_anything` on the pair —
     // 21,408 memo hits a six-game `cube` run at `0e9bdaa4` for answers it
     // already held.
-    let mut blockers: Vec<(
-        &crate::card::CardInstance,
-        &std::sync::Arc<crate::game::layers::ComputedPermanent>,
-        i32,
-        i32,
-        bool,
-        bool,
-        bool,
-    )> = may_block
+    let mut blockers: Vec<BlockerFacts> = may_block
         .iter()
-        .map(|(c, cp)| {
-            (
-                *c,
-                cp,
-                c.power(),
-                c.toughness(),
-                cp.keywords().has_kw(&Keyword::Flying),
-                cp.keywords().has_kw(&Keyword::Reach),
-                cp.keywords().has_kw(&Keyword::Deathtouch),
-            )
+        .map(|(c, cp)| BlockerFacts {
+            card: c,
+            view: cp,
+            power: c.power(),
+            toughness: c.toughness(),
+            flying: cp.keywords().has_kw(&Keyword::Flying),
+            reach: cp.keywords().has_kw(&Keyword::Reach),
+            deathtouch: cp.keywords().has_kw(&Keyword::Deathtouch),
         })
         .collect();
-    blockers.sort_by_key(|(_, _, p, ..)| *p);
+    blockers.sort_by_key(|b| b.power);
 
     // Track which attackers have already been damage-saturated by
     // assigned blockers — if blocker total toughness >= attacker
@@ -10389,7 +10392,16 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         Default::default();
     let mut assignments: Vec<(CardId, CardId)> = Vec::new();
 
-    for (blk_card, blk_view, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
+    for BlockerFacts {
+        card: blk_card,
+        view: blk_view,
+        power: b_pow,
+        toughness: b_tough,
+        flying: b_flying,
+        reach: b_reach,
+        deathtouch: b_dt,
+    } in blockers
+    {
         let b_id = blk_card.id;
         let blk_view: &crate::game::layers::ComputedPermanent = blk_view;
         // Pick the best attacker for this blocker.

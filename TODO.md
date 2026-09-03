@@ -25,28 +25,30 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-193)` is the last claimed,
-   `(-194)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
-   rules"**. Cold here: `profiling-fast` **~14 min cold / ~5 min warm**, test build+suite
-   ~4 min; `nextest` needs installing (CLAUDE.md). Callgrind `--games 6` ~25 s/pool. ⚠ A rebase
-   between an A/B's two builds can pull a concurrent CATALOG commit: `git log --stat
-   <base>..HEAD -- crabomination_catalog` after any rebase (PERF Standing rules, top).
-2. **Gates at `e725e5c2` (this run):** suite **19,238 / 0 / 5** (+1 device test), golden traces
-   7/7 unmoved, clippy clean, release-fast typecheck clean, `--bench` **195,806 / 27.49 / 611.9 /
-   0 stalls, byte-identical to `df27df7e`** (default engine unchanged — only opt-in code landed),
-   determinism ok. Grid NOT re-run: byte-identical default => `df27df7e`'s `--wide` (301,600
-   games, cap 4 = Beacon) still describes it. Audits all clean (PERF Baseline).
-3. **This run took `(-21)`'s never-read half and CLOSED the open-board sub-question** (Log
-   `e725e5c2`). `CRAB_ATTACK_CENSUS` reads what the attack sim chooses; the `atk-open` pilot skips
-   it on a blockerless board: -1.3/-1.8 % cube/sealed Ir but -0.1 pt on a 96 k sealed ladder (it
-   overrides a correct hold-back). Opt-in, NOT adopted. ⚠ **Do NOT re-try a `greedy.len() >= 2`
-   gate** — the level-2 dump shows 18 of 60 bench divergences have 2+ attackers and they are the
-   biggest swings (drop a Goblin Guide, +10 pts from not carding the opponent). The real signal is
-   an attack-trigger downside, which is card-specific, not attacker count. The device is done.
-4. **Perf leads left:** `profiling-lines` read of `computed_permanent_hinted`'s 150 Ir/call
-   memo-hit path (2.4 %, never read by line). The `a198daf3` re-read (candidates, top) stands: no
-   row prices at a build without a device. Sized, leave: `apply_as_enters_effect` / Mimeoplasm,
-   the empty-stack `PassPriority` sweep, `activate_ability_inner` (2.0 %, no hot line).
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-196)` is the last claimed,
+   `(-197)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   rules"**. Cold here: `profiling-fast` **~17 min cold / ~5 min warm** (a `crabomination_base`
+   edit re-fingerprints the catalog: ~14 min), test build+suite ~4 min; `nextest` needs
+   installing (CLAUDE.md). Callgrind `--games 6` ~25 s/pool. ⚠ A rebase between an A/B's two
+   builds can pull a concurrent CATALOG commit: `git log --stat <base>..HEAD --
+   crabomination_catalog` after any rebase (PERF Standing rules, top). ⚠ `diff` two
+   `bot_ladder` stdouts with the `decided ... in N.Ns` line excluded — it carries wall clock.
+2. **Gates at `d3d28c18` (this run):** PERF Baseline has them — suite, clippy, release-fast
+   typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to `df27df7e`**,
+   golden traces 7/7 unmoved, three-pool stdout identical at every step, `--no-actor` grid.
+3. **This run: three engine devices, `cube` -3.12 % / `sealed` -3.47 % / `fixed` -1.53 %
+   cumulative** (Log `(-194)`..`(-196)`): the block planner reads the views it holds; a batch
+   kind mask (`EventKind::bit`, `event_kind_bits`) gates the dispatcher's pair loop; a per-card
+   printed-trigger kind fold on `CardMemo`'s third word gates its permanent walk. **The method
+   that found all three: `cg_contexts.py` on a `--separate-callers=3` dump, ranking a hot row's
+   *callers* — not a line profile of its body.** `bench_ab.py` 16 pairs: +0.67 % median, inside
+   noise (fixed's Ir delta is under the instrument's floor).
+4. **Perf leads left (candidates, top):** the cheap-on-empty clone for `CardData`/`PlayerData`/
+   `GameState` collection fields (`Vec::clone` 471 k calls, 89 % copy nothing, ~45 Ir each —
+   ceiling ~0.7 %, needs a `Deref` newtype on five `CardData` fields); `resolve_combat`'s 13 k
+   protection asks through `protection_prevents_views` (0.2 %); `activate_ability_inner` 1,963
+   Ir/call self over 23,666 (2.0 %, unread by context). Refuted this run: the kind-fold gate in
+   `fire_step_triggers` (+0.2 M — an inlined tag compare is cheaper than a memo load).
 5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
    cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`
    is the raw material, `Predicate::CastSpellNamedThisTurn` the missing arm), a per-turn
