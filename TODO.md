@@ -25,29 +25,29 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-196)` is the last claimed,
-   `(-197)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-197)` is the last claimed,
+   `(-198)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
    rules"**. Cold here: `profiling-fast` **~17 min cold / ~5 min warm** (a `crabomination_base`
    edit re-fingerprints the catalog: ~14 min), test build+suite ~4 min; `nextest` needs
    installing (CLAUDE.md). Callgrind `--games 6` ~25 s/pool. ⚠ A rebase between an A/B's two
    builds can pull a concurrent CATALOG commit: `git log --stat <base>..HEAD --
    crabomination_catalog` after any rebase (PERF Standing rules, top). ⚠ `diff` two
    `bot_ladder` stdouts with the `decided ... in N.Ns` line excluded — it carries wall clock.
-2. **Gates at `d3d28c18` (this run):** PERF Baseline has them — suite, clippy, release-fast
+2. **Gates at `5bf4e81c` (this run):** PERF Baseline has them — suite, clippy, release-fast
    typecheck, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical to `df27df7e`**,
    golden traces 7/7 unmoved, three-pool stdout identical at every step, `--no-actor` grid.
-3. **This run: three engine devices, `cube` -3.12 % / `sealed` -3.47 % / `fixed` -1.53 %
-   cumulative** (Log `(-194)`..`(-196)`): the block planner reads the views it holds; a batch
+3. **This run: four engine devices, `cube` -3.78 % / `sealed` -4.02 % / `fixed` -2.09 %
+   cumulative** (Log `(-194)`..`(-197)`): the block planner reads the views it holds; a batch
    kind mask (`EventKind::bit`, `event_kind_bits`) gates the dispatcher's pair loop; a per-card
-   printed-trigger kind fold on `CardMemo`'s third word gates its permanent walk. **The method
-   that found all three: `cg_contexts.py` on a `--separate-callers=3` dump, ranking a hot row's
-   *callers* — not a line profile of its body.** `bench_ab.py` 16 pairs: +0.67 % median, inside
-   noise (fixed's Ir delta is under the instrument's floor).
-4. **Perf leads left (candidates, top):** the cheap-on-empty clone for `CardData`/`PlayerData`/
-   `GameState` collection fields (`Vec::clone` 471 k calls, 89 % copy nothing, ~45 Ir each —
-   ceiling ~0.7 %, needs a `Deref` newtype on five `CardData` fields); `resolve_combat`'s 13 k
-   protection asks through `protection_prevents_views` (0.2 %); `activate_ability_inner` 1,963
-   Ir/call self over 23,666 (2.0 %, unread by context). Refuted this run: the kind-fold gate in
+   printed-trigger kind fold on `CardMemo`'s third word gates its permanent walk; a mana-static
+   lane gates the three board walks every land tap made. **The method that found all four:
+   `cg_contexts.py` on a `--separate-callers=3` dump, ranking a hot row's *callers* — not a
+   line profile of its body.** `bench_ab.py` 16 pairs: +0.67 % median, inside noise.
+4. **Perf leads left (candidates, top, priced):** the auto-tapper is **9.65 % of `cube`** —
+   a printed-mana-ability fast path in `activate_ability_inner` (ceiling ~3 %, a 2,000-line
+   read to do exactly; `(-197)`'s Log entry prices each piece of a tap) and a per-definition
+   memo for `mana_source_table` (2.1 %); then the cheap-on-empty clone (~0.7 %) and
+   `resolve_combat`'s protection asks (0.2 %). Refuted this run: the kind-fold gate in
    `fire_step_triggers` (+0.2 M — an inlined tag compare is cheaper than a memo load).
 5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
    cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`

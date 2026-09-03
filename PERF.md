@@ -2520,27 +2520,28 @@ a box whose state moves.
 
 ## Baseline
 
-### The dispatcher-mask pass — closing state at `d3d28c18`
+### The dispatcher-mask pass — closing state at `5bf4e81c`
 
-Three engine commits, each behaviour-preserving (three-pool stdout
+Four engine commits, each behaviour-preserving (three-pool stdout
 identical, `--bench` byte-identical, golden traces unmoved at every
 step), all found by ranking a hot row's *callers* on a
 `--separate-callers=3` dump rather than reading its body by line.
 
 ```text
-  pool     base 0e9bdaa4     tip d3d28c18      cumulative
-  fixed      837,759,772      824,906,185   **-1.534 %**
-  cube     2,335,851,736    2,262,935,469   **-3.122 %**
-  sealed   2,345,940,541    2,264,448,217   **-3.474 %**
+  pool     base 0e9bdaa4     tip 5bf4e81c      cumulative
+  fixed      837,759,772      820,222,909   **-2.093 %**
+  cube     2,335,851,736    2,247,464,551   **-3.784 %**
+  sealed   2,345,940,541    2,251,720,461   **-4.016 %**
 
   leg      fixed      cube      sealed    what
   (-194)  -0.313 %  -0.787 %  -0.504 %   the block planner reads the views it holds
   (-195)  -0.251 %  -1.096 %  -1.339 %   batch kind mask ahead of the dispatcher's pair loop
   (-196)  -0.977 %  -1.270 %  -1.669 %   per-card printed-trigger kind fold gates its walk
+  (-197)  -0.568 %  -0.684 %  -0.562 %   mana-static lane ahead of the land tap's three walks
 
-  bench_ab.py, 16 pairs, base vs tip (--bench = fixed): median +0.67 %,
-  mean +0.35 %, sd 2.09 — inside the instrument's noise, as a -1.5 % Ir
-  change on that pool should be.
+  bench_ab.py, 16 pairs, base vs the (-196) tip (--bench = fixed):
+  median +0.67 %, mean +0.35 %, sd 2.09 — inside the instrument's noise,
+  as a -1.5 % Ir change on that pool should be.
 ```
 
 ```text
@@ -2554,12 +2555,12 @@ release the release-fast typecheck gate (debug-assertions off)   clean
         611.9 per game / 0 stalls** — byte-identical to df27df7e;
         determinism ok (all pairs split); peak_rss 21.4 MiB,
         bin 219,679,016 B (`--no-default-features`)
-grid    `scripts/robustness_grid.sh --no-actor` at d3d28c18 (+ the
-        `BlockerFacts` rename): ladder **30 cells / 33,120 games, 0
+grid    `scripts/robustness_grid.sh --no-actor` at 5bf4e81c (and at
+        d3d28c18 before it): ladder **30 cells / 33,120 games, 0
         failures**, cap 0 / stuck 0 / draw 0, 7 assertion strings in the
-        binary — the `trigger_kind_fold` and dispatch-memo staleness
-        `debug_assert!`s live on every cell. Actor leg not run: no
-        encoder or pool change this run.
+        binary — the `trigger_kind_fold`, dispatch-memo and mana-static
+        lane staleness `debug_assert!`s live on every cell. Actor leg
+        not run: no encoder or pool change this run.
 audits  audit_incomplete --structural-only 21,795 / 0 to review (Elite
         Interceptor reviewed); audit_stubs 0 flagged;
         audit_oracle_verbs.py 70 -> 61 rows, every one filed
@@ -22654,16 +22655,41 @@ Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
 
-**State at `d3d28c18` (`(-194)`..`(-196)`, three-pool Ir against
-`0e9bdaa4`): `fixed` 837,759,772 -> 824,906,185 (-1.534 %), `cube`
-2,335,851,736 -> 2,262,935,469 (-3.122 %), `sealed` 2,345,940,541 ->
-2,264,448,217 (-3.474 %).** The `cube` self table at the tip, top rows:
+**State at `5bf4e81c` (`(-194)`..`(-197)`, three-pool Ir against
+`0e9bdaa4`): `fixed` 837,759,772 -> 820,222,909 (-2.093 %), `cube`
+2,335,851,736 -> 2,247,464,551 (-3.784 %), `sealed` 2,345,940,541 ->
+2,251,720,461 (-4.016 %).** The `cube` self table at `(-196)`, top rows:
 `dispatch_triggers_for_events` 3.95 % (was 5.80 %), `gather_continuous_
 effects_inner` 3.65 %, `compute_permanent_pass` 3.17 %, `Vec::from_iter`
 2.99 %, `Arc::clone_from_ref_in` 2.60 %, `memcpy` 2.51 %, SBA 2.33 %,
 `activate_ability_inner` 2.05 %, `computed_permanent_hinted` 1.96 %.
 
-Open, priced, cheapest build first:
+Open, priced, largest first:
+
+* **A printed-mana-ability fast path in `activate_ability_inner` —
+  ceiling ~3 % of `cube`.** `auto_tap_for_cost_inner` is 9.65 % of
+  `cube` inclusive and 22,330 of its calls are `activate_ability` on a
+  land at ~6,000 Ir each (`(-197)`'s Log entry prices the tap: 1,945 self
+  of ~100 cheap gates plus the zone-position scan, ~900 for one
+  `AddMana` through `EffectContext` + the generic resolver, ~900 for the
+  CR 732.3 digest, 220 for the probe clone's unshare). A fast path for
+  "printed index, `{T}` only, `AddMana` of fixed colours, non-creature
+  non-artifact non-enchantment source, no grant/strip/type-rewrite
+  static in scope" that emits `PermanentTapped` + `TappedForMana` + the
+  resolver's `ManaAdded` in the same order and keeps the digest is the
+  device. It is exact only if it reproduces every side effect the
+  generic path has between line ~14391 and ~17500 of `actions.rs`;
+  three-pool stdout identity and the golden traces are the check that
+  can see a slip, and every cast in the suite exercises it. Not
+  attempted this run.
+* **`mana_source_table` — 2.1 % of `cube`** (8,678 calls x 5,463 Ir):
+  one `effective_mana_abilities_into` per untapped permanent (71,720 x
+  400 Ir, of which `granted_abilities_of_inner` 96,734 x 170 — its
+  grants-nothing gate misses on any permanent with a static or a
+  counter), plus `effect_produced_colors` 44,974 walks. A per-definition
+  memo of "printed mana-ability indices and the colours each makes"
+  serves the `rewrites == Some(false)`, no-grant, unstripped case, which
+  is nearly every land.
 
 * **Cheap-on-empty clones — ceiling ~0.7 % of `cube`.** `Vec::clone` is
   471,251 calls / 33.6 M inclusive (1.44 %) and only 29,494 of them reach
@@ -22684,13 +22710,6 @@ Open, priced, cheapest build first:
   `damage_prevented_by_protection` calls (5.0 M) inside scopes that
   already hold `computed_of`; `protection_prevents_views` is the form.
   The SBA lethal-damage walk's 5,896 (3.1 M) are the same shape.
-* **`activate_ability_inner` — 1,963 Ir/call self over 23,666 calls
-  (46.5 M, 2.05 %), never read by calling context.** Its callees say
-  what it is not: `continue_ability_resolution_x_into` 21.8 M,
-  `resolve_extra_mana_on_land_tap` 7.8 M, `find_by_id_mut` 5.4 M (the
-  probe clone's unshare), `mana_production_multiplier_for` 5.1 M. The
-  self is the activation body itself; `cg_contexts.py` on it is the
-  next question, `cg_lines.py` the one after.
 * **`fingerprint` — 29,196 calls x 900 Ir (26.3 M, 1.16 %),** 23,666 of
   them the CR 732.3 announcement watch under `activate_ability`. The
   per-permanent cost is one `mix` plus four loads; `CounterBag` is a

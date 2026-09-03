@@ -52,6 +52,13 @@ MTG engine (Rust) targeting full-card coverage plus ML training; Bevy client.
 - Callgrind is cheap here and contention-immune: a `--games 6` dump is ~25 s
   on `cube`, ~10 s on `fixed`, so two pools in parallel are free. **The build
   is the whole cost of an A/B, not the measurement.**
+- **Disk is a per-session allowance and a long run fills it.**
+  `target/debug/incremental` reached 18 GB after one suite run plus a few
+  targeted `nextest` runs, and each saved `profiling-fast` binary is 220 MB;
+  a full disk makes a background command's output vanish (`ENOSPC` on the
+  task log) rather than fail loudly. `rm -rf target/debug/incremental`
+  costs one non-incremental engine rebuild (~4 min) and returns the space;
+  delete superseded A/B binaries and dumps from the scratchpad as you go.
 
 ## Performance
 
