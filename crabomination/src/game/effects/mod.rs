@@ -33382,6 +33382,7 @@ impl GameState {
                             triggered: triggered.clone(),
                             statics: statics.clone(),
                         });
+                        self.offboard_keyword_grants = true;
                     }
                 }
                 Ok(())

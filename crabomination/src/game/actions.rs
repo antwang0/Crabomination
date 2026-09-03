@@ -10223,6 +10223,7 @@ impl GameState {
             && !self.players[p].sorceries_as_flash
         {
             self.players[p].command.push(card);
+            self.offboard_keyword_grants = true;
             return Err(GameError::SorcerySpeedOnly);
         }
 
@@ -10232,11 +10233,13 @@ impl GameState {
             && let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id))
         {
             self.players[p].command.push(card);
+            self.offboard_keyword_grants = true;
             return Err(e);
         }
         for tgt in &additional_targets {
             if let Err(e) = self.check_target_legality_with_source(tgt, p, Some(card_id)) {
                 self.players[p].command.push(card);
+                self.offboard_keyword_grants = true;
                 return Err(e);
             }
         }
@@ -10280,6 +10283,7 @@ impl GameState {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].command.push(card);
+                self.offboard_keyword_grants = true;
                 return Err(e);
             }
         };

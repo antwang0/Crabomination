@@ -1295,6 +1295,7 @@ impl GameState {
             .map(|t| t.effect.clone())
             .collect();
         self.players[seat].command.push(scheme);
+        self.offboard_keyword_grants = true;
         let queue: Vec<PendingTriggerPush> = triggers
             .into_iter()
             .map(|effect| {
@@ -1403,6 +1404,7 @@ impl GameState {
             if card.definition.is_plane() {
                 let id = card.id;
                 self.players[seat].command.push(card);
+                self.offboard_keyword_grants = true;
                 return Some(id);
             }
             self.players[seat].planar_deck.push(card);
@@ -1437,6 +1439,7 @@ impl GameState {
             let id = card.id;
             queue.extend(self.planar_trigger_pushes(&card, EventKind::Encountered, seat));
             self.players[seat].command.push(card);
+            self.offboard_keyword_grants = true;
             id
         });
         if !queue.is_empty() {
@@ -4096,6 +4099,7 @@ impl GameState {
         // The eot grants are gone; the keyword counters are what is left.
         self.board_instance_keywords =
             self.battlefield.iter().any(|c| !c.keyword_counters.is_empty());
+        self.offboard_keyword_grants = self.offboard_keyword_grants_now();
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
         // graveyard cards, which `clear_end_of_turn_effects` above doesn't
         // reach — expire them here so the window closes at end of turn.
@@ -6774,7 +6778,10 @@ impl GameState {
                 card.tapped = false;
                 self.players[owner].library.insert(0, card)
             }
-            Zone::Command => self.players[owner].command.push(card),
+            Zone::Command => {
+                self.players[owner].command.push(card);
+                self.offboard_keyword_grants = true;
+            }
             Zone::Ante => self.players[owner].ante.push(card),
             Zone::Battlefield | Zone::Stack => {
                 // Unsupported as a replacement redirect target — the

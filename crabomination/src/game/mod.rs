@@ -2272,6 +2272,20 @@ pub struct GameState {
     /// [`grant_keyword_eot`]: Self::grant_keyword_eot
     #[serde(default = "serde_true")]
     pub(crate) board_instance_keywords: bool,
+    /// Presence gate for the command-zone and emblem legs of
+    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope): `false` only
+    /// when no player's command zone holds a scheme / vanguard / plane /
+    /// conspiracy that can grant a keyword and no emblem carries a
+    /// keyword-granting static. Same device as `board_instance_keywords`:
+    /// `true` from construction and on deserialize, recomputed exactly at
+    /// cleanup by [`offboard_keyword_grants_now`], and set by every
+    /// `command.push` and `emblems.push` in between. The recompute counts a
+    /// face-down conspiracy as live, so a hidden agenda turning face up
+    /// needs no writer of its own.
+    ///
+    /// [`offboard_keyword_grants_now`]: Self::offboard_keyword_grants_now
+    #[serde(default = "serde_true")]
+    pub(crate) offboard_keyword_grants: bool,
     /// CR 508.1/509.1d — turn-scoped combat taxes charged to the *acting*
     /// player, {N} per attacker / per blocker they declare (War Tax, War
     /// Cadence). Symmetric across seats and cleared at cleanup; the
@@ -3082,6 +3096,7 @@ impl Clone for GameState {
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             step_bounded_may_play: self.step_bounded_may_play,
             board_instance_keywords: self.board_instance_keywords,
+            offboard_keyword_grants: self.offboard_keyword_grants,
             attack_tax_this_turn: self.attack_tax_this_turn,
             block_tax_this_turn: self.block_tax_this_turn,
             acted_on_own_turn_mask: self.acted_on_own_turn_mask,
@@ -3292,6 +3307,7 @@ impl GameState {
             damage_cant_be_prevented_this_turn: false,
             step_bounded_may_play: false,
             board_instance_keywords: true,
+            offboard_keyword_grants: true,
             attack_tax_this_turn: 0,
             block_tax_this_turn: 0,
             acted_on_own_turn_mask: 0,
@@ -4984,6 +5000,7 @@ impl GameState {
             let card = crate::card::CardInstance::new(id, def, seat);
             self.players[seat].command.push(card);
             self.players[seat].commanders.push(id);
+            self.offboard_keyword_grants = true;
 
             // CR 903.9b replacement — graveyard / exile / hand /
             // library from anywhere → command zone. `from: None`
@@ -5098,6 +5115,7 @@ impl GameState {
             matches!(sa.effect, crate::effect::StaticEffect::NoMaximumHandSize)
         });
         self.players[seat].command.push(crate::card::CardInstance::new(id, def, seat));
+        self.offboard_keyword_grants = true;
         if no_max {
             self.players[seat].max_hand_size = None;
         } else if let Some(max) = self.players[seat].max_hand_size.as_mut() {
@@ -5204,6 +5222,7 @@ impl GameState {
             card.named_card = Some(name.to_string());
         }
         self.players[seat].command.push(card);
+        self.offboard_keyword_grants = true;
         id
     }
 
@@ -9715,22 +9734,28 @@ impl GameState {
         // is a payload-carrying enum and its `PartialEq` is not free — into a
         // branch no predicate takes unless it names one of the three.
         let synth = pred(&Keyword::Hexproof) || pred(&Keyword::CantBlock) || pred(&Keyword::Menace);
+        // The command-zone and emblem legs sit behind `offboard_keyword_grants`
+        // (PERF `(-191)`): exact after every cleanup, set by every push into
+        // either list in between, audited here.
+        let offboard = self.offboard_keyword_grants;
+        debug_assert!(
+            offboard || !self.offboard_keyword_grants_now(),
+            "offboard_keyword_grants is clear, but a command-zone card or emblem can grant a keyword"
+        );
         self.continuous_effects
             .iter()
             .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k)))
             || self.board_grants_keyword(&pred, synth)
             || self.players.iter().any(|p| {
-                p.command
-                    .iter()
-                    .any(|c| {
+                (offboard
+                    && (p.command.iter().any(|c| {
                         (c.definition.is_scheme() || c.command_zone_abilities_active())
                             && card_can_grant_keyword(c, &pred, synth)
-                    })
-                    || p.emblems.iter().any(|em| {
+                    }) || p.emblems.iter().any(|em| {
                         em.statics
                             .iter()
                             .any(|sa| static_effect_grants_keyword(&sa.effect, &pred))
-                    })
+                    })))
                     // The Incarnation cycle's `GraveyardAnthem` is the gather's
                     // one zone-special grant — read off *graveyard* cards'
                     // printed statics. The zone answers "is there one here" off
@@ -9744,6 +9769,26 @@ impl GameState {
                         })
                     }))
             })
+    }
+
+    /// [`offboard_keyword_grants`](Self::offboard_keyword_grants) recomputed
+    /// from scratch: the command-zone and emblem legs of
+    /// [`keyword_grant_in_scope`](Self::keyword_grant_in_scope) at the
+    /// widest predicate, with a face-down conspiracy counted as live so no
+    /// face-up flip needs to write the flag. Once a turn, at cleanup, and in
+    /// the gate's `debug_assert!`.
+    pub(crate) fn offboard_keyword_grants_now(&self) -> bool {
+        self.players.iter().any(|p| {
+            p.command.iter().any(|c| {
+                (c.definition.is_scheme()
+                    || c.definition.is_vanguard()
+                    || c.definition.is_plane()
+                    || c.definition.is_conspiracy())
+                    && card_can_grant_keyword(c, &|_| true, true)
+            }) || p.emblems.iter().any(|em| {
+                em.statics.iter().any(|sa| static_effect_grants_keyword(&sa.effect, &|_| true))
+            })
+        })
     }
 
     /// The battlefield leg of
