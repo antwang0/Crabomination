@@ -14526,23 +14526,39 @@ impl GameState {
             return false;
         }
         let Some(tgt) = self.computed_permanent(target) else { return false };
-        // Everything below this reads the *source* — five `computed_permanent`
-        // lookups and two `Vec` clones — and none of it can change the answer
+        // Everything below this reads the *source* — a `computed_permanent`
+        // lookup and two `Vec` clones — and none of it can change the answer
         // unless the target carries a protection keyword. Most permanents
         // never do, so gate on the one thing that is already computed.
         if !tgt.keywords().iter().any(Self::protection_keyword) {
             return false;
         }
-        let src_colors: crate::mana::ColorSet = self
-            .computed_permanent(source)
-            .map(|c| c.colors)
-            .unwrap_or_else(|| {
-                self.battlefield_find(source)
-                    .map(|c| c.definition.cost.color_set())
-                    .unwrap_or_default()
-            });
-        let src_is_creature = self
-            .computed_permanent(source)
+        self.protection_prevents_views(source, self.computed_permanent(source).as_deref(), &tgt)
+    }
+
+    /// [`damage_prevented_by_protection`](Self::damage_prevented_by_protection)
+    /// over views the caller already holds — the `_on` form. `src_cp` is
+    /// `None` when the source is not on the battlefield (printed fallbacks).
+    ///
+    /// The bot's block planner asks the question twice per (blocker,
+    /// attacker) pair inside one freeze scope, holding both computed views:
+    /// 61,872 calls on a six-game `cube` run at `0e9bdaa4`, 14.7 M Ir —
+    /// 8.7 M of it the memo-hit lookup of a view the loop had in hand.
+    pub(crate) fn protection_prevents_views(
+        &self,
+        source: CardId,
+        src_cp: Option<&crate::game::layers::ComputedPermanent>,
+        tgt: &crate::game::layers::ComputedPermanent,
+    ) -> bool {
+        if !tgt.keywords().iter().any(Self::protection_keyword) {
+            return false;
+        }
+        let src_colors: crate::mana::ColorSet = src_cp.map(|c| c.colors).unwrap_or_else(|| {
+            self.battlefield_find(source)
+                .map(|c| c.definition.cost.color_set())
+                .unwrap_or_default()
+        });
+        let src_is_creature = src_cp
             .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
@@ -14551,8 +14567,7 @@ impl GameState {
             });
         // CR 702.16e — protection from a creature type prevents damage from a
         // source of that type.
-        let src_creature_types = self
-            .computed_permanent(source)
+        let src_creature_types = src_cp
             .map(|c| c.subtypes().creature_types.clone())
             .unwrap_or_else(|| {
                 self.battlefield_find(source)
@@ -14563,14 +14578,11 @@ impl GameState {
             .battlefield_find(source)
             .map(|c| c.definition.cost.cmc())
             .unwrap_or(0);
-        let src_card_types = self
-            .computed_permanent(source)
-            .map(|c| c.card_types().to_vec())
-            .unwrap_or_else(|| {
-                self.battlefield_find(source)
-                    .map(|c| c.definition.card_types.clone())
-                    .unwrap_or_default()
-            });
+        let src_card_types = src_cp.map(|c| c.card_types().to_vec()).unwrap_or_else(|| {
+            self.battlefield_find(source)
+                .map(|c| c.definition.card_types.clone())
+                .unwrap_or_default()
+        });
         tgt.keywords().iter().filter_map(ProtectionKind::of).any(|kind| match kind {
             ProtectionKind::Color(color) => src_colors.contains(color),
             // CR 702.16 — "protection from its colors" (Earnest Fellowship).

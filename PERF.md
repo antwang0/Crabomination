@@ -11557,6 +11557,53 @@ the table above is safe to compress:
 
 ## Log
 
+### `(-194)` TAKEN — the block planner reads the views it already holds: `cube` -0.787 % / `sealed` -0.504 % / `fixed` -0.313 %
+
+```text
+  pool    base 0e9bdaa4     (-194)          delta
+  fixed     837,759,772     835,139,701   **-0.313 %**
+  cube    2,335,851,736   2,317,457,135   **-0.787 %**
+  sealed  2,345,940,541   2,334,128,670   **-0.504 %**
+  three-pool stdout identical; --bench byte-identical
+  (195,806 / 27.49 / 611.9 / 0 stalls); golden traces 7/7 unmoved
+```
+
+The lead NEXT carried was "read `computed_permanent_hinted`'s 150 Ir/call
+memo-hit path by line". A `--separate-callers=3` dump answered it without
+a line profile: the 366,058 calls (10.95 % inclusive on `cube`) rank by
+*context*, and the two largest hit-path contexts were both
+`pick_blocks_inner` asking for views it was holding —
+
+```text
+  calls    incl Ir     context (cube, 0e9bdaa4)
+  64,356   8,737,924   damage_prevented_by_protection <- pick_blocks_inner
+  21,408   3,542,532   pick_blocks_inner (the per-blocker re-ask)
+  49,768  38,960,004   legal_blockers <- pick_blocks_inner  (49,766 MISSES:
+                       the scope's first ask per own creature; the pass)
+```
+
+Two caller-side changes, no engine semantics moved:
+
+* The pair loop asked `damage_prevented_by_protection(a, b)` and `(b, a)`
+  per (blocker, attacker) pair — 61,872 calls, 14.7 M Ir inclusive — and
+  each one re-looked up the target's view in the scope memo, then the
+  source's, for a keyword scan that is false on nearly every pair. The
+  body is now `protection_prevents_views(source, src_cp, tgt_cp)` and the
+  planner hands it `blk_view` / `a.cp`, which it built for the pair check
+  anyway. The by-id form calls the same body, so the two cannot drift.
+* The blocker loop re-found each blocker by id, re-asked the memo for the
+  view `legal_blockers` had just returned in its `(card, view)` pair, and
+  re-ran `blocker_can_block_anything` — the exact filter `legal_blockers`
+  applied. The sorted `blockers` list now carries the card and view.
+
+**Rule that falls out:** a memo-hit path's cost is priced by the contexts
+that ask it, not by its body — `cg_contexts.py` on a `--separate-callers`
+dump ranks the asks, and the top two here were answers the caller had in
+hand. The 150 Ir hit path itself was never the lead. What is left of the
+family, by context: `resolve_combat`'s 13,164 protection asks (5.0 M,
+0.21 %, inside its own scopes; the strike-back loop holds `computed_of`)
+and the SBA lethal-damage walk's 5,896 (3.1 M).
+
 ### `e725e5c2` — the attack search's open-board skip: a measured 1.3-1.8 % throughput device, NOT adopted (leans -0.1 pt strength)
 
 `(-21)` has said "the attack sim's candidate count is a search-quality
@@ -22433,9 +22480,28 @@ attack-trigger creature and leans -0.1 pt on a 96 k-game sealed ladder.
 Filed as an opt-in pilot (`atk-open`), NOT adopted; the reusable half is
 the instrument, and a `greedy.len()>=2` gate is refuted off the dump (18 of
 60 bench divergences are 2+ attackers and the biggest swings — a Goblin
-Guide held back to not card the opponent). The Ir lead that is left is
-still the `profiling-lines` read of `computed_permanent_hinted`'s 150
-Ir/call memo-hit path.**
+Guide held back to not card the opponent).**
+
+**`computed_permanent_hinted`'s memo-hit path — READ BY CONTEXT AT
+`0e9bdaa4`, `(-194)` TAKEN (Log).** The `profiling-lines` read NEXT asked
+for was the wrong instrument: `--separate-callers=3` ranks the 366,058
+calls by who asks, and the top hit-path contexts were the block planner
+asking for views it held. What the census leaves, on `cube`:
+
+```text
+  calls    incl Ir    context                                     state
+  49,768  38.96 M     legal_blockers <- pick_blocks_inner         misses: the pass, inherent
+  29,602  28.89 M     permanent_value_with <- eval_material_inner misses: leaf eval, inherent
+  14,554  22.85 M     Map::next <- SmallVec::extend <- scope      misses
+  13,262  21.54 M     attacker_info build <- pick_blocks_inner    misses + the scope's gather
+  13,164   5.0 M      damage_prevented_by_protection <- resolve_combat   hits; `_views` form
+   5,896   3.1 M      ... <- check_state_based_actions_into       hits; the lethal-damage walk
+```
+
+The miss rows are one layer pass per permanent per scope and the scope's
+one gather — the price of the freeze design, not a device. The two hit
+rows are the `(-194)` shape again at a fifth of the size (0.35 % between
+them); `resolve_combat`'s strike-back loop already holds `computed_of`.
 
 **Engine thread scaling — no global contention (measured `e725e5c2`,
 `profiling-fast`).** 1,200 `fixed` games (gang mirror, seed 7): 16.5 s at

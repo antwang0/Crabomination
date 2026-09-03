@@ -10348,11 +10348,25 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // view is the one `legal_blockers` already had to build, so this is free;
     // reading the printed list here is what made a granted Reach unable to
     // block a flier in any plan the bot made. See `evasion_bars_block`.
-    let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = may_block
+    // The card and its view ride along: the loop below used to re-find the
+    // card by id and re-ask the memo for the view `legal_blockers` had just
+    // handed back, then re-run `blocker_can_block_anything` on the pair —
+    // 21,408 memo hits a six-game `cube` run at `0e9bdaa4` for answers it
+    // already held.
+    let mut blockers: Vec<(
+        &crate::card::CardInstance,
+        &std::sync::Arc<crate::game::layers::ComputedPermanent>,
+        i32,
+        i32,
+        bool,
+        bool,
+        bool,
+    )> = may_block
         .iter()
         .map(|(c, cp)| {
             (
-                c.id,
+                *c,
+                cp,
                 c.power(),
                 c.toughness(),
                 cp.keywords().has_kw(&Keyword::Flying),
@@ -10361,7 +10375,7 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             )
         })
         .collect();
-    blockers.sort_by_key(|(_, p, _, _, _, _)| *p);
+    blockers.sort_by_key(|(_, _, p, ..)| *p);
 
     // Track which attackers have already been damage-saturated by
     // assigned blockers — if blocker total toughness >= attacker
@@ -10375,26 +10389,18 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         Default::default();
     let mut assignments: Vec<(CardId, CardId)> = Vec::new();
 
-    for (b_id, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
+    for (blk_card, blk_view, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
+        let b_id = blk_card.id;
+        let blk_view: &crate::game::layers::ComputedPermanent = blk_view;
         // Pick the best attacker for this blocker.
         let mut best: Option<(CardId, i32, bool)> = None; // (attacker, score, was_kill)
         // Blocker-side facts, read once instead of once per attacker: the
-        // trade math below asks both on every pair.
-        let blk = state.battlefield_find(b_id);
-        let blk_first_strike = blk.is_some_and(|c| {
-            c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
-        });
-        let blocker_indestructible = blk.is_some_and(|c| c.is_indestructible());
-        // CR 509.1a/b — the attacker-independent half of block legality, asked
-        // once for this blocker rather than once per attacker. `None` means it
-        // can block nothing, so the whole attacker loop is dead.
-        let blk_cp = state.computed_permanent(b_id);
-        let Some((blk_card, blk_view)) = blk
-            .zip(blk_cp.as_deref())
-            .filter(|&(b, bcp)| state.blocker_can_block_anything(b, bcp))
-        else {
-            continue;
-        };
+        // trade math below asks both on every pair. The attacker-independent
+        // half of block legality (CR 509.1a/b) is `legal_blockers`' filter,
+        // already applied to every entry here.
+        let blk_first_strike = blk_card.has_keyword(&Keyword::FirstStrike)
+            || blk_card.has_keyword(&Keyword::DoubleStrike);
+        let blocker_indestructible = blk_card.is_indestructible();
         for a in &attacker_info {
             let (a_id, a_pow, a_tough, a_dt) = (&a.id, &a.power, &a.toughness, &a.deathtouch);
             if evasion_bars_block(a.flying, b_flying, b_reach) {
@@ -10433,8 +10439,14 @@ fn pick_blocks_inner(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             // a blocker protected from the attacker's color takes none (won't
             // die), and an attacker protected from the blocker's color takes
             // none (won't be killed). Factor both into the trade math.
-            let blocker_takes_no_dmg = state.damage_prevented_by_protection(*a_id, b_id);
-            let attacker_takes_no_dmg = state.damage_prevented_by_protection(b_id, *a_id);
+            // Both views are in hand, so the `_views` form: the by-id form
+            // re-asks the scope memo for each, twice a pair.
+            let blocker_takes_no_dmg =
+                state.protection_prevents_views(*a_id, a.cp.as_deref(), blk_view);
+            let attacker_takes_no_dmg = match a.cp.as_deref() {
+                Some(acp) => state.protection_prevents_views(b_id, Some(blk_view), acp),
+                None => state.damage_prevented_by_protection(b_id, *a_id),
+            };
             // CR 702.12 — an indestructible permanent isn't destroyed by lethal
             // damage (or deathtouch), so it never dies in a trade and can't be
             // killed by a blocker. Block freely behind an indestructible body.
