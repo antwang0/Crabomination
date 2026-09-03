@@ -403,6 +403,7 @@ const LANE_ACT_GRANT: u32 = 18;
 /// that the one store every write path already makes clears it too.
 const LANE_TRIGGERER: u32 = 20;
 const LANE_PT_REDUCE: u32 = 22;
+const LANE_GATE_KEYWORD: u32 = 24;
 const LANE_MASK: u32 = 0b11;
 
 /// Does this permanent contribute anything to
@@ -436,6 +437,35 @@ fn card_has_activated_grant(c: &CardInstance) -> bool {
         .static_abilities
         .iter()
         .any(|sa| crate::effect::static_effect_grants_activated(&sa.effect))
+}
+
+/// Is one of the keywords the whole-board presence gate
+/// [`GameState::board_keyword_matching`](crate::game::GameState::board_keyword_matching)
+/// is ever asked about *printed* on this permanent? The [`LANE_GATE_KEYWORD`]
+/// predicate: the union of every caller's list, so one lane answers all of
+/// them and the gate's per-permanent printed scan runs only on a board that
+/// carries one. A caller asking about a keyword missing from this list gets a
+/// wrong `false` on the printed leg — which is what the gate's own
+/// `debug_assert!` (recomputing the board's keywords) fires on.
+pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
+    use crate::card::Keyword::*;
+    c.definition.keywords.iter().any(|k| {
+        matches!(
+            k,
+            MustAttack
+                | MustAttackOrBlock
+                | MustAttackIfAnotherAttacks
+                | MustBlock
+                | MustBeBlocked
+                | AllMustBlock
+                | CantBeBlockedUnlessAllBlock
+                | CantBeBlockedByMoreThanOne
+                | Phasing
+                | CumulativeUpkeep(_)
+                | DoesntUntapWhileCounter(_)
+                | DoesntUntapIfAttackedLastTurn
+        )
+    })
 }
 
 /// Can this permanent contribute a trigger of its **own** to
@@ -1004,6 +1034,14 @@ impl Battlefield {
     #[inline]
     pub fn has_damage_shield(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
         self.lane(LANE_SHIELD, walk)
+    }
+
+    /// Does any permanent here carry a printed gate keyword
+    /// ([`card_has_gate_keyword`])? Definition-only, so the lane holds it
+    /// across the tap / damage / counter writes that a scope memo cannot.
+    #[inline]
+    pub fn has_gate_keyword(&self) -> bool {
+        self.lane(LANE_GATE_KEYWORD, card_has_gate_keyword)
     }
 
     /// One lane's answer: a word load and two mask tests on a hit, the board

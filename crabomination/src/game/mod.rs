@@ -9212,8 +9212,13 @@ impl GameState {
             fx.iter()
                 .any(|e| matches!(&e.modification, Modification::AddKeyword(k) if pred(k)))
         };
+        // The printed leg is definition-only, so the zone's lane answers it
+        // for the whole board at once: on the ordinary board — no Lure, no
+        // Phasing, no cumulative upkeep — the walk below never derefs a
+        // definition and reads two instance lengths per permanent.
+        let printed = self.battlefield.has_gate_keyword();
         let hit = self.battlefield.iter().any(|c| {
-            c.definition.keywords.iter().any(&pred)
+            (printed && c.definition.keywords.iter().any(&pred))
                 || c.granted_keywords_eot.iter().any(&pred)
                 || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
         }) || match self.frozen_effects_memoized() {
