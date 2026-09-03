@@ -2552,6 +2552,14 @@ release the profiling-fast build of each leg (release-fast opts,
         (`--no-default-features`)
 stalls  three-pool six-game stdout identical to the base's at every leg
         but the wall-clock line
+grid    `scripts/robustness_grid.sh` at `a9ce7489` (the `(-192)` engine plus
+        the CR 400.7 fix): ladder **30 cells / 33,120 games, 0 failures**,
+        cap 0 / stuck 0 / draw 0; actor leg 3 seeds x 600 games clean
+        (151-172 games/s under `overflow` + `debug-assertions`). The first
+        run at `(-192)` itself tripped the `(-190)` audit on six cells —
+        the CR 400.7 defect (Log, top) — so the grid is what qualified
+        this pass's three new `debug_assert!`s. `--pilots` / `--wide` last
+        ran at the `(-185)` engine.
 ```
 
 ### The printed-filter pass — closing state at `(-185)`

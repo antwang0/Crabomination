@@ -33,9 +33,9 @@ sixty-seventh pass, so don't re-take that.
    --stat <base>..HEAD -- crabomination_catalog` after any rebase (PERF Standing rules, top).
 2. **Gates at the `(-192)` tip:** suite 19,217 / 0 / 5, traces unmoved at every leg, clippy
    `--all-targets` clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**,
-   determinism ok. `robustness_grid.sh` (ladder + actor) at `(-192)`: see PERF Baseline — three
-   new `debug_assert!`s this run (the gate-keyword lane, the grant member list, the two state
-   flags) are what it audits. `--pilots` and `--wide` last ran at the `(-185)` engine.
+   determinism ok. `robustness_grid.sh` (ladder 30 cells / 33,120 games + actor 3 seeds) clean at
+   `a9ce7489`; its first run at `(-192)` tripped the `(-190)` audit on six cells and that was a
+   real CR 400.7 defect (`d98c4212`). `--pilots` and `--wide` last ran at the `(-185)` engine.
 3. **This run: `(-188)`..`(-192)`, one probe then five legs** — a keyword presence gate cost
    886 Ir a call; three `#[inline(never)]` fns and a ten-second `fixed` dump priced its five
    legs, and each went behind the cheapest holder: a definition-only lane, a member list
