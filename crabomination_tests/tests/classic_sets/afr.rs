@@ -433,6 +433,25 @@ fn ellywick_ventures_and_emblem_anthems() {
     assert!(b.keywords().contains(&crabomination::card::Keyword::Trample), "trample granted");
 }
 
+/// Ellywick -2: the picked creature to hand, "if it's legendary, you gain 3
+/// life" — the rider it shipped without (oracle-verb audit, `gain_life`).
+#[test]
+fn ellywick_minus_two_gains_three_for_a_legend() {
+    let mut g = two_player_game();
+    g.step = crabomination::game::TurnStep::PreCombatMain;
+    let elly = g.add_card_to_battlefield(0, catalog::ellywick_tumblestrum());
+    // AutoDecider keeps the top revealed card; a legend on top, then filler.
+    let legend = g.add_card_to_library(0, catalog::quintorius_field_historian());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: elly, ability_index: 1, target: None, x_value: None,
+    }).expect("-2");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == legend), "legend picked to hand");
+    assert_eq!(g.players[0].life, life + 3, "legendary pick gains 3");
+}
+
 // ── AFR wave 3 ──────────────────────────────────────────────────────────────
 
 /// Priest of Ancient Lore ETBs into a life and a card.

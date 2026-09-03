@@ -1323,17 +1323,41 @@ fn cruel_administrator_attack_makes_soldier() {
 /// Sparring Dummy mills and pulls a land milled this way to hand.
 #[test]
 fn sparring_dummy_mills_for_land() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let sd = g.add_card_to_battlefield(0, catalog::sparring_dummy());
     g.clear_sickness(sd);
     g.add_card_to_library(0, catalog::forest()); // top → milled, taken to hand
     g.step = TurnStep::PreCombatMain;
     g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     }).expect("activate");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "land to hand");
+    assert_eq!(g.players[0].life, life, "a land is not a Lesson");
+}
+
+/// "You gain 2 life if a Lesson card is milled this way" — the rider the card
+/// shipped without (oracle-verb audit, `gain_life` class).
+#[test]
+fn sparring_dummy_gains_two_on_a_milled_lesson() {
+    let mut g = two_player_game();
+    let sd = g.add_card_to_battlefield(0, catalog::sparring_dummy());
+    g.clear_sickness(sd);
+    g.players[0].library.clear(); // the seeded Forests sit on top
+    let lesson = g.add_card_to_library(0, catalog::reduce_to_memory());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("activate");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == lesson), "the Lesson stays milled");
+    assert_eq!(g.players[0].life, life + 2, "gained 2 for the Lesson");
 }
 
 /// Buzzard-Wasp Colony's ETB sacrifices a creature to draw a card.

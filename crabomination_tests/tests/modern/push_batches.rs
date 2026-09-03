@@ -1137,58 +1137,62 @@ fn tamiyo_static_blocks_opponent_forced_discard() {
         "Tamiyo's static blocks the forced discard");
 }
 
+/// Geyadrone Dihada +1: "Each opponent loses 2 life and you gain 2 life. Put
+/// a corruption counter on up to one other target creature or planeswalker."
+/// The card shipped a lose-1 / draw / loyalty-reset body it never printed
+/// (oracle-verb audit, `gain_life` class).
 #[test]
-fn geyadrone_dihada_plus_one_drains_each_opponent_for_one() {
+fn geyadrone_dihada_plus_one_drains_gains_and_corrupts() {
+    use crabomination::game::types::Target;
     let mut g = two_player_game();
     let dihada = g.add_card_to_battlefield(0, catalog::geyadrone_dihada());
-    g.add_card_to_library(0, catalog::island());
-    let p1_life = g.players[1].life;
-    let hand_before = g.players[0].hand.len();
-
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let (life0, life1) = (g.players[0].life, g.players[1].life);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
-        card_id: dihada, ability_index: 0, target: None,
+        x_value: None,
+        card_id: dihada, ability_index: 0, target: Some(Target::Permanent(bear)),
     }).expect("Dihada +1");
     drain_stack(&mut g);
-
-    assert_eq!(g.players[1].life, p1_life - 1, "Opp loses 1");
-    assert!(g.players[0].hand.len() > hand_before, "You draw a card");
+    assert_eq!(g.players[1].life, life1 - 2, "opponent loses 2");
+    assert_eq!(g.players[0].life, life0 + 2, "you gain 2");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Corruption), 1,
+        "corruption counter on the target");
 }
 
-/// +1's rider resets loyalty to 3 when you have less life than an opponent.
+/// "Up to one target": the +1 resolves with no counter target at all.
 #[test]
-fn geyadrone_dihada_plus_one_resets_loyalty_when_behind() {
+fn geyadrone_dihada_plus_one_needs_no_target() {
     let mut g = two_player_game();
     let dihada = g.add_card_to_battlefield(0, catalog::geyadrone_dihada());
-    g.add_card_to_library(0, catalog::island());
-    // Push loyalty to 8, then fall behind on life.
-    g.battlefield_find_mut(dihada).unwrap().add_counters(CounterType::Loyalty, 5); // 3 + 5 = 8
-    g.players[0].life = 5;
-    g.players[1].life = 20;
+    let life1 = g.players[1].life;
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
+        x_value: None,
         card_id: dihada, ability_index: 0, target: None,
-    }).expect("Dihada +1");
+    }).expect("Dihada +1 with no target");
     drain_stack(&mut g);
-    // +1 raised it to 9, then the rider reset it to the starting 3.
-    assert_eq!(g.battlefield_find(dihada).unwrap().counter_count(CounterType::Loyalty), 3,
-        "loyalty reset to starting value when behind on life");
+    assert_eq!(g.players[1].life, life1 - 2, "drain still resolves");
 }
 
+/// -7: "Gain control of each permanent with a corruption counter on it."
 #[test]
-fn geyadrone_dihada_minus_seven_halves_opponent_life() {
+fn geyadrone_dihada_minus_seven_takes_corrupted_permanents() {
     let mut g = two_player_game();
     let dihada = g.add_card_to_battlefield(0, catalog::geyadrone_dihada());
     g.battlefield_find_mut(dihada).unwrap().add_counters(CounterType::Loyalty, 4); // 3 + 4 = 7
-    g.players[1].life = 21;
+    let marked = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let clean = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(marked).unwrap().add_counters(CounterType::Corruption, 1);
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-            x_value: None,
+        x_value: None,
         card_id: dihada, ability_index: 2, target: None,
     }).expect("Dihada -7");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 10, "21 → loses 11 (half rounded up)");
+    assert_eq!(g.battlefield_find(marked).unwrap().controller, 0, "corrupted permanent taken");
+    assert_eq!(g.battlefield_find(clean).unwrap().controller, 1, "unmarked one stays");
 }
 
+/// -3 steals the target until end of turn, untaps it, and corrupts it.
 #[test]
 fn geyadrone_dihada_minus_three_steals_creature() {
     use crabomination::game::types::Target;
@@ -1204,9 +1208,9 @@ fn geyadrone_dihada_minus_three_steals_creature() {
     }).expect("Dihada -3 threaten");
     drain_stack(&mut g);
 
-    // Bear is now under your control with haste.
     let bear_card = g.battlefield_find(bear).expect("Bear still on bf");
     assert_eq!(bear_card.controller, 0, "Bear now controlled by you");
+    assert_eq!(bear_card.counter_count(CounterType::Corruption), 1, "corruption counter");
 }
 
 #[test]

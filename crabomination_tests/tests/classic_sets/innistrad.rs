@@ -1620,6 +1620,40 @@ fn circle_of_confinement_exiles_cheap_creature() {
     assert!(g.battlefield_find(bear).is_none(), "cheap creature exiled");
 }
 
+/// "Whenever an opponent casts a Vampire spell with the same name as a card
+/// exiled with this enchantment, you gain 2 life" — the trigger Circle of
+/// Confinement shipped without (oracle-verb audit, `gain_life` class).
+#[test]
+fn circle_of_confinement_gains_two_when_the_exiled_vampires_twin_is_cast() {
+    let mut g = two_player_game();
+    let exiled = g.add_card_to_battlefield(1, catalog::vampire_interloper()); // MV 2 Vampire
+    let circle = g.add_card_to_battlefield(0, catalog::circle_of_confinement());
+    let mut ctx = EffectContext::for_ability(circle, 0, Some(Target::Permanent(exiled)));
+    ctx.targets = vec![Target::Permanent(exiled)];
+    g.resolve_effect(&catalog::circle_of_confinement().triggered_abilities[0].effect, &ctx).unwrap();
+    assert!(g.exile.iter().any(|c| c.id == exiled), "Interloper exiled with the Circle");
+    // The opponent casts another Vampire Interloper.
+    let twin = g.add_card_to_hand(1, catalog::vampire_interloper());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "a non-Vampire, differently named spell: nothing");
+    g.perform_action(GameAction::CastSpell {
+        card_id: twin, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast the twin");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "same-named Vampire spell: gain 2");
+}
+
 /// Stolen Vitality pumps +3/+1 and grants trample on your turn.
 #[test]
 fn stolen_vitality_pumps_and_tramples_on_your_turn() {

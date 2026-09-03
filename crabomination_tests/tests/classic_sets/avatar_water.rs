@@ -12,6 +12,45 @@ fn ready(g: &mut GameState, id: CardId) {
     g.clear_sickness(id);
 }
 
+/// Ruinous Waterbending: "If this spell's additional cost was paid, whenever
+/// a creature dies this turn, you gain 1 life" — the rider it shipped
+/// without (oracle-verb audit, `gain_life` class). Waterbent, the four
+/// helpers and the opponent's bear all die to the -2/-2: five lives.
+#[test]
+fn ruinous_waterbending_gains_per_death_only_when_waterbent() {
+    for waterbent in [true, false] {
+        let mut g = two_player_game();
+        let mut helpers = Vec::new();
+        for _ in 0..4 {
+            let h = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            ready(&mut g, h);
+            helpers.push(h);
+        }
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, catalog::ruinous_waterbending());
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.players[0].mana_pool.add_colorless(1);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let life = g.players[0].life;
+        if waterbent {
+            g.perform_action(GameAction::CastSpellWaterbend {
+                card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+                helpers: helpers.clone(),
+            }).expect("waterbend {4} with four helpers");
+        } else {
+            g.perform_action(GameAction::CastSpell {
+                card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+            }).expect("plain cast");
+        }
+        drain_stack(&mut g);
+        assert!(g.battlefield.iter().all(|c| !c.definition.is_creature()), "every 2/2 died");
+        let expected = if waterbent { life + 5 } else { life };
+        assert_eq!(g.players[0].life, expected, "waterbent={waterbent}: one life per death");
+    }
+}
+
 #[test]
 fn waterbend_helpers_pay_the_additional_cost() {
     // Benevolent River Spirit — {U}{U}, waterbend {5} (mandatory). With only UU

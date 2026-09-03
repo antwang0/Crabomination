@@ -7094,15 +7094,23 @@ pub fn survey_mechan() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Hexproof],
+        // "Target player draws three cards and gains 3 life" is collapsed to
+        // you (1v1 worklist); "costs {X} less, where X is the number of
+        // differently named lands you control" counts every land.
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(10)]),
             sac_cost: true,
+            cost_reduction_per: Some(SelectionRequirement::Land),
             effect: Effect::Seq(vec![
                 Effect::DealDamage {
                     to: target_any(),
                     amount: Value::Const(3),
                 },
                 Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::GainLife {
                     who: Selector::You,
                     amount: Value::Const(3),
                 },

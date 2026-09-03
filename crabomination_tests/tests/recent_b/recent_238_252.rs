@@ -896,6 +896,33 @@ mod recent240 {
         assert!(g.players[0].hand.iter().any(|c| c.id == bear), "creature returned to hand");
     }
 
+    /// Say Its Name's graveyard ability: exile it and two other copies from
+    /// your graveyard to fetch Altanak, the Thrice-Called onto the battlefield
+    /// — the ability it shipped without (oracle-verb audit, `search_library`
+    /// class). The library is the only zone searched.
+    #[test]
+    fn say_its_name_thrice_calls_altanak_from_the_graveyard() {
+        use crabomination::game::types::{GameAction, TurnStep};
+        let mut g = two_player_game();
+        let first = g.add_card_to_graveyard(0, catalog::say_its_name());
+        let others = [
+            g.add_card_to_graveyard(0, catalog::say_its_name()),
+            g.add_card_to_graveyard(0, catalog::say_its_name()),
+        ];
+        let altanak = g.add_card_to_library(0, catalog::altanak_the_thrice_called());
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(altanak))]));
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: first, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+        }).expect("activate from the graveyard");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(altanak).is_some(), "Altanak onto the battlefield");
+        assert!(g.exile.iter().any(|c| c.id == first), "the activated copy is exiled");
+        assert!(others.iter().all(|id| g.exile.iter().any(|c| c.id == *id)), "two other copies exiled");
+    }
+
     /// Veteran Survivor gains +3/+3 and hexproof once three cards are exiled with
     /// it via its Survival ability.
     #[test]

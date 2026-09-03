@@ -12756,8 +12756,8 @@ pub fn collective_brutality() -> CardDefinition {
 /// Haste is the Threaten-style play pattern; the -7 ult is faithful via
 /// `Effect::LoseHalfLife`.
 pub fn geyadrone_dihada() -> CardDefinition {
-    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
-    use crate::effect::{Duration, Predicate};
+    use crate::card::{CounterType, LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::effect::Duration;
     CardDefinition {
         name: "Geyadrone Dihada",
         cost: cost(&[generic(1), u(), b(), r()]),
@@ -12768,33 +12768,41 @@ pub fn geyadrone_dihada() -> CardDefinition {
             ..Default::default()
         },
         base_loyalty: 4,
+        // "Protection from permanents with corruption counters on them."
+        keywords: vec![crate::card::Keyword::ProtectionFromMatching(Box::new(
+            SelectionRequirement::WithCounter(CounterType::Corruption),
+        ))],
         loyalty_abilities: vec![
+            // +1: "Each opponent loses 2 life and you gain 2 life. Put a
+            // corruption counter on up to one other target creature or
+            // planeswalker." — "up to one" rides `MayDo`.
             LoyaltyAbility {
-                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::LoseLife {
                         who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(1),
+                        amount: Value::Const(2),
                     },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::If {
-                        cond: Predicate::PlayerHasLessLifeThanOpponent {
-                            who: PlayerRef::You,
-                        },
-                        then: Box::new(Effect::SetLoyalty {
-                            what: Selector::This,
-                            value: Value::Const(3),
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                    Effect::MayDo {
+                        description: "put a corruption counter on up to one other target \
+                                      creature or planeswalker"
+                            .into(),
+                        body: Box::new(Effect::AddCounter {
+                            what: target_filtered(
+                                SelectionRequirement::Creature
+                                    .or(SelectionRequirement::Planeswalker)
+                                    .and(SelectionRequirement::OtherThanSource),
+                            ),
+                            kind: CounterType::Corruption,
+                            amount: Value::ONE,
                         }),
-                        else_: Box::new(Effect::Noop),
                     },
                 ]),
+                ..Default::default()
             },
+            // -3: gain control until end of turn, untap it, corruption counter, haste.
             LoyaltyAbility {
-                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Seq(vec![
                     Effect::GainControl {
@@ -12808,20 +12816,30 @@ pub fn geyadrone_dihada() -> CardDefinition {
                         what: Selector::Target(0),
                         up_to: None,
                     },
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Corruption,
+                        amount: Value::ONE,
+                    },
                     Effect::GrantKeyword {
                         what: Selector::Target(0),
                         keyword: crate::card::Keyword::Haste,
                         duration: Duration::EndOfTurn,
                     },
                 ]),
+                ..Default::default()
             },
+            // -7: "Gain control of each permanent with a corruption counter on it."
             LoyaltyAbility {
-                x_cost: false,
                 loyalty_cost: -7,
-                effect: Effect::LoseHalfLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    rounded_up: true,
+                effect: Effect::GainControl {
+                    what: Selector::EachPermanent(SelectionRequirement::WithCounter(
+                        CounterType::Corruption,
+                    )),
+                    to: None,
+                    duration: Duration::Permanent,
                 },
+                ..Default::default()
             },
         ],
         ..Default::default()

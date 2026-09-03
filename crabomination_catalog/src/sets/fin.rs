@@ -5309,11 +5309,23 @@ pub fn town_greeter() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::MillThenToHand {
-            amount: Value::Const(4),
-            filter: SelectionRequirement::Land,
-            otherwise: None,
-        })],
+        // "If you put a Town card into your hand this way, you gain 2 life."
+        // — the pick is on `LastMoved`.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::MillThenToHand {
+                amount: Value::Const(4),
+                filter: SelectionRequirement::Land,
+                otherwise: None,
+            },
+            Effect::If {
+                cond: crate::effect::Predicate::EntityMatchesAny {
+                    what: Selector::LastMoved,
+                    filter: SelectionRequirement::HasLandType(crate::card::LandType::Town),
+                },
+                then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         ..Default::default()
     }
 }

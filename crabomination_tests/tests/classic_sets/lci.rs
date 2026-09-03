@@ -359,6 +359,23 @@ fn spelunking_overrides_enters_tapped() {
     assert!(!g.battlefield_find(cave).unwrap().tapped, "Spelunking → land enters untapped");
 }
 
+/// Spelunking's ETB draws, then may put a land from hand onto the
+/// battlefield; "if you put a Cave onto the battlefield this way, you gain
+/// 4 life" (the rider it shipped without — oracle-verb audit, `gain_life`).
+#[test]
+fn spelunking_etb_gains_four_for_a_cave() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // the draw
+    let cave = g.add_card_to_hand(0, catalog::hidden_cataract());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![cave])]));
+    g.move_card_to_battlefield_for_test(0, catalog::spelunking());
+    drain_stack(&mut g);
+    let cave_card = g.battlefield_find(cave).expect("Cave put onto the battlefield");
+    assert!(!cave_card.tapped, "enters untapped");
+    assert_eq!(g.players[0].life, life + 4, "a Cave gains 4");
+}
+
 /// Forgotten Monument grants other Caves you control a pay-1-life any-color
 /// mana ability (surfaced as a virtual activated ability past the printed set).
 #[test]

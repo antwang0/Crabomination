@@ -3553,27 +3553,30 @@ fn quandrix_quickener_scries_and_untaps_target_land() {
 
 // ── Search for Glory (modern_decks push) ────────────────────────────────
 
+/// Search for Glory tutors a legendary card, a Saga, or a snow permanent. It
+/// shipped an invented scry and a creature/enchantment/planeswalker filter
+/// (oracle-verb audit, `gain_life` class); the {S}-spent lifegain stays
+/// unmodelled.
 #[test]
 fn search_for_glory_tutors_a_legendary_card_to_hand() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-    let mut g = two_player_game();
-    let lib_card = g.add_card_to_library(0, catalog::quintorius_field_historian());
-    let id = g.add_card_to_hand(0, catalog::search_for_glory());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-
-    g.decider = Box::new(ScriptedDecider::new(vec![
-        // Scry decision (none — pass)
-        DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
-        DecisionAnswer::Search(Some(lib_card)),
-    ]));
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Search for Glory castable");
-    drain_stack(&mut g);
-
-    let in_hand = g.players[0].hand.iter().any(|c| c.id == lib_card);
-    assert!(in_hand, "Quintorius tutored into hand");
+    for (pick, name) in [
+        (catalog::quintorius_field_historian as fn() -> _, "Quintorius, Field Historian"),
+        (catalog::snow_covered_forest, "Snow-Covered Forest"),
+        (catalog::the_binding_of_the_titans, "The Binding of the Titans"),
+    ] {
+        let mut g = two_player_game();
+        let lib_card = g.add_card_to_library(0, pick());
+        let id = g.add_card_to_hand(0, catalog::search_for_glory());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(lib_card))]));
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("Search for Glory castable");
+        drain_stack(&mut g);
+        assert!(g.players[0].hand.iter().any(|c| c.id == lib_card), "{name} tutored into hand");
+    }
 }
 
 // ── Fervent Strike (modern_decks push) ──────────────────────────────────

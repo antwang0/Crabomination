@@ -2,12 +2,14 @@
 //! Survival payoffs. Tests in `tests/recent_b/recent240.rs`.
 
 use crate::card::{
-    AdditionalCastCost, CardDefinition, CardType, CreatureType, ExileReturnZone, Keyword,
-    MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes, TriggeredAbility,
+    ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CreatureType,
+    ExileReturnZone, Keyword, MayPlayDuration, SelectionRequirement as R, StaticAbility, Subtypes,
+    TriggeredAbility,
 };
 use crate::effect::shortcut::etb;
 use crate::effect::{
     Effect, EventKind, EventScope, EventSpec, PlayerRef, Predicate, Selector, StaticEffect, Value,
+    ZoneDest,
 };
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, r, w};
@@ -79,6 +81,22 @@ pub fn say_its_name() -> CardDefinition {
                 max: Value::Const(1),
             },
         ]),
+        // "Exile this card and two other cards named Say Its Name from your
+        // graveyard: Search your graveyard, hand, and/or library for a card
+        // named Altanak, the Thrice-Called and put it onto the battlefield.
+        // Activate only as a sorcery." The search reads the library only.
+        activated_abilities: vec![ActivatedAbility {
+            from_graveyard: true,
+            exile_self_cost: true,
+            exile_other_filter: Some((R::HasName("Say Its Name".into()), 2)),
+            sorcery_speed: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::HasName("Altanak, the Thrice-Called".into()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

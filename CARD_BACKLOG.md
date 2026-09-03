@@ -22,6 +22,7 @@ Four changes, all reversible from `git log -p`, and **no body was edited**:
 | [The printed-clause ratchet family — one body, and where its needles break](#the-printed-clause-ratchet-family--one-body-and-where-its-needles-break) | open | 58 |
 | [The printed *keyword* and printed *numbers* ratchets — the join, not the text](#the-printed-keyword-and-printed-numbers-ratchets--the-join-not-the-text) | open | 56 |
 | [The two once-a-turn limits, and the one card that cannot carry the flag](#the-two-once-a-turn-limits-and-the-one-card-that-cannot-carry-the-flag) | open | 47 |
+| [Oracle-verb audit — the `gain_life` and `search_library` classes](#oracle-verb-audit--the-gain_life-and-search_library-classes) | open | 55 |
 | [Oracle-verb audit — the `draw` and `counters` classes](#oracle-verb-audit--the-draw-and-counters-classes) | open | 60 |
 | [Oracle-verb audit — the `search_library`, `destroy` and `draw` classes](#oracle-verb-audit--the-search_library-destroy-and-draw-classes) | open | 76 |
 | [Tier 4 — remaining SOS/SOA audit simplifications (2026-07)](#tier-4--remaining-sossoa-audit-simplifications-2026-07) | open | 608 |
@@ -699,6 +700,56 @@ Filed, with the reason:
   own primitive (draw replacement, name-wide graveyard/hand/library exile,
   counter-removal costs, manifest, a full state restore, "for each opponent who
   can't", wish, mulligan-time exile).
+
+## Oracle-verb audit — the `gain_life` and `search_library` classes
+
+**`gain_life` 12 -> 1, `search_library` 10 -> 9; twenty-two rows read
+against the oracle, twelve fixed with a test apiece, one false, nine filed.**
+Every fix used a primitive that already existed but three: a
+`CounterType::Corruption`, `MillThenToHand` leaving its pick on
+`Selector::LastMoved` (the way `Mill`, `ExileUpToNFromGraveyards` and
+`PutFromHandOntoBattlefield` already do), and
+`SameNameAsExiledWithSource` reading the until-leaves `exiled_by` link
+beside `exiled_with` — `ExileUntilSourceLeaves` never stamped the latter,
+so the requirement was blind to every Fiend Hunter-shaped exile.
+
+| Card | What the tree shipped | Fix |
+|---|---|---|
+| Geyadrone Dihada | a lose-1 / draw / loyalty-reset +1 and a halve-life -7 — **a whole wrong card** | +1 drain 2 / gain 2 / corruption counter on up to one other target; -3 adds the counter; -7 takes each corrupted permanent; protection from corrupted permanents |
+| Search for Glory | an invented scry, then a creature/enchantment/legendary/planeswalker search | snow permanent, legendary, or Saga; the {S}-spent lifegain stays unmodelled |
+| Survey Mechan | 3 damage + draw 3, no lifegain, no discount | + gain 3 (target player collapsed to you), `cost_reduction_per: Land` for the differently-named-lands discount |
+| Ruinous Waterbending | the -2/-2 only | `If SpellWasWaterbend` -> `WheneverCreatureDiesThisTurn` gain 1 |
+| Spelunking | draw + put a land, no Cave rider | `then: If EntityMatchesAny(LastMoved, Cave)` gain 4 |
+| Ellywick Tumblestrum | -2 pick with no legend rider | `LookPick::gain_life_if_pick(Legendary, 3)` |
+| The Binding of the Titans | II exiled two, no lifegain | + `GainLife(CountOf(MatchingAmong(LastMoved, Creature)))` |
+| Tymaret, Chosen from Death | a **single** targeted graveyard exile, no lifegain | up to two from graveyards + the same count rider |
+| Town Greeter | mill four, land to hand, no Town rider | the pick on `LastMoved`, `If Town` gain 2 |
+| Sparring Dummy | `MillThenToHand`, no Lesson rider | `Mill 1` -> `If Lesson` gain 2 -> `MayDo` land among `LastMoved` to hand |
+| Circle of Confinement | the exile only | opponent casts a Vampire spell `SameNameAsExiledWithSource` -> gain 2 |
+| Say Its Name | the sorcery half only | graveyard ability: exile self + two other copies, search the library for Altanak onto the battlefield (graveyard/hand halves omitted) |
+
+**False (the tenth class again):** Fasting's "skip your draw step to gain 2"
+lives inside `StaticEffect::ControllerMaySkipDrawStepForLife`'s handler.
+
+**Filed, each blocked on a primitive:**
+
+* **Sift Through Sands** — "if you've cast a spell named Peer Through Depths
+  and a spell named Reach Through Mists this turn": no per-turn cast-name
+  memory (`Predicate::CastSpellNamedThisTurn`).
+* **Urborg Panther** — "Sacrifice a creature named Feral Shadow, a creature
+  named Breathstealer, and this creature": `sac_other_filter` is one filter
+  with a count, and neither Breathstealer nor Spirit of the Night is in
+  the catalog, so the assembly would search for a card that cannot be
+  found.
+* **Search for Glory**'s "gain 1 life for each {S} spent" — the pool does
+  not remember which mana came from a snow source.
+* **Survey Mechan**'s "differently named lands" — counted as lands.
+* **The auditor's blind spot, six rows, all bespoke and correct:** Doomsday
+  (`Effect::Doomsday`), Isperia the Inscrutable (`IsperiaReveal`), Natural
+  Balance and Scholarship Sponsor (`CatchUpBasicLands`), Parallel Thoughts
+  (`ExileFaceDownDrawPile`), Signal the Clans and Transmute Artifact (their
+  own variants). `search_library` is now nine rows of which eight are
+  these.
 
 ## Oracle-verb audit — the `token` class, and the tenth false class
 

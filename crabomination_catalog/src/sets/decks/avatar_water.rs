@@ -182,12 +182,25 @@ pub fn ruinous_waterbending() -> CardDefinition {
             ..Default::default()
         },
         waterbend: wb_opt(4),
-        effect: Effect::PumpPT {
-            what: Selector::EachPermanent(SelectionRequirement::Creature),
-            power: Value::Const(-2),
-            toughness: Value::Const(-2),
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            // "If this spell's additional cost was paid, whenever a creature
+            // dies this turn, you gain 1 life." Registered before the SBA
+            // sweep that the -2/-2 causes, so those deaths count.
+            Effect::If {
+                cond: crate::effect::Predicate::SpellWasWaterbend,
+                then: Box::new(Effect::WheneverCreatureDiesThisTurn {
+                    filter: SelectionRequirement::Creature,
+                    body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

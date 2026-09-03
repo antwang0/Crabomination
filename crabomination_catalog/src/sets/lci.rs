@@ -1704,7 +1704,16 @@ pub fn spelunking() -> CardDefinition {
                 haste: false,
                 sacrifice_eot: false,
                 return_eot: false,
-                then: None,
+                // "If you put a Cave onto the battlefield this way, you gain
+                // 4 life." — the entrant is on `LastMoved`.
+                then: Some(Box::new(Effect::If {
+                    cond: crate::effect::Predicate::EntityMatchesAny {
+                        what: Selector::LastMoved,
+                        filter: SelectionRequirement::HasLandType(crate::card::LandType::Cave),
+                    },
+                    then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(4) }),
+                    else_: Box::new(Effect::Noop),
+                })),
             },
         ]))],
         static_abilities: vec![StaticAbility {

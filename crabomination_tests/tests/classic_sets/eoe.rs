@@ -2597,26 +2597,30 @@ fn the_seriema_tutors_a_legendary_to_hand() {
         "legendary creature tutored to hand");
 }
 
-/// Survey Mechan's {10}, Sac ability deals 3 to a target and draws three.
+/// Survey Mechan's {10}, Sac ability deals 3 to a target, draws three and
+/// gains 3 (the lifegain was dropped — oracle-verb audit, `gain_life`
+/// class); each land you control shaves {1} off the activation.
 #[test]
 fn survey_mechan_sac_burn_and_draw() {
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     let mech = g.add_card_to_battlefield(0, catalog::survey_mechan());
     for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::island()); }
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add_colorless(10);
-    let life1 = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(7);
+    let (life0, life1) = (g.players[0].life, g.players[1].life);
     let hand = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: mech, ability_index: 0, target: Some(Target::Player(1)),
         additional_targets: vec![], x_value: None, mode: None,
-    }).expect("activate Survey Mechan");
+    }).expect("activate Survey Mechan for {7} with three lands");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 3, "dealt 3 damage");
     assert_eq!(g.players[0].hand.len(), hand + 3, "drew three");
+    assert_eq!(g.players[0].life, life0 + 3, "gained 3");
     assert!(g.battlefield_find(mech).is_none(), "sacrificed itself");
 }
 

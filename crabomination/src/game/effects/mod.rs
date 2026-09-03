@@ -8066,11 +8066,16 @@ impl GameState {
                     max: 1,
                     eligible: None,
                 });
+                // The pick lands on `Selector::LastMoved` (cleared first, so a
+                // declined pick leaves nothing stale) for "if you put a [Town]
+                // card into your hand this way" riders — Town Greeter.
+                self.scratch.last_moved_cards.clear();
                 if let DecisionAnswer::Cards(picked) = answer
                     && let Some(cid) = picked.first()
                     && let Some(card) = Self::take_card(&mut self.players[p].graveyard, *cid)
                 {
                     self.players[p].hand.push(card);
+                    self.scratch.last_moved_cards.push(*cid);
                 }
                 Ok(())
             }

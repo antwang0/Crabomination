@@ -3014,6 +3014,47 @@ fn binding_of_the_titans_mills() {
     assert_eq!(g.players[1].graveyard.len(), 3, "opponent milled three");
 }
 
+/// The Binding of the Titans II exiles up to two cards from graveyards and
+/// gains 1 life per creature card among them — the rider it shipped without
+/// (oracle-verb audit, `gain_life` class).
+#[test]
+fn binding_of_the_titans_chapter_two_gains_per_creature_exiled() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let saga = g.add_card_to_battlefield(0, catalog::the_binding_of_the_titans());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let forest = g.add_card_to_graveyard(1, catalog::forest());
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear, forest])]));
+    resolve_chapter(&mut g, saga, 0, 1, None);
+    assert!(g.players[1].graveyard.is_empty(), "both exiled");
+    assert_eq!(g.players[0].life, life + 1, "one creature card among the two");
+}
+
+/// Tymaret, Chosen from Death's {1}{B} exiles up to two cards from graveyards
+/// and gains 1 life per creature card exiled. It shipped as a single-card
+/// exile with no lifegain (oracle-verb audit, `gain_life` class).
+#[test]
+fn tymaret_exiles_two_and_gains_per_creature() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let tymaret = g.add_card_to_battlefield(0, catalog::tymaret_chosen_from_death());
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let ogre = g.add_card_to_graveyard(1, catalog::gray_ogre());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear, ogre])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tymaret, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("activate Tymaret");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.is_empty(), "both exiled");
+    assert_eq!(g.players[0].life, life + 2, "two creature cards exiled");
+}
+
 /// Kiora Bests the Sea God I creates an 8/8 hexproof Kraken.
 #[test]
 fn kiora_makes_kraken() {

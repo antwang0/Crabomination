@@ -2538,12 +2538,25 @@ pub fn tymaret_chosen_from_death() -> CardDefinition {
             color: Color::Black,
             base_p: 2,
         }),
+        // "{1}{B}: Exile up to two target cards from graveyards. You gain 1
+        // life for each creature card exiled this way." Same shape as The
+        // Binding of the Titans II (the picks are not targets).
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), b()]),
-            effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::InGraveyard),
-                to: ZoneDest::Exile,
-            },
+            effect: Effect::Seq(vec![
+                Effect::ExileUpToNFromGraveyards {
+                    count: Value::Const(2),
+                    of: None,
+                    single: false,
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::CountOf(Box::new(Selector::MatchingAmong {
+                        inner: Box::new(Selector::LastMoved),
+                        filter: SelectionRequirement::Creature,
+                    })),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
@@ -5558,11 +5571,21 @@ pub fn the_binding_of_the_titans() -> CardDefinition {
             ),
             (
                 2,
-                Effect::ExileUpToNFromGraveyards {
-                    count: Value::Const(2),
-                    of: None,
-                    single: false,
-                },
+                // "For each creature card exiled this way, you gain 1 life."
+                Effect::Seq(vec![
+                    Effect::ExileUpToNFromGraveyards {
+                        count: Value::Const(2),
+                        of: None,
+                        single: false,
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::CountOf(Box::new(Selector::MatchingAmong {
+                            inner: Box::new(Selector::LastMoved),
+                            filter: SelectionRequirement::Creature,
+                        })),
+                    },
+                ]),
             ),
             (
                 3,

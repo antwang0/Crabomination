@@ -645,8 +645,10 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(6),
                     pick_filter: Some(R::Creature),
-    ..Default::default()
-})),
+                    // "If it's legendary, you gain 3 life."
+                    gain_life_if_pick: Some((R::HasSupertype(Supertype::Legendary), 3)),
+                    ..Default::default()
+                })),
                 ..Default::default()
             },
             LoyaltyAbility {

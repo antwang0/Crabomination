@@ -820,6 +820,8 @@ pub enum CounterType {
     Death,
     /// Corrosion — an artifact dies once its mana value is at most its rust count.
     Rust,
+    /// Geyadrone Dihada — marks what her protection ignores and her -7 takes.
+    Corruption,
 }
 
 /// Every zone a card can occupy.

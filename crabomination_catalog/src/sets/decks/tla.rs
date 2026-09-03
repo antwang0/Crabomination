@@ -2350,13 +2350,36 @@ pub fn sparring_dummy() -> CardDefinition {
         power: 1,
         toughness: 3,
         keywords: vec![Keyword::Defender],
+        // "{T}: Mill a card. You may put a land card milled this way into
+        // your hand. You gain 2 life if a Lesson card is milled this way."
+        // `Mill` leaves the milled card on `LastMoved`, so both riders read
+        // it there.
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::MillThenToHand {
-                amount: Value::ONE,
-                filter: SelectionRequirement::Land,
-                otherwise: None,
-            },
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::ONE },
+                Effect::If {
+                    cond: crate::effect::Predicate::EntityMatchesAny {
+                        what: Selector::LastMoved,
+                        filter: SelectionRequirement::HasSpellSubtype(SpellSubtype::Lesson),
+                    },
+                    then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+                    else_: Box::new(Effect::Noop),
+                },
+                Effect::MayDo {
+                    description: "put a land card milled this way into your hand".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::Take {
+                            inner: Box::new(Selector::MatchingAmong {
+                                inner: Box::new(Selector::LastMoved),
+                                filter: SelectionRequirement::Land,
+                            }),
+                            count: Box::new(Value::ONE),
+                        },
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

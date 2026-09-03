@@ -3573,14 +3573,27 @@ pub fn circle_of_confinement() -> CardDefinition {
         name: "Circle of Confinement",
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
-        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent)
-                    .and(SelectionRequirement::ManaValueAtMost(3)),
-            ),
-            return_to: ExileReturnZone::Battlefield,
-        })],
+        triggered_abilities: vec![
+            etb(Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent)
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            }),
+            // "Whenever an opponent casts a Vampire spell with the same name
+            // as a card exiled with this enchantment, you gain 2 life."
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                    .with_filter(crate::effect::Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                            .and(SelectionRequirement::SameNameAsExiledWithSource),
+                    }),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            },
+        ],
         ..Default::default()
     }
 }

@@ -2936,6 +2936,21 @@ fn town_greeter_mills_and_takes_a_land() {
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"));
 }
 
+/// "If you put a Town card into your hand this way, you gain 2 life" — the
+/// rider Town Greeter shipped without (oracle-verb audit, `gain_life` class).
+#[test]
+fn town_greeter_gains_two_for_a_town() {
+    let mut g = two_player_game();
+    g.players[0].library.clear(); // the seeded Forests would be the lands milled
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let town = g.add_card_to_library(0, catalog::windurst_federation_center()); // the only land milled
+    let life = g.players[0].life;
+    g.move_card_to_battlefield_for_test(0, catalog::town_greeter());
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == town), "the Town went to hand");
+    assert_eq!(g.players[0].life, life + 2, "a Town to hand gains 2");
+}
+
 /// Giott loots when a Dwarf you control enters (its own ETB included).
 #[test]
 fn giott_loots_on_dwarf_enter() {

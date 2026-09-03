@@ -4611,11 +4611,15 @@ impl GameState {
                         }),
                     // Extraplanar Lens — "a land with the same name as the
                     // exiled card".
+                    // Either link is "exiled with": `exiled_with` (imprint,
+                    // `ExileWithSource`) or the until-leaves `exiled_by`
+                    // (Circle of Confinement's Vampire name check).
                     R::SameNameAsExiledWithSource => source.is_some_and(|sid| {
                         self.exile
                             .iter()
                             .any(|c| {
-                                c.exiled_with == Some(sid)
+                                (c.exiled_with == Some(sid)
+                                    || c.exiled_by.as_ref().is_some_and(|l| l.source == sid))
                                     && c.definition.name == card.definition.name
                             })
                     }),

@@ -804,20 +804,20 @@ pub fn search_for_glory() -> CardDefinition {
         name: "Search for Glory",
         cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::HasCardType(CardType::Creature)
-                    .or(SelectionRequirement::HasCardType(CardType::Enchantment))
-                    .or(SelectionRequirement::HasSupertype(Supertype::Legendary))
-                    .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-        ]),
+        // "Search your library for a snow permanent card, a legendary card,
+        // or a Saga card." The printed "you gain 1 life for each {S} spent to
+        // cast this spell" is omitted: the pool does not track which mana
+        // came from a snow source.
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsSnow
+                .and(SelectionRequirement::PermanentCard)
+                .or(SelectionRequirement::HasSupertype(Supertype::Legendary))
+                .or(SelectionRequirement::HasEnchantmentSubtype(
+                    crate::card::EnchantmentSubtype::Saga,
+                )),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
         ..Default::default()
     }
 }
