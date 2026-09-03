@@ -2540,9 +2540,11 @@ step), all found by ranking a hot row's *callers* on a
   (-197)  -0.568 %  -0.684 %  -0.562 %   mana-static lane ahead of the land tap's three walks
   (-198)  -0.854 %  -0.488 %  -0.658 %   per-definition mana summary is the auto-tapper's row
 
-  bench_ab.py, 16 pairs, base vs the (-196) tip (--bench = fixed):
-  median +0.67 %, mean +0.35 %, sd 2.09 — inside the instrument's noise,
-  as a -1.5 % Ir change on that pool should be.
+  bench_ab.py, 24 pairs, base 0e9bdaa4 vs the (-198) tip (--bench =
+  fixed, -2.93 % Ir): **median +1.89 % games/s, paired mean +1.81 %,
+  sd 3.55** — the wall clock sees it, at the ratio the instrument's
+  calibration predicts (a -2.0 % Ir read +2.6 % at the 116th pass).
+  At the (-196) tip (-1.5 % Ir) 16 pairs read +0.67 %, inside noise.
 ```
 
 ```text
