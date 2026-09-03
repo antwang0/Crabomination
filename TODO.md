@@ -25,38 +25,40 @@ sixty-seventh pass, so don't re-take that.
 
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
-   tracker prose; ⚠ claim a candidate number at PUSH time — `(-188)`..`(-193)` taken this run,
+   tracker prose; ⚠ claim a candidate number at PUSH time — `(-193)` is the last claimed,
    `(-194)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
    rules for a perf pass"**. Cold here: `profiling-fast` 10 min (3 min warm), test build+suite
    5 min cold / 3 warm; `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind
    ~2 min. ⚠ A rebase between an A/B's two builds can pull a concurrent CATALOG commit: `git log
    --stat <base>..HEAD -- crabomination_catalog` after any rebase (PERF Standing rules, top).
-2. **Gates at the `(-192)` tip:** suite 19,217 / 0 / 5, traces unmoved at every leg, clippy
-   `--all-targets` clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls, byte-identical**,
-   determinism ok. `robustness_grid.sh` (ladder 30 cells / 33,120 games + actor 3 seeds) clean at
-   `a9ce7489`; its first run at `(-192)` tripped the `(-190)` audit on six cells and that was a
-   real CR 400.7 defect (`d98c4212`). `--pilots` and `--wide` last ran at the `(-185)` engine.
-3. **This run: `(-188)`..`(-192)`, one probe then five legs** — a keyword presence gate cost
-   886 Ir a call; three `#[inline(never)]` fns and a ten-second `fixed` dump priced its five
-   legs, and each went behind the cheapest holder: a definition-only lane, a member list
-   (`grant_members`, the `trigger_members` shape), two `GameState` flags exact at cleanup
-   (`board_instance_keywords`, `offboard_keyword_grants` — `step_bounded_may_play`'s device), no
-   hoist. Cumulative vs `fb120400`: **fixed -1.64 %, cube -1.61 %, sealed -0.83 %** (Baseline
-   top). `(-193)` (pool batching, `(-170)(b)`) **+0.9..1.3 %, reverted**: a pool access costs
-   what it moves, not the thread-local. A fix rode along: three eot keyword grants had no CR
-   613.7 timestamp (`6717b648`).
-4. **Next perf lead (PERF candidates, `(-192)` block):** `affected_includes_gated` 548 k calls /
-   1.16 % of `cube` (a per-pass reach mask in `compute_permanent_pass`); `drop_in_place<
-   ComputedPermanent>` under the pool's overwrite (`(-107)`'s by-value question); `Unfreeze::drop`
-   at 34 Ir x 213 k. The keyword-gate family is mined out (~100 Ir a call left, all legs priced).
+2. **Gates at `df27df7e`:** suite 19,237 / 0 / 5, golden traces unmoved, clippy `--all-targets`
+   clean, release-fast typecheck gate clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
+   byte-identical**, determinism ok. `robustness_grid.sh` at `df27df7e`: ladder 30 cells /
+   33,120 games + actor 3 seeds, **0 failures**. `--pilots` / `--wide` last ran at the `(-185)`
+   engine. Structural audits 0 / 0; the oracle-verb table 70, all filed.
+3. **This run: no perf leg — the queue is mined out at this tip, and PERF's candidates section
+   opens with the re-read that says so** (three fresh dumps at `a198daf3`, within 0.07 % of
+   `(-192)`; `affected_includes_gated`'s reach mask refuted by arithmetic; `make_mut_slow`,
+   `Vec::clone`, `__rust_alloc`, `IntoIter::drop` caller tables read, all real writes / diffuse).
+   The bot's attack search is 59.8 % of `cube` and a search-quality decision (`(-21)`). The two
+   leads left are not self-table rows: a search-count A/B measured on strength as well as Ir,
+   or a `profiling-lines` read of `computed_permanent_hinted`'s 150 Ir/call memo-hit path.
+4. **The oracle-verb table is fully read: 106 -> 70 rows, 21 shipped defects fixed this run
+   (two whole wrong cards: Geyadrone Dihada, Search for Glory; one invented token: Corpses of
+   the Lost), and every survivor is filed in CARD_BACKLOG's top two sections** against the
+   primitive it wants or the auditor's bespoke blind spot. Three engine bits rode along:
+   `CounterType::Corruption`, `MillThenToHand` on `LastMoved`, `SameNameAsExiledWithSource`
+   reading the until-leaves link. ⚠ The catalog change moves `cube`/`sealed` play: a fresh Ir
+   base before any A/B.
 5. **Open, sized (leave):** `apply_as_enters_effect` / Mimeoplasm (ENGINE_BACKLOG); the empty-stack
    `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 2.0 % of both pools in gate
    prelude with no single hot line — a `profiling-lines` read, not a device.
-6. **Card lanes, all in CARD_BACKLOG's first sections** (printed-clause ratchets,
-   `audit_oracle_verbs.py`: `counters` / `lose_life` / `draw` / `destroy` / `mill` / `token` worked
-   (`mill` 4 real of 8, `token` 2 fixed + 6 blocked on a primitive each, both with a whole wrong
-   card); `gain_life` 12 / `search_library` 10 left, ~half of each class is the auditor's blind
-   spot — read the body before believing a row). ⚠ A python auditor's zero is suspect.
+6. **Best next moves:** (a) the primitives that unblock several filed rows at once — a per-turn
+   cast-name memory (Sift Through Sands + the Kamigawa "if you've cast X this turn" family; put
+   it in `ColdState`, not `PlayerData` — 24 bytes of headroom), a per-turn `modes_chosen` sibling
+   (Monument to Endurance), a `DelayedKind` for "when you next attack this turn" (All-Out
+   Assault); (b) the printed-clause ratchets (CARD_BACKLOG, first section). ⚠ A python auditor's
+   zero is suspect; read the body before believing a row.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)

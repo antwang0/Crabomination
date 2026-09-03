@@ -2512,6 +2512,45 @@ a box whose state moves.
 
 ## Baseline
 
+### The oracle-verb close-out — closing state at `df27df7e`
+
+No perf leg: three fresh dumps at `a198daf3` read within 0.07 % of
+`(-192)` and nothing priced at a build (candidates, top entry). The run
+was twenty-one shipped-card defects across six oracle-verb classes, with
+three engine bits that ride along (`CounterType::Corruption`,
+`MillThenToHand` on `LastMoved`, `SameNameAsExiledWithSource` reading the
+until-leaves link). **The catalog change moves `cube` / `sealed` play, so
+the next A/B takes a fresh base at this tip or later.**
+
+```text
+  pool     a198daf3 (this run's base, pre-catalog)   vs (-192)
+  fixed      833,934,847                              +0.070 %
+  cube     2,316,705,788                              +0.061 %
+  sealed   2,344,388,085                              +0.071 %
+```
+
+```text
+rustc   1.95.0 (59807616e 2026-04-14); Intel Xeon @ 2.80 GHz, 4 cores
+suite   19,237 / 0 / 5 (19,220 at a198daf3; +12 and +5 card tests, four
+        Geyadrone tests that pinned an invented card rewritten as three);
+        golden traces in it and unmoved at both commits
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate (debug-assertions off)   clean
+--bench profiling-fast at df27df7e: **195,806 decisions / 27.49 turns /
+        611.9 per game / 0 stalls (cap 0 / stuck 0 / draw 0)** —
+        byte-identical to the invariant (the fixed pool carries none of
+        the 21 cards); determinism ok (3 vs 1 threads identical);
+        peak_rss 19.3 MiB, bin 219,404,200 B (`--no-default-features`)
+grid    `scripts/robustness_grid.sh` at `df27df7e`: ladder **30 cells /
+        33,120 games, 0 failures**, cap 0 / stuck 0 / draw 0; actor leg
+        3 seeds x 600 games clean (99-126 games/s under `overflow` +
+        `debug-assertions`, 7 assertion strings in the binary).
+        `--pilots` / `--wide` last ran at the `(-185)` engine.
+audits  `audit_incomplete --structural-only` 21,795 cards / 0 to review
+        (Elite Interceptor reviewed); `audit_stubs` 0 flagged;
+        `audit_oracle_verbs.py` 106 -> **70** rows, every one filed.
+```
+
 ### The presence-flag pass — closing state at `(-192)`
 
 Five candidates, one base (`fb120400`, the `(-185)` tip plus trackers),
@@ -22300,6 +22339,80 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**RE-READ AT `a198daf3` (the `(-192)` engine + CR 400.7 + the mill/token
+card fixes) — three fresh dumps, the map agrees with `(-90)`/`(-92)`, and
+no row prices at a build.** `profiling-fast`, `--no-default-features`,
+`--games 6 --threads 1 --seed 1`:
+
+```text
+  pool     a198daf3          vs (-192)
+  fixed      833,934,847     +0.070 %   (catalog commits since; no engine change)
+  cube     2,316,705,788     +0.061 %
+  sealed   2,344,388,085     +0.071 %
+```
+
+Inclusive shape of `cube`, for orientation (the bot owns the game):
+`next_action_inner` 93.5 %; `pick_attacks_scored` -> `simulate_attack_
+outcome_once` **59.8 %** over 2,070 candidates (`(-21)`: the count is a
+search-quality decision); `main_phase_action_with` 30.0 %; `sim_step`
+26.5 %; `pass_priority` 25.4 %; `accept_on` 22.4 %; `cast_spell_with_
+convoke` 16.0 %; `resolve_combat` 15.3 %; `perform_action` 13.5 %;
+`with_frozen_layers` 11.4 %; `computed_permanent_hinted` 10.4 %;
+`dispatch_triggers_for_events` 8.3 %; `check_state_based_actions_into`
+6.7 %; `compute_permanents` 5.8 % (23,004 calls: `combat_damage_computed`
+7,296 / `declare_attackers_banded` 6,758 / `declare_blockers` 5,036 / SBA
+3,914 — every one an id subset, and 11,200 of them gather because they
+run under `&mut self`).
+
+Rows read this pass and closed by inspection, so nobody re-reads them:
+
+* **`affected_includes_gated` 548,110 x 49 Ir (1.16 %) — the "per-pass
+  reach mask" device is refuted by arithmetic.** 279,444 passes at ~2
+  effects each: every (effect, permanent) pair is evaluated exactly once
+  per pass already, and a pass is one `compute_permanent_pass` call for
+  one permanent, so there is no second read for a mask to serve. The
+  common anthem decomposes to `AffectedPermanents::All` (a seat compare
+  and a type `contains`), not `CardMatch`; the 49 Ir is the call and the
+  arm, and inlining it into the filter closure is a ~10 Ir/call bet
+  (~0.2 %) that also grows the 293 Ir pass body. Not a candidate.
+* **`make_mut_slow` 123,490 x 300 = 37.1 M (1.6 %), by caller:**
+  `cast_spell_with_convoke` 38,084 / 34.7 M, `resolve_top_of_stack_inner`
+  10,458, `declare_blockers` 8,586, `Battlefield::find_by_id_mut` 8,326
+  (22,354 of its 24,886 calls are `activate_ability_inner`'s),
+  `on_left_battlefield` 5,430, `resolve_combat` 5,296,
+  `declare_attackers_banded` 3,376 + its `iter_mut` 3,376 (the one
+  `Battlefield::iter_mut` caller). All real writes on a probe-cloned
+  state — hand/stack/battlefield under a cast, block flags under a
+  declaration. CoW as designed; no read-only `&mut` route found.
+* **`Vec::clone` 469,736 x 51 = 24 M**: `GameState::clone` 139,412 (the
+  non-`CowBox` fields, `(-13)`), `make_mut_slow` 137,594 (the unshared
+  zone's buffer), `Arc::clone_from_ref_in` 123,300 (`CardInstance` under
+  `Arc::make_mut`). Diffuse across the three.
+* **`__rust_alloc` 981,466 by caller**: `finish_grow` 261,534, `from_iter`
+  112,469, `make_mut_slow` 91,418, `Vec::clone` 64,219,
+  `clone_from_ref_in` 60,446, `GameState::clone` 49,702,
+  `PrintedList::push` 47,928, `CowBox::push` 38,312. The `(-163)`/`(-165)`
+  census, unchanged in shape.
+* **`IntoIter::drop` 401,462 x 25 = 9.9 M**: `effective_mana_abilities_
+  into` 84,220, `declare_attackers_banded` 57,902, `fire_step_triggers`
+  48,432, `check_state_based_actions_into` 42,444, three combat-damage
+  trigger firers ~63 k. `for x in vec` over collected lists; `(-156)`'s
+  rule prices each at ~10 % of its row.
+* `DebugStruct::field` 114 k `write_str` calls = `wants_converge`, once
+  per card name per process (How to measure). `Unfreeze::drop` 213 k x 34
+  = 7.2 M: the lock on the three-in-four empty scopes is ~20 Ir, and a
+  lock-free "memo present" flag is `(-47th)`'s depth-shadow refutation
+  again (0.14 % ceiling). `card_can_reduce_toughness` 179 k x 42 = 7.5 M
+  (0.32 %) under the toughness-reducer lane's re-walks — below the bar.
+
+**What is left is the per-step engine cost under a search whose size is
+deliberate, and the actor agrees with `cube` to within 30 % on every row
+(Profile of record). The next perf lead is not in a self table: it is
+either a search-count decision (`EVAL_TOP`, `attack_search`) measured on
+strength as well as Ir, or a `profiling-lines` read of
+`computed_permanent_hinted`'s 150 Ir/call self (366 k calls, 2.4 %) —
+the one memo-hit path nobody has read by line.**
 
 **(-188)..(-192) TAKEN — the keyword presence gates, five legs priced by
 one probe and taken one at a time; cumulative `fixed` -1.64 % / `cube`

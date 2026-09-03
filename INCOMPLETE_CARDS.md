@@ -22,7 +22,7 @@ It has two independent passes:
    effect tree and flags *dead modes* (a `ChooseMode`/`ChooseN`/`Escalate` arm
    that resolves to `Noop`/empty) and *dead abilities* (a triggered / activated
    / loyalty ability with an empty effect). An empty arm is a bug regardless of
-   what the card "should" do. **Re-run 2026-08-29 (unchanged since 2026-08-23): 21,795 unique cards, one
+   what the card "should" do. **Re-run 2026-09-03 (unchanged since 2026-08-23): 21,795 unique cards, one
    finding — Elite Interceptor, already triaged below as not a gap.**
    `audit_stubs` on the same tip: 21,795 scanned, **0 flagged**.
 2. **Comment scan**: lists every `pub fn … -> CardDefinition` factory whose doc
