@@ -2256,6 +2256,22 @@ pub struct GameState {
     /// field existed still sweeps once.
     #[serde(default = "serde_true")]
     pub(crate) step_bounded_may_play: bool,
+    /// Presence gate for the instance leg of
+    /// [`board_keyword_matching`](Self::board_keyword_matching): `false` only
+    /// when no battlefield permanent carries an until-end-of-turn keyword
+    /// grant or a keyword counter, so that leg — a `CardData` deref per
+    /// permanent on every whole-board keyword ask — is skipped. The same
+    /// device as `step_bounded_may_play`: `true` from construction and on
+    /// deserialize, recomputed **exactly** at cleanup (the eot grants have
+    /// just been cleared; the counters are counted), and set by every engine
+    /// path that adds one in between — [`grant_keyword_eot`], the three
+    /// `keyword_counters.add` sites, and a permanent phasing back in with its
+    /// counters. A test that writes the fields directly is fine until a
+    /// cleanup has run; the gate's `debug_assert!` audits the rest.
+    ///
+    /// [`grant_keyword_eot`]: Self::grant_keyword_eot
+    #[serde(default = "serde_true")]
+    pub(crate) board_instance_keywords: bool,
     /// CR 508.1/509.1d — turn-scoped combat taxes charged to the *acting*
     /// player, {N} per attacker / per blocker they declare (War Tax, War
     /// Cadence). Symmetric across seats and cleared at cleanup; the
@@ -3065,6 +3081,7 @@ impl Clone for GameState {
             token_minting_source: self.token_minting_source,
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             step_bounded_may_play: self.step_bounded_may_play,
+            board_instance_keywords: self.board_instance_keywords,
             attack_tax_this_turn: self.attack_tax_this_turn,
             block_tax_this_turn: self.block_tax_this_turn,
             acted_on_own_turn_mask: self.acted_on_own_turn_mask,
@@ -3274,6 +3291,7 @@ impl GameState {
             token_minting_source: None,
             damage_cant_be_prevented_this_turn: false,
             step_bounded_may_play: false,
+            board_instance_keywords: true,
             attack_tax_this_turn: 0,
             block_tax_this_turn: 0,
             acted_on_own_turn_mask: 0,
@@ -9217,11 +9235,25 @@ impl GameState {
         // Phasing, no cumulative upkeep — the walk below never derefs a
         // definition and reads two instance lengths per permanent.
         let printed = self.battlefield.has_gate_keyword();
-        let hit = self.battlefield.iter().any(|c| {
-            (printed && c.definition.keywords.iter().any(&pred))
-                || c.granted_keywords_eot.iter().any(&pred)
-                || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))
-        }) || match self.frozen_effects_memoized() {
+        // The instance leg reads the two per-permanent fields only while the
+        // state says some permanent may carry one (`board_instance_keywords`,
+        // exact after every cleanup); otherwise the walk is skipped whole.
+        let instance = self.board_instance_keywords;
+        debug_assert!(
+            instance
+                || !self.battlefield.iter().any(|c| {
+                    !c.granted_keywords_eot.is_empty() || !c.keyword_counters.is_empty()
+                }),
+            "board_instance_keywords is clear, but a permanent carries an eot grant or keyword counter"
+        );
+        let hit = (printed || instance)
+            && self.battlefield.iter().any(|c| {
+                (printed && c.definition.keywords.iter().any(&pred))
+                    || (instance
+                        && (c.granted_keywords_eot.iter().any(&pred)
+                            || c.keyword_counters.iter().any(|(k, n)| *n > 0 && pred(k))))
+            })
+            || match self.frozen_effects_memoized() {
             Some(fx) => granted(&fx),
             // The legs above are positive short-circuits; when they all miss
             // this used to gather to prove a negative. Ask the presence gate
@@ -14575,6 +14607,7 @@ impl GameState {
         if let Some(c) = self.battlefield.find_by_id_mut(cid) {
             c.granted_keywords_eot.push(kw);
             c.granted_keywords_eot_ts.push(ts);
+            self.board_instance_keywords = true;
         }
     }
 

@@ -15699,6 +15699,7 @@ impl GameState {
                         } else {
                             base
                         };
+                        self.board_instance_keywords = true;
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.keyword_counters.add(keyword.clone(), n);
                             // "This permanent gained a counter this turn"
@@ -15736,6 +15737,7 @@ impl GameState {
                     self.permanents_gained_counter_this_turn.insert(cid);
                     if pick < missing_kw.len() {
                         let kw = missing_kw.swap_remove(pick);
+                        self.board_instance_keywords = true;
                         if let Some(c) = self.battlefield_find_mut(cid) {
                             c.keyword_counters.add(kw.clone(), 1);
                         }
@@ -15812,6 +15814,7 @@ impl GameState {
                             .map(|c| (c.counters.clone(), c.keyword_counters.clone()))
                             .unwrap_or_default()
                     };
+                    self.board_instance_keywords |= taken_kw.iter().any(|(_, n)| *n > 0);
                     if let Some(d) = self.battlefield_find_mut(dst) {
                         for (kind, n) in taken {
                             if n > 0 {
