@@ -298,6 +298,15 @@ pub struct EvalWeights {
     /// invisible" — the documented blindness behind the over-attack the
     /// SOS college probes measured.
     pub attack_sim_spells: bool,
+    /// Take the greedy declaration without simulating when no opposing
+    /// seat controls a creature, planeswalker or battle — nothing to block
+    /// with, nothing to crack back with, nothing to attack instead of the
+    /// face. `CRAB_ATTACK_CENSUS` reads that board as 9-16 % of searched
+    /// declarations on every pool and greedy winning 94-100 % of them (the
+    /// rest a lone Goblin Guide or mana dork, where the sim prices the
+    /// trigger's land or the tapped mana above the damage); see
+    /// [`attack_candidates_for_mcts`].
+    pub attack_skip_open: bool,
     /// Extend the attack simulation one extra turn cycle when it ends
     /// with either life total at 10 or below. The one-cycle horizon can
     /// see "this creature survives to block" but not "this is the race I
@@ -650,6 +659,7 @@ impl EvalWeights {
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
+            attack_skip_open: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -727,6 +737,7 @@ impl EvalWeights {
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
+            attack_skip_open: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -787,6 +798,7 @@ impl EvalWeights {
             block_search: 0,
             legacy_pretap: false,
             attack_sim_spells: false,
+            attack_skip_open: false,
             attack_race_horizon: false,
             net_slot: 0,
             net_blend_scale: 0,
@@ -1204,6 +1216,14 @@ impl EvalWeights {
     /// [`buff_2for1`](Self::buff_2for1); ladder as A against the default.
     pub const fn buff_2for1_on() -> Self {
         Self { buff_2for1: true, ..Self::block_gang_search() }
+    }
+
+    /// The default plus the open-board shortcut. The opt-in for
+    /// [`attack_skip_open`](Self::attack_skip_open); ladder as A against
+    /// the default. A throughput device, so the gate it must pass is "no
+    /// loss" rather than "a win".
+    pub const fn attack_skip_open_on() -> Self {
+        Self { attack_skip_open: true, ..Self::block_gang_search() }
     }
 
     /// The default plus converge-aware land drops. The opt-in for
@@ -8537,6 +8557,9 @@ pub(crate) fn attack_candidates_for_mcts(
     if w.attack_search == 0 || greedy.is_empty() {
         return vec![greedy];
     }
+    if w.attack_skip_open && board_open_for_attack(state, seat) {
+        return vec![greedy];
+    }
     let mut candidates: Vec<Vec<Attack>> = vec![greedy.clone(), Vec::new()];
     if greedy.len() > 1 {
         let mut order: Vec<usize> = (0..greedy.len()).collect();
@@ -8626,6 +8649,41 @@ pub(crate) fn attack_candidates_for_mcts(
     candidates
 }
 
+/// No opposing seat controls a creature, planeswalker or battle — the board
+/// [`EvalWeights::attack_skip_open`] takes the greedy declaration on.
+///
+/// Printed types first, which settles the common board with no layer
+/// gather; a non-creature permanent is then asked for its computed types
+/// inside one freeze scope, so an animated land or a Vehicle under a
+/// "becomes a creature" effect still counts as a blocker. A land that
+/// *could* animate at instant speed does not: the search's own sims never
+/// activate one either, so the shortcut loses nothing the search had.
+fn board_open_for_attack(state: &GameState, seat: usize) -> bool {
+    use crate::card::{CardInstance, CardType};
+    let opposing = |c: &CardInstance| {
+        c.controller != seat
+            && state.players[c.controller].is_alive()
+            && !state.same_team(seat, c.controller)
+    };
+    if state.battlefield.iter().any(|c| {
+        opposing(c)
+            && (c.definition.is_creature()
+                || c.definition.is_planeswalker()
+                || c.definition.is_battle())
+    }) {
+        return false;
+    }
+    state.with_frozen_layers(|st| {
+        !st.battlefield.iter().filter(|c| opposing(c)).any(|c| {
+            st.computed_permanent_on(c).is_some_and(|cp| {
+                cp.card_types().iter().any(|t| {
+                    matches!(t, CardType::Creature | CardType::Planeswalker | CardType::Battle)
+                })
+            })
+        })
+    })
+}
+
 /// The saturation fallback's switch (see [`EvalWeights::net_tail_guard`]):
 /// weights for scoring ONE decision's candidates. When the flag is on and
 /// the net reads the current state outside the rankable band
@@ -8661,9 +8719,104 @@ fn pick_attacks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<A
         let Some(score) = simulate_attack_outcome(state, seat, cand, w) else { continue };
         scored.push((i, score));
     }
-    match choose_scored(state.turn_number, &scored) {
-        Some(i) => candidates.swap_remove(i),
-        None => candidates.swap_remove(0),
+    let chosen = choose_scored(state.turn_number, &scored).unwrap_or(0);
+    if attack_census::on() {
+        attack_census::tick(state, seat, candidates.len(), chosen, &scored);
+    }
+    candidates.swap_remove(chosen)
+}
+
+/// `CRAB_ATTACK_CENSUS` — what the attack search decides, counted.
+///
+/// `pick_attacks_scored` is ~60 % of a `cube` game (PERF `(-21)`), and "the
+/// candidate count is a search-quality decision" has been re-asserted since
+/// the forty-ninth pass without anyone reading what the search *chooses*.
+/// Per searched declaration: the candidates simulated, which index won
+/// (greedy / no attack / a holdback), how many candidates tied the winner,
+/// and whether the defending seats had a creature at all. Off unless the
+/// variable is set; one `OnceLock` read per searched declaration.
+///
+/// ```text
+/// CRAB_ATTACK_CENSUS=1 bot_ladder --a gang --b gang --games 6 --threads 1 --decks cube
+/// ```
+pub mod attack_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    use crate::game::GameState;
+
+    /// `[calls, candidates, won greedy, won none, won holdback, tied with
+    /// the winner, defender had no creature, ... and greedy won there]`.
+    pub static N: [AtomicU64; 8] = [const { AtomicU64::new(0) }; 8];
+
+    /// 0 = off, 1 = count, 2 = count and name each creatureless-defender
+    /// search the greedy declaration did not win.
+    pub fn level() -> u8 {
+        static LEVEL: std::sync::OnceLock<u8> = std::sync::OnceLock::new();
+        *LEVEL.get_or_init(|| match std::env::var("CRAB_ATTACK_CENSUS") {
+            Ok(v) if v == "2" => 2,
+            Ok(v) => u8::from(!v.is_empty() && v != "0"),
+            _ => 0,
+        })
+    }
+
+    pub fn on() -> bool {
+        level() > 0
+    }
+
+    pub(super) fn tick(
+        state: &GameState,
+        seat: usize,
+        candidates: usize,
+        chosen: usize,
+        scored: &[(usize, i32)],
+    ) {
+        N[0].fetch_add(1, Relaxed);
+        N[1].fetch_add(candidates as u64, Relaxed);
+        N[2 + chosen.min(2)].fetch_add(1, Relaxed);
+        if let Some(&(_, best)) = scored.iter().find(|(i, _)| *i == chosen) {
+            let tied = scored.iter().filter(|(i, s)| *i != chosen && *s == best).count();
+            N[5].fetch_add(tied as u64, Relaxed);
+        }
+        let defender_has_creature = state.battlefield.iter().any(|c| {
+            c.controller != seat
+                && c.definition.is_creature()
+                && state.players[c.controller].is_alive()
+        });
+        if !defender_has_creature {
+            N[6].fetch_add(1, Relaxed);
+            if chosen == 0 {
+                N[7].fetch_add(1, Relaxed);
+            } else if level() >= 2 {
+                let mine: Vec<&str> = state
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == seat && c.definition.is_creature())
+                    .map(|c| c.definition.name)
+                    .collect();
+                let theirs: Vec<String> = state
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller != seat)
+                    .map(|c| format!("{}{}", c.definition.name, if c.tapped { "(T)" } else { "" }))
+                    .collect();
+                let opp: Vec<String> = state
+                    .players
+                    .iter()
+                    .enumerate()
+                    .filter(|(s, p)| *s != seat && p.is_alive())
+                    .map(|(_, p)| format!("life {} hand {}", p.life, p.hand.len()))
+                    .collect();
+                eprintln!(
+                    "attack_census turn {} seat {seat} chose {chosen} scores {scored:?} mine {mine:?} \
+                     theirs {theirs:?} opp {opp:?}",
+                    state.turn_number,
+                );
+            }
+        }
+    }
+
+    pub fn snapshot() -> [u64; 8] {
+        std::array::from_fn(|i| N[i].load(Relaxed))
     }
 }
 
@@ -17816,6 +17969,41 @@ mod tests {
         assert!(
             eval_material(&sim, 0, &w) < snapshot,
             "losing the body must score worse than the board that still has it",
+        );
+    }
+
+    /// `attack_skip_open` collapses the search to the greedy declaration
+    /// exactly when no opposing seat controls a blocker, and leaves the
+    /// search intact the moment one appears. The throughput device measured
+    /// on PERF `(-21)`: an open board is 9-16 % of searched declarations.
+    #[test]
+    fn attack_skip_open_only_shortcuts_a_blockerless_board() {
+        let w = EvalWeights::attack_skip_open_on();
+        // Two attackers vs an empty opposing board — the shortcut fires and
+        // the candidate list is the single greedy declaration.
+        let mut open = two_player_game();
+        for n in 0..2 {
+            let a = open.add_card_to_battlefield(
+                0,
+                weights_test_creature(if n == 0 { "Runner A" } else { "Runner B" }, 2, 3, 3, &[]),
+            );
+            open.clear_sickness(a);
+        }
+        assert!(board_open_for_attack(&open, 0), "no opposing creature — board is open");
+        assert_eq!(
+            attack_candidates_for_mcts(&open, 0, &w).len(),
+            1,
+            "the open-board shortcut takes greedy without simulating",
+        );
+        // Drop a small blocker the attackers still profitably run past onto
+        // the opposing board: the shortcut no longer fires, so the search
+        // runs and offers holdback candidates.
+        let mut guarded = open.clone();
+        guarded.add_card_to_battlefield(1, weights_test_creature("Wall", 1, 0, 3, &[]));
+        assert!(!board_open_for_attack(&guarded, 0), "an opposing creature closes the board");
+        assert!(
+            attack_candidates_for_mcts(&guarded, 0, &w).len() > 1,
+            "a blocker restores the full attack search",
         );
     }
 

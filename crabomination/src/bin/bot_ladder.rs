@@ -260,6 +260,10 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // damage-order decision had no policy arm. Gate as A against
         // `gang`.
         "dmgorder" => Some(Pilot::Scored(EvalWeights::damage_order_on())),
+        // The open-board shortcut: no opposing creature / planeswalker /
+        // battle, so the attack search takes greedy without a sim. A
+        // throughput device; gate as A against `gang` for *no loss*.
+        "atk-open" => Some(Pilot::Scored(EvalWeights::attack_skip_open_on())),
         // Outcome-judged mid-resolution targets (round 53): the
         // suspending ChooseTarget path was a polarity guess that buffs
         // the opponent's best creature whenever a beneficial trigger's
@@ -575,7 +579,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
 }
 
 /// Profile names accepted by `--a` / `--b`, for the help text and errors.
-const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
+const PROFILES: &str = "baseline, combat, holdsick, holdsick+combat, atk, atk-cheap, atk-hold, atk-sim, atk-open, atk-race, atk-life, dflt-life, blk, lookahead, holdinst, mcts, mcts-heur, mcts-deep, planner, v2+combat, pretap, scaled, keywords, kw25, base, base+kw, life, power, v2, uniform, landseq, mull, gang, landseq2, mull2, race2, look1, look2, smarttap, dmgorder, targeteval, det1, det3, net, net-det1, net-det3, net-blend, net-blend300, net-q10, net-q20, netb-q10, netb-q20, netb-ply, net-guard, mcts-net, mcts-net-deep, mcts-net-128, mcts-net-256, mcts-net-h4, mcts-net-c05, mcts-net-c14, mcts-net-c20, mcts-net-prior, mcts-net-adapt, mcts-net-combat, mcts-net-gumbel, mcts-net-bdeep, mcts-net-fetcharms, legacyfetch, net-bdet1 (*net* need CRAB_NET=<weights.safetensors> or the committed nets/champion.safetensors)";
 
 /// Peak resident set size in MiB, or `None` where the OS doesn't expose it
 /// cheaply. Linux keeps the high-water mark in `/proc/self/status`, which
@@ -1633,6 +1637,24 @@ fn main() {
             "  sim_rejects {errs}/{calls} ({:.2} %) — attack {}/{}, block {}/{}, other {}/{}",
             if calls == 0 { 0.0 } else { 100.0 * errs as f64 / calls as f64 },
             s[0].1, s[0].0, s[1].1, s[1].0, s[2].1, s[2].0,
+        );
+    }
+    // What the attack search (PERF (-21), ~60 % of `cube`) decides. Off
+    // unless `CRAB_ATTACK_CENSUS` is set.
+    if crabomination::server::bot::attack_census::on() {
+        let [calls, cands, greedy, none, hold, tied, empty, empty_greedy] =
+            crabomination::server::bot::attack_census::snapshot();
+        let pct = |n: u64, d: u64| if d == 0 { 0.0 } else { 100.0 * n as f64 / d as f64 };
+        println!(
+            "  attack_census {calls} searched, {cands} candidates ({:.2}/search); won: greedy \
+             {greedy} ({:.1} %), none {none} ({:.1} %), holdback {hold} ({:.1} %); {tied} \
+             tied the winner; defender creatureless {empty} ({:.1} %), greedy won there \
+             {empty_greedy}",
+            if calls == 0 { 0.0 } else { cands as f64 / calls as f64 },
+            pct(greedy, calls),
+            pct(none, calls),
+            pct(hold, calls),
+            pct(empty, calls),
         );
     }
     // PERF (-88): how many state-based-action sweeps re-sweep a state the
