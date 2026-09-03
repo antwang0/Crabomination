@@ -20306,6 +20306,43 @@ re-check it against the current representation before trusting it.*
 
 ## Profile of record
 
+### THE ACTOR RE-READ AT `b13f5ccd` — the printed-filter pass reaches the training path: -5.6 % since `ec1bb132`, and the requirement walker has left the table
+
+Same recipe (`profiling-fast -p crabomination_ml --no-default-features`,
+`CRAB_NO_JITTER=1 selfplay_train --actors 1 --games 60 --steps 1 --seed 7`,
+callgrind, `nm | grep -cE " (T|t) (_)?mi_"` 0). **2,884,346,924 Ir** against
+`ec1bb132`'s 3,056,559,076 — **-5.63 %**, across the `(-176)`..`(-185)` legs
+and the concurrent catalog commits, so a direction and not an A/B. 60 games,
+5,805 rows, 0 stalls.
+
+```text
+            now     ec1bb132   row
+  6.04 %   6.23 %   __memcpy_avx_unaligned_erms
+  5.92 %   5.52 %   dispatch_triggers_for_events
+  2.75 %   3.48 %   _int_free
+  2.47 %   2.33 %   compute_permanent_pass
+  2.37 %   2.32 %   gather_continuous_effects_inner
+  2.31 %   2.35 %   computed_permanent_hinted
+  2.27 %   2.55 %   _int_malloc
+  2.14 %   2.68 %   malloc
+  2.11 %      -     Vec::from_iter
+  2.08 %      -     activate_ability_inner
+  2.04 %   2.60 %   check_state_based_actions_into
+  1.97 %   1.84 %   encode_state_inner       } the encoder, 3.74 %
+  1.77 %   1.67 %   encode_card_object_into  }
+  1.72 %   2.17 %   free
+  1.68 %      -     cow::make_mut_slow
+  1.46 %   1.37 %   rand_distr Normal::sample  <- net init, once per process
+  1.14 %   1.08 %   recommend::rank_shape      <- the deck builder
+```
+
+`evaluate_requirement_static_hinted` is **105,958 calls** on the actor and
+neither it nor `printed_requirement` is in the top forty rows; on `cube` at
+the same tip the walker is ~145 k calls / 1.4 %. The allocator cluster fell
+from 10.88 % to 8.88 % — a smaller total's share, not a device. The shape
+otherwise holds: the encoder and the deck builder remain the only actor-only
+rows, both priced in the two entries below.
+
 ### THE ACTOR RE-READ AT `ec1bb132` — the shape has not moved in fifteen more passes, and that is the finding
 
 Same recipe as the `d0243e89` entry below (`profiling-fast -p crabomination_ml

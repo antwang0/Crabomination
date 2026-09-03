@@ -42,9 +42,11 @@ sixty-seventh pass, so don't re-take that.
    `printed_requirement` (`eval.rs`) at the targeting enumerator, `resolve_selector`, the
    trigger-grant walk and the graveyard sweep. Cumulative vs `0c3f4a78`: **cube -1.81 %, fixed
    -0.67 %, sealed -0.69 %** through `(-184)`, then `(-185)` **-1.06 / -0.13 / -0.10 %** (fixed /
-   cube / sealed) on the re-based catalog. PERF Baseline top. ⚠ Two rules fell out: a one-caller
-   wrapper is inlined by luck (read a gate's body through your own closure), and an evaluator
-   called 500 k times a run takes no flag — `const OFF: bool`, not an argument or a field.
+   cube / sealed) on the re-based catalog. PERF Baseline top. **The actor reads -5.6 % since
+   `ec1bb132`** (Profile of record, top). ⚠ Two rules fell out: a one-caller wrapper is inlined
+   by luck (read a gate's body through your own closure), and an evaluator called 500 k times a
+   run takes no flag — `const OFF: bool`, not an argument or a field. `(-186)` flat and `(-187)` a
+   loss, both reverted and filed (candidates): the walker lane is mined out.
 4. **Next perf lead (PERF candidates, `(-185)`):** the walker is ~167 k calls on `cube` after
    this; largest contexts are its own recursion from plain-form callers (`cg_contexts.py`,
    `--separate-callers=4`), the gather's condition-gated statics (5.7 M) and the SBA `no_other`
