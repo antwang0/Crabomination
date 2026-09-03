@@ -2512,6 +2512,31 @@ a box whose state moves.
 
 ## Baseline
 
+### The attack-search census pass — closing state at `e725e5c2`
+
+No engine change — the default profile is byte-identical to `df27df7e`
+(`--bench` 195,806 / 27.49 / 611.9 / 0 stalls, golden traces 7/7 unmoved).
+The run read `(-21)`'s never-read half with a new instrument
+(`CRAB_ATTACK_CENSUS`) and priced the one device it suggested (`atk-open`,
+the open-board skip): -1.3/-1.8 % on cube/sealed but -0.1 pt on a 96 k-game
+sealed ladder, so filed as an opt-in pilot, not adopted (Log, `e725e5c2`).
+
+```text
+suite   19,238 / 0 / 5 (+1: attack_skip_open_only_shortcuts_a_blockerless_board)
+clippy  --workspace --exclude crabomination_client --all-targets   clean
+release the release-fast typecheck gate (debug-assertions off)   clean
+--bench profiling-fast: 195,806 / 27.49 / 611.9 / 0 stalls, determinism ok,
+        byte-identical to df27df7e (default profile unchanged)
+audits  audit_incomplete --structural-only 21,795 / 0 to review; audit_stubs
+        0; audit_variant_coverage 0 dead capability / 2 dead primitive
+        (AddRadCounters, GrantCastBackFromGraveyard — unbuilt, pre-existing);
+        audit_panics 0 bare; audit_doc_drift 0; audit_bottom_random 0/0
+```
+
+The robustness grid was not re-run: the default engine is byte-identical to
+`df27df7e`, whose `--wide` grid (301,600 games, cap 4 = the Beacon board)
+still describes it.
+
 ### The oracle-verb close-out — closing state at `df27df7e`
 
 No perf leg: three fresh dumps at `a198daf3` read within 0.07 % of
@@ -11531,6 +11556,53 @@ the table above is safe to compress:
 
 
 ## Log
+
+### `e725e5c2` — the attack search's open-board skip: a measured 1.3-1.8 % throughput device, NOT adopted (leans -0.1 pt strength)
+
+`(-21)` has said "the attack sim's candidate count is a search-quality
+decision, not a perf one" since the forty-ninth pass, and nobody had read
+what the search *chooses*. `CRAB_ATTACK_CENSUS` (new, off by default, one
+`OnceLock` read per searched declaration) does, on the gang mirror
+(`profiling-fast`, `--games 6 --seed 1`):
+
+```text
+  pool    won greedy   won none   holdback   defender creatureless (greedy won there)
+  fixed     53.4 %      37.7 %      8.9 %     16.2 %  (58/62 = 94 %)
+  cube      55.0 %      32.0 %     13.0 %     12.6 %  (68/68 = 100 %)
+  sealed    58.7 %      28.1 %     13.1 %      9.3 %  (68/68 = 100 %)
+```
+
+So on **9-16 % of searched declarations no opposing seat has a blocker**,
+and greedy wins 94-100 % of those. The `atk-open` pilot
+(`EvalWeights::attack_skip_open`, opt-in) takes greedy without simulating on
+exactly that board — printed types settle the common case, a non-creature
+permanent's computed types are read inside one freeze scope so an animated
+permanent still counts.
+
+```text
+  callgrind Ir A/B, gang vs atk-open, --games 6 --seed 1
+  pool     gang            atk-open        delta
+  cube   2,335,849,420   2,294,558,647   **-1.768 %**   (seed-1 greedy won 68/68 -> games identical, clean)
+  sealed 2,345,936,811   2,315,540,125   **-1.296 %**
+  fixed    837,756,609     983,243,120   **+17.37 %**   (divergence, not cost — see below)
+  strength ladder atk-open vs gang, sealed 96,000 paired games (rho -0.994):
+    A win% 49.9 % — gang leads 0.1 pt, marginal
+```
+
+**The fixed +17 % is divergence, not the mechanism.** On cube/sealed seed 1
+greedy wins every open board, so the shortcut only deletes sim work and the
+games are byte-identical. On fixed seed 1 the sim held back a lone Goblin
+Guide (`none` scored 9 vs greedy 7 — its attack trigger cards the opponent),
+the shortcut overrides that and attacks, and the aggro mirror's game
+diverges into a longer one. That override is exactly the -0.1 pt the ladder
+reads. **Not adopted:** for a training engine a real (if tiny) strength leak
+is not worth 1.3-1.8 %; kept as a documented, opt-in pilot like
+`atk-race` / `atk-life`, with the census as the reusable instrument. The
+default profile stays byte-identical (`--bench` 195,806 / 27.49 / 611.9 / 0
+stalls, unmoved; golden traces unmoved). **Open follow-up:** gating the skip
+on `greedy.len() >= 2` would drop the lone-attacker divergences (all the
+observed misses were single Goblin Guide / Llanowar Elves boards) and might
+make it strength-neutral — one more ladder settles it.
 
 ### `d98c4212` — a rules price, not a candidate: CR 400.7 clears "until end of turn" effects as a permanent leaves — `fixed` +0.070 % / `sealed` +0.070 % / `cube` +0.062 %
 
@@ -22348,6 +22420,17 @@ chains to; the full tables are in `git log -- PERF.md` at `36592fd8`,
 Ordered by expected value. Each run pulls the top one, attaches numbers,
 and feeds what it finds back in. Re-profile and replenish when the list
 goes thin or stale.
+
+**`(-21)`'s search-count half read at `e725e5c2` (Log): the census
+`CRAB_ATTACK_CENSUS` says 9-16 % of searched declarations face no blocker
+and greedy wins 94-100 % of those, so the open-board skip saves 1.3-1.8 %
+on cube/sealed — but it overrides the sim's correct hold-back of an
+attack-trigger creature and leans -0.1 pt on a 96 k-game sealed ladder.
+Filed as an opt-in pilot (`atk-open`), NOT adopted; the reusable half is
+the instrument and the open follow-up (gate the skip on `greedy.len()>=2`
+to drop the lone-attacker divergences, one ladder to confirm). The Ir
+lead that is left is still the `profiling-lines` read of
+`computed_permanent_hinted`'s 150 Ir/call memo-hit path.**
 
 **RE-READ AT `a198daf3` (the `(-192)` engine + CR 400.7 + the mill/token
 card fixes) — three fresh dumps, the map agrees with `(-90)`/`(-92)`, and

@@ -3772,14 +3772,6 @@ Strixhaven coverage push). Remaining gaps:
   prompt — it hands over the lowest-mana-value eligible card. Fine for
   Karn's +1 and Animal Magnetism, but a real pick belongs on the opposing
   seat's decider.
-- ⏳ **Bot matches aren't reproducible.** `HeuristicBot` draws from the global
-  RNG, so `bot_vs_bot_commander_demo_terminates` varies 0.5s–15s+ run to run
-  and occasionally blew its old 120s ceiling. The ceiling is now 600s, but
-  it's a *wall-clock* budget inside a test binary that runs 450 other tests
-  in parallel: under a loaded `cargo test --workspace` the binary takes ~620s
-  and the assertion trips even though the same test finishes in ~50s alone.
-  The real fix is a seeded RNG on `HeuristicBot` (with the seed printed on
-  failure) and an action-count ceiling instead of a clock.
 - ⏳ **`Effect::EachPlayerChoosesCreatureTypeThen` asks the synchronous
   decider for every seat**, so a UI player isn't prompted for their own
   Harsh Mercy / Patriarch's Bidding pick (same gap as `TemptingOffer`). The

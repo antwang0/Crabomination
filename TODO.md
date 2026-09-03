@@ -26,40 +26,32 @@ sixty-seventh pass, so don't re-take that.
 1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks
    origin/claude/modern_decks`. Two sessions may run at once: rebase, never force; code before
    tracker prose; ⚠ claim a candidate number at PUSH time — `(-193)` is the last claimed,
-   `(-194)` is next. Container gotchas in **CLAUDE.md**; measurement rules in **PERF's "Standing
-   rules for a perf pass"**. Cold here: `profiling-fast` 10 min (3 min warm), test build+suite
-   5 min cold / 3 warm; `nextest` needs installing (CLAUDE.md has the line). Three-pool callgrind
-   ~2 min. ⚠ A rebase between an A/B's two builds can pull a concurrent CATALOG commit: `git log
-   --stat <base>..HEAD -- crabomination_catalog` after any rebase (PERF Standing rules, top).
-2. **Gates at `df27df7e`:** suite 19,237 / 0 / 5, golden traces unmoved, clippy `--all-targets`
-   clean, release-fast typecheck gate clean, `--bench` **195,806 / 27.49 / 611.9 / 0 stalls,
-   byte-identical**, determinism ok. `robustness_grid.sh` at `df27df7e`: ladder 30 cells /
-   33,120 games + actor 3 seeds + pilots 45 / 45, **0 failures**; `--wide` 52 cells / 301,600
-   games, cap 4 = the Beacon board (ENGINE_BACKLOG, closed), unchanged (PERF Baseline).
-   Structural audits 0 / 0; the oracle-verb table 70, all filed.
-3. **This run: no perf leg — the queue is mined out at this tip, and PERF's candidates section
-   opens with the re-read that says so** (three fresh dumps at `a198daf3`, within 0.07 % of
-   `(-192)`; `affected_includes_gated`'s reach mask refuted by arithmetic; `make_mut_slow`,
-   `Vec::clone`, `__rust_alloc`, `IntoIter::drop` caller tables read, all real writes / diffuse).
-   The bot's attack search is 59.8 % of `cube` and a search-quality decision (`(-21)`). The two
-   leads left are not self-table rows: a search-count A/B measured on strength as well as Ir,
-   or a `profiling-lines` read of `computed_permanent_hinted`'s 150 Ir/call memo-hit path.
-4. **The oracle-verb table is fully read: 106 -> 70 rows, 21 shipped defects fixed this run
-   (two whole wrong cards: Geyadrone Dihada, Search for Glory; one invented token: Corpses of
-   the Lost), and every survivor is filed in CARD_BACKLOG's top two sections** against the
-   primitive it wants or the auditor's bespoke blind spot. Three engine bits rode along:
-   `CounterType::Corruption`, `MillThenToHand` on `LastMoved`, `SameNameAsExiledWithSource`
-   reading the until-leaves link. ⚠ The catalog change moves `cube`/`sealed` play: a fresh Ir
-   base before any A/B.
-5. **Open, sized (leave):** `apply_as_enters_effect` / Mimeoplasm (ENGINE_BACKLOG); the empty-stack
-   `PassPriority` sweep (CARD_BACKLOG). `activate_ability_inner` is 2.0 % of both pools in gate
-   prelude with no single hot line — a `profiling-lines` read, not a device.
-6. **Best next moves:** (a) the primitives that unblock several filed rows at once — a per-turn
-   cast-name memory (Sift Through Sands + the Kamigawa "if you've cast X this turn" family; put
-   it in `ColdState`, not `PlayerData` — 24 bytes of headroom), a per-turn `modes_chosen` sibling
-   (Monument to Endurance), a `DelayedKind` for "when you next attack this turn" (All-Out
-   Assault); (b) the printed-clause ratchets (CARD_BACKLOG, first section). ⚠ A python auditor's
-   zero is suspect; read the body before believing a row.
+   `(-194)` is next. Container gotchas in **CLAUDE.md**; measurement in **PERF's "Standing
+   rules"**. Cold here: `profiling-fast` **~14 min cold / ~5 min warm**, test build+suite
+   ~4 min; `nextest` needs installing (CLAUDE.md). Callgrind `--games 6` ~25 s/pool. ⚠ A rebase
+   between an A/B's two builds can pull a concurrent CATALOG commit: `git log --stat
+   <base>..HEAD -- crabomination_catalog` after any rebase (PERF Standing rules, top).
+2. **Gates at `e725e5c2` (this run):** suite **19,238 / 0 / 5** (+1 device test), golden traces
+   7/7 unmoved, clippy clean, release-fast typecheck clean, `--bench` **195,806 / 27.49 / 611.9 /
+   0 stalls, byte-identical to `df27df7e`** (default engine unchanged — only opt-in code landed),
+   determinism ok. Grid NOT re-run: byte-identical default => `df27df7e`'s `--wide` (301,600
+   games, cap 4 = Beacon) still describes it. Audits all clean (PERF Baseline).
+3. **This run took `(-21)`'s never-read half** (Log `e725e5c2`). `CRAB_ATTACK_CENSUS` reads what
+   the attack sim chooses; the `atk-open` pilot skips it on a blockerless board: -1.3/-1.8 %
+   cube/sealed Ir but -0.1 pt on a 96 k sealed ladder (it overrides a correct hold-back). Opt-in,
+   NOT adopted. ⚠ **NEXT PERF MOVE, one ladder:** gate the skip on `greedy.len() >= 2` — every
+   divergence was a single attacker, so a 2+ gate may make it strength-neutral and keep the win.
+4. **Other perf leads:** `profiling-lines` read of `computed_permanent_hinted`'s 150 Ir/call
+   memo-hit path (2.4 %, never read by line). The `a198daf3` re-read (candidates, top) stands: no
+   row prices at a build without a device. Sized, leave: `apply_as_enters_effect` / Mimeoplasm,
+   the empty-stack `PassPriority` sweep, `activate_ability_inner` (2.0 %, no hot line).
+5. **Cards/rules (leftover only):** primitives unblocking several filed rows — a per-turn
+   cast-name memory (Sift Through Sands + Kamigawa "cast X this turn"; `spell_ids_cast_this_turn`
+   is the raw material, `Predicate::CastSpellNamedThisTurn` the missing arm), a per-turn
+   `modes_chosen` sibling (Monument to Endurance), a `DelayedKind` "when you next attack this
+   turn" (All-Out Assault); then the printed-clause ratchets (CARD_BACKLOG). ⚠ A python auditor's
+   zero is suspect — read the body. 2 dead primitives (`AddRadCounters`,
+   `GrantCastBackFromGraveyard`): implemented, nothing builds them.
 
 ## Standing index (every number lives in PERF, ENGINE_BACKLOG or
 INCOMPLETE_CARDS; a line here that restates one is a line to delete)
